@@ -89,6 +89,7 @@ export default function WorkflowBoardPage(): React.ReactElement {
               phase: tPhase,
               status: tStatus,
               knownPhases: BOARD_PHASES,
+              rejectedColumn: t("board.rejectedColumn"),
             })}
           />
         )}

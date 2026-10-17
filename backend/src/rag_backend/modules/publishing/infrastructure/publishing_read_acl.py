@@ -54,6 +54,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_FINAL_REVIEW,
     PHASE_PUBLISHED,
     PHASE_STATUS_PENDING,
+    PHASE_STATUS_REJECTED,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.models import CarouselProject
@@ -63,7 +64,11 @@ from rag_backend.infrastructure.database.blog_post_repository import (
 )
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
-from rag_backend.modules.publishing.constants import BOARD_PHASES
+from rag_backend.modules.publishing.constants import (
+    BOARD_COLUMN_REJECTED,
+    BOARD_COLUMNS,
+    BOARD_PHASES,
+)
 from rag_backend.modules.publishing.domain.projections import (
     AnalyticsProjection,
     AnalyticsQuery,
@@ -193,15 +198,18 @@ class PublishingReadAcl:
     async def project_board(self, query: BoardQuery) -> BoardProjection:
         """Project the workflow-board phase columns (legacy board route)."""
         projects = await self._board_projects(query.author_id)
-        cards_by_phase: dict[str, list[BoardCard]] = {
-            phase: [] for phase in _KANBAN_PHASES
+        cards_by_column: dict[str, list[BoardCard]] = {
+            column: [] for column in BOARD_COLUMNS
         }
         for project in projects:
-            phase, card = _to_board_card(project)
-            cards_by_phase.setdefault(phase, []).append(card)
+            _, card = _to_board_card(project)
+            # AE-0416: a rejected project sits in the Rejected column.
+            rejected = card.phase_status == PHASE_STATUS_REJECTED
+            column = BOARD_COLUMN_REJECTED if rejected else card.current_phase
+            cards_by_column.setdefault(column, []).append(card)
         columns = [
-            BoardColumn(phase=phase, cards=cards_by_phase.get(phase, []))
-            for phase in _KANBAN_PHASES
+            BoardColumn(phase=column, cards=cards_by_column.get(column, []))
+            for column in BOARD_COLUMNS
         ]
         return BoardProjection(columns=columns)
 

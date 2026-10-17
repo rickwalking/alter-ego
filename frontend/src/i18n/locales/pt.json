@@ -1032,7 +1032,8 @@
       "noProjects": "Nenhum projeto",
       "retry": "Tentar novamente",
       "breadcrumb": "pipeline",
-      "newCard": "Novo card"
+      "newCard": "Novo card",
+      "rejectedColumn": "Rejeitados"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",

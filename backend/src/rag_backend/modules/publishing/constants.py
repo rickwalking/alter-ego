@@ -19,6 +19,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_OUTLINE,
     PHASE_PUBLISHED,
     PHASE_RESEARCH,
+    PHASE_STATUS_REJECTED,
 )
 
 # Module identity (used for tracing/observability metadata).
@@ -39,6 +40,11 @@ BOARD_PHASES = [
     PHASE_FINAL_REVIEW,
     PHASE_PUBLISHED,
 ]
+
+# AE-0416: rejected projects get their own column after the phases (they used to
+# sit in their phase column, mostly "brief"). The cards keep their real phase.
+BOARD_COLUMN_REJECTED = PHASE_STATUS_REJECTED
+BOARD_COLUMNS = [*BOARD_PHASES, BOARD_COLUMN_REJECTED]
 
 # AE-0369: the Instagram Story announcing a new carousel post. Rendered from the
 # PT slide 1 into the serving root and fetched by Meta from the public route.

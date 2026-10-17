@@ -1032,7 +1032,8 @@
       "noProjects": "No projects",
       "retry": "Retry",
       "breadcrumb": "pipeline",
-      "newCard": "New Card"
+      "newCard": "New Card",
+      "rejectedColumn": "Rejected"
     },
     "calendar": {
       "title": "Content Calendar",
