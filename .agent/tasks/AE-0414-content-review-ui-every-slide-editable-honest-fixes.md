@@ -1,6 +1,6 @@
 # AE-0414 — Content review UI: every slide, every flagged field editable, honest fixes
 
-Status: In Review
+Status: Review
 Tier: T2
 Priority: P1
 Type: Bug

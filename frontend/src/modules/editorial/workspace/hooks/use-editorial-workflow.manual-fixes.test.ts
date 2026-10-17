@@ -33,8 +33,6 @@ class SilentEventSource {
   }
 }
 
-const originalEventSource = globalThis.EventSource;
-
 const contentState: EditorialWorkflowState = {
   project_id: "project-1",
   current_phase: "content",
@@ -71,12 +69,11 @@ function answerResume(status: number, detail: string): void {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  // @ts-expect-error — swap in the mock for the duration of each test.
-  globalThis.EventSource = SilentEventSource;
+  vi.stubGlobal("EventSource", SilentEventSource);
 });
 
 afterEach(() => {
-  globalThis.EventSource = originalEventSource;
+  vi.unstubAllGlobals();
 });
 
 async function renderWorkflow(): Promise<
