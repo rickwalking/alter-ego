@@ -21,6 +21,9 @@ from rag_backend.application.services.carousel_template.slides import (
     _render_intro_slide,
     _render_summary_slide,
 )
+from rag_backend.application.services.carousel_template.strategies.cover_card import (
+    cover_card_strategy,
+)
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
@@ -198,6 +201,7 @@ def build_carousel_html(
         if strategy_registry is not None:
             effective_strategy = (
                 quote_card_strategy(project, slide)
+                or cover_card_strategy(project, slide)
                 or role_layouts.get(int(slide["number"]))
                 or (strategy_name or project.slide_layout_strategy)
             )

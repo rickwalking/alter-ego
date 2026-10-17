@@ -14,6 +14,7 @@ from uuid import UUID
 
 from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.domain.models.news_quote import NewsQuote
+from rag_backend.domain.models.slide_cover import SlideCover
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
 
@@ -171,6 +172,8 @@ class ProjectSpec:
     hook_asset_id: str | None = None
     # AE-0406: the scout-verified quotes of a ``pov_news`` topic.
     quotes: tuple[NewsQuote, ...] = ()
+    # AE-0418: the GrokBot cover the owner chose for slide 1 (None = default).
+    cover: SlideCover | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

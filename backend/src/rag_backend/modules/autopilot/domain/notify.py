@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from rag_backend.modules.autopilot.domain.cover_offer import CoverOffer
 from rag_backend.modules.autopilot.domain.messages import InlineKeyboard
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
@@ -28,6 +29,8 @@ class ReviewNotice:
     # AE-0367: quality issue lines; ``fixable`` adds the "Fix issues" button.
     issues: tuple[str, ...] = ()
     fixable: bool = False
+    # AE-0418: the GrokBot cover preview and the slide-1 toggle.
+    cover: CoverOffer | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -46,6 +49,8 @@ class StatusNotice:
     run_id: UUID
     text: str
     keyboard: InlineKeyboard | None
+    # AE-0418: sent as a photo with ``text`` as its caption when set.
+    photo_path: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -78,6 +83,7 @@ class ReviewFacts:
     image_style: str = ""
     issues: tuple[str, ...] = ()
     fixable: bool = False
+    cover: CoverOffer | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

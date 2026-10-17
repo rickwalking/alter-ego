@@ -8,7 +8,7 @@ adapter in ``bootstrap`` opens the session and calls ``tick``.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import structlog
 
@@ -55,6 +55,7 @@ from rag_backend.modules.autopilot.domain.autofix import (
     GateRepairer,
     SlideFixer,
 )
+from rag_backend.modules.autopilot.domain.cover_ports import CoverOffers, CoverSwitcher
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
@@ -126,6 +127,9 @@ class RunnerDependencies:
     gate_repair: GateRepairer | None = None
     # AE-0401: then model-fix the slides still failing (no revise after it).
     slide_fix: SlideFixer | None = None
+    # AE-0418: the owner's GrokBot cover choice and the slide-1 re-render.
+    covers: CoverOffers | None = None
+    cover_switch: CoverSwitcher | None = None
 
 
 _Step = GateRead
@@ -144,6 +148,8 @@ class AutopilotRunner:
                 recovery=deps.recovery,
                 escalations=self._recovery,
                 autofix=deps.autofix,
+                covers=deps.covers,
+                cover_switch=deps.cover_switch,
             )
         )
         self._repair = GateRepairStep(
@@ -328,7 +334,11 @@ class AutopilotRunner:
         if topic is None:
             return None
         spec = project_spec(run, topic, self._deps.owner_user_id)
-        return await with_inputs(spec, self._deps.inputs)
+        spec = await with_inputs(spec, self._deps.inputs)
+        if self._deps.covers is None:
+            return spec
+        # AE-0418: slide 1 is the GrokBot cover only when the owner chose it.
+        return replace(spec, cover=await self._deps.covers.chosen_cover(run))
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
         if run.carousel_project_id is not None:

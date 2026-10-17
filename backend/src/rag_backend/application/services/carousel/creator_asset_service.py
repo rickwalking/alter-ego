@@ -14,6 +14,7 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
     validate_and_normalize_creator_asset,
 )
 from rag_backend.domain.constants.creator_asset import (
+    CREATOR_ASSET_ROLE_COVER,
     ERR_CREATOR_ASSET_FORBIDDEN,
     ERR_CREATOR_ASSET_NOT_FOUND,
     build_creator_asset_filename,
@@ -189,6 +190,31 @@ class CreatorAssetService:
             return self._canonical_storage_path(asset.content_sha256).is_file()
         except CreatorAssetValidationError:
             return False
+
+    def stored_file(self, asset: CarouselCreatorAsset) -> Path | None:
+        """AE-0418: the asset's canonical WebP, or None when it is gone."""
+        if not self.has_stored_file(asset):
+            return None
+        return self._canonical_storage_path(asset.content_sha256)
+
+    async def store_cover(
+        self, owner_id: str, normalized: NormalizedCreatorAsset
+    ) -> CarouselCreatorAsset:
+        """AE-0418: store a validated GrokBot cover with role ``cover``.
+
+        Bytes the owner already has as a library photo reuse that row and keep
+        its role (the owner's photo is never re-tagged).
+        """
+        existing = await self._asset_repo.get_by_owner_and_content_sha256(
+            owner_id, normalized.content_sha256
+        )
+        asset = await self._persist_normalized_asset(owner_id, normalized)
+        if existing is not None:
+            return asset
+        tagged = await self._asset_repo.set_tags(
+            CreatorAssetTags(asset_id=asset.id, role=CREATOR_ASSET_ROLE_COVER)
+        )
+        return tagged or asset
 
     async def select_hook_photo(self, command: HookPhotoCommand) -> CarouselProject:
         """Bind the slide-1 photo and stage it where the slides are rendered."""

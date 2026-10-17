@@ -32,6 +32,7 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.ports import Clock
 from rag_backend.modules.autopilot.domain.scout_ports import StatusSender
+from rag_backend.modules.autopilot.infrastructure.cover_store import SqlCoverAssetStore
 from rag_backend.modules.autopilot.infrastructure.intake_store import (
     SqlAlchemyTopicIntakeStore,
 )
@@ -68,6 +69,8 @@ def build_topic_intake(
         daily_cap=settings.autopilot_daily_cap,
         # AE-0406: the x-signals post texts the ``pov_news`` quotes cite.
         posts=store,
+        # AE-0418: the GrokBot covers the topics name.
+        covers=SqlCoverAssetStore(session),
     )
     return TopicIntakeService(deps)
 

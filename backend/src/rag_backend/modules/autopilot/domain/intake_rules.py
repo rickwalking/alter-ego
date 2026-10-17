@@ -3,13 +3,13 @@
 Pure. Each rule names the reason code and, when one field caused it, that
 field (``audience``, ``quotes[1].excerpt``) so the scout can fix one topic
 without guessing. The order is the contract's: text, URLs, sources, thesis,
-the carousel defaults, then the ``pov_news`` quotes.
+the carousel defaults, the ``pov_news`` quotes, then (AE-0418) the cover.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from rag_backend.domain.content_mode import is_pov_family, is_pov_news
 from rag_backend.domain.models.news_quote import NewsQuote
@@ -25,9 +25,15 @@ from rag_backend.modules.autopilot.constants import (
     REASON_SOURCE_NOT_IN_SIGNALS,
     REASON_URL_IN_TEXT,
 )
+from rag_backend.modules.autopilot.cover_constants import FIELD_COVER_ASSET_ID
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
     CarouselText,
     carousel_reason,
+)
+from rag_backend.modules.autopilot.domain.cover import (
+    CoverCheck,
+    CoverFacts,
+    cover_reason,
 )
 from rag_backend.modules.autopilot.domain.quotes import QuoteFacts, quotes_problem
 from rag_backend.modules.autopilot.domain.topic_text import contains_url
@@ -83,14 +89,17 @@ class TopicFields:
     content_mode: str
     thesis_draft: str | None
     quotes: tuple[NewsQuote, ...] = ()
+    # AE-0418: the GrokBot cover the topic names (None = no cover).
+    cover_asset_id: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class RuleFacts:
-    """The allowlist and the stored X post texts the rules check against."""
+    """The allowlist, stored X post texts and covers the rules check against."""
 
     allowlist: frozenset[str]
     post_texts: Mapping[str, str]
+    covers: CoverFacts = field(default_factory=CoverFacts)
 
 
 def refusal_for(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
@@ -105,7 +114,7 @@ def refusal_for(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
     carousel = _carousel_refusal(topic)
     if carousel is not None:
         return carousel
-    return _quotes_refusal(topic, facts)
+    return _quotes_refusal(topic, facts) or _cover_refusal(topic, facts)
 
 
 def _named_text(topic: TopicFields) -> tuple[tuple[str, str], ...]:
@@ -176,6 +185,19 @@ def _quotes_refusal(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
     if problem is None:
         return None
     return Refusal(reason=problem.reason, field=problem.field)
+
+
+def _cover_refusal(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
+    """AE-0418: the cover must exist, be fresh, unused, and (screenshot) sourced."""
+    if topic.cover_asset_id is None:
+        return None
+    reason = cover_reason(
+        CoverCheck(asset_id=topic.cover_asset_id, sources=topic.sources),
+        facts.covers,
+    )
+    if reason is None:
+        return None
+    return Refusal(reason=reason, field=FIELD_COVER_ASSET_ID)
 
 
 __all__ = ["Refusal", "RuleFacts", "TopicFields", "refusal_for"]

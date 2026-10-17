@@ -5,7 +5,6 @@ raises ``HookPhotoError`` instead of silently rendering slide 1 without it.
 """
 
 import html
-import os
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -20,6 +19,11 @@ from rag_backend.application.services.carousel_template.pov_shell import (
     PovShellConfig,
     render_pov_shell,
 )
+from rag_backend.application.services.carousel_template.strategies.photo_errors import (
+    HookPhotoError,
+    ai_cover_src,
+    readable,
+)
 from rag_backend.domain.constants import LANGUAGE_PT
 from rag_backend.domain.constants.content_mode import (
     ERR_HOOK_PHOTO_MISSING,
@@ -32,15 +36,6 @@ HOOK_FACE_STRATEGY = "hook_face"
 _LAYOUT = "pov-hook"
 
 
-class HookPhotoError(RuntimeError):
-    """Slide 1 of a POV deck cannot render: its photo is missing or unreadable."""
-
-    def __init__(self, code: str, project_id: str) -> None:
-        super().__init__(f"{code}: project {project_id}")
-        self.code = code
-        self.project_id = project_id
-
-
 def hook_photo_src(project: CarouselProject) -> str:
     """The slide-1 photo staged in the artifact; raises when it is unusable.
 
@@ -50,17 +45,14 @@ def hook_photo_src(project: CarouselProject) -> str:
     staged = project.hook_asset_staged_path
     if project.hook_asset_id is None or not staged:
         raise HookPhotoError(ERR_HOOK_PHOTO_MISSING, str(project.id))
-    if project.output_dir and not _readable(Path(project.output_dir) / staged):
+    if project.output_dir and not readable(Path(project.output_dir) / staged):
         raise HookPhotoError(ERR_HOOK_PHOTO_UNREADABLE, str(project.id))
     return staged
 
 
-def _readable(path: Path) -> bool:
-    return path.is_file() and os.access(path, os.R_OK)
-
-
 def _photo_html(project: CarouselProject, alt: str) -> str:
-    src = hook_photo_src(project)
+    # AE-0418: the owner may swap the photo for a GrokBot ``ai_image`` cover.
+    src = ai_cover_src(project) or hook_photo_src(project)
     return (
         f'<div class="pov-hook-photo">'
         f'<img src="{html.escape(src, quote=True)}" '

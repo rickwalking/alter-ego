@@ -10,7 +10,15 @@ from dataclasses import dataclass
 import httpx
 import structlog
 
+from rag_backend.modules.autopilot.cover_constants import (
+    LOG_COVER,
+    LOG_COVER_PHOTO_FAILED,
+)
 from rag_backend.modules.autopilot.domain.carousel_defaults import with_profile
+from rag_backend.modules.autopilot.domain.cover_offer import (
+    cover_caption,
+    with_cover_row,
+)
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
     TelegramDeliveryError,
@@ -34,10 +42,12 @@ from rag_backend.modules.autopilot.domain.review_issues import (
 )
 from rag_backend.modules.autopilot.infrastructure.telegram_payload import (
     accepted_payload,
+    cover_photo_file,
     group_ids,
     media_parts,
     message_data,
     one_id,
+    photo_data,
     photo_file,
     retry_after_seconds,
 )
@@ -98,13 +108,18 @@ class TelegramNotifier:
         """Upload the album when it is not already stored, then the keyboard."""
         self._require_token()
         album_ids = notice.prior_album_ids or await self._album(notice)
+        if not notice.prior_album_ids:
+            await self._cover_preview(notice)
         keyboard_id = await self._keyboard_message(notice)
         return ReviewSendResult(album_ids=album_ids, keyboard_id=keyboard_id)
 
     async def send_status(self, notice: StatusNotice) -> StatusSendResult:
-        """Send one text message and return its id."""
+        """Send one text message (AE-0418: or photo) and return its id."""
         self._require_token()
-        payload = await self._message(notice)
+        if notice.photo_path:
+            payload = await self._status_photo(notice, notice.photo_path)
+        else:
+            payload = await self._message(notice)
         return StatusSendResult(message_id=one_id(payload))
 
     def _require_token(self) -> None:
@@ -132,7 +147,11 @@ class TelegramNotifier:
                 with_profile(notice.profile, caption_preview(notice.caption)),
                 notice.issues,
             ),
-            keyboard=review_keyboard_with_fix(notice.run_id, fixable=notice.fixable),
+            keyboard=with_cover_row(
+                review_keyboard_with_fix(notice.run_id, fixable=notice.fixable),
+                notice.run_id,
+                notice.cover,
+            ),
         )
         payload = await self._message(status)
         return one_id(payload)
@@ -151,6 +170,28 @@ class TelegramNotifier:
         files = photo_file(path)
         data = {FIELD_CHAT_ID: chat_id, FIELD_CAPTION: caption}
         return await self._post(TELEGRAM_METHOD_PHOTO, data, files)
+
+    async def _status_photo(self, notice: StatusNotice, path: str) -> object:
+        data = photo_data(notice.chat_id, notice.text, notice.keyboard)
+        return await self._post(TELEGRAM_METHOD_PHOTO, data, cover_photo_file(path))
+
+    async def _cover_preview(self, notice: ReviewNotice) -> None:
+        """AE-0418: the GrokBot cover after the album, while it is not slide 1.
+
+        A failed preview is logged; it never blocks the review itself.
+        """
+        cover = notice.cover
+        if cover is None or cover.chosen:
+            return
+        data = photo_data(notice.chat_id, cover_caption(cover), None)
+        try:
+            await self._post(
+                TELEGRAM_METHOD_PHOTO, data, cover_photo_file(cover.photo_path)
+            )
+        except (TelegramDeliveryError, OSError, ValueError) as exc:
+            logger.warning(
+                LOG_COVER, outcome=LOG_COVER_PHOTO_FAILED, error=type(exc).__name__
+            )
 
     async def _message(self, notice: StatusNotice) -> object:
         data = message_data(notice.chat_id, notice.text, notice.keyboard)

@@ -11,6 +11,7 @@ from rag_backend.modules.autopilot.application.thesis_prompts import (
     ThesisPromptDependencies,
     ThesisPromptService,
 )
+from rag_backend.modules.autopilot.infrastructure.cover_offers import cover_offers
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
@@ -29,6 +30,8 @@ def thesis_prompts(
             notifier=deps.notifier,
             chat_id=deps.chat_id,
             configured=deps.configured,
+            # AE-0418: preview the topic's GrokBot cover with its toggle.
+            covers=cover_offers(db),
         )
     )
 

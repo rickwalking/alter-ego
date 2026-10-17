@@ -26,6 +26,11 @@ from rag_backend.domain.models.news_quote import (
     quote_rows,
     quotes_from_rows,
 )
+from rag_backend.domain.models.slide_cover import (
+    SlideCover,
+    slide_cover_from_row,
+    slide_cover_row,
+)
 
 FK_HOOK_ASSET = "fk_carousel_projects_hook_asset"
 _ASSET_FK = "carousel_creator_assets.id"
@@ -46,6 +51,7 @@ class ContentModeFields(TypedDict):
     hook_asset_id: UUID | None
     pov_quotes: tuple[NewsQuote, ...]
     pov_sources: tuple[str, ...]
+    slide_cover: SlideCover | None
 
 
 class CarouselContentModeColumns:
@@ -78,6 +84,8 @@ class CarouselContentModeColumns:
     # AE-0406 (ADR-0023): ``pov_news`` quotes and the topic sources (NULL = none).
     pov_quotes: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, nullable=True)
     pov_sources: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    # AE-0418 (ADR-0024): the owner-chosen GrokBot cover (NULL = default slide 1).
+    slide_cover: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
 
     def content_mode_fields(self) -> ContentModeFields:
         """The entity keyword arguments for these columns."""
@@ -92,6 +100,7 @@ class CarouselContentModeColumns:
             hook_asset_id=UUID(self.hook_asset_id) if self.hook_asset_id else None,
             pov_quotes=quotes_from_rows(self.pov_quotes),
             pov_sources=_source_list(self.pov_sources),
+            slide_cover=slide_cover_from_row(self.slide_cover),
         )
 
     def write_content_mode(self, entity: CarouselProject) -> None:
@@ -107,9 +116,10 @@ class CarouselContentModeColumns:
         self.write_owner_edits(entity)
 
     def write_owner_edits(self, entity: CarouselProject) -> None:
-        """Copy only the owner-editable fields (update): hook text and photo."""
+        """Copy only the owner-editable fields (update): hook text, photo, cover."""
         self.hook_text = entity.hook_text
         self.hook_asset_id = str(entity.hook_asset_id) if entity.hook_asset_id else None
+        self.slide_cover = slide_cover_row(entity.slide_cover)
 
 
 def _source_list(raw: object) -> tuple[str, ...]:

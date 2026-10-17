@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 from pathlib import Path
 
 import httpx
@@ -38,6 +39,10 @@ from rag_backend.modules.autopilot.webhook_constants import (
 )
 
 _File = tuple[str, bytes, str]
+_RGB = "RGB"
+_JPEG_FORMAT = "JPEG"
+_JPEG_QUALITY = 90
+_JPEG_SUFFIX = ".jpg"
 
 
 def media_parts(
@@ -60,6 +65,28 @@ def media_parts(
 def photo_file(path: str) -> dict[str, _File]:
     """One JPEG part named ``photo``."""
     return {MEDIA_TYPE_PHOTO: _jpeg(path)}
+
+
+def cover_photo_file(path: str) -> dict[str, _File]:
+    """AE-0418: the stored WebP cover re-encoded as one JPEG ``photo`` part."""
+    from PIL import Image
+
+    source = Path(path)
+    buffer = BytesIO()
+    with Image.open(source) as image:
+        image.convert(_RGB).save(buffer, format=_JPEG_FORMAT, quality=_JPEG_QUALITY)
+    name = source.with_suffix(_JPEG_SUFFIX).name
+    return {MEDIA_TYPE_PHOTO: (name, buffer.getvalue(), TELEGRAM_PHOTO_MIME)}
+
+
+def photo_data(
+    notice_chat: str, caption: str, keyboard: InlineKeyboard | None
+) -> dict[str, str]:
+    """Form fields for ``sendPhoto`` with an optional inline keyboard."""
+    data = {FIELD_CHAT_ID: notice_chat, FIELD_CAPTION: caption}
+    if keyboard is not None:
+        data[FIELD_REPLY_MARKUP] = json.dumps(markup(keyboard))
+    return data
 
 
 def _jpeg(path: str) -> _File:

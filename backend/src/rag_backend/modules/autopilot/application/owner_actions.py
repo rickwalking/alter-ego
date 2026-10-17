@@ -15,6 +15,7 @@ from uuid import UUID
 
 import structlog
 
+from rag_backend.modules.autopilot.application.cover_actions import CoverOwnerActions
 from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
 )
@@ -43,6 +44,10 @@ from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
     parse_callback,
+)
+from rag_backend.modules.autopilot.domain.cover_ports import (
+    CoverChoiceStore,
+    CoverOffers,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
@@ -135,9 +140,12 @@ class OwnerActionDeps:
     topics: TopicCandidateRepository | None = None
     # AE-0404: audience and post engagement for the schedule picker.
     schedule_signals: ScheduleSignalsSource | None = None
+    # AE-0418: the GrokBot cover offer and the owner's slide-1 choice.
+    covers: CoverOffers | None = None
+    cover_choices: CoverChoiceStore | None = None
 
 
-class OwnerActionService(ThesisOwnerActions):
+class OwnerActionService(ThesisOwnerActions, CoverOwnerActions):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
@@ -169,7 +177,7 @@ class OwnerActionService(ThesisOwnerActions):
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
-        if await self._thesis_callback(update):
+        if await self._thesis_callback(update) or await self._cover_callback(update):
             return
         parsed = parse_callback(update.data)
         if parsed is None:

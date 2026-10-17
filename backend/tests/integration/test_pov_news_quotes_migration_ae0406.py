@@ -22,6 +22,7 @@ from tests.integration.test_autopilot_migration import (
 )
 
 _REVISION = "c4d5e6f7a8b9"
+_COVER_HEAD = "d5e6f7a8b9c0"
 _PARENT = "a0e4f0a4b4c4"
 _TOPICS = "topic_candidates"
 _PROJECTS = "carousel_projects"
@@ -31,7 +32,9 @@ _PROJECT_COLUMNS = {"pov_quotes", "pov_sources"}
 def test_revision_is_the_single_head_on_top_of_the_audience_hours() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_REVISION]
+    # AE-0418: the GrokBot cover revision now sits on top of this one.
+    assert list(script.get_heads()) == [_COVER_HEAD]
+    assert script.get_revision(_COVER_HEAD).down_revision == _REVISION
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

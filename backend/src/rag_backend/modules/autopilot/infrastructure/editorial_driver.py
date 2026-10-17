@@ -145,6 +145,7 @@ class InProcessEditorialDriver:
             presentation_policy_version=policy_version_for(spec),
             content_mode=spec.content_mode,
             cta_goal=DEFAULT_CTA_GOAL,
+            slide_cover=spec.cover,
             **pov_fields_for(spec),
         )
         return await self._acl.create_project(project)

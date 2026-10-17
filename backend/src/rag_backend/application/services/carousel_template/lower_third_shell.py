@@ -14,13 +14,19 @@ from rag_backend.application.services.carousel_template.slide_number import (
 )
 
 
-def render_slide_artwork(slide_number: str | int, *, alt: str = "") -> str:
-    """Render the full-bleed artwork region for a slide."""
+def render_slide_artwork(
+    slide_number: str | int, *, alt: str = "", src: str | None = None
+) -> str:
+    """Render the full-bleed artwork region for a slide.
+
+    AE-0418: ``src`` replaces the generated hero (a GrokBot ``ai_image`` cover).
+    """
     safe_number = normalize_slide_number(slide_number)
     safe_alt = html.escape(_plain_text_for_attribute(alt), quote=True)
+    image = html.escape(src or f"images/slide_{safe_number}.jpg", quote=True)
     return (
         f'  <div class="slide-artwork">\n'
-        f'    <img src="images/slide_{safe_number}.jpg" alt="{safe_alt}" />\n'
+        f'    <img src="{image}" alt="{safe_alt}" />\n'
         f"  </div>"
     )
 
@@ -34,6 +40,7 @@ class LowerThirdConfig:
     overlay_classes: str = "slide-overlay"
     footer_html: str = ""
     include_counter: bool = True
+    artwork_src: str | None = None
 
 
 def render_lower_third_shell(
@@ -46,7 +53,7 @@ def render_lower_third_shell(
         counter = format_slide_counter(safe_number, config.total_slides)
         counter_html = f'<div class="slide-hero-number">{counter}</div>'
     return (
-        f"{render_slide_artwork(safe_number, alt=config.artwork_alt)}\n"
+        f"{_artwork(safe_number, config)}\n"
         f'  <div class="{config.overlay_classes}"></div>\n'
         f'  <section class="slide-presentation" data-layout="lower-third">\n'
         f'    <div class="slide-presentation-copy slide-hero-main">\n'
@@ -55,6 +62,12 @@ def render_lower_third_shell(
         f"    </div>\n"
         f"    {config.footer_html}\n"
         f"  </section>"
+    )
+
+
+def _artwork(safe_number: str, config: LowerThirdConfig) -> str:
+    return render_slide_artwork(
+        safe_number, alt=config.artwork_alt, src=config.artwork_src
     )
 
 

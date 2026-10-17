@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from rag_backend.domain.content_mode import is_pov_family, is_pov_news
+from rag_backend.modules.autopilot.domain.cover_offer import CoverOffer, with_cover_row
 from rag_backend.modules.autopilot.domain.messages import (
     InlineButton,
     InlineKeyboard,
@@ -74,8 +75,11 @@ def parse_thesis_callback(data: str) -> ThesisCallback | None:
     return ThesisCallback(kind=match.group(1), run_id=UUID(match.group(2)))
 
 
-def thesis_keyboard(run_id: UUID) -> InlineKeyboard:
-    """Confirm, Edit and Discard for one run (each callback <=64 bytes)."""
+def thesis_keyboard(run_id: UUID, cover: CoverOffer | None = None) -> InlineKeyboard:
+    """Confirm, Edit and Discard for one run (each callback <=64 bytes).
+
+    AE-0418: a topic with a GrokBot cover adds the slide-1 toggle row.
+    """
     row = (
         InlineButton(
             text=BUTTON_THESIS_CONFIRM,
@@ -90,7 +94,7 @@ def thesis_keyboard(run_id: UUID) -> InlineKeyboard:
             callback_data=callback_data(CALLBACK_THESIS_DISCARD_PREFIX, run_id),
         ),
     )
-    return InlineKeyboard(rows=(row,))
+    return with_cover_row(InlineKeyboard(rows=(row,)), run_id, cover)
 
 
 def thesis_prompt_text(topic: TopicCandidate) -> str:

@@ -94,7 +94,7 @@ class PovInputsAcl:
         """
         if not owner_id:
             return None
-        service = _service(self._session)
+        service = creator_asset_service(self._session)
         for asset in await self._candidates(owner_id):
             if service.has_stored_file(asset):
                 return str(asset.id)
@@ -108,15 +108,17 @@ class PovInputsAcl:
             StageCreatorAssetCommand,
         )
 
-        asset = await _assets(self._session).get_by_id(project.hook_asset_id)
+        asset = await creator_assets(self._session).get_by_id(project.hook_asset_id)
         if asset is None:
             return
-        _service(self._session).stage_into_candidate_artifact(
-            StageCreatorAssetCommand(asset=asset, staging_root=_output_root(project))
+        creator_asset_service(self._session).stage_into_candidate_artifact(
+            StageCreatorAssetCommand(
+                asset=asset, staging_root=project_output_root(project)
+            )
         )
 
     async def _candidates(self, owner_id: str) -> list[CarouselCreatorAsset]:
-        library = await _assets(self._session).list_for_owner(
+        library = await creator_assets(self._session).list_for_owner(
             CreatorAssetLibraryQuery(owner_id=owner_id, role=CREATOR_ASSET_ROLE_HOOK)
         )
         by_id = {str(asset.id): asset for asset in library}
@@ -143,7 +145,7 @@ class PovInputsAcl:
         return [str(value) for value in result.scalars().all() if value is not None]
 
 
-def _assets(session: AsyncSession) -> PostgresCreatorAssetRepository:
+def creator_assets(session: AsyncSession) -> PostgresCreatorAssetRepository:
     from rag_backend.infrastructure.database.creator_asset_repository import (
         PostgresCreatorAssetRepository,
     )
@@ -151,7 +153,7 @@ def _assets(session: AsyncSession) -> PostgresCreatorAssetRepository:
     return PostgresCreatorAssetRepository(session)
 
 
-def _service(session: AsyncSession) -> CreatorAssetService:
+def creator_asset_service(session: AsyncSession) -> CreatorAssetService:
     from rag_backend.application.services.carousel.creator_asset_service import (
         CreatorAssetService,
     )
@@ -161,13 +163,13 @@ def _service(session: AsyncSession) -> CreatorAssetService:
     )
 
     return CreatorAssetService(
-        asset_repo=_assets(session),
+        asset_repo=creator_assets(session),
         carousel_repo=PostgresCarouselRepository(session),
         assets_root=Path(get_settings().carousel_creator_assets_dir),
     )
 
 
-def _output_root(project: CarouselProject) -> Path:
+def project_output_root(project: CarouselProject) -> Path:
     """Where the slides render: the output dir, else the default one."""
     from rag_backend.infrastructure.config.settings import get_settings
 
@@ -181,4 +183,10 @@ def as_uuid(value: str | None) -> UUID | None:
     return UUID(value) if value else None
 
 
-__all__ = ["PovInputsAcl", "as_uuid"]
+__all__ = [
+    "PovInputsAcl",
+    "as_uuid",
+    "creator_asset_service",
+    "creator_assets",
+    "project_output_root",
+]
