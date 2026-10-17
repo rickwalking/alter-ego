@@ -137,12 +137,34 @@ class TestCheckpointGatePhase:
             (PHASE_CONTENT, ("__unknown_node__",), PHASE_CONTENT),
         ],
     )
-    def test_gate_phase(
+    def test_gate_phase_with_an_open_interrupt(
         self, stored: str, pending: tuple[str, ...], expected: str
     ) -> None:
-        snapshot = SimpleNamespace(values={"current_phase": stored}, next=pending)
+        task = SimpleNamespace(interrupts=("review",))
+        snapshot = SimpleNamespace(
+            values={"current_phase": stored}, next=pending, tasks=(task,)
+        )
 
         assert checkpoint_gate_phase(snapshot) == expected
+
+    def test_top_level_interrupts_count_as_open(self) -> None:
+        snapshot = SimpleNamespace(
+            values={"current_phase": PHASE_OUTLINE},
+            next=(PHASE_CONTENT,),
+            interrupts=("review",),
+        )
+
+        assert checkpoint_gate_phase(snapshot) == PHASE_CONTENT
+
+    def test_parked_before_a_node_keeps_the_stored_phase(self) -> None:
+        """No interrupt is open yet (dead run / seeded checkpoint)."""
+        snapshot = SimpleNamespace(
+            values={"current_phase": PHASE_FINAL_REVIEW},
+            next=("research",),
+            tasks=(SimpleNamespace(interrupts=()),),
+        )
+
+        assert checkpoint_gate_phase(snapshot) == PHASE_FINAL_REVIEW
 
     def test_snapshot_without_values_has_no_phase(self) -> None:
         assert checkpoint_gate_phase(SimpleNamespace(values=None, next=())) == ""

@@ -15,6 +15,13 @@ from rag_backend.domain.constants.carousel_workflow import (
 _CURRENT_PHASE = "current_phase"
 
 
+def _has_open_interrupt(snapshot: object) -> bool:
+    if getattr(snapshot, "interrupts", ()) or ():
+        return True
+    tasks = getattr(snapshot, "tasks", ()) or ()
+    return any(getattr(task, "interrupts", ()) for task in tasks)
+
+
 def checkpoint_gate_phase(snapshot: object) -> str:
     """The phase of the review gate the checkpoint is parked at (AE-0413).
 
@@ -22,15 +29,16 @@ def checkpoint_gate_phase(snapshot: object) -> str:
     gate of a phase the stored ``current_phase`` still names the node before
     it (``outline`` at the first content gate). The pending node is the gate
     the reviewer sees, the same rule ``CarouselWorkflowEngine.get_state``
-    applies. The approved-hold park (AE-0288) and a finished graph keep the
-    stored value.
+    applies. Only an OPEN review interrupt makes the pending node a gate: the
+    approved-hold park (AE-0288), a finished graph and a run parked before a
+    node with no interrupt yet keep the stored value.
     """
     values = getattr(snapshot, "values", None)
     if not isinstance(values, dict):
         return ""
     stored = str(values.get(_CURRENT_PHASE, ""))
     pending_next = getattr(snapshot, "next", ()) or ()
-    if not pending_next:
+    if not pending_next or not _has_open_interrupt(snapshot):
         return stored
     node = str(pending_next[0])
     if node == PHASE_APPROVED_HOLD or node not in CAROUSEL_WORKFLOW_PHASES:

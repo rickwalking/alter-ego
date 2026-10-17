@@ -182,7 +182,9 @@ Pending.
 ## Decision Log
 
 - **Guard reads the pending gate, not the raw stored phase.** It is the phase the API shows
-  and the one the reviewer acts on; the approved hold keeps `final_review` (AE-0288).
+  and the one the reviewer acts on; the approved hold keeps `final_review` (AE-0288). Only an
+  OPEN interrupt makes the pending node a gate: a run parked before a node with no interrupt
+  (dead run, seeded test checkpoints) keeps the stored value.
 - **Manual fixes reuse the parked marker** instead of a new state flag: the marker already
   means "the next content entry reuses these artifacts" (AE-0405).
 - **Edit payloads still replace a locale payload** (no key overlay): the completed-project
