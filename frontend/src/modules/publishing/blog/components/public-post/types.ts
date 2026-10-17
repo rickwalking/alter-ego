@@ -6,6 +6,7 @@
  * live here rather than inline in the `.tsx` files.
  */
 
+import type { CSSProperties, ReactNode } from "react";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
 export interface BlogPostAdminPanelProps {
@@ -28,7 +29,8 @@ export interface SectionProps {
 export interface BlogPostHeaderProps {
   title: string;
   subtitle?: string;
-  badge: string;
+  badge?: string;
+  swipeHint: string;
   design: CarouselDesignResponse;
 }
 
@@ -43,4 +45,13 @@ export interface ResolveSlideImageOptions {
   design: CarouselDesignResponse;
   slideImages: string[];
   sectionIndex: number;
+}
+
+export interface PublicCoverImageProps {
+  src: string;
+  alt: string;
+  sizes: string;
+  frameClassName?: string;
+  frameStyle?: CSSProperties;
+  overlay?: ReactNode;
 }

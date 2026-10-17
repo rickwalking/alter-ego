@@ -20,12 +20,18 @@ from rag_backend.domain.constants import (
     BRAND_KEYWORDS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
+    LANGUAGE_PT,
     SWIPE_TEXT_EN,
 )
 from rag_backend.domain.models import CarouselProject
 
 _SAFE_IMAGE_FILENAME = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
 _SLIDE_IMAGE_FILENAME = re.compile(r"^slide_(\d+)\.jpg$")
+_PREVIEW_IMAGE_URL = re.compile(
+    r"^(?P<base>/api/carousels/[^/]+)/preview/images/(?P<file>[a-zA-Z0-9_\-\.]+)"
+    r"(?:\?lang=(?P<lang>pt|en))?$"
+)
+_IMAGE_LIST_KEYS = ("slides", "rendered_slides_pt", "rendered_slides_en")
 
 
 def _slide_image_numbers(output_dir: str | None, subdir: str) -> list[int]:
@@ -130,12 +136,44 @@ def _apply_preview_pt_urls(
     return images
 
 
+def _to_public_image_url(url: object) -> object:
+    """Map an owner-only preview image URL to the public image route."""
+    if not isinstance(url, str):
+        return url
+    match = _PREVIEW_IMAGE_URL.match(url)
+    if match is None:
+        return url
+    lang = match.group("lang") or LANGUAGE_PT
+    return f"{match.group('base')}/images/{match.group('file')}?lang={lang}"
+
+
+def _apply_public_image_urls(tokens: dict[str, object]) -> dict[str, object]:
+    """AE-0412 (QA B08): a public carousel never exposes preview image URLs.
+
+    Draft-time merges persist owner-only ``/preview/images/`` URLs into the
+    stored tokens; once the carousel is public those stored values would win
+    over the public defaults and visitors would get 401s.
+    """
+    raw_images = tokens.get("images")
+    if not isinstance(raw_images, dict):
+        return tokens
+    images = dict(raw_images)
+    images["hero"] = _to_public_image_url(images.get("hero"))
+    for key in _IMAGE_LIST_KEYS:
+        value = images.get(key)
+        if isinstance(value, list):
+            images[key] = [_to_public_image_url(item) for item in value]
+    return {**tokens, "images": images}
+
+
 def _apply_draft_preview_urls(
     project: CarouselProject,
     tokens: dict[str, object],
 ) -> dict[str, object]:
     """Use owner-scoped preview routes until the carousel is published publicly."""
-    if project.is_public or not project.output_dir:
+    if project.is_public:
+        return _apply_public_image_urls(tokens)
+    if not project.output_dir:
         return tokens
     raw_numbers = _slide_image_numbers_for_project(project, "images")
     pt_numbers = _slide_image_numbers_for_project(project, "pt")

@@ -1,8 +1,12 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { BLOG_LANGUAGES } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
 import { resolvePublicBlogView } from "@/lib/public-blog";
+import { toCategoryLabel } from "@/lib/public-blog-text";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import {
@@ -21,27 +25,71 @@ interface BlogPostPageProps {
   searchParams: Promise<{ lang?: string }>;
 }
 
+const META_DESCRIPTION_MAX_CHARS = 160;
+const META_TITLE_SEPARATOR = " · ";
+
+/** One backend round-trip per request for both the page and its metadata. */
+const loadView = cache(resolvePublicBlogView);
+
+async function resolveLang(langParam: string | undefined): Promise<string> {
+  if (
+    langParam === BLOG_LANGUAGES.ENGLISH ||
+    langParam === BLOG_LANGUAGES.PORTUGUESE
+  ) {
+    return langParam;
+  }
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("locale")?.value;
+  return localeCookie &&
+    SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
+    ? (localeCookie as SupportedLocale)
+    : DEFAULT_LOCALE;
+}
+
+function truncateDescription(text: string): string {
+  if (text.length <= META_DESCRIPTION_MAX_CHARS) return text;
+  return `${text.slice(0, META_DESCRIPTION_MAX_CHARS - 1).trimEnd()}…`;
+}
+
+/** AE-0412 (B22): per-post title/description instead of the generic site title. */
+export async function generateMetadata({
+  params,
+  searchParams,
+}: BlogPostPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const { lang } = await searchParams;
+  const view = await loadView(id, await resolveLang(lang));
+  if (!view) {
+    return {};
+  }
+  const t = await getTranslations("blog");
+  const title = `${view.title || t("untitledPost")}${META_TITLE_SEPARATOR}${t("metaTitleSuffix")}`;
+  const description = view.subtitle
+    ? truncateDescription(view.subtitle)
+    : undefined;
+  const image = view.design.images.hero || undefined;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: image ? [image] : undefined,
+    },
+  };
+}
+
 export default async function PublicBlogPostPage({
   params,
   searchParams,
 }: BlogPostPageProps) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
+  const currentLang = await resolveLang(langParam);
+  const t = await getTranslations("blog");
 
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const cookieLang: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
-
-  const currentLang =
-    langParam === BLOG_LANGUAGES.ENGLISH ||
-    langParam === BLOG_LANGUAGES.PORTUGUESE
-      ? langParam
-      : cookieLang;
-
-  const view = await resolvePublicBlogView(id, currentLang);
+  const view = await loadView(id, currentLang);
 
   if (!view) {
     notFound();
@@ -49,7 +97,8 @@ export default async function PublicBlogPostPage({
 
   const { design } = view;
   const cssVars = designTokensToCssVars(design);
-  const badge = design.layout.badge_label;
+  const badge = toCategoryLabel(design.layout.badge_label);
+  const title = view.title || t("untitledPost");
 
   const heroImageUrl = design.images.hero ?? "";
   const slideImageUrls = design.images.slides;
@@ -78,21 +127,22 @@ export default async function PublicBlogPostPage({
         />
       </div>
       <div
-        className="relative z-10 mx-auto px-6"
+        className="relative z-10 mx-auto px-4 sm:px-6"
         style={{ maxWidth: `${BLOG_POST_MAX_WIDTH_PX + 432}px` }}
       >
         <BackLink />
         <article className="mx-auto max-w-3xl">
           <BlogPostHeader
-            title={view.title}
+            title={title}
             subtitle={view.subtitle ?? undefined}
             badge={badge}
+            swipeHint={t("swipeHint")}
             design={design}
           />
           {heroImageUrl && (
             <BlogPostHero
               imageUrl={heroImageUrl}
-              title={view.title}
+              title={title}
               design={design}
             />
           )}

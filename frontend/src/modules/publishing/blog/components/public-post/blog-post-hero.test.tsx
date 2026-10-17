@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { BlogPostHero } from "./blog-post-hero";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
@@ -50,7 +50,10 @@ describe("BlogPostHero Component", () => {
       it("Then the image src points to the provided URL", () => {
         render(<BlogPostHero {...defaultProps} />);
         const img = screen.getByRole("img");
-        expect(img).toHaveAttribute("src", "/api/carousels/1/images/hero");
+        // next/image re-assigns `src` when an onError handler is set (AE-0412),
+        // which resolves it against the document origin.
+        const src = new URL(img.getAttribute("src") ?? "", "http://x");
+        expect(src.pathname).toBe("/api/carousels/1/images/hero");
       });
 
       it("Then the container has border styling from design tokens", () => {
@@ -65,6 +68,22 @@ describe("BlogPostHero Component", () => {
         const wrapper = container.firstElementChild as HTMLElement;
         expect(wrapper.style.boxShadow).toBeTruthy();
       });
+    });
+  });
+
+  // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
+  // Scenario: A missing image does not render a broken image
+  describe("Given the hero image fails to load", () => {
+    it("Then the whole hero is removed", () => {
+      const { container } = render(
+        <BlogPostHero
+          imageUrl="/missing.jpg"
+          title="Understanding Zero Trust"
+          design={MOCK_DESIGN}
+        />,
+      );
+      fireEvent.error(screen.getByRole("img"));
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });

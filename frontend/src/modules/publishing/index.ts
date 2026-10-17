@@ -118,6 +118,7 @@ export {
 } from "./blog/components/public-post/blog-post-content";
 export { BlogPostHeader } from "./blog/components/public-post/blog-post-header";
 export { BlogPostHero } from "./blog/components/public-post/blog-post-hero";
+export { PublicCoverImage } from "./blog/components/public-post/public-cover-image";
 
 /* --- distribution: hooks --- */
 export {
