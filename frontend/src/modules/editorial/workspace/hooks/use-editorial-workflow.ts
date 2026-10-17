@@ -28,6 +28,19 @@ import type {
 
 export type { EditorialReviseOptions };
 
+/**
+ * AE-0414 (B02): an edits-only revise (content manual fixes, design recovery)
+ * carries the reviewer's slide edits and no feedback. Its callers fire and
+ * forget it, so a rejection would surface as an uncaught page error; the
+ * failure is already shown through the hook's translated ``error``.
+ */
+function isEditsOnlyRevise(
+  feedback: string,
+  options?: EditorialReviseOptions,
+): boolean {
+  return !feedback.trim() && (options?.editedLocalizedSlides?.length ?? 0) > 0;
+}
+
 /** The action that started the running phase, or null when unknown. */
 function resolveRunningAction(
   state: EditorialWorkflowState | null,
@@ -184,12 +197,22 @@ export function useEditorialWorkflow(
       });
       return resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, reviseOptions);
     },
-    revise: (feedback: string, reviseOptions?: EditorialReviseOptions) => {
+    revise: (
+      feedback: string,
+      reviseOptions?: EditorialReviseOptions,
+    ): Promise<EditorialWorkflowState | null> => {
       setLastResume({
         action: EDITORIAL_REVIEW_ACTIONS.REVISE,
         phase: state?.current_phase ?? "",
       });
-      return resume(EDITORIAL_REVIEW_ACTIONS.REVISE, feedback, reviseOptions);
+      const pending = resume(
+        EDITORIAL_REVIEW_ACTIONS.REVISE,
+        feedback,
+        reviseOptions,
+      );
+      return isEditsOnlyRevise(feedback, reviseOptions)
+        ? pending.catch(() => null)
+        : pending;
     },
     runningAction: resolveRunningAction(state, lastResume),
     awaitingHumanReview:

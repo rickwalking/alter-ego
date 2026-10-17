@@ -16,34 +16,39 @@ import type {
 import {
   addressViolations,
   applySlideCopyEdit,
+  applySlideExtraEdit,
+  applySlideStructuredItemEdit,
   BlockingSlidesNotice,
   buildSlideFieldErrors,
+  changedLocalizedSlides,
   fieldErrorKey,
   focusInvalidField,
   hasBlockingContentGateValidation,
   hasBlockingPresentationViolations,
-  isWarningViolation,
   listContentReviewViolations,
-  resolveBodyBudget,
-  resolveHeadingBudget,
   resolveLocalizedSlides,
   slideDomId,
   slidesHaveCopyChanges,
   SlideViolationSummary,
+  structuredItemFieldPath,
   useSlideFieldErrors,
   violationsForSlide,
-  violationToneClasses,
   type SlideCopyEdit,
+  type SlideExtraEdit,
   type SlideFieldErrorState,
+  type SlideStructuredItemEdit,
 } from "@/modules/editorial";
 import {
   CONTENT_REVIEW_ID_PREFIX,
   ContentLocaleFields,
 } from "./content-phase-locale-fields";
+import { ContentViolationList } from "./content-phase-violations";
 
 /**
  * AE-0403: "submit manual fixes" at the content gate. Saves the edits through
  * an edits-only revise (apply + re-validate + re-interrupt); it never approves.
+ * AE-0414 (B04): ``onSubmit`` receives only the slides the reviewer changed,
+ * each exactly as edited (never clamped to a budget).
  */
 export interface ContentManualFixesActions {
   onSubmit: (slides: LocalizedSlideReview[]) => void;
@@ -145,11 +150,26 @@ export function ContentPhaseReview({
   }, [addressed, runInProgress]);
 
   const handleCopyChange = (edit: SlideCopyEdit): void => {
-    if (!onSlidesChange) {
-      return;
-    }
-    onSlidesChange(applySlideCopyEdit(localizedSlides, edit));
+    onSlidesChange?.(applySlideCopyEdit(localizedSlides, edit));
     errors.clearField(fieldErrorKey(edit.slideIndex, edit.locale, edit.field));
+  };
+
+  // AE-0414 (B11): structured items and free-text extras are editable too.
+  const handleItemChange = (edit: SlideStructuredItemEdit): void => {
+    onSlidesChange?.(applySlideStructuredItemEdit(localizedSlides, edit));
+    errors.clearField(
+      fieldErrorKey(
+        edit.slideIndex,
+        edit.locale,
+        structuredItemFieldPath(edit.listKey, edit.itemIndex, edit.field),
+      ),
+    );
+  };
+
+  const handleExtraChange = (edit: SlideExtraEdit): void => {
+    onSlidesChange?.(applySlideExtraEdit(localizedSlides, edit));
+    const path = edit.field ? `${edit.extraKey}.${edit.field}` : edit.extraKey;
+    errors.clearField(fieldErrorKey(edit.slideIndex, edit.locale, path));
   };
 
   const submitManualFixes = (): void => {
@@ -157,7 +177,9 @@ export function ContentPhaseReview({
       return;
     }
     awaitingResult.current = true;
-    manualFixes.onSubmit(localizedSlides);
+    manualFixes.onSubmit(
+      changedLocalizedSlides(baselineSlides, localizedSlides),
+    );
   };
 
   if (localizedSlides.length === 0) {
@@ -201,58 +223,17 @@ export function ContentPhaseReview({
         </NeonAlert>
       ) : null}
 
-      {violations.length > 0 ? (
-        <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-          <p className="font-medium text-destructive text-xs">
-            {t("violationsTitle")}
-          </p>
-          <ul className="space-y-1 text-xs">
-            {violations.map((violation) => {
-              const warning = isWarningViolation(violation);
-              return (
-                <li
-                  key={`${violation.code}-${violation.slide_index ?? "all"}-${violation.field ?? "field"}-${violation.locale ?? "locale"}`}
-                  className={violationToneClasses(violation)}
-                >
-                  <span className="mr-1 font-medium uppercase tracking-wide">
-                    {warning
-                      ? t("violationSeverityWarning")
-                      : t("violationSeverityBlocker")}
-                  </span>
-                  <span className="font-mono">{violation.code}</span>
-                  {violation.slide_index
-                    ? ` · ${t("slideLabel", { index: violation.slide_index })}`
-                    : ""}
-                  {violation.locale
-                    ? ` · ${violation.locale.toUpperCase()}`
-                    : ""}
-                  {violation.field ? ` · ${violation.field}` : ""}
-                  {": "}
-                  {violation.message}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+      <ContentViolationList violations={addressed} />
 
       <div className="space-y-3">
         {localizedSlides.map((slide) => {
-          const budgets = {
-            heading: resolveHeadingBudget(
-              slide.slide_type,
-              state.presentation_policy_version,
-            ),
-            body: resolveBodyBudget(
-              slide.slide_type,
-              state.presentation_policy_version,
-            ),
-          };
           const localeProps = {
             slide,
-            budgets,
+            policyVersion: state.presentation_policy_version,
             fieldErrors: errors.fieldErrors,
             onCopyChange: canEdit ? handleCopyChange : undefined,
+            onStructuredItemChange: canEdit ? handleItemChange : undefined,
+            onExtraChange: canEdit ? handleExtraChange : undefined,
           };
 
           return (

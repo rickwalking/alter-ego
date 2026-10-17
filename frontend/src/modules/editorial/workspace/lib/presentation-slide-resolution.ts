@@ -76,11 +76,54 @@ export function applySlideStructuredItemEdit(
   });
 }
 
-function localeCopySignature(presentation: Record<string, unknown>): string {
-  const heading =
-    typeof presentation.heading === "string" ? presentation.heading : "";
-  const body = typeof presentation.body === "string" ? presentation.body : "";
-  return `${heading}\u0000${body}`;
+/**
+ * AE-0414: free-text structured extras the content review can edit — a string
+ * (``tldr_strip``, the CTA ``creator_*`` fields) or one ``title``/``body`` of an
+ * object extra (``insight``). Lists use ``SlideStructuredItemEdit``.
+ */
+export interface SlideExtraEdit {
+  slideIndex: number;
+  locale: PresentationLocaleKey;
+  extraKey: string;
+  field?: string;
+  value: string;
+}
+
+function nextExtraValue(current: unknown, edit: SlideExtraEdit): unknown {
+  if (edit.field === undefined) {
+    return edit.value;
+  }
+  if (!current || typeof current !== "object" || Array.isArray(current)) {
+    return current;
+  }
+  return { ...(current as Record<string, unknown>), [edit.field]: edit.value };
+}
+
+export function applySlideExtraEdit(
+  slides: LocalizedSlideReview[],
+  edit: SlideExtraEdit,
+): LocalizedSlideReview[] {
+  return slides.map((slide) => {
+    if (slide.slide_index !== edit.slideIndex) {
+      return slide;
+    }
+    const presentation = slide[edit.locale];
+    return {
+      ...slide,
+      [edit.locale]: {
+        ...presentation,
+        [edit.extraKey]: nextExtraValue(presentation[edit.extraKey], edit),
+      },
+    };
+  });
+}
+
+/**
+ * AE-0414: a slide's full reviewable copy (both locales, every field — heading,
+ * body, structured items and extras), so an edit anywhere counts as a change.
+ */
+function slideCopySignature(slide: LocalizedSlideReview): string {
+  return JSON.stringify([slide.presentation_pt, slide.presentation_en]);
 }
 
 export function slidesHaveCopyChanges(
@@ -92,26 +135,36 @@ export function slidesHaveCopyChanges(
   }
   return original.some((slide, index) => {
     const counterpart = edited[index];
-    if (slide.slide_index !== counterpart.slide_index) {
-      return true;
-    }
     return (
-      localeCopySignature(slide.presentation_pt) !==
-        localeCopySignature(counterpart.presentation_pt) ||
-      localeCopySignature(slide.presentation_en) !==
-        localeCopySignature(counterpart.presentation_en)
+      slide.slide_index !== counterpart.slide_index ||
+      slideCopySignature(slide) !== slideCopySignature(counterpart)
     );
   });
 }
 
-function localizedSlidesLookMalformed(slides: LocalizedSlideReview[]): boolean {
-  return slides.some((slide) => {
-    const body = presentationBody(slide.presentation_pt);
-    const heading = presentationHeading(slide.presentation_pt, "");
-    return (
-      body.trim().startsWith("{") || (body.includes("'pt'") && !heading.trim())
-    );
-  });
+/**
+ * AE-0414: the slides the reviewer actually changed, sent verbatim (never
+ * clamped or trimmed). The backend merges edits by ``slide_index``, so an
+ * untouched slide is never round-tripped and can never be overwritten.
+ */
+export function changedLocalizedSlides(
+  original: LocalizedSlideReview[],
+  edited: LocalizedSlideReview[],
+): LocalizedSlideReview[] {
+  const baseline = new Map(
+    original.map((slide) => [slide.slide_index, slideCopySignature(slide)]),
+  );
+  return edited.filter(
+    (slide) => baseline.get(slide.slide_index) !== slideCopySignature(slide),
+  );
+}
+
+function localizedSlideLooksMalformed(slide: LocalizedSlideReview): boolean {
+  const body = presentationBody(slide.presentation_pt);
+  const heading = presentationHeading(slide.presentation_pt, "");
+  return (
+    body.trim().startsWith("{") || (body.includes("'pt'") && !heading.trim())
+  );
 }
 
 function hasStructuredPresentation(
@@ -130,82 +183,85 @@ function hasStructuredPresentation(
   );
 }
 
-function localizedSlidesFromDraftPresentations(
-  state: EditorialWorkflowState,
-): LocalizedSlideReview[] {
-  return state.slide_drafts.flatMap((slide, index) => {
-    if (
-      !hasStructuredPresentation(slide.presentation_pt) ||
-      !hasStructuredPresentation(slide.presentation_en)
-    ) {
-      return [];
-    }
-    const presentationPt = slide.presentation_pt;
-    const presentationEn = slide.presentation_en;
-    const slideIndex =
-      typeof slide.slide_index === "number" ? slide.slide_index : index + 1;
-    const slideType =
-      typeof slide.slide_type === "string"
-        ? slide.slide_type
-        : typeof slide.type === "string"
-          ? slide.type
-          : "content";
-    return [
-      {
-        slide_index: slideIndex,
-        slide_type: slideType,
-        presentation_pt: presentationPt,
-        presentation_en: presentationEn,
-      },
-    ];
-  });
+type SlideDraft = EditorialWorkflowState["slide_drafts"][number];
+
+function draftSlideIndex(slide: SlideDraft, position: number): number {
+  return typeof slide.slide_index === "number"
+    ? slide.slide_index
+    : position + 1;
 }
 
+function draftSlideType(slide: SlideDraft): string {
+  if (typeof slide.slide_type === "string") {
+    return slide.slide_type;
+  }
+  return typeof slide.type === "string" ? slide.type : "content";
+}
+
+function firstString(...values: unknown[]): string {
+  const found = values.find((value) => typeof value === "string");
+  return typeof found === "string" ? found : "";
+}
+
+/** A draft's legacy flat copy (``heading``/``title`` + ``body``/``draft_text``). */
+function legacyDraftPresentation(
+  slide: SlideDraft,
+  slideType: string,
+): Record<string, unknown> {
+  return {
+    slide_type: slideType,
+    heading: firstString(slide.heading, slide.title),
+    body: firstString(slide.body, slide.draft_text),
+  };
+}
+
+function slideFromDraft(
+  slide: SlideDraft,
+  position: number,
+): LocalizedSlideReview {
+  const slideType = draftSlideType(slide);
+  const legacy = legacyDraftPresentation(slide, slideType);
+  return {
+    slide_index: draftSlideIndex(slide, position),
+    slide_type: slideType,
+    presentation_pt: hasStructuredPresentation(slide.presentation_pt)
+      ? slide.presentation_pt
+      : legacy,
+    presentation_en: hasStructuredPresentation(slide.presentation_en)
+      ? slide.presentation_en
+      : legacy,
+  };
+}
+
+/**
+ * AE-0414 (B10): every slide of the deck, resolved PER SLIDE INDEX.
+ *
+ * ``state.localized_slides`` is the copy the validator checks (violations point
+ * at it), the repair endpoint rewrites and manual edits merge into, so it wins
+ * for each slide it carries in good shape. A slide missing from it, or whose
+ * localized copy is malformed (raw JSON body), falls back to its draft
+ * (structured ``presentation_*`` per locale, else the legacy flat copy). A
+ * draft without presentations no longer drops its slide from the editor.
+ */
 export function resolveLocalizedSlides(
   state: EditorialWorkflowState,
 ): LocalizedSlideReview[] {
-  const fromDraftPresentations = localizedSlidesFromDraftPresentations(state);
-  if (fromDraftPresentations.length > 0) {
-    return fromDraftPresentations;
-  }
-  if (
-    state.localized_slides &&
-    state.localized_slides.length > 0 &&
-    !localizedSlidesLookMalformed(state.localized_slides)
-  ) {
-    return state.localized_slides;
-  }
-  return state.slide_drafts.map((slide, index) => {
-    const slideIndex =
-      typeof slide.slide_index === "number" ? slide.slide_index : index + 1;
-    const slideType =
-      typeof slide.slide_type === "string"
-        ? slide.slide_type
-        : typeof slide.type === "string"
-          ? slide.type
-          : "content";
-    const heading =
-      typeof slide.heading === "string"
-        ? slide.heading
-        : typeof slide.title === "string"
-          ? slide.title
-          : "";
-    const body =
-      typeof slide.body === "string"
-        ? slide.body
-        : typeof slide.draft_text === "string"
-          ? slide.draft_text
-          : "";
-    const presentation = {
-      slide_type: slideType,
-      heading,
-      body,
-    };
-    return {
-      slide_index: slideIndex,
-      slide_type: slideType,
-      presentation_pt: presentation,
-      presentation_en: presentation,
-    };
+  const bySlide = new Map<number, LocalizedSlideReview>();
+  state.slide_drafts.forEach((slide, position) => {
+    const resolved = slideFromDraft(slide, position);
+    bySlide.set(resolved.slide_index, resolved);
   });
+  for (const slide of state.localized_slides ?? []) {
+    // A malformed localized slide only yields to a draft that exists; it is
+    // still shown (never dropped) when it is the slide's only source.
+    if (
+      !localizedSlideLooksMalformed(slide) ||
+      !bySlide.has(slide.slide_index)
+    ) {
+      bySlide.set(slide.slide_index, slide);
+    }
+  }
+  return [...bySlide.values()].sort(
+    (left, right) => left.slide_index - right.slide_index,
+  );
 }

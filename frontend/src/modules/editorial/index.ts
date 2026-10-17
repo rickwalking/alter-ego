@@ -106,6 +106,10 @@ export {
   type SlideFieldErrors,
 } from "./workspace/lib/slide-field-errors";
 export { useSlideFieldErrors } from "./workspace/hooks/use-slide-field-errors";
+export {
+  useFieldErrorMessage,
+  useViolationFieldLabel,
+} from "./workspace/hooks/use-field-error-message";
 export type { SlideFieldErrorState } from "./workspace/hooks/types";
 
 /* --- workspace: presentation review utilities --- */
@@ -117,11 +121,6 @@ export {
   presentationBody,
   resolveSlideDraftTitle,
   resolveSlideDraftPreview,
-  resolveHeadingBudget,
-  resolveBodyBudget,
-  formatBudgetUsage,
-  isBudgetExceeded,
-  localizedSlidesHaveBudgetViolations,
   isPresentationStructuredItem,
   isPresentationStructuredItemList,
   listPresentationStructuredItems,
@@ -139,8 +138,21 @@ export {
   VIOLATION_SEVERITY_WARNING,
   VIOLATION_SEVERITY_BLOCKER,
   type PresentationStructuredItem,
-  type PresentationFieldBudget,
 } from "./workspace/lib/presentation-review-utils";
+
+/* --- workspace: presentation copy budgets (AE-0414: every policy version) --- */
+export {
+  resolveHeadingBudget,
+  resolveBodyBudget,
+  resolveItemBudget,
+  resolveExtraBudget,
+  measureBudgetUsage,
+  formatBudgetUsage,
+  isBudgetExceeded,
+  localizedSlidesHaveBudgetViolations,
+  type BudgetUsage,
+  type PresentationFieldBudget,
+} from "./workspace/lib/presentation-copy-budgets";
 
 /* --- workspace: pov_news quote card (AE-0407) --- */
 export {
@@ -157,15 +169,25 @@ export {
 /* --- workspace: localized slide resolution + copy editing --- */
 export {
   applySlideCopyEdit,
+  applySlideExtraEdit,
   applySlideStructuredItemEdit,
+  changedLocalizedSlides,
   slidesHaveCopyChanges,
   resolveLocalizedSlides,
+  type SlideExtraEdit,
   type PresentationLocaleKey,
   type EditableCopyField,
   type SlideCopyEdit,
   type SlideStructuredItemEdit,
   type StructuredItemField,
 } from "./workspace/lib/presentation-slide-resolution";
+
+/* --- workspace: per-locale emphasis convention (AE-0414) --- */
+export {
+  EMPHASIS_EXAMPLE_BY_LOCALE,
+  emphasisConventionMismatch,
+  normalizeEmphasis,
+} from "./workspace/lib/presentation-emphasis";
 
 /* --- workflow: types --- */
 export type { ReviewAssignmentPayload, ContentLock } from "./workflow/types";
