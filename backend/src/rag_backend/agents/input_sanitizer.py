@@ -8,31 +8,55 @@ from rag_backend.domain.constants.input_sanitizer import (
 )
 from rag_backend.domain.copy_sanitize import sanitize_model_copy
 
+_INJECTION_RE = re.compile(
+    "|".join(re.escape(pattern) for pattern in INJECTION_PATTERNS),
+    flags=re.IGNORECASE,
+)
+
+
+def _strip_injection_patterns(value: str) -> str:
+    """Remove injection phrases case-insensitively until none is left.
+
+    Repeats so a phrase rebuilt by a removal ("ignore previous ignore previous
+    instructions instructions") is removed too. Case is preserved.
+    """
+    cleaned = value
+    while True:
+        stripped = _INJECTION_RE.sub("", cleaned)
+        if stripped == cleaned:
+            return cleaned
+        cleaned = stripped
+
+
+def _harden(value: str) -> str:
+    cleaned = value.replace("<", "").replace(">", "").replace("(", "").replace(")", "")
+    return _strip_injection_patterns(cleaned)[:MAX_LLM_INPUT_LENGTH].strip()
+
 
 def sanitize_llm_input(value: str) -> str:
-    """Strip injection-prone characters and patterns from user-provided text."""
-    cleaned = value.replace("<", "").replace(">", "").replace("(", "").replace(")", "")
-    lowered = cleaned.lower()
-    for pattern in INJECTION_PATTERNS:
-        lowered = lowered.replace(pattern, "")
-    cleaned = lowered[:MAX_LLM_INPUT_LENGTH]
-    return cleaned.strip()
+    """Strip injection-prone characters and patterns from text fed to an LLM.
+
+    AE-0413: this used to lowercase the whole text (the patterns were matched
+    on a lowercased copy). Topic, brief, audience and reviewer feedback reached
+    the outline and drafting prompts in lowercase, and the model mirrored it:
+    about 30 sentence-case blockers per run. The anti-injection intent is kept
+    (``< > ( )`` stripped, injection phrases removed case-insensitively,
+    length capped); only the case is preserved now. Same hardening as
+    :func:`sanitize_display_input` (AE-0289).
+    """
+    return _harden(value)
 
 
 def sanitize_display_input(value: str) -> str:
     """Sanitize user-edited FINAL published copy while PRESERVING case (AE-0289).
 
-    ``sanitize_llm_input`` lowercases text because it hardens strings that are fed
-    back into an LLM prompt. Edited carousel slide copy is final display content,
-    not prompt input — lowercasing it corrupts headings/acronyms/proper nouns and
-    breaks sentence-case validation (``heading_not_sentence_case_en``). This keeps
-    the same injection defenses (strip ``< > ( )`` and injection patterns, cap
-    length) but leaves case intact by matching patterns case-insensitively.
+    Edited carousel slide copy is final display content; lowercasing it
+    corrupted headings, acronyms and proper nouns and broke sentence-case
+    validation. Since AE-0413 :func:`sanitize_llm_input` preserves case too, so
+    both apply the same hardening: strip ``< > ( )`` and injection patterns
+    (case-insensitively) and cap the length.
     """
-    cleaned = value.replace("<", "").replace(">", "").replace("(", "").replace(")", "")
-    for pattern in INJECTION_PATTERNS:
-        cleaned = re.sub(re.escape(pattern), "", cleaned, flags=re.IGNORECASE)
-    return cleaned[:MAX_LLM_INPUT_LENGTH].strip()
+    return _harden(value)
 
 
 _HTML_TAG_RE = re.compile(r"<[^>]*>")

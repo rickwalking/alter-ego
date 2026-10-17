@@ -16,6 +16,9 @@ from typing import cast
 
 from typing_extensions import deprecated
 
+from rag_backend.api.routes.carousels.editorial_workflow_routes_feedback import (
+    phase_feedback_history_field,
+)
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStateResponse,
     LocalizedSlideReview,
@@ -29,11 +32,12 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.application.services.carousel.workflow_state_sanitize import (
-    SanitizeWorkflowStateCommand,
+    read_only_sanitize_command,
     sanitize_workflow_state_artifacts,
 )
 from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
+from rag_backend.domain.constants.content_feedback import STATE_FIELD_FEEDBACK_HISTORY
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_BLOCKING,
@@ -265,6 +269,7 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     (STATE_FIELD_LINKEDIN_POST_EN, _string_field(STATE_FIELD_LINKEDIN_POST_EN)),
     (STATE_FIELD_RUBRIC_SCORES, _dict_field(STATE_FIELD_RUBRIC_SCORES)),
     (STATE_FIELD_PHASE_FEEDBACK, _string_list_map_field(STATE_FIELD_PHASE_FEEDBACK)),
+    (STATE_FIELD_FEEDBACK_HISTORY, phase_feedback_history_field),
     (STATE_FIELD_REVISION_COUNT, _int_map_field(STATE_FIELD_REVISION_COUNT)),
     (
         STATE_FIELD_LOCALIZED_SLIDES,
@@ -295,8 +300,8 @@ def build_editorial_workflow_state_response(
     lock_version: int = 1,
 ) -> EditorialWorkflowStateResponse:
     """Build a typed API response from a raw workflow state dictionary."""
-    command = SanitizeWorkflowStateCommand(state=state)
-    sanitized = sanitize_workflow_state_artifacts(command)
+    # AE-0413: a GET is read-only (stored copy, report and policy version).
+    sanitized = sanitize_workflow_state_artifacts(read_only_sanitize_command(state))
     kwargs: dict[str, object] = {name: get(sanitized) for name, get in _FIELD_MAPPING}
     kwargs[STATE_FIELD_PHASE_PROGRESS] = _resolve_phase_progress(
         sanitized, phase_progress

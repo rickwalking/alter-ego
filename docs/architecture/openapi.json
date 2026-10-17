@@ -4012,6 +4012,16 @@
             "title": "Phase Feedback",
             "type": "object"
           },
+          "phase_feedback_history": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/PhaseFeedbackHistoryEntryResponse"
+              },
+              "type": "array"
+            },
+            "title": "Phase Feedback History",
+            "type": "object"
+          },
           "phase_progress": {
             "anyOf": [
               {
@@ -5654,6 +5664,40 @@
         "title": "Phase5MigrationResponse",
         "type": "object"
       },
+      "PhaseFeedbackHistoryEntryResponse": {
+        "description": "A consumed reviewer note (AE-0405 lifecycle, exposed by AE-0413).\n\n``status`` is ``applied`` (a regeneration used it), ``dropped`` (a stale\nautopilot note) or ``migrated`` (a legacy note).",
+        "properties": {
+          "added_at": {
+            "title": "Added At",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "settled_at": {
+            "title": "Settled At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note",
+          "source",
+          "added_at",
+          "status",
+          "settled_at"
+        ],
+        "title": "PhaseFeedbackHistoryEntryResponse",
+        "type": "object"
+      },
       "PlagiarismCheckResponse": {
         "description": "Response from plagiarism detection.",
         "properties": {
@@ -6162,6 +6206,110 @@
         "title": "QualityRubricUpdate",
         "type": "object"
       },
+      "QuoteProposal": {
+        "additionalProperties": false,
+        "description": "AE-0406 (spec \u00a74): one verified quote of a post sent through x-signals.\n\nUnknown keys are a 422 for the batch. Every other rule is a domain rule\nthat rejects only this topic, with its reason code and ``field``,\nincluding a missing or blank field (PR #124 review: ``quote_invalid``,\n``quotes[i].<name>``), so every field defaults to None here.",
+        "properties": {
+          "excerpt": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "lang_original": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lang Original"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "text_en": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text En"
+          },
+          "text_pt": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Pt"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "QuoteProposal",
+        "type": "object"
+      },
       "RefreshDesignTokensResponse": {
         "properties": {
           "errors": {
@@ -6195,8 +6343,23 @@
       },
       "RejectedTopic": {
         "additionalProperties": false,
-        "description": "A proposal the intake did not queue, with a stable reason code.",
+        "description": "A proposal the intake did not queue, with a stable reason code.\n\nAE-0406: ``index`` (position in the request) is always present; ``field``\nonly when one field caused the rejection (the route drops it otherwise).",
         "properties": {
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
           "reason": {
             "title": "Reason",
             "type": "string"
@@ -6207,6 +6370,7 @@
           }
         },
         "required": [
+          "index",
           "title",
           "reason"
         ],
@@ -7496,7 +7660,7 @@
           },
           "mode": {
             "default": "news_analysis",
-            "pattern": "^(news_analysis|pov)$",
+            "pattern": "^(news_analysis|pov|pov_news)$",
             "title": "Mode",
             "type": "string"
           },
@@ -7516,6 +7680,14 @@
               }
             ],
             "title": "Pov Format"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteProposal"
+            },
+            "maxItems": 10,
+            "title": "Quotes",
+            "type": "array"
           },
           "score": {
             "maximum": 100.0,

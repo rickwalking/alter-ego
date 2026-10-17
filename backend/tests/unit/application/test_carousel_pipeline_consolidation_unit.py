@@ -107,7 +107,7 @@ class TestGenerateCarouselTool:
         assert project_id == str(created.id)
         assert "ignore previous instructions" not in workflow_request.topic
         assert workflow_request.topic == ""
-        assert workflow_request.audience == "developers"
+        assert workflow_request.audience == "Developers"  # AE-0413: case kept
         assert workflow_request.brief == workflow_request.topic
         assert workflow_request.source_urls == []
 

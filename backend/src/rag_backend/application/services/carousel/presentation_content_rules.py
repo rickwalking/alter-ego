@@ -12,7 +12,8 @@ v1 project keeps its legacy semantics:
 - ``emphasis_markup_invalid``: visible copy uses an HTML tag other than
   ``<strong>``, unbalanced/nested ``<strong>`` tags, or the bare ``strong ...
   /strong`` residue a tag-stripping sanitizer leaves behind.
-- ``translation_not_english``: the EN heading/body is the PT copy pasted as-is.
+- ``translation_not_english``: the EN heading/body is the PT copy pasted as-is,
+  or is still Portuguese (AE-0413).
 """
 
 from __future__ import annotations
@@ -21,6 +22,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel.owner_autofix_text import (
+    looks_portuguese,
+)
 from rag_backend.application.services.carousel.presentation_policy_types import (
     CarouselPresentationPolicy,
 )
@@ -40,6 +44,7 @@ from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_EMPHASIS_MARKUP_INVALID,
     VIOLATION_SUMMARY_POINTS_MISSING,
     VIOLATION_TRANSLATION_NOT_ENGLISH,
+    VIOLATION_WRONG_LANGUAGE,
 )
 from rag_backend.domain.models.carousel_presentation import (
     SlideValidationViolation,
@@ -252,13 +257,27 @@ def translation_violations(
         policy=command.policy,
         slide_index=command.slide_index,
     )
-    violations: list[SlideValidationViolation] = []
-    for field in (_FIELD_HEADING, _FIELD_BODY):
-        english = _normalized(text_of(command.en_payload, field))
-        portuguese = _normalized(text_of(command.pt_payload, field))
-        if len(english) >= MIN_UNTRANSLATED_COMPARE_CHARS and english == portuguese:
-            violations.append(_violation(rule_command, code, field))
-    return violations
+    return [
+        _violation(rule_command, code, field)
+        for field in (_FIELD_HEADING, _FIELD_BODY)
+        if _untranslated(command, field)
+    ]
+
+
+def _untranslated(command: TranslationCheckCommand, field: str) -> bool:
+    """EN copy pasted from PT, or EN copy that is still Portuguese (AE-0413).
+
+    The second half is the autofix's ``looks_portuguese`` rule, so a policy
+    without the ``wrong_language`` rule (v3) still flags Portuguese EN copy.
+    """
+    raw_english = text_of(command.en_payload, field)
+    english = _normalized(raw_english)
+    portuguese = _normalized(text_of(command.pt_payload, field))
+    if len(english) >= MIN_UNTRANSLATED_COMPARE_CHARS and english == portuguese:
+        return True
+    if VIOLATION_WRONG_LANGUAGE in command.policy.rule_severities:
+        return False  # wrong_language reports it (no duplicate violation)
+    return looks_portuguese(raw_english)
 
 
 __all__ = [

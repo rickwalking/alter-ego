@@ -48,6 +48,27 @@ slide copy.
    - An active autopilot note is `dropped` when the content gate is approved, because the
      reason it was written for no longer holds.
 
+## Manual fixes and the content gate phase (AE-0413)
+
+- **The first content gate accepts manual fixes.** The content node is interrupted, so its
+  return value is never committed: on the first content gate the stored `current_phase`
+  still said `outline`, and the structured-feedback guard (`read_checkpoint_phase`) 422'd
+  `edited_localized_slides` (`edited_localized_slides_phase_not_allowed`). The guard now reads
+  the phase of the gate the graph is parked at (`checkpoint_gate_phase`: the pending node,
+  except the approved hold), and the parked content checkpoint stores `current_phase=content`.
+- **Manual fixes apply and re-validate only.** A revise that carries only
+  `edited_localized_slides` (no new note, no send-back) sets `content_artifacts_parked` when
+  the node finishes, so the next content entry reuses the edited, re-validated copy. Before,
+  the re-entry ran the content ensure: it rebuilt every localized slide from the PT drafts
+  (EN fell back to the PT copy, structured items were dropped) and re-drafted blocking slides
+  with the LLM. A revise with a new note still regenerates (with the edits as the previous
+  drafts). Log: `content_manual_fixes_kept`.
+- **A content re-entry without regeneration keeps the stored EN translations**
+  (`translations_en`); the fail-closed single-slide re-draft receives the active notes.
+- **Where a used note goes.** `phase_feedback.content` lists the *active* notes only, so it is
+  `[]` after a revision used the note. The state response now also serves
+  `phase_feedback_history` (`{phase: [{note, source, added_at, status, settled_at}]}`).
+
 Logs: `content_feedback_applied`, `content_feedback_settled`, `content_artifacts_parked` and
 `content_artifacts_replay_reused`.
 

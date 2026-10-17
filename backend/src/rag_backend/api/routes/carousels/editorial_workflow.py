@@ -302,12 +302,14 @@ async def resume_editorial_workflow(
             db=db, project_id=str(project_id), project_title=project.topic
         ),
     )
+    # AE-0413: validate the structured feedback BEFORE bumping the lock: a 422
+    # after the bump left the client on a stale version and reset its edits.
+    await ensure_structured_feedback_allowed(engine, str(project_id), body)
     new_lock_version = await bump_resume_lock_version(
         db,
         str(project_id),
         body.expected_version,
     )
-    await ensure_structured_feedback_allowed(engine, str(project_id), body)
     current_phase = await handlers.mark_resume_in_progress(engine, str(project_id))
     schedule_background_resume(
         engine,
