@@ -198,6 +198,10 @@ class BlogPostCrudPort(Protocol):
         """List blog summaries + the total count (legacy ``list_summaries``)."""
         ...
 
+    async def public_post_ids(self, post_ids: list[str]) -> frozenset[str]:
+        """Subset of ``post_ids`` that pass the public-visibility rule (AE-0411)."""
+        ...
+
 
 class CarouselReleasePort(Protocol):
     """Public-release (``is_public``) write contract for a carousel project.

@@ -1115,7 +1115,8 @@
         "approved": "Aprovado",
         "published": "Publicado",
         "archived": "Arquivado",
-        "unknown": "Desconhecido"
+        "unknown": "Desconhecido",
+        "notLive": "Aguardando publicação do carrossel"
       },
       "fields": {
         "title": "Título",
@@ -1154,7 +1155,26 @@
       "errors": {
         "versionConflict": "Este post foi alterado em outra sessão. A lista foi atualizada — tente novamente.",
         "carouselDeleteBlocked": "Este post vem de um carrossel e não pode ser excluído enquanto vinculado. Oculte-o ou exclua o projeto de carrossel.",
-        "actionFailed": "A ação falhou. Tente novamente."
+        "actionFailed": "A ação falhou. Tente novamente.",
+        "loadFailed": "Não foi possível carregar os posts. Recarregue a página para tentar de novo.",
+        "createFailed": "Não foi possível criar o post. Tente de novo.",
+        "slugConflict": "Outro post já usa este slug. Escolha um diferente.",
+        "loadPostFailed": "Não foi possível carregar este post. Recarregue a página para tentar de novo.",
+        "saveFailed": "Não foi possível salvar o post. Tente de novo.",
+        "saveConflict": "Este post foi alterado em outra sessão. Recarregue a página para ver a versão mais recente e refaça a edição.",
+        "saveValidation": "O servidor recusou as alterações. Confira o título e o resumo."
+      },
+      "breadcrumbAll": "todos os posts",
+      "newPost": "Novo Post",
+      "untitledDraft": "Rascunho sem título",
+      "countOne": "{count} post",
+      "countOther": "{count} posts",
+      "countOfTotal": "{count} de {total} posts",
+      "notLiveHint": "Salvo como publicado, mas só aparece para os leitores quando o carrossel for publicado no site.",
+      "validation": {
+        "titleRequired": "O título é obrigatório.",
+        "titleTooLong": "O título pode ter no máximo {max} caracteres.",
+        "excerptTooLong": "O resumo pode ter no máximo {max} caracteres."
       }
     },
     "analytics": {

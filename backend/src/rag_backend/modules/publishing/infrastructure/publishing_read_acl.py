@@ -80,6 +80,9 @@ from rag_backend.modules.publishing.domain.projections import (
     CarouselBlogI18nProjection,
     CarouselBlogProjection,
 )
+from rag_backend.modules.publishing.infrastructure.public_visibility import (
+    public_blog_post_ids,
+)
 from rag_backend.modules.publishing.infrastructure.read_projection_helpers import (
     extract_first_paragraph,
     extract_title_and_subtitle,
@@ -245,6 +248,10 @@ class PublishingReadAcl:
                 offset=query.offset,
             ),
         )
+
+    async def public_post_ids(self, post_ids: list[str]) -> frozenset[str]:
+        """Subset of ``post_ids`` passing the public-visibility rule (AE-0411)."""
+        return await public_blog_post_ids(self._session, post_ids)
 
     # --- internal read helpers ------------------------------------------------
     async def _carousel_blog_row(self, project_id: str) -> BlogPostModel | None:

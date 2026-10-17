@@ -158,6 +158,10 @@ class AclBlogPostCrudAdapter:
         """List blog summaries + total count via the read ACL."""
         return await self._acl.list_summaries(query)
 
+    async def public_post_ids(self, post_ids: list[str]) -> frozenset[str]:
+        """Subset of ``post_ids`` readable anonymously, via the read ACL."""
+        return await self._acl.public_post_ids(post_ids)
+
 
 __all__ = [
     "AclBlogPostCrudAdapter",
