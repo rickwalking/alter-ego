@@ -269,6 +269,7 @@
           "excerpt": {
             "anyOf": [
               {
+                "maxLength": 500,
                 "type": "string"
               },
               {
@@ -742,6 +743,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_public": {
+            "default": false,
+            "title": "Is Public",
+            "type": "boolean"
+          },
           "keywords": {
             "items": {
               "type": "string"
@@ -893,6 +899,7 @@
           "excerpt": {
             "anyOf": [
               {
+                "maxLength": 500,
                 "type": "string"
               },
               {
@@ -11028,7 +11035,7 @@
     },
     "/api/carousels/{project_id}/images/{filename}": {
       "get": {
-        "description": "Serve a raw hero image (from <output>/images/).",
+        "description": "Serve a public carousel image.\n\nResolves the raw image (``<output>/images/``) first, then the rendered slide\nof ``lang`` (standard, then HD) \u2014 the same fallback the owner-only preview\nroute uses, so a public page never 404s on an image the owner can see\n(AE-0412, QA B08).",
         "operationId": "get_carousel_image_api_carousels__project_id__images__filename__get",
         "parameters": [
           {
@@ -11047,6 +11054,17 @@
             "required": true,
             "schema": {
               "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Lang",
               "type": "string"
             }
           }
