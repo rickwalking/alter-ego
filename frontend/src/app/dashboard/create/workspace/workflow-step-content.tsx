@@ -11,6 +11,7 @@ import {
 } from "@/app/dashboard/create/step-ids";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { useEditorialWorkflow } from "@/modules/editorial";
+import { usePhaseLabel } from "./editorial-phase-labels";
 
 export interface WorkflowStepContentProps {
   project: CarouselProjectResponse;
@@ -34,6 +35,7 @@ export function WorkflowStepContent({
   onPublished,
 }: WorkflowStepContentProps): React.ReactElement {
   const t = useTranslations("create");
+  const phaseLabel = usePhaseLabel();
   const workflowStepId = resolveStepFromWorkflowPhase(
     editorialWorkflow.state?.current_phase,
   );
@@ -55,7 +57,7 @@ export function WorkflowStepContent({
           }}
         >
           {t("futureStep", {
-            phase: editorialWorkflow.state?.current_phase ?? "—",
+            phase: phaseLabel(editorialWorkflow.state?.current_phase),
           })}
         </p>
       ) : null}

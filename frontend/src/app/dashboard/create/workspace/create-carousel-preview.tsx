@@ -181,6 +181,15 @@ function PreviewSlides({
   );
 }
 
+const TEMPLATE_VERSION_PREFIX = "v";
+
+/** AE-0415 (B33): "v2" stays "v2" (the stored value may already carry the v). */
+function formatTemplateVersion(version: string): string {
+  return version.toLowerCase().startsWith(TEMPLATE_VERSION_PREFIX)
+    ? version
+    : `${TEMPLATE_VERSION_PREFIX}${version}`;
+}
+
 function PreviewHeader({ project }: CarouselPreviewProps): React.ReactElement {
   return (
     <div className="p-4 space-y-3">
@@ -190,7 +199,7 @@ function PreviewHeader({ project }: CarouselPreviewProps): React.ReactElement {
         </span>
         {project.template_version && (
           <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 font-medium text-xs text-[var(--color-primary)]">
-            v{project.template_version}
+            {formatTemplateVersion(project.template_version)}
           </span>
         )}
       </div>

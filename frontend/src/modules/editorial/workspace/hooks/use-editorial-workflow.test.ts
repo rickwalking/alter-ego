@@ -378,11 +378,18 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
+  // AE-0415 (B15): a same-phase running -> ready flip is confirmed against
+  // GET workflow/state before it is applied.
   it("merges review_required gate payload into workflow state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
     await waitFor(() => {
       expect(MockEventSource.instances).toHaveLength(1);
+    });
+    mockWorkflowStateResponse({
+      ...baseState,
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [{ title: "Finding" }],
     });
 
     act(() => {
@@ -407,6 +414,46 @@ describe("useEditorialWorkflow", () => {
       expect(result.current.state?.current_phase).toBe("research");
       expect(result.current.state?.research_findings).toHaveLength(1);
     });
+  });
+
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: A reload during a running phase keeps the running state
+  //   Given GET workflow/state reports phase_status "in_progress"
+  //   And the SSE snapshot replays the checkpoint as "awaiting_human"
+  //   Then the running state is kept
+  it("keeps the running state when the SSE snapshot replays a stale gate", async () => {
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+    const fetchesBeforeSnapshot = countStateFetches();
+
+    act(() => {
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+          phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          gate_payload: {
+            current_phase: "research",
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            research_findings: [{ title: "Finding" }],
+            outline: [],
+            slide_drafts: [],
+          },
+        },
+      );
+    });
+
+    await waitFor(() => {
+      expect(countStateFetches()).toBe(fetchesBeforeSnapshot + 1);
+    });
+    expect(result.current.state?.phase_status).toBe(
+      WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    );
+    expect(result.current.awaitingHumanReview).toBe(false);
   });
 
   // Feature: Unified workflow progress in create workspace
@@ -1553,6 +1600,47 @@ describe("useEditorialWorkflow", () => {
     });
 
     expect(result.current.phaseEvents).toEqual([]);
+  });
+
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: A fresh project does not request the workflow state
+  it("skips the mount fetch when initialFetch is false", async () => {
+    renderHook(() =>
+      useEditorialWorkflow("project-1", { initialFetch: false }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(countStateFetches()).toBe(0);
+  });
+
+  // Scenario: The banner names the phase that is running
+  it("reports which review action started the running phase", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
+        init?.method === "POST"
+      ) {
+        return {
+          ok: false,
+          status: HTTP_STATUS.CONFLICT,
+          json: async () => ({ detail: "resume_already_in_progress" }),
+        } as Response;
+      }
+      return { ok: true, json: async () => baseState } as Response;
+    });
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+    await waitFor(() => {
+      expect(result.current.state?.current_phase).toBe("research");
+    });
+    expect(result.current.runningAction).toBeNull();
+
+    await act(async () => {
+      await result.current.approve();
+    });
+
+    expect(result.current.state?.phase_status).toBe(
+      WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    );
+    expect(result.current.runningAction).toBe(EDITORIAL_REVIEW_ACTIONS.APPROVE);
   });
 
   it("revise wrapper forwards feedback and options to the resume endpoint", async () => {

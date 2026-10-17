@@ -97,6 +97,18 @@ export interface WorkflowEventPayload {
   reason?: string;
 }
 
+/** AE-0415: options of `useEditorialWorkflow`. */
+export interface UseEditorialWorkflowOptions {
+  /** Fetch workflow/state on mount (default true; false for a fresh project). */
+  initialFetch?: boolean;
+}
+
+/** AE-0415 (B27): the review action that started a run, and its phase. */
+export interface RecordedResume {
+  action: string;
+  phase: string;
+}
+
 export interface StartWorkflowInput {
   topic: string;
   audience: string;

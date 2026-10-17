@@ -1,5 +1,5 @@
 import { TEXT_MUTED } from "@/constants/neon";
-import { inputStyle } from "./section-styles";
+import { INPUT_FOCUS_CLASS, inputStyle } from "./section-styles";
 
 export interface LabeledSelectOption {
   value: string;
@@ -37,6 +37,7 @@ export function LabeledSelect({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          className={INPUT_FOCUS_CLASS}
           style={{ ...inputStyle, marginTop: "6px" }}
         >
           {options.map((option) => (

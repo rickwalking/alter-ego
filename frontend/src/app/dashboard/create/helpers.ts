@@ -27,6 +27,24 @@ function presetFromValue(value: string): { model: string; style: string } {
 
 const _TEMPLATE_STRATEGY_FALLBACK = "hero_content";
 
+/** Backend `CarouselCreateRequest.niche` max length (api/schemas/carousel.py). */
+export const NICHE_MAX_LENGTH = 200;
+
+/**
+ * AE-0415 (B18): an empty Brief falls back to the topic, cut at a word
+ * boundary to the niche limit (the topic allows 500 characters, niche 200).
+ */
+export function fallbackNiche(topic: string): string {
+  const trimmed = topic.trim();
+  if (trimmed.length <= NICHE_MAX_LENGTH) {
+    return trimmed;
+  }
+  const cut = trimmed.slice(0, NICHE_MAX_LENGTH + 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  const atWord = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+  return atWord.slice(0, NICHE_MAX_LENGTH).trimEnd();
+}
+
 type ContentModeRequest = Pick<
   CarouselCreateRequest,
   | "content_mode"
@@ -73,7 +91,7 @@ export function buildCarouselCreateRequest(
   return {
     topic: form.topic.trim(),
     audience: form.audience.trim(),
-    niche: form.niche.trim() || form.topic.trim(),
+    niche: form.niche.trim() || fallbackNiche(form.topic),
     theme: form.theme || AUTO_THEME_VALUE,
     image_model: model as CarouselCreateRequest["image_model"],
     image_style: style as CarouselCreateRequest["image_style"],
