@@ -42,15 +42,38 @@ describe("carousel-media-url", () => {
     ).toBe("/api/carousels/proj-1/preview/images/slide_2.jpg?lang=en");
   });
 
-  it("rewrites authenticated preview URLs to public image routes", () => {
+  // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
+  // Scenario: Listing card maps an owner-only preview hero to the public route
+  it("rewrites authenticated preview URLs to public image routes keeping lang", () => {
     expect(
       toPublicCarouselImageUrl(
         "/api/carousels/proj-1/preview/images/hero.jpg?lang=pt",
       ),
-    ).toBe("/api/carousels/proj-1/images/hero.jpg");
+    ).toBe("/api/carousels/proj-1/images/hero.jpg?lang=pt");
+    expect(
+      toPublicCarouselImageUrl(
+        "/api/carousels/proj-1/preview/images/slide_2.jpg?v=1&lang=en",
+      ),
+    ).toBe("/api/carousels/proj-1/images/slide_2.jpg?lang=en");
+    expect(
+      toPublicCarouselImageUrl(
+        "/api/carousels/proj-1/preview/images/slide_1.jpg?lang=fr",
+      ),
+    ).toBe("/api/carousels/proj-1/images/slide_1.jpg");
+    expect(
+      toPublicCarouselImageUrl(
+        "/api/carousels/proj-1/preview/images/slide_1.jpg",
+      ),
+    ).toBe("/api/carousels/proj-1/images/slide_1.jpg");
+    // Scenario: Public URLs without a lang keep working
     expect(
       toPublicCarouselImageUrl("/api/carousels/proj-1/images/slide_1.jpg"),
     ).toBe("/api/carousels/proj-1/images/slide_1.jpg");
+    expect(
+      toPublicCarouselImageUrl(
+        "/api/carousels/proj-1/slide-images/pt/slide_1.jpg",
+      ),
+    ).toBe("/api/carousels/proj-1/slide-images/pt/slide_1.jpg");
   });
 
   it("builds publish panel slide URLs with preview routes and cache buster", () => {
