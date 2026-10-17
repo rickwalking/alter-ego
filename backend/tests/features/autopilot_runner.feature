@@ -34,11 +34,12 @@ Feature: Autopilot runner
 
   # --- AE-0348 QA round 1 -------------------------------------------------
 
-  Scenario: The engine rejects an approve the policy allowed
-    Given the content gate persona entry has no "overall" score
-    And the engine reads a missing "overall" as 0
-    When the runner reads the gate
-    Then the policy revises instead of approving
+  # AE-0407 supersedes the "missing overall reads as 0" rule: a missing or 0
+  # overall is a failed judge call, unscored on both sides (one shared helper).
+  Scenario: The engine and the policy read a missing "overall" the same way
+    Given the content gate persona entries are 90 and one with no "overall" score
+    When the runner reads the gate and the engine checks the approve
+    Then both read the lowest score as 90
     And no approve is sent that the engine would refuse
 
   Scenario: Content approve with blocking presentation violations is revised
@@ -308,9 +309,10 @@ Feature: Autopilot runner
     And the engine's content-approve check reports a presentation blocker
     Then the policy revises the content gate with reason "presentation_validation_blocked"
 
-  Scenario: An unreadable persona score fails closed
+  Scenario: An unreadable persona score is unscored (AE-0407)
     Given the content gate persona entry is present but not a number
-    Then the snapshot counts it as 0 and the policy revises
+    Then the snapshot reads it as unscored, like the engine
+    And a gate whose only entry is unreadable is "not scored"
 
   Scenario: The owner sees that the run was not scored
     Given a run that reaches final review with no persona scores

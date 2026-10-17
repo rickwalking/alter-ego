@@ -119,13 +119,27 @@ def _runner(
     return runner, recovery
 
 
-# Scenario: The engine rejects an approve the policy allowed
-def test_engine_check_reads_a_missing_overall_as_zero() -> None:
+# Scenario: The engine and the policy read a missing "overall" the same way
+def test_engine_check_skips_a_missing_overall() -> None:
     state: dict[str, object] = {
         FIELD_CURRENT_PHASE: GATE_CONTENT,
         FIELD_PERSONA_SCORES: {"voice": {FIELD_OVERALL: 90}, "tone": {}},
     }
-    assert content_approve_blocker(state) == ERR_PERSONA_SCORE_TOO_LOW
+    assert content_approve_blocker(state) is None
+
+
+# Scenario: A stored overall is read on the 0-100 scale (AE-0407)
+def test_engine_check_reads_a_ten_point_overall_on_hundred() -> None:
+    passing: dict[str, object] = {
+        FIELD_CURRENT_PHASE: GATE_CONTENT,
+        FIELD_PERSONA_SCORES: {"slide_1": {FIELD_OVERALL: 8.7}},
+    }
+    low: dict[str, object] = {
+        FIELD_CURRENT_PHASE: GATE_CONTENT,
+        FIELD_PERSONA_SCORES: {"slide_1": {FIELD_OVERALL: 6.5}},
+    }
+    assert content_approve_blocker(passing) is None
+    assert content_approve_blocker(low) == ERR_PERSONA_SCORE_TOO_LOW
 
 
 # Scenario: Content approve with blocking presentation violations is revised

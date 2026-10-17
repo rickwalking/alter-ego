@@ -23,10 +23,7 @@ from rag_backend.application.services.carousel.slide_fix_types import (
     SlideIssue,
     SlideTarget,
 )
-from rag_backend.domain.constants.carousel_workflow import (
-    PERSONA_SCORE_OVERALL_KEY,
-    PHASE_CONTENT,
-)
+from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.slide_fix import (
     ISSUE_VOICE_SCORE_LOW,
     ISSUE_VOICE_SCORE_MESSAGE,
@@ -38,6 +35,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_INDEX,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
+from rag_backend.domain.persona_score import stored_overall
 
 
 @dataclass(frozen=True)
@@ -81,18 +79,13 @@ def _issue(violation: SlideValidationViolation) -> SlideIssue:
     )
 
 
-def overall_score(value: object) -> float:
-    """A persona-score entry's ``overall`` (a missing or bad one is 0)."""
-    raw = (
-        value.get(PERSONA_SCORE_OVERALL_KEY, 0) if isinstance(value, Mapping) else value
-    )
-    if isinstance(raw, bool) or not isinstance(raw, int | float):
-        return 0.0
-    return float(raw)
+def overall_score(value: object) -> float | None:
+    """A persona-score entry's ``overall`` on 0-100; None when unscored (AE-0407)."""
+    return stored_overall(value)
 
 
 def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
-    """Voice scores by slide index, from the ``slide_N`` keys."""
+    """Voice scores (0-100) by slide index; unscored slides are left out."""
     raw = state.get(STATE_FIELD_PERSONA_SCORES)
     if not isinstance(raw, Mapping):
         return {}
@@ -100,8 +93,9 @@ def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
     for key, value in raw.items():
         prefix = PERSONA_SCORE_SLIDE_KEY.format(index="")
         suffix = str(key).removeprefix(prefix)
-        if str(key).startswith(prefix) and suffix.isdigit():
-            scores[int(suffix)] = overall_score(value)
+        score = overall_score(value)
+        if str(key).startswith(prefix) and suffix.isdigit() and score is not None:
+            scores[int(suffix)] = score
     return scores
 
 
