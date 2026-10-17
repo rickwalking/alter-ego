@@ -18,6 +18,11 @@ import asyncio
 import re
 
 from rag_backend.agents.input_sanitizer import sanitize_web_content
+from rag_backend.agents.research_relevance import (
+    ResearchHit,
+    hit_rejection,
+    search_query_for,
+)
 from rag_backend.agents.tools.constants import (
     DEFAULT_SEARCH_SOURCE_TYPES,
     SOURCE_KEY_SNIPPET,
@@ -29,6 +34,7 @@ from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.research_enrichment import (
     BLOCK_PAGE_MARKERS,
     BLOCK_PAGE_SCAN_CHARS,
+    LOG_RESEARCH_HIT_FILTERED,
     MAX_CONCURRENT_SCRAPES,
     MAX_URL_SOURCES_SCRAPED,
     MAX_WEB_SEARCH_RESULTS,
@@ -137,24 +143,42 @@ async def _search_topic_sources(
     research_tool: ResearchTool,
     topic: str,
 ) -> list[dict[str, str]]:
-    """Search the topic and shape the top hits as ``web_search`` sources."""
+    """Search the topic and shape the top relevant hits as ``web_search`` sources.
+
+    AE-0413: bracketed tags are dropped from the query, and hits that are not
+    Portuguese/English or share no keyword with the query are discarded.
+    """
+    query = search_query_for(topic)
     try:
-        hits = await research_tool.search_web(topic, list(DEFAULT_SEARCH_SOURCE_TYPES))
+        hits = await research_tool.search_web(query, list(DEFAULT_SEARCH_SOURCE_TYPES))
     except Exception as exc:
         logger.warning("research_search_failed", topic=topic, error=str(exc))
         return []
     sources: list[dict[str, str]] = []
-    for hit in hits[:MAX_WEB_SEARCH_RESULTS]:
-        snippet = hit.get(SOURCE_KEY_SNIPPET, "")
-        if not snippet:
-            continue
-        sources.append({
-            "title": hit.get(SOURCE_KEY_TITLE, ""),
-            "content": sanitize_web_content(snippet),
-            "source_type": SOURCE_TYPE_WEB_SEARCH,
-            "url": hit.get(SOURCE_KEY_URL, ""),
-        })
-    return sources
+    for hit in hits:
+        source = _relevant_source(hit, query)
+        if source is not None:
+            sources.append(source)
+    return sources[:MAX_WEB_SEARCH_RESULTS]
+
+
+def _relevant_source(hit: dict[str, str], query: str) -> dict[str, str] | None:
+    """The hit as a ``web_search`` source, or None when empty or filtered."""
+    snippet = hit.get(SOURCE_KEY_SNIPPET, "")
+    if not snippet:
+        return None
+    title = hit.get(SOURCE_KEY_TITLE, "")
+    url = hit.get(SOURCE_KEY_URL, "")
+    reason = hit_rejection(ResearchHit(title=title, snippet=snippet), query)
+    if reason is not None:
+        logger.info(LOG_RESEARCH_HIT_FILTERED, url=url, reason=reason)
+        return None
+    return {
+        "title": title,
+        "content": sanitize_web_content(snippet),
+        "source_type": SOURCE_TYPE_WEB_SEARCH,
+        "url": url,
+    }
 
 
 __all__ = ["enrich_sources"]

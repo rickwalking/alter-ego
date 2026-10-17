@@ -36,6 +36,8 @@ from rag_backend.domain.constants.presentation_policy import (
 
 _STATE_OUTLINE = "outline"
 _STATE_SLIDE_DRAFTS = "slide_drafts"
+_STATE_LOCALIZED_SLIDES = "localized_slides"
+_STATE_POLICY_VERSION = "presentation_policy_version"
 _PRESENTATION_PT_KEY = "presentation_pt"
 _PRESENTATION_EN_KEY = "presentation_en"
 _DRAFT_TEXT_KEY = "draft_text"
@@ -67,13 +69,14 @@ def _sanitize_structured_items(
     items: object,
     *,
     list_field: str,
-    policy: CarouselPresentationPolicy,
+    policy: CarouselPresentationPolicy | None,
 ) -> list[dict[str, object]]:
+    """Clean item copy; ``policy=None`` keeps the full text (no budget clamp)."""
     if not isinstance(items, list):
         return []
     title_key, body_key = _STRUCTURED_BUDGET_KEYS[list_field]
-    title_budget = policy.copy_budgets.get(title_key)
-    body_budget = policy.copy_budgets.get(body_key)
+    title_budget = policy.copy_budgets.get(title_key) if policy else None
+    body_budget = policy.copy_budgets.get(body_key) if policy else None
     sanitized: list[dict[str, object]] = []
     for item in items:
         if not isinstance(item, Mapping):
@@ -94,12 +97,15 @@ def _sanitize_structured_items(
 def _sanitize_presentation_payload(
     payload: Mapping[str, object],
     *,
-    policy: CarouselPresentationPolicy,
+    policy: CarouselPresentationPolicy | None,
 ) -> dict[str, object]:
+    """Clean payload copy; ``policy=None`` keeps the full text (no budget clamp)."""
     slide_type = str(payload.get(_SLIDE_TYPE_KEY) or payload.get("type") or "")
     result = dict(payload)
-    heading_budget = heading_budget_for_slide_type(slide_type, policy)
-    body_budget = body_budget_for_slide_type(slide_type, policy)
+    heading_budget = (
+        heading_budget_for_slide_type(slide_type, policy) if policy else None
+    )
+    body_budget = body_budget_for_slide_type(slide_type, policy) if policy else None
 
     for field in _PRESENTATION_TEXT_FIELDS:
         if field not in result:
@@ -157,9 +163,15 @@ def sanitize_slide_drafts(
     slide_drafts: list[dict[str, object]],
     *,
     policy_version: str = DEFAULT_PRESENTATION_POLICY_VERSION,
+    clamp_to_budgets: bool = True,
 ) -> list[dict[str, object]]:
-    """Sanitize visible copy in slide drafts and fit text to presentation budgets."""
-    policy = load_presentation_policy(policy_version)
+    """Sanitize visible copy in slide drafts and fit text to presentation budgets.
+
+    AE-0413: ``clamp_to_budgets=False`` (read paths) cleans the copy but never
+    cuts it: the state GET clamped every draft to the v1 budgets, so the UI
+    showed (and sent back) text cut mid-sentence.
+    """
+    policy = load_presentation_policy(policy_version) if clamp_to_budgets else None
     sanitized: list[dict[str, object]] = []
     for slide in slide_drafts:
         if not isinstance(slide, dict):
@@ -203,6 +215,8 @@ class SanitizeWorkflowStateCommand:
     locale: str = LANGUAGE_PT
     policy_version: str = DEFAULT_PRESENTATION_POLICY_VERSION
     rebuild_validation: bool = True
+    # AE-0413: read paths keep the stored copy whole (no budget clamp).
+    clamp_to_budgets: bool = True
 
 
 def sanitize_workflow_state_artifacts(
@@ -226,6 +240,7 @@ def sanitize_workflow_state_artifacts(
             updated[_STATE_SLIDE_DRAFTS] = sanitize_slide_drafts(
                 draft_dicts,
                 policy_version=command.policy_version,
+                clamp_to_budgets=command.clamp_to_budgets,
             )
             if command.rebuild_validation:
                 updated.update(
@@ -235,6 +250,32 @@ def sanitize_workflow_state_artifacts(
                     )
                 )
     return updated
+
+
+def read_only_sanitize_command(
+    state: Mapping[str, object],
+) -> SanitizeWorkflowStateCommand:
+    """The sanitize command of a READ path (the workflow state GET, AE-0413).
+
+    The GET used the defaults: every read re-clamped the drafts to the v1
+    budgets, rebuilt ``localized_slides`` and the validation report from those
+    drafts (dropping repaired and hand-edited copy, EN falling back to PT) and
+    relabelled the project v1. A read now keeps the stored localized slides,
+    report and policy version; only a legacy state without localized slides
+    gets them built, under the project's own policy version.
+    """
+    stored_version = state.get(_STATE_POLICY_VERSION)
+    policy_version = (
+        stored_version
+        if isinstance(stored_version, str) and stored_version.strip()
+        else DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+    return SanitizeWorkflowStateCommand(
+        state=state,
+        policy_version=policy_version,
+        rebuild_validation=not state.get(_STATE_LOCALIZED_SLIDES),
+        clamp_to_budgets=False,
+    )
 
 
 def workflow_artifacts_differ(before: object, after: object) -> bool:
@@ -259,6 +300,7 @@ def workflow_state_needs_sanitization(state: Mapping[str, object]) -> bool:
 
 __all__ = [
     "SanitizeWorkflowStateCommand",
+    "read_only_sanitize_command",
     "sanitize_outline_slides",
     "sanitize_slide_drafts",
     "sanitize_workflow_state_artifacts",

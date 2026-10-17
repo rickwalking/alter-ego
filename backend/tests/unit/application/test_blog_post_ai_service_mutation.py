@@ -178,8 +178,8 @@ class TestBlogPostAIServiceMutationKillers:
 
         expected = PROMPT_AI_SUGGEST.format(
             action="improve",
-            context="ctx",
-            text="hello world",
+            context="CTX",
+            text="Hello World",
         )
         prompt = llm_service.generate.call_args.kwargs["messages"][0]["content"]
         assert prompt == expected
@@ -324,7 +324,7 @@ class TestBlogPostAIServiceMutationKillers:
 
         result = await service.suggest(_SuggestInput("Hello <World>", action="improve"))
 
-        assert result["original_text"] == "hello world"
+        assert result["original_text"] == "Hello World"
 
     @pytest.mark.asyncio
     async def test_improve_default_trace_context(
@@ -456,8 +456,8 @@ class TestBlogPostAIServiceMutationKillers:
 
         expected = PROMPT_AI_IMPROVE.format(
             action="improve",
-            context="ctx",
-            text="hello world",
+            context="CTX",
+            text="Hello World",
         )
         prompt = llm_service.generate.call_args.kwargs["messages"][0]["content"]
         assert prompt == expected
@@ -651,7 +651,7 @@ class TestBlogPostAIServiceMutationKillers:
             )
         )
 
-        assert result["original_text"] == "hello world"
+        assert result["original_text"] == "Hello World"
 
     @pytest.mark.asyncio
     async def test_generate_image_starts_trace_with_default_user_id(
@@ -732,7 +732,7 @@ class TestBlogPostAIServiceMutationKillers:
             await service.generate_image("post-1", "A <blog> hero image")
 
         image_service.generate_image.assert_awaited_once_with(
-            "a blog hero image",
+            "A blog hero image",
             str(tmp_path / "post-1" / "mock-uuid.jpg"),
         )
 
@@ -925,7 +925,7 @@ class TestBlogPostAIServiceMutationKillers:
         with patch("uuid.uuid4", return_value="mock-uuid"):
             result = await service.generate_image("post-1", "A <blog> hero image")
 
-        assert result["prompt"] == "a blog hero image"
+        assert result["prompt"] == "A blog hero image"
 
     @pytest.mark.asyncio
     async def test_load_persona_does_not_call_db_when_no_id(
