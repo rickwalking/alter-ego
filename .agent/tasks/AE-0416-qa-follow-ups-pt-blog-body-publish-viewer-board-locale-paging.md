@@ -173,6 +173,8 @@ Pending.
   prompt, no target language), and translating it would add an LLM call per build for a single
   intro paragraph. The PT body now starts with the first section; the EN body keeps the intro.
   Stored bodies of existing projects are not rewritten (no data change, per the brief).
+  Since AE-0413 (#132) research hits may be PT or EN, so a summary of PT sources can be
+  Portuguese; the EN body keeps the intro as before (pre-existing, out of scope here).
 - **Item 2: the "real slide list" is the workflow state.** `GET /api/carousels/{id}` returns no
   slide rows, but the publish page already loads the workflow state; `resolveLocalizedSlides`
   (the list the slide text editor uses) gives the slide numbers. The viewer builds
