@@ -30,10 +30,9 @@ function makePost(status: string): BlogPost {
 }
 
 describe("mapBlogPostToDashboard", () => {
-  it("maps workflow status into the status slot, never into category", () => {
+  it("maps workflow status into the status slot", () => {
     const dashboard = mapBlogPostToDashboard(makePost("draft"));
     expect(dashboard.status).toBe("draft");
-    expect(dashboard.category).toBe("");
   });
 
   it("narrows an unknown backend status to null instead of leaking it", () => {
@@ -41,8 +40,13 @@ describe("mapBlogPostToDashboard", () => {
     expect(dashboard.status).toBeNull();
   });
 
-  it("marks published posts as featured", () => {
-    expect(mapBlogPostToDashboard(makePost("published")).featured).toBe(true);
-    expect(mapBlogPostToDashboard(makePost("draft")).featured).toBe(false);
+  // Scenario (AE-0411): A carousel post waiting for its carousel release is
+  // not shown as live — liveness comes from the API, never from status.
+  it("maps is_public into isPublic and defaults a missing flag to false", () => {
+    const live = { ...makePost("published"), is_public: true };
+    const waiting = { ...makePost("published"), is_public: false };
+    expect(mapBlogPostToDashboard(live).isPublic).toBe(true);
+    expect(mapBlogPostToDashboard(waiting).isPublic).toBe(false);
+    expect(mapBlogPostToDashboard(makePost("published")).isPublic).toBe(false);
   });
 });

@@ -48,6 +48,9 @@ BLOG_POST_LINK_GUARDED_ORIGINS: frozenset[BlogPostOrigin] = frozenset({
 })
 
 ERR_CAROUSEL_ORIGIN_DELETE_BLOCKED = "carousel_origin_delete_blocked"
+# Create hit the unique ``slug`` index (a caller-supplied slug already in use;
+# generated slugs carry a random suffix). AE-0411.
+ERR_BLOG_POST_SLUG_CONFLICT = "blog_post_slug_conflict"
 
 
 # Default forbidden phrases for persona training

@@ -20,10 +20,9 @@ function makePost(overrides: Partial<DashboardBlogPost>): DashboardBlogPost {
     views: 0,
     comments: 0,
     status: "draft",
-    category: "",
     origin: "standalone",
     lockVersion: 1,
-    featured: false,
+    isPublic: true,
     ...overrides,
   };
 }
@@ -75,6 +74,23 @@ describe("BlogPostCardActions (AE-0296)", () => {
     );
     expect(screen.queryByText("Delete")).toBeNull();
     expect(screen.getByText("Hide (revert to draft)")).toBeInTheDocument();
+  });
+
+  // Scenario (AE-0411): A carousel post waiting for its carousel release is
+  // not shown as live — hiding it would keep it hidden after the release.
+  it("offers no Hide for a published post that is not live yet", () => {
+    render(
+      <BlogPostCardActions
+        post={makePost({
+          origin: "carousel",
+          status: "published",
+          isPublic: false,
+        })}
+        actions={handlers()}
+      />,
+    );
+    expect(screen.queryByText("Hide (revert to draft)")).toBeNull();
+    expect(screen.getByText("Edit")).toBeInTheDocument();
   });
 
   it("routes Delete and Hide clicks to the handlers", () => {

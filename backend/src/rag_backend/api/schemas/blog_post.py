@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
 
+# ``blog_posts.excerpt`` is ``VARCHAR(500)``: validate here so an over-long
+# excerpt is a 422 the editor can show, not a database error (AE-0411).
+BLOG_EXCERPT_MAX_LENGTH = 500
+
 
 class BlogPostCreate(BaseModel):
     """Schema for creating a blog post."""
@@ -14,7 +18,7 @@ class BlogPostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     slug: str | None = None
     content: dict = Field(default_factory=dict)
-    excerpt: str | None = None
+    excerpt: str | None = Field(None, max_length=BLOG_EXCERPT_MAX_LENGTH)
     featured_image_url: str | None = None
     meta_title: str | None = None
     meta_description: str | None = None
@@ -30,7 +34,7 @@ class BlogPostUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = None
     content: dict | None = None
-    excerpt: str | None = None
+    excerpt: str | None = Field(None, max_length=BLOG_EXCERPT_MAX_LENGTH)
     featured_image_url: str | None = None
     meta_title: str | None = None
     meta_description: str | None = None
@@ -106,6 +110,11 @@ class BlogPostSummaryResponse(BaseModel):
     updated_at: datetime
     published_at: datetime | None = None
     lock_version: int = 1
+    # AE-0411: whether an anonymous visitor can read the post right now. A
+    # carousel-linked row is stored ``published`` by the dual-write but stays
+    # hidden until its carousel is released (``is_public``), so ``status`` alone
+    # cannot tell the dashboard that a post is live.
+    is_public: bool = False
 
     class Config:
         from_attributes = True

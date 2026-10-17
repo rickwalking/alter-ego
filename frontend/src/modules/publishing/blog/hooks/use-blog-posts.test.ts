@@ -2,6 +2,8 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
+  BLOG_POST_ERR_SLUG_CONFLICT,
+  BLOG_POST_ERR_VALIDATION,
   BLOG_POST_ERR_VERSION_CONFLICT,
   BlogPostMutationError,
 } from "../constants";
@@ -134,5 +136,38 @@ describe("useBlogPosts unpublish (AE-0296)", () => {
         .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(BlogPostMutationError);
     });
+  });
+});
+
+// Scenarios: see tests/features/blog-dashboard-ae0411.feature
+describe("useBlogPosts create errors (AE-0411)", () => {
+  it.each([
+    [409, BLOG_POST_ERR_SLUG_CONFLICT],
+    [422, BLOG_POST_ERR_VALIDATION],
+  ])("throws a typed error on %i", async (status, code) => {
+    mockFetch.mockResolvedValueOnce(listResponse());
+    const { result } = renderHook(() => useBlogPosts());
+    await waitFor(() => expect(result.current.posts).toHaveLength(1));
+
+    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: "x" }, status));
+    await act(async () => {
+      await expect(result.current.create({ title: "T" })).rejects.toMatchObject(
+        { code },
+      );
+    });
+    expect(result.current.posts).toHaveLength(1);
+  });
+
+  it("clears a previous load error once a refetch succeeds", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, 500));
+    const { result } = renderHook(() => useBlogPosts());
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+
+    mockFetch.mockResolvedValueOnce(listResponse());
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.total).toBe(1);
   });
 });

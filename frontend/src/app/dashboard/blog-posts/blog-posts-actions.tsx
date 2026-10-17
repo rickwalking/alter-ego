@@ -16,7 +16,9 @@ const PUBLISHED_STATUS = "published";
 
 /**
  * Edit / Hide / Delete controls per card (AE-0296). Hide is offered for
- * published posts (unpublish → draft; restore = normal publish workflow).
+ * published posts that are live (unpublish → draft; restore = normal publish
+ * workflow). A carousel post awaiting its carousel release is not live, and
+ * hiding it would keep it hidden after the release (AE-0411), so no Hide.
  * Delete is hidden for carousel-origin posts — the backend 409-guards them
  * while linked to their project; Hide (or deleting the carousel) is the path.
  */
@@ -33,7 +35,7 @@ export function BlogPostCardActions({
           {t("actions.edit")}
         </NeonButton>
       </Link>
-      {post.status === PUBLISHED_STATUS && (
+      {post.status === PUBLISHED_STATUS && post.isPublic && (
         <NeonButton
           size="sm"
           variant="ghost"

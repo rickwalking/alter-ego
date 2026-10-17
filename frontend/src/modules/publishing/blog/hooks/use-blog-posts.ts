@@ -15,6 +15,8 @@ import type {
 } from "../types";
 import {
   BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
+  BLOG_POST_ERR_SLUG_CONFLICT,
+  BLOG_POST_ERR_VALIDATION,
   BLOG_POST_ERR_VERSION_CONFLICT,
   BlogPostMutationError,
 } from "../constants";
@@ -40,6 +42,7 @@ export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
     async (activeFilters: BlogPostFilters = filters) => {
       try {
         setLoading(true);
+        setError(null);
         const params = new URLSearchParams();
         if (activeFilters.status) params.set("status", activeFilters.status);
         if (activeFilters.search) params.set("search", activeFilters.search);
@@ -72,6 +75,12 @@ export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (response.status === HTTP_STATUS.CONFLICT) {
+      throw new BlogPostMutationError(BLOG_POST_ERR_SLUG_CONFLICT);
+    }
+    if (response.status === HTTP_STATUS.UNPROCESSABLE_ENTITY) {
+      throw new BlogPostMutationError(BLOG_POST_ERR_VALIDATION);
+    }
     if (!response.ok) throw new Error("Failed to create blog post");
     const post = await response.json();
     setPosts((prev) => [post, ...prev]);

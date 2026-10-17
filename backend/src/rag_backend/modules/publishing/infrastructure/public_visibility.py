@@ -10,6 +10,7 @@ never-released carousel's blog leaks through ``/public/blog-posts``.
 from __future__ import annotations
 
 from sqlalchemy import ColumnElement, and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
@@ -32,4 +33,28 @@ def public_blog_visibility_clause() -> ColumnElement[bool]:
     )
 
 
-__all__ = ["BLOG_ORIGIN_CAROUSEL", "public_blog_visibility_clause"]
+async def public_blog_post_ids(
+    session: AsyncSession,
+    post_ids: list[str],
+) -> frozenset[str]:
+    """Return the subset of ``post_ids`` that anonymous readers can see (AE-0411).
+
+    Same rule as the public API (:func:`public_blog_visibility_clause`), so the
+    dashboard can tell a live post from a carousel-linked row that is stored
+    ``published`` but whose carousel has not been released yet.
+    """
+    if not post_ids:
+        return frozenset()
+    query = select(BlogPostModel.id).where(
+        BlogPostModel.id.in_(post_ids),
+        public_blog_visibility_clause(),
+    )
+    result = await session.execute(query)
+    return frozenset(str(post_id) for post_id in result.scalars().all())
+
+
+__all__ = [
+    "BLOG_ORIGIN_CAROUSEL",
+    "public_blog_post_ids",
+    "public_blog_visibility_clause",
+]
