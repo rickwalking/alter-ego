@@ -102,8 +102,6 @@ export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
 export { BlogPostFilters as BlogPostFiltersPanel } from "./blog/components/blog-post-filters";
 export { ImageGenModal } from "./blog/components/image-gen-modal";
 export { KeyboardShortcutsHelp } from "./blog/components/keyboard-shortcuts-help";
-export { RichTextEditor } from "./blog/components/rich-text-editor";
-export type { RichTextEditorProps } from "./blog/components/types";
 export { SeoPreview } from "./blog/components/seo-preview";
 export { VersionHistorySidebar } from "./blog/components/version-history-sidebar";
 export type { BlogPostVersion } from "./blog/components/types";

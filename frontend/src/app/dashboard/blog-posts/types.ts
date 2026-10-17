@@ -69,3 +69,27 @@ export interface FieldErrorProps {
   id: string;
   message: string | null;
 }
+
+/** One dashboard list page: 0-based page plus the server-side filters (AE-0416). */
+export interface BlogPostListQuery {
+  page: number;
+  status: string;
+  search: string;
+}
+
+export interface BlogPostsPagerProps {
+  /** 0-based current page. */
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+}
+
+export interface UseBlogPostsPagingResult {
+  page: number;
+  statusFilter: string;
+  /** What the search box shows; the API search follows it after a pause. */
+  searchInput: string;
+  goToPage: (page: number) => void;
+  changeStatus: (status: string) => void;
+  changeSearch: (value: string) => void;
+}

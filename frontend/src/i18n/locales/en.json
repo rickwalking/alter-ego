@@ -933,7 +933,8 @@
       "linkedin": "LinkedIn"
     },
     "instagram": {
-      "captionLabel": "Instagram caption",
+      "captionLabel": "Instagram caption (PT)",
+      "captionPtOnly": "The Instagram caption is published in Portuguese only. The English copy is in the LinkedIn post and the EN PDF.",
       "placeholder": "Write your Instagram caption…",
       "hashtagHelp": "Hashtags: {count} / {max}",
       "hashtagOver": "Over the 30-hashtag limit — Instagram will reject the post.",
@@ -963,7 +964,9 @@
       "nextSlide": "Next slide",
       "goToSlide": "Go to slide {number}",
       "downloadImages": "Download images",
-      "downloadingImages": "Downloading..."
+      "downloadingImages": "Downloading...",
+      "slideAlt": "{title} – slide {number}",
+      "slideNotRendered": "Slide not rendered yet"
     },
     "regenerateStrategy": {
       "title": "Slide Layout",
@@ -1035,7 +1038,8 @@
       "noProjects": "No projects",
       "retry": "Retry",
       "breadcrumb": "pipeline",
-      "newCard": "New Card"
+      "newCard": "New Card",
+      "rejectedColumn": "Rejected"
     },
     "calendar": {
       "title": "Content Calendar",
@@ -1173,6 +1177,12 @@
       "countOne": "{count} post",
       "countOther": "{count} posts",
       "countOfTotal": "{count} of {total} posts",
+      "pager": {
+        "label": "Blog post pages",
+        "previous": "Previous",
+        "next": "Next",
+        "status": "Page {page} of {count}"
+      },
       "notLiveHint": "Stored as published, but readers only see it once its carousel is published on the site.",
       "validation": {
         "titleRequired": "The title is required.",

@@ -265,11 +265,10 @@ class TestBlogTitles:
         )
         assert project.title == "Gancho em PT"
         assert project.title_en == "Hook in EN"
-        assert str(updates["blog_markdown"]).startswith(
-            "# Gancho em PT\n\nIntro research."
-        )
+        # AE-0416: the English research intro only opens the EN body.
+        assert str(updates["blog_markdown"]).startswith("# Gancho em PT\n\n## ")
         assert project.blog_translations is not None
-        assert project.blog_translations["en"].startswith("# Hook in EN")
+        assert project.blog_translations["en"].startswith("# Hook in EN\n\nIntro")
         assert "EN notes." in project.blog_translations["en"]
 
     async def test_existing_titles_are_kept(self) -> None:

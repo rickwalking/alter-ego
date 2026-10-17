@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BLOG_POST_STATUSES } from "@/modules/publishing";
 import type { DashboardBlogPost } from "@/modules/editorial-operations";
-import { filterBlogPosts } from "@/modules/editorial-operations";
 import {
   FeaturedBlogPost,
   RegularBlogPosts,
@@ -70,29 +69,5 @@ describe("blog posts grid (AE-0295)", () => {
     );
     expect(screen.getByText("Published")).toBeInTheDocument();
     expect(screen.getByText("Featured")).toBeInTheDocument();
-  });
-});
-
-describe("filterBlogPosts status filter (AE-0295)", () => {
-  it("filters by workflow status, not by category", () => {
-    const posts = [
-      makeDashboardPost({ id: "a", status: "draft" }),
-      makeDashboardPost({ id: "b", status: "published" }),
-    ];
-    const filtered = filterBlogPosts(posts, {
-      search: "",
-      statusFilter: "draft",
-    });
-    expect(filtered.map((p) => p.id)).toEqual(["a"]);
-  });
-
-  it("keeps unknown-status posts visible when no status filter is active", () => {
-    const posts = [makeDashboardPost({ status: null })];
-    expect(
-      filterBlogPosts(posts, {
-        search: "",
-        statusFilter: "",
-      }),
-    ).toHaveLength(1);
   });
 });

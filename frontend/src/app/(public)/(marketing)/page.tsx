@@ -1,8 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { cookies } from "next/headers";
+import { getRequestLocale } from "@/i18n/request-locale";
 import { fetchCompletedProjects } from "@/lib/server-fetch";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 import { MarketingDecorations } from "@/app/(public)/(marketing)/marketing-decorations";
 import { MarketingHero } from "@/app/(public)/(marketing)/marketing-hero";
@@ -44,12 +42,7 @@ export default async function HomePage() {
   const tc = await getTranslations("common");
   const tb = await getTranslations("blog");
 
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
 
   const data: CarouselProjectListResponse = await fetchCompletedProjects(5);
 

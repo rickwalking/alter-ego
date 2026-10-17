@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
 
@@ -10,10 +10,14 @@ vi.mock("next-intl", () => ({
       nextSlide: "Next slide",
       downloadImages: "Download images",
       downloadingImages: "Downloading...",
+      slideNotRendered: "Slide not rendered yet",
     };
     return (key: string, values?: Record<string, unknown>) => {
       if (key === "goToSlide") {
         return `Go to slide ${values?.number}`;
+      }
+      if (key === "slideAlt") {
+        return `${values?.title} – slide ${values?.number}`;
       }
       return entries[key] ?? key;
     };
@@ -171,5 +175,17 @@ describe("HorizontalCarouselViewer", () => {
       <HorizontalCarouselViewer slideUrls={[]} alt="Empty" />,
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  // Feature: QA follow-ups (AE-0416)
+  // Scenario: A slide whose image is not rendered shows a placeholder
+  it("replaces a slide image that fails to load with a placeholder", () => {
+    render(<HorizontalCarouselViewer slideUrls={urls} alt="Deck" />);
+    const [first] = screen.getAllByRole("img");
+    expect(first.getAttribute("alt")).toBe("Deck – slide 1");
+    fireEvent.error(first);
+    expect(screen.getByText("Slide not rendered yet")).toBeInTheDocument();
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
   });
 });

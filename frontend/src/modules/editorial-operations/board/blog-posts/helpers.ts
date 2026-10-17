@@ -1,7 +1,11 @@
-import type { BlogPostFilters, DashboardBlogPost } from "./types";
+import type { DashboardBlogPost } from "./types";
 
-export function formatBlogPostDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+/** BCP 47 tag per dashboard locale, so dates read "17 de out. de 2026" in PT. */
+const DATE_LOCALES: Record<string, string> = { en: "en-US", pt: "pt-BR" };
+
+/** Short post date in the dashboard language (AE-0416; was always en-US). */
+export function formatBlogPostDate(date: string, locale: string): string {
+  return new Date(date).toLocaleDateString(DATE_LOCALES[locale] ?? locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -17,28 +21,4 @@ export function pickFeaturedBlogPost(
   posts: DashboardBlogPost[],
 ): DashboardBlogPost | undefined {
   return posts.find((post) => post.isPublic);
-}
-
-export function filterBlogPosts(
-  posts: DashboardBlogPost[],
-  filters: BlogPostFilters,
-): DashboardBlogPost[] {
-  const searchLower = filters.search.toLowerCase();
-  const statusLower = filters.statusFilter.toLowerCase();
-
-  return posts.filter((post) => {
-    // Status filter matches the workflow status, not the content category
-    // (conflating the two was the AE-0295 root cause).
-    if (statusLower && (post.status ?? "") !== statusLower) {
-      return false;
-    }
-    if (
-      searchLower &&
-      !post.title.toLowerCase().includes(searchLower) &&
-      !post.excerpt.toLowerCase().includes(searchLower)
-    ) {
-      return false;
-    }
-    return true;
-  });
 }

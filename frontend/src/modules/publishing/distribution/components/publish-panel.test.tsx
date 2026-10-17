@@ -24,6 +24,7 @@ vi.mock("next-intl", () => ({
       "instagram.queued": "Queued",
       "instagram.published": "Published",
       "instagram.failed": "Failed",
+      "instagram.captionPtOnly": "The Instagram caption is Portuguese only",
       "linkedin.languageTabsLabel": "Language",
       "linkedin.placeholder": "Write post",
       "linkedin.help": "LinkedIn plain text only",
@@ -45,6 +46,9 @@ vi.mock("next-intl", () => ({
       }
       if (key === "goToSlide") {
         return `Go to slide ${values?.number}`;
+      }
+      if (key === "slideAlt") {
+        return `${values?.title} – slide ${values?.number}`;
       }
       return entries[key] ?? key;
     };
@@ -219,5 +223,69 @@ describe("PublishPanel", () => {
       screen.getByRole("button", { name: /Publish to Instagram/ }),
     );
     expect(handler).toHaveBeenCalledWith("caption #one");
+  });
+
+  // Feature: QA follow-ups (AE-0416) — publish page slide viewer (B25)
+  describe("slide viewer (AE-0416)", () => {
+    const EIGHT_SLIDES = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    // Scenario: The viewer counts the real slide list
+    it("counts the real slides, not the stale design-token list", () => {
+      render(
+        <PublishPanel project={buildProject()} slideNumbers={EIGHT_SLIDES} />,
+      );
+      expect(screen.getAllByRole("img")).toHaveLength(8);
+      expect(screen.getByText("1 / 8")).toBeInTheDocument();
+      const sources = screen
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("src") ?? "");
+      expect(sources[7]).toContain(
+        "/api/carousels/proj-1/preview/images/slide_8.jpg?lang=pt",
+      );
+    });
+
+    // Scenario: The viewer falls back to the design tokens without a slide list
+    it("falls back to the design tokens without a slide list", () => {
+      render(<PublishPanel project={buildProject()} slideNumbers={[]} />);
+      expect(screen.getAllByRole("img")).toHaveLength(4);
+      expect(screen.getByText("1 / 4")).toBeInTheDocument();
+    });
+
+    // Scenario: The EN viewer tab requests the EN slide images
+    it("asks for the EN images and uses the English title on the EN tab", async () => {
+      const user = userEvent.setup();
+      render(
+        <PublishPanel
+          project={buildProject({ title_en: "English title" })}
+          slideNumbers={[2, 1]}
+        />,
+      );
+      await user.click(screen.getAllByRole("tab", { name: "en" })[0]);
+      const images = screen.getAllByRole("img");
+      expect(images.map((img) => img.getAttribute("alt"))).toEqual([
+        "English title – slide 1",
+        "English title – slide 2",
+      ]);
+      expect(images[0].getAttribute("src")).toContain("slide_1.jpg?lang=en");
+    });
+
+    // Scenario: The EN tab says the Instagram caption is Portuguese
+    it("says the Instagram caption is Portuguese on the EN tab only", async () => {
+      const user = userEvent.setup();
+      render(<PublishPanel project={buildProject()} />);
+      // Scenario: The PT tab shows no caption-language notice
+      expect(screen.queryByRole("note")).toBeNull();
+      expect(screen.getAllByRole("img")[0].getAttribute("alt")).toBe(
+        "Title – slide 1",
+      );
+      await user.click(screen.getAllByRole("tab", { name: "en" })[0]);
+      expect(screen.getByRole("note")).toHaveTextContent(
+        "The Instagram caption is Portuguese only",
+      );
+      // Without an English title the alt text keeps the PT title.
+      expect(screen.getAllByRole("img")[0].getAttribute("alt")).toBe(
+        "Title – slide 1",
+      );
+    });
   });
 });

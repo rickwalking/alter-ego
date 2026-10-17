@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   BlogPostBadge,
   BlogPostStatusBadge,
@@ -42,10 +42,11 @@ function NotLiveHint({ post }: BlogPostMetaProps): React.ReactElement | null {
 }
 
 function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
+  const locale = useLocale();
   return (
     <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(255,255,255,0.04)]">
       <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-        {formatBlogPostDate(post.date)}
+        {formatBlogPostDate(post.date, locale)}
       </span>
       <div className="flex gap-1.5 font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
         <span>👁 {post.views.toLocaleString()}</span>
