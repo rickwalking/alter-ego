@@ -8,7 +8,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
-from rag_backend.domain.constants.slide_fix import AUTOFIX_MODEL_ATTEMPTS
+from rag_backend.domain.constants.slide_fix import (
+    AUTOFIX_ESCALATION_ATTEMPTS,
+    AUTOFIX_MODEL_ATTEMPTS,
+)
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
@@ -252,6 +255,17 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_AUTOFIX_ATTEMPTS",
             "autopilot_autofix_attempts",
+        ),
+    )
+
+    # AE-0407: then up to this many attempts on the reasoning model before
+    # the run escalates to the owner (0 turns the escalation off).
+    autopilot_autofix_escalation_attempts: int = Field(
+        default=AUTOFIX_ESCALATION_ATTEMPTS,
+        ge=0,
+        validation_alias=AliasChoices(
+            "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS",
+            "autopilot_autofix_escalation_attempts",
         ),
     )
 

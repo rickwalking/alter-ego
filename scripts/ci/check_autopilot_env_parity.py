@@ -8,6 +8,8 @@ must be the public site origin. ``AUTOPILOT_DAILY_CAP`` must have a numeric
 default so an unset secret does not crash settings parsing.
 ``AUTOPILOT_DEFAULT_PUBLISH`` (AE-0370) and ``AUTOPILOT_PERSONA_ID`` (AE-0371,
 empty default) must be named on both surfaces.
+``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` (AE-0407) must be named on both with
+a numeric default, like the daily cap (a secret or a GitHub variable).
 
 Usage:
     python3 scripts/ci/check_autopilot_env_parity.py
@@ -51,6 +53,8 @@ VAR_OPENCODE_SIDECAR_URL = "OPENCODE_SIDECAR_URL"
 VAR_OPENCODE_SERVER_PASSWORD = "OPENCODE_SERVER_PASSWORD"
 VAR_TELEGRAM_ALERTS_BOT_TOKEN = "TELEGRAM_ALERTS_BOT_TOKEN"
 VAR_TELEGRAM_ALERTS_CHAT_ID = "TELEGRAM_ALERTS_CHAT_ID"
+# AE-0407: reasoning-model attempts of the slide fix; 0 turns them off.
+VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS = "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS"
 
 REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_META_IG_ACCESS_TOKEN,
@@ -72,12 +76,14 @@ REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_OPENCODE_SERVER_PASSWORD,
     VAR_TELEGRAM_ALERTS_BOT_TOKEN,
     VAR_TELEGRAM_ALERTS_CHAT_ID,
+    VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS,
 )
 
 PUBLIC_SLIDE_BASE_URL = "https://marinssolutions.com"
 DISABLED_VALUE = "false"
 DEFAULT_DAILY_CAP = "1"
 DEFAULT_PUBLISH_MODE = "now"
+DEFAULT_ESCALATION_ATTEMPTS = "2"
 DEPLOY_SURFACE = "deploy.yml"
 COMPOSE_SURFACE = "docker-compose.prod.yml backend environment"
 
@@ -106,15 +112,7 @@ _DEPLOY_ENABLED = re.compile(
     + DISABLED_VALUE
     + r"['\"]\s*\}\}$"
 )
-_COMPOSE_CAP = re.compile(
-    r"^\$\{" + re.escape(VAR_AUTOPILOT_DAILY_CAP) + r":-([0-9]+)\}$"
-)
-_DEPLOY_CAP = re.compile(
-    r"^\$\{\{\s*secrets\."
-    + re.escape(VAR_AUTOPILOT_DAILY_CAP)
-    + r"\s*\|\|\s*['\"]([0-9]+)['\"]\s*\}\}$"
-)
-_LITERAL_CAP = re.compile(r"^[0-9]+$")
+_LITERAL_NUMBER = re.compile(r"^[0-9]+$")
 
 MSG_MISSING_DEPLOY = "{name} missing from deploy.yml"
 MSG_MISSING_COMPOSE = "{name} missing from docker-compose.prod.yml backend environment"
@@ -122,7 +120,12 @@ MSG_ENABLED = VAR_AUTOPILOT_ENABLED + " must default to false in {surface}"
 MSG_BASE_URL = (
     VAR_CAROUSEL_PUBLIC_BASE_URL + " must be " + PUBLIC_SLIDE_BASE_URL + " in {surface}"
 )
-MSG_CAP = VAR_AUTOPILOT_DAILY_CAP + " must have a numeric default in {surface}"
+MSG_NUMERIC_DEFAULT = "{name} must have a numeric default in {surface}"
+# Variables whose value parses as an int in settings: never empty in prod.
+NUMERIC_DEFAULT_NAMES: tuple[str, ...] = (
+    VAR_AUTOPILOT_DAILY_CAP,
+    VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS,
+)
 MSG_UNREADABLE = "unreadable {path}: {reason}"
 
 
@@ -168,6 +171,8 @@ def sample_deploy_value(name: str) -> str:
         return "${{ secrets." + name + " || '" + DEFAULT_PUBLISH_MODE + "' }}"
     if name == VAR_CAROUSEL_PUBLIC_BASE_URL:
         return PUBLIC_SLIDE_BASE_URL
+    if name == VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS:
+        return "${{ vars." + name + " || '" + DEFAULT_ESCALATION_ATTEMPTS + "' }}"
     return "${{ secrets." + name + " }}"
 
 
@@ -181,6 +186,8 @@ def sample_compose_value(name: str) -> str:
         return "${" + name + ":-" + DEFAULT_PUBLISH_MODE + "}"
     if name == VAR_CAROUSEL_PUBLIC_BASE_URL:
         return "${" + name + ":-" + PUBLIC_SLIDE_BASE_URL + "}"
+    if name == VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS:
+        return "${" + name + ":-" + DEFAULT_ESCALATION_ATTEMPTS + "}"
     return "${" + name + ":-}"
 
 
@@ -191,7 +198,8 @@ def gaps(surfaces: EnvSurfaces) -> list[str]:
         messages.extend(_missing(surfaces, name))
     messages.extend(_check_enabled(surfaces))
     messages.extend(_check_base_url(surfaces))
-    messages.extend(_check_daily_cap(surfaces))
+    for name in NUMERIC_DEFAULT_NAMES:
+        messages.extend(_check_numeric_default(surfaces, name))
     return messages
 
 
@@ -323,8 +331,9 @@ def _check_base_url(surfaces: EnvSurfaces) -> list[str]:
     return _when_present(surfaces, rule)
 
 
-def _check_daily_cap(surfaces: EnvSurfaces) -> list[str]:
-    rule = ValueRule(VAR_AUTOPILOT_DAILY_CAP, _cap_ok, MSG_CAP)
+def _check_numeric_default(surfaces: EnvSurfaces, name: str) -> list[str]:
+    template = MSG_NUMERIC_DEFAULT.replace("{name}", name)
+    rule = ValueRule(name, lambda value: _numeric_default_ok(name, value), template)
     return _when_present(surfaces, rule)
 
 
@@ -351,12 +360,19 @@ def _public_url_ok(value: str) -> bool:
     return _PUBLIC_URL.search(value) is not None
 
 
-def _cap_ok(value: str) -> bool:
-    if _LITERAL_CAP.fullmatch(value):
+def _numeric_default_ok(name: str, value: str) -> bool:
+    """A literal number, ``${NAME:-N}`` or ``${{ secrets|vars.NAME || 'N' }}``."""
+    if _LITERAL_NUMBER.fullmatch(value):
         return True
-    if _COMPOSE_CAP.fullmatch(value):
+    compose = re.compile(r"^\$\{" + re.escape(name) + r":-([0-9]+)\}$")
+    if compose.fullmatch(value):
         return True
-    return _DEPLOY_CAP.fullmatch(value) is not None
+    deploy = re.compile(
+        r"^\$\{\{\s*(?:secrets|vars)\."
+        + re.escape(name)
+        + r"\s*\|\|\s*['\"]([0-9]+)['\"]\s*\}\}$"
+    )
+    return deploy.fullmatch(value) is not None
 
 
 if __name__ == "__main__":

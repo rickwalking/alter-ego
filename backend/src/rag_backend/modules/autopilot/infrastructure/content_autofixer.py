@@ -14,7 +14,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.domain.constants.slide_fix import AUTOFIX_MODEL_ATTEMPTS
+from rag_backend.domain.constants.slide_fix import (
+    AUTOFIX_ESCALATION_ATTEMPTS,
+    AUTOFIX_MODEL_ATTEMPTS,
+)
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.autopilot.autofix_constants import (
     AGENT_NAME_SLIDE_FIXER,
@@ -73,6 +76,11 @@ class AutofixerConfig:
     # and, for tests, the model the slide fix uses instead of the fast role.
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
     slide_fix_model: SlideFixModelFactory | None = None
+    # AE-0407: reasoning-model attempts after the fast ones
+    # (AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS) and, for tests, their model
+    # (None: ``slide_fix_model`` when set, else the reasoning role).
+    autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
+    slide_fix_escalation_model: SlideFixModelFactory | None = None
 
 
 class InProcessContentAutofixer:
@@ -122,7 +130,9 @@ class InProcessContentAutofixer:
             phase=command.phase,
             engine=factory() if factory is not None else None,
             attempts=self._config.autofix_attempts,
+            escalation_attempts=self._config.autofix_escalation_attempts,
             model_factory=self._config.slide_fix_model,
+            escalation_model_factory=self._config.slide_fix_escalation_model,
         )
         owner = await read_project_owner_id(command.project_id, self._config.session)
         metadata = _trace(command.project_id, PHASE_AUTOFIX, owner)
@@ -171,6 +181,7 @@ def _slide_fix_outcome(report: SlideFixReport) -> SlideFixOutcome:
                 rules_before=attempt.rules_before,
                 rules_after=attempt.rules_after,
                 outcome=attempt.outcome,
+                model_role=attempt.model_role,
             )
             for attempt in report.attempts
         ),

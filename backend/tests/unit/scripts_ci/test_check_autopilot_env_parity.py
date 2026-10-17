@@ -49,6 +49,8 @@ _TICKET_ENV_NAMES = (
     "OPENCODE_SERVER_PASSWORD",
     "TELEGRAM_ALERTS_BOT_TOKEN",
     "TELEGRAM_ALERTS_CHAT_ID",
+    # AE-0407
+    "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS",
 )
 
 
@@ -277,6 +279,55 @@ def test_fires_when_daily_cap_has_no_default(tmp_path: Path) -> None:
         "AUTOPILOT_DAILY_CAP must have a numeric default in deploy.yml" in result.stderr
     )
     assert "docker-compose.prod.yml backend environment" in result.stderr
+
+
+_ESCALATION = "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS"
+
+
+@pytest.mark.parametrize("side", ["deploy", "compose"])
+def test_fires_when_escalation_attempts_is_missing(tmp_path: Path, side: str) -> None:
+    """AE-0407: the escalation attempts missing on either side fails the gate."""
+    deploy_values, compose_values = _canonical_values()
+    assert deploy_values[_ESCALATION] == "${{ vars." + _ESCALATION + " || '2' }}"
+    assert compose_values[_ESCALATION] == "${" + _ESCALATION + ":-2}"
+    del (deploy_values if side == "deploy" else compose_values)[_ESCALATION]
+    deploy, compose = _write_pair(tmp_path, deploy_values, compose_values)
+
+    result = _run(str(deploy), str(compose))
+
+    assert result.returncode == EXIT_VIOLATION, result.stdout + result.stderr
+    surface = "deploy.yml" if side == "deploy" else "docker-compose.prod.yml"
+    assert f"{_ESCALATION} missing from {surface}" in result.stderr
+
+
+def test_fires_when_escalation_attempts_has_no_numeric_default(
+    tmp_path: Path,
+) -> None:
+    """AE-0407: an empty value would crash the integer setting at startup."""
+    deploy_values, compose_values = _canonical_values()
+    deploy_values[_ESCALATION] = "${{ vars." + _ESCALATION + " }}"
+    compose_values[_ESCALATION] = "${" + _ESCALATION + ":-}"
+    deploy, compose = _write_pair(tmp_path, deploy_values, compose_values)
+
+    result = _run(str(deploy), str(compose))
+
+    assert result.returncode == EXIT_VIOLATION
+    message = f"{_ESCALATION} must have a numeric default in"
+    assert f"{message} deploy.yml" in result.stderr
+    assert f"{message} docker-compose.prod.yml backend environment" in result.stderr
+    assert "AUTOPILOT_DAILY_CAP must have" not in result.stderr
+
+
+def test_escalation_attempts_accepts_a_secret_or_a_literal(tmp_path: Path) -> None:
+    """AE-0407: a secret with a numeric fallback and a literal 0 both pass."""
+    deploy_values, compose_values = _canonical_values()
+    deploy_values[_ESCALATION] = "${{ secrets." + _ESCALATION + " || '0' }}"
+    compose_values[_ESCALATION] = "0"
+    deploy, compose = _write_pair(tmp_path, deploy_values, compose_values)
+
+    result = _run(str(deploy), str(compose))
+
+    assert result.returncode == EXIT_OK, result.stderr
 
 
 def test_usage_and_unreadable_paths(tmp_path: Path) -> None:

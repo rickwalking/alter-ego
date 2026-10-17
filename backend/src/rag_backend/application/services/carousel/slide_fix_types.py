@@ -14,7 +14,11 @@ from rag_backend.application.services.carousel.owner_autofix_plan import (
     AutofixContext,
 )
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
-from rag_backend.domain.constants.slide_fix import AUTOFIX_MODEL_ATTEMPTS
+from rag_backend.domain.constants.slide_fix import (
+    AUTOFIX_ESCALATION_ATTEMPTS,
+    AUTOFIX_MODEL_ATTEMPTS,
+    MODEL_ROLE_FAST,
+)
 
 
 class SlideRewriter(Protocol):
@@ -28,27 +32,33 @@ class SlideRewriter(Protocol):
 class VoiceScorer(Protocol):
     """The persona's voice-match score (0-100) of one slide's PT copy."""
 
-    async def score(self, text: str) -> float:
-        """Raises on a transport or provider failure."""
+    async def score(self, text: str) -> float | None:
+        """None when the judge gave no score (AE-0407); may raise."""
         ...
 
 
 @dataclass(frozen=True)
 class SlideFixSettings:
-    """How hard to try: attempts per slide, parallel slides, the voice floor."""
+    """How hard to try: attempts per slide, parallel slides, the voice floor.
+
+    ``escalation_attempts`` more attempts run on ``escalation_rewriter``
+    (the reasoning model) after ``attempts`` failed ones (AE-0407).
+    """
 
     attempts: int = AUTOFIX_MODEL_ATTEMPTS
+    escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
     concurrency: int = 1
     voice_floor: float = VOICE_MATCH_MIN_SCORE
 
 
 @dataclass(frozen=True)
 class SlideFixTools:
-    """The model, the optional voice scorer and the persona style guide."""
+    """The models, the optional voice scorer and the persona style guide."""
 
     rewriter: SlideRewriter
     scorer: VoiceScorer | None = None
     style_guide: str = ""
+    escalation_rewriter: SlideRewriter | None = None
 
 
 @dataclass(frozen=True)
@@ -91,6 +101,7 @@ class FixAttempt:
     rules_before: tuple[str, ...]
     rules_after: tuple[str, ...]
     outcome: str
+    model_role: str = MODEL_ROLE_FAST
 
 
 @dataclass(frozen=True)

@@ -30,12 +30,13 @@ Feature: Autopilot model fix of failing slides (AE-0401)
     When the runner ticks
     Then the gate is approved after 3 attempts
 
+  # AE-0407: 3 fast attempts, then 2 on the reasoning model, before escalating.
   Scenario: Still failing after 3 attempts escalates with the slides listed
     Given slide 3's PT body has an emoji
     And the model always answers with an emoji
     When the runner ticks
     Then the run is escalated with reason "content_quality"
-    And the escalation lists "slide 3", "visible_emoji_forbidden", its current text and "3 fix attempts"
+    And the escalation lists "slide 3", "visible_emoji_forbidden", its current text and "5 fix attempts"
     And no revise is sent
     And the checkpoint copy is unchanged
 

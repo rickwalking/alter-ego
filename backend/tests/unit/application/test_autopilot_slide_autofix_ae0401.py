@@ -254,7 +254,11 @@ class TestSlideAutofixFlow:
     async def test_still_failing_escalates_with_the_slides(
         self, db_session: AsyncSession
     ) -> None:
-        """Scenario: Still failing after 3 attempts escalates with the slides listed."""
+        """Scenario: Still failing after 3 attempts escalates with the slides listed.
+
+        AE-0407: 3 fast attempts then 2 on the reasoning model (here the same
+        fake), so 5 attempts are counted.
+        """
         flow = await _flow(db_session, GateSeed(breaks=(emoji_body_3,)), [STILL_EMOJI])
         await _tick(flow)
         assert flow.runs.run.state is AutopilotRunState.ESCALATED
@@ -262,9 +266,9 @@ class TestSlideAutofixFlow:
         detail = flow.runs.transitions[-1].detail
         assert "slide 3: visible_emoji_forbidden" in detail
         assert EMOJI_BODY_3 in detail
-        assert "(3 fix attempts)" in detail
+        assert "(5 fix attempts)" in detail
         assert flow.gate.resumes == []
-        assert len(flow.script.prompts) == 3
+        assert len(flow.script.prompts) == 5
         assert (await _pt(flow, 3))["body"] == EMOJI_BODY_3
         assert await _lock_version(flow) == LOCK_VERSION
 
@@ -313,7 +317,7 @@ class TestSlideAutofixFlow:
             await _tick(flow)
         events = [log["event"] for log in logs]
         assert events.count("autopilot_gate_repair_noop") == 1
-        assert len(_attempt_logs(logs)) == 3
+        assert len(_attempt_logs(logs)) == 5
         assert flow.runs.run.state is AutopilotRunState.ESCALATED
         escalations = [
             t for t in flow.runs.transitions if t.new is AutopilotRunState.ESCALATED

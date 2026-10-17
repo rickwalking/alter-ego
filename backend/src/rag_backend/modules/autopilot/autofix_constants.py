@@ -1,8 +1,9 @@
 """Constants for the autopilot model fix of failing slides (AE-0401).
 
 Content-quality and voice-score failures at the content and design gates go
-through deterministic repair, then up to 3 model attempts per failing slide,
-then straight to the owner: they never spend the revise budget.
+through deterministic repair, then up to 3 fast-model attempts per failing
+slide and 2 more on the reasoning model (AE-0407), then straight to the
+owner: they never spend the revise budget.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ LOG_FIELD_ATTEMPT = "attempt"
 LOG_FIELD_RULES_BEFORE = "rules_before"
 LOG_FIELD_RULES_AFTER = "rules_after"
 LOG_FIELD_OUTCOME = "outcome"
+LOG_FIELD_MODEL_ROLE = "model_role"
 LOG_FIELD_FAILING_SLIDES = "failing_slides"
 
 # The Telegram escalation lists every slide the fix gave up on.

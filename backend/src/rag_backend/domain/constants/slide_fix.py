@@ -2,13 +2,20 @@
 
 After the deterministic gate repair, each slide that still fails a blocking
 copy rule (or scores under the voice floor) is rewritten by the fast model,
-at most ``AUTOFIX_MODEL_ATTEMPTS`` times, then the run escalates.
+at most ``AUTOFIX_MODEL_ATTEMPTS`` times, then by the reasoning model at most
+``AUTOFIX_ESCALATION_ATTEMPTS`` times (AE-0407), then the run escalates.
 """
 
 from __future__ import annotations
 
 # Owner decision 2026-10-16: three model attempts per slide, then escalate.
 AUTOFIX_MODEL_ATTEMPTS = 3
+# AE-0407 (owner, 2026-10-17): then up to two attempts on the stronger
+# reasoning model before the run escalates (0 turns the escalation off).
+AUTOFIX_ESCALATION_ATTEMPTS = 2
+# The model role of an attempt (the LLM routing role names).
+MODEL_ROLE_FAST = "fast"
+MODEL_ROLE_REASONING = "reasoning"
 SLIDE_FIX_TIMEOUT_SECONDS = 120.0
 
 SLIDE_FIX_PROMPT_DOMAIN = "carousel"
@@ -52,6 +59,7 @@ __all__ = [
     "ATTEMPT_MODEL_ERROR",
     "ATTEMPT_STILL_FAILING",
     "ATTEMPT_UNPARSEABLE",
+    "AUTOFIX_ESCALATION_ATTEMPTS",
     "AUTOFIX_MODEL_ATTEMPTS",
     "ISSUE_LINE",
     "ISSUE_MODEL_ERROR",
@@ -61,6 +69,8 @@ __all__ = [
     "LOG_SLIDE_FIX_APPLIED",
     "LOG_SLIDE_FIX_CONFLICT",
     "LOG_SLIDE_FIX_NOOP",
+    "MODEL_ROLE_FAST",
+    "MODEL_ROLE_REASONING",
     "PERSONA_SCORE_SLIDE_KEY",
     "SLIDE_FIX_PROMPT_DOMAIN",
     "SLIDE_FIX_PROMPT_NAME",

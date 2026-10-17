@@ -102,6 +102,8 @@ class SlideFixAttemptRecord:
     rules_before: tuple[str, ...]
     rules_after: tuple[str, ...]
     outcome: str
+    # AE-0407: the model role of the attempt ("fast" or "reasoning").
+    model_role: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

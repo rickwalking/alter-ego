@@ -3,7 +3,9 @@
 Autopilot only, at the content and design gates. A gate that still fails on
 content quality (blocking presentation rules) or on a low voice score after
 the AE-0392 repair is not revised: each failing slide is rewritten by the
-fast model, at most ``AUTOPILOT_AUTOFIX_ATTEMPTS`` times, the fixed slides are
+fast model, at most ``AUTOPILOT_AUTOFIX_ATTEMPTS`` times, then by the
+reasoning model at most ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` times
+(AE-0407, attempts numbered on), the fixed slides are
 written through the editorial facade, and the gate is read again. A clean
 gate is approved; otherwise the run escalates to the owner with every slide
 the fix gave up on. The revise budget is never spent on these reasons; other
@@ -29,6 +31,7 @@ from rag_backend.modules.autopilot.autofix_constants import (
     ESCALATION_TEXT_MAX_CHARS,
     LOG_FIELD_ATTEMPT,
     LOG_FIELD_FAILING_SLIDES,
+    LOG_FIELD_MODEL_ROLE,
     LOG_FIELD_OUTCOME,
     LOG_FIELD_RULES_AFTER,
     LOG_FIELD_RULES_BEFORE,
@@ -125,6 +128,7 @@ def _log_attempts(read: GateRead, outcome: SlideFixOutcome) -> None:
                 LOG_FIELD_RULES_BEFORE: list(attempt.rules_before),
                 LOG_FIELD_RULES_AFTER: list(attempt.rules_after),
                 LOG_FIELD_OUTCOME: attempt.outcome,
+                LOG_FIELD_MODEL_ROLE: attempt.model_role,
             },
         )
 
