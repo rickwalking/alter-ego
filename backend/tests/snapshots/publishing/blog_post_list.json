@@ -8,6 +8,7 @@
         "excerpt": "Deterministic excerpt.",
         "featured_image_url": null,
         "id": "<uuid>",
+        "is_public": false,
         "keywords": [
           "fixture",
           "snapshot"
