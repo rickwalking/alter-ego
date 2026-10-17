@@ -13,7 +13,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.domain.constants.slide_fix import AUTOFIX_MODEL_ATTEMPTS
+from rag_backend.domain.constants.slide_fix import (
+    AUTOFIX_ESCALATION_ATTEMPTS,
+    AUTOFIX_MODEL_ATTEMPTS,
+)
 from rag_backend.domain.protocols.social import SocialPublisher
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.autopilot.application.manual_publish import (
@@ -250,6 +253,8 @@ class AutopilotTickConfig:
     persona_id: str = ""
     # AE-0401: AUTOPILOT_AUTOFIX_ATTEMPTS, model attempts per failing slide.
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
+    # AE-0407: AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS, reasoning-model attempts.
+    autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
 
 
 class AutopilotRunnerTickAdapter:
@@ -300,6 +305,7 @@ def _runner_deps(
             session=session,
             engine_factory=config.engine_factory,
             autofix_attempts=config.autofix_attempts,
+            autofix_escalation_attempts=config.autofix_escalation_attempts,
         )
     )
     return RunnerDependencies(

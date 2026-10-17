@@ -56,10 +56,12 @@ Other fixes from the same run:
 ## Autopilot autofix
 
 See [`docs/architecture/grokbot-autopilot.md`](../architecture/grokbot-autopilot.md) "Model
-fix, then escalate". In short: deterministic repair, then up to 3 model attempts per failing
-slide (blocking rule or voice score under 70), then approve or escalate. Never a revise.
+fix, then escalate". In short: deterministic repair, then up to 3 fast-model attempts per
+failing slide (blocking rule or voice score under 70), then up to 2 more on the reasoning model
+(AE-0407), then approve or escalate. Never a revise.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `AUTOPILOT_AUTOFIX_ATTEMPTS` | 3 (`AUTOFIX_MODEL_ATTEMPTS`) | model attempts per failing slide |
+| `AUTOPILOT_AUTOFIX_ATTEMPTS` | 3 (`AUTOFIX_MODEL_ATTEMPTS`) | fast-model attempts per failing slide |
+| `AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS` | 2 (`AUTOFIX_ESCALATION_ATTEMPTS`) | reasoning-model attempts after them (0 = off; on deploy.yml as a GitHub variable) |
 | `CONTENT_DRAFT_CONCURRENCY` | 4 | slides fixed in parallel |

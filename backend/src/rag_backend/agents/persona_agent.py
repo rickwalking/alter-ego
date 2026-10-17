@@ -5,9 +5,15 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
+from rag_backend.agents.constants import KEY_OVERALL
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.prompts.registry import render_prompt
+from rag_backend.domain.constants.persona import (
+    PERSONA_SCORE_TEN_POINT_MAX,
+    PERSONA_SCORE_TEN_TO_HUNDRED,
+)
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.persona_score import on_hundred_scale
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 # 1-line fallback if the prompt registry is unavailable (AE-0243). The live
@@ -60,7 +66,9 @@ class PersonaAgent:
         does not name the scale and the model often answers on 0-10 (prod
         2026-10-16: overall 8.2-8.9 for on-voice copy), which failed every POV
         voice gate. A response whose five scores are all at most 10 is read as
-        a 0-10 answer and scaled to 0-100.
+        a 0-10 answer and scaled to 0-100. AE-0407: ``overall`` is the gate's
+        score, so an ``overall`` in (0, 10] is scaled on its own even when a
+        sub-score is above 10 (prod: tone 78 with overall 7.8).
         """
         try:
             data = __import__("json").loads(response)
@@ -124,13 +132,18 @@ _SCORE_FIELDS = (
     "human_authenticity",
     "overall",
 )
-_TEN_POINT_MAX = 10.0
-_TEN_TO_HUNDRED = 10.0
 
 
 def _on_hundred_point_scale(scores: dict[str, float]) -> dict[str, float]:
-    """Scores on 0-100; an all-at-most-10 answer is a 0-10 answer (AE-0398)."""
+    """Scores on 0-100; an all-at-most-10 answer is a 0-10 answer (AE-0398).
+
+    The overall is scaled by itself (AE-0407), the sub-scores together.
+    """
     values = scores.values()
-    if any(value > _TEN_POINT_MAX for value in values) or not any(values):
-        return scores
-    return {field: value * _TEN_TO_HUNDRED for field, value in scores.items()}
+    scaled = scores
+    if not any(value > PERSONA_SCORE_TEN_POINT_MAX for value in values) and any(values):
+        scaled = {
+            field: value * PERSONA_SCORE_TEN_TO_HUNDRED
+            for field, value in scores.items()
+        }
+    return {**scaled, KEY_OVERALL: on_hundred_scale(scores[KEY_OVERALL])}

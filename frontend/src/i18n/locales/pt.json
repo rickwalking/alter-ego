@@ -570,6 +570,9 @@
       "headingLabel": "Título",
       "bodyLabel": "Corpo",
       "structuredExtra": "Campo estruturado: {field}",
+      "insightQuoteLabel": "Cartão de citação",
+      "insightQuoteAria": "Citação de {name}",
+      "insightQuoteSource": "{handle} · {platform}",
       "imagePromptsLink": "{count, plural, one {# prompt de imagem está disponível na etapa Imagens.} other {# prompts de imagem estão disponíveis na etapa Imagens.}}",
       "emptyPhase": "Nenhum conteúdo gerado está disponível para esta fase. Tente atualizar ou aprovar novamente a etapa anterior.",
       "finalReview": {

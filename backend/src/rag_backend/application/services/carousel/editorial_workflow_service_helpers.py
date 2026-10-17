@@ -42,7 +42,6 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_PRESENTATION_VALIDATION_BLOCKED,
     ERR_REVISION_CAP_EXCEEDED,
     FINAL_REVIEW_SEND_BACK_PHASES,
-    PERSONA_SCORE_OVERALL_KEY,
     PHASE_CONTENT,
     PHASE_DESIGN,
     PHASE_STATUS_AWAITING_HUMAN,
@@ -61,6 +60,7 @@ from rag_backend.domain.constants.content_feedback import (
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.persona_score import lowest_overall
 
 
 @dataclass(frozen=True)
@@ -104,16 +104,9 @@ def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None
     current_phase = str(prior.get("current_phase", ""))
     if current_phase != PHASE_CONTENT:
         return
-    persona_scores = prior.get("persona_scores") or {}
-    if not isinstance(persona_scores, dict) or not persona_scores:
-        return
-    min_score = min(
-        float(value.get(PERSONA_SCORE_OVERALL_KEY, 0))
-        if isinstance(value, dict)
-        else float(value)
-        for value in persona_scores.values()
-    )
-    if min_score < VOICE_MATCH_MIN_SCORE:
+    # AE-0407: 0-100 scale, unscored entries skipped (as the autopilot reads).
+    min_score = lowest_overall(prior.get("persona_scores"))
+    if min_score is not None and min_score < VOICE_MATCH_MIN_SCORE:
         raise ValueError(ERR_PERSONA_SCORE_TOO_LOW)
 
 

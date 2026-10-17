@@ -291,9 +291,10 @@ class TestTargetsAndPrompt:
 
     @pytest.mark.parametrize(
         ("value", "expected"),
-        [({"overall": 72}, 72.0), (55, 55.0), ({"overall": True}, 0.0), ("x", 0.0)],
+        [({"overall": 72}, 72.0), (55, 55.0), ({"overall": True}, None), ("x", None)],
     )
-    def test_overall_score(self, value: object, expected: float) -> None:
+    def test_overall_score(self, value: object, expected: float | None) -> None:
+        # AE-0407: an unreadable overall is unscored (None), not 0.
         assert overall_score(value) == expected
 
     def test_slide_scores_ignores_bad_shapes(self) -> None:

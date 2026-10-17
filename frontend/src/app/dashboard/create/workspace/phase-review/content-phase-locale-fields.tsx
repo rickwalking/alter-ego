@@ -6,12 +6,15 @@ import {
   fieldErrorKey,
   FlaggableTextarea,
   formatBudgetUsage,
+  INSIGHT_QUOTE_EXTRA_KEY,
   isBudgetExceeded,
   isPresentationStructuredItemList,
   listPresentationIconNames,
   listPresentationStructuredItems,
   listStructuredExtras,
+  parsePresentationInsightQuote,
   PresentationIconPreview,
+  PresentationInsightQuoteCard,
   PresentationStructuredItems,
   presentationBody,
   presentationHeading,
@@ -132,6 +135,35 @@ function renderStructuredExtraValue(value: unknown): React.ReactNode {
   );
 }
 
+/** AE-0407: a ``pov_news`` insight renders as a quote card, never raw JSON. */
+function StructuredExtra({
+  extraKey,
+  value,
+}: {
+  extraKey: string;
+  value: unknown;
+}): React.ReactElement {
+  const t = useTranslations("editorialWorkflow.review");
+  const quote =
+    extraKey === INSIGHT_QUOTE_EXTRA_KEY
+      ? parsePresentationInsightQuote(value)
+      : null;
+  return (
+    <div>
+      <p className="font-medium text-[var(--color-text-muted)] text-xs">
+        {quote
+          ? t("insightQuoteLabel")
+          : t("structuredExtra", { field: extraKey })}
+      </p>
+      {quote ? (
+        <PresentationInsightQuoteCard insight={quote} />
+      ) : (
+        renderStructuredExtraValue(value)
+      )}
+    </div>
+  );
+}
+
 function PresentationExtras({
   presentation,
   localeLabel,
@@ -139,7 +171,6 @@ function PresentationExtras({
   presentation: Record<string, unknown>;
   localeLabel: string;
 }): React.ReactElement {
-  const t = useTranslations("editorialWorkflow.review");
   const structuredExtras = listStructuredExtras(presentation);
   const structuredItems = listPresentationStructuredItems(presentation);
   const iconNames = listPresentationIconNames(presentation);
@@ -169,12 +200,11 @@ function PresentationExtras({
       {structuredExtras.length > 0 ? (
         <div className="space-y-1 pt-1">
           {structuredExtras.map((extra) => (
-            <div key={`${localeLabel}-${extra.key}`}>
-              <p className="font-medium text-[var(--color-text-muted)] text-xs">
-                {t("structuredExtra", { field: extra.key })}
-              </p>
-              {renderStructuredExtraValue(extra.value)}
-            </div>
+            <StructuredExtra
+              key={`${localeLabel}-${extra.key}`}
+              extraKey={extra.key}
+              value={extra.value}
+            />
           ))}
         </div>
       ) : null}

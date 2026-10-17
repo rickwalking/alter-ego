@@ -64,11 +64,12 @@ def test_persona_score_is_the_minimum_overall() -> None:
     assert snapshot.lock_version == 3
 
 
-def test_persona_dict_without_overall_counts_as_zero_like_the_engine() -> None:
-    """Scenario: The engine rejects an approve the policy allowed (QA r1 B1).
+def test_persona_dict_without_overall_is_unscored_like_the_engine() -> None:
+    """Scenario: The engine and the policy read a missing "overall" the same way.
 
-    The engine reads a persona entry without ``overall`` as 0, so the
-    snapshot must too; otherwise the policy approves into a refusal.
+    QA r1 B1: the snapshot must read like the engine, or the policy approves
+    into a refusal. AE-0407: both skip an entry without ``overall`` (a
+    failed judge call), so the lowest score is the scored one.
     """
     state = {
         FIELD_CURRENT_PHASE: "content",
@@ -76,7 +77,7 @@ def test_persona_dict_without_overall_counts_as_zero_like_the_engine() -> None:
         FIELD_PERSONA_SCORES: {"voice": {FIELD_OVERALL: 80}, "empty": {}},
     }
     snapshot = assemble_snapshot(_parts(state, slides=6, lock=3))
-    assert snapshot.persona_score == 0.0
+    assert snapshot.persona_score == 80.0
 
 
 def test_missing_persona_scores_stay_none() -> None:

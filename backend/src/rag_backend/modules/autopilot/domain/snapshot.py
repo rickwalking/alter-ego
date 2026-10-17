@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from rag_backend.domain.persona_score import lowest_overall
 from rag_backend.modules.autopilot.constants import (
     BLOCKER_BLOCKING,
     BLOCKER_MISSING,
@@ -20,7 +21,6 @@ from rag_backend.modules.autopilot.constants import (
     FIELD_FORBIDDEN_PHRASES,
     FIELD_KEY_POINTS,
     FIELD_OUTLINE,
-    FIELD_OVERALL,
     FIELD_PERSONA_SCORES,
     FIELD_PHASE_STATUS,
     FIELD_PRESENTATION_VALIDATION,
@@ -85,28 +85,14 @@ def _source(item: Mapping[str, object]) -> ResearchSourceFact:
 
 
 def _persona_score(raw: object) -> float | None:
-    """The lowest persona score, or None when the run was not scored (AE-0364).
+    """The lowest persona score on 0-100, or None when unscored (AE-0364).
 
     None means "not scored" (no persona), which the policy skips like the
-    engine does. An entry that is present but unreadable counts as 0, so the
-    gate fails closed instead of approving into an engine error.
+    engine does. AE-0407: both read through ``lowest_overall``, so a stored
+    0-10 answer is scaled and a 0 / missing / unreadable entry (a failed
+    judge call) is unscored on both sides instead of failing one of them.
     """
-    if not isinstance(raw, dict) or not raw:
-        return None
-    return min(_one_score(value) for value in raw.values())
-
-
-def _one_score(value: object) -> float:
-    if isinstance(value, dict):
-        # The engine reads a missing ``overall`` as 0 (QA r1 B1); so do we.
-        return _float_or_zero(value.get(FIELD_OVERALL, 0))
-    return _float_or_zero(value)
-
-
-def _float_or_zero(value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        return 0.0
-    return float(value)
+    return lowest_overall(raw)
 
 
 def _forbidden(state: Mapping[str, object]) -> tuple[str, ...]:

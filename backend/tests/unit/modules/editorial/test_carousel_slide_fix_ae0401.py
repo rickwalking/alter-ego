@@ -84,7 +84,8 @@ class TestRunSlideFix:
                 engine=engine,
             )
         )
-        assert roles == ["fast"]
+        # AE-0407: the reasoning model is built for the escalation attempts.
+        assert roles == ["fast", "reasoning"]
         assert report.status == AUTOFIX_STATUS_FIXED
         assert [(s.slide_index, s.fixed, s.attempts) for s in report.slides] == [
             (3, True, 1)
@@ -110,6 +111,7 @@ class TestRunSlideFix:
                 phase="content",
                 engine=engine,
                 attempts=1,
+                escalation_attempts=0,
                 model_factory=lambda: FakeChat(reply=lambda _prompt: "no json"),
             )
         )

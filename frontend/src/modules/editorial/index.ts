@@ -74,6 +74,7 @@ export { HookPicker } from "./workspace/components/hook-picker";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
+export { PresentationInsightQuoteCard } from "./workspace/components/presentation-insight-quote-card";
 export { SlideCopyEditor } from "./workspace/components/slide-copy-editor";
 export {
   BlockingSlidesNotice,
@@ -86,6 +87,7 @@ export type {
   HookPickerProps,
   ImagePromptReviewProps,
   PresentationIconPreviewProps,
+  PresentationInsightQuoteCardProps,
   PresentationStructuredItemsProps,
   SlideCopyEditorProps,
   WorkflowFailedCardProps,
@@ -139,6 +141,18 @@ export {
   type PresentationStructuredItem,
   type PresentationFieldBudget,
 } from "./workspace/lib/presentation-review-utils";
+
+/* --- workspace: pov_news quote card (AE-0407) --- */
+export {
+  INSIGHT_QUOTE_EXTRA_KEY,
+  QUOTE_HANDLE_PREFIX,
+  QUOTE_SOURCE_PLATFORM,
+  formatQuoteHandle,
+  isPresentationInsightQuotePayload,
+  parsePresentationInsightQuote,
+  type PresentationInsightQuote,
+  type PresentationInsightQuotePayload,
+} from "./workspace/lib/presentation-insight-quote";
 
 /* --- workspace: localized slide resolution + copy editing --- */
 export {

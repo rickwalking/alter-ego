@@ -154,8 +154,8 @@ def test_unscored_run_still_fails_on_an_engine_blocker() -> None:
     "entry",
     [{FIELD_OVERALL: None}, {FIELD_OVERALL: "high"}, "high", True],
 )
-def test_unreadable_persona_score_fails_closed(entry: object) -> None:
-    """Scenario: An unreadable persona score fails closed."""
+def test_unreadable_persona_score_is_unscored(entry: object) -> None:
+    """Scenario: An unreadable persona score is unscored (AE-0407)."""
     state = _state(**{FIELD_PERSONA_SCORES: {"slide_1": entry}})
 
     snapshot = assemble_snapshot(
@@ -168,8 +168,8 @@ def test_unreadable_persona_score_fails_closed(entry: object) -> None:
         )
     )
 
-    assert snapshot.persona_score == 0.0
-    assert decide(snapshot).reason == REASON_PERSONA_SCORE
+    assert snapshot.persona_score is None
+    assert decide(snapshot).reason != REASON_PERSONA_SCORE
 
 
 def test_review_caption_says_not_scored() -> None:
