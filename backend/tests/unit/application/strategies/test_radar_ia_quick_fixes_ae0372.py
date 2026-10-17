@@ -43,12 +43,8 @@ from rag_backend.domain.constants.carousel_cta import (
 from rag_backend.domain.protocols.carousel import _RenderOptions
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
-_FOLLOW_PT = (
-    "Siga @pedromarins.ai: eu traduzo IA em decisões reais."
-)
-_FOLLOW_EN = (
-    "Follow @pedromarins.ai: I turn AI into real decisions."
-)
+_FOLLOW_PT = "Siga @pedromarins.ai: eu traduzo IA em decisões reais."
+_FOLLOW_EN = "Follow @pedromarins.ai: I turn AI into real decisions."
 _OLD_PT = "Siga para mais conteúdo como esse"
 
 

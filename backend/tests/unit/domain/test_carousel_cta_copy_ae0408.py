@@ -11,8 +11,20 @@ from rag_backend.domain.constants.carousel_cta import (
 )
 
 _WEEKDAYS = (
-    "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo",
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "segunda",
+    "terça",
+    "quarta",
+    "quinta",
+    "sexta",
+    "sábado",
+    "domingo",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
 )
 
 

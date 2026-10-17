@@ -20,16 +20,12 @@ CTA_GOALS: frozenset[str] = frozenset({
 DEFAULT_CTA_HANDLE = "pedromarins.ai"
 
 CTA_COPY_PT: dict[str, str] = {
-    CTA_GOAL_FOLLOW: (
-        "Siga {handle}: eu traduzo IA em decisões reais."
-    ),
+    CTA_GOAL_FOLLOW: ("Siga {handle}: eu traduzo IA em decisões reais."),
     CTA_GOAL_SEND: "Manda pra quem precisa ouvir isso.",
     CTA_GOAL_COMMENT: "Discorda? Me diz nos comentários.",
 }
 CTA_COPY_EN: dict[str, str] = {
-    CTA_GOAL_FOLLOW: (
-        "Follow {handle}: I turn AI into real decisions."
-    ),
+    CTA_GOAL_FOLLOW: ("Follow {handle}: I turn AI into real decisions."),
     CTA_GOAL_SEND: "Send this to someone who needs to hear it.",
     CTA_GOAL_COMMENT: "Disagree? Tell me in the comments.",
 }
