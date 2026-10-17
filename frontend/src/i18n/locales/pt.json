@@ -930,7 +930,8 @@
       "linkedin": "LinkedIn"
     },
     "instagram": {
-      "captionLabel": "Legenda do Instagram",
+      "captionLabel": "Legenda do Instagram (PT)",
+      "captionPtOnly": "A legenda do Instagram é publicada só em português. O texto em inglês está no post do LinkedIn e no PDF EN.",
       "placeholder": "Escreva sua legenda do Instagram…",
       "hashtagHelp": "Hashtags: {count} / {max}",
       "hashtagOver": "Acima do limite de 30 hashtags — o Instagram rejeitará o post.",
@@ -960,7 +961,9 @@
       "nextSlide": "Próximo slide",
       "goToSlide": "Ir para slide {number}",
       "downloadImages": "Baixar imagens",
-      "downloadingImages": "Baixando..."
+      "downloadingImages": "Baixando...",
+      "slideAlt": "{title} – slide {number}",
+      "slideNotRendered": "Slide ainda não renderizado"
     },
     "regenerateStrategy": {
       "title": "Layout dos Slides",

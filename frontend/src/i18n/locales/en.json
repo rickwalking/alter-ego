@@ -930,7 +930,8 @@
       "linkedin": "LinkedIn"
     },
     "instagram": {
-      "captionLabel": "Instagram caption",
+      "captionLabel": "Instagram caption (PT)",
+      "captionPtOnly": "The Instagram caption is published in Portuguese only. The English copy is in the LinkedIn post and the EN PDF.",
       "placeholder": "Write your Instagram caption…",
       "hashtagHelp": "Hashtags: {count} / {max}",
       "hashtagOver": "Over the 30-hashtag limit — Instagram will reject the post.",
@@ -960,7 +961,9 @@
       "nextSlide": "Next slide",
       "goToSlide": "Go to slide {number}",
       "downloadImages": "Download images",
-      "downloadingImages": "Downloading..."
+      "downloadingImages": "Downloading...",
+      "slideAlt": "{title} – slide {number}",
+      "slideNotRendered": "Slide not rendered yet"
     },
     "regenerateStrategy": {
       "title": "Slide Layout",

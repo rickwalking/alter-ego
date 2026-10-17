@@ -183,6 +183,9 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
     workflowState,
   );
   const artifactsReady = isPublishReady(project, workflowState);
+  const localizedSlides = workflowState
+    ? resolveLocalizedSlides(workflowState)
+    : [];
 
   return (
     <div
@@ -300,6 +303,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                 isPublishingInstagram={publishInstagram.isPending}
                 publishResult={publishResult}
                 cacheBustToken={rebuiltVersion ?? undefined}
+                slideNumbers={localizedSlides.map((slide) => slide.slide_index)}
               />
             </div>
 
@@ -335,7 +339,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                   images; chains the republish so the served PDF reflects the edit. */}
                 <SlideTextEditSection
                   projectId={projectId}
-                  slides={resolveLocalizedSlides(workflowState)}
+                  slides={localizedSlides}
                   policyVersion={workflowState.presentation_policy_version}
                   runInProgress={
                     workflowState.phase_status ===

@@ -19,6 +19,13 @@ export function HorizontalCarouselViewer({
   const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  // AE-0416: slides whose image did not load (not rendered yet) get a
+  // placeholder instead of a broken image.
+  const [missingSlides, setMissingSlides] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const markMissing = (url: string): void =>
+    setMissingSlides((current) => new Set(current).add(url));
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
@@ -114,15 +121,22 @@ export function HorizontalCarouselViewer({
               key={`slide-${i + 1}`}
               className="relative aspect-[4/5] w-full flex-shrink-0 snap-center"
             >
-              <Image
-                src={url}
-                alt={`${alt} – slide ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                unoptimized
-                priority={i === 0}
-              />
+              {missingSlides.has(url) ? (
+                <div className="flex h-full w-full items-center justify-center bg-[var(--color-background)] p-4 text-center text-[var(--color-text-muted)] text-sm">
+                  {t("slideNotRendered")}
+                </div>
+              ) : (
+                <Image
+                  src={url}
+                  alt={t("slideAlt", { title: alt, number: i + 1 })}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  unoptimized
+                  priority={i === 0}
+                  onError={() => markMissing(url)}
+                />
+              )}
               <div className="absolute top-3 right-3 rounded-full bg-background/60 px-2 py-0.5 text-foreground text-xs">
                 {i + 1} / {slideUrls.length}
               </div>
