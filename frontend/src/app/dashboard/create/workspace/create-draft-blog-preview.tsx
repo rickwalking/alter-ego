@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
+import {
+  API_ENDPOINTS,
+  DEFAULT_BLOG_LANGUAGE,
+  HTTP_STATUS,
+} from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface WorkspaceDraftBlogPreviewProps {
@@ -28,6 +32,11 @@ export function CreateDraftBlogPreview({
       const response = await authenticatedFetch(
         API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG(projectId, DEFAULT_BLOG_LANGUAGE),
       );
+      // AE-0415 (B30): nothing generated yet is an empty state, not an error.
+      if (response.status === HTTP_STATUS.NOT_FOUND) {
+        setMarkdown("");
+        return;
+      }
       if (!response.ok) {
         setError(t("previewError"));
         return;

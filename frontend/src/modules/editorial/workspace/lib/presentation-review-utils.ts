@@ -1,6 +1,5 @@
 import type {
   EditorialWorkflowState,
-  LocalizedSlideReview,
   SlideValidationViolation,
   ViolationSeverity,
 } from "@/modules/editorial/workspace/types-ai";
@@ -51,38 +50,6 @@ export interface PresentationStructuredItem {
   title?: string;
   body?: string;
 }
-
-export interface PresentationFieldBudget {
-  maxCharacters: number;
-  maxLines?: number;
-}
-
-const HERO_LOWER_THIRD_V1_BUDGETS: Record<string, PresentationFieldBudget> = {
-  intro_heading: { maxCharacters: 72, maxLines: 3 },
-  intro_subtitle: { maxCharacters: 180, maxLines: 4 },
-  summary_heading: { maxCharacters: 64, maxLines: 3 },
-  content_heading: { maxCharacters: 64, maxLines: 3 },
-  content_body: { maxCharacters: 220, maxLines: 6 },
-  closing_action_title: { maxCharacters: 30 },
-  closing_action_body: { maxCharacters: 90 },
-  cta_creator_name: { maxCharacters: 60 },
-  cta_handle: { maxCharacters: 80 },
-  cta_website: { maxCharacters: 80 },
-};
-
-const SLIDE_TYPE_HEADING_BUDGET_KEY: Record<string, string> = {
-  intro: "intro_heading",
-  summary: "summary_heading",
-  content: "content_heading",
-  // Backend applies content_heading to closing/cta visible headings.
-  closing: "content_heading",
-  cta: "content_heading",
-};
-
-const SLIDE_TYPE_BODY_BUDGET_KEY: Record<string, string> = {
-  intro: "intro_subtitle",
-  content: "content_body",
-};
 
 export function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -147,80 +114,6 @@ export function resolveSlideDraftPreview(
   }
   const body = slide.body;
   return typeof body === "string" ? body : "";
-}
-
-export function resolveHeadingBudget(
-  slideType: string,
-  policyVersion?: string | null,
-): PresentationFieldBudget | null {
-  if (policyVersion && policyVersion !== "hero_lower_third_v1") {
-    return null;
-  }
-  const budgetKey = SLIDE_TYPE_HEADING_BUDGET_KEY[slideType];
-  return budgetKey ? (HERO_LOWER_THIRD_V1_BUDGETS[budgetKey] ?? null) : null;
-}
-
-export function resolveBodyBudget(
-  slideType: string,
-  policyVersion?: string | null,
-): PresentationFieldBudget | null {
-  if (policyVersion && policyVersion !== "hero_lower_third_v1") {
-    return null;
-  }
-  const budgetKey = SLIDE_TYPE_BODY_BUDGET_KEY[slideType];
-  return budgetKey ? (HERO_LOWER_THIRD_V1_BUDGETS[budgetKey] ?? null) : null;
-}
-
-export function formatBudgetUsage(
-  value: string,
-  budget: PresentationFieldBudget | null,
-): string | null {
-  if (!budget) {
-    return null;
-  }
-  const lineCount = value.trim() ? value.split(/\r?\n/).length : 0;
-  const lineSuffix =
-    budget.maxLines !== undefined
-      ? ` · ${lineCount}/${budget.maxLines} lines`
-      : "";
-  return `${value.length}/${budget.maxCharacters} chars${lineSuffix}`;
-}
-
-export function isBudgetExceeded(
-  value: string,
-  budget: PresentationFieldBudget | null,
-): boolean {
-  if (!budget) {
-    return false;
-  }
-  if (value.length > budget.maxCharacters) {
-    return true;
-  }
-  if (budget.maxLines !== undefined) {
-    const lineCount = value.trim() ? value.split(/\r?\n/).length : 0;
-    return lineCount > budget.maxLines;
-  }
-  return false;
-}
-
-export function localizedSlidesHaveBudgetViolations(
-  slides: LocalizedSlideReview[],
-  policyVersion?: string | null,
-): boolean {
-  return slides.some((slide) => {
-    const headingBudget = resolveHeadingBudget(slide.slide_type, policyVersion);
-    const bodyBudget = resolveBodyBudget(slide.slide_type, policyVersion);
-    const ptHeading = presentationHeading(slide.presentation_pt, "");
-    const ptBody = presentationBody(slide.presentation_pt);
-    const enHeading = presentationHeading(slide.presentation_en, "");
-    const enBody = presentationBody(slide.presentation_en);
-    return (
-      isBudgetExceeded(ptHeading, headingBudget) ||
-      isBudgetExceeded(ptBody, bodyBudget) ||
-      isBudgetExceeded(enHeading, headingBudget) ||
-      isBudgetExceeded(enBody, bodyBudget)
-    );
-  });
 }
 
 export function isPresentationStructuredItem(

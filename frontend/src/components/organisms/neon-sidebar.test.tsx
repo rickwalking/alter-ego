@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => "pt",
 }));
 
 vi.mock("@/modules/identity", () => ({
@@ -27,6 +28,19 @@ vi.mock("@/modules/identity", () => ({
 }));
 
 describe("NeonSidebar", () => {
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: The dashboard offers a language switcher
+  it("shows the EN | PT language switcher with the current locale pressed", () => {
+    render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
+    const switcher = screen.getByTestId("sidebar-language-switcher");
+    const buttons = switcher.querySelectorAll("button");
+    expect(buttons).toHaveLength(2);
+    const pressed = Array.from(buttons).filter(
+      (button) => button.getAttribute("aria-pressed") === "true",
+    );
+    expect(pressed.map((button) => button.textContent)).toEqual(["pt"]);
+  });
+
   it("renders navigation links from sections", () => {
     render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
     expect(screen.getByText("Alter Ego")).toBeInTheDocument();

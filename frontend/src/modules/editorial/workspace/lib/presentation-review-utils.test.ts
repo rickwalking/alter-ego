@@ -4,20 +4,22 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/editorial";
 import type { LocalizedSlideReview } from "@/modules/editorial";
 import {
-  formatBudgetUsage,
   hasBlockingPresentationViolations,
-  isBudgetExceeded,
   isWarningViolation,
   listPresentationIconNames,
   listPresentationStructuredItems,
   listPresentationViolations,
   listStructuredExtras,
-  localizedSlidesHaveBudgetViolations,
   resolvePresentationPreviewText,
-  resolveBodyBudget,
-  resolveHeadingBudget,
   violationToneClasses,
 } from "./presentation-review-utils";
+import {
+  formatBudgetUsage,
+  isBudgetExceeded,
+  localizedSlidesHaveBudgetViolations,
+  resolveBodyBudget,
+  resolveHeadingBudget,
+} from "./presentation-copy-budgets";
 import {
   applySlideCopyEdit,
   resolveLocalizedSlides,

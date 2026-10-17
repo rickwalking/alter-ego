@@ -25,6 +25,7 @@ export function CreateWorkflowControls({
   contentHasEdits,
   contentSlides,
   personaApproveBlocked,
+  personaShortfallDetail = null,
   presentationApproveBlocked,
   editBudgetBlocked,
   designReviseBlocked,
@@ -93,7 +94,11 @@ export function CreateWorkflowControls({
       )}
       <div className="flex flex-col gap-2">
         {loading && (
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p
+            className="text-xs"
+            role="status"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
             {t("actions.processing")}
           </p>
         )}
@@ -110,7 +115,7 @@ export function CreateWorkflowControls({
               void approve(approveOptions);
             }}
           >
-            {loading ? t("actions.processing") : t("actions.approve")}
+            {t("actions.approve")}
           </NeonButton>
           <NeonButton
             size="sm"
@@ -128,7 +133,7 @@ export function CreateWorkflowControls({
         )}
         {personaApproveBlocked && (
           <p className="text-destructive text-xs">
-            {t("persona.belowThreshold")}
+            {personaShortfallDetail ?? t("persona.belowThreshold")}
           </p>
         )}
         {presentationApproveBlocked && (

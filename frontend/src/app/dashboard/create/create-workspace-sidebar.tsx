@@ -11,6 +11,7 @@ import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { ProjectSummaryCard } from "@/app/dashboard/create/workspace/project-summary-card";
 import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
+import { usePhaseLabel } from "@/app/dashboard/create/workspace/editorial-phase-labels";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -33,6 +34,7 @@ export function CreateWorkspaceSidebar({
   projectId,
 }: CreateWorkspaceSidebarProps): React.ReactElement {
   const t = useTranslations("create");
+  const phaseLabel = usePhaseLabel();
 
   const showPublishCta =
     workflowState?.workflow_status ===
@@ -85,15 +87,15 @@ export function CreateWorkspaceSidebar({
           <h3
             style={{ fontSize: "14px", fontWeight: 700, marginBottom: "8px" }}
           >
-            Workflow
+            {t("workspace.workflowTitle")}
           </h3>
           <div className="flex items-center gap-2">
             <span style={{ fontSize: "12px", color: TEXT_DIM }}>
-              Active phase
+              {t("workspace.activePhase")}
             </span>
             <WorkflowStatusBadge
               status={workflowState.phase_status ?? null}
-              label={workflowState.current_phase}
+              label={phaseLabel(workflowState.current_phase)}
             />
           </div>
         </div>

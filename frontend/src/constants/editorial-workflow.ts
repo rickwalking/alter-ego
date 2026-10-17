@@ -1,15 +1,5 @@
 import { HTTP_STATUS } from "@/constants/api";
 
-/** Maps editorial workflow phases to legacy pipeline phase keys for progress UI. */
-export const EDITORIAL_TO_PIPELINE_PHASE: Record<string, string> = {
-  research: "researching",
-  outline: "drafting",
-  content: "drafting",
-  design: "designing",
-  images: "generating_images",
-  final_review: "exporting",
-};
-
 /** Editorial workflow SSE event names (must match backend SSE_EVENT_*). */
 export const EDITORIAL_WORKFLOW_SSE_EVENTS = {
   PHASE_CHANGED: "phase_change",
@@ -133,6 +123,23 @@ export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
   // AE-0315: stale lock_version — distinct copy from the other two causes.
   VERSION_CONFLICT: "version_conflict",
 } as const;
+
+/**
+ * AE-0414 (B02): machine-readable 4xx ``detail`` codes of
+ * ``POST /workflow/resume`` that get a translated message
+ * (``editorialWorkflow.errors.resumeCodes.<code>``) instead of the raw code.
+ */
+export const EDITORIAL_RESUME_ERROR_CODES: ReadonlySet<string> = new Set([
+  "edited_localized_slides_phase_not_allowed",
+  "structured_feedback_final_review_only",
+  "send_back_target_phase_not_allowed",
+  "revise_feedback_required",
+  "persona_score_too_low",
+  "presentation_validation_blocked",
+  "unsupported_review_action",
+  "not_assigned_reviewer",
+  "persona_not_found",
+]);
 
 /**
  * AE-0310: backend hint code carried in `design_recovery_hint` while the

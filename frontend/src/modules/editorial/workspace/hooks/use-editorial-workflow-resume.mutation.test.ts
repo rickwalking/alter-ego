@@ -245,7 +245,12 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     waitSpy.mockRestore();
   });
 
-  it("returns immediately when async accepted response leaves workflow ready", async () => {
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: Requesting a revision shows the running state at once
+  //   Given the research gate is awaiting review
+  //   When the backend answers 202 "in_progress"
+  //   Then the state flips to in_progress and the hook waits for the next gate
+  it("flips the acted-on ready gate to in_progress on 202 and waits for the next gate", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
@@ -261,6 +266,55 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     const { hookParams, workflowStateRef } = createHookOptions({
       workflowState: readyState,
     });
+    const statusesSeenByWait: string[] = [];
+    const nextGate: EditorialWorkflowState = {
+      ...readyState,
+      current_phase: "outline",
+      outline: [{ title: "Intro" }],
+      lock_version: 2,
+    };
+    const waitSpy = vi
+      .spyOn(editorialWorkflowUtils, "waitUntilWorkflowReadyWithTransport")
+      .mockImplementation(async (getState) => {
+        statusesSeenByWait.push(getState()?.phase_status ?? "");
+        return nextGate;
+      });
+    const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
+
+    await act(async () => {
+      await result.current.resume("revise", "more depth");
+    });
+
+    expect(waitSpy).toHaveBeenCalledTimes(1);
+    expect(statusesSeenByWait).toEqual([WORKFLOW_PHASE_STATUS.IN_PROGRESS]);
+    expect(workflowStateRef.current?.current_phase).toBe("outline");
+    waitSpy.mockRestore();
+  });
+
+  // Scenario: a newer gate delivered by the stream before the 202 is kept.
+  it("keeps a newer ready gate that arrived before the 202", async () => {
+    const newerGate: EditorialWorkflowState = {
+      ...readyState,
+      current_phase: "outline",
+      outline: [{ title: "Intro" }],
+    };
+    const { hookParams, workflowStateRef } = createHookOptions({
+      workflowState: readyState,
+    });
+    mockAuthenticatedFetch.mockImplementation(async () => {
+      workflowStateRef.current = newerGate;
+      return {
+        ok: true,
+        status: HTTP_STATUS.ACCEPTED,
+        json: async () => ({
+          accepted: true,
+          project_id: "project-1",
+          current_phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          lock_version: 2,
+        }),
+      } as Response;
+    });
     const waitSpy = vi.spyOn(
       editorialWorkflowUtils,
       "waitUntilWorkflowReadyWithTransport",
@@ -272,6 +326,9 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     });
 
     expect(waitSpy).not.toHaveBeenCalled();
+    expect(workflowStateRef.current?.phase_status).toBe(
+      WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+    );
     expect(workflowStateRef.current?.lock_version).toBe(2);
     waitSpy.mockRestore();
   });

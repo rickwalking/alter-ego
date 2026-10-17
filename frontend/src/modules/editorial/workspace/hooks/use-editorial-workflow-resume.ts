@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
 import {
+  EDITORIAL_RESUME_ERROR_CODES,
   EDITORIAL_WORKFLOW_CONFLICT_CODES,
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
 } from "@/constants/editorial-workflow";
@@ -29,6 +30,17 @@ import type {
 
 export type { EditorialReviseOptions } from "./types";
 
+/**
+ * AE-0415: a ready gate on another phase than the one the owner acted on is a
+ * newer result (the stream delivered it before the 202) and must be kept.
+ */
+function isNewerReadyGate(
+  state: EditorialWorkflowState,
+  actedOnPhase: string | undefined,
+): boolean {
+  return isWorkflowReady(state) && state.current_phase !== actedOnPhase;
+}
+
 export function useEditorialWorkflowResume({
   projectId,
   lockVersion,
@@ -51,6 +63,7 @@ export function useEditorialWorkflowResume({
     ): Promise<EditorialWorkflowState> => {
       setLoading(true);
       setError(null);
+      const actedOnPhase = workflowStateRef.current?.current_phase;
       setState((prev) => {
         if (!prev || isWorkflowReady(prev)) {
           return prev;
@@ -79,6 +92,10 @@ export function useEditorialWorkflowResume({
         }
         if (message === EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS) {
           return translateError("runInProgress");
+        }
+        // AE-0414 (B02): a known 4xx code is translated, never shown raw.
+        if (EDITORIAL_RESUME_ERROR_CODES.has(message)) {
+          return translateError(`resumeCodes.${message}`);
         }
         return message;
       };
@@ -185,18 +202,21 @@ export function useEditorialWorkflowResume({
           if (!isResumeAcceptedResponse(accepted)) {
             throw new Error(translateError("resumeFailed"));
           }
+          // AE-0415 (B26): the backend marked the run in_progress before the
+          // 202, so the gate the owner just acted on is no longer ready —
+          // adopt the accepted status (running banner, actions hidden) and
+          // wait for the NEXT ready state instead of the stale gate.
           setState((prev) => {
-            const next =
-              prev && isWorkflowReady(prev)
+            const next = prev
+              ? isNewerReadyGate(prev, actedOnPhase)
                 ? { ...prev, lock_version: accepted.lock_version }
-                : prev
-                  ? {
-                      ...prev,
-                      lock_version: accepted.lock_version,
-                      phase_status:
-                        accepted.phase_status as import("@/modules/editorial/workspace/types-ai").WorkflowPhaseStatus,
-                    }
-                  : prev;
+                : {
+                    ...prev,
+                    lock_version: accepted.lock_version,
+                    phase_status:
+                      accepted.phase_status as import("@/modules/editorial/workspace/types-ai").WorkflowPhaseStatus,
+                  }
+              : prev;
             workflowStateRef.current = next;
             return next;
           });

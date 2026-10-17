@@ -30,5 +30,11 @@ export const inputStyle = {
   background: "rgba(6,10,18,0.6)",
   color: TEXT,
   fontSize: "13px",
-  outline: "none",
 } as const;
+
+/**
+ * AE-0415 (B31): visible keyboard focus on the create-form inputs and selects
+ * (the inline style used to set `outline: none` with no replacement).
+ */
+export const INPUT_FOCUS_CLASS =
+  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neon-cyan";

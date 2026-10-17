@@ -18,6 +18,7 @@ import { usePovPhoto } from "@/app/dashboard/create/use-pov-photo";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
+import { createErrorMessage } from "@/app/dashboard/create/create-error-message";
 import {
   INITIAL_CREATE_FORM_STATE,
   isPovForm,
@@ -50,6 +51,8 @@ export default function CreateCarouselPage(): React.ReactElement {
   const handleChange = useCallback(
     (patch: Partial<CreateCarouselFormState>): void => {
       setForm((prev) => ({ ...prev, ...patch }));
+      // AE-0415 (B32): an error about the previous input is stale now.
+      setError(null);
     },
     [],
   );
@@ -72,9 +75,7 @@ export default function CreateCarouselPage(): React.ReactElement {
       const project = await createCarousel.mutateAsync(payload);
       router.push(DASHBOARD_ROUTES.CREATE_WORKSPACE(project.id));
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create carousel",
-      );
+      setError(createErrorMessage(err, t));
     }
   };
 
@@ -84,8 +85,8 @@ export default function CreateCarouselPage(): React.ReactElement {
       style={{ fontFamily: "Inter, system-ui, sans-serif" }}
     >
       <NeonTopBar
-        title="Create Carousel"
-        breadcrumb={[{ label: "new project" }]}
+        title={t("topBar.title")}
+        breadcrumb={[{ label: t("topBar.newProject") }]}
       />
 
       <div className="p-7">

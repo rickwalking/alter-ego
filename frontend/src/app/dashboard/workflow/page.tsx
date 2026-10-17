@@ -12,6 +12,7 @@ import {
   mapApiWorkflowKanbanToNeon,
 } from "@/modules/editorial-operations";
 import { useWorkflowKanban } from "@/modules/editorial";
+import { localizeBoardColumns } from "@/app/dashboard/workflow/localize-board";
 
 const NEW_CARD_ICON = (
   <svg
@@ -30,8 +31,22 @@ const NEW_CARD_ICON = (
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 
+/** Phase ids with a `create.phases` name (board columns). */
+const BOARD_PHASES: ReadonlySet<string> = new Set([
+  "brief",
+  "research",
+  "outline",
+  "content",
+  "design",
+  "images",
+  "final_review",
+  "published",
+]);
+
 export default function WorkflowBoardPage(): React.ReactElement {
   const t = useTranslations("workflow");
+  const tPhase = useTranslations("create.phases");
+  const tStatus = useTranslations("create.status");
   const { board, loading, error, refetch } = useWorkflowKanban();
 
   return (
@@ -40,12 +55,12 @@ export default function WorkflowBoardPage(): React.ReactElement {
       style={{ fontFamily: PAGE_FONT_FAMILY }}
     >
       <NeonTopBar
-        title="Workflow Board"
-        breadcrumb={[{ label: "pipeline" }]}
+        title={t("board.title")}
+        breadcrumb={[{ label: t("board.breadcrumb") }]}
         actions={
           <Link href={DASHBOARD_ROUTES.CREATE}>
             <NeonButton size="sm" icon={NEW_CARD_ICON}>
-              New Card
+              {t("board.newCard")}
             </NeonButton>
           </Link>
         }
@@ -69,7 +84,13 @@ export default function WorkflowBoardPage(): React.ReactElement {
           </div>
         )}
         {board && !loading && !error && (
-          <NeonKanbanBoard columns={mapApiWorkflowKanbanToNeon(board)} />
+          <NeonKanbanBoard
+            columns={localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
+              phase: tPhase,
+              status: tStatus,
+              knownPhases: BOARD_PHASES,
+            })}
+          />
         )}
       </div>
     </div>
