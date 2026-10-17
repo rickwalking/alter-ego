@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
 import {
+  EDITORIAL_RESUME_ERROR_CODES,
   EDITORIAL_WORKFLOW_CONFLICT_CODES,
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
 } from "@/constants/editorial-workflow";
@@ -91,6 +92,10 @@ export function useEditorialWorkflowResume({
         }
         if (message === EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS) {
           return translateError("runInProgress");
+        }
+        // AE-0414 (B02): a known 4xx code is translated, never shown raw.
+        if (EDITORIAL_RESUME_ERROR_CODES.has(message)) {
+          return translateError(`resumeCodes.${message}`);
         }
         return message;
       };

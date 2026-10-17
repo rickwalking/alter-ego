@@ -15,6 +15,7 @@ import type { NeonTextareaProps } from "@/components/atoms/neon-textarea";
 import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { PresentationStructuredItem } from "@/modules/editorial/workspace/lib/presentation-review-utils";
 import type { PresentationInsightQuote } from "@/modules/editorial/workspace/lib/presentation-insight-quote";
+import type { RepairSlideDiff } from "@/modules/editorial/workspace/hooks/use-repair-carousel";
 import type {
   SlideCopyEdit,
   SlideStructuredItemEdit,
@@ -119,4 +120,10 @@ export interface BlockingSlidesNoticeProps {
   message: string;
   slideIndexes: number[];
   onSelectSlide: (slideIndex: number) => void;
+}
+
+/** AE-0414 (B09): what one auto-repair fixed and how many blockers it left. */
+export interface RepairOutcome {
+  fixed: RepairSlideDiff[];
+  remaining: number;
 }
