@@ -2,13 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import {
-  formatBudgetUsage,
-  isBudgetExceeded,
   presentationBody,
   presentationHeading,
   PRESENTATION_STRUCTURED_ITEM_LIST_KEYS,
-  resolveBodyBudget,
 } from "@/modules/editorial/workspace/lib/presentation-review-utils";
+import {
+  formatBudgetUsage,
+  isBudgetExceeded,
+  resolveBodyBudget,
+} from "@/modules/editorial/workspace/lib/presentation-copy-budgets";
 import type {
   PresentationLocaleKey,
   SlideStructuredItemEdit,

@@ -135,6 +135,23 @@ export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
 } as const;
 
 /**
+ * AE-0414 (B02): machine-readable 4xx ``detail`` codes of
+ * ``POST /workflow/resume`` that get a translated message
+ * (``editorialWorkflow.errors.resumeCodes.<code>``) instead of the raw code.
+ */
+export const EDITORIAL_RESUME_ERROR_CODES: ReadonlySet<string> = new Set([
+  "edited_localized_slides_phase_not_allowed",
+  "structured_feedback_final_review_only",
+  "send_back_target_phase_not_allowed",
+  "revise_feedback_required",
+  "persona_score_too_low",
+  "presentation_validation_blocked",
+  "unsupported_review_action",
+  "not_assigned_reviewer",
+  "persona_not_found",
+]);
+
+/**
  * AE-0310: backend hint code carried in `design_recovery_hint` while the
  * design step holds a blocking presentation validation report.
  */

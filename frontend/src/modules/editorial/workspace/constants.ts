@@ -62,6 +62,26 @@ export const FIELD_ERROR_MESSAGE_CODES: ReadonlySet<string> = new Set([
   "body_empty",
   "heading_repeated_in_body",
   "icon_name_not_allowlisted",
+  // AE-0414 (B24): every other presentation-validator code, so no backend
+  // English message reaches the PT review.
+  "assistant_chatter",
+  "body_too_short",
+  "closing_actions_missing",
+  "copy_truncated",
+  "emphasis_unbalanced",
+  "encoding_garbled",
+  "markup_leak",
+  "placeholder_text",
+  "repeated_text",
+  "slide_count_invalid",
+  "slide_parse_failed",
+  "slide_type_invalid",
+  "structured_extra_missing",
+  "structured_extra_shape_mismatch",
+  "structured_item_split",
+  "structured_payload_in_copy",
+  "summary_points_missing",
+  "wrong_language",
 ]);
 
 /** AE-0403: codes whose message needs the ``{limit}`` read from the backend. */
@@ -81,3 +101,6 @@ export const VIOLATION_LOCALE_TO_PRESENTATION_KEY: Readonly<
   pt: "presentation_pt",
   en: "presentation_en",
 };
+
+/** AE-0414 (B09): ``POST /repair`` status when nothing could be changed. */
+export const REPAIR_STATUS_NOOP = "noop";

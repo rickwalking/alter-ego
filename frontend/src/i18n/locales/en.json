@@ -556,8 +556,9 @@
         "pending": "Fixing…",
         "failed": "The automatic fix could not be applied. Try again.",
         "conflictInProgress": "A revision run is in progress; check again in a moment.",
-        "noChanges": "No deterministic fixes were needed.",
-        "fixedSlide": "Slide {index} · {locale}: fixed {codes}"
+        "noChanges": "There was nothing to fix automatically.",
+        "fixedSlide": "Slide {index} · {locale}: fixed {codes}",
+        "remaining": "{count, plural, one {Could not fix # issue automatically.} other {Could not fix # issues automatically.}} Edit the highlighted fields or request a revision."
       },
       "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
       "imagesTitle": "Generated images",
@@ -566,7 +567,6 @@
       "imagePromptForSlide": "Slide {index} image prompt",
       "imagePromptTextareaLabel": "Image prompt for slide {index}",
       "untitledSlide": "Untitled slide",
-      "fieldBudget": "Budget: {usage}",
       "headingLabel": "Heading",
       "bodyLabel": "Body",
       "structuredExtra": "Structured field: {field}",
@@ -620,7 +620,25 @@
           "heading_empty": "The heading is required",
           "body_empty": "The body is empty",
           "heading_repeated_in_body": "The body must not repeat the heading",
-          "icon_name_not_allowlisted": "Icon not allowed"
+          "icon_name_not_allowlisted": "Icon not allowed",
+          "assistant_chatter": "Remove the assistant chatter (e.g. \"Sure, here is…\")",
+          "body_too_short": "The body is too short",
+          "closing_actions_missing": "The closing slide needs its actions",
+          "copy_truncated": "The copy looks cut off; finish the sentence",
+          "emphasis_unbalanced": "The emphasis is unbalanced (open and close the markup)",
+          "encoding_garbled": "The text has garbled characters",
+          "markup_leak": "Remove the markup that leaked into the text",
+          "placeholder_text": "Replace the placeholder text with the final copy",
+          "repeated_text": "The text repeats itself; remove the repetition",
+          "slide_count_invalid": "The number of slides is out of range",
+          "slide_parse_failed": "The generated copy for this slide could not be read; rewrite its heading and body",
+          "slide_type_invalid": "Invalid slide type",
+          "structured_extra_missing": "A required structured field is missing on this slide",
+          "structured_extra_shape_mismatch": "A structured field has a different shape in PT and EN",
+          "structured_item_split": "A structured item was split in two; join its title and body",
+          "structured_payload_in_copy": "Remove the JSON or structure that showed up inside the text",
+          "summary_points_missing": "The summary slide needs its summary points",
+          "wrong_language": "The text is in the wrong language for this column"
         },
         "fields": {
           "heading": "heading",
@@ -640,6 +658,37 @@
         "submitManualFixes": "Submit manual fixes",
         "submittingManualFixes": "Submitting fixes…",
         "manualFixesHint": "Fix the highlighted fields and submit your manual fixes. This saves the edits and validates again; it does not approve the step."
+      },
+      "copyField": {
+        "chars": "{count, plural, one {# character} other {# characters}}",
+        "charsOfMax": "{count}/{max} characters",
+        "linesOfMax": "{count}/{max} lines",
+        "overBudget": "over the limit: the validator will block this copy",
+        "emphasisHint": "Emphasis in this column: use {example}",
+        "emphasisMismatch": "This copy uses the other language's emphasis markup; here use {example}",
+        "emphasisConvert": "Convert emphasis",
+        "itemHeading": "{list} {index}",
+        "itemTitle": "Item title",
+        "itemBody": "Item body",
+        "itemLists": {
+          "summary_points": "Summary point",
+          "features": "Feature",
+          "actions": "Action"
+        },
+        "extraLabels": {
+          "tldr_strip": "Summary strip (TL;DR)",
+          "creator_name": "Creator name",
+          "creator_handle": "Creator handle",
+          "creator_website": "Creator website"
+        },
+        "extraPart": "{field} · {part}",
+        "extraParts": {
+          "title": "title",
+          "body": "body",
+          "quote": "quote",
+          "attribution": "attribution"
+        },
+        "emptyValue": "(empty)"
       }
     },
     "failed": {
@@ -658,7 +707,18 @@
       "resumeUnknown": "Workflow resume failed",
       "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit.",
       "runInProgress": "A revision run is already in progress for this carousel. Follow its progress in the banner above.",
-      "versionConflict": "This carousel changed in another session. Refresh the page and try again."
+      "versionConflict": "This carousel changed in another session. Refresh the page and try again.",
+      "resumeCodes": {
+        "edited_localized_slides_phase_not_allowed": "Manual fixes cannot be submitted at this step right now. Your edits are still here; refresh the page and try again.",
+        "structured_feedback_final_review_only": "This kind of change can only be submitted at the final review.",
+        "send_back_target_phase_not_allowed": "The workflow cannot be sent back to that step from here.",
+        "revise_feedback_required": "Write your feedback before requesting a revision.",
+        "persona_score_too_low": "Approval is blocked: the copy does not sound like your voice yet.",
+        "presentation_validation_blocked": "Approval is blocked until the presentation violations are resolved.",
+        "unsupported_review_action": "This review action is not supported.",
+        "not_assigned_reviewer": "You are not the reviewer of this carousel.",
+        "persona_not_found": "The persona of this carousel was not found."
+      }
     },
     "transport": {
       "pollingFallback": "Polling fallback active"

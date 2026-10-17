@@ -24,6 +24,19 @@ import type { StartWorkflowInput } from "./types";
 
 export type { EditorialReviseOptions };
 
+/**
+ * AE-0414 (B02): an edits-only revise (content manual fixes, design recovery)
+ * carries the reviewer's slide edits and no feedback. Its callers fire and
+ * forget it, so a rejection would surface as an uncaught page error; the
+ * failure is already shown through the hook's translated ``error``.
+ */
+function isEditsOnlyRevise(
+  feedback: string,
+  options?: EditorialReviseOptions,
+): boolean {
+  return !feedback.trim() && (options?.editedLocalizedSlides?.length ?? 0) > 0;
+}
+
 export function useEditorialWorkflow(projectId: string) {
   const t = useTranslations("editorialWorkflow.errors");
   const [state, setState] = useState<EditorialWorkflowState | null>(null);
@@ -149,8 +162,19 @@ export function useEditorialWorkflow(projectId: string) {
     refreshState,
     approve: (options?: EditorialReviseOptions) =>
       resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, options),
-    revise: (feedback: string, options?: EditorialReviseOptions) =>
-      resume(EDITORIAL_REVIEW_ACTIONS.REVISE, feedback, options),
+    revise: (
+      feedback: string,
+      options?: EditorialReviseOptions,
+    ): Promise<EditorialWorkflowState | null> => {
+      const pending = resume(
+        EDITORIAL_REVIEW_ACTIONS.REVISE,
+        feedback,
+        options,
+      );
+      return isEditsOnlyRevise(feedback, options)
+        ? pending.catch(() => null)
+        : pending;
+    },
     awaitingHumanReview:
       state?.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
     hasActiveWorkflow: Boolean(state?.current_phase),

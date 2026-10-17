@@ -556,8 +556,9 @@
         "pending": "Corrigindo…",
         "failed": "A correção automática não pôde ser aplicada. Tente novamente.",
         "conflictInProgress": "Uma revisão está em andamento; verifique novamente em instantes.",
-        "noChanges": "Nenhuma correção determinística foi necessária.",
-        "fixedSlide": "Slide {index} · {locale}: corrigido {codes}"
+        "noChanges": "Não havia nada para corrigir automaticamente.",
+        "fixedSlide": "Slide {index} · {locale}: corrigido {codes}",
+        "remaining": "{count, plural, one {Não foi possível corrigir # problema automaticamente.} other {Não foi possível corrigir # problemas automaticamente.}} Edite os campos destacados ou solicite uma revisão."
       },
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "imagesTitle": "Imagens geradas",
@@ -566,7 +567,6 @@
       "imagePromptForSlide": "Prompt de imagem do slide {index}",
       "imagePromptTextareaLabel": "Prompt de imagem para o slide {index}",
       "untitledSlide": "Slide sem título",
-      "fieldBudget": "Orçamento: {usage}",
       "headingLabel": "Título",
       "bodyLabel": "Corpo",
       "structuredExtra": "Campo estruturado: {field}",
@@ -620,7 +620,25 @@
           "heading_empty": "O título é obrigatório",
           "body_empty": "O corpo está vazio",
           "heading_repeated_in_body": "O corpo não pode repetir o título",
-          "icon_name_not_allowlisted": "Ícone não permitido"
+          "icon_name_not_allowlisted": "Ícone não permitido",
+          "assistant_chatter": "Remova a conversa do assistente (ex.: \"Claro, aqui está…\")",
+          "body_too_short": "O corpo está curto demais",
+          "closing_actions_missing": "O slide de fechamento precisa das ações",
+          "copy_truncated": "O texto parece cortado no meio; complete a frase",
+          "emphasis_unbalanced": "A ênfase está desbalanceada (abra e feche a marcação)",
+          "encoding_garbled": "O texto tem caracteres corrompidos",
+          "markup_leak": "Remova a marcação que vazou para o texto",
+          "placeholder_text": "Substitua o texto provisório pelo texto final",
+          "repeated_text": "O texto se repete; remova a repetição",
+          "slide_count_invalid": "O número de slides está fora do permitido",
+          "slide_parse_failed": "Não foi possível ler o texto gerado deste slide; reescreva o título e o corpo",
+          "slide_type_invalid": "Tipo de slide inválido",
+          "structured_extra_missing": "Falta um campo estruturado obrigatório neste slide",
+          "structured_extra_shape_mismatch": "Um campo estruturado tem formato diferente entre PT e EN",
+          "structured_item_split": "Um item estruturado foi quebrado em dois; junte título e corpo",
+          "structured_payload_in_copy": "Remova o JSON ou a estrutura que apareceu dentro do texto",
+          "summary_points_missing": "O slide de resumo precisa dos pontos de resumo",
+          "wrong_language": "O texto está no idioma errado para esta coluna"
         },
         "fields": {
           "heading": "título",
@@ -640,6 +658,37 @@
         "submitManualFixes": "Enviar correções manuais",
         "submittingManualFixes": "Enviando correções…",
         "manualFixesHint": "Corrija os campos destacados e envie as correções manuais. Isso salva as edições e valida de novo, sem aprovar a etapa."
+      },
+      "copyField": {
+        "chars": "{count, plural, one {# caractere} other {# caracteres}}",
+        "charsOfMax": "{count}/{max} caracteres",
+        "linesOfMax": "{count}/{max} linhas",
+        "overBudget": "acima do limite: o validador vai bloquear este texto",
+        "emphasisHint": "Ênfase nesta coluna: use {example}",
+        "emphasisMismatch": "Este texto usa a marcação de ênfase do outro idioma; aqui use {example}",
+        "emphasisConvert": "Converter ênfase",
+        "itemHeading": "{list} {index}",
+        "itemTitle": "Título do item",
+        "itemBody": "Corpo do item",
+        "itemLists": {
+          "summary_points": "Ponto de resumo",
+          "features": "Destaque",
+          "actions": "Ação"
+        },
+        "extraLabels": {
+          "tldr_strip": "Faixa de resumo (TL;DR)",
+          "creator_name": "Nome do criador",
+          "creator_handle": "Perfil do criador",
+          "creator_website": "Site do criador"
+        },
+        "extraPart": "{field} · {part}",
+        "extraParts": {
+          "title": "título",
+          "body": "corpo",
+          "quote": "citação",
+          "attribution": "autoria"
+        },
+        "emptyValue": "(vazio)"
       }
     },
     "failed": {
@@ -658,7 +707,18 @@
       "resumeUnknown": "Falha ao retomar o fluxo de trabalho",
       "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite.",
       "runInProgress": "Já existe uma revisão em andamento para este carrossel. Acompanhe o progresso no aviso acima.",
-      "versionConflict": "Este carrossel foi alterado em outra sessão. Atualize a página e tente novamente."
+      "versionConflict": "Este carrossel foi alterado em outra sessão. Atualize a página e tente novamente.",
+      "resumeCodes": {
+        "edited_localized_slides_phase_not_allowed": "As correções manuais não podem ser enviadas nesta etapa agora. Suas edições continuam aqui; atualize a página e tente de novo.",
+        "structured_feedback_final_review_only": "Este tipo de ajuste só pode ser enviado na revisão final.",
+        "send_back_target_phase_not_allowed": "Não é possível devolver o fluxo para essa etapa a partir daqui.",
+        "revise_feedback_required": "Escreva o feedback antes de solicitar uma revisão.",
+        "persona_score_too_low": "A aprovação está bloqueada: o texto ainda não soa como a sua voz.",
+        "presentation_validation_blocked": "A aprovação está bloqueada até que as violações de apresentação sejam resolvidas.",
+        "unsupported_review_action": "Esta ação de revisão não é suportada.",
+        "not_assigned_reviewer": "Você não é o revisor deste carrossel.",
+        "persona_not_found": "A persona deste carrossel não foi encontrada."
+      }
     },
     "transport": {
       "pollingFallback": "Fallback de polling ativo"

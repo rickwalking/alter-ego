@@ -36,7 +36,6 @@ function renderColumn(
       slide={slide}
       localeKey={localeKey}
       localeLabel={localeKey === "presentation_pt" ? "PT" : "EN"}
-      budgets={{ heading: null, body: null }}
       fieldErrors={new Map()}
     />,
   );
