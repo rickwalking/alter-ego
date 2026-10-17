@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { cookies } from "next/headers";
+import { getRequestLocale } from "@/i18n/request-locale";
 import { NeonBlogPostCard } from "@/modules/publishing";
 import { BG_DEEP, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
@@ -8,7 +8,6 @@ import {
   fetchCompletedProjects,
   fetchPublicBlogPosts,
 } from "@/lib/server-fetch";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
@@ -100,12 +99,7 @@ function buildCards(
 
 export default async function PublicBlogListPage() {
   const t = await getTranslations("blog");
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
 
   const [publicFeed, carouselFeed] = await Promise.all([
     fetchPublicBlogPosts(BLOG_LIST_LIMIT),

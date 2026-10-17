@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { NEON_CYAN, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
+import { LOCALE_COOKIE } from "@/i18n/locale";
 
-export const LOCALE_COOKIE_NAME = "locale";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 type LanguageSwitcherVariant = "default" | "neon";
@@ -28,7 +28,7 @@ export function LanguageSwitcher({
   const handleSwitch = (newLocale: string) => {
     if (newLocale === locale) return;
 
-    document.cookie = `${LOCALE_COOKIE_NAME}=${newLocale}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+    document.cookie = `${LOCALE_COOKIE}=${newLocale}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
     window.location.reload();
   };
 

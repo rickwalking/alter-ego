@@ -1,22 +1,15 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { getRequestLocale } from "@/i18n/request-locale";
 import { getTranslations } from "next-intl/server";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { BG_DEEP, NEON_CYAN, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
 
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
 
 export async function PublicHeader(): Promise<React.ReactElement> {
   const tc = await getTranslations("common");
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
 
   return (
     <header

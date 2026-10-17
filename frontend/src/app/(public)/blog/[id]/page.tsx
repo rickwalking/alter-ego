@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { getRequestLocale } from "@/i18n/request-locale";
 import { BLOG_LANGUAGES } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
 import { resolvePublicBlogView } from "@/lib/public-blog";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
 import {
   BackLink,
   BlogPostContent,
@@ -28,12 +26,7 @@ export default async function PublicBlogPostPage({
   const { id } = await params;
   const { lang: langParam } = await searchParams;
 
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const cookieLang: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
+  const cookieLang = await getRequestLocale();
 
   const currentLang =
     langParam === BLOG_LANGUAGES.ENGLISH ||

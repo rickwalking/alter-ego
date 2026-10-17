@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
-import { cookies } from "next/headers";
+import { getRequestLocale } from "@/i18n/request-locale";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers";
 import { VercelInsights } from "@/components/vercel-insights";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,12 +41,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const messages = await getMessages();
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
+  const locale = await getRequestLocale();
 
   return (
     // The whole app is dark-mode only. Tailwind's `dark:` variant resolves
