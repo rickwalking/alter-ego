@@ -48,7 +48,11 @@ def research_summary_from_findings(findings: object) -> str:
 
 @dataclass(frozen=True)
 class BlogCompositionInput:
-    """Inputs for building blog markdown without constrained slide bodies."""
+    """Inputs for building blog markdown without constrained slide bodies.
+
+    AE-0416: ``research_summary`` is English (the source-synthesis prompt is
+    English and names no target language), so only the EN body uses it.
+    """
 
     slides: tuple[dict[str, object], ...]
     title: str
@@ -113,13 +117,12 @@ def _outline_index(
 def build_blog_markdown_from_long_form_notes(
     composition: BlogCompositionInput,
 ) -> str:
-    """Build blog markdown from research, outline headings, and long-form notes."""
-    sections: list[str] = [f"# {composition.title}", ""]
-    research = composition.research_summary.strip()
-    if research:
-        sections.append(research)
-        sections.append("")
+    """Build the PT blog markdown from outline headings and long-form notes.
 
+    AE-0416: the English research summary is not added here. The PT body used
+    to open with it, so the Portuguese post started with an English paragraph.
+    """
+    sections: list[str] = [f"# {composition.title}", ""]
     outline_by_index = _outline_index(composition.outline)
     for slide in composition.slides[:MAX_SLIDES]:
         if not isinstance(slide, dict):
@@ -165,7 +168,7 @@ def build_blog_markdown_en_from_long_form_notes(
     composition: BlogCompositionInput,
     translations_en: Mapping[int, Mapping[str, object]],
 ) -> str:
-    """Build EN blog markdown from translated long-form notes when available."""
+    """Build EN blog markdown: research intro, then translated long-form notes."""
     sections: list[str] = [f"# {composition.title}", ""]
     research = composition.research_summary.strip()
     if research:
