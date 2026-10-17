@@ -4,27 +4,30 @@ export function BlogPostHeader({
   title,
   subtitle,
   badge,
+  swipeHint,
   design,
 }: BlogPostHeaderProps) {
   const { colors, typography } = design;
 
   return (
     <>
-      <div className="mb-6">
-        <div
-          className="inline-flex items-center gap-2 rounded-md border px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest"
-          style={{
-            borderColor: `${colors.primary}4D`,
-            background: `${colors.primary}14`,
-            color: colors.primary,
-            fontFamily: typography.font_family_badge,
-          }}
-        >
-          {badge}
+      {badge && (
+        <div className="mb-6">
+          <div
+            className="inline-flex items-center gap-2 rounded-md border px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest"
+            style={{
+              borderColor: `${colors.primary}4D`,
+              background: `${colors.primary}14`,
+              color: colors.primary,
+              fontFamily: typography.font_family_badge,
+            }}
+          >
+            {badge}
+          </div>
         </div>
-      </div>
+      )}
       <h1
-        className="mb-3 text-5xl font-extrabold leading-tight md:text-6xl"
+        className="mb-3 text-4xl font-extrabold leading-tight break-words sm:text-5xl md:text-6xl"
         style={{ color: colors.text }}
       >
         {title}
@@ -42,7 +45,7 @@ export function BlogPostHeader({
         style={{ borderColor: `${colors.primary}0F` }}
       >
         <span className="flex items-center gap-1 text-sm text-muted-foreground/45">
-          {design.layout.swipe_text}
+          {swipeHint}
         </span>
       </div>
     </>

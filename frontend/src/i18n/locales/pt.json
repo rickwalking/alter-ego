@@ -211,7 +211,10 @@
       "deleteConfirmTitle": "Excluir post",
       "cancel": "Cancelar",
       "deleting": "Excluindo..."
-    }
+    },
+    "untitledPost": "Post sem título",
+    "swipeHint": "Deslize →",
+    "metaTitleSuffix": "Pedro Marins · Blog"
   },
   "create": {
     "pageTitle": "Criar Carrossel",

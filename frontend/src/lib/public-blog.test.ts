@@ -103,3 +103,87 @@ describe("resolvePublicBlogView (AE-0297)", () => {
     expect(await resolvePublicBlogView("unknown-id", "pt")).toBeNull();
   });
 });
+
+// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
+// tests/features/public-blog-polish-ae0412.feature
+describe("resolvePublicBlogView sanitizing (AE-0412)", () => {
+  const PREVIEW_DESIGN_DATA = {
+    blog: {
+      title: "slide",
+      subtitle: "Use <strong>ChatGPT</strong>",
+      markdown: "# slide\n\nWhy <strong>ChatGPT</strong>?",
+      language: "en",
+      available_languages: ["pt", "en"],
+    },
+    design: {
+      ...FALLBACK_DESIGN_TOKENS,
+      images: {
+        ...FALLBACK_DESIGN_TOKENS.images,
+        hero: "/api/carousels/p/preview/images/slide_1.jpg?lang=en",
+        slides: [
+          "/api/carousels/p/preview/images/slide_2.jpg?lang=en",
+          "/api/carousels/p/slide-images/en/slide_3.jpg",
+        ],
+      },
+    },
+  };
+
+  // Scenario: Post page maps preview hero and slide URLs to public routes
+  it("maps preview image URLs to public routes keeping lang", async () => {
+    mockFetchPost.mockResolvedValue(CAROUSEL_POST);
+    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
+
+    const view = await resolvePublicBlogView("post-2", "en");
+    expect(view?.design.images.hero).toBe(
+      "/api/carousels/p/images/slide_1.jpg?lang=en",
+    );
+    expect(view?.design.images.slides).toEqual([
+      "/api/carousels/p/images/slide_2.jpg?lang=en",
+      "/api/carousels/p/slide-images/en/slide_3.jpg",
+    ]);
+  });
+
+  // Scenario: A placeholder title falls back to a real title
+  // Scenario: Emphasis markup in the body is rendered as emphasis
+  it("falls back from a placeholder title and converts emphasis HTML", async () => {
+    mockFetchPost.mockResolvedValue({
+      ...CAROUSEL_POST,
+      title: "Gemini 4 Argon chegou.",
+    });
+    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
+
+    const view = await resolvePublicBlogView("post-2", "en");
+    expect(view?.title).toBe("Gemini 4 Argon chegou.");
+    expect(view?.subtitle).toBe("Use ChatGPT");
+    expect(view?.markdown).toBe("# slide\n\nWhy **ChatGPT**?");
+  });
+
+  // Scenario: Every title candidate is a placeholder
+  it("returns an empty title when no candidate is real", async () => {
+    mockFetchPost.mockResolvedValue(null);
+    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
+
+    const view = await resolvePublicBlogView("project-9", "en");
+    expect(view?.title).toBe("");
+  });
+
+  // Scenario: A subtitle equal to the title is not repeated
+  it("drops a subtitle that repeats the title", async () => {
+    mockFetchPost.mockResolvedValue(null);
+    mockFetchDesign.mockResolvedValue({
+      ...DESIGN_DATA,
+      blog: { ...DESIGN_DATA.blog, subtitle: "Carousel <b>title</b>" },
+    });
+
+    const view = await resolvePublicBlogView("project-9", "pt");
+    expect(view?.subtitle).toBeNull();
+  });
+
+  it("keeps an empty hero empty", async () => {
+    mockFetchPost.mockResolvedValue(STANDALONE_POST);
+
+    const view = await resolvePublicBlogView("post-1", "pt");
+    expect(view?.design.images.hero).toBe("");
+    expect(view?.subtitle).toBe("An excerpt");
+  });
+});

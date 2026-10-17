@@ -37,6 +37,7 @@ describe("BlogPostHeader Component", () => {
     const defaultProps = {
       title: "Understanding Zero Trust Architecture",
       badge: "Cybersecurity",
+      swipeHint: "Deslize →",
       design: MOCK_DESIGN,
     };
 
@@ -84,11 +85,25 @@ describe("BlogPostHeader Component", () => {
       });
     });
 
-    describe("When the swipe text is rendered", () => {
-      it("Then it displays the swipe_text from design layout", () => {
+    // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
+    // Scenario: The swipe hint is translated
+    describe("When the swipe hint is rendered", () => {
+      it("Then it displays the localized hint, not the design's English text", () => {
         render(<BlogPostHeader {...defaultProps} />);
+        expect(screen.getByText("Deslize →")).toBeInTheDocument();
         expect(
-          screen.getByText(MOCK_DESIGN.layout.swipe_text),
+          screen.queryByText(MOCK_DESIGN.layout.swipe_text),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    // Scenario: A long niche is not used as a category chip
+    describe("When no badge is provided", () => {
+      it("Then no category chip is rendered", () => {
+        render(<BlogPostHeader {...defaultProps} badge={undefined} />);
+        expect(screen.queryByText("Cybersecurity")).not.toBeInTheDocument();
+        expect(
+          screen.getByText("Understanding Zero Trust Architecture"),
         ).toBeInTheDocument();
       });
     });
