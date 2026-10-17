@@ -66,3 +66,9 @@ The Bot browses x.com in its own logged-in browser and submits observed posts th
 
 - **Option 1:** it needs a user password on a bot, re-login every hour, and six racy HTTP calls, and it hits the 100 s start timeout.
 - **Option 2:** it gives an injectable LLM publish credentials, which breaks the "human publishes" invariant.
+
+## Update 2026-10-17
+
+The scout may attach an optional slide-1 cover (an image it generated or a screenshot of a topic
+source) through `POST /api/autopilot/assets`; the owner chooses it per post on Telegram and the
+default slide 1 never changes by itself. See [ADR-0024](0024-grok-cover-asset.md) (AE-0418).

@@ -136,6 +136,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-022: GrokBot Image Bridge (async webhook + OpenAI-compatible callback, OpenAI fallback)](docs/decisions/0022-grokbot-image-bridge.md) *(proposed)*
 - [ADR-021: Content Mode "Ponto de Vista" (roles on top of the existing carousel pipeline)](docs/decisions/0021-content-mode-pov.md) *(proposed)*
 - [ADR-023: Content Mode `pov_news` (news analysis through the owner's point of view, scout-verified quotes)](docs/decisions/0023-content-mode-pov-news.md) *(proposed)*
+- [ADR-024: GrokBot Cover Asset for Slide 1 (upload + per-post owner choice on Telegram)](docs/decisions/0024-grok-cover-asset.md) *(proposed)*
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually
