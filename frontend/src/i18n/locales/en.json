@@ -570,6 +570,9 @@
       "headingLabel": "Heading",
       "bodyLabel": "Body",
       "structuredExtra": "Structured field: {field}",
+      "insightQuoteLabel": "Quote card",
+      "insightQuoteAria": "Quote from {name}",
+      "insightQuoteSource": "{handle} · {platform}",
       "imagePromptsLink": "{count, plural, one {# image prompt is available in the Images step.} other {# image prompts are available in the Images step.}}",
       "emptyPhase": "No generated content is available for this phase yet. Try refreshing or re-approving the previous step.",
       "finalReview": {

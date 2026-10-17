@@ -14,6 +14,7 @@ import type {
 import type { NeonTextareaProps } from "@/components/atoms/neon-textarea";
 import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { PresentationStructuredItem } from "@/modules/editorial/workspace/lib/presentation-review-utils";
+import type { PresentationInsightQuote } from "@/modules/editorial/workspace/lib/presentation-insight-quote";
 import type {
   SlideCopyEdit,
   SlideStructuredItemEdit,
@@ -32,6 +33,11 @@ export interface PresentationIconPreviewProps {
 export interface PresentationStructuredItemsProps {
   items: PresentationStructuredItem[];
   className?: string;
+}
+
+/** AE-0407: the ``pov_news`` quote card shown in the content review. */
+export interface PresentationInsightQuoteCardProps {
+  insight: PresentationInsightQuote;
 }
 
 export interface WorkflowFailedCardProps {
