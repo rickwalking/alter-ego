@@ -16,6 +16,9 @@ from typing import cast
 
 from typing_extensions import deprecated
 
+from rag_backend.api.routes.carousels.editorial_workflow_routes_feedback import (
+    phase_feedback_history_field,
+)
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStateResponse,
     LocalizedSlideReview,
@@ -34,6 +37,7 @@ from rag_backend.application.services.carousel.workflow_state_sanitize import (
 )
 from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
+from rag_backend.domain.constants.content_feedback import STATE_FIELD_FEEDBACK_HISTORY
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_BLOCKING,
@@ -265,6 +269,7 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     (STATE_FIELD_LINKEDIN_POST_EN, _string_field(STATE_FIELD_LINKEDIN_POST_EN)),
     (STATE_FIELD_RUBRIC_SCORES, _dict_field(STATE_FIELD_RUBRIC_SCORES)),
     (STATE_FIELD_PHASE_FEEDBACK, _string_list_map_field(STATE_FIELD_PHASE_FEEDBACK)),
+    (STATE_FIELD_FEEDBACK_HISTORY, phase_feedback_history_field),
     (STATE_FIELD_REVISION_COUNT, _int_map_field(STATE_FIELD_REVISION_COUNT)),
     (
         STATE_FIELD_LOCALIZED_SLIDES,

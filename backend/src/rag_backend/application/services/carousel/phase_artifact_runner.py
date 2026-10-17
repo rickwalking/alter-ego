@@ -54,6 +54,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_PRESENTATION_VALIDATION,
     STATE_FIELD_RESEARCH_FINDINGS,
+    STATE_FIELD_SLIDE_DRAFTS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
@@ -96,10 +97,29 @@ class PhaseArtifactRunnerConfig:
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
+_TRANSLATIONS_EN_KEY = "translations_en"
+
+
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
     """Resolve the seeded presentation policy version from workflow state."""
     value = state.get("presentation_policy_version")
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _review_translations(
+    state: CarouselWorkflowState,
+    updates: dict[str, object],
+) -> object:
+    """EN translations for the content review build (AE-0413).
+
+    Fresh translations win. When the drafts were NOT regenerated the stored
+    translations still match them: dropping them made the builder fall back
+    to the PT draft, so the EN copy silently became Portuguese.
+    """
+    fresh = updates.get(_TRANSLATIONS_EN_KEY)
+    if fresh is not None or STATE_FIELD_SLIDE_DRAFTS in updates:
+        return fresh
+    return state.get(_TRANSLATIONS_EN_KEY)
 
 
 @dataclass(frozen=True)
@@ -355,9 +375,9 @@ class PhaseArtifactRunner:
                 ContentReviewContext(
                     project_id=str(state.get("project_id", "")),
                     slide_drafts=sanitized_state.get("slide_drafts") or [],
-                    translations_en=updates.get("translations_en"),
+                    translations_en=_review_translations(state, updates),
                     retry_draft=self._resolve_slide_draft_retry(
-                        resolved, outline, regen.mode
+                        resolved, outline, regen
                     ),
                     policy_version=_state_policy_version(state),
                 )
@@ -369,9 +389,13 @@ class PhaseArtifactRunner:
         self,
         resolved: EditorialWorkflowStartInput,
         outline: object,
-        mode: ContentModeBrief | None = None,
+        regen: ContentRegenInputs | None = None,
     ) -> SlideDraftRetryFn | None:
-        """Injected retry double when configured, else the agent-backed retry."""
+        """Injected retry double when configured, else the agent-backed retry.
+
+        AE-0413: the re-draft of a blocking slide carries the reviewer notes of
+        this regeneration too, so a retried slide does not ignore the feedback.
+        """
         if self._slide_draft_retry is not None:
             return self._slide_draft_retry
         if not isinstance(outline, list):
@@ -384,7 +408,8 @@ class PhaseArtifactRunner:
             SlideDraftGenerationParams(
                 outline=outline_dicts,
                 persona=resolved.persona,
-                mode=mode,
+                revision_notes=(regen.revision_notes or None) if regen else None,
+                mode=regen.mode if regen else None,
             ),
         )
 

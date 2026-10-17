@@ -21,7 +21,7 @@ live in `domain/constants/carousel_presentation.py`.
 | `encoding_garbled` | mojibake (`Ã©`, `â€™`), U+FFFD, control characters | control characters removed, cp1252 mojibake decoded when it round-trips |
 | `copy_truncated` | a body (not intro/CTA) ending without `.!?`, with `...`, `,`, `:` or a dangling connector | model fix |
 | `body_too_short` | a content-slide body under 8 words (unless 3+ complete features carry the copy) | model fix |
-| `wrong_language` | PT copy that reads as English, EN copy as Portuguese (4+ words, 2+ other-language stopwords outnumbering its own) | model fix |
+| `wrong_language` | PT copy that reads as English, EN copy as Portuguese (4+ words, 2+ other-language stopwords outnumbering its own; EN copy also when the autofix's `looks_portuguese` matches: 1 PT stopword + an accented letter in 3+ words, AE-0413). Contracts without this rule (v3) report Portuguese EN copy as `translation_not_english` | model fix |
 | `repeated_text` | the same sentence twice in one slide, a doubled word ("o o", "the the"; "had had" is fine) | doubled word collapsed |
 | `structured_item_split` | an item title ending on "ou", "e", "de", "com", "or", "and", "of", "with" | model fix; the outline fill no longer cuts a key point there |
 

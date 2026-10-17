@@ -106,6 +106,20 @@ class SlideImagePrompt(BaseModel):
     theme_colors: dict[str, str] | None = None
 
 
+class PhaseFeedbackHistoryEntryResponse(BaseModel):
+    """A consumed reviewer note (AE-0405 lifecycle, exposed by AE-0413).
+
+    ``status`` is ``applied`` (a regeneration used it), ``dropped`` (a stale
+    autopilot note) or ``migrated`` (a legacy note).
+    """
+
+    note: str
+    source: str
+    added_at: str
+    status: str
+    settled_at: str
+
+
 class EditorialWorkflowStateResponse(BaseModel):
     """Current workflow state returned to clients."""
 
@@ -128,6 +142,11 @@ class EditorialWorkflowStateResponse(BaseModel):
     linkedin_post_en: str | None = None
     rubric_scores: dict[str, object] = Field(default_factory=dict)
     phase_feedback: dict[str, list[str]] = Field(default_factory=dict)
+    # AE-0413: ``phase_feedback`` holds the ACTIVE notes only; a content note
+    # leaves it once the regeneration used it. The consumed notes are here.
+    phase_feedback_history: dict[str, list[PhaseFeedbackHistoryEntryResponse]] = Field(
+        default_factory=dict
+    )
     revision_count: dict[str, int] = Field(default_factory=dict)
     error_message: str | None = None
     slide_image_prompts: list[SlideImagePrompt] | None = None
@@ -156,6 +175,7 @@ __all__ = [
     "EditorialWorkflowStartRequest",
     "EditorialWorkflowStateResponse",
     "LocalizedSlideReview",
+    "PhaseFeedbackHistoryEntryResponse",
     "ReviewAction",
     "SlideImagePrompt",
     "SlideValidationReportResponse",

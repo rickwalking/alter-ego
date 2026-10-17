@@ -19,6 +19,9 @@ import re
 from rag_backend.application.services.carousel.draft_blob_text import (
     looks_like_object,
 )
+from rag_backend.application.services.carousel.owner_autofix_text import (
+    looks_portuguese,
+)
 from rag_backend.domain.constants.carousel_autofix import (
     ENGLISH_MARKERS,
     PORTUGUESE_MARKERS,
@@ -229,7 +232,16 @@ def truncation_detail(text: str) -> str:
 
 
 def wrong_language_detail(text: str, *, portuguese: bool) -> str:
-    """Copy that reads as the other language (stopword markers)."""
+    """Copy that reads as the other language (stopword markers).
+
+    AE-0413: EN copy is also flagged when the autofix would call it Portuguese
+    (``looks_portuguese``: one marker plus an accented letter in 3+ words).
+    The validator used to need 4+ words and 2+ markers, so short Portuguese
+    EN headings ("Agentes de código mudam o review") passed unflagged while
+    the autofix treated them as untranslated.
+    """
+    if not portuguese and looks_portuguese(text):
+        return "reads as Portuguese"
     words = _LETTER_WORD_PATTERN.findall(plain_text(text).casefold())
     if len(words) < MIN_LANGUAGE_CHECK_WORDS:
         return ""

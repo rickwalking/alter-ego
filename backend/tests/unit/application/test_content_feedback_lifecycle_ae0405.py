@@ -285,6 +285,8 @@ class TestParkedContentUpdates:
             **artifacts,
             STATE_FIELD_CONTENT_ARTIFACTS_PARKED: True,
             "content_approved": False,
+            # AE-0413: the parked checkpoint names the content gate.
+            "current_phase": "content",
         }
 
     @pytest.mark.parametrize(

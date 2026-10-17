@@ -9,6 +9,7 @@ import structlog
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
+from rag_backend.agents.carousel_content_park import manual_fixes_park_updates
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -456,7 +457,7 @@ async def content_phase_async(
         config,
         _content_artifact_config(artifact_updates),
     )
-    return {**merged, **sync_result}
+    return {**merged, **sync_result, **manual_fixes_park_updates(sync_result, merged)}
 
 
 async def design_phase_async(

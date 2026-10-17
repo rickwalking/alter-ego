@@ -40,6 +40,8 @@ LOG_FEEDBACK_APPLIED = "content_feedback_applied"
 LOG_FEEDBACK_SETTLED = "content_feedback_settled"
 LOG_CONTENT_REPLAY_REUSED = "content_artifacts_replay_reused"
 LOG_CONTENT_ARTIFACTS_PARKED = "content_artifacts_parked"
+# AE-0413: a manual-fixes revise keeps the edited copy (no content ensure).
+LOG_CONTENT_MANUAL_FIXES_KEPT = "content_manual_fixes_kept"
 
 __all__ = [
     "FEEDBACK_ENTRY_ADDED_AT",
@@ -53,6 +55,7 @@ __all__ = [
     "FEEDBACK_STATUS_DROPPED",
     "FEEDBACK_STATUS_MIGRATED",
     "LOG_CONTENT_ARTIFACTS_PARKED",
+    "LOG_CONTENT_MANUAL_FIXES_KEPT",
     "LOG_CONTENT_REPLAY_REUSED",
     "LOG_FEEDBACK_APPLIED",
     "LOG_FEEDBACK_SETTLED",

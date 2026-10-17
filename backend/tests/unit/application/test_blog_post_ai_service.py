@@ -343,7 +343,8 @@ class TestBlogPostAIService:
         result = await service.generate_image("post-1", "A blog hero image")
 
         image_service.generate_image.assert_awaited_once()
-        assert result["prompt"] == "a blog hero image"
+        # AE-0413: the sanitizer keeps case (the model mirrored lowercase input).
+        assert result["prompt"] == "A blog hero image"
         assert Path(result["image_url"]).exists()
         assert Path(result["image_url"]).read_text(encoding="utf-8") == "fake-image"
 
