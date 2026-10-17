@@ -1,15 +1,5 @@
 import { HTTP_STATUS } from "@/constants/api";
 
-/** Maps editorial workflow phases to legacy pipeline phase keys for progress UI. */
-export const EDITORIAL_TO_PIPELINE_PHASE: Record<string, string> = {
-  research: "researching",
-  outline: "drafting",
-  content: "drafting",
-  design: "designing",
-  images: "generating_images",
-  final_review: "exporting",
-};
-
 /** Editorial workflow SSE event names (must match backend SSE_EVENT_*). */
 export const EDITORIAL_WORKFLOW_SSE_EVENTS = {
   PHASE_CHANGED: "phase_change",
