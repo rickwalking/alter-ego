@@ -59,6 +59,9 @@ jobs:
     needs: detect
     if: needs.detect.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    # AE-0417: the full backend gate set (tests + mutation) takes 40-55 min;
+    # a hung test must not hold the runner for hours.
+    timeout-minutes: 90
     services:
       postgres:
         image: postgres:16-alpine
