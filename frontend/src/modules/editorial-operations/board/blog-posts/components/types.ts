@@ -16,4 +16,10 @@ export interface BlogPostBadgeProps {
 export interface BlogPostStatusBadgeProps {
   /** `null` = unknown/drifted backend status → neutral fallback badge. */
   status: BlogPostStatus | null;
+  /**
+   * AE-0411: `false` on a `published` post means anonymous readers cannot see
+   * it yet (carousel not released) — the badge says so instead of "Published".
+   * Omitted = no live-state info (badge shows the stored status).
+   */
+  isPublic?: boolean;
 }

@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import {
-  BLOG_POST_CATEGORY_OPTIONS,
   BLOG_POST_STATUS_FILTER_VALUES,
   BLOG_POSTS_I18N_NAMESPACE,
 } from "@/modules/editorial-operations";
@@ -20,13 +19,22 @@ const SELECT_STYLE = {
   outline: "none",
 } as const;
 
+/**
+ * Status filter + real post counter (AE-0411). The old category filter was
+ * removed: posts carry no category on the backend, so it always emptied the
+ * list (B20).
+ */
 export function BlogPostsFilters({
   statusFilter,
-  categoryFilter,
   onStatusFilterChange,
-  onCategoryFilterChange,
+  shownCount,
+  totalCount,
 }: BlogPostsFiltersProps): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
+  const counter =
+    shownCount === totalCount
+      ? t(shownCount === 1 ? "countOne" : "countOther", { count: shownCount })
+      : t("countOfTotal", { count: shownCount, total: totalCount });
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div className="flex gap-2">
@@ -43,26 +51,16 @@ export function BlogPostsFilters({
             </option>
           ))}
         </select>
-        <select
-          style={SELECT_STYLE}
-          value={categoryFilter}
-          onChange={(e) => onCategoryFilterChange(e.target.value)}
-        >
-          {BLOG_POST_CATEGORY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
       </div>
       <span
+        aria-live="polite"
         style={{
           fontFamily: "'JetBrains Mono', ui-monospace, monospace",
           fontSize: "11px",
           color: TEXT_DIM,
         }}
       >
-        24 posts
+        {counter}
       </span>
     </div>
   );

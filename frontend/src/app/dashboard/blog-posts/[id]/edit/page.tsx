@@ -10,16 +10,25 @@ import {
   NeonCardHeader,
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
-import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
-import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import {
   AiSuggestionPanel,
-  RichTextEditor,
   VersionHistorySidebar,
   useBlogPostEditor,
 } from "@/modules/publishing";
+import type { BlogEditorSaveError } from "@/modules/publishing";
 import { ROUTE_PATHS } from "@/constants/api";
+import { NEON_RED } from "@/constants/neon";
+import { BlogPostEditFields } from "@/app/dashboard/blog-posts/[id]/edit/blog-post-edit-fields";
+
+/** i18n key per save failure (AE-0411, B19). */
+const SAVE_ERROR_KEYS: Record<BlogEditorSaveError, string> = {
+  version_conflict: "errors.saveConflict",
+  validation_failed: "errors.saveValidation",
+  blog_post_slug_conflict: "errors.slugConflict",
+  carousel_origin_delete_blocked: "errors.saveFailed",
+  failed: "errors.saveFailed",
+};
 
 export default function BlogPostEditPage() {
   const params = useParams<{ id: string }>();
@@ -29,6 +38,7 @@ export default function BlogPostEditPage() {
   const {
     post,
     loading,
+    loadFailed,
     saving,
     title,
     setTitle,
@@ -38,14 +48,19 @@ export default function BlogPostEditPage() {
     setBodyText,
     setSelectedText,
     selectedText,
+    validation,
+    saveError,
     handleSave,
     handleRestore,
   } = useBlogPostEditor(postId);
+  const invalid = validation.title !== null || validation.excerpt !== null;
 
   // AE-0296: saving returns to the listing so the refreshed card is visible.
+  // AE-0411: only on success — a failed save stays here and shows the error.
   const handleSaveAndReturn = async (): Promise<void> => {
-    await handleSave();
-    router.push(ROUTE_PATHS.BLOG_POSTS);
+    if (await handleSave()) {
+      router.push(ROUTE_PATHS.BLOG_POSTS);
+    }
   };
 
   if (loading && !post) {
@@ -59,7 +74,9 @@ export default function BlogPostEditPage() {
   if (!post) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <p>{t("notFound")}</p>
+        <p role={loadFailed ? "alert" : undefined}>
+          {loadFailed ? t("errors.loadPostFailed") : t("notFound")}
+        </p>
         <Link href={ROUTE_PATHS.BLOG_POSTS}>
           <NeonButton variant="outline" className="mt-4">
             {t("backToList")}
@@ -82,12 +99,18 @@ export default function BlogPostEditPage() {
           </NeonButton>
           <NeonButton
             onClick={() => void handleSaveAndReturn()}
-            disabled={saving}
+            disabled={saving || invalid}
           >
             {saving ? t("saving") : t("saveChanges")}
           </NeonButton>
         </div>
       </div>
+
+      {saveError && (
+        <p className="mb-4 text-sm" style={{ color: NEON_RED }} role="alert">
+          {t(SAVE_ERROR_KEYS[saveError])}
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <NeonCard className="lg:col-span-2">
@@ -95,20 +118,15 @@ export default function BlogPostEditPage() {
             <NeonCardTitle>{post.title}</NeonCardTitle>
           </NeonCardHeader>
           <NeonCardContent className="space-y-4">
-            <NeonInput
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <NeonTextarea
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              rows={2}
-            />
-            <RichTextEditor
-              value={bodyText}
-              onChange={setBodyText}
+            <BlogPostEditFields
+              title={title}
+              onTitleChange={setTitle}
+              excerpt={excerpt}
+              onExcerptChange={setExcerpt}
+              bodyText={bodyText}
+              onBodyChange={setBodyText}
               onSelectionChange={setSelectedText}
-              placeholder={t("fields.content")}
+              validation={validation}
             />
           </NeonCardContent>
         </NeonCard>

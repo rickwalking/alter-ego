@@ -36,6 +36,12 @@ export interface BlogPost {
   published_at?: string | null;
   scheduled_publish_at?: string | null;
   lock_version: number;
+  /**
+   * List-only (AE-0411): whether anonymous readers can see the post now. A
+   * carousel post is stored `published` but stays hidden until its carousel
+   * is released. Absent on detail payloads.
+   */
+  is_public?: boolean;
 }
 
 export interface BlogPostCreatePayload {

@@ -28,6 +28,8 @@ export type {
 } from "./blog/constants";
 export {
   BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
+  BLOG_POST_ERR_SLUG_CONFLICT,
+  BLOG_POST_ERR_VALIDATION,
   BLOG_POST_ERR_VERSION_CONFLICT,
   BLOG_POST_ORIGIN_CAROUSEL,
   BLOG_POST_ORIGIN_STANDALONE,
@@ -56,9 +58,18 @@ export type {
 export { useBlogPosts } from "./blog/hooks/use-blog-posts";
 export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
 export type {
+  BlogEditorSaveError,
   BlogPostFilters,
   UseBlogPostEditorResult,
 } from "./blog/hooks/types";
+export {
+  BLOG_EXCERPT_MAX_LENGTH,
+  BLOG_TITLE_MAX_LENGTH,
+} from "./blog/editor-content";
+export type {
+  BlogEditorFieldError,
+  BlogEditorValidation,
+} from "./blog/editor-content";
 export {
   useCarouselProject,
   useCarouselProjects,

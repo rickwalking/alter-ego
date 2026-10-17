@@ -9,6 +9,8 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { BlogPostVersion } from "../components/types";
+import type { BlogPostMutationErrorCode } from "../constants";
+import type { BlogEditorValidation } from "../editor-content";
 import type { BlogPost } from "../types";
 
 export interface AccessibilityIssue {
@@ -51,9 +53,14 @@ export interface SeoAnalysisResult {
   suggestions: string[];
 }
 
+/** Why an editor save failed (AE-0411): a backend guard code or a generic failure. */
+export type BlogEditorSaveError = BlogPostMutationErrorCode | "failed";
+
 export interface UseBlogPostEditorResult {
   post: BlogPost | undefined;
   loading: boolean;
+  /** The detail request failed (network/5xx); a 404 is `post` undefined. */
+  loadFailed: boolean;
   saving: boolean;
   title: string;
   setTitle: Dispatch<SetStateAction<string>>;
@@ -63,7 +70,11 @@ export interface UseBlogPostEditorResult {
   setBodyText: Dispatch<SetStateAction<string>>;
   selectedText: string;
   setSelectedText: Dispatch<SetStateAction<string>>;
-  handleSave: () => Promise<void>;
+  /** Client-side checks mirroring the backend 422 rules. */
+  validation: BlogEditorValidation;
+  saveError: BlogEditorSaveError | null;
+  /** Resolves `true` when saved (or nothing changed); never rejects. */
+  handleSave: () => Promise<boolean>;
   handleRestore: (version: BlogPostVersion) => void;
 }
 

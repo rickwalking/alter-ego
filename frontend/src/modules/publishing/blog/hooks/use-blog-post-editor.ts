@@ -1,37 +1,57 @@
 "use client";
 
 /**
- * Blog post editor state hook (AE-0155 route-page thinning).
+ * Blog post editor state hook (AE-0155 route-page thinning; AE-0411 fixes).
  *
- * Owns the editor composition that previously lived inline in
- * `app/dashboard/blog-posts/[id]/edit/page.tsx`: it loads the post via
- * {@link useBlogPosts}, mirrors its editable fields into local state, and
- * exposes the save + version-restore handlers. The route page becomes thin
- * composition over this contract; behavior is byte-identical.
+ * Loads the FULL post through the detail endpoint (the list only carries
+ * summaries without `content`, and only its first page), mirrors the editable
+ * fields into local state, and saves only what changed. The body is read from
+ * either stored shape (`content.body` or a carousel row's `content.markdown`)
+ * and written back without dropping any other content key, so a title-only
+ * save never touches the stored content (B05). Client validation mirrors the
+ * backend 422 rules and save failures are returned, never thrown (B19).
  */
 
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { BlogPostVersion } from "../components/types";
-import { useBlogPosts } from "./use-blog-posts";
-import type { UseBlogPostEditorResult } from "./types";
+import {
+  blogPostKeys,
+  fetchBlogPostDetail,
+  saveBlogPost,
+} from "../blog-post-requests";
+import { BlogPostMutationError } from "../constants";
+import {
+  buildBlogPostUpdate,
+  hasValidationErrors,
+  readEditableBody,
+  validateBlogEditorFields,
+} from "../editor-content";
+import type { BlogPost } from "../types";
+import type { BlogEditorSaveError, UseBlogPostEditorResult } from "./types";
 
 const DEFAULT_LOCK_VERSION = 1;
+const SAVE_FAILED: BlogEditorSaveError = "failed";
+
+function toSaveError(err: unknown): BlogEditorSaveError {
+  return err instanceof BlogPostMutationError ? err.code : SAVE_FAILED;
+}
 
 export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
-  const { posts, loading, update, refetch } = useBlogPosts();
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: blogPostKeys.detail(postId),
+    queryFn: () => fetchBlogPostDetail(postId),
+    enabled: Boolean(postId),
+  });
+  const post = query.data ?? undefined;
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [selectedText, setSelectedText] = useState("");
-  const [lockVersion, setLockVersion] = useState(DEFAULT_LOCK_VERSION);
   const [saving, setSaving] = useState(false);
-
-  const post = posts.find((item) => item.id === postId);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
+  const [saveError, setSaveError] = useState<BlogEditorSaveError | null>(null);
 
   useEffect(() => {
     if (!post) {
@@ -39,28 +59,44 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     }
     setTitle(post.title);
     setExcerpt(post.excerpt ?? "");
-    const body =
-      typeof post.content?.body === "string" ? post.content.body : "";
-    setBodyText(body);
-    setLockVersion(post.lock_version ?? DEFAULT_LOCK_VERSION);
+    setBodyText(readEditableBody(post.content).text);
   }, [post]);
 
-  const handleSave = async (): Promise<void> => {
-    if (!postId) {
-      return;
+  const fields = { title, excerpt, bodyText };
+  const validation = validateBlogEditorFields(fields);
+
+  const persist = async (loaded: BlogPost): Promise<boolean> => {
+    const payload = buildBlogPostUpdate(
+      {
+        title: loaded.title,
+        excerpt: loaded.excerpt ?? "",
+        content: loaded.content ?? {},
+      },
+      fields,
+    );
+    if (!payload) {
+      return true;
+    }
+    const saved = await saveBlogPost(
+      postId,
+      payload,
+      loaded.lock_version ?? DEFAULT_LOCK_VERSION,
+    );
+    queryClient.setQueryData(blogPostKeys.detail(postId), saved);
+    return true;
+  };
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!post || hasValidationErrors(validation)) {
+      return false;
     }
     setSaving(true);
+    setSaveError(null);
     try {
-      await update(
-        postId,
-        {
-          title,
-          excerpt,
-          content: { body: bodyText },
-        },
-        lockVersion,
-      );
-      await refetch();
+      return await persist(post);
+    } catch (err) {
+      setSaveError(toSaveError(err));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -69,14 +105,13 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
   const handleRestore = (version: BlogPostVersion): void => {
     setTitle(version.title);
     setExcerpt(version.excerpt ?? "");
-    const body =
-      typeof version.snapshot?.body === "string" ? version.snapshot.body : "";
-    setBodyText(body);
+    setBodyText(readEditableBody(version.snapshot).text);
   };
 
   return {
     post,
-    loading,
+    loading: query.isPending && Boolean(postId),
+    loadFailed: query.isError,
     saving,
     title,
     setTitle,
@@ -86,6 +121,8 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     setBodyText,
     selectedText,
     setSelectedText,
+    validation,
+    saveError,
     handleSave,
     handleRestore,
   };

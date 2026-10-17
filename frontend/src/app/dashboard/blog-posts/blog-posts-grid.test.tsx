@@ -28,10 +28,9 @@ function makeDashboardPost(
     views: 10,
     comments: 2,
     status: "draft",
-    category: "",
     origin: "standalone",
     lockVersion: 1,
-    featured: false,
+    isPublic: true,
     ...overrides,
   };
 }
@@ -65,7 +64,7 @@ describe("blog posts grid (AE-0295)", () => {
   it("renders the featured card with its real status and the featured tag", () => {
     render(
       <FeaturedBlogPost
-        post={makeDashboardPost({ status: "published", featured: true })}
+        post={makeDashboardPost({ status: "published", isPublic: true })}
         actions={NOOP_ACTIONS}
       />,
     );
@@ -83,7 +82,6 @@ describe("filterBlogPosts status filter (AE-0295)", () => {
     const filtered = filterBlogPosts(posts, {
       search: "",
       statusFilter: "draft",
-      categoryFilter: "",
     });
     expect(filtered.map((p) => p.id)).toEqual(["a"]);
   });
@@ -94,7 +92,6 @@ describe("filterBlogPosts status filter (AE-0295)", () => {
       filterBlogPosts(posts, {
         search: "",
         statusFilter: "",
-        categoryFilter: "",
       }),
     ).toHaveLength(1);
   });
