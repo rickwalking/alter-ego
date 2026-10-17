@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import {
   BLOG_POSTS_I18N_NAMESPACE,
-  filterBlogPosts,
   mapBlogPostToDashboard,
 } from "@/modules/editorial-operations";
 import { useBlogPosts } from "@/modules/publishing";
@@ -18,33 +16,36 @@ import { BlogPostsList } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import { DeleteConfirmModal } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
-
-/** API max page size — load as many posts as one request allows (AE-0411). */
-const BLOG_POSTS_LIST_LIMIT = 100;
+import { BlogPostsPager } from "@/app/dashboard/blog-posts/blog-posts-pager";
+import {
+  blogPostsPageCount,
+  blogPostsPageFilters,
+} from "@/app/dashboard/blog-posts/blog-posts-paging";
+import {
+  INITIAL_BLOG_POST_LIST_QUERY,
+  useBlogPostsPaging,
+} from "@/app/dashboard/blog-posts/use-blog-posts-paging";
 
 export default function BlogPostsPage(): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const {
     posts,
     total,
     loading,
     error,
+    setFilters,
     create,
     delete: deletePost,
     unpublish,
-  } = useBlogPosts({ limit: BLOG_POSTS_LIST_LIMIT });
+  } = useBlogPosts(blogPostsPageFilters(INITIAL_BLOG_POST_LIST_QUERY));
+  // AE-0416: one API page at a time; status and search filter on the server.
+  const paging = useBlogPostsPaging(setFilters);
   const { creating, createError, handleNewPost } = useNewBlogPost(create);
   const { actions, deleteTarget, actionError, confirmDelete, cancelDelete } =
     useBlogPostActions({ deletePost, unpublish });
 
   const dashboardPosts = posts.map(mapBlogPostToDashboard);
-
-  const filteredPosts = filterBlogPosts(dashboardPosts, {
-    search,
-    statusFilter,
-  });
+  const isFiltered = paging.statusFilter !== "" || paging.searchInput !== "";
   const notice = actionError ?? createError;
 
   return (
@@ -59,8 +60,8 @@ export default function BlogPostsPage(): React.ReactElement {
           <>
             <NeonSearchBar
               placeholder={t("searchPlaceholder")}
-              value={search}
-              onChange={setSearch}
+              value={paging.searchInput}
+              onChange={paging.changeSearch}
               className="w-full sm:w-[200px]"
             />
             <NeonButton
@@ -89,6 +90,15 @@ export default function BlogPostsPage(): React.ReactElement {
       />
 
       <div className="p-7 flex flex-col gap-4">
+        {/* The status filter stays mounted while a new page loads (AE-0416). */}
+        {!error && (
+          <BlogPostsFilters
+            statusFilter={paging.statusFilter}
+            onStatusFilterChange={paging.changeStatus}
+            shownCount={dashboardPosts.length}
+            totalCount={Math.max(total, dashboardPosts.length)}
+          />
+        )}
         {loading && (
           <div className="flex justify-center py-12">
             <NeonSpinner size="lg" />
@@ -114,16 +124,15 @@ export default function BlogPostsPage(): React.ReactElement {
         )}
         {!loading && !error && (
           <>
-            <BlogPostsFilters
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              shownCount={filteredPosts.length}
-              totalCount={Math.max(total, dashboardPosts.length)}
-            />
             <BlogPostsList
-              posts={filteredPosts}
-              hasNoPosts={dashboardPosts.length === 0}
+              posts={dashboardPosts}
+              hasNoPosts={!isFiltered && total === 0}
               actions={actions}
+            />
+            <BlogPostsPager
+              page={paging.page}
+              pageCount={blogPostsPageCount(total)}
+              onPageChange={paging.goToPage}
             />
           </>
         )}

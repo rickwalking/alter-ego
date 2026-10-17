@@ -1174,6 +1174,12 @@
       "countOne": "{count} post",
       "countOther": "{count} posts",
       "countOfTotal": "{count} de {total} posts",
+      "pager": {
+        "label": "Páginas de posts",
+        "previous": "Anterior",
+        "next": "Próxima",
+        "status": "Página {page} de {count}"
+      },
       "notLiveHint": "Salvo como publicado, mas só aparece para os leitores quando o carrossel for publicado no site.",
       "validation": {
         "titleRequired": "O título é obrigatório.",

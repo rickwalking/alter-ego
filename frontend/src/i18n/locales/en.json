@@ -1174,6 +1174,12 @@
       "countOne": "{count} post",
       "countOther": "{count} posts",
       "countOfTotal": "{count} of {total} posts",
+      "pager": {
+        "label": "Blog post pages",
+        "previous": "Previous",
+        "next": "Next",
+        "status": "Page {page} of {count}"
+      },
       "notLiveHint": "Stored as published, but readers only see it once its carousel is published on the site.",
       "validation": {
         "titleRequired": "The title is required.",
