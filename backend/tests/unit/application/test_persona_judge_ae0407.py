@@ -16,9 +16,9 @@ from unittest.mock import MagicMock
 import pytest
 from structlog.testing import capture_logs
 
-from rag_backend.agents import persona_judge
 from rag_backend.agents.persona_agent import PersonaAgent
-from rag_backend.agents.persona_judge import judge_voice
+from rag_backend.application.services.carousel import persona_judge
+from rag_backend.application.services.carousel.persona_judge import judge_voice
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,

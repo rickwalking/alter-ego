@@ -30,7 +30,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
 from rag_backend.modules.editorial.infrastructure.pov_inputs import PovInputsAcl
 
 if TYPE_CHECKING:
-    from rag_backend.agents.persona_judge import VoiceJudge
+    from rag_backend.application.services.carousel.persona_judge import VoiceJudge
     from rag_backend.application.services.carousel.slide_fix_types import (
         SlideFixOutcome,
         SlideFixResult,
@@ -116,7 +116,7 @@ class _PersonaScorer:
         self._agent = agent
 
     async def score(self, text: str) -> float | None:
-        from rag_backend.agents.persona_judge import judge_voice
+        from rag_backend.application.services.carousel.persona_judge import judge_voice
         from rag_backend.application.services.carousel.slide_fix_targets import (
             overall_score,
         )

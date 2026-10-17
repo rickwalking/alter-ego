@@ -567,12 +567,25 @@ its text changed. A model error or an unparseable answer counts as an attempt. F
 written once, through the reviewer-edit path plus their new voice score, under the project lock
 and the lock-version CAS (a lost CAS writes nothing: next tick). The gate is read again: clean
 is approved; anything left escalates at once with the Telegram detail "slide N: rules. Current
-text: "..." (3 fix attempts)". Every attempt logs `autopilot_slide_autofix` (run, project,
-slide, attempt, rules before/after, outcome); Langfuse metadata `phase=autofix`,
+text: "..." (5 fix attempts)". Every attempt logs `autopilot_slide_autofix` (run, project,
+slide, attempt, rules before/after, outcome, `model_role`); Langfuse metadata `phase=autofix`,
 `agent_name=slide_fixer`. The revise budget is never spent on these reasons; research,
 outline, images and forbidden phrases keep revise/escalate. An escalated run is no longer
 active, so a gate cannot loop on a repair no-op (prod 2026-10-16 logged one every minute for
 50 minutes). Rules: [`docs/backend/slide-copy-validators.md`](../backend/slide-copy-validators.md).
+
+**Escalation to the reasoning model (AE-0407).** After the fast attempts fail, up to
+`AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS` (default 2; 0 turns it off and the reasoning model is
+not built) more run on the reasoning-role model, from the last usable copy and the checks it
+still fails. Attempts are numbered on (4, 5), each logs `model_role` (`fast` / `reasoning`),
+and the escalation text counts all of them. The persona judge stays on the fast model; a judge
+call that errors, times out or answers no usable `overall` is retried once
+(`persona_judge_failed`), and a second failure leaves the slide unscored: it keeps its previous
+score and gets no `voice_score_low`. Stored scores are read on one 0-100 scale everywhere
+(`domain/persona_score.py`: an `overall` in (0, 10] reads ×10; 0 / missing reads unscored). A
+model rewrite that sets a field carrying an AE-0366 `casing_repairs` marker, with a correct
+sentence case, drops that field's marker; a sentence that starts with an `@handle` or a URL
+is never capitalized.
 
 **Telegram webhook security** (`POST /api/telegram/webhook`):
 

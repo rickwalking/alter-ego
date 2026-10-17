@@ -13,7 +13,6 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
-from rag_backend.agents.persona_judge import judge_voice
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
@@ -33,6 +32,7 @@ from rag_backend.application.services.carousel.editorial_visual_pipeline import 
     ensure_slides_from_outline,
     generate_carousel_images,
 )
+from rag_backend.application.services.carousel.persona_judge import judge_voice
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )

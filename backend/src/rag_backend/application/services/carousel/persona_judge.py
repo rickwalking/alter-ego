@@ -13,7 +13,7 @@ from typing import Protocol
 
 import structlog
 
-from rag_backend.agents.constants import (
+from rag_backend.domain.constants.persona import (
     LOG_PERSONA_JUDGE_FAILED,
     PERSONA_JUDGE_CALLS,
     PERSONA_JUDGE_REASON_ERROR,

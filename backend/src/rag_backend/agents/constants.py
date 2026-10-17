@@ -37,11 +37,3 @@ SECTION_INSTRUCTION = "INSTRUCTION"
 
 # Error messages
 ERR_JSON_PARSE = "Failed to parse evaluation response"
-
-# AE-0407: a persona judge call that errors, times out or answers no usable
-# overall is retried once; a second failure leaves the slide unscored.
-PERSONA_JUDGE_CALLS = 2
-PERSONA_JUDGE_TIMEOUT_SECONDS = 120.0
-LOG_PERSONA_JUDGE_FAILED = "persona_judge_failed"
-PERSONA_JUDGE_REASON_ERROR = "error"
-PERSONA_JUDGE_REASON_NO_SCORE = "no_score"

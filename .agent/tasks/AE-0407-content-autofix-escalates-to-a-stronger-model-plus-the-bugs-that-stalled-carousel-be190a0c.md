@@ -61,26 +61,26 @@ The orchestrator fixed this carousel by hand; prod is not touched by this ticket
 
 ## Acceptance Criteria
 
-- [ ] AC1: A slide fixed on FAST attempt 2 stops there (2 attempts, role `fast`).
-- [ ] AC2: A slide still failing after 3 FAST attempts is fixed on attempt 4 by the REASONING
+- [x] AC1: A slide fixed on FAST attempt 2 stops there (2 attempts, role `fast`).
+- [x] AC2: A slide still failing after 3 FAST attempts is fixed on attempt 4 by the REASONING
   model, and the gate approves.
-- [ ] AC3: A slide still failing after 5 attempts escalates; the escalation text says
+- [x] AC3: A slide still failing after 5 attempts escalates; the escalation text says
   "(5 fix attempts)"; attempts 1-3 log `model_role=fast`, 4-5 `model_role=reasoning`.
-- [ ] AC4: With `AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS=0` the run escalates after 3 attempts and
+- [x] AC4: With `AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS=0` the run escalates after 3 attempts and
   the reasoning model is never built.
-- [ ] AC5: The setting exists (default 2, `ge=0`), is wired worker → autofixer → slide fix, and is
+- [x] AC5: The setting exists (default 2, `ge=0`), is wired worker → autofixer → slide fix, and is
   named on both prod surfaces (deploy.yml, docker-compose.prod.yml) and in the autopilot-env gate.
-- [ ] AC6: A stored 8.7 reads as 87 on every read path (slide fix targets, autopilot snapshot,
+- [x] AC6: A stored 8.7 reads as 87 on every read path (slide fix targets, autopilot snapshot,
   content-approve check); 75 reads as 75; 0.0 reads as unscored (not low) on every read path.
-- [ ] AC7: `_parse_evaluation_response` scales an `overall` ≤ 10 even when a sub-score is > 10.
-- [ ] AC8: A judge call that errors, times out, or parses to 0.0 / no `overall` is retried once;
+- [x] AC7: `_parse_evaluation_response` scales an `overall` ≤ 10 even when a sub-score is > 10.
+- [x] AC8: A judge call that errors, times out, or parses to 0.0 / no `overall` is retried once;
   a second failure keeps the previous score, adds no `voice_score_low`, writes no 0.0, and logs
   `persona_judge_failed`. The content phase omits an unscored slide instead of storing 0.0.
-- [ ] AC9: Slide 8's case: only casing markers, rewritten correctly → markers dropped, slide
+- [x] AC9: Slide 8's case: only casing markers, rewritten correctly → markers dropped, slide
   fixed. A rewrite that still starts lowercase keeps the marker; an unanswered field keeps it.
-- [ ] AC10: `@taylorhbuilds viu…` and `https://…` sentence starts are neither flagged nor
+- [x] AC10: `@taylorhbuilds viu…` and `https://…` sentence starts are neither flagged nor
   capitalized; a normal lowercase start still is.
-- [ ] AC11: The content review shows `insight` as a quote card (quote, name, `@handle · X`, no URL)
+- [x] AC11: The content review shows `insight` as a quote card (quote, name, `@handle · X`, no URL)
   in PT and EN with en/pt i18n keys; a malformed insight keeps the JSON fallback.
 
 ## Gherkin Scenarios
@@ -92,11 +92,40 @@ The orchestrator fixed this carousel by hand; prod is not touched by this ticket
 
 ### ADDED
 
-- Pending.
+- `backend/src/rag_backend/domain/persona_score.py` (shared 0-100 read helper)
+- `backend/src/rag_backend/application/services/carousel/persona_judge.py` (retry-once judge)
+- `backend/src/rag_backend/application/services/carousel/slide_fix_casing.py` (marker clear)
+- `backend/tests/features/autofix_escalation_ae0407.feature`
+- `backend/tests/unit/application/test_autofix_escalation_ae0407.py`,
+  `test_autofix_escalation_flow_ae0407.py`, `test_slide_fix_casing_ae0407.py`
+- `backend/tests/unit/application/test_persona_judge_ae0407.py`
+- `backend/tests/unit/domain/test_persona_score_ae0407.py`
+- `backend/tests/unit/modules/editorial/test_carousel_slide_fix_escalation_ae0407.py`
+- `frontend/src/modules/editorial/workspace/lib/presentation-insight-quote.ts` (+ test)
+- `frontend/src/modules/editorial/workspace/components/presentation-insight-quote-card.tsx` (+ test)
+- `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-locale-fields.test.tsx`
+- `frontend/tests/features/content-review-insight-card-ae0407.feature`
 
 ### MODIFIED
 
-- Pending.
+- Slide fix: `slide_fix_loop.py`, `slide_fix_types.py`, `slide_fix_targets.py`,
+  `domain/constants/slide_fix.py`, `modules/editorial/infrastructure/carousel_slide_fix.py`
+- Autopilot: `content_autofixer.py`, `bootstrap.py`, `slide_autofix.py`, `autofix_constants.py`,
+  `domain/autofix.py`, `domain/snapshot.py`, `bootstrap/autopilot_worker_factory.py`,
+  `infrastructure/config/settings.py`
+- Persona: `agents/persona_agent.py`, `domain/constants/persona.py`,
+  `editorial_workflow_service_helpers.py`, `phase_artifact_runner.py`
+- Casing: `sentence_case.py`
+- Env: `.github/workflows/deploy.yml`, `docker-compose.prod.yml`, `backend/.env.example`,
+  `scripts/ci/check_autopilot_env_parity.py` (+ its test)
+- Frontend: `content-phase-locale-fields.tsx`, `modules/editorial/index.ts`,
+  `workspace/components/types.ts`, `i18n/locales/en.json`, `pt.json`
+- Superseded scenarios/tests: `autopilot_runner.feature` (missing overall),
+  `autopilot_slide_autofix_ae0401.feature` (5 attempts), `persona_score_scale_ae0398.feature`,
+  `test_gate_snapshot.py`, `test_persona_unscored_ae0364.py`, `test_qa_r1_runner_recovery.py`,
+  `test_autopilot_slide_autofix_ae0401.py`, `test_slide_fix_service_ae0401.py`,
+  `test_carousel_slide_fix_ae0401.py`
+- Docs: `docs/backend/slide-copy-validators.md`, `docs/architecture/grokbot-autopilot.md`
 
 ### REMOVED
 
@@ -146,7 +175,7 @@ Ticket created from the owner brief (hotfix fast path).
 
 ## Files Touched
 
-Pending.
+See Delta.
 
 ## Test Evidence
 
@@ -174,13 +203,19 @@ Pending (hotfix fast path: CI Test & Coverage decides).
 - 2026-10-17: A stored `overall` in (0, 10] is ×10. A real 0-100 score of 10 or less is read as a
   0-10 answer; the judge never produces such a score for on-topic copy, and it is still under 70
   only when the 0-10 answer was under 7.
-- 2026-10-17: The retry-once judge is one helper (`agents/persona_judge.py`) used by the slide
+- 2026-10-17: The retry-once judge is one helper (`application/services/carousel/persona_judge.py`) used by the slide
   fix scorer and the content-phase scoring, so neither stores a 0.0. Its timeout is 120 s (the
   slide fix timeout).
 - 2026-10-17: A casing marker is dropped only for a field the model's answer actually set (the
   same text landed in the candidate) and that passes the live check on the model's text, before
   the deterministic repair. A lowercase rewrite the repair would capitalize keeps its marker, so
   the AE-0366 intent (proper nouns may still be lowercase) holds.
+- 2026-10-17: Known consequence of "unscored keeps the previous score": a slide that failed
+  only on a low voice score, rewritten and then unscored twice, counts as fixed (its copy is
+  written) but keeps its old low score, so the re-read gate still escalates on
+  `persona_score_below_threshold`, without that slide in the "could not fix" list. This fails
+  closed (no approve on an unverified voice) and needs two judge failures in a row; not worth an
+  extra rule in a hotfix.
 - 2026-10-17: A sentence that starts with `@handle` or a URL (`http://`, `https://`, `www.`)
   counts as correctly cased: case there is the source's, not ours.
 
