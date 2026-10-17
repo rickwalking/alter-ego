@@ -57,7 +57,7 @@ from rag_backend.application.services.carousel.artifact_path_resolver import (
     resolve_shared_images_dir,
     resolve_slide_image_path,
 )
-from rag_backend.domain.constants import SWIPE_TEXT_EN
+from rag_backend.domain.constants import LANGUAGE_PT, SWIPE_TEXT_EN
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, User
 from rag_backend.modules.presentation import PresentationHandlers
@@ -278,14 +278,21 @@ async def get_carousel_image(
     project_id: UUID,
     filename: str,
     handlers: PresentationHandlersDep,
+    lang: Annotated[str, Query(pattern="^(pt|en)$")] = LANGUAGE_PT,
 ) -> FileResponse:
-    """Serve a raw hero image (from <output>/images/)."""
+    """Serve a public carousel image.
+
+    Resolves the raw image (``<output>/images/``) first, then the rendered slide
+    of ``lang`` (standard, then HD) — the same fallback the owner-only preview
+    route uses, so a public page never 404s on an image the owner can see
+    (AE-0412, QA B08).
+    """
     project = await _load_project_with_output(handlers, project_id)
     assert_carousel_public(project)
     images_dir = resolve_shared_images_dir(project)
-    if images_dir is None:
-        raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
-    image_path = _resolve_image_file(images_dir, filename)
+    image_path = _resolve_image_file(images_dir, filename) if images_dir else None
+    if image_path is None:
+        image_path = resolve_slide_image_path(project, lang, filename)
     if image_path is None:
         raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
     return FileResponse(

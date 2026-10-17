@@ -6,8 +6,10 @@
  * live here rather than inline in the `.tsx` files.
  */
 
+import type { SupportedLocale } from "@/i18n/config";
 import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
 
 export interface NeonBlogPostCardComponentProps extends NeonBlogPostCardProps {
   featured?: boolean;
+  locale?: SupportedLocale;
 }

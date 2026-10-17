@@ -50,6 +50,8 @@ describe("mapProjectToBlogPostCard", () => {
       },
     };
     const result = mapProjectToBlogPostCard(project, "en");
-    expect(result.imageUrl).toBe("/api/carousels/proj-1/images/hero.jpg");
+    expect(result.imageUrl).toBe(
+      "/api/carousels/proj-1/images/hero.jpg?lang=pt",
+    );
   });
 });

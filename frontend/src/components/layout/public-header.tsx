@@ -8,6 +8,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
+const PUBLIC_HEADER_BRAND = "Pedro Marins";
 
 export async function PublicHeader(): Promise<React.ReactElement> {
   const tc = await getTranslations("common");
@@ -30,20 +31,14 @@ export async function PublicHeader(): Promise<React.ReactElement> {
       }}
     >
       <div
-        className="mx-auto px-6"
-        style={{
-          maxWidth: `${PUBLIC_HEADER_MAX_WIDTH_PX}px`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+        className="mx-auto flex min-w-0 items-center justify-between gap-3 px-4 sm:px-6"
+        style={{ maxWidth: `${PUBLIC_HEADER_MAX_WIDTH_PX}px` }}
       >
         <Link
           href={PUBLIC_ROUTE_PATHS.HOME}
+          aria-label={PUBLIC_HEADER_BRAND}
+          className="flex shrink-0 items-center gap-3"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
             fontSize: "20px",
             fontWeight: 800,
             color: TEXT,
@@ -67,12 +62,13 @@ export async function PublicHeader(): Promise<React.ReactElement> {
               boxShadow:
                 "0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)",
             }}
+            aria-hidden="true"
           >
             P
           </span>
-          <span>Pedro Marins</span>
+          <span className="hidden sm:inline">{PUBLIC_HEADER_BRAND}</span>
         </Link>
-        <nav style={{ display: "flex", alignItems: "center", gap: "28px" }}>
+        <nav className="flex min-w-0 items-center gap-4 sm:gap-7">
           <Link
             href={PUBLIC_ROUTE_PATHS.CHAT}
             style={{
@@ -110,6 +106,8 @@ export async function PublicHeader(): Promise<React.ReactElement> {
             {tc("login")}
           </Link>
           <div
+            className="hidden sm:block"
+            aria-hidden="true"
             style={{
               width: "1px",
               height: "20px",
