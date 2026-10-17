@@ -1,6 +1,6 @@
 # AE-0408 — Follow CTA no longer promises a Tuesday and Thursday schedule
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bug
