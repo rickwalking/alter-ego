@@ -77,7 +77,7 @@ Ticket created; persona passed through the re-drive; tests.
 
 ## Test Evidence
 
-Pending (hotfix fast path gates).
+Hotfix fast path, one at a time with DATABASE_URL: all 21 non-mutation backend gates PASS. Python 3.11 app import OK (3.11.15; a standalone import of the resume runner hits a pre-existing circular import on main too). mutation: deferred to CI (hotfix fast path).
 
 ## QA Report
 
