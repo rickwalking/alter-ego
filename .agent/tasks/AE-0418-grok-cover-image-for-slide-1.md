@@ -183,10 +183,12 @@ Pending.
   under). The credit is computed from `source_url` at selection time
   (`@handle · X` for x.com / twitter.com status URLs, else the host without
   `www.`).
-- **D9 — Dashboard.** The dashboard's slide-1 photo picker lists library photos
-  with role `hook`; the Grok cover is a per-run Telegram choice and is not shown
-  there. Adding it would need a new project API and UI for a flow the owner runs
-  on Telegram; left out of this ticket (frontend untouched).
+- **D9 — Dashboard.** The dashboard's only slide-1 photo choice is the create
+  wizard's "Foto do slide 1" (`use-pov-photo.ts`, manual carousels). Grok covers
+  exist only on autopilot topics, so there is nothing to offer there; the
+  per-run choice lives on Telegram. Frontend untouched (brief: "if the dashboard
+  shows the slide-1 photo choice, include the Grok cover" does not apply to a
+  flow that never has a Grok topic).
 - **D10 — Sweep.** A new step on the Telegram notify tick (it already runs every
   worker cycle with a session) deletes up to 20 unreferenced covers older than
   6 h per tick: the cover row, its creator-asset row (only when role `cover`)
@@ -194,6 +196,18 @@ Pending.
 - **D11 — Schema.** Prod has no `alembic_version` and migrate-on-deploy is off:
   the PR body lists idempotent manual SQL; the Alembic revision is idempotent
   too (columns/table added only when missing).
+- **D12 — Upload size reported.** An `ai_image` is centre-cropped to 4:5 and
+  scaled to exactly 1080×1350 (the slide), so its 201 body reports 1080×1350;
+  the contract's example matches this. A screenshot keeps its size.
+- **D13 — Same bytes as an owner photo.** `carousel_creator_assets` is unique on
+  (owner, sha256). If Grok re-sends bytes the owner already has, the existing
+  row is reused with its role untouched, and the sweep never deletes a row whose
+  role is not `cover` (nor a file another row still uses).
+- **D14 — Contract check.** Everything in the fixed Grok contract is
+  implemented as written (endpoint, fields, limits, 201 shape, codes, 6 h, one
+  use). Nothing in it could not work. Backend-only details (HTTP status per
+  code, 503 when no owner user is configured) are an appendix of the doc, not a
+  change to the contract.
 
 ## Blockers
 

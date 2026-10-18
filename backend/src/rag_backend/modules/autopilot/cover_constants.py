@@ -61,7 +61,6 @@ COVER_SOURCE_URL_MAX_CHARS = 2048
 
 # Telegram: ``ap:cv:<run>`` uses the cover, ``ap:cvoff:<run>`` drops it.
 KIND_COVER_ON = "cv"
-KIND_COVER_OFF = "cvoff"
 CALLBACK_COVER_ON_PREFIX = "ap:cv:"
 CALLBACK_COVER_OFF_PREFIX = "ap:cvoff:"
 CALLBACK_COVER_PATTERN = (
@@ -85,16 +84,14 @@ TEXT_COVER_SWITCHING = "🖼️ Trocando a capa do slide 1. A revisão volta em 
 COVER_REWORK_PHASE = "owner_cover"
 REASON_COVER_SWITCH = "owner_cover_switch"
 REASON_COVER_MISSING = "cover_file_missing"
-# Notice-ledger key: the cover photo is sent once per run and message kind.
+# Notice-ledger key: the thesis-time cover photo is sent once per run.
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
 COVER_SCOPE_THESIS = "thesis"
-COVER_SCOPE_REVIEW = "review{revision}"
 
 LOG_COVER = "autopilot.cover"
 LOG_COVER_UPLOADED = "uploaded"
 LOG_COVER_REJECTED = "rejected"
 LOG_COVER_SWEPT = "swept"
-LOG_COVER_SWITCH = "switched"
 LOG_COVER_PHOTO_FAILED = "photo_failed"
 
 __all__ = [
@@ -114,7 +111,6 @@ __all__ = [
     "COVER_MAX_AGE_HOURS",
     "COVER_NOTICE_KEY",
     "COVER_REWORK_PHASE",
-    "COVER_SCOPE_REVIEW",
     "COVER_SCOPE_THESIS",
     "COVER_SOURCE_URL_MAX_CHARS",
     "COVER_SWEEP_LIMIT",
@@ -133,13 +129,11 @@ __all__ = [
     "HTTP_UNPROCESSABLE",
     "HTTP_UNSUPPORTED_MEDIA_TYPE",
     "INDEX_COVER_CREATED_AT",
-    "KIND_COVER_OFF",
     "KIND_COVER_ON",
     "LOG_COVER",
     "LOG_COVER_PHOTO_FAILED",
     "LOG_COVER_REJECTED",
     "LOG_COVER_SWEPT",
-    "LOG_COVER_SWITCH",
     "LOG_COVER_UPLOADED",
     "PATH_ASSETS",
     "REASON_COVER_ASSET_EXPIRED",
