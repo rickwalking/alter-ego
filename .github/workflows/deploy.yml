@@ -197,6 +197,10 @@ jobs:
             LLM_MODEL_QUEUE_REASONING=${{ vars.LLM_MODEL_QUEUE_REASONING || 'go:deepseek-v4-pro,go:qwen3.8-max' }}
             OPENCODE_SIDECAR_URL=http://opencode:4096
             OPENCODE_SERVER_PASSWORD=${{ secrets.OPENCODE_SERVER_PASSWORD }}
+            # Cloudflare Worker egress for the sidecar's OpenCode API traffic
+            # (ops/egress-worker). Empty = direct egress from the droplet.
+            OPENCODE_EGRESS_URL=${{ secrets.OPENCODE_EGRESS_URL }}
+            OPENCODE_EGRESS_TOKEN=${{ secrets.OPENCODE_EGRESS_TOKEN }}
             TELEGRAM_ALERTS_BOT_TOKEN=${{ secrets.TELEGRAM_ALERTS_BOT_TOKEN }}
             TELEGRAM_ALERTS_CHAT_ID=${{ secrets.TELEGRAM_ALERTS_CHAT_ID }}
             EOF

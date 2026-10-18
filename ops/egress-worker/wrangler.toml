@@ -1,0 +1,19 @@
+# Cloudflare Worker egress for the OpenCode sidecar.
+#
+# Deploy:
+#   cd ops/egress-worker
+#   npx wrangler deploy
+#   npx wrangler secret put EGRESS_TOKEN   # shared token the sidecar sends
+#
+# Then set on the droplet's .env and recreate the opencode service:
+#   OPENCODE_EGRESS_URL=https://alter-ego-egress.<account>.workers.dev
+#   OPENCODE_EGRESS_TOKEN=<same token>
+
+name = "alter-ego-egress"
+main = "worker.js"
+compatibility_date = "2026-10-15"
+
+# Optional override for the upstream API base (defaults to the OpenCode
+# inference API in worker.js). Do NOT put EGRESS_TOKEN here — it is a secret.
+# [vars]
+# UPSTREAM_BASE = "https://opencode.ai/inference/openai/v1"

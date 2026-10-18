@@ -38,5 +38,7 @@ ENV OPENCODE_DISABLE_AUTOUPDATE=true \
 # The agent's only working directory: a tmpfs mount in compose.
 WORKDIR /work
 
+COPY --chmod=755 --chown=opencode:opencode entrypoint.sh /home/opencode/entrypoint.sh
+
 EXPOSE 4096
-CMD ["opencode", "serve", "--hostname", "0.0.0.0", "--port", "4096"]
+ENTRYPOINT ["/home/opencode/entrypoint.sh"]
