@@ -74,7 +74,7 @@ Ticket created; constants raised; feature + unit tests.
 
 ## Test Evidence
 
-Pending (hotfix fast path gates).
+Hotfix fast path, run one at a time with DATABASE_URL set: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet, docstrings, dead-code, inline-prompts, redis-factory, autopilot-env, healthcheck-loopback, bandit, pip-audit, integrity, test, diff-cover, migrations, schema-drift all PASS (lint-diff after a ruff comparison-order fix). Python 3.11 import check OK (3.11.15). mutation: deferred to CI (hotfix fast path).
 
 ## QA Report
 
