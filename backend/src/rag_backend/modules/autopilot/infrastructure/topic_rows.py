@@ -32,6 +32,7 @@ def topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         pov_format=candidate.pov_format,
         slide_count=candidate.slide_count,
         quotes=_quote_column(candidate),
+        cover_asset_id=candidate.cover_asset_id,
     )
 
 
@@ -56,6 +57,7 @@ def topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
         pov_format=row.pov_format,
         slide_count=row.slide_count,
         quotes=quotes_from_rows(row.quotes),
+        cover_asset_id=row.cover_asset_id,
     )
 
 

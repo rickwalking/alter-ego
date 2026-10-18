@@ -21,10 +21,20 @@ from rag_backend.modules.autopilot.constants import (
     REASON_PROJECT_MISSING,
     REASON_REVISION_CAP,
 )
+from rag_backend.modules.autopilot.cover_constants import (
+    COVER_REWORK_PHASE,
+    REASON_COVER_MISSING,
+)
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
     AutofixStatus,
     ContentAutofixer,
+)
+from rag_backend.modules.autopilot.domain.cover_ports import (
+    CoverOffers,
+    CoverSwitchCommand,
+    CoverSwitcher,
+    CoverSwitchStatus,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
@@ -53,6 +63,9 @@ class ReworkDependencies:
     recovery: RunRecoveryStore
     escalations: RunRecovery
     autofix: ContentAutofixer | None = None
+    # AE-0418: the owner's GrokBot cover choice and the slide-1 re-render.
+    covers: CoverOffers | None = None
+    cover_switch: CoverSwitcher | None = None
 
 
 class ReworkStep:
@@ -78,8 +91,13 @@ class ReworkStep:
         if not _at_final_review(snapshot):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
-        if run.rework_phase == AUTOFIX_REWORK_PHASE:
-            return await self._autofix(run, snapshot, project_id)
+        # AE-0367 "Fix issues" and AE-0418 "Usar capa do Grok" are no revise.
+        special = {
+            AUTOFIX_REWORK_PHASE: self._autofix,
+            COVER_REWORK_PHASE: self._cover,
+        }.get(run.rework_phase)
+        if special is not None:
+            return await special(run, snapshot, project_id)
         return await self._apply(run, snapshot, project_id)
 
     async def _autofix(
@@ -101,6 +119,36 @@ class ReworkStep:
         )
         outcome = await autofix.autofix(command)
         if outcome.status is AutofixStatus.CONFLICT:
+            return 1
+        await self._deps.recovery.clear_rework(run.run_id)
+        return None
+
+    async def _cover(
+        self,
+        run: AutopilotRun,
+        snapshot: GateSnapshot,
+        project_id: str,
+    ) -> int | None:
+        """AE-0418: switch slide 1; None hands the run to the final-review stop.
+
+        A conflict keeps the intent for the next tick; a cover whose file is
+        gone sends the run back to the owner's review unchanged.
+        """
+        switcher = self._deps.cover_switch
+        covers = self._deps.covers
+        if switcher is None or covers is None:
+            await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_REWORK_RETRY)
+            return 1
+        command = CoverSwitchCommand(
+            project_id=project_id,
+            expected_version=snapshot.lock_version,
+            cover=await covers.chosen_cover(run),
+        )
+        status = await switcher.switch(command)
+        if status is CoverSwitchStatus.CONFLICT:
+            return 1
+        if status is CoverSwitchStatus.MISSING:
+            await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_COVER_MISSING)
             return 1
         await self._deps.recovery.clear_rework(run.run_id)
         return None

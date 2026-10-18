@@ -8,6 +8,9 @@ from rag_backend.application.services.carousel_template.css.slide_styles_closing
 from rag_backend.application.services.carousel_template.css.slide_styles_components import (  # noqa: E501
     get_neon_slide_component_css,
 )
+from rag_backend.application.services.carousel_template.css.slide_styles_cover import (
+    get_cover_slide_css,
+)
 from rag_backend.application.services.carousel_template.css.slide_styles_pov import (
     get_pov_slide_css,
 )
@@ -23,6 +26,7 @@ def _get_neon_slide_css(theme: dict[str, str]) -> str:
         + get_neon_slide_component_css(theme)
         + get_neon_slide_closing_css(theme)
         + get_pov_slide_css(theme)
+        + get_cover_slide_css(theme)
     )
 
 

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.creator_asset import CREATOR_ASSET_ROLE_COVER
 from rag_backend.domain.models.carousel_creator_asset import (
     CarouselCreatorAsset,
     CreatorAssetLibraryQuery,
@@ -59,12 +60,19 @@ class PostgresCreatorAssetRepository:
     async def list_for_owner(
         self, query: CreatorAssetLibraryQuery
     ) -> list[CarouselCreatorAsset]:
-        """AE-0376: the owner's photo library, newest first, optionally by role."""
+        """AE-0376: the owner's photo library, newest first, optionally by role.
+
+        AE-0418: GrokBot covers (role ``cover``) are not library photos; they
+        are listed only when asked for by that role.
+        """
+        role = CarouselCreatorAssetModel.role
         stmt = select(CarouselCreatorAssetModel).where(
             CarouselCreatorAssetModel.owner_id == query.owner_id
         )
         if query.role is not None:
-            stmt = stmt.where(CarouselCreatorAssetModel.role == query.role)
+            stmt = stmt.where(role == query.role)
+        else:
+            stmt = stmt.where(or_(role.is_(None), role != CREATOR_ASSET_ROLE_COVER))
         stmt = stmt.order_by(CarouselCreatorAssetModel.created_at.desc()).limit(
             query.limit
         )

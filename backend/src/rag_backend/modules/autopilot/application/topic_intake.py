@@ -17,6 +17,11 @@ from rag_backend.modules.autopilot.constants import (
     REASON_DUPLICATE_TOPIC,
     STATUS_CANDIDATE_ACCEPTED,
 )
+from rag_backend.modules.autopilot.domain.cover import CoverAsset, CoverFacts
+from rag_backend.modules.autopilot.domain.cover_ports import (
+    CoverClaim,
+    CoverIntakeStore,
+)
 from rag_backend.modules.autopilot.domain.intake import (
     IntakeFacts,
     IntakePlan,
@@ -50,6 +55,22 @@ from rag_backend.modules.autopilot.domain.topic_text import (
 logger = structlog.get_logger()
 
 
+class _NoCovers:
+    """No cover store wired: every named cover is ``cover_asset_unknown``."""
+
+    @staticmethod
+    async def covers_by_ids(ids: tuple[UUID, ...]) -> dict[UUID, CoverAsset]:
+        """Nothing is known."""
+        del ids
+        return {}
+
+    @staticmethod
+    async def claim_cover(claim: CoverClaim) -> bool:
+        """Nothing to claim."""
+        del claim
+        return False
+
+
 class _NoStoredPosts:
     """No x-signals reader wired: every quote fails ``quote_source_invalid``."""
 
@@ -69,6 +90,8 @@ class TopicIntakeDependencies:
     daily_cap: int
     # AE-0406: the stored x-signals post texts that ``pov_news`` quotes cite.
     posts: XPostTextReader = field(default_factory=_NoStoredPosts)
+    # AE-0418: the GrokBot covers the topics name (``cover.asset_id``).
+    covers: CoverIntakeStore = field(default_factory=_NoCovers)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -126,7 +149,19 @@ class TopicIntakeService:
             daily_cap=self._deps.daily_cap,
             news_runs_this_week=await self._news_runs_this_week(now),
             post_texts=await self._post_texts(prepared),
+            covers=await self._covers(prepared, now),
         )
+
+    async def _covers(
+        self, prepared: tuple[PreparedProposal, ...], now: datetime
+    ) -> CoverFacts:
+        """AE-0418: the stored covers the batch names (no read without)."""
+        ids = tuple(
+            dict.fromkeys(i.cover_uuid for i in prepared if i.cover_uuid is not None)
+        )
+        if not ids:
+            return CoverFacts(now=now)
+        return CoverFacts(assets=await self._deps.covers.covers_by_ids(ids), now=now)
 
     async def _news_runs_this_week(self, now: datetime) -> int:
         week_start, week_end = sao_paulo_week(now)
@@ -152,6 +187,8 @@ class TopicIntakeService:
         for item in plan.new_candidates:
             stored = await self._deps.store.add_candidate(_candidate(item))
             (kept if stored else lost).append(item)
+            if stored:
+                await self._claim_cover(item)
         if not lost:
             return plan
         lost_ids = {item.candidate_id for item in lost}
@@ -162,6 +199,15 @@ class TopicIntakeService:
             accepted_ids=tuple(i for i in plan.accepted_ids if i not in lost_ids),
             new_candidates=tuple(kept),
             rejected=(*capped, *(_duplicate(item) for item in lost)),
+        )
+
+    async def _claim_cover(self, item: NewCandidate) -> None:
+        """AE-0418: the stored topic is the cover's one use."""
+        asset_id = item.proposal.cover_uuid
+        if asset_id is None:
+            return
+        await self._deps.covers.claim_cover(
+            CoverClaim(asset_id=asset_id, topic_candidate_id=item.candidate_id)
         )
 
     async def _queue(self, plan: IntakePlan) -> tuple[UUID, ...]:
@@ -209,6 +255,7 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         pov_format=proposal.pov_choice.pov_format,
         slide_count=proposal.pov_choice.slide_count,
         quotes=proposal.quotes,
+        cover_asset_id=proposal.cover_uuid,
     )
 
 

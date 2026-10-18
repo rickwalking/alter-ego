@@ -17,12 +17,9 @@ from rag_backend.modules.autopilot.bootstrap import (
     InstagramPublishTickAdapter,
     InstagramTickConfig,
     ManualInstagramPublishRequest,
-    TelegramNotifyTickAdapter,
-    TelegramTickConfig,
     bootstrap_module,
     build_autopilot_runner_tick,
     build_instagram_publish_tick,
-    build_telegram_notify_tick,
     manual_instagram_publish,
     notifier_is_configured,
 )
@@ -34,6 +31,11 @@ from rag_backend.modules.autopilot.bootstrap_credentials import (
     credential_tick_config,
     encryption_key_usable,
     prepare_instagram_credentials,
+)
+from rag_backend.modules.autopilot.bootstrap_telegram import (
+    TelegramNotifyTickAdapter,
+    TelegramTickConfig,
+    build_telegram_notify_tick,
 )
 from rag_backend.modules.autopilot.domain.exceptions import (
     InvalidAutopilotTransition,
@@ -85,6 +87,9 @@ def register_persistence_models() -> tuple[str, ...]:
     Returns the registered table names. Callers (the shared model package)
     use the call for its side effect; the tuple keeps the import live.
     """
+    from rag_backend.modules.autopilot.infrastructure.cover_models import (
+        AutopilotCoverAssetModel,
+    )
     from rag_backend.modules.autopilot.infrastructure.insights_models import (
         InstagramAudienceHoursModel,
         InstagramPostInsightsModel,
@@ -113,4 +118,5 @@ def register_persistence_models() -> tuple[str, ...]:
         InstagramStoryModel.__tablename__,
         InstagramPostInsightsModel.__tablename__,
         InstagramAudienceHoursModel.__tablename__,
+        AutopilotCoverAssetModel.__tablename__,
     )

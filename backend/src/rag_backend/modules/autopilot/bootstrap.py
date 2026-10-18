@@ -42,7 +42,6 @@ from rag_backend.modules.autopilot.application.story_step import (
     StoryDependencies,
 )
 from rag_backend.modules.autopilot.bootstrap_schedule import scheduled_publish_sweep
-from rag_backend.modules.autopilot.bootstrap_thesis import thesis_prompts
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
@@ -283,6 +282,10 @@ def _runner_deps(
         AutofixerConfig,
         InProcessContentAutofixer,
     )
+    from rag_backend.modules.autopilot.infrastructure.cover_images import (
+        EditorialCoverSwitcher,
+    )
+    from rag_backend.modules.autopilot.infrastructure.cover_offers import cover_offers
     from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
         EditorialDriverConfig,
         InProcessEditorialDriver,
@@ -320,78 +323,10 @@ def _runner_deps(
         autofix=autofixer,
         gate_repair=autofixer,
         slide_fix=autofixer,
+        # AE-0418: the owner's GrokBot cover choice and its slide-1 re-render.
+        covers=cover_offers(session),
+        cover_switch=EditorialCoverSwitcher(session),
     )
-
-
-@dataclass(frozen=True, kw_only=True)
-class TelegramTickConfig:
-    """Worker-tick wiring for owner Telegram notices."""
-
-    token: str
-    chat_id: str
-    web_base_url: str
-    # AE-0367: lets the review list quality issues and offer "Fix issues".
-    engine_factory: EngineFactory | None = None
-
-
-class TelegramNotifyTickAdapter:
-    """Deliver pending notices on the tick's session, after the runner."""
-
-    def __init__(self, config: TelegramTickConfig) -> None:
-        self._config = config
-
-    async def tick(self, db: AsyncSession) -> int:
-        """Send due reviews, statuses, and reminders."""
-        from rag_backend.modules.autopilot.application.notifications import (
-            NotificationDependencies,
-            OwnerNotificationService,
-        )
-        from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
-            AutofixerConfig,
-            InProcessContentAutofixer,
-        )
-        from rag_backend.modules.autopilot.infrastructure.notice_source import (
-            SqlAutopilotEventSource,
-            SqlNoticeLogStore,
-        )
-        from rag_backend.modules.autopilot.infrastructure.review_facts import (
-            CarouselReviewFacts,
-        )
-        from rag_backend.modules.autopilot.infrastructure.telegram_notifier import (
-            AsyncSleeper,
-            TelegramClientConfig,
-            TelegramNotifier,
-        )
-
-        configured = bool(self._config.token.strip() and self._config.chat_id.strip())
-        deps = NotificationDependencies(
-            events=SqlAutopilotEventSource(db),
-            runs=SqlAlchemyAutopilotRepository(db),
-            facts=CarouselReviewFacts(
-                db,
-                InProcessContentAutofixer(
-                    AutofixerConfig(
-                        session=db, engine_factory=self._config.engine_factory
-                    )
-                ),
-            ),
-            notices=SqlNoticeLogStore(db),
-            notifier=TelegramNotifier(
-                TelegramClientConfig(token=self._config.token, sleeper=AsyncSleeper())
-            ),
-            clock=SystemClock(),
-            chat_id=self._config.chat_id,
-            configured=configured,
-            web_base_url=self._config.web_base_url,
-        )
-        sent = await OwnerNotificationService(deps).tick()
-        # AE-0377: ask the owner to confirm each POV run's thesis (once).
-        return sent + await thesis_prompts(db, deps).tick()
-
-
-def build_telegram_notify_tick(config: TelegramTickConfig) -> TelegramNotifyTickAdapter:
-    """Build the worker collaborator. The HTTP client is created per process tick."""
-    return TelegramNotifyTickAdapter(config)
 
 
 def notifier_is_configured(token: str, chat_id: str) -> bool:

@@ -63,7 +63,7 @@ class GateRepairReport:
     translation_failed: bool = False
 
 
-class _RepublishRenderer:
+class RepublishRenderer:
     """Re-render through the AE-0313 republish path (hero images reused)."""
 
     def __init__(self, session: AsyncSession) -> None:
@@ -121,7 +121,7 @@ def _service(
             workflow=engine,
             translator=translator,
             renderer=(
-                _RepublishRenderer(request.session) if for_apply and render else None
+                RepublishRenderer(request.session) if for_apply and render else None
             ),
         )
     )
@@ -183,6 +183,7 @@ __all__ = [
     "OwnerAutofixReport",
     "OwnerAutofixRequest",
     "OwnerIssues",
+    "RepublishRenderer",
     "inspect_owner_issues",
     "run_gate_repair",
     "run_owner_autofix",

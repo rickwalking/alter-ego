@@ -78,10 +78,11 @@ class TestSlideLayoutRegistry:
         strategy = registry.find_for_slide("cta")
         assert strategy.strategy_name == "cta_centered"
 
-    def test_bootstrap_registers_all_twelve(self, registry):
+    def test_bootstrap_registers_all_thirteen(self, registry):
         # AE-0376: + hook_face, statement, save_checklist, cta_follow (POV).
+        # AE-0418: + cover_card (the GrokBot screenshot cover on slide 1).
         result = registry.list()
-        assert len(result) == 12
+        assert len(result) == 13
 
     def test_bootstrap_has_all_strategy_names(self, registry):
         names = {r["name"] for r in registry.list()}
@@ -98,6 +99,7 @@ class TestSlideLayoutRegistry:
             "statement",
             "save_checklist",
             "cta_follow",
+            "cover_card",
         }
         assert names == expected
 

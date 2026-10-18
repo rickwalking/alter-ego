@@ -99,6 +99,8 @@ class TopicCandidate:
     slide_count: int | None = None
     # AE-0406: the verified quotes of a ``pov_news`` topic (empty otherwise).
     quotes: tuple[NewsQuote, ...] = ()
+    # AE-0418: the GrokBot cover the scout attached (None = no cover).
+    cover_asset_id: UUID | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -130,6 +132,8 @@ class AutopilotRun:
     escalated_version: int | None = None
     # AE-0377: the thesis the owner confirmed (POV runs only).
     pov_thesis: str | None = None
+    # AE-0418: True once the owner chose the GrokBot cover for slide 1.
+    cover_chosen: bool = False
     # AE-0370: when a ``scheduled`` run is due. Kept after the due tick so the
     # published notice can say how late it went out.
     scheduled_at: datetime | None = None

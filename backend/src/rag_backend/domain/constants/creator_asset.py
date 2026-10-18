@@ -51,6 +51,9 @@ CREATOR_ASSET_ROLES: frozenset[str] = frozenset({
     CREATOR_ASSET_ROLE_POV,
 })
 CREATOR_ASSET_ROLE_PATTERN = "^(hook|cta|pov)$"
+# AE-0418: a GrokBot slide-1 cover. Stored like a library photo but never part
+# of the owner's library (not in CREATOR_ASSET_ROLES, hidden from its list).
+CREATOR_ASSET_ROLE_COVER = "cover"
 CREATOR_ASSET_POSE_TAG_MAX_CHARS = 40
 CREATOR_ASSET_MEDIA_TYPE_WEBP = "image/webp"
 
@@ -85,6 +88,7 @@ __all__ = [
     "CREATOR_ASSET_POSE_TAG_MAX_CHARS",
     "CREATOR_ASSET_RIFF_MAGIC",
     "CREATOR_ASSET_ROLES",
+    "CREATOR_ASSET_ROLE_COVER",
     "CREATOR_ASSET_ROLE_CTA",
     "CREATOR_ASSET_ROLE_HOOK",
     "CREATOR_ASSET_ROLE_PATTERN",

@@ -23,7 +23,7 @@ _REVISION = "b0c1d2e3f4a5"
 _PARENT = "a9b0c1d2e3f4"
 _POV_THESIS = "b1c2d3e4f5a6"
 # AE-0404: the audience-hours revision is the single head now.
-_HEAD = "c4d5e6f7a8b9"  # AE-0406: the pov_news quotes revision is the head
+_HEAD = "d5e6f7a8b9c0"  # AE-0418: the GrokBot cover revision is the head
 _PROJECT_COLUMNS = {
     "content_mode",
     "pov_thesis",

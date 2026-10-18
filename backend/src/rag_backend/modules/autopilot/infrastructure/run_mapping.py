@@ -36,6 +36,7 @@ def run_row(run: AutopilotRun) -> AutopilotRunModel:
         escalated_version=run.escalated_version,
         pov_thesis=run.pov_thesis,
         scheduled_at=run.scheduled_at,
+        cover_chosen=run.cover_chosen,
     )
 
 
@@ -62,6 +63,7 @@ def run_from_row(row: AutopilotRunModel) -> AutopilotRun:
         escalated_version=row.escalated_version,
         pov_thesis=row.pov_thesis,
         scheduled_at=aware(row.scheduled_at),
+        cover_chosen=bool(row.cover_chosen),
     )
 
 

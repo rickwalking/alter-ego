@@ -48,6 +48,10 @@
       {
         "display_name": "CTA Follow",
         "name": "cta_follow"
+      },
+      {
+        "display_name": "Cover Card",
+        "name": "cover_card"
       }
     ]
   },

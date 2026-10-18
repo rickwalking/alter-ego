@@ -503,6 +503,29 @@ caption footer `Fontes: @handle, domain.com` is appended by code (`domain/source
 `topic_candidates.quotes`, `carousel_projects.pov_quotes` and `carousel_projects.pov_sources`.
 `content_mode` is a plain `String(20)`, so `pov_news` needs no enum change.
 
+### 5.8 GrokBot cover for slide 1 (AE-0418, ADR-0024)
+
+Contract: [`grokbot-cover-asset.md`](grokbot-cover-asset.md). The scout may upload one cover per
+topic through `POST /api/autopilot/assets` (multipart `file`, `kind` `ai_image` | `screenshot`,
+`source_url` for screenshots) and name it on the topic as `cover: {"asset_id": "<uuid>"}` in any
+mode. Per-topic rejections (`field: "cover.asset_id"`): `cover_asset_unknown`,
+`cover_asset_expired` (older than 6 h), `cover_asset_used` (one topic per asset),
+`cover_source_invalid` (a screenshot whose `source_url` is not in the topic's `sources`).
+
+**The owner chooses every time.** The default never changes (the owner's photo on POV, the
+generated hero on Radar IA). The thesis message (POV modes) and every review message show the
+cover as a photo and a "🖼️ Usar capa do Grok" button (`ap:cv:<run>`); once chosen the button is
+"📸 Usar minha foto" (POV) or "↩️ Usar capa padrão" (Radar IA) (`ap:cvoff:<run>`). At the
+thesis the choice is stored on `autopilot_runs.cover_chosen` and the carousel is created with it;
+at the review the tap queues the `owner_cover` rework, the worker tick stages the file, writes
+`carousel_projects.slide_cover` under the lock-version CAS and re-renders through the republish
+path, and the fresh review goes out. An `ai_image` renders full-bleed under the title; a
+`screenshot` renders as a framed card with `@handle · X` or the domain.
+
+**Migration.** Revision `d5e6f7a8b9c0` (after `c4d5e6f7a8b9`) adds `autopilot_cover_assets`,
+`topic_candidates.cover_asset_id`, `autopilot_runs.cover_chosen` and
+`carousel_projects.slide_cover` (all nullable / idempotent).
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |

@@ -355,6 +355,7 @@ def _review_notice(
         profile=_profile(job.facts),
         issues=job.facts.issues,
         fixable=job.facts.fixable,
+        cover=job.facts.cover,
     )
 
 

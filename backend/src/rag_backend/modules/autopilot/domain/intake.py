@@ -8,12 +8,10 @@ in the application service.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import cast
 from uuid import UUID, uuid4
 
-from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
-from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.constants import (
     KIND_EXISTING,
     KIND_NEW,
@@ -21,80 +19,25 @@ from rag_backend.modules.autopilot.constants import (
     REASON_DAILY_CAP_REACHED,
     REASON_DUPLICATE_TOPIC,
 )
-from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
+from rag_backend.modules.autopilot.domain.cover import CoverFacts
+from rag_backend.modules.autopilot.domain.intake_proposal import (
+    PreparedProposal,
+    ProposalInput,
+    prepare,
+)
 from rag_backend.modules.autopilot.domain.intake_rules import (
     Refusal,
     RuleFacts,
     TopicFields,
     refusal_for,
 )
-from rag_backend.modules.autopilot.domain.pov_choice import (
-    NO_POV_CHOICE,
-    PovChoice,
-    pov_choice_for,
-)
-from rag_backend.modules.autopilot.domain.quotes import clean_quote
 from rag_backend.modules.autopilot.domain.topic_text import (
-    signal_hash,
-    strip_controls,
     titles_are_duplicates,
 )
-from rag_backend.modules.autopilot.domain.x_status import canonical_url
 from rag_backend.modules.autopilot.pov_constants import (
     MAX_NEWS_RUNS_PER_WEEK,
     REASON_WEEKLY_NEWS_CAP,
 )
-
-
-@dataclass(frozen=True, kw_only=True)
-class ProposalInput:
-    """One schema-valid proposal before control-character stripping."""
-
-    title: str
-    angle: str
-    why_viral: str
-    audience: str
-    niche: str
-    brief: str
-    sources: tuple[str, ...]
-    score: int
-    image_style: str = DEFAULT_IMAGE_STYLE
-    image_guidance: str | None = None
-    # AE-0377: scout v3. No mode = Radar IA; POV needs the draft thesis.
-    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
-    thesis_draft: str | None = None
-    pov_choice: PovChoice = NO_POV_CHOICE
-    # AE-0406: the position in the request and the ``pov_news`` quotes.
-    index: int = 0
-    quotes: tuple[NewsQuote, ...] = ()
-
-
-@dataclass(frozen=True, kw_only=True)
-class PreparedProposal:
-    """A proposal after stripping and canonicalizing sources."""
-
-    raw_title: str
-    title: str
-    angle: str
-    why_viral: str
-    audience: str
-    niche: str
-    brief: str
-    sources: tuple[str, ...]
-    score: int
-    signal_hash: str
-    image_style: str = DEFAULT_IMAGE_STYLE
-    image_guidance: str | None = None
-    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
-    thesis_draft: str | None = None
-    pov_choice: PovChoice = NO_POV_CHOICE
-    index: int = 0
-    quotes: tuple[NewsQuote, ...] = ()
-
-    @property
-    def is_news(self) -> bool:
-        """True for a Radar IA proposal (capped per week; ``pov_news`` is not)."""
-        return self.content_mode == CONTENT_MODE_NEWS_ANALYSIS
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -110,6 +53,8 @@ class IntakeFacts:
     news_runs_this_week: int = 0
     # AE-0406: canonical status URL -> the post text stored through x-signals.
     post_texts: Mapping[str, str] = field(default_factory=dict)
+    # AE-0418: the covers the batch names and the clock that ages them.
+    covers: CoverFacts = field(default_factory=CoverFacts)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -152,56 +97,34 @@ class _Classified:
     refusal: Refusal | None
 
 
-def prepare(proposal: ProposalInput) -> PreparedProposal:
-    """Strip control characters and canonicalize source URLs."""
-    title = strip_controls(proposal.title)
-    sources = tuple(
-        canonical_url(strip_controls(source)) for source in proposal.sources
-    )
-    return PreparedProposal(
-        raw_title=proposal.title,
-        title=title,
-        angle=strip_controls(proposal.angle),
-        why_viral=strip_controls(proposal.why_viral),
-        audience=strip_controls(proposal.audience),
-        niche=strip_controls(proposal.niche),
-        brief=strip_controls(proposal.brief),
-        sources=sources,
-        score=proposal.score,
-        signal_hash=signal_hash(title, sources),
-        image_style=proposal.image_style,
-        image_guidance=_optional_text(proposal.image_guidance),
-        content_mode=proposal.content_mode,
-        thesis_draft=_optional_text(proposal.thesis_draft),
-        pov_choice=pov_choice_for(proposal.content_mode, proposal.pov_choice),
-        index=proposal.index,
-        quotes=tuple(clean_quote(quote) for quote in proposal.quotes),
-    )
-
-
-def _optional_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    return strip_controls(value) or None
-
-
 def plan_intake(
     proposals: tuple[PreparedProposal, ...], facts: IntakeFacts
 ) -> IntakePlan:
     """Accept, reject, and mark the top scores that still fit today's cap."""
-    known = dict(facts.known_hashes)
-    rows = [_classify_and_remember(item, facts, known) for item in proposals]
+    memory = _Memory(known=dict(facts.known_hashes), claimed=set())
+    rows = [_classify_and_remember(item, facts, memory) for item in proposals]
     return _finish(rows, facts)
+
+
+@dataclass
+class _Memory:
+    """Hashes and (AE-0418) covers already taken by earlier topics of the batch."""
+
+    known: dict[str, UUID]
+    claimed: set[UUID]
 
 
 def _classify_and_remember(
     proposal: PreparedProposal,
     facts: IntakeFacts,
-    known: dict[str, UUID],
+    memory: _Memory,
 ) -> _Classified:
-    row = _classify(proposal, facts, known)
+    claimed = replace(facts.covers, claimed=frozenset(memory.claimed))
+    row = _classify(proposal, replace(facts, covers=claimed), memory.known)
     if row.kind == KIND_NEW and row.candidate_id is not None:
-        known[proposal.signal_hash] = row.candidate_id
+        memory.known[proposal.signal_hash] = row.candidate_id
+        if proposal.cover_uuid is not None:
+            memory.claimed.add(proposal.cover_uuid)
     return row
 
 
@@ -256,8 +179,13 @@ def _refusal(proposal: PreparedProposal, facts: IntakeFacts) -> Refusal | None:
             content_mode=proposal.content_mode,
             thesis_draft=proposal.thesis_draft,
             quotes=proposal.quotes,
+            cover_asset_id=proposal.cover_asset_id,
         ),
-        RuleFacts(allowlist=facts.allowlist, post_texts=facts.post_texts),
+        RuleFacts(
+            allowlist=facts.allowlist,
+            post_texts=facts.post_texts,
+            covers=facts.covers,
+        ),
     )
 
 
@@ -382,3 +310,16 @@ def _candidate(row: _Classified, queue_ids: frozenset[UUID]) -> NewCandidate:
         proposal=row.proposal,
         queue=candidate_id in queue_ids,
     )
+
+
+__all__ = [
+    "IntakeFacts",
+    "IntakePlan",
+    "NewCandidate",
+    "PreparedProposal",
+    "ProposalInput",
+    "TopicRejection",
+    "plan_intake",
+    "prepare",
+    "rejection",
+]

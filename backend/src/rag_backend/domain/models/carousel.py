@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from rag_backend.domain.constants import IMAGE_MODEL_DEFAULT, IMAGE_STYLE_DEFAULT
 from rag_backend.domain.models.news_quote import NewsQuote
+from rag_backend.domain.models.slide_cover import SlideCover
 
 
 class DesignTokenColors(TypedDict):
@@ -196,6 +197,9 @@ class CarouselProject:
     # topic's sources in order (the caption footer). Create-only.
     pov_quotes: tuple[NewsQuote, ...] = ()
     pov_sources: tuple[str, ...] = ()
+    # AE-0418 (ADR-0024): the GrokBot cover the owner chose for slide 1
+    # (None = the default slide 1). An owner edit, like the hook photo.
+    slide_cover: SlideCover | None = None
     # AE-0314: read-only view of the server-guaranteed republish marker. Written
     # ONLY by the write owner (mark/clear); never round-tripped through the ORM
     # ``update_from_entity`` hydrator, so it cannot be clobbered.

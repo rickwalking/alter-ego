@@ -46,6 +46,7 @@ from rag_backend.modules.autopilot.constants import (
     X_SIGNAL_BATCH_MAX,
     X_SIGNAL_BATCH_MIN,
 )
+from rag_backend.modules.autopilot.cover_constants import COVER_ASSET_ID_MAX_CHARS
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.topic_text import is_http_url, strip_controls
 from rag_backend.modules.autopilot.pov_constants import (
@@ -79,6 +80,21 @@ class QuoteProposal(BaseModel):
     lang_original: _QuoteText | None = None
     text_pt: _QuoteText | None = None
     text_en: _QuoteText | None = None
+
+
+class CoverReference(BaseModel):
+    """AE-0418: the GrokBot cover a topic names (``cover.asset_id``).
+
+    Unknown keys are a 422 for the batch. Whether the asset exists, is fresh,
+    unused and (screenshot) sourced is a per-topic domain rule, so a malformed
+    id is a ``cover_asset_unknown`` rejection of that topic only.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: str = Field(
+        min_length=TEXT_MIN_CHARS, max_length=COVER_ASSET_ID_MAX_CHARS
+    )
 
 
 class TopicProposal(BaseModel):
@@ -128,6 +144,8 @@ class TopicProposal(BaseModel):
     quotes: list[QuoteProposal] = Field(
         default_factory=list, max_length=QUOTES_SCHEMA_MAX
     )
+    # AE-0418: an optional GrokBot cover for slide 1 (every mode).
+    cover: CoverReference | None = None
 
     @field_validator("pov_format")
     @classmethod
@@ -222,6 +240,17 @@ class XSignalsResponse(BaseModel):
 
     accepted: list[str]
     rejected: list[RejectedXPost]
+
+
+class CoverAssetResponse(BaseModel):
+    """AE-0418: the 201 body of ``POST /assets``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: UUID
+    kind: str
+    width: int
+    height: int
 
 
 class ScoutFailedBody(BaseModel):

@@ -75,6 +75,7 @@
   "POST /api/auth/change-password",
   "POST /api/auth/logout",
   "POST /api/auth/token",
+  "POST /api/autopilot/assets",
   "POST /api/autopilot/scout-failed",
   "POST /api/autopilot/topics",
   "POST /api/autopilot/x-signals",

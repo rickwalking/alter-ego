@@ -56,6 +56,7 @@ def _input(item: TopicProposal, index: int) -> ProposalInput:
         pov_choice=PovChoice(pov_format=item.pov_format, slide_count=item.slide_count),
         index=index,
         quotes=tuple(_quote(quote) for quote in item.quotes),
+        cover_asset_id=item.cover.asset_id if item.cover is not None else None,
     )
 
 

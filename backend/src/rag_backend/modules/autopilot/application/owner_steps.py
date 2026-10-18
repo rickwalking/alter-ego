@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rag_backend.modules.autopilot.cover_constants import REASON_COVER_SWITCH
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.recovery_constants import REASON_APPROVE_REFUSED
 from rag_backend.modules.autopilot.webhook_constants import (
@@ -61,6 +62,12 @@ APPROVE_REFUSED_STEP = OwnerStep(
     expected=_PUBLISHING,
     new=_AWAITING,
     reason=REASON_APPROVE_REFUSED,
+)
+# AE-0418: "Usar capa do Grok" on the review queues a slide-1 re-render.
+COVER_STEP = OwnerStep(
+    expected=_AWAITING,
+    new=_REWORKING,
+    reason=REASON_COVER_SWITCH,
 )
 # AE-0367: "Fix issues" queues a deterministic repair for the worker tick.
 AUTOFIX_STEP = OwnerStep(

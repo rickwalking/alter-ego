@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
-from rag_backend.modules.autopilot.bootstrap import (
+from rag_backend.modules.autopilot.bootstrap import notifier_is_configured
+from rag_backend.modules.autopilot.bootstrap_telegram import (
     TelegramTickConfig,
     build_telegram_notify_tick,
-    notifier_is_configured,
 )
 from rag_backend.modules.autopilot.constants import (
     AGGREGATE_TYPE_AUTOPILOT_RUN,

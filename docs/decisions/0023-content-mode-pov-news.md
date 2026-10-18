@@ -81,3 +81,5 @@ Chosen: **Option 3**.
 
 - Spec: GrokBot scout contract "POV News Mode Spec (v2)", 2026-10-16.
 - Ticket: AE-0406. Related: ADR-0020 (autopilot), ADR-0021 (POV mode).
+- Follow-up: [ADR-0024](0024-grok-cover-asset.md) adds an optional GrokBot slide-1 cover the
+  owner chooses per post (AE-0418).

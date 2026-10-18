@@ -14,6 +14,7 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -132,6 +133,8 @@ class TopicCandidateModel(AutopilotOrmBase):
     quotes: Mapped[list[dict[str, str]] | None] = mapped_column(
         _JSON_DOCUMENT, nullable=True
     )
+    # AE-0418: the GrokBot cover (``autopilot_cover_assets.id``, NULL = none).
+    cover_asset_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 
@@ -202,6 +205,8 @@ class AutopilotRunModel(AutopilotOrmBase):
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # AE-0418: the owner chose the GrokBot cover for slide 1 (NULL = no).
+    cover_chosen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

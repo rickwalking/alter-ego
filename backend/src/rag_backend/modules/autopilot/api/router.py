@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AUTOPILOT
+from rag_backend.modules.autopilot.api.assets import router as cover_assets_router
 from rag_backend.modules.autopilot.api.auth import require_autopilot_api_key
 from rag_backend.modules.autopilot.api.dependencies import (
     build_scout_failure,
@@ -161,6 +162,10 @@ async def post_autopilot_scout_failed(
         return ScoutFailedResponse(delivered=False)
     detail = result.error or DETAIL_SCOUT_NOTIFY_FAILED
     raise HTTPException(status_code=_failure_status(detail), detail=detail)
+
+
+# AE-0418: ``POST /assets`` (GrokBot cover upload) under the same guard.
+router.include_router(cover_assets_router)
 
 
 def _failure_status(error: str) -> int:

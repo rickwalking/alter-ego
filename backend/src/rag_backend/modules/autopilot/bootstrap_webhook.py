@@ -25,6 +25,10 @@ from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
     AutofixerConfig,
     InProcessContentAutofixer,
 )
+from rag_backend.modules.autopilot.infrastructure.cover_offers import (
+    SqlCoverChoices,
+    cover_offers,
+)
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
@@ -90,6 +94,9 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         ),
         topics=repo,
         schedule_signals=_schedule_signals(build),
+        # AE-0418: "Usar capa do Grok" on the thesis and review messages.
+        covers=cover_offers(build.session),
+        cover_choices=SqlCoverChoices(build.session),
     )
     return OwnerActionService(deps)
 
