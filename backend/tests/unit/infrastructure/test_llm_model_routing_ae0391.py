@@ -24,6 +24,8 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
     LLM_ROLE_REASONING,
     LLM_TAG_FALLBACK,
     LLM_TIMEOUT_FALLBACK_SECONDS,
+    LLM_TIMEOUT_FAST_SECONDS,
+    LLM_TIMEOUT_REASONING_SECONDS,
     LOG_LLM_FALLBACK_USED,
 )
 from rag_backend.infrastructure.config.settings import Settings
@@ -75,7 +77,7 @@ def test_reasoning_role_routes_to_reasoning_model_with_its_fallback() -> None:
     assert isinstance(model.primary, ChatOpenAI)
     assert model.primary.model_name == "deepseek-v4-pro"
     assert model.primary.openai_api_base == "https://opencode.ai/zen/go/v1"
-    assert model.timeout_seconds == 240.0
+    assert model.timeout_seconds == LLM_TIMEOUT_REASONING_SECONDS
     assert isinstance(model.fallback, ChatOpenAI)
     assert model.fallback.model_name == "qwen3.8-max"
     assert model.role == LLM_ROLE_REASONING
@@ -87,7 +89,7 @@ def test_fast_role_routes_to_fast_model() -> None:
 
     assert isinstance(model, RoutedChatModel)
     assert model.model_name == "deepseek-v4.1-flash"
-    assert model.timeout_seconds == 120.0
+    assert model.timeout_seconds == LLM_TIMEOUT_FAST_SECONDS
 
 
 def test_role_model_ids_come_from_settings() -> None:
@@ -118,7 +120,7 @@ def test_unknown_role_uses_glm_model_and_reasoning_budget() -> None:
 
     assert isinstance(model, RoutedChatModel)
     assert model.model_name == "glm-5.3"
-    assert model.timeout_seconds == 240.0
+    assert model.timeout_seconds == LLM_TIMEOUT_REASONING_SECONDS
 
 
 def test_no_role_keeps_the_single_glm_chat_model() -> None:
