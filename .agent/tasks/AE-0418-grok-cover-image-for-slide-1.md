@@ -1,6 +1,6 @@
 # AE-0418 — Grok cover image for slide 1 (owner chooses per post)
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -114,11 +114,11 @@ See `backend/tests/features/autopilot_grok_cover_ae0418.feature`.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -129,15 +129,18 @@ Ticket created from the owner brief and the fixed Grok contract
 
 ## Files Touched
 
-Pending.
+See `git diff b47da0710..HEAD --stat` (backend autopilot/editorial/carousel template, Alembic
+`d5e6f7a8b9c0`, docs, tests).
 
 ## Test Evidence
 
-Pending.
+Full `gate-capture.sh backend`: 22/22 PASS; 5391 tests passed; coverage 93%; diff-cover 99%;
+mutation 80.98%. See `.agent/reports/AE-0418.dev-summary.md`.
 
 ## QA Report
 
-Pending.
+[`.agent/reports/AE-0418.qa.md`](../reports/AE-0418.qa.md): external (opencode), **WARN**: 22/22 gates,
+0 integrity blockers; open note: new modules not in `paths_to_mutate`.
 
 ## Decision Log
 
@@ -215,4 +218,5 @@ None.
 
 ## Final Summary
 
-Pending.
+Grok can upload a slide-1 cover and attach it to any topic; the owner switches slide 1 to it (and
+back) on Telegram; default unchanged. Manual prod SQL in the PR body must be applied before merge.

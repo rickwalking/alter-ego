@@ -222,6 +222,7 @@ class TestReviewCover:
         assert world.runs.run.state is _S.REWORKING
         assert world.runs.run.cover_chosen
         assert world.runs.run.rework_phase == COVER_REWORK_PHASE
+        assert [c.expected for c in world.choices.commands] == [_S.REWORKING]
         assert _answers(world) == [ANSWER_COVER_ON]
         assert world.messenger.edits[-1].text == TEXT_COVER_SWITCHING
 
