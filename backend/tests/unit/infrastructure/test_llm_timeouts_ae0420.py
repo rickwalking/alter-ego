@@ -27,4 +27,4 @@ def test_reasoning_role_keeps_the_larger_budget() -> None:
 def test_fallback_budget_is_no_shorter_than_fast() -> None:
     """Scenario: The fallback budget is no shorter than the fast role's."""
     assert LLM_TIMEOUT_FALLBACK_SECONDS >= 300.0
-    assert LLM_TIMEOUT_FALLBACK_SECONDS >= role_timeout(LLM_ROLE_FAST)
+    assert role_timeout(LLM_ROLE_FAST) <= LLM_TIMEOUT_FALLBACK_SECONDS
