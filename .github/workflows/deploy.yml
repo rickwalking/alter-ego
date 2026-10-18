@@ -15,6 +15,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # AE-0417: backend + frontend tests take ~15 min; a hung test must not
+    # stall the deploy for hours.
+    timeout-minutes: 40
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -185,11 +188,12 @@ jobs:
             GROKBOT_IMAGE_WEBHOOK_URL=${{ secrets.GROKBOT_IMAGE_WEBHOOK_URL }}
             GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER=${{ vars.GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER || 'Authorization' }}
             GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE=${{ secrets.GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE }}
-            # AE-0399 model queue: free DeepSeek via the OpenCode sidecar first, then
-            # DeepSeek Flash on Go, then Qwen. Rollback = set LLM_MODEL_QUEUE_FAST to
-            # a single go: entry (repo variable). Breaker alerts go to a
+            # AE-0399 model queue: DeepSeek Flash on Go, then Qwen. AE-0419: the free
+            # OpenCode sidecar model was dropped: OpenCode refuses its free tier from
+            # server IPs (FreeTierError even from its own CLI on the droplet, 2026-10-17).
+            # Override with the LLM_MODEL_QUEUE_FAST repo variable. Breaker alerts go to a
             # send-only Telegram bot (no token = alerts off, logs only).
-            LLM_MODEL_QUEUE_FAST=${{ vars.LLM_MODEL_QUEUE_FAST || 'sidecar:opencode/deepseek-v4.1-flash-free,go:deepseek-v4.1-flash,go:qwen3.8-flash' }}
+            LLM_MODEL_QUEUE_FAST=${{ vars.LLM_MODEL_QUEUE_FAST || 'go:deepseek-v4.1-flash,go:qwen3.8-flash' }}
             LLM_MODEL_QUEUE_REASONING=${{ vars.LLM_MODEL_QUEUE_REASONING || 'go:deepseek-v4-pro,go:qwen3.8-max' }}
             OPENCODE_SIDECAR_URL=http://opencode:4096
             OPENCODE_SERVER_PASSWORD=${{ secrets.OPENCODE_SERVER_PASSWORD }}

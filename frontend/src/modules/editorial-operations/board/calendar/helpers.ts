@@ -1,15 +1,24 @@
 import {
+  addDays,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
   format,
   isSameMonth,
   isToday,
+  parseISO,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
 import type { CalendarItem } from "@/modules/editorial";
-import { CALENDAR_ISO_DAY_FORMAT, CALENDAR_WEEK_STARTS_ON } from "./constants";
+import { toDateLocaleTag } from "@/lib/locale-format";
+import {
+  CALENDAR_EVENT_DAY_FORMAT,
+  CALENDAR_ISO_DAY_FORMAT,
+  CALENDAR_TITLE_FORMAT,
+  CALENDAR_WEEKDAY_FORMAT,
+  CALENDAR_WEEK_STARTS_ON,
+} from "./constants";
 import type { CalendarContentType, CalendarDay, CalendarEvent } from "./types";
 
 function mapContentType(raw: string): CalendarContentType {
@@ -92,4 +101,30 @@ export function buildCalendarDaysFromApi(
     ...cell,
     events: eventsByDay[cell.iso] ?? [],
   }));
+}
+
+/** Viewed-month title in the active locale (pt "Outubro de 2026"). */
+export function formatCalendarTitle(anchor: Date, locale: string): string {
+  const tag = toDateLocaleTag(locale);
+  const title = anchor.toLocaleDateString(tag, CALENDAR_TITLE_FORMAT);
+  return title.charAt(0).toLocaleUpperCase(tag) + title.slice(1);
+}
+
+/** Per-event label for a `yyyy-MM-dd` cell (pt "17 de out.", en "Oct 17"). */
+export function formatCalendarDayLabel(iso: string, locale: string): string {
+  return parseISO(iso).toLocaleDateString(
+    toDateLocaleTag(locale),
+    CALENDAR_EVENT_DAY_FORMAT,
+  );
+}
+
+/** Seven weekday headers from the grid's first weekday, in the locale. */
+export function calendarWeekdayHeaders(locale: string): string[] {
+  const tag = toDateLocaleTag(locale);
+  const first = startOfWeek(new Date(), {
+    weekStartsOn: CALENDAR_WEEK_STARTS_ON,
+  });
+  return Array.from({ length: 7 }, (_, offset) =>
+    addDays(first, offset).toLocaleDateString(tag, CALENDAR_WEEKDAY_FORMAT),
+  );
 }

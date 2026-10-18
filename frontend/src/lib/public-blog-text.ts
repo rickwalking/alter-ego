@@ -7,6 +7,7 @@
  */
 
 import type { SupportedLocale } from "@/i18n/config";
+import { formatLocaleDate } from "@/lib/locale-format";
 
 const EMPHASIS_TAG_PATTERN = /<\/?(?:strong|b|em|i)\s*>/gi;
 const STRONG_HTML_PATTERN = /<(strong|b)\s*>([\s\S]*?)<\/\1\s*>/gi;
@@ -32,17 +33,8 @@ const NUMBERED_SLIDE_PATTERN = /^slide[\s_-]*\d*$/i;
 const CATEGORY_MAX_CHARS = 32;
 const CATEGORY_MAX_WORDS = 4;
 
-const DATE_LOCALE_TAGS: Record<SupportedLocale, string> = {
-  pt: "pt-BR",
-  en: "en-US",
-};
-const DATE_FORMAT_BY_LOCALE: Record<
-  SupportedLocale,
-  Intl.DateTimeFormatOptions
-> = {
-  pt: { day: "2-digit", month: "2-digit", year: "numeric" },
-  en: { month: "short", day: "numeric", year: "numeric" },
-};
+/** Public dates are calendar dates of the stored UTC instant. */
+const PUBLIC_DATE_TIME_ZONE = "UTC";
 
 /** Remove emphasis markup (HTML and markdown) and collapse whitespace. */
 export function stripEmphasisMarkup(text: string): string {
@@ -100,15 +92,5 @@ export function formatPublicDate(
   isoDate: string | null | undefined,
   locale: SupportedLocale,
 ): string {
-  if (!isoDate) {
-    return "";
-  }
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return date.toLocaleDateString(DATE_LOCALE_TAGS[locale], {
-    ...DATE_FORMAT_BY_LOCALE[locale],
-    timeZone: "UTC",
-  });
+  return formatLocaleDate(isoDate, locale, PUBLIC_DATE_TIME_ZONE);
 }

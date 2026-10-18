@@ -28,8 +28,9 @@ When `LLM_MODEL_QUEUE_FAST` / `LLM_MODEL_QUEUE_REASONING` is set, the role is se
 `ModelQueueChatModel` (`infrastructure/external/model_queue_chat_model.py`) instead of the
 model + fallback pair above. The queue is a comma list of `go:<model>` (the OpenCode Go
 endpoint) and `sidecar:<provider>/<model>` (the OpenCode sidecar) entries, tried in order.
-Prod: fast = `sidecar:opencode/deepseek-v4.1-flash-free,go:deepseek-v4.1-flash,go:qwen3.8-flash`,
-reasoning = `go:deepseek-v4-pro,go:qwen3.8-max`. An empty setting keeps the AE-0391 routing.
+Prod: fast = `go:deepseek-v4.1-flash,go:qwen3.8-flash`, reasoning = `go:deepseek-v4-pro,go:qwen3.8-max`
+(repo variables `LLM_MODEL_QUEUE_FAST` / `LLM_MODEL_QUEUE_REASONING`). An empty setting keeps the
+AE-0391 routing. The free sidecar model is no longer in the queue (AE-0419, below).
 
 Each model has a circuit breaker (`infrastructure/llm/model_breaker.py`), shared by the process:
 CLOSED (calls pass), OPEN (skipped until the cooldown ends), HALF_OPEN (one probe call). What a
@@ -50,6 +51,14 @@ the logs (`llm_breaker_opened` / `_half_open` / `_closed`) and, with `TELEGRAM_A
 models unavailable" at most once per 15 min.
 
 ### OpenCode sidecar
+
+> **AE-0419 (2026-10-17): not used in prod.** OpenCode refuses its free tier from server IPs:
+> `opencode run -m opencode/deepseek-v4.1-flash-free` returns `FreeTierError` on the droplet even
+> from OpenCode's own CLI and with a signed-out profile, while the same version answers from a
+> residential connection. The restriction is the provider's policy for automated/server use, so
+> prod does not route around it (no proxying through a home connection). The fast queue is
+> `go:deepseek-v4.1-flash,go:qwen3.8-flash`. The sidecar service and `sidecar:` queue entries still
+> work for a provider/model that allows server use.
 
 `opencode/deepseek-v4.1-flash-free` answers only requests made from within OpenCode (a direct
 API call gets 403 `FreeTierError`, and the free tier refuses any restricted permission config).

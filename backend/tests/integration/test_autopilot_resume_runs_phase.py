@@ -39,6 +39,9 @@ import rag_backend.infrastructure.database.config as db_config
 from rag_backend.application.services.carousel import (
     editorial_workflow_resume_runner as resume_runner,
 )
+from rag_backend.application.services.carousel import (
+    editorial_workflow_run_heartbeat as run_heartbeat,
+)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowConfig,
     EditorialWorkflowService,
@@ -192,7 +195,7 @@ async def world(
     monkeypatch.setattr(resume_runner, "publish_run_finished", _finished)
     monkeypatch.setattr(resume_runner, "write_run_heartbeat_once", _stage_beat)
     monkeypatch.setattr(
-        resume_runner, "DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS", _BEAT_SECONDS
+        run_heartbeat, "DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS", _BEAT_SECONDS
     )
     service = EditorialWorkflowService(
         EditorialWorkflowConfig(llm=MagicMock(), checkpointer=MemorySaver())

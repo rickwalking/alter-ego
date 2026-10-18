@@ -56,16 +56,6 @@ export const CALENDAR_STATUS_META: Record<
   },
 };
 
-export const CALENDAR_WEEKDAY_HEADERS = [
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-] as const;
-
 export const CALENDAR_LEGEND = [
   { l: "Carousel", c: CALENDAR_COLORS.cyan },
   { l: "Blog Post", c: CALENDAR_COLORS.teal },
@@ -77,17 +67,28 @@ export const CALENDAR_LEGEND = [
 
 export const CALENDAR_VIEW_MODES = ["Month", "Week", "Day"] as const;
 
-/** Grid week starts on Sunday — matches `CALENDAR_WEEKDAY_HEADERS` ("Sun" first). */
+/** Grid week starts on Sunday (the weekday headers start there too). */
 export const CALENDAR_WEEK_STARTS_ON = 0 as const;
 
 /** date-fns format token for a cell's `yyyy-MM-dd` key (length-significant). */
 export const CALENDAR_ISO_DAY_FORMAT = "yyyy-MM-dd";
 
-/** Title format for the viewed month, e.g. "June 2026". */
-export const CALENDAR_TITLE_FORMAT = "MMMM yyyy";
+/** Intl format of the viewed month title (pt "Junho de 2026", en "June 2026"). */
+export const CALENDAR_TITLE_FORMAT: Intl.DateTimeFormatOptions = {
+  month: "long",
+  year: "numeric",
+};
 
-/** Per-event date label format, e.g. "Jun 10". */
-export const CALENDAR_EVENT_DAY_FORMAT = "MMM d";
+/** Intl format of a per-event date label (pt "10 de jun.", en "Jun 10"). */
+export const CALENDAR_EVENT_DAY_FORMAT: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+};
+
+/** Intl format of a weekday column header (pt "dom.", en "Sun"). */
+export const CALENDAR_WEEKDAY_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+};
 
 export const CALENDAR_BTN_GHOST: CSSProperties = {
   display: "inline-flex",

@@ -55,6 +55,10 @@ def _make_params(
 
 
 _RUNNER = "rag_backend.application.services.carousel.editorial_workflow_resume_runner"
+# AE-0417: the interval heartbeat loop lives in its own module.
+_HEARTBEAT = (
+    "rag_backend.application.services.carousel.editorial_workflow_run_heartbeat"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -70,7 +74,7 @@ def _patch_run_progress_seams() -> Generator[None, None, None]:
             new=AsyncMock(side_effect=lambda *_: nullcontext()),
         ),
         patch(
-            f"{_RUNNER}.write_run_heartbeat_with_retry",
+            f"{_HEARTBEAT}.write_run_heartbeat_with_retry",
             new=AsyncMock(return_value=True),
         ),
         # AE-0320: stage-boundary beats use the single-attempt variant.

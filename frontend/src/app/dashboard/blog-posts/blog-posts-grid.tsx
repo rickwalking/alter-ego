@@ -11,6 +11,7 @@ import {
 } from "@/modules/editorial-operations";
 import { BLOG_POSTS_I18N_NAMESPACE } from "@/modules/editorial-operations";
 import { BlogPostCardActions } from "@/app/dashboard/blog-posts/blog-posts-actions";
+import { formatLocaleNumber } from "@/lib/locale-format";
 import {
   BG_CARD,
   NEON_CARD_BORDER,
@@ -49,7 +50,7 @@ function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
         {formatBlogPostDate(post.date, locale)}
       </span>
       <div className="flex gap-1.5 font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-        <span>👁 {post.views.toLocaleString()}</span>
+        <span>👁 {formatLocaleNumber(post.views, locale)}</span>
         <span>💬 {post.comments}</span>
       </div>
     </div>
