@@ -34,9 +34,12 @@ DEFAULT_LLM_MODEL_FALLBACK = "qwen3.8-flash"
 DEFAULT_LLM_MODEL_FALLBACK_REASONING = "qwen3.8-max"
 
 # Per-call wall-clock budgets (one attempt).
-LLM_TIMEOUT_REASONING_SECONDS = 240.0
-LLM_TIMEOUT_FAST_SECONDS = 120.0
-LLM_TIMEOUT_FALLBACK_SECONDS = 180.0
+# AE-0420: raised after the OpenCode Go endpoint answered a ~4k-char draft in
+# 13-134 s on 2026-10-18 (qwen3.8-flash 134 s); the old 120 s fast budget timed
+# content drafting out, opened every breaker and failed two carousels.
+LLM_TIMEOUT_REASONING_SECONDS = 360.0
+LLM_TIMEOUT_FAST_SECONDS = 300.0
+LLM_TIMEOUT_FALLBACK_SECONDS = 300.0
 
 # AE-0395: attempts per model (primary, then fallback) for a timeout, an error
 # (except auth) or empty content, with exponential backoff between attempts.
