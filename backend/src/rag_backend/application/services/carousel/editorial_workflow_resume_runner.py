@@ -298,7 +298,9 @@ async def _run_phase(
 ) -> CarouselWorkflowState:
     """Apply the review decision, or re-run the parked node (AE-0363)."""
     if params.action == RUN_ACTION_REDRIVE:
-        return await service.redrive_pending_phase(params.project_id, db)
+        # AE-0421: the re-driven phase drafts and scores with the persona too.
+        persona = await resume_persona.load_project_persona(db, params.project_id)
+        return await service.redrive_pending_phase(params.project_id, db, persona)
     return await service.resume_workflow(
         ResumeWorkflowInput(
             project_id=params.project_id,
