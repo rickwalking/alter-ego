@@ -68,6 +68,8 @@ class CoverSwitchStatus(StrEnum):
     SWITCHED = "switched"
     CONFLICT = "conflict"
     MISSING = "missing"
+    # Stored, but the re-render failed: never reported as switched.
+    RENDER_FAILED = "render_failed"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -108,6 +110,12 @@ class CoverAssetStore(CoverIntakeStore, Protocol):
 
     async def delete_covers(self, ids: tuple[UUID, ...]) -> None:
         """Delete the cover rows."""
+        ...
+
+    async def images_in_use(
+        self, creator_asset_ids: tuple[UUID, ...]
+    ) -> frozenset[UUID]:
+        """The creator assets among the ids that a cover row still references."""
         ...
 
     async def commit(self) -> None:

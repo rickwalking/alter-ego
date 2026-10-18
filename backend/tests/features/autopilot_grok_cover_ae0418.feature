@@ -78,6 +78,33 @@ Feature: Grok cover image for slide 1, chosen by the owner per post (AE-0418, AD
     When the scout posts two topics with that cover
     Then the first is accepted and the second is rejected with "cover_asset_used"
 
+  # PR #136 review (item 5): the claim is checked, never ignored.
+  Scenario: A cover another batch claimed after the read rejects the topic
+    Given a cover the intake read as unused
+    And another batch claims it before this topic is stored
+    When the scout posts a topic with that cover
+    Then the topic is rejected with "cover_asset_used" and field "cover.asset_id"
+    And the topic is not stored
+
+  Scenario: A cover the sweep deleted after the read rejects the topic
+    Given a cover the intake read as unused
+    And the sweep deletes it before this topic is stored
+    When the scout posts a topic with that cover
+    Then the topic is rejected with "cover_asset_unknown"
+    And the topic is not stored
+
+  # PR #136 review (item 4): uploads never starve /signals or /topics.
+  Scenario: Cover uploads have their own rate limit
+    When the scout sends 30 uploads in a minute
+    Then none of them is rate limited and the 31st is answered 429
+    And the next 10 posts to /topics are all answered 200
+
+  # PR #136 review (item 1): the production proxy must not answer 413 first.
+  Scenario: nginx lets a 5 MB cover through to the backend
+    Given the nginx and nginx-ssl configs
+    Then both have a location for /api/autopilot/assets with client_max_body_size 6m
+    And it forwards the same proxy headers as /api/
+
   Scenario: Unknown keys inside cover reject the batch
     When the scout posts a topic with cover {"asset_id": "...", "url": "..."}
     Then the response is 422
@@ -119,6 +146,14 @@ Feature: Grok cover image for slide 1, chosen by the owner per post (AE-0418, AD
     Then the project's slide cover is set, the file is staged, the deck is re-rendered
     And the run is back in awaiting_owner with a new review whose keyboard has "↩️ Usar capa padrão"
 
+  # PR #136 review (item 3): a failed re-render is never reported as done.
+  Scenario: A failed slide-1 re-render is escalated, never reported as done
+    Given the owner tapped "🖼️ Usar capa do Grok" on a Radar IA review
+    When the worker tick switches slide 1 and the re-render reports errors
+    Then the switch is "render_failed", not "switched"
+    And the run is escalated with reason "cover_render_failed" and the rework is cleared
+    And the owner's escalation notice says the cover switch did not render
+
   Scenario: A cover tap on a run that is not waiting is refused
     Given a run that is generating
     When the owner taps "🖼️ Usar capa do Grok"
@@ -152,3 +187,15 @@ Feature: Grok cover image for slide 1, chosen by the owner per post (AE-0418, AD
     Given an unused cover uploaded 7 hours ago and a used one uploaded 7 hours ago
     When the workers tick sweeps covers
     Then only the unused cover, its creator asset row and its file are deleted
+
+  # PR #136 review (item 2): one creator asset can back two covers.
+  Scenario: Sweeping an unused cover keeps a used cover with the same bytes
+    Given covers A and B uploaded 7 hours ago with identical bytes
+    And B is attached to a topic
+    When the workers tick sweeps covers
+    Then A is deleted and B, its creator asset and its file survive
+
+  Scenario: The sweep keeps an image a carousel still renders
+    Given an unused cover uploaded 7 hours ago that a project's slide cover points at
+    When the workers tick sweeps covers
+    Then the cover row is deleted but its creator asset and file survive

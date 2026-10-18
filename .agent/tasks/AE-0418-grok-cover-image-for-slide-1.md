@@ -10,7 +10,7 @@ Agent Lane: architect → developer → qa → release
 Branch: feat/ae-0418-grok-cover
 Kanban Card: TBD
 Created: 2026-10-17
-Updated: 2026-10-17
+Updated: 2026-10-18
 
 ## Goal
 
@@ -127,6 +127,13 @@ See `backend/tests/features/autopilot_grok_cover_ae0418.feature`.
 Ticket created from the owner brief and the fixed Grok contract
 (`ae-0418-grok-contract.md`).
 
+### 2026-10-17 (PR #136 review round)
+
+The orchestrator's independent review found six issues; all fixed on the branch
+(D15–D20): nginx body size, the sweep deleting a shared image, a failed
+re-render reported as done, the shared rate limit, the ignored claim result,
+and the stray drift-check migration (already removed in `3b1a26912`).
+
 ## Files Touched
 
 See `git diff b47da0710..HEAD --stat` (backend autopilot/editorial/carousel template, Alembic
@@ -136,6 +143,9 @@ See `git diff b47da0710..HEAD --stat` (backend autopilot/editorial/carousel temp
 
 Full `gate-capture.sh backend`: 22/22 PASS; 5391 tests passed; coverage 93%; diff-cover 99%;
 mutation 80.98%. See `.agent/reports/AE-0418.dev-summary.md`.
+
+After the PR #136 review fixes (2026-10-18): full `gate-capture.sh backend` 22/22 PASS; 5412
+tests passed; coverage 93%; diff-cover 98%; mutation 82.08%.
 
 ## QA Report
 
@@ -212,6 +222,42 @@ mutation 80.98%. See `.agent/reports/AE-0418.dev-summary.md`.
   code, 503 when no owner user is configured) are an appendix of the doc, not a
   change to the contract.
 
+- **D15 — nginx body size (review item 1).** Both `nginx/nginx.conf` and
+  `nginx/nginx.conf.ssl` get an exact-match `location = /api/autopilot/assets`
+  with `client_max_body_size 6m` (5 MB file + multipart overhead) and the same
+  proxy settings as `/api/`. There is no nginx binary or `nginx -t` step in CI,
+  so `tests/unit/autopilot/test_nginx_cover_upload_ae0418.py` checks both
+  configs as text (block present, 6m, proxy_pass, same proxy headers as
+  `/api/`) and proves the check fires on three seeded violations. Deploy note
+  in the PR body: nginx must be reloaded with the new config.
+- **D16 — Shared creator asset in the sweep (item 2).** Identical bytes reuse
+  one creator asset, so two cover rows can share it and the cover-row FK
+  cascades. The sweep now deletes the cover rows first, then asks
+  `images_in_use` which creator assets another cover row still references and
+  keeps those; the editorial side also keeps an asset a project still renders
+  (`hook_asset_id` or `slide_cover`). The file is still kept while any row
+  shares its hash.
+- **D17 — A failed re-render is not "done" (item 3).** `EditorialCoverSwitcher`
+  maps a stored switch with `render_errors` to the new
+  `CoverSwitchStatus.RENDER_FAILED` (logged with the errors). The rework step
+  escalates the run with `cover_render_failed` (same path as the revision cap:
+  rework cleared, escalation marked at the current lock version), so the owner
+  gets the escalation notice with a plain Portuguese text
+  (`TEXT_COVER_RENDER_FAILED`) instead of a fresh "switched" review.
+- **D18 — Own upload rate limit (item 4).** `POST /api/autopilot/assets` uses
+  `@limiter.limit("30/minute")` (`RATE_LIMIT_AUTOPILOT_ASSETS`), its own
+  per-IP bucket; `/signals`, `/x-signals` and `/topics` keep the shared
+  10/minute budget. Documented in `docs/architecture/grokbot-cover-asset.md`
+  §3 (the one sanctioned change to the Grok contract).
+- **D19 — The claim result is checked (item 5).** After a candidate is stored,
+  a failed `claim_cover` (another batch claimed it, or the sweep deleted it,
+  after the facts were read) removes that candidate again
+  (`TopicIntakeStore.remove_candidate`) and rejects the topic with
+  `cover_asset_used` when the row still exists, else `cover_asset_unknown`,
+  `field: "cover.asset_id"`. It is not counted as accepted or queued.
+- **D20 — Single Alembic head (item 6).** `ff5f4b8cfac3__driftcheck.py` was
+  removed in `3b1a26912`; `alembic heads` shows only `d5e6f7a8b9c0`.
+
 ## Blockers
 
 None.
@@ -219,4 +265,6 @@ None.
 ## Final Summary
 
 Grok can upload a slide-1 cover and attach it to any topic; the owner switches slide 1 to it (and
-back) on Telegram; default unchanged. Manual prod SQL in the PR body must be applied before merge.
+back) on Telegram; default unchanged. Manual prod SQL in the PR body must be applied before merge,
+and nginx must pick up the new `/api/autopilot/assets` location (6 MB bodies) on deploy.
+`/assets` has its own 30/minute rate limit.

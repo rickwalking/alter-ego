@@ -24,6 +24,7 @@ from rag_backend.modules.autopilot.constants import (
 from rag_backend.modules.autopilot.cover_constants import (
     COVER_REWORK_PHASE,
     REASON_COVER_MISSING,
+    REASON_COVER_RENDER_FAILED,
 )
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
@@ -132,7 +133,8 @@ class ReworkStep:
         """AE-0418: switch slide 1; None hands the run to the final-review stop.
 
         A conflict keeps the intent for the next tick; a cover whose file is
-        gone sends the run back to the owner's review unchanged.
+        gone sends the run back to the owner's review unchanged; a failed
+        re-render is escalated (the owner is told), never reported as done.
         """
         switcher = self._deps.cover_switch
         covers = self._deps.covers
@@ -149,6 +151,9 @@ class ReworkStep:
             return 1
         if status is CoverSwitchStatus.MISSING:
             await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_COVER_MISSING)
+            return 1
+        if status is CoverSwitchStatus.RENDER_FAILED:
+            await self._escalate(run, project_id, REASON_COVER_RENDER_FAILED)
             return 1
         await self._deps.recovery.clear_rework(run.run_id)
         return None
@@ -170,7 +175,10 @@ class ReworkStep:
         return 1
 
     async def _cap(self, run: AutopilotRun, project_id: str) -> None:
-        moved = await self._end(run, AutopilotRunState.ESCALATED, REASON_REVISION_CAP)
+        await self._escalate(run, project_id, REASON_REVISION_CAP)
+
+    async def _escalate(self, run: AutopilotRun, project_id: str, reason: str) -> None:
+        moved = await self._end(run, AutopilotRunState.ESCALATED, reason)
         if not moved:
             return
         after = await self._deps.editorial.read_gate(project_id)

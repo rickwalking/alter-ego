@@ -387,6 +387,10 @@ class TopicIntakeStore(Protocol):
         """Insert one topic candidate. False when its signal hash already exists."""
         ...
 
+    async def remove_candidate(self, candidate_id: UUID) -> None:
+        """AE-0418: delete a candidate this batch inserted (its cover was lost)."""
+        ...
+
     async def lock_intake(self) -> None:
         """Serialize concurrent intake batches for the rest of the transaction."""
         ...

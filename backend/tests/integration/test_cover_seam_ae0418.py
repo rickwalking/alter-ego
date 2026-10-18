@@ -68,9 +68,9 @@ _NOW = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
 _X = "https://x.com/poteto/status/2111133080526495985"
 
 
-def _png(size: tuple[int, int]) -> bytes:
+def _png(size: tuple[int, int], shade: int = 9) -> bytes:
     buffer = BytesIO()
-    Image.new("RGB", size, (9, 9, 9)).save(buffer, format="PNG")
+    Image.new("RGB", size, (shade, shade, shade)).save(buffer, format="PNG")
     return buffer.getvalue()
 
 
@@ -87,9 +87,9 @@ async def _seed_owner(session: AsyncSession) -> None:
     await session.flush()
 
 
-async def _image(session: AsyncSession, kind: str = "ai_image") -> UUID:
+async def _image(session: AsyncSession, kind: str = "ai_image", shade: int = 9) -> UUID:
     stored = await EditorialCoverImages(session).store_image(
-        CoverImage(owner_id=_OWNER, content=_png((1080, 1350)), kind=kind)
+        CoverImage(owner_id=_OWNER, content=_png((1080, 1350), shade), kind=kind)
     )
     return stored.creator_asset_id
 
@@ -99,10 +99,11 @@ async def _cover(
     *,
     age: timedelta = timedelta(hours=1),
     kind: str = "ai_image",
+    shade: int = 9,
 ) -> CoverAsset:
     cover = CoverAsset(
         asset_id=uuid4(),
-        creator_asset_id=await _image(session, kind),
+        creator_asset_id=await _image(session, kind, shade),
         kind=kind,
         source_url=_X if kind == "screenshot" else None,
         width=1080,
@@ -154,7 +155,7 @@ async def test_store_claim_expire_and_sweep(
 ) -> None:
     await _seed_owner(db_session)
     fresh = await _cover(db_session)
-    old = await _cover(db_session, age=timedelta(hours=7))
+    old = await _cover(db_session, age=timedelta(hours=7), shade=10)
     store = SqlCoverAssetStore(db_session)
     found = await store.covers_by_ids((fresh.asset_id, uuid4()))
     assert list(found) == [fresh.asset_id]

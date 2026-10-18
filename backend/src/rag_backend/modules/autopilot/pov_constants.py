@@ -14,6 +14,10 @@ from rag_backend.domain.constants.content_mode import (
     CONTENT_MODE_POV_NEWS,
     POV_THESIS_MAX_CHARS,
 )
+from rag_backend.modules.autopilot.cover_constants import (
+    REASON_COVER_RENDER_FAILED,
+    TEXT_COVER_RENDER_FAILED,
+)
 
 # AE-0406: scout v4 adds ``pov_news`` (news through the owner's point of view).
 SCOUT_MODES: frozenset[str] = frozenset({
@@ -95,6 +99,8 @@ TEXT_HOOK_PHOTO_MISSING = (
 POV_TEXT_BY_REASON: dict[str, str] = {
     REASON_PERSONA_NOT_SCORED: TEXT_PERSONA_NOT_SCORED,
     REASON_HOOK_PHOTO_MISSING: TEXT_HOOK_PHOTO_MISSING,
+    # AE-0418: a GrokBot cover switch whose re-render failed (any mode).
+    REASON_COVER_RENDER_FAILED: TEXT_COVER_RENDER_FAILED,
 }
 # ``AUTOPILOT_PERSONA_ID`` empty: the persona resolved by this name instead.
 AUTOPILOT_PERSONA_NAME = "Pedro"

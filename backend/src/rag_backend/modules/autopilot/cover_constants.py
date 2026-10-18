@@ -84,6 +84,12 @@ TEXT_COVER_SWITCHING = "🖼️ Trocando a capa do slide 1. A revisão volta em 
 COVER_REWORK_PHASE = "owner_cover"
 REASON_COVER_SWITCH = "owner_cover_switch"
 REASON_COVER_MISSING = "cover_file_missing"
+# The slide-1 switch was stored but the re-render failed: escalated, not done.
+REASON_COVER_RENDER_FAILED = "cover_render_failed"
+TEXT_COVER_RENDER_FAILED = (
+    "🖼️ A troca da capa do slide 1 não renderizou. Os slides não mudaram; "
+    "abra o carrossel no dashboard e gere de novo."
+)
 # Notice-ledger key: the thesis-time cover photo is sent once per run.
 COVER_NOTICE_KEY = "cover:{scope}:{run_id}"
 COVER_SCOPE_THESIS = "thesis"
@@ -93,6 +99,7 @@ LOG_COVER_UPLOADED = "uploaded"
 LOG_COVER_REJECTED = "rejected"
 LOG_COVER_SWEPT = "swept"
 LOG_COVER_PHOTO_FAILED = "photo_failed"
+LOG_COVER_RENDER_FAILED = "render_failed"
 
 __all__ = [
     "ANSWER_COVER_NOT_NOW",
@@ -133,6 +140,7 @@ __all__ = [
     "LOG_COVER",
     "LOG_COVER_PHOTO_FAILED",
     "LOG_COVER_REJECTED",
+    "LOG_COVER_RENDER_FAILED",
     "LOG_COVER_SWEPT",
     "LOG_COVER_UPLOADED",
     "PATH_ASSETS",
@@ -140,9 +148,11 @@ __all__ = [
     "REASON_COVER_ASSET_UNKNOWN",
     "REASON_COVER_ASSET_USED",
     "REASON_COVER_MISSING",
+    "REASON_COVER_RENDER_FAILED",
     "REASON_COVER_SOURCE_INVALID",
     "REASON_COVER_SWITCH",
     "TABLE_COVER_ASSETS",
+    "TEXT_COVER_RENDER_FAILED",
     "TEXT_COVER_SWITCHING",
     "UPLOAD_READ_SLACK_BYTES",
     "UPLOAD_STATUS_BY_CODE",

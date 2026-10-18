@@ -39,7 +39,9 @@ current default?
 
 Chosen: **Option 3**.
 
-- Upload: API key and the shared autopilot rate limit; one PNG/JPEG `file` ≤ 5 MB, `kind`
+- Upload: API key and its own rate limit (30/minute per IP, outside the shared 10/minute
+  autopilot budget so uploads never starve `/topics`), behind an nginx location that accepts
+  6 MB bodies (nginx's 1 MB default would 413 a normal cover); one PNG/JPEG `file` ≤ 5 MB, `kind`
   (`ai_image` | `screenshot`), `source_url` for screenshots. Magic bytes decide the format; an
   `ai_image` is centre-cropped to 4:5 and must be ≥ 1080×1350 (then scaled to the slide size),
   a screenshot keeps its aspect and needs ≥ 600 px of width; 4096 px a side and 16 MP max.
@@ -49,16 +51,23 @@ Chosen: **Option 3**.
 - Topic rule (per topic, last in the rule order): the asset exists, is younger than 6 h, is
   unused, and a screenshot's source is in the topic's `sources` (`cover_asset_unknown`,
   `cover_asset_expired`, `cover_asset_used`, `cover_source_invalid`, `field: "cover.asset_id"`).
+  The claim is a compare-and-set checked at store time: a cover lost to a concurrent batch or the
+  sweep after the read rejects the topic (`cover_asset_used` / `cover_asset_unknown`) and the
+  topic row is removed.
 - Owner choice on Telegram: the thesis message (POV modes) and every review message show the
   cover and a toggle (`ap:cv:<run>` / `ap:cvoff:<run>`), owner-only and idempotent. At the
   thesis the choice is stored on the run and the carousel is created with it; at the review the
   tap queues an `owner_cover` rework that stages the file, stores `carousel_projects.slide_cover`
-  under the lock-version CAS and re-renders through the AE-0313 republish path.
+  under the lock-version CAS and re-renders through the AE-0313 republish path. A re-render that
+  reports errors is `render_failed`: the run is escalated (`cover_render_failed`) and the owner
+  is told, never shown a "switched" review.
 - Render: an `ai_image` replaces the slide-1 image full-bleed (POV hook photo / Radar IA intro
   artwork); a screenshot uses the new `cover_card` layout (title above a rounded, shadowed card
   and the credit `@handle · X` or the domain). A missing staged file raises
   `HookPhotoError(slide_cover_unreadable)`.
-- Unused covers older than 6 h are deleted by the Telegram notify tick.
+- Unused covers older than 6 h are deleted by the Telegram notify tick. Identical bytes reuse one
+  creator asset, so the sweep deletes the image only when no other cover row and no project
+  (`hook_asset_id`, `slide_cover`) still references it.
 
 ### Consequences
 

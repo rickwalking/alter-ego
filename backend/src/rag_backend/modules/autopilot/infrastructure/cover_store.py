@@ -93,6 +93,23 @@ class SqlCoverAssetStore:
             delete(AutopilotCoverAssetModel).where(AutopilotCoverAssetModel.id.in_(ids))
         )
 
+    async def images_in_use(
+        self, creator_asset_ids: tuple[UUID, ...]
+    ) -> frozenset[UUID]:
+        """The creator assets among the ids that a cover row still references.
+
+        Identical bytes reuse one creator asset, so two covers can share it.
+        """
+        if not creator_asset_ids:
+            return frozenset()
+        column = AutopilotCoverAssetModel.creator_asset_id
+        result = await self._session.scalars(
+            select(column)
+            .where(column.in_([str(i) for i in creator_asset_ids]))
+            .distinct()
+        )
+        return frozenset(UUID(value) for value in result.all())
+
     async def commit(self) -> None:
         """Commit the unit of work."""
         await self._session.commit()
