@@ -115,9 +115,17 @@ async def test_run_phase_redrive_never_sends_a_review() -> None:
     service.redrive_pending_phase = AsyncMock(return_value=dict(_PERSISTED))
     service.resume_workflow = AsyncMock()
     db = MagicMock()
-    state = await resume_runner._run_phase(service, _params(RUN_ACTION_REDRIVE), db)
+    persona = MagicMock(name="persona")
+    # AE-0421: the re-drive loads the project's persona, like a resume.
+    with patch(
+        "rag_backend.application.services.carousel.resume_persona.load_project_persona",
+        new_callable=AsyncMock,
+        return_value=persona,
+    ) as load:
+        state = await resume_runner._run_phase(service, _params(RUN_ACTION_REDRIVE), db)
     assert state == _PERSISTED
-    service.redrive_pending_phase.assert_awaited_once_with(_PROJECT, db)
+    load.assert_awaited_once_with(db, _PROJECT)
+    service.redrive_pending_phase.assert_awaited_once_with(_PROJECT, db, persona)
     service.resume_workflow.assert_not_awaited()
 
 
@@ -204,3 +212,19 @@ async def test_orchestrator_binds_the_context_before_continuing() -> None:
     runner = engine.set_artifact_runner.call_args.args[0]
     assert runner._db is db
     assert runner._workflow_input is workflow_input
+
+
+@pytest.mark.asyncio
+async def test_redrive_runs_the_node_with_the_project_persona() -> None:
+    """Scenario (AE-0421): a re-drive drafts and scores with the persona."""
+    service, orchestrator = _service(dict(_PERSISTED))
+    persona = MagicMock(name="persona")
+    with (
+        patch(f"{_SERVICE}.CarouselProjectWriteOwner") as owner,
+        patch(f"{_SERVICE}.publish_workflow_sse_updates", new=AsyncMock()),
+    ):
+        owner.return_value.sync_phase = AsyncMock()
+        owner.return_value.commit = AsyncMock()
+        await service.redrive_pending_phase(_PROJECT, MagicMock(), persona)
+    workflow_input = orchestrator.continue_pending.await_args.kwargs["workflow_input"]
+    assert workflow_input.persona is persona

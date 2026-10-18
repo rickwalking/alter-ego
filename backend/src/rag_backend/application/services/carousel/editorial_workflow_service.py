@@ -71,6 +71,7 @@ from rag_backend.domain.constants.langfuse_tracing import (
 )
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.carousels import ReviewEventParams
+from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
@@ -447,17 +448,21 @@ class EditorialWorkflowService:
         self,
         project_id: str,
         db: AsyncSession | None,
+        persona: PersonaProfile | None = None,
     ) -> CarouselWorkflowState:
         """Re-run a parked pending node; never sends a review decision (AE-0363).
 
         For a run that died after its gate was approved: the next phase runs
         again and parks at its own gate, which still needs a review.
+        AE-0421: the re-run gets the project's persona, like a resume (AE-0397);
+        without it the content node drafted without the voice and never scored
+        it (``persona_not_scored``).
         """
         state = await self._orchestrator.continue_pending(
             project_id,
             db=db,
             workflow_input=EditorialWorkflowStartInput(
-                topic="", audience="", brief="", sources=[], user_id=""
+                topic="", audience="", brief="", sources=[], user_id="", persona=persona
             ),
         )
         persisted = await self._orchestrator.get_state(project_id)
