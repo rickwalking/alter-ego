@@ -142,6 +142,11 @@ services:
       context: ops/opencode
     environment:
       OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
+      # Optional Cloudflare Worker egress (ops/egress-worker): when set, the
+      # sidecar's OpenCode API traffic exits via Cloudflare IPs, not this
+      # host's. Empty = direct egress (previous behavior).
+      OPENCODE_EGRESS_URL: ${OPENCODE_EGRESS_URL:-}
+      OPENCODE_EGRESS_TOKEN: ${OPENCODE_EGRESS_TOKEN:-}
     read_only: true
     # AE-0402: tmpfs mounts are root-owned by default; the agent runs as 10001
     # and writes all over its home at runtime (see ops/opencode/Dockerfile).
