@@ -1,6 +1,7 @@
 """``POST /api/autopilot/assets``: GrokBot uploads a slide-1 cover (AE-0418).
 
-Same API key and shared rate limit as every autopilot route. One multipart
+Same API key as every autopilot route, with its own rate limit (30/minute,
+not the shared 10/minute budget of the other routes). One multipart
 ``file`` part (PNG or JPEG, at most 5 MB) plus ``kind`` and, for a
 screenshot, ``source_url``. Refusals are 4xx with ``{"detail": "<code>"}``
 (contract: ``docs/architecture/grokbot-cover-asset.md``).
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants.creator_asset import CREATOR_ASSET_MAX_BYTES
-from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AUTOPILOT
+from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AUTOPILOT_ASSETS
 from rag_backend.domain.models.slide_cover import CoverAssetError
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.autopilot.api.dependencies import clock_from
@@ -28,7 +29,6 @@ from rag_backend.modules.autopilot.application.cover_upload import (
     CoverUploadDependencies,
     CoverUploadService,
 )
-from rag_backend.modules.autopilot.constants import RATE_LIMIT_SCOPE_AUTOPILOT
 from rag_backend.modules.autopilot.cover_constants import (
     DETAIL_COVER_OWNER_UNCONFIGURED,
     FORM_FIELD_FILE,
@@ -86,7 +86,7 @@ def upload_form(
 
 
 @router.post(PATH_ASSETS, status_code=_HTTP_CREATED, response_model=CoverAssetResponse)
-@limiter.shared_limit(RATE_LIMIT_AUTOPILOT, RATE_LIMIT_SCOPE_AUTOPILOT)
+@limiter.limit(RATE_LIMIT_AUTOPILOT_ASSETS)
 async def post_autopilot_asset(
     request: Request,
     service: Annotated[CoverUploadService, Depends(build_cover_upload)],

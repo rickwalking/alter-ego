@@ -143,6 +143,13 @@ class SqlAlchemyTopicIntakeStore:
             return False
         return True
 
+    async def remove_candidate(self, candidate_id: UUID) -> None:
+        """AE-0418: delete a candidate this batch inserted (its cover was lost)."""
+        await self._session.execute(
+            delete(TopicCandidateModel).where(TopicCandidateModel.id == candidate_id)
+        )
+        await self._session.flush()
+
     async def lock_intake(self) -> None:
         """Transaction-scoped advisory lock on PostgreSQL; a no-op elsewhere.
 

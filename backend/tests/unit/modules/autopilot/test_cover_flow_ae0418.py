@@ -262,11 +262,21 @@ class _Covers:
         self.stored[cover.asset_id] = cover
 
     async def expired_covers(self, query: ExpiredCoverQuery) -> tuple[CoverAsset, ...]:
-        old = [c for c in self.stored.values() if c.created_at < query.before]
+        old = [
+            c
+            for c in self.stored.values()
+            if c.created_at < query.before and not c.is_used
+        ]
         return tuple(old[: query.limit])
 
     async def delete_covers(self, ids: tuple[UUID, ...]) -> None:
         self.deleted.extend(ids)
+
+    async def images_in_use(
+        self, creator_asset_ids: tuple[UUID, ...]
+    ) -> frozenset[UUID]:
+        kept = (c for c in self.stored.values() if c.asset_id not in self.deleted)
+        return frozenset(c.creator_asset_id for c in kept) & set(creator_asset_ids)
 
     async def commit(self) -> None:
         self.commits += 1

@@ -2,7 +2,8 @@
 
 Runs on the Telegram notify tick (every worker cycle). Each pass deletes at
 most ``COVER_SWEEP_LIMIT`` covers, oldest first: the cover rows, then their
-creator-asset images and files, in one commit.
+creator-asset images and files, in one commit. Identical bytes share one
+creator asset, so an image another cover row still references is kept.
 """
 
 from __future__ import annotations
@@ -50,11 +51,14 @@ class CoverSweepService:
         expired = await self._deps.covers.expired_covers(query)
         if not expired:
             return 0
-        await self._deps.covers.delete_covers(tuple(c.asset_id for c in expired))
+        covers = self._deps.covers
+        await covers.delete_covers(tuple(c.asset_id for c in expired))
+        images = tuple(dict.fromkeys(c.creator_asset_id for c in expired))
+        in_use = await covers.images_in_use(images)
         await self._deps.images.delete_images(
-            tuple(c.creator_asset_id for c in expired)
+            tuple(i for i in images if i not in in_use)
         )
-        await self._deps.covers.commit()
+        await covers.commit()
         logger.info(LOG_COVER, outcome=LOG_COVER_SWEPT, count=len(expired))
         return len(expired)
 

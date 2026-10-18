@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.creator_asset import CREATOR_ASSET_ROLE_COVER
@@ -98,6 +98,7 @@ async def delete_cover_images(
     """Delete cover-role creator assets and their files (flush, no commit).
 
     A row with another role (an owner photo whose bytes Grok re-sent) is kept,
+    so is a row a project still renders (``hook_asset_id`` or ``slide_cover``),
     and a file is kept while another row still points at the same bytes.
     """
     deleted = 0
@@ -105,9 +106,31 @@ async def delete_cover_images(
         asset = await creator_assets(session).get_by_id(asset_id)
         if asset is None or asset.role != CREATOR_ASSET_ROLE_COVER:
             continue
+        if await _used_by_a_project(session, asset_id):
+            continue
         await _delete_row(session, asset)
         deleted += 1
     return deleted
+
+
+async def _used_by_a_project(session: AsyncSession, asset_id: UUID) -> bool:
+    """True when a carousel's slide 1 points at the creator asset."""
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    key = str(asset_id)
+    found = await session.scalar(
+        select(CarouselProjectModel.id)
+        .where(
+            or_(
+                CarouselProjectModel.hook_asset_id == key,
+                cast(CarouselProjectModel.slide_cover, String).contains(key),
+            )
+        )
+        .limit(1)
+    )
+    return found is not None
 
 
 async def _delete_row(session: AsyncSession, asset: CarouselCreatorAsset) -> None:

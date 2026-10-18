@@ -9,8 +9,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.modules.autopilot.cover_constants import (
+    LOG_COVER,
+    LOG_COVER_RENDER_FAILED,
+)
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverImage,
     CoverSwitchCommand,
@@ -27,6 +32,8 @@ from rag_backend.modules.editorial.public import (
     store_cover_image,
     switch_slide_cover,
 )
+
+logger = structlog.get_logger()
 
 _SWITCH_STATUS: dict[str, CoverSwitchStatus] = {
     AUTOFIX_STATUS_FIXED: CoverSwitchStatus.SWITCHED,
@@ -73,7 +80,10 @@ class EditorialCoverSwitcher:
         self._session = session
 
     async def switch(self, command: CoverSwitchCommand) -> CoverSwitchStatus:
-        """Stage, store and re-render; a conflict writes nothing."""
+        """Stage, store and re-render; a conflict writes nothing.
+
+        A stored choice whose re-render reported errors is ``RENDER_FAILED``.
+        """
         result = await switch_slide_cover(
             CoverSwitchRequest(
                 session=self._session,
@@ -82,7 +92,16 @@ class EditorialCoverSwitcher:
                 cover=command.cover,
             )
         )
-        return _SWITCH_STATUS.get(result.status, CoverSwitchStatus.MISSING)
+        status = _SWITCH_STATUS.get(result.status, CoverSwitchStatus.MISSING)
+        if status is CoverSwitchStatus.SWITCHED and result.render_errors:
+            logger.warning(
+                LOG_COVER,
+                outcome=LOG_COVER_RENDER_FAILED,
+                project_id=command.project_id,
+                errors=list(result.render_errors),
+            )
+            return CoverSwitchStatus.RENDER_FAILED
+        return status
 
 
 __all__ = ["EditorialCoverImages", "EditorialCoverSwitcher"]

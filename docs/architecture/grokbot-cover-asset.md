@@ -56,7 +56,16 @@ Upload errors (4xx, body `{ "detail": "<code>" }`):
 | `asset_type_unsupported` | not a real PNG or JPEG |
 | `asset_kind_invalid` | `kind` missing or not `ai_image` / `screenshot` |
 | `asset_source_missing` | `screenshot` without `source_url` |
-| 401 `invalid_api_key` / 429 | as on the other routes |
+| 401 `invalid_api_key` | as on the other routes |
+| 429 | more than **30 uploads per minute** (per IP) |
+
+Rate limit: `/assets` has its **own** budget of **30 requests per minute** per IP. It does not
+count against the shared 10/minute budget of `/signals`, `/x-signals` and `/topics`, so a run that
+uploads several covers can still post its topics. (AE-0418 review; the first draft shared the
+10/minute bucket.)
+
+Body size: the production nginx accepts up to 6 MB on `/api/autopilot/assets` (the 5 MB file plus
+the multipart overhead); every other `/api/` route keeps nginx's 1 MB default.
 
 ## 4. Topic field `cover`
 

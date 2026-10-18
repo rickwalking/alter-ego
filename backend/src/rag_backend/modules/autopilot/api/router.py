@@ -3,6 +3,7 @@
 Every route on this router requires the service API key. Decorate each
 route with the shared slowapi limit (``RATE_LIMIT_AUTOPILOT`` /
 ``RATE_LIMIT_SCOPE_AUTOPILOT``) so they share one 10/minute budget per IP.
+AE-0418: the cover upload (``assets.py``) has its own 30/minute limit.
 """
 
 from __future__ import annotations

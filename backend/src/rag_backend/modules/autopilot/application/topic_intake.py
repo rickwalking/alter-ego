@@ -17,6 +17,11 @@ from rag_backend.modules.autopilot.constants import (
     REASON_DUPLICATE_TOPIC,
     STATUS_CANDIDATE_ACCEPTED,
 )
+from rag_backend.modules.autopilot.cover_constants import (
+    FIELD_COVER_ASSET_ID,
+    REASON_COVER_ASSET_UNKNOWN,
+    REASON_COVER_ASSET_USED,
+)
 from rag_backend.modules.autopilot.domain.cover import CoverAsset, CoverFacts
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverClaim,
@@ -181,34 +186,58 @@ class TopicIntakeService:
         return await self._deps.posts.x_post_texts(XPostLookup(urls=urls))
 
     async def _stored(self, plan: IntakePlan) -> IntakePlan:
-        """Insert new candidates. A hash a concurrent batch won is a duplicate."""
+        """Insert new candidates. A hash a concurrent batch won is a duplicate.
+
+        AE-0418: a cover another batch claimed (or the sweep deleted) after the
+        facts were read rejects that topic, and its row is removed again.
+        """
         kept: list[NewCandidate] = []
-        lost: list[NewCandidate] = []
+        lost: list[tuple[NewCandidate, TopicRejection]] = []
         for item in plan.new_candidates:
-            stored = await self._deps.store.add_candidate(_candidate(item))
-            (kept if stored else lost).append(item)
-            if stored:
-                await self._claim_cover(item)
+            rejection = await self._store_one(item)
+            if rejection is None:
+                kept.append(item)
+                continue
+            lost.append((item, rejection))
         if not lost:
             return plan
-        lost_ids = {item.candidate_id for item in lost}
-        # A lost row is a duplicate, not also "capped" (daily or weekly).
-        lost_titles = {item.proposal.title for item in lost}
+        lost_ids = {item.candidate_id for item, _ in lost}
+        # A lost row is a duplicate (or lost its cover), not also "capped".
+        lost_titles = {item.proposal.title for item, _ in lost}
         capped = tuple(r for r in plan.rejected if r.title not in lost_titles)
         return IntakePlan(
             accepted_ids=tuple(i for i in plan.accepted_ids if i not in lost_ids),
             new_candidates=tuple(kept),
-            rejected=(*capped, *(_duplicate(item) for item in lost)),
+            rejected=(*capped, *(rejection for _, rejection in lost)),
         )
 
-    async def _claim_cover(self, item: NewCandidate) -> None:
-        """AE-0418: the stored topic is the cover's one use."""
+    async def _store_one(self, item: NewCandidate) -> TopicRejection | None:
+        """Insert one candidate and claim its cover; the rejection when lost."""
+        if not await self._deps.store.add_candidate(_candidate(item)):
+            return _duplicate(item)
+        reason = await self._claim_cover(item)
+        if reason is None:
+            return None
+        await self._deps.store.remove_candidate(item.candidate_id)
+        return TopicRejection(
+            title=item.proposal.title,
+            reason=reason,
+            index=item.proposal.index,
+            field=FIELD_COVER_ASSET_ID,
+        )
+
+    async def _claim_cover(self, item: NewCandidate) -> str | None:
+        """AE-0418: the stored topic is the cover's one use; None when it is."""
         asset_id = item.proposal.cover_uuid
         if asset_id is None:
-            return
-        await self._deps.covers.claim_cover(
-            CoverClaim(asset_id=asset_id, topic_candidate_id=item.candidate_id)
-        )
+            return None
+        covers = self._deps.covers
+        claim = CoverClaim(asset_id=asset_id, topic_candidate_id=item.candidate_id)
+        if await covers.claim_cover(claim):
+            return None
+        if asset_id in await covers.covers_by_ids((asset_id,)):
+            return REASON_COVER_ASSET_USED
+        return REASON_COVER_ASSET_UNKNOWN
 
     async def _queue(self, plan: IntakePlan) -> tuple[UUID, ...]:
         created_at = self._deps.clock.now()
