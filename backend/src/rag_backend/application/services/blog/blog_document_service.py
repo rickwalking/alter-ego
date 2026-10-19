@@ -32,7 +32,6 @@ from rag_backend.domain.models.blog_document import (
     BlogLanguageDocument,
     BlogSection,
     InvalidBlogDocumentError,
-    drop_invalid_translations,
     parse_blog_content,
 )
 from rag_backend.domain.models.blog_document_split import build_language_document
