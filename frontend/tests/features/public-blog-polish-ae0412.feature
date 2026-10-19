@@ -11,10 +11,16 @@ Feature: Public blog renders correctly for anonymous visitors (AE-0412)
     Then the card image is "/api/carousels/P/images/slide_1.jpg?lang=pt"
     And no card requests a "/preview/images/" URL
 
-  Scenario: Post page maps preview hero and slide URLs to public routes
-    Given a carousel-origin post whose design hero is an owner-only preview URL
+  # Superseded by ADR-0025 / AE-0422: the post page no longer surfaces any
+  # carousel design image (its `images.hero`/`images.slides` are rendered
+  # Instagram slides). The owner-only-preview-URL concern this scenario
+  # guarded cannot arise because no design image reaches /blog/{id} at all.
+  # The card mapping (scenario above) is unaffected.
+  Scenario: Post page surfaces no carousel design image
+    Given a carousel-origin post whose design exposes a hero and slides
     When an anonymous visitor opens /blog/{id}
-    Then the hero image URL uses the public "/images/" route with the same lang
+    Then the page renders no image whose URL is a carousel design image
+    And the hero falls back to the post's own cover when one exists
 
   Scenario: Public URLs without a lang keep working
     Given a stored hero "/api/carousels/P/images/slide_1"

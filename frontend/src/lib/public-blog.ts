@@ -80,6 +80,29 @@ function sanitizeView(
   };
 }
 
+/**
+ * Drop a carousel design's images, keeping only its theme tokens (ADR-0025).
+ *
+ * A carousel design's `images` are rendered Instagram slides (`/slide-images/…`,
+ * baked-in text, empty alt); they are never blog artwork, so the public blog
+ * page must not read them (AE-0422). The post's own cover/section images arrive
+ * with `blog.v2` in AE-0423.
+ */
+function themeOnlyDesign(
+  design: CarouselDesignResponse,
+): CarouselDesignResponse {
+  return {
+    ...design,
+    images: {
+      hero: "",
+      slides: [],
+      rendered_slides_pt: null,
+      rendered_slides_en: null,
+      blog_image_map: null,
+    },
+  };
+}
+
 function fromCarousel(data: {
   blog: { title: string; subtitle?: string | null; markdown: string };
   design: CarouselDesignResponse;
@@ -88,7 +111,7 @@ function fromCarousel(data: {
     title: data.blog.title,
     subtitle: data.blog.subtitle ?? null,
     markdown: data.blog.markdown,
-    design: data.design,
+    design: themeOnlyDesign(data.design),
   };
 }
 
