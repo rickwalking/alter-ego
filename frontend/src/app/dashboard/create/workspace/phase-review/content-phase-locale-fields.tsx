@@ -7,6 +7,8 @@ import {
   isPresentationStructuredItemList,
   listPresentationStructuredItems,
   listStructuredExtras,
+  mirrorLocaleStructure,
+  otherLocaleKey,
   PRESENTATION_STRUCTURED_ITEM_LIST_KEYS,
   PresentationStructuredItems,
   presentationBody,
@@ -85,8 +87,15 @@ function PresentationExtras({
 }: {
   props: ContentLocaleFieldsProps;
 }): React.ReactElement {
-  const presentation = props.slide[props.localeKey];
   const context = editContext(props);
+  // AE-0430: an editable column also offers every structured field the
+  // other locale has (an EN TL;DR the translation dropped stays fixable).
+  const presentation = context
+    ? mirrorLocaleStructure(
+        props.slide[props.localeKey],
+        props.slide[otherLocaleKey(props.localeKey)],
+      )
+    : props.slide[props.localeKey];
   const list = structuredList(presentation);
   const extras = listStructuredExtras(presentation);
   return (

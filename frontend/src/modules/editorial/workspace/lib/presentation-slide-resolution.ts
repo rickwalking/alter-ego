@@ -3,6 +3,10 @@ import type {
   LocalizedSlideReview,
 } from "@/modules/editorial/workspace/types-ai";
 import {
+  mirrorLocaleStructure,
+  otherLocaleKey,
+} from "./presentation-locale-mirror";
+import {
   presentationBody,
   presentationHeading,
 } from "./presentation-review-utils";
@@ -51,6 +55,14 @@ export interface SlideStructuredItemEdit {
   value: string;
 }
 
+/** AE-0430: the locale payload plus the structure the other locale has. */
+function editablePresentation(
+  slide: LocalizedSlideReview,
+  locale: PresentationLocaleKey,
+): Record<string, unknown> {
+  return mirrorLocaleStructure(slide[locale], slide[otherLocaleKey(locale)]);
+}
+
 export function applySlideStructuredItemEdit(
   slides: LocalizedSlideReview[],
   edit: SlideStructuredItemEdit,
@@ -59,7 +71,8 @@ export function applySlideStructuredItemEdit(
     if (slide.slide_index !== edit.slideIndex) {
       return slide;
     }
-    const presentation = slide[edit.locale];
+    // AE-0430: an edit on a field mirrored from the other locale creates it.
+    const presentation = editablePresentation(slide, edit.locale);
     const current = presentation[edit.listKey];
     if (!Array.isArray(current)) {
       return slide;
@@ -107,7 +120,7 @@ export function applySlideExtraEdit(
     if (slide.slide_index !== edit.slideIndex) {
       return slide;
     }
-    const presentation = slide[edit.locale];
+    const presentation = editablePresentation(slide, edit.locale);
     return {
       ...slide,
       [edit.locale]: {
