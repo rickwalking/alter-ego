@@ -1,12 +1,16 @@
 """API routes for blog post version history."""
 
-from datetime import UTC, datetime
 from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_content_write import (
+    ContentWrite,
+    require_if_match,
+    write_post_content,
+)
 from rag_backend.api.dependencies.blog_document import validated_write
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
@@ -21,17 +25,21 @@ from rag_backend.application.services.editorial_audit_service import (
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_BLOG_VERSION_NOT_FOUND
+from rag_backend.domain.constants.blog_editor import VERSION_SUMMARY_RESTORE
+from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.events.factory import get_event_publisher
 
 router = APIRouter(tags=["blog_post_versions"])
 
 
-def _audit_service() -> EditorialAuditService:
+def _event_service() -> WorkflowEventService:
     settings = get_settings()
-    return EditorialAuditService(
-        WorkflowEventService(get_event_publisher(settings.redis_url or None))
-    )
+    return WorkflowEventService(get_event_publisher(settings.redis_url or None))
+
+
+def _audit_service() -> EditorialAuditService:
+    return EditorialAuditService(_event_service())
 
 
 @router.get(
@@ -59,9 +67,11 @@ async def restore_blog_post_version(
     version_number: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
-    """Restore a blog post to a previous version."""
+    """Restore a blog post to a previous version (If-Match, snapshotted)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
+    require_if_match(if_match)
 
     versions = post.version_history if post.version_history else []
     version_data: dict | None = None
@@ -76,31 +86,30 @@ async def restore_blog_post_version(
             detail=ERR_BLOG_VERSION_NOT_FOUND.format(version_number=version_number),
         )
 
-    # A restore is a content write: strict blog.v2, cover projection synced.
+    # A restore is a content write: strict blog.v2, cover projection synced,
+    # If-Match guarded and snapshotted like a save (AE-0424).
     restored = validated_write(
         version_data.get("snapshot", {}), post.ai_generation_metadata
     )
-    post.content = restored.content
-    post.featured_image_url = restored.featured_image_url
-    post.title = version_data.get("title", post.title)
-    post.excerpt = version_data.get("excerpt", post.excerpt)
-
-    max_version = max(
-        (v.get("version_number", 0) for v in versions if isinstance(v, dict)),
-        default=0,
+    values: dict[str, object] = {
+        "content": restored.content,
+        "featured_image_url": restored.featured_image_url,
+        "title": version_data.get("title") or post.title,
+        "excerpt": version_data.get("excerpt", post.excerpt),
+    }
+    await write_post_content(
+        db,
+        ContentWrite(
+            post=post,
+            if_match=if_match,
+            values=values,
+            user_id=current_user.id,
+            events=_event_service(),
+            change_summary=VERSION_SUMMARY_RESTORE.format(
+                version_number=version_number
+            ),
+        ),
     )
-    new_version_number = max_version + 1
-    snapshot = post.content.copy()
-    post.version_history.append({
-        "id": str(uuid4()),
-        "content_id": str(post_id),
-        "content_type": "blog_post",
-        "version_number": new_version_number,
-        "snapshot": snapshot,
-        "change_summary": f"Restored from version {version_number}",
-        "author_id": current_user.id,
-        "created_at": datetime.now(UTC),
-    })
 
     await _audit_service().log_version_restored(
         db,

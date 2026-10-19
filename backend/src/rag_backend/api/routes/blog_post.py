@@ -7,6 +7,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_content_write import (
+    ContentWrite,
+    require_if_match,
+    write_post_content,
+)
 from rag_backend.api.dependencies.blog_document import (
     display_content,
     prepare_create_payload,
@@ -39,7 +44,6 @@ from rag_backend.application.services.editorial_audit_service import (
 )
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
-    _VersionedUpdate,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
@@ -92,11 +96,13 @@ def _user_is_admin(user: EditorUser) -> bool:
     return user.role == UserRole.ADMIN.value
 
 
-def _audit_service() -> EditorialAuditService:
+def _event_service() -> WorkflowEventService:
     settings = get_settings()
-    return EditorialAuditService(
-        WorkflowEventService(get_event_publisher(settings.redis_url or None))
-    )
+    return WorkflowEventService(get_event_publisher(settings.redis_url or None))
+
+
+def _audit_service() -> EditorialAuditService:
+    return EditorialAuditService(_event_service())
 
 
 async def _stage_new_post(db: AsyncSession, post: object) -> None:
@@ -226,31 +232,23 @@ async def update_blog_post(
 ) -> BlogPostResponse:
     """Update a blog post with optimistic locking (WF-005)."""
     existing = await get_blog_post_for_user(db, post_id, current_user)
-    if if_match is None:
-        raise HTTPException(
-            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
-            detail=ERR_VERSION_HEADER_REQUIRED,
-        )
+    require_if_match(if_match)
 
     update_data = data.model_dump(exclude_unset=True)
     guard_blog_post_update_fields(update_data, is_admin=_user_is_admin(current_user))
     prepare_update_values(update_data, existing.ai_generation_metadata)
 
-    lock_service = OptimisticLockService()
-    try:
-        await lock_service.apply_versioned_update(
-            db,
-            _VersionedUpdate(
-                post_id=str(post_id),
-                expected_version=if_match,
-                values=update_data,
-            ),
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ERR_VERSION_CONFLICT,
-        ) from exc
+    # AE-0424: versioned write + version snapshot + approval reset in one txn.
+    await write_post_content(
+        db,
+        ContentWrite(
+            post=existing,
+            if_match=if_match,
+            values=update_data,
+            user_id=current_user.id,
+            events=_event_service(),
+        ),
+    )
 
     post = await publishing.service.get_blog_post(str(post_id))
     if post is None:

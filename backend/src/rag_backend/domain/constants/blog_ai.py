@@ -28,6 +28,8 @@ TEXT:
 Respond with JSON: suggested_text, explanation.
 """
 
+SUGGEST_DEFAULT_EXPLANATION = "Suggested {action} rewrite."
+
 PROMPT_AI_IMPROVE = """Rewrite the selected blog text.
 
 ACTION: {action}

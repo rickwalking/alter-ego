@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.application.services.blog.ai_envelope import parse_suggestion
 from rag_backend.application.services.blog_workflow_observability import (
     StartupParams,
     blog_ai_propagate,
@@ -23,6 +23,7 @@ from rag_backend.domain.constants.blog_ai import (
     ERR_INVALID_AI_ACTION,
     PROMPT_AI_IMPROVE,
     PROMPT_AI_SUGGEST,
+    SUGGEST_DEFAULT_EXPLANATION,
     VALID_AI_ACTIONS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
@@ -112,19 +113,14 @@ class BlogPostAIService:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
             )
-        try:
-            data = json.loads(raw)
-            suggested = str(data.get("suggested_text", raw))
-            explanation = str(data.get("explanation", ""))
-        except json.JSONDecodeError:
-            suggested = raw.strip()
-            explanation = f"Suggested {input_data.action} rewrite."
-
+        # AE-0424 (F-10): fenced/nested envelopes become plain text.
+        parsed = parse_suggestion(raw or "")
         return {
             "original_text": safe_text,
-            "suggested_text": suggested,
+            "suggested_text": parsed.text,
             "suggestion_type": input_data.action,
-            "explanation": explanation,
+            "explanation": parsed.explanation
+            or SUGGEST_DEFAULT_EXPLANATION.format(action=input_data.action),
         }
 
     async def improve(

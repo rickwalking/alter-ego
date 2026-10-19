@@ -134,6 +134,9 @@ class BlogPostVersionResponse(BaseModel):
 
     id: UUID
     version_number: int
+    # AE-0424: saves snapshot the title/excerpt too (older entries have none).
+    title: str | None = None
+    excerpt: str | None = None
     snapshot: dict
     change_summary: str | None = None
     author_id: str | None = None

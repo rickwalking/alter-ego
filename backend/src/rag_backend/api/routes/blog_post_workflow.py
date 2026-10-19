@@ -1,12 +1,13 @@
 """API routes for blog post workflow transitions (Phase 3 WF-003)."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_content_write import check_optional_if_match
 from rag_backend.api.dependencies.blog_document import assert_publishable
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
@@ -24,7 +25,6 @@ from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
-from rag_backend.api.schemas.calendar import SchedulePublishRequest
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
 from rag_backend.application.services.notification_service import (
     NotificationService,
@@ -41,6 +41,7 @@ from rag_backend.domain.constants.ai_disclosure import (
     AI_DISCLOSURE_NONE,
     ERR_DISCLOSURE_REQUIRED,
 )
+from rag_backend.domain.constants.blog_editor import ERR_BLOG_REVIEWER_REQUIRED
 from rag_backend.domain.constants.blog_post import (
     BlogPostStatus,
     EditorialCommentStatus,
@@ -58,11 +59,9 @@ from rag_backend.domain.constants.workflow_events import (
 )
 from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
-    ERR_SCHEDULE_IN_PAST,
     ERR_SELF_REVIEW,
     ERR_VERSION_HEADER_REQUIRED,
     MAX_REJECT_REASON_LENGTH,
-    MIN_SCHEDULE_LEAD_SECONDS,
     NOTIFICATION_TITLE_CHANGES_REQUESTED,
     WORKFLOW_REJECT_COMMENT_PREFIX,
 )
@@ -76,6 +75,7 @@ router = APIRouter(tags=["blog_post_workflow"])
 
 
 def _event_service() -> WorkflowEventService:
+    """The Redis-backed workflow event service of the blog routes."""
     settings = get_settings()
     return WorkflowEventService(get_event_publisher(settings.redis_url or None))
 
@@ -135,6 +135,25 @@ async def _emit_status_change(
     )
 
 
+def _resolve_reviewer(
+    author_id: str, requested: str | None, *, allow_self: bool
+) -> str:
+    """The reviewer to assign; 400 on self-review unless it is allowed."""
+    if requested is None and allow_self:
+        return author_id
+    if requested is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_BLOG_REVIEWER_REQUIRED,
+        )
+    if requested == author_id and not allow_self:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_SELF_REVIEW,
+        )
+    return requested
+
+
 @router.post(
     "/blog-posts/{post_id}/submit-review",
     response_model=BlogPostResponse,
@@ -146,19 +165,24 @@ async def submit_blog_post_for_review(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
-    reviewer_id: str = Query(...),
+    reviewer_id: str | None = Query(default=None),
 ) -> BlogPostResponse:
-    """Submit a blog post for review."""
+    """Submit a blog post for review.
+
+    ``BLOG_ALLOW_SELF_REVIEW`` (default false, AE-0424) lets the author be the
+    reviewer (and is the reviewer when none is given); otherwise a distinct
+    reviewer is required.
+    """
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.DRAFT)
     old_status = post.status
 
+    reviewer_id = _resolve_reviewer(
+        post.author_id or current_user.id,
+        reviewer_id,
+        allow_self=get_settings().blog_allow_self_review,
+    )
     await validate_reviewer_user(db, reviewer_id)
-    if post.author_id and reviewer_id == post.author_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SELF_REVIEW,
-        )
 
     post.status = BlogPostStatus.UNDER_REVIEW.value
     post.submitted_for_review_at = datetime.now(UTC)
@@ -273,14 +297,17 @@ async def publish_blog_post(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
     publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
     """Publish an approved blog post (author or admin only).
 
     The ``blog.v2`` document needs >= 1 non-empty section; a null cover is
-    allowed (cards/OG fall back to a neutral default, AE-0423).
+    allowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``
+    the editor sends is checked (409 when stale, AE-0424).
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
+    await check_optional_if_match(post.lock_version, if_match)
     assert_publishable(post.content)
 
     disclosure = AiDisclosureService()
@@ -303,38 +330,6 @@ async def publish_blog_post(
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
     )
-    await db.commit()
-    await db.refresh(post)
-    return post
-
-
-@router.post(
-    "/blog-posts/{post_id}/schedule",
-    response_model=BlogPostResponse,
-    summary="Schedule blog post for future publication",
-)
-@limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
-async def schedule_blog_post(
-    request: Request,
-    post_id: UUID,
-    body: SchedulePublishRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-) -> BlogPostResponse:
-    """Schedule an approved post for future publication (SCHED-001, UI-024)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
-    assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    min_schedule = datetime.now(UTC) + timedelta(seconds=MIN_SCHEDULE_LEAD_SECONDS)
-    scheduled_at = body.scheduled_publish_at
-    if scheduled_at.tzinfo is None:
-        scheduled_at = scheduled_at.replace(tzinfo=UTC)
-    if scheduled_at < min_schedule:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SCHEDULE_IN_PAST,
-        )
-    await publishing.service.schedule_blog(post, scheduled_at)
     await db.commit()
     await db.refresh(post)
     return post
