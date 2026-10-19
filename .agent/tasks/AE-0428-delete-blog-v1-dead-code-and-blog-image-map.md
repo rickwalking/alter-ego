@@ -160,7 +160,8 @@ Feature: Blog v1 dead code is gone
 - Blocked by: AE-0422 (blog stops reading `blog_image_map`), AE-0423 (v2 read path + dual-write
   removal) **and a prod `--verify` zero-non-v2 report — SATISFIED on 2026-10-19 (owner-run
   `--verify` = 0 non-v2 rows)**, AE-0424 (new image controls replace `ImageGenModal`); may run
-  before/after AE-0426. AE-0422/AE-0423/AE-0424 are merged into `main` (PR #149 is based on it).
+  before/after AE-0426. AE-0422/AE-0423/AE-0424/AE-0425 (#146) and AE-0426 (#148) are merged
+  into `main` (PR #149 is based on it, `1b59bee15`).
 - Related: AE-0424, AE-0426, ADR-0025, ADR-0009, ADR-0018 (dead-code baseline).
 
 ## Implementation Plan
@@ -219,6 +220,20 @@ the dual-write upsert moved to AE-0422 (it would clobber v2); the delete-time de
 - **AC8 prod gate SATISFIED:** the owner ran `blog_v1_to_v2 --verify` on prod on 2026-10-19 and it
   reported zero non-v2 rows (translations included). The read fail-safe removal is therefore
   allowed; ticket, `deploy.yml` comments and the service docstring record this evidence.
+
+### 2026-10-19 — second rebase: AE-0425 (#146) and AE-0426 (#148) merged into main
+
+- Rebased onto `origin/main` (`1b59bee15`) after the CI diff-cover gate failed because main moved
+  mid-run (the shallow CI fetch diffed against a main containing AE-0425's changes).
+- The barrel conflict kept AE-0425's live "blog: generation" exports
+  (`BlogGenerationStatus`, `CreateBlogFromCarousel`, `generateStandaloneBlogPost`,
+  `isGenerationInProgress`, `GENERATION_TOPIC_*`) and re-pruned the v1 dead exports again.
+- AE-0425 call-site check: `blog_generate_support.py` uses `parse_blog_content` directly and
+  `has_article()` catches `InvalidBlogDocumentError` (no two-argument `read_document` remains);
+  all src call sites are one-argument.
+- `openapi.json` regenerated from the merged source: it now also reconciles the AE-0425 blog
+  generation schemas that were missing from the stale committed artifact on main (174 component
+  schemas; ticket-relevant removals unchanged).
 
 ## Files Touched
 
@@ -363,8 +378,9 @@ Pending.
   prove the code fails closed with no adapter.
 - **OpenAPI artifact regenerated, not hand-edited.** `docs/architecture/openapi.json` is generated
   by `scripts/export_openapi.py`. The committed artifact on the base was already stale relative to
-  the base source (it lacked the AE-0418 autopilot cover schemas), so regenerating also reconciles
-  those pre-existing, unrelated additions. The only ticket-relevant changes are the removal of
+  the base source, so regenerating also reconciles pre-existing, unrelated additions (first the
+  AE-0418 autopilot cover schemas, then — after the AE-0425 rebase — the blog generation schemas
+  missing from main's artifact). The only ticket-relevant changes are the removal of
   `CarouselBlogImageMapEntry`, the `blog_image_map` property, and the moved generate-image
   description. Regeneration is also what makes `frontend:schema-drift` green after the Zod
   deletions; the two now-dead entries were dropped from `check-schema-drift.mjs`'s SCHEMA_MAP.
