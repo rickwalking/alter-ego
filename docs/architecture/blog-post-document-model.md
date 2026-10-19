@@ -512,6 +512,38 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
 `--dry-run` shows per-row PT/translation counts and flags oversized sections. `--verify` is also safe
 to run at any time as a health check (exit 0 = all rows v2).
 
+### Hidden-post rebuild runbook (AE-0426)
+
+Posts hidden by AE-0422 keep a durable `ai_generation_metadata.hidden_bad_post` marker. Rebuild them
+through the writer pipeline **inside the prod backend container**, so generated images land in the
+mounted `carousel_output_dir/blog-images` volume (running it from a bare checkout writes images
+outside that store):
+
+```
+docker compose exec backend \
+  python -m rag_backend.scripts.rebuild_hidden_posts --dry-run
+docker compose exec backend \
+  python -m rag_backend.scripts.rebuild_hidden_posts --apply --only <post-id>
+```
+
+Start with `--only <post-id>` (repeatable) for one post. `--apply` otherwise **defaults to
+`--max-posts 1`** (an apply-only spend cap); raise it explicitly for a batch
+(`--apply --max-posts 10`). `--limit N` narrows the selection list first; the summary reports any rows
+omitted by either cap. The dry run is never truncated by `--max-posts`, so the full target list (and
+its missing-material skips) stays visible. The dry run performs the
+free DB-only material checks, so missing carousels and carousels without `long_form_notes` show as
+skips before any paid generation.
+
+The command selects marked rows whose `rebuilt_at` is absent, reuses each existing row (no duplicate)
+and writes a `blog.v2` **draft** with cover/section images and stored PT/EN scores. Starting an
+attempt replaces the hidden legacy body with a fresh v2 document (the AE-0424 slot path only edits
+v2) and the draft takes the writer's title. Published rows
+are skipped as `currently_published` unless `--include-published` is passed (a rebuild flips them
+back to `draft`). It never publishes; the owner reviews and publishes. A successful or `partial`
+attempt stamps `hidden_bad_post.rebuilt_at`, so re-runs are no-ops; `failed` leaves it unset for a
+retry. The summary prints selected/rebuilt/skipped/failed (and omitted), the process exits non-zero
+when any post failed, and each post emits its own Langfuse trace (flushed before exit).
+
 ### Worked example (real v1 PT post)
 
 **Before** (`content`):
