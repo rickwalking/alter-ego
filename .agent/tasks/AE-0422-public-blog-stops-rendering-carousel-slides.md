@@ -91,6 +91,11 @@ sections positionally because `blog_image_map` is `null` (F-07 wrong-section ris
       twice and asserts an existing row's content/status are unchanged and no row is created when
       none exists. Deleting a carousel still flips its published blog row to `draft` (orphan
       safety).
+- [x] AC8: The legacy public read (`GET /api/carousels/{project_id}/blog` and `/blog/{lang}`) is
+      gated on the canonical `origin='carousel'` `blog_posts` row's `status`: anonymous callers get
+      a uniform 404 (ADR-0013) unless the row is `published`, so a hidden post stops being served at
+      `/blog/<carousel project id>` even though `carousel_projects.is_public` is still true.
+      Authenticated dashboard/editor preview keeps reading regardless.
 
 ## Gherkin Scenarios
 
@@ -172,6 +177,17 @@ operator path adds no new `application -> infrastructure` (AE-0082 baseline) edg
 (which fields clear, which event fires) match the workflow unpublish route byte-for-byte. Running it
 against production is still the orchestrator's owner-approved action, not part of this ticket.
 
+### Legacy public-URL gate (AC8)
+
+Hiding a row flips its `status` to `draft`, but the legacy carousel-blog URL is keyed by the
+**carousel project id** and was previously gated only on `carousel_projects.is_public` — which the
+hide action does not change — so a hidden post stayed reachable at `/blog/<carousel project id>`
+through `GET /api/carousels/{project_id}/blog` (row read) and `/blog/{lang}` (embedded read). Both
+routes now call `_assert_blog_visible` (`media.py`): for anonymous callers they 404 (uniform,
+ADR-0013) unless `PublishingReadAcl.is_carousel_blog_published(project_id)` finds a `published`
+`origin='carousel'` row; an authenticated caller (owner/admin preview) bypasses the gate. The
+predicate is exposed on the publishing read port/adapters so the route adds no new infra import.
+
 ## Dependencies
 
 - Blocks: none (ships first).
@@ -248,6 +264,12 @@ Backend:
 - `backend/tests/unit/infrastructure/test_blog_post_hide.py` (new)
 - `backend/tests/integration/test_publishing_safety_net.py`, `test_presentation_safety_net.py`
   (seed the carousel-origin blog row explicitly)
+- `backend/src/rag_backend/api/routes/carousels/media.py` (AC8: `_assert_blog_visible` on both blog reads)
+- `backend/src/rag_backend/modules/publishing/{application/service.py,domain/ports.py,infrastructure/publishing_port_adapters.py,infrastructure/publishing_read_acl.py}`
+  (AC8: `carousel_blog_is_published` / `is_carousel_blog_published`)
+- `backend/tests/integration/carousel_consolidation/helpers.py` (`seed_carousel_blog_row`),
+  `.../test_legacy_visibility.py` (published-row readable; public carousel + draft row 404;
+  carousel publish does not publish the blog)
 
 Note: the branch also carries the plan artifacts added by the architecture commit (ADR-0025, the
 blog-post-document-model doc, the AE-0423..AE-0428 tickets/feature files) — not part of this
@@ -266,6 +288,16 @@ implementation.
 - New AC7 tests: `test_carousel_save_blog_noop.py` (no row created on save; existing row's
   content/status unchanged; hidden post not re-published; ADR-0011 distribution mirror still written)
   and the rewritten `test_carousel_repository_detach.py`.
+- New AC8 tests: `tests/unit/modules/publishing/test_publishing_read_projection.py::test_public_visibility_gate`
+  (absent/draft → False, published → True) and `tests/integration/test_presentation_safety_net.py`
+  (hidden draft 404 for anonymous on both routes; published 200; authenticated preview 200) plus
+  `tests/integration/carousel_consolidation/test_legacy_visibility.py`
+  (`test_public_blog_when_row_published`, `test_public_carousel_with_draft_row_is_hidden`,
+  `test_explicit_publish_sets_is_public` now asserts the carousel-publish/blog-publish separation).
+  Gherkin: `backend/tests/features/blog_no_carousel_slides_ae0422.feature` (four public-visibility
+  scenarios).
+- CI (PR #144): all 33 checks green, including `backend / Test & Coverage`, `backend / Mutation`
+  (blocking ≥75%) and `frontend` gates; `mergeStateStatus: CLEAN`.
 
 ## QA Report
 
@@ -319,6 +351,15 @@ Pending.
 - **Risk:** Low–Medium — a small backend write-path removal plus a frontend rendering change;
   mitigated by the no-clobber regression test and by shipping before the model migration.
 - **Size:** S
+
+### 2026-10-19 (takeover)
+
+Finished AC8: the legacy carousel-blog read now 404s for anonymous callers when the canonical
+`origin='carousel'` row is not `published`; authenticated preview is unaffected. Added the
+public-visibility predicate to the publishing read port/ACL, Gherkin + unit + integration coverage,
+and updated the two `test_legacy_visibility.py` scenarios that relied on the superseded
+`is_public`-only contract (per ADR-0025: a carousel going public never publishes its blog post).
+PR #144 CI green (33/33).
 
 ## Blockers
 
