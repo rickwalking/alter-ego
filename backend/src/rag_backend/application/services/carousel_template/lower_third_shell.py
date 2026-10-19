@@ -12,6 +12,12 @@ from rag_backend.application.services.carousel_template.slide_number import (
     format_slide_counter,
     normalize_slide_number,
 )
+from rag_backend.domain.protocols.carousel import _RenderOptions
+
+# AE-0434: the artwork region of a slide the contract does not illustrate.
+_NO_ARTWORK_HTML = (
+    '  <div class="slide-artwork slide-artwork-none" aria-hidden="true"></div>'
+)
 
 
 def render_slide_artwork(
@@ -41,6 +47,12 @@ class LowerThirdConfig:
     footer_html: str = ""
     include_counter: bool = True
     artwork_src: str | None = None
+    show_artwork: bool = True
+
+
+def artwork_enabled(options: _RenderOptions | None) -> bool:
+    """Whether the slide being rendered gets generated artwork (AE-0434)."""
+    return (options or {}).get("artwork", True)
 
 
 def render_lower_third_shell(
@@ -66,9 +78,18 @@ def render_lower_third_shell(
 
 
 def _artwork(safe_number: str, config: LowerThirdConfig) -> str:
+    # AE-0434: never reference ``images/slide_N.jpg`` for a slide the images
+    # phase does not plan; an explicit ``artwork_src`` (GrokBot cover) still wins.
+    if not config.show_artwork and config.artwork_src is None:
+        return _NO_ARTWORK_HTML
     return render_slide_artwork(
         safe_number, alt=config.artwork_alt, src=config.artwork_src
     )
 
 
-__all__ = ["LowerThirdConfig", "render_lower_third_shell", "render_slide_artwork"]
+__all__ = [
+    "LowerThirdConfig",
+    "artwork_enabled",
+    "render_lower_third_shell",
+    "render_slide_artwork",
+]

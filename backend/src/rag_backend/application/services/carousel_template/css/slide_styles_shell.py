@@ -15,6 +15,19 @@ def get_neon_slide_shell_css(theme: dict[str, str]) -> str:
     z-index: 0;
     overflow: hidden;
   }}
+  .slide-artwork-none {{
+    background:
+      radial-gradient(
+        circle at 78% 18%,
+        color-mix(in srgb, var(--primary) 38%, transparent) 0%,
+        transparent 58%
+      ),
+      linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--primary) 16%, var(--bg)) 0%,
+        var(--bg) 72%
+      );
+  }}
   .slide-artwork img {{
     width: 100%;
     height: 100%;

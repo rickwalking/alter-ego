@@ -10,6 +10,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import replace
 
+from rag_backend.application.services.carousel.image_artwork import (
+    artwork_slide_numbers,
+)
 from rag_backend.application.services.carousel.presentation_policy_types import (
     PresentationPolicyError,
 )
@@ -62,6 +65,18 @@ def pov_slide_strategies(project: CarouselProject, total_slides: int) -> dict[in
     }
 
 
+def deck_artwork_slides(
+    project: CarouselProject, total_slides: int
+) -> frozenset[int] | None:
+    """AE-0434: slides of a ``total_slides`` deck the images phase illustrates.
+
+    The same set the images node plans (``artwork_slide_numbers``), sized to the
+    rendered deck, so the template never points at artwork that was never made.
+    None for fixed contracts (every lower-third slide keeps its artwork).
+    """
+    return artwork_slide_numbers(replace(project, slide_count=total_slides))
+
+
 def quote_card_strategy(
     project: CarouselProject, slide: Mapping[str, object]
 ) -> str | None:
@@ -77,4 +92,9 @@ def quote_card_strategy(
     return insight_quote.INSIGHT_QUOTE_STRATEGY
 
 
-__all__ = ["POV_ROLE_STRATEGIES", "pov_slide_strategies", "quote_card_strategy"]
+__all__ = [
+    "POV_ROLE_STRATEGIES",
+    "deck_artwork_slides",
+    "pov_slide_strategies",
+    "quote_card_strategy",
+]

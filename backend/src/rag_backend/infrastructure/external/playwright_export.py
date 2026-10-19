@@ -32,6 +32,9 @@ from rag_backend.domain.constants.playwright_geometry import (
     ERR_SCREENSHOT_DIMENSION_MISMATCH,
 )
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
+from rag_backend.infrastructure.external.playwright_artwork_check import (
+    ensure_artwork_files,
+)
 from rag_backend.infrastructure.external.playwright_export_pov import (
     pov_export_injection,
 )
@@ -290,6 +293,8 @@ class PlaywrightExportService(CarouselExportService):
 
         html_file = output_path / "carousel.html"
         html_file.write_text(html_content, encoding=ENCODING_UTF8)
+        # AE-0434: fail fast, naming the slide, before Playwright decodes images.
+        ensure_artwork_files(html_content, output_path, hd=cfg.hd)
 
         exported_paths: list[str] = []
         scale = HD_SCALE_FACTOR if cfg.hd else 1

@@ -129,6 +129,8 @@ class _RenderOptions(TypedDict, total=False):
     """Total slide count for progress display."""
     language: str
     """Language code (pt, en) for localized text."""
+    artwork: bool
+    """False when the contract plans no generated artwork for the slide (AE-0434)."""
 
 
 class SlideLayoutStrategy(Protocol):
