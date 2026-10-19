@@ -17,6 +17,11 @@ describe("middleware route helpers", () => {
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.CHAT)).toBe(true);
     });
 
+    it("Then the session-expired logout route is public (AE-0429)", () => {
+      expect(isPublicRoute(PUBLIC_ROUTE_PATHS.LOGOUT)).toBe(true);
+      expect(PUBLIC_ROUTE_PATHS.LOGOUT.startsWith("/api/")).toBe(false);
+    });
+
     it("Then dashboard paths are not public", () => {
       expect(isPublicRoute(DASHBOARD_ROUTES.HOME)).toBe(false);
       expect(isPublicRoute(DASHBOARD_ROUTES.CREATE)).toBe(false);

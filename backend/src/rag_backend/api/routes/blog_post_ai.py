@@ -7,7 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
-from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
+from rag_backend.api.dependencies.resource_access import (
+    get_blog_post_for_user,
+    lock_blog_post,
+)
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.blog_post_ai import (
@@ -70,6 +73,21 @@ async def _record_ai_action(
     )
 
 
+async def _authorize_then_release(
+    db: AsyncSession, post_id: UUID, user: EditorUser
+) -> str:
+    """Check access, then end the read transaction before the LLM call.
+
+    AE-0432: the post loaded here must not be written back after the call — a
+    budget reservation or AI action committed meanwhile would be erased. The
+    write re-reads the row with :func:`lock_blog_post` and merges onto it.
+    """
+    await get_blog_post_for_user(db, post_id, user)
+    user_id = str(user.id)
+    await db.rollback()
+    return user_id
+
+
 def blog_event_service() -> WorkflowEventService:
     """The workflow event service of the blog editor routes (AE-0424)."""
     settings = get_settings()
@@ -95,7 +113,7 @@ async def ai_suggest(
     current_user: EditorUser,
 ) -> BlogPostAiSuggestResponse:
     """Generate an AI suggestion for selected blog text."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    user_id = await _authorize_then_release(db, post_id, current_user)
     service = _build_ai_service()
     try:
         result = await service.suggest(
@@ -103,7 +121,7 @@ async def ai_suggest(
                 text=body.text,
                 action=body.suggestion_type,
                 context=body.context,
-                trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+                trace=BlogAiTraceContext(post_id=str(post_id), user_id=user_id),
             )
         )
     except ValueError:
@@ -112,10 +130,13 @@ async def ai_suggest(
             detail=ERR_INVALID_REQUEST,
         ) from None
 
-    suggestions = list(post.ai_suggestions or [])
-    suggestions.append({**result, "applied": False})
-    post.ai_suggestions = suggestions
-    await _record_ai_action(db, post, post_id, current_user.id, AI_ACTION_SUGGEST)
+    # Re-read under the row lock: merge onto what was committed during the call.
+    post = await lock_blog_post(db, post_id)
+    post.ai_suggestions = [
+        *(post.ai_suggestions or []),
+        {**result, "applied": False},
+    ]
+    await _record_ai_action(db, post, post_id, user_id, AI_ACTION_SUGGEST)
     await db.commit()
     return BlogPostAiSuggestResponse(**result)
 
@@ -134,7 +155,7 @@ async def ai_improve(
     current_user: EditorUser,
 ) -> BlogPostAiImproveResponse:
     """Improve selected blog text, optionally using a persona voice."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    user_id = await _authorize_then_release(db, post_id, current_user)
     service = _build_ai_service()
     try:
         result = await service.improve(
@@ -144,7 +165,7 @@ async def ai_improve(
                 action=body.action,
                 context=body.context,
                 persona_id=body.persona_id,
-                trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+                trace=BlogAiTraceContext(post_id=str(post_id), user_id=user_id),
             )
         )
     except ValueError:
@@ -152,6 +173,7 @@ async def ai_improve(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_INVALID_REQUEST,
         ) from None
-    await _record_ai_action(db, post, post_id, current_user.id, AI_ACTION_IMPROVE)
+    post = await lock_blog_post(db, post_id)
+    await _record_ai_action(db, post, post_id, user_id, AI_ACTION_IMPROVE)
     await db.commit()
     return BlogPostAiImproveResponse(**result)

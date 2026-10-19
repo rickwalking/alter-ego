@@ -114,9 +114,9 @@ test.describe("auth baseline safety net", () => {
   // useAuth.logout() does `fetch POST /api/auth/logout` then
   // `window.location.href = "/login"`. OBSERVED divergence from the architecture
   // description:
-  //   1. The local app/api/auth/logout route ONLY defines GET (which is what
-  //      clears the cookie); the hook calls it with POST. So the logout request
-  //      does NOT clear the `access_token` cookie.
+  //   1. The POST is the backend logout (stubbed below); the cookie-clearing
+  //      handler is GET /auth/logout (AE-0429 moved it out of /api). So this
+  //      logout request does NOT clear the `access_token` cookie.
   //   2. Because the (still valid) admin cookie survives, navigating to "/login"
   //      hits the middleware, which treats /login as an auth route with a valid
   //      token and IMMEDIATELY redirects back to DASHBOARD_ROUTES.CHAT.

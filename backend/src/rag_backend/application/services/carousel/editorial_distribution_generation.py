@@ -23,6 +23,10 @@ from rag_backend.application.services.carousel.editorial_distribution_slide impo
     _slide_heading,
     _slide_long_form_notes,
 )
+from rag_backend.application.services.carousel.editorial_translation_structure import (
+    structured_source,
+    structured_translation,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
@@ -110,6 +114,8 @@ def _build_translation_payload(
         notes = _slide_long_form_notes(slide)
         if notes:
             item[LONG_FORM_NOTES_KEY] = notes
+        # AE-0430: the TL;DR and item texts travel too, so EN keeps PT's shape.
+        item.update(structured_source(slide))
         payload.append(item)
     return payload
 
@@ -135,8 +141,24 @@ def _parse_translation_response(
         en_notes = item.get(LONG_FORM_NOTES_KEY)
         if isinstance(en_notes, str) and en_notes.strip():
             translation[LONG_FORM_NOTES_KEY] = en_notes.strip()
+        translation.update(structured_source(item))
         result[index] = translation
     return result
+
+
+def _with_pt_structure(
+    translations: dict[int, dict[str, object]],
+    slide_drafts: list[dict[str, object]],
+) -> dict[int, dict[str, object]]:
+    """AE-0430: every translated slide carries its PT draft's structured extras."""
+    for position, slide in enumerate(slide_drafts[:MAX_SLIDES]):
+        if not isinstance(slide, dict):
+            continue
+        index = int(slide.get(SLIDE_INDEX_KEY, position + 1))
+        translation = translations.get(index)
+        if translation is not None:
+            translation.update(structured_translation(slide, translation))
+    return translations
 
 
 async def _generate_en_translations(
@@ -162,7 +184,7 @@ async def _generate_en_translations(
         data = cast(dict[str, object], extract_json(str(response.content)))
     except (json.JSONDecodeError, TypeError) as exc:
         raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
-    return _parse_translation_response(data)
+    return _with_pt_structure(_parse_translation_response(data), slide_drafts)
 
 
 __all__ = [

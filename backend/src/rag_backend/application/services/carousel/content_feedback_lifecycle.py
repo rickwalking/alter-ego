@@ -232,10 +232,16 @@ def _log(
 
 
 def consume_feedback_notes(
-    state: Mapping[str, object], phase: str
+    state: Mapping[str, object],
+    phase: str,
+    status: str = FEEDBACK_STATUS_APPLIED,
 ) -> dict[str, object]:
-    """Updates marking every active ``phase`` note applied (it was just used)."""
-    updates, moved = _settle(state, phase, lambda _active: FEEDBACK_STATUS_APPLIED)
+    """Updates moving every active ``phase`` note to the history (it was just used).
+
+    AE-0430: the caller passes ``unchanged`` when the regeneration left the
+    visible copy as it was, so the history never says "applied" for a no-op.
+    """
+    updates, moved = _settle(state, phase, lambda _active: status)
     if moved:
         _log(LOG_FEEDBACK_APPLIED, state, moved)
     return updates

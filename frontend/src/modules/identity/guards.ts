@@ -24,6 +24,7 @@ export const PUBLIC_ROUTES = [
   PUBLIC_ROUTE_PATHS.BLOG,
   `${PUBLIC_ROUTE_PATHS.BLOG}/`,
   PUBLIC_ROUTE_PATHS.CHAT,
+  PUBLIC_ROUTE_PATHS.LOGOUT,
 ];
 
 export function isPublicRoute(pathname: string): boolean {
@@ -31,6 +32,9 @@ export function isPublicRoute(pathname: string): boolean {
     return true;
   }
   if (pathname === PUBLIC_ROUTE_PATHS.CHAT) {
+    return true;
+  }
+  if (pathname === PUBLIC_ROUTE_PATHS.LOGOUT) {
     return true;
   }
   if (

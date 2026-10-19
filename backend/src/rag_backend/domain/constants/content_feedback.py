@@ -34,6 +34,8 @@ FEEDBACK_ENTRY_SETTLED_AT = "settled_at"
 FEEDBACK_STATUS_APPLIED = "applied"
 FEEDBACK_STATUS_DROPPED = "dropped"
 FEEDBACK_STATUS_MIGRATED = "migrated"
+# AE-0430: the regeneration used the note but the visible copy did not change.
+FEEDBACK_STATUS_UNCHANGED = "unchanged"
 
 # structlog events.
 LOG_FEEDBACK_APPLIED = "content_feedback_applied"
@@ -54,6 +56,7 @@ __all__ = [
     "FEEDBACK_STATUS_APPLIED",
     "FEEDBACK_STATUS_DROPPED",
     "FEEDBACK_STATUS_MIGRATED",
+    "FEEDBACK_STATUS_UNCHANGED",
     "LOG_CONTENT_ARTIFACTS_PARKED",
     "LOG_CONTENT_MANUAL_FIXES_KEPT",
     "LOG_CONTENT_REPLAY_REUSED",

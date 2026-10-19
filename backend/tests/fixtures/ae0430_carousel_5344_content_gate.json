@@ -1,0 +1,321 @@
+{
+ "_source": "prod carousel 5344b6c6 (2026-10-19), localized_slides + content_gate_validation export, AE-0430",
+ "policy_version": "hero_lower_third_v4",
+ "localized_slides": [
+  {
+   "slide_index": 1,
+   "slide_type": "intro",
+   "presentation_pt": {
+    "slide_type": "intro",
+    "heading": "Viram o Grok Bot reservar mesa. Ninguém falou do computador.",
+    "body": "**PT**\nTodo mundo viu o Grok Bot reservar mesa. Ninguém falou do computador. A ligação chama atenção.",
+    "tldr_strip": "Grok Bot, reserva por telefone, agente com computador próprio"
+   },
+   "presentation_en": {
+    "slide_type": "intro",
+    "heading": "The Grok Bot booked a table. It's not the demo, it's the <strong>computer</strong>.",
+    "body": "I look at the computer, not the demo. The call is just the tip: the leap is in the runtime that executes outside the chat, with queues, permissions and logs. In practice, what changes for devs is code review, testing and CI/CD with an agent running for real."
+   }
+  },
+  {
+   "slide_index": 2,
+   "slide_type": "summary",
+   "presentation_pt": {
+    "slide_type": "summary",
+    "heading": "Do chat para a ligação",
+    "body": "",
+    "summary_points": [
+     {
+      "icon_name": "message-circle",
+      "title": "Post de Musk no X",
+      "body": "Musk disse que o Grok Bot liga para restaurantes e reserva mesa por telefone. Não é"
+     },
+     {
+      "icon_name": "newspaper",
+      "title": "Demonstração com restaurante",
+      "body": "Brian Roemmele mostrou um bot ligando para um restaurante italiano e concluindo a"
+     },
+     {
+      "icon_name": "brain",
+      "title": "Comparação com contratação",
+      "body": "Musk comparou o bot a um funcionário competente. Eu vejo diferente: funcionário tem"
+     }
+    ]
+   },
+   "presentation_en": {
+    "slide_type": "summary",
+    "heading": "From chat to phone call",
+    "body": "",
+    "summary_points": [
+     {
+      "icon_name": "message-circle",
+      "title": "Musk post on X",
+      "body": "Musk said Grok Bot calls restaurants and books a table by phone. It is not chat, it is"
+     },
+     {
+      "icon_name": "newspaper",
+      "title": "Restaurant demonstration",
+      "body": "Brian Roemmele showed a bot calling an Italian restaurant and completing the reservation"
+     },
+     {
+      "icon_name": "brain",
+      "title": "Hiring comparison",
+      "body": "Musk compared the bot to a competent employee. I see it differently: an employee has"
+     }
+    ]
+   }
+  },
+  {
+   "slide_index": 3,
+   "slide_type": "content",
+   "presentation_pt": {
+    "slide_type": "content",
+    "heading": "Ele não usa o seu notebook",
+    "body": "O Grok Bot roda em um **computador próprio na nuvem**, com navegador, terminal e arquivos. Não é o seu notebook que sustenta a tarefa, é a máquina dele. Na prática, você fecha a tampa e segue pelo celular.",
+    "content_kind": "features",
+    "features": [
+     {
+      "icon_name": "brain",
+      "title": "Ambiente próprio",
+      "body": "Navegador, terminal e arquivos ficam no ambiente dele. O que muda para devs: seu setup local não entra na conta."
+     },
+     {
+      "icon_name": "message-circle",
+      "title": "Celular no controle",
+      "body": "Feche o notebook e acompanhe a tarefa pelo app. O estado vive no servidor, não na sua sessão local."
+     },
+     {
+      "icon_name": "book-open",
+      "title": "Arquivo local",
+      "body": "Se precisar de um arquivo do notebook, ele usa o computador dele. Seu disco não vira dependência."
+     }
+    ]
+   },
+   "presentation_en": {
+    "slide_type": "content",
+    "heading": "It does not use your laptop",
+    "body": "Grok Bot runs on its own **cloud computer**, with a browser, terminal and files. It is not your laptop carrying the task, it is its machine. In practice, you close the lid and keep going from your phone.",
+    "content_kind": "features",
+    "features": [
+     {
+      "icon_name": "brain",
+      "title": "Own environment",
+      "body": "Browser, terminal and files live in its environment. What changes for devs: your local setup is not part of the equation."
+     },
+     {
+      "icon_name": "message-circle",
+      "title": "Phone control",
+      "body": "Close your laptop and follow the task from the app. State lives on the server, not in your local session."
+     },
+     {
+      "icon_name": "book-open",
+      "title": "Local file",
+      "body": "If it needs a file from your laptop, it uses its computer. Your disk is not a dependency."
+     }
+    ]
+   }
+  },
+  {
+   "slide_index": 4,
+   "slide_type": "content",
+   "presentation_pt": {
+    "slide_type": "content",
+    "heading": "Tarefas chatas viram delegação",
+    "body": "**PT** ** ** Na prática, o ganho não é a resposta, é a **execução**. Você descreve o pedido e o agente conduz a ligação até a reserva estar feita. O pedido não volta pela metade.",
+    "content_kind": "features",
+    "features": []
+   },
+   "presentation_en": {
+    "slide_type": "content",
+    "heading": "Boring tasks become delegation",
+    "body": "PT:\nHeading: A boring task becomes real delegation\nwhat comes back is not a draft to review, but <strong>a completed action</strong>. The target is the decision, not the paragraph.",
+    "content_kind": "features",
+    "features": []
+   }
+  },
+  {
+   "slide_index": 5,
+   "slide_type": "content",
+   "presentation_pt": {
+    "slide_type": "content",
+    "heading": "Autonomia pede supervisão",
+    "body": "O risco está no acesso, não no chat. Esse computador persistente guarda logins, arquivos e sessões abertas.",
+    "content_kind": "features",
+    "features": []
+   },
+   "presentation_en": {
+    "slide_type": "content",
+    "heading": "Autonomy requires supervision",
+    "body": "The risk is in access, not in the chat. This persistent computer stores logins, files and open sessions.",
+    "content_kind": "features",
+    "features": []
+   }
+  },
+  {
+   "slide_index": 6,
+   "slide_type": "closing",
+   "presentation_pt": {
+    "slide_type": "closing",
+    "heading": "Comece pequeno. Depois escale.",
+    "body": "A primeira tarefa é um teste controlado, não uma prova de confiança. Eu libero o agente para uma ação só e acompanho de perto. Se ele erra, desfaço em um clique.",
+    "actions": [
+     {
+      "icon_name": "target",
+      "title": "Escolha uma tarefa simples",
+      "body": "Um comando claro e um resultado fácil de reverter: reservar uma mesa, não reescrever o backlog inteiro. Na prática, o alvo é o erro barato."
+     },
+     {
+      "icon_name": "eye",
+      "title": "Acompanhe pelo celular",
+      "body": "Leia cada passo no app antes de liberar mais acesso. Code review de agente é isso: você vê o diff, não só o resultado final."
+     },
+     {
+      "icon_name": "shield-check",
+      "title": "Amplie a autonomia aos poucos",
+      "body": "Passou no teste? Solte uma tarefa um pouco mais longa. Autonomia se ganha com histórico, não com discurso."
+     }
+    ]
+   },
+   "presentation_en": {
+    "slide_type": "closing",
+    "heading": "Start small. Then scale.",
+    "body": "The first task is a controlled test, not a trust exercise. I give the agent one action and watch it closely. If it gets it wrong, I undo it in one click.",
+    "actions": [
+     {
+      "icon_name": "target",
+      "title": "Pick a simple task",
+      "body": "A clear instruction and an easy outcome to reverse: booking a table, not rewriting the whole backlog. In practice, the target is a cheap mistake."
+     },
+     {
+      "icon_name": "eye",
+      "title": "Watch it on your phone",
+      "body": "Read every step in the app before granting more access. Agent code review is this: you see the diff, not just the final result."
+     },
+     {
+      "icon_name": "shield-check",
+      "title": "Expand autonomy gradually",
+      "body": "Did it pass the test? Release a slightly longer task. Autonomy is earned through track record, not through a speech."
+     }
+    ]
+   }
+  },
+  {
+   "slide_index": 7,
+   "slide_type": "cta",
+   "presentation_pt": {
+    "slide_type": "cta",
+    "heading": "Qual tarefa chata você entregaria primeiro?",
+    "body": "Delegar não é escolher ferramenta. É escolher o que deixa de passar pela sua mão.\n\nComente qual tarefa o seu Grok Bot resolveria primeiro. **Salve o carrossel** para consultar depois e compartilhe com quem está definindo o que delegar."
+   },
+   "presentation_en": {
+    "slide_type": "cta",
+    "heading": "Which boring task would you hand over first?",
+    "body": "Delegating is not choosing a tool. It is choosing what stops passing through your hands.\n\nComment which task your Grok Bot would solve first. <strong>Save the carousel</strong> to check later and share it with whoever is defining what to delegate."
+   }
+  }
+ ],
+ "content_gate_validation": {
+  "validation_status": "invalid",
+  "validated_at": "2026-10-19T12:59:48.295811Z",
+  "blocking": true,
+  "violations": [
+   {
+    "code": "heading_too_long",
+    "message": "heading exceeds max 72 characters (got 83)",
+    "slide_index": 1,
+    "locale": "en",
+    "field": "heading",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "body exceeds max 180 characters (got 258)",
+    "slide_index": 1,
+    "locale": "en",
+    "field": "body",
+    "severity": "blocker"
+   },
+   {
+    "code": "translation_shape_mismatch",
+    "message": "PT structured shape 'intro:tldr' does not match EN structured shape 'intro:plain'",
+    "slide_index": 1,
+    "locale": null,
+    "field": null,
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "features[0].body exceeds max 100 characters (got 112)",
+    "slide_index": 3,
+    "locale": "pt",
+    "field": "features[0].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "features[0].body exceeds max 100 characters (got 121)",
+    "slide_index": 3,
+    "locale": "en",
+    "field": "features[0].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "features[1].body exceeds max 100 characters (got 105)",
+    "slide_index": 3,
+    "locale": "en",
+    "field": "features[1].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[0].body exceeds max 90 characters (got 139)",
+    "slide_index": 6,
+    "locale": "pt",
+    "field": "actions[0].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[1].body exceeds max 90 characters (got 124)",
+    "slide_index": 6,
+    "locale": "pt",
+    "field": "actions[1].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[2].body exceeds max 90 characters (got 106)",
+    "slide_index": 6,
+    "locale": "pt",
+    "field": "actions[2].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[0].body exceeds max 90 characters (got 145)",
+    "slide_index": 6,
+    "locale": "en",
+    "field": "actions[0].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[1].body exceeds max 90 characters (got 127)",
+    "slide_index": 6,
+    "locale": "en",
+    "field": "actions[1].body",
+    "severity": "blocker"
+   },
+   {
+    "code": "body_too_long",
+    "message": "actions[2].body exceeds max 90 characters (got 116)",
+    "slide_index": 6,
+    "locale": "en",
+    "field": "actions[2].body",
+    "severity": "blocker"
+   }
+  ]
+ },
+ "slide_1_draft_text": "**PT**\n\n**heading:** Todo mundo viu o Grok Bot reservar mesa. Ninguém falou do computador.\n\n**body:** A ligação chama atenção. O ponto real é o que sustenta a ação: **um agente que executa** a tarefa, não um que só responde. Na prática, o alvo é a delegação: um pipeline que roda sozinho, não um chat que espera comando.\n\n**EN**\n\n**heading:** Everyone saw Grok Bot book a table. Nobody talked about the computer.\n\n**body:** The call draws attention. The real point is what sustains the action: **an agent that executes** the task, not one that only replies. In practice, the target is delegation: a pipeline that runs on its own, not a chat that waits for a command."
+}

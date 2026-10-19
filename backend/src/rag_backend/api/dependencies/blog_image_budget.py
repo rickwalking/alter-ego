@@ -11,8 +11,9 @@ The reservation is deliberately **kept** when the spend or the later write
 fails (provider error, deleted section, 409): the provider may already have
 billed the call, and the cap is a spend ceiling, not a count of stored images.
 
-A per-event-loop ``asyncio.Lock`` serializes reservations inside one process as well, so
-the guarantee also holds on engines without row locks (SQLite in tests).
+A per-post, per-event-loop ``asyncio.Lock`` serializes reservations inside one
+process as well, so the guarantee also holds on engines without row locks
+(SQLite in tests).
 """
 
 from __future__ import annotations
@@ -32,20 +33,20 @@ from rag_backend.application.services.blog.blog_image_budget import (
 )
 from rag_backend.domain.constants.blog_editor import ERR_BLOG_IMAGE_BUDGET_EXHAUSTED
 
-# One lock per event loop (an ``asyncio.Lock`` is bound to the loop it first
-# waited on; tests and workers may run several loops).
-_RESERVATION_LOCKS: WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = (
-    WeakKeyDictionary()
-)
+# One lock per post and event loop (an ``asyncio.Lock`` is bound to the loop it
+# first waited on; tests and workers may run several loops). Per post so one
+# post's reservation never waits on another's (AE-0432). The row lock
+# (``FOR UPDATE``) is the cross-process guarantee; this one covers engines
+# without row locks inside one process.
+_RESERVATION_LOCKS: WeakKeyDictionary[
+    asyncio.AbstractEventLoop, dict[str, asyncio.Lock]
+] = WeakKeyDictionary()
 
 
-def _reservation_lock() -> asyncio.Lock:
+def _reservation_lock(post_id: UUID | str) -> asyncio.Lock:
     loop = asyncio.get_running_loop()
-    lock = _RESERVATION_LOCKS.get(loop)
-    if lock is None:
-        lock = asyncio.Lock()
-        _RESERVATION_LOCKS[loop] = lock
-    return lock
+    locks = _RESERVATION_LOCKS.setdefault(loop, {})
+    return locks.setdefault(str(post_id), asyncio.Lock())
 
 
 @dataclass(frozen=True)
@@ -68,7 +69,7 @@ async def reserve_image_budget(
     db: AsyncSession, reservation: BudgetReservation
 ) -> None:
     """Lock, check and count the images now; commit (ends the transaction)."""
-    async with _reservation_lock():
+    async with _reservation_lock(reservation.post_id):
         locked = await lock_blog_post(db, reservation.post_id)
         metadata = locked.ai_generation_metadata
         current = dict(metadata) if isinstance(metadata, dict) else {}

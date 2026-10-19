@@ -249,7 +249,7 @@ class TestTranslatorKeepsCaseAndTags:
         assert payload[0]["heading"] == "Gemini 4 Argon chegou"
 
     @pytest.mark.asyncio
-    async def test_translation_prompt_is_v6_with_rubric(self) -> None:
+    async def test_translation_prompt_carries_rubric(self) -> None:
         llm = AsyncMock()
         llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
@@ -263,6 +263,8 @@ class TestTranslatorKeepsCaseAndTags:
         assert "Gemini 4 Argon chegou" in prompt
         assert RUBRIC_HEADER in prompt
         assert "<strong>" in prompt
+        # AE-0430: an answer without the TL;DR leaves EN without one (the gate
+        # then blocks on the shape and its repair translates the PT one).
         assert result == {1: {"heading": "H", "body": "B"}}
 
 

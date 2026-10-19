@@ -4,4 +4,10 @@ export const PUBLIC_ROUTE_PATHS = {
   BLOG: "/blog",
   CHAT: "/chat",
   LOGIN: "/login",
+  /**
+   * Session-expired logout handler. Must NOT live under `/api`: nginx proxies
+   * every `/api/*` request to FastAPI, so a Next route there never runs in prod
+   * (AE-0429).
+   */
+  LOGOUT: "/auth/logout",
 } as const;

@@ -28,6 +28,7 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.protocols import ResearchEnrichmentParams
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class CarouselEditorialOrchestrator:
@@ -50,6 +51,9 @@ class CarouselEditorialOrchestrator:
                 llm=roles.fast,
                 image_registry=image_registry,
                 draft_concurrency=roles.draft_concurrency,
+                # AE-0430: turns on the field repair of a blocked content gate
+                # (fast model), traced in Langfuse.
+                gate_repair_tracing=get_langfuse_runnable_config,
             )
         )
         self._engine = CarouselWorkflowEngine(
