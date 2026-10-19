@@ -145,6 +145,12 @@ body to a fresh `blog.v2` document (the slot path refuses non-v2 rows), the gene
 the row author (or the audit actor) so slot writes and the trace share one identity, and the job
 sets `retitle=True` so the draft takes the writer's title.
 
+Standalone-process hardening from the AE-0422 prod run: imports of settings/DB/checkpointer/bootstrap
+are lazy so `--help` needs no settings; `--dry-run` is explicit (still the default); every structlog
+call is key/value (no `%` formatting). A real-subprocess test runs `--help` with settings removed and
+`--dry-run` against a file SQLite DB. Runbook uses
+`docker compose exec backend python -m rag_backend.scripts.rebuild_hidden_posts`.
+
 ### 2026-10-19
 
 Implemented on branch `feat/ae-0426-rebuild-hidden-posts` (rebased onto
@@ -154,6 +160,16 @@ Implemented on branch `feat/ae-0426-rebuild-hidden-posts` (rebased onto
 error isolation, non-zero exit and Langfuse flush. Reviewer fixes: non-DB backend gates green,
 focused tests 48 passed; DB/mutation gates deferred to CI (Docker daemon unavailable locally; worker
 rule forbids local mutation).
+
+### 2026-10-19 (final)
+
+Rebased onto the current base tip `3cdcec038` (the previous tip `7510a2670` carried a stray
+`f90105f3bcf2__driftcheck` migration that broke Strict Diff and six migration-head tests;
+`3cdcec038` drops it). Adapted the integration harness to the latest slot-write wiring
+(`SlotWriteGenerationStore(..., RunOwner(user_id=..., image_cap=...))`, `image_cap` moved out of
+`BlogGenerationDeps`). `7f9b3c5fa`: CI fully green — Test & Coverage 16m57s, Mutation 33m31s,
+Strict Diff pass, backend-gate pass, merge state CLEAN. The next base tip added aiohttp advisories,
+so the branch was rebased onto `e2410af45` (aiohttp 3.14.5) and `pip-audit` is clean locally.
 
 ## Files Touched
 
@@ -178,6 +194,16 @@ rule forbids local mutation).
 - `docs/architecture/blog-post-document-model.md` — operator runbook note.
 
 ## Test Evidence
+
+Final tree (base tips through `e2410af45`; non-DB gates run individually):
+
+```
+GATES_JSON: {"pass":17,"fail":0,"skip":0,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"}]}
+```
+
+DB/mutation gates deferred to CI. CI evidence: `7f9b3c5fa` had every substantive check green
+(Test 16m57s, Mutation 33m31s); `177df5495` failed `backend-gate` only on the new `aiohttp 3.14.3`
+`pip-audit` advisories, fixed by rebasing onto `e2410af45` (aiohttp 3.14.5).
 
 Earlier full run (before the review fixes):
 

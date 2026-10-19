@@ -22,6 +22,12 @@ def test_apply_flag_is_opt_in() -> None:
     assert cli.build_parser().parse_args(["--apply"]).apply is True
 
 
+def test_dry_run_flag_is_accepted_and_excludes_apply() -> None:
+    assert cli.build_parser().parse_args(["--dry-run"]).apply is False
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["--apply", "--dry-run"])
+
+
 def test_only_is_repeatable_and_caps_parse() -> None:
     args = cli.build_parser().parse_args([
         "--only",
@@ -113,13 +119,18 @@ def _patch_run_deps(monkeypatch: pytest.MonkeyPatch, service: object) -> None:
     async def _checkpointer(_settings: object, _stack: object) -> None:
         return None
 
-    monkeypatch.setattr(cli, "get_settings", lambda: settings)
-    monkeypatch.setattr(cli, "init_db", _init_db)
-    monkeypatch.setattr(cli, "close_db", _close_db)
+    from rag_backend.agents import harness
+    from rag_backend.bootstrap import blog_rebuild as bootstrap_rebuild
+    from rag_backend.infrastructure.config import settings as settings_module
+    from rag_backend.infrastructure.database import config as db_config
+
+    monkeypatch.setattr(settings_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(db_config, "init_db", _init_db)
+    monkeypatch.setattr(db_config, "close_db", _close_db)
     monkeypatch.setattr(cli, "_init_langfuse", lambda: None)
     monkeypatch.setattr(cli, "_flush_langfuse", lambda: None)
-    monkeypatch.setattr(cli, "build_checkpointer", _checkpointer)
-    monkeypatch.setattr(cli, "build_rebuild_service", lambda _cp: service)
+    monkeypatch.setattr(harness, "build_checkpointer", _checkpointer)
+    monkeypatch.setattr(bootstrap_rebuild, "build_rebuild_service", lambda _cp: service)
 
 
 async def test_run_returns_nonzero_and_prints_the_summary_on_failure(
@@ -140,8 +151,10 @@ async def test_run_prints_the_summary_when_setup_aborts(
     def _boom(_cp: object) -> object:
         raise RuntimeError("wiring failed")
 
+    from rag_backend.bootstrap import blog_rebuild as bootstrap_rebuild
+
     _patch_run_deps(monkeypatch, _FakeService(RebuildReport()))
-    monkeypatch.setattr(cli, "build_rebuild_service", _boom)
+    monkeypatch.setattr(bootstrap_rebuild, "build_rebuild_service", _boom)
     assert await cli._run(apply=False, selection=RebuildSelection()) == cli.EXIT_FAILED
     assert "summary: selected=0" in capsys.readouterr().out
 
@@ -154,9 +167,14 @@ def test_main_returns_the_run_exit_code(monkeypatch: pytest.MonkeyPatch) -> None
         captured["selection"] = selection
         return cli.EXIT_FAILED
 
+    from rag_backend.infrastructure import logging as logging_module
+    from rag_backend.infrastructure.config import settings as settings_module
+
     monkeypatch.setattr(cli, "_run", _fake_run)
-    monkeypatch.setattr(cli, "setup_logging", lambda **_kwargs: None)
-    monkeypatch.setattr(cli, "get_settings", lambda: SimpleNamespace(debug=False))
+    monkeypatch.setattr(logging_module, "setup_logging", lambda **_kwargs: None)
+    monkeypatch.setattr(
+        settings_module, "get_settings", lambda: SimpleNamespace(debug=False)
+    )
     assert cli.main(["--apply", "--only", "post-a"]) == cli.EXIT_FAILED
     assert captured["apply"] is True
     assert captured["selection"] == RebuildSelection(

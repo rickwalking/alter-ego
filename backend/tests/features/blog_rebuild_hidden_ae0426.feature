@@ -83,3 +83,14 @@ Feature: Rebuild hidden bad posts as drafts (AE-0426)
     Given one target row whose generation fails
     When the script completes
     Then any failed row makes the process exit non-zero
+
+  Scenario: The script starts as a standalone process
+    Given the module is started with --help in a fresh process
+    Then it exits 0 without loading the full settings
+    And --apply and --dry-run are documented
+
+  Scenario: A standalone dry run reads the database
+    Given a database with one marker-selected legacy row
+    When the module runs with --dry-run in a subprocess
+    Then it exits 0
+    And the summary reports one selected row and no failure

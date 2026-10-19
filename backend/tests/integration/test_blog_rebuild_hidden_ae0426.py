@@ -37,7 +37,10 @@ from rag_backend.application.services.blog.blog_rebuild import (
     RebuildSelection,
 )
 from rag_backend.bootstrap.blog_generation import resolve_persona
-from rag_backend.bootstrap.blog_generation_store import SlotWriteGenerationStore
+from rag_backend.bootstrap.blog_generation_store import (
+    RunOwner,
+    SlotWriteGenerationStore,
+)
 from rag_backend.domain.constants.blog_document import BLOG_SCHEMA_V2
 from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.constants.blog_rebuild import (
@@ -101,9 +104,10 @@ def _build_generation(images_dir: Path, user_id: str) -> BlogGenerationService:
             writer=FakeWriter(draft_article=article(3)),
             gate=BlogQualityGate(QualityGateDeps(FakeWriter(), FakeScorer([80.0]))),
             images=image_batch(images_dir, FakeImageGenerator()),
-            store=SlotWriteGenerationStore(get_session_maker(), user_id),
+            store=SlotWriteGenerationStore(
+                get_session_maker(), RunOwner(user_id=user_id, image_cap=30)
+            ),
             timings=GenerationTimings(timeout_seconds=10, heartbeat_seconds=5),
-            image_cap=30,
         )
     )
 

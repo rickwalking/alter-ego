@@ -520,9 +520,9 @@ mounted `carousel_output_dir/blog-images` volume (running it from a bare checkou
 outside that store):
 
 ```
-docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
-  python -m rag_backend.scripts.rebuild_hidden_posts            # dry-run (default)
-docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+docker compose exec backend \
+  python -m rag_backend.scripts.rebuild_hidden_posts --dry-run
+docker compose exec backend \
   python -m rag_backend.scripts.rebuild_hidden_posts --apply --only <post-id>
 ```
 

@@ -23,23 +23,17 @@ import asyncio
 import sys
 from collections.abc import Sequence
 from contextlib import AsyncExitStack
+from typing import TYPE_CHECKING
 
 import structlog
 
-from rag_backend.agents.harness import build_checkpointer
-from rag_backend.application.services.blog.blog_rebuild import (
-    RebuildReport,
-    RebuildSelection,
-)
-from rag_backend.bootstrap.blog_rebuild import build_rebuild_service
 from rag_backend.domain.constants.blog_rebuild import LOG_REBUILD_ABORTED
-from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.database.config import close_db, init_db
-from rag_backend.infrastructure.langfuse_client import (
-    get_langfuse_client,
-    init_langfuse,
-)
-from rag_backend.infrastructure.logging import setup_logging
+
+if TYPE_CHECKING:
+    from rag_backend.application.services.blog.blog_rebuild import (
+        RebuildReport,
+        RebuildSelection,
+    )
 
 logger = structlog.get_logger(__name__)
 
@@ -62,10 +56,16 @@ def _positive_int(value: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     """CLI flags; the default is ``--dry-run`` (a preview of the targets)."""
     parser = argparse.ArgumentParser(prog="rebuild_hidden_posts", description=__doc__)
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--apply",
         action="store_true",
         help="write changes (default is dry-run)",
+    )
+    mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="preview only (the default)",
     )
     parser.add_argument(
         "--only",
@@ -98,6 +98,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def selection_from_args(args: argparse.Namespace) -> RebuildSelection:
     """Translate the parsed CLI flags into the application selection guard."""
+    from rag_backend.application.services.blog.blog_rebuild import RebuildSelection
+
     return RebuildSelection(
         only=frozenset(args.only),
         limit=args.limit,
@@ -135,6 +137,9 @@ def exit_code(report: RebuildReport) -> int:
 
 
 def _init_langfuse() -> None:
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.infrastructure.langfuse_client import init_langfuse
+
     settings = get_settings()
     init_langfuse(
         settings.langfuse_public_key,
@@ -146,6 +151,8 @@ def _init_langfuse() -> None:
 
 
 def _flush_langfuse() -> None:
+    from rag_backend.infrastructure.langfuse_client import get_langfuse_client
+
     try:
         client = get_langfuse_client()
         if client is not None:
@@ -155,6 +162,12 @@ def _flush_langfuse() -> None:
 
 
 async def _run(*, apply: bool, selection: RebuildSelection) -> int:
+    from rag_backend.agents.harness import build_checkpointer
+    from rag_backend.application.services.blog.blog_rebuild import RebuildReport
+    from rag_backend.bootstrap.blog_rebuild import build_rebuild_service
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.infrastructure.database.config import close_db, init_db
+
     report = RebuildReport()
     aborted = False
     try:
@@ -185,6 +198,9 @@ async def _run(*, apply: bool, selection: RebuildSelection) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse flags, run the rebuild, return the process exit code."""
     args = build_parser().parse_args(argv)
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.infrastructure.logging import setup_logging
+
     setup_logging(debug=get_settings().debug)
     return asyncio.run(_run(apply=args.apply, selection=selection_from_args(args)))
 
