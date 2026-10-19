@@ -1,16 +1,16 @@
 # AE-0424 — Section editor, per-section/cover images, versions on save, publish button (C)
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: P1
 Type: Feature
 Area: Cross-cutting
-Owner: Unassigned
+Owner: Claude (worker)
 Agent Lane: architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0424-section-editor
 Kanban Card: TBD
 Created: 2026-10-18
-Updated: 2026-10-18
+Updated: 2026-10-19
 
 ## Goal
 
@@ -70,44 +70,44 @@ PT and EN (the document stores `translations.en` but nothing exposes it). Design
 
 ## Acceptance Criteria
 
-- [ ] AC1: The editor shows one card per section; editing a heading/body and saving persists it, and
+- [x] AC1: The editor shows one card per section; editing a heading/body and saving persists it, and
       the other sections are preserved.
-- [ ] AC2: Adding, deleting and reordering sections updates the stored `content.sections`; a
+- [x] AC2: Adding, deleting and reordering sections updates the stored `content.sections`; a
       reordered section keeps its own image and stable id.
-- [ ] AC3: A section image can be generated, regenerated with an edited prompt, and removed; a
+- [x] AC3: A section image can be generated, regenerated with an edited prompt, and removed; a
       generated image has a non-empty `alt` (defaulting to the heading) and an optional caption. The
       provider result is **downloaded and persisted** to the blog-images store; only the canonical
       CDN/same-origin URL is stored (a provider URL is never persisted; a persistence failure leaves
       `image = null` and returns the error).
-- [ ] AC4: The cover can be generated/regenerated/removed; the same persistence rule applies; on
+- [x] AC4: The cover can be generated/regenerated/removed; the same persistence rule applies; on
       save `featured_image_url` equals `cover.url` (or `NULL` when the cover is removed).
-- [ ] AC5: "Rewrite this section in my voice" replaces only that section's `body_md`
+- [x] AC5: "Rewrite this section in my voice" replaces only that section's `body_md`
       (`PersonaAgent.enforce`); the voice score is shown from `content.quality`.
-- [ ] AC6: Saving appends a `version_history` entry; the sidebar lists it and restore works (F-13).
-- [ ] AC7: Leaving the editor with unsaved changes prompts/guards (F-12).
-- [ ] AC8: `ai-suggest` never returns a fenced ```json envelope as `suggested_text`; a nested
+- [x] AC6: Saving appends a `version_history` entry; the sidebar lists it and restore works (F-13).
+- [x] AC7: Leaving the editor with unsaved changes prompts/guards (F-12).
+- [x] AC8: `ai-suggest` never returns a fenced ```json envelope as `suggested_text`; a nested
       envelope is unwrapped (F-10).
-- [ ] AC9: Publish/Unpublish works **through the existing status guards**: Publish is enabled only
+- [x] AC9: Publish/Unpublish works **through the existing status guards**: Publish is enabled only
       for `approved` (a draft cannot jump to `published`; a 400/status-guard error is shown, not
       swallowed); Publish validates at least one non-empty section (empty → 422, stays `approved`);
       unpublish returns to `draft` (public 404). "Publish now" on a draft auto-submits + self-approves
       when `BLOG_ALLOW_SELF_REVIEW` is enabled; when disabled it is hidden and the editor links to
       the review flow.
-- [ ] AC10: `blog_post_editorial.feature` is reconciled in place (no dead rich-editor promises).
-- [ ] AC11: PT/EN buttons switch the whole edited document; editing EN never mutates PT and vice
+- [x] AC10: `blog_post_editorial.feature` is reconciled in place (no dead rich-editor promises).
+- [x] AC11: PT/EN buttons switch the whole edited document; editing EN never mutates PT and vice
       versa; saving persists only the active language.
-- [ ] AC12: An absent EN translation is read-only with a "Generate EN translation" action; after
+- [x] AC12: An absent EN translation is read-only with a "Generate EN translation" action; after
       generation the EN tab is editable.
-- [ ] AC13: Submit review → Approve/Reject and Schedule call the existing workflow routes and reflect
+- [x] AC13: Submit review → Approve/Reject and Schedule call the existing workflow routes and reflect
       the resulting status; a past schedule timestamp is rejected; `If-Match` guards **every**
       content-mutating call (save, image generate/patch/delete, rewrite, restore); an edit while
       `under_review`/`approved`/scheduled resets to `draft` and clears `scheduled_publish_at`; a
       cancel-schedule action (`DELETE …/schedule`) leaves the post `approved`; with
       `BLOG_ALLOW_SELF_REVIEW` (default **false**) a "Publish now" on a draft auto-submits +
       self-approves, and with it disabled the explicit steps are required.
-- [ ] AC14: The editor's own copy (buttons, labels, errors) stays localized via next-intl; content
+- [x] AC14: The editor's own copy (buttons, labels, errors) stays localized via next-intl; content
       language (PT/EN) is independent of the UI locale.
-- [ ] AC15: If a content write fails because the row is still non-v2 (`InvalidBlogDocumentError`),
+- [x] AC15: If a content write fails because the row is still non-v2 (`InvalidBlogDocumentError`),
       the editor shows a blocking "migration pending" banner with the API error and does not attempt
       a client-side v1 parse or persist. The banner clears after the cutover is verified and the post
       is reloaded.
@@ -188,9 +188,29 @@ PT and EN (the document stores `translations.en` but nothing exposes it). Design
 
 Ticket created from the AE-0422 plan (ADR-0025, wave C).
 
+### 2026-10-19
+
+Implemented backend + frontend (worker, branch `feat/ae-0424-section-editor`, stacked on
+`feat/ae-0423-blog-document-model`). Gate evidence in Test Evidence below.
+
 ## Files Touched
 
-Pending.
+- Backend: `api/routes/blog_post_images.py`, `blog_post_sections.py`, `blog_post_schedule.py`
+  (new); `blog_post.py`, `blog_post_versions.py`, `blog_post_workflow.py`, `blog_post_ai.py`;
+  `api/dependencies/blog_content_write.py`, `blog_slot_write.py`, `blog_editor.py` (new);
+  `api/schemas/blog_post.py`, `blog_post_editor.py` (new);
+  `application/services/blog/{ai_envelope,blog_document_edits,blog_image_service,blog_review_reset,blog_translation_service,blog_version_history}.py`
+  (new); `optimistic_lock_service.py`, `blog_post_ai_service.py`;
+  `agents/blog_editor_prompts.py` + `agents/prompts/blog/v1/{image_prompt,translate_section}.yaml`;
+  `domain/constants/blog_editor.py`; settings `blog_allow_self_review` + `.env.example`.
+- Frontend: `modules/publishing/blog/components/section-editor/*` (new),
+  `hooks/use-blog-post-editor.ts` (rewritten), `use-blog-editor-actions.ts`,
+  `use-blog-review-actions.ts`, `use-blog-editor-data.ts`, `use-unsaved-changes-guard.ts`
+  (new), `blog-editor-requests.ts`, `lib/editor-document.ts`, `editor-content.ts`,
+  `version-history-sidebar.tsx`, `app/dashboard/blog-posts/[id]/edit/*`,
+  `constants/blog-editor.ts`, i18n `dashboard.blogPosts.editor.*` (en + pt).
+- Specs reconciled: `blog_post_editorial.feature`, `blog-dashboard-ae0411.feature`,
+  `blog-posts-management.feature`.
 
 ## Test Evidence
 
@@ -211,6 +231,32 @@ Pending.
   is the same content-language switch (AE-0423 renders it).
 - **Version snapshot in the save transaction.** Appending in `apply_versioned_update` removes the
   chicken-and-egg where restore is the only writer of history.
+- **(impl) Mutation routes return the full post.** Image/rewrite/translation/restore answer with
+  `BlogPostResponse` (new `lock_version` + status in one reply) instead of `{image}`/`{section}`.
+- **(impl) Added routes:** `PATCH …/cover/image`, `POST …/translations/en` (the EN action; the
+  AE-0425 writer may replace its internals later), public `GET /blog-images/{post}/{uuid}.jpg`
+  (no route served the blog-images store, so a stored path was not a usable URL) and
+  `GET /blog-editor/settings` (`allow_self_review` for the editor).
+- **(impl) Workflow If-Match:** publish/schedule/cancel check `If-Match` when sent (the editor
+  always sends it); they do not bump `lock_version` (status-only writes).
+- **(impl) Approval reset:** a `content`/`title`/`excerpt` change on `under_review`/`approved`
+  resets to `draft`, clears schedule + review stamps and emits the status event; a published
+  post stays published on edit (state diagram).
+- **(impl) Persona for "rewrite in my voice":** requested → the post's carousel persona → the
+  first persona (single author); none → 422. Output gets the display hardening.
+- **(impl) Translation input is not `sanitize_llm_input`-ed** (it strips markdown link
+  parentheses); the owner's text is delimited as data in the versioned template.
+- **(impl) Editor UX:** alt/caption/remove are draft edits saved with PUT (client + server reject
+  a blank alt); generate/regenerate/rewrite/translate save pending edits first, then merge only
+  their slot. Workflow buttons are disabled while there are unsaved edits. Save stays in the
+  editor (so the new version shows); this reconciles the AE-0296/AE-0411 "returns to the
+  listing" lines. Reviewer is an ID input (existing review-assignment pattern). The unsaved
+  guard covers tab close, in-app links and the Back button (not the browser back button).
+- **(impl) Bugs found and fixed:** `BlogPostResponse.version_history` was `list[str]` (any
+  response after a snapshot would 500) and `editor_comments` likewise; reject appended in place
+  to a JSON list, so the reason was never persisted.
+- **(impl) `BLOG_ALLOW_SELF_REVIEW`** is a Settings field + `.env.example` only; enabling it in
+  prod (deploy/compose) is the owner's decision.
 - **Image routes are owned by C.** C adds the editor endpoints; D reuses the same service/routes
   for bulk generation and adds no new routes. One route set.
 

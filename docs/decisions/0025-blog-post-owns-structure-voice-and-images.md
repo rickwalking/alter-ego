@@ -442,6 +442,17 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 | `DELETE /blog-posts/{id}/schedule` | — + `If-Match` | `200` | cancels the schedule; post stays `approved` |
 | `POST /blog-posts/{id}/ai-suggest` | `{text, suggestion_type, context?}` | `200` | response `suggested_text` is plain text, never a fenced JSON envelope |
 | `GET /blog-posts/{id}/versions` / `POST …/restore-version/{n}` | — + `If-Match` on restore | `200` | now populated on save; restore is a content mutation |
+| `PATCH /blog-posts/{id}/cover/image` | `{alt?, caption?}` + `If-Match` | `200` | added by AE-0424 (cover alt/caption, same rules as the section PATCH) |
+| `POST /blog-posts/{id}/translations/en` | — + `If-Match` | `200` | added by AE-0424: "Generate EN translation" (PT → EN per section, images kept); 409 if EN exists, 502 on failure |
+| `GET /blog-images/{post_id}/{uuid}.jpg` | — (public) | `200` image | added by AE-0424: serves the blog-images store; the canonical same-origin URL when the CDN is off |
+| `GET /blog-editor/settings` | — | `200` `{allow_self_review}` | added by AE-0424: lets the editor pick "Publish now" vs the explicit review steps |
+
+**AE-0424 implementation notes.** Every content-mutating route above answers with the full
+`BlogPostResponse` (not just `{image}`/`{section}`), so the editor gets the new `lock_version`
+and status in the same reply. Image, rewrite and translation routes take `?language=pt|en`.
+On publish / schedule / cancel-schedule `If-Match` is checked when sent (the editor always
+sends it) and the lock version is not bumped (a status-only write). The `/generate-image`
+route (AE-0423) is unchanged and is no longer used by the editor; AE-0428 removes it.
 
 Public read (`GET /api/public/blog-posts/{id}`, ADR-0013) keeps its lean allow-list, but `content`
 is **projected**, not serialized as-is. The public allow-list is:
