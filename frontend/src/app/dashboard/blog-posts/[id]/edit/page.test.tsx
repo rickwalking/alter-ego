@@ -21,6 +21,7 @@ const editorState = vi.fn<() => UseBlogPostEditorResult>();
 const confirmLeave = vi.fn(() => true);
 const slotsPending = vi.fn(() => false);
 let capturedApply: ((text: string) => void) | null = null;
+let capturedUnsaved: boolean | null = null;
 vi.mock("@/modules/publishing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/publishing")>()),
   useBlogPostEditor: () => editorState(),
@@ -41,7 +42,10 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
   useBlogReviewActions: () => ({ allowSelfReview: false, pending: false }),
   useUnsavedChangesGuard: () => ({ confirmLeave }),
   // AE-0425: the generation banner has its own tests (blog-generation-status).
-  BlogGenerationStatus: () => null,
+  BlogGenerationStatus: (props: { unsavedChanges?: boolean }) => {
+    capturedUnsaved = props.unsavedChanges ?? null;
+    return null;
+  },
   AiSuggestionPanel: ({
     onApplySuggestion,
   }: {
@@ -273,5 +277,15 @@ describe("BlogPostEditPage (AE-0424)", () => {
     expect(
       screen.getByRole("button", { name: "Save changes" }),
     ).not.toBeDisabled();
+  });
+
+  // AE-0425 follow-up: the banner's Retry knows about unsaved edits.
+  it("tells the generation banner when the draft has unsaved edits", () => {
+    editorState.mockReturnValue(state({ dirty: true }));
+    const { rerender } = render(<BlogPostEditPage />);
+    expect(capturedUnsaved).toBe(true);
+    editorState.mockReturnValue(state({ dirty: false }));
+    rerender(<BlogPostEditPage />);
+    expect(capturedUnsaved).toBe(false);
   });
 });

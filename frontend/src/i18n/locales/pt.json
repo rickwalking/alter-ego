@@ -1315,7 +1315,8 @@
         "carouselPrivate": "Este post vem de um carrossel privado: depois de publicado, ele dá 404 no site. Torne o carrossel público ou mantenha o post como rascunho.",
         "interrupted": "A geração foi interrompida por um reinício. Seu rascunho e as seções prontas foram mantidos.",
         "carouselVisibilityLink": "Abrir a visibilidade do carrossel",
-        "retryImages": "Gerar as imagens que faltam"
+        "retryImages": "Gerar as imagens que faltam",
+        "saveBeforeRetry": "Salve (ou descarte) suas alterações antes de tentar de novo: a geração substitui o que o editor mostra."
       }
     },
     "analytics": {

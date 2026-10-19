@@ -21,13 +21,21 @@ export type UseCreateBlogFromCarouselResult = {
 
 export type BlogGenerationStatusProps = {
   postId: string;
+  /** The editor holds unsaved edits: a retry would replace them, so it is
+   * disabled until the owner saves (or discards) them. */
+  unsavedChanges?: boolean;
 };
 
 export type BlogGenerationNoticeProps = {
   state: GenerationState;
   retrying: boolean;
   retryFailed: boolean;
+  unsavedChanges: boolean;
   onRetry: () => void;
+};
+
+export type RetryControlProps = Omit<BlogGenerationNoticeProps, "state"> & {
+  label: string;
 };
 
 export type CarouselPrivateWarningProps = {

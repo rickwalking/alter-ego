@@ -78,7 +78,9 @@ export function BlogPostEditorView({
           </NeonButton>
         </div>
       </div>
-      {post && <BlogGenerationStatus postId={post.id} />}
+      {post && (
+        <BlogGenerationStatus postId={post.id} unsavedChanges={editor.dirty} />
+      )}
       {migrationPending && <MigrationBanner detail={error?.detail ?? null} />}
       {error && !migrationPending && (
         <p className="mb-4 text-sm" style={{ color: NEON_RED }} role="alert">

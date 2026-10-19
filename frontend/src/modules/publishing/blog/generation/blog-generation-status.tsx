@@ -24,6 +24,7 @@ import {
   GENERATION_WARNING_CAROUSEL_PRIVATE,
 } from "./generation-constants";
 import type {
+  RetryControlProps,
   BlogGenerationNoticeProps,
   BlogGenerationStatusProps,
   CarouselPrivateWarningProps,
@@ -33,11 +34,38 @@ import { useBlogGeneration } from "./use-blog-generation";
 const BANNER_CLASS = "mb-4 rounded-md border px-4 py-3 text-sm";
 const NAMESPACE = "dashboard.blogPosts.generation";
 
-function FailedNotice({
-  state,
+/** Retry button; disabled with a "save first" hint while the editor holds
+ * unsaved edits (the run would replace them in the editor). */
+function RetryControl({
+  label,
   retrying,
   retryFailed,
+  unsavedChanges,
   onRetry,
+}: RetryControlProps): React.ReactElement {
+  const t = useTranslations(NAMESPACE);
+  return (
+    <>
+      <NeonButton
+        size="sm"
+        disabled={retrying || unsavedChanges}
+        onClick={onRetry}
+      >
+        {retrying ? t("retrying") : label}
+      </NeonButton>
+      {unsavedChanges ? (
+        <p className="mt-2" data-testid="retry-save-first">
+          {t("saveBeforeRetry")}
+        </p>
+      ) : null}
+      {retryFailed ? <p className="mt-2">{t("retryFailed")}</p> : null}
+    </>
+  );
+}
+
+function FailedNotice({
+  state,
+  ...retry
 }: BlogGenerationNoticeProps): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   const interrupted = state.errors.some(
@@ -47,11 +75,8 @@ function FailedNotice({
     <div role="alert" className={BANNER_CLASS} style={{ color: NEON_RED }}>
       <p className="mb-2">{interrupted ? t("interrupted") : t("failed")}</p>
       {state.recoverable ? (
-        <NeonButton size="sm" disabled={retrying} onClick={onRetry}>
-          {retrying ? t("retrying") : t("retry")}
-        </NeonButton>
+        <RetryControl {...retry} label={t("retry")} />
       ) : null}
-      {retryFailed ? <p className="mt-2">{t("retryFailed")}</p> : null}
     </div>
   );
 }
@@ -78,10 +103,13 @@ function RunNotice(
         <p className="mb-2">
           {t("partial", { count: state.imageCount, slots: state.imageSlots })}
         </p>
-        <NeonButton size="sm" disabled={props.retrying} onClick={props.onRetry}>
-          {props.retrying ? t("retrying") : t("retryImages")}
-        </NeonButton>
-        {props.retryFailed ? <p className="mt-2">{t("retryFailed")}</p> : null}
+        <RetryControl
+          retrying={props.retrying}
+          retryFailed={props.retryFailed}
+          unsavedChanges={props.unsavedChanges}
+          onRetry={props.onRetry}
+          label={t("retryImages")}
+        />
       </div>
     );
   }
@@ -117,6 +145,7 @@ function CarouselPrivateWarning({
 
 export function BlogGenerationStatus({
   postId,
+  unsavedChanges = false,
 }: BlogGenerationStatusProps): React.ReactElement | null {
   const { state, projectId, retrying, retryFailed, retry } =
     useBlogGeneration(postId);
@@ -133,6 +162,7 @@ export function BlogGenerationStatus({
         state={state}
         retrying={retrying}
         retryFailed={retryFailed}
+        unsavedChanges={unsavedChanges}
         onRetry={() => void retry()}
       />
     </>

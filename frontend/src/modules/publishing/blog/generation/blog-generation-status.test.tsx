@@ -39,13 +39,13 @@ function post(
   } as unknown as BlogPost;
 }
 
-function renderStatus(): ReactElement {
+function renderStatus(unsavedChanges = false): ReactElement {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const element = (
     <QueryClientProvider client={client}>
-      <BlogGenerationStatus postId="post-1" />
+      <BlogGenerationStatus postId="post-1" unsavedChanges={unsavedChanges} />
     </QueryClientProvider>
   );
   render(element);
@@ -207,5 +207,37 @@ describe("BlogGenerationStatus (AE-0425)", () => {
     expect(generationPollInterval(post({ status: "in_progress" }))).toBe(5000);
     expect(generationPollInterval(post({ status: "complete" }))).toBe(false);
     expect(generationPollInterval(undefined)).toBe(false);
+  });
+
+  // Re-review follow-up: a retry would replace unsaved editor edits.
+  it.each([
+    ["failed", "Retry generation"],
+    ["partial", "Generate the missing images"],
+  ])(
+    "disables the %s retry while the editor has unsaved edits",
+    async (status, label) => {
+      mockFetch.mockResolvedValue(
+        jsonResponse(post({ status, recoverable: true, image_slots: 2 })),
+      );
+      renderStatus(true);
+      const button = await screen.findByRole("button", { name: label });
+      expect(button).toBeDisabled();
+      expect(screen.getByTestId("retry-save-first")).toHaveTextContent(
+        "Save (or discard) your unsaved changes before retrying",
+      );
+      fireEvent.click(button);
+      expect(mockFetch).toHaveBeenCalledTimes(1); // only the GET, no retry
+    },
+  );
+
+  it("enables the retry again once the edits are saved", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(post({ status: "failed", recoverable: true })),
+    );
+    renderStatus(false);
+    expect(
+      await screen.findByRole("button", { name: "Retry generation" }),
+    ).not.toBeDisabled();
+    expect(screen.queryByTestId("retry-save-first")).not.toBeInTheDocument();
   });
 });
