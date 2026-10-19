@@ -37,6 +37,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import cast
+from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +49,7 @@ from rag_backend.application.services.content_calendar_service import (
 from rag_backend.application.services.editorial_analytics_service import (
     EditorialAnalyticsService,
 )
-from rag_backend.domain.constants.blog_post import BlogPostOrigin
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_BRIEF,
     PHASE_FINAL_REVIEW,
@@ -178,6 +179,19 @@ class PublishingReadAcl:
             language=language,
             available_languages=project.get_available_languages(),
         )
+
+    # --- PublishingReadPort: public-visibility gate (AE-0422) ------------------
+    async def is_carousel_blog_published(self, project_id: UUID) -> bool:
+        """Whether the carousel's ``origin='carousel'`` row is published (AE-0422).
+
+        Public (anonymous) callers of the legacy carousel-blog read must 404
+        unless the row is ``published``; authenticated preview bypasses this gate
+        in the route. ``False`` when the carousel has no blog row.
+        """
+        row = await self._carousel_blog_row(str(project_id))
+        if row is None:
+            return False
+        return row.status == BlogPostStatus.PUBLISHED.value
 
     # --- PublishingReadPort: content-calendar projection ----------------------
     async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:

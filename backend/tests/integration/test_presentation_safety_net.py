@@ -48,6 +48,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.models import (
     CarouselProject,
     CarouselSlide,
@@ -183,7 +184,19 @@ class PresEnv:
             headers=auth_headers_for(user),
         )
 
-    async def seed_project(self, *, is_public: bool) -> str:
+    def anonymous_client(self) -> AsyncClient:
+        """A cookie-less client (the public visitor's request, AE-0422)."""
+        return AsyncClient(
+            transport=ASGITransport(app=self._app),
+            base_url="http://test",
+        )
+
+    async def seed_project(
+        self,
+        *,
+        is_public: bool,
+        blog_status: BlogPostStatus = BlogPostStatus.PUBLISHED,
+    ) -> str:
         """Persist a completed, rendered carousel owned by ``self.owner``."""
         from rag_backend.infrastructure.database.carousel_repository import (
             PostgresCarouselRepository,
@@ -223,30 +236,24 @@ class PresEnv:
             # AE-0422: a carousel save no longer creates/auto-publishes a blog row,
             # so seed the canonical ``origin='carousel'`` row explicitly to keep
             # exercising the row read path.
-            from rag_backend.domain.constants.blog_post import (
-                BlogPostOrigin,
-                BlogPostStatus,
-            )
             from rag_backend.infrastructure.database.models import BlogPostModel
 
             session.add(
-                BlogPostModel.from_entity(
-                    {
-                        "id": str(uuid4()),
-                        "project_id": project_id,
-                        "origin": BlogPostOrigin.CAROUSEL.value,
-                        "title": project.topic,
-                        "slug": f"carousel-{project_id}",
-                        "status": BlogPostStatus.PUBLISHED.value,
-                        "content": {
-                            "markdown": FIXTURE_BLOG_PT,
-                            "translations": {
-                                "pt": FIXTURE_BLOG_PT,
-                                "en": FIXTURE_BLOG_EN,
-                            },
+                BlogPostModel.from_entity({
+                    "id": str(uuid4()),
+                    "project_id": project_id,
+                    "origin": BlogPostOrigin.CAROUSEL.value,
+                    "title": project.topic,
+                    "slug": f"carousel-{project_id}",
+                    "status": blog_status.value,
+                    "content": {
+                        "markdown": FIXTURE_BLOG_PT,
+                        "translations": {
+                            "pt": FIXTURE_BLOG_PT,
+                            "en": FIXTURE_BLOG_EN,
                         },
-                    }
-                )
+                    },
+                })
             )
             await session.commit()
         return project_id
@@ -353,6 +360,47 @@ class TestBlogResponse:
         body = resp.json()
         assert body["language"] == "en"
         assert body["available_languages"] == ["pt", "en"]
+
+    @pytest.mark.asyncio
+    async def test_hidden_blog_404_for_anonymous(self, pres_env: PresEnv) -> None:
+        """Scenario: an anonymous visitor cannot read a hidden carousel post.
+
+        AE-0422: the legacy ``/blog/<carousel project id>`` URL stayed reachable
+        after the post was hidden; anonymous callers must now get a uniform 404,
+        for both the default and the localized read.
+        """
+        project_id = await pres_env.seed_project(
+            is_public=True, blog_status=BlogPostStatus.DRAFT
+        )
+        async with pres_env.anonymous_client() as client:
+            default = await client.get(f"/api/carousels/{project_id}/blog")
+            localized = await client.get(f"/api/carousels/{project_id}/blog/en")
+        assert default.status_code == 404
+        assert localized.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_published_blog_200_for_anonymous(self, pres_env: PresEnv) -> None:
+        """Scenario: an anonymous visitor reads a published carousel post."""
+        project_id = await pres_env.seed_project(
+            is_public=True, blog_status=BlogPostStatus.PUBLISHED
+        )
+        async with pres_env.anonymous_client() as client:
+            resp = await client.get(f"/api/carousels/{project_id}/blog")
+        assert resp.status_code == 200
+        assert resp.json()["markdown"] == FIXTURE_BLOG_PT
+
+    @pytest.mark.asyncio
+    async def test_hidden_blog_still_previews_for_owner(
+        self, pres_env: PresEnv
+    ) -> None:
+        """Scenario: an authenticated editor still previews a hidden carousel post."""
+        project_id = await pres_env.seed_project(
+            is_public=True, blog_status=BlogPostStatus.DRAFT
+        )
+        async with pres_env.client_for(pres_env.owner) as client:
+            resp = await client.get(f"/api/carousels/{project_id}/blog")
+        assert resp.status_code == 200
+        assert resp.json()["markdown"] == FIXTURE_BLOG_PT
 
 
 class TestSlidesResponse:
