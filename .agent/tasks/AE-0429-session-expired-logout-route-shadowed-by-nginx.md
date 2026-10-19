@@ -213,7 +213,18 @@ regenerated.
 
 ## Test Evidence
 
-Pending the full gate run.
+Commit `9d9c44ac8`. Full frontend gate set reproduced locally via
+`bash scripts/ci/gate-capture.sh frontend:<gate>`; mutation deferred to CI per the worker
+memory policy.
+
+- Targeted: `npx vitest run src/app/auth/logout/route.test.ts src/lib/api-client.test.ts
+  src/constants/middleware.test.ts` → 3 files / 64 tests passed.
+- Full suite: 182 files / 1538 tests passed.
+- Build route list contains `ƒ /auth/logout` and no `ƒ /api/auth/logout`.
+
+GATES_JSON: {"pass":16,"fail":0,"skip":1,"results":[{"gate":"frontend:lint","status":"PASS"},{"gate":"frontend:lint-changed","status":"PASS"},{"gate":"frontend:component-types","status":"PASS"},{"gate":"frontend:duplication","status":"PASS"},{"gate":"frontend:dead-code","status":"PASS"},{"gate":"frontend:typecheck","status":"PASS"},{"gate":"frontend:build","status":"PASS"},{"gate":"frontend:legacy-guard","status":"PASS"},{"gate":"frontend:legacy-inventory","status":"PASS"},{"gate":"frontend:format","status":"PASS"},{"gate":"frontend:security","status":"PASS"},{"gate":"frontend:integrity","status":"PASS"},{"gate":"frontend:test","status":"PASS"},{"gate":"frontend:schema-drift","status":"PASS"},{"gate":"frontend:duplication-tests","status":"PASS"},{"gate":"frontend:dead-files","status":"PASS"},{"gate":"frontend:mutation","status":"SKIP"}]}
+
+See `.agent/reports/AE-0429.dev-summary.md`.
 
 ## QA Report
 
