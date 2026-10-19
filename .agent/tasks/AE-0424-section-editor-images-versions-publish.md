@@ -214,13 +214,22 @@ Implemented backend + frontend (worker, branch `feat/ae-0424-section-editor`, st
 
 ## Test Evidence
 
-Full local runs via `bash scripts/ci/gate-capture.sh <scope>` (`GATES_BASE_REF=origin/main`,
-backend with a throwaway Postgres `DATABASE_URL`), 2026-10-19:
+**Review round 1 (2026-10-19), head `e7908227e` rebased onto the latest AE-0423 branch.**
 
-- backend — 22/22 PASS (incl. test, diff-cover, migrations, schema-drift, mutation):
-  `GATES_JSON: {"pass":22,"fail":0,"skip":0,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"PASS"}]}`
-- frontend — 17/17 PASS:
-  `GATES_JSON: {"pass":17,"fail":0,"skip":0,"results":[{"gate":"frontend:lint","status":"PASS"},{"gate":"frontend:lint-changed","status":"PASS"},{"gate":"frontend:component-types","status":"PASS"},{"gate":"frontend:duplication","status":"PASS"},{"gate":"frontend:dead-code","status":"PASS"},{"gate":"frontend:typecheck","status":"PASS"},{"gate":"frontend:build","status":"PASS"},{"gate":"frontend:legacy-guard","status":"PASS"},{"gate":"frontend:legacy-inventory","status":"PASS"},{"gate":"frontend:format","status":"PASS"},{"gate":"frontend:security","status":"PASS"},{"gate":"frontend:integrity","status":"PASS"},{"gate":"frontend:test","status":"PASS"},{"gate":"frontend:schema-drift","status":"PASS"},{"gate":"frontend:duplication-tests","status":"PASS"},{"gate":"frontend:dead-files","status":"PASS"},{"gate":"frontend:mutation","status":"PASS"}]}`
+- CI on PR #147: **34/34 checks pass**, including `backend / Test & Coverage`,
+  `backend / Mutation (blocking ≥75%)`, `frontend / Test`, Build, Lint, Type Check,
+  Integrity, Strict Diff, Architecture, Migrations, Schema drift.
+- Local (orchestrator rule 2026-10-19: no local mutation, targeted tests only):
+  - backend static gates via `gate-capture.sh backend` — format, lint, lint-diff,
+    blanket-ignore, strict-diff, type, imports, arch-ratchet, docstrings, dead-code,
+    inline-prompts, redis-factory, autopilot-env, healthcheck-loopback, bandit, pip-audit,
+    integrity: 17/17 PASS. The run was stopped before test/mutation (OOM rule); CI ran those.
+  - backend targeted pytest (blog editor, review flow, AE-0423 sections, ai service, scheduled
+    publish, publishing/presentation safety nets, route snapshot): 280 passed; ruff + mypy clean.
+  - frontend: typecheck, eslint, component-types, dead-code, prettier clean; targeted vitest
+    (publishing, blog-posts dashboard, public blog): 348 passed.
+
+Earlier full local run (before review round 1): backend 22/22 PASS, frontend 17/17 PASS.
 
 PR: https://github.com/rickwalking/alter-ego/pull/147
 
