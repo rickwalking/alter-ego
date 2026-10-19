@@ -1,16 +1,16 @@
 # AE-0423 — Blog document model (blog.v2) + one-shot cutover + public render (B)
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: P1
 Type: Feature
 Area: Cross-cutting
-Owner: Unassigned
+Owner: Claude (worker)
 Agent Lane: architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0423-blog-document-model
 Kanban Card: TBD
 Created: 2026-10-18
-Updated: 2026-10-18
+Updated: 2026-10-19
 
 ## Goal
 
@@ -188,6 +188,19 @@ ADR-0025 and `docs/architecture/blog-post-document-model.md`.
 
 Ticket created from the AE-0422 plan (ADR-0025, wave B).
 
+### 2026-10-19 (worker)
+
+- Backend done: `BlogDocument` model + strict `parse_blog_content`, fence-aware
+  splitter/re-joiner, `BlogDocumentService` (strict writes, cover projection, publish
+  guard, temporary read fail-safe with deterministic ids + `blog_v2_non_migrated_rows`),
+  public projection, cutover runner + `python -m rag_backend.scripts.blog_v1_to_v2`,
+  deploy step in `deploy.yml`, API wiring (create/update/get/publish/public/restore/
+  generate-image).
+- Verified the CLI end to end against a real Postgres 16: dry-run, apply+verify,
+  idempotent re-apply, rollback, verify exit 1, re-apply.
+- Worktree moved to `~/projects/alter-ego-ae0423` after Orca wiped `~/orca/workspaces/`
+  twice mid-run (work restored from the session, then committed/pushed per increment).
+
 ## Files Touched
 
 Pending.
@@ -221,6 +234,49 @@ Pending.
   not a dual-shape renderer branch.
 - **No images in the cutover.** v1 images were never stored (read-time injection), so there is
   nothing to carry.
+
+### Implementation decisions (worker, 2026-10-19)
+
+- **Structural vs write-only rules.** `parse_blog_content` (every read and write) enforces the
+  shape: `schema == "blog.v2"`, non-blank `image.alt`, `https:`/same-origin image URLs, unique
+  section ids (`^sec_[A-Za-z0-9_-]{1,64}$`), 2-letter translation keys, no unknown keys.
+  `BlogDocumentService.validate_for_write` adds the write-only rules: `body_md <=
+  BLOG_SECTION_MAX_CHARS` (20 000), heading `<= 200` chars and not starting with `#` (a `#`
+  inside, e.g. "C# tips", is fine), >= 1 section unless `generation.status == "in_progress"`
+  (also per translation). This keeps an oversized migrated row readable (flagged for AE-0426)
+  while the editor cannot save a new oversized section.
+- **Heading-only chunks are kept.** The plan's pseudo-code skipped every empty-body chunk; that
+  would silently drop a `## Heading` with no body. Only the empty lede (no heading, blank body)
+  is dropped; a headed chunk with an empty body becomes a section with `body_md == ""`.
+- **Body bytes.** A section body is the raw text after its heading line minus the surrounding
+  newlines (`strip("\r\n")`); `--rollback` re-joins `## {heading}\n\n{body_md}` (lede without a
+  heading) with `\n\n` between sections, so section bodies round-trip byte-identically.
+- **Partial rows.** A top-level v2 row whose translations are not all v2 keeps its PT document;
+  only the stray translation values are converted (strings) or dropped (anything else).
+- **`featured_image_url` is never client-writable.** PUT/POST derive it from `content.cover`;
+  a client-sent `featured_image_url` is ignored. The legacy `generate-image` route now writes
+  `content.cover` through the service (422 before any image spend if the row is not v2; 502 if
+  the provider URL is not publishable) so the projection invariant holds on every path.
+- **Create.** An empty `content` becomes a fresh valid document (one empty lede section); any
+  non-empty non-v2 `content` is a 422. **Restore-version** validates the snapshot as a write
+  (a v1 snapshot is a 422).
+- **Publish guard.** `POST /publish` requires a v2 document with >= 1 non-empty section (422
+  `blog_document_not_publishable`); a null cover is allowed. The scheduled-publish sweep is not
+  changed here (AE-0424 owns review/schedule).
+- **Read fail-safe ids are deterministic** (`uuid5(post_id:n)`), so repeated reads of the same
+  non-migrated row are byte-identical (found via the existing "editor gets the anonymous
+  payload byte-identical" test).
+- **Cutover keeps `updated_at`** (a data rewrite is not an edit) and does not bump
+  `lock_version`. Its report lists every cleared `featured_image_url` so a standalone post's old
+  image URL stays recoverable from the deploy log.
+- **422 detail format.** `"<code>"` or `"<code>: <message>"`; AE-0424 keys its "migration
+  pending" banner on the `blog_document_not_v2` / `invalid_blog_document` prefix.
+- **Body sanitization at write is not added here.** `sanitize_display_input` strips `( ) < >`,
+  which would break every markdown link; rendering stays behind the react-markdown allow-list.
+  AE-0424 decides the editor's write-boundary sanitization.
+- **Pre-existing defect found (not fixed here, AE-0424 owns versions):** `restore-version`
+  appends a dict to `version_history` while `BlogPostResponse.version_history` is `list[str]`,
+  so a successful restore 500s on response validation.
 
 
 ## Risk & Size
