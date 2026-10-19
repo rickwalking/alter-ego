@@ -301,6 +301,9 @@ Pending.
   leading prose.
 - **(review) Editor:** typing during an in-flight save is kept; a save that loses the race to
   our own slot write is retried once on the new lock.
+- **(review 2) Prune grace window, cutover stash kept, budget reserved under the lock before
+  the spend, transitions re-read their row `FOR UPDATE`** (submit/approve/reject/publish/
+  unpublish/schedule/cancel), `docs/architecture/openapi.json` regenerated.
 - **Image routes are owned by C.** C adds the editor endpoints; D reuses the same service/routes
   for bulk generation and adds no new routes. One route set.
 
@@ -325,15 +328,24 @@ AE-0425 (PR #146) reuses these; changing them is a cross-ticket change.
   `<carousel_output_dir>/blog-images/<post_id>/<uuid4>.<png|jpg|webp>`; the provider writes
   `<uuid>.part`, `finalize` sniffs the real type and renames. Canonical URL: CDN when
   enabled, else `/api/blog-images/<post_id>/<file>`. `prune(post_id, keep)` +
-  `referenced_filenames(content, version_history)`; `api/dependencies/blog_editor.
-  prune_unreferenced_images(post)` runs after every committed content write.
+  `referenced_filenames(content, version_history, featured_image_url, cutover stash)`;
+  `api/dependencies/blog_editor.prune_unreferenced_images(post)` runs after every committed
+  content write. A file younger than `BLOG_IMAGE_PRUNE_GRACE_SECONDS` (3600) is never
+  pruned — it may be an image of a concurrent request (or an AE-0425 batch) still waiting on
+  the row lock; the AE-0423 cutover rollback stash
+  (`ai_generation_metadata.blog_v2_cutover.featured_image_url`) and the `featured_image_url`
+  column count as references.
 - **Image service** — `BlogImageService(provider, store, render_prompt)` with
   `agents.blog_editor_prompts.image_prompt` (template `agents/prompts/blog/v1/image_prompt.yaml`);
   `generate(BlogImageRequest(post_id, scene, alt)) -> BlogImage` (model `gpt-image-2`).
-- **Image budget** — `application/services/blog/blog_image_budget.py`:
-  `ai_generation_metadata.blog_image_generations` counted per generated image
-  (`count_one_image`), refused at `BLOG_IMAGE_COST_CAP` (setting `blog_image_cost_cap`,
-  default 30).
+- **Image budget** — `api/dependencies/blog_image_budget.reserve_image_budget(db,
+  BudgetReservation(post_id, cap, images=1))`: called in the preflight BEFORE the provider
+  call; locks the row (`FOR UPDATE` + a per-event-loop asyncio lock), refuses with 429 at
+  `BLOG_IMAGE_COST_CAP` (setting `blog_image_cost_cap`, default 30), counts the images in
+  `ai_generation_metadata.blog_image_generations` and commits (ending the read
+  transaction). The reservation is deliberately kept when the spend or the write fails (the
+  provider may have billed it). A batch (AE-0425) reserves per image or `images=n` up front;
+  `apply_slot_edit` must NOT count again (no `metadata_edit=count_one_image`).
 - **Serving** — `GET /api/blog-images/{post_id}/{uuid}.{ext}`: published → public,
   `max-age=3600, must-revalidate`; otherwise author/admin only with `private, no-store`;
   everyone else gets the uniform 404 (ADR-0013). With the CDN enabled, draft images are

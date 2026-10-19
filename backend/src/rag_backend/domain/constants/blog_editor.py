@@ -20,6 +20,9 @@ BLOG_IMAGE_TYPES: Final[dict[str, tuple[int, bytes]]] = {
     "jpg": (0, b"\xff\xd8\xff"),
     "webp": (8, b"WEBP"),
 }
+# Never prune a store file younger than this: a concurrent generation may
+# still be waiting on the row lock to store it (AE-0424 review round 2).
+BLOG_IMAGE_PRUNE_GRACE_SECONDS: Final = 3600
 BLOG_IMAGE_MEDIA_TYPES: Final[dict[str, str]] = {
     "png": "image/png",
     "jpg": "image/jpeg",

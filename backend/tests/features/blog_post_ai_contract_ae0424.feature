@@ -239,3 +239,27 @@ Feature: Blog AI contract, section rewrite and versions on save (AE-0424)
     Given the model returns "Here you go:" followed by a fenced JSON envelope
     When the editor POSTs /blog-posts/{id}/ai-suggest
     Then the response suggested_text is the envelope's text
+
+  # --- review round 2 ---
+
+  Scenario: A save between image generation and its write keeps the image
+    Given an image file is on disk and its slot write waits on the row lock
+    When a save commits and prunes unreferenced files
+    Then the pending file is kept (inside the prune grace window)
+    And the image write stores a URL that serves 200
+
+  Scenario: The cutover rollback stash is a reference
+    Given ai_generation_metadata.blog_v2_cutover.featured_image_url names a stored file
+    When any content write prunes the store
+    Then that file is kept
+
+  Scenario: The image budget is reserved before the spend
+    Given a post one image below BLOG_IMAGE_COST_CAP
+    When two image requests run in parallel
+    Then exactly one is generated and the other responds 429
+    And a reservation whose write fails stays counted
+
+  Scenario: Transitions run under the row lock
+    Given a slot write just reset an under-review post to draft
+    When the reviewer approves it
+    Then the approve sees the draft status and responds 400

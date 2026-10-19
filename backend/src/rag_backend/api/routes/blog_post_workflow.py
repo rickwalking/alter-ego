@@ -22,6 +22,7 @@ from rag_backend.api.dependencies.resource_access import (
     assert_blog_post_status,
     get_blog_post_by_id,
     get_blog_post_for_user,
+    lock_blog_post,
     validate_reviewer_user,
 )
 from rag_backend.api.dependencies.roles import EditorUser
@@ -173,6 +174,9 @@ async def submit_blog_post_for_review(
     reviewer is required.
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.DRAFT)
     # Same guard as publish: never queue a review of an unpublishable post.
     assert_ready_to_publish(post)
@@ -221,6 +225,9 @@ async def approve_blog_post(
 ) -> BlogPostResponse:
     """Approve a blog post (assigned reviewer or admin only)."""
     post = await get_blog_post_by_id(db, post_id)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
     old_status = post.status
@@ -252,6 +259,9 @@ async def reject_blog_post(
 ) -> BlogPostResponse:
     """Reject a blog post (assigned reviewer or admin only)."""
     post = await get_blog_post_by_id(db, post_id)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
     old_status = post.status
@@ -313,6 +323,9 @@ async def publish_blog_post(
     the editor sends is checked (409 when stale, AE-0424).
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, if_match)
     assert_ready_to_publish(post)
@@ -346,6 +359,9 @@ async def unpublish_blog_post(
 ) -> BlogPostResponse:
     """Unpublish a blog post (optimistic-locked visibility flip; AE-0296)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     if if_match is None:
         raise HTTPException(
             status_code=status.HTTP_428_PRECONDITION_REQUIRED,

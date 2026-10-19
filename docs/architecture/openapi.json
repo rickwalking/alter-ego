@@ -105,6 +105,70 @@
         "title": "ApplyStrategyResponse",
         "type": "object"
       },
+      "BlogEditorSettingsResponse": {
+        "description": "Deployment switches the editor needs to pick its review controls.",
+        "properties": {
+          "allow_self_review": {
+            "title": "Allow Self Review",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "allow_self_review"
+        ],
+        "title": "BlogEditorSettingsResponse",
+        "type": "object"
+      },
+      "BlogImageGenerateRequest": {
+        "description": "Generate/regenerate a cover or section image; ``prompt`` is the scene.",
+        "properties": {
+          "prompt": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          }
+        },
+        "title": "BlogImageGenerateRequest",
+        "type": "object"
+      },
+      "BlogImagePatchRequest": {
+        "description": "Edit the alt text and/or caption of an existing image (never blank alt).",
+        "properties": {
+          "alt": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          }
+        },
+        "title": "BlogImagePatchRequest",
+        "type": "object"
+      },
       "BlogPostAiImproveRequest": {
         "description": "Request body for AI text improvement.",
         "properties": {
@@ -349,41 +413,6 @@
         "title": "BlogPostCreate",
         "type": "object"
       },
-      "BlogPostGenerateImageRequest": {
-        "description": "Request body for blog featured image generation.",
-        "properties": {
-          "prompt": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Prompt",
-            "type": "string"
-          }
-        },
-        "required": [
-          "prompt"
-        ],
-        "title": "BlogPostGenerateImageRequest",
-        "type": "object"
-      },
-      "BlogPostGenerateImageResponse": {
-        "description": "Generated blog image response.",
-        "properties": {
-          "image_url": {
-            "title": "Image Url",
-            "type": "string"
-          },
-          "prompt": {
-            "title": "Prompt",
-            "type": "string"
-          }
-        },
-        "required": [
-          "prompt",
-          "image_url"
-        ],
-        "title": "BlogPostGenerateImageResponse",
-        "type": "object"
-      },
       "BlogPostListResponse": {
         "description": "Schema for listing blog posts.",
         "properties": {
@@ -503,7 +532,15 @@
           },
           "editor_comments": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "string"
+                }
+              ]
             },
             "title": "Editor Comments",
             "type": "array"
@@ -666,13 +703,6 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
-          },
-          "version_history": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Version History",
-            "type": "array"
           },
           "view_count": {
             "default": 0,
@@ -1049,6 +1079,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1058,6 +1099,17 @@
             "additionalProperties": true,
             "title": "Snapshot",
             "type": "object"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "version_number": {
             "title": "Version Number",
@@ -1071,6 +1123,65 @@
           "created_at"
         ],
         "title": "BlogPostVersionResponse",
+        "type": "object"
+      },
+      "BlogSectionRewriteRequest": {
+        "description": "Rewrite one section in the persona voice (default persona when absent).",
+        "properties": {
+          "persona_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Id"
+          }
+        },
+        "title": "BlogSectionRewriteRequest",
+        "type": "object"
+      },
+      "Body_post_autopilot_asset_api_autopilot_assets_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "title": "Body_post_autopilot_asset_api_autopilot_assets_post",
         "type": "object"
       },
       "Body_upload_creator_asset_api_carousels__project_id__creator_asset_upload_post": {
@@ -2918,6 +3029,54 @@
           "updated_at"
         ],
         "title": "ConversationResponse",
+        "type": "object"
+      },
+      "CoverAssetResponse": {
+        "additionalProperties": false,
+        "description": "AE-0418: the 201 body of ``POST /assets``.",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_id",
+          "kind",
+          "width",
+          "height"
+        ],
+        "title": "CoverAssetResponse",
+        "type": "object"
+      },
+      "CoverReference": {
+        "additionalProperties": false,
+        "description": "AE-0418: the GrokBot cover a topic names (``cover.asset_id``).\n\nUnknown keys are a 422 for the batch. Whether the asset exists, is fresh,\nunused and (screenshot) sourced is a per-topic domain rule, so a malformed\nid is a ``cover_asset_unknown`` rejection of that topic only.",
+        "properties": {
+          "asset_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Asset Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id"
+        ],
+        "title": "CoverReference",
         "type": "object"
       },
       "CreateUserRequest": {
@@ -7645,6 +7804,16 @@
             "title": "Brief",
             "type": "string"
           },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "image_guidance": {
             "anyOf": [
               {
@@ -8626,6 +8795,47 @@
         ]
       }
     },
+    "/api/autopilot/assets": {
+      "post": {
+        "description": "Store one cover and return its ``asset_id`` and final size.",
+        "operationId": "post_autopilot_asset_api_autopilot_assets_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_post_autopilot_asset_api_autopilot_assets_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverAssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Autopilot Asset",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
     "/api/autopilot/scout-failed": {
       "post": {
         "description": "Send the owner one Telegram message containing the scout's reason.",
@@ -8795,6 +9005,89 @@
         "summary": "Post Autopilot X Signals",
         "tags": [
           "autopilot"
+        ]
+      }
+    },
+    "/api/blog-editor/settings": {
+      "get": {
+        "description": "``allow_self_review`` mirrors ``BLOG_ALLOW_SELF_REVIEW`` (default false).",
+        "operationId": "get_blog_editor_settings_api_blog_editor_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogEditorSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Blog editor deployment settings",
+        "tags": [
+          "blog_post_workflow"
+        ]
+      }
+    },
+    "/api/blog-images/{post_id}/{filename}": {
+      "get": {
+        "description": "Serve a stored blog image (only ``<uuid4>.<jpg|png|webp>`` names).",
+        "operationId": "get_blog_image_api_blog_images__post_id___filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Serve a blog image",
+        "tags": [
+          "blog_post_images"
         ]
       }
     },
@@ -9012,7 +9305,7 @@
         ]
       },
       "get": {
-        "description": "Get a specific blog post.",
+        "description": "Get a specific blog post (content always as a ``blog.v2`` document).",
         "operationId": "get_blog_post_api_blog_posts__post_id__get",
         "parameters": [
           {
@@ -9503,10 +9796,10 @@
         ]
       }
     },
-    "/api/blog-posts/{post_id}/generate-image": {
-      "post": {
-        "description": "Generate a featured image for a blog post.",
-        "operationId": "generate_image_api_blog_posts__post_id__generate_image_post",
+    "/api/blog-posts/{post_id}/cover/image": {
+      "delete": {
+        "description": "Clear the cover (PT: ``featured_image_url`` becomes ``NULL``).",
+        "operationId": "delete_cover_image_api_blog_posts__post_id__cover_image_delete",
         "parameters": [
           {
             "in": "path",
@@ -9517,24 +9810,41 @@
               "title": "Post Id",
               "type": "string"
             }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BlogPostGenerateImageRequest"
-              }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BlogPostGenerateImageResponse"
+                  "$ref": "#/components/schemas/BlogPostResponse"
                 }
               }
             },
@@ -9556,9 +9866,177 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Generate featured image for blog post",
+        "summary": "Remove the cover",
         "tags": [
-          "blog_post_ai"
+          "blog_post_images"
+        ]
+      },
+      "patch": {
+        "description": "Edit the cover's alt (never blank) and caption.",
+        "operationId": "patch_cover_image_api_blog_posts__post_id__cover_image_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogImagePatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit cover alt/caption",
+        "tags": [
+          "blog_post_images"
+        ]
+      },
+      "post": {
+        "description": "Generate or regenerate the cover (502 on failure, cover unchanged).",
+        "operationId": "generate_cover_image_api_blog_posts__post_id__cover_image_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogImageGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate the cover",
+        "tags": [
+          "blog_post_images"
         ]
       }
     },
@@ -9613,7 +10091,7 @@
     },
     "/api/blog-posts/{post_id}/publish": {
       "post": {
-        "description": "Publish an approved blog post (author or admin only).",
+        "description": "Publish an approved blog post (author or admin only).\n\nThe ``blog.v2`` document needs >= 1 non-empty section; a null cover is\nallowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``\nthe editor sends is checked (409 when stale, AE-0424).",
         "operationId": "publish_blog_post_api_blog_posts__post_id__publish_post",
         "parameters": [
           {
@@ -9624,6 +10102,22 @@
               "format": "uuid",
               "title": "Post Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -9721,7 +10215,7 @@
     },
     "/api/blog-posts/{post_id}/restore-version/{version_number}": {
       "post": {
-        "description": "Restore a blog post to a previous version.",
+        "description": "Restore a blog post to a previous version (If-Match, snapshotted).",
         "operationId": "restore_blog_post_version_api_blog_posts__post_id__restore_version__version_number__post",
         "parameters": [
           {
@@ -9741,6 +10235,22 @@
             "schema": {
               "title": "Version Number",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -9778,6 +10288,69 @@
       }
     },
     "/api/blog-posts/{post_id}/schedule": {
+      "delete": {
+        "description": "Clear ``scheduled_publish_at``; the post stays ``approved`` (AE-0424).",
+        "operationId": "cancel_blog_post_schedule_api_blog_posts__post_id__schedule_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel the scheduled publication of a blog post",
+        "tags": [
+          "blog_post_workflow"
+        ]
+      },
       "post": {
         "description": "Schedule an approved post for future publication (SCHED-001, UI-024).",
         "operationId": "schedule_blog_post_api_blog_posts__post_id__schedule_post",
@@ -9790,6 +10363,22 @@
               "format": "uuid",
               "title": "Post Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -9833,6 +10422,372 @@
         "summary": "Schedule blog post for future publication",
         "tags": [
           "blog_post_workflow"
+        ]
+      }
+    },
+    "/api/blog-posts/{post_id}/sections/{section_id}/image": {
+      "delete": {
+        "description": "Set one section's image to ``null``.",
+        "operationId": "delete_section_image_api_blog_posts__post_id__sections__section_id__image_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a section image",
+        "tags": [
+          "blog_post_images"
+        ]
+      },
+      "patch": {
+        "description": "Edit one section image's alt (never blank) and caption.",
+        "operationId": "patch_section_image_api_blog_posts__post_id__sections__section_id__image_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogImagePatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit section image alt/caption",
+        "tags": [
+          "blog_post_images"
+        ]
+      },
+      "post": {
+        "description": "Generate or regenerate one section's image (alt defaults to its heading).",
+        "operationId": "generate_section_image_api_blog_posts__post_id__sections__section_id__image_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogImageGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate a section image",
+        "tags": [
+          "blog_post_images"
+        ]
+      }
+    },
+    "/api/blog-posts/{post_id}/sections/{section_id}/rewrite": {
+      "post": {
+        "description": "Replace only that section's ``body_md`` (422 when no persona exists).",
+        "operationId": "rewrite_section_api_blog_posts__post_id__sections__section_id__rewrite_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "default": "pt",
+              "pattern": "^(pt|en)$",
+              "title": "Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogSectionRewriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rewrite one section in the persona voice",
+        "tags": [
+          "blog_post_sections"
         ]
       }
     },
@@ -9887,7 +10842,7 @@
     },
     "/api/blog-posts/{post_id}/submit-review": {
       "post": {
-        "description": "Submit a blog post for review.",
+        "description": "Submit a blog post for review.\n\n``BLOG_ALLOW_SELF_REVIEW`` (default false, AE-0424) lets the author be the\nreviewer (and is the reviewer when none is given); otherwise a distinct\nreviewer is required.",
         "operationId": "submit_blog_post_for_review_api_blog_posts__post_id__submit_review_post",
         "parameters": [
           {
@@ -9903,10 +10858,17 @@
           {
             "in": "query",
             "name": "reviewer_id",
-            "required": true,
+            "required": false,
             "schema": {
-              "title": "Reviewer Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reviewer Id"
             }
           }
         ],
@@ -9940,6 +10902,71 @@
         "summary": "Submit blog post for review",
         "tags": [
           "blog_post_workflow"
+        ]
+      }
+    },
+    "/api/blog-posts/{post_id}/translations/en": {
+      "post": {
+        "description": "Translate the PT document into ``translations.en`` (502 on failure).",
+        "operationId": "generate_en_translation_api_blog_posts__post_id__translations_en_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate the EN translation of a blog post",
+        "tags": [
+          "blog_post_sections"
         ]
       }
     },
@@ -10550,6 +11577,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Carousel Blog",
         "tags": [
           "carousels"
@@ -10607,6 +11639,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Carousel Blog I18N",
         "tags": [
           "carousels"

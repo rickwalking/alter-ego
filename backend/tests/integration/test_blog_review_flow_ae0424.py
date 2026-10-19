@@ -157,6 +157,44 @@ class TestTransitionsAreVersioned:
         assert stale.status_code == 409
         assert (await get_post(clients.author, post["id"]))["status"] == APPROVED
 
+    # AE-0424 review round 2: transitions re-read their row FOR UPDATE, so an
+    # approve overlapping a committed slot write sees its reset to draft.
+    async def test_transitions_lock_the_row(
+        self, clients: EditorClients, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from rag_backend.api.routes import blog_post_schedule, blog_post_workflow
+
+        locked: list[str] = []
+        original = blog_post_workflow.lock_blog_post
+
+        async def spy(db, post_id):
+            locked.append(str(post_id))
+            return await original(db, post_id)
+
+        monkeypatch.setattr(blog_post_workflow, "lock_blog_post", spy)
+        monkeypatch.setattr(blog_post_schedule, "lock_blog_post", spy)
+        post = await create_post(clients.author, v2_content())
+        await _submit(clients.author, post["id"], clients.reviewer_id)
+        await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
+        await clients.author.post(
+            f"{BLOG_POSTS_URL}/{post['id']}/schedule",
+            json={"scheduled_publish_at": _future()},
+        )
+        assert locked == [post["id"]] * 3
+
+    async def test_approve_after_a_reset_to_draft_is_refused(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content())
+        submitted = (
+            await _submit(clients.author, post["id"], clients.reviewer_id)
+        ).json()
+        # A content write committed first: the post is back to draft.
+        await put(clients.author, submitted, {"content": v2_content("Editado")})
+        approve = await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
+        assert approve.status_code == 400
+        assert (await get_post(clients.author, post["id"]))["status"] == "draft"
+
     async def test_unpublishable_draft_cannot_be_submitted(
         self, clients: EditorClients
     ) -> None:

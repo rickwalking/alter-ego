@@ -5,8 +5,8 @@ regenerate (POST, optional edited ``prompt``), alt + caption edits (PATCH) and
 remove (DELETE) on the language the editor shows (``?language=pt|en``).
 
 Generation follows the shared slot-write contract (``blog_slot_write``):
-preflight (``If-Match``, v2 document, slot exists, per-post image budget), then
-the provider spend, then :func:`apply_slot_edit` onto the LATEST document under
+preflight (``If-Match``, v2 document, slot exists), the per-post image budget
+reserved under the row lock (``blog_image_budget``), then the provider spend, then :func:`apply_slot_edit` onto the LATEST document under
 a row lock; a failed write deletes the new file. After every write the store
 keeps only files referenced by the content or a version snapshot.
 
@@ -32,6 +32,10 @@ from rag_backend.api.dependencies.blog_editor import (
     blog_images_store,
     build_blog_image_service,
     prune_unreferenced_images,
+)
+from rag_backend.api.dependencies.blog_image_budget import (
+    BudgetReservation,
+    reserve_image_budget,
 )
 from rag_backend.api.dependencies.blog_slot_write import (
     DocumentEdit,
@@ -59,10 +63,6 @@ from rag_backend.application.services.blog.blog_document_edits import (
     with_cover,
     with_section,
 )
-from rag_backend.application.services.blog.blog_image_budget import (
-    count_one_image,
-    within_budget,
-)
 from rag_backend.application.services.blog.blog_image_service import (
     BlogImageError,
     BlogImageRequest,
@@ -74,7 +74,6 @@ from rag_backend.domain.constants.blog_editor import (
     BLOG_IMAGE_CACHE_PUBLIC,
     BLOG_IMAGE_FILENAME_PATTERN,
     BLOG_IMAGE_MEDIA_TYPES,
-    ERR_BLOG_IMAGE_BUDGET_EXHAUSTED,
     ERR_BLOG_IMAGE_NOT_FOUND,
     ERR_BLOG_SECTION_IMAGE_MISSING,
 )
@@ -162,22 +161,15 @@ def _change(edit: _SlotEdit, document_edit: DocumentEdit) -> SlotEdit:
     )
 
 
-def _require_budget(post: LockedBlogPostRow) -> None:
-    if not within_budget(post.ai_generation_metadata, blog_image_cost_cap()):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=ERR_BLOG_IMAGE_BUDGET_EXHAUSTED,
-        )
-
-
 async def _generated_image(edit: _SlotEdit, prompt: str | None) -> BlogImage:
-    """Preflight (document, slot, budget) then the provider spend."""
+    """Preflight (document, slot), reserve the budget, then the provider spend."""
     document = load_document(edit.post)
     request = edit_or_404(lambda: _request(edit, document, prompt))
-    _require_budget(edit.post)
-    # Release the read transaction (and its connection) during the slow spend;
-    # the write re-reads the row under ``FOR UPDATE`` afterwards.
-    await edit.db.rollback()
+    # Reserve under the row lock and commit: no transaction is held during
+    # the slow spend; the write re-reads the row ``FOR UPDATE`` afterwards.
+    await reserve_image_budget(
+        edit.db, BudgetReservation(post_id=edit.post_id, cap=blog_image_cost_cap())
+    )
     try:
         return await build_blog_image_service().generate(request)
     except BlogImageError as exc:
@@ -196,7 +188,6 @@ async def _generate(edit: _SlotEdit, prompt: str | None) -> LockedBlogPostRow:
         edit=lambda latest: _place(latest, edit.slot, image),
         events=blog_event_service(),
         ai_action=AI_ACTION_GENERATE_IMAGE,
-        metadata_edit=count_one_image,
         discard=lambda: blog_images_store().delete(post_id, filename),
     )
     return await _write(edit, change)

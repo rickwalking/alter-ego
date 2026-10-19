@@ -34,6 +34,10 @@ from rag_backend.application.services.blog.blog_translation_service import (
     BlogTranslationService,
 )
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC
+from rag_backend.domain.constants.blog_document import (
+    CUTOVER_METADATA_KEY,
+    CUTOVER_STASH_FEATURED_KEY,
+)
 from rag_backend.domain.constants.blog_editor import (
     BLOG_EDITOR_LANGUAGE_PATTERN,
     BLOG_IMAGES_DIR_NAME,
@@ -62,6 +66,16 @@ class StoredImagesRow(Protocol):
     id: object
     content: object
     version_history: object
+    featured_image_url: object
+    ai_generation_metadata: object
+
+
+def _cutover_stash(metadata: object) -> object:
+    """The AE-0423 ``--rollback`` stash of the pre-cutover featured image."""
+    if not isinstance(metadata, dict):
+        return None
+    stash = metadata.get(CUTOVER_METADATA_KEY)
+    return stash.get(CUTOVER_STASH_FEATURED_KEY) if isinstance(stash, dict) else None
 
 
 def prune_unreferenced_images(post: StoredImagesRow) -> int:
@@ -69,9 +83,17 @@ def prune_unreferenced_images(post: StoredImagesRow) -> int:
 
     Run after every committed content write (slot routes, PUT, restore): a
     regenerated / removed image stays while a version snapshot can restore it,
-    and goes once nothing references it (AE-0424 review).
+    and goes once nothing references it (AE-0424 review). The featured-image
+    column and the AE-0423 cutover rollback stash count as references, and
+    files inside the store's grace window are never deleted (an image waiting
+    on the row lock would otherwise be removed before its URL is stored).
     """
-    keep = referenced_filenames(post.content, post.version_history)
+    keep = referenced_filenames(
+        post.content,
+        post.version_history,
+        post.featured_image_url,
+        _cutover_stash(post.ai_generation_metadata),
+    )
     return blog_images_store().prune(str(post.id), keep)
 
 

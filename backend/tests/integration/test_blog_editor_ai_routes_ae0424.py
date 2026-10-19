@@ -6,7 +6,10 @@ Feature: frontend/tests/features/blog_editor_ae0424.feature (backend half)
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -29,6 +32,7 @@ from rag_backend.application.services.blog.blog_translation_service import (
 from rag_backend.application.services.blog_post_ai_service import BlogPostAIService
 from rag_backend.domain.constants.blog_document import ERR_BLOG_DOCUMENT_NOT_V2
 from rag_backend.domain.constants.blog_editor import (
+    BLOG_IMAGE_PRUNE_GRACE_SECONDS,
     ERR_BLOG_IMAGE_BUDGET_EXHAUSTED,
     ERR_BLOG_IMAGE_GENERATION_FAILED,
     ERR_BLOG_PERSONA_REQUIRED,
@@ -51,6 +55,7 @@ from tests.integration.blog_editor_support_ae0424 import (
     editor_clients,
     get_post,
     if_match,
+    put,
     set_fields,
     three_sections,
     versions,
@@ -65,6 +70,12 @@ async def clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
         yield built
 
 
+def _age(path: Path) -> None:
+    """Move a file's mtime past the prune grace window."""
+    old = time.time() - BLOG_IMAGE_PRUNE_GRACE_SECONDS - 60
+    os.utime(path, (old, old))
+
+
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"png-body"
 
 
@@ -75,6 +86,8 @@ class _Provider:
         self.fail = fail
         self.calls = 0
         self.during: Callable[[], Awaitable[None]] | None = None
+        # Runs after the bytes are on disk (the image waits for the row lock).
+        self.after_write: Callable[[], Awaitable[None]] | None = None
 
     async def generate_image(self, prompt: str, output_path: str) -> str:
         self.calls += 1
@@ -83,6 +96,8 @@ class _Provider:
         if self.during is not None:
             await self.during()
         Path(output_path).write_bytes(PNG_BYTES)
+        if self.after_write is not None:
+            await self.after_write()
         return PROVIDER_URL
 
 
@@ -426,12 +441,116 @@ class TestSlotWriteContract:
         ).json()
         folder = tmp_path / "store" / post["id"]
         assert len(list(folder.iterdir())) == 2
+        for path in folder.iterdir():
+            _age(path)
         await set_fields(post["id"], version_history=[])
         await clients.author.delete(url, headers=if_match(second))
         # The first image is referenced by nothing now -> deleted; the second
         # lives on in the pre-remove version snapshot (restorable).
         kept = second["content"]["sections"][0]["image"]["url"].rsplit("/", 1)[-1]
         assert [p.name for p in folder.iterdir()] == [kept]
+
+
+class TestPruneRaces:
+    """AE-0424 review round 2: pruning never breaks an in-flight image."""
+
+    # A Save lands after the image file is written but before its slot write:
+    # the Save's prune must not delete the pending file.
+    async def test_save_between_generate_and_write_keeps_the_image(
+        self, clients: EditorClients, provider: _Provider
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        edited = dict(post["content"])
+        edited["sections"] = [dict(x) for x in post["content"]["sections"]]
+        edited["sections"][2]["body_md"] = "Salvo no meio"
+
+        async def save_now() -> None:
+            response = await put(clients.author, post, {"content": edited})
+            assert response.status_code == 200, response.text
+
+        provider.after_write = save_now
+        response = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["content"]["sections"][2]["body_md"] == "Salvo no meio"
+        served = await clients.author.get(
+            body["content"]["sections"][0]["image"]["url"]
+        )
+        assert served.status_code == 200
+
+    # The AE-0423 cutover rollback stash and the featured_image_url column are
+    # references too (even when old), so --rollback never restores a dead URL.
+    async def test_cutover_stash_and_featured_image_are_kept(
+        self, clients: EditorClients, provider: _Provider, tmp_path: Path
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        folder = tmp_path / "store" / post["id"]
+        folder.mkdir(parents=True)
+        stash = folder / "00000000-0000-4000-8000-00000000000a.png"
+        featured = folder / "00000000-0000-4000-8000-00000000000b.png"
+        orphan = folder / "00000000-0000-4000-8000-00000000000c.png"
+        for path in (stash, featured, orphan):
+            path.write_bytes(PNG_BYTES)
+            _age(path)
+        prefix = f"/api/blog-images/{post['id']}"
+        await set_fields(
+            post["id"],
+            featured_image_url=f"{prefix}/{featured.name}",
+            ai_generation_metadata={
+                "blog_v2_cutover": {"featured_image_url": f"{prefix}/{stash.name}"}
+            },
+        )
+        response = await put(clients.author, post, {"title": "Novo"})
+        assert response.status_code == 200, response.text
+        assert stash.exists() and featured.exists()
+        assert not orphan.exists()
+
+
+class TestImageBudgetReservation:
+    """The budget is reserved under the row lock before the provider call."""
+
+    async def test_parallel_requests_at_cap_minus_one(
+        self,
+        clients: EditorClients,
+        provider: _Provider,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from rag_backend.api.routes import blog_post_images
+
+        monkeypatch.setattr(blog_post_images, "blog_image_cost_cap", lambda: 1)
+        post = await create_post(clients.author, three_sections())
+        responses = await asyncio.gather(
+            clients.author.post(
+                _section_image_url(post["id"], SEC_1), json={}, headers=if_match(post)
+            ),
+            clients.author.post(
+                _section_image_url(post["id"], SEC_2), json={}, headers=if_match(post)
+            ),
+        )
+        codes = sorted(r.status_code for r in responses)
+        assert codes == [200, 429]
+        assert provider.calls == 1
+
+    # The reservation is kept when the write fails after the spend.
+    async def test_failed_write_keeps_the_reservation(
+        self, clients: EditorClients, provider: _Provider
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        without_first = dict(post["content"])
+        without_first["sections"] = post["content"]["sections"][1:]
+
+        async def delete_section() -> None:
+            await set_fields(post["id"], content=without_first)
+
+        provider.during = delete_section
+        response = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        assert response.status_code == 404
+        stored = await get_post(clients.author, post["id"])
+        assert stored["ai_generation_metadata"]["blog_image_generations"] == 1
 
 
 def _fake_ai(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> MagicMock:

@@ -22,6 +22,7 @@ from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import (
     assert_blog_post_status,
     get_blog_post_for_user,
+    lock_blog_post,
 )
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
@@ -84,6 +85,9 @@ async def schedule_blog_post(
 ) -> BlogPostResponse:
     """Schedule an approved post for future publication (SCHED-001, UI-024)."""
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(target.db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)
     assert_ready_to_publish(post)
@@ -106,6 +110,9 @@ async def cancel_blog_post_schedule(
 ) -> BlogPostResponse:
     """Clear ``scheduled_publish_at``; the post stays ``approved`` (AE-0424)."""
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(target.db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)
     if post.scheduled_publish_at is None:
