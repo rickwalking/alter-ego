@@ -49,6 +49,17 @@ Feature: An expired session logs out through a front-end route (AE-0429)
     Then the access_token cookie is cleared
     And the browser is redirected to "/login?error=session_expired"
 
+  # AE-0431: under the Next standalone server, request.url carries the bind
+  # address (0.0.0.0:3000); the Location must use the proxied Host instead.
+  Scenario: The login Location never exposes the internal server host
+    Given a request to "/auth/logout?redirect=/dashboard/create/abc?step=content"
+      whose URL host is the standalone server bind address "0.0.0.0:3000"
+      with headers "Host: marinssolutions.com" and "X-Forwarded-Proto: https"
+    When the logout handler runs
+    Then the access_token cookie is cleared
+    And the browser is redirected to "https://marinssolutions.com/login?redirect=/dashboard/create/abc?step=content&error=session_expired"
+    And the Location header does not contain "0.0.0.0" or "localhost"
+
   Scenario: The logout route is reachable without a token
     Given an unauthenticated request to "/auth/logout"
     When the middleware classifies the path
