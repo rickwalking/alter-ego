@@ -404,10 +404,12 @@ Alembic reconcile remains a **separate** prerequisite for schema migrations.
 **Modes.** `--dry-run` (counts + samples, no writes), `--apply` (batched, idempotent, one transaction
 per batch under `pg_advisory_xact_lock`), `--verify` (exit non-zero if any row is still non-v2),
 `--rollback` (re-join sections; only with a code rollback). `--apply --verify` can be combined.
+`--verify` uses the same strict `parse_blog_content` as the read path (a `blog.v2` marker alone is not
+enough); `--apply` also repairs a v2-marked row by dropping only its translations that do not parse.
 
 **Deploy order.** `deploy.yml` builds the image → `down` (no old/new overlap) → starts Postgres →
-runs the command with `--apply --verify` using the new image → only then `up -d`. A non-zero exit
-aborts before the app serves traffic. The operator can re-run the same command ad hoc.
+runs the command with `--apply --verify` using the new image → `up -d`. The step never blocks the stack: its exit code is captured, `up -d` always runs (the read fail-safe keeps non-migrated rows rendering), and the deploy job fails at the end so the failure alerts (an abort here would leave the stack down, the 2026-06-18 failure mode).
+The operator can re-run the same command ad hoc.
 
 ```
 for each row in blog_posts:
@@ -447,8 +449,13 @@ The real v1 shape is `{"markdown": "...", "translations": {"en": "..."}}`; `blog
 Properties:
 
 - **idempotent** — skipped once `schema == "blog.v2"` (a re-run is a no-op).
-- **verified** — `--verify` exits non-zero on any non-v2 row **or non-v2 translation value**; the
-deploy aborts before traffic.
+- **verified** — `--verify` exits non-zero on any row whose content fails the strict parse
+  (including a bad translation); the deploy still brings the stack up and fails the job afterwards.
+- **versions migrated** — every `version_history[*].snapshot` is rewritten with the same rules (and
+  re-joined on `--rollback`), so a pre-cutover version stays restorable as a strict v2 write.
+- **cover projection reversible** — a cleared `featured_image_url` is stashed in
+  `ai_generation_metadata.blog_v2_cutover` (never public) and restored by `--rollback` when no cover
+  was set since.
 - **forward-only at the application level** — after cutover there is no v1 persist path; the strict
   parser rejects non-v2 writes. The temporary read fail-safe (below) is removed in AE-0428.
 - **reversible at the data level** — `--rollback` (run from the new image **before** reverting the
@@ -458,7 +465,8 @@ deploy aborts before traffic.
   rollback to the pre-B release.
 - **fence-safe.** A `## ` line inside a fenced code block is not a section boundary.
 - **no coercion.** A non-markdown content object becomes an empty section, never `str(dict)`.
-- **translations preserved** — every string translation is converted; non-string entries are dropped.
+- **translations preserved** — every non-blank string translation is converted; non-string and
+  blank entries are dropped (a blank translation fell back to PT in v1 and still does).
 - **oversized sections** are not silently truncated; the verification report flags them for AE-0426.
 - **image-free** — v1 images were injected at read time from `design.images.slides`
   (`design_token_utils.py:216-221,280`) and never stored; nothing to carry.

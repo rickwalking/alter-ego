@@ -35,17 +35,15 @@ async def _insert_carousel_blog_row(
     status: BlogPostStatus,
 ) -> BlogPostModel:
     """Insert an ``origin='carousel'`` blog row for the project (explicit row)."""
-    row = BlogPostModel.from_entity(
-        {
-            "id": str(uuid4()),
-            "project_id": project_id,
-            "origin": BlogPostOrigin.CAROUSEL.value,
-            "title": "Detach test",
-            "slug": f"carousel-{project_id}",
-            "status": status.value,
-            "content": {"markdown": "# Blog body", "translations": {}},
-        }
-    )
+    row = BlogPostModel.from_entity({
+        "id": str(uuid4()),
+        "project_id": project_id,
+        "origin": BlogPostOrigin.CAROUSEL.value,
+        "title": "Detach test",
+        "slug": f"carousel-{project_id}",
+        "status": status.value,
+        "content": {"markdown": "# Blog body", "translations": {}},
+    })
     db_session.add(row)
     await db_session.flush()
     return row

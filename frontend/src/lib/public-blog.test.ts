@@ -2,29 +2,56 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
 import { resolvePublicBlogView } from "./public-blog";
 
-// Scenarios: see tests/features/public-blog-detail.feature
+// Feature: Public blog renders the v2 document (AE-0423)
+// frontend/tests/features/blog_sections_ae0423.feature
+// (also public-blog-detail.feature, public-blog-polish-ae0412.feature,
+//  blog_no_carousel_slides_ae0422.feature)
 
 vi.mock("@/lib/server-fetch", () => ({
   fetchPublicBlogPost: vi.fn(),
-  fetchBlogWithDesign: vi.fn(),
+  fetchCarouselDesign: vi.fn(),
 }));
 
-import { fetchBlogWithDesign, fetchPublicBlogPost } from "@/lib/server-fetch";
+import * as serverFetch from "@/lib/server-fetch";
+import { fetchCarouselDesign, fetchPublicBlogPost } from "@/lib/server-fetch";
 
 const mockFetchPost = vi.mocked(fetchPublicBlogPost);
-const mockFetchDesign = vi.mocked(fetchBlogWithDesign);
+const mockFetchDesign = vi.mocked(fetchCarouselDesign);
+
+const PT_DOCUMENT = {
+  schema: "blog.v2",
+  cover: { url: "https://cdn.example/cover.jpg", alt: "Capa" },
+  sections: [
+    {
+      id: "sec_1",
+      heading: "O que aconteceu",
+      body_md: "Por que <strong>importa</strong>?",
+      image: { url: "https://cdn.example/s1.jpg", alt: "Diagrama do fluxo" },
+    },
+    { id: "sec_2", heading: "Depois", body_md: "Fim.", image: null },
+  ],
+  translations: {
+    en: {
+      schema: "blog.v2",
+      cover: null,
+      sections: [
+        { id: "sec_3", heading: "What happened", body_md: "EN.", image: null },
+      ],
+    },
+  },
+};
 
 const STANDALONE_POST = {
   id: "post-1",
   slug: "post-1",
   title: "Standalone post",
   excerpt: "An excerpt",
-  featured_image_url: null,
+  featured_image_url: "https://cdn.example/cover.jpg",
   published_at: "2026-07-01T00:00:00Z",
   keywords: [],
   origin: "standalone",
   project_id: null,
-  content: { body: "# Standalone body" },
+  content: PT_DOCUMENT,
 };
 
 const CAROUSEL_POST = {
@@ -32,20 +59,17 @@ const CAROUSEL_POST = {
   id: "post-2",
   origin: "carousel",
   project_id: "project-9",
-  content: { markdown: "# Carousel body", translations: { en: "# EN body" } },
 };
 
-const DESIGN_DATA = {
-  blog: {
-    title: "Carousel title",
-    subtitle: "Sub",
-    markdown: "# Designed",
-    language: "pt",
-    available_languages: ["pt", "en"],
-  },
-  design: {
-    ...FALLBACK_DESIGN_TOKENS,
-    theme_name: "designed-theme",
+const DESIGN = {
+  ...FALLBACK_DESIGN_TOKENS,
+  theme_name: "designed-theme",
+  images: {
+    hero: "/api/carousels/p/preview/images/slide_1.jpg?lang=en",
+    slides: ["/api/carousels/p/slide-images/en/slide_2.jpg"],
+    rendered_slides_pt: ["/api/carousels/p/slide-images/pt/slide_1.jpg"],
+    rendered_slides_en: null,
+    blog_image_map: [{ slide_number: 2, heading: "x", alt: "" }],
   },
 };
 
@@ -54,143 +78,129 @@ beforeEach(() => {
   mockFetchDesign.mockReset();
 });
 
-describe("resolvePublicBlogView (AE-0297)", () => {
-  it("renders a standalone published post with the default public theme", async () => {
+describe("resolvePublicBlogView (AE-0423 v2 render)", () => {
+  // Scenario: The cover renders as the article hero
+  // Scenario: Each section renders its own heading, body and image
+  it("renders the post's own cover and sections with the default theme", async () => {
     mockFetchPost.mockResolvedValue(STANDALONE_POST);
 
     const view = await resolvePublicBlogView("post-1", "pt");
-    expect(view).not.toBeNull();
+
     expect(view?.title).toBe("Standalone post");
-    expect(view?.markdown).toBe("# Standalone body");
+    expect(view?.subtitle).toBe("An excerpt");
+    expect(view?.cover).toEqual({
+      url: "https://cdn.example/cover.jpg",
+      alt: "Capa",
+    });
+    expect(view?.sections.map((s) => s.heading)).toEqual([
+      "O que aconteceu",
+      "Depois",
+    ]);
+    expect(view?.sections[0].image?.alt).toBe("Diagrama do fluxo");
+    expect(view?.sections[1].image).toBeNull();
     expect(view?.design.theme_name).toBe(FALLBACK_DESIGN_TOKENS.theme_name);
     expect(mockFetchDesign).not.toHaveBeenCalled();
   });
 
-  it("enriches a carousel-origin post through its project design", async () => {
+  // Scenario: Emphasis markup in the body is rendered as emphasis (AE-0412)
+  it("converts emphasis HTML in section bodies to markdown", async () => {
+    mockFetchPost.mockResolvedValue(STANDALONE_POST);
+    const view = await resolvePublicBlogView("post-1", "pt");
+    expect(view?.sections[0].body_md).toBe("Por que **importa**?");
+  });
+
+  // Scenario: No carousel slide image is ever used
+  // Scenario: The public read never fetches carousel blog markdown
+  it("themes a carousel-origin post from its design but takes no design image", async () => {
     mockFetchPost.mockResolvedValue(CAROUSEL_POST);
-    mockFetchDesign.mockResolvedValue(DESIGN_DATA);
+    mockFetchDesign.mockResolvedValue(DESIGN);
 
     const view = await resolvePublicBlogView("post-2", "pt");
+
     expect(mockFetchDesign).toHaveBeenCalledWith("project-9", "pt");
     expect(view?.design.theme_name).toBe("designed-theme");
-    expect(view?.markdown).toBe("# Designed");
+    expect(view?.design.images.hero).toBe("");
+    expect(view?.design.images.slides).toEqual([]);
+    expect(view?.design.images.blog_image_map ?? null).toBeNull();
+    expect(JSON.stringify(view)).not.toContain("/slide-images/");
+    expect(view?.sections).toHaveLength(2);
+    expect(Object.keys(serverFetch)).not.toContain("fetchBlogWithDesign");
   });
 
   it("falls back to the default theme when the design fetch fails (never 404)", async () => {
     mockFetchPost.mockResolvedValue(CAROUSEL_POST);
     mockFetchDesign.mockResolvedValue(null);
 
-    const view = await resolvePublicBlogView("post-2", "en");
-    expect(view).not.toBeNull();
+    const view = await resolvePublicBlogView("post-2", "pt");
     expect(view?.design.theme_name).toBe(FALLBACK_DESIGN_TOKENS.theme_name);
-    // Localized translation is preferred over the raw markdown.
-    expect(view?.markdown).toBe("# EN body");
   });
 
-  it("keeps legacy carousel-projection URLs working", async () => {
-    mockFetchPost.mockResolvedValue(null);
-    mockFetchDesign.mockResolvedValue(DESIGN_DATA);
-
-    const view = await resolvePublicBlogView("project-9", "pt");
-    expect(mockFetchDesign).toHaveBeenCalledWith("project-9", "pt");
-    expect(view?.title).toBe("Carousel title");
+  // Scenario: An English translation renders under the en locale
+  // Scenario: PT/EN content buttons switch the rendered document
+  it("renders the EN translation and keeps the PT cover when EN has none", async () => {
+    mockFetchPost.mockResolvedValue(STANDALONE_POST);
+    const view = await resolvePublicBlogView("post-1", "en");
+    expect(view?.sections.map((s) => s.heading)).toEqual(["What happened"]);
+    expect(view?.cover?.url).toBe("https://cdn.example/cover.jpg");
   });
 
-  it("returns null (→ not-found) when nothing resolves", async () => {
-    mockFetchPost.mockResolvedValue(null);
-    mockFetchDesign.mockResolvedValue(null);
-
-    expect(await resolvePublicBlogView("unknown-id", "pt")).toBeNull();
-  });
-});
-
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
-// tests/features/public-blog-polish-ae0412.feature
-describe("resolvePublicBlogView sanitizing (AE-0412)", () => {
-  const PREVIEW_DESIGN_DATA = {
-    blog: {
-      title: "slide",
-      subtitle: "Use <strong>ChatGPT</strong>",
-      markdown: "# slide\n\nWhy <strong>ChatGPT</strong>?",
-      language: "en",
-      available_languages: ["pt", "en"],
-    },
-    design: {
-      ...FALLBACK_DESIGN_TOKENS,
-      images: {
-        ...FALLBACK_DESIGN_TOKENS.images,
-        hero: "/api/carousels/p/preview/images/slide_1.jpg?lang=en",
-        slides: [
-          "/api/carousels/p/preview/images/slide_2.jpg?lang=en",
-          "/api/carousels/p/slide-images/en/slide_3.jpg",
-        ],
-      },
-    },
-  };
-
-  // Feature: Public blog body never renders carousel slides (AE-0422)
-  // frontend/tests/features/blog_no_carousel_slides_ae0422.feature
-  // Scenario: Theme still comes from the carousel design
-  //   Given the carousel design exposes colors and typography
-  //   When the blog page renders
-  //   Then the section headings use the design typography
-  //   And no image URL is taken from the design
-  it("keeps carousel theme tokens but drops every design image", async () => {
-    mockFetchPost.mockResolvedValue(CAROUSEL_POST);
-    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
-
-    const view = await resolvePublicBlogView("post-2", "en");
-    expect(view?.design.theme_name).toBe(FALLBACK_DESIGN_TOKENS.theme_name);
-    expect(view?.design.typography).toEqual(FALLBACK_DESIGN_TOKENS.typography);
-    // No carousel design image reaches the public page — not even as a
-    // rendered `/slide-images/` URL (AE-0422, ADR-0025).
-    expect(view?.design.images.hero).toBe("");
-    expect(view?.design.images.slides).toEqual([]);
-    expect(view?.design.images.rendered_slides_pt ?? null).toBeNull();
-    expect(view?.design.images.blog_image_map ?? null).toBeNull();
-  });
-
-  // Scenario: A placeholder title falls back to a real title
-  // Scenario: Emphasis markup in the body is rendered as emphasis
-  it("falls back from a placeholder title and converts emphasis HTML", async () => {
+  it("falls back to PT when the translation is absent (never 404)", async () => {
     mockFetchPost.mockResolvedValue({
-      ...CAROUSEL_POST,
-      title: "Gemini 4 Argon chegou.",
+      ...STANDALONE_POST,
+      content: { ...PT_DOCUMENT, translations: {} },
     });
-    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
-
-    const view = await resolvePublicBlogView("post-2", "en");
-    expect(view?.title).toBe("Gemini 4 Argon chegou.");
-    expect(view?.subtitle).toBe("Use ChatGPT");
-    expect(view?.markdown).toBe("# slide\n\nWhy **ChatGPT**?");
+    const view = await resolvePublicBlogView("post-1", "en");
+    expect(view?.sections[0].heading).toBe("O que aconteceu");
   });
 
-  // Scenario: Every title candidate is a placeholder
-  it("returns an empty title when no candidate is real", async () => {
+  // Scenario: A carousel-origin post with no v2 row is 404
+  // Scenario: An unpublished v2 post is not publicly viewable
+  it("returns null (not-found) when the public API has no post", async () => {
     mockFetchPost.mockResolvedValue(null);
-    mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
+    expect(await resolvePublicBlogView("project-9", "pt")).toBeNull();
+    expect(mockFetchDesign).not.toHaveBeenCalled();
+  });
 
-    const view = await resolvePublicBlogView("project-9", "en");
+  // Scenario: A non-v2 content blob is rejected by the parse helper
+  it("fails safe to not-found on a non-v2 content blob", async () => {
+    mockFetchPost.mockResolvedValue({
+      ...STANDALONE_POST,
+      content: { markdown: "# legacy" },
+    });
+    expect(await resolvePublicBlogView("post-1", "pt")).toBeNull();
+  });
+
+  // Scenario: Every title candidate is a placeholder (AE-0412)
+  it("returns an empty title for a placeholder", async () => {
+    mockFetchPost.mockResolvedValue({ ...STANDALONE_POST, title: "slide" });
+    const view = await resolvePublicBlogView("post-1", "pt");
     expect(view?.title).toBe("");
   });
 
-  // Scenario: A subtitle equal to the title is not repeated
+  // Scenario: A subtitle equal to the title is not repeated (AE-0412)
   it("drops a subtitle that repeats the title", async () => {
-    mockFetchPost.mockResolvedValue(null);
-    mockFetchDesign.mockResolvedValue({
-      ...DESIGN_DATA,
-      blog: { ...DESIGN_DATA.blog, subtitle: "Carousel <b>title</b>" },
+    mockFetchPost.mockResolvedValue({
+      ...STANDALONE_POST,
+      excerpt: "Standalone <b>post</b>",
     });
-
-    const view = await resolvePublicBlogView("project-9", "pt");
+    const view = await resolvePublicBlogView("post-1", "pt");
     expect(view?.subtitle).toBeNull();
   });
 
-  it("keeps an empty hero empty", async () => {
-    mockFetchPost.mockResolvedValue(STANDALONE_POST);
-
+  it("maps owner-only preview image URLs to the public route", async () => {
+    mockFetchPost.mockResolvedValue({
+      ...STANDALONE_POST,
+      excerpt: null,
+      content: {
+        ...PT_DOCUMENT,
+        cover: {
+          url: "/api/carousels/p/preview/images/hero.jpg?lang=pt",
+          alt: "Capa",
+        },
+      },
+    });
     const view = await resolvePublicBlogView("post-1", "pt");
-    expect(view?.design.images.hero).toBe("");
-    expect(view?.subtitle).toBe("An excerpt");
+    expect(view?.cover?.url).toBe("/api/carousels/p/images/hero.jpg?lang=pt");
+    expect(view?.subtitle).toBeNull();
   });
 });

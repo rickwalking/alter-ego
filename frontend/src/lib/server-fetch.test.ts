@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchCompletedProjects,
-  fetchBlogWithDesign,
+  fetchCarouselDesign,
   fetchBlogWithDesignCombined,
   fetchPublicBlogPost,
   fetchPublicBlogPosts,
@@ -129,32 +129,22 @@ describe("server-fetch", () => {
     });
   });
 
-  describe("fetchBlogWithDesign", () => {
-    it("returns blog and design data on success", async () => {
-      vi.spyOn(globalThis, "fetch").mockImplementation(
-        (input: RequestInfo | URL) => {
-          const url = String(input);
-          if (url.includes("/blog/")) {
-            return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve(MOCK_BLOG),
-            } as Response);
-          }
-          if (url.includes("/design")) {
-            return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve(MOCK_DESIGN),
-            } as Response);
-          }
-          return Promise.resolve({ ok: false, status: 404 } as Response);
-        },
-      );
+  describe("fetchCarouselDesign (AE-0423)", () => {
+    // Scenario: The public read never fetches carousel blog markdown
+    it("fetches only the design endpoint", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(MOCK_DESIGN),
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
 
-      const result = await fetchBlogWithDesign("test-id", "en");
+      const result = await fetchCarouselDesign("test-id", "en");
 
-      expect(result).not.toBeNull();
-      expect(result!.blog.title).toBe("Test Title");
-      expect(result!.design.theme_name).toBe("ai_competition");
+      expect(result?.theme_name).toBe("ai_competition");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = String(mockFetch.mock.calls[0][0]);
+      expect(url).toContain("/design");
+      expect(url).not.toContain("/blog");
     });
 
     it("returns null on fetch failure", async () => {
@@ -162,29 +152,7 @@ describe("server-fetch", () => {
         new Error("Network error"),
       );
 
-      const result = await fetchBlogWithDesign("test-id");
-
-      expect(result).toBeNull();
-    });
-
-    it("returns null on non-ok blog response", async () => {
-      // Scenario: Admin sees 404 on public blog page for draft carousel
-      vi.spyOn(globalThis, "fetch").mockImplementation(
-        (input: RequestInfo | URL) => {
-          const url = String(input);
-          if (url.includes("/blog/")) {
-            return Promise.resolve({ ok: false, status: 404 } as Response);
-          }
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(MOCK_DESIGN),
-          } as Response);
-        },
-      );
-
-      const result = await fetchBlogWithDesign("bad-id");
-
-      expect(result).toBeNull();
+      expect(await fetchCarouselDesign("test-id")).toBeNull();
     });
   });
 

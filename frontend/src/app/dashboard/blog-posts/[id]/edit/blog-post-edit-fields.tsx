@@ -18,9 +18,7 @@ const TITLE_ID = "blog-post-title";
 const TITLE_ERROR_ID = "blog-post-title-error";
 const EXCERPT_ID = "blog-post-excerpt";
 const EXCERPT_ERROR_ID = "blog-post-excerpt-error";
-const BODY_ID = "blog-post-body";
 const LABEL_CLASS = "mb-1 block text-xs font-semibold text-text-muted";
-const BODY_ROWS = 20;
 const EXCERPT_ROWS = 2;
 
 function FieldError({
@@ -43,19 +41,15 @@ function FieldError({
 }
 
 /**
- * Title / excerpt / body fields of the blog editor (AE-0411, B19): labelled,
+ * Title / excerpt fields of the blog editor (AE-0411, B19): labelled,
  * `required` + `maxLength` matching the backend limits, with inline errors.
- * The body is edited as source text (markdown) in a textarea so loading and
- * saving never reformats the stored text.
+ * The body is edited per section by the `blog.v2` section editor (AE-0424).
  */
 export function BlogPostEditFields({
   title,
   onTitleChange,
   excerpt,
   onExcerptChange,
-  bodyText,
-  onBodyChange,
-  onSelectionChange,
   validation,
 }: BlogPostEditFieldsProps): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
@@ -96,22 +90,6 @@ export function BlogPostEditFields({
           onChange={(e) => onExcerptChange(e.target.value)}
         />
         <FieldError id={EXCERPT_ERROR_ID} message={excerptError} />
-      </div>
-      <div>
-        <label htmlFor={BODY_ID} className={LABEL_CLASS}>
-          {t("fields.content")}
-        </label>
-        <NeonTextarea
-          id={BODY_ID}
-          value={bodyText}
-          rows={BODY_ROWS}
-          className="font-mono"
-          onChange={(e) => onBodyChange(e.target.value)}
-          onSelect={(e) => {
-            const { selectionStart, selectionEnd, value } = e.currentTarget;
-            onSelectionChange(value.slice(selectionStart, selectionEnd));
-          }}
-        />
       </div>
     </>
   );

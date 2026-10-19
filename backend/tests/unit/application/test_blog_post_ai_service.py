@@ -59,8 +59,6 @@ class TestBlogPostAIService:
     def service(self, llm_service: AsyncMock, tmp_path: Path) -> BlogPostAIService:
         return BlogPostAIService(
             llm_service=llm_service,
-            image_service=None,
-            output_dir=tmp_path,
         )
 
     @pytest.mark.asyncio
@@ -270,13 +268,9 @@ class TestBlogPostAIService:
         """Given dependencies, when service is created, then they are stored."""
         service = BlogPostAIService(
             llm_service=llm_service,
-            image_service=None,
-            output_dir=tmp_path,
         )
 
         assert service._llm_service is llm_service
-        assert service._image_service is None
-        assert service._output_dir == tmp_path
 
     @pytest.mark.asyncio
     async def test_improve_with_persona_uses_persona_agent(
@@ -297,8 +291,6 @@ class TestBlogPostAIService:
 
         service = BlogPostAIService(
             llm_service=StubOpenAIService(),
-            image_service=None,
-            output_dir=tmp_path,
         )
 
         persona = PersonaProfile(name="Pedro")
@@ -322,81 +314,6 @@ class TestBlogPostAIService:
             )
 
         assert result["improved_text"] == "Pedro-style text"
-
-    @pytest.mark.asyncio
-    async def test_generate_image_writes_file_and_returns_path(
-        self, llm_service: AsyncMock, tmp_path: Path
-    ) -> None:
-        """Given image service, when generating image, then file path is returned."""
-        image_service = AsyncMock()
-
-        def _write_image(prompt: str, output_path: str) -> None:
-            Path(output_path).write_text("fake-image", encoding="utf-8")
-
-        image_service.generate_image = AsyncMock(side_effect=_write_image)
-        service = BlogPostAIService(
-            llm_service=llm_service,
-            image_service=image_service,
-            output_dir=tmp_path,
-        )
-
-        result = await service.generate_image("post-1", "A blog hero image")
-
-        image_service.generate_image.assert_awaited_once()
-        # AE-0413: the sanitizer keeps case (the model mirrored lowercase input).
-        assert result["prompt"] == "A blog hero image"
-        assert Path(result["image_url"]).exists()
-        assert Path(result["image_url"]).read_text(encoding="utf-8") == "fake-image"
-
-    @pytest.mark.asyncio
-    async def test_generate_image_starts_trace_with_post_and_user(
-        self, llm_service: AsyncMock, tmp_path: Path
-    ) -> None:
-        """Given post id and user, when generating image, then trace uses both values."""
-        image_service = AsyncMock()
-        image_service.generate_image = AsyncMock(return_value=None)
-        service = BlogPostAIService(
-            llm_service=llm_service,
-            image_service=image_service,
-            output_dir=tmp_path,
-        )
-
-        with patch(
-            "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
-        ) as mock_trace:
-            await service.generate_image("post-9", "prompt", user_id="editor-3")
-
-        mock_trace.assert_called_once_with(
-            StartupParams(post_id="post-9", user_id="editor-3")
-        )
-
-    @pytest.mark.asyncio
-    async def test_generate_image_wraps_service_errors(
-        self, llm_service: AsyncMock, tmp_path: Path
-    ) -> None:
-        """Given image service failure, when generating, then RuntimeError is raised."""
-        image_service = AsyncMock()
-
-        def _fail(_prompt: str, _output_path: str) -> None:
-            raise OSError("disk full")
-
-        image_service.generate_image = _fail
-        service = BlogPostAIService(
-            llm_service=llm_service,
-            image_service=image_service,
-            output_dir=tmp_path,
-        )
-
-        with pytest.raises(RuntimeError, match="Image generation failed"):
-            await service.generate_image("post-1", "prompt")
-
-    @pytest.mark.asyncio
-    async def test_generate_image_requires_service(
-        self, service: BlogPostAIService
-    ) -> None:
-        """Given no image service, when generating image, then RuntimeError is raised."""
-        with pytest.raises(RuntimeError, match="image service unavailable"):
-            await service.generate_image("post-1", "A blog hero image")
 
 
 class TestLLMServiceProtocol:

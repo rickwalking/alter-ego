@@ -11,6 +11,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from rag_backend.application.services.blog.blog_document_service import (
+    BlogDocumentService,
+)
+from rag_backend.application.services.blog.blog_public_projection import (
+    project_public_document,
+)
+
 if TYPE_CHECKING:
     from rag_backend.modules.publishing import BlogPostModel
 
@@ -40,6 +47,10 @@ PUBLIC_BLOG_POST_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "sources",
     "citations",
     "view_count",
+    # Editor-only parts of the blog.v2 document (AE-0423, ADR-0025).
+    "quality",
+    "prompt",
+    "model",
 })
 
 
@@ -94,9 +105,15 @@ def to_public_summary(post: "BlogPostModel") -> PublicBlogPostSummary:
 
 
 def to_public_detail(post: "BlogPostModel") -> PublicBlogPostResponse:
-    """Build the lean detail by explicit field mapping (allow-list)."""
+    """Build the lean detail by explicit field mapping (allow-list).
+
+    ``content`` is the public projection of the ``blog.v2`` document (no
+    quality, image prompt/model or generation metadata); a row the cutover has
+    not reached is adapted to text-only v2 in memory (AE-0423 fail-safe).
+    """
     summary = to_public_summary(post)
+    document = BlogDocumentService.read_document(post.content, str(post.id))
     return PublicBlogPostResponse(
         **summary.model_dump(),
-        content=dict(post.content or {}),
+        content=project_public_document(document),
     )

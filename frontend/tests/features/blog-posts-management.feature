@@ -7,7 +7,8 @@ Feature: Manage blog posts from the dashboard (AE-0296)
     Given a blog post exists in the listing
     When the admin clicks Edit on its card
     Then the edit page opens for that post
-    And saving changes persists via PUT and returns to the listing
+    And saving changes persists via PUT and the editor stays open with the new version listed (AE-0424)
+    And "Back to list" returns to the listing (guarded while there are unsaved changes)
 
   Scenario: Delete a post with confirmation
     Given a standalone blog post exists in the listing

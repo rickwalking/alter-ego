@@ -143,11 +143,9 @@ class BlogPostHideService:
             hidden_ids.append(str(row.id))
         await db.flush()
         if hidden_ids:
-            logger.info(
-                "hid %d carousel-origin blog post(s): %s",
-                len(hidden_ids),
-                run.reason,
-            )
+            # structlog key/value (not %-style args, which raise once the app
+            # has configured structlog; found as an order-dependent test failure).
+            logger.info("blog_posts_hidden", count=len(hidden_ids), reason=run.reason)
         return HideReport(ids=hidden_ids, reason=run.reason)
 
     @staticmethod

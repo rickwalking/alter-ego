@@ -171,10 +171,13 @@ Feature: Public blog and workspace preview separation
     Then I should see the generated blog markdown preview
     And the page URL should not be the public "/blog/{project_id}" route
 
+  # AE-0423 / ADR-0025: /blog/{project_id} is no longer a public read path; a
+  # published post is read at /blog/{post id} from its own blog.v2 document.
   @cp-happy-path
   Scenario: Public blog page has no admin publish panel
     Given a carousel project exists with is_public true
-    When I navigate to "/blog/{project_id}" as an admin
+    And its blog post is published as a blog.v2 document
+    When I navigate to "/blog/{post_id}" as an admin
     Then I should not see the blog admin publish panel
     And I should see read-only blog content
 
@@ -190,7 +193,10 @@ Feature: Public blog and workspace preview separation
     Given the workflow_status is "approved_for_publish"
     When I click "Publish to site"
     Then the project is_public should become true
-    When I navigate to "/blog/{project_id}" without authentication
+    # AE-0423: the public blog content is the published blog.v2 post, not the
+    # carousel projection.
+    When the project's blog post is published
+    And I navigate to "/blog/{post_id}" without authentication
     Then I should see the published blog content
 
 @cp-consolidation @cp-ui-legacy

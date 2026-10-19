@@ -53,19 +53,17 @@ async def _seed_post(
     with_stamps: bool = False,
 ) -> str:
     post_id = str(uuid4())
-    row = BlogPostModel.from_entity(
-        {
-            "id": post_id,
-            "origin": origin.value,
-            "title": "Seed",
-            "slug": f"seed-{post_id}",
-            "status": status.value,
-            "content": {"markdown": "# seed"},
-            "ai_generation_metadata": ai_generation_metadata or {},
-            "published_at": _NOW if with_stamps else None,
-            "submitted_for_review_at": _NOW if with_stamps else None,
-        }
-    )
+    row = BlogPostModel.from_entity({
+        "id": post_id,
+        "origin": origin.value,
+        "title": "Seed",
+        "slug": f"seed-{post_id}",
+        "status": status.value,
+        "content": {"markdown": "# seed"},
+        "ai_generation_metadata": ai_generation_metadata or {},
+        "published_at": _NOW if with_stamps else None,
+        "submitted_for_review_at": _NOW if with_stamps else None,
+    })
     db.add(row)
     await db.flush()
     return post_id
@@ -192,9 +190,11 @@ class TestBlogPostHideService:
 
     def test_is_hide_target_only_matches_published_carousel(self) -> None:
         def row(origin: str, status: str) -> BlogPostModel:
-            return BlogPostModel.from_entity(
-                {"id": str(uuid4()), "origin": origin, "status": status}
-            )
+            return BlogPostModel.from_entity({
+                "id": str(uuid4()),
+                "origin": origin,
+                "status": status,
+            })
 
         assert is_hide_target(
             row(BlogPostOrigin.CAROUSEL.value, BlogPostStatus.PUBLISHED.value)
@@ -205,3 +205,28 @@ class TestBlogPostHideService:
         assert not is_hide_target(
             row(BlogPostOrigin.STANDALONE.value, BlogPostStatus.PUBLISHED.value)
         )
+
+
+class TestHideLoggingUnderAppConfig:
+    # Regression (found rebasing AE-0423): a %-style log call raised
+    # "_proxy_to_logger() takes 2 to 3 positional arguments" once the app had
+    # configured structlog, so the hide failed depending on test order.
+    async def test_hide_logs_under_the_app_structlog_config(
+        self, db_session: AsyncSession
+    ) -> None:
+        import structlog
+
+        from rag_backend.infrastructure.logging import setup_logging
+
+        setup_logging(debug=False)
+        try:
+            await _seed_post(
+                db_session,
+                origin=BlogPostOrigin.CAROUSEL,
+                status=BlogPostStatus.PUBLISHED,
+                with_stamps=True,
+            )
+            report = await _service().hide(db_session, _RUN)
+            assert len(report.ids) == 1
+        finally:
+            structlog.reset_defaults()

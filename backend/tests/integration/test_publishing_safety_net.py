@@ -65,6 +65,7 @@ from rag_backend.domain.models import (
     UserRole,
 )
 from rag_backend.domain.protocols import PublishResult
+from tests.blog_v2_support import v2_content
 from tests.integration.conftest import TEST_SECRET, auth_headers_for, create_test_user
 from tests.snapshots.publishing import _snapshot as publishing_snapshot
 
@@ -134,9 +135,10 @@ FIXTURE_DESIGN_TOKENS: Final[dict[str, object]] = {
 # Deterministic blog-post payload for the CRUD snapshots.
 FIXTURE_BLOG_POST_TITLE = "Fixture Blog Post"
 FIXTURE_BLOG_POST_SLUG = "fixture-blog-post"
-FIXTURE_BLOG_POST_CONTENT: Final[dict[str, object]] = {
-    "blocks": [{"type": "paragraph", "text": "Deterministic blog post body."}],
-}
+# AE-0423: a blog.v2 document with a fixed section id (deterministic snapshots).
+FIXTURE_BLOG_POST_CONTENT: Final[dict[str, object]] = v2_content(
+    "Deterministic blog post body."
+)
 FIXTURE_BLOG_POST_EXCERPT = "Deterministic excerpt."
 FIXTURE_BLOG_POST_KEYWORDS: Final[list[str]] = ["fixture", "snapshot"]
 
@@ -285,24 +287,22 @@ class PubEnv:
             from rag_backend.infrastructure.database.models import BlogPostModel
 
             session.add(
-                BlogPostModel.from_entity(
-                    {
-                        "id": str(uuid4()),
-                        "project_id": project_id,
-                        "origin": BlogPostOrigin.CAROUSEL.value,
-                        "title": FIXTURE_TITLE,
-                        "slug": f"carousel-{project_id}",
-                        "status": BlogPostStatus.PUBLISHED.value,
-                        "content": {
-                            "markdown": FIXTURE_BLOG_PT,
-                            "translations": {
-                                "pt": FIXTURE_BLOG_PT,
-                                "en": FIXTURE_BLOG_EN,
-                            },
+                BlogPostModel.from_entity({
+                    "id": str(uuid4()),
+                    "project_id": project_id,
+                    "origin": BlogPostOrigin.CAROUSEL.value,
+                    "title": FIXTURE_TITLE,
+                    "slug": f"carousel-{project_id}",
+                    "status": BlogPostStatus.PUBLISHED.value,
+                    "content": {
+                        "markdown": FIXTURE_BLOG_PT,
+                        "translations": {
+                            "pt": FIXTURE_BLOG_PT,
+                            "en": FIXTURE_BLOG_EN,
                         },
-                        "distribution": build_distribution(project),
-                    }
-                )
+                    },
+                    "distribution": build_distribution(project),
+                })
             )
             if approved_for_publish:
                 model = await session.get(CarouselProjectModel, project_id)

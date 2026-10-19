@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
@@ -10,43 +10,48 @@ import {
   NeonCardHeader,
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
-import { API_ENDPOINTS } from "@/constants/api";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { tryParseBlogContent } from "../lib/parse-blog-content";
 import type { BlogPostVersion, VersionHistorySidebarProps } from "./types";
 
+const PREVIEW_CHARS = 400;
+const PARAGRAPH_BREAK = "\n\n";
+
+/** The text of a `blog.v2` snapshot (sections joined), for the diff preview. */
+export function snapshotText(snapshot: BlogPostVersion["snapshot"]): string {
+  const document = tryParseBlogContent(snapshot);
+  if (!document) {
+    return "";
+  }
+  return document.sections
+    .map((section) =>
+      [section.heading, section.body_md].filter(Boolean).join(PARAGRAPH_BREAK),
+    )
+    .join(PARAGRAPH_BREAK);
+}
+
+function clip(text: string): string {
+  return text.length > PREVIEW_CHARS
+    ? `${text.slice(0, PREVIEW_CHARS)}…`
+    : text;
+}
+
+/**
+ * Version history of a post (AE-0424, F-13): every save appends a snapshot,
+ * listed here newest first; restoring calls the restore route (a new snapshot records it)
+ * and loads the restored content into the editor.
+ */
 export function VersionHistorySidebar({
-  postId,
-  currentBody,
+  versions,
+  loading,
+  currentText,
+  disabled,
   onRestore,
 }: VersionHistorySidebarProps): React.JSX.Element {
   const t = useTranslations("dashboard.blogPosts.versions");
-  const [versions, setVersions] = useState<BlogPostVersion[]>([]);
   const [selected, setSelected] = useState<BlogPostVersion | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const loadVersions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await authenticatedFetch(
-        API_ENDPOINTS.BLOG_POST_VERSIONS(postId),
-      );
-      if (!response.ok) {
-        return;
-      }
-      const data = (await response.json()) as BlogPostVersion[];
-      setVersions(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [postId]);
-
-  useEffect(() => {
-    void loadVersions();
-  }, [loadVersions]);
-
-  const selectedBody =
-    typeof selected?.snapshot?.body === "string" ? selected.snapshot.body : "";
-
+  const newestFirst = [...versions].sort(
+    (a, b) => b.version_number - a.version_number,
+  );
   return (
     <NeonCard>
       <NeonCardHeader className="pb-2">
@@ -60,7 +65,7 @@ export function VersionHistorySidebar({
           <p className="text-muted-foreground text-sm">{t("empty")}</p>
         )}
         <ul className="max-h-48 space-y-2 overflow-auto">
-          {versions.map((version) => (
+          {newestFirst.map((version) => (
             <li key={version.version_number}>
               <button
                 type="button"
@@ -70,7 +75,9 @@ export function VersionHistorySidebar({
                 <span>
                   {t("versionLabel", { number: version.version_number })}
                 </span>
-                <NeonBadge variant="outline">{version.title}</NeonBadge>
+                {version.title && (
+                  <NeonBadge variant="outline">{version.title}</NeonBadge>
+                )}
               </button>
             </li>
           ))}
@@ -79,17 +86,16 @@ export function VersionHistorySidebar({
           <div className="space-y-2 rounded border p-2 text-xs">
             <p className="font-medium">{t("diffTitle")}</p>
             <p className="text-muted-foreground whitespace-pre-wrap">
-              {selectedBody.slice(0, 400)}
-              {selectedBody.length > 400 ? "…" : ""}
+              {clip(snapshotText(selected.snapshot))}
             </p>
             <p className="text-muted-foreground whitespace-pre-wrap">
-              {currentBody.slice(0, 400)}
-              {currentBody.length > 400 ? "…" : ""}
+              {clip(currentText)}
             </p>
             <NeonButton
               size="sm"
               variant="outline"
-              onClick={() => onRestore(selected)}
+              disabled={disabled}
+              onClick={() => onRestore(selected.version_number)}
             >
               {t("restore")}
             </NeonButton>

@@ -1,19 +1,41 @@
 import { PublicCoverImage } from "./public-cover-image";
 import type { BlogPostHeroProps } from "./types";
 
-export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
+const HERO_FRAME_CLASS =
+  "relative mb-10 h-72 w-full overflow-hidden rounded-2xl md:h-96";
+
+/**
+ * Article hero: the post's own cover with its stored alt (AE-0423, ADR-0025),
+ * or a neutral themed default when the cover is null — never a carousel slide.
+ */
+export function BlogPostHero({ cover, design }: BlogPostHeroProps) {
   const { colors } = design;
+  const frameStyle = {
+    border: `1px solid ${colors.primary}33`,
+    boxShadow: `0 0 60px ${colors.primary}1F, 0 20px 40px rgba(0,0,0,0.4)`,
+  };
+
+  if (!cover) {
+    return (
+      <div
+        data-testid="blog-hero-fallback"
+        aria-hidden="true"
+        className={HERO_FRAME_CLASS}
+        style={{
+          ...frameStyle,
+          background: `linear-gradient(135deg, ${colors.primary}33 0%, ${colors.accent}1A 50%, ${colors.bg} 100%)`,
+        }}
+      />
+    );
+  }
 
   return (
     <PublicCoverImage
-      src={imageUrl}
-      alt={title}
+      src={cover.url}
+      alt={cover.alt}
       sizes="(max-width: 768px) 100vw, 768px"
-      frameClassName="relative mb-10 h-72 w-full overflow-hidden rounded-2xl md:h-96"
-      frameStyle={{
-        border: `1px solid ${colors.primary}33`,
-        boxShadow: `0 0 60px ${colors.primary}1F, 0 20px 40px rgba(0,0,0,0.4)`,
-      }}
+      frameClassName={HERO_FRAME_CLASS}
+      frameStyle={frameStyle}
       overlay={
         <div
           className="absolute inset-0"

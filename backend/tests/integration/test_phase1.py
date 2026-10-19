@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
 from rag_backend.domain.models import User, UserRole
+from tests.blog_v2_support import v2_content
 
 TEST_SECRET = "test-secret-for-phase1-integration-tests!"
 
@@ -221,7 +222,7 @@ class TestBlogPostEndpoints:
         payload = {
             "title": "Test Blog Post",
             "slug": "test-blog-post",
-            "content": {"blocks": []},
+            "content": v2_content("A test body"),
             "excerpt": "A test excerpt",
             "author_id": "test-author",
         }
@@ -361,9 +362,11 @@ class TestBlogPostEndpoints:
         reviewer = await _create_user("reviewer@example.com", UserRole.EDITOR)
 
         # Create a blog post owned by admin
+        # AE-0423: publish needs a blog.v2 document with a non-empty section.
         create_payload = {
             "title": "Workflow Test",
             "slug": "workflow-test",
+            "content": v2_content("Workflow body"),
         }
         create_response = await client.post("/api/blog-posts", json=create_payload)
         post = create_response.json()

@@ -7,6 +7,10 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from rag_backend.application.services.blog.blog_publish_readiness import (
+    DisclosureRequiredError,
+    assert_ready_to_publish,
+)
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_post import BlogPostStatus
@@ -16,10 +20,31 @@ from rag_backend.domain.constants.workflow_events import (
     EVENT_TYPE_BLOGPOST_PUBLISHED,
     EVENT_TYPE_BLOGPOST_SCHEDULED,
 )
+from rag_backend.domain.models.blog_document import InvalidBlogDocumentError
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
+
+LOG_SCHEDULED_PUBLISH_BLOCKED = "blog_scheduled_publish_blocked"
+
+
+def _publishable(post: BlogPostModel) -> bool:
+    """Run the publish guard; a blocked post loses its schedule, stays approved.
+
+    AE-0424 review: the sweep must not publish what "Publish" would refuse
+    (empty document or missing AI disclosure). Clearing the schedule stops the
+    sweep retrying every tick; the owner sees the post approved, unscheduled.
+    """
+    try:
+        assert_ready_to_publish(post)
+    except (InvalidBlogDocumentError, DisclosureRequiredError) as exc:
+        logger.warning(
+            LOG_SCHEDULED_PUBLISH_BLOCKED, post_id=str(post.id), reason=str(exc)
+        )
+        post.scheduled_publish_at = None
+        return False
+    return True
 
 
 class ScheduledPublishService:
@@ -39,6 +64,7 @@ class ScheduledPublishService:
         """Publish all posts whose scheduled time has passed."""
         now = datetime.now(UTC)
         published = 0
+        blocked = 0
         async with self._session_factory() as db:
             result = await db.execute(
                 select(BlogPostModel)
@@ -52,6 +78,9 @@ class ScheduledPublishService:
             posts = list(result.scalars().all())
             for post in posts:
                 if post.status != BlogPostStatus.APPROVED.value:
+                    continue
+                if not _publishable(post):
+                    blocked += 1
                     continue
                 post.status = BlogPostStatus.PUBLISHED.value
                 post.published_at = now
@@ -72,8 +101,9 @@ class ScheduledPublishService:
                         title=post.title,
                     )
                 published += 1
-            if published:
+            if published or blocked:
                 await db.commit()
+            if published:
                 logger.info("scheduled_posts_published", count=published)
         return published
 

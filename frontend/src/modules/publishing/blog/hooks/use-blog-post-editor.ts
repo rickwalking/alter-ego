@@ -1,129 +1,217 @@
 "use client";
 
 /**
- * Blog post editor state hook (AE-0155 route-page thinning; AE-0411 fixes).
+ * Blog section editor state (AE-0411 load/save; AE-0424 `blog.v2` draft).
  *
- * Loads the FULL post through the detail endpoint (the list only carries
- * summaries without `content`, and only its first page), mirrors the editable
- * fields into local state, and saves only what changed. The body is read from
- * either stored shape (`content.body` or a carousel row's `content.markdown`)
- * and written back without dropping any other content key, so a title-only
- * save never touches the stored content (B05). Client validation mirrors the
- * backend 422 rules and save failures are returned, never thrown (B19).
+ * Loads the FULL post through the detail endpoint and edits a draft
+ * `{ title, excerpt, document }` over the strict `blog.v2` document, one
+ * content language at a time (PT or EN). A save PUTs only what changed with
+ * `If-Match`; a conflict keeps the owner's unsaved draft, typing done while
+ * the PUT is in flight is kept, and a 409 caused by our own slot write is
+ * retried on top. Slot actions (image, rewrite, translation) apply their
+ * server answer to just that slot (`lib/editor-session.ts`). A row that is still legacy markdown is never
+ * parsed here: it surfaces as "migration pending" (AC15).
  */
 
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import type { BlogPostVersion } from "../components/types";
+import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
+import { blogPostKeys, fetchBlogPostDetail } from "../blog-post-requests";
 import {
-  blogPostKeys,
-  fetchBlogPostDetail,
-  saveBlogPost,
-} from "../blog-post-requests";
-import { BlogPostMutationError } from "../constants";
+  BlogEditorRequestError,
+  restoreVersion,
+  savePost,
+  type LockedPost,
+} from "../blog-editor-requests";
 import {
   buildBlogPostUpdate,
   hasValidationErrors,
-  readEditableBody,
-  validateBlogEditorFields,
+  validateBlogEditorDraft,
+  type BlogEditorDraft,
 } from "../editor-content";
-import type { BlogPost } from "../types";
-import type { BlogEditorSaveError, UseBlogPostEditorResult } from "./types";
+import {
+  ownBumpRetry,
+  sessionAfterSave,
+  sessionAfterSlot,
+  sessionFromPost,
+} from "../lib/editor-session";
+import {
+  BLOG_CONTENT_PT,
+  type BlogContentLanguage,
+} from "../lib/editor-document";
+import type { BlogPost, BlogPostUpdatePayload } from "../types";
+import type {
+  BlogEditorError,
+  DraftMerge,
+  EditorSession,
+  UseBlogPostEditorResult,
+} from "./types";
 
-const DEFAULT_LOCK_VERSION = 1;
-const SAVE_FAILED: BlogEditorSaveError = "failed";
-
-function toSaveError(err: unknown): BlogEditorSaveError {
-  return err instanceof BlogPostMutationError ? err.code : SAVE_FAILED;
+function isVersionConflict(err: unknown): boolean {
+  return (
+    err instanceof BlogEditorRequestError &&
+    err.kind === BLOG_EDITOR_ERROR_KINDS.VERSION_CONFLICT
+  );
 }
 
-export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
-  const queryClient = useQueryClient();
+/** PUT `payload`; on a 409 caused by our own slot write, retry on top once. */
+async function saveWithOwnBumpRetry(
+  session: EditorSession,
+  payload: BlogPostUpdatePayload,
+  latest: () => EditorSession | null,
+): Promise<{ saved: BlogPost; sent: BlogEditorDraft | null }> {
+  try {
+    return {
+      saved: await savePost(locked(session.base), payload),
+      sent: session.draft,
+    };
+  } catch (err) {
+    const retry = isVersionConflict(err)
+      ? ownBumpRetry(session.base.lock_version, latest())
+      : null;
+    if (!retry) {
+      throw err;
+    }
+    const current = latest()?.base ?? session.base;
+    if (!retry.payload) {
+      return { saved: current, sent: retry.draft };
+    }
+    const lock = { id: session.base.id, lockVersion: retry.lockVersion };
+    return { saved: await savePost(lock, retry.payload), sent: retry.draft };
+  }
+}
+
+function toEditorError(err: unknown): BlogEditorError {
+  if (err instanceof BlogEditorRequestError) {
+    return { kind: err.kind, detail: err.detail };
+  }
+  return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
+}
+
+export function locked(post: BlogPost): LockedPost {
+  return { id: post.id, lockVersion: post.lock_version };
+}
+
+function useEditorSession(postId: string) {
   const query = useQuery({
     queryKey: blogPostKeys.detail(postId),
     queryFn: () => fetchBlogPostDetail(postId),
     enabled: Boolean(postId),
   });
-  const post = query.data ?? undefined;
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [bodyText, setBodyText] = useState("");
-  const [selectedText, setSelectedText] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<BlogEditorSaveError | null>(null);
+  const loaded = query.data ?? null;
+  const [session, setSession] = useState<EditorSession | null>(null);
+  // Adjust state while rendering (not in an effect): start a session the
+  // first time a post loads; later server answers update it explicitly.
+  if (loaded && session?.base.id !== loaded.id) {
+    setSession(sessionFromPost(loaded));
+  }
+  return { query, session, setSession };
+}
 
+export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
+  const { query, session, setSession } = useEditorSession(postId);
+  // The latest committed session, for answers that arrive after a re-render
+  // (a 409 retry, the lock an action must use).
+  const latest = useRef<EditorSession | null>(session);
   useEffect(() => {
-    if (!post) {
-      return;
-    }
-    setTitle(post.title);
-    setExcerpt(post.excerpt ?? "");
-    setBodyText(readEditableBody(post.content).text);
-  }, [post]);
+    latest.current = session;
+  }, [session]);
+  const [language, setLanguage] =
+    useState<BlogContentLanguage>(BLOG_CONTENT_PT);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<BlogEditorError | null>(null);
+  const draft = session?.draft ?? null;
+  const original = session?.original ?? null;
+  const validation = draft ? validateBlogEditorDraft(draft) : null;
+  const payload =
+    draft && original ? buildBlogPostUpdate(original, draft) : null;
 
-  const fields = { title, excerpt, bodyText };
-  const validation = validateBlogEditorFields(fields);
-
-  const persist = async (loaded: BlogPost): Promise<boolean> => {
-    const payload = buildBlogPostUpdate(
-      {
-        title: loaded.title,
-        excerpt: loaded.excerpt ?? "",
-        content: loaded.content ?? {},
-      },
-      fields,
+  const updateDraft = (
+    edit: (current: BlogEditorDraft) => BlogEditorDraft,
+  ): void => {
+    setSession((prev) =>
+      prev?.draft ? { ...prev, draft: edit(prev.draft) } : prev,
     );
-    if (!payload) {
-      return true;
-    }
-    const saved = await saveBlogPost(
-      postId,
-      payload,
-      loaded.lock_version ?? DEFAULT_LOCK_VERSION,
-    );
-    queryClient.setQueryData(blogPostKeys.detail(postId), saved);
-    return true;
   };
 
-  const handleSave = async (): Promise<boolean> => {
-    if (!post || hasValidationErrors(validation)) {
-      return false;
+  const replaceFromServer = (post: BlogPost): void =>
+    setSession(sessionFromPost(post));
+
+  const applyServerPost = (post: BlogPost, merge: DraftMerge): void => {
+    setSession((prev) => sessionAfterSlot(prev, post, merge));
+  };
+
+  const persist = async (): Promise<BlogPost | null> => {
+    if (!session) {
+      return null;
+    }
+    if (!payload) {
+      return latest.current?.base ?? session.base;
+    }
+    if (validation && hasValidationErrors(validation)) {
+      return null;
     }
     setSaving(true);
-    setSaveError(null);
+    setError(null);
     try {
-      return await persist(post);
+      const { saved, sent } = await saveWithOwnBumpRetry(
+        session,
+        payload,
+        () => latest.current,
+      );
+      setSession((prev) => sessionAfterSave(prev, saved, sent));
+      return saved;
     } catch (err) {
-      setSaveError(toSaveError(err));
-      return false;
+      setError(toEditorError(err));
+      return null;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRestore = (version: BlogPostVersion): void => {
-    setTitle(version.title);
-    setExcerpt(version.excerpt ?? "");
-    setBodyText(readEditableBody(version.snapshot).text);
+  const handleRestore = async (versionNumber: number): Promise<boolean> => {
+    if (!session) {
+      return false;
+    }
+    setError(null);
+    try {
+      replaceFromServer(
+        await restoreVersion(locked(session.base), versionNumber),
+      );
+      return true;
+    } catch (err) {
+      setError(toEditorError(err));
+      return false;
+    }
   };
 
   return {
-    post,
+    post: session?.base,
     loading: query.isPending && Boolean(postId),
     loadFailed: query.isError,
-    saving,
-    title,
-    setTitle,
-    excerpt,
-    setExcerpt,
-    bodyText,
-    setBodyText,
-    selectedText,
-    setSelectedText,
+    draft,
+    language,
+    setLanguage,
+    updateDraft,
     validation,
-    saveError,
-    handleSave,
+    dirty: payload !== null,
+    saving,
+    error,
+    setError,
+    handleSave: async () => (await persist()) !== null,
+    ensureSaved: async () => {
+      const saved = await persist();
+      return saved ? locked(saved) : null;
+    },
+    applyServerPost,
+    replaceFromServer,
+    reload: async () => {
+      const result = await query.refetch();
+      if (result.data) {
+        replaceFromServer(result.data);
+      }
+    },
     handleRestore,
   };
 }

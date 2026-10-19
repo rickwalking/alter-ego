@@ -1,4 +1,10 @@
-import type { BlogEditorValidation } from "@/modules/publishing";
+import type {
+  BlogEditorData,
+  BlogEditorValidation,
+  BlogReviewActions,
+  SectionSelection,
+  UseBlogPostEditorResult,
+} from "@/modules/publishing";
 import type { DashboardBlogPost } from "@/modules/editorial-operations";
 
 export interface BlogPostsFiltersProps {
@@ -59,10 +65,21 @@ export interface BlogPostEditFieldsProps {
   onTitleChange: (value: string) => void;
   excerpt: string;
   onExcerptChange: (value: string) => void;
-  bodyText: string;
-  onBodyChange: (value: string) => void;
-  onSelectionChange: (value: string) => void;
   validation: BlogEditorValidation;
+}
+
+export interface BlogPostEditorViewProps {
+  editor: UseBlogPostEditorResult;
+}
+
+export interface BlogEditorSidebarProps {
+  editor: UseBlogPostEditorResult;
+  review: BlogReviewActions;
+  data: BlogEditorData;
+  selection: SectionSelection | null;
+  /** Any image/rewrite/translation action is running. */
+  slotsPending: boolean;
+  onApplySuggestion: (text: string) => void;
 }
 
 export interface FieldErrorProps {

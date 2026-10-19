@@ -34,9 +34,12 @@ const MOCK_DESIGN: CarouselDesignResponse = {
 describe("BlogPostHero Component", () => {
   // Scenario: Blog post hero renders image with design styling
   describe("Given a BlogPostHero with an image URL and design tokens", () => {
+    // AE-0423: the hero is the post's own cover with its stored alt.
     const defaultProps = {
-      imageUrl: "/api/carousels/1/images/hero",
-      title: "Understanding Zero Trust",
+      cover: {
+        url: "/api/carousels/1/images/hero",
+        alt: "Understanding Zero Trust",
+      },
       design: MOCK_DESIGN,
     };
 
@@ -77,13 +80,22 @@ describe("BlogPostHero Component", () => {
     it("Then the whole hero is removed", () => {
       const { container } = render(
         <BlogPostHero
-          imageUrl="/missing.jpg"
-          title="Understanding Zero Trust"
+          cover={{ url: "/missing.jpg", alt: "Understanding Zero Trust" }}
           design={MOCK_DESIGN}
         />,
       );
       fireEvent.error(screen.getByRole("img"));
       expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  // Feature: Public blog renders the v2 document (AE-0423)
+  // Scenario: A missing cover uses a neutral default
+  describe("Given the document's cover is null", () => {
+    it("Then a neutral default hero is shown and no image is rendered", () => {
+      render(<BlogPostHero cover={null} design={MOCK_DESIGN} />);
+      expect(screen.getByTestId("blog-hero-fallback")).toBeInTheDocument();
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
     });
   });
 });

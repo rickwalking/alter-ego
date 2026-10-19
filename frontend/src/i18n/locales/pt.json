@@ -214,7 +214,10 @@
     },
     "untitledPost": "Post sem título",
     "swipeHint": "Deslize →",
-    "metaTitleSuffix": "Pedro Marins · Blog"
+    "metaTitleSuffix": "Pedro Marins · Blog",
+    "contentLanguage": "Idioma do conteúdo",
+    "contentLanguagePt": "PT",
+    "contentLanguageEn": "EN"
   },
   "create": {
     "pageTitle": "Criar Carrossel",
@@ -1188,6 +1191,100 @@
         "titleRequired": "O título é obrigatório.",
         "titleTooLong": "O título pode ter no máximo {max} caracteres.",
         "excerptTooLong": "O resumo pode ter no máximo {max} caracteres."
+      },
+      "editor": {
+        "heading": "Editar post do blog",
+        "back": "Voltar para a lista",
+        "save": "Salvar alterações",
+        "saving": "Salvando…",
+        "unsaved": {
+          "badge": "Alterações não salvas",
+          "confirm": "Você tem alterações não salvas. Sair e perdê-las?"
+        },
+        "language": {
+          "label": "Idioma do conteúdo",
+          "pt": "PT",
+          "en": "EN",
+          "missingEnglish": "Este post ainda não tem versão em inglês. A aba EN fica somente leitura até ela ser gerada.",
+          "generateEnglish": "Gerar tradução EN"
+        },
+        "cover": {
+          "label": "Imagem de capa"
+        },
+        "section": {
+          "title": "Seção {number}",
+          "heading": "Título da seção",
+          "headingPlaceholder": "Sem título (introdução)",
+          "body": "Texto (markdown)",
+          "image": "Imagem da seção",
+          "moveUp": "Subir",
+          "moveDown": "Descer",
+          "delete": "Excluir seção",
+          "add": "Adicionar seção",
+          "rewrite": "Reescrever esta seção na minha voz"
+        },
+        "image": {
+          "prompt": "Prompt da imagem",
+          "promptPlaceholder": "Descreva a imagem (opcional — o padrão usa o texto da seção)",
+          "generate": "Gerar imagem",
+          "regenerate": "Gerar de novo",
+          "retry": "Tentar de novo",
+          "remove": "Remover imagem",
+          "alt": "Texto alternativo",
+          "caption": "Legenda",
+          "failed": "A geração da imagem falhou. Nada foi alterado — tente de novo."
+        },
+        "voice": {
+          "title": "Nota de voz",
+          "score": "{score}/100",
+          "notScored": "Ainda sem nota",
+          "persona": "Persona da voz",
+          "noPersona": "Nenhuma persona disponível"
+        },
+        "review": {
+          "title": "Revisão e publicação",
+          "status": {
+            "draft": "Rascunho",
+            "under_review": "Em revisão",
+            "approved": "Aprovado",
+            "published": "Publicado",
+            "archived": "Arquivado"
+          },
+          "reviewer": "ID do revisor",
+          "reviewerHint": "Outro editor precisa revisar este post.",
+          "submit": "Enviar para revisão",
+          "approve": "Aprovar",
+          "reject": "Rejeitar",
+          "rejectReason": "Motivo da rejeição",
+          "publish": "Publicar",
+          "publishNow": "Publicar agora",
+          "unpublish": "Despublicar",
+          "schedule": "Agendar",
+          "scheduleAt": "Publicar em",
+          "scheduledFor": "Agendado para {date}",
+          "cancelSchedule": "Cancelar agendamento"
+        },
+        "migration": {
+          "title": "Migração pendente",
+          "body": "Este post ainda está no formato antigo e não pode ser editado até a migração do blog rodar. Recarregue depois que a migração for verificada."
+        },
+        "issues": {
+          "headingInvalid": "Títulos não podem começar com # nem passar de 200 caracteres.",
+          "bodyTooLong": "Esta seção está longa demais (máximo de 20.000 caracteres).",
+          "altRequired": "Toda imagem precisa de texto alternativo.",
+          "noSections": "O documento precisa de pelo menos uma seção."
+        },
+        "errors": {
+          "version_conflict": "Este post mudou em outra sessão. Seu texto não salvo continua aqui: copie, recarregue a página e refaça a edição.",
+          "migration_pending": "Este post ainda está no formato antigo (migração pendente).",
+          "validation": "O servidor recusou as alterações. Confira as seções, os títulos e os textos alternativos das imagens.",
+          "status_guard": "Essa etapa não é permitida no status atual do post. Só posts aprovados podem ser publicados: envie para revisão primeiro.",
+          "conflict": "Essa ação não é possível agora (o post mudou). Recarregue e tente de novo.",
+          "not_found": "Essa seção ou tradução não existe mais. Recarregue a página.",
+          "ai_failed": "O serviço de IA falhou. Nada foi alterado — tente de novo.",
+          "failed": "A ação falhou. Tente de novo.",
+          "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP."
+        }
       }
     },
     "analytics": {

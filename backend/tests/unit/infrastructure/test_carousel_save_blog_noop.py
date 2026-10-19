@@ -63,18 +63,16 @@ async def _insert_carousel_row(
     status: BlogPostStatus,
     ai_generation_metadata: dict[str, object] | None = None,
 ) -> BlogPostModel:
-    row = BlogPostModel.from_entity(
-        {
-            "id": str(uuid4()),
-            "project_id": project_id,
-            "origin": BlogPostOrigin.CAROUSEL.value,
-            "title": "Existing blog post",
-            "slug": f"carousel-{project_id}",
-            "status": status.value,
-            "content": _LEGACY_CONTENT,
-            "ai_generation_metadata": ai_generation_metadata or {},
-        }
-    )
+    row = BlogPostModel.from_entity({
+        "id": str(uuid4()),
+        "project_id": project_id,
+        "origin": BlogPostOrigin.CAROUSEL.value,
+        "title": "Existing blog post",
+        "slug": f"carousel-{project_id}",
+        "status": status.value,
+        "content": _LEGACY_CONTENT,
+        "ai_generation_metadata": ai_generation_metadata or {},
+    })
     db_session.add(row)
     await db_session.flush()
     return row

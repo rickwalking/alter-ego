@@ -44,10 +44,9 @@ Feature: Blog Post Creation with the section editor (reconciled)
   Scenario: Manage a section's image
     Given a section "intro" with no image
     When I click "Generate Image" for that section
-    Then I should see a preview of the generated image
-    When I click "Use This Image"
-    Then the section gets that image with a non-empty alt (defaulting to the heading)
-    And I can edit its alt text and caption
+    Then I should see a preview of the generated image in that section
+    And the section has that image with a non-empty alt (defaulting to the heading)
+    And I can edit its alt text and caption and save them
 
   Scenario: Manage the cover
     Given a post with no cover
@@ -60,10 +59,17 @@ Feature: Blog Post Creation with the section editor (reconciled)
     Then only that section's body is replaced
     And I can see the voice score for the post
 
-  Scenario: Plain publish from the editor
-    Given a draft with at least one non-empty section
+  Scenario: Publish an approved post from the editor
+    Given an approved post with at least one non-empty section
     When I click "Publish"
     Then the post status should be "published"
+    And the post should be visible at /blog/{id}
+
+  Scenario: Publish now on a draft when self-review is enabled
+    Given BLOG_ALLOW_SELF_REVIEW is true
+    And a draft with at least one non-empty section
+    When I click "Publish now"
+    Then the post is submitted, self-approved and published
     And the post should be visible at /blog/{id}
 
   # === EDGE CASES ===
@@ -97,7 +103,7 @@ Feature: Blog Post Creation with the section editor (reconciled)
     Then the post status should be "draft"
     And the public URL should return 404
 
-    When I edit the post and click "Publish"
+    When I edit the post, it is approved again and I click "Publish"
     Then the post should be visible again at the same URL
 
   # === ERROR CASES ===
@@ -116,10 +122,10 @@ Feature: Blog Post Creation with the section editor (reconciled)
     And the rest of the document should remain editable
 
   Scenario: Publishing an empty document is blocked
-    Given every section's body is empty
+    Given an approved post whose sections all have empty bodies
     When I click "Publish"
     Then I should see a validation message
-    And the post should stay "draft"
+    And the post should stay "approved"
 
   Scenario: Submit, approve and schedule
     Given a draft with at least one non-empty section

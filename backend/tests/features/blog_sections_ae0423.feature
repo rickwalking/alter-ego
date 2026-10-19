@@ -78,6 +78,31 @@ Feature: Blog document model (blog.v2), strict parser and one-shot cutover (AE-0
     And it has one section with heading "What happened" and body "Body"
     And the top-level translations value is no longer a string
 
+  Scenario: A blank translation is not migrated (PT fallback is kept)
+    Given a v1 row whose content.translations.en is an empty or blank string
+    When the cutover runs with --apply
+    Then the row has no translations.en document
+    And an EN reader is served the PT document, as in v1
+
+  Scenario: A v2 row with an invalid translation keeps its PT document
+    Given a row at schema "blog.v2" with a translation keyed "en-US"
+    When the cutover runs with --apply, or the row is read before that
+    Then only the invalid translation is dropped
+    And the PT sections are unchanged (never blanked to one empty section)
+
+  Scenario: Pre-cutover versions stay restorable
+    Given a v1 row whose version_history snapshots are v1 documents
+    When the cutover runs with --apply
+    Then every snapshot is rewritten to blog.v2 with the same rules
+    And --rollback rewrites them back to the v1 shape
+
+  Scenario: Rollback restores the featured_image_url the cutover cleared
+    Given a v1 row with a featured_image_url
+    When the cutover runs with --apply
+    Then featured_image_url is null and the old value is stashed in ai_generation_metadata
+    When the cutover runs with --rollback and no cover was set since
+    Then featured_image_url is restored and the stash is removed
+
   Scenario: A non-string translation entry is dropped, not stringified
     Given a v1 row whose content.translations contains a dict for "en"
     When the cutover runs with --apply
@@ -86,6 +111,7 @@ Feature: Blog document model (blog.v2), strict parser and one-shot cutover (AE-0
 
   Scenario: A "## " line inside a fenced code block is not a section boundary
     Given a v1 row whose markdown contains a fenced block with a "## comment" line
+    And a fence line with an info string (```python) inside the open fence
     When the cutover runs with --apply
     Then the fenced block stays inside its section body
     And the row has the expected unordered section count
@@ -141,13 +167,27 @@ Feature: Blog document model (blog.v2), strict parser and one-shot cutover (AE-0
     Given a blog_posts table with one row left at the legacy shape
     When the cutover runs with --verify
     Then the command exits non-zero
-    And the deploy aborts before the app stack starts
+
+  Scenario: --verify uses the same strict parse as the read path
+    Given a row whose content carries schema "blog.v2" but fails the strict parse
+    And the failure is a translation keyed "en-US"
+    When the cutover runs with --verify
+    Then the row is reported as not v2 and the command exits non-zero
 
   Scenario: The deploy runs the cutover after Postgres and before the app stack
     Given the deploy workflow has built the new image and stopped the old stack
     When Postgres becomes healthy
     Then the cutover runs with --apply --verify using the new image
-    And the full stack starts only after a zero exit
+    And the full stack is started next
+
+  # Review fix (AE-0423): the stack is down while the cutover runs, so a failure
+  # must never abort there (the 2026-06-18 alembic outage failure mode).
+  Scenario: A failed cutover never keeps the stack down
+    Given the cutover exits non-zero (a --verify hit, a DB error or an import error)
+    When the deploy continues
+    Then the exit code is captured and the full stack is still brought up
+    And the read fail-safe keeps non-migrated rows rendering
+    And the deploy job fails at the end so the failure alerts
 
   # --- featured_image_url projection ---
 

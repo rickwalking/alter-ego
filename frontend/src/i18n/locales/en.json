@@ -214,7 +214,10 @@
     },
     "untitledPost": "Untitled post",
     "swipeHint": "Swipe →",
-    "metaTitleSuffix": "Pedro Marins · Blog"
+    "metaTitleSuffix": "Pedro Marins · Blog",
+    "contentLanguage": "Content language",
+    "contentLanguagePt": "PT",
+    "contentLanguageEn": "EN"
   },
   "create": {
     "pageTitle": "Create Carousel",
@@ -1188,6 +1191,100 @@
         "titleRequired": "The title is required.",
         "titleTooLong": "The title can have at most {max} characters.",
         "excerptTooLong": "The excerpt can have at most {max} characters."
+      },
+      "editor": {
+        "heading": "Edit blog post",
+        "back": "Back to list",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "unsaved": {
+          "badge": "Unsaved changes",
+          "confirm": "You have unsaved changes. Leave and lose them?"
+        },
+        "language": {
+          "label": "Content language",
+          "pt": "PT",
+          "en": "EN",
+          "missingEnglish": "This post has no English version yet. The EN tab is read-only until it is generated.",
+          "generateEnglish": "Generate EN translation"
+        },
+        "cover": {
+          "label": "Cover image"
+        },
+        "section": {
+          "title": "Section {number}",
+          "heading": "Heading",
+          "headingPlaceholder": "No heading (intro)",
+          "body": "Body (markdown)",
+          "image": "Section image",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "delete": "Delete section",
+          "add": "Add section",
+          "rewrite": "Rewrite this section in my voice"
+        },
+        "image": {
+          "prompt": "Image prompt",
+          "promptPlaceholder": "Describe the image (optional — defaults to the section text)",
+          "generate": "Generate image",
+          "regenerate": "Regenerate",
+          "retry": "Retry",
+          "remove": "Remove image",
+          "alt": "Alt text",
+          "caption": "Caption",
+          "failed": "Image generation failed. Nothing was changed — try again."
+        },
+        "voice": {
+          "title": "Voice score",
+          "score": "{score}/100",
+          "notScored": "Not scored yet",
+          "persona": "Voice persona",
+          "noPersona": "No persona available"
+        },
+        "review": {
+          "title": "Review and publishing",
+          "status": {
+            "draft": "Draft",
+            "under_review": "Under review",
+            "approved": "Approved",
+            "published": "Published",
+            "archived": "Archived"
+          },
+          "reviewer": "Reviewer ID",
+          "reviewerHint": "A different editor must review this post.",
+          "submit": "Submit for review",
+          "approve": "Approve",
+          "reject": "Reject",
+          "rejectReason": "Reason for rejection",
+          "publish": "Publish",
+          "publishNow": "Publish now",
+          "unpublish": "Unpublish",
+          "schedule": "Schedule",
+          "scheduleAt": "Publish at",
+          "scheduledFor": "Scheduled for {date}",
+          "cancelSchedule": "Cancel schedule"
+        },
+        "migration": {
+          "title": "Migration pending",
+          "body": "This post is still stored in the old format and cannot be edited until the blog migration runs. Reload after the migration is verified."
+        },
+        "issues": {
+          "headingInvalid": "Headings cannot start with # or exceed 200 characters.",
+          "bodyTooLong": "This section is too long (20,000 characters max).",
+          "altRequired": "Alt text is required for every image.",
+          "noSections": "The document needs at least one section."
+        },
+        "errors": {
+          "version_conflict": "This post changed in another session. Your unsaved text is kept here: copy it, reload the page, then redo the edit.",
+          "migration_pending": "This post is still in the old format (migration pending).",
+          "validation": "The server rejected the changes. Check the sections, headings and image alt texts.",
+          "status_guard": "That step is not allowed in the post's current status. Only approved posts can be published: submit it for review first.",
+          "conflict": "That action is not possible right now (the post changed). Reload and try again.",
+          "not_found": "That section or translation no longer exists. Reload the page.",
+          "ai_failed": "The AI service failed. Nothing was changed — try again.",
+          "failed": "The action failed. Try again.",
+          "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP."
+        }
       }
     },
     "analytics": {

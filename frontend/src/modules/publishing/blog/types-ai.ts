@@ -11,7 +11,6 @@
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,
-  BlogGenerateImageResult,
   VoiceScoreResult,
   RubricEvaluationResult,
   ContentSource,

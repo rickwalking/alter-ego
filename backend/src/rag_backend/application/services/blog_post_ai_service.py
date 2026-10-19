@@ -2,31 +2,40 @@
 
 from __future__ import annotations
 
-import json
-import uuid
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Protocol
 
 from langchain_core.language_models import BaseChatModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.application.services.blog.ai_envelope import (
+    parse_suggestion,
+    strip_code_fence,
+)
 from rag_backend.application.services.blog_workflow_observability import (
     StartupParams,
     blog_ai_propagate,
     start_blog_workflow_trace,
 )
 from rag_backend.domain.constants.blog_ai import (
-    ERR_IMAGE_GENERATION_FAILED,
     ERR_INVALID_AI_ACTION,
     PROMPT_AI_IMPROVE,
     PROMPT_AI_SUGGEST,
+    SUGGEST_DEFAULT_EXPLANATION,
     VALID_AI_ACTIONS,
 )
+from rag_backend.domain.constants.blog_document import BLOG_SECTION_MAX_CHARS
+from rag_backend.domain.constants.blog_editor import (
+    ERR_BLOG_PERSONA_REQUIRED,
+    ERR_BLOG_REWRITE_EMPTY,
+    ERR_BLOG_REWRITE_TOO_LONG,
+    PHASE_BLOG_SECTION_REWRITE,
+)
+from rag_backend.domain.constants.input_sanitizer import MAX_LLM_INPUT_LENGTH
 from rag_backend.domain.models.persona import PersonaProfile
-from rag_backend.domain.protocols import ImageGenerationService
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 
 
@@ -60,6 +69,19 @@ class _ImproveInput:
     trace: BlogAiTraceContext | None = None
 
 
+@dataclass
+class _RewriteInput:
+    """Bundled input for BlogPostAIService.rewrite_section() (AE-0424)."""
+
+    db: AsyncSession
+    body_md: str
+    heading: str | None = None
+    # The requested persona, else the post's carousel persona (resolved by the
+    # route); ``None`` falls back to the first (single-author) persona.
+    persona_id: str | None = None
+    trace: BlogAiTraceContext | None = None
+
+
 class LLMServiceProtocol(Protocol):
     async def generate(
         self,
@@ -73,17 +95,14 @@ class LLMServiceProtocol(Protocol):
 
 
 class BlogPostAIService:
-    """Provides AI suggestions, improvements, and image generation for blog posts."""
+    """AI suggestions, improvements and section rewrites for blog posts.
 
-    def __init__(
-        self,
-        llm_service: LLMServiceProtocol,
-        image_service: ImageGenerationService | None,
-        output_dir: Path,
-    ) -> None:
+    Images go through ``BlogImageService`` (AE-0424); the legacy
+    ``generate_image`` path was removed with ``POST /generate-image``.
+    """
+
+    def __init__(self, llm_service: LLMServiceProtocol) -> None:
         self._llm_service = llm_service
-        self._image_service = image_service
-        self._output_dir = output_dir
 
     async def suggest(
         self,
@@ -112,19 +131,17 @@ class BlogPostAIService:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
             )
-        try:
-            data = json.loads(raw)
-            suggested = str(data.get("suggested_text", raw))
-            explanation = str(data.get("explanation", ""))
-        except json.JSONDecodeError:
-            suggested = raw.strip()
-            explanation = f"Suggested {input_data.action} rewrite."
-
+        # AE-0424 (F-10): fenced/nested envelopes become plain text.
+        parsed = parse_suggestion(raw or "")
         return {
             "original_text": safe_text,
-            "suggested_text": suggested,
+            "suggested_text": parsed.text,
             "suggestion_type": input_data.action,
-            "explanation": explanation,
+            "explanation": (
+                SUGGEST_DEFAULT_EXPLANATION.format(action=input_data.action)
+                if parsed.explanation is None
+                else parsed.explanation
+            ),
         }
 
     async def improve(
@@ -171,37 +188,42 @@ class BlogPostAIService:
             "action": input_data.action,
         }
 
-    async def generate_image(
-        self,
-        post_id: str,
-        prompt: str,
-        *,
-        user_id: str = "system",
-    ) -> dict[str, str]:
-        """Generate a featured image for a blog post."""
-        if self._image_service is None:
-            raise RuntimeError(
-                ERR_IMAGE_GENERATION_FAILED.format(reason="image service unavailable")
+    async def rewrite_section(self, input_data: _RewriteInput) -> str:
+        """One section body rewritten in the persona voice (``PersonaAgent.enforce``).
+
+        Persona: the given one, else the first (single-author) persona; none at
+        all is a ``ValueError``. The model OUTPUT is not run through the input
+        sanitizer (it strips ``( ) < >`` and truncates): only a surrounding code
+        fence is removed and the length is checked against the section limit;
+        rendering relies on the markdown allow-list. A body longer than the LLM
+        input limit is refused instead of being silently truncated.
+        """
+        if len(input_data.body_md) > MAX_LLM_INPUT_LENGTH:
+            raise ValueError(ERR_BLOG_REWRITE_TOO_LONG)
+        persona = await self._resolve_persona(input_data)
+        if persona is None:
+            raise ValueError(ERR_BLOG_PERSONA_REQUIRED)
+        post_id = (input_data.trace or BlogAiTraceContext()).post_id or "unknown"
+        agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
+        with blog_ai_propagate(post_id, PHASE_BLOG_SECTION_REWRITE):
+            rewritten = await agent.enforce(
+                input_data.body_md, context=input_data.heading or ""
             )
+        return _checked_rewrite(rewritten)
 
-        start_blog_workflow_trace(StartupParams(post_id=post_id, user_id=user_id))
-        safe_prompt = sanitize_llm_input(prompt)
-        output_dir = self._output_dir / post_id
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f"{uuid.uuid4()}.jpg"
-
-        with blog_ai_propagate(post_id, "generate_image"):
-            try:
-                await self._image_service.generate_image(safe_prompt, str(output_path))
-            except Exception as exc:
-                raise RuntimeError(
-                    ERR_IMAGE_GENERATION_FAILED.format(reason=str(exc))
-                ) from exc
-
-        return {
-            "prompt": safe_prompt,
-            "image_url": str(output_path),
-        }
+    async def _resolve_persona(
+        self, input_data: _RewriteInput
+    ) -> PersonaProfile | None:
+        db = input_data.db
+        if input_data.persona_id is not None:
+            return await self._load_persona(db, input_data.persona_id)
+        result = await db.execute(
+            select(PersonaProfileModel)
+            .order_by(PersonaProfileModel.created_at)
+            .limit(1)
+        )
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model is not None else None
 
     @staticmethod
     async def _load_persona(
@@ -214,6 +236,15 @@ class BlogPostAIService:
         if model is None:
             return None
         return model.to_entity()
+
+
+def _checked_rewrite(rewritten: object) -> str:
+    text = strip_code_fence(rewritten if isinstance(rewritten, str) else "")
+    if not text:
+        raise ValueError(ERR_BLOG_REWRITE_EMPTY)
+    if len(text) > BLOG_SECTION_MAX_CHARS:
+        raise ValueError(ERR_BLOG_REWRITE_TOO_LONG)
+    return text
 
 
 __all__ = ["BlogPostAIService"]

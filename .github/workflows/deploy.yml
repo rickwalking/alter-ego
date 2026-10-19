@@ -261,6 +261,25 @@ jobs:
             # (docs/deployment/prod-migration-reconcile.md). Prod uses create_all
             # bootstrap until then.
 
+            # --- Blog document cutover (AE-0423, ADR-0025) ---------------------
+            # One-shot, idempotent data rewrite of blog_posts.content v1 -> blog.v2
+            # (no DDL, no Alembic). Runs with the FRESHLY BUILT backend image while
+            # only Postgres is up (no old/new app overlap). It NEVER blocks the
+            # stack: the stack is already down here, so aborting would repeat the
+            # 2026-06-18 outage. Its exit code (a --verify hit, a DB error mid-batch,
+            # an import/settings error) is captured, the stack ALWAYS comes back up
+            # (the backend read fail-safe keeps non-migrated rows rendering), and
+            # the job fails at the very end so the deploy is red and alerts.
+            # Safe to re-run ad hoc.
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.blog_v1_to_v2 --apply --verify
+            BLOG_CUTOVER_EXIT=$?
+            set -e
+            if [ "$BLOG_CUTOVER_EXIT" -ne 0 ]; then
+              echo "::error::blog v2 cutover exited $BLOG_CUTOVER_EXIT; bringing the stack up anyway (read fail-safe active), failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -304,3 +323,9 @@ jobs:
 
             # Clean up old images
             docker image prune -af --filter "until=168h"
+
+            # AE-0423: surface a failed blog cutover only now, with the stack up.
+            if [ "$BLOG_CUTOVER_EXIT" -ne 0 ]; then
+              echo "::error::blog v2 cutover failed (exit $BLOG_CUTOVER_EXIT): run 'python -m rag_backend.scripts.blog_v1_to_v2 --dry-run' / '--apply --verify' on the droplet"
+              exit 1
+            fi

@@ -5,24 +5,29 @@ import {
   resolveDisplayTitle,
   stripEmphasisMarkup,
 } from "@/lib/public-blog-text";
-import { fetchBlogWithDesign, fetchPublicBlogPost } from "@/lib/server-fetch";
+import { fetchCarouselDesign, fetchPublicBlogPost } from "@/lib/server-fetch";
+import {
+  resolveBlogLanguage,
+  tryParseBlogContent,
+} from "@/modules/publishing/blog/lib/parse-blog-content";
+import type { BlogImage, BlogSection } from "@/schemas/blog-document";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 import type { PublicBlogPostResponse } from "@/schemas/public-blog-post";
 
 /**
- * Public blog detail resolution (AE-0297, ADR-0013).
+ * Public blog detail resolution (AE-0297, ADR-0013, AE-0423/ADR-0025).
  *
- * Single canonical URL `/blog/{id}` branched by provenance:
- * 1. `id` resolves on the public blog-post API → carousel-origin posts enrich
- *    through their project's design tokens; standalone posts render with the
- *    default public theme (never 404 for missing tokens).
- * 2. Otherwise `id` is treated as a legacy carousel project id (today's URLs)
- *    and rendered through the existing carousel projection path.
+ * `/blog/{id}` renders ONLY the post's own `blog.v2` document from the public
+ * blog-post API: its cover and per-section images with their stored alt. The
+ * carousel is consulted for theme tokens only (colors/typography), never for
+ * article text or images: there is no `fetchBlogWithDesign` / carousel `/blog`
+ * read and no legacy `/blog/{project_id}` fallback, so a carousel-origin post
+ * without a published v2 row is a 404. The content language (`?lang=`) picks
+ * `content.translations[lang]` and falls back to the PT document.
  *
- * AE-0412: every view is sanitized for anonymous visitors — image URLs use the
- * public routes (never the owner-only preview route), the title carries no
- * markup and is never a placeholder ("" when no real title exists), and inline
- * emphasis HTML in the body becomes markdown emphasis.
+ * AE-0412: the view is sanitized for anonymous visitors — image URLs use the
+ * public routes, the title carries no markup and is never a placeholder, and
+ * inline emphasis HTML in a section body becomes markdown emphasis.
  */
 
 const ORIGIN_CAROUSEL = "carousel";
@@ -30,64 +35,12 @@ const ORIGIN_CAROUSEL = "carousel";
 export interface PublicBlogView {
   title: string;
   subtitle: string | null;
-  markdown: string;
+  cover: BlogImage | null;
+  sections: BlogSection[];
   design: CarouselDesignResponse;
 }
 
-function extractMarkdown(
-  content: Record<string, unknown>,
-  lang: string,
-): string {
-  const translations = content.translations;
-  if (translations && typeof translations === "object") {
-    const localized = (translations as Record<string, unknown>)[lang];
-    if (typeof localized === "string" && localized.length > 0) {
-      return localized;
-    }
-  }
-  if (typeof content.markdown === "string") {
-    return content.markdown;
-  }
-  if (typeof content.body === "string") {
-    return content.body;
-  }
-  return "";
-}
-
-function publicDesign(design: CarouselDesignResponse): CarouselDesignResponse {
-  const { hero, slides } = design.images;
-  return {
-    ...design,
-    images: {
-      ...design.images,
-      hero: hero ? toPublicCarouselImageUrl(hero) : hero,
-      slides: slides.map(toPublicCarouselImageUrl),
-    },
-  };
-}
-
-function sanitizeView(
-  view: PublicBlogView,
-  fallbackTitles: ReadonlyArray<string | null | undefined>,
-): PublicBlogView {
-  const title = resolveDisplayTitle([view.title, ...fallbackTitles]);
-  const subtitle = view.subtitle ? stripEmphasisMarkup(view.subtitle) : "";
-  return {
-    title,
-    subtitle: subtitle && subtitle !== title ? subtitle : null,
-    markdown: emphasisHtmlToMarkdown(view.markdown),
-    design: publicDesign(view.design),
-  };
-}
-
-/**
- * Drop a carousel design's images, keeping only its theme tokens (ADR-0025).
- *
- * A carousel design's `images` are rendered Instagram slides (`/slide-images/…`,
- * baked-in text, empty alt); they are never blog artwork, so the public blog
- * page must not read them (AE-0422). The post's own cover/section images arrive
- * with `blog.v2` in AE-0423.
- */
+/** Keep a carousel design's theme tokens, never its images (ADR-0025). */
 function themeOnlyDesign(
   design: CarouselDesignResponse,
 ): CarouselDesignResponse {
@@ -103,64 +56,54 @@ function themeOnlyDesign(
   };
 }
 
-function fromCarousel(data: {
-  blog: { title: string; subtitle?: string | null; markdown: string };
-  design: CarouselDesignResponse;
-}): PublicBlogView {
-  return {
-    title: data.blog.title,
-    subtitle: data.blog.subtitle ?? null,
-    markdown: data.blog.markdown,
-    design: themeOnlyDesign(data.design),
-  };
-}
-
-function fromStandalone(
+async function resolveTheme(
   post: PublicBlogPostResponse,
   lang: string,
-): PublicBlogView {
+): Promise<CarouselDesignResponse> {
+  if (post.origin !== ORIGIN_CAROUSEL || !post.project_id) {
+    return FALLBACK_DESIGN_TOKENS;
+  }
+  const design = await fetchCarouselDesign(post.project_id, lang);
+  // A published post never 404s for missing tokens: default public theme.
+  return design ? themeOnlyDesign(design) : FALLBACK_DESIGN_TOKENS;
+}
+
+function publicImage(image: BlogImage | null): BlogImage | null {
+  return image ? { ...image, url: toPublicCarouselImageUrl(image.url) } : null;
+}
+
+function publicSection(section: BlogSection): BlogSection {
   return {
-    title: post.title,
-    subtitle: post.excerpt ?? null,
-    markdown: extractMarkdown(post.content, lang),
-    design: {
-      ...FALLBACK_DESIGN_TOKENS,
-      images: {
-        ...FALLBACK_DESIGN_TOKENS.images,
-        hero: post.featured_image_url ?? "",
-      },
-    },
+    ...section,
+    body_md: emphasisHtmlToMarkdown(section.body_md),
+    image: publicImage(section.image),
   };
 }
 
-async function resolveRawView(
-  id: string,
-  lang: string,
-): Promise<{ view: PublicBlogView; fallbackTitle?: string } | null> {
-  const post = await fetchPublicBlogPost(id);
-  if (post) {
-    if (post.origin === ORIGIN_CAROUSEL && post.project_id) {
-      const enriched = await fetchBlogWithDesign(post.project_id, lang);
-      if (enriched) {
-        return { view: fromCarousel(enriched), fallbackTitle: post.title };
-      }
-    }
-    // Default public theme — a published post must never 404 for missing
-    // design tokens (fail toward a plain render, not toward not-found).
-    return { view: fromStandalone(post, lang) };
-  }
-  // Legacy carousel-projection URL (`/blog/{project_id}`).
-  const legacy = await fetchBlogWithDesign(id, lang);
-  return legacy ? { view: fromCarousel(legacy) } : null;
+function publicSubtitle(
+  post: PublicBlogPostResponse,
+  title: string,
+): string | null {
+  const subtitle = post.excerpt ? stripEmphasisMarkup(post.excerpt) : "";
+  return subtitle && subtitle !== title ? subtitle : null;
 }
 
 export async function resolvePublicBlogView(
   id: string,
   lang: string,
 ): Promise<PublicBlogView | null> {
-  const resolved = await resolveRawView(id, lang);
-  if (!resolved) {
+  const post = await fetchPublicBlogPost(id);
+  const document = post ? tryParseBlogContent(post.content) : null;
+  if (!post || !document) {
     return null;
   }
-  return sanitizeView(resolved.view, [resolved.fallbackTitle]);
+  const language = resolveBlogLanguage(document, lang);
+  const title = resolveDisplayTitle([post.title]);
+  return {
+    title,
+    subtitle: publicSubtitle(post, title),
+    cover: publicImage(language.cover ?? document.cover),
+    sections: language.sections.map(publicSection),
+    design: await resolveTheme(post, lang),
+  };
 }

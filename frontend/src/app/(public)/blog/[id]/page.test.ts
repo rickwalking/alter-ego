@@ -29,17 +29,14 @@ function props(id: string, lang?: string) {
   };
 }
 
+// AE-0423: the view carries the post's own v2 cover and sections; the OG image
+// is the cover (never a carousel design image).
 const VIEW = {
   title: "Opinião impopular",
   subtitle: "o modelo de IA não é o gargalo.",
-  markdown: "# x",
-  design: {
-    ...FALLBACK_DESIGN_TOKENS,
-    images: {
-      ...FALLBACK_DESIGN_TOKENS.images,
-      hero: "/api/carousels/p/images/slide_1.jpg?lang=pt",
-    },
-  },
+  cover: { url: "https://cdn.example/cover.jpg", alt: "Capa" },
+  sections: [{ id: "sec_1", heading: null, body_md: "x", image: null }],
+  design: FALLBACK_DESIGN_TOKENS,
 };
 
 beforeEach(() => {
@@ -49,7 +46,7 @@ beforeEach(() => {
 // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
 // Scenario: Each post page has its own metadata
 describe("generateMetadata for /blog/[id]", () => {
-  it("uses the post title, subtitle and hero", async () => {
+  it("uses the post title, subtitle and cover", async () => {
     mockResolve.mockResolvedValue(VIEW);
 
     const metadata = await generateMetadata(props("post-1"));
@@ -59,7 +56,7 @@ describe("generateMetadata for /blog/[id]", () => {
     expect(metadata.description).toBe("o modelo de IA não é o gargalo.");
     expect(metadata.openGraph).toMatchObject({
       type: "article",
-      images: ["/api/carousels/p/images/slide_1.jpg?lang=pt"],
+      images: ["https://cdn.example/cover.jpg"],
     });
   });
 
@@ -69,12 +66,13 @@ describe("generateMetadata for /blog/[id]", () => {
     expect(mockResolve).toHaveBeenCalledWith("post-1", "en");
   });
 
-  it("truncates a long description and handles missing title and hero", async () => {
+  // Scenario: The listing card uses a fallback when the cover is null
+  it("truncates a long description and handles missing title and cover", async () => {
     mockResolve.mockResolvedValue({
       ...VIEW,
       title: "",
       subtitle: "x".repeat(300),
-      design: FALLBACK_DESIGN_TOKENS,
+      cover: null,
     });
 
     const metadata = await generateMetadata(props("post-2", "xx"));

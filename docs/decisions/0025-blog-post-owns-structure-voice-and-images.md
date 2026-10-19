@@ -223,8 +223,8 @@ old slop": the old shape is migrated once and then removed from the code, not ca
   **schema** migrations, not for this cutover.
 - **Ordering is guaranteed by the deploy.** `deploy.yml` builds the image, `down`s the stack (no
   old/new overlap), starts Postgres, runs the one-shot with `--apply --verify` against the freshly
-  built backend image, and only then `up -d`s the app. A non-zero exit aborts the deploy before the
-  app serves traffic. The same command is safe for the operator to re-run.
+  built backend image, and then `up -d`s the app. A non-zero exit (verify hit, DB error, import
+  error) never blocks the stack: its exit code is captured, `up -d` always runs (the read fail-safe keeps non-migrated rows rendering), and the deploy job fails at the end so the failure alerts (an abort here would leave the stack down, the 2026-06-18 failure mode). The same command is safe for the operator to re-run.
 - **The parser is strict for writes, with a temporary read fail-safe.** `parse_blog_content(content)`
   accepts **only** v2 and raises on anything else; no write ever stores v1. If the cutover has not
   run (operator error, partial deploy), the public/editor read catches `InvalidBlogDocumentError`
@@ -442,6 +442,30 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 | `DELETE /blog-posts/{id}/schedule` | — + `If-Match` | `200` | cancels the schedule; post stays `approved` |
 | `POST /blog-posts/{id}/ai-suggest` | `{text, suggestion_type, context?}` | `200` | response `suggested_text` is plain text, never a fenced JSON envelope |
 | `GET /blog-posts/{id}/versions` / `POST …/restore-version/{n}` | — + `If-Match` on restore | `200` | now populated on save; restore is a content mutation |
+| `PATCH /blog-posts/{id}/cover/image` | `{alt?, caption?}` + `If-Match` | `200` | added by AE-0424 (cover alt/caption, same rules as the section PATCH) |
+| `POST /blog-posts/{id}/translations/en` | — + `If-Match` | `200` | added by AE-0424: "Generate EN translation" (PT → EN per section, images kept); 409 if EN exists, 502 on failure |
+| `GET /blog-images/{post_id}/{uuid}.jpg` | — (public) | `200` image | added by AE-0424: serves the blog-images store; the canonical same-origin URL when the CDN is off |
+| `GET /blog-editor/settings` | — | `200` `{allow_self_review}` | added by AE-0424: lets the editor pick "Publish now" vs the explicit review steps |
+
+**AE-0424 implementation notes.** Every content-mutating route above answers with the full
+`BlogPostResponse` (not just `{image}`/`{section}`), so the editor gets the new `lock_version`
+and status in the same reply. Image, rewrite and translation routes take `?language=pt|en`.
+On publish / schedule / cancel-schedule `If-Match` is checked when sent (the editor always
+sends it) and the lock version is not bumped (a status-only write). The `/generate-image`
+route was removed by AE-0424 (review): every cover/section image goes through the slot routes.
+
+**AE-0424 review decisions.** (1) A slot write that spent on a provider re-reads the row
+`FOR UPDATE` and applies onto the latest document by section id (shared with AE-0425).
+(2) Version entries snapshot the state *before* each write, capped at 50 (the first entry, the
+original draft, is always kept); `version_history` is served only by `/versions`.
+(3) Status transitions bump `lock_version`; the publish guard (non-empty document + valid
+AI-disclosure label) also runs at submit-review, schedule and the due-post sweep.
+(4) Draft images: `GET /api/blog-images/...` serves a non-published post's images only to its
+author or an admin (`private, no-store`), else the uniform 404 (ADR-0013); published images use
+`public, max-age=3600, must-revalidate` (not `immutable`, so an unpublish takes effect). When
+the CDN is enabled the canonical URL is the CDN's, so draft images there are reachable only via
+their unguessable uuid4 URL — an accepted, explicit exception until the CDN gets signed URLs.
+(5) Per-post image budget `BLOG_IMAGE_COST_CAP` (images per post, default 30).
 
 Public read (`GET /api/public/blog-posts/{id}`, ADR-0013) keeps its lean allow-list, but `content`
 is **projected**, not serialized as-is. The public allow-list is:
@@ -566,7 +590,8 @@ The v2 refactor deletes the v1 machinery instead of leaving it behind a flag (AE
   than carried.
 - **Bad:** a new writer agent + prompts + image cost per post; a one-shot data cutover to run on
   deploy (all rows become v2 before the new code serves, so there is no partial-state window; a
-  failed verify aborts the deploy and a temporary read fail-safe keeps reads up); A briefly renders
+  failed cutover still brings the stack up, fails the deploy job afterwards, and a temporary read
+  fail-safe keeps reads up); A briefly renders
   legacy markdown (without slides) until B's cutover; sections are not queryable relationally
   (acceptable for a per-post document, ADR-0006).
 - **Neutral:** the review/schedule state machine and endpoints already exist and are kept; the change

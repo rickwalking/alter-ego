@@ -60,8 +60,10 @@ class BlogPostResponse(BaseModel):
     featured_image_url: str | None = None
     author_id: str | None = None
     reviewer_id: str | None = None
-    editor_comments: list[str] = Field(default_factory=list)
-    version_history: list[str] = Field(default_factory=list)
+    # Reject appends ``{text, author_id, status}`` comments (objects). The
+    # bounded version history is served by ``GET /blog-posts/{id}/versions``
+    # only (AE-0424 review), never inlined in every post response.
+    editor_comments: list[dict | str] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
     citations: list[dict] = Field(default_factory=list)
     ai_suggestions: list[dict] = Field(default_factory=list)
@@ -134,6 +136,9 @@ class BlogPostVersionResponse(BaseModel):
 
     id: UUID
     version_number: int
+    # AE-0424: saves snapshot the title/excerpt too (older entries have none).
+    title: str | None = None
+    excerpt: str | None = None
     snapshot: dict
     change_summary: str | None = None
     author_id: str | None = None
