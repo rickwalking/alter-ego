@@ -53,3 +53,33 @@ Feature: Rebuild hidden bad posts as drafts (AE-0426)
     When the script runs over several rows
     Then the failed row is counted as failed
     And the remaining rows are still processed
+    And the summary is still printed
+
+  Scenario: Missing carousel or notes are reported by the dry run
+    Given a target row whose carousel project no longer exists
+    And a target row whose carousel has no long_form_notes
+    When the script runs with --dry-run
+    Then the first row is reported as missing_carousel
+    And the second row is reported as missing_notes
+    And no paid generation is attempted
+
+  Scenario: A published row is not silently unpublished
+    Given a target row with status "published"
+    When the script runs without --include-published
+    Then the row is reported as currently_published
+    And its status remains "published"
+    When the script runs with --include-published
+    Then the row is rebuilt as a draft
+
+  Scenario: The operator narrows the run
+    Given several target rows
+    When the script runs with --only for one post
+    Then only that post is considered
+    When the script runs with --limit or --max-posts
+    Then at most that many posts are attempted
+    And the summary reports the omitted count
+
+  Scenario: A failed post makes the command exit non-zero
+    Given one target row whose generation fails
+    When the script completes
+    Then any failed row makes the process exit non-zero
