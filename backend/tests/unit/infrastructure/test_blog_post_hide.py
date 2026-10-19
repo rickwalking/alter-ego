@@ -205,3 +205,28 @@ class TestBlogPostHideService:
         assert not is_hide_target(
             row(BlogPostOrigin.STANDALONE.value, BlogPostStatus.PUBLISHED.value)
         )
+
+
+class TestHideLoggingUnderAppConfig:
+    # Regression (found rebasing AE-0423): a %-style log call raised
+    # "_proxy_to_logger() takes 2 to 3 positional arguments" once the app had
+    # configured structlog, so the hide failed depending on test order.
+    async def test_hide_logs_under_the_app_structlog_config(
+        self, db_session: AsyncSession
+    ) -> None:
+        import structlog
+
+        from rag_backend.infrastructure.logging import setup_logging
+
+        setup_logging(debug=False)
+        try:
+            await _seed_post(
+                db_session,
+                origin=BlogPostOrigin.CAROUSEL,
+                status=BlogPostStatus.PUBLISHED,
+                with_stamps=True,
+            )
+            report = await _service().hide(db_session, _RUN)
+            assert len(report.ids) == 1
+        finally:
+            structlog.reset_defaults()
