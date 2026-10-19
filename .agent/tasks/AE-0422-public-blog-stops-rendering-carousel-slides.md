@@ -1,6 +1,6 @@
 # AE-0422 — Public blog stops rendering carousel slides (A)
 
-Status: In Review
+Status: Review
 Tier: T1
 Priority: P1
 Type: Bug
