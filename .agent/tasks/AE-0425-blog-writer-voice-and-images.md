@@ -248,17 +248,23 @@ Pending.
    lease is logged (`blog_generation_heartbeat_failed`) and the loop keeps beating; the beat task
    is awaited with `asyncio.wait`, which never re-raises its outcome. Test: a `ConnectionError`
    heartbeat blip → the run still finishes `complete` and `finish()` runs.
-2. **Owner edits during the image step survive.** After the paid image calls the run re-reads the
-   row and attaches the images by section id onto the CURRENT content (`merge_content`: CAS loop
-   on the lease, no owner-edit conflict); only EMPTY slots are filled, an owner-set image is kept,
-   a section the owner deleted is skipped. The editor is read-only (fieldset disabled + save
-   disabled) while `generation.status == in_progress`, and adopts each newer server version of a
-   post that is still generating. (When #147's reusable slot-write helper lands, these writes move
-   onto it — see the orchestrator note.)
-3. **Retry never regenerates an existing article.** `partial` is retryable too; when
-   `content.sections` has a non-empty section the retry is `images_only` (no writer/gate) and
-   fills only the missing slots. `generation.image_spend_usd` accumulates across attempts and the
-   remaining budget (`BLOG_IMAGE_COST_CAP` − spent) bounds every attempt.
+2. **Owner edits during the image step survive — on AE-0424's shared slot-write path.** Every
+   CONTENT write of the run (the article, then the images) goes through `apply_slot_edit`
+   (`bootstrap/blog_generation_store.py`): the row is re-read `SELECT ... FOR UPDATE` after the
+   provider spend, the edit is applied onto the LATEST document by section id (only EMPTY slots are
+   filled, an owner-set image is kept, a section the owner deleted is skipped), stored with a
+   version snapshot at the locked `lock_version` (an owner save is the base, never a 409), the
+   lease is checked on the locked row, and the new image files are deleted when the write fails.
+   The article write refuses to overwrite an article the owner already wrote
+   (`generation_conflict`). Run state (heartbeat, final status) stays lease-fenced in
+   `SqlBlogGenerationStore`. The editor is read-only (fieldset + save disabled) while
+   `generation.status == in_progress` and adopts each newer server version while generating.
+3. **Retry never regenerates an existing article.** `partial` is retryable too; when the stored
+   document has a non-empty section the retry is `images_only` (no writer/gate) and fills only the
+   missing slots. Images count on AE-0424's per-post cap (`blog_image_generations`,
+   `BLOG_IMAGE_COST_CAP`, default 30 images, shared with the editor); the run only attempts what is
+   left. A row whose content does not parse counts as "no article" (strict `parse_blog_content`,
+   no read fail-safe — AE-0428 removes it): the retry reruns the writer instead of a 500.
 4. **Single image store/route/template = AE-0424's** (see "One image path" below).
 - **Low: English in PT.** Besides stripping verbatim research sentences, a cheap per-section check
   (English vs Portuguese function words) reports PT sections that read as English; the finding
@@ -276,11 +282,11 @@ Pending.
   (public; uuid4 names). AE-0425 rebased onto `feat/ae-0424-section-editor`, dropped its own
   route/template/service and builds bulk generation on top (`blog_image_batch.py`: concurrency,
   budget, best-effort slots). The PR now targets `feat/ae-0424-section-editor`.
-- **Lease fence = JSON path + lock_version.** Every write is
-  `WHERE id AND generation.lease_id = :mine AND lock_version = :seen`; a retry and the reaper rotate
-  the lease and bump `lock_version`. Proven on SQLite and Postgres 16 (the store tests run on both
-  when `DATABASE_URL` is set). Content writes refuse to overwrite an owner save
-  (`generation_conflict`, recoverable); heartbeats follow the owner's version.
+- **Lease fence.** Run-state writes are `WHERE id AND generation.lease_id = :mine AND lock_version
+  = :seen`; content writes check the lease on the `FOR UPDATE`-locked row inside AE-0424's slot
+  write. A retry and the reaper rotate the lease and bump `lock_version`, so a stale task's writes
+  fail (its new image files are deleted). Proven on SQLite and Postgres (the store tests run on
+  both when `DATABASE_URL` is set).
 - **Quality judgement on the reasoning model.** The gate's only model judgement is the revision
   notes for the single rewrite (`judge`, best-effort); drafting/rewrite/persona scoring stay fast.
   Rewrite is whole-article, once, re-normalized and re-scored; the second score is stored as is.
@@ -292,8 +298,9 @@ Pending.
   longest section on paragraph breaks; otherwise `section_count_mismatch` (run fails, nothing
   stored). N = `project.slide_count` → `slide_count_from_config(slides_config)` → content-mode
   default (POV family 9, Radar IA 7); standalone uses the default.
-- **Cost cap in USD.** `BLOG_IMAGE_COST_CAP` (default 3.0) / an estimated $0.25 per gpt-image-2
-  1536x1024 image = 12 slots; capped slots stay `null` with `image_cost_cap_reached`.
+- **Image cap = AE-0424's.** `BLOG_IMAGE_COST_CAP` counts images per post (default 30; editor +
+  every generation attempt); capped slots stay `null` with `image_cost_cap_reached`. (The earlier
+  USD cap and its setting were removed: one cap, one setting.)
 - **Generated body sanitization.** `sanitize_model_copy` + HTML-tag strip, not
   `sanitize_display_input` (that strips `( )` and would break markdown links); raw HTML is never
   rendered (react-markdown allow-list).
