@@ -98,8 +98,9 @@ inventory (grep/knip).
   `useCarouselProject`, `mapBlogPostToDashboard`); typecheck proves it.
 - [x] AC8: The AE-0423 read fail-safe is deleted (no legacy-markdown → v2 adapter, no
   `blog_v2_non_migrated_rows` metric) and a regression test proves a non-v2 read now fails closed
-  with the standard error/404 rather than adapting. The removal is gated on prod `--verify` zero;
-  record that evidence in Test Evidence.
+  with the standard error/404 rather than adapting. The prod `--verify` gate was SATISFIED on
+  2026-10-19 (owner-run `blog_v1_to_v2 --verify` reported zero non-v2 rows, translations
+  included); recorded in Test Evidence.
 
 ## Gherkin Scenarios
 
@@ -157,8 +158,9 @@ Feature: Blog v1 dead code is gone
 
 - Blocks: none.
 - Blocked by: AE-0422 (blog stops reading `blog_image_map`), AE-0423 (v2 read path + dual-write
-  removal) **and a prod `--verify` zero-non-v2 report**, AE-0424 (new image controls replace
-  `ImageGenModal`); may run before/after AE-0426.
+  removal) **and a prod `--verify` zero-non-v2 report — SATISFIED on 2026-10-19 (owner-run
+  `--verify` = 0 non-v2 rows)**, AE-0424 (new image controls replace `ImageGenModal`); may run
+  before/after AE-0426. AE-0422/AE-0423/AE-0424 are merged into `main` (PR #149 is based on it).
 - Related: AE-0424, AE-0426, ADR-0025, ADR-0009, ADR-0018 (dead-code baseline).
 
 ## Implementation Plan
@@ -196,14 +198,27 @@ the dual-write upsert moved to AE-0422 (it would clobber v2); the delete-time de
 ### 2026-10-19 — implementation
 
 - AC1: removed the key from model/schema/design/API routes and from the frontend schema/renderer.
-- AC2: deleted the 16 dead frontend files (+2 tests) and their barrel exports; baseline 61 → 34.
+- AC2: deleted the 16 dead frontend files (+2 tests) and their barrel exports; baseline 60 → 34.
 - AC3: deleted `carousel/nodes/content/` and its unit test.
 - AC4: added distribution text assertions to `test_editorial_distribution_pack.py` (PT + EN).
 - AC5: regenerated `dead-code-baseline.json` (down-only).
 - AC6: new `scripts/check_blog_v1_dead_code.py` + seeded rule-fires test, wired into both gate sets.
 - AC7: `BlogPostFilters` type, editorial `useCarouselProject`, `mapBlogPostToDashboard` preserved.
 - AC8: `read_document` is strict; adapter + metric + metric constant removed; callers map the error.
-- Rebased twice onto the moving `feat/ae-0423-blog-document-model` (final base `370053345`).
+
+### 2026-10-19 — worker takeover: retarget to main
+
+- The orchestrator retargeted PR #149 to `main` (the AE-0423/AE-0424 bases merged) and the branch
+  was rebased onto `origin/main` (`c9aac8162`), keeping main's behaviour and re-applying only this
+  PR's deletions. Conflict resolutions: `publishing/index.ts` / `blog/components/types.ts` /
+  `blog/hooks/types.ts` (AE-0424 had re-added dead symbols — re-pruned), knip baseline and
+  `openapi.json` regenerated.
+- `read_document(content)` / `display_content(content)` re-applied at every call site
+  (`api/dependencies/blog_document.py:107`, `api/routes/blog_post.py:215`,
+  `api/schemas/public_blog_post.py:115`); grep shows no call site passes a second argument.
+- **AC8 prod gate SATISFIED:** the owner ran `blog_v1_to_v2 --verify` on prod on 2026-10-19 and it
+  reported zero non-v2 rows (translations included). The read fail-safe removal is therefore
+  allowed; ticket, `deploy.yml` comments and the service docstring record this evidence.
 
 ## Files Touched
 
@@ -257,7 +272,7 @@ Tests / fixtures / artifact:
   `backend/tests/unit/application/test_editorial_distribution_pack.py`
 - `backend/tests/snapshots/presentation/design.json`
 - `frontend/tests/features/blog.feature`, `frontend/tests/features/blog_no_carousel_slides_ae0422.feature`
-- `frontend/scripts/dead-code-baseline.json` (regenerated: 61 → 34)
+- `frontend/scripts/dead-code-baseline.json` (regenerated: 60 → 34)
 - `frontend/scripts/check-schema-drift.mjs` (dropped the two deleted mappings)
 - `docs/architecture/openapi.json` (regenerated with `scripts/export_openapi.py`)
 
@@ -281,36 +296,30 @@ npx vitest run src/lib/public-blog.test.ts src/lib/server-fetch.test.ts \
 => 5 files / 71 tests passed
 ```
 
-Gate reproduction (all gates below run individually and PASS after the final rebase):
+Gate reproduction (full `gate-capture.sh` runs — real gate exit codes, no pipes — after the
+2026-10-19 rebase onto `origin/main`):
 ```
-backend: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
-         docstrings, dead-code, inline-prompts, blog-v1-dead-code, redis-factory, autopilot-env,
-         healthcheck-loopback, bandit, pip-audit, integrity, migrations, schema-drift
-frontend: lint, lint-changed, component-types, duplication, dead-code, blog-v1-dead-code,
-          typecheck, format, security, integrity, schema-drift, duplication-tests, dead-files
-GATES_JSON: {"pass":33,"fail":0,"skip":0,"results":[]}
+backend:  19 PASS, 0 FAIL, 4 SKIP (test / diff-cover / migrations / schema-drift — Postgres-
+          dependent; no local DATABASE_URL, CI runs them against the service container)
+frontend: 18 PASS, 0 FAIL, 0 SKIP (includes the full frontend:test suite and frontend:build)
 ```
-Earlier (same code, before the last base-only rebase) a full `gate-capture.sh backend` and
-`gate-capture.sh frontend` both exited 0 with `GATES_JSON {"pass":23,"fail":0,"skip":0,...}` and
-`{"pass":18,"fail":0,"skip":0,...}`.
+Backend targeted (sqlite in-memory per conftest): 109 passed (blog document service, editorial
+distribution pack, guard rule-fires, blog document domain) + 40 passed (sections API integration,
+presentation safety net). Frontend targeted: 5 files / 71 tests passed.
 
 **Mutation is deferred to CI** per the orchestrator rule for this machine (no local `mutmut` /
-mutation lane; CI's mutation gate is the source of truth). `backend:test` / `frontend:test` full
-suites are likewise left to CI after the final rebase; the touched files were run targeted above.
+mutation lane; CI's mutation gate is the source of truth). The full `backend:test` suite runs in
+CI with the Postgres service.
 
-AC8 **merge gate (owner-run prod evidence, not yet collected)**: removing the read fail-safe is
-safe only when production has zero non-v2 rows. `deploy.yml` deliberately runs the cutover with
-`set +e` and **always** brings the stack up (a failed cutover keeps rendering via the fail-safe, and
-the job fails only at the end). Therefore this PR must **not merge** until #145 is deployed and the
-owner has run on prod:
-
-```
-python -m rag_backend.scripts.blog_v1_to_v2 --verify   # must exit 0 (non-v2 rows + translations = 0)
-```
-
-Once that passes, strict reads are safe. Fail-closed regression tests (prove no adapter remains):
-`test_legacy_public_row_is_404` and `test_editor_read_of_a_legacy_row_is_422` (detail
-`blog_document_not_v2`) in `test_blog_sections_api_ae0423.py`, plus `TestStrictRead` in
+AC8 **merge gate — SATISFIED (owner-run prod evidence, 2026-10-19)**: the orchestrator confirmed
+the owner ran the prod verification on 2026-10-19 and
+`python -m rag_backend.scripts.blog_v1_to_v2 --verify` reported **zero non-v2 rows** (translations
+included). Removing the read fail-safe is therefore safe, and this PR records that evidence. Note
+`deploy.yml` deliberately runs the cutover with `set +e` and **always** brings the stack up — but
+that ordering is no longer the gate: the owner's `--verify` run above is. Fail-closed regression
+tests (prove no adapter remains): `test_legacy_public_row_is_404` and
+`test_editor_read_of_a_legacy_row_is_422` (detail `blog_document_not_v2`) in
+`test_blog_sections_api_ae0423.py`, plus `TestStrictRead` in
 `test_blog_document_service_ae0423.py`.
 
 AC1 grep (AC1's own check):
@@ -345,12 +354,13 @@ Pending.
   frontend duplicates were deleted. The guard therefore matches those two tokens on frontend paths
   only. The frozen carousel prompt YAML still mentions `blog_image_map`; the guard scans code
   extensions only.
-- **AC8 is gated on prod evidence.** The worker cannot run the production verification. The merge
-  condition is explicit: **do not merge** until #145 is deployed and the owner runs
-  `blog_v1_to_v2 --verify` on prod with exit 0 (zero non-v2 rows, translations included). The
-  deploy job itself does NOT abort on a failed cutover (`set +e` + always `up -d`, because until
-  now the fail-safe kept rows rendering), so deploy ordering is not evidence. The two API
-  regression tests + `TestStrictRead` prove the code fails closed with no adapter once merged.
+- **AC8 gate satisfied with owner-run prod evidence.** On 2026-10-19 the owner ran
+  `blog_v1_to_v2 --verify` on prod with exit 0 (zero non-v2 rows, translations included), so the
+  read fail-safe removal is safe; the ticket, `deploy.yml` comments and the service docstring
+  record this. The deploy job itself does NOT abort on a failed cutover (`set +e` + always
+  `up -d`, because the fail-safe historically kept rows rendering), so deploy ordering is not
+  evidence — the owner's `--verify` run is. The two API regression tests + `TestStrictRead`
+  prove the code fails closed with no adapter.
 - **OpenAPI artifact regenerated, not hand-edited.** `docs/architecture/openapi.json` is generated
   by `scripts/export_openapi.py`. The committed artifact on the base was already stale relative to
   the base source (it lacked the AE-0418 autopilot cover schemas), so regenerating also reconciles
@@ -376,7 +386,9 @@ None.
 Blog v1 is gone: `blog_image_map` is removed from the domain model, design payload, API schemas
 and routes, and the frontend schema/renderer; the 16 dead publishing components/hooks/adapter/
 constants and the unreferenced `carousel/nodes/content/` package are deleted (dead-code baseline
-61 → 34); the AE-0423 legacy-read adapter and its metric are removed so a non-v2 row now fails
+60 → 34); the AE-0423 legacy-read adapter and its metric are removed so a non-v2 row now fails
 closed; and a scoped static guard (with an AE-0180 rule-fires test) prevents the symbols from
-coming back. Distribution helpers and same-name live symbols are preserved and tested. Net diff vs
-the AE-0423 base: 66 files, +453 / −2829 lines.
+coming back. Distribution helpers and same-name live symbols are preserved and tested. On
+2026-10-19 the branch was rebased onto `origin/main` (after the AE-0423/AE-0424 bases merged),
+keeping main's AE-0424 behaviour and re-applying only this PR's deletions; the AC8 prod gate is
+satisfied (owner-run `--verify` = 0 non-v2 rows on prod, 2026-10-19).
