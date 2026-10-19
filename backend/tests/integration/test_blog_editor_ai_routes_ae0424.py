@@ -80,7 +80,9 @@ def provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Provider:
     fake = _Provider()
     store = BlogImageStore(root=tmp_path / "store", cdn=AssetCdnService())
     monkeypatch.setattr(
-        blog_post_images, "build_blog_image_service", lambda: BlogImageService(fake, store)
+        blog_post_images,
+        "build_blog_image_service",
+        lambda: BlogImageService(fake, store),
     )
     monkeypatch.setattr(blog_post_images, "blog_images_store", lambda: store)
     return fake
@@ -139,7 +141,9 @@ class TestSectionImages:
     ) -> None:
         post = await create_post(clients.author, three_sections())
         url = _section_image_url(post["id"])
-        generated = (await clients.author.post(url, json={}, headers=if_match(post))).json()
+        generated = (
+            await clients.author.post(url, json={}, headers=if_match(post))
+        ).json()
         patched = await clients.author.patch(
             url,
             json={"alt": "Gráfico de custos", "caption": "Fonte: OpenAI"},
@@ -147,7 +151,10 @@ class TestSectionImages:
         )
         assert patched.status_code == 200, patched.text
         image = patched.json()["content"]["sections"][0]["image"]
-        assert (image["alt"], image["caption"]) == ("Gráfico de custos", "Fonte: OpenAI")
+        assert (image["alt"], image["caption"]) == (
+            "Gráfico de custos",
+            "Fonte: OpenAI",
+        )
         removed = await clients.author.delete(url, headers=if_match(patched.json()))
         assert removed.status_code == 200
         assert removed.json()["content"]["sections"][0]["image"] is None
@@ -158,7 +165,9 @@ class TestSectionImages:
     ) -> None:
         post = await create_post(clients.author, three_sections())
         url = _section_image_url(post["id"])
-        generated = (await clients.author.post(url, json={}, headers=if_match(post))).json()
+        generated = (
+            await clients.author.post(url, json={}, headers=if_match(post))
+        ).json()
         response = await clients.author.patch(
             url, json={"alt": "  "}, headers=if_match(generated)
         )
@@ -167,7 +176,9 @@ class TestSectionImages:
     async def test_patch_without_image_is_404(self, clients: EditorClients) -> None:
         post = await create_post(clients.author, three_sections())
         response = await clients.author.patch(
-            _section_image_url(post["id"]), json={"caption": "x"}, headers=if_match(post)
+            _section_image_url(post["id"]),
+            json={"caption": "x"},
+            headers=if_match(post),
         )
         assert response.status_code == 404
         assert response.json()["detail"] == ERR_BLOG_SECTION_IMAGE_MISSING
@@ -207,7 +218,9 @@ class TestSectionImages:
     ) -> None:
         post = await create_post(clients.author, three_sections())
         response = await clients.author.post(
-            _section_image_url(post["id"], "sec_unknown"), json={}, headers=if_match(post)
+            _section_image_url(post["id"], "sec_unknown"),
+            json={},
+            headers=if_match(post),
         )
         assert response.status_code == 404
         assert response.json()["detail"] == ERR_BLOG_SECTION_NOT_FOUND
@@ -246,15 +259,22 @@ class TestCover:
         url = f"{BLOG_POSTS_URL}/{post['id']}/cover/image"
         first = (await clients.author.post(url, json={}, headers=if_match(post))).json()
         cover = first["content"]["cover"]
-        assert (cover["alt"], first["featured_image_url"]) == ("GPT 5.6 saiu", cover["url"])
-        second = (await clients.author.post(url, json={}, headers=if_match(first))).json()
+        assert (cover["alt"], first["featured_image_url"]) == (
+            "GPT 5.6 saiu",
+            cover["url"],
+        )
+        second = (
+            await clients.author.post(url, json={}, headers=if_match(first))
+        ).json()
         assert second["content"]["cover"]["url"] != cover["url"]
         assert second["featured_image_url"] == second["content"]["cover"]["url"]
         patched = await clients.author.patch(
             url, json={"caption": "Capa"}, headers=if_match(second)
         )
         assert patched.json()["content"]["cover"]["caption"] == "Capa"
-        removed = (await clients.author.delete(url, headers=if_match(patched.json()))).json()
+        removed = (
+            await clients.author.delete(url, headers=if_match(patched.json()))
+        ).json()
         assert removed["content"]["cover"] is None
         assert removed["featured_image_url"] is None
 
@@ -307,11 +327,18 @@ class TestRewriteSection:
             headers=if_match(post),
         )
         assert response.status_code == 200, response.text
-        before, after = post["content"]["sections"], response.json()["content"]["sections"]
+        before, after = (
+            post["content"]["sections"],
+            response.json()["content"]["sections"],
+        )
         assert after[1]["body_md"] == "Na minha voz"
         assert (after[0], after[2]) == (before[0], before[2])
         sent = fake.rewrite_section.await_args.args[0]
-        assert (sent.body_md, sent.heading, sent.persona_id) == ("Corpo dois", "Dois", "p1")
+        assert (sent.body_md, sent.heading, sent.persona_id) == (
+            "Corpo dois",
+            "Dois",
+            "p1",
+        )
 
     # Scenario: Rewriting a section without a persona uses the default persona
     async def test_no_persona_anywhere_is_422(
@@ -420,7 +447,9 @@ class TestStrictSuggest:
 
         llm = MagicMock()
         llm.generate = AsyncMock(return_value=raw)
-        service = BlogPostAIService(llm_service=llm, image_service=None, output_dir=Path("."))
+        service = BlogPostAIService(
+            llm_service=llm, image_service=None, output_dir=Path()
+        )
         monkeypatch.setattr(blog_post_ai, "_build_ai_service", lambda: service)
         post = await create_post(clients.author, three_sections())
         response = await clients.author.post(

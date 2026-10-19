@@ -80,7 +80,10 @@ class TestSectionSaves:
     ) -> None:
         post = await create_post(clients.author, three_sections())
         content = post["content"]
-        content["sections"][0]["image"] = {"url": "https://cdn.example/a.jpg", "alt": " "}
+        content["sections"][0]["image"] = {
+            "url": "https://cdn.example/a.jpg",
+            "alt": " ",
+        }
         response = await put(clients.author, post, {"content": content})
         assert response.status_code == 422
         stored = await get_post(clients.author, post["id"])
@@ -94,7 +97,9 @@ class TestSectionSaves:
         saved = (await put(clients.author, post, {"content": content})).json()
         assert saved["featured_image_url"] == "https://cdn/c.jpg"
         saved["content"]["cover"] = None
-        cleared = (await put(clients.author, saved, {"content": saved["content"]})).json()
+        cleared = (
+            await put(clients.author, saved, {"content": saved["content"]})
+        ).json()
         assert cleared["featured_image_url"] is None
 
 
@@ -149,9 +154,13 @@ class TestVersionsOnSave:
     ) -> None:
         post = await create_post(clients.author, v2_content("v0"))
         first = (
-            await put(clients.author, post, {"title": "T1", "content": v2_content("v1")})
+            await put(
+                clients.author, post, {"title": "T1", "content": v2_content("v1")}
+            )
         ).json()
-        second = (await put(clients.author, first, {"content": v2_content("v2")})).json()
+        second = (
+            await put(clients.author, first, {"content": v2_content("v2")})
+        ).json()
         response = await clients.author.post(
             f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1", headers=if_match(second)
         )
@@ -189,18 +198,14 @@ class TestEditResetsApproval:
         assert stored["status"] == BlogPostStatus.DRAFT.value
         assert stored["scheduled_publish_at"] is None
 
-    async def test_published_edit_stays_published(
-        self, clients: EditorClients
-    ) -> None:
+    async def test_published_edit_stays_published(self, clients: EditorClients) -> None:
         post = await create_post(clients.author, v2_content("v0"))
         await set_fields(post["id"], status=BlogPostStatus.PUBLISHED.value)
         await put(clients.author, post, {"content": v2_content("v1")})
         stored = await get_post(clients.author, post["id"])
         assert stored["status"] == BlogPostStatus.PUBLISHED.value
 
-    async def test_due_sweep_skips_an_edited_post(
-        self, clients: EditorClients
-    ) -> None:
+    async def test_due_sweep_skips_an_edited_post(self, clients: EditorClients) -> None:
         from rag_backend.application.services.notification_service import (
             NotificationService,
         )

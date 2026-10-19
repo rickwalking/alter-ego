@@ -52,9 +52,11 @@ def _no_langfuse() -> Iterator[None]:
         "rag_backend.application.services.blog.blog_translation_service.blog_ai_propagate",
         "rag_backend.application.services.blog_post_ai_service.blog_ai_propagate",
     )
-    with patch(targets[0], return_value=context), patch(
-        targets[1], return_value=context
-    ), patch(targets[2], return_value=context):
+    with (
+        patch(targets[0], return_value=context),
+        patch(targets[1], return_value=context),
+        patch(targets[2], return_value=context),
+    ):
         yield
 
 
@@ -116,9 +118,9 @@ class TestBlogImageService:
 
     async def test_cdn_url_when_enabled(self, tmp_path: Path) -> None:
         cdn = AssetCdnService(cdn_base_url="https://cdn.example", enabled=True)
-        image = await BlogImageService(_WritingProvider(), _store(tmp_path, cdn)).generate(
-            _request()
-        )
+        image = await BlogImageService(
+            _WritingProvider(), _store(tmp_path, cdn)
+        ).generate(_request())
         assert image.url.startswith(f"https://cdn.example/blog-images/{POST_ID}/")
 
     # Scenario: A failed image generation shows a visible retry (backend: 502 code)
@@ -206,7 +208,12 @@ class TestBlogTranslationService:
 
     @pytest.mark.parametrize(
         "answer",
-        ["not json", json.dumps({"heading": "x"}), json.dumps(["x"]), "{\"body_md\": \" \"}"],
+        [
+            "not json",
+            json.dumps({"heading": "x"}),
+            json.dumps(["x"]),
+            '{"body_md": " "}',
+        ],
     )
     async def test_bad_answer_fails_the_translation(self, answer: str) -> None:
         document = parse_blog_content(v2_content("Corpo", "Um"))
@@ -232,12 +239,16 @@ class TestBlogTranslationService:
 def _ai_service() -> BlogPostAIService:
     llm = MagicMock()
     llm.chat_model = MagicMock()
-    return BlogPostAIService(llm_service=llm, image_service=None, output_dir=Path("."))
+    return BlogPostAIService(llm_service=llm, image_service=None, output_dir=Path())
 
 
 def _db(persona: object | None = None, project: object | None = None) -> MagicMock:
     db = MagicMock()
-    db.get = AsyncMock(side_effect=lambda model, _id: project if "Carousel" in model.__name__ else persona)
+    db.get = AsyncMock(
+        side_effect=lambda model, _id: (
+            project if "Carousel" in model.__name__ else persona
+        )
+    )
     result = MagicMock()
     result.scalar_one_or_none = MagicMock(return_value=persona)
     db.execute = AsyncMock(return_value=result)

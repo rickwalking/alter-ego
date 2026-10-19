@@ -58,9 +58,7 @@ def self_review(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 async def _submit(client: AsyncClient, post_id: str, reviewer: str | None = None):
     params = {"reviewer_id": reviewer} if reviewer else None
-    return await client.post(
-        f"{BLOG_POSTS_URL}/{post_id}/submit-review", params=params
-    )
+    return await client.post(f"{BLOG_POSTS_URL}/{post_id}/submit-review", params=params)
 
 
 def _future(days: int = 2) -> str:

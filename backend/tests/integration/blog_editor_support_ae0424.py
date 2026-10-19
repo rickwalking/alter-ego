@@ -60,9 +60,10 @@ async def editor_clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
     author = await create_test_user("author@ae0424.test", UserRole.EDITOR)
     reviewer = await create_test_user("reviewer@ae0424.test", UserRole.EDITOR)
     app = create_app()
-    async with _client(app, auth_headers_for(author)) as a, _client(
-        app, auth_headers_for(reviewer)
-    ) as r:
+    async with (
+        _client(app, auth_headers_for(author)) as a,
+        _client(app, auth_headers_for(reviewer)) as r,
+    ):
         yield EditorClients(a, r, str(author.id), str(reviewer.id))
     limiter.reset()
     db_config.c_engine = None
