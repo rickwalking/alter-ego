@@ -73,7 +73,7 @@ class TestParseSuggestion:
         parsed = parse_suggestion(raw)
         assert parsed.text == "Sharper lede"
         assert FENCE not in parsed.text
-        assert parsed.explanation is None
+        assert parsed.explanation == ""
 
     # Scenario: A nested envelope is unwrapped once
     def test_nested_envelope(self) -> None:
@@ -108,10 +108,10 @@ class TestParseSuggestion:
         assert parse_suggestion("[1, 2]").text == "[1, 2]"
 
     def test_null_suggested_text_is_empty(self) -> None:
-        raw = json.dumps({"suggested_text": None, "explanation": "  "})
+        raw = json.dumps({"suggested_text": None, "explanation": 7})
         parsed = parse_suggestion(raw)
         assert parsed.text == ""
-        assert parsed.explanation is None
+        assert parsed.explanation == "7"
 
 
 class TestStripCodeFence:

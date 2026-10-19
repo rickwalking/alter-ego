@@ -146,8 +146,11 @@ class BlogPostAIService:
             "original_text": safe_text,
             "suggested_text": parsed.text,
             "suggestion_type": input_data.action,
-            "explanation": parsed.explanation
-            or SUGGEST_DEFAULT_EXPLANATION.format(action=input_data.action),
+            "explanation": (
+                SUGGEST_DEFAULT_EXPLANATION.format(action=input_data.action)
+                if parsed.explanation is None
+                else parsed.explanation
+            ),
         }
 
     async def improve(

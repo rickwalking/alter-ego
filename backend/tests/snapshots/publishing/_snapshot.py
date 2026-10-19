@@ -77,6 +77,8 @@ _EXTRA_VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({
     "owner_id",
     "author_id",
     "reviewer_id",
+    # AE-0424: version_history entries carry the post id as ``content_id``.
+    "content_id",
 })
 
 # ISO datetime fields not keyed by the Identity ``created_at`` / ``updated_at``

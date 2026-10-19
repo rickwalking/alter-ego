@@ -21,7 +21,7 @@ from rag_backend.domain.constants.blog_editor import (
 
 @dataclass(frozen=True)
 class SuggestionText:
-    """The plain suggestion; ``explanation`` is ``None`` when the model gave none."""
+    """The plain suggestion; ``explanation`` is ``None`` when it was no envelope."""
 
     text: str
     explanation: str | None
@@ -49,9 +49,9 @@ def _envelope(raw: str) -> dict[str, object] | None:
     return data
 
 
-def _explanation(data: dict[str, object]) -> str | None:
+def _explanation(data: dict[str, object]) -> str:
     value = data.get(SUGGEST_KEY_EXPLANATION)
-    return value if isinstance(value, str) and value.strip() else None
+    return "" if value is None else str(value)
 
 
 def parse_suggestion(raw: str) -> SuggestionText:

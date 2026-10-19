@@ -335,8 +335,10 @@ class TestRestoreVersion:
             post["id"],
             version_history=[{"version_number": 1, "snapshot": {"markdown": "x"}}],
         )
+        # AE-0424: restore is a content write, so it carries If-Match.
         response = await admin_client.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1"
+            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1",
+            headers={HTTP_HEADER_IF_MATCH: str(post["lock_version"])},
         )
         assert response.status_code == 422
 
