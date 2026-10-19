@@ -115,4 +115,48 @@ describe("GET /auth/logout", () => {
     expect(location.pathname).toBe(BACKEND_LOGIN_PATH);
     expect(location.searchParams.get("error")).toBe(SESSION_EXPIRED_ERROR);
   });
+
+  // Feature: An expired session logs out through a front-end route (AE-0429)
+  // Scenario: The login Location never exposes the internal server host (AE-0431)
+  //   Given a request to "/auth/logout?redirect=..." whose URL host is the
+  //     standalone server bind address "0.0.0.0:3000" with forwarded headers
+  //   When the logout handler runs
+  //   Then the Location uses the public host over https and never contains
+  //     "0.0.0.0" or "localhost"
+  it("uses the forwarded host and protocol instead of the bind address", async () => {
+    mockBackendLogout();
+    const request = new NextRequest(
+      `http://0.0.0.0:3000/auth/logout?redirect=${encodeURIComponent(LOGIN_REDIRECT)}`,
+      {
+        headers: {
+          host: "marinssolutions.com",
+          "x-forwarded-proto": "https",
+        },
+      },
+    );
+
+    const response = await GET(request);
+
+    expectCookieCleared(response);
+    const location = locationOf(response).toString();
+    expect(location).toBe(
+      `https://marinssolutions.com${BACKEND_LOGIN_PATH}?redirect=${encodeURIComponent(LOGIN_REDIRECT)}&error=${SESSION_EXPIRED_ERROR}`,
+    );
+    expect(location).not.toMatch(/0\.0\.0\.0|localhost/);
+  });
+
+  it("falls back to the request origin when no forwarded host is sent", async () => {
+    mockBackendLogout();
+    const request = new NextRequest(
+      `http://0.0.0.0:3000/auth/logout?redirect=${encodeURIComponent(LOGIN_REDIRECT)}`,
+    );
+
+    const response = await GET(request);
+
+    expectCookieCleared(response);
+    const location = locationOf(response);
+    expect(location.pathname).toBe(BACKEND_LOGIN_PATH);
+    expect(location.searchParams.get("redirect")).toBe(LOGIN_REDIRECT);
+    expect(location.searchParams.get("error")).toBe(SESSION_EXPIRED_ERROR);
+  });
 });

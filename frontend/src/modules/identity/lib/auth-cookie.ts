@@ -1,5 +1,6 @@
 import type { NextRequest, NextResponse } from "next/server";
 
+import { HTTP_HEADER_X_FORWARDED_PROTO } from "@/constants/auth";
 import { SECONDS_PER_HOUR } from "@/constants/time";
 
 import { COOKIE_ACCESS_TOKEN } from "../guards";
@@ -13,7 +14,7 @@ export function isSecureRequest(request: NextRequest): boolean {
   if (request.nextUrl.protocol === "https:") {
     return true;
   }
-  const forwarded = request.headers.get("x-forwarded-proto");
+  const forwarded = request.headers.get(HTTP_HEADER_X_FORWARDED_PROTO);
   if (!forwarded) {
     return false;
   }
