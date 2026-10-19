@@ -1,8 +1,8 @@
 """Versioned blog editor prompts (``agents/prompts/blog/v1/``, AE-0424).
 
-The single application-side edge to the prompt registry for the blog editor,
-so the image and translation services render their templates without each
-adding an ``application -> agents`` import (import-boundary ratchet).
+Renders the image and section-translation templates. The application services
+receive these functions from the API composition edge (they never import the
+agents layer), so the prompt text stays in the registry files.
 """
 
 from __future__ import annotations

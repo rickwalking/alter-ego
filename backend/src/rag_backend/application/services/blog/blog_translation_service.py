@@ -16,12 +16,10 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from collections.abc import Callable
 from typing import Protocol
 
 from rag_backend.application.services.blog.ai_envelope import strip_code_fence
-from rag_backend.application.services.blog.blog_prompts import (
-    translate_section_prompt,
-)
 from rag_backend.application.services.blog_workflow_observability import (
     blog_ai_propagate,
 )
@@ -76,11 +74,21 @@ def _parse_answer(raw: str) -> tuple[str | None, str]:
     return (heading.strip() or None) if isinstance(heading, str) else None, body
 
 
-class BlogTranslationService:
-    """Translate the PT sections into a ``translations.en`` document."""
+SectionPromptRenderer = Callable[[str | None, str], str]
 
-    def __init__(self, llm: TranslationLLM) -> None:
+
+class BlogTranslationService:
+    """Translate the PT sections into a ``translations.en`` document.
+
+    ``render_prompt(heading, body_md)`` renders the versioned translation
+    template (injected: ``agents.blog_editor_prompts.translate_section_prompt``).
+    """
+
+    def __init__(
+        self, llm: TranslationLLM, render_prompt: SectionPromptRenderer
+    ) -> None:
         self._llm = llm
+        self._render_prompt = render_prompt
         self._limit = asyncio.Semaphore(TRANSLATION_CONCURRENCY)
 
     async def translate(
@@ -101,7 +109,7 @@ class BlogTranslationService:
     async def _section(self, section: BlogSection) -> BlogSection:
         if not section.body_md.strip():
             return section.model_copy(update={"id": _new_id()})
-        prompt = translate_section_prompt(section.heading, section.body_md)
+        prompt = self._render_prompt(section.heading, section.body_md)
         async with self._limit:
             try:
                 raw = await self._llm.generate(
@@ -123,4 +131,9 @@ def _new_id() -> str:
     return f"{BLOG_SECTION_ID_PREFIX}{uuid.uuid4()}"
 
 
-__all__ = ["BlogTranslationError", "BlogTranslationService", "TranslationLLM"]
+__all__ = [
+    "BlogTranslationError",
+    "BlogTranslationService",
+    "SectionPromptRenderer",
+    "TranslationLLM",
+]

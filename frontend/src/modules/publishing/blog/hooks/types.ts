@@ -153,3 +153,10 @@ export interface BlogEditorData {
   personaId: string | null;
   setPersonaId: (personaId: string | null) => void;
 }
+
+/** One slot action: its status key, the request and how to merge its answer. */
+export interface SlotRun {
+  key: string;
+  task: (target: LockedPost) => Promise<BlogPost>;
+  merge: DraftMerge;
+}

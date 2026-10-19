@@ -5,6 +5,7 @@ post (the due-post sweep publishes it); ``DELETE /schedule`` cancels it and the
 post stays ``approved``. Both check an ``If-Match`` the editor sends.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
@@ -36,6 +37,22 @@ from rag_backend.modules.publishing import PublishingModule
 router = APIRouter(tags=["blog_post_workflow"])
 
 IfMatch = Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)]
+# Path params are fields of the target dataclass (``Depends()``).
+SCHEDULE_PATH = "/blog-posts/{post_id}/schedule"
+
+
+@dataclass
+class ScheduleTarget:
+    """The post, session, caller, publishing facade and optional ``If-Match``."""
+
+    post_id: UUID
+    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: EditorUser
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)]
+    if_match: IfMatch = None
+
+
+Target = Annotated[ScheduleTarget, Depends()]
 
 
 def _future_schedule(requested: datetime) -> datetime:
@@ -53,54 +70,44 @@ def _future_schedule(requested: datetime) -> datetime:
 
 
 @router.post(
-    "/blog-posts/{post_id}/schedule",
+    SCHEDULE_PATH,
     response_model=BlogPostResponse,
     summary="Schedule blog post for future publication",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def schedule_blog_post(
-    request: Request,
-    post_id: UUID,
-    body: SchedulePublishRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-    if_match: IfMatch = None,
+    request: Request, body: SchedulePublishRequest, target: Target
 ) -> BlogPostResponse:
     """Schedule an approved post for future publication (SCHED-001, UI-024)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    await check_optional_if_match(post.lock_version, if_match)
+    await check_optional_if_match(post.lock_version, target.if_match)
     scheduled_at = _future_schedule(body.scheduled_publish_at)
-    await publishing.service.schedule_blog(post, scheduled_at)
-    await db.commit()
-    await db.refresh(post)
+    await target.publishing.service.schedule_blog(post, scheduled_at)
+    await target.db.commit()
+    await target.db.refresh(post)
     return post
 
 
 @router.delete(
-    "/blog-posts/{post_id}/schedule",
+    SCHEDULE_PATH,
     response_model=BlogPostResponse,
     summary="Cancel the scheduled publication of a blog post",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def cancel_blog_post_schedule(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
+    request: Request, target: Target
 ) -> BlogPostResponse:
     """Clear ``scheduled_publish_at``; the post stays ``approved`` (AE-0424)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    await check_optional_if_match(post.lock_version, if_match)
+    await check_optional_if_match(post.lock_version, target.if_match)
     if post.scheduled_publish_at is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERR_BLOG_SCHEDULE_NOT_SET,
         )
     post.scheduled_publish_at = None
-    await db.commit()
-    await db.refresh(post)
+    await target.db.commit()
+    await target.db.refresh(post)
     return post

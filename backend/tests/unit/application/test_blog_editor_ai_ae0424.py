@@ -14,6 +14,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from rag_backend.agents.blog_editor_prompts import (
+    image_prompt,
+    translate_section_prompt,
+)
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
 from rag_backend.application.services.blog.blog_image_service import (
     BlogImageError,
@@ -88,7 +92,9 @@ class TestBlogImageService:
         self, tmp_path: Path
     ) -> None:
         provider = _WritingProvider()
-        image = await BlogImageService(provider, _store(tmp_path)).generate(_request())
+        image = await BlogImageService(
+            provider, _store(tmp_path), image_prompt
+        ).generate(_request())
         assert image.url.startswith(f"/api/blog-images/{POST_ID}/")
         assert image.url.endswith(".jpg")
         assert PROVIDER_URL not in image.model_dump_json()
@@ -103,23 +109,25 @@ class TestBlogImageService:
         self, tmp_path: Path
     ) -> None:
         provider = _WritingProvider()
-        await BlogImageService(provider, _store(tmp_path)).generate(_request())
+        await BlogImageService(provider, _store(tmp_path), image_prompt).generate(
+            _request()
+        )
         prompt = provider.prompts[0]
         assert "no text, no words, no letters, no numbers" in prompt
         assert "Um farol na costa" in prompt
 
     async def test_image_prompt_sanitizer_is_applied(self, tmp_path: Path) -> None:
         provider = _WritingProvider()
-        image = await BlogImageService(provider, _store(tmp_path)).generate(
-            _request("Elon Musk on stage")
-        )
+        image = await BlogImageService(
+            provider, _store(tmp_path), image_prompt
+        ).generate(_request("Elon Musk on stage"))
         assert "Musk" not in provider.prompts[0]
         assert "Musk" not in (image.prompt or "")
 
     async def test_cdn_url_when_enabled(self, tmp_path: Path) -> None:
         cdn = AssetCdnService(cdn_base_url="https://cdn.example", enabled=True)
         image = await BlogImageService(
-            _WritingProvider(), _store(tmp_path, cdn)
+            _WritingProvider(), _store(tmp_path, cdn), image_prompt
         ).generate(_request())
         assert image.url.startswith(f"https://cdn.example/blog-images/{POST_ID}/")
 
@@ -130,19 +138,23 @@ class TestBlogImageService:
         provider = MagicMock()
         provider.generate_image = AsyncMock(side_effect=RuntimeError("boom"))
         with pytest.raises(BlogImageError) as exc:
-            await BlogImageService(provider, _store(tmp_path)).generate(_request())
+            await BlogImageService(provider, _store(tmp_path), image_prompt).generate(
+                _request()
+            )
         assert exc.value.code == ERR_BLOG_IMAGE_GENERATION_FAILED
 
     async def test_missing_file_is_a_persist_failure(self, tmp_path: Path) -> None:
         with pytest.raises(BlogImageError) as exc:
-            await BlogImageService(_WritingProvider(b""), _store(tmp_path)).generate(
-                _request()
-            )
+            await BlogImageService(
+                _WritingProvider(b""), _store(tmp_path), image_prompt
+            ).generate(_request())
         assert exc.value.code == ERR_BLOG_IMAGE_PERSIST_FAILED
 
     async def test_no_provider_is_a_generation_failure(self, tmp_path: Path) -> None:
         with pytest.raises(BlogImageError) as exc:
-            await BlogImageService(None, _store(tmp_path)).generate(_request())
+            await BlogImageService(None, _store(tmp_path), image_prompt).generate(
+                _request()
+            )
         assert exc.value.code == ERR_BLOG_IMAGE_GENERATION_FAILED
 
     def test_store_file_lookup(self, tmp_path: Path) -> None:
@@ -172,6 +184,10 @@ def _llm(answers: list[str]) -> MagicMock:
     return llm
 
 
+def _translator(answers: list[str]) -> BlogTranslationService:
+    return BlogTranslationService(_llm(answers), translate_section_prompt)
+
+
 def _pt_document() -> object:
     content = v2_content("Corpo um", "Um")
     image = {"url": "https://cdn.example/a.jpg", "alt": "Arte"}
@@ -187,7 +203,7 @@ class TestBlogTranslationService:
     # Scenario: A missing EN translation is read-only with a generate action
     async def test_translates_sections_keeping_images_and_cover(self) -> None:
         answer = json.dumps({"heading": "One", "body_md": "Body one"})
-        service = BlogTranslationService(_llm([f"```json\n{answer}\n```"]))
+        service = _translator([f"```json\n{answer}\n```"])
         english = await service.translate(POST_ID, _pt_document())
         first, empty = english.sections
         assert (first.heading, first.body_md) == ("One", "Body one")
@@ -201,9 +217,7 @@ class TestBlogTranslationService:
     async def test_headingless_section_stays_headingless(self) -> None:
         answer = json.dumps({"heading": "Invented", "body_md": "Body"})
         document = parse_blog_content(v2_content("Corpo", None))
-        english = await BlogTranslationService(_llm([answer])).translate(
-            POST_ID, document
-        )
+        english = await _translator([answer]).translate(POST_ID, document)
         assert english.sections[0].heading is None
 
     @pytest.mark.parametrize(
@@ -218,21 +232,21 @@ class TestBlogTranslationService:
     async def test_bad_answer_fails_the_translation(self, answer: str) -> None:
         document = parse_blog_content(v2_content("Corpo", "Um"))
         with pytest.raises(BlogTranslationError):
-            await BlogTranslationService(_llm([answer])).translate(POST_ID, document)
+            await _translator([answer]).translate(POST_ID, document)
 
     async def test_llm_error_fails_the_translation(self) -> None:
         llm = MagicMock()
         llm.generate = AsyncMock(side_effect=TimeoutError())
         document = parse_blog_content(v2_content("Corpo", "Um"))
         with pytest.raises(BlogTranslationError):
-            await BlogTranslationService(llm).translate(POST_ID, document)
+            await BlogTranslationService(llm, translate_section_prompt).translate(
+                POST_ID, document
+            )
 
     async def test_non_string_heading_becomes_null(self) -> None:
         answer = json.dumps({"heading": 3, "body_md": "Body"})
         document = parse_blog_content(v2_content("Corpo", "Um"))
-        english = await BlogTranslationService(_llm([answer])).translate(
-            POST_ID, document
-        )
+        english = await _translator([answer]).translate(POST_ID, document)
         assert english.sections[0].heading is None
 
 
@@ -278,15 +292,9 @@ class TestRewriteSection:
         db.execute.assert_not_awaited()
 
     # Scenario: Rewriting a section without a persona uses the default persona
-    async def test_project_persona_is_the_default(self) -> None:
-        project = MagicMock(persona_id="p-project")
-        db = _db(persona=self._persona_model(), project=project)
-        assert await self._run(db, "Voz", project_id="proj") == "Voz"
-        db.execute.assert_not_awaited()
-
     async def test_first_persona_when_nothing_bound(self) -> None:
-        db = _db(persona=self._persona_model(), project=MagicMock(persona_id=None))
-        assert await self._run(db, "Voz", project_id="proj") == "Voz"
+        db = _db(persona=self._persona_model())
+        assert await self._run(db, "Voz") == "Voz"
         db.execute.assert_awaited_once()
 
     async def test_no_persona_at_all_is_rejected(self) -> None:

@@ -21,7 +21,6 @@ import {
   generateEnTranslation,
   generateSlotImage,
   rewriteSection,
-  type LockedPost,
 } from "../blog-editor-requests";
 import {
   withServerBody,
@@ -29,11 +28,10 @@ import {
   withServerTranslation,
   type BlogImageSlotRef,
 } from "../lib/editor-document";
-import type { BlogPost } from "../types";
 import type {
   BlogEditorError,
   BlogEditorSlotActions,
-  DraftMerge,
+  SlotRun,
   SlotStatus,
   UseBlogPostEditorResult,
 } from "./types";
@@ -61,12 +59,6 @@ function toError(err: unknown): BlogEditorError {
     return { kind: err.kind, detail: err.detail };
   }
   return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
-}
-
-interface SlotRun {
-  key: string;
-  task: (target: LockedPost) => Promise<BlogPost>;
-  merge: DraftMerge;
 }
 
 export function useBlogEditorActions(

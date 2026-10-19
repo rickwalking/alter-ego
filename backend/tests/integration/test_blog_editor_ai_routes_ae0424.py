@@ -14,6 +14,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
+from rag_backend.agents.blog_editor_prompts import (
+    image_prompt,
+    translate_section_prompt,
+)
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
 from rag_backend.application.services.blog.blog_image_service import (
     BlogImageService,
@@ -82,7 +86,7 @@ def provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Provider:
     monkeypatch.setattr(
         blog_post_images,
         "build_blog_image_service",
-        lambda: BlogImageService(fake, store),
+        lambda: BlogImageService(fake, store, image_prompt),
     )
     monkeypatch.setattr(blog_post_images, "blog_images_store", lambda: store)
     return fake
@@ -314,6 +318,40 @@ def _fake_ai(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> MagicM
     return fake
 
 
+class TestRewritePersonaResolution:
+    """Scenario: Rewriting a section without a persona uses the default persona."""
+
+    def _target(self, persona_id: str | None) -> MagicMock:
+        target = MagicMock()
+        project = MagicMock(persona_id=persona_id)
+        target.repo.get_project_by_id = AsyncMock(return_value=project)
+        return target
+
+    async def test_requested_persona_wins(self) -> None:
+        from rag_backend.api.routes.blog_post_sections import _persona_id
+
+        target = self._target("p-project")
+        assert (
+            await _persona_id(target, "11111111-1111-4111-8111-111111111111", "p1")
+            == "p1"
+        )
+        target.repo.get_project_by_id.assert_not_awaited()
+
+    async def test_project_persona_is_the_default(self) -> None:
+        from rag_backend.api.routes.blog_post_sections import _persona_id
+
+        target = self._target("p-project")
+        project_id = "11111111-1111-4111-8111-111111111111"
+        assert await _persona_id(target, project_id, None) == "p-project"
+
+    async def test_no_project_or_unbound_persona_is_none(self) -> None:
+        from rag_backend.api.routes.blog_post_sections import _persona_id
+
+        assert await _persona_id(self._target("x"), None, None) is None
+        project_id = "11111111-1111-4111-8111-111111111111"
+        assert await _persona_id(self._target(None), project_id, None) is None
+
+
 class TestRewriteSection:
     # Scenario: Rewriting a section replaces only that section's body
     async def test_rewrite_replaces_only_that_body(
@@ -391,7 +429,7 @@ def _translator(monkeypatch: pytest.MonkeyPatch, answer: str) -> MagicMock:
     monkeypatch.setattr(
         blog_post_sections,
         "build_blog_translation_service",
-        lambda: BlogTranslationService(llm),
+        lambda: BlogTranslationService(llm, translate_section_prompt),
     )
     return llm
 

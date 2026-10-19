@@ -13,10 +13,16 @@ from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_editor import (
+    CoverTarget,
+    SectionTarget,
+    blog_images_store,
+    build_blog_image_service,
+)
 from rag_backend.api.dependencies.blog_slot_write import (
     LockedBlogPostRow,
     SlotWrite,
@@ -25,15 +31,9 @@ from rag_backend.api.dependencies.blog_slot_write import (
     require_current_version,
     store_document,
 )
-from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
-from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.api.routes.blog_post_ai import (
-    blog_event_service,
-    blog_images_store,
-    build_blog_image_service,
-)
+from rag_backend.api.routes.blog_post_ai import blog_event_service
 from rag_backend.api.schemas.blog_post import BlogPostResponse
 from rag_backend.api.schemas.blog_post_editor import (
     BlogImageGenerateRequest,
@@ -52,15 +52,12 @@ from rag_backend.application.services.blog.blog_image_service import (
 )
 from rag_backend.domain.constants.ai_disclosure import AI_ACTION_GENERATE_IMAGE
 from rag_backend.domain.constants.blog_editor import (
-    BLOG_EDITOR_LANGUAGE_PATTERN,
     BLOG_IMAGE_CACHE_CONTROL,
     BLOG_IMAGE_FILENAME_PATTERN,
-    BLOG_LANGUAGE_PT,
     ERR_BLOG_IMAGE_NOT_FOUND,
     ERR_BLOG_SECTION_IMAGE_MISSING,
     MEDIA_TYPE_JPEG,
 )
-from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_AI_ENDPOINTS,
     RATE_LIMIT_WORKFLOW_ENDPOINTS,
@@ -69,8 +66,6 @@ from rag_backend.domain.models.blog_document import BlogDocument, BlogImage
 
 router = APIRouter(tags=["blog_post_images"])
 
-Language = Annotated[str, Query(pattern=BLOG_EDITOR_LANGUAGE_PATTERN)]
-IfMatch = Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)]
 COVER_PATH = "/blog-posts/{post_id}/cover/image"
 SECTION_PATH = "/blog-posts/{post_id}/sections/{section_id}/image"
 
@@ -85,6 +80,7 @@ class _Slot:
 
 @dataclass(frozen=True)
 class _SlotEdit:
+    db: AsyncSession
     post: LockedBlogPostRow
     if_match: int | None
     user_id: str
@@ -126,8 +122,9 @@ def _request(
 
 
 async def _store(
-    db: AsyncSession, edit: _SlotEdit, document: BlogDocument, action: str | None = None
+    edit: _SlotEdit, document: BlogDocument, action: str | None = None
 ) -> LockedBlogPostRow:
+    db = edit.db
     await store_document(
         db,
         SlotWrite(
@@ -144,9 +141,7 @@ async def _store(
     return edit.post
 
 
-async def _generate(
-    db: AsyncSession, edit: _SlotEdit, prompt: str | None
-) -> LockedBlogPostRow:
+async def _generate(edit: _SlotEdit, prompt: str | None) -> LockedBlogPostRow:
     require_current_version(edit.post, edit.if_match)
     document = load_document(edit.post)
     request = edit_or_404(lambda: _request(edit, document, prompt))
@@ -157,7 +152,7 @@ async def _generate(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.code
         ) from exc
     updated = edit_or_404(lambda: _place(document, edit.slot, image))
-    return await _store(db, edit, updated, AI_ACTION_GENERATE_IMAGE)
+    return await _store(edit, updated, AI_ACTION_GENERATE_IMAGE)
 
 
 def _patched(
@@ -176,46 +171,41 @@ def _patched(
     return _place(document, slot, image.model_copy(update=changes))
 
 
-async def _patch(
-    db: AsyncSession, edit: _SlotEdit, body: BlogImagePatchRequest
-) -> LockedBlogPostRow:
+async def _patch(edit: _SlotEdit, body: BlogImagePatchRequest) -> LockedBlogPostRow:
     require_current_version(edit.post, edit.if_match)
     document = load_document(edit.post)
-    return await _store(
-        db, edit, edit_or_404(lambda: _patched(document, edit.slot, body))
+    return await _store(edit, edit_or_404(lambda: _patched(document, edit.slot, body)))
+
+
+async def _remove(edit: _SlotEdit) -> LockedBlogPostRow:
+    require_current_version(edit.post, edit.if_match)
+    document = load_document(edit.post)
+    return await _store(edit, edit_or_404(lambda: _place(document, edit.slot, None)))
+
+
+async def _edit(target: CoverTarget | SectionTarget) -> _SlotEdit:
+    section_id = getattr(target, "section_id", None)
+    post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
+    return _SlotEdit(
+        db=target.db,
+        post=post,
+        if_match=target.if_match,
+        user_id=target.current_user.id,
+        slot=_Slot(target.language, section_id),
     )
 
 
-async def _remove(db: AsyncSession, edit: _SlotEdit) -> LockedBlogPostRow:
-    require_current_version(edit.post, edit.if_match)
-    document = load_document(edit.post)
-    return await _store(
-        db, edit, edit_or_404(lambda: _place(document, edit.slot, None))
-    )
-
-
-async def _edit(
-    db: AsyncSession, request: tuple[UUID, EditorUser, int | None], slot: _Slot
-) -> _SlotEdit:
-    post_id, user, if_match = request
-    post = await get_blog_post_for_user(db, post_id, user)
-    return _SlotEdit(post=post, if_match=if_match, user_id=user.id, slot=slot)
+Cover = Annotated[CoverTarget, Depends()]
+Section = Annotated[SectionTarget, Depends()]
 
 
 @router.post(COVER_PATH, response_model=BlogPostResponse, summary="Generate the cover")
 @limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
 async def generate_cover_image(
-    request: Request,
-    post_id: UUID,
-    body: BlogImageGenerateRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
+    request: Request, body: BlogImageGenerateRequest, target: Cover
 ) -> LockedBlogPostRow:
     """Generate or regenerate the cover (502 on failure, cover unchanged)."""
-    edit = await _edit(db, (post_id, current_user, if_match), _Slot(language))
-    return await _generate(db, edit, body.prompt)
+    return await _generate(await _edit(target), body.prompt)
 
 
 @router.patch(
@@ -223,32 +213,17 @@ async def generate_cover_image(
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def patch_cover_image(
-    request: Request,
-    post_id: UUID,
-    body: BlogImagePatchRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
+    request: Request, body: BlogImagePatchRequest, target: Cover
 ) -> LockedBlogPostRow:
     """Edit the cover's alt (never blank) and caption."""
-    edit = await _edit(db, (post_id, current_user, if_match), _Slot(language))
-    return await _patch(db, edit, body)
+    return await _patch(await _edit(target), body)
 
 
 @router.delete(COVER_PATH, response_model=BlogPostResponse, summary="Remove the cover")
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
-async def delete_cover_image(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
-) -> LockedBlogPostRow:
+async def delete_cover_image(request: Request, target: Cover) -> LockedBlogPostRow:
     """Clear the cover (PT: ``featured_image_url`` becomes ``NULL``)."""
-    edit = await _edit(db, (post_id, current_user, if_match), _Slot(language))
-    return await _remove(db, edit)
+    return await _remove(await _edit(target))
 
 
 @router.post(
@@ -256,19 +231,10 @@ async def delete_cover_image(
 )
 @limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
 async def generate_section_image(
-    request: Request,
-    post_id: UUID,
-    section_id: str,
-    body: BlogImageGenerateRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
+    request: Request, body: BlogImageGenerateRequest, target: Section
 ) -> LockedBlogPostRow:
     """Generate or regenerate one section's image (alt defaults to its heading)."""
-    slot = _Slot(language, section_id)
-    edit = await _edit(db, (post_id, current_user, if_match), slot)
-    return await _generate(db, edit, body.prompt)
+    return await _generate(await _edit(target), body.prompt)
 
 
 @router.patch(
@@ -278,38 +244,19 @@ async def generate_section_image(
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def patch_section_image(
-    request: Request,
-    post_id: UUID,
-    section_id: str,
-    body: BlogImagePatchRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
+    request: Request, body: BlogImagePatchRequest, target: Section
 ) -> LockedBlogPostRow:
     """Edit one section image's alt (never blank) and caption."""
-    slot = _Slot(language, section_id)
-    edit = await _edit(db, (post_id, current_user, if_match), slot)
-    return await _patch(db, edit, body)
+    return await _patch(await _edit(target), body)
 
 
 @router.delete(
     SECTION_PATH, response_model=BlogPostResponse, summary="Remove a section image"
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
-async def delete_section_image(
-    request: Request,
-    post_id: UUID,
-    section_id: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
-) -> LockedBlogPostRow:
+async def delete_section_image(request: Request, target: Section) -> LockedBlogPostRow:
     """Set one section's image to ``null``."""
-    slot = _Slot(language, section_id)
-    edit = await _edit(db, (post_id, current_user, if_match), slot)
-    return await _remove(db, edit)
+    return await _remove(await _edit(target))
 
 
 @router.get("/blog-images/{post_id}/{filename}", summary="Serve a blog image")

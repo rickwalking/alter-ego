@@ -12,12 +12,12 @@ leaves the slot unchanged.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
-from rag_backend.application.services.blog.blog_prompts import image_prompt
 from rag_backend.application.services.blog_workflow_observability import (
     blog_ai_propagate,
 )
@@ -107,14 +107,25 @@ async def _call_provider(
         raise BlogImageError(ERR_BLOG_IMAGE_GENERATION_FAILED) from exc
 
 
+ImagePromptRenderer = Callable[[str], str]
+
+
 class BlogImageService:
-    """Generate a blog image into the store and describe it as a ``BlogImage``."""
+    """Generate a blog image into the store and describe it as a ``BlogImage``.
+
+    ``render_prompt`` wraps the scene in the versioned image template (injected
+    by the API edge: ``agents.blog_editor_prompts.image_prompt``).
+    """
 
     def __init__(
-        self, provider: ImageGenerationService | None, store: BlogImageStore
+        self,
+        provider: ImageGenerationService | None,
+        store: BlogImageStore,
+        render_prompt: ImagePromptRenderer,
     ) -> None:
         self._provider = provider
         self._store = store
+        self._render_prompt = render_prompt
 
     async def generate(self, request: BlogImageRequest) -> BlogImage:
         """Generate, persist and return the image; raises :class:`BlogImageError`."""
@@ -122,7 +133,7 @@ class BlogImageService:
         if provider is None:
             raise BlogImageError(ERR_BLOG_IMAGE_GENERATION_FAILED)
         scene = _clean_scene(request.scene)
-        prompt = image_prompt(scene)
+        prompt = self._render_prompt(scene)
         path = self._store.new_path(request.post_id)
         with blog_ai_propagate(request.post_id, PHASE_BLOG_SECTION_IMAGE):
             await _call_provider(provider, prompt, path)
@@ -143,5 +154,6 @@ __all__ = [
     "BlogImageRequest",
     "BlogImageService",
     "BlogImageStore",
+    "ImagePromptRenderer",
     "default_scene",
 ]

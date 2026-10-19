@@ -11,10 +11,7 @@ from langchain_core.language_models import BaseChatModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.agents.input_sanitizer import (
-    sanitize_display_input,
-    sanitize_llm_input,
-)
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.blog.ai_envelope import (
     parse_suggestion,
@@ -40,10 +37,7 @@ from rag_backend.domain.constants.blog_editor import (
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols import ImageGenerationService
-from rag_backend.infrastructure.database.models import (
-    CarouselProjectModel,
-    PersonaProfileModel,
-)
+from rag_backend.infrastructure.database.models import PersonaProfileModel
 
 
 @dataclass(frozen=True)
@@ -83,8 +77,9 @@ class _RewriteInput:
     db: AsyncSession
     body_md: str
     heading: str | None = None
+    # The requested persona, else the post's carousel persona (resolved by the
+    # route); ``None`` falls back to the first (single-author) persona.
     persona_id: str | None = None
-    project_id: str | None = None
     trace: BlogAiTraceContext | None = None
 
 
@@ -232,8 +227,9 @@ class BlogPostAIService:
     async def rewrite_section(self, input_data: _RewriteInput) -> str:
         """One section body rewritten in the persona voice (``PersonaAgent.enforce``).
 
-        Persona: the requested one, else the carousel project's, else the
-        first (single-author) persona; none at all is a ``ValueError``.
+        Persona: the given one, else the first (single-author) persona; none at
+        all is a ``ValueError``. The output gets the same hardening as display
+        copy (``sanitize_llm_input`` == ``sanitize_display_input``, AE-0413).
         """
         persona = await self._resolve_persona(input_data)
         if persona is None:
@@ -244,7 +240,7 @@ class BlogPostAIService:
             rewritten = await agent.enforce(
                 input_data.body_md, context=input_data.heading or ""
             )
-        text = sanitize_display_input(strip_code_fence(rewritten or ""))
+        text = sanitize_llm_input(strip_code_fence(rewritten or ""))
         if not text:
             raise ValueError(ERR_BLOG_REWRITE_EMPTY)
         return text
@@ -253,11 +249,8 @@ class BlogPostAIService:
         self, input_data: _RewriteInput
     ) -> PersonaProfile | None:
         db = input_data.db
-        persona_id = input_data.persona_id or await _project_persona_id(
-            db, input_data.project_id
-        )
-        if persona_id is not None:
-            return await self._load_persona(db, persona_id)
+        if input_data.persona_id is not None:
+            return await self._load_persona(db, input_data.persona_id)
         result = await db.execute(
             select(PersonaProfileModel)
             .order_by(PersonaProfileModel.created_at)
@@ -277,14 +270,6 @@ class BlogPostAIService:
         if model is None:
             return None
         return model.to_entity()
-
-
-async def _project_persona_id(db: AsyncSession, project_id: str | None) -> str | None:
-    if project_id is None:
-        return None
-    project = await db.get(CarouselProjectModel, project_id)
-    persona_id = getattr(project, "persona_id", None)
-    return str(persona_id) if persona_id else None
 
 
 __all__ = ["BlogPostAIService"]

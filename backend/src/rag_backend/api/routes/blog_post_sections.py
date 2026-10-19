@@ -8,12 +8,20 @@
 Both writes are ``If-Match`` guarded and stored through the versioned path.
 """
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_editor import (
+    IfMatch,
+    Language,
+    PostTarget,
+    Session,
+    build_blog_translation_service,
+)
 from rag_backend.api.dependencies.blog_slot_write import (
     LockedBlogPostRow,
     SlotWrite,
@@ -22,19 +30,13 @@ from rag_backend.api.dependencies.blog_slot_write import (
     require_current_version,
     store_document,
 )
-from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.api.routes.blog_post_ai import (
-    _build_ai_service,
-    blog_event_service,
-    build_blog_translation_service,
-)
+from rag_backend.api.routes.blog_post_ai import _build_ai_service, blog_event_service
+from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
-from rag_backend.api.schemas.blog_post_editor import (
-    BlogSectionRewriteRequest,
-)
+from rag_backend.api.schemas.blog_post_editor import BlogSectionRewriteRequest
 from rag_backend.application.services.blog.blog_document_edits import (
     find_section,
     language_document,
@@ -50,24 +52,38 @@ from rag_backend.application.services.blog_post_ai_service import (
 )
 from rag_backend.domain.constants.ai_disclosure import AI_ACTION_IMPROVE
 from rag_backend.domain.constants.blog_editor import (
-    BLOG_EDITOR_LANGUAGE_PATTERN,
     BLOG_LANGUAGE_EN,
     BLOG_LANGUAGE_PT,
     ERR_BLOG_TRANSLATION_EXISTS,
 )
-from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
-from rag_backend.domain.constants.rate_limits import (
-    RATE_LIMIT_AI_ENDPOINTS,
-)
+from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.blog_document import BlogDocument
+from rag_backend.domain.protocols import CarouselRepository
 
 router = APIRouter(tags=["blog_post_sections"])
 
-Language = Annotated[str, Query(pattern=BLOG_EDITOR_LANGUAGE_PATTERN)]
-IfMatch = Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)]
+
+@dataclass
+class RewriteTarget:
+    """A section rewrite; the carousel repo resolves the project's persona."""
+
+    post_id: UUID
+    section_id: str
+    db: Session
+    current_user: EditorUser
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)]
+    if_match: IfMatch = None
+    language: Language = BLOG_LANGUAGE_PT
 
 
-async def _commit_document(db: AsyncSession, write: SlotWrite) -> LockedBlogPostRow:
+# Path params are fields of the target dataclasses (``Depends()``).
+REWRITE_PATH = "/blog-posts/{post_id}/sections/{section_id}/rewrite"
+TRANSLATION_PATH = "/blog-posts/{post_id}/translations/en"
+Rewrite = Annotated[RewriteTarget, Depends()]
+Post = Annotated[PostTarget, Depends()]
+
+
+async def _commit(write: SlotWrite, db: AsyncSession) -> LockedBlogPostRow:
     await store_document(db, write)
     await db.commit()
     await db.refresh(write.post)
@@ -85,71 +101,82 @@ def _addressed(
     return document, section.body_md, section.heading
 
 
+async def _persona_id(
+    target: RewriteTarget, project_id: object, requested: str | None
+) -> str | None:
+    """The requested persona, else the post's carousel persona (if any)."""
+    if requested or not project_id:
+        return requested
+    project = await target.repo.get_project_by_id(UUID(str(project_id)))
+    persona_id = getattr(project, "persona_id", None)
+    return str(persona_id) if persona_id else None
+
+
+async def _rewritten_body(request: _RewriteInput) -> str:
+    try:
+        return await _build_ai_service().rewrite_section(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+
+def _slot_write(
+    target: RewriteTarget | PostTarget, post: LockedBlogPostRow, document: BlogDocument
+) -> SlotWrite:
+    return SlotWrite(
+        post=post,
+        if_match=target.if_match,
+        document=document,
+        user_id=target.current_user.id,
+        events=blog_event_service(),
+        ai_action=AI_ACTION_IMPROVE,
+    )
+
+
 @router.post(
-    "/blog-posts/{post_id}/sections/{section_id}/rewrite",
+    REWRITE_PATH,
     response_model=BlogPostResponse,
     summary="Rewrite one section in the persona voice",
 )
 @limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
 async def rewrite_section(
     request: Request,
-    post_id: UUID,
-    section_id: str,
     body: BlogSectionRewriteRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-    language: Language = BLOG_LANGUAGE_PT,
+    target: Rewrite,
 ) -> LockedBlogPostRow:
     """Replace only that section's ``body_md`` (422 when no persona exists)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
-    require_current_version(post, if_match)
-    document, body_md, heading = _addressed(post, section_id, language)
-    try:
-        text = await _build_ai_service().rewrite_section(
-            _RewriteInput(
-                db=db,
-                body_md=body_md,
-                heading=heading,
-                persona_id=body.persona_id,
-                project_id=post.project_id,
-                trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
-            )
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-        ) from exc
-    current = language_document(document, language)
-    section = find_section(current, section_id).model_copy(update={"body_md": text})
-    updated = with_section(document, language, section)
-    write = SlotWrite(
-        post=post,
-        if_match=if_match,
-        document=updated,
-        user_id=current_user.id,
-        events=blog_event_service(),
-        ai_action=AI_ACTION_IMPROVE,
+    post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
+    require_current_version(post, target.if_match)
+    document, body_md, heading = _addressed(post, target.section_id, target.language)
+    rewrite = _RewriteInput(
+        db=target.db,
+        body_md=body_md,
+        heading=heading,
+        persona_id=await _persona_id(target, post.project_id, body.persona_id),
+        trace=BlogAiTraceContext(
+            post_id=str(target.post_id), user_id=target.current_user.id
+        ),
     )
-    return await _commit_document(db, write)
+    text = await _rewritten_body(rewrite)
+    current = language_document(document, target.language)
+    section = find_section(current, target.section_id)
+    updated = with_section(
+        document, target.language, section.model_copy(update={"body_md": text})
+    )
+    return await _commit(_slot_write(target, post, updated), target.db)
 
 
 @router.post(
-    "/blog-posts/{post_id}/translations/en",
+    TRANSLATION_PATH,
     response_model=BlogPostResponse,
     summary="Generate the EN translation of a blog post",
 )
 @limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
-async def generate_en_translation(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    if_match: IfMatch = None,
-) -> LockedBlogPostRow:
+async def generate_en_translation(request: Request, target: Post) -> LockedBlogPostRow:
     """Translate the PT document into ``translations.en`` (502 on failure)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
-    require_current_version(post, if_match)
+    post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
+    require_current_version(post, target.if_match)
     document = load_document(post)
     if BLOG_LANGUAGE_EN in document.translations:
         raise HTTPException(
@@ -157,18 +184,12 @@ async def generate_en_translation(
         )
     try:
         english = await build_blog_translation_service().translate(
-            str(post_id), document
+            str(target.post_id), document
         )
     except BlogTranslationError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.code
         ) from exc
-    write = SlotWrite(
-        post=post,
-        if_match=if_match,
-        document=with_translation(document, english),
-        user_id=current_user.id,
-        events=blog_event_service(),
-        ai_action=AI_ACTION_IMPROVE,
+    return await _commit(
+        _slot_write(target, post, with_translation(document, english)), target.db
     )
-    return await _commit_document(db, write)
