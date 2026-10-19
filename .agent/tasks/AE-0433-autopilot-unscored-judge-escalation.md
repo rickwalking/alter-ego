@@ -126,8 +126,10 @@ Feature: An unscored persona judge never escalates a passing run (AE-0433)
 - `modules/autopilot/application/slide_autofix.py` (wait / `persona_judge_unavailable`)
 - `modules/autopilot/domain/autofix.py`, `infrastructure/content_autofixer.py`,
   `autofix_constants.py`, `pov_constants.py` (Telegram text), `bootstrap.py`
-- `infrastructure/config/settings.py`, `bootstrap/autopilot_worker_factory.py`
-  (`AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS`)
+- `infrastructure/config/settings.py` → the autopilot autofix fields move to the new mixin
+  `infrastructure/config/autopilot_autofix_settings.py` (with `AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS`;
+  keeps `settings.py` under 400 lines after main grew it to 398; `pyproject.toml` gives the mixin
+  the same mypy override as `settings`), `bootstrap/autopilot_worker_factory.py`
 - `tests/unit/application/test_autofix_escalation_ae0407.py` (the unscored rewrite's entry
   now carries the AE-0433 re-score marker; the kept score 50 is still asserted)
 - `docs/backend/slide-copy-validators.md`
@@ -172,7 +174,7 @@ See Delta.
 ## Test Evidence
 
 Hotfix fast path, each gate via `gate-capture.sh backend:<gate>`. DB gates SKIP locally (no
-Postgres); the suite was run directly (5791 passed, 14 skipped, 93% total) and diff-cover
+Postgres); the suite was run directly (5952 passed, 14 skipped (after the rebase on main 1b59bee15), 93% total) and diff-cover
 directly (100%). Python 3.11 compile/import OK. Mutation deferred to CI. Details:
 `.agent/reports/AE-0433.dev-summary.md`.
 
