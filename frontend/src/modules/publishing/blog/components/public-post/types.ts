@@ -7,6 +7,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import type { BlogImage, BlogSection } from "@/schemas/blog-document";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
 export interface BlogPostAdminPanelProps {
@@ -15,11 +16,23 @@ export interface BlogPostAdminPanelProps {
 }
 
 export interface BlogPostContentProps {
-  markdown: string;
+  sections: BlogSection[];
   design: CarouselDesignResponse;
 }
 
 export interface SectionProps {
+  heading: string | null;
+  bodyMd: string;
+  image?: BlogImage | null;
+  design: CarouselDesignResponse;
+}
+
+export interface SectionHeadingProps {
+  heading: string | null;
+  design: CarouselDesignResponse;
+}
+
+export interface SectionBodyProps {
   markdown: string;
   design: CarouselDesignResponse;
 }
@@ -33,9 +46,14 @@ export interface BlogPostHeaderProps {
 }
 
 export interface BlogPostHeroProps {
-  imageUrl: string;
-  title: string;
+  cover: BlogImage | null;
   design: CarouselDesignResponse;
+}
+
+export interface BlogLanguageSwitchProps {
+  activeLanguage: string;
+  label: string;
+  options: ReadonlyArray<{ language: string; label: string; href: string }>;
 }
 
 export interface PublicCoverImageProps {

@@ -214,7 +214,10 @@
     },
     "untitledPost": "Post sem título",
     "swipeHint": "Deslize →",
-    "metaTitleSuffix": "Pedro Marins · Blog"
+    "metaTitleSuffix": "Pedro Marins · Blog",
+    "contentLanguage": "Idioma do conteúdo",
+    "contentLanguagePt": "PT",
+    "contentLanguageEn": "EN"
   },
   "create": {
     "pageTitle": "Criar Carrossel",

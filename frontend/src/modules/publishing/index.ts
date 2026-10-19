@@ -108,6 +108,7 @@ export type { BlogPostVersion } from "./blog/components/types";
 
 /* --- blog: public-post components --- */
 export { BackLink } from "./blog/components/public-post/back-link";
+export { BlogLanguageSwitch } from "./blog/components/public-post/blog-language-switch";
 export { BlogPostAdminPanel } from "./blog/components/public-post/blog-post-admin-panel";
 export { BlogPostContent } from "./blog/components/public-post/blog-post-content";
 export { BlogPostHeader } from "./blog/components/public-post/blog-post-header";

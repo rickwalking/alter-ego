@@ -6,7 +6,6 @@ import {
 } from "@/constants/api";
 import { SERVER_FETCH } from "@/constants/server-fetch";
 import {
-  carouselBlogI18nResponseSchema,
   carouselBlogWithDesignResponseSchema,
   carouselDesignResponseSchema,
   carouselProjectListResponseSchema,
@@ -76,31 +75,21 @@ export async function fetchCompletedProjects(
   return result ?? { items: [], total: 0, limit, offset: 0 };
 }
 
-export async function fetchBlogWithDesign(
+/**
+ * Carousel design tokens for theming a carousel-origin blog post (AE-0423).
+ *
+ * Theme only (colors/typography/layout): the public blog never reads article
+ * text from the carousel `/blog` endpoint, and the caller drops `images`.
+ */
+export async function fetchCarouselDesign(
   id: string,
   lang: string = "pt",
-): Promise<{
-  blog: z.infer<typeof carouselBlogI18nResponseSchema>;
-  design: z.infer<typeof carouselDesignResponseSchema>;
-} | null> {
-  const [blog, design] = await Promise.all([
-    validatedFetch(
-      API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang),
-      carouselBlogI18nResponseSchema,
-      { cache: "no-store" },
-    ),
-    validatedFetch(
-      API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
-      carouselDesignResponseSchema,
-      { cache: "no-store" },
-    ),
-  ]);
-
-  if (!blog || !design) {
-    return null;
-  }
-
-  return { blog, design };
+): Promise<z.infer<typeof carouselDesignResponseSchema> | null> {
+  return validatedFetch(
+    API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
+    carouselDesignResponseSchema,
+    { cache: "no-store" },
+  );
 }
 
 export async function fetchPublicBlogPosts(

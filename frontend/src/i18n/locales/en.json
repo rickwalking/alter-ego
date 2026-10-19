@@ -214,7 +214,10 @@
     },
     "untitledPost": "Untitled post",
     "swipeHint": "Swipe →",
-    "metaTitleSuffix": "Pedro Marins · Blog"
+    "metaTitleSuffix": "Pedro Marins · Blog",
+    "contentLanguage": "Content language",
+    "contentLanguagePt": "PT",
+    "contentLanguageEn": "EN"
   },
   "create": {
     "pageTitle": "Create Carousel",

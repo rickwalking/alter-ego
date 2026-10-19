@@ -9,6 +9,7 @@ import { toCategoryLabel } from "@/lib/public-blog-text";
 import { getRequestLocale } from "@/i18n/request-locale";
 import {
   BackLink,
+  BlogLanguageSwitch,
   BlogPostContent,
   BlogPostHeader,
   BlogPostHero,
@@ -60,7 +61,8 @@ export async function generateMetadata({
   const description = view.subtitle
     ? truncateDescription(view.subtitle)
     : undefined;
-  const image = view.design.images.hero || undefined;
+  // OG image: the post's own cover only (never a carousel slide, AE-0423).
+  const image = view.cover?.url || undefined;
   return {
     title,
     description,
@@ -93,7 +95,18 @@ export default async function PublicBlogPostPage({
   const badge = toCategoryLabel(design.layout.badge_label);
   const title = view.title || t("untitledPost");
 
-  const heroImageUrl = design.images.hero ?? "";
+  const languageOptions = [
+    {
+      language: BLOG_LANGUAGES.PORTUGUESE,
+      label: t("contentLanguagePt"),
+      href: `?lang=${BLOG_LANGUAGES.PORTUGUESE}`,
+    },
+    {
+      language: BLOG_LANGUAGES.ENGLISH,
+      label: t("contentLanguageEn"),
+      href: `?lang=${BLOG_LANGUAGES.ENGLISH}`,
+    },
+  ];
 
   return (
     <div
@@ -131,14 +144,13 @@ export default async function PublicBlogPostPage({
             swipeHint={t("swipeHint")}
             design={design}
           />
-          {heroImageUrl && (
-            <BlogPostHero
-              imageUrl={heroImageUrl}
-              title={title}
-              design={design}
-            />
-          )}
-          <BlogPostContent markdown={view.markdown} design={design} />
+          <BlogLanguageSwitch
+            activeLanguage={currentLang}
+            label={t("contentLanguage")}
+            options={languageOptions}
+          />
+          <BlogPostHero cover={view.cover} design={design} />
+          <BlogPostContent sections={view.sections} design={design} />
         </article>
       </div>
     </div>

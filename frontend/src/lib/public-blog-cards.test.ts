@@ -52,41 +52,64 @@ const POST: PublicBlogPostSummary = {
   project_id: null,
 };
 
+/** Public posts linked to each project (the only listing source, AE-0423). */
+function linked(projects: Project[]): { items: PublicBlogPostSummary[] } {
+  return {
+    items: projects.map((p) => ({
+      ...POST,
+      id: `post-${p.id}`,
+      origin: "carousel",
+      project_id: p.id,
+    })),
+  };
+}
+
+function cardsFor(projects: Project[], locale: "pt" | "en") {
+  return buildPublicBlogCards({
+    publicFeed: linked(projects),
+    carouselFeed: feed(projects),
+    locale,
+  });
+}
+
 describe("buildPublicBlogCards", () => {
-  // Scenario: Listing card maps an owner-only preview hero to the public route
-  it("uses the public image route for carousel heroes", () => {
-    const [card] = buildPublicBlogCards({
-      publicFeed: null,
+  // Feature: Public blog renders the v2 document (AE-0423)
+  // Scenario: The listing card uses a fallback when the cover is null
+  it("uses the post cover, never the carousel hero, for a linked post", () => {
+    const [withCover] = buildPublicBlogCards({
+      publicFeed: {
+        items: [
+          {
+            ...linked([project()]).items[0],
+            featured_image_url: "https://cdn.example/cover.jpg",
+          },
+        ],
+      },
       carouselFeed: feed([project()]),
       locale: "pt",
     });
-    expect(card.imageUrl).toBe(
-      "/api/carousels/proj-1/images/slide_1.jpg?lang=pt",
-    );
-    expect(card.imageUrl).not.toContain("/preview/images/");
-    expect(card.href).toBe("/blog/proj-1");
+    expect(withCover.imageUrl).toBe("https://cdn.example/cover.jpg");
+    expect(withCover.href).toBe("/blog/post-proj-1");
+
+    const [noCover] = cardsFor([project()], "pt");
+    expect(noCover.imageUrl).toBeUndefined();
   });
 
-  it("leaves the image undefined when the project has no hero", () => {
-    const [card] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([project({ design_tokens: null })]),
-      locale: "pt",
-    });
-    expect(card.imageUrl).toBeUndefined();
+  // Scenario: A carousel-origin post with no v2 row is 404 — so the listing
+  // never links a bare project id when the public feed is unavailable.
+  it("renders no cards when the public feed is unavailable", () => {
+    expect(
+      buildPublicBlogCards({
+        publicFeed: null,
+        carouselFeed: feed([project()]),
+        locale: "pt",
+      }),
+    ).toEqual([]);
   });
 
   it("localizes title and subtitle", () => {
-    const [pt] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([project()]),
-      locale: "pt",
-    });
-    const [en] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([project()]),
-      locale: "en",
-    });
+    const [pt] = cardsFor([project()], "pt");
+    const [en] = cardsFor([project()], "en");
     expect(pt.title).toBe("Título PT");
     expect(pt.subtitle).toBe("Subtítulo PT");
     expect(en.title).toBe("Title EN");
@@ -95,22 +118,18 @@ describe("buildPublicBlogCards", () => {
 
   // Scenario: A placeholder title falls back to a real title
   it("skips a placeholder English title", () => {
-    const [card] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([
-        project({ title_en: "slide", title: "Gemini 4 Argon chegou." }),
-      ]),
-      locale: "en",
-    });
+    const [card] = cardsFor(
+      [project({ title_en: "slide", title: "Gemini 4 Argon chegou." })],
+      "en",
+    );
     expect(card.title).toBe("Gemini 4 Argon chegou.");
   });
 
   it("falls back to the topic, then to the public post title", () => {
-    const [topicCard] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([project({ title: null, title_en: null })]),
-      locale: "pt",
-    });
+    const [topicCard] = cardsFor(
+      [project({ title: null, title_en: null })],
+      "pt",
+    );
     expect(topicCard.title).toBe("Raw topic");
 
     const [postCard] = buildPublicBlogCards({
@@ -127,49 +146,46 @@ describe("buildPublicBlogCards", () => {
 
   // Scenario: Emphasis markup in a title is not shown raw
   it("strips emphasis markup from titles", () => {
-    const [card] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([
+    const [card] = cardsFor(
+      [
         project({
           title: "Por que todo mundo usa <strong>ChatGPT</strong>?",
         }),
-      ]),
-      locale: "pt",
-    });
+      ],
+      "pt",
+    );
     expect(card.title).toBe("Por que todo mundo usa ChatGPT?");
   });
 
   // Scenario: A long niche is not used as a category chip
   it("only keeps a short niche as the category", () => {
-    const [shortNiche, longNiche] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([
+    const [shortNiche, longNiche] = cardsFor(
+      [
         project(),
         project({
           id: "proj-2",
           niche:
             "Goodhart's Law gaming, context anxiety, anti-gaming gates in agentic AI",
         }),
-      ]),
-      locale: "pt",
-    });
+      ],
+      "pt",
+    );
     expect(shortNiche.niche).toBe("AI models");
     expect(longNiche.niche).toBeUndefined();
   });
 
   // Scenario: A subtitle equal to the title is not repeated
   it("drops a subtitle that repeats the title and truncates long ones", () => {
-    const [same, long] = buildPublicBlogCards({
-      publicFeed: null,
-      carouselFeed: feed([
+    const [same, long] = cardsFor(
+      [
         project({ subtitle: "Título PT" }),
         project({
           id: "proj-2",
           subtitle: Array.from({ length: 20 }, (_, i) => `w${i}`).join(" "),
         }),
-      ]),
-      locale: "pt",
-    });
+      ],
+      "pt",
+    );
     expect(same.subtitle).toBeUndefined();
     expect(long.subtitle).toBe(
       `${Array.from({ length: 15 }, (_, i) => `w${i}`).join(" ")}...`,
