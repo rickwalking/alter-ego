@@ -1,6 +1,6 @@
 # AE-0434 — Final export fails with image_decode_timeout: export expects artwork the images phase never made
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: P1
 Type: Bug
@@ -133,7 +133,20 @@ Root cause traced (prod read-only + code), renderer + preflight fix, Gherkin + t
 
 ## Test Evidence
 
-Pending.
+Hotfix fast path (no local mutation; no usable local Postgres: Docker down, no
+credentials for the system clusters, so the DB gates run in CI).
+
+- New tests: `test_export_artwork_ae0434.py` (10) + `test_playwright_artwork_check_ae0434.py` (6):
+  16 passed; 6 fail on the pre-fix renderer (verified by swapping the old `html_template.py`).
+- `uv run pytest tests/unit -p no:randomly`: 4937 passed, 1 skipped.
+- Python 3.11 import check (`uv run --python 3.11`): OK.
+- `bash scripts/ci/gate-capture.sh backend` (non-DB gates): format, lint, lint-diff,
+  blanket-ignore, strict-diff, type, imports, arch-ratchet, docstrings, dead-code,
+  inline-prompts, redis-factory, autopilot-env, healthcheck-loopback, bandit, pip-audit,
+  integrity = PASS; test, diff-cover, migrations, schema-drift = SKIP (no DATABASE_URL);
+  mutation: deferred to CI (hotfix fast path). The group run started mutmut by mistake; it
+  was killed after a few minutes, so its FAIL line is the kill, not a result.
+- CI: PR #155.
 
 ## QA Report
 
