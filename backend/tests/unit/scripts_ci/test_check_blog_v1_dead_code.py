@@ -11,7 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from scripts.check_blog_v1_dead_code import find_violations, main
 
 _SEEDED = "const x = payload.blog_image_map;\n"
