@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Protocol, cast
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,6 +45,24 @@ logger = get_logger()
 HIDDEN_BAD_POST_KEY = "hidden_bad_post"
 DEFAULT_HIDE_REASON = "legacy carousel-origin post (AE-0422 AC6)"
 DEFAULT_HIDE_ACTOR = "system:ae-0422-hide"
+
+
+class _HidablePost(Protocol):
+    """The instance-shaped view of ``BlogPostModel`` this service mutates.
+
+    ``BlogPostModel`` declares several columns with legacy ``Column(...)`` (not
+    ``Mapped``), so SQLAlchemy attribute access is typed as ``Column[T]`` rather
+    than the runtime instance value. This Protocol (reached via ``cast`` on a
+    real row) gives the plain Python types of a loaded instance.
+    """
+
+    id: object
+    origin: str
+    status: str
+    published_at: datetime | None
+    submitted_for_review_at: datetime | None
+    lock_version: int
+    ai_generation_metadata: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -69,8 +88,9 @@ class HideReport:
 
 def is_hide_target(post: BlogPostModel) -> bool:
     """A post is hidden iff it is carousel-origin **and** currently published."""
+    origin = cast("str", post.origin)
     return (
-        post.origin == BlogPostOrigin.CAROUSEL.value
+        origin == BlogPostOrigin.CAROUSEL.value
         and post.status == BlogPostStatus.PUBLISHED.value
     )
 
@@ -86,9 +106,7 @@ class BlogPostHideService:
         ids = (await db.execute(self._preview_query())).scalars().all()
         return HideReport(ids=list(ids))
 
-    async def hide(
-        self, db: AsyncSession, run: HideRun | None = None
-    ) -> HideReport:
+    async def hide(self, db: AsyncSession, run: HideRun | None = None) -> HideReport:
         """Hide every published carousel-origin post in one transaction.
 
         The caller owns the commit (mirrors the workflow routes): the field
@@ -100,28 +118,29 @@ class BlogPostHideService:
         rows = (await db.execute(self._targets_query())).scalars().all()
         hidden_ids: list[str] = []
         for post in rows:
-            old_status = post.status
-            post.status = BlogPostStatus.DRAFT.value
-            post.published_at = None
-            post.submitted_for_review_at = None
-            post.lock_version = (post.lock_version or 0) + 1
-            post.ai_generation_metadata = {
-                **(post.ai_generation_metadata or {}),
+            row = cast("_HidablePost", post)
+            old_status = row.status
+            row.status = BlogPostStatus.DRAFT.value
+            row.published_at = None
+            row.submitted_for_review_at = None
+            row.lock_version = (row.lock_version or 0) + 1
+            row.ai_generation_metadata = {
+                **row.ai_generation_metadata,
                 HIDDEN_BAD_POST_KEY: {"at": at.isoformat(), "reason": run.reason},
             }
             await self._emitter.emit(
                 db,
                 event_type=EVENT_TYPE_BLOGPOST_STATUS_CHANGED,
-                aggregate_id=str(post.id),
+                aggregate_id=str(row.id),
                 aggregate_type=AGGREGATE_TYPE_BLOG_POST,
-                payload={"old_status": old_status, "new_status": post.status},
+                payload={"old_status": old_status, "new_status": row.status},
                 metadata={
                     "user_id": run.user_id,
                     "source": EVENT_SOURCE_BLOG_WORKFLOW,
                     "reason": run.reason,
                 },
             )
-            hidden_ids.append(str(post.id))
+            hidden_ids.append(str(row.id))
         await db.flush()
         if hidden_ids:
             logger.info(
