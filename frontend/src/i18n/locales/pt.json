@@ -1282,7 +1282,8 @@
           "conflict": "Essa ação não é possível agora (o post mudou). Recarregue e tente de novo.",
           "not_found": "Essa seção ou tradução não existe mais. Recarregue a página.",
           "ai_failed": "O serviço de IA falhou. Nada foi alterado — tente de novo.",
-          "failed": "A ação falhou. Tente de novo."
+          "failed": "A ação falhou. Tente de novo.",
+          "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP."
         }
       }
     },

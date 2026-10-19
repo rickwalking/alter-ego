@@ -70,7 +70,6 @@ export function blogPost(overrides: Partial<BlogPost> = {}): BlogPost {
     content: v2Document(),
     excerpt: "",
     editor_comments: [],
-    version_history: [],
     sources: [],
     citations: [],
     ai_suggestions: [],

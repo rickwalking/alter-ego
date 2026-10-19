@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
 
 const editorState = vi.fn<() => UseBlogPostEditorResult>();
 const confirmLeave = vi.fn(() => true);
+const slotsPending = vi.fn(() => false);
 let capturedApply: ((text: string) => void) | null = null;
 vi.mock("@/modules/publishing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/publishing")>()),
@@ -32,6 +33,7 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
   }),
   useBlogEditorActions: () => ({
     statusOf: () => ({ pending: false, error: null }),
+    anyPending: slotsPending(),
     generateImage: vi.fn(),
     rewrite: vi.fn(),
     generateTranslation: vi.fn(),
@@ -226,6 +228,17 @@ describe("BlogPostEditPage (AE-0424)", () => {
     editorState.mockReturnValue(state({ post: undefined }));
     rerender(<BlogPostEditPage />);
     expect(screen.getByText("Blog post not found.")).toBeInTheDocument();
+  });
+
+  // AE-0424 review: workflow controls wait for a running slot action.
+  it("disables the review controls while a slot action runs", () => {
+    slotsPending.mockReturnValue(true);
+    editorState.mockReturnValue(
+      state({ post: blogPost({ status: "under_review" }) }),
+    );
+    render(<BlogPostEditPage />);
+    expect(screen.getByRole("button", { name: "Approve" })).toBeDisabled();
+    slotsPending.mockReturnValue(false);
   });
 
   it("shows a spinner while loading", () => {

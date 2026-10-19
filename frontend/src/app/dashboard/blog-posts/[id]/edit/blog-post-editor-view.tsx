@@ -117,6 +117,7 @@ export function BlogPostEditorView({
             review={review}
             data={data}
             selection={selection}
+            slotsPending={actions.anyPending}
             onApplySuggestion={(text) =>
               editor.updateDraft((d) => ({
                 ...d,

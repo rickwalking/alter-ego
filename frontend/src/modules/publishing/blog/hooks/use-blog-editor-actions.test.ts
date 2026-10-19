@@ -125,6 +125,39 @@ describe("image slots", () => {
     );
   });
 
+  it("reports a running slot action (review controls wait for it)", async () => {
+    const { result } = await renderActions();
+    let finish: (value: Response) => void = () => undefined;
+    mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (finish = r)));
+    let running: Promise<void> = Promise.resolve();
+    act(() => {
+      running = result.current.actions.generateImage(SLOT, null);
+    });
+    await waitFor(() => expect(result.current.actions.anyPending).toBe(true));
+    await act(async () => {
+      finish(
+        jsonResponse(
+          blogPost({ lock_version: 3, content: withSectionImage() }),
+        ),
+      );
+      await running;
+    });
+    expect(result.current.actions.anyPending).toBe(false);
+  });
+
+  it("maps the image budget 429 to the budget error", async () => {
+    const { result } = await renderActions();
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ detail: "blog_image_budget_exhausted" }, 429),
+    );
+    await act(async () => {
+      await result.current.actions.generateImage(SLOT, null);
+    });
+    expect(
+      result.current.actions.statusOf(imageSlotKey(SLOT)).error?.kind,
+    ).toBe("budget");
+  });
+
   // Scenario: A failed image generation shows a visible retry
   it("records the failure on that slot only", async () => {
     const { result } = await renderActions();

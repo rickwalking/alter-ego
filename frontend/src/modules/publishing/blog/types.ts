@@ -17,8 +17,6 @@ export interface BlogPost {
   reviewer_id?: string | null;
   /** Reject reasons are `{text, author_id, status}` objects (AE-0424). */
   editor_comments: Array<string | Record<string, unknown>>;
-  /** One entry per save/restore (AE-0424); the sidebar reads `/versions`. */
-  version_history: Record<string, unknown>[];
   sources: string[];
   citations: Record<string, unknown>[];
   ai_suggestions: Record<string, unknown>[];

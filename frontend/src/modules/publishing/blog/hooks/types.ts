@@ -8,7 +8,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { BlogDocument } from "@/schemas/blog-document";
+import type { DraftMergeFn, EditorSessionState } from "../lib/editor-session";
 import type { BlogEditorErrorKind } from "@/constants/blog-editor";
 import type { LockedPost } from "../blog-editor-requests";
 import type { BlogEditorDraft, BlogEditorValidation } from "../editor-content";
@@ -66,17 +66,9 @@ export interface BlogEditorError {
 }
 
 /** The loaded post, the draft as loaded (`original`) and the edited draft. */
-export interface EditorSession {
-  base: BlogPost;
-  /** `null` when the stored content is not `blog.v2` (migration pending). */
-  original: BlogEditorDraft | null;
-  draft: BlogEditorDraft | null;
-}
+export type EditorSession = EditorSessionState;
 
-export type DraftMerge = (
-  draftDoc: BlogDocument,
-  serverDoc: BlogDocument,
-) => BlogDocument;
+export type DraftMerge = DraftMergeFn;
 
 export interface UseBlogPostEditorResult {
   post: BlogPost | undefined;
@@ -123,6 +115,8 @@ export interface SlotStatus {
 
 export interface BlogEditorSlotActions {
   statusOf: (key: string) => SlotStatus;
+  /** A slot action is running: review/publish controls wait for it. */
+  anyPending: boolean;
   generateImage: (
     slot: BlogImageSlotRef,
     prompt: string | null,

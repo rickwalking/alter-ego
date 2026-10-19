@@ -42,7 +42,6 @@ export {
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,
-  BlogGenerateImageResult,
   VoiceScoreResult,
   RubricEvaluationResult,
   ContentSource,
@@ -106,7 +105,6 @@ export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/t
 export { AccessibilityChecker } from "./blog/components/accessibility-checker";
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
 export { BlogPostFilters as BlogPostFiltersPanel } from "./blog/components/blog-post-filters";
-export { ImageGenModal } from "./blog/components/image-gen-modal";
 export { KeyboardShortcutsHelp } from "./blog/components/keyboard-shortcuts-help";
 export { SeoPreview } from "./blog/components/seo-preview";
 export {

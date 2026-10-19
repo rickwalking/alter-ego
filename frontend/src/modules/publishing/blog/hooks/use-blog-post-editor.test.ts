@@ -164,6 +164,56 @@ describe("useBlogPostEditor save", () => {
   });
 });
 
+describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
+  it("keeps keystrokes typed while the save is in flight", async () => {
+    const { result } = await renderLoaded();
+    act(() => result.current.updateDraft((d) => ({ ...d, title: "Enviado" })));
+    let resolve: (value: Response) => void = () => undefined;
+    mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (resolve = r)));
+    let saving: Promise<boolean> = Promise.resolve(false);
+    act(() => {
+      saving = result.current.handleSave();
+    });
+    act(() =>
+      result.current.updateDraft((d) => ({ ...d, title: "Enviado e mais" })),
+    );
+    await act(async () => {
+      resolve(jsonResponse(blogPost({ title: "Enviado", lock_version: 3 })));
+      await saving;
+    });
+    expect(result.current.draft?.title).toBe("Enviado e mais");
+    expect(result.current.post?.lock_version).toBe(3);
+    expect(result.current.dirty).toBe(true);
+  });
+
+  // Scenario: A concurrent save conflict is surfaced — but a 409 caused by
+  // our own slot write landing during the PUT is retried on top instead.
+  it("retries a save that lost the race to our own slot write", async () => {
+    const { result } = await renderLoaded();
+    act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));
+    let reject: (value: Response) => void = () => undefined;
+    mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (reject = r)));
+    let saving: Promise<boolean> = Promise.resolve(false);
+    act(() => {
+      saving = result.current.handleSave();
+    });
+    act(() =>
+      result.current.applyServerPost(blogPost({ lock_version: 3 }), (d) => d),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(blogPost({ title: "Novo", lock_version: 4 })),
+    );
+    await act(async () => {
+      reject(jsonResponse({ detail: "version_conflict" }, 409));
+      expect(await saving).toBe(true);
+    });
+    const [, retryInit] = mockFetch.mock.calls[2];
+    expect(new Headers(retryInit?.headers).get("If-Match")).toBe("3");
+    expect(result.current.post?.lock_version).toBe(4);
+    expect(result.current.error).toBeNull();
+  });
+});
+
 describe("useBlogPostEditor server answers", () => {
   it("applyServerPost keeps other edits and merges the slot", async () => {
     const { result } = await renderLoaded();

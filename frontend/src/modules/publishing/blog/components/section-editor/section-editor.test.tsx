@@ -204,6 +204,22 @@ describe("ImageSlot", () => {
     expect(onGenerate).toHaveBeenCalledWith("Um farol");
   });
 
+  it("explains an exhausted image budget", () => {
+    render(
+      <ImageSlot
+        slotId="x"
+        label="Cover image"
+        image={null}
+        status={{ pending: false, error: { kind: "budget", detail: null } }}
+        readOnly={false}
+        issue={null}
+        onGenerate={vi.fn()}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/whole image budget/)).toBeInTheDocument();
+  });
+
   it("disables the controls while generating", () => {
     render(
       <ImageSlot

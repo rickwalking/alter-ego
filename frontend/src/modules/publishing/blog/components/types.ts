@@ -24,13 +24,6 @@ export interface BlogPostFiltersProps {
   onStatusChange: (value: string) => void;
 }
 
-export interface ImageGenModalProps {
-  postId: string;
-  open: boolean;
-  onClose: () => void;
-  onImageGenerated: (imageUrl: string) => void;
-}
-
 export interface KeyboardShortcutsHelpProps {
   open: boolean;
   onClose: () => void;

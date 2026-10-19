@@ -1282,7 +1282,8 @@
           "conflict": "That action is not possible right now (the post changed). Reload and try again.",
           "not_found": "That section or translation no longer exists. Reload the page.",
           "ai_failed": "The AI service failed. Nothing was changed — try again.",
-          "failed": "The action failed. Try again."
+          "failed": "The action failed. Try again.",
+          "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP."
         }
       }
     },

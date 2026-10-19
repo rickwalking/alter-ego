@@ -18,6 +18,8 @@ export const BLOG_EDITOR_ERROR_KINDS = {
   CONFLICT: "conflict",
   NOT_FOUND: "not_found",
   AI_FAILED: "ai_failed",
+  /** 429: the per-post image budget (BLOG_IMAGE_COST_CAP) is used up. */
+  BUDGET: "budget",
   FAILED: "failed",
 } as const;
 

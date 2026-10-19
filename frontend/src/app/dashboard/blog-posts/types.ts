@@ -77,6 +77,8 @@ export interface BlogEditorSidebarProps {
   review: BlogReviewActions;
   data: BlogEditorData;
   selection: SectionSelection | null;
+  /** Any image/rewrite/translation action is running. */
+  slotsPending: boolean;
   onApplySuggestion: (text: string) => void;
 }
 

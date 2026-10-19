@@ -20,6 +20,7 @@ export function BlogEditorSidebar({
   review,
   data,
   selection,
+  slotsPending,
   onApplySuggestion,
 }: BlogEditorSidebarProps): React.ReactElement | null {
   const { post, draft } = editor;
@@ -27,7 +28,9 @@ export function BlogEditorSidebar({
     return null;
   }
   const shown = activeDocument(draft.document, editor.language);
-  const busy = editor.dirty || editor.saving || review.pending;
+  // A running slot action may change the content (and reset the review), so
+  // the workflow controls wait for it (AE-0424 review).
+  const busy = editor.dirty || editor.saving || review.pending || slotsPending;
   return (
     <div className="space-y-4">
       <ReviewBar

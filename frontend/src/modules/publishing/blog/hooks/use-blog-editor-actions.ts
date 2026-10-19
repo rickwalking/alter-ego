@@ -116,6 +116,7 @@ export function useBlogEditorActions(
 
   return {
     statusOf: (key: string) => status[key] ?? IDLE,
+    anyPending: Object.values(status).some((slot) => slot.pending),
     generateImage,
     rewrite,
     generateTranslation,

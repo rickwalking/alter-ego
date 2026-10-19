@@ -11,6 +11,7 @@ import {
   NeonAlertDescription,
 } from "@/components/molecules/neon-alert";
 import {
+  BLOG_EDITOR_ERROR_KINDS,
   BLOG_EDITOR_I18N_NAMESPACE,
   BLOG_IMAGE_PROMPT_MAX_LENGTH,
   BLOG_IMAGE_TEXT_MAX_LENGTH,
@@ -80,7 +81,11 @@ export function ImageSlot({
       />
       {status.error && (
         <NeonAlert variant="destructive" role="alert">
-          <NeonAlertDescription>{t("image.failed")}</NeonAlertDescription>
+          <NeonAlertDescription>
+            {status.error.kind === BLOG_EDITOR_ERROR_KINDS.AI_FAILED
+              ? t("image.failed")
+              : t(`errors.${status.error.kind}`)}
+          </NeonAlertDescription>
         </NeonAlert>
       )}
       <div className="flex flex-wrap gap-2">

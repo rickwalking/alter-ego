@@ -6,13 +6,14 @@
  * Loads the FULL post through the detail endpoint and edits a draft
  * `{ title, excerpt, document }` over the strict `blog.v2` document, one
  * content language at a time (PT or EN). A save PUTs only what changed with
- * `If-Match`; a conflict keeps the owner's unsaved draft. Slot actions (image,
- * rewrite, translation) apply their server answer to just that slot, so typing
- * elsewhere is never lost. A row that is still legacy markdown is never
+ * `If-Match`; a conflict keeps the owner's unsaved draft, typing done while
+ * the PUT is in flight is kept, and a 409 caused by our own slot write is
+ * retried on top. Slot actions (image, rewrite, translation) apply their
+ * server answer to just that slot (`lib/editor-session.ts`). A row that is still legacy markdown is never
  * parsed here: it surfaces as "migration pending" (AC15).
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
@@ -29,12 +30,17 @@ import {
   validateBlogEditorDraft,
   type BlogEditorDraft,
 } from "../editor-content";
-import { tryParseBlogContent } from "../lib/parse-blog-content";
+import {
+  ownBumpRetry,
+  sessionAfterSave,
+  sessionAfterSlot,
+  sessionFromPost,
+} from "../lib/editor-session";
 import {
   BLOG_CONTENT_PT,
   type BlogContentLanguage,
 } from "../lib/editor-document";
-import type { BlogPost } from "../types";
+import type { BlogPost, BlogPostUpdatePayload } from "../types";
 import type {
   BlogEditorError,
   DraftMerge,
@@ -42,17 +48,38 @@ import type {
   UseBlogPostEditorResult,
 } from "./types";
 
-function draftFromPost(post: BlogPost): BlogEditorDraft | null {
-  const document = tryParseBlogContent(post.content);
-  if (!document) {
-    return null;
-  }
-  return { title: post.title, excerpt: post.excerpt ?? "", document };
+function isVersionConflict(err: unknown): boolean {
+  return (
+    err instanceof BlogEditorRequestError &&
+    err.kind === BLOG_EDITOR_ERROR_KINDS.VERSION_CONFLICT
+  );
 }
 
-function sessionFromPost(post: BlogPost): EditorSession {
-  const original = draftFromPost(post);
-  return { base: post, original, draft: original };
+/** PUT `payload`; on a 409 caused by our own slot write, retry on top once. */
+async function saveWithOwnBumpRetry(
+  session: EditorSession,
+  payload: BlogPostUpdatePayload,
+  latest: () => EditorSession | null,
+): Promise<{ saved: BlogPost; sent: BlogEditorDraft | null }> {
+  try {
+    return {
+      saved: await savePost(locked(session.base), payload),
+      sent: session.draft,
+    };
+  } catch (err) {
+    const retry = isVersionConflict(err)
+      ? ownBumpRetry(session.base.lock_version, latest())
+      : null;
+    if (!retry) {
+      throw err;
+    }
+    const current = latest()?.base ?? session.base;
+    if (!retry.payload) {
+      return { saved: current, sent: retry.draft };
+    }
+    const lock = { id: session.base.id, lockVersion: retry.lockVersion };
+    return { saved: await savePost(lock, retry.payload), sent: retry.draft };
+  }
 }
 
 function toEditorError(err: unknown): BlogEditorError {
@@ -84,6 +111,12 @@ function useEditorSession(postId: string) {
 
 export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
   const { query, session, setSession } = useEditorSession(postId);
+  // The latest committed session, for answers that arrive after a re-render
+  // (a 409 retry, the lock an action must use).
+  const latest = useRef<EditorSession | null>(session);
+  useEffect(() => {
+    latest.current = session;
+  }, [session]);
   const [language, setLanguage] =
     useState<BlogContentLanguage>(BLOG_CONTENT_PT);
   const [saving, setSaving] = useState(false);
@@ -106,7 +139,7 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     setSession(sessionFromPost(post));
 
   const applyServerPost = (post: BlogPost, merge: DraftMerge): void => {
-    setSession((prev) => mergeServerPost(prev, post, merge));
+    setSession((prev) => sessionAfterSlot(prev, post, merge));
   };
 
   const persist = async (): Promise<BlogPost | null> => {
@@ -114,7 +147,7 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
       return null;
     }
     if (!payload) {
-      return session.base;
+      return latest.current?.base ?? session.base;
     }
     if (validation && hasValidationErrors(validation)) {
       return null;
@@ -122,8 +155,12 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     setSaving(true);
     setError(null);
     try {
-      const saved = await savePost(locked(session.base), payload);
-      replaceFromServer(saved);
+      const { saved, sent } = await saveWithOwnBumpRetry(
+        session,
+        payload,
+        () => latest.current,
+      );
+      setSession((prev) => sessionAfterSave(prev, saved, sent));
       return saved;
     } catch (err) {
       setError(toEditorError(err));
@@ -177,19 +214,4 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     },
     handleRestore,
   };
-}
-
-/** The new session after a slot action: base/original from the server, the
- * draft keeps the owner's other edits and takes only the merged slot. */
-function mergeServerPost(
-  prev: EditorSession | null,
-  post: BlogPost,
-  merge: DraftMerge,
-): EditorSession {
-  const next = sessionFromPost(post);
-  if (!prev?.draft || !next.original) {
-    return next;
-  }
-  const document = merge(prev.draft.document, next.original.document);
-  return { ...next, draft: { ...prev.draft, document } };
 }

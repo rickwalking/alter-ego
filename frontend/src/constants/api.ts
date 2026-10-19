@@ -74,8 +74,6 @@ export const API_ENDPOINTS = {
   BLOG_POST_VERSIONS: (id: string) => `/api/blog-posts/${id}/versions`,
   BLOG_POST_AI_SUGGEST: (id: string) => `/api/blog-posts/${id}/ai-suggest`,
   BLOG_POST_AI_IMPROVE: (id: string) => `/api/blog-posts/${id}/ai-improve`,
-  BLOG_POST_GENERATE_IMAGE: (id: string) =>
-    `/api/blog-posts/${id}/generate-image`,
   PERSONAS: "/api/personas",
   PERSONA_VOICE_SCORE: (id: string) => `/api/personas/${id}/voice-score`,
   RUBRICS: "/api/rubrics",

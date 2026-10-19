@@ -8,7 +8,6 @@ import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type {
   BlogAiImproveResult,
   BlogAiSuggestResult,
-  BlogGenerateImageResult,
   VoiceScoreResult,
 } from "@/modules/publishing/blog/types-ai";
 import type { BlogAiImproveParams, UseBlogAiState } from "./types";
@@ -96,36 +95,6 @@ export function useBlogAi(postId: string | null) {
     [postId],
   );
 
-  const generateImage = useCallback(
-    async (prompt: string): Promise<BlogGenerateImageResult> => {
-      if (!postId) {
-        throw new Error("Post ID is required");
-      }
-      setState({ loading: true, error: null });
-      try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.BLOG_POST_GENERATE_IMAGE(postId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({ prompt }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Image generation failed");
-        }
-        return (await response.json()) as BlogGenerateImageResult;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Image generation failed";
-        setState({ loading: false, error: message });
-        throw err;
-      } finally {
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    },
-    [postId],
-  );
-
   const scoreVoice = useCallback(
     async (personaId: string, text: string): Promise<VoiceScoreResult> => {
       setState({ loading: true, error: null });
@@ -157,7 +126,6 @@ export function useBlogAi(postId: string | null) {
     ...state,
     suggest,
     improve,
-    generateImage,
     scoreVoice,
   };
 }
