@@ -38,7 +38,7 @@ KEY_CAPTION: Final = "caption"
 KEY_SOURCE: Final = "source"
 KEY_CREATED_AT: Final = "created_at"
 
-# Legacy (v1) content keys, read only by the cutover and the read fail-safe.
+# Legacy (v1) content keys, read only by the one-shot cutover command.
 LEGACY_KEY_MARKDOWN: Final = "markdown"
 LEGACY_KEY_BODY: Final = "body"
 

@@ -1,7 +1,7 @@
 """Fence-aware v1 markdown <-> ``blog.v2`` conversion (AE-0423, ADR-0025).
 
-Pure functions shared by the one-shot cutover command and the temporary read
-fail-safe, so both split a legacy body with exactly the same rules:
+Pure functions used by the one-shot cutover command (the temporary AE-0423
+read fail-safe that also used them was removed in AE-0428):
 
 - a section starts at a ``## `` line **outside** fenced code blocks;
 - a leading ``# <title>`` line of the lede is stripped (the title is a column);

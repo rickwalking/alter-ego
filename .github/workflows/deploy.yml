@@ -271,8 +271,9 @@ jobs:
             # and the job fails at the very end so the deploy is red and alerts.
             # AE-0428 REMOVED the backend read fail-safe, so a failed cutover now
             # leaves non-v2 rows failing closed (public 404 / editor 422) until the
-            # command is re-run. That is why AE-0428 must not merge until the owner
-            # has run `blog_v1_to_v2 --verify` on prod (exit 0 = zero non-v2 rows).
+            # command is re-run. Merging was therefore gated on the owner running
+            # `blog_v1_to_v2 --verify` on prod — DONE on 2026-10-19, exit 0 (zero
+            # non-v2 rows, translations included).
             # Safe to re-run ad hoc.
             set +e
             docker compose -f docker-compose.prod.yml run --rm --no-deps backend \

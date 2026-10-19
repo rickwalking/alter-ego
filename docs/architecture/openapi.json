@@ -1348,29 +1348,6 @@
         "title": "CarouselBlogI18nResponse",
         "type": "object"
       },
-      "CarouselBlogImageMapEntry": {
-        "properties": {
-          "alt": {
-            "title": "Alt",
-            "type": "string"
-          },
-          "heading": {
-            "title": "Heading",
-            "type": "string"
-          },
-          "slide_number": {
-            "title": "Slide Number",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "slide_number",
-          "heading",
-          "alt"
-        ],
-        "title": "CarouselBlogImageMapEntry",
-        "type": "object"
-      },
       "CarouselBlogResponse": {
         "properties": {
           "markdown": {
@@ -1536,20 +1513,6 @@
       },
       "CarouselDesignImages": {
         "properties": {
-          "blog_image_map": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/CarouselBlogImageMapEntry"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blog Image Map"
-          },
           "hero": {
             "title": "Hero",
             "type": "string"

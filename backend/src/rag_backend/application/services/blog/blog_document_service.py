@@ -6,10 +6,9 @@ equal to ``content.cover.url`` (the column is a projection of the cover), and
 guards publish. Reads go through :meth:`read_document`, which is strict too: a
 non-v2 row raises :class:`InvalidBlogDocumentError` (fails closed with the
 standard error/404) instead of adapting legacy markdown. The temporary AE-0423
-read fail-safe was removed in AE-0428; that removal is gated on the owner
-running ``python -m rag_backend.scripts.blog_v1_to_v2 --verify`` on production
-(exit 0 = zero non-v2 rows, translations included) after AE-0423 is deployed,
-because ``deploy.yml`` always brings the stack up even when the cutover fails.
+read fail-safe was removed in AE-0428 after the owner's prod verification:
+``python -m rag_backend.scripts.blog_v1_to_v2 --verify`` reported zero non-v2
+rows (translations included) on 2026-10-19.
 """
 
 from __future__ import annotations
