@@ -18,12 +18,12 @@ from rag_backend.application.services.carousel.content_gate_repair import (
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     validate_localized_slides,
 )
+from rag_backend.domain.constants.carousel_presentation import (
+    VIOLATION_TRANSLATION_SHAPE_MISMATCH,
+)
 from rag_backend.domain.constants.content_gate_repair import (
     GATE_REPAIR_MAX_ROUNDS,
     GATE_REPAIR_PROBLEM_MISSING_EN,
-)
-from rag_backend.domain.constants.carousel_presentation import (
-    VIOLATION_TRANSLATION_SHAPE_MISMATCH,
 )
 from tests.unit.application.content_gate_repair_fixtures_ae0430 import (
     POLICY_V4,

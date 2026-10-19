@@ -250,3 +250,41 @@ class TestFieldBudget:
         assert _max(field_budget(content, "summary_points[0].body", policy)) == 90
         assert field_budget(content, "tldr_strip", policy) is None
         assert field_budget(content, "stats[0].body", policy) is None
+
+
+@pytest.mark.unit
+class TestRunnerWiring:
+    def test_tracing_turns_on_the_llm_repairer(self) -> None:
+        """Scenario: The orchestrator's runner repairs with the traced fast model."""
+        from rag_backend.agents.carousel_editorial_orchestrator import (
+            CarouselEditorialOrchestrator,
+        )
+        from rag_backend.application.services.carousel.phase_artifact_runner import (
+            PhaseArtifactRunner,
+            PhaseArtifactRunnerConfig,
+        )
+
+        def runner(
+            repairer: FakeRepairer | None = None, *, traced: bool = False
+        ) -> PhaseArtifactRunner:
+            config = PhaseArtifactRunnerConfig(
+                outline_agent=MagicMock(),
+                content_agent=MagicMock(),
+                llm=MagicMock(),
+                gate_repairer=repairer,
+                gate_repair_tracing=RunnableConfig if traced else None,
+            )
+            return PhaseArtifactRunner(config)
+
+        off = runner()
+        on = runner(traced=True)
+        injected = FakeRepairer()
+
+        assert off._gate_repairer is None
+        assert isinstance(on._gate_repairer, LlmGateFieldRepairer)
+        assert runner(injected)._gate_repairer is injected
+        scoped = on.with_context(db=None)
+        assert isinstance(scoped._gate_repairer, LlmGateFieldRepairer)
+        orchestrator = CarouselEditorialOrchestrator(llm=MagicMock())
+        wired = orchestrator._artifact_runner._gate_repairer
+        assert isinstance(wired, LlmGateFieldRepairer)

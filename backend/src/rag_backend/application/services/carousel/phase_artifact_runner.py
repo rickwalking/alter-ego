@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 from typing import TypedDict
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
@@ -28,6 +30,8 @@ from rag_backend.application.services.carousel.content_feedback_lifecycle import
 )
 from rag_backend.application.services.carousel.content_gate_repair import (
     GateFieldRepairer,
+    LlmGateFieldRepairer,
+    LlmGateRepairConfig,
 )
 from rag_backend.application.services.carousel.content_gate_repair_flow import (
     GateRepairContext,
@@ -111,8 +115,11 @@ class PhaseArtifactRunnerConfig:
     slide_draft_retry: SlideDraftRetryFn | None = None
     # AE-0391: slides drafted / persona-scored concurrently (bounded).
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
-    # AE-0430: rewrites only the fields a blocked content gate names.
+    # AE-0430: rewrites only the fields a blocked content gate names. When
+    # unset, ``gate_repair_tracing`` (the orchestrator's Langfuse config) turns
+    # on the fast-model repairer built from ``llm``; with neither, it is off.
     gate_repairer: GateFieldRepairer | None = None
+    gate_repair_tracing: Callable[[], RunnableConfig] | None = None
 
 
 _TRANSLATIONS_EN_KEY = "translations_en"
@@ -138,6 +145,15 @@ def _review_translations(
     if fresh is not None or STATE_FIELD_SLIDE_DRAFTS in updates:
         return fresh
     return state.get(_TRANSLATIONS_EN_KEY)
+
+
+def _llm_gate_repairer(config: PhaseArtifactRunnerConfig) -> GateFieldRepairer | None:
+    """AE-0430: the fast-model field repairer, on when tracing is configured."""
+    if config.gate_repair_tracing is None:
+        return None
+    return LlmGateFieldRepairer(
+        LlmGateRepairConfig(llm=config.llm, runnable_config=config.gate_repair_tracing)
+    )
 
 
 def _settle_used_notes(
@@ -189,7 +205,8 @@ class PhaseArtifactRunner:
         self._workflow_input = config.workflow_input
         self._slide_draft_retry = config.slide_draft_retry
         self._draft_concurrency = config.draft_concurrency
-        self._gate_repairer = config.gate_repairer
+        self._gate_repair_tracing = config.gate_repair_tracing
+        self._gate_repairer = config.gate_repairer or _llm_gate_repairer(config)
 
     def with_context(
         self,
@@ -209,6 +226,7 @@ class PhaseArtifactRunner:
                 slide_draft_retry=self._slide_draft_retry,
                 draft_concurrency=self._draft_concurrency,
                 gate_repairer=self._gate_repairer,
+                gate_repair_tracing=self._gate_repair_tracing,
             )
         )
 
