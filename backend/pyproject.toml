@@ -360,7 +360,6 @@ ignore-names = [
 "src/rag_backend/application/services/carousel_refinement.py" = ["C901", "PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/content_calendar_service.py" = ["PLR0912", "PLR0913"]
 "src/rag_backend/application/services/blog_post_service.py" = ["PLR0913"]
-"src/rag_backend/application/services/carousel/nodes/content/core.py" = ["PLR0912", "PLR0913", "C901", "PLR0914",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/editorial_analytics_service.py" = ["PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/accessibility_check_service.py" = ["PLR0913", "PLR0912"]
 "src/rag_backend/application/services/persona_service.py" = ["PLR0913"]
@@ -401,7 +400,6 @@ ignore-names = [
 "src/rag_backend/api/middleware/auth.py" = ["RUF029"]
 "src/rag_backend/application/services/carousel/nodes/design.py" = ["C901", "PLR0912", "PLR0913",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/carousel/nodes/export.py" = ["PLR0917", "PLR0915"]
-"src/rag_backend/application/services/carousel/nodes/content/slides.py" = ["E402"]
 "src/rag_backend/application/services/carousel/theme_resolver.py" = ["C901", "PLR0912"]
 # E501: Line length — wrap where practical, suppress where not
 "src/rag_backend/domain/metrics.py" = ["E501"]

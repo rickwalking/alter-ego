@@ -243,6 +243,12 @@ Guard + gate wiring (AC6):
 - `backend/tests/unit/scripts_ci/test_check_blog_v1_dead_code.py` (new, rule-fires)
 - `scripts/ci/gates.sh`, `.github/workflows/ci-gate.yml`
 
+Config / docs / deploy:
+- `backend/.importlinter` and `backend/pyproject.toml` (dropped the deleted package's entries)
+- `frontend/src/modules/publishing/index.ts` (removed the stale `useCarouselBlogPosts` doc)
+- `.github/workflows/deploy.yml` (cutover comments now state that AE-0428 removed the read
+  fail-safe and that merge is gated on a prod `--verify` = 0)
+
 Tests / fixtures / artifact:
 - `backend/tests/features/blog_sections_ae0423.feature`
 - `backend/tests/integration/test_blog_sections_api_ae0423.py`,
@@ -292,13 +298,20 @@ Earlier (same code, before the last base-only rebase) a full `gate-capture.sh ba
 mutation lane; CI's mutation gate is the source of truth). `backend:test` / `frontend:test` full
 suites are likewise left to CI after the final rebase; the touched files were run targeted above.
 
-AC8 cutover evidence (prod `--verify` is an owner-run production operation, not available to this
-worker): `.github/workflows/deploy.yml` runs
-`python -m rag_backend.scripts.blog_v1_to_v2 --apply --verify` under `set -e` after Postgres health
-and **before** the app stack starts, so a non-zero verify aborts the deploy and the app never serves
-non-v2 rows. Fail-closed regression tests: `test_legacy_public_row_is_404` and
-`test_editor_read_of_a_legacy_row_is_422` (detail `blog_document_not_v2`) in
-`test_blog_sections_api_ae0423.py`, plus `TestStrictRead` in `test_blog_document_service_ae0423.py`.
+AC8 **merge gate (owner-run prod evidence, not yet collected)**: removing the read fail-safe is
+safe only when production has zero non-v2 rows. `deploy.yml` deliberately runs the cutover with
+`set +e` and **always** brings the stack up (a failed cutover keeps rendering via the fail-safe, and
+the job fails only at the end). Therefore this PR must **not merge** until #145 is deployed and the
+owner has run on prod:
+
+```
+python -m rag_backend.scripts.blog_v1_to_v2 --verify   # must exit 0 (non-v2 rows + translations = 0)
+```
+
+Once that passes, strict reads are safe. Fail-closed regression tests (prove no adapter remains):
+`test_legacy_public_row_is_404` and `test_editor_read_of_a_legacy_row_is_422` (detail
+`blog_document_not_v2`) in `test_blog_sections_api_ae0423.py`, plus `TestStrictRead` in
+`test_blog_document_service_ae0423.py`.
 
 AC1 grep (AC1's own check):
 ```
@@ -332,11 +345,12 @@ Pending.
   frontend duplicates were deleted. The guard therefore matches those two tokens on frontend paths
   only. The frozen carousel prompt YAML still mentions `blog_image_map`; the guard scans code
   extensions only.
-- **AC8 evidence substitution.** Prod `blog_v1_to_v2 --verify` is an owner-run production action
-  and is not available to the worker. Evidence used instead: `deploy.yml` runs
-  `--apply --verify` before the app stack under `set -e` (a non-zero verify aborts the deploy), and
-  two API regression tests + `TestStrictRead` prove a non-v2 read fails closed (public: uniform
-  404; editor: 422 `blog_document_not_v2`) with no adapter.
+- **AC8 is gated on prod evidence.** The worker cannot run the production verification. The merge
+  condition is explicit: **do not merge** until #145 is deployed and the owner runs
+  `blog_v1_to_v2 --verify` on prod with exit 0 (zero non-v2 rows, translations included). The
+  deploy job itself does NOT abort on a failed cutover (`set +e` + always `up -d`, because until
+  now the fail-safe kept rows rendering), so deploy ordering is not evidence. The two API
+  regression tests + `TestStrictRead` prove the code fails closed with no adapter once merged.
 - **OpenAPI artifact regenerated, not hand-edited.** `docs/architecture/openapi.json` is generated
   by `scripts/export_openapi.py`. The committed artifact on the base was already stale relative to
   the base source (it lacked the AE-0418 autopilot cover schemas), so regenerating also reconciles

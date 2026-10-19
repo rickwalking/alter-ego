@@ -12,7 +12,6 @@
  *
  * See `src/modules/README.md` for the public-contract convention.
  */
-
 /* --- blog: types --- */
 export type {
   BlogPost,
@@ -40,6 +39,7 @@ export {
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,
+  BlogGenerateImageResult,
   VoiceScoreResult,
   RubricEvaluationResult,
   ContentSource,
@@ -55,16 +55,10 @@ export type {
 export { useBlogPosts } from "./blog/hooks/use-blog-posts";
 export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
 export type {
-  BlogEditorData,
+  BlogEditorSaveError,
   BlogPostFilters,
-  BlogReviewActions,
   UseBlogPostEditorResult,
 } from "./blog/hooks/types";
-export { useBlogEditorActions } from "./blog/hooks/use-blog-editor-actions";
-export { useBlogEditorData } from "./blog/hooks/use-blog-editor-data";
-export { useBlogReviewActions } from "./blog/hooks/use-blog-review-actions";
-export { useUnsavedChangesGuard } from "./blog/hooks/use-unsaved-changes-guard";
-export { activeDocument, applySuggestion } from "./blog/lib/editor-document";
 export {
   BLOG_EXCERPT_MAX_LENGTH,
   BLOG_TITLE_MAX_LENGTH,
@@ -91,16 +85,7 @@ export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/t
 
 /* --- blog: components --- */
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
-export {
-  snapshotText,
-  VersionHistorySidebar,
-} from "./blog/components/version-history-sidebar";
-/* --- blog: section editor (AE-0424) --- */
-export { BlogSectionEditor } from "./blog/components/section-editor/blog-section-editor";
-export { MigrationBanner } from "./blog/components/section-editor/migration-banner";
-export { ReviewBar } from "./blog/components/section-editor/review-bar";
-export { VoiceScore } from "./blog/components/section-editor/voice-score";
-export type { SectionSelection } from "./blog/components/section-editor/types";
+export { VersionHistorySidebar } from "./blog/components/version-history-sidebar";
 export type { BlogPostVersion } from "./blog/components/types";
 
 /* --- blog: public-post components --- */
