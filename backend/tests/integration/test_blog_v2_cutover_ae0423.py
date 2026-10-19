@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -134,13 +136,8 @@ class TestApply:
         self, db, content: object
     ) -> None:
         _, maker = db
-        post_id = await _insert(maker, content if content is not None else {})
-        if content is None:
-            async with maker() as session:
-                row = await session.get(BlogPostModel, post_id)
-                assert row is not None
-                row.content = None  # type: ignore[assignment]
-                await session.commit()
+        # ``None`` is stored as JSON ``null`` (the column is NOT NULL).
+        post_id = await _insert(maker, content)
         await blog_v2_cutover.apply(maker)
         document = parse_blog_content((await _row(maker, post_id)).content)
         assert len(document.sections) == 1
@@ -175,7 +172,9 @@ class TestApply:
         report = await blog_v2_cutover.apply(maker)
         assert report.rows[0].oversized == ["pt#0"]
         content = (await _row(maker, post_id)).content
-        assert content["sections"][0]["body_md"] == body  # type: ignore[index]
+        sections = content["sections"]
+        assert isinstance(sections, list)
+        assert sections[0]["body_md"] == body
 
 
 class TestDryRun:
@@ -297,3 +296,32 @@ class TestCli:
     def test_main_runs_against_the_configured_database(self, cli_db) -> None:
         # Sync test: ``main`` owns its own event loop via ``asyncio.run``.
         assert blog_v1_to_v2.main(["--verify"]) == 0
+
+
+class _FakeDialectSession:
+    def __init__(self, dialect: str) -> None:
+        self._bind = SimpleNamespace(dialect=SimpleNamespace(name=dialect))
+        self.executed: list[tuple[str, dict]] = []
+
+    def get_bind(self) -> SimpleNamespace:
+        return self._bind
+
+    async def execute(self, statement: object, params: dict | None = None) -> None:
+        self.executed.append((str(statement), params or {}))
+
+
+class TestAdvisoryLock:
+    async def test_postgres_batches_take_the_advisory_xact_lock(self) -> None:
+        session = _FakeDialectSession("postgresql")
+        await blog_v2_cutover._lock(cast(AsyncSession, session))
+        assert session.executed == [
+            (
+                "SELECT pg_advisory_xact_lock(:key)",
+                {"key": blog_v2_cutover.CUTOVER_ADVISORY_LOCK_KEY},
+            )
+        ]
+
+    async def test_other_dialects_skip_the_lock(self) -> None:
+        session = _FakeDialectSession("sqlite")
+        await blog_v2_cutover._lock(cast(AsyncSession, session))
+        assert session.executed == []
