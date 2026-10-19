@@ -9,8 +9,10 @@ and the owner could not fix it.
 
 Now the translation request carries the draft's ``tldr_strip`` and item texts,
 and the parsed translation gets the same structure: translated texts where the
-model answered with the same shape, the PT value otherwise (the content-gate
-repair then translates what is still Portuguese). Non-text extras are copied.
+model answered with the same shape. An unanswered TL;DR stays absent (the gate
+blocks on the shape mismatch and its repair fills and translates it); an item
+list with another shape keeps the PT items, which the language checks flag.
+Non-text extras are copied.
 """
 
 from __future__ import annotations
@@ -67,13 +69,17 @@ def _translated_items(pt_items: list[object], answered: object) -> list[object]:
 
 def _translated_value(
     key: str, pt_value: object, answer: Mapping[str, object]
-) -> object:
+) -> object | None:
+    """The EN value of one extra; None when it must stay absent.
+
+    An unanswered TL;DR is never filled with the PT text: EN stays without one,
+    so ``translation_shape_mismatch`` keeps the slide blocked and the gate
+    repair fills it from PT and translates it (a PT TL;DR must not ship as EN).
+    """
     answered = answer.get(key)
     if key == TLDR_STRIP_KEY:
         return (
-            answered.strip()
-            if isinstance(answered, str) and answered.strip()
-            else pt_value
+            answered.strip() if isinstance(answered, str) and answered.strip() else None
         )
     if key in ITEM_LISTS and isinstance(pt_value, list):
         return _translated_items(pt_value, answered)
@@ -84,13 +90,15 @@ def structured_translation(
     draft: Mapping[str, object],
     answer: Mapping[str, object],
 ) -> dict[str, object]:
-    """The EN structured extras: every key the PT draft has, translated if possible."""
+    """The EN structured extras: the PT draft's keys, translated where possible."""
     structured: dict[str, object] = {}
     for key in STRUCTURED_EXTRA_KEYS:
         pt_value = draft.get(key)
         if pt_value is None:
             continue
-        structured[key] = _translated_value(key, pt_value, answer)
+        value = _translated_value(key, pt_value, answer)
+        if value is not None:
+            structured[key] = value
     return structured
 
 

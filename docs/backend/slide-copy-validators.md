@@ -99,7 +99,10 @@ Related fixes from the same incident:
 - **Translation keeps the shape.** The translator (`carousel/v8/slide_translations.yaml`)
   now receives and returns `tldr_strip` and the item texts; the parser gives every EN
   translation the PT draft's structured extras (translated when the answer has the same
-  shape, the PT value otherwise).
+  shape). An unanswered TL;DR stays absent, so the gate blocks on the shape and the repair
+  translates it. The TL;DR strip is now language-checked like heading and body
+  (`translation_not_english` when it equals the PT one, `wrong_language`), so a PT TL;DR can
+  never pass as the EN one.
 - **Label scaffolding.** `**PT**` / `**EN**` bold-only lines are locale section headers in
   the scaffold recovery (only `## PT` was), so `**PT**` no longer leaks into the PT body,
   and an EN payload built from the draft takes the EN section heading.

@@ -5,6 +5,7 @@ Gherkin: tests/features/content_gate_repair_ae0430.feature (sections C and E).
 
 from __future__ import annotations
 
+import copy
 import json
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
@@ -12,6 +13,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage
 
+from rag_backend.application.services.carousel.content_gate_repair import (
+    FieldRepairRequest,
+    GateRepairCommand,
+    run_gate_repair,
+)
 from rag_backend.application.services.carousel.editorial_distribution_generation import (
     _generate_en_translations,
 )
@@ -21,16 +27,20 @@ from rag_backend.application.services.carousel.editorial_translation_structure i
 )
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     build_presentation_review_updates,
+    validate_localized_slides,
 )
 from rag_backend.application.services.carousel.slide_scaffold_recovery import (
     split_scaffold_sections,
     strip_scaffold_labels,
 )
 from rag_backend.domain.constants.carousel_presentation import (
+    VIOLATION_TRANSLATION_NOT_ENGLISH,
     VIOLATION_TRANSLATION_SHAPE_MISMATCH,
 )
+from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
 from tests.unit.application.content_gate_repair_fixtures_ae0430 import (
     POLICY_V4,
+    FakeRepairer,
     load_fixture,
 )
 
@@ -86,13 +96,95 @@ class TestTranslationKeepsShape:
         codes = [v["code"] for v in cast(list[dict[str, object]], report["violations"])]
         assert VIOLATION_TRANSLATION_SHAPE_MISMATCH not in codes
 
-    async def test_missing_answer_falls_back_to_pt_shape(self) -> None:
-        """Scenario: A translation that drops the TL;DR still has EN's TL;DR slot."""
-        llm = _llm({"slides_en": [{"slide_index": 1, "heading": "H", "body": "B."}]})
+    async def test_pt_tldr_in_en_is_a_blocker_the_repair_fixes(self) -> None:
+        """Scenario: A PT TL;DR never ships as the EN one."""
+        llm = _llm({
+            "slides_en": [
+                {
+                    "slide_index": 1,
+                    "heading": "They saw Grok Bot book a table.",
+                    "body": "The call draws attention. The real point is the computer.",
+                }
+            ]
+        })
 
         translations = await _generate_en_translations(llm, [_intro_draft()])
 
-        assert translations[1]["tldr_strip"] == _TLDR_PT
+        assert "tldr_strip" not in translations[1]
+        review = build_presentation_review_updates(
+            [_intro_draft()], translations_en=translations, policy_version=POLICY_V4
+        )
+        slides = cast(list[dict[str, object]], review["localized_slides"])
+        assert VIOLATION_TRANSLATION_SHAPE_MISMATCH in _codes(slides)
+        pasted = copy.deepcopy(slides)
+        en = cast(dict[str, object], pasted[0]["presentation_en"])
+        en["tldr_strip"] = _TLDR_PT
+        assert ("tldr_strip", VIOLATION_TRANSLATION_NOT_ENGLISH) in _fields(pasted)
+        # The model skips the TL;DR in round 1; round 2 asks again and fixes it.
+        repairer = _SkipFirstRound({"1:en:tldr_strip": _TLDR_EN})
+
+        outcome = await run_gate_repair(
+            GateRepairCommand(
+                slides=slides, repairer=repairer, policy_version=POLICY_V4
+            )
+        )
+
+        assert [ids.count("1:en:tldr_strip") for ids in repairer.calls] == [1, 1]
+        fixed = cast(dict[str, object], outcome.slides[0]["presentation_en"])
+        assert fixed["tldr_strip"] == _TLDR_EN
+        assert not [v for v in outcome.report.violations if v.field == "tldr_strip"]
+        assert VIOLATION_TRANSLATION_SHAPE_MISMATCH not in {
+            v.code for v in outcome.report.violations
+        }
+
+    async def test_wrong_language_tldr_is_flagged(self) -> None:
+        """Scenario: A Portuguese EN TL;DR that differs from PT is still flagged."""
+        slides = [
+            _localized_intro(
+                en_tldr="Agente com computador próprio e reserva por telefone"
+            )
+        ]
+        fields = _fields(slides)
+        assert ("tldr_strip", "wrong_language") in fields
+
+
+def _localized_intro(en_tldr: str) -> dict[str, object]:
+    return {
+        "slide_index": 1,
+        "slide_type": "intro",
+        "presentation_pt": {
+            "slide_type": "intro",
+            "heading": "Viram o Grok Bot reservar mesa.",
+            "body": "A ligação chama atenção. O ponto real é o computador.",
+            "tldr_strip": _TLDR_PT,
+        },
+        "presentation_en": {
+            "slide_type": "intro",
+            "heading": "They saw Grok Bot book a table.",
+            "body": "The call draws attention. The real point is the computer.",
+            "tldr_strip": en_tldr,
+        },
+    }
+
+
+def _report(slides: list[dict[str, object]]) -> list[SlideValidationViolation]:
+    return validate_localized_slides(slides, policy_version=POLICY_V4).violations
+
+
+def _codes(slides: list[dict[str, object]]) -> set[str]:
+    return {violation.code for violation in _report(slides)}
+
+
+def _fields(slides: list[dict[str, object]]) -> set[tuple[str | None, str]]:
+    return {(violation.field, violation.code) for violation in _report(slides)}
+
+
+class _SkipFirstRound(FakeRepairer):
+    """Answers nothing in round 1, then the table."""
+
+    async def repair(self, request: FieldRepairRequest) -> dict[str, str]:
+        answers = await super().repair(request)
+        return {} if len(self.calls) == 1 else answers
 
 
 @pytest.mark.unit

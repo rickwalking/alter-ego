@@ -81,6 +81,15 @@ Feature: The content gate repairs only the failing fields (AE-0430)
     And the model is asked to translate "1:en:tldr_strip"
     And no "translation_shape_mismatch" remains
 
+  Scenario: A PT TL;DR never ships as the EN one
+    Given the translator answers without the intro "tldr_strip"
+    When the slides are translated to English
+    Then the EN intro has no "tldr_strip" and the gate blocks on "translation_shape_mismatch"
+    And an EN "tldr_strip" equal to the PT one is a "translation_not_english" blocker
+    And an EN "tldr_strip" written in Portuguese is a "wrong_language" blocker
+    When the repair model skips "1:en:tldr_strip" in round 1
+    Then round 2 asks for "1:en:tldr_strip" again and the translated TL;DR clears the gate
+
   # --- E: label scaffolding never reaches visible copy ------------------
 
   Scenario: Bold locale markers are parsed as sections, not copy

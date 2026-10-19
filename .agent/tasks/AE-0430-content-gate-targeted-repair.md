@@ -239,6 +239,12 @@ Pending external QA.
   and then repairs what is still blocked (≤2 fast-model calls). The history shows `applied`
   only if the copy changed. Whatever remains is listed and fixable by hand, EN TL;DR included.
 
+- **Orchestrator review fix (PT TL;DR as EN)**: the translation fallback copied the PT
+  TL;DR into EN and the language rules skipped `tldr_strip`, so the gate went green with a
+  Portuguese EN TL;DR. Now `tldr_strip` is language-checked (`language_fields`,
+  `translation_violations`) and an unanswered TL;DR stays absent, so the mismatch blocks
+  and the repair loop translates it (retried in round 2 if the model skips it).
+
 ## Blockers
 
 None.

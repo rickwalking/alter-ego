@@ -263,11 +263,9 @@ class TestTranslatorKeepsCaseAndTags:
         assert "Gemini 4 Argon chegou" in prompt
         assert RUBRIC_HEADER in prompt
         assert "<strong>" in prompt
-        # AE-0430 (v8): the EN translation also carries the draft's structured
-        # extras; an answer without the TL;DR keeps the PT one for the gate repair.
-        assert result == {
-            1: {"heading": "H", "body": "B", "tldr_strip": "Resumo curto do carrossel."}
-        }
+        # AE-0430: an answer without the TL;DR leaves EN without one (the gate
+        # then blocks on the shape and its repair translates the PT one).
+        assert result == {1: {"heading": "H", "body": "B"}}
 
 
 def _content_state(updates: dict[str, object]) -> dict[str, object]:
