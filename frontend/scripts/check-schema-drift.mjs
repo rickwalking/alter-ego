@@ -70,11 +70,9 @@ const SCHEMA_MAP = [
   // --- carousel ---
   { zod: "carouselDesignColorsSchema", file: "carousel.ts", openapi: "CarouselDesignColors", kind: "response" },
   { zod: "carouselDesignTypographySchema", file: "carousel.ts", openapi: "CarouselDesignTypography", kind: "response" },
-  { zod: "carouselBlogImageMapEntrySchema", file: "carousel.ts", openapi: "CarouselBlogImageMapEntry", kind: "response" },
   { zod: "carouselDesignImagesSchema", file: "carousel.ts", openapi: "CarouselDesignImages", kind: "response" },
   { zod: "carouselDesignLayoutSchema", file: "carousel.ts", openapi: "CarouselDesignLayout", kind: "response" },
   { zod: "carouselDesignResponseSchema", file: "carousel.ts", openapi: "CarouselDesignResponse", kind: "response" },
-  { zod: "carouselBlogI18nResponseSchema", file: "carousel.ts", openapi: "CarouselBlogI18nResponse", kind: "response" },
   { zod: "carouselProjectResponseSchema", file: "carousel.ts", openapi: "CarouselProjectResponse", kind: "response" },
   { zod: "carouselProjectListResponseSchema", file: "carousel.ts", openapi: "CarouselProjectListResponse", kind: "response" },
   { zod: "carouselSlideResponseSchema", file: "carousel.ts", openapi: "CarouselSlideResponse", kind: "response" },
