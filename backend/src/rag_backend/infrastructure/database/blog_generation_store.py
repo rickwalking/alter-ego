@@ -1,13 +1,13 @@
-"""Lease-fenced persistence of a blog generation run (AE-0425, ADR-0025).
+"""Lease-fenced run-state persistence of a blog generation (AE-0425, ADR-0025).
 
-Every write of a run is a compare-and-set on the row:
+The run's metadata writes (heartbeat, final status) are a compare-and-set:
 ``WHERE id = :post AND generation.lease_id = :mine AND lock_version = :seen``.
 A new attempt (retry) and the reaper rotate the lease **and** bump
 ``lock_version``, so a stale/duplicate task's write affects zero rows and
-raises :class:`LeaseLostError`; it can never clobber a newer run. Content
-writes also bump ``lock_version`` and fail with
-:class:`GenerationConflictError` if the owner saved the row meanwhile.
-Heartbeats and the final status write only touch ``ai_generation_metadata``.
+raises :class:`LeaseLostError`; it can never clobber a newer run. CONTENT
+writes do not go through here: they use AE-0424's slot-write path (row lock,
+apply onto the latest document, version snapshot), see
+``bootstrap/blog_generation_store.py``.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
+from rag_backend.application.services.blog.blog_image_budget import image_generations
 from rag_backend.domain.constants.blog_document import (
     GENERATION_KEY,
     GENERATION_STATUS_IN_PROGRESS,
@@ -34,9 +35,6 @@ from rag_backend.domain.constants.blog_generation import (
     LOG_GENERATION_REAPED,
 )
 from rag_backend.domain.models.blog_generation import (
-    ContentMerge,
-    ContentWrite,
-    GenerationConflictError,
     GenerationLease,
     GenerationOutcome,
     LeaseLostError,
@@ -47,7 +45,6 @@ from rag_backend.domain.models.blog_generation_state import (
     is_stale,
     lease_of,
     reaped,
-    with_voice_score,
 )
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
@@ -79,8 +76,6 @@ class _Mutation:
     """How one fenced write changes the row."""
 
     values: Callable[[_Row], dict[str, object]]
-    bump: bool = False
-    expect_version: bool = False
 
 
 class SqlBlogGenerationStore:
@@ -101,43 +96,28 @@ class SqlBlogGenerationStore:
             ),
         )
 
-    async def write_content(self, lease: GenerationLease, write: ContentWrite) -> None:
-        """Store the document + cover projection + voice-score mirror.
-
-        Refuses to overwrite an owner save (``GenerationConflictError``).
-        """
-        await self._fenced(
-            lease,
-            _Mutation(
-                lambda row: _content_values(row, write), bump=True, expect_version=True
-            ),
-        )
-
     async def read_content(self, lease: GenerationLease) -> dict[str, object]:
         """The row's current ``content`` (still fenced on the lease)."""
+        row = await self._read_fenced(lease)
+        return row.content
+
+    async def images_generated(self, lease: GenerationLease) -> int:
+        """Images generated for the post so far (AE-0424's per-post counter)."""
+        row = await self._read_fenced(lease)
+        return image_generations(row.metadata)
+
+    async def _read_fenced(self, lease: GenerationLease) -> _Row:
         async with self._lock, self._sessions() as session:
             row = await _read(session, lease.post_id)
         if row is None or lease_of(row.metadata) != lease.lease_id:
             raise LeaseLostError(lease.post_id)
-        return row.content
-
-    async def merge_content(self, lease: GenerationLease, merge: ContentMerge) -> None:
-        """Write ``merge(current content)``: an owner save made meanwhile is the
-        base of the merge, never a conflict (the CAS loop re-reads on a race)."""
-        await self._fenced(
-            lease,
-            _Mutation(lambda row: _content_values(row, merge(row.content)), bump=True),
-        )
+        return row
 
     async def finish(self, lease: GenerationLease, outcome: GenerationOutcome) -> None:
         """Record the final status/errors (metadata only)."""
         await self._fenced(
             lease,
-            _Mutation(
-                lambda row: {
-                    "ai_generation_metadata": finished(row.metadata, outcome, _now())
-                }
-            ),
+            _Mutation(lambda row: _finish_values(row, outcome)),
         )
 
     async def _fenced(self, lease: GenerationLease, mutation: _Mutation) -> None:
@@ -153,28 +133,18 @@ class SqlBlogGenerationStore:
             row = await _read(session, lease.post_id)
             if row is None or lease_of(row.metadata) != lease.lease_id:
                 raise LeaseLostError(lease.post_id)
-            if mutation.expect_version and row.lock_version != lease.lock_version:
-                raise GenerationConflictError(lease.post_id)
             values = mutation.values(row)
-            if mutation.bump:
-                values["lock_version"] = row.lock_version + 1
             written = await _compare_and_set(session, (lease, row), values)
-        if written and mutation.bump:
-            lease.lock_version = row.lock_version + 1
         return written
 
 
-def _content_values(row: _Row, write: ContentWrite) -> dict[str, object]:
-    updated: dict[str, object] = {
-        "content": write.content,
-        "featured_image_url": write.featured_image_url,
-        "ai_generation_metadata": with_voice_score(
-            heartbeat(row.metadata, _now()), write.voice_score
-        ),
+def _finish_values(row: _Row, outcome: GenerationOutcome) -> dict[str, object]:
+    values: dict[str, object] = {
+        "ai_generation_metadata": finished(row.metadata, outcome, _now())
     }
-    if write.title:
-        updated["title"] = write.title
-    return updated
+    if outcome.title:
+        values["title"] = outcome.title
+    return values
 
 
 async def _read(session: AsyncSession, post_id: str) -> _Row | None:

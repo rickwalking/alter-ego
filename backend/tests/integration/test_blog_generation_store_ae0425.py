@@ -21,10 +21,16 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from rag_backend.bootstrap.blog_generation_store import SlotWriteGenerationStore
 from rag_backend.domain.constants.blog_generation import ERR_GENERATION_INTERRUPTED
+from rag_backend.domain.models.blog_document import (
+    BlogDocument,
+    BlogImage,
+    InvalidBlogDocumentError,
+    parse_blog_content,
+)
 from rag_backend.domain.models.blog_generation import (
-    ContentWrite,
-    GenerationConflictError,
+    DocumentApply,
     GenerationLease,
     GenerationOutcome,
     LeaseLostError,
@@ -145,33 +151,38 @@ async def test_draft_row_is_an_in_progress_draft(sessions: Sessions) -> None:
     assert row.ai_disclosure_label == "ai_generated"
 
 
-async def test_writes_under_the_current_lease(sessions: Sessions) -> None:
+def _slot_store(sessions: Sessions) -> SlotWriteGenerationStore:
+    return SlotWriteGenerationStore(sessions, AUTHOR_ID)
+
+
+def _replace_with(body: str) -> DocumentApply:
+    document = parse_blog_content(v2_content(body))
+    return DocumentApply(edit=lambda _latest: document, voice_score=81.0)
+
+
+async def test_content_writes_go_through_the_slot_path(sessions: Sessions) -> None:
+    # The article write: lease checked on the locked row, voice score
+    # mirrored, version snapshot taken (AE-0424 slot path), lock_version bumped.
     lease = await _draft(sessions)
-    store = SqlBlogGenerationStore(sessions)
+    store = _slot_store(sessions)
     await store.heartbeat(lease)
-    await store.write_content(
-        lease,
-        ContentWrite(
-            content=v2_content("Corpo"),
-            featured_image_url=None,
-            voice_score=81.0,
-            title="Novo",
-        ),
+    await store.apply_document(lease, _replace_with("Corpo"))
+    await store.finish(
+        lease, GenerationOutcome(status="complete", image_count=0, title="Novo")
     )
-    await store.finish(lease, GenerationOutcome(status="complete", image_count=0))
     row = await _row(sessions, lease.post_id)
     assert row.content["sections"][0]["body_md"] == "Corpo"
     assert row.title == "Novo"
     assert row.lock_version == 2
-    assert lease.lock_version == 2
     assert row.ai_generation_metadata["voice_score"] == 81.0
+    assert len(row.version_history) == 1
     assert generation_of(row.ai_generation_metadata)["status"] == "complete"
 
 
 async def test_a_stale_task_cannot_clobber_a_newer_lease(sessions: Sessions) -> None:
     # Scenario: A stale duplicate task cannot clobber a newer lease
     old = await _draft(sessions)
-    store = SqlBlogGenerationStore(sessions)
+    store = _slot_store(sessions)
     await store.finish(old, GenerationOutcome(status="failed", recoverable=True))
     async with sessions() as db:
         newer = await restart_generation(
@@ -179,18 +190,63 @@ async def test_a_stale_task_cannot_clobber_a_newer_lease(sessions: Sessions) -> 
         )
         await db.commit()
     assert newer is not None
-    await SqlBlogGenerationStore(sessions).write_content(
-        newer, ContentWrite(content=v2_content("Lease B"), featured_image_url=None)
+    await store.apply_document(newer, _replace_with("Lease B"))
+    discarded: list[bool] = []
+    stale = DocumentApply(
+        edit=lambda _latest: parse_blog_content(v2_content("Lease A")),
+        images_generated=1,
+        discard=lambda: discarded.append(True),
     )
     with pytest.raises(LeaseLostError):
-        await store.write_content(
-            old, ContentWrite(content=v2_content("Lease A"), featured_image_url=None)
-        )
+        await store.apply_document(old, stale)
     with pytest.raises(LeaseLostError):
         await store.heartbeat(old)
+    assert discarded == [True]  # the stale task's new files are deleted
     row = await _row(sessions, old.post_id)
     assert row.content["sections"][0]["body_md"] == "Lease B"
     assert generation_of(row.ai_generation_metadata)["attempt"] == 2
+
+
+async def test_images_apply_onto_an_owner_save_and_count(sessions: Sessions) -> None:
+    # Review fix 2: an owner save during the image step is the base of the
+    # image write (never a conflict); images count against the post's cap.
+    lease = await _draft(sessions)
+    store = _slot_store(sessions)
+    await store.apply_document(lease, _replace_with("Gerado"))
+    async with sessions() as db:
+        await db.execute(
+            update(BlogPostModel).values(
+                content=v2_content("Editado pelo dono"),
+                lock_version=BlogPostModel.lock_version + 1,
+            )
+        )
+        await db.commit()
+    image = BlogImage(url="/api/blog-images/p/x.jpg", alt="Alt")
+
+    def attach(latest: BlogDocument) -> BlogDocument:
+        first = latest.sections[0].model_copy(update={"image": image})
+        return latest.model_copy(update={"sections": [first]})
+
+    await store.apply_document(lease, DocumentApply(edit=attach, images_generated=2))
+    row = await _row(sessions, lease.post_id)
+    assert row.content["sections"][0]["body_md"] == "Editado pelo dono"
+    assert row.content["sections"][0]["image"]["alt"] == "Alt"
+    assert row.lock_version == 4
+    assert await store.images_generated(lease) == 2
+    assert await store.read_content(lease) == row.content
+
+
+async def test_an_invalid_write_is_a_document_error(sessions: Sessions) -> None:
+    lease = await _draft(sessions)
+    store = _slot_store(sessions)
+
+    def broken(latest: BlogDocument) -> BlogDocument:
+        bad = latest.sections[0].model_copy(update={"heading": "# H1 heading"})
+        return latest.model_copy(update={"sections": [bad]})
+
+    await store.apply_document(lease, _replace_with("Ok"))
+    with pytest.raises(InvalidBlogDocumentError):
+        await store.apply_document(lease, DocumentApply(edit=broken))
 
 
 async def test_restart_is_compare_and_set(sessions: Sessions) -> None:
@@ -199,22 +255,6 @@ async def test_restart_is_compare_and_set(sessions: Sessions) -> None:
         assert (
             await restart_generation(db, RestartSpec(lease.post_id, 7, _start("x")))
             is None
-        )
-
-
-async def test_an_owner_save_during_the_run_is_a_conflict(sessions: Sessions) -> None:
-    lease = await _draft(sessions)
-    async with sessions() as db:
-        await db.execute(
-            update(BlogPostModel).values(lock_version=BlogPostModel.lock_version + 1)
-        )
-        await db.commit()
-    store = SqlBlogGenerationStore(sessions)
-    # Heartbeats follow the new version; content writes refuse to overwrite it.
-    await store.heartbeat(lease)
-    with pytest.raises(GenerationConflictError):
-        await store.write_content(
-            lease, ContentWrite(content=v2_content(), featured_image_url=None)
         )
 
 
@@ -267,37 +307,6 @@ async def test_live_row_lookup(sessions: Sessions) -> None:
         assert await live_post_id_for_project(db, "nope") is None
     metadata = heartbeat(started({}, _start("z")), "now")
     assert generation_of(metadata)["heartbeat_at"] == "now"
-
-
-async def test_merge_applies_onto_an_owner_save(sessions: Sessions) -> None:
-    # Review fix 2: an owner save during the image step is the merge's base,
-    # never a conflict; lock_version moves past the owner's version.
-    lease = await _draft(sessions)
-    store = SqlBlogGenerationStore(sessions)
-    await store.write_content(
-        lease, ContentWrite(content=v2_content("Gerado"), featured_image_url=None)
-    )
-    async with sessions() as db:
-        await db.execute(
-            update(BlogPostModel).values(
-                content=v2_content("Editado pelo dono"),
-                lock_version=BlogPostModel.lock_version + 1,
-            )
-        )
-        await db.commit()
-
-    def merge(current: dict[str, object]) -> ContentWrite:
-        sections = current["sections"]
-        assert isinstance(sections, list)
-        sections[0]["image"] = {"url": "/api/blog-images/p/x.jpg", "alt": "Alt"}
-        return ContentWrite(content=current, featured_image_url=None)
-
-    await store.merge_content(lease, merge)
-    row = await _row(sessions, lease.post_id)
-    assert row.content["sections"][0]["body_md"] == "Editado pelo dono"
-    assert row.content["sections"][0]["image"]["alt"] == "Alt"
-    assert row.lock_version == 4
-    assert await store.read_content(lease) == row.content
 
 
 async def test_read_content_is_fenced(sessions: Sessions) -> None:

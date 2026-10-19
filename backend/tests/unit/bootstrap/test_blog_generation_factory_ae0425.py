@@ -78,7 +78,9 @@ def test_service_is_wired_with_the_role_models_and_gpt_image(
     monkeypatch.setattr(
         blog_generation, "build_blog_image_service", lambda: editor_image_service
     )
-    service = blog_generation.build_generation_service(PersonaProfile())
+    store = object()
+    monkeypatch.setattr(blog_generation, "blog_images_store", lambda: store)
+    service = blog_generation.build_generation_service(PersonaProfile(), "user-1")
     deps = service._deps
     assert deps.writer._models.fast is container.roles.fast
     assert deps.writer._models.reasoning is container.roles.reasoning
@@ -88,7 +90,9 @@ def test_service_is_wired_with_the_role_models_and_gpt_image(
     # The one image path (AE-0424): the batch wraps the editor's service.
     assert deps.images._deps.images is editor_image_service
     assert deps.images._deps.concurrency == get_settings().blog_image_concurrency
-    assert deps.image_cost_cap_usd == get_settings().blog_image_cost_cap
+    assert deps.image_cap == get_settings().blog_image_cost_cap  # AE-0424's cap
+    assert deps.images._deps.store is store
+    assert deps.store._user_id == "user-1"
 
 
 def test_reaper_and_paths() -> None:
@@ -102,7 +106,7 @@ def test_reaper_and_paths() -> None:
 def test_settings_defaults() -> None:
     settings = get_settings()
     assert settings.blog_image_concurrency == 2
-    assert settings.blog_image_cost_cap == 3.0
+    assert settings.blog_image_cost_cap == 30
     assert settings.blog_generation_timeout_seconds == 900
     assert settings.blog_generation_stale_seconds == 180
 

@@ -23,9 +23,6 @@ GEN_KEY_WARNINGS: Final = "warnings"
 GEN_KEY_IMAGE_COUNT: Final = "image_count"
 # N + 1: the cover plus one image per section (the carousel slide count).
 GEN_KEY_IMAGE_SLOTS: Final = "image_slots"
-# Cumulative image spend of the post across attempts (USD), held against
-# BLOG_IMAGE_COST_CAP so a retry never re-spends the whole budget.
-GEN_KEY_IMAGE_SPEND_USD: Final = "image_spend_usd"
 METADATA_KEY_VOICE_SCORE: Final = "voice_score"
 
 # Error entry keys (``generation.errors[]``).
@@ -81,13 +78,9 @@ WARNING_CAROUSEL_PRIVATE: Final = "carousel_private"
 
 # --- image slots ------------------------------------------------------------
 IMAGE_SLOT_COVER: Final = "cover"
-# Conservative per-image estimate for ``gpt-image-2`` at 1536x1024 (USD). The
-# per-post cost cap divides by it to get how many images one post may spend.
-BLOG_IMAGE_ESTIMATED_COST_USD: Final = 0.25
 
 # --- defaults (Settings) ----------------------------------------------------
 DEFAULT_BLOG_IMAGE_CONCURRENCY: Final = 2
-DEFAULT_BLOG_IMAGE_COST_CAP_USD: Final = 3.0
 DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS: Final = 900
 DEFAULT_BLOG_GENERATION_STALE_SECONDS: Final = 180
 BLOG_GENERATION_HEARTBEAT_SECONDS: Final = 30.0
@@ -108,6 +101,8 @@ LOG_GENERATION_LEASE_LOST: Final = "blog_generation_lease_lost"
 LOG_GENERATION_REAPED: Final = "blog_generation_reaped"
 LOG_IMAGE_FAILED: Final = "blog_image_failed"
 LOG_IMAGES_DONE: Final = "blog_images_done"
+# Version-history summary of the generation's own writes (AE-0424 slot path).
+VERSION_SUMMARY_GENERATION: Final = "Before blog generation"
 LOG_SOURCE_LEAK_STRIPPED: Final = "blog_source_leak_stripped"
 LOG_HEARTBEAT_FAILED: Final = "blog_generation_heartbeat_failed"
 LOG_ENGLISH_IN_PT: Final = "blog_english_in_pt_section"

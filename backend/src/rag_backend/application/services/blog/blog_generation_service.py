@@ -79,13 +79,11 @@ from rag_backend.domain.constants.blog_generation import (
 )
 from rag_backend.domain.models.blog_document import (
     BlogDocument,
-    BlogImage,
     InvalidBlogDocumentError,
     parse_blog_content,
 )
 from rag_backend.domain.models.blog_generation import (
-    ContentMerge,
-    ContentWrite,
+    DocumentApply,
     DraftArticle,
     GenerationConflictError,
     GenerationLease,
@@ -198,18 +196,32 @@ class BlogGenerationService:
             document = build_generated_document(languages, _now())
             await self._store(job, document, languages)
             titles = ImageTitles(languages.title, languages.en_title)
+        generated = await self._deps.store.images_generated(job.lease)
         result = await self._deps.images.generate(
             ImageBatchRequest(
                 trace=job.trace,
                 subjects=missing_image_subjects(document, titles.title),
-                budget_usd=self._deps.image_cost_cap_usd - job.prior_image_spend_usd,
+                max_images=self._deps.image_cap - generated,
             )
         )
         if result.images:
-            await self._deps.store.merge_content(
-                job.lease, _image_merge(result.images, titles)
-            )
+            await self._attach(job, result, titles)
         return _outcome(job, languages, result)
+
+    async def _attach(
+        self, job: GenerationJob, result: ImageBatchResult, titles: ImageTitles
+    ) -> None:
+        """Attach by section id onto the LATEST document (owner edits survive);
+        a failed write deletes the new files (no orphans)."""
+        images = result.images
+        await self._deps.store.apply_document(
+            job.lease,
+            DocumentApply(
+                edit=lambda latest: attach_images(latest, images, titles),
+                images_generated=len(images),
+                discard=lambda: self._deps.images.discard(job.lease.post_id, images),
+            ),
+        )
 
     async def _current(self, job: GenerationJob) -> tuple[BlogDocument, ImageTitles]:
         content = await self._deps.store.read_content(job.lease)
@@ -246,29 +258,22 @@ class BlogGenerationService:
     async def _store(
         self, job: GenerationJob, document: BlogDocument, languages: GeneratedLanguages
     ) -> None:
-        written = BlogDocumentService.validate_for_write(document.to_content())
-        await self._deps.store.write_content(
+        BlogDocumentService.validate_for_write(document.to_content())
+        await self._deps.store.apply_document(
             job.lease,
-            ContentWrite(
-                content=written.content,
-                featured_image_url=written.featured_image_url,
+            DocumentApply(
+                edit=lambda latest: _place_article(latest, document),
                 voice_score=languages.pt.voice.overall,
-                title=languages.title if job.retitle else None,
             ),
         )
 
 
-def _image_merge(images: dict[str, BlogImage], titles: ImageTitles) -> ContentMerge:
-    """Attach the images to whatever the row holds NOW (owner edits survive)."""
-
-    def merge(current: dict[str, object]) -> ContentWrite:
-        merged = attach_images(parse_blog_content(current), images, titles)
-        written = BlogDocumentService.validate_for_write(merged.to_content())
-        return ContentWrite(
-            content=written.content, featured_image_url=written.featured_image_url
-        )
-
-    return merge
+def _place_article(latest: BlogDocument, article: BlogDocument) -> BlogDocument:
+    """The generated article replaces the in-progress bootstrap document; an
+    article the owner already wrote is never overwritten (conflict)."""
+    if any(section.body_md.strip() for section in latest.sections):
+        raise GenerationConflictError(ERR_GENERATION_CONFLICT)
+    return article
 
 
 def _outcome(
@@ -285,14 +290,14 @@ def _outcome(
         voice_score_en=languages.en.voice.overall if languages else None,
         rewrite_passes=languages.pt.rewrite_passes if languages else None,
         image_count=len(result.images),
-        image_spend_usd=result.spent_usd,
     )
     return GenerationOutcome(
         status=status,
         errors=result.errors,
         recoverable=bool(result.errors),
         image_count=len(result.images),
-        image_spend_usd=result.spent_usd,
+        # A standalone post takes the writer's title (with the final status).
+        title=languages.title if job.retitle and languages else None,
     )
 
 

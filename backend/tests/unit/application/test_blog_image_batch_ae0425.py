@@ -14,7 +14,6 @@ import pytest
 from rag_backend.application.services.blog import blog_image_batch
 from rag_backend.application.services.blog.blog_image_batch import (
     ImageBatchRequest,
-    image_budget,
 )
 from rag_backend.domain.constants.blog_editor import (
     ERR_BLOG_IMAGE_GENERATION_FAILED,
@@ -58,9 +57,9 @@ def _subjects(count: int, fail: str | None = None) -> tuple[ImageSubject, ...]:
 
 
 def _request(
-    count: int, budget: float = 10.0, fail: str | None = None
+    count: int, budget: int = 30, fail: str | None = None
 ) -> ImageBatchRequest:
-    return ImageBatchRequest(TRACE, _subjects(count, fail), budget_usd=budget)
+    return ImageBatchRequest(TRACE, _subjects(count, fail), max_images=budget)
 
 
 async def test_cover_and_one_image_per_section_are_persisted(tmp_path: Path) -> None:
@@ -69,7 +68,6 @@ async def test_cover_and_one_image_per_section_are_persisted(tmp_path: Path) -> 
     result = await image_batch(tmp_path, generator).generate(_request(4))
     assert set(result.images) == {IMAGE_SLOT_COVER, "sec_1", "sec_2", "sec_3", "sec_4"}
     assert result.errors == ()
-    assert result.spent_usd == pytest.approx(1.25)
     for image in result.images.values():
         # The editor's store (AE-0424): canonical same-origin URL only.
         assert image.url.startswith(f"/api/blog-images/{POST_ID}/")
@@ -107,19 +105,17 @@ async def test_an_image_that_was_not_written_is_a_failure(tmp_path: Path) -> Non
 async def test_the_budget_limits_the_attempted_slots(tmp_path: Path) -> None:
     # Scenario: The per-post image cost cap is enforced
     generator = FakeImageGenerator()
-    result = await image_batch(tmp_path, generator).generate(_request(4, budget=0.75))
+    result = await image_batch(tmp_path, generator).generate(_request(4, budget=3))
     assert len(generator.prompts) == 3
     assert set(result.images) == {IMAGE_SLOT_COVER, "sec_1", "sec_2"}
     capped = [e for e in result.errors if e["code"] == ERR_IMAGE_COST_CAP]
     assert [e["slot"] for e in capped] == ["sec_3", "sec_4"]
-    assert result.spent_usd == pytest.approx(0.75)
 
 
 async def test_an_exhausted_budget_spends_nothing(tmp_path: Path) -> None:
     generator = FakeImageGenerator()
-    result = await image_batch(tmp_path, generator).generate(_request(2, budget=-1.0))
+    result = await image_batch(tmp_path, generator).generate(_request(2, budget=-1))
     assert generator.prompts == []
-    assert result.spent_usd == 0.0
     assert len(result.errors) == 3
 
 
@@ -140,7 +136,9 @@ async def test_concurrency_is_bounded(tmp_path: Path) -> None:
     assert peak == 2
 
 
-def test_budget() -> None:
-    assert image_budget(3.0) == 12
-    assert image_budget(0.0) == 0
-    assert image_budget(0.25) == 1
+async def test_discard_deletes_the_new_files(tmp_path: Path) -> None:
+    batch = image_batch(tmp_path, FakeImageGenerator())
+    result = await batch.generate(_request(1))
+    assert len(list((tmp_path / POST_ID).iterdir())) == 2
+    batch.discard(POST_ID, result.images)
+    assert list((tmp_path / POST_ID).iterdir()) == []

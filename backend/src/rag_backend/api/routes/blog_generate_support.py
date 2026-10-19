@@ -37,9 +37,6 @@ from rag_backend.application.services.blog.blog_brief import (
     carousel_brief,
     standalone_brief,
 )
-from rag_backend.application.services.blog.blog_document_service import (
-    BlogDocumentService,
-)
 from rag_backend.application.services.blog.blog_generated_document import (
     ImageTitles,
     missing_image_subjects,
@@ -67,6 +64,10 @@ from rag_backend.domain.constants.blog_generation import (
     REQUEST_KEY_SOURCE_URLS,
     REQUEST_KEY_TOPIC,
     WARNING_CAROUSEL_PRIVATE,
+)
+from rag_backend.domain.models.blog_document import (
+    InvalidBlogDocumentError,
+    parse_blog_content,
 )
 from rag_backend.domain.models.blog_generation import (
     GenerationLease,
@@ -108,8 +109,6 @@ class PreparedRun:
     # Images-only retry (``brief is None``): the titles and the empty slots.
     titles: ImageTitles | None = None
     image_slots: int = 0
-    # What earlier attempts spent on images (per-post cap, across attempts).
-    prior_image_spend_usd: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -187,7 +186,7 @@ def _slots(prepared: PreparedRun) -> int:
 def prepare_images_only(post: BlogPostRow) -> PreparedRun:
     """Retry of a post whose article exists: only its empty image slots run;
     the article is never regenerated."""
-    document = BlogDocumentService.read_document(post.content, str(post.id))
+    document = parse_blog_content(post.content)
     titles = ImageTitles(title=post.title, en_title=post.title)
     return PreparedRun(
         brief=None,
@@ -198,9 +197,17 @@ def prepare_images_only(post: BlogPostRow) -> PreparedRun:
     )
 
 
-def has_article(content: object, post_id: str) -> bool:
-    """True when the stored document already has a non-empty section."""
-    document = BlogDocumentService.read_document(content, post_id)
+def has_article(content: object) -> bool:
+    """True when the stored ``blog.v2`` document has a non-empty section.
+
+    Strict parse (no read fail-safe, which AE-0428 removes): a row that does
+    not parse has no article to keep, so the retry runs the full writer (which
+    replaces it) instead of failing with a 500.
+    """
+    try:
+        document = parse_blog_content(content)
+    except InvalidBlogDocumentError:
+        return False
     return any(section.body_md.strip() for section in document.sections)
 
 
@@ -269,7 +276,7 @@ def start_run(
     lease, trace = job
     persona = prepared.brief.persona if prepared.brief else PersonaProfile()
     try:
-        service = build_generation_service(persona)
+        service = build_generation_service(persona, trace.user_id)
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -283,7 +290,6 @@ def start_run(
             brief=prepared.brief,
             titles=prepared.titles,
             retitle=prepared.retitle,
-            prior_image_spend_usd=prepared.prior_image_spend_usd,
         ),
     )
 

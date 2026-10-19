@@ -17,7 +17,10 @@ from rag_backend.agents.blog_writer import (
     BlogWriterModels,
     PersonaVoiceScorer,
 )
-from rag_backend.api.dependencies.blog_editor import build_blog_image_service
+from rag_backend.api.dependencies.blog_editor import (
+    blog_images_store,
+    build_blog_image_service,
+)
 from rag_backend.application.services.blog.blog_generation_job import (
     BlogGenerationDeps,
     GenerationTimings,
@@ -33,6 +36,7 @@ from rag_backend.application.services.blog.blog_quality_gate import (
     BlogQualityGate,
     QualityGateDeps,
 )
+from rag_backend.bootstrap.blog_generation_store import SlotWriteGenerationStore
 from rag_backend.domain.constants.blog_generation import (
     BLOG_DEFAULT_PERSONA_NAME,
     BLOG_GENERATION_HEARTBEAT_SECONDS,
@@ -49,7 +53,6 @@ from rag_backend.infrastructure.database.blog_generation_drafts import (
 )
 from rag_backend.infrastructure.database.blog_generation_store import (
     SqlBlogGenerationReaper,
-    SqlBlogGenerationStore,
 )
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.modules.editorial.public import PovInputsAcl
@@ -70,13 +73,17 @@ def _image_batch(settings: Settings) -> BlogImageBatchService:
     return BlogImageBatchService(
         BlogImageBatchDeps(
             images=build_blog_image_service(),
+            store=blog_images_store(),
             concurrency=settings.blog_image_concurrency,
         )
     )
 
 
-def build_generation_service(persona: PersonaProfile) -> BlogGenerationService:
-    """The service for one run (the voice scorer is bound to its persona)."""
+def build_generation_service(
+    persona: PersonaProfile, user_id: str
+) -> BlogGenerationService:
+    """The service for one run (voice scorer bound to its persona; content
+    writes recorded as ``user_id``'s through AE-0424's slot-write path)."""
     container = get_container()
     settings = container.settings()
     roles = container.llm_service().role_models
@@ -91,12 +98,12 @@ def build_generation_service(persona: PersonaProfile) -> BlogGenerationService:
             writer=writer,
             gate=gate,
             images=_image_batch(settings),
-            store=SqlBlogGenerationStore(get_session_maker()),
+            store=SlotWriteGenerationStore(get_session_maker(), user_id),
             timings=GenerationTimings(
                 timeout_seconds=settings.blog_generation_timeout_seconds,
                 heartbeat_seconds=BLOG_GENERATION_HEARTBEAT_SECONDS,
             ),
-            image_cost_cap_usd=settings.blog_image_cost_cap,
+            image_cap=settings.blog_image_cost_cap,
         )
     )
 

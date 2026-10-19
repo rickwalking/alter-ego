@@ -32,15 +32,15 @@ class GenerationTimings:
 
 @dataclass(frozen=True)
 class BlogGenerationDeps:
-    """Collaborators of the run (all behind domain ports) + the spend cap."""
+    """Collaborators of the run (all behind domain ports) + the image cap."""
 
     writer: BlogArticleWriter
     gate: BlogQualityGate
     images: BlogImageBatchService
     store: BlogGenerationStore
     timings: GenerationTimings
-    # BLOG_IMAGE_COST_CAP: per post, across every attempt (USD).
-    image_cost_cap_usd: float
+    # BLOG_IMAGE_COST_CAP (AE-0424): images per post, every attempt + the editor.
+    image_cap: int
 
 
 @dataclass(frozen=True)
@@ -51,7 +51,6 @@ class GenerationJob:
     ``None``: an images-only retry of an article that already exists — only
     its empty image slots are generated, titled by ``titles``.
     ``retitle`` lets a standalone post take the writer's title.
-    ``prior_image_spend_usd`` is what earlier attempts already spent.
     """
 
     lease: GenerationLease
@@ -59,7 +58,6 @@ class GenerationJob:
     brief: WriterBrief | None = None
     titles: ImageTitles | None = None
     retitle: bool = False
-    prior_image_spend_usd: float = 0.0
 
 
 __all__ = ["BlogGenerationDeps", "GenerationJob", "GenerationTimings"]

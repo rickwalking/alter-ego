@@ -14,8 +14,7 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models.blog_generation import (
-    ContentMerge,
-    ContentWrite,
+    DocumentApply,
     DraftArticle,
     DraftSection,
     GenerationLease,
@@ -58,17 +57,19 @@ class BlogGenerationStore(Protocol):
         """Stamp ``generation.heartbeat_at``; raises ``LeaseLostError``."""
         ...
 
-    async def write_content(self, lease: GenerationLease, write: ContentWrite) -> None:
-        """Store the document (``LeaseLostError`` / ``GenerationConflictError``)."""
-        ...
-
     async def read_content(self, lease: GenerationLease) -> dict[str, object]:
         """The row's current ``content``; raises ``LeaseLostError``."""
         ...
 
-    async def merge_content(self, lease: GenerationLease, merge: ContentMerge) -> None:
-        """Re-read the row and write ``merge(current content)`` (no owner-edit
-        conflict: the merge is applied to whatever the owner saved)."""
+    async def images_generated(self, lease: GenerationLease) -> int:
+        """Images already generated for this post (counts against the cap)."""
+        ...
+
+    async def apply_document(
+        self, lease: GenerationLease, change: DocumentApply
+    ) -> None:
+        """Lock the row, apply ``change.edit`` onto its LATEST document and store
+        it (an owner save made meanwhile is the base, never a conflict)."""
         ...
 
     async def finish(self, lease: GenerationLease, outcome: GenerationOutcome) -> None:

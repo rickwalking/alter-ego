@@ -81,9 +81,9 @@ class _Harness:
         self.generator = FakeImageGenerator()
         self.personas: list[PersonaProfile] = []
 
-    def build(self, persona: PersonaProfile) -> BlogGenerationService:
-        from rag_backend.infrastructure.database.blog_generation_store import (
-            SqlBlogGenerationStore,
+    def build(self, persona: PersonaProfile, user_id: str) -> BlogGenerationService:
+        from rag_backend.bootstrap.blog_generation_store import (
+            SlotWriteGenerationStore,
         )
         from rag_backend.infrastructure.database.config import get_session_maker
 
@@ -95,9 +95,9 @@ class _Harness:
                     QualityGateDeps(self.writer, FakeScorer(scores=[80.0]))
                 ),
                 images=image_batch(self.images_dir, self.generator),
-                store=SqlBlogGenerationStore(get_session_maker()),
+                store=SlotWriteGenerationStore(get_session_maker(), user_id),
                 timings=GenerationTimings(timeout_seconds=10, heartbeat_seconds=5),
-                image_cost_cap_usd=5.0,
+                image_cap=30,
             )
         )
 
@@ -106,9 +106,7 @@ class _Harness:
 async def harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Harness:
     from rag_backend.api.routes import blog_post_images
     from rag_backend.application.services.asset_cdn_service import AssetCdnService
-    from rag_backend.application.services.blog.blog_image_service import (
-        BlogImageStore,
-    )
+    from rag_backend.application.services.blog.blog_image_store import BlogImageStore
 
     images = tmp_path / "blog-images"
     built = _Harness(images)
@@ -361,7 +359,7 @@ async def test_a_partial_run_retries_only_its_missing_images(
     partial = await _settled(client, post_id)
     generation = partial["ai_generation_metadata"]["generation"]
     assert generation["status"] == "partial"
-    assert generation["image_spend_usd"] == pytest.approx(2.0)
+    assert partial["ai_generation_metadata"]["blog_image_generations"] == 7
     bodies = [s["body_md"] for s in partial["content"]["sections"]]
 
     harness.generator.honor_marker = False
@@ -372,10 +370,37 @@ async def test_a_partial_run_retries_only_its_missing_images(
     assert generation["status"] == "complete"
     assert generation["mode"] == "images_only"
     assert generation["image_slots"] == 1
-    assert generation["image_spend_usd"] == pytest.approx(2.25)
+    # Counted on AE-0424's per-post cap across attempts.
+    assert done["ai_generation_metadata"]["blog_image_generations"] == 8
     assert len(harness.writer.drafts) == 1  # the writer ran once, never again
     assert [s["body_md"] for s in done["content"]["sections"]] == bodies
     assert done["content"]["sections"][3]["image"] is not None
+
+
+async def test_retry_of_an_unparseable_row_reruns_the_writer(
+    client: AsyncClient, harness: _Harness
+) -> None:
+    # AE-0428 review: a row that does not parse is "no article" (never a 500).
+    from sqlalchemy import update
+
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+
+    harness.writer.draft_error = writer_failure()
+    response = await client.post(GENERATE, json={"topic": "Tema quebrado"})
+    post_id = response.json()["id"]
+    await _settled(client, post_id)
+    async with get_session_maker()() as session:
+        await session.execute(
+            update(BlogPostModel)
+            .where(BlogPostModel.id == post_id)
+            .values(content={"markdown": "# legado"})
+        )
+        await session.commit()
+    retry = await client.post(f"{POSTS}/{post_id}/generation/retry")
+    assert retry.status_code == 202, retry.text
+    await asyncio.gather(*runner.running_blog_generation_tasks())
+    assert len(harness.writer.drafts) == 2  # the full writer ran again
 
 
 async def test_generated_images_are_served_by_the_editor_route(

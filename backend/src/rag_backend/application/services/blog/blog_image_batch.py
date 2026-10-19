@@ -5,9 +5,9 @@ one blog-images store, one serving route. This module adds what bulk
 generation needs on top of it:
 
 * bounded concurrency (``BLOG_IMAGE_CONCURRENCY``), cover first;
-* the per-post spend cap: the caller passes the budget still available for
-  this post (``BLOG_IMAGE_COST_CAP`` minus what earlier attempts spent), and
-  only that many slots are attempted;
+* the per-post image cap (AE-0424's ``BLOG_IMAGE_COST_CAP`` counter): the
+  caller passes how many images the post may still generate, and only that
+  many slots are attempted;
 * best-effort slots: a failed or capped slot stays ``null`` with an error that
   names it; nothing here ever fails the draft.
 """
@@ -25,6 +25,7 @@ from rag_backend.application.services.blog.blog_image_service import (
     BlogImageService,
     default_scene,
 )
+from rag_backend.application.services.blog.blog_image_store import BlogImageStore
 from rag_backend.application.services.blog_workflow_observability import (
     BlogPhaseScope,
     blog_phase_trace,
@@ -32,7 +33,6 @@ from rag_backend.application.services.blog_workflow_observability import (
 from rag_backend.domain.constants.blog_editor import PHASE_BLOG_SECTION_IMAGE
 from rag_backend.domain.constants.blog_generation import (
     AGENT_BLOG_IMAGES,
-    BLOG_IMAGE_ESTIMATED_COST_USD,
     ERR_IMAGE_COST_CAP,
     ERROR_KEY_CODE,
     ERROR_KEY_REASON,
@@ -45,40 +45,32 @@ from rag_backend.domain.models.blog_generation import GenerationTrace, ImageSubj
 
 logger = structlog.get_logger(__name__)
 
-_COST_EPSILON = 1e-9
-
 
 @dataclass(frozen=True)
 class BlogImageBatchDeps:
-    """The single-image service (AE-0424) and the batch concurrency."""
+    """The single-image service + store (AE-0424) and the batch concurrency."""
 
     images: BlogImageService
+    store: BlogImageStore
     concurrency: int
 
 
 @dataclass(frozen=True)
 class ImageBatchRequest:
-    """The slots to fill, in order (cover first), and the budget left (USD)."""
+    """The slots to fill, in order (cover first), and how many images the
+    post may still generate."""
 
     trace: GenerationTrace
     subjects: tuple[ImageSubject, ...]
-    budget_usd: float
+    max_images: int
 
 
 @dataclass(frozen=True)
 class ImageBatchResult:
-    """Stored images by slot, one error per empty slot, and what was spent."""
+    """Stored images by slot and one error per empty slot."""
 
     images: dict[str, BlogImage]
     errors: tuple[dict[str, object], ...]
-    spent_usd: float
-
-
-def image_budget(budget_usd: float) -> int:
-    """How many images ``budget_usd`` pays for."""
-    if budget_usd <= 0:
-        return 0
-    return int((budget_usd + _COST_EPSILON) // BLOG_IMAGE_ESTIMATED_COST_USD)
 
 
 def _slot_error(slot: str, code: str, reason: str) -> dict[str, object]:
@@ -100,7 +92,7 @@ class BlogImageBatchService:
 
     async def generate(self, request: ImageBatchRequest) -> ImageBatchResult:
         """Cover first, bounded concurrency, budget-capped; never raises per slot."""
-        allowed = image_budget(request.budget_usd)
+        allowed = max(0, request.max_images)
         attempted = request.subjects[:allowed]
         gate = asyncio.Semaphore(max(1, self._deps.concurrency))
         outcomes = await asyncio.gather(
@@ -112,16 +104,20 @@ class BlogImageBatchService:
             _slot_error(subject.slot, ERR_IMAGE_COST_CAP, ERR_IMAGE_COST_CAP)
             for subject in request.subjects[allowed:]
         )
-        spent = len(attempted) * BLOG_IMAGE_ESTIMATED_COST_USD
         logger.info(
             LOG_IMAGES_DONE,
             post_id=request.trace.post_id,
             image_count=len(images),
+            attempted=len(attempted),
             slots=len(request.subjects),
             failed=len(errors),
-            estimated_cost_usd=spent,
         )
-        return ImageBatchResult(images=images, errors=tuple(errors), spent_usd=spent)
+        return ImageBatchResult(images=images, errors=tuple(errors))
+
+    def discard(self, post_id: str, images: dict[str, BlogImage]) -> None:
+        """Delete the stored files of ``images`` (their write failed)."""
+        for image in images.values():
+            self._deps.store.delete(post_id, image.url.rsplit("/", 1)[-1])
 
     async def _bounded(
         self, gate: asyncio.Semaphore, job: tuple[GenerationTrace, ImageSubject]
@@ -157,5 +153,4 @@ __all__ = [
     "BlogImageBatchService",
     "ImageBatchRequest",
     "ImageBatchResult",
-    "image_budget",
 ]

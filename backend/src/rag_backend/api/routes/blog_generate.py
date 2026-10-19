@@ -14,7 +14,6 @@ pipeline as a tracked in-process task; the editor polls ``GET
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Annotated
 from uuid import UUID
 
@@ -84,7 +83,6 @@ from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.blog_generation import GenerationLease, GenerationTrace
 from rag_backend.domain.models.blog_generation_state import (
     generation_of,
-    image_spend_of,
     status_of,
 )
 
@@ -244,11 +242,8 @@ async def retry_blog_generation(
     # An article that exists is never regenerated: only its empty image slots.
     prepared = (
         prepare_images_only(post)
-        if has_article(post.content, str(post_id))
+        if has_article(post.content)
         else await _prepare_retry(load, generation)
-    )
-    prepared = replace(
-        prepared, prior_image_spend_usd=image_spend_of(post.ai_generation_metadata)
     )
     stored = generation.get(GEN_KEY_REQUEST)
     start = new_start(

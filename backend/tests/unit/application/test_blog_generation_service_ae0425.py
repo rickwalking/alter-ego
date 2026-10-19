@@ -48,10 +48,9 @@ from rag_backend.domain.constants.blog_generation import (
 )
 from rag_backend.domain.models.blog_document import parse_blog_content
 from rag_backend.domain.models.blog_generation import (
-    ContentWrite,
+    DocumentApply,
     DraftArticle,
     DraftSection,
-    GenerationConflictError,
     GenerationLease,
     GenerationTrace,
     WriterBrief,
@@ -96,7 +95,7 @@ def _service(
     writer: FakeWriter,
     store: FakeStore,
     timeout: float = 5.0,
-    cap: float = 5.0,
+    cap: int = 30,
 ) -> BlogGenerationService:
     images = image_batch(tmp, FakeImageGenerator())
     gate = BlogQualityGate(
@@ -109,7 +108,7 @@ def _service(
             images=images,
             store=store,
             timings=GenerationTimings(timeout_seconds=timeout, heartbeat_seconds=0.01),
-            image_cost_cap_usd=cap,
+            image_cap=cap,
         )
     )
 
@@ -125,7 +124,7 @@ def _job(count: int = 4, retitle: bool = False) -> GenerationJob:
     )
 
 
-def _final(store: FakeStore) -> ContentWrite:
+def _final(store: FakeStore) -> dict[str, object]:
     return store.contents[-1]
 
 
@@ -139,22 +138,22 @@ async def test_a_complete_run_stores_a_scored_document_with_images(
     assert outcome.status == GENERATION_STATUS_COMPLETE
     assert outcome.image_count == 5
     assert len(store.contents) == 2
-    document = parse_blog_content(_final(store).content)
+    document = parse_blog_content(_final(store))
     assert len(document.sections) == 4
     assert document.cover is not None
     assert all(section.image is not None for section in document.sections)
-    assert _final(store).featured_image_url == document.cover.url
     # Scenario: The voice score is mirrored for the listing badge
     assert document.quality is not None
     assert document.quality.voice_score == 82.0
-    assert store.contents[0].voice_score == 82.0  # the article write
+    assert store.applied[0].voice_score == 82.0  # the article write
+    assert store.generated == 5  # counted against the per-post cap
     # EN translation: same ids, own quality, own alt text.
     english = document.translations["en"]
     assert [s.id for s in english.sections] == [s.id for s in document.sections]
     assert english.quality is not None
     assert english.sections[1].image is not None
     assert english.sections[1].image.alt == "Section 2"
-    assert store.contents[0].title is None
+    assert outcome.title is None
     assert store.outcomes == [outcome]
 
 
@@ -163,7 +162,7 @@ async def test_section_and_slot_count_follow_the_slide_count(tmp_path: Path) -> 
     writer = FakeWriter(draft_article=article(9))
     store = FakeStore()
     outcome = await _service(tmp_path, writer, store).run(_job(9))
-    document = parse_blog_content(_final(store).content)
+    document = parse_blog_content(_final(store))
     assert len(document.sections) == 9
     assert outcome is not None
     assert outcome.image_count == 10
@@ -180,7 +179,7 @@ async def test_a_failed_image_makes_the_run_partial(tmp_path: Path) -> None:
     )
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_PARTIAL
-    document = parse_blog_content(_final(store).content)
+    document = parse_blog_content(_final(store))
     failed = document.sections[2]
     assert failed.image is None
     assert outcome.errors[0]["slot"] == failed.id
@@ -254,17 +253,35 @@ async def test_a_lost_lease_stops_silently(tmp_path: Path) -> None:
     assert store.outcomes == []
 
 
-async def test_an_owner_edit_during_the_run_is_a_conflict(tmp_path: Path) -> None:
-    class ConflictStore(FakeStore):
-        async def write_content(
-            self, lease: GenerationLease, write: ContentWrite
-        ) -> None:
-            raise GenerationConflictError(lease.post_id)
-
-    store = ConflictStore()
+async def test_an_article_the_owner_already_wrote_is_never_overwritten(
+    tmp_path: Path,
+) -> None:
+    store = FakeStore()
+    store.content = parse_blog_content({
+        "schema": "blog.v2",
+        "sections": [{"id": "sec_owner", "heading": None, "body_md": "Meu texto."}],
+    }).to_content()
     outcome = await _service(tmp_path, FakeWriter(), store).run(_job())
     assert outcome is not None
     assert outcome.errors[0]["code"] == ERR_GENERATION_CONFLICT
+    assert parse_blog_content(store.content).sections[0].body_md == "Meu texto."
+
+
+async def test_a_failed_image_write_discards_the_new_files(tmp_path: Path) -> None:
+    # Review: a failed write leaves no orphan files (AE-0424 discard).
+    class FailingAttach(FakeStore):
+        async def apply_document(
+            self, lease: GenerationLease, change: DocumentApply
+        ) -> None:
+            if change.images_generated:
+                self.fail_writes = True
+            await super().apply_document(lease, change)
+
+    store = FailingAttach()
+    outcome = await _service(tmp_path, FakeWriter(), store).run(_job(2))
+    assert outcome is not None
+    assert outcome.errors[0]["code"] == ERR_GENERATION_FAILED
+    assert list((tmp_path / POST_ID).iterdir()) == []
 
 
 async def test_an_unexpected_error_is_a_generic_failure(tmp_path: Path) -> None:
@@ -277,7 +294,7 @@ async def test_an_unexpected_error_is_a_generic_failure(tmp_path: Path) -> None:
 async def test_a_standalone_run_takes_the_writer_title(tmp_path: Path) -> None:
     store = FakeStore()
     await _service(tmp_path, FakeWriter(), store).run(_job(retitle=True))
-    assert store.contents[0].title == "Título do artigo"
+    assert store.outcomes[0].title == "Título do artigo"
 
 
 async def test_every_call_runs_in_a_named_blog_phase(
@@ -375,15 +392,13 @@ async def test_owner_edits_during_the_image_step_survive(tmp_path: Path) -> None
     assert document.sections[2].image is not None
     assert document.sections[2].image.url == "https://cdn.example/owner.jpg"
     assert document.cover is not None
-    assert _final(store).featured_image_url == document.cover.url
 
 
-def _images_only_job(prior: float = 0.0) -> GenerationJob:
+def _images_only_job() -> GenerationJob:
     return GenerationJob(
         lease=GenerationLease(post_id=POST_ID, lease_id="lease-b", lock_version=3),
         trace=GenerationTrace(project_id=POST_ID, user_id="user-1", post_id=POST_ID),
         titles=ImageTitles("Título", "Title"),
-        prior_image_spend_usd=prior,
     )
 
 
@@ -413,30 +428,23 @@ async def test_an_images_only_retry_fills_only_the_empty_slots(tmp_path: Path) -
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_COMPLETE
     assert outcome.image_count == 1
-    assert outcome.image_spend_usd == pytest.approx(0.25)
+    assert store.generated == 4 + 1  # the first run's 4 + this retry's 1
     after = parse_blog_content(store.content)
     assert [s.body_md for s in after.sections] == [s.body_md for s in before.sections]
     assert after.sections[0].image == before.sections[0].image
     assert after.sections[2].image is not None
 
 
-async def test_spend_from_earlier_attempts_counts_against_the_cap(
+async def test_images_generated_earlier_count_against_the_cap(
     tmp_path: Path,
 ) -> None:
-    # Review fix 3: the cap is per post, across attempts.
+    # Review fix 3: AE-0424's per-post cap counts every attempt + the editor.
     store = await _partial_store(tmp_path)
-    outcome = await _service(tmp_path, FakeWriter(), store, cap=1.25).run(
-        _images_only_job(prior=1.25)
+    assert store.generated == 4
+    outcome = await _service(tmp_path, FakeWriter(), store, cap=4).run(
+        _images_only_job()
     )
     assert outcome is not None
     assert outcome.image_count == 0
-    assert outcome.image_spend_usd == 0.0
     assert outcome.status == GENERATION_STATUS_PARTIAL
     assert outcome.errors[0]["code"] == "image_cost_cap_reached"
-
-
-async def test_a_full_run_records_its_image_spend(tmp_path: Path) -> None:
-    store = FakeStore()
-    outcome = await _service(tmp_path, FakeWriter(), store).run(_job(4))
-    assert outcome is not None
-    assert outcome.image_spend_usd == pytest.approx(1.25)

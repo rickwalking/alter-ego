@@ -27,7 +27,6 @@ from rag_backend.domain.constants.blog_generation import (
     GEN_KEY_HEARTBEAT_AT,
     GEN_KEY_IMAGE_COUNT,
     GEN_KEY_IMAGE_SLOTS,
-    GEN_KEY_IMAGE_SPEND_USD,
     GEN_KEY_KIND,
     GEN_KEY_LEASE_ID,
     GEN_KEY_MODE,
@@ -77,12 +76,6 @@ def status_of(metadata: object) -> str | None:
     return status if isinstance(status, str) else None
 
 
-def image_spend_of(metadata: object) -> float:
-    """What every attempt so far spent on images for this post (USD)."""
-    spend = generation_of(metadata).get(GEN_KEY_IMAGE_SPEND_USD)
-    return float(spend) if isinstance(spend, int | float) else 0.0
-
-
 def _attempt(metadata: object) -> int:
     attempt = generation_of(metadata).get(GEN_KEY_ATTEMPT)
     return attempt if isinstance(attempt, int) else 0
@@ -114,8 +107,6 @@ def started(metadata: object, start: GenerationStart) -> dict[str, object]:
             GEN_KEY_IMAGE_SLOTS: start.image_slots,
             GEN_KEY_IMAGE_COUNT: 0,
             GEN_KEY_MODE: start.mode,
-            # Carried across attempts: the cost cap is per post, not per run.
-            GEN_KEY_IMAGE_SPEND_USD: image_spend_of(metadata),
         },
     )
 
@@ -150,7 +141,6 @@ def finished(
             GEN_KEY_ERRORS: errors,
             GEN_KEY_RECOVERABLE: outcome.recoverable,
             GEN_KEY_IMAGE_COUNT: outcome.image_count,
-            GEN_KEY_IMAGE_SPEND_USD: image_spend_of(metadata) + outcome.image_spend_usd,
         },
     )
 
@@ -198,7 +188,6 @@ __all__ = [
     "finished",
     "generation_of",
     "heartbeat",
-    "image_spend_of",
     "is_stale",
     "lease_of",
     "reaped",

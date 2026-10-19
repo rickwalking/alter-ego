@@ -19,13 +19,10 @@ from rag_backend.application.services.blog.blog_image_batch import (
     BlogImageBatchDeps,
     BlogImageBatchService,
 )
-from rag_backend.application.services.blog.blog_image_service import (
-    BlogImageService,
-    BlogImageStore,
-)
+from rag_backend.application.services.blog.blog_image_service import BlogImageService
+from rag_backend.application.services.blog.blog_image_store import BlogImageStore
 from rag_backend.domain.models.blog_generation import (
-    ContentMerge,
-    ContentWrite,
+    DocumentApply,
     DraftArticle,
     DraftSection,
     GenerationLease,
@@ -141,7 +138,7 @@ def image_batch(
     store = BlogImageStore(root=root, cdn=AssetCdnService())
     service = BlogImageService(generator, store, image_prompt)
     return BlogImageBatchService(
-        BlogImageBatchDeps(images=service, concurrency=concurrency)
+        BlogImageBatchDeps(images=service, store=store, concurrency=concurrency)
     )
 
 
@@ -171,16 +168,19 @@ class FakeStore:
 
     ``lost`` makes every write raise ``LeaseLostError``; ``heartbeat_errors``
     makes that many heartbeats raise ``ConnectionError`` (a DB blip);
-    ``owner_edit`` mutates the content right before a merge (an owner save
-    during the image step).
+    ``owner_edit`` mutates the content right before a write (an owner save
+    during the run); ``fail_writes`` makes content writes fail (discard runs).
     """
 
     content: dict[str, object] = field(default_factory=dict)
-    contents: list[ContentWrite] = field(default_factory=list)
+    contents: list[dict[str, object]] = field(default_factory=list)
+    applied: list[DocumentApply] = field(default_factory=list)
     outcomes: list[GenerationOutcome] = field(default_factory=list)
     heartbeats: int = 0
     heartbeat_errors: int = 0
+    generated: int = 0
     lost: bool = False
+    fail_writes: bool = False
     owner_edit: Callable[[dict[str, object]], dict[str, object]] | None = None
 
     async def heartbeat(self, lease: GenerationLease) -> None:
@@ -190,24 +190,31 @@ class FakeStore:
             raise ConnectionError("db blip")
         self.heartbeats += 1
 
-    async def write_content(self, lease: GenerationLease, write: ContentWrite) -> None:
-        self._check(lease)
-        self.contents.append(write)
-        self.content = write.content
-        lease.lock_version += 1
-
     async def read_content(self, lease: GenerationLease) -> dict[str, object]:
         self._check(lease)
         return self.content
 
-    async def merge_content(self, lease: GenerationLease, merge: ContentMerge) -> None:
+    async def images_generated(self, lease: GenerationLease) -> int:
         self._check(lease)
-        if self.owner_edit is not None:
+        return self.generated
+
+    async def apply_document(
+        self, lease: GenerationLease, change: DocumentApply
+    ) -> None:
+        from rag_backend.domain.models.blog_document import parse_blog_content
+
+        self._check(lease)
+        if self.fail_writes:
+            if change.discard is not None:
+                change.discard()
+            raise ConnectionError("write failed")
+        if self.owner_edit is not None and self.content:
             self.content = self.owner_edit(self.content)
-        write = merge(self.content)
-        self.contents.append(write)
-        self.content = write.content
-        lease.lock_version += 1
+        latest = parse_blog_content(self.content or _bootstrap())
+        self.content = change.edit(latest).to_content()
+        self.contents.append(self.content)
+        self.applied.append(change)
+        self.generated += change.images_generated
 
     async def finish(self, lease: GenerationLease, outcome: GenerationOutcome) -> None:
         self._check(lease)
@@ -218,6 +225,16 @@ class FakeStore:
 
         if self.lost:
             raise LeaseLostError(lease.post_id)
+
+
+def _bootstrap() -> dict[str, object]:
+    return {
+        "schema": "blog.v2",
+        "cover": None,
+        "sections": [],
+        "translations": {},
+        "quality": None,
+    }
 
 
 def writer_failure() -> WriterFailedError:

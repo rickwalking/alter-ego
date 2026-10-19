@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from rag_backend.domain.models.blog_document import BlogDocument
 from rag_backend.domain.models.persona import PersonaProfile
 
 
@@ -162,38 +163,40 @@ class GenerationTrace:
     post_id: str
 
 
+DocumentEdit = Callable[[BlogDocument], BlogDocument]
+
+
 @dataclass(frozen=True)
-class ContentWrite:
-    """A lease-fenced content write (bumps ``lock_version``)."""
+class DocumentApply:
+    """One content write of a run, applied onto the row's LATEST document.
 
-    content: dict[str, object]
-    featured_image_url: str | None
+    ``edit`` maps the latest document to the new one (it may raise, e.g.
+    ``GenerationConflictError`` when the owner already wrote an article);
+    ``images_generated`` is counted against the post's image cap;
+    ``discard`` cleans up (new image files) when the write fails.
+    """
+
+    edit: DocumentEdit
+    images_generated: int = 0
     voice_score: float | None = None
-    title: str | None = None
-
-
-# Builds a content write from the row's CURRENT content (read under the fence).
-ContentMerge = Callable[[dict[str, object]], ContentWrite]
+    discard: Callable[[], None] | None = None
 
 
 @dataclass(frozen=True)
 class GenerationOutcome:
-    """The final, metadata-only write of a run.
-
-    ``image_spend_usd`` is what THIS attempt spent; the store adds it to the
-    post's cumulative ``generation.image_spend_usd``.
-    """
+    """The final, metadata-only write of a run (``title``: a standalone
+    post takes the writer's title)."""
 
     status: str
     errors: tuple[dict[str, object], ...] = ()
     recoverable: bool = False
     image_count: int = 0
-    image_spend_usd: float = 0.0
+    title: str | None = None
 
 
 __all__ = [
-    "ContentMerge",
-    "ContentWrite",
+    "DocumentApply",
+    "DocumentEdit",
     "DraftArticle",
     "DraftSection",
     "GatedLanguage",
