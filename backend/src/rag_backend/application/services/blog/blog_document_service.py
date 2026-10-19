@@ -38,6 +38,7 @@ from rag_backend.domain.models.blog_document import (
     BlogLanguageDocument,
     BlogSection,
     InvalidBlogDocumentError,
+    drop_invalid_translations,
     parse_blog_content,
 )
 from rag_backend.domain.models.blog_document_split import (
@@ -158,11 +159,23 @@ def _stable_section_ids(post_id: str) -> SectionIdFactory:
 
 
 def _adapt_in_memory(content: object, post_id: str) -> BlogDocument:
+    """Best text-only v2 view of a row that does not parse (never raises).
+
+    A v2-marked row keeps its PT document and loses only the translations that
+    do not parse; a legacy row is split like the cutover; anything else is one
+    empty section.
+    """
     new_id = _stable_section_ids(post_id)
-    try:
-        return parse_blog_content(migrate_content(content, new_id))
-    except InvalidBlogDocumentError:
-        return parse_blog_content(build_language_document("", new_id))
+    candidates = (
+        drop_invalid_translations(content),
+        migrate_content(content, new_id),
+    )
+    for candidate in candidates:
+        try:
+            return parse_blog_content(candidate)
+        except InvalidBlogDocumentError:
+            continue
+    return parse_blog_content(build_language_document("", new_id))
 
 
 __all__ = [

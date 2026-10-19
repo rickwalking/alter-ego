@@ -323,3 +323,16 @@ class TestReadFailSafeStability:
         assert first == second
         assert first != other
         parse_blog_content(first)
+
+
+class TestReadFailSafeKeepsPt:
+    # Scenario: A v2 row with an invalid translation keeps its PT document
+    def test_bad_translation_is_dropped_not_the_whole_post(self) -> None:
+        en = {"schema": BLOG_SCHEMA_V2, "sections": [_section(SEC_B)]}
+        content = _doc(
+            sections=[_section(body_md="Corpo PT")],
+            translations={"en-US": en, "en": en},
+        )
+        document = BlogDocumentService.read_document(content, "post-11")
+        assert document.sections[0].body_md == "Corpo PT"
+        assert set(document.translations) == {"en"}

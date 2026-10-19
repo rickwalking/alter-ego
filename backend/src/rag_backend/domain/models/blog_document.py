@@ -40,6 +40,7 @@ from rag_backend.domain.constants.blog_document import (
     ERR_BLOG_TRANSLATION_LANGUAGE_INVALID,
     ERR_INVALID_BLOG_DOCUMENT,
     KEY_SCHEMA,
+    KEY_TRANSLATIONS,
 )
 
 _FORBID_EXTRA = ConfigDict(extra="forbid", frozen=True)
@@ -191,6 +192,40 @@ def parse_blog_content(content: object) -> BlogDocument:
         ) from exc
 
 
+def _is_valid_translation(language: object, value: object) -> bool:
+    if not isinstance(language, str):
+        return False
+    if re.fullmatch(BLOG_LANGUAGE_PATTERN, language) is None:
+        return False
+    try:
+        BlogLanguageDocument.model_validate(value)
+    except ValidationError:
+        return False
+    return True
+
+
+def drop_invalid_translations(content: object) -> dict[str, object] | None:
+    """Repair a ``blog.v2``-marked row by dropping translations that do not parse.
+
+    Returns the repaired content, or ``None`` when ``content`` is not a v2 marked
+    object or no translation had to be dropped. The PT document is never
+    touched, so a bad translation (e.g. key ``en-US``) can no longer blank the
+    whole post on read or keep ``--verify`` failing forever.
+    """
+    if not isinstance(content, dict) or content.get(KEY_SCHEMA) != BLOG_SCHEMA_V2:
+        return None
+    raw = content.get(KEY_TRANSLATIONS, {})
+    translations = raw if isinstance(raw, dict) else {}
+    kept = {
+        str(language): value
+        for language, value in translations.items()
+        if _is_valid_translation(language, value)
+    }
+    if isinstance(raw, dict) and len(kept) == len(raw):
+        return None
+    return {**content, KEY_TRANSLATIONS: kept}
+
+
 __all__ = [
     "BlogDocument",
     "BlogImage",
@@ -199,5 +234,6 @@ __all__ = [
     "BlogRepetition",
     "BlogSection",
     "InvalidBlogDocumentError",
+    "drop_invalid_translations",
     "parse_blog_content",
 ]

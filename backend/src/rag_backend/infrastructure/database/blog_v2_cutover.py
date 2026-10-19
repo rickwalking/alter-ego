@@ -7,20 +7,24 @@ by ``python -m rag_backend.scripts.blog_v1_to_v2`` as an explicit deploy step
 
 - ``dry_run`` — per-row PT/translation section counts + oversized flags; no writes.
 - ``apply`` — batched, one transaction per batch under ``pg_advisory_xact_lock``;
-  a v2 row is skipped, so a second run changes nothing. ``featured_image_url``
-  is cleared with the cover (the column is the cover's projection).
-- ``verify`` — standalone-safe gate: lists every row (or translation) not at v2.
-- ``rollback`` — re-joins sections to ``{"markdown", "translations"}``; run it
-  from the new image BEFORE reverting the app code.
+  a migrated row is skipped, so a second run changes nothing. Also rewrites
+  every ``version_history`` snapshot and repairs v2 rows with bad translations;
+  ``featured_image_url`` is cleared with the cover and stashed for rollback
+  (see ``domain.models.blog_cutover_plan``).
+- ``verify`` — standalone-safe gate: lists every row whose content does not
+  pass the same strict ``parse_blog_content`` the read path uses.
+- ``rollback`` — re-joins sections to ``{"markdown", "translations"}`` (content
+  and snapshots) and restores a stashed ``featured_image_url``; run it from the
+  new image BEFORE reverting the app code.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 import structlog
-from sqlalchemy import inspect, select, text, update
+from sqlalchemy import Row, inspect, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.domain.constants.blog_document import (
@@ -29,11 +33,12 @@ from rag_backend.domain.constants.blog_document import (
     KEY_SECTIONS,
     KEY_TRANSLATIONS,
 )
-from rag_backend.domain.models.blog_document_split import (
-    is_v2_content,
-    is_v2_language_document,
-    migrate_content,
-    rollback_content,
+from rag_backend.domain.models.blog_cutover_plan import (
+    CutoverRowChange,
+    CutoverRowState,
+    is_valid_v2_content,
+    plan_apply,
+    plan_rollback,
 )
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
@@ -51,8 +56,8 @@ MODE_ROLLBACK = "rollback"
 _LOCK_SQL = text("SELECT pg_advisory_xact_lock(:key)")
 
 SessionMaker = async_sessionmaker[AsyncSession]
-Rewrite = Callable[[object], dict[str, object] | None]
-_Row = tuple[str, object, str | None]
+RowPlan = Callable[[CutoverRowState], CutoverRowChange | None]
+_Row = tuple[str, CutoverRowState]
 
 
 @dataclass
@@ -113,16 +118,6 @@ def describe_row(
     return row
 
 
-def _as_dict(content: object) -> dict[str, object]:
-    return content if isinstance(content, dict) else {}
-
-
-def _rollback_rewrite(content: object) -> dict[str, object] | None:
-    if not is_v2_language_document(content):
-        return None
-    return rollback_content(content)
-
-
 async def _table_exists(session: AsyncSession) -> bool:
     return await session.run_sync(
         lambda sync: inspect(sync.connection()).has_table(BlogPostModel.__tablename__)
@@ -145,13 +140,35 @@ async def _lock(session: AsyncSession) -> None:
     await session.execute(_LOCK_SQL, {"key": CUTOVER_ADVISORY_LOCK_KEY})
 
 
+_ROW_COLUMNS = (
+    BlogPostModel.id,
+    BlogPostModel.content,
+    BlogPostModel.featured_image_url,
+    BlogPostModel.version_history,
+    BlogPostModel.ai_generation_metadata,
+)
+
+
+def _to_rows(result_rows: Sequence[Row[tuple[object, ...]]]) -> list[_Row]:
+    return [
+        (
+            str(row[0]),
+            CutoverRowState(
+                content=row[1],
+                featured_image_url=row[2] if isinstance(row[2], str) else None,
+                version_history=row[3],
+                metadata=row[4],
+            ),
+        )
+        for row in result_rows
+    ]
+
+
 async def _load_batch(session: AsyncSession, ids: list[str]) -> list[_Row]:
     result = await session.execute(
-        select(
-            BlogPostModel.id, BlogPostModel.content, BlogPostModel.featured_image_url
-        ).where(BlogPostModel.id.in_(ids))
+        select(*_ROW_COLUMNS).where(BlogPostModel.id.in_(ids))
     )
-    return [(str(row[0]), row[1], row[2]) for row in result.all()]
+    return _to_rows(result.all())
 
 
 async def _write_row(
@@ -165,34 +182,25 @@ async def _write_row(
     )
 
 
-@dataclass(frozen=True)
-class _BatchJob:
-    rewrite: Rewrite
-    clear_featured: bool
-    # Report the v2 side: the rewrite for apply, the original row for rollback.
-    describe_original: bool = False
-
-
 async def _run_batch(
-    session: AsyncSession, ids: list[str], job: _BatchJob
+    session: AsyncSession, ids: list[str], plan: RowPlan
 ) -> list[CutoverRow]:
     changed: list[CutoverRow] = []
-    for post_id, content, featured in await _load_batch(session, ids):
-        rewritten = job.rewrite(content)
-        if rewritten is None:
+    for post_id, state in await _load_batch(session, ids):
+        change = plan(state)
+        if change is None:
             continue
-        values: dict[str, object] = {"content": rewritten}
-        if job.clear_featured:
-            values["featured_image_url"] = None
-        await _write_row(session, post_id, values)
-        cleared = featured if job.clear_featured else None
-        v2_side = content if job.describe_original else rewritten
-        changed.append(describe_row(post_id, _as_dict(v2_side), cleared))
+        await _write_row(session, post_id, change.values)
+        changed.append(_describe(post_id, change))
     return changed
 
 
+def _describe(post_id: str, change: CutoverRowChange) -> CutoverRow:
+    return describe_row(post_id, change.v2_content, change.cleared_featured_image_url)
+
+
 async def _run_batched(
-    maker: SessionMaker, job: _BatchJob, report: CutoverReport
+    maker: SessionMaker, plan: RowPlan, report: CutoverReport
 ) -> CutoverReport:
     ids = await _all_ids(maker)
     report.scanned = len(ids)
@@ -200,7 +208,7 @@ async def _run_batched(
         batch = ids[start : start + CUTOVER_BATCH_SIZE]
         async with maker() as session, session.begin():
             await _lock(session)
-            report.rows.extend(await _run_batch(session, batch, job))
+            report.rows.extend(await _run_batch(session, batch, plan))
     report.changed = len(report.rows)
     logger.info(
         "blog_v2_cutover_done",
@@ -212,31 +220,21 @@ async def _run_batched(
 
 
 async def apply(maker: SessionMaker) -> CutoverReport:
-    """Rewrite every non-v2 row in place (idempotent)."""
-    job = _BatchJob(rewrite=migrate_content, clear_featured=True)
-    return await _run_batched(maker, job, CutoverReport(mode=MODE_APPLY))
+    """Rewrite every non-migrated row (content + snapshots) in place."""
+    return await _run_batched(maker, plan_apply, CutoverReport(mode=MODE_APPLY))
 
 
 async def rollback(maker: SessionMaker) -> CutoverReport:
-    """Re-join every v2 row to the v1 ``{markdown, translations}`` shape."""
-    job = _BatchJob(
-        rewrite=_rollback_rewrite, clear_featured=False, describe_original=True
-    )
-    return await _run_batched(maker, job, CutoverReport(mode=MODE_ROLLBACK))
+    """Re-join every v2 row (content + snapshots) to the v1 shape."""
+    return await _run_batched(maker, plan_rollback, CutoverReport(mode=MODE_ROLLBACK))
 
 
 async def _scan(maker: SessionMaker) -> list[_Row]:
     async with maker() as session:
         if not await _table_exists(session):
             return []
-        result = await session.execute(
-            select(
-                BlogPostModel.id,
-                BlogPostModel.content,
-                BlogPostModel.featured_image_url,
-            ).order_by(BlogPostModel.id)
-        )
-        return [(str(row[0]), row[1], row[2]) for row in result.all()]
+        result = await session.execute(select(*_ROW_COLUMNS).order_by(BlogPostModel.id))
+        return _to_rows(result.all())
 
 
 async def dry_run(maker: SessionMaker) -> CutoverReport:
@@ -244,21 +242,21 @@ async def dry_run(maker: SessionMaker) -> CutoverReport:
     report = CutoverReport(mode=MODE_DRY_RUN)
     rows = await _scan(maker)
     report.scanned = len(rows)
-    for post_id, content, featured in rows:
-        migrated = migrate_content(content)
-        if migrated is not None:
-            report.rows.append(describe_row(post_id, migrated, featured))
+    for post_id, state in rows:
+        change = plan_apply(state)
+        if change is not None:
+            report.rows.append(_describe(post_id, change))
     report.changed = len(report.rows)
     return report
 
 
 async def verify(maker: SessionMaker) -> CutoverReport:
-    """List every row whose content (or any translation) is not ``blog.v2``."""
+    """List every row whose content fails the strict ``blog.v2`` parse."""
     report = CutoverReport(mode=MODE_VERIFY)
     rows = await _scan(maker)
     report.scanned = len(rows)
     report.non_v2_ids = [
-        post_id for post_id, content, _ in rows if not is_v2_content(content)
+        post_id for post_id, state in rows if not is_valid_v2_content(state.content)
     ]
     if report.non_v2_ids:
         logger.error("blog_v2_cutover_verify_failed", non_v2=len(report.non_v2_ids))

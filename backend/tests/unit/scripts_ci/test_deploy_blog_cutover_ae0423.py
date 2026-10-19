@@ -2,6 +2,7 @@
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 Scenario: The deploy runs the cutover after Postgres and before the app stack
+Scenario: A failed cutover never keeps the stack down
 """
 
 from __future__ import annotations
@@ -44,12 +45,27 @@ def test_cutover_uses_the_freshly_built_image_without_app_overlap() -> None:
     assert "run --rm --no-deps backend" in command
 
 
-def test_cutover_failure_aborts_the_deploy() -> None:
+def test_cutover_failure_never_keeps_the_stack_down() -> None:
+    """A failed cutover must not abort while the stack is down (2026-06-18)."""
     text = _script()
     cutover = _index(text, CUTOVER)
-    script_start = text.rfind("script: |", 0, cutover)
-    assert "set -e" in text[script_start:cutover]
-    assert "|| true" not in text[cutover : text.find("\n", cutover)]
+    stack_up = _index(text, f"{COMPOSE} up -d\n")
+    before = text[text.rfind(COMPOSE, 0, cutover) - 40 : cutover]
+    assert "set +e" in before
+    between = text[cutover:stack_up]
+    assert "BLOG_CUTOVER_EXIT=$?" in between
+    assert "set -e" in between
+    assert "exit 1" not in between
+
+
+def test_cutover_failure_fails_the_job_after_the_stack_is_up() -> None:
+    text = _script()
+    stack_up = _index(text, f"{COMPOSE} up -d\n")
+    final_check = text.rfind('if [ "$BLOG_CUTOVER_EXIT" -ne 0 ]')
+    assert final_check > stack_up
+    assert "exit 1" in text[final_check : text.find("fi", final_check)]
+    after = text[final_check:]
+    assert f"{COMPOSE} down" not in after
 
 
 def test_no_alembic_step_is_coupled_to_the_cutover() -> None:

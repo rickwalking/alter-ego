@@ -53,19 +53,17 @@ async def _seed_post(
     with_stamps: bool = False,
 ) -> str:
     post_id = str(uuid4())
-    row = BlogPostModel.from_entity(
-        {
-            "id": post_id,
-            "origin": origin.value,
-            "title": "Seed",
-            "slug": f"seed-{post_id}",
-            "status": status.value,
-            "content": {"markdown": "# seed"},
-            "ai_generation_metadata": ai_generation_metadata or {},
-            "published_at": _NOW if with_stamps else None,
-            "submitted_for_review_at": _NOW if with_stamps else None,
-        }
-    )
+    row = BlogPostModel.from_entity({
+        "id": post_id,
+        "origin": origin.value,
+        "title": "Seed",
+        "slug": f"seed-{post_id}",
+        "status": status.value,
+        "content": {"markdown": "# seed"},
+        "ai_generation_metadata": ai_generation_metadata or {},
+        "published_at": _NOW if with_stamps else None,
+        "submitted_for_review_at": _NOW if with_stamps else None,
+    })
     db.add(row)
     await db.flush()
     return post_id
@@ -192,9 +190,11 @@ class TestBlogPostHideService:
 
     def test_is_hide_target_only_matches_published_carousel(self) -> None:
         def row(origin: str, status: str) -> BlogPostModel:
-            return BlogPostModel.from_entity(
-                {"id": str(uuid4()), "origin": origin, "status": status}
-            )
+            return BlogPostModel.from_entity({
+                "id": str(uuid4()),
+                "origin": origin,
+                "status": status,
+            })
 
         assert is_hide_target(
             row(BlogPostOrigin.CAROUSEL.value, BlogPostStatus.PUBLISHED.value)

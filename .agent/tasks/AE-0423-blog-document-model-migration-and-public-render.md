@@ -82,8 +82,10 @@ ADR-0025 and `docs/architecture/blog-post-document-model.md`.
       row returns 404 (it does not resurrect v1 markdown).
 - [x] AC6: `--verify` asserts **zero non-v2 rows** (top-level and every translation value) and exits
       non-zero otherwise; the deploy runs
-      `--apply --verify` between Postgres-up and full-stack-up and aborts before traffic on failure.
-      A non-v2 row is a deploy error to fix, not a supported persisted shape. Until cutover runs, the
+      `--apply --verify` between Postgres-up and full-stack-up; on failure it still brings the stack
+      up and fails the job afterwards (review fix: never abort with the stack down). `--verify` uses
+      the strict `parse_blog_content`. A non-v2 row is a deploy error to fix, not a supported
+      persisted shape. Until cutover runs, the
       **read** path catches `InvalidBlogDocumentError` for a legacy-markdown row and synthesizes a
       text-only v2 document in memory (`cover/images = null`, `quality = null`), emits
       `blog_v2_non_migrated_rows`, never 500s, and never reads carousel slides. Writes stay strict
@@ -105,7 +107,8 @@ ADR-0025 and `docs/architecture/blog-post-document-model.md`.
       `--apply` changes nothing.
 - [x] AC12: `deploy.yml` runs the command with the freshly built backend image **after** Postgres is
       healthy and **before** the full stack is brought up; there is no old/new app overlap and no
-      Alembic step. A non-zero exit aborts the deploy before traffic. The same command is safe for
+      Alembic step. A non-zero exit is captured, `up -d` always runs, and the job fails afterwards
+      (never aborts with the stack down). The same command is safe for
       the operator to re-run ad hoc.
 
 
@@ -156,7 +159,7 @@ ADR-0025 and `docs/architecture/blog-post-document-model.md`.
 - Prompts/LLM: none
 - Observability: cutover logs (rows/languages migrated, oversized), `blog_v2_non_migrated_rows`
 - Deployment: explicit one-shot step in `.github/workflows/deploy.yml` after Postgres health and
-  before `up -d`; no Alembic dependency; non-zero `--verify` aborts the deploy
+  before `up -d`; no Alembic dependency; a non-zero exit never blocks `up -d` and fails the job after
 
 ## Dependencies
 
@@ -233,8 +236,8 @@ Pending.
   two heads; coupling this rewrite to the AE-0207 head/stamp reconcile would add unrelated risk.
   The command is explicit, operator-runnable, idempotent and independent of Alembic state.
 - **Explicit deploy ordering.** Build → `down` (no old/new overlap) → Postgres → `--apply --verify`
-  → `up -d`. A failed verify aborts before traffic; `deploy.yml` owns the step (documented here, not
-  edited in this docs-only plan).
+  → `up -d`. A failed cutover is captured, the stack still comes up (read fail-safe) and the job
+  fails afterwards; `deploy.yml` owns the step.
 - **Temporary read fail-safe.** A cutover that has not run must not 500 the public blog. Reads adapt
   legacy markdown in memory; writes stay strict; AE-0428 removes the adapter after prod `--verify`.
 - **Translations are migrated.** `content.translations` is `dict[str, str]`; each string gets the
@@ -249,6 +252,20 @@ Pending.
   nothing to carry.
 
 ### Implementation decisions (worker, 2026-10-19)
+
+- **Review fixes (orchestrator code review of PR #145):**
+  1. The deploy step never aborts with the stack down: the exit code is captured, `up -d` always
+     runs, and the job fails at the end (`deploy.yml`, ADR-0025 and the architecture doc updated).
+  2. `--verify` uses the strict `parse_blog_content`; `--apply` and the read fail-safe repair a
+     v2-marked row by dropping only the translations that fail the parse (PT is never blanked).
+  3. Blank translation strings are not migrated, and `resolveBlogLanguage` falls back to PT when a
+     translation has no non-empty section.
+  4. `--apply` rewrites every `version_history[*].snapshot` (and `--rollback` reverses it), so
+     pre-cutover versions stay restorable under strict writes. Done in the cutover only; no change
+     to `blog_post_versions.py` (AE-0424 owns it).
+  5. A cleared `featured_image_url` is stashed in `ai_generation_metadata.blog_v2_cutover` and
+     restored by `--rollback` when no cover was set since (a newer cover wins).
+  Low: a fence line with an info string no longer closes an open fence (CommonMark).
 
 - **Structural vs write-only rules.** `parse_blog_content` (every read and write) enforces the
   shape: `schema == "blog.v2"`, non-blank `image.alt`, `https:`/same-origin image URLs, unique

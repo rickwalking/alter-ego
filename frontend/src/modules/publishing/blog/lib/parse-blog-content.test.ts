@@ -92,4 +92,21 @@ describe("resolveBlogLanguage", () => {
     expect(resolveBlogLanguage(document, "es")).toBe(document);
     expect(resolveBlogLanguage(document, "pt")).toBe(document);
   });
+
+  // Scenario: A blank translation falls back to PT
+  it("falls back to PT when the translation has no non-empty section", () => {
+    const document = parseBlogContent({
+      ...DOCUMENT,
+      translations: {
+        en: {
+          schema: "blog.v2",
+          cover: null,
+          sections: [
+            { id: "sec_9", heading: null, body_md: "  ", image: null },
+          ],
+        },
+      },
+    });
+    expect(resolveBlogLanguage(document, "en")).toBe(document);
+  });
 });

@@ -41,7 +41,7 @@ SectionIdFactory = Callable[[], str]
 
 _H2_RE = re.compile(r"^## ")
 _H1_RE = re.compile(r"^# ")
-_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINE_BREAKS = "\r\n"
 _SECTION_SEPARATOR = "\n\n"
 _H2_PREFIX = "## "
@@ -68,11 +68,14 @@ class _FenceState:
         match = _FENCE_RE.match(line)
         if match is None:
             return
-        fence = match.group(1)
+        fence, rest = match.group(1), match.group(2)
         if not self.marker:
             self.marker = fence
             return
-        if fence[0] == self.marker[0] and len(fence) >= len(self.marker):
+        # CommonMark: a closing fence repeats the opening char, is at least as
+        # long, and carries no info string (```python inside a fence is code).
+        closes = fence[0] == self.marker[0] and len(fence) >= len(self.marker)
+        if closes and not rest.strip():
             self.marker = ""
 
     @property
@@ -155,14 +158,25 @@ def extract_legacy_markdown(content: object) -> str:
     return ""
 
 
+def _is_markdown_text(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def legacy_translations(content: object) -> dict[str, str]:
-    """String translations of a v1 row; non-string entries are dropped."""
+    """Non-blank string translations of a v1 row.
+
+    Non-string entries are dropped (never ``str(dict)``) and so are blank
+    strings: v1 rendered PT for an empty translation, so the cutover must not
+    turn it into an empty EN document that would hide the PT fallback.
+    """
     if not isinstance(content, dict):
         return {}
     raw = content.get(KEY_TRANSLATIONS)
     if not isinstance(raw, dict):
         return {}
-    return {str(lang): value for lang, value in raw.items() if isinstance(value, str)}
+    return {
+        str(lang): str(value) for lang, value in raw.items() if _is_markdown_text(value)
+    }
 
 
 def is_v2_language_document(value: object) -> bool:
@@ -187,7 +201,7 @@ def _migrate_translations(raw: object, new_id: SectionIdFactory) -> dict[str, ob
     for lang, value in raw.items():
         if is_v2_language_document(value):
             migrated[str(lang)] = value
-        elif isinstance(value, str):
+        elif isinstance(value, str) and _is_markdown_text(value):
             migrated[str(lang)] = build_language_document(value, new_id)
     return migrated
 

@@ -223,8 +223,8 @@ old slop": the old shape is migrated once and then removed from the code, not ca
   **schema** migrations, not for this cutover.
 - **Ordering is guaranteed by the deploy.** `deploy.yml` builds the image, `down`s the stack (no
   old/new overlap), starts Postgres, runs the one-shot with `--apply --verify` against the freshly
-  built backend image, and only then `up -d`s the app. A non-zero exit aborts the deploy before the
-  app serves traffic. The same command is safe for the operator to re-run.
+  built backend image, and then `up -d`s the app. A non-zero exit (verify hit, DB error, import
+  error) never blocks the stack: its exit code is captured, `up -d` always runs (the read fail-safe keeps non-migrated rows rendering), and the deploy job fails at the end so the failure alerts (an abort here would leave the stack down, the 2026-06-18 failure mode). The same command is safe for the operator to re-run.
 - **The parser is strict for writes, with a temporary read fail-safe.** `parse_blog_content(content)`
   accepts **only** v2 and raises on anything else; no write ever stores v1. If the cutover has not
   run (operator error, partial deploy), the public/editor read catches `InvalidBlogDocumentError`
@@ -566,7 +566,8 @@ The v2 refactor deletes the v1 machinery instead of leaving it behind a flag (AE
   than carried.
 - **Bad:** a new writer agent + prompts + image cost per post; a one-shot data cutover to run on
   deploy (all rows become v2 before the new code serves, so there is no partial-state window; a
-  failed verify aborts the deploy and a temporary read fail-safe keeps reads up); A briefly renders
+  failed cutover still brings the stack up, fails the deploy job afterwards, and a temporary read
+  fail-safe keeps reads up); A briefly renders
   legacy markdown (without slides) until B's cutover; sections are not queryable relationally
   (acceptable for a per-post document, ADR-0006).
 - **Neutral:** the review/schedule state machine and endpoints already exist and are kept; the change

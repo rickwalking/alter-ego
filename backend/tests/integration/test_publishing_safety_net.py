@@ -287,24 +287,22 @@ class PubEnv:
             from rag_backend.infrastructure.database.models import BlogPostModel
 
             session.add(
-                BlogPostModel.from_entity(
-                    {
-                        "id": str(uuid4()),
-                        "project_id": project_id,
-                        "origin": BlogPostOrigin.CAROUSEL.value,
-                        "title": FIXTURE_TITLE,
-                        "slug": f"carousel-{project_id}",
-                        "status": BlogPostStatus.PUBLISHED.value,
-                        "content": {
-                            "markdown": FIXTURE_BLOG_PT,
-                            "translations": {
-                                "pt": FIXTURE_BLOG_PT,
-                                "en": FIXTURE_BLOG_EN,
-                            },
+                BlogPostModel.from_entity({
+                    "id": str(uuid4()),
+                    "project_id": project_id,
+                    "origin": BlogPostOrigin.CAROUSEL.value,
+                    "title": FIXTURE_TITLE,
+                    "slug": f"carousel-{project_id}",
+                    "status": BlogPostStatus.PUBLISHED.value,
+                    "content": {
+                        "markdown": FIXTURE_BLOG_PT,
+                        "translations": {
+                            "pt": FIXTURE_BLOG_PT,
+                            "en": FIXTURE_BLOG_EN,
                         },
-                        "distribution": build_distribution(project),
-                    }
-                )
+                    },
+                    "distribution": build_distribution(project),
+                })
             )
             if approved_for_publish:
                 model = await session.get(CarouselProjectModel, project_id)

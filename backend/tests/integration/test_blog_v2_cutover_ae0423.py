@@ -326,3 +326,68 @@ class TestAdvisoryLock:
         session = _FakeDialectSession("sqlite")
         await blog_v2_cutover._lock(cast(AsyncSession, session))
         assert session.executed == []
+
+
+async def _insert_full(
+    maker: async_sessionmaker[AsyncSession], **fields: object
+) -> str:
+    post_id = str(uuid4())
+    async with maker() as session:
+        session.add(
+            BlogPostModel(
+                id=post_id, title="T", slug=f"s-{post_id}", status="draft", **fields
+            )
+        )
+        await session.commit()
+    return post_id
+
+
+V2_EN_US = {
+    "schema": BLOG_SCHEMA_V2,
+    "cover": None,
+    "sections": [{"id": "sec_1", "heading": "A", "body_md": "Corpo", "image": None}],
+    "translations": {"en-US": {"schema": BLOG_SCHEMA_V2, "sections": []}},
+    "quality": None,
+}
+
+
+class TestReviewFixes:
+    # Scenario: --verify uses the same strict parse as the read path
+    async def test_verify_flags_a_marker_v2_row_that_fails_the_parse(self, db) -> None:
+        _, maker = db
+        post_id = await _insert_full(maker, content=V2_EN_US)
+        assert (await blog_v2_cutover.verify(maker)).non_v2_ids == [post_id]
+        # Scenario: A v2 row with an invalid translation keeps its PT document
+        await blog_v2_cutover.apply(maker)
+        content = (await _row(maker, post_id)).content
+        assert content["translations"] == {}
+        assert content["sections"] == V2_EN_US["sections"]
+        assert (await blog_v2_cutover.verify(maker)).non_v2_ids == []
+
+    # Scenario: Pre-cutover versions stay restorable
+    # Scenario: Rollback restores the featured_image_url the cutover cleared
+    async def test_snapshots_and_featured_image_round_trip(self, db) -> None:
+        _, maker = db
+        history = [{"version_number": 1, "snapshot": {"markdown": "## Old\n\nv1"}}]
+        post_id = await _insert_full(
+            maker,
+            content={"markdown": GPT_MD},
+            featured_image_url="https://cdn/old.jpg",
+            version_history=history,
+        )
+        await blog_v2_cutover.apply(maker)
+        row = await _row(maker, post_id)
+        assert row.featured_image_url is None
+        snapshot = row.version_history[0]["snapshot"]
+        assert parse_blog_content(snapshot).sections[0].heading == "Old"
+
+        await blog_v2_cutover.rollback(maker)
+        row = await _row(maker, post_id)
+        assert row.featured_image_url == "https://cdn/old.jpg"
+        assert row.version_history == [
+            {
+                "version_number": 1,
+                "snapshot": {"markdown": "## Old\n\nv1", "translations": {}},
+            }
+        ]
+        assert "blog_v2_cutover" not in (row.ai_generation_metadata or {})

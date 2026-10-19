@@ -54,13 +54,19 @@ export function tryParseBlogContent(content: unknown): BlogDocument | null {
   }
 }
 
+function hasBody(document: BlogLanguageDocument): boolean {
+  return document.sections.some((section) => section.body_md.trim() !== "");
+}
+
 /**
- * The language subtree to render: `translations[lang]` when present, else the
- * canonical PT document (a missing translation never 404s).
+ * The language subtree to render: `translations[lang]` when it has at least
+ * one non-empty section, else the canonical PT document (a missing or blank
+ * translation never renders an empty page and never 404s, as in v1).
  */
 export function resolveBlogLanguage(
   document: BlogDocument,
   lang: string,
 ): BlogLanguageDocument {
-  return document.translations[lang] ?? document;
+  const translation = document.translations[lang];
+  return translation && hasBody(translation) ? translation : document;
 }

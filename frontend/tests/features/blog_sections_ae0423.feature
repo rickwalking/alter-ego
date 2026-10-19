@@ -92,6 +92,11 @@ Feature: Public blog renders the v2 document (AE-0423)
     Then the English sections render
     And a missing en translation falls back to the PT sections
 
+  Scenario: A blank translation falls back to PT
+    Given content.translations.en has no section with a non-empty body
+    When a visitor loads the en locale
+    Then the PT sections render (never an empty EN page)
+
   Scenario: PT/EN content buttons switch the rendered document
     Given a published post with PT and EN documents
     When a visitor clicks "EN" on the post
