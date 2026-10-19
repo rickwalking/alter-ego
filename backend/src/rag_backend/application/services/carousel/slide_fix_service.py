@@ -105,6 +105,7 @@ def _score_entry(previous: object, result: SlideFixResult) -> dict[str, object]:
     if result.unscored_ticks > 0:
         return {
             **detail,
+            PERSONA_SCORE_OVERALL_KEY: result.score,
             PERSONA_SCORE_RESCORE_PENDING_KEY: True,
             PERSONA_SCORE_UNSCORED_TICKS_KEY: result.unscored_ticks,
         }
@@ -120,7 +121,7 @@ def _scores_patch(
         return None
     scores: dict[str, object] = dict(raw)
     for result in fixed:
-        if result.score is None and result.unscored_ticks == 0:
+        if result.score is None:
             continue
         key = PERSONA_SCORE_SLIDE_KEY.format(index=result.slide_index)
         scores[key] = _score_entry(scores.get(key), result)

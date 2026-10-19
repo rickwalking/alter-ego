@@ -264,6 +264,8 @@ async def _rescore_stale(target: SlideTarget, ctx: LoopContext) -> SlideTarget:
 
 
 def _fixed(state: _State) -> SlideFixResult:
+    # A slide that never had a score has no stale score to re-score.
+    stale = state.target.score is not None
     return SlideFixResult(
         slide_index=state.target.slide_index,
         fixed=True,
@@ -271,7 +273,7 @@ def _fixed(state: _State) -> SlideFixResult:
         issues=(),
         attempts=state.attempts,
         score=state.target.score,
-        unscored_ticks=state.target.unscored_ticks,
+        unscored_ticks=state.target.unscored_ticks if stale else 0,
     )
 
 
