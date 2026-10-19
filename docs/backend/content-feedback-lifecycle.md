@@ -21,7 +21,7 @@ slide copy.
 |-------|---------|
 | `phase_feedback[phase]` | Active note texts (API shape unchanged). |
 | `phase_feedback_notes[phase]` | The same notes with `source` (`human` / `autopilot`) and `added_at`. |
-| `phase_feedback_history[phase]` | Consumed notes: `status` `applied` / `dropped` / `migrated`, plus `settled_at`. Read it with `content_feedback_lifecycle.feedback_history(state, phase)`. |
+| `phase_feedback_history[phase]` | Consumed notes: `status` `applied` / `unchanged` / `dropped` / `migrated`, plus `settled_at`. Read it with `content_feedback_lifecycle.feedback_history(state, phase)`. |
 | `content_artifacts_parked` | True while the graph is parked at the content review and that pass's artifacts are saved. |
 
 ## Lifecycle
@@ -30,7 +30,10 @@ slide copy.
    autopilot sends `structured_feedback.feedback_source = "autopilot"`.
 2. **Applying a note.** When the content ensure regenerates with the active notes, it moves
    them to the history as `applied`. A failed regeneration (invalid JSON) keeps them active
-   for the retry.
+   for the retry. AE-0430: the regeneration request also carries the content gate's
+   blocking violations (one line each: slide, locale, field, rule and limit), the targeted
+   gate repair runs after it (see `slide-copy-validators.md`), and the note is recorded as
+   `unchanged` instead of `applied` when the visible slide copy did not change.
 3. **Parking.** The content node puts that pass's artifact updates on the interrupt payload
    (`parked_artifact_updates`). Once the graph parks, `CarouselWorkflowEngine` writes them to
    the checkpoint, sets `content_artifacts_parked` and `content_approved=False`, then re-parks
