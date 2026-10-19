@@ -85,6 +85,10 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
 
     for module in (blog_generation_service, blog_image_batch):
         monkeypatch.setattr(module, "blog_phase_trace", lambda _scope: nullcontext())
+    # The editor's single-image service (AE-0424) traces with its own helper.
+    from rag_backend.application.services.blog import blog_image_service as _single
+
+    monkeypatch.setattr(_single, "blog_ai_propagate", lambda *_a: nullcontext())
 
 
 def _service(
