@@ -189,11 +189,32 @@ default. Image generation therefore produces that many section images + 1 cover.
 generation uses the same content-mode default because it has no project. There is no
 `BLOG_IMAGE_MAX`; `BLOG_IMAGE_COST_CAP` is the only ceiling.
 
+#### As built (AE-0425)
+
+- **Pipeline:** `BlogWriterAgent.draft` (fast) → `normalize_section_count` (merge extras / split long
+  sections on paragraph breaks, else `section_count_mismatch`) → `BlogQualityGate` per language (PT
+  strips any research sentence copied verbatim, then `PersonaAgent.evaluate_match` + the
+  deterministic scan; `< 70` or any finding → `judge` on the **reasoning** model writes revision
+  notes → exactly one `rewrite` on the fast model → re-scored) → store the image-less document →
+  `BlogImageService` (cover first, `BLOG_IMAGE_CONCURRENCY`, `BLOG_IMAGE_COST_CAP` in USD at
+  ~$0.25/image) → store the document with images → `complete` / `partial`.
+- **Run state:** `ai_generation_metadata.generation = {status, kind, started_at, heartbeat_at,
+  finished_at, lease_id, attempt, errors[], recoverable, request, warnings[], image_slots,
+  image_count}`. Every write is a compare-and-set on `generation.lease_id` (JSON path) **and**
+  `lock_version`; a retry and the reaper rotate the lease and bump `lock_version`.
+- **Retry:** `POST /blog-posts/{id}/generation/retry` (same row, new attempt) — `from-carousel` 409s
+  for any existing row, so the retry cannot go through it.
+- **Images store:** `<CAROUSEL_OUTPUT_DIR>/blog-images/<post_id>/<uuid>.jpg`, served by
+  `GET /api/blog-images/<post_id>/<file>` (public when the post is published, author/admin
+  otherwise). EN reuses the PT image file with its own alt text.
+- **Private carousel:** the run records `warnings: ["carousel_private"]`; the editor banner warns
+  that the published post would 404 and links to the carousel's visibility control.
+
 ### 3.2 Generate standalone
 
-Same as 3.1 with the input being `{topic, persona_id?, language?, source_urls?[]}`; research is
-gathered (or a brief is used) instead of a carousel artifact. `origin = "standalone"`, `project_id =
-null`.
+Same as 3.1 with the input being `{topic, persona_id?, language?, source_urls?[]}`; the writer gets
+the topic and the URLs as references (never fetched — no SSRF) instead of a carousel artifact.
+`origin = "standalone"`, `project_id = null`, and the post takes the writer's title.
 
 ### 3.3 Edit a section image
 
@@ -490,6 +511,38 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
 
 `--dry-run` shows per-row PT/translation counts and flags oversized sections. `--verify` is also safe
 to run at any time as a health check (exit 0 = all rows v2).
+
+### Hidden-post rebuild runbook (AE-0426)
+
+Posts hidden by AE-0422 keep a durable `ai_generation_metadata.hidden_bad_post` marker. Rebuild them
+through the writer pipeline **inside the prod backend container**, so generated images land in the
+mounted `carousel_output_dir/blog-images` volume (running it from a bare checkout writes images
+outside that store):
+
+```
+docker compose exec backend \
+  python -m rag_backend.scripts.rebuild_hidden_posts --dry-run
+docker compose exec backend \
+  python -m rag_backend.scripts.rebuild_hidden_posts --apply --only <post-id>
+```
+
+Start with `--only <post-id>` (repeatable) for one post. `--apply` otherwise **defaults to
+`--max-posts 1`** (an apply-only spend cap); raise it explicitly for a batch
+(`--apply --max-posts 10`). `--limit N` narrows the selection list first; the summary reports any rows
+omitted by either cap. The dry run is never truncated by `--max-posts`, so the full target list (and
+its missing-material skips) stays visible. The dry run performs the
+free DB-only material checks, so missing carousels and carousels without `long_form_notes` show as
+skips before any paid generation.
+
+The command selects marked rows whose `rebuilt_at` is absent, reuses each existing row (no duplicate)
+and writes a `blog.v2` **draft** with cover/section images and stored PT/EN scores. Starting an
+attempt replaces the hidden legacy body with a fresh v2 document (the AE-0424 slot path only edits
+v2) and the draft takes the writer's title. Published rows
+are skipped as `currently_published` unless `--include-published` is passed (a rebuild flips them
+back to `draft`). It never publishes; the owner reviews and publishes. A successful or `partial`
+attempt stamps `hidden_bad_post.rebuilt_at`, so re-runs are no-ops; `failed` leaves it unset for a
+retry. The summary prints selected/rebuilt/skipped/failed (and omitted), the process exits non-zero
+when any post failed, and each post emits its own Langfuse trace (flushed before exit).
 
 ### Worked example (real v1 PT post)
 

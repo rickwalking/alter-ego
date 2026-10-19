@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
+import { isGenerationInProgress } from "../generation/generation-state";
 import { blogPostKeys, fetchBlogPostDetail } from "../blog-post-requests";
 import {
   BlogEditorRequestError,
@@ -103,7 +104,17 @@ function useEditorSession(postId: string) {
   const [session, setSession] = useState<EditorSession | null>(null);
   // Adjust state while rendering (not in an effect): start a session the
   // first time a post loads; later server answers update it explicitly.
-  if (loaded && session?.base.id !== loaded.id) {
+  // AE-0425: the generation run owns the document while it writes it. A newer
+  // server version is adopted (replacing the read-only session) when EITHER
+  // copy is generating: the editor's copy (the run's writes, then its final
+  // status) or the server's (a Retry clicked here flipped it to in_progress,
+  // so the editor locks at once instead of staying editable on "failed").
+  const stale =
+    loaded !== null &&
+    session !== null &&
+    session.base.lock_version !== loaded.lock_version &&
+    (isGenerationInProgress(session.base) || isGenerationInProgress(loaded));
+  if (loaded && (session?.base.id !== loaded.id || stale)) {
     setSession(sessionFromPost(loaded));
   }
   return { query, session, setSession };

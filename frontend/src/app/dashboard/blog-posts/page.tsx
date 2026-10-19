@@ -15,6 +15,7 @@ import { BlogPostsFilters } from "@/app/dashboard/blog-posts/blog-posts-filters"
 import { BlogPostsList } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import { DeleteConfirmModal } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
+import { GenerateBlogPostAction } from "@/app/dashboard/blog-posts/generate-blog-post-modal";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 import { BlogPostsPager } from "@/app/dashboard/blog-posts/blog-posts-pager";
 import {
@@ -85,6 +86,7 @@ export default function BlogPostsPage(): React.ReactElement {
             >
               {t("newPost")}
             </NeonButton>
+            <GenerateBlogPostAction />
           </>
         }
       />

@@ -186,7 +186,7 @@
     "backHome": "Back to home",
     "backToPosts": "Back to posts",
     "readMore": "Read more",
-    "noPosts": "No blog posts yet. Generate a carousel to create your first post.",
+    "noPosts": "No blog posts yet. Generate one with AI, or create one from a carousel.",
     "loading": "Loading blog posts...",
     "error": "Failed to load blog posts",
     "languageSwitch": {
@@ -1010,6 +1010,16 @@
     "notReady": {
       "title": "Not ready to publish yet",
       "body": "The PDF, the slide images and the publishing actions appear once the carousel reaches the final review. Continue the review in the workspace."
+    },
+    "blogFromCarousel": {
+      "title": "Blog post",
+      "body": "Write one continuous article in your voice from this carousel's research and notes, with its own cover and one image per slide. It is created as a draft.",
+      "create": "Create blog post from this carousel",
+      "creating": "Starting…",
+      "failed": "Could not create the blog post. Try again.",
+      "privateWarning": "This carousel is private: the post will return 404 on the public site until the carousel is public.",
+      "exists": "This carousel already has a blog post, so no new one was created.",
+      "openExisting": "Open the existing post"
     }
   },
   "auth": {
@@ -1285,6 +1295,28 @@
           "failed": "The action failed. Try again.",
           "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP."
         }
+      },
+      "generation": {
+        "generateWithAi": "Generate with AI",
+        "modalTitle": "Generate a blog post",
+        "topicLabel": "Topic",
+        "topicPlaceholder": "What should the post argue?",
+        "topicHint": "One continuous article in your voice, with a cover and one image per section. It is saved as a draft.",
+        "submit": "Generate draft",
+        "cancel": "Cancel",
+        "starting": "Starting…",
+        "startFailed": "Could not start the generation. Try again.",
+        "inProgress": "Writing this post in your voice and generating {slots, plural, =0 {its images} one {# image} other {# images (cover + one per section)}}… This page updates by itself.",
+        "partial": "The post is ready: {count} of {slots} images were generated. The empty slots can be filled in the editor.",
+        "failed": "The generation failed. Your draft was kept.",
+        "retry": "Retry generation",
+        "retrying": "Retrying…",
+        "retryFailed": "The retry could not start. Try again in a minute.",
+        "carouselPrivate": "This post comes from a private carousel: once published it returns 404 on the public site. Make the carousel public, or keep the post as a draft.",
+        "interrupted": "The generation was interrupted by a restart. Your draft and any finished sections were kept.",
+        "carouselVisibilityLink": "Open the carousel's visibility settings",
+        "retryImages": "Generate the missing images",
+        "saveBeforeRetry": "Save (or discard) your unsaved changes before retrying: the generation replaces what the editor shows."
       }
     },
     "analytics": {

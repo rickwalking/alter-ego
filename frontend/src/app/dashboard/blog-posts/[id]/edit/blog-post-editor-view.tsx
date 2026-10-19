@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import {
+  BlogGenerationStatus,
   BlogSectionEditor,
   MigrationBanner,
+  isGenerationInProgress,
   applySuggestion,
   useBlogEditorActions,
   useBlogEditorData,
@@ -45,6 +47,8 @@ export function BlogPostEditorView({
   const { draft, validation, error } = editor;
   const migrationPending =
     !draft || error?.kind === BLOG_EDITOR_ERROR_KINDS.MIGRATION_PENDING;
+  // AE-0425: the writer/image run owns the document until it finishes.
+  const generating = isGenerationInProgress(post ?? null);
   const leave = (): void => {
     if (confirmLeave()) {
       router.push(ROUTE_PATHS.BLOG_POSTS);
@@ -66,12 +70,17 @@ export function BlogPostEditorView({
           </NeonButton>
           <NeonButton
             onClick={() => void editor.handleSave()}
-            disabled={editor.saving || !editor.dirty || migrationPending}
+            disabled={
+              editor.saving || !editor.dirty || migrationPending || generating
+            }
           >
             {editor.saving ? t("saving") : t("save")}
           </NeonButton>
         </div>
       </div>
+      {post && (
+        <BlogGenerationStatus postId={post.id} unsavedChanges={editor.dirty} />
+      )}
       {migrationPending && <MigrationBanner detail={error?.detail ?? null} />}
       {error && !migrationPending && (
         <p className="mb-4 text-sm" style={{ color: NEON_RED }} role="alert">
@@ -79,57 +88,64 @@ export function BlogPostEditorView({
         </p>
       )}
       {draft && validation && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            <BlogPostEditFields
-              title={draft.title}
-              onTitleChange={(title) =>
-                editor.updateDraft((d) => ({ ...d, title }))
-              }
-              excerpt={draft.excerpt}
-              onExcerptChange={(excerpt) =>
-                editor.updateDraft((d) => ({ ...d, excerpt }))
-              }
-              validation={validation}
-            />
-            <BlogSectionEditor
-              document={draft.document}
-              language={editor.language}
-              validation={validation.document}
-              statusOf={actions.statusOf}
-              onLanguageChange={editor.setLanguage}
-              onDocumentChange={(edit) =>
+        <fieldset
+          disabled={generating}
+          aria-busy={generating}
+          data-testid="blog-editor-fields"
+          className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+        >
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-4 lg:col-span-2">
+              <BlogPostEditFields
+                title={draft.title}
+                onTitleChange={(title) =>
+                  editor.updateDraft((d) => ({ ...d, title }))
+                }
+                excerpt={draft.excerpt}
+                onExcerptChange={(excerpt) =>
+                  editor.updateDraft((d) => ({ ...d, excerpt }))
+                }
+                validation={validation}
+              />
+              <BlogSectionEditor
+                document={draft.document}
+                language={editor.language}
+                validation={validation.document}
+                statusOf={actions.statusOf}
+                onLanguageChange={editor.setLanguage}
+                onDocumentChange={(edit) =>
+                  editor.updateDraft((d) => ({
+                    ...d,
+                    document: edit(d.document),
+                  }))
+                }
+                onGenerateImage={(slot, prompt) =>
+                  void actions.generateImage(slot, prompt)
+                }
+                onRewrite={(sectionId) => void actions.rewrite(sectionId)}
+                onGenerateTranslation={() => void actions.generateTranslation()}
+                onSelectText={setSelection}
+              />
+            </div>
+            <BlogEditorSidebar
+              editor={editor}
+              review={review}
+              data={data}
+              selection={selection}
+              slotsPending={actions.anyPending}
+              onApplySuggestion={(text) =>
                 editor.updateDraft((d) => ({
                   ...d,
-                  document: edit(d.document),
+                  document: applySuggestion(d.document, {
+                    language: editor.language,
+                    selection,
+                    text,
+                  }),
                 }))
               }
-              onGenerateImage={(slot, prompt) =>
-                void actions.generateImage(slot, prompt)
-              }
-              onRewrite={(sectionId) => void actions.rewrite(sectionId)}
-              onGenerateTranslation={() => void actions.generateTranslation()}
-              onSelectText={setSelection}
             />
           </div>
-          <BlogEditorSidebar
-            editor={editor}
-            review={review}
-            data={data}
-            selection={selection}
-            slotsPending={actions.anyPending}
-            onApplySuggestion={(text) =>
-              editor.updateDraft((d) => ({
-                ...d,
-                document: applySuggestion(d.document, {
-                  language: editor.language,
-                  selection,
-                  text,
-                }),
-              }))
-            }
-          />
-        </div>
+        </fieldset>
       )}
     </div>
   );

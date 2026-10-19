@@ -94,6 +94,16 @@ export { useSeoAnalysis } from "./blog/hooks/use-seo-analysis";
 export type { SeoAnalysisResult } from "./blog/hooks/types";
 export { useEditorShortcuts } from "./blog/hooks/use-editor-shortcuts";
 
+/* --- blog: generation (AE-0425) --- */
+export { BlogGenerationStatus } from "./blog/generation/blog-generation-status";
+export { CreateBlogFromCarousel } from "./blog/generation/create-blog-from-carousel";
+export { generateStandaloneBlogPost } from "./blog/generation/generation-requests";
+export { isGenerationInProgress } from "./blog/generation/generation-state";
+export {
+  GENERATION_TOPIC_MAX_CHARS,
+  GENERATION_TOPIC_MIN_CHARS,
+} from "./blog/generation/generation-constants";
+
 /* --- blog: adapters --- */
 export { mapProjectToBlogPostCard } from "./blog/adapters/blog-post-adapter";
 

@@ -7,6 +7,11 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.domain.constants.blog_generation import (
+    DEFAULT_BLOG_GENERATION_STALE_SECONDS,
+    DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS,
+    DEFAULT_BLOG_IMAGE_CONCURRENCY,
+)
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.domain.constants.slide_fix import (
     AUTOFIX_ESCALATION_ATTEMPTS,
@@ -317,6 +322,16 @@ class Settings(BaseSettings):
     workflow_run_heartbeat_stale_seconds: int = 180
     workflow_run_reap_observations: int = 3
     workflow_run_overdue_minutes: int = 60
+    # AE-0425 (ADR-0025): blog writer + GPT images. Concurrency of the image
+    # step (the per-post cap is AE-0424's blog_image_cost_cap), the run bound
+    # and the heartbeat age after which the worker-tick reaper fails a run.
+    blog_image_concurrency: int = Field(default=DEFAULT_BLOG_IMAGE_CONCURRENCY, ge=1)
+    blog_generation_timeout_seconds: int = Field(
+        default=DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS, ge=1
+    )
+    blog_generation_stale_seconds: int = Field(
+        default=DEFAULT_BLOG_GENERATION_STALE_SECONDS, ge=1
+    )
 
     feature_flag_editorial_workflow: bool = True
     feature_flag_quality_checks: bool = True

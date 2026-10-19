@@ -32,6 +32,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
+from rag_backend.domain.constants.blog_rebuild import HIDDEN_BAD_POST_KEY
 from rag_backend.domain.constants.workflow_events import (
     AGGREGATE_TYPE_BLOG_POST,
     EVENT_SOURCE_BLOG_WORKFLOW,
@@ -42,7 +43,6 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-HIDDEN_BAD_POST_KEY = "hidden_bad_post"
 DEFAULT_HIDE_REASON = "legacy carousel-origin post (AE-0422 AC6)"
 DEFAULT_HIDE_ACTOR = "system:ae-0422-hide"
 
