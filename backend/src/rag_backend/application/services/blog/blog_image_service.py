@@ -11,13 +11,12 @@ leaves the slot unchanged.
 
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from rag_backend.application.services.asset_cdn_service import AssetCdnService
+from rag_backend.application.services.blog.blog_image_store import BlogImageStore
 from rag_backend.application.services.blog_workflow_observability import (
     blog_ai_propagate,
 )
@@ -26,10 +25,7 @@ from rag_backend.application.services.image_prompt_sanitizer import (
 )
 from rag_backend.domain.constants.blog_document import BLOG_IMAGE_SOURCE_GENERATED
 from rag_backend.domain.constants.blog_editor import (
-    BLOG_IMAGE_EXTENSION,
     BLOG_IMAGE_MODEL,
-    BLOG_IMAGES_DIR_NAME,
-    BLOG_IMAGES_ROUTE_PREFIX,
     ERR_BLOG_IMAGE_GENERATION_FAILED,
     ERR_BLOG_IMAGE_PERSIST_FAILED,
     IMAGE_PROMPT_BODY_CHARS,
@@ -46,31 +42,6 @@ class BlogImageError(RuntimeError):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
-
-
-@dataclass(frozen=True)
-class BlogImageStore:
-    """Where blog image bytes live and how they are addressed."""
-
-    root: Path
-    cdn: AssetCdnService
-
-    def new_path(self, post_id: str) -> Path:
-        """A fresh ``<root>/<post_id>/<uuid>.jpg`` path (directory created)."""
-        directory = self.root / post_id
-        directory.mkdir(parents=True, exist_ok=True)
-        return directory / f"{uuid.uuid4()}{BLOG_IMAGE_EXTENSION}"
-
-    def url_for(self, post_id: str, filename: str) -> str:
-        """The canonical URL: CDN when enabled, else the same-origin route."""
-        if self.cdn.enabled:
-            return self.cdn.resolve_url(f"{BLOG_IMAGES_DIR_NAME}/{post_id}/{filename}")
-        return f"{BLOG_IMAGES_ROUTE_PREFIX}/{post_id}/{filename}"
-
-    def file_for(self, post_id: str, filename: str) -> Path | None:
-        """The stored file, or ``None`` when it does not exist."""
-        path = self.root / post_id / filename
-        return path if path.is_file() else None
 
 
 @dataclass(frozen=True)
@@ -91,10 +62,6 @@ def default_scene(heading: str | None, body_md: str) -> str:
 
 def _clean_scene(scene: str) -> str:
     return sanitize_image_prompt(scene.strip())[:IMAGE_PROMPT_MAX_CHARS]
-
-
-def _persisted(path: Path) -> bool:
-    return path.is_file() and path.stat().st_size > 0
 
 
 async def _call_provider(
@@ -137,10 +104,11 @@ class BlogImageService:
         path = self._store.new_path(request.post_id)
         with blog_ai_propagate(request.post_id, PHASE_BLOG_SECTION_IMAGE):
             await _call_provider(provider, prompt, path)
-        if not _persisted(path):
+        stored = self._store.finalize(path)
+        if stored is None:
             raise BlogImageError(ERR_BLOG_IMAGE_PERSIST_FAILED)
         return BlogImage(
-            url=self._store.url_for(request.post_id, path.name),
+            url=self._store.url_for(request.post_id, stored.name),
             alt=request.alt,
             source=BLOG_IMAGE_SOURCE_GENERATED,
             prompt=scene,
@@ -153,7 +121,6 @@ __all__ = [
     "BlogImageError",
     "BlogImageRequest",
     "BlogImageService",
-    "BlogImageStore",
     "ImagePromptRenderer",
     "default_scene",
 ]

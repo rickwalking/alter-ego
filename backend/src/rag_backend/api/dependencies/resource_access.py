@@ -7,6 +7,7 @@ from typing import TypedDict
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
@@ -158,6 +159,27 @@ async def get_blog_post_by_id(
 ) -> BlogPostModel:
     """Load a blog post without ownership check."""
     post = await db.get(BlogPostModel, str(post_id))
+    if post is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=post_id),
+        )
+    return post
+
+
+async def lock_blog_post(db: AsyncSession, post_id: UUID | str) -> BlogPostModel:
+    """``SELECT ... FOR UPDATE`` a blog post, refreshing the loaded instance.
+
+    Writes that ran a slow provider call (image, rewrite, translation) re-read
+    the row here so they apply onto the LATEST document and status (AE-0424).
+    """
+    result = await db.execute(
+        select(BlogPostModel)
+        .where(BlogPostModel.id == str(post_id))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    post = result.scalar_one_or_none()
     if post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -351,5 +373,6 @@ __all__ = [
     "get_blog_post_for_read",
     "get_blog_post_for_user",
     "guard_blog_post_update_fields",
+    "lock_blog_post",
     "validate_reviewer_user",
 ]

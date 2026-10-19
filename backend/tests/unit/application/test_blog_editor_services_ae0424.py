@@ -31,6 +31,7 @@ from rag_backend.application.services.blog.blog_version_history import (
     append_version,
 )
 from rag_backend.domain.constants.blog_editor import (
+    BLOG_VERSION_HISTORY_MAX,
     ERR_BLOG_SECTION_NOT_FOUND,
     ERR_BLOG_TRANSLATION_MISSING,
 )
@@ -89,6 +90,20 @@ class TestParseSuggestion:
         parsed = parse_suggestion(raw)
         assert parsed.text == "Inner"
         assert parsed.explanation == "outer"
+
+    # AE-0424 review: prose before the fenced JSON must not leak the blob.
+    def test_prose_before_a_fence_is_unwrapped(self) -> None:
+        raw = f'Here is my suggestion:\n{FENCE}json\n{{"suggested_text": "Sharper"}}\n{FENCE}'
+        assert parse_suggestion(raw).text == "Sharper"
+
+    def test_bare_json_inside_prose_is_unwrapped(self) -> None:
+        raw = 'Sure! {"suggested_text": "X", "explanation": "e"} hope it helps'
+        parsed = parse_suggestion(raw)
+        assert (parsed.text, parsed.explanation) == ("X", "e")
+
+    def test_non_json_fence_degrades_to_raw(self) -> None:
+        raw = f"Note:\n{FENCE}\nnot json\n{FENCE}"
+        assert parse_suggestion(raw).text == raw.strip()
 
     # Scenario: Non-JSON model output degrades to the raw text
     def test_non_json_degrades_to_raw(self) -> None:
@@ -164,6 +179,28 @@ class TestAppendVersion:
     def test_non_list_history_starts_fresh(self) -> None:
         history = append_version(None, self._snapshot())
         assert history[0]["version_number"] == 1
+
+    def test_same_pre_state_is_not_appended_twice(self) -> None:
+        history = append_version([], self._snapshot())
+        assert append_version(history, self._snapshot()) == history
+
+    def test_history_is_capped_keeping_the_original(self) -> None:
+        history: list[dict[str, object]] = []
+        for index in range(BLOG_VERSION_HISTORY_MAX + 5):
+            snapshot = VersionSnapshot(
+                post_id="p1",
+                title=f"T{index}",
+                excerpt=None,
+                content={},
+                author_id=None,
+                change_summary="Before save",
+            )
+            history = append_version(history, snapshot)
+        assert len(history) == BLOG_VERSION_HISTORY_MAX
+        assert history[0]["title"] == "T0"
+        assert history[-1]["title"] == f"T{BLOG_VERSION_HISTORY_MAX + 4}"
+        numbers = [entry["version_number"] for entry in history]
+        assert numbers == sorted(numbers)
 
     def test_entry_without_number_counts_as_zero(self) -> None:
         history = append_version([{"version_number": None}], self._snapshot())

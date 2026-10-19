@@ -92,7 +92,6 @@
   "POST /api/blog-posts/{post_id}/approve",
   "POST /api/blog-posts/{post_id}/comments",
   "POST /api/blog-posts/{post_id}/cover/image",
-  "POST /api/blog-posts/{post_id}/generate-image",
   "POST /api/blog-posts/{post_id}/plagiarism-check",
   "POST /api/blog-posts/{post_id}/publish",
   "POST /api/blog-posts/{post_id}/reject",

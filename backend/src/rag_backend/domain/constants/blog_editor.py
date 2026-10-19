@@ -12,15 +12,31 @@ BLOG_EDITOR_LANGUAGE_PATTERN: Final = r"^(pt|en)$"
 # The canonical same-origin URL is served by ``GET /api/blog-images/...``; a
 # CDN URL is used instead when the CDN is enabled. A provider URL is never kept.
 BLOG_IMAGES_DIR_NAME: Final = "blog-images"
-BLOG_IMAGE_EXTENSION: Final = ".jpg"
+# Provider bytes land in ``<uuid>.part``; the store sniffs the real type and
+# renames (gpt-image-2 returns PNG by default). extension -> (offset, magic).
+BLOG_IMAGE_PARTIAL_SUFFIX: Final = ".part"
+BLOG_IMAGE_TYPES: Final[dict[str, tuple[int, bytes]]] = {
+    "png": (0, b"\x89PNG\r\n\x1a\n"),
+    "jpg": (0, b"\xff\xd8\xff"),
+    "webp": (8, b"WEBP"),
+}
+BLOG_IMAGE_MEDIA_TYPES: Final[dict[str, str]] = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "webp": "image/webp",
+}
 BLOG_IMAGES_ROUTE_PREFIX: Final = "/api/blog-images"
 BLOG_IMAGE_FILENAME_PATTERN: Final = (
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$"
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$"
 )
 # Model recorded on a generated image (the gpt-image-2 OpenAI provider).
 BLOG_IMAGE_MODEL: Final = "gpt-image-2"
-BLOG_IMAGE_CACHE_CONTROL: Final = "public, max-age=31536000, immutable"
-MEDIA_TYPE_JPEG: Final = "image/jpeg"
+# Published posts: cacheable but revalidated (an unpublish must take effect).
+# Drafts: author/admin only, never stored by shared caches (ADR-0013).
+BLOG_IMAGE_CACHE_PUBLIC: Final = "public, max-age=3600, must-revalidate"
+BLOG_IMAGE_CACHE_PRIVATE: Final = "private, no-store"
+# Per-post image budget (generate + regenerate count), BLOG_IMAGE_COST_CAP.
+BLOG_IMAGE_GENERATIONS_KEY: Final = "blog_image_generations"
 
 # Versioned prompt templates (agents/prompts/blog/v1/).
 PROMPT_DOMAIN_BLOG: Final = "blog"
@@ -36,8 +52,13 @@ PHASE_BLOG_TRANSLATION: Final = "blog_translation"
 
 # Version history entries (``blog_posts.version_history``).
 VERSION_CONTENT_TYPE_BLOG_POST: Final = "blog_post"
-VERSION_SUMMARY_SAVE: Final = "Saved"
-VERSION_SUMMARY_RESTORE: Final = "Restored from version {version_number}"
+# Entries snapshot the state BEFORE the write (AE-0424 review): the summary
+# names the write that replaced it.
+VERSION_SUMMARY_SAVE: Final = "Before save"
+VERSION_SUMMARY_RESTORE: Final = "Before restoring version {version_number}"
+VERSION_SUMMARY_SLOT: Final = "Before {action}"
+# Bounded history: the first (original) entry + the newest ones.
+BLOG_VERSION_HISTORY_MAX: Final = 50
 
 # ai-suggest envelope keys (AE-0424 strict JSON, F-10).
 SUGGEST_KEY_TEXT: Final = "suggested_text"
@@ -52,6 +73,8 @@ ERR_BLOG_TRANSLATION_EXISTS: Final = "blog_translation_exists"
 ERR_BLOG_IMAGE_PERSIST_FAILED: Final = "blog_image_persist_failed"
 ERR_BLOG_IMAGE_GENERATION_FAILED: Final = "blog_image_generation_failed"
 ERR_BLOG_IMAGE_NOT_FOUND: Final = "blog_image_not_found"
+ERR_BLOG_IMAGE_BUDGET_EXHAUSTED: Final = "blog_image_budget_exhausted"
+ERR_BLOG_REWRITE_TOO_LONG: Final = "blog_rewrite_too_long"
 ERR_BLOG_PERSONA_REQUIRED: Final = "blog_persona_required"
 ERR_BLOG_REWRITE_EMPTY: Final = "blog_rewrite_empty"
 ERR_BLOG_TRANSLATION_FAILED: Final = "blog_translation_failed"

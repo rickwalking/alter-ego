@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Protocol
 from uuid import UUID
 
 from fastapi import Depends, Header, Query
@@ -25,9 +25,10 @@ from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.knowledge import get_container
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
-from rag_backend.application.services.blog.blog_image_service import (
-    BlogImageService,
+from rag_backend.application.services.blog.blog_image_service import BlogImageService
+from rag_backend.application.services.blog.blog_image_store import (
     BlogImageStore,
+    referenced_filenames,
 )
 from rag_backend.application.services.blog.blog_translation_service import (
     BlogTranslationService,
@@ -53,6 +54,30 @@ def blog_images_store() -> BlogImageStore:
     )
     root = Path(settings.carousel_output_dir) / BLOG_IMAGES_DIR_NAME
     return BlogImageStore(root=root, cdn=cdn)
+
+
+class StoredImagesRow(Protocol):
+    """The row fields that decide which stored images are still referenced."""
+
+    id: object
+    content: object
+    version_history: object
+
+
+def prune_unreferenced_images(post: StoredImagesRow) -> int:
+    """Delete store files referenced by neither the content nor the history.
+
+    Run after every committed content write (slot routes, PUT, restore): a
+    regenerated / removed image stays while a version snapshot can restore it,
+    and goes once nothing references it (AE-0424 review).
+    """
+    keep = referenced_filenames(post.content, post.version_history)
+    return blog_images_store().prune(str(post.id), keep)
+
+
+def blog_image_cost_cap() -> int:
+    """``BLOG_IMAGE_COST_CAP``: images generated per post before refusing."""
+    return int(get_container().settings().blog_image_cost_cap)
 
 
 def build_blog_image_service() -> BlogImageService:
@@ -108,7 +133,10 @@ __all__ = [
     "CoverTarget",
     "PostTarget",
     "SectionTarget",
+    "Session",
+    "blog_image_cost_cap",
     "blog_images_store",
     "build_blog_image_service",
     "build_blog_translation_service",
+    "prune_unreferenced_images",
 ]

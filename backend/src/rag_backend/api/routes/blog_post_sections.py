@@ -13,7 +13,6 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.blog_editor import (
     IfMatch,
@@ -23,12 +22,13 @@ from rag_backend.api.dependencies.blog_editor import (
     build_blog_translation_service,
 )
 from rag_backend.api.dependencies.blog_slot_write import (
+    DocumentEdit,
     LockedBlogPostRow,
-    SlotWrite,
+    SlotEdit,
+    apply_slot_edit,
     edit_or_404,
     load_document,
     require_current_version,
-    store_document,
 )
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
 from rag_backend.api.dependencies.roles import EditorUser
@@ -57,7 +57,7 @@ from rag_backend.domain.constants.blog_editor import (
     ERR_BLOG_TRANSLATION_EXISTS,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
-from rag_backend.domain.models.blog_document import BlogDocument
+from rag_backend.domain.models.blog_document import BlogDocument, BlogLanguageDocument
 from rag_backend.domain.protocols import CarouselRepository
 
 router = APIRouter(tags=["blog_post_sections"])
@@ -81,13 +81,6 @@ REWRITE_PATH = "/blog-posts/{post_id}/sections/{section_id}/rewrite"
 TRANSLATION_PATH = "/blog-posts/{post_id}/translations/en"
 Rewrite = Annotated[RewriteTarget, Depends()]
 Post = Annotated[PostTarget, Depends()]
-
-
-async def _commit(write: SlotWrite, db: AsyncSession) -> LockedBlogPostRow:
-    await store_document(db, write)
-    await db.commit()
-    await db.refresh(write.post)
-    return write.post
 
 
 def _addressed(
@@ -121,14 +114,32 @@ async def _rewritten_body(request: _RewriteInput) -> str:
         ) from exc
 
 
-def _slot_write(
-    target: RewriteTarget | PostTarget, post: LockedBlogPostRow, document: BlogDocument
-) -> SlotWrite:
-    return SlotWrite(
-        post=post,
-        if_match=target.if_match,
-        document=document,
-        user_id=target.current_user.id,
+def _with_body(
+    document: BlogDocument, target: RewriteTarget, text: str
+) -> BlogDocument:
+    """The latest document with the rewritten body in that section (by id)."""
+    current = language_document(document, target.language)
+    section = find_section(current, target.section_id)
+    updated = section.model_copy(update={"body_md": text})
+    return with_section(document, target.language, updated)
+
+
+def _with_english(
+    document: BlogDocument, english: BlogLanguageDocument
+) -> BlogDocument:
+    """Store EN unless another request stored one during the spend (409)."""
+    if BLOG_LANGUAGE_EN in document.translations:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=ERR_BLOG_TRANSLATION_EXISTS
+        )
+    return with_translation(document, english)
+
+
+def _change(target: RewriteTarget | PostTarget, edit: DocumentEdit) -> SlotEdit:
+    return SlotEdit(
+        post_id=str(target.post_id),
+        user_id=str(target.current_user.id),
+        edit=edit,
         events=blog_event_service(),
         ai_action=AI_ACTION_IMPROVE,
     )
@@ -148,7 +159,7 @@ async def rewrite_section(
     """Replace only that section's ``body_md`` (422 when no persona exists)."""
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
     require_current_version(post, target.if_match)
-    document, body_md, heading = _addressed(post, target.section_id, target.language)
+    _, body_md, heading = _addressed(post, target.section_id, target.language)
     rewrite = _RewriteInput(
         db=target.db,
         body_md=body_md,
@@ -159,12 +170,8 @@ async def rewrite_section(
         ),
     )
     text = await _rewritten_body(rewrite)
-    current = language_document(document, target.language)
-    section = find_section(current, target.section_id)
-    updated = with_section(
-        document, target.language, section.model_copy(update={"body_md": text})
-    )
-    return await _commit(_slot_write(target, post, updated), target.db)
+    change = _change(target, lambda latest: _with_body(latest, target, text))
+    return await apply_slot_edit(target.db, change)
 
 
 @router.post(
@@ -182,6 +189,8 @@ async def generate_en_translation(request: Request, target: Post) -> LockedBlogP
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=ERR_BLOG_TRANSLATION_EXISTS
         )
+    user_id = str(target.current_user.id)
+    await target.db.rollback()  # no transaction held during the LLM spend
     try:
         english = await build_blog_translation_service().translate(
             str(target.post_id), document
@@ -190,6 +199,11 @@ async def generate_en_translation(request: Request, target: Post) -> LockedBlogP
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.code
         ) from exc
-    return await _commit(
-        _slot_write(target, post, with_translation(document, english)), target.db
+    change = SlotEdit(
+        post_id=str(target.post_id),
+        user_id=user_id,
+        edit=lambda latest: _with_english(latest, english),
+        events=blog_event_service(),
+        ai_action=AI_ACTION_IMPROVE,
     )
+    return await apply_slot_edit(target.db, change)

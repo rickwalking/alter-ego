@@ -7,7 +7,7 @@ Feature: frontend/tests/features/blog_editor_ae0424.feature (backend half)
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -29,6 +29,7 @@ from rag_backend.application.services.blog.blog_translation_service import (
 from rag_backend.application.services.blog_post_ai_service import BlogPostAIService
 from rag_backend.domain.constants.blog_document import ERR_BLOG_DOCUMENT_NOT_V2
 from rag_backend.domain.constants.blog_editor import (
+    ERR_BLOG_IMAGE_BUDGET_EXHAUSTED,
     ERR_BLOG_IMAGE_GENERATION_FAILED,
     ERR_BLOG_PERSONA_REQUIRED,
     ERR_BLOG_SECTION_IMAGE_MISSING,
@@ -64,21 +65,30 @@ async def clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
         yield built
 
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"png-body"
+
+
 class _Provider:
+    """Writes PNG bytes (what gpt-image-2 returns); ``during`` runs mid-spend."""
+
     def __init__(self, fail: bool = False) -> None:
         self.fail = fail
         self.calls = 0
+        self.during: Callable[[], Awaitable[None]] | None = None
 
     async def generate_image(self, prompt: str, output_path: str) -> str:
         self.calls += 1
         if self.fail:
             raise RuntimeError("provider down")
-        Path(output_path).write_bytes(b"jpeg-bytes")
+        if self.during is not None:
+            await self.during()
+        Path(output_path).write_bytes(PNG_BYTES)
         return PROVIDER_URL
 
 
 @pytest.fixture
 def provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Provider:
+    from rag_backend.api.dependencies import blog_editor
     from rag_backend.api.routes import blog_post_images
 
     fake = _Provider()
@@ -89,6 +99,7 @@ def provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Provider:
         lambda: BlogImageService(fake, store, image_prompt),
     )
     monkeypatch.setattr(blog_post_images, "blog_images_store", lambda: store)
+    monkeypatch.setattr(blog_editor, "blog_images_store", lambda: store)
     return fake
 
 
@@ -111,13 +122,12 @@ class TestSectionImages:
         assert PROVIDER_URL not in json.dumps(response.json())
         assert (image["alt"], image["model"]) == ("Um", "gpt-image-2")
         assert image["prompt"].startswith("Um. Corpo um")
+        assert image["url"].endswith(".png")
         served = await clients.author.get(image["url"])
         assert served.status_code == 200
-        assert served.content == b"jpeg-bytes"
-        async with AsyncClient(
-            transport=clients.author._transport, base_url="http://test"
-        ) as anonymous:
-            assert (await anonymous.get(image["url"])).status_code == 200
+        assert served.content == PNG_BYTES
+        assert served.headers["content-type"] == "image/png"
+        assert served.headers["cache-control"] == "private, no-store"
         assert len(await versions(clients.author, post["id"])) == 1
 
     # Scenario: Regenerating uses an edited prompt
@@ -305,6 +315,124 @@ class TestBlogImageServing:
         missing = "00000000-0000-4000-8000-000000000000.jpg"
         assert (await clients.author.get(f"{base}/{missing}")).status_code == 404
 
+    # ADR-0013: a non-published post's images 404 for everyone but its
+    # author/admin; published images are public with a revalidated cache.
+    async def test_draft_images_are_author_only_until_published(
+        self, clients: EditorClients, provider: _Provider
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        generated = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        url = generated.json()["content"]["sections"][0]["image"]["url"]
+        async with AsyncClient(
+            transport=clients.author._transport, base_url="http://test"
+        ) as anonymous:
+            assert (await anonymous.get(url)).status_code == 404
+            assert (await clients.reviewer.get(url)).status_code == 404
+            await set_fields(post["id"], status=BlogPostStatus.PUBLISHED.value)
+            public = await anonymous.get(url)
+        assert public.status_code == 200
+        assert (
+            public.headers["cache-control"] == "public, max-age=3600, must-revalidate"
+        )
+
+    async def test_unknown_post_is_404(self, clients: EditorClients) -> None:
+        url = "/api/blog-images/00000000-0000-4000-8000-000000000009/00000000-0000-4000-8000-000000000000.png"
+        assert (await clients.author.get(url)).status_code == 404
+
+
+class TestSlotWriteContract:
+    """The paid result survives concurrent writes (shared AE-0424/AE-0425 contract)."""
+
+    # A Save (or another slot) commits while the provider runs: the slot is
+    # applied onto the LATEST document, no 409, both changes kept.
+    async def test_save_during_generation_keeps_both(
+        self, clients: EditorClients, provider: _Provider
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        saved = dict(post["content"])
+        saved["sections"] = [dict(x) for x in post["content"]["sections"]]
+        saved["sections"][1]["body_md"] = "Salvo durante a geração"
+
+        async def concurrent_save() -> None:
+            await set_fields(
+                post["id"], content=saved, lock_version=post["lock_version"] + 1
+            )
+
+        provider.during = concurrent_save
+        response = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["content"]["sections"][0]["image"] is not None
+        assert body["content"]["sections"][1]["body_md"] == "Salvo durante a geração"
+        assert body["lock_version"] == post["lock_version"] + 2
+
+    # The section was deleted during the spend: 404 and the new file is gone.
+    async def test_section_deleted_during_generation_leaves_no_orphan(
+        self, clients: EditorClients, provider: _Provider, tmp_path: Path
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        without_first = dict(post["content"])
+        without_first["sections"] = post["content"]["sections"][1:]
+
+        async def delete_section() -> None:
+            await set_fields(post["id"], content=without_first)
+
+        provider.during = delete_section
+        response = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == ERR_BLOG_SECTION_NOT_FOUND
+        folder = tmp_path / "store" / post["id"]
+        assert not folder.exists() or not any(folder.iterdir())
+
+    async def test_image_budget_is_enforced_before_spend(
+        self,
+        clients: EditorClients,
+        provider: _Provider,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from rag_backend.api.routes import blog_post_images
+
+        monkeypatch.setattr(blog_post_images, "blog_image_cost_cap", lambda: 1)
+        post = await create_post(clients.author, three_sections())
+        first = await clients.author.post(
+            _section_image_url(post["id"]), json={}, headers=if_match(post)
+        )
+        assert first.json()["ai_generation_metadata"]["blog_image_generations"] == 1
+        second = await clients.author.post(
+            _section_image_url(post["id"], SEC_2),
+            json={},
+            headers=if_match(first.json()),
+        )
+        assert second.status_code == 429
+        assert second.json()["detail"] == ERR_BLOG_IMAGE_BUDGET_EXHAUSTED
+        assert provider.calls == 1
+
+    # Regenerate keeps the old file while a version snapshot references it;
+    # once nothing references it, the next write deletes it.
+    async def test_unreferenced_files_are_pruned(
+        self, clients: EditorClients, provider: _Provider, tmp_path: Path
+    ) -> None:
+        post = await create_post(clients.author, three_sections())
+        url = _section_image_url(post["id"])
+        first = (await clients.author.post(url, json={}, headers=if_match(post))).json()
+        second = (
+            await clients.author.post(url, json={}, headers=if_match(first))
+        ).json()
+        folder = tmp_path / "store" / post["id"]
+        assert len(list(folder.iterdir())) == 2
+        await set_fields(post["id"], version_history=[])
+        await clients.author.delete(url, headers=if_match(second))
+        # The first image is referenced by nothing now -> deleted; the second
+        # lives on in the pre-remove version snapshot (restorable).
+        kept = second["content"]["sections"][0]["image"]["url"].rsplit("/", 1)[-1]
+        assert [p.name for p in folder.iterdir()] == [kept]
+
 
 def _fake_ai(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> MagicMock:
     from rag_backend.api.routes import blog_post_sections
@@ -485,9 +613,7 @@ class TestStrictSuggest:
 
         llm = MagicMock()
         llm.generate = AsyncMock(return_value=raw)
-        service = BlogPostAIService(
-            llm_service=llm, image_service=None, output_dir=Path()
-        )
+        service = BlogPostAIService(llm_service=llm)
         monkeypatch.setattr(blog_post_ai, "_build_ai_service", lambda: service)
         post = await create_post(clients.author, three_sections())
         response = await clients.author.post(

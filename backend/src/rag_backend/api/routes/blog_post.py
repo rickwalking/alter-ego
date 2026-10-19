@@ -17,6 +17,7 @@ from rag_backend.api.dependencies.blog_document import (
     prepare_create_payload,
     prepare_update_values,
 )
+from rag_backend.api.dependencies.blog_editor import prune_unreferenced_images
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -266,6 +267,7 @@ async def update_blog_post(
     )
     await db.commit()
     await db.refresh(post)
+    prune_unreferenced_images(post)
     return post
 
 

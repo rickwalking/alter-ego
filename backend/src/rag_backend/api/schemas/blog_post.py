@@ -60,10 +60,10 @@ class BlogPostResponse(BaseModel):
     featured_image_url: str | None = None
     author_id: str | None = None
     reviewer_id: str | None = None
-    # Reject appends ``{text, author_id, status}`` comments and every save
-    # appends a version entry (AE-0424): both are objects, not strings.
+    # Reject appends ``{text, author_id, status}`` comments (objects). The
+    # bounded version history is served by ``GET /blog-posts/{id}/versions``
+    # only (AE-0424 review), never inlined in every post response.
     editor_comments: list[dict | str] = Field(default_factory=list)
-    version_history: list[dict] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
     citations: list[dict] = Field(default_factory=list)
     ai_suggestions: list[dict] = Field(default_factory=list)

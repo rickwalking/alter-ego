@@ -7,8 +7,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.dependencies.blog_content_write import check_optional_if_match
-from rag_backend.api.dependencies.blog_document import assert_publishable
+from rag_backend.api.dependencies.blog_content_write import (
+    bump_lock_version,
+    check_optional_if_match,
+)
+from rag_backend.api.dependencies.blog_document import assert_ready_to_publish
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -26,7 +29,6 @@ from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
 from rag_backend.api.schemas.blog_post_editor import BlogEditorSettingsResponse
-from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
 from rag_backend.application.services.notification_service import (
     NotificationService,
     _WorkflowUpdateParams,
@@ -38,10 +40,6 @@ from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
-from rag_backend.domain.constants.ai_disclosure import (
-    AI_DISCLOSURE_NONE,
-    ERR_DISCLOSURE_REQUIRED,
-)
 from rag_backend.domain.constants.blog_editor import ERR_BLOG_REVIEWER_REQUIRED
 from rag_backend.domain.constants.blog_post import (
     BlogPostStatus,
@@ -176,6 +174,8 @@ async def submit_blog_post_for_review(
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.DRAFT)
+    # Same guard as publish: never queue a review of an unpublishable post.
+    assert_ready_to_publish(post)
     old_status = post.status
 
     reviewer_id = _resolve_reviewer(
@@ -188,6 +188,7 @@ async def submit_blog_post_for_review(
     post.status = BlogPostStatus.UNDER_REVIEW.value
     post.submitted_for_review_at = datetime.now(UTC)
     post.reviewer_id = reviewer_id
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -226,6 +227,7 @@ async def approve_blog_post(
 
     post.status = BlogPostStatus.APPROVED.value
     post.approved_at = datetime.now(UTC)
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -256,6 +258,7 @@ async def reject_blog_post(
 
     post.status = BlogPostStatus.DRAFT.value
     post.submitted_for_review_at = None
+    bump_lock_version(post)
 
     # Reassign (not .append): an in-place JSON list mutation is not tracked by
     # SQLAlchemy, so the reason was silently never stored (AE-0424).
@@ -312,24 +315,12 @@ async def publish_blog_post(
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, if_match)
-    assert_publishable(post.content)
-
-    disclosure = AiDisclosureService()
-    metadata = (
-        post.ai_generation_metadata
-        if isinstance(post.ai_generation_metadata, dict)
-        else {}
-    )
-    label = str(post.ai_disclosure_label or disclosure.compute_label(metadata))
-    if disclosure.requires_disclosure(label) and label == AI_DISCLOSURE_NONE:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=ERR_DISCLOSURE_REQUIRED,
-        )
+    assert_ready_to_publish(post)
 
     old_status = post.status
 
     await publishing.service.publish_blog(post)
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id

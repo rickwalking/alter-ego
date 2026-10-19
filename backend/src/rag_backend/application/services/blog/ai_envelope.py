@@ -10,6 +10,7 @@ text. The caller never shows a fenced blob in a user field.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 
 from rag_backend.domain.constants.blog_editor import (
@@ -17,6 +18,8 @@ from rag_backend.domain.constants.blog_editor import (
     SUGGEST_KEY_EXPLANATION,
     SUGGEST_KEY_TEXT,
 )
+
+_FENCED_BLOCK = re.compile(r"```[A-Za-z]*[ \t]*\n?(.*?)```", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -38,8 +41,7 @@ def strip_code_fence(raw: str) -> str:
     return body.strip()
 
 
-def _envelope(raw: str) -> dict[str, object] | None:
-    candidate = strip_code_fence(raw)
+def _as_envelope(candidate: str) -> dict[str, object] | None:
     try:
         data = json.loads(candidate)
     except json.JSONDecodeError:
@@ -47,6 +49,28 @@ def _envelope(raw: str) -> dict[str, object] | None:
     if not isinstance(data, dict) or SUGGEST_KEY_TEXT not in data:
         return None
     return data
+
+
+def _candidates(raw: str) -> list[str]:
+    """The whole answer, every fenced block, then the outermost ``{...}``.
+
+    Models often write a line of prose before the fenced JSON; the envelope is
+    still found so the raw blob never reaches the user (AE-0424 review).
+    """
+    found = [strip_code_fence(raw)]
+    found.extend(match.group(1).strip() for match in _FENCED_BLOCK.finditer(raw))
+    start, end = raw.find("{"), raw.rfind("}")
+    if 0 <= start < end:
+        found.append(raw[start : end + 1])
+    return found
+
+
+def _envelope(raw: str) -> dict[str, object] | None:
+    for candidate in _candidates(raw):
+        data = _as_envelope(candidate)
+        if data is not None:
+            return data
+    return None
 
 
 def _explanation(data: dict[str, object]) -> str:

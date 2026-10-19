@@ -12,6 +12,7 @@ from rag_backend.api.dependencies.blog_content_write import (
     write_post_content,
 )
 from rag_backend.api.dependencies.blog_document import validated_write
+from rag_backend.api.dependencies.blog_editor import prune_unreferenced_images
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
 from rag_backend.api.dependencies.roles import EditorUser
@@ -121,4 +122,5 @@ async def restore_blog_post_version(
     )
     await db.commit()
     await db.refresh(post)
+    prune_unreferenced_images(post)
     return post

@@ -37,24 +37,9 @@ class BlogPostAiImproveResponse(BaseModel):
     action: str
 
 
-class BlogPostGenerateImageRequest(BaseModel):
-    """Request body for blog featured image generation."""
-
-    prompt: str = Field(..., min_length=1, max_length=2000)
-
-
-class BlogPostGenerateImageResponse(BaseModel):
-    """Generated blog image response."""
-
-    prompt: str
-    image_url: str
-
-
 __all__ = [
     "BlogPostAiImproveRequest",
     "BlogPostAiImproveResponse",
     "BlogPostAiSuggestRequest",
     "BlogPostAiSuggestResponse",
-    "BlogPostGenerateImageRequest",
-    "BlogPostGenerateImageResponse",
 ]

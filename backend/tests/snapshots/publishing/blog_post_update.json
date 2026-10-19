@@ -47,33 +47,6 @@
     "submitted_for_review_at": null,
     "title": "Fixture Blog Post",
     "updated_at": "<timestamp>",
-    "version_history": [
-      {
-        "author_id": "<uuid>",
-        "change_summary": "Saved",
-        "content_id": "<uuid>",
-        "content_type": "blog_post",
-        "created_at": "<timestamp>",
-        "excerpt": "Updated excerpt.",
-        "id": "<uuid>",
-        "snapshot": {
-          "cover": null,
-          "quality": null,
-          "schema": "blog.v2",
-          "sections": [
-            {
-              "body_md": "Deterministic blog post body.",
-              "heading": null,
-              "id": "sec_00000000-0000-4000-8000-000000000001",
-              "image": null
-            }
-          ],
-          "translations": {}
-        },
-        "title": "Fixture Blog Post",
-        "version_number": 1
-      }
-    ],
     "view_count": 0
   },
   "cookies": {},

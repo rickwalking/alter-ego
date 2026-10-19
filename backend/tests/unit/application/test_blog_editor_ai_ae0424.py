@@ -23,8 +23,11 @@ from rag_backend.application.services.blog.blog_image_service import (
     BlogImageError,
     BlogImageRequest,
     BlogImageService,
-    BlogImageStore,
     default_scene,
+)
+from rag_backend.application.services.blog.blog_image_store import (
+    BlogImageStore,
+    referenced_filenames,
 )
 from rag_backend.application.services.blog.blog_translation_service import (
     BlogTranslationError,
@@ -39,11 +42,15 @@ from rag_backend.domain.constants.blog_editor import (
     ERR_BLOG_IMAGE_PERSIST_FAILED,
     ERR_BLOG_PERSONA_REQUIRED,
     ERR_BLOG_REWRITE_EMPTY,
+    ERR_BLOG_REWRITE_TOO_LONG,
 )
 from rag_backend.domain.models.blog_document import BlogImage, parse_blog_content
 from tests.blog_v2_support import v2_content, v2_section
 
 POST_ID = "11111111-1111-4111-8111-111111111111"
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 16
+JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"0" * 16
+WEBP_BYTES = b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"0" * 8
 PROVIDER_URL = "https://provider.example/tmp/abc.png"
 SEC_2 = "sec_00000000-0000-4000-8000-000000000002"
 
@@ -67,7 +74,7 @@ def _no_langfuse() -> Iterator[None]:
 class _WritingProvider:
     """Writes bytes to the requested path and returns a provider URL."""
 
-    def __init__(self, payload: bytes = b"jpeg") -> None:
+    def __init__(self, payload: bytes = PNG_BYTES) -> None:
         self.payload = payload
         self.prompts: list[str] = []
 
@@ -96,10 +103,12 @@ class TestBlogImageService:
             provider, _store(tmp_path), image_prompt
         ).generate(_request())
         assert image.url.startswith(f"/api/blog-images/{POST_ID}/")
-        assert image.url.endswith(".jpg")
+        # gpt-image-2 returns PNG: the file is named (and served) as .png.
+        assert image.url.endswith(".png")
         assert PROVIDER_URL not in image.model_dump_json()
         stored = tmp_path / "blog-images" / POST_ID / image.url.rsplit("/", 1)[1]
-        assert stored.read_bytes() == b"jpeg"
+        assert stored.read_bytes() == PNG_BYTES
+        assert not list((tmp_path / "blog-images" / POST_ID).glob("*.part"))
         assert image.alt == "O que aconteceu"
         assert image.model == "gpt-image-2"
         assert image.source == "generated"
@@ -157,12 +166,53 @@ class TestBlogImageService:
             )
         assert exc.value.code == ERR_BLOG_IMAGE_GENERATION_FAILED
 
-    def test_store_file_lookup(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("payload", "extension"),
+        [(PNG_BYTES, ".png"), (JPEG_BYTES, ".jpg"), (WEBP_BYTES, ".webp")],
+    )
+    async def test_real_type_decides_the_extension(
+        self, tmp_path: Path, payload: bytes, extension: str
+    ) -> None:
+        service = BlogImageService(
+            _WritingProvider(payload), _store(tmp_path), image_prompt
+        )
+        image = await service.generate(_request())
+        assert image.url.endswith(extension)
+
+    async def test_unknown_bytes_are_a_persist_failure(self, tmp_path: Path) -> None:
+        service = BlogImageService(
+            _WritingProvider(b"not an image"), _store(tmp_path), image_prompt
+        )
+        with pytest.raises(BlogImageError) as exc:
+            await service.generate(_request())
+        assert exc.value.code == ERR_BLOG_IMAGE_PERSIST_FAILED
+        assert not any((tmp_path / "blog-images" / POST_ID).iterdir())
+
+    def test_store_lookup_delete_and_prune(self, tmp_path: Path) -> None:
         store = _store(tmp_path)
         path = store.new_path(POST_ID)
         assert store.file_for(POST_ID, path.name) is None
         path.write_bytes(b"x")
         assert store.file_for(POST_ID, path.name) == path
+        other = store.new_path(POST_ID)
+        other.write_bytes(b"y")
+        assert store.prune(POST_ID, {path.name}) == 1
+        assert not other.exists()
+        store.delete(POST_ID, path.name)
+        assert store.file_for(POST_ID, path.name) is None
+        assert store.prune("no-such-post", set()) == 0
+
+    def test_referenced_filenames_walks_content_and_history(self) -> None:
+        content = {
+            "cover": {"url": "/api/blog-images/p/a.png"},
+            "sections": [{"image": {"url": "https://cdn/x/b.jpg"}}],
+        }
+        history = [{"snapshot": {"cover": {"url": "/api/blog-images/p/c.webp"}}}]
+        assert referenced_filenames(content, history, None) == {
+            "a.png",
+            "b.jpg",
+            "c.webp",
+        }
 
 
 class TestDefaultScene:
@@ -253,7 +303,7 @@ class TestBlogTranslationService:
 def _ai_service() -> BlogPostAIService:
     llm = MagicMock()
     llm.chat_model = MagicMock()
-    return BlogPostAIService(llm_service=llm, image_service=None, output_dir=Path())
+    return BlogPostAIService(llm_service=llm)
 
 
 def _db(persona: object | None = None, project: object | None = None) -> MagicMock:
@@ -305,9 +355,27 @@ class TestRewriteSection:
         with pytest.raises(ValueError, match=ERR_BLOG_REWRITE_EMPTY):
             await self._run(_db(persona=self._persona_model()), "   ")
 
-    async def test_rewrite_output_is_display_sanitized(self) -> None:
-        text = await self._run(_db(persona=self._persona_model()), "Olá <b>mundo</b>")
-        assert "<" not in text and ">" not in text
+    async def test_rewrite_output_keeps_markdown(self) -> None:
+        # The model output is NOT run through the input sanitizer: links and
+        # parentheses survive (rendering relies on the markdown allow-list).
+        markdown = "Veja [o anúncio](https://example.com) (em inglês) <3"
+        text = await self._run(_db(persona=self._persona_model()), markdown)
+        assert text == markdown
+
+    async def test_rewrite_longer_than_a_section_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match=ERR_BLOG_REWRITE_TOO_LONG):
+            await self._run(_db(persona=self._persona_model()), "x" * 20_001)
+
+    async def test_body_longer_than_the_llm_input_is_rejected(self) -> None:
+        db = _db(persona=self._persona_model())
+        with patch(
+            "rag_backend.application.services.blog_post_ai_service.PersonaAgent"
+        ) as agent_cls:
+            with pytest.raises(ValueError, match=ERR_BLOG_REWRITE_TOO_LONG):
+                await _ai_service().rewrite_section(
+                    _RewriteInput(db=db, body_md="x" * 10_001)
+                )
+            agent_cls.assert_not_called()
 
 
 def test_blog_image_is_frozen_model() -> None:

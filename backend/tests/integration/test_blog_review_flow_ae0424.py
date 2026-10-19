@@ -131,6 +131,42 @@ class TestReview:
         assert "Falta fonte" in body["editor_comments"][-1]["text"]
 
 
+class TestTransitionsAreVersioned:
+    """Status transitions bump lock_version so a stale write cannot land."""
+
+    async def test_submit_and_approve_bump_the_lock(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content())
+        submitted = (
+            await _submit(clients.author, post["id"], clients.reviewer_id)
+        ).json()
+        assert submitted["lock_version"] == post["lock_version"] + 1
+        approved = await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
+        assert approved.json()["lock_version"] == post["lock_version"] + 2
+
+    # Scenario: Editing after approval resets the post to draft (a save that
+    # was prepared before the approval cannot silently skip the reset).
+    async def test_save_prepared_before_approval_conflicts(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content())
+        await _submit(clients.author, post["id"], clients.reviewer_id)
+        await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
+        stale = await put(clients.author, post, {"content": v2_content("x")})
+        assert stale.status_code == 409
+        assert (await get_post(clients.author, post["id"]))["status"] == APPROVED
+
+    async def test_unpublishable_draft_cannot_be_submitted(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content("  "))
+        response = await _submit(clients.author, post["id"], clients.reviewer_id)
+        assert response.status_code == 422
+        assert response.json()["detail"].startswith(ERR_BLOG_NOT_PUBLISHABLE)
+        assert (await get_post(clients.author, post["id"]))["status"] == "draft"
+
+
 class TestPublishGuard:
     # Scenario: Publishing a draft is rejected by the status guard
     async def test_draft_cannot_publish(self, clients: EditorClients) -> None:
@@ -236,6 +272,20 @@ class TestSchedule:
         again = await clients.author.delete(url)
         assert again.status_code == 409
         assert again.json()["detail"] == ERR_BLOG_SCHEDULE_NOT_SET
+
+    async def test_unpublishable_post_cannot_be_scheduled(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content("  "))
+        await set_fields(post["id"], status=APPROVED)
+        response = await clients.author.post(
+            f"{BLOG_POSTS_URL}/{post['id']}/schedule",
+            json={"scheduled_publish_at": _future()},
+        )
+        assert response.status_code == 422
+        assert (await get_post(clients.author, post["id"]))[
+            "scheduled_publish_at"
+        ] is None
 
     async def test_cancel_needs_approved(self, clients: EditorClients) -> None:
         post = await create_post(clients.author, v2_content())

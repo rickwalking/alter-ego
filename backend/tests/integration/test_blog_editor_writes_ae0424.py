@@ -112,11 +112,15 @@ class TestVersionsOnSave:
             clients.author, post, {"title": "Novo", "content": v2_content("Editado")}
         )
         assert response.status_code == 200, response.text
+        # The entry keeps the state BEFORE the save (the original draft), so
+        # the AI-written first version is never lost (AE-0424 review).
         history = await versions(clients.author, post["id"])
         assert len(history) == 1
         assert history[0]["version_number"] == 1
-        assert history[0]["title"] == "Novo"
-        assert history[0]["snapshot"]["sections"][0]["body_md"] == "Editado"
+        assert history[0]["title"] == "GPT 5.6 saiu"
+        assert history[0]["snapshot"]["sections"][0]["body_md"] == "Original"
+        assert history[0]["change_summary"] == "Before save"
+        assert "version_history" not in response.json()
 
     # Scenario: Version history accumulates across saves
     async def test_history_accumulates_in_order(self, clients: EditorClients) -> None:
@@ -126,9 +130,17 @@ class TestVersionsOnSave:
         history = await versions(clients.author, post["id"])
         assert [v["version_number"] for v in history] == [1, 2]
         assert [v["snapshot"]["sections"][0]["body_md"] for v in history] == [
+            "v0",
             "v1",
-            "v2",
         ]
+
+    async def test_unchanged_state_is_not_snapshotted_twice(
+        self, clients: EditorClients
+    ) -> None:
+        post = await create_post(clients.author, v2_content("v0"))
+        first = (await put(clients.author, post, {"keywords": ["a"]})).json()
+        await put(clients.author, first, {"keywords": ["b"]})
+        assert len(await versions(clients.author, post["id"])) == 1
 
     # Scenario: Stale If-Match still conflicts (AE-0296 unchanged)
     async def test_stale_if_match_conflicts_without_a_snapshot(
@@ -161,8 +173,9 @@ class TestVersionsOnSave:
         second = (
             await put(clients.author, first, {"content": v2_content("v2")})
         ).json()
+        # History: [1] v0 (original title), [2] v1 / "T1" (state before save 2).
         response = await clients.author.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1", headers=if_match(second)
+            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/2", headers=if_match(second)
         )
         assert response.status_code == 200, response.text
         restored = response.json()
@@ -170,7 +183,8 @@ class TestVersionsOnSave:
         assert restored["title"] == "T1"
         history = await versions(clients.author, post["id"])
         assert len(history) == 3
-        assert history[-1]["change_summary"] == "Restored from version 1"
+        assert history[-1]["change_summary"] == "Before restoring version 2"
+        assert history[-1]["snapshot"]["sections"][0]["body_md"] == "v2"
 
     async def test_restore_needs_if_match(self, clients: EditorClients) -> None:
         post = await create_post(clients.author, v2_content("v0"))

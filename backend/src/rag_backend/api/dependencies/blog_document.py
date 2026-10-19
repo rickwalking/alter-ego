@@ -19,6 +19,13 @@ from rag_backend.application.services.blog.blog_document_service import (
     BlogDocumentWrite,
     is_generation_in_progress,
 )
+from rag_backend.application.services.blog.blog_publish_readiness import (
+    DisclosureRequiredError,
+    PublishCandidate,
+)
+from rag_backend.application.services.blog.blog_publish_readiness import (
+    assert_ready_to_publish as check_ready_to_publish,
+)
 from rag_backend.domain.models.blog_document import (
     BlogImage,
     InvalidBlogDocumentError,
@@ -74,12 +81,20 @@ def cover_write(content: object, cover: BlogImage | None) -> BlogDocumentWrite:
         raise_invalid_document(exc)
 
 
-def assert_publishable(content: object) -> None:
-    """422 unless the document has >= 1 non-empty section (cover optional)."""
+def assert_ready_to_publish(post: PublishCandidate) -> None:
+    """422 unless publishable: >= 1 non-empty section and a valid AI label.
+
+    Shared by publish, submit-for-review and schedule (AE-0424 review); the
+    due-post sweep runs the same application guard.
+    """
     try:
-        BlogDocumentService.assert_publishable(content)
+        check_ready_to_publish(post)
     except InvalidBlogDocumentError as exc:
         raise_invalid_document(exc)
+    except DisclosureRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.code
+        ) from exc
 
 
 def display_content(content: object, post_id: str) -> dict[str, object]:
@@ -88,7 +103,7 @@ def display_content(content: object, post_id: str) -> dict[str, object]:
 
 
 __all__ = [
-    "assert_publishable",
+    "assert_ready_to_publish",
     "cover_write",
     "display_content",
     "prepare_create_payload",

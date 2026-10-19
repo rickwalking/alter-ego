@@ -291,6 +291,9 @@ class Settings(BaseSettings):
     # posts. Bypasses only the submit-time ERR_SELF_REVIEW guard and stores the
     # author as reviewer_id; off by default (a distinct reviewer is required).
     blog_allow_self_review: bool = False
+    # AE-0424: images generated per post (cover + sections, regenerations
+    # included) before generation is refused; the spend ceiling of ADR-0025.
+    blog_image_cost_cap: int = Field(default=30, ge=1)
 
     otel_enabled: bool = False
     otel_exporter_endpoint: str = ""

@@ -45,4 +45,3 @@ ERR_INVALID_AI_ACTION = (
     "Invalid AI action. Must be one of: improve, shorten, expand, add_opinion"
 )
 ERR_BLOG_POST_NOT_FOUND = "Blog post not found: {post_id}"
-ERR_IMAGE_GENERATION_FAILED = "Image generation failed: {reason}"

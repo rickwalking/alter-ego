@@ -13,7 +13,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.dependencies.blog_content_write import check_optional_if_match
+from rag_backend.api.dependencies.blog_content_write import (
+    bump_lock_version,
+    check_optional_if_match,
+)
+from rag_backend.api.dependencies.blog_document import assert_ready_to_publish
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import (
     assert_blog_post_status,
@@ -82,8 +86,10 @@ async def schedule_blog_post(
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)
+    assert_ready_to_publish(post)
     scheduled_at = _future_schedule(body.scheduled_publish_at)
     await target.publishing.service.schedule_blog(post, scheduled_at)
+    bump_lock_version(post)
     await target.db.commit()
     await target.db.refresh(post)
     return post
@@ -108,6 +114,7 @@ async def cancel_blog_post_schedule(
             detail=ERR_BLOG_SCHEDULE_NOT_SET,
         )
     post.scheduled_publish_at = None
+    bump_lock_version(post)
     await target.db.commit()
     await target.db.refresh(post)
     return post

@@ -21,6 +21,7 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
     clear_memory_events,
 )
+from tests.blog_v2_support import v2_content
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +41,7 @@ async def test_process_due_posts_is_idempotent(test_engine) -> None:
             title="Scheduled Post",
             slug="scheduled-post-worker",
             status=BlogPostStatus.APPROVED.value,
-            content={"body": "hello"},
+            content=v2_content("hello"),
             scheduled_publish_at=datetime.now(UTC) - timedelta(minutes=5),
             author_id=None,
         )
@@ -64,3 +65,37 @@ async def test_process_due_posts_is_idempotent(test_engine) -> None:
         assert updated is not None
         assert updated.status == BlogPostStatus.PUBLISHED.value
         assert updated.scheduled_publish_at is None
+
+
+@pytest.mark.asyncio
+async def test_unpublishable_post_is_never_published_by_the_sweep(test_engine) -> None:
+    """AE-0424 review: the sweep runs the publish guard (empty document)."""
+    session_factory = async_sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with session_factory() as db:
+        db.add(
+            BlogPostModel(
+                id="scheduled-empty",
+                title="Empty",
+                slug="scheduled-empty",
+                status=BlogPostStatus.APPROVED.value,
+                content=v2_content("   "),
+                scheduled_publish_at=datetime.now(UTC) - timedelta(minutes=5),
+                author_id=None,
+            )
+        )
+        await db.commit()
+
+    service = ScheduledPublishService(
+        session_factory,
+        WorkflowEventService(MemoryEventPublisher()),
+        NotificationService(),
+    )
+    assert await service.process_due_posts() == 0
+
+    async with session_factory() as db:
+        stored = await db.get(BlogPostModel, "scheduled-empty")
+        assert stored is not None
+        assert stored.status == BlogPostStatus.APPROVED.value
+        assert stored.scheduled_publish_at is None
