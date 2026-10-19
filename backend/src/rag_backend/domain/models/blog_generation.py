@@ -180,6 +180,10 @@ class DocumentApply:
     images_generated: int = 0
     voice_score: float | None = None
     discard: Callable[[], None] | None = None
+    # The article write: a stored row that does not parse as ``blog.v2`` (a
+    # non-migrated legacy row) is REPLACED by the new document instead of
+    # being rejected (it has no sections to merge onto).
+    replaces_document: bool = False
 
 
 @dataclass(frozen=True)

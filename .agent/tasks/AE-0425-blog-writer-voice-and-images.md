@@ -267,6 +267,19 @@ Pending.
    left. A row whose content does not parse counts as "no article" (strict `parse_blog_content`,
    no read fail-safe — AE-0428 removes it): the retry reruns the writer instead of a 500.
 4. **Single image store/route/template = AE-0424's** (see "One image path" below).
+### PR #146 re-review fixes (2026-10-19)
+
+- **A. Editor lock across a Retry.** The editor adopts a newer server version whenever EITHER its
+  own copy or the server's (polled) copy is generating, so a Retry clicked in the editor locks the
+  fields at once (server flipped to `in_progress`) and the images appear when the run completes,
+  without a reload. Test: hook failed → retry → locked → unlocked with the cover image.
+- **B. Unparseable rows.** The article write is a full-document replacement when the locked row
+  does not parse as `blog.v2` (same versioned write: snapshot of the old content), so a retry of a
+  legacy row ends `complete` instead of a paid 422 dead end. Tests: store (replace vs slot path),
+  API (unparseable row → retry → final status `complete`, v2 with 7 sections + cover).
+- **C. Orphans.** After the image write, the files of images whose slot vanished meanwhile (section
+  deleted / filled by the owner) are deleted; they still count against the cap (they were paid).
+
 - **Low: English in PT.** Besides stripping verbatim research sentences, a cheap per-section check
   (English vs Portuguese function words) reports PT sections that read as English; the finding
   goes to the judge and triggers the single rewrite.

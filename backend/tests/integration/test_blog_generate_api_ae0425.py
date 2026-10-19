@@ -397,10 +397,18 @@ async def test_retry_of_an_unparseable_row_reruns_the_writer(
             .values(content={"markdown": "# legado"})
         )
         await session.commit()
+    harness.writer.draft_error = None
+    harness.writer.draft_article = article(7)
     retry = await client.post(f"{POSTS}/{post_id}/generation/retry")
     assert retry.status_code == 202, retry.text
-    await asyncio.gather(*runner.running_blog_generation_tasks())
+    done = await _settled(client, post_id)
     assert len(harness.writer.drafts) == 2  # the full writer ran again
+    # Review B: the unparseable row is REPLACED by the new v2 document (a
+    # full-document write), so the paid retry is not a dead end.
+    assert done["ai_generation_metadata"]["generation"]["status"] == "complete"
+    assert done["content"]["schema"] == "blog.v2"
+    assert len(done["content"]["sections"]) == 7
+    assert done["content"]["cover"] is not None
 
 
 async def test_generated_images_are_served_by_the_editor_route(

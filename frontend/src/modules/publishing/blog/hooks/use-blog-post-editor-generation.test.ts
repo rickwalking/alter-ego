@@ -4,6 +4,7 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { blogPost, v2Document } from "../editor.test-utils";
 import { blogPostKeys } from "../blog-post-requests";
+import { isGenerationInProgress } from "../generation/generation-state";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 
 // Scenarios: tests/features/blog_generate_ae0425.feature
@@ -74,5 +75,48 @@ describe("useBlogPostEditor while generating (AE-0425)", () => {
     );
     await waitFor(() => expect(hook.result.current.post).not.toBeNull());
     expect(hook.result.current.draft?.document.sections).toHaveLength(3);
+  });
+});
+
+describe("useBlogPostEditor across a retry (AE-0425 review A)", () => {
+  it("failed -> retry -> locked while generating -> unlocked with images", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }): ReactNode =>
+      createElement(QueryClientProvider, { client }, children);
+    const failed = blogPost({
+      lock_version: 2,
+      ai_generation_metadata: { generation: { status: "failed" } },
+    });
+    mockFetch.mockResolvedValueOnce(jsonResponse(failed));
+    const hook = renderHook(() => useBlogPostEditor("p-1"), { wrapper });
+    await waitFor(() => expect(hook.result.current.post).not.toBeNull());
+    expect(isGenerationInProgress(hook.result.current.post)).toBe(false);
+
+    // Retry clicked: the server copy is now in progress (new lease, bumped).
+    const running = blogPost({
+      lock_version: 3,
+      ai_generation_metadata: { generation: { status: "in_progress" } },
+    });
+    client.setQueryData(blogPostKeys.detail("p-1"), running);
+    await waitFor(() =>
+      expect(isGenerationInProgress(hook.result.current.post)).toBe(true),
+    );
+
+    // The run finished and attached its images: unlocked, images shown.
+    const document = v2Document();
+    const image = { url: "/api/blog-images/p-1/a.jpg", alt: "Capa" };
+    const done = blogPost({
+      lock_version: 5,
+      content: { ...document, cover: image },
+      ai_generation_metadata: { generation: { status: "complete" } },
+    });
+    client.setQueryData(blogPostKeys.detail("p-1"), done);
+    await waitFor(() =>
+      expect(isGenerationInProgress(hook.result.current.post)).toBe(false),
+    );
+    expect(hook.result.current.post?.lock_version).toBe(5);
+    expect(hook.result.current.draft?.document.cover?.url).toBe(image.url);
   });
 });

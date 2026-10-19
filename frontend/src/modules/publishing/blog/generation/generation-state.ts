@@ -87,7 +87,10 @@ export function readGenerationState(
 
 /** True while the post's generation run is writing it (editor read-only). */
 export function isGenerationInProgress(
-  post: { ai_generation_metadata?: Record<string, unknown> | null } | null,
+  post:
+    | { ai_generation_metadata?: Record<string, unknown> | null }
+    | null
+    | undefined,
 ): boolean {
   return (
     readGenerationState(post?.ai_generation_metadata)?.status ===

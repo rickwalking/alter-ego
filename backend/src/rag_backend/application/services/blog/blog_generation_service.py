@@ -37,6 +37,7 @@ from rag_backend.application.services.blog.blog_generated_document import (
     attach_images,
     build_generated_document,
     missing_image_subjects,
+    placed_slots,
 )
 from rag_backend.application.services.blog.blog_generation_job import (
     BlogGenerationDeps,
@@ -212,16 +213,27 @@ class BlogGenerationService:
         self, job: GenerationJob, result: ImageBatchResult, titles: ImageTitles
     ) -> None:
         """Attach by section id onto the LATEST document (owner edits survive);
-        a failed write deletes the new files (no orphans)."""
+        a failed write deletes the new files, and so does a successful write for
+        the images whose slot the owner removed or filled meanwhile."""
         images = result.images
+        placed: set[str] = set()
+
+        def edit(latest: BlogDocument) -> BlogDocument:
+            attached = attach_images(latest, images, titles)
+            placed.clear()
+            placed.update(placed_slots(attached, images))
+            return attached
+
         await self._deps.store.apply_document(
             job.lease,
             DocumentApply(
-                edit=lambda latest: attach_images(latest, images, titles),
+                edit=edit,
                 images_generated=len(images),
                 discard=lambda: self._deps.images.discard(job.lease.post_id, images),
             ),
         )
+        unused = {slot: image for slot, image in images.items() if slot not in placed}
+        self._deps.images.discard(job.lease.post_id, unused)
 
     async def _current(self, job: GenerationJob) -> tuple[BlogDocument, ImageTitles]:
         content = await self._deps.store.read_content(job.lease)
@@ -264,6 +276,7 @@ class BlogGenerationService:
             DocumentApply(
                 edit=lambda latest: _place_article(latest, document),
                 voice_score=languages.pt.voice.overall,
+                replaces_document=True,
             ),
         )
 

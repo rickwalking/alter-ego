@@ -150,10 +150,20 @@ def attach_images(
     return document.model_copy(update={**pt, "translations": translations})
 
 
+def placed_slots(document: BlogDocument, images: dict[str, BlogImage]) -> set[str]:
+    """The slots whose generated image is in ``document`` (PT) after attaching."""
+    urls = {image.url: slot for slot, image in images.items()}
+    found = [document.cover, *(section.image for section in document.sections)]
+    return {
+        urls[image.url] for image in found if image is not None and image.url in urls
+    }
+
+
 __all__ = [
     "GeneratedLanguages",
     "ImageTitles",
     "attach_images",
     "build_generated_document",
     "missing_image_subjects",
+    "placed_slots",
 ]

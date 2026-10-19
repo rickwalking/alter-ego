@@ -249,6 +249,36 @@ async def test_an_invalid_write_is_a_document_error(sessions: Sessions) -> None:
         await store.apply_document(lease, DocumentApply(edit=broken))
 
 
+async def test_the_article_replaces_an_unparseable_row(sessions: Sessions) -> None:
+    # Review B: a legacy (non-v2) row cannot be slot-edited; the article
+    # write replaces it through the versioned write (old content snapshotted).
+    lease = await _draft(sessions)
+    async with sessions() as db:
+        await db.execute(update(BlogPostModel).values(content={"markdown": "# old"}))
+        await db.commit()
+    store = _slot_store(sessions)
+    change = _replace_with("Novo artigo")
+    await store.apply_document(
+        lease,
+        DocumentApply(edit=change.edit, voice_score=80.0, replaces_document=True),
+    )
+    row = await _row(sessions, lease.post_id)
+    assert row.content["sections"][0]["body_md"] == "Novo artigo"
+    assert row.ai_generation_metadata["voice_score"] == 80.0
+    assert len(row.version_history) == 1
+
+
+async def test_a_parseable_row_takes_the_slot_path(sessions: Sessions) -> None:
+    lease = await _draft(sessions)
+    store = _slot_store(sessions)
+    change = _replace_with("Artigo")
+    await store.apply_document(
+        lease, DocumentApply(edit=change.edit, replaces_document=True)
+    )
+    row = await _row(sessions, lease.post_id)
+    assert row.content["sections"][0]["body_md"] == "Artigo"
+
+
 async def test_restart_is_compare_and_set(sessions: Sessions) -> None:
     lease = await _draft(sessions)
     async with sessions() as db:

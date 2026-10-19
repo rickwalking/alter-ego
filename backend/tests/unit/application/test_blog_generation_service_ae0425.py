@@ -391,6 +391,15 @@ async def test_owner_edits_during_the_image_step_survive(tmp_path: Path) -> None
     assert document.sections[1].image is not None
     assert document.sections[2].image is not None
     assert document.sections[2].image.url == "https://cdn.example/owner.jpg"
+    # Review C: the images whose slot vanished (deleted section, owner image)
+    # are deleted from the store; only the placed ones remain on disk.
+    placed = [document.cover, *(s.image for s in document.sections)]
+    generated = [
+        i.url.rsplit("/", 1)[1] for i in placed if i and i.source == "generated"
+    ]
+    on_disk = sorted(path.name for path in (tmp_path / POST_ID).iterdir())
+    assert len(generated) == 3  # cover + the 2 surviving empty sections
+    assert on_disk == sorted(generated)  # the other 2 files were deleted
     assert document.cover is not None
 
 

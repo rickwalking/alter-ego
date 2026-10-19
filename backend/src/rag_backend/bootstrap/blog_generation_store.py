@@ -20,12 +20,25 @@ from datetime import UTC, datetime
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from rag_backend.api.dependencies.blog_slot_write import SlotEdit, apply_slot_edit
+from rag_backend.api.dependencies.blog_content_write import (
+    ContentWrite,
+    write_post_content,
+)
+from rag_backend.api.dependencies.blog_document import validated_write
+from rag_backend.api.dependencies.blog_slot_write import (
+    LockedBlogPostRow,
+    SlotEdit,
+    apply_slot_edit,
+)
+from rag_backend.api.dependencies.resource_access import lock_blog_post
 from rag_backend.application.services.blog.blog_image_budget import count_one_image
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.ai_disclosure import AI_ACTION_GENERATE_IMAGE
 from rag_backend.domain.constants.blog_generation import VERSION_SUMMARY_GENERATION
-from rag_backend.domain.models.blog_document import InvalidBlogDocumentError
+from rag_backend.domain.models.blog_document import (
+    InvalidBlogDocumentError,
+    parse_blog_content,
+)
 from rag_backend.domain.models.blog_generation import (
     DocumentApply,
     GenerationLease,
@@ -38,6 +51,9 @@ from rag_backend.domain.models.blog_generation_state import (
     with_voice_score,
 )
 from rag_backend.infrastructure.config.settings import get_settings
+from rag_backend.infrastructure.database.blog_generation_drafts import (
+    bootstrap_content,
+)
 from rag_backend.infrastructure.database.blog_generation_store import (
     SqlBlogGenerationStore,
 )
@@ -97,6 +113,8 @@ class SlotWriteGenerationStore:
         self, lease: GenerationLease, change: DocumentApply
     ) -> None:
         """Apply ``change`` onto the latest document under the row lock."""
+        if change.replaces_document and await self._replace_unparseable(lease, change):
+            return
         slot = SlotEdit(
             post_id=lease.post_id,
             user_id=self._user_id,
@@ -116,6 +134,60 @@ class SlotWriteGenerationStore:
             if change.discard is not None:
                 change.discard()
             raise
+
+    async def _replace_unparseable(
+        self, lease: GenerationLease, change: DocumentApply
+    ) -> bool:
+        """Full-document write when the locked row does not parse as v2.
+
+        The slot path rejects such a row (422) because there is nothing to
+        merge onto; the freshly written article replaces it instead, through
+        the same versioned write (snapshot of the old content, review reset).
+        Returns ``False`` (no write) when the row parses.
+        """
+        async with self._sessions() as db:
+            locked = await lock_blog_post(db, lease.post_id)
+            try:
+                parse_blog_content(locked.content)
+            except InvalidBlogDocumentError:
+                await self._write_replacement(db, (lease, change), locked)
+                return True
+            await db.rollback()
+            return False
+
+    async def _write_replacement(
+        self,
+        db: AsyncSession,
+        job: tuple[GenerationLease, DocumentApply],
+        locked: LockedBlogPostRow,
+    ) -> None:
+        lease, change = job
+        metadata: object = locked.ai_generation_metadata
+        current: dict[str, object] = (
+            dict(metadata) if isinstance(metadata, dict) else {}
+        )
+        updated = _MetadataChange(lease, change, datetime.now(UTC).isoformat())(current)
+        document = change.edit(parse_blog_content(bootstrap_content()))
+        try:
+            validated = validated_write(document.to_content(), updated)
+        except HTTPException as exc:
+            raise InvalidBlogDocumentError(str(exc.detail)) from exc
+        await write_post_content(
+            db,
+            ContentWrite(
+                post=locked,
+                if_match=locked.lock_version,
+                values={
+                    "content": validated.content,
+                    "featured_image_url": validated.featured_image_url,
+                    "ai_generation_metadata": updated,
+                },
+                user_id=self._user_id,
+                events=_event_service(),
+                change_summary=VERSION_SUMMARY_GENERATION,
+            ),
+        )
+        await db.commit()
 
 
 __all__ = ["SlotWriteGenerationStore"]
