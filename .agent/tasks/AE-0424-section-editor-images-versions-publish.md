@@ -265,8 +265,70 @@ Pending.
   to a JSON list, so the reason was never persisted.
 - **(impl) `BLOG_ALLOW_SELF_REVIEW`** is a Settings field + `.env.example` only; enabling it in
   prod (deploy/compose) is the owner's decision.
+- **(review) Post-spend writes re-read the row** under `FOR UPDATE` and apply the slot onto
+  the latest document, so concurrent cover + section generation or a Save during the spend
+  no longer 409s and orphans a paid image (see the shared contract below).
+- **(review) Version entries snapshot the PRE-write state** ("Before save" / "Before restoring
+  version n"), so the original (AI) draft is kept; history is capped at
+  `BLOG_VERSION_HISTORY_MAX` = 50 (first entry always kept), an unchanged pre-state is not
+  re-appended, and `version_history` is no longer in `BlogPostResponse` (`GET /versions`).
+- **(review) Status transitions bump `lock_version`** (submit/approve/reject/publish/
+  schedule/cancel) and the review reset is decided from the locked row; the editor disables
+  the review controls while any slot action runs.
+- **(review) One publish guard** (`blog_publish_readiness.assert_ready_to_publish`:
+  non-empty document + valid AI-disclosure label) for publish, submit-review, schedule and the
+  due-post sweep (a blocked scheduled post stays approved, its schedule is cleared, logged).
+- **(review) Rewrite output** is not passed through the input sanitizer (it stripped
+  `( ) < >` and truncated at 10k); only a code fence is stripped and the length is checked
+  against `BLOG_SECTION_MAX_CHARS`. A body over the 10k LLM input limit is refused (422)
+  instead of silently truncated. Note: `PersonaAgent.enforce` still sanitizes its INPUT
+  (existing agent behaviour, unchanged here).
+- **(review) Images:** real type sniffed (gpt-image-2 returns PNG), unreferenced files pruned
+  after every write, per-post budget, draft images author/admin-only.
+- **(review) Legacy `POST /generate-image` removed** with `BlogPostAIService.generate_image`,
+  `useBlogAi().generateImage` and the dead `ImageGenModal` (AE-0428 has one less file to
+  delete).
+- **(review) ai-suggest** also finds the envelope in a fenced block or a bare `{…}` after
+  leading prose.
+- **(review) Editor:** typing during an in-flight save is kept; a save that loses the race to
+  our own slot write is retried once on the new lock.
 - **Image routes are owned by C.** C adds the editor endpoints; D reuses the same service/routes
   for bulk generation and adds no new routes. One route set.
+
+
+## Shared contract with AE-0425 (image store, image routes, slot writes)
+
+AE-0425 (PR #146) reuses these; changing them is a cross-ticket change.
+
+- **Slot-write path** — `api/dependencies/blog_slot_write.py`:
+  1. preflight before any spend: `require_current_version(post, if_match)` (428/409),
+     `load_document(post)` (422 non-v2 → editor "migration pending"), slot lookup
+     (`edit_or_404`, 404), image budget (`within_budget`, 429);
+  2. end the read transaction, spend (provider/LLM);
+  3. `apply_slot_edit(db, SlotEdit(post_id, user_id, edit, events, ai_action?,
+     metadata_edit?, discard?, change_summary?))`: `SELECT … FOR UPDATE` the row
+     (`resource_access.lock_blog_post`), apply `edit` onto the **latest** document by
+     section id (only the section must still exist → else 404), store through
+     `write_post_content` at the locked `lock_version` (review reset + pre-write version
+     snapshot decided from the locked row), commit; on any failure roll back and call
+     `discard` (e.g. delete the new file).
+- **Image store** — `application/services/blog/blog_image_store.py` (`BlogImageStore`):
+  `<carousel_output_dir>/blog-images/<post_id>/<uuid4>.<png|jpg|webp>`; the provider writes
+  `<uuid>.part`, `finalize` sniffs the real type and renames. Canonical URL: CDN when
+  enabled, else `/api/blog-images/<post_id>/<file>`. `prune(post_id, keep)` +
+  `referenced_filenames(content, version_history)`; `api/dependencies/blog_editor.
+  prune_unreferenced_images(post)` runs after every committed content write.
+- **Image service** — `BlogImageService(provider, store, render_prompt)` with
+  `agents.blog_editor_prompts.image_prompt` (template `agents/prompts/blog/v1/image_prompt.yaml`);
+  `generate(BlogImageRequest(post_id, scene, alt)) -> BlogImage` (model `gpt-image-2`).
+- **Image budget** — `application/services/blog/blog_image_budget.py`:
+  `ai_generation_metadata.blog_image_generations` counted per generated image
+  (`count_one_image`), refused at `BLOG_IMAGE_COST_CAP` (setting `blog_image_cost_cap`,
+  default 30).
+- **Serving** — `GET /api/blog-images/{post_id}/{uuid}.{ext}`: published → public,
+  `max-age=3600, must-revalidate`; otherwise author/admin only with `private, no-store`;
+  everyone else gets the uniform 404 (ADR-0013). With the CDN enabled, draft images are
+  reachable at unguessable CDN URLs (recorded in ADR-0025).
 
 ## Risk & Size
 

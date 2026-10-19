@@ -452,7 +452,20 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 and status in the same reply. Image, rewrite and translation routes take `?language=pt|en`.
 On publish / schedule / cancel-schedule `If-Match` is checked when sent (the editor always
 sends it) and the lock version is not bumped (a status-only write). The `/generate-image`
-route (AE-0423) is unchanged and is no longer used by the editor; AE-0428 removes it.
+route was removed by AE-0424 (review): every cover/section image goes through the slot routes.
+
+**AE-0424 review decisions.** (1) A slot write that spent on a provider re-reads the row
+`FOR UPDATE` and applies onto the latest document by section id (shared with AE-0425).
+(2) Version entries snapshot the state *before* each write, capped at 50 (the first entry, the
+original draft, is always kept); `version_history` is served only by `/versions`.
+(3) Status transitions bump `lock_version`; the publish guard (non-empty document + valid
+AI-disclosure label) also runs at submit-review, schedule and the due-post sweep.
+(4) Draft images: `GET /api/blog-images/...` serves a non-published post's images only to its
+author or an admin (`private, no-store`), else the uniform 404 (ADR-0013); published images use
+`public, max-age=3600, must-revalidate` (not `immutable`, so an unpublish takes effect). When
+the CDN is enabled the canonical URL is the CDN's, so draft images there are reachable only via
+their unguessable uuid4 URL — an accepted, explicit exception until the CDN gets signed URLs.
+(5) Per-post image budget `BLOG_IMAGE_COST_CAP` (images per post, default 30).
 
 Public read (`GET /api/public/blog-posts/{id}`, ADR-0013) keeps its lean allow-list, but `content`
 is **projected**, not serialized as-is. The public allow-list is:

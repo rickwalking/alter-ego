@@ -163,3 +163,79 @@ Feature: Blog AI contract, section rewrite and versions on save (AE-0424)
     Then the status becomes "draft"
     And scheduled_publish_at is null
     And the due-post sweep no longer publishes it
+
+  # --- shared slot-write contract (review fixes; reused by AE-0425) ---
+
+  Scenario: A save during image generation keeps both changes
+    Given a v2 post at lock_version 2
+    And the editor requests a section image with If-Match 2
+    When another write commits while the provider runs (lock_version 3)
+    Then the image is applied onto the latest document by section id
+    And the API responds 200 at lock_version 4 with both changes
+
+  Scenario: A section deleted during generation leaves no orphan file
+    Given a section image generation is running
+    When the section is deleted before the image is stored
+    Then the API responds 404
+    And the generated file is deleted from the blog-images store
+
+  Scenario: The per-post image budget is enforced before spend
+    Given a post that already generated BLOG_IMAGE_COST_CAP images
+    When the editor requests another image
+    Then the API responds 429 "blog_image_budget_exhausted"
+    And the provider is not called
+
+  Scenario: Stored files follow the real image type
+    Given the provider returns PNG bytes
+    When the image is stored
+    Then the file is named .png and served as image/png
+
+  Scenario: Draft images are private
+    Given a draft post with a generated image
+    When an anonymous visitor or another editor requests the image
+    Then the API responds 404
+    And the author gets it with "Cache-Control: private, no-store"
+    And after publish anyone gets it with a revalidated public cache
+
+  Scenario: Unreferenced image files are pruned
+    Given an image no version snapshot or content references any more
+    When the next content write commits
+    Then that file is deleted from the store
+
+  # --- version history (review fixes) ---
+
+  Scenario: A version entry keeps the state before the write
+    Given an AI-written draft
+    When the owner saves an edit
+    Then the version entry holds the original AI draft
+    And the post response carries no version_history (GET /versions serves it)
+
+  Scenario: Version history is bounded
+    Given more than BLOG_VERSION_HISTORY_MAX saves
+    Then the first entry (the original draft) and the newest entries are kept
+
+  # --- publish guards on every path (review fixes) ---
+
+  Scenario: An unpublishable post cannot be submitted, scheduled or swept
+    Given an approved post whose sections are all empty
+    When it is submitted for review, scheduled, or reached by the due-post sweep
+    Then submit and schedule respond 422
+    And the sweep does not publish it and clears its schedule
+
+  Scenario: Status transitions bump lock_version
+    Given a draft at lock_version 2
+    When it is submitted and approved
+    Then lock_version is 4
+    And a save prepared at lock_version 2 responds 409
+
+  # --- rewrite + suggest output (review fixes) ---
+
+  Scenario: The rewrite output keeps its markdown
+    Given the persona rewrite contains a link and parentheses
+    Then the stored body keeps them (no input sanitizer on model output)
+    And a rewrite longer than the section limit is rejected with 422
+
+  Scenario: Prose before the fenced JSON is still unwrapped
+    Given the model returns "Here you go:" followed by a fenced JSON envelope
+    When the editor POSTs /blog-posts/{id}/ai-suggest
+    Then the response suggested_text is the envelope's text
