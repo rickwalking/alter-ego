@@ -171,7 +171,12 @@ See Delta.
 
 ## Test Evidence
 
-See the PR body (gate list and suite run).
+Hotfix fast path, each gate via `gate-capture.sh backend:<gate>`. DB gates SKIP locally (no
+Postgres); the suite was run directly (5791 passed, 14 skipped, 93% total) and diff-cover
+directly (100%). Python 3.11 compile/import OK. Mutation deferred to CI. Details:
+`.agent/reports/AE-0433.dev-summary.md`.
+
+GATES_JSON: {"pass":17,"fail":0,"skip":5,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"SKIP"},{"gate":"backend:diff-cover","status":"SKIP"},{"gate":"backend:migrations","status":"SKIP"},{"gate":"backend:schema-drift","status":"SKIP"},{"gate":"backend:mutation","status":"SKIP"}]}
 
 ## QA Report
 
