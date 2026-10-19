@@ -1,13 +1,13 @@
 # AE-0422 — Public blog stops rendering carousel slides (A)
 
-Status: Intake
+Status: In Review
 Tier: T1
 Priority: P1
 Type: Bug
 Area: Cross-cutting
 Owner: Unassigned
 Agent Lane: architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0422-blog-no-carousel-slides
 Kanban Card: TBD
 Created: 2026-10-18
 Updated: 2026-10-18
@@ -64,24 +64,29 @@ sections positionally because `blog_image_map` is `null` (F-07 wrong-section ris
 
 ## Acceptance Criteria
 
-- [ ] AC1: The public blog page renders **no** `<img>` whose `src` contains `/slide-images/`.
-- [ ] AC2: `resolveSlideImage` / the positional fallback and the `blog_image_map` read are removed
+- [x] AC1: The public blog page renders **no** `<img>` whose `src` contains `/slide-images/`.
+- [x] AC2: `resolveSlideImage` / the positional fallback and the `blog_image_map` read are removed
       from `blog-post-content.tsx`; the component no longer needs `slideImages`.
-- [ ] AC3: The carousel design fetch is kept only for theme tokens; a post with no design tokens
+- [x] AC3: The carousel design fetch is kept only for theme tokens; a post with no design tokens
       still renders (default theme).
-- [ ] AC4: The title renders exactly once (no duplicate H1) — the existing v1 strip may stay until
+- [x] AC4: The title renders exactly once (no duplicate H1) — the existing v1 strip may stay until
       AE-0423, but the page has one H1.
-- [ ] AC5: `blog_clean_slides.feature` is marked superseded by ADR-0025 (or rewritten to assert no
+- [x] AC5: `blog_clean_slides.feature` is marked superseded by ADR-0025 (or rewritten to assert no
       carousel slides in blog bodies); the mapping scenarios in `blog_content_cleanup.feature` are
       marked superseded.
-- [ ] AC6: A Gherkin scenario documents that the prod hide selects **all** published
+- [x] AC6: A Gherkin scenario documents that the prod hide selects **all** published
       carousel-origin rows — `status == "published"` AND `origin == "carousel"` — with **no**
       body-length or H1-stub filter (all 10 live posts were built by the old pipeline). Hiding uses
       the **unpublish transition semantics** (published → draft, publish stamps cleared, status event
       emitted) and writes a durable marker
       `ai_generation_metadata.hidden_bad_post = {at, reason}` so AE-0426 can select the row after
       its status changed. Hiding is idempotent and never deletes.
-- [ ] AC7: Creating/updating a carousel no longer creates, overwrites or publishes a `blog_posts`
+      Implemented (testable spec + operator action):
+      `backend/src/rag_backend/infrastructure/database/blog_post_hide.py` (`is_hide_target` predicate
+      + `BlogPostHideService.hide`, dry-run `preview`), operator CLI
+      `backend/scripts/hide_bad_carousel_posts.py` (`--dry-run` default, `--apply`), tests
+      `backend/tests/unit/infrastructure/test_blog_post_hide.py`.
+- [x] AC7: Creating/updating a carousel no longer creates, overwrites or publishes a `blog_posts`
       row (`sync_carousel_blog_post` and its calls are gone); a regression test saves a project
       twice and asserts an existing row's content/status are unchanged and no row is created when
       none exists. Deleting a carousel still flips its published blog row to `draft` (orphan
@@ -100,6 +105,12 @@ sections positionally because `blog_image_map` is `null` (F-07 wrong-section ris
 ### ADDED
 
 - `blog_no_carousel_slides_ae0422.feature`.
+- `themeOnlyDesign()` in `frontend/src/lib/public-blog.ts`.
+- `backend/src/rag_backend/infrastructure/database/blog_post_hide.py` + `BlogPostHideService`,
+  `is_hide_target`, `HideRun`/`HideReport` (AC6).
+- `backend/scripts/hide_bad_carousel_posts.py` (AC6 operator CLI, dry-run default).
+- `backend/tests/unit/infrastructure/test_carousel_save_blog_noop.py` (AC7 regression) and
+  `test_blog_post_hide.py` (AC6).
 - A short "hide-all selection criteria" section in this ticket (used by AE-0426).
 
 ### MODIFIED
@@ -145,6 +156,22 @@ status event; public uniform 404 per ADR-0013) **and** write the durable marker
 `status = draft` update is not enough because AE-0426 cannot distinguish a hidden bad post from an
 ordinary draft. **No deletion.** Hiding twice is a no-op (same marker, same status).
 
+Implemented in `backend/src/rag_backend/infrastructure/database/blog_post_hide.py`:
+
+- `is_hide_target(post)` — the selection predicate (origin carousel AND status published).
+- `BlogPostHideService.preview(db)` — dry-run: ids that `hide` would change, no writes.
+- `BlogPostHideService.hide(db, HideRun(reason, now, user_id))` — per selected row: status → `draft`,
+  `published_at`/`submitted_for_review_at` cleared, `lock_version` bumped, marker written, and
+  `EVENT_TYPE_BLOGPOST_STATUS_CHANGED` emitted with the old/new status (transactional outbox, same as
+  the workflow routes). The caller owns the commit; a second run selects nothing.
+- `backend/scripts/hide_bad_carousel_posts.py` — operator CLI (`--dry-run` is the default, `--apply`
+  writes).
+
+It mirrors the unpublish field write directly rather than calling `BlogVisibilityPort` so the
+operator path adds no new `application -> infrastructure` (AE-0082 baseline) edge; the semantics
+(which fields clear, which event fires) match the workflow unpublish route byte-for-byte. Running it
+against production is still the orchestrator's owner-approved action, not part of this ticket.
+
 ## Dependencies
 
 - Blocks: none (ships first).
@@ -176,13 +203,69 @@ Ticket created from the AE-0422 plan (ADR-0025, wave A).
 Updated after the owner revision: also removes the carousel→blog dual-write (it re-published blog
 posts on every carousel save and would clobber v2).
 
+### 2026-10-18 (dev)
+
+Implemented A end-to-end on `feat/ae-0422-blog-no-carousel-slides`.
+
+Frontend (commit `54cfcafad`): `blog-post-content.tsx` no longer reads any carousel design image;
+the section renderer emits `ReactMarkdown` only. Removed `resolveSlideImage`, the positional
+`slideImage` fallback, `ResolveSlideImageOptions`, `slideImages`, and the now-unused
+`CAROUSEL_SLIDE_WIDTH/HEIGHT` constants; dropped the removed symbols from the publishing barrel. New
+`themeOnlyDesign()` in `lib/public-blog.ts` keeps the theme tokens but strips `images`
+(`hero`/`slides`/`rendered_slides_pt`/`rendered_slides_en`/`blog_image_map`), so no carousel image
+URL can reach the page.
+
+Backend (commits `a50396da7`, `17844e12c`, `8f8a45363`): removed `sync_carousel_blog_post` and its
+`create_project`/`update_project` calls; deleted `carousel_blog_dual_write.py` and folded the
+delete-time `_detach_carousel_blog_posts` into `carousel_repository.py`; added the AC6 hide service +
+CLI. Tests were updated to seed the carousel-origin blog row explicitly instead of relying on the
+removed auto-create.
+
 ## Files Touched
 
-Pending.
+Frontend:
+
+- `frontend/src/modules/publishing/blog/components/public-post/blog-post-content.tsx` (+ `.test.tsx`)
+- `frontend/src/modules/publishing/blog/components/public-post/types.ts`
+- `frontend/src/app/(public)/blog/[id]/page.tsx`
+- `frontend/src/lib/public-blog.ts` (+ `.test.ts`)
+- `frontend/src/constants/blog.ts`
+- `frontend/src/modules/publishing/index.ts`
+- `frontend/tests/features/blog_no_carousel_slides_ae0422.feature` (new)
+- `frontend/tests/features/blog_clean_slides.feature`, `blog_content_cleanup.feature`,
+  `public-blog-polish-ae0412.feature` (superseded/rewritten scenarios)
+
+Backend:
+
+- `backend/src/rag_backend/infrastructure/database/carousel_repository.py` (upsert removed; detach inlined)
+- `backend/src/rag_backend/infrastructure/database/distribution_home.py` (docstrings)
+- `backend/src/rag_backend/infrastructure/database/blog_post_hide.py` (new, AC6)
+- `backend/src/rag_backend/infrastructure/database/carousel_blog_dual_write.py` (deleted)
+- `backend/scripts/hide_bad_carousel_posts.py` (new, AC6 CLI)
+- `backend/tests/features/blog_no_carousel_slides_ae0422.feature` (new)
+- `backend/tests/unit/infrastructure/test_carousel_repository_detach.py`
+- `backend/tests/unit/infrastructure/test_carousel_save_blog_noop.py` (new)
+- `backend/tests/unit/infrastructure/test_blog_post_hide.py` (new)
+- `backend/tests/integration/test_publishing_safety_net.py`, `test_presentation_safety_net.py`
+  (seed the carousel-origin blog row explicitly)
+
+Note: the branch also carries the plan artifacts added by the architecture commit (ADR-0025, the
+blog-post-document-model doc, the AE-0423..AE-0428 tickets/feature files) — not part of this
+implementation.
 
 ## Test Evidence
 
-Pending.
+- Frontend: `npm run test -- --run` → 1529 passed (181 files). `npm run typecheck` clean. `npm run
+  build` succeeds. `bash scripts/ci/gates.sh frontend --changed-only` → 13 PASS / 0 FAIL.
+- Backend: `uv run pytest tests/unit -q` → 4710 passed, 1 skipped. `uv run pytest tests/integration
+  -q` → 700 passed, 13 skipped. `bash scripts/ci/gates.sh backend --changed-only` → 17 PASS / 0 FAIL
+  (format, lint, strict-diff, type, imports, arch-ratchet, docstrings, dead-code, …).
+- New AC6 tests: `backend/tests/unit/infrastructure/test_blog_post_hide.py` (hides, idempotent
+  re-run, standalone untouched, draft untouched, marker preserves metadata, dry-run writes nothing,
+  real status event via `WorkflowEventService`).
+- New AC7 tests: `test_carousel_save_blog_noop.py` (no row created on save; existing row's
+  content/status unchanged; hidden post not re-published; ADR-0011 distribution mirror still written)
+  and the rewritten `test_carousel_repository_detach.py`.
 
 ## QA Report
 
@@ -211,6 +294,25 @@ Pending.
   **Known behavior (not changed here):** deleting a carousel also unpublishes an already-published
   v2 post (published → draft). That is the safe default for v1 orphans; keeping a v2 post live after
   its source carousel is deleted is a possible follow-up, not part of this epic.
+- **Strip the carousel design image entirely, including `images.hero`.** AC1 forbids any `<img>` src
+  containing `/slide-images/`, and the design's `images.hero` **is** a rendered slide
+  (`design_token_utils.py::_public_rendered_slide_urls` / `_build_default_design_tokens` build it as
+  `/api/carousels/{id}/slide-images/pt/slide_1.jpg`). So the public page must show no carousel design
+  image at all — `themeOnlyDesign()` keeps colors/typography and drops `images`. A standalone post
+  still shows its own `featured_image_url`.
+- **Preserve the ADR-0011 distribution mirror.** Removing `sync_carousel_blog_post` also removed the
+  only writer of `blog_posts.distribution`. Rather than drop that behavior, `create_project` /
+  `update_project` now call the existing `write_distribution` (no-op when there is no row; never
+  touches `content`/`status`). This keeps the "distribution home" contract live while satisfying "no
+  row created/published/overwritten".
+- **Put the AC6 hide service in `infrastructure/database`, not `application`.** It writes
+  `BlogPostModel` directly and reuses `WorkflowEventService`, so an `application` home would add a
+  new `application -> infrastructure` edge to the generated AE-0082 baseline. Placing it next to
+  `workflow_timeout_repository` (which already does infra→application) keeps `.importlinter`
+  untouched.
+- **Seed the carousel-origin blog row explicitly in the safety-net tests.** Those tests exercised the
+  removed auto-create path; making them insert the AE-0127-shape row directly keeps them testing the
+  *read* path (which this ticket does not change) rather than deleting their coverage.
 
 ## Risk & Size
 
@@ -224,4 +326,9 @@ None.
 
 ## Final Summary
 
-Pending.
+Implemented and pushed on `feat/ae-0422-blog-no-carousel-slides` (commits `54cfcafad`, `a50396da7`,
+`17844e12c`, `8f8a45363`). The public blog body renders text only (no carousel design image reaches
+the page), the carousel write path no longer creates/overwrites/publishes blog rows (delete-time
+detach retained), and the AC6 hide action ships as a tested service + dry-run-default CLI. All seven
+acceptance criteria are met; every local gate is green. Production hiding is the orchestrator's
+owner-approved action.
