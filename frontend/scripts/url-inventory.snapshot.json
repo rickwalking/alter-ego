@@ -21,12 +21,6 @@
       "segmentConfig": {}
     },
     {
-      "url": "/api/auth/logout",
-      "kind": "route",
-      "file": "src/app/api/auth/logout/route.ts",
-      "segmentConfig": {}
-    },
-    {
       "url": "/api/auth/token",
       "kind": "route",
       "file": "src/app/api/auth/token/route.ts",
@@ -42,6 +36,12 @@
       "url": "/api/carousels/[id]/workflow/start",
       "kind": "route",
       "file": "src/app/api/carousels/[id]/workflow/start/route.ts",
+      "segmentConfig": {}
+    },
+    {
+      "url": "/auth/logout",
+      "kind": "route",
+      "file": "src/app/auth/logout/route.ts",
       "segmentConfig": {}
     },
     {

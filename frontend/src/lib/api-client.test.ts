@@ -217,7 +217,8 @@ describe("API Client Module", () => {
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
           ApiError,
         );
-        expect(location.href).toContain("/api/auth/logout");
+        expect(location.href).toContain("/auth/logout");
+        expect(location.href).not.toContain("/api/");
         expect(location.href).toContain("redirect=");
       });
     });
@@ -701,7 +702,8 @@ describe("API Client Module", () => {
           message: "Session expired",
           code: "AUTH_EXPIRED",
         });
-        expect(location.href).toContain("/api/auth/logout");
+        expect(location.href).toContain("/auth/logout");
+        expect(location.href).not.toContain("/api/");
       });
 
       it("Then it should fall back to Unauthorized when the body is not JSON", async () => {
@@ -723,7 +725,8 @@ describe("API Client Module", () => {
           status: 401,
           message: "Unauthorized",
         });
-        expect(location.href).toContain("/api/auth/logout");
+        expect(location.href).toContain("/auth/logout");
+        expect(location.href).not.toContain("/api/");
       });
     });
 
