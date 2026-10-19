@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { HTTP_STATUS } from "@/constants/api";
 import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 // API Response Schema
 export const apiResponseSchema = z.object({
@@ -30,7 +31,7 @@ function redirectToLoginAfterUnauthorized(): void {
   const redirect = `${window.location.pathname}${window.location.search}`;
   const params = new URLSearchParams();
   params.set(AUTH_LOGIN_REDIRECT_PARAM, redirect);
-  window.location.href = `/api/auth/logout?${params.toString()}`;
+  window.location.href = `${PUBLIC_ROUTE_PATHS.LOGOUT}?${params.toString()}`;
 }
 
 export class ApiError extends Error {
