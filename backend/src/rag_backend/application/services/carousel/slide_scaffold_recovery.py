@@ -51,8 +51,13 @@ _LOCALE_SECTION_TITLES: dict[str, str] = {
     LANGUAGE_EN: "EN",
 }
 
-_SECTION_PATTERN = re.compile(r"^##\s+(?P<title>.+?)\s*$", re.MULTILINE)
-_SECTION_LINE = re.compile(r"^\s*##\s+.*$")
+# AE-0430: a locale section is "## PT" or a bold-only "**PT**" / "**EN:**" line
+# (prod 5344b6c6 leaked "**PT**" into the visible PT body).
+_SECTION_PATTERN = re.compile(
+    r"^(?:##\s+(?P<title>.+?)|\*\*(?P<bold>PT|EN):?\*\*:?)\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+_SECTION_LINE = re.compile(r"^\s*(?:##\s+.*|\*\*(?:PT|EN):?\*\*:?\s*)$", re.IGNORECASE)
 _LABEL_LINE = re.compile(r"^\*\*(?P<label>[A-Za-z ]+):\*\*\s*(?P<value>.*)$")
 _INLINE_LABEL_PREFIX = re.compile(r"^\s*\*\*[A-Za-z ]+:\*\*\s*")
 _PLAIN_LABEL_PREFIX = re.compile(
@@ -68,7 +73,8 @@ def split_scaffold_sections(raw: str) -> dict[str, str]:
     for position, match in enumerate(matches):
         start = match.end()
         end = matches[position + 1].start() if position + 1 < len(matches) else len(raw)
-        sections[match.group("title").strip().upper()] = raw[start:end].strip()
+        title = match.group("title") or match.group("bold") or ""
+        sections[title.strip().upper()] = raw[start:end].strip()
     return sections
 
 
@@ -162,6 +168,30 @@ def _recover_body_copy(failure: SlideParseFailure) -> dict[str, str] | None:
     return None
 
 
+def _heading_is_fallback(
+    slide: Mapping[str, object],
+    payload: Mapping[str, object],
+    failure: SlideParseFailure,
+) -> bool:
+    """True when the heading is empty, or an EN heading that is the PT title.
+
+    AE-0430: without a translation the EN payload is built from the draft, so
+    its heading is the PT title; the scaffold's EN section heading is better.
+    """
+    heading = str(payload.get(_KEY_HEADING) or "").strip()
+    if not heading:
+        return True
+    if failure.locale != LANGUAGE_EN:
+        return False
+    pt_payload = slide.get(STATE_FIELD_PRESENTATION_PT)
+    pt_heading = (
+        str(pt_payload.get(_KEY_HEADING) or "").strip()
+        if isinstance(pt_payload, Mapping)
+        else ""
+    )
+    return heading == pt_heading
+
+
 def _recover_one(slide: dict[str, object], failure: SlideParseFailure) -> bool:
     """Apply one deterministic recovery; return True when it succeeded."""
     locale_key = _LOCALE_PAYLOAD_KEYS.get(failure.locale)
@@ -173,7 +203,7 @@ def _recover_one(slide: dict[str, object], failure: SlideParseFailure) -> bool:
         copy = _recover_body_copy(failure)
         if copy is None:
             return False
-        if copy[_KEY_HEADING] and not str(payload.get(_KEY_HEADING) or "").strip():
+        if copy[_KEY_HEADING] and _heading_is_fallback(slide, payload, failure):
             payload[_KEY_HEADING] = copy[_KEY_HEADING]
         payload[_KEY_BODY] = copy[_KEY_BODY]
     slide[locale_key] = normalize_canonical_shape(payload)

@@ -182,6 +182,12 @@ export {
   type StructuredItemField,
 } from "./workspace/lib/presentation-slide-resolution";
 
+/* --- workspace: mirror the other locale's structured fields (AE-0430) --- */
+export {
+  mirrorLocaleStructure,
+  otherLocaleKey,
+} from "./workspace/lib/presentation-locale-mirror";
+
 /* --- workspace: per-locale emphasis convention (AE-0414) --- */
 export {
   EMPHASIS_EXAMPLE_BY_LOCALE,

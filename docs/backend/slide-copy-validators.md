@@ -65,3 +65,46 @@ failing slide (blocking rule or voice score under 70), then up to 2 more on the 
 | `AUTOPILOT_AUTOFIX_ATTEMPTS` | 3 (`AUTOFIX_MODEL_ATTEMPTS`) | fast-model attempts per failing slide |
 | `AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS` | 2 (`AUTOFIX_ESCALATION_ATTEMPTS`) | reasoning-model attempts after them (0 = off; on deploy.yml as a GitHub variable) |
 | `CONTENT_DRAFT_CONCURRENCY` | 4 | slides fixed in parallel |
+
+## Content-gate targeted repair (AE-0430)
+
+Prod carousel `5344b6c6` kept 12 blockers through two "Feedback para revisão" runs. Before
+this, the only model step at the content gate was one whole-slide re-draft (fail-closed
+chain), and it never saw the violations. Now, whenever the content ensure ends with a
+blocking `content_gate_validation` (first drafting, translation, a revision), the runner
+calls `content_gate_repair_flow.repair_blocked_content_gate`:
+
+1. **Fill.** A PT structured field EN lacks (TL;DR, item list, a shorter list) is copied
+   into EN, so `translation_shape_mismatch` cannot stay; each copied text becomes a
+   "translate this" target.
+2. **Targets.** One per blocking violation that names a slide, a locale and a visible
+   text path (`heading`, `body`, `tldr_strip`, `<list>[n].title|body`). Each target carries
+   the current text, the exact budget the validator enforces (`max_characters`,
+   `max_lines`), the problems, the slide heading and, for EN, the PT source. Fields that
+   pass are never sent, and answers for ids nobody asked for are ignored.
+3. **One model call per round** (fast role, `carousel_gate_repair/v1/field_repair.yaml`,
+   Langfuse-traced through the orchestrator's runnable config), answers patched in by path,
+   re-validated. At most **2 rounds** (`GATE_REPAIR_MAX_ROUNDS`), at most 40 fields per round.
+4. The repaired slides are written back like owner edits (`apply_localized_slide_edits`):
+   drafts, EN translations and both reports stay in step. Nothing is truncated and no rule
+   is loosened; whatever still blocks stays visible. A failing model changes nothing.
+
+Code: `content_gate_repair.py` (loop + model adapter), `content_gate_repair_targets.py`
+(fill, targets, patching), `content_gate_repair_flow.py` (runner hook, revision note).
+Logs: `content_gate_repair_round`, `content_gate_repair_done`,
+`content_gate_repair_model_failed`.
+
+Related fixes from the same incident:
+
+- **Translation keeps the shape.** The translator (`carousel/v8/slide_translations.yaml`)
+  now receives and returns `tldr_strip` and the item texts; the parser gives every EN
+  translation the PT draft's structured extras (translated when the answer has the same
+  shape). An unanswered TL;DR stays absent, so the gate blocks on the shape and the repair
+  translates it. The TL;DR strip is now language-checked like heading and body
+  (`translation_not_english` when it equals the PT one, `wrong_language`), so a PT TL;DR can
+  never pass as the EN one.
+- **Label scaffolding.** `**PT**` / `**EN**` bold-only lines are locale section headers in
+  the scaffold recovery (only `## PT` was), so `**PT**` no longer leaks into the PT body,
+  and an EN payload built from the draft takes the EN section heading.
+- **Manual editor.** The editable EN column offers every structured field PT has (empty),
+  so a remaining violation is always fixable by hand.

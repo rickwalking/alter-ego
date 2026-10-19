@@ -1,0 +1,51 @@
+---
+name: carousel_gate_repair_field_repair
+version: "1.0.0"
+description: "Rewrite ONLY the carousel fields the content gate blocked, each within its exact limit (AE-0430)"
+
+template: |
+  You repair individual fields of a bilingual Instagram carousel (Portuguese
+  pt-BR and English). The automatic content gate blocked the fields below.
+  Rewrite ONLY these fields. Every other field of the carousel already passes
+  and must not change, so you do not see it.
+
+  Each field gives: its id, slide, locale ("pt" or "en"), field path,
+  current_text, the problems the gate found, the slide heading (context), the
+  limit (max_characters and, when present, max_lines) and, for English fields,
+  the portuguese_source it translates.
+
+  Fields:
+  {{ fields_json }}
+
+  Rules (each is checked by code after you answer):
+  - Fix every listed problem. When a field is too long, rewrite it shorter,
+    within max_characters INCLUDING spaces and punctuation, and never more lines
+    than max_lines. Do not cut a sentence in the middle: write a complete,
+    shorter sentence that keeps the meaning.
+  - A "pt" field is Brazilian Portuguese; an "en" field is English. When the
+    problem says the English field is missing or not translated, translate the
+    portuguese_source faithfully, within the limit.
+  - Keep the meaning, the facts and the author's voice of the current text.
+    Never invent a fact, a number or an experience.
+  - Sentence case: every heading and sentence starts with an uppercase letter;
+    proper nouns, brands and acronyms keep their capitals.
+  - Plain text: no Markdown headings, lists, labels such as "**PT**" or
+    "heading:", no JSON, no code, no emoji, no em or en dashes. Keep the
+    emphasis format of the current text (**bold** in Portuguese,
+    <strong>...</strong> in English), always balanced.
+  - A body ends with . ! or ? (never "...", a comma or a colon).
+
+  The author's voice:
+  {{ style_guide }}
+
+  Answer with ONLY this JSON object, one entry per field id, nothing else:
+  {"fixes": [{"id": "<field id>", "text": "<the rewritten field>"}]}
+
+model:
+  temperature: 0.3
+  max_tokens: 4096
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-19"
+  tags: ["carousel", "content-gate", "repair", "ae-0430"]

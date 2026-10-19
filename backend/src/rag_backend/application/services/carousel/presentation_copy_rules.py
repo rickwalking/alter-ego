@@ -42,6 +42,7 @@ from rag_backend.application.services.carousel.copy_hygiene_text import (
 from rag_backend.application.services.carousel.presentation_content_rules import (
     ContentRuleCommand,
     complete_item_count,
+    language_fields,
     rule_active,
     slide_type_of,
     text_of,
@@ -185,7 +186,7 @@ def _body_codes(
     if VIOLATION_WRONG_LANGUAGE in active:
         found.extend(
             (VIOLATION_WRONG_LANGUAGE, (field, detail))
-            for field, text in visible_fields(command.payload)
+            for field, text in language_fields(command.payload)
             if (detail := wrong_language_detail(text, portuguese=portuguese))
         )
     return found

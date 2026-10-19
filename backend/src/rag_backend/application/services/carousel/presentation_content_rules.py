@@ -53,6 +53,8 @@ from rag_backend.domain.models.carousel_presentation import (
 
 _FIELD_HEADING = "heading"
 _FIELD_BODY = "body"
+# AE-0430: the TL;DR strip is rendered, so its language is checked too.
+_FIELD_TLDR = "tldr_strip"
 _KEY_FEATURES = "features"
 _KEY_ACTIONS = "actions"
 _KEY_SUMMARY_POINTS = "summary_points"
@@ -210,6 +212,17 @@ def visible_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
     return fields
 
 
+def language_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
+    """The visible fields plus the TL;DR strip: every text whose language counts.
+
+    AE-0430: a PT TL;DR shipped as the EN one passed the gate because only
+    heading, body and items were language-checked.
+    """
+    tldr = text_of(payload, _FIELD_TLDR)
+    extra = [(_FIELD_TLDR, tldr)] if tldr.strip() else []
+    return [*visible_fields(payload), *extra]
+
+
 def content_rule_violations(
     command: ContentRuleCommand,
 ) -> list[SlideValidationViolation]:
@@ -247,7 +260,7 @@ class TranslationCheckCommand:
 def translation_violations(
     command: TranslationCheckCommand,
 ) -> list[SlideValidationViolation]:
-    """Flag EN heading/body copy that is the PT copy pasted untranslated."""
+    """Flag EN heading/body/TL;DR copy that is the PT copy pasted untranslated."""
     code = VIOLATION_TRANSLATION_NOT_ENGLISH
     if code not in command.policy.rule_severities:
         return []
@@ -259,7 +272,7 @@ def translation_violations(
     )
     return [
         _violation(rule_command, code, field)
-        for field in (_FIELD_HEADING, _FIELD_BODY)
+        for field in (_FIELD_HEADING, _FIELD_BODY, _FIELD_TLDR)
         if _untranslated(command, field)
     ]
 
@@ -286,6 +299,7 @@ __all__ = [
     "complete_item_count",
     "content_rule_violations",
     "emphasis_markup_is_valid",
+    "language_fields",
     "rule_active",
     "slide_type_of",
     "text_of",
