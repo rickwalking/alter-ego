@@ -1,13 +1,18 @@
 """API routes for blog post workflow transitions (Phase 3 WF-003)."""
 
-from datetime import UTC, datetime, timedelta
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.dependencies.blog_document import assert_publishable
+from rag_backend.api.dependencies.blog_content_write import (
+    bump_lock_version,
+    check_optional_if_match,
+)
+from rag_backend.api.dependencies.blog_document import assert_ready_to_publish
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -18,14 +23,14 @@ from rag_backend.api.dependencies.resource_access import (
     assert_blog_post_status,
     get_blog_post_by_id,
     get_blog_post_for_user,
+    lock_blog_post,
     validate_reviewer_user,
 )
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
-from rag_backend.api.schemas.calendar import SchedulePublishRequest
-from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
+from rag_backend.api.schemas.blog_post_editor import BlogEditorSettingsResponse
 from rag_backend.application.services.notification_service import (
     NotificationService,
     _WorkflowUpdateParams,
@@ -37,10 +42,7 @@ from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
-from rag_backend.domain.constants.ai_disclosure import (
-    AI_DISCLOSURE_NONE,
-    ERR_DISCLOSURE_REQUIRED,
-)
+from rag_backend.domain.constants.blog_editor import ERR_BLOG_REVIEWER_REQUIRED
 from rag_backend.domain.constants.blog_post import (
     BlogPostStatus,
     EditorialCommentStatus,
@@ -58,11 +60,9 @@ from rag_backend.domain.constants.workflow_events import (
 )
 from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
-    ERR_SCHEDULE_IN_PAST,
     ERR_SELF_REVIEW,
     ERR_VERSION_HEADER_REQUIRED,
     MAX_REJECT_REASON_LENGTH,
-    MIN_SCHEDULE_LEAD_SECONDS,
     NOTIFICATION_TITLE_CHANGES_REQUESTED,
     WORKFLOW_REJECT_COMMENT_PREFIX,
 )
@@ -76,6 +76,7 @@ router = APIRouter(tags=["blog_post_workflow"])
 
 
 def _event_service() -> WorkflowEventService:
+    """The Redis-backed workflow event service of the blog routes."""
     settings = get_settings()
     return WorkflowEventService(get_event_publisher(settings.redis_url or None))
 
@@ -135,6 +136,25 @@ async def _emit_status_change(
     )
 
 
+def _resolve_reviewer(
+    author_id: str, requested: str | None, *, allow_self: bool
+) -> str:
+    """The reviewer to assign; 400 on self-review unless it is allowed."""
+    if requested is None and allow_self:
+        return author_id
+    if requested is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_BLOG_REVIEWER_REQUIRED,
+        )
+    if requested == author_id and not allow_self:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_SELF_REVIEW,
+        )
+    return requested
+
+
 @router.post(
     "/blog-posts/{post_id}/submit-review",
     response_model=BlogPostResponse,
@@ -146,23 +166,34 @@ async def submit_blog_post_for_review(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
-    reviewer_id: str = Query(...),
+    reviewer_id: str | None = Query(default=None),
 ) -> BlogPostResponse:
-    """Submit a blog post for review."""
+    """Submit a blog post for review.
+
+    ``BLOG_ALLOW_SELF_REVIEW`` (default false, AE-0424) lets the author be the
+    reviewer (and is the reviewer when none is given); otherwise a distinct
+    reviewer is required.
+    """
     post = await get_blog_post_for_user(db, post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.DRAFT)
+    # Same guard as publish: never queue a review of an unpublishable post.
+    assert_ready_to_publish(post)
     old_status = post.status
 
+    reviewer_id = _resolve_reviewer(
+        post.author_id or current_user.id,
+        reviewer_id,
+        allow_self=get_settings().blog_allow_self_review,
+    )
     await validate_reviewer_user(db, reviewer_id)
-    if post.author_id and reviewer_id == post.author_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SELF_REVIEW,
-        )
 
     post.status = BlogPostStatus.UNDER_REVIEW.value
     post.submitted_for_review_at = datetime.now(UTC)
     post.reviewer_id = reviewer_id
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -195,12 +226,16 @@ async def approve_blog_post(
 ) -> BlogPostResponse:
     """Approve a blog post (assigned reviewer or admin only)."""
     post = await get_blog_post_by_id(db, post_id)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
     old_status = post.status
 
     post.status = BlogPostStatus.APPROVED.value
     post.approved_at = datetime.now(UTC)
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -225,20 +260,27 @@ async def reject_blog_post(
 ) -> BlogPostResponse:
     """Reject a blog post (assigned reviewer or admin only)."""
     post = await get_blog_post_by_id(db, post_id)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
     old_status = post.status
 
     post.status = BlogPostStatus.DRAFT.value
     post.submitted_for_review_at = None
+    bump_lock_version(post)
 
-    if post.editor_comments is None:
-        post.editor_comments = []
-    post.editor_comments.append({
-        "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
-        "author_id": current_user.id,
-        "status": EditorialCommentStatus.OPEN.value,
-    })
+    # Reassign (not .append): an in-place JSON list mutation is not tracked by
+    # SQLAlchemy, so the reason was silently never stored (AE-0424).
+    post.editor_comments = [
+        *(post.editor_comments or []),
+        {
+            "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
+            "author_id": current_user.id,
+            "status": EditorialCommentStatus.OPEN.value,
+        },
+    ]
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -261,44 +303,53 @@ async def reject_blog_post(
     return post
 
 
+# Path params are fields of the target dataclass (``Depends()``).
+PUBLISH_PATH = "/blog-posts/{post_id}/publish"
+UNPUBLISH_PATH = "/blog-posts/{post_id}/unpublish"
+
+
+@dataclass
+class PublishTarget:
+    """The post, session, caller, publishing facade and optional ``If-Match``.
+
+    Shared by publish and unpublish (keeps each route at <= 3 arguments).
+    """
+
+    post_id: UUID
+    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: EditorUser
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)]
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None
+
+
 @router.post(
-    "/blog-posts/{post_id}/publish",
+    PUBLISH_PATH,
     response_model=BlogPostResponse,
     summary="Publish blog post",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def publish_blog_post(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
+    request: Request, target: Annotated[PublishTarget, Depends()]
 ) -> BlogPostResponse:
     """Publish an approved blog post (author or admin only).
 
     The ``blog.v2`` document needs >= 1 non-empty section; a null cover is
-    allowed (cards/OG fall back to a neutral default, AE-0423).
+    allowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``
+    the editor sends is checked (409 when stale, AE-0424).
     """
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    db, current_user = target.db, target.current_user
+    post = await get_blog_post_for_user(db, target.post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    assert_publishable(post.content)
-
-    disclosure = AiDisclosureService()
-    metadata = (
-        post.ai_generation_metadata
-        if isinstance(post.ai_generation_metadata, dict)
-        else {}
-    )
-    label = str(post.ai_disclosure_label or disclosure.compute_label(metadata))
-    if disclosure.requires_disclosure(label) and label == AI_DISCLOSURE_NONE:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=ERR_DISCLOSURE_REQUIRED,
-        )
+    await check_optional_if_match(post.lock_version, target.if_match)
+    assert_ready_to_publish(post)
 
     old_status = post.status
 
-    await publishing.service.publish_blog(post)
+    await target.publishing.service.publish_blog(post)
+    bump_lock_version(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -309,53 +360,20 @@ async def publish_blog_post(
 
 
 @router.post(
-    "/blog-posts/{post_id}/schedule",
-    response_model=BlogPostResponse,
-    summary="Schedule blog post for future publication",
-)
-@limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
-async def schedule_blog_post(
-    request: Request,
-    post_id: UUID,
-    body: SchedulePublishRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-) -> BlogPostResponse:
-    """Schedule an approved post for future publication (SCHED-001, UI-024)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
-    assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    min_schedule = datetime.now(UTC) + timedelta(seconds=MIN_SCHEDULE_LEAD_SECONDS)
-    scheduled_at = body.scheduled_publish_at
-    if scheduled_at.tzinfo is None:
-        scheduled_at = scheduled_at.replace(tzinfo=UTC)
-    if scheduled_at < min_schedule:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SCHEDULE_IN_PAST,
-        )
-    await publishing.service.schedule_blog(post, scheduled_at)
-    await db.commit()
-    await db.refresh(post)
-    return post
-
-
-@router.post(
-    "/blog-posts/{post_id}/unpublish",
+    UNPUBLISH_PATH,
     response_model=BlogPostResponse,
     summary="Unpublish blog post",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def unpublish_blog_post(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
+    request: Request, target: Annotated[PublishTarget, Depends()]
 ) -> BlogPostResponse:
     """Unpublish a blog post (optimistic-locked visibility flip; AE-0296)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    db, current_user, if_match = target.db, target.current_user, target.if_match
+    post = await get_blog_post_for_user(db, target.post_id, current_user)
+    # Transition under the row lock: an overlapping slot write (review reset)
+    # either commits first and is seen here, or waits for us (AE-0424).
+    post = await lock_blog_post(db, post.id)
     if if_match is None:
         raise HTTPException(
             status_code=status.HTTP_428_PRECONDITION_REQUIRED,
@@ -371,7 +389,7 @@ async def unpublish_blog_post(
         ) from exc
     old_status = post.status
 
-    await publishing.service.unpublish_blog(post)
+    await target.publishing.service.unpublish_blog(post)
     # A visibility flip is a versioned write like any other: bump the version
     # so a concurrent editor's stale If-Match is rejected instead of clobbered.
     post.lock_version = if_match + 1
@@ -382,3 +400,18 @@ async def unpublish_blog_post(
     await db.commit()
     await db.refresh(post)
     return post
+
+
+@router.get(
+    "/blog-editor/settings",
+    response_model=BlogEditorSettingsResponse,
+    summary="Blog editor deployment settings",
+)
+@limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
+async def get_blog_editor_settings(
+    request: Request, current_user: EditorUser
+) -> BlogEditorSettingsResponse:
+    """``allow_self_review`` mirrors ``BLOG_ALLOW_SELF_REVIEW`` (default false)."""
+    return BlogEditorSettingsResponse(
+        allow_self_review=get_settings().blog_allow_self_review
+    )

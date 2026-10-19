@@ -24,13 +24,6 @@ export interface BlogPostFiltersProps {
   onStatusChange: (value: string) => void;
 }
 
-export interface ImageGenModalProps {
-  postId: string;
-  open: boolean;
-  onClose: () => void;
-  onImageGenerated: (imageUrl: string) => void;
-}
-
 export interface KeyboardShortcutsHelpProps {
   open: boolean;
   onClose: () => void;
@@ -48,14 +41,20 @@ export interface SeoPreviewProps {
 
 export interface BlogPostVersion {
   version_number: number;
-  title: string;
-  excerpt?: string;
+  /** Absent on entries written before AE-0424 (restore-only history). */
+  title?: string | null;
+  excerpt?: string | null;
   snapshot?: Record<string, unknown>;
+  change_summary?: string | null;
   created_at?: string;
 }
 
 export interface VersionHistorySidebarProps {
-  postId: string;
-  currentBody: string;
-  onRestore: (version: BlogPostVersion) => void;
+  versions: BlogPostVersion[];
+  loading: boolean;
+  /** The editor's current text, shown next to the selected snapshot. */
+  currentText: string;
+  /** Pending edits block a restore (it would replace them). */
+  disabled: boolean;
+  onRestore: (versionNumber: number) => void;
 }

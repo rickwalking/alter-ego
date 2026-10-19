@@ -126,6 +126,26 @@ Feature: Blog section editor, images, versions and publish (AE-0424)
     Then a conflict message is shown
     And the owner's unsaved text is preserved in the editor
 
+  Scenario: Typing during an in-flight save is kept
+    Given the owner clicked Save
+    When the owner keeps typing before the save answers
+    Then the new text stays in the editor as unsaved changes
+
+  Scenario: A save that races our own image generation is retried
+    Given an image generation finishes while a save is in flight
+    When the save gets a 409 because of that generation
+    Then the save is retried once on the new lock version
+    And no conflict message is shown
+
+  Scenario: Review controls wait for a running slot action
+    Given an image, rewrite or translation is running
+    Then the submit/approve/publish/schedule controls are disabled
+
+  Scenario: An exhausted image budget is explained on the slot
+    Given the post used its whole image budget
+    When the owner clicks generate on a slot
+    Then the slot shows the budget message
+
   # --- publish ---
 
   Scenario: Publish turns an approved post into a published post

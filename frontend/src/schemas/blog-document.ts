@@ -38,6 +38,16 @@ export const blogDocumentSchema = blogLanguageDocumentSchema.extend({
   translations: z.record(z.string(), blogLanguageDocumentSchema).default({}),
 });
 
+/** Editor-only voice/repetition scores (`content.quality`, AE-0425 writes). */
+export const blogQualitySchema = z.object({
+  voice_score: z.number(),
+  voice_breakdown: z
+    .record(z.string(), z.union([z.number(), z.array(z.string())]))
+    .default({}),
+  rewrite_passes: z.number().optional(),
+  checked_at: z.string().nullable().optional(),
+});
+
 export type BlogImage = z.infer<typeof blogImageSchema>;
 export type BlogSection = z.infer<typeof blogSectionSchema>;
 export type BlogLanguageDocument = z.infer<typeof blogLanguageDocumentSchema>;

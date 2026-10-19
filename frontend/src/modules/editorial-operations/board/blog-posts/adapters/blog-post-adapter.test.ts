@@ -13,7 +13,6 @@ function makePost(status: string): BlogPost {
     content: {},
     excerpt: "Excerpt",
     editor_comments: [],
-    version_history: [],
     sources: [],
     citations: [],
     ai_suggestions: [],

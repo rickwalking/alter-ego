@@ -335,70 +335,9 @@ class TestRestoreVersion:
             post["id"],
             version_history=[{"version_number": 1, "snapshot": {"markdown": "x"}}],
         )
+        # AE-0424: restore is a content write, so it carries If-Match.
         response = await admin_client.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1"
+            f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1",
+            headers={HTTP_HEADER_IF_MATCH: str(post["lock_version"])},
         )
         assert response.status_code == 422
-
-
-class _FakeImageService:
-    def __init__(self, image_url: str) -> None:
-        self.image_url = image_url
-        self.calls = 0
-
-    async def generate_image(self, post_id: str, prompt: str, *, user_id: str) -> dict:
-        self.calls += 1
-        return {"prompt": prompt, "image_url": self.image_url}
-
-
-class TestGenerateImageWritesTheCover:
-    @pytest.fixture
-    def fake_images(self, monkeypatch: pytest.MonkeyPatch):
-        from rag_backend.api.routes import blog_post_ai
-
-        def install(image_url: str) -> _FakeImageService:
-            fake = _FakeImageService(image_url)
-            monkeypatch.setattr(blog_post_ai, "_build_ai_service", lambda: fake)
-            return fake
-
-        return install
-
-    # Scenario: featured_image_url tracks cover.url on save
-    async def test_generated_image_becomes_the_cover(
-        self, admin_client: AsyncClient, fake_images
-    ) -> None:
-        fake_images("https://cdn.example/generated.jpg")
-        post = await _create(admin_client, content=v2_content("Corpo"))
-        response = await admin_client.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/generate-image", json={"prompt": "abstract"}
-        )
-        assert response.status_code == 200, response.text
-        stored = await _get(admin_client, post["id"])
-        assert stored["featured_image_url"] == "https://cdn.example/generated.jpg"
-        assert stored["content"]["cover"]["url"] == "https://cdn.example/generated.jpg"
-        assert stored["content"]["cover"]["alt"] == "GPT 5.6 saiu"
-
-    async def test_legacy_row_fails_before_any_image_spend(
-        self, admin_client: AsyncClient, fake_images
-    ) -> None:
-        fake = fake_images("https://cdn.example/generated.jpg")
-        post = await _create(admin_client, content=v2_content("Corpo"))
-        await _set_fields(post["id"], content={"markdown": "x"})
-        response = await admin_client.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/generate-image", json={"prompt": "abstract"}
-        )
-        assert response.status_code == 422
-        assert fake.calls == 0
-
-    async def test_unpublishable_image_url_is_502(
-        self, admin_client: AsyncClient, fake_images
-    ) -> None:
-        fake_images("output/blog-images/local.jpg")
-        post = await _create(admin_client, content=v2_content("Corpo"))
-        response = await admin_client.post(
-            f"{BLOG_POSTS_URL}/{post['id']}/generate-image", json={"prompt": "abstract"}
-        )
-        assert response.status_code == 502
-        stored = await _get(admin_client, post["id"])
-        assert stored["featured_image_url"] is None
-        assert stored["content"]["cover"] is None

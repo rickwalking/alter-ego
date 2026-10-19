@@ -3,27 +3,30 @@ Feature: Blog dashboard list and editor (AE-0411)
   drafts, and the editor loads and saves posts without losing content.
 
   # --- Editor (B05, B19) ---
+  # Reconciled by AE-0424: the editor edits the blog.v2 document as sections
+  # (no single body field, no v1 markdown/body branch).
 
   Scenario: The editor loads the full post through the detail endpoint
     Given a post that is not in the first list page
     When the editor opens it
     Then the post is fetched from GET /api/blog-posts/{id}
-    And the body field shows its stored text
+    And the section editor shows its stored blog.v2 sections
 
-  Scenario: A carousel post body is read from content.markdown
-    Given a carousel post whose content is {"markdown": "# Body", "translations": {...}}
+  Scenario: A legacy markdown row is never parsed by the editor
+    Given a post whose stored content is not a blog.v2 document
     When the editor opens it
-    Then the body field shows "# Body"
+    Then the "migration pending" banner is shown
+    And no content is sent
 
   Scenario: A title-only save does not send content
     Given a loaded post
     When the user changes only the title and saves
     Then the PUT payload carries only the title
 
-  Scenario: A body edit keeps every other content key
-    Given a carousel post with markdown and translations
-    When the user edits the body and saves
-    Then the PUT content has the new markdown and the same translations
+  Scenario: A section edit keeps the other language
+    Given a post with a PT document and an EN translation
+    When the user edits a PT section and saves
+    Then the PUT content has the new PT section and the same translations.en
 
   Scenario: An empty title cannot be saved
     Given a loaded post

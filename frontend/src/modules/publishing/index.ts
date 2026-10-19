@@ -42,7 +42,6 @@ export {
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,
-  BlogGenerateImageResult,
   VoiceScoreResult,
   RubricEvaluationResult,
   ContentSource,
@@ -58,10 +57,16 @@ export type {
 export { useBlogPosts } from "./blog/hooks/use-blog-posts";
 export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
 export type {
-  BlogEditorSaveError,
+  BlogEditorData,
   BlogPostFilters,
+  BlogReviewActions,
   UseBlogPostEditorResult,
 } from "./blog/hooks/types";
+export { useBlogEditorActions } from "./blog/hooks/use-blog-editor-actions";
+export { useBlogEditorData } from "./blog/hooks/use-blog-editor-data";
+export { useBlogReviewActions } from "./blog/hooks/use-blog-review-actions";
+export { useUnsavedChangesGuard } from "./blog/hooks/use-unsaved-changes-guard";
+export { activeDocument, applySuggestion } from "./blog/lib/editor-document";
 export {
   BLOG_EXCERPT_MAX_LENGTH,
   BLOG_TITLE_MAX_LENGTH,
@@ -100,10 +105,18 @@ export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/t
 export { AccessibilityChecker } from "./blog/components/accessibility-checker";
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
 export { BlogPostFilters as BlogPostFiltersPanel } from "./blog/components/blog-post-filters";
-export { ImageGenModal } from "./blog/components/image-gen-modal";
 export { KeyboardShortcutsHelp } from "./blog/components/keyboard-shortcuts-help";
 export { SeoPreview } from "./blog/components/seo-preview";
-export { VersionHistorySidebar } from "./blog/components/version-history-sidebar";
+export {
+  snapshotText,
+  VersionHistorySidebar,
+} from "./blog/components/version-history-sidebar";
+/* --- blog: section editor (AE-0424) --- */
+export { BlogSectionEditor } from "./blog/components/section-editor/blog-section-editor";
+export { MigrationBanner } from "./blog/components/section-editor/migration-banner";
+export { ReviewBar } from "./blog/components/section-editor/review-bar";
+export { VoiceScore } from "./blog/components/section-editor/voice-score";
+export type { SectionSelection } from "./blog/components/section-editor/types";
 export type { BlogPostVersion } from "./blog/components/types";
 
 /* --- blog: public-post components --- */

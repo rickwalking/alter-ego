@@ -8,6 +8,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.blog.blog_version_history import (
+    VersionSnapshot,
+    append_version,
+)
 from rag_backend.domain.constants.optimistic_locking import (
     DEFAULT_LOCK_TTL_SECONDS,
     ERR_LOCK_HELD_BY_OTHER,
@@ -31,6 +35,18 @@ class _VersionedUpdate:
     post_id: str
     expected_version: int
     values: dict[str, object]
+    # AE-0424 (F-13): the saved state appended to ``version_history`` in the
+    # same UPDATE; ``prior_history`` is the row's history read in this
+    # transaction (the lock_version guard rejects a concurrent writer).
+    snapshot: VersionSnapshot | None = None
+    prior_history: object = None
+
+
+def _with_snapshot(params: _VersionedUpdate) -> dict[str, object]:
+    if params.snapshot is None:
+        return dict(params.values)
+    history = append_version(params.prior_history, params.snapshot)
+    return {**params.values, "version_history": history}
 
 
 class OptimisticLockService:
@@ -58,7 +74,7 @@ class OptimisticLockService:
         from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
         assignment = {
-            **params.values,
+            **_with_snapshot(params),
             "lock_version": params.expected_version + 1,
         }
         result = await db.execute(

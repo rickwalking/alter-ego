@@ -9,15 +9,6 @@ BASE_REF="${GATES_BASE_REF:-origin/main}"
 # shellcheck source=scripts/lib/diff_base.sh
 source "$ROOT/scripts/lib/diff_base.sh"
 
-# Resolve the diff range once via the shared 3-tier fallback (AE-0177) instead of
-# hard-coding `origin/main...HEAD`. On a stacked branch with no merge base this
-# falls back to the two-ref form (BASE HEAD); if neither resolves, the resolver
-# warns and we degrade to advisory (skip) rather than silently passing.
-if ! DIFF_RANGE="$(resolve_diff_base "$BASE_REF")"; then
-  echo "Strict diff ruff: diff base unresolved — degrading to advisory (skip)."
-  exit 0
-fi
-
 cd "$ROOT/backend"
 
 # AE-0080: composition-root app factory was relocated byte-identical from
@@ -44,7 +35,20 @@ is_exempt() {
   return 1
 }
 
-mapfile -t FILES < <("$SCRIPT_DIR/changed-backend-files.sh")
+# List the changed files FIRST: changed-backend-files.sh runs
+# `git fetch origin main --depth=1`, which can drop the merge base on a stacked
+# PR. Resolving the range before it left `origin/main...HEAD` unusable for every
+# per-file diff and the gate died silently under `set -e` (AE-0424 review 2).
+mapfile -t FILES < <("$SCRIPT_DIR/changed-backend-files.sh" "$BASE_REF")
+
+# Resolve the diff range once via the shared 3-tier fallback (AE-0177) instead of
+# hard-coding `origin/main...HEAD`. On a stacked branch with no merge base this
+# falls back to the two-ref form (BASE HEAD); if neither resolves, the resolver
+# warns and we degrade to advisory (skip) rather than silently passing.
+if ! DIFF_RANGE="$(resolve_diff_base "$BASE_REF")"; then
+  echo "Strict diff ruff: diff base unresolved — degrading to advisory (skip)."
+  exit 0
+fi
 SRC_FILES=()
 for file in "${FILES[@]}"; do
   if [[ "$file" == src/* ]] && ! is_exempt "$file"; then
@@ -66,7 +70,9 @@ for file in "${SRC_FILES[@]}"; do
   # Get added lines from the diff (unified=0 to skip context). $DIFF_RANGE comes
   # from the shared resolver (merge-base or two-ref form) — see AE-0177.
   # shellcheck disable=SC2086 # $DIFF_RANGE word-splits into one or two refs.
-  CHANGED_LINES["$key"]=$(git diff -U0 $DIFF_RANGE -- "$file" 2>/dev/null | grep -E '^@@' | sed 's/^@@ -[0-9,]* +\([0-9]*\),\?\([0-9]*\) @@.*/\1:\2/')
+  # A file without added hunks has nothing to check (`|| true`: grep exits 1 on
+  # no match, which must not abort the gate under `set -e` + pipefail).
+  CHANGED_LINES["$key"]=$({ git diff -U0 $DIFF_RANGE -- "$file" 2>/dev/null || true; } | { grep -E '^@@' || true; } | sed 's/^@@ -[0-9,]* +\([0-9]*\),\?\([0-9]*\) @@.*/\1:\2/')
 done
 
 # Run ruff on each file and filter violations to only those on changed lines

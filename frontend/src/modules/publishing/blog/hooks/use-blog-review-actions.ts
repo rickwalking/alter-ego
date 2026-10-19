@@ -1,0 +1,85 @@
+"use client";
+
+/**
+ * Review, publish and schedule controls of the blog editor (AE-0424).
+ *
+ * They call the existing `blog_post_workflow` routes through the status
+ * guards (a draft cannot jump to `published`: the 400 is shown, not
+ * swallowed). With `BLOG_ALLOW_SELF_REVIEW` on, "Publish now" on a draft runs
+ * submit-review (the author as reviewer) -> approve -> publish in one flow.
+ * The editor settings come from `GET /api/blog-editor/settings`.
+ */
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
+import {
+  approvePost,
+  BlogEditorRequestError,
+  cancelSchedule,
+  fetchEditorSettings,
+  publishPost,
+  rejectPost,
+  schedulePost,
+  submitForReview,
+  unpublishPost,
+} from "../blog-editor-requests";
+import type { BlogPost } from "../types";
+import { locked } from "./use-blog-post-editor";
+import type { BlogReviewActions, UseBlogPostEditorResult } from "./types";
+
+export const blogEditorSettingsKey = ["blog-editor-settings"] as const;
+
+async function publishNowFlow(post: BlogPost): Promise<BlogPost> {
+  const submitted = await submitForReview(post.id, null);
+  const approved = await approvePost(submitted.id);
+  return publishPost(locked(approved));
+}
+
+export function useBlogReviewActions(
+  editor: UseBlogPostEditorResult,
+): BlogReviewActions {
+  const settings = useQuery({
+    queryKey: blogEditorSettingsKey,
+    queryFn: fetchEditorSettings,
+  });
+  const [pending, setPending] = useState(false);
+
+  const run = async (
+    task: (post: BlogPost) => Promise<BlogPost>,
+  ): Promise<void> => {
+    const post = editor.post;
+    if (!post || editor.dirty) {
+      return;
+    }
+    setPending(true);
+    editor.setError(null);
+    try {
+      editor.replaceFromServer(await task(post));
+    } catch (err) {
+      await editor.reload();
+      editor.setError(
+        err instanceof BlogEditorRequestError
+          ? { kind: err.kind, detail: err.detail }
+          : { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null },
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return {
+    allowSelfReview: settings.data?.allow_self_review ?? false,
+    pending,
+    submitForReview: (reviewerId) =>
+      run((post) => submitForReview(post.id, reviewerId)),
+    approve: () => run((post) => approvePost(post.id)),
+    reject: (reason) => run((post) => rejectPost(post.id, reason)),
+    publish: () => run((post) => publishPost(locked(post))),
+    publishNow: () => run(publishNowFlow),
+    unpublish: () => run((post) => unpublishPost(locked(post))),
+    schedule: (iso) => run((post) => schedulePost(locked(post), iso)),
+    cancelSchedule: () => run((post) => cancelSchedule(locked(post))),
+  };
+}
