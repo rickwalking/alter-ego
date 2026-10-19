@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.check_blog_v1_dead_code import find_violations, main
 
 _SEEDED = "const x = payload.blog_image_map;\n"
@@ -17,7 +19,7 @@ _CLEAN = "export const OK = 1;\n"
 
 
 def test_guard_fires_on_seeded_v1_symbol(
-    tmp_path: Path, capsys: object
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     offender = tmp_path / "offender.ts"
     offender.write_text(_SEEDED, encoding="utf-8")
@@ -26,7 +28,7 @@ def test_guard_fires_on_seeded_v1_symbol(
     assert violations, "guard must flag the seeded blog_image_map reference"
     assert main([str(tmp_path)]) == 1
 
-    out = capsys.readouterr().out  # type: ignore[attr-defined]
+    out = capsys.readouterr().out
     assert "offender.ts" in out
     assert "blog_image_map" in out
 
