@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_document import assert_publishable
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -273,9 +274,14 @@ async def publish_blog_post(
     current_user: EditorUser,
     publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
-    """Publish an approved blog post (author or admin only)."""
+    """Publish an approved blog post (author or admin only).
+
+    The ``blog.v2`` document needs >= 1 non-empty section; a null cover is
+    allowed (cards/OG fall back to a neutral default, AE-0423).
+    """
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
+    assert_publishable(post.content)
 
     disclosure = AiDisclosureService()
     metadata = (

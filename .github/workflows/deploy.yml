@@ -261,6 +261,15 @@ jobs:
             # (docs/deployment/prod-migration-reconcile.md). Prod uses create_all
             # bootstrap until then.
 
+            # --- Blog document cutover (AE-0423, ADR-0025) ---------------------
+            # One-shot, idempotent data rewrite of blog_posts.content v1 -> blog.v2
+            # (no DDL, no Alembic). Runs with the FRESHLY BUILT backend image while
+            # only Postgres is up (no old/new app overlap). --verify exits non-zero
+            # if any row or translation is still non-v2; under `set -e` that aborts
+            # the deploy BEFORE the app stack serves traffic. Safe to re-run ad hoc.
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.blog_v1_to_v2 --apply --verify
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 

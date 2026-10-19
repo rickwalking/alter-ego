@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_document import validated_write
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
 from rag_backend.api.dependencies.roles import EditorUser
@@ -75,7 +76,12 @@ async def restore_blog_post_version(
             detail=ERR_BLOG_VERSION_NOT_FOUND.format(version_number=version_number),
         )
 
-    post.content = version_data.get("snapshot", {})
+    # A restore is a content write: strict blog.v2, cover projection synced.
+    restored = validated_write(
+        version_data.get("snapshot", {}), post.ai_generation_metadata
+    )
+    post.content = restored.content
+    post.featured_image_url = restored.featured_image_url
     post.title = version_data.get("title", post.title)
     post.excerpt = version_data.get("excerpt", post.excerpt)
 

@@ -7,6 +7,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_document import (
+    display_content,
+    prepare_create_payload,
+    prepare_update_values,
+)
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -123,6 +128,7 @@ async def create_blog_post(
 ) -> BlogPostResponse:
     """Create a new blog post."""
     payload = data.model_dump(exclude={"author_id"})
+    prepare_create_payload(payload)
     post = publishing.service.new_blog_post(payload)
     post.author_id = current_user.id
     await _stage_new_post(db, post)
@@ -196,8 +202,11 @@ async def get_blog_post(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> BlogPostResponse:
-    """Get a specific blog post."""
-    return await get_blog_post_for_read(db, post_id, current_user)
+    """Get a specific blog post (content always as a ``blog.v2`` document)."""
+    post = await get_blog_post_for_read(db, post_id, current_user)
+    response = BlogPostResponse.model_validate(post)
+    content = display_content(post.content, str(post.id))
+    return response.model_copy(update={"content": content})
 
 
 @router.put(
@@ -216,7 +225,7 @@ async def update_blog_post(
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
     """Update a blog post with optimistic locking (WF-005)."""
-    await get_blog_post_for_user(db, post_id, current_user)
+    existing = await get_blog_post_for_user(db, post_id, current_user)
     if if_match is None:
         raise HTTPException(
             status_code=status.HTTP_428_PRECONDITION_REQUIRED,
@@ -225,6 +234,7 @@ async def update_blog_post(
 
     update_data = data.model_dump(exclude_unset=True)
     guard_blog_post_update_fields(update_data, is_admin=_user_is_admin(current_user))
+    prepare_update_values(update_data, existing.ai_generation_metadata)
 
     lock_service = OptimisticLockService()
     try:

@@ -1,12 +1,19 @@
 """Blog post AI assistance API routes."""
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.blog_document import (
+    cover_write,
+    validated_write,
+)
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import get_blog_post_for_user
 from rag_backend.api.dependencies.roles import EditorUser
@@ -40,7 +47,12 @@ from rag_backend.domain.constants.ai_disclosure import (
     AI_ACTION_SUGGEST,
 )
 from rag_backend.domain.constants.blog_ai import ERR_IMAGE_GENERATION_FAILED
+from rag_backend.domain.constants.blog_document import (
+    BLOG_IMAGE_SOURCE_GENERATED,
+    ERR_BLOG_IMAGE_URL_INVALID,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
+from rag_backend.domain.models.blog_document import BlogImage
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.events.factory import get_event_publisher
@@ -97,6 +109,32 @@ def _build_ai_service() -> BlogPostAIService:
         image_service=image_provider.service,
         output_dir=Path(settings.carousel_output_dir) / "blog-images",
     )
+
+
+@dataclass(frozen=True)
+class _CoverText:
+    prompt: str
+    alt: str
+
+
+def _cover_image(url: str, text: _CoverText) -> BlogImage:
+    """The generated cover; a non-publishable URL is an image failure (502)."""
+    try:
+        return BlogImage(
+            url=url,
+            alt=text.alt,
+            source=BLOG_IMAGE_SOURCE_GENERATED,
+            prompt=text.prompt,
+            model=IMAGE_MODEL_OPENAI,
+            created_at=datetime.now(UTC).isoformat(),
+        )
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=ERR_IMAGE_GENERATION_FAILED.format(
+                reason=ERR_BLOG_IMAGE_URL_INVALID
+            ),
+        ) from exc
 
 
 @router.post(
@@ -188,8 +226,14 @@ async def generate_image(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> BlogPostGenerateImageResponse:
-    """Generate a featured image for a blog post."""
+    """Generate the cover image of a blog post (``content.cover`` + projection).
+
+    Fails fast (422) before any image spend when the stored content is not a
+    valid ``blog.v2`` document; ``featured_image_url`` is re-projected from the
+    new cover in the same transaction (AE-0423).
+    """
     post = await get_blog_post_for_user(db, post_id, current_user)
+    validated_write(post.content, post.ai_generation_metadata)
     service = _build_ai_service()
     try:
         result = await service.generate_image(
@@ -203,7 +247,13 @@ async def generate_image(
             detail=ERR_IMAGE_GENERATION_FAILED.format(reason="image generation failed"),
         ) from exc
 
-    post.featured_image_url = _cdn_service().resolve_url(result["image_url"])
+    cover = _cover_image(
+        _cdn_service().resolve_url(result["image_url"]),
+        _CoverText(prompt=result["prompt"], alt=post.title or result["prompt"]),
+    )
+    written = cover_write(post.content, cover)
+    post.content = written.content
+    post.featured_image_url = written.featured_image_url
     metadata = dict(post.ai_generation_metadata or {})
     metadata["last_image_prompt"] = result["prompt"]
     post.ai_generation_metadata = metadata
