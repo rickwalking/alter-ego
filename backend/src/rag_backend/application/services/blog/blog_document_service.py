@@ -12,6 +12,8 @@ emitted. AE-0428 deletes that adapter once prod ``--verify`` reports zero.
 
 from __future__ import annotations
 
+import itertools
+import uuid
 from dataclasses import dataclass
 
 import structlog
@@ -19,6 +21,7 @@ import structlog
 from rag_backend.domain.constants.blog_document import (
     BLOG_HEADING_MARKER,
     BLOG_HEADING_MAX_CHARS,
+    BLOG_SECTION_ID_PREFIX,
     BLOG_SECTION_MAX_CHARS,
     ERR_BLOG_HEADING_INVALID,
     ERR_BLOG_NO_SECTIONS,
@@ -38,6 +41,7 @@ from rag_backend.domain.models.blog_document import (
     parse_blog_content,
 )
 from rag_backend.domain.models.blog_document_split import (
+    SectionIdFactory,
     build_language_document,
     migrate_content,
 )
@@ -139,14 +143,26 @@ class BlogDocumentService:
             logger.warning(
                 METRIC_BLOG_V2_NON_MIGRATED_ROWS, post_id=post_id, reason=exc.code
             )
-            return _adapt_in_memory(content)
+            return _adapt_in_memory(content, post_id)
 
 
-def _adapt_in_memory(content: object) -> BlogDocument:
+def _stable_section_ids(post_id: str) -> SectionIdFactory:
+    """Deterministic ids so repeated reads of one legacy row are identical."""
+    counter = itertools.count()
+
+    def _next_id() -> str:
+        seed = f"{post_id}:{next(counter)}"
+        return f"{BLOG_SECTION_ID_PREFIX}{uuid.uuid5(uuid.NAMESPACE_URL, seed)}"
+
+    return _next_id
+
+
+def _adapt_in_memory(content: object, post_id: str) -> BlogDocument:
+    new_id = _stable_section_ids(post_id)
     try:
-        return parse_blog_content(migrate_content(content))
+        return parse_blog_content(migrate_content(content, new_id))
     except InvalidBlogDocumentError:
-        return parse_blog_content(build_language_document(""))
+        return parse_blog_content(build_language_document("", new_id))
 
 
 __all__ = [

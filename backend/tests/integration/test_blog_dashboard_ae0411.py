@@ -17,11 +17,13 @@ from rag_backend.domain.constants.blog_post import (
 )
 from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.domain.models import UserRole
+from tests.blog_v2_support import v2_content
 from tests.integration.conftest import auth_headers_for, create_test_user
 
 BLOG_POSTS_URL = "/api/blog-posts"
 UNTITLED = "Untitled draft"
-CAROUSEL_BODY = {"markdown": "# Long body", "translations": {"en": "# Body"}}
+# AE-0423: content is a blog.v2 document (the only accepted write shape).
+CAROUSEL_BODY = v2_content("Long body")
 
 
 @pytest.fixture
@@ -114,7 +116,7 @@ class TestCreateSlug:
         self, admin_client: AsyncClient
     ) -> None:
         # Scenario: Creating two posts without a slug succeeds
-        payload = {"title": UNTITLED, "content": {"blocks": []}, "excerpt": ""}
+        payload = {"title": UNTITLED, "content": v2_content(""), "excerpt": ""}
         first = await _create(admin_client, payload)
         second = await _create(admin_client, payload)
         assert first["slug"] != second["slug"]

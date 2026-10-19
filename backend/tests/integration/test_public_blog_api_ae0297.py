@@ -18,6 +18,7 @@ from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_PUBLIC_BLOG_READ
 from rag_backend.domain.models import User, UserRole
+from tests.blog_v2_support import v2_content, v2_section
 
 TEST_SECRET = "test-secret-for-ae0297-public-blog-tests"
 
@@ -147,7 +148,7 @@ async def _insert_post(
                 status=status_value,
                 origin=origin,
                 project_id=project_id,
-                content={"markdown": "# Body"},
+                content=v2_content("Body"),
                 excerpt="Excerpt",
                 author_id="author-1",
                 reviewer_id="reviewer-1",
@@ -232,7 +233,13 @@ class TestPublicDetail:
         assert response.status_code == 200
         body = response.json()
         assert body["id"] == post_id
-        assert body["content"] == {"markdown": "# Body"}
+        # AE-0423: content is the public projection of the blog.v2 document.
+        assert body["content"] == {
+            "schema": "blog.v2",
+            "cover": None,
+            "sections": [v2_section("Body")],
+            "translations": {},
+        }
         assert response.headers["Cache-Control"] == "no-store"
 
     @pytest.mark.asyncio

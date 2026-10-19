@@ -309,3 +309,17 @@ class TestPublicProjection:
         assert isinstance(sections, list)
         assert sections[0]["image"] is None
         assert projected["translations"] == {}
+
+
+class TestReadFailSafeStability:
+    def test_repeated_reads_of_a_legacy_row_are_identical(self) -> None:
+        legacy = {
+            "markdown": "## A\n\nx\n\n## B\n\ny",
+            "translations": {"en": "## E\n\nz"},
+        }
+        first = BlogDocumentService.read_document(legacy, "post-9").to_content()
+        second = BlogDocumentService.read_document(legacy, "post-9").to_content()
+        other = BlogDocumentService.read_document(legacy, "post-10").to_content()
+        assert first == second
+        assert first != other
+        parse_blog_content(first)

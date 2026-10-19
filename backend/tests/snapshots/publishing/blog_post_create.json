@@ -9,12 +9,18 @@
     "citations": [],
     "comment_count": 0,
     "content": {
-      "blocks": [
+      "cover": null,
+      "quality": null,
+      "schema": "blog.v2",
+      "sections": [
         {
-          "text": "Deterministic blog post body.",
-          "type": "paragraph"
+          "body_md": "Deterministic blog post body.",
+          "heading": null,
+          "id": "sec_00000000-0000-4000-8000-000000000001",
+          "image": null
         }
-      ]
+      ],
+      "translations": {}
     },
     "created_at": "<timestamp>",
     "editor_comments": [],
