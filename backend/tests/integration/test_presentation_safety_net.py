@@ -42,6 +42,7 @@ import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -219,6 +220,34 @@ class PresEnv:
                     image_prompt=f"Prompt {i}",
                 )
                 await repo.create_slide(slide)
+            # AE-0422: a carousel save no longer creates/auto-publishes a blog row,
+            # so seed the canonical ``origin='carousel'`` row explicitly to keep
+            # exercising the row read path.
+            from rag_backend.domain.constants.blog_post import (
+                BlogPostOrigin,
+                BlogPostStatus,
+            )
+            from rag_backend.infrastructure.database.models import BlogPostModel
+
+            session.add(
+                BlogPostModel.from_entity(
+                    {
+                        "id": str(uuid4()),
+                        "project_id": project_id,
+                        "origin": BlogPostOrigin.CAROUSEL.value,
+                        "title": project.topic,
+                        "slug": f"carousel-{project_id}",
+                        "status": BlogPostStatus.PUBLISHED.value,
+                        "content": {
+                            "markdown": FIXTURE_BLOG_PT,
+                            "translations": {
+                                "pt": FIXTURE_BLOG_PT,
+                                "en": FIXTURE_BLOG_EN,
+                            },
+                        },
+                    }
+                )
+            )
             await session.commit()
         return project_id
 
