@@ -18,6 +18,7 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
 )
+from rag_backend.domain.protocols.blog_generation import BlogGenerationReaper
 from rag_backend.domain.protocols.carousel_run import (
     CarouselDriftReconciler,
     CarouselRepublishSweeper,
@@ -97,6 +98,8 @@ class WorkflowWorkerServices:
     autopilot_runner: AutopilotRunnerTick | None = None
     telegram_notify: TelegramNotifyTick | None = None
     credential_refresh: CredentialRefreshTick | None = None
+    # AE-0425: fails blog generation runs killed by a restart (stale heartbeat).
+    blog_generation_reaper: BlogGenerationReaper | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +116,7 @@ class _TickCollaborators:
     autopilot_runner: AutopilotRunnerTick | None = None
     telegram_notify: TelegramNotifyTick | None = None
     credential_refresh: CredentialRefreshTick | None = None
+    blog_generation_reaper: BlogGenerationReaper | None = None
 
 
 async def _run_tick(
@@ -157,6 +161,10 @@ async def _core_steps(
     republished = 0
     if services.republish_sweeper is not None:
         republished = await services.republish_sweeper.sweep(db)
+    # AE-0425: alongside the carousel stale-run reaper, interrupted blog runs.
+    blog_reaped = 0
+    if services.blog_generation_reaper is not None:
+        blog_reaped = await services.blog_generation_reaper.tick(db)
     reminders = await services.notifications.send_deadline_reminders(db)
     alerts = 0
     if settings.workflow_alerts_enabled:
@@ -170,6 +178,7 @@ async def _core_steps(
         "reaped": reaped,
         "converged": converged,
         "republished": republished,
+        "blog_reaped": blog_reaped,
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
@@ -230,6 +239,7 @@ async def run_workflow_workers(
         autopilot_runner=services.autopilot_runner,
         telegram_notify=services.telegram_notify,
         credential_refresh=services.credential_refresh,
+        blog_generation_reaper=services.blog_generation_reaper,
     )
     interval = settings.workflow_worker_interval_seconds
 

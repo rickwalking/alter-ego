@@ -40,6 +40,8 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
   }),
   useBlogReviewActions: () => ({ allowSelfReview: false, pending: false }),
   useUnsavedChangesGuard: () => ({ confirmLeave }),
+  // AE-0425: the generation banner has its own tests (blog-generation-status).
+  BlogGenerationStatus: () => null,
   AiSuggestionPanel: ({
     onApplySuggestion,
   }: {
@@ -245,5 +247,31 @@ describe("BlogPostEditPage (AE-0424)", () => {
     editorState.mockReturnValue(state({ post: undefined, loading: true }));
     const { container } = render(<BlogPostEditPage />);
     expect(container.querySelector(".h-64")).not.toBeNull();
+  });
+
+  // AE-0425 review fix 2: the run owns the document while it generates.
+  it("is read-only while the generation is in progress", () => {
+    const generating = {
+      ...blogPost(),
+      ai_generation_metadata: { generation: { status: "in_progress" } },
+    };
+    editorState.mockReturnValue(state({ post: generating, dirty: true }));
+    render(<BlogPostEditPage />);
+    expect(screen.getByTestId("blog-editor-fields")).toBeDisabled();
+    expect(screen.getByLabelText("Title")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  });
+
+  it("is editable once the generation has finished", () => {
+    const done = {
+      ...blogPost(),
+      ai_generation_metadata: { generation: { status: "complete" } },
+    };
+    editorState.mockReturnValue(state({ post: done, dirty: true }));
+    render(<BlogPostEditPage />);
+    expect(screen.getByTestId("blog-editor-fields")).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Save changes" }),
+    ).not.toBeDisabled();
   });
 });

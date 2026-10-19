@@ -333,3 +333,38 @@ async def test_run_tick_refreshes_credentials_before_instagram() -> None:
     )
     assert log == ["credentials", "instagram"]
     assert counters["credential_refresh"] == 1
+
+
+class _RecordingBlogReaper:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("blog_reaper")
+        return 2
+
+
+@pytest.mark.asyncio
+async def test_run_tick_reaps_interrupted_blog_generations() -> None:
+    """AE-0425: the blog generation reaper runs on the core tick.
+
+    Feature: tests/features/blog_generate_ae0425.feature
+    Scenario: A restart mid-generation is reaped to failed/recoverable
+    """
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=cast(object, _RecordingReaper(log)),
+        drift_reconciler=None,
+        republish_sweeper=None,
+        blog_generation_reaper=cast(object, _RecordingBlogReaper(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, _FakeSession()), collaborators
+    )
+    assert log == ["reaper", "blog_reaper"]
+    assert counters["blog_reaped"] == 2

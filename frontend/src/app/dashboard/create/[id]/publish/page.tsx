@@ -17,6 +17,7 @@ import { useEditorialWorkflow } from "@/modules/editorial";
 import { AutoRepairButton } from "@/modules/editorial";
 import { resolveLocalizedSlides } from "@/modules/editorial";
 import {
+  CreateBlogFromCarousel,
   PublishPanel,
   PublishFailedNotice,
   RebuildPdfSection,
@@ -352,6 +353,14 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                 />
               </div>
             )}
+
+            {/* AE-0425: the blog post is written from this carousel, as a draft. */}
+            <div style={{ ...panelStyle, marginTop: "16px" }}>
+              <CreateBlogFromCarousel
+                projectId={projectId}
+                isPublic={Boolean(project.is_public)}
+              />
+            </div>
 
             {offersRadarTemplates(project) && (
               <div style={{ marginTop: "16px" }}>

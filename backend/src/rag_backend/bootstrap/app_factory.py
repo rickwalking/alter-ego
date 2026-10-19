@@ -26,6 +26,7 @@ from rag_backend.api.routes import (
     admin,
     admin_migration,
     auth,
+    blog_generate,
     blog_post,
     blog_post_ai,
     blog_post_comments,
@@ -51,19 +52,23 @@ from rag_backend.api.routes import (
     workflow_board,
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
+from rag_backend.application.services.blog.blog_generation_runner import (
+    cancel_blog_generation_tasks,
+)
 from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
+)
+from rag_backend.bootstrap.autopilot_worker_factory import (
+    autopilot_engine_factory,
+    build_autopilot_worker_steps,
 )
 
 # The HTTP router stays off the package facade. Model registration imports
 # the facade, and the router imports the shared slowapi limiter under
 # ``rag_backend.api``. Pulling that through the facade would make
 # infrastructure depend on the API layer.
-from rag_backend.bootstrap.autopilot_worker_factory import (
-    autopilot_engine_factory,
-    build_autopilot_worker_steps,
-)
+from rag_backend.bootstrap.blog_generation import build_blog_generation_reaper
 from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
     build_drift_reconciler,
 )
@@ -166,6 +171,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         app.state.carousel_checkpointer,
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
+                    blog_generation_reaper=build_blog_generation_reaper(settings),
                     instagram_publish=autopilot.instagram_publish,
                     credential_refresh=autopilot.credential_refresh,
                     autopilot_runner=autopilot.autopilot_runner,
@@ -180,6 +186,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         worker_stop.set()
         await worker_task
+        # AE-0425: in-flight blog runs mark their rows recoverable-failed.
+        await cancel_blog_generation_tasks()
 
     logger.info("application_shutdown")
     await close_db()
@@ -268,6 +276,8 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")
+    # AE-0425: the generation entry points register before the blog CRUD.
+    app.include_router(blog_generate.router, prefix="/api")
     app.include_router(blog_post.router, prefix="/api")
     app.include_router(public_blog_post.router, prefix="/api")
     app.include_router(blog_post_ai.router, prefix="/api")

@@ -427,6 +427,8 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 | `POST /blog-posts` | `BlogPostCreate` (content validated as v2 if a `schema` is present) | `201` draft | unchanged; still slug-only when content is empty |
 | `POST /blog-posts/from-carousel` | `{project_id, persona_id?, language?}` | `202` `{id, generation:{status:"in_progress"}}` | always a **draft**; 404 if the project is unknown; 409 if the project already has a non-deleted blog row |
 | `POST /blog-posts/generate` | `{topic, persona_id?, language?, source_urls?[]}` | `202` `{id, generation:{status:"in_progress"}}` | standalone generation (F-09) |
+| `POST /blog-posts/{id}/generation/retry` | — | `202` `{id, generation:{status:"in_progress", attempt}}` | AE-0425: the owner's retry of a **failed** run on the same row (new lease + attempt, no duplicate row); 409 while in progress or after a finished run. Needed because `from-carousel` 409s for any existing row |
+| `GET /blog-images/{post_id}/{file}` | — | `200` JPEG | AE-0425: serves the blog-images store (the canonical same-origin URL stored in `cover.url` / `image.url`); public for a published post, author/admin otherwise, uniform 404 |
 | `GET /blog-posts/{id}` | — | `200` `BlogPostResponse` incl. `content` v2 + `ai_generation_metadata.generation` | editor poll |
 | `PUT /blog-posts/{id}` | `BlogPostUpdate` (`content` may be v2) + `If-Match` | `200` | 422 invalid section shape; 409 lock conflict; appends a version snapshot |
 | `POST /blog-posts/{id}/cover/image` | `{prompt?}` + `If-Match` | `200` `{cover}` | generate/regenerate cover; 502 image failure; persists bytes to the blog-images store |

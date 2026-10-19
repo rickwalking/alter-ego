@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
+import { isGenerationInProgress } from "../generation/generation-state";
 import { blogPostKeys, fetchBlogPostDetail } from "../blog-post-requests";
 import {
   BlogEditorRequestError,
@@ -103,7 +104,15 @@ function useEditorSession(postId: string) {
   const [session, setSession] = useState<EditorSession | null>(null);
   // Adjust state while rendering (not in an effect): start a session the
   // first time a post loads; later server answers update it explicitly.
-  if (loaded && session?.base.id !== loaded.id) {
+  // AE-0425: while the base post is still being generated the editor is
+  // read-only, so each newer server version (the polled generation writes)
+  // replaces the session; otherwise the sections would never appear.
+  const stale =
+    loaded !== null &&
+    session !== null &&
+    session.base.lock_version !== loaded.lock_version &&
+    isGenerationInProgress(session.base);
+  if (loaded && (session?.base.id !== loaded.id || stale)) {
     setSession(sessionFromPost(loaded));
   }
   return { query, session, setSession };

@@ -189,11 +189,32 @@ default. Image generation therefore produces that many section images + 1 cover.
 generation uses the same content-mode default because it has no project. There is no
 `BLOG_IMAGE_MAX`; `BLOG_IMAGE_COST_CAP` is the only ceiling.
 
+#### As built (AE-0425)
+
+- **Pipeline:** `BlogWriterAgent.draft` (fast) → `normalize_section_count` (merge extras / split long
+  sections on paragraph breaks, else `section_count_mismatch`) → `BlogQualityGate` per language (PT
+  strips any research sentence copied verbatim, then `PersonaAgent.evaluate_match` + the
+  deterministic scan; `< 70` or any finding → `judge` on the **reasoning** model writes revision
+  notes → exactly one `rewrite` on the fast model → re-scored) → store the image-less document →
+  `BlogImageService` (cover first, `BLOG_IMAGE_CONCURRENCY`, `BLOG_IMAGE_COST_CAP` in USD at
+  ~$0.25/image) → store the document with images → `complete` / `partial`.
+- **Run state:** `ai_generation_metadata.generation = {status, kind, started_at, heartbeat_at,
+  finished_at, lease_id, attempt, errors[], recoverable, request, warnings[], image_slots,
+  image_count}`. Every write is a compare-and-set on `generation.lease_id` (JSON path) **and**
+  `lock_version`; a retry and the reaper rotate the lease and bump `lock_version`.
+- **Retry:** `POST /blog-posts/{id}/generation/retry` (same row, new attempt) — `from-carousel` 409s
+  for any existing row, so the retry cannot go through it.
+- **Images store:** `<CAROUSEL_OUTPUT_DIR>/blog-images/<post_id>/<uuid>.jpg`, served by
+  `GET /api/blog-images/<post_id>/<file>` (public when the post is published, author/admin
+  otherwise). EN reuses the PT image file with its own alt text.
+- **Private carousel:** the run records `warnings: ["carousel_private"]`; the editor banner warns
+  that the published post would 404 and links to the carousel's visibility control.
+
 ### 3.2 Generate standalone
 
-Same as 3.1 with the input being `{topic, persona_id?, language?, source_urls?[]}`; research is
-gathered (or a brief is used) instead of a carousel artifact. `origin = "standalone"`, `project_id =
-null`.
+Same as 3.1 with the input being `{topic, persona_id?, language?, source_urls?[]}`; the writer gets
+the topic and the URLs as references (never fetched — no SSRF) instead of a carousel artifact.
+`origin = "standalone"`, `project_id = null`, and the post takes the writer's title.
 
 ### 3.3 Edit a section image
 

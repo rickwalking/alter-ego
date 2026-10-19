@@ -186,7 +186,7 @@
     "backHome": "Voltar ao início",
     "backToPosts": "Voltar aos posts",
     "readMore": "Ler mais",
-    "noPosts": "Nenhum post ainda. Gere um carrossel para criar seu primeiro post.",
+    "noPosts": "Nenhum post ainda. Gere um com IA ou crie a partir de um carrossel.",
     "loading": "Carregando posts...",
     "error": "Falha ao carregar posts",
     "languageSwitch": {
@@ -1010,6 +1010,16 @@
     "notReady": {
       "title": "Ainda não está pronto para publicar",
       "body": "O PDF, as imagens dos slides e as ações de publicação aparecem quando o carrossel chega à revisão final. Continue a revisão na área de trabalho."
+    },
+    "blogFromCarousel": {
+      "title": "Post do blog",
+      "body": "Escreva um artigo contínuo na sua voz a partir da pesquisa e das notas deste carrossel, com capa própria e uma imagem por slide. Ele é criado como rascunho.",
+      "create": "Criar post a partir deste carrossel",
+      "creating": "Iniciando…",
+      "failed": "Não foi possível criar o post. Tente de novo.",
+      "privateWarning": "Este carrossel é privado: o post dá 404 no site até o carrossel ficar público.",
+      "exists": "Este carrossel já tem um post, então nenhum novo foi criado.",
+      "openExisting": "Abrir o post existente"
     }
   },
   "auth": {
@@ -1285,6 +1295,27 @@
           "failed": "A ação falhou. Tente de novo.",
           "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP."
         }
+      },
+      "generation": {
+        "generateWithAi": "Gerar com IA",
+        "modalTitle": "Gerar um post",
+        "topicLabel": "Tema",
+        "topicPlaceholder": "O que o post deve defender?",
+        "topicHint": "Um artigo contínuo na sua voz, com capa e uma imagem por seção. Ele é salvo como rascunho.",
+        "submit": "Gerar rascunho",
+        "cancel": "Cancelar",
+        "starting": "Iniciando…",
+        "startFailed": "Não foi possível iniciar a geração. Tente de novo.",
+        "inProgress": "Escrevendo este post na sua voz e gerando {slots, plural, =0 {as imagens} one {# imagem} other {# imagens (capa + uma por seção)}}… A página se atualiza sozinha.",
+        "partial": "O post está pronto: {count} de {slots} imagens foram geradas. Os espaços vazios podem ser preenchidos no editor.",
+        "failed": "A geração falhou. Seu rascunho foi mantido.",
+        "retry": "Tentar gerar de novo",
+        "retrying": "Tentando de novo…",
+        "retryFailed": "Não foi possível tentar de novo. Tente em um minuto.",
+        "carouselPrivate": "Este post vem de um carrossel privado: depois de publicado, ele dá 404 no site. Torne o carrossel público ou mantenha o post como rascunho.",
+        "interrupted": "A geração foi interrompida por um reinício. Seu rascunho e as seções prontas foram mantidos.",
+        "carouselVisibilityLink": "Abrir a visibilidade do carrossel",
+        "retryImages": "Gerar as imagens que faltam"
       }
     },
     "analytics": {

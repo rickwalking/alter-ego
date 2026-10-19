@@ -69,6 +69,11 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/workflow/stream`,
   BLOG_POSTS: "/api/blog-posts",
   BLOG_POST_BY_ID: (id: string) => `/api/blog-posts/${id}`,
+  // AE-0425: generation entry points (202 + a draft; the editor then polls).
+  BLOG_POST_FROM_CAROUSEL: "/api/blog-posts/from-carousel",
+  BLOG_POST_GENERATE: "/api/blog-posts/generate",
+  BLOG_POST_GENERATION_RETRY: (id: string) =>
+    `/api/blog-posts/${id}/generation/retry`,
   PUBLIC_BLOG_POSTS: "/api/public/blog-posts",
   PUBLIC_BLOG_POST_BY_ID: (id: string) => `/api/public/blog-posts/${id}`,
   BLOG_POST_VERSIONS: (id: string) => `/api/blog-posts/${id}/versions`,

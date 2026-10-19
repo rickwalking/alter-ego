@@ -1,16 +1,16 @@
 # AE-0425 — Blog writer (voice) + GPT images + generation entry points (D)
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: P1
 Type: Feature
 Area: Cross-cutting
-Owner: Unassigned
+Owner: Claude (worker)
 Agent Lane: architect → developer → qa → release
-Branch: TBD
-Kanban Card: TBD
+Branch: feat/ae-0425-blog-writer-voice-images
+Kanban Card: PR #146
 Created: 2026-10-18
-Updated: 2026-10-18
+Updated: 2026-10-19
 
 ## Goal
 
@@ -64,49 +64,49 @@ the body has no images of its own. Design: ADR-0025, `docs/architecture/blog-pos
 
 ## Acceptance Criteria
 
-- [ ] AC1: `POST /blog-posts/from-carousel` creates a **draft** with `generation.status=in_progress`
+- [x] AC1: `POST /blog-posts/from-carousel` creates a **draft** with `generation.status=in_progress`
       and returns 202; it 404s an unknown project and 409s when a **live blog row** already exists.
       "Live row" means **any non-deleted `blog_posts` row with that `project_id`**, regardless of
       status (`draft`, `under_review`, `approved`, scheduled, `published`, or hidden). The 409 body
       carries the existing post id; hidden bad posts are rebuilt by AE-0426, never by re-running
       from-carousel.
-- [ ] AC2: `POST /blog-posts/generate` creates a draft from a topic (+ optional persona/sources) and
+- [x] AC2: `POST /blog-posts/generate` creates a draft from a topic (+ optional persona/sources) and
       returns 202.
-- [ ] AC3: The generated article is one continuous body (not per-slide concatenation) whose sections
+- [x] AC3: The generated article is one continuous body (not per-slide concatenation) whose sections
       have distinct narrative roles; no section restates the same source sentence verbatim.
-- [ ] AC4: The body's `voice_score` is `>= 70` or the writer performed exactly one rewrite pass; the
+- [x] AC4: The body's `voice_score` is `>= 70` or the writer performed exactly one rewrite pass; the
       score and breakdown are stored in `content.quality`.
-- [ ] AC5: A seeded repeated sentence and a seeded banned stock phrase are detected and reported.
-- [ ] AC6: The writer emits **exactly N sections** (N = carousel slide count: `project.slide_count`,
+- [x] AC5: A seeded repeated sentence and a seeded banned stock phrase are detected and reported.
+- [x] AC6: The writer emits **exactly N sections** (N = carousel slide count: `project.slide_count`,
       else `slide_count_from_config()`, else the content-mode default; standalone uses the default).
       A mismatch is normalized (split/merge) or fails the generation with a clear error; it is never
       silently stored. The post gets **N+1 image slots** (cover + one per section); stored images are
       `<= N+1` because a failed slot stays `image=null`. Every image prompt contains no text, and a
       stored `image.alt` is non-empty.
-- [ ] AC7: A failed image leaves that slot `image=null`, records an error with the section id, and
+- [x] AC7: A failed image leaves that slot `image=null`, records an error with the section id, and
       the draft is still usable with `generation.status=partial`.
-- [ ] AC8: An LLM failure leaves the draft row with `generation.status=failed` and no data loss;
+- [x] AC8: An LLM failure leaves the draft row with `generation.status=failed` and no data loss;
       the owner can retry.
-- [ ] AC9: All LLM/image calls are Langfuse-traced with `content_type="blog_post"`, `project_id`,
+- [x] AC9: All LLM/image calls are Langfuse-traced with `content_type="blog_post"`, `project_id`,
       `phase`, `agent_name`, `user_id`; image count and voice score are logged.
-- [ ] AC10: The writer never emits an English research intro into the PT sections (F-05 class). The
+- [x] AC10: The writer never emits an English research intro into the PT sections (F-05 class). The
       test is deterministic: a unique English sentence is seeded in the findings and asserted absent
       from every PT `body_md`; the same fixture is asserted present in `translations.en` (so the
       assertion cannot pass vacuously).
-- [ ] AC11: EN is gated like PT: the same voice/repetition checks run on
+- [x] AC11: EN is gated like PT: the same voice/repetition checks run on
       `translations.en.sections` and its score is stored under `translations.en.quality`; an EN score
       below the threshold triggers the same single rewrite pass.
-- [ ] AC12: If the source carousel is private (`is_public = false`), the editor warns that the
+- [x] AC12: If the source carousel is private (`is_public = false`), the editor warns that the
       published post will 404 on the public site (ADR-0013 visibility gate: carousel-origin posts
       require the parent carousel to be public); the owner can make the carousel public or keep the
       post as a draft. The warning is covered by a test.
-- [ ] AC13: The route persists the draft and schedules the pipeline in a tracked in-process task;
+- [x] AC13: The route persists the draft and schedules the pipeline in a tracked in-process task;
       the row carries `generation = {status, started_at, heartbeat_at, lease_id, attempt, errors}`
       and heartbeats during the run. Every write is lease-fenced (`WHERE lease_id = :mine`), so a
       duplicate/retried task cannot clobber a newer run. `BLOG_GENERATION_TIMEOUT_SECONDS` (default
       900) bounds the run; `CancelledError` marks the row recoverable-failed and re-raises. No
       FastAPI `BackgroundTasks`, Celery/ARQ, or new queue.
-- [ ] AC14: A deploy/restart that kills the task leaves the row `in_progress`; the existing
+- [x] AC14: A deploy/restart that kills the task leaves the row `in_progress`; the existing
       `run_workflow_workers` tick (default every 60 s) reaps rows whose
       `heartbeat_at < now - BLOG_GENERATION_STALE_SECONDS` (default 180) to `failed` with
       `ERR_GENERATION_INTERRUPTED`, `recoverable=true`, preserving partial content. The owner retries
@@ -195,19 +195,94 @@ the body has no images of its own. Design: ADR-0025, `docs/architecture/blog-pos
 
 Ticket created from the AE-0422 plan (ADR-0025, wave D).
 
+### 2026-10-19 (worker)
+
+- Backend: writer façade `agents/blog_writer/` (draft/rewrite on the fast model, judgement on the
+  reasoning model, persona voice scorer, text-free image prompts) + prompts `agents/prompts/blog/v1/`;
+  application `blog_quality_scan` / `blog_quality_gate` / `blog_section_plan` / `blog_brief` /
+  `blog_generated_document` / `blog_image_service` / `blog_generation_service` /
+  `blog_generation_runner`; lease-fenced SQL store + reaper; routes `from-carousel`, `generate`,
+  `generation/retry`, `blog-images`; settings + `.env.example`; worker-tick reaper; shutdown cancel.
+- Frontend: "Generate with AI" (blog dashboard), "Create blog post from this carousel" (carousel
+  publish page), editor generation banner (progress / partial / failed + retry / interrupted /
+  private-carousel warning with a link to the carousel visibility control), i18n PT/EN.
+- Rebased onto the moved `origin/feat/ae-0423-blog-document-model` (17 new AE-0423 commits), clean.
+
 ## Files Touched
 
-Pending.
+- Backend (new): `domain/constants/{blog_voice,blog_generation}.py`,
+  `domain/models/{blog_generation,blog_generation_state}.py`, `domain/protocols/blog_generation.py`,
+  `agents/blog_writer/{__init__,agent,constants,image_prompts,parsing,persona_block,voice}.py`,
+  `agents/prompts/blog/v1/{system.md,draft.yaml,rewrite.yaml,judge.yaml,image_prompt.yaml,README.md}`,
+  `application/services/blog/{blog_brief,blog_generated_document,blog_generation_runner,blog_generation_service,blog_image_service,blog_quality_gate,blog_quality_scan,blog_section_plan}.py`,
+  `infrastructure/database/{blog_generation_drafts,blog_generation_store}.py`,
+  `bootstrap/blog_generation.py`, `api/routes/{blog_generate,blog_generate_support,blog_images}.py`,
+  `api/schemas/blog_generate.py`.
+- Backend (modified): `application/services/blog_workflow_observability.py` (`blog_phase_trace`),
+  `application/workers/workflow_workers.py` (reaper step), `bootstrap/app_factory.py` (routers,
+  reaper, shutdown cancel), `api/routes/__init__.py`, `infrastructure/config/settings.py`,
+  `backend/.env.example`, `tests/snapshots/openapi_routes.json`.
+- Frontend (new): `modules/publishing/blog/generation/*` (requests, state, hooks, banner,
+  from-carousel section, types), `app/dashboard/blog-posts/{generate-blog-post-modal.tsx,use-generate-blog-post.ts}`.
+- Frontend (modified): `constants/api.ts`, `modules/publishing/index.ts`, blog-posts page, editor page,
+  carousel publish page, `i18n/locales/{en,pt}.json`.
+- Docs: ADR-0025 API table (retry + image routes), architecture companion §3.1 "As built".
 
 ## Test Evidence
 
-Pending.
+Backend (full run, live Postgres 16 DATABASE_URL; mutation 80.82%, diff-cover PASS):
+GATES_JSON: {"pass":22,"fail":0,"skip":0,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"PASS"}]}
+Frontend (full run):
+GATES_JSON: {"pass":17,"fail":0,"skip":0,"results":[{"gate":"frontend:lint","status":"PASS"},{"gate":"frontend:lint-changed","status":"PASS"},{"gate":"frontend:component-types","status":"PASS"},{"gate":"frontend:duplication","status":"PASS"},{"gate":"frontend:dead-code","status":"PASS"},{"gate":"frontend:typecheck","status":"PASS"},{"gate":"frontend:build","status":"PASS"},{"gate":"frontend:legacy-guard","status":"PASS"},{"gate":"frontend:legacy-inventory","status":"PASS"},{"gate":"frontend:format","status":"PASS"},{"gate":"frontend:security","status":"PASS"},{"gate":"frontend:integrity","status":"PASS"},{"gate":"frontend:test","status":"PASS"},{"gate":"frontend:schema-drift","status":"PASS"},{"gate":"frontend:duplication-tests","status":"PASS"},{"gate":"frontend:dead-files","status":"PASS"},{"gate":"frontend:mutation","status":"PASS"}]}
+Store lease-fence tests also run on Postgres 16 (JSON-path predicate proven on both dialects).
 
 ## QA Report
 
 Pending.
 
 ## Decision Log
+
+### Implementation decisions (worker, 2026-10-19)
+
+- **Retry route.** AC1 409s `from-carousel` for ANY existing row, so "retry on the same route/row"
+  (AC14) cannot go through it. Added `POST /blog-posts/{id}/generation/retry` (202): only a `failed`
+  run, same row, new lease + attempt, `lock_version` bumped (fences the old task); 409 while
+  `in_progress` or after `complete`/`partial`. ADR-0025 API table updated.
+- **Blog-images serving route.** The existing `generate-image` stored a filesystem path (not
+  servable). Images now live in `<CAROUSEL_OUTPUT_DIR>/blog-images/<post>/<uuid>.jpg` and the
+  document stores the same-origin `/api/blog-images/<post>/<file>`, served by a new GET route
+  (public when the post is published, author/admin otherwise, uniform 404). No provider URL is
+  ever stored (gpt-image-2 returns base64 bytes that the provider writes to the store).
+- **Lease fence = JSON path + lock_version.** Every write is
+  `WHERE id AND generation.lease_id = :mine AND lock_version = :seen`; a retry and the reaper rotate
+  the lease and bump `lock_version`. Proven on SQLite and Postgres 16 (the store tests run on both
+  when `DATABASE_URL` is set). Content writes refuse to overwrite an owner save
+  (`generation_conflict`, recoverable); heartbeats follow the owner's version.
+- **Quality judgement on the reasoning model.** The gate's only model judgement is the revision
+  notes for the single rewrite (`judge`, best-effort); drafting/rewrite/persona scoring stay fast.
+  Rewrite is whole-article, once, re-normalized and re-scored; the second score is stored as is.
+- **Source leak guard (AC10).** PT sentences copied verbatim from the (English) research findings are
+  stripped deterministically before scoring; EN is untouched (the seeded oracle stays in EN).
+- **Verbatim note copies** are reported as `repetition.repeated_sentences` (the `blog.v2` quality
+  model has no separate field) and trigger the rewrite (AC3).
+- **Count normalization (AC6).** Extra sections merge into the last; missing sections split the
+  longest section on paragraph breaks; otherwise `section_count_mismatch` (run fails, nothing
+  stored). N = `project.slide_count` → `slide_count_from_config(slides_config)` → content-mode
+  default (POV family 9, Radar IA 7); standalone uses the default.
+- **Cost cap in USD.** `BLOG_IMAGE_COST_CAP` (default 3.0) / an estimated $0.25 per gpt-image-2
+  1536x1024 image = 12 slots; capped slots stay `null` with `image_cost_cap_reached`.
+- **Generated body sanitization.** `sanitize_model_copy` + HTML-tag strip, not
+  `sanitize_display_input` (that strips `( )` and would break markdown links); raw HTML is never
+  rendered (react-markdown allow-list).
+- **EN images** reuse the PT image file with their own alt text; `translations.en.quality` is stored.
+- **Disclosure.** Generated rows carry `ai_disclosure_label = ai_generated` (QUAL-002).
+- **`build_blog_markdown_from_long_form_notes` kept** (not deleted): the blog body no longer uses it
+  (from-carousel runs the writer), but it still fills `carousel_projects.blog_markdown` for the
+  distribution pack (LinkedIn input), which AE-0428 classifies as live.
+- **Per-slot image retry** in the editor belongs to AE-0424 (it owns the section image slots and
+  routes); the AE-0425 banner reports `N of N+1 images` for a partial run and links nothing per slot.
+- **Not in mutmut's path list.** The new modules are not added to `[tool.mutmut] paths_to_mutate`
+  (curated list); unit tests assert behavior (exact counts, findings, fences).
 
 - **One writer, not per-slide.** Concatenating notes is the root cause of F-02/F-03; a single
   article pass with the persona style guide fixes both.
