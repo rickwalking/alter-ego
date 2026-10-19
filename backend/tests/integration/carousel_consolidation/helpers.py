@@ -13,6 +13,7 @@ import jwt
 from httpx import AsyncClient
 
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.models import (
     CarouselProject,
     CarouselStatus,
@@ -193,6 +194,40 @@ async def create_carousel(
         created = await repo.create_project(project)
         await session.commit()
         return str(created.id)
+
+
+async def seed_carousel_blog_row(
+    project_id: str,
+    *,
+    status: BlogPostStatus = BlogPostStatus.PUBLISHED,
+    markdown: str = "# Public\n\nVisible",
+) -> str:
+    """Insert the canonical ``origin='carousel'`` blog row for a project (AE-0422).
+
+    Since AE-0422 a carousel save no longer creates/auto-publishes a blog row, and
+    the legacy carousel-blog read is public for anonymous callers only when this
+    row is ``published``. Tests that exercise the public read seed the row
+    explicitly instead of relying on the removed auto-create.
+    """
+    from uuid import uuid4
+
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models import BlogPostModel
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        row = BlogPostModel.from_entity({
+            "id": str(uuid4()),
+            "project_id": project_id,
+            "origin": BlogPostOrigin.CAROUSEL.value,
+            "title": "Public",
+            "slug": f"carousel-{project_id}",
+            "status": status.value,
+            "content": {"markdown": markdown, "translations": {"pt": markdown}},
+        })
+        session.add(row)
+        await session.commit()
+        return str(row.id)
 
 
 async def create_minimal_carousel_artifacts(

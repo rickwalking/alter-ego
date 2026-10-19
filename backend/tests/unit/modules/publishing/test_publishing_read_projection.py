@@ -33,10 +33,11 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from rag_backend.domain.constants.blog_post import BlogPostOrigin
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_CONTENT,
     PHASE_STATUS_AWAITING_HUMAN,
@@ -234,6 +235,46 @@ class TestCarouselBlogProjection:
         await db_session.commit()
         acl = PublishingReadAcl(db_session)
         assert await acl.project_carousel_blog(project) is None
+
+    @pytest.mark.asyncio
+    async def test_public_visibility_gate(self, db_session: AsyncSession) -> None:
+        """Scenario: only a ``published`` row passes the public-visibility gate.
+
+        AE-0422: anonymous callers of the legacy ``/blog`` read are gated on the
+        row status; a hidden (draft) or absent row must not be public.
+        """
+        project = _carousel_entity()
+        acl = PublishingReadAcl(db_session)
+        assert await acl.is_carousel_blog_published(project.id) is False
+
+        db_session.add(
+            BlogPostModel.from_entity({
+                "project_id": str(project.id),
+                "origin": BlogPostOrigin.CAROUSEL.value,
+                "title": "Hidden",
+                "slug": f"carousel-{project.id}",
+                "status": BlogPostStatus.DRAFT.value,
+                "content": {"markdown": "HIDDEN BODY"},
+            })
+        )
+        await db_session.commit()
+        assert await acl.is_carousel_blog_published(project.id) is False
+
+        row = (
+            (
+                await db_session.execute(
+                    select(BlogPostModel).where(
+                        BlogPostModel.project_id == str(project.id)
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert row is not None
+        row.status = BlogPostStatus.PUBLISHED.value
+        await db_session.commit()
+        assert await acl.is_carousel_blog_published(project.id) is True
 
     @pytest.mark.asyncio
     async def test_i18n_en_resolves_title_and_languages(

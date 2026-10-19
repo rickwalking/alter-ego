@@ -94,7 +94,6 @@ export default async function PublicBlogPostPage({
   const title = view.title || t("untitledPost");
 
   const heroImageUrl = design.images.hero ?? "";
-  const slideImageUrls = design.images.slides;
 
   return (
     <div
@@ -139,11 +138,7 @@ export default async function PublicBlogPostPage({
               design={design}
             />
           )}
-          <BlogPostContent
-            markdown={view.markdown}
-            design={design}
-            slideImages={slideImageUrls}
-          />
+          <BlogPostContent markdown={view.markdown} design={design} />
         </article>
       </div>
     </div>

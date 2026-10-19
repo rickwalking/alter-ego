@@ -17,6 +17,7 @@ Mirrors the editorial ``editorial_port_adapters`` module (AE-0111).
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
 from rag_backend.domain.models import CarouselProject
 from rag_backend.modules.publishing.domain.models import BlogPostModel
@@ -118,6 +119,10 @@ class AclPublishingReadAdapter:
     ) -> CarouselBlogI18nProjection | None:
         """Project the localized carousel blog via the read ACL."""
         return await self._acl.project_carousel_blog_i18n(project, language)
+
+    async def is_carousel_blog_published(self, project_id: UUID) -> bool:
+        """Whether the carousel's blog row is published, via the read ACL."""
+        return await self._acl.is_carousel_blog_published(project_id)
 
     async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
         """Project the content-calendar entries via the read ACL."""

@@ -45,6 +45,7 @@ import os
 from collections.abc import AsyncGenerator, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, cast
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -271,6 +272,38 @@ class PubEnv:
                     image_prompt=f"Prompt {i}",
                 )
                 await repo.create_slide(slide)
+            # AE-0422: a carousel save no longer creates/auto-publishes a blog row,
+            # so the safety net seeds the canonical ``origin='carousel'`` row
+            # explicitly (the AE-0127 shape) to keep exercising the row read path.
+            from rag_backend.domain.constants.blog_post import (
+                BlogPostOrigin,
+                BlogPostStatus,
+            )
+            from rag_backend.infrastructure.database.distribution_home import (
+                build_distribution,
+            )
+            from rag_backend.infrastructure.database.models import BlogPostModel
+
+            session.add(
+                BlogPostModel.from_entity(
+                    {
+                        "id": str(uuid4()),
+                        "project_id": project_id,
+                        "origin": BlogPostOrigin.CAROUSEL.value,
+                        "title": FIXTURE_TITLE,
+                        "slug": f"carousel-{project_id}",
+                        "status": BlogPostStatus.PUBLISHED.value,
+                        "content": {
+                            "markdown": FIXTURE_BLOG_PT,
+                            "translations": {
+                                "pt": FIXTURE_BLOG_PT,
+                                "en": FIXTURE_BLOG_EN,
+                            },
+                        },
+                        "distribution": build_distribution(project),
+                    }
+                )
+            )
             if approved_for_publish:
                 model = await session.get(CarouselProjectModel, project_id)
                 assert model is not None
@@ -491,12 +524,12 @@ class TestPublicCarouselBlog:
         """Scenario: the ``origin='carousel'`` row (the production path) yields the
         byte-identical /blog response captured by the embedded golden snapshot.
 
-        Post-AE-0163 the carousel repository dual-writes the canonical
-        ``origin='carousel'`` blog_posts row on every blog write (the same shape as
-        the AE-0127 backfill), so ``seed_carousel`` already creates it and the read
-        path sources the body + 404 signal SOLELY from that row. This proves the
-        row-path response is byte-identical to the embedded golden snapshot
-        (``carousel_blog``) — the de-risking guarantee for the AE-0162 drop.
+        Since AE-0422 a carousel save no longer creates the row, so
+        ``seed_carousel`` seeds the canonical ``origin='carousel'`` blog_posts row
+        explicitly (the AE-0127 backfill shape) and the read path sources the body +
+        404 signal SOLELY from that row. This proves the row-path response is
+        byte-identical to the embedded golden snapshot (``carousel_blog``) — the
+        de-risking guarantee for the AE-0162 drop.
         """
         from sqlalchemy import select
 
@@ -508,7 +541,7 @@ class TestPublicCarouselBlog:
             is_public=True, approved_for_publish=False
         )
 
-        # The AE-0163 dual-write created exactly one carousel-origin row on seed.
+        # The seed created exactly one carousel-origin row for the project.
         session_maker = get_session_maker()
         async with session_maker() as session:
             rows = (

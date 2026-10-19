@@ -109,11 +109,7 @@ export type { BlogPostVersion } from "./blog/components/types";
 /* --- blog: public-post components --- */
 export { BackLink } from "./blog/components/public-post/back-link";
 export { BlogPostAdminPanel } from "./blog/components/public-post/blog-post-admin-panel";
-export {
-  BlogPostContent,
-  extractH2Heading,
-  resolveSlideImage,
-} from "./blog/components/public-post/blog-post-content";
+export { BlogPostContent } from "./blog/components/public-post/blog-post-content";
 export { BlogPostHeader } from "./blog/components/public-post/blog-post-header";
 export { BlogPostHero } from "./blog/components/public-post/blog-post-hero";
 export { PublicCoverImage } from "./blog/components/public-post/public-cover-image";

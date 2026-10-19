@@ -57,6 +57,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Protocol
+from uuid import UUID
 
 from rag_backend.domain.models.carousel import CarouselProject
 from rag_backend.domain.protocols.repositories import CarouselRepository
@@ -156,6 +157,15 @@ class PublishingReadPort(Protocol):
         language: str,
     ) -> CarouselBlogI18nProjection | None:
         """Project the localized carousel blog, ``None`` if absent in ``language``."""
+        ...
+
+    async def is_carousel_blog_published(self, project_id: UUID) -> bool:
+        """Whether the carousel's ``origin='carousel'`` blog row is published.
+
+        Public (anonymous) callers of the legacy carousel-blog read may only see
+        a post whose ``blog_posts`` row is ``published`` (AE-0422); authenticated
+        preview keeps reading regardless. ``False`` when no row exists.
+        """
         ...
 
     async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:

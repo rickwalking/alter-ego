@@ -46,3 +46,25 @@ Feature: Carousel saves never touch blog posts
     When the carousel is deleted
     Then the blog_posts row survives with its project link cleared
     And its status is "draft"
+
+  # The public-visibility half: hiding a post must also stop the legacy
+  # project-id URL from serving it to anonymous visitors (ADR-0013 uniform 404).
+  Scenario: An anonymous visitor cannot read a hidden carousel post at the legacy URL
+    Given the project's blog_posts row is "draft"
+    When an anonymous client requests the legacy carousel blog URL
+    Then the response is 404
+
+  Scenario: An anonymous visitor cannot read a hidden carousel post in a language
+    Given the project's blog_posts row is "draft"
+    When an anonymous client requests the legacy carousel blog language URL
+    Then the response is 404
+
+  Scenario: An anonymous visitor can read a published carousel post at the legacy URL
+    Given the project's blog_posts row is "published"
+    When an anonymous client requests the legacy carousel blog URL
+    Then the response is 200
+
+  Scenario: An authenticated editor still previews a hidden carousel post
+    Given the project's blog_posts row is "draft"
+    When the owner requests the legacy carousel blog URL
+    Then the response is 200

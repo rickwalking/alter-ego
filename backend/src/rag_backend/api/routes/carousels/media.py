@@ -34,7 +34,10 @@ from rag_backend.api.constants import (
     MEDIA_TYPE_JPEG,
     MEDIA_TYPE_PDF,
 )
-from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies import (
+    get_optional_user,
+    require_authenticated_user,
+)
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.dependencies.publishing import (
@@ -111,6 +114,25 @@ async def _load_project_or_404(
     return project
 
 
+async def _assert_blog_visible(
+    publishing: PublishingModule,
+    project: CarouselProject,
+    user: User | None,
+) -> None:
+    """404 the legacy carousel-blog read for anonymous callers on unpublished posts.
+
+    AE-0422: the public ``/blog`` + ``/blog/{lang}`` reads rendered any carousel
+    whose blog was generated, ignoring ``blog_posts.status`` — a hidden post stayed
+    reachable at ``/blog/<carousel project id>``. Anonymous callers must now see it
+    only when the canonical ``origin='carousel'`` row is ``published`` (uniform 404,
+    ADR-0013); authenticated dashboard/editor preview keeps reading regardless.
+    """
+    if user is not None:
+        return
+    if not await publishing.service.carousel_blog_is_published(project.id):
+        raise HTTPException(status_code=404, detail=ERR_BLOG_NOT_GENERATED)
+
+
 async def _load_project_with_output(
     handlers: PresentationHandlers,
     project_id: UUID,
@@ -164,10 +186,12 @@ async def get_carousel_blog(
     publishing: Annotated[
         PublishingModule, Depends(get_publishing_module_for_blog_read)
     ],
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
 ) -> CarouselBlogResponse:
     """Get the generated blog post for a carousel (default pt-BR)."""
     project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
+    await _assert_blog_visible(publishing, project, user)
     projection = await publishing.service.project_carousel_blog(project)
     if projection is None:
         raise HTTPException(status_code=404, detail=ERR_BLOG_NOT_GENERATED)
@@ -193,11 +217,13 @@ async def get_carousel_blog_i18n(
     publishing: Annotated[
         PublishingModule, Depends(get_publishing_module_for_blog_read)
     ],
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
 ) -> CarouselBlogI18nResponse:
     """Get the generated blog post in a specific language."""
 
     project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
+    await _assert_blog_visible(publishing, project, user)
 
     projection = await publishing.service.project_carousel_blog_i18n(project, lang)
     if projection is None:
