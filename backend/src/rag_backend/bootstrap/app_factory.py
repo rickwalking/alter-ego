@@ -29,7 +29,10 @@ from rag_backend.api.routes import (
     blog_post,
     blog_post_ai,
     blog_post_comments,
+    blog_post_images,
     blog_post_quality,
+    blog_post_schedule,
+    blog_post_sections,
     blog_post_versions,
     blog_post_workflow,
     carousels,
@@ -269,6 +272,9 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(public_blog_post.router, prefix="/api")
     app.include_router(blog_post_ai.router, prefix="/api")
     app.include_router(blog_post_workflow.router, prefix="/api")
+    app.include_router(blog_post_schedule.router, prefix="/api")
+    app.include_router(blog_post_images.router, prefix="/api")
+    app.include_router(blog_post_sections.router, prefix="/api")
     app.include_router(blog_post_versions.router, prefix="/api")
     app.include_router(blog_post_comments.router, prefix="/api")
     app.include_router(blog_post_quality.router, prefix="/api")

@@ -8,11 +8,18 @@ from pathlib import Path
 from typing import Protocol
 
 from langchain_core.language_models import BaseChatModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.input_sanitizer import (
+    sanitize_display_input,
+    sanitize_llm_input,
+)
 from rag_backend.agents.persona_agent import PersonaAgent
-from rag_backend.application.services.blog.ai_envelope import parse_suggestion
+from rag_backend.application.services.blog.ai_envelope import (
+    parse_suggestion,
+    strip_code_fence,
+)
 from rag_backend.application.services.blog_workflow_observability import (
     StartupParams,
     blog_ai_propagate,
@@ -26,9 +33,17 @@ from rag_backend.domain.constants.blog_ai import (
     SUGGEST_DEFAULT_EXPLANATION,
     VALID_AI_ACTIONS,
 )
+from rag_backend.domain.constants.blog_editor import (
+    ERR_BLOG_PERSONA_REQUIRED,
+    ERR_BLOG_REWRITE_EMPTY,
+    PHASE_BLOG_SECTION_REWRITE,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols import ImageGenerationService
-from rag_backend.infrastructure.database.models import PersonaProfileModel
+from rag_backend.infrastructure.database.models import (
+    CarouselProjectModel,
+    PersonaProfileModel,
+)
 
 
 @dataclass(frozen=True)
@@ -58,6 +73,18 @@ class _ImproveInput:
     action: str
     context: str | None = None
     persona_id: str | None = None
+    trace: BlogAiTraceContext | None = None
+
+
+@dataclass
+class _RewriteInput:
+    """Bundled input for BlogPostAIService.rewrite_section() (AE-0424)."""
+
+    db: AsyncSession
+    body_md: str
+    heading: str | None = None
+    persona_id: str | None = None
+    project_id: str | None = None
     trace: BlogAiTraceContext | None = None
 
 
@@ -199,6 +226,43 @@ class BlogPostAIService:
             "image_url": str(output_path),
         }
 
+    async def rewrite_section(self, input_data: _RewriteInput) -> str:
+        """One section body rewritten in the persona voice (``PersonaAgent.enforce``).
+
+        Persona: the requested one, else the carousel project's, else the
+        first (single-author) persona; none at all is a ``ValueError``.
+        """
+        persona = await self._resolve_persona(input_data)
+        if persona is None:
+            raise ValueError(ERR_BLOG_PERSONA_REQUIRED)
+        post_id = (input_data.trace or BlogAiTraceContext()).post_id or "unknown"
+        agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
+        with blog_ai_propagate(post_id, PHASE_BLOG_SECTION_REWRITE):
+            rewritten = await agent.enforce(
+                input_data.body_md, context=input_data.heading or ""
+            )
+        text = sanitize_display_input(strip_code_fence(rewritten or ""))
+        if not text:
+            raise ValueError(ERR_BLOG_REWRITE_EMPTY)
+        return text
+
+    async def _resolve_persona(
+        self, input_data: _RewriteInput
+    ) -> PersonaProfile | None:
+        db = input_data.db
+        persona_id = input_data.persona_id or await _project_persona_id(
+            db, input_data.project_id
+        )
+        if persona_id is not None:
+            return await self._load_persona(db, persona_id)
+        result = await db.execute(
+            select(PersonaProfileModel)
+            .order_by(PersonaProfileModel.created_at)
+            .limit(1)
+        )
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model is not None else None
+
     @staticmethod
     async def _load_persona(
         db: AsyncSession,
@@ -210,6 +274,14 @@ class BlogPostAIService:
         if model is None:
             return None
         return model.to_entity()
+
+
+async def _project_persona_id(db: AsyncSession, project_id: str | None) -> str | None:
+    if project_id is None:
+        return None
+    project = await db.get(CarouselProjectModel, project_id)
+    persona_id = getattr(project, "persona_id", None)
+    return str(persona_id) if persona_id else None
 
 
 __all__ = ["BlogPostAIService"]

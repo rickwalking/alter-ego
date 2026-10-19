@@ -24,10 +24,10 @@ from rag_backend.application.services.blog_workflow_observability import (
 from rag_backend.application.services.image_prompt_sanitizer import (
     sanitize_image_prompt,
 )
-from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.constants.blog_document import BLOG_IMAGE_SOURCE_GENERATED
 from rag_backend.domain.constants.blog_editor import (
     BLOG_IMAGE_EXTENSION,
+    BLOG_IMAGE_MODEL,
     BLOG_IMAGES_DIR_NAME,
     BLOG_IMAGES_ROUTE_PREFIX,
     ERR_BLOG_IMAGE_GENERATION_FAILED,
@@ -133,7 +133,7 @@ class BlogImageService:
             alt=request.alt,
             source=BLOG_IMAGE_SOURCE_GENERATED,
             prompt=scene,
-            model=IMAGE_MODEL_OPENAI,
+            model=BLOG_IMAGE_MODEL,
             created_at=datetime.now(UTC).isoformat(),
         )
 

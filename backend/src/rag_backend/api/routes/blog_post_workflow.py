@@ -25,6 +25,7 @@ from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
+from rag_backend.api.schemas.blog_post_editor import BlogEditorSettingsResponse
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
 from rag_backend.application.services.notification_service import (
     NotificationService,
@@ -256,13 +257,16 @@ async def reject_blog_post(
     post.status = BlogPostStatus.DRAFT.value
     post.submitted_for_review_at = None
 
-    if post.editor_comments is None:
-        post.editor_comments = []
-    post.editor_comments.append({
-        "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
-        "author_id": current_user.id,
-        "status": EditorialCommentStatus.OPEN.value,
-    })
+    # Reassign (not .append): an in-place JSON list mutation is not tracked by
+    # SQLAlchemy, so the reason was silently never stored (AE-0424).
+    post.editor_comments = [
+        *(post.editor_comments or []),
+        {
+            "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
+            "author_id": current_user.id,
+            "status": EditorialCommentStatus.OPEN.value,
+        },
+    ]
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -377,3 +381,18 @@ async def unpublish_blog_post(
     await db.commit()
     await db.refresh(post)
     return post
+
+
+@router.get(
+    "/blog-editor/settings",
+    response_model=BlogEditorSettingsResponse,
+    summary="Blog editor deployment settings",
+)
+@limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
+async def get_blog_editor_settings(
+    request: Request, current_user: EditorUser
+) -> BlogEditorSettingsResponse:
+    """``allow_self_review`` mirrors ``BLOG_ALLOW_SELF_REVIEW`` (default false)."""
+    return BlogEditorSettingsResponse(
+        allow_self_review=get_settings().blog_allow_self_review
+    )

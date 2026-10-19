@@ -28,6 +28,13 @@ from rag_backend.api.schemas.blog_post_ai import (
 )
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
+from rag_backend.application.services.blog.blog_image_service import (
+    BlogImageService,
+    BlogImageStore,
+)
+from rag_backend.application.services.blog.blog_translation_service import (
+    BlogTranslationService,
+)
 from rag_backend.application.services.blog_post_ai_service import (
     BlogAiTraceContext,
     BlogPostAIService,
@@ -51,20 +58,18 @@ from rag_backend.domain.constants.blog_document import (
     BLOG_IMAGE_SOURCE_GENERATED,
     ERR_BLOG_IMAGE_URL_INVALID,
 )
+from rag_backend.domain.constants.blog_editor import BLOG_IMAGES_DIR_NAME
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.blog_document import BlogImage
 from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.container import get_container
+from rag_backend.infrastructure.container import Container, get_container
 from rag_backend.infrastructure.events.factory import get_event_publisher
 
 router = APIRouter(tags=["blog_post_ai"])
 
 
 def _audit_service() -> EditorialAuditService:
-    settings = get_settings()
-    return EditorialAuditService(
-        WorkflowEventService(get_event_publisher(settings.redis_url or None))
-    )
+    return EditorialAuditService(blog_event_service())
 
 
 def _cdn_service() -> AssetCdnService:
@@ -99,8 +104,40 @@ async def _record_ai_action(
     )
 
 
+def blog_event_service() -> WorkflowEventService:
+    """The workflow event service of the blog editor routes (AE-0424)."""
+    settings = get_settings()
+    return WorkflowEventService(get_event_publisher(settings.redis_url or None))
+
+
+def blog_images_store() -> BlogImageStore:
+    """The blog-images store: ``<carousel_output_dir>/blog-images`` (+ CDN)."""
+    root = Path(get_settings().carousel_output_dir) / BLOG_IMAGES_DIR_NAME
+    return BlogImageStore(root=root, cdn=_cdn_service())
+
+
+def _container() -> Container:
+    """The one service-locator seam of the blog AI/editor routes."""
+    return get_container()
+
+
+def build_blog_image_service() -> BlogImageService:
+    """Cover/section image generation through gpt-image-2 (ADR-0025)."""
+    registry = _container().image_provider_registry()
+    try:
+        provider = registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC)
+    except RuntimeError:
+        return BlogImageService(None, blog_images_store())
+    return BlogImageService(provider.service, blog_images_store())
+
+
+def build_blog_translation_service() -> BlogTranslationService:
+    """PT -> EN translation for the editor's "Generate EN translation"."""
+    return BlogTranslationService(_container().llm_service())
+
+
 def _build_ai_service() -> BlogPostAIService:
-    container = get_container()
+    container = _container()
     settings = container.settings()
     image_registry = container.image_provider_registry()
     image_provider = image_registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC)

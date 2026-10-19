@@ -17,6 +17,8 @@ BLOG_IMAGES_ROUTE_PREFIX: Final = "/api/blog-images"
 BLOG_IMAGE_FILENAME_PATTERN: Final = (
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$"
 )
+# Model recorded on a generated image (the gpt-image-2 OpenAI provider).
+BLOG_IMAGE_MODEL: Final = "gpt-image-2"
 BLOG_IMAGE_CACHE_CONTROL: Final = "public, max-age=31536000, immutable"
 MEDIA_TYPE_JPEG: Final = "image/jpeg"
 
