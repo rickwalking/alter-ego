@@ -9,6 +9,7 @@ from rag_backend.application.services.carousel_template.constants import swipe_t
 from rag_backend.application.services.carousel_template.helpers import _render_inline
 from rag_backend.application.services.carousel_template.lower_third_shell import (
     LowerThirdConfig,
+    artwork_enabled,
     render_lower_third_shell,
 )
 from rag_backend.application.services.carousel_template.strategies.photo_errors import (
@@ -75,6 +76,7 @@ class IntroHeroStrategy:
                 include_counter=False,
                 # AE-0418: the owner's chosen GrokBot ``ai_image`` cover.
                 artwork_src=ai_cover_src(project),
+                show_artwork=artwork_enabled(options),
             )
         )
 

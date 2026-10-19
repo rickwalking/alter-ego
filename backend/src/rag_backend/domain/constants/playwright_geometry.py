@@ -4,6 +4,8 @@ VIOLATION_FONT_UNAVAILABLE = "font_unavailable"
 VIOLATION_FONT_READY_TIMEOUT = "font_ready_timeout"
 VIOLATION_IMAGE_DECODE_FAILED = "image_decode_failed"
 VIOLATION_IMAGE_DECODE_TIMEOUT = "image_decode_timeout"
+# AE-0434: an artwork ``src`` points at a file the images phase never wrote.
+VIOLATION_SLIDE_ARTWORK_MISSING = "slide_artwork_missing"
 VIOLATION_LAYOUT_COPY_ABOVE_BOUNDARY = "layout_copy_above_boundary"
 VIOLATION_LAYOUT_COPY_OVERFLOW = "layout_copy_overflow"
 VIOLATION_LAYOUT_COPY_DESCENDANT_OVERFLOW = "layout_copy_descendant_overflow"
@@ -69,4 +71,5 @@ __all__ = [
     "VIOLATION_LAYOUT_NEAR_LIMIT",
     "VIOLATION_LAYOUT_OVERFLOW_SCROLL",
     "VIOLATION_LAYOUT_PRESENTATION_BELOW_FOOTER",
+    "VIOLATION_SLIDE_ARTWORK_MISSING",
 ]

@@ -11,6 +11,7 @@ from rag_backend.application.services.carousel_template.icon_registry import (
 )
 from rag_backend.application.services.carousel_template.lower_third_shell import (
     LowerThirdConfig,
+    artwork_enabled,
     render_lower_third_shell,
 )
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
@@ -78,6 +79,7 @@ class FeatureGridStrategy:
                 slide_number=slide_number,
                 total_slides=total_slides,
                 copy_inner_html=copy_inner,
+                show_artwork=artwork_enabled(options),
             )
         )
 

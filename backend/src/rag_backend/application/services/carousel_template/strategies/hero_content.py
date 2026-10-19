@@ -11,6 +11,7 @@ from rag_backend.application.services.carousel_template.helpers import (
 )
 from rag_backend.application.services.carousel_template.lower_third_shell import (
     LowerThirdConfig,
+    artwork_enabled,
     render_lower_third_shell,
 )
 from rag_backend.domain.constants import LANGUAGE_PT
@@ -63,6 +64,7 @@ class HeroContentStrategy:
                 copy_inner_html=copy_inner,
                 artwork_alt=heading,
                 footer_html=footer_html,
+                show_artwork=artwork_enabled(options),
             )
         )
 

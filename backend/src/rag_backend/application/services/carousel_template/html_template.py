@@ -11,6 +11,7 @@ from rag_backend.application.services.carousel_template.helpers import (
     _build_watermark_html,
 )
 from rag_backend.application.services.carousel_template.role_layouts import (
+    deck_artwork_slides,
     pov_slide_strategies,
     quote_card_strategy,
 )
@@ -194,6 +195,8 @@ def build_carousel_html(
     slides_html = ""
     # AE-0376: POV decks pick a layout per role (hook_face, statement, ...).
     role_layouts = pov_slide_strategies(project, total_slides)
+    # AE-0434: a role contract (Radar IA v4) illustrates only some slides.
+    artwork = deck_artwork_slides(project, total_slides)
     for slide in slides:
         slide_type = slide["type"]
         is_first_or_last = slide["number"] in {_FIRST_SLIDE_NUMBER, str(total_slides)}
@@ -214,7 +217,11 @@ def build_carousel_html(
                 slide,
                 project,
                 theme,
-                options=_RenderOptions(total_slides=total_slides, language=lang),
+                options=_RenderOptions(
+                    total_slides=total_slides,
+                    language=lang,
+                    artwork=artwork is None or int(slide["number"]) in artwork,
+                ),
             )
         elif slide_type == SLIDE_TYPE_INTRO:
             inner = _render_intro_slide(slide, project, theme)
