@@ -8,7 +8,7 @@ Area: Cross-cutting
 Owner: Claude (worker)
 Agent Lane: architect → developer → qa → release
 Branch: feat/ae-0425-blog-writer-voice-images
-Kanban Card: PR #146
+Kanban Card: PR #146 (base feat/ae-0424-section-editor)
 Created: 2026-10-18
 Updated: 2026-10-19
 
@@ -242,17 +242,40 @@ Pending.
 
 ## Decision Log
 
+### PR #146 review fixes (2026-10-19)
+
+1. **Heartbeat never replaces the run result.** Any `store.heartbeat` error other than a lost
+   lease is logged (`blog_generation_heartbeat_failed`) and the loop keeps beating; the beat task
+   is awaited with `asyncio.wait`, which never re-raises its outcome. Test: a `ConnectionError`
+   heartbeat blip → the run still finishes `complete` and `finish()` runs.
+2. **Owner edits during the image step survive.** After the paid image calls the run re-reads the
+   row and attaches the images by section id onto the CURRENT content (`merge_content`: CAS loop
+   on the lease, no owner-edit conflict); only EMPTY slots are filled, an owner-set image is kept,
+   a section the owner deleted is skipped. The editor is read-only (fieldset disabled + save
+   disabled) while `generation.status == in_progress`, and adopts each newer server version of a
+   post that is still generating. (When #147's reusable slot-write helper lands, these writes move
+   onto it — see the orchestrator note.)
+3. **Retry never regenerates an existing article.** `partial` is retryable too; when
+   `content.sections` has a non-empty section the retry is `images_only` (no writer/gate) and
+   fills only the missing slots. `generation.image_spend_usd` accumulates across attempts and the
+   remaining budget (`BLOG_IMAGE_COST_CAP` − spent) bounds every attempt.
+4. **Single image store/route/template = AE-0424's** (see "One image path" below).
+- **Low: English in PT.** Besides stripping verbatim research sentences, a cheap per-section check
+  (English vs Portuguese function words) reports PT sections that read as English; the finding
+  goes to the judge and triggers the single rewrite.
+
 ### Implementation decisions (worker, 2026-10-19)
 
 - **Retry route.** AC1 409s `from-carousel` for ANY existing row, so "retry on the same route/row"
   (AC14) cannot go through it. Added `POST /blog-posts/{id}/generation/retry` (202): only a `failed`
   run, same row, new lease + attempt, `lock_version` bumped (fences the old task); 409 while
   `in_progress` or after `complete`/`partial`. ADR-0025 API table updated.
-- **Blog-images serving route.** The existing `generate-image` stored a filesystem path (not
-  servable). Images now live in `<CAROUSEL_OUTPUT_DIR>/blog-images/<post>/<uuid>.jpg` and the
-  document stores the same-origin `/api/blog-images/<post>/<file>`, served by a new GET route
-  (public when the post is published, author/admin otherwise, uniform 404). No provider URL is
-  ever stored (gpt-image-2 returns base64 bytes that the provider writes to the store).
+- **One image path (orchestrator decision, PR review 2026-10-19).** AE-0424 (#147) owns the
+  blog-images store (`BlogImageStore`), the single-image `BlogImageService`, the image template
+  (`agents/prompts/blog/v1/image_prompt.yaml`, `{scene}`) and `GET /api/blog-images/{post_id}/{file}`
+  (public; uuid4 names). AE-0425 rebased onto `feat/ae-0424-section-editor`, dropped its own
+  route/template/service and builds bulk generation on top (`blog_image_batch.py`: concurrency,
+  budget, best-effort slots). The PR now targets `feat/ae-0424-section-editor`.
 - **Lease fence = JSON path + lock_version.** Every write is
   `WHERE id AND generation.lease_id = :mine AND lock_version = :seen`; a retry and the reaper rotate
   the lease and bump `lock_version`. Proven on SQLite and Postgres 16 (the store tests run on both
@@ -279,8 +302,9 @@ Pending.
 - **`build_blog_markdown_from_long_form_notes` kept** (not deleted): the blog body no longer uses it
   (from-carousel runs the writer), but it still fills `carousel_projects.blog_markdown` for the
   distribution pack (LinkedIn input), which AE-0428 classifies as live.
-- **Per-slot image retry** in the editor belongs to AE-0424 (it owns the section image slots and
-  routes); the AE-0425 banner reports `N of N+1 images` for a partial run and links nothing per slot.
+- **Per-slot image controls** live in AE-0424's section editor (generate/regenerate per slot);
+  the AE-0425 banner reports `N of M images` for a partial run and offers "Generate the missing
+  images" (the images-only retry).
 - **Not in mutmut's path list.** The new modules are not added to `[tool.mutmut] paths_to_mutate`
   (curated list); unit tests assert behavior (exact counts, findings, fences).
 
