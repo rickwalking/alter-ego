@@ -9,7 +9,8 @@ stored with a version snapshot at the locked ``lock_version`` (an owner save
 during the run is the base of the write, never a 409), and the new image files
 are discarded when the write fails. The lease is checked on the locked row, in
 the same transaction, and the generated images are counted against AE-0424's
-per-post cap (``count_one_image``).
+per-post cap is RESERVED under the row lock before the provider spend
+(``reserve_image_budget``, AE-0424 review round 2).
 """
 
 from __future__ import annotations
@@ -25,13 +26,16 @@ from rag_backend.api.dependencies.blog_content_write import (
     write_post_content,
 )
 from rag_backend.api.dependencies.blog_document import validated_write
+from rag_backend.api.dependencies.blog_image_budget import (
+    BudgetReservation,
+    reserve_image_budget,
+)
 from rag_backend.api.dependencies.blog_slot_write import (
     LockedBlogPostRow,
     SlotEdit,
     apply_slot_edit,
 )
 from rag_backend.api.dependencies.resource_access import lock_blog_post
-from rag_backend.application.services.blog.blog_image_budget import count_one_image
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.ai_disclosure import AI_ACTION_GENERATE_IMAGE
 from rag_backend.domain.constants.blog_generation import VERSION_SUMMARY_GENERATION
@@ -77,20 +81,24 @@ class _MetadataChange:
     def __call__(self, metadata: dict[str, object]) -> dict[str, object]:
         if lease_of(metadata) != self.lease.lease_id:
             raise LeaseLostError(self.lease.post_id)
-        updated = with_voice_score(
-            heartbeat(metadata, self.now), self.change.voice_score
-        )
-        for _image in range(self.change.images_generated):
-            updated = count_one_image(updated)
-        return updated
+        return with_voice_score(heartbeat(metadata, self.now), self.change.voice_score)
+
+
+@dataclass(frozen=True)
+class RunOwner:
+    """Who the run writes as, and the post's image cap (BLOG_IMAGE_COST_CAP)."""
+
+    user_id: str
+    image_cap: int
 
 
 class SlotWriteGenerationStore:
     """``BlogGenerationStore``: run state lease-fenced, content via the slot path."""
 
-    def __init__(self, sessions: SessionFactory, user_id: str) -> None:
+    def __init__(self, sessions: SessionFactory, owner: RunOwner) -> None:
         self._sessions = sessions
-        self._user_id = user_id
+        self._user_id = owner.user_id
+        self._cap = owner.image_cap
         self._state = SqlBlogGenerationStore(sessions)
 
     async def heartbeat(self, lease: GenerationLease) -> None:
@@ -101,9 +109,20 @@ class SlotWriteGenerationStore:
         """The row's current content."""
         return await self._state.read_content(lease)
 
-    async def images_generated(self, lease: GenerationLease) -> int:
-        """Images generated for the post so far."""
-        return await self._state.images_generated(lease)
+    async def reserve_images(self, lease: GenerationLease, wanted: int) -> int:
+        """Reserve the images one by one through AE-0424's reservation (row
+        lock + commit before the spend); stop at the cap (429)."""
+        granted = 0
+        for _image in range(wanted):
+            try:
+                async with self._sessions() as db:
+                    await reserve_image_budget(
+                        db, BudgetReservation(post_id=lease.post_id, cap=self._cap)
+                    )
+            except HTTPException:
+                break
+            granted += 1
+        return granted
 
     async def finish(self, lease: GenerationLease, outcome: GenerationOutcome) -> None:
         """Record the final status."""
@@ -190,4 +209,4 @@ class SlotWriteGenerationStore:
         await db.commit()
 
 
-__all__ = ["SlotWriteGenerationStore"]
+__all__ = ["RunOwner", "SlotWriteGenerationStore"]

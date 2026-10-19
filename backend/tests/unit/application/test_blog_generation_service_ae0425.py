@@ -95,7 +95,6 @@ def _service(
     writer: FakeWriter,
     store: FakeStore,
     timeout: float = 5.0,
-    cap: int = 30,
 ) -> BlogGenerationService:
     images = image_batch(tmp, FakeImageGenerator())
     gate = BlogQualityGate(
@@ -108,7 +107,6 @@ def _service(
             images=images,
             store=store,
             timings=GenerationTimings(timeout_seconds=timeout, heartbeat_seconds=0.01),
-            image_cap=cap,
         )
     )
 
@@ -146,7 +144,7 @@ async def test_a_complete_run_stores_a_scored_document_with_images(
     assert document.quality is not None
     assert document.quality.voice_score == 82.0
     assert store.applied[0].voice_score == 82.0  # the article write
-    assert store.generated == 5  # counted against the per-post cap
+    assert store.generated == 5  # reserved on the per-post cap before the spend
     # EN translation: same ids, own quality, own alt text.
     english = document.translations["en"]
     assert [s.id for s in english.sections] == [s.id for s in document.sections]
@@ -437,7 +435,7 @@ async def test_an_images_only_retry_fills_only_the_empty_slots(tmp_path: Path) -
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_COMPLETE
     assert outcome.image_count == 1
-    assert store.generated == 4 + 1  # the first run's 4 + this retry's 1
+    assert store.generated == 5 + 1  # first run's 5 reserved (one failed) + 1
     after = parse_blog_content(store.content)
     assert [s.body_md for s in after.sections] == [s.body_md for s in before.sections]
     assert after.sections[0].image == before.sections[0].image
@@ -449,10 +447,9 @@ async def test_images_generated_earlier_count_against_the_cap(
 ) -> None:
     # Review fix 3: AE-0424's per-post cap counts every attempt + the editor.
     store = await _partial_store(tmp_path)
-    assert store.generated == 4
-    outcome = await _service(tmp_path, FakeWriter(), store, cap=4).run(
-        _images_only_job()
-    )
+    assert store.generated == 5  # all 5 slots were reserved before the spend
+    store.cap = 5
+    outcome = await _service(tmp_path, FakeWriter(), store).run(_images_only_job())
     assert outcome is not None
     assert outcome.image_count == 0
     assert outcome.status == GENERATION_STATUS_PARTIAL

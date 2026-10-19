@@ -172,7 +172,8 @@ class DocumentApply:
 
     ``edit`` maps the latest document to the new one (it may raise, e.g.
     ``GenerationConflictError`` when the owner already wrote an article);
-    ``images_generated`` is counted against the post's image cap;
+    ``images_generated`` marks an image write (AI disclosure); the images
+    were already counted when their budget was RESERVED before the spend;
     ``discard`` cleans up (new image files) when the write fails.
     """
 

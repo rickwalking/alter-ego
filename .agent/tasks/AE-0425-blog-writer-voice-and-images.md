@@ -277,6 +277,10 @@ Pending.
   does not parse as `blog.v2` (same versioned write: snapshot of the old content), so a retry of a
   legacy row ends `complete` instead of a paid 422 dead end. Tests: store (replace vs slot path),
   API (unparseable row → retry → final status `complete`, v2 with 7 sections + cover).
+- **Budget reserved before the spend (AE-0424 review round 2 contract).** The run reserves its
+  image slots one by one through `reserve_image_budget` (row lock + commit) BEFORE any provider
+  call and only generates what was granted; the reservation is kept when a slot fails (it may be
+  billed). Content writes no longer count images.
 - **C. Orphans.** After the image write, the files of images whose slot vanished meanwhile (section
   deleted / filled by the owner) are deleted; they still count against the cap (they were paid).
 

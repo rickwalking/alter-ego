@@ -178,7 +178,8 @@ class FakeStore:
     outcomes: list[GenerationOutcome] = field(default_factory=list)
     heartbeats: int = 0
     heartbeat_errors: int = 0
-    generated: int = 0
+    generated: int = 0  # reserved images (AE-0424 counter)
+    cap: int = 30
     lost: bool = False
     fail_writes: bool = False
     owner_edit: Callable[[dict[str, object]], dict[str, object]] | None = None
@@ -194,9 +195,11 @@ class FakeStore:
         self._check(lease)
         return self.content
 
-    async def images_generated(self, lease: GenerationLease) -> int:
+    async def reserve_images(self, lease: GenerationLease, wanted: int) -> int:
         self._check(lease)
-        return self.generated
+        granted = max(0, min(wanted, self.cap - self.generated))
+        self.generated += granted
+        return granted
 
     async def apply_document(
         self, lease: GenerationLease, change: DocumentApply
@@ -214,7 +217,6 @@ class FakeStore:
         self.content = change.edit(latest).to_content()
         self.contents.append(self.content)
         self.applied.append(change)
-        self.generated += change.images_generated
 
     async def finish(self, lease: GenerationLease, outcome: GenerationOutcome) -> None:
         self._check(lease)

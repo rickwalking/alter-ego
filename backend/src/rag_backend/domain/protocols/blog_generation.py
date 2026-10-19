@@ -61,8 +61,9 @@ class BlogGenerationStore(Protocol):
         """The row's current ``content``; raises ``LeaseLostError``."""
         ...
 
-    async def images_generated(self, lease: GenerationLease) -> int:
-        """Images already generated for this post (counts against the cap)."""
+    async def reserve_images(self, lease: GenerationLease, wanted: int) -> int:
+        """Reserve up to ``wanted`` images of the post's cap BEFORE the spend
+        (under the row lock); returns how many were granted."""
         ...
 
     async def apply_document(

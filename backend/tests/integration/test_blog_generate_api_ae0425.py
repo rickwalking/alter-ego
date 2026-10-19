@@ -83,6 +83,7 @@ class _Harness:
 
     def build(self, persona: PersonaProfile, user_id: str) -> BlogGenerationService:
         from rag_backend.bootstrap.blog_generation_store import (
+            RunOwner,
             SlotWriteGenerationStore,
         )
         from rag_backend.infrastructure.database.config import get_session_maker
@@ -95,9 +96,10 @@ class _Harness:
                     QualityGateDeps(self.writer, FakeScorer(scores=[80.0]))
                 ),
                 images=image_batch(self.images_dir, self.generator),
-                store=SlotWriteGenerationStore(get_session_maker(), user_id),
+                store=SlotWriteGenerationStore(
+                    get_session_maker(), RunOwner(user_id=user_id, image_cap=30)
+                ),
                 timings=GenerationTimings(timeout_seconds=10, heartbeat_seconds=5),
-                image_cap=30,
             )
         )
 
@@ -359,7 +361,8 @@ async def test_a_partial_run_retries_only_its_missing_images(
     partial = await _settled(client, post_id)
     generation = partial["ai_generation_metadata"]["generation"]
     assert generation["status"] == "partial"
-    assert partial["ai_generation_metadata"]["blog_image_generations"] == 7
+    # Reserved before the spend: all 8 slots (the failed one may be billed).
+    assert partial["ai_generation_metadata"]["blog_image_generations"] == 8
     bodies = [s["body_md"] for s in partial["content"]["sections"]]
 
     harness.generator.honor_marker = False
@@ -371,7 +374,7 @@ async def test_a_partial_run_retries_only_its_missing_images(
     assert generation["mode"] == "images_only"
     assert generation["image_slots"] == 1
     # Counted on AE-0424's per-post cap across attempts.
-    assert done["ai_generation_metadata"]["blog_image_generations"] == 8
+    assert done["ai_generation_metadata"]["blog_image_generations"] == 9
     assert len(harness.writer.drafts) == 1  # the writer ran once, never again
     assert [s["body_md"] for s in done["content"]["sections"]] == bodies
     assert done["content"]["sections"][3]["image"] is not None

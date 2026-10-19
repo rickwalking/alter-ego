@@ -36,7 +36,10 @@ from rag_backend.application.services.blog.blog_quality_gate import (
     BlogQualityGate,
     QualityGateDeps,
 )
-from rag_backend.bootstrap.blog_generation_store import SlotWriteGenerationStore
+from rag_backend.bootstrap.blog_generation_store import (
+    RunOwner,
+    SlotWriteGenerationStore,
+)
 from rag_backend.domain.constants.blog_generation import (
     BLOG_DEFAULT_PERSONA_NAME,
     BLOG_GENERATION_HEARTBEAT_SECONDS,
@@ -98,12 +101,14 @@ def build_generation_service(
             writer=writer,
             gate=gate,
             images=_image_batch(settings),
-            store=SlotWriteGenerationStore(get_session_maker(), user_id),
+            store=SlotWriteGenerationStore(
+                get_session_maker(),
+                RunOwner(user_id=user_id, image_cap=settings.blog_image_cost_cap),
+            ),
             timings=GenerationTimings(
                 timeout_seconds=settings.blog_generation_timeout_seconds,
                 heartbeat_seconds=BLOG_GENERATION_HEARTBEAT_SECONDS,
             ),
-            image_cap=settings.blog_image_cost_cap,
         )
     )
 

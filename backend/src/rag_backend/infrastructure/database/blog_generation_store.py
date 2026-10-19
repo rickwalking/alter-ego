@@ -24,7 +24,6 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
-from rag_backend.application.services.blog.blog_image_budget import image_generations
 from rag_backend.domain.constants.blog_document import (
     GENERATION_KEY,
     GENERATION_STATUS_IN_PROGRESS,
@@ -100,11 +99,6 @@ class SqlBlogGenerationStore:
         """The row's current ``content`` (still fenced on the lease)."""
         row = await self._read_fenced(lease)
         return row.content
-
-    async def images_generated(self, lease: GenerationLease) -> int:
-        """Images generated for the post so far (AE-0424's per-post counter)."""
-        row = await self._read_fenced(lease)
-        return image_generations(row.metadata)
 
     async def _read_fenced(self, lease: GenerationLease) -> _Row:
         async with self._lock, self._sessions() as session:

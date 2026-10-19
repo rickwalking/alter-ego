@@ -197,13 +197,12 @@ class BlogGenerationService:
             document = build_generated_document(languages, _now())
             await self._store(job, document, languages)
             titles = ImageTitles(languages.title, languages.en_title)
-        generated = await self._deps.store.images_generated(job.lease)
+        subjects = missing_image_subjects(document, titles.title)
+        # AE-0424 contract: the budget is reserved under the row lock BEFORE
+        # any provider spend (kept even when a slot later fails: it may be billed).
+        granted = await self._deps.store.reserve_images(job.lease, len(subjects))
         result = await self._deps.images.generate(
-            ImageBatchRequest(
-                trace=job.trace,
-                subjects=missing_image_subjects(document, titles.title),
-                max_images=self._deps.image_cap - generated,
-            )
+            ImageBatchRequest(trace=job.trace, subjects=subjects, max_images=granted)
         )
         if result.images:
             await self._attach(job, result, titles)

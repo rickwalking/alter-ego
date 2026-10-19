@@ -32,15 +32,13 @@ class GenerationTimings:
 
 @dataclass(frozen=True)
 class BlogGenerationDeps:
-    """Collaborators of the run (all behind domain ports) + the image cap."""
+    """Collaborators of the run (all behind domain ports)."""
 
     writer: BlogArticleWriter
     gate: BlogQualityGate
     images: BlogImageBatchService
     store: BlogGenerationStore
     timings: GenerationTimings
-    # BLOG_IMAGE_COST_CAP (AE-0424): images per post, every attempt + the editor.
-    image_cap: int
 
 
 @dataclass(frozen=True)

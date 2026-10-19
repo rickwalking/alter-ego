@@ -21,7 +21,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from rag_backend.bootstrap.blog_generation_store import SlotWriteGenerationStore
+from rag_backend.bootstrap.blog_generation_store import (
+    RunOwner,
+    SlotWriteGenerationStore,
+)
 from rag_backend.domain.constants.blog_generation import ERR_GENERATION_INTERRUPTED
 from rag_backend.domain.models.blog_document import (
     BlogDocument,
@@ -152,7 +155,7 @@ async def test_draft_row_is_an_in_progress_draft(sessions: Sessions) -> None:
 
 
 def _slot_store(sessions: Sessions) -> SlotWriteGenerationStore:
-    return SlotWriteGenerationStore(sessions, AUTHOR_ID)
+    return SlotWriteGenerationStore(sessions, RunOwner(AUTHOR_ID, image_cap=3))
 
 
 def _replace_with(body: str) -> DocumentApply:
@@ -232,8 +235,20 @@ async def test_images_apply_onto_an_owner_save_and_count(sessions: Sessions) -> 
     assert row.content["sections"][0]["body_md"] == "Editado pelo dono"
     assert row.content["sections"][0]["image"]["alt"] == "Alt"
     assert row.lock_version == 4
-    assert await store.images_generated(lease) == 2
+    # The write itself counts nothing: images are reserved before the spend.
+    assert "blog_image_generations" not in row.ai_generation_metadata
     assert await store.read_content(lease) == row.content
+
+
+async def test_images_are_reserved_up_to_the_cap(sessions: Sessions) -> None:
+    # AE-0424 review round 2: reserved under the row lock BEFORE the spend.
+    lease = await _draft(sessions)
+    store = _slot_store(sessions)
+    assert await store.reserve_images(lease, 2) == 2
+    assert await store.reserve_images(lease, 5) == 1  # cap 3
+    assert await store.reserve_images(lease, 1) == 0
+    row = await _row(sessions, lease.post_id)
+    assert row.ai_generation_metadata["blog_image_generations"] == 3
 
 
 async def test_an_invalid_write_is_a_document_error(sessions: Sessions) -> None:
