@@ -244,6 +244,7 @@ class TestRollback:
         assert content["translations"] == {"en": en}
         assert "# GPT 5.6 saiu" not in str(content["markdown"])
         assert report.changed == 1
+        assert report.rows[0].section_counts == {"pt": 2, "en": 1}
         assert (await blog_v2_cutover.rollback(maker)).changed == 0
 
 

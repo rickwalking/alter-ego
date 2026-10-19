@@ -113,6 +113,10 @@ def describe_row(
     return row
 
 
+def _as_dict(content: object) -> dict[str, object]:
+    return content if isinstance(content, dict) else {}
+
+
 def _rollback_rewrite(content: object) -> dict[str, object] | None:
     if not is_v2_language_document(content):
         return None
@@ -165,6 +169,8 @@ async def _write_row(
 class _BatchJob:
     rewrite: Rewrite
     clear_featured: bool
+    # Report the v2 side: the rewrite for apply, the original row for rollback.
+    describe_original: bool = False
 
 
 async def _run_batch(
@@ -180,7 +186,8 @@ async def _run_batch(
             values["featured_image_url"] = None
         await _write_row(session, post_id, values)
         cleared = featured if job.clear_featured else None
-        changed.append(describe_row(post_id, rewritten, cleared))
+        v2_side = content if job.describe_original else rewritten
+        changed.append(describe_row(post_id, _as_dict(v2_side), cleared))
     return changed
 
 
@@ -212,7 +219,9 @@ async def apply(maker: SessionMaker) -> CutoverReport:
 
 async def rollback(maker: SessionMaker) -> CutoverReport:
     """Re-join every v2 row to the v1 ``{markdown, translations}`` shape."""
-    job = _BatchJob(rewrite=_rollback_rewrite, clear_featured=False)
+    job = _BatchJob(
+        rewrite=_rollback_rewrite, clear_featured=False, describe_original=True
+    )
     return await _run_batched(maker, job, CutoverReport(mode=MODE_ROLLBACK))
 
 
