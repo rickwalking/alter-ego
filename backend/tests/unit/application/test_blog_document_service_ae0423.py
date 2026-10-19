@@ -6,7 +6,6 @@ Feature: backend/tests/features/blog_sections_ae0423.feature
 from __future__ import annotations
 
 import pytest
-from structlog.testing import capture_logs
 
 from rag_backend.application.services.blog.blog_document_service import (
     BlogDocumentService,
@@ -23,7 +22,6 @@ from rag_backend.domain.constants.blog_document import (
     ERR_BLOG_NO_SECTIONS,
     ERR_BLOG_NOT_PUBLISHABLE,
     ERR_BLOG_SECTION_TOO_LONG,
-    METRIC_BLOG_V2_NON_MIGRATED_ROWS,
 )
 from rag_backend.domain.models.blog_document import (
     BlogImage,
@@ -202,46 +200,33 @@ class TestPublishGuard:
         assert exc.value.code == ERR_BLOG_NOT_PUBLISHABLE
 
 
-class TestReadFailSafe:
-    # Scenario: A non-migrated legacy row is read through the temporary fail-safe
-    def test_legacy_row_reads_as_text_only_v2_and_emits_metric(self) -> None:
-        legacy = {
-            "markdown": "# T\n\n## A\n\nCorpo",
-            "translations": {"en": "## E\n\nBody"},
-        }
-        with capture_logs() as logs:
-            document = BlogDocumentService.read_document(legacy, "post-1")
-
-        assert document.cover is None
-        assert document.quality is None
-        assert [(s.heading, s.body_md, s.image) for s in document.sections] == [
-            ("A", "Corpo", None)
-        ]
-        assert document.translations["en"].sections[0].body_md == "Body"
-        events = [
-            entry
-            for entry in logs
-            if entry["event"] == METRIC_BLOG_V2_NON_MIGRATED_ROWS
-        ]
-        assert events
-        assert events[0]["post_id"] == "post-1"
-
-    def test_valid_v2_row_reads_without_metric(self) -> None:
-        with capture_logs() as logs:
-            document = BlogDocumentService.read_document(_doc(), "post-2")
+class TestStrictRead:
+    # Scenario: A non-v2 read now fails closed (the temporary adapter is gone)
+    def test_valid_v2_row_reads(self) -> None:
+        document = BlogDocumentService.read_document(_doc())
         assert document.sections[0].id == SEC_A
-        assert not logs
 
-    def test_broken_v2_row_reads_as_an_empty_document(self) -> None:
+    @pytest.mark.parametrize(
+        "content",
+        [
+            {"markdown": "# T\n\n## A\n\nCorpo"},
+            {"markdown": "## A\n\nx", "translations": {"en": "## E\n\nBody"}},
+            None,
+            [],
+            "flat markdown",
+            {"x": 1},
+        ],
+    )
+    def test_any_non_v2_content_raises_instead_of_adapting(
+        self, content: object
+    ) -> None:
+        with pytest.raises(InvalidBlogDocumentError):
+            BlogDocumentService.read_document(content)
+
+    def test_malformed_v2_row_raises(self) -> None:
         broken = _doc(sections=[_section(), _section()])
-        document = BlogDocumentService.read_document(broken, "post-3")
-        assert len(document.sections) == 1
-        assert document.sections[0].body_md == ""
-
-    @pytest.mark.parametrize("content", [None, [], "flat markdown", {"x": 1}])
-    def test_any_non_v2_content_never_raises(self, content: object) -> None:
-        document = BlogDocumentService.read_document(content, "post-4")
-        assert len(document.sections) == 1
+        with pytest.raises(InvalidBlogDocumentError):
+            BlogDocumentService.read_document(broken)
 
 
 class TestGenerationFlag:
@@ -309,30 +294,3 @@ class TestPublicProjection:
         assert isinstance(sections, list)
         assert sections[0]["image"] is None
         assert projected["translations"] == {}
-
-
-class TestReadFailSafeStability:
-    def test_repeated_reads_of_a_legacy_row_are_identical(self) -> None:
-        legacy = {
-            "markdown": "## A\n\nx\n\n## B\n\ny",
-            "translations": {"en": "## E\n\nz"},
-        }
-        first = BlogDocumentService.read_document(legacy, "post-9").to_content()
-        second = BlogDocumentService.read_document(legacy, "post-9").to_content()
-        other = BlogDocumentService.read_document(legacy, "post-10").to_content()
-        assert first == second
-        assert first != other
-        parse_blog_content(first)
-
-
-class TestReadFailSafeKeepsPt:
-    # Scenario: A v2 row with an invalid translation keeps its PT document
-    def test_bad_translation_is_dropped_not_the_whole_post(self) -> None:
-        en = {"schema": BLOG_SCHEMA_V2, "sections": [_section(SEC_B)]}
-        content = _doc(
-            sections=[_section(body_md="Corpo PT")],
-            translations={"en-US": en, "en": en},
-        )
-        document = BlogDocumentService.read_document(content, "post-11")
-        assert document.sections[0].body_md == "Corpo PT"
-        assert set(document.translations) == {"en"}

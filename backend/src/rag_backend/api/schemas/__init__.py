@@ -19,7 +19,6 @@ from rag_backend.api.schemas.blog_post import (
 )
 from rag_backend.api.schemas.carousel import (
     CarouselBlogI18nResponse,
-    CarouselBlogImageMapEntry,
     CarouselBlogResponse,
     CarouselBlogWithDesignResponse,
     CarouselCaptionResponse,
@@ -96,7 +95,6 @@ __all__ = [
     "BlogPostUpdate",
     "BlogPostVersionResponse",
     "CarouselBlogI18nResponse",
-    "CarouselBlogImageMapEntry",
     "CarouselBlogResponse",
     "CarouselBlogWithDesignResponse",
     "CarouselCaptionResponse",

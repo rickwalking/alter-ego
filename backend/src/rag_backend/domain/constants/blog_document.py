@@ -47,7 +47,7 @@ GENERATION_KEY: Final = "generation"
 GENERATION_STATUS_KEY: Final = "status"
 GENERATION_STATUS_IN_PROGRESS: Final = "in_progress"
 
-# Error codes (API ``detail``) and the read fail-safe metric event.
+# Error codes (API ``detail``).
 ERR_INVALID_BLOG_DOCUMENT: Final = "invalid_blog_document"
 ERR_BLOG_DOCUMENT_NOT_V2: Final = "blog_document_not_v2"
 ERR_BLOG_DOCUMENT_NOT_OBJECT: Final = "blog_document_not_object"
@@ -59,8 +59,6 @@ ERR_BLOG_IMAGE_URL_INVALID: Final = "blog_image_url_invalid"
 ERR_BLOG_IMAGE_ALT_BLANK: Final = "blog_image_alt_blank"
 ERR_BLOG_TRANSLATION_LANGUAGE_INVALID: Final = "blog_translation_language_invalid"
 ERR_BLOG_NOT_PUBLISHABLE: Final = "blog_document_not_publishable"
-METRIC_BLOG_V2_NON_MIGRATED_ROWS: Final = "blog_v2_non_migrated_rows"
-
 # Cutover bookkeeping (AE-0423). A cleared ``featured_image_url`` is stashed in
 # ``ai_generation_metadata`` (never public) so ``--rollback`` can restore it.
 CUTOVER_METADATA_KEY: Final = "blog_v2_cutover"

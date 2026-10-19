@@ -17,21 +17,11 @@ export const carouselDesignTypographySchema = z.object({
   font_family_badge: z.string(),
 });
 
-export const carouselBlogImageMapEntrySchema = z.object({
-  slide_number: z.number(),
-  heading: z.string(),
-  alt: z.string(),
-});
-
 export const carouselDesignImagesSchema = z.object({
   hero: z.string(),
   slides: z.array(z.string()),
   rendered_slides_pt: z.array(z.string()).nullable().optional(),
   rendered_slides_en: z.array(z.string()).nullable().optional(),
-  blog_image_map: z
-    .array(carouselBlogImageMapEntrySchema)
-    .nullable()
-    .optional(),
 });
 
 export const carouselDesignLayoutSchema = z.object({
@@ -47,20 +37,6 @@ export const carouselDesignResponseSchema = z.object({
   layout: carouselDesignLayoutSchema,
   theme_name: z.string(),
 });
-
-export const carouselBlogI18nResponseSchema = z.object({
-  markdown: z.string(),
-  title: z.string(),
-  subtitle: z.string().nullable(),
-  language: z.string(),
-  available_languages: z.array(z.string()),
-});
-
-// Same shape as the i18n response plus a design block (AE-0154 dedup).
-export const carouselBlogWithDesignResponseSchema =
-  carouselBlogI18nResponseSchema.extend({
-    design: carouselDesignResponseSchema,
-  });
 
 export const carouselProjectResponseSchema = z.object({
   id: z.string(),
@@ -225,17 +201,8 @@ export const slideFieldViolationSchema = z.object({
 
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 
-export type CarouselBlogImageMapEntry = z.infer<
-  typeof carouselBlogImageMapEntrySchema
->;
 export type CarouselDesignResponse = z.infer<
   typeof carouselDesignResponseSchema
->;
-export type CarouselBlogI18nResponse = z.infer<
-  typeof carouselBlogI18nResponseSchema
->;
-export type CarouselBlogWithDesignResponse = z.infer<
-  typeof carouselBlogWithDesignResponseSchema
 >;
 export type CarouselProjectResponse = z.infer<
   typeof carouselProjectResponseSchema

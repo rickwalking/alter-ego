@@ -143,7 +143,6 @@ class CarouselProject:
     background_color: str | None = None
     blog_markdown: str | None = None
     blog_translations: dict[str, str] | None = None
-    blog_image_map: list[dict[str, str | int]] | None = None
     caption: str | None = None
     caption_en: str | None = None
     linkedin_post_pt: str | None = None

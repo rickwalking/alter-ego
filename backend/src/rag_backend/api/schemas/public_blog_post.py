@@ -108,11 +108,11 @@ def to_public_detail(post: "BlogPostModel") -> PublicBlogPostResponse:
     """Build the lean detail by explicit field mapping (allow-list).
 
     ``content`` is the public projection of the ``blog.v2`` document (no
-    quality, image prompt/model or generation metadata); a row the cutover has
-    not reached is adapted to text-only v2 in memory (AE-0423 fail-safe).
+    quality, image prompt/model or generation metadata). A non-v2 row raises
+    :class:`InvalidBlogDocumentError`; the route maps it to the uniform 404.
     """
     summary = to_public_summary(post)
-    document = BlogDocumentService.read_document(post.content, str(post.id))
+    document = BlogDocumentService.read_document(post.content)
     return PublicBlogPostResponse(
         **summary.model_dump(),
         content=project_public_document(document),

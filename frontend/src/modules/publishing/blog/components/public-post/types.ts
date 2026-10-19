@@ -10,11 +10,6 @@ import type { CSSProperties, ReactNode } from "react";
 import type { BlogImage, BlogSection } from "@/schemas/blog-document";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
-export interface BlogPostAdminPanelProps {
-  projectId: string;
-  design: CarouselDesignResponse;
-}
-
 export interface BlogPostContentProps {
   sections: BlogSection[];
   design: CarouselDesignResponse;

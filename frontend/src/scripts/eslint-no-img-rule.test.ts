@@ -2,8 +2,8 @@
  * AE-0202 rule-fires regression test (dogfoods AE-0180): a raw `<img>` element
  * in production `src` must be an ESLint ERROR (`@next/next/no-img-element`), not a
  * warning. The rule was promoted warn -> error once the last prod `<img>`
- * (image-gen-modal.tsx) migrated to next/image; this test proves the promotion
- * actually fires, so it cannot silently regress to a warning.
+ * (a legacy modal component) migrated to next/image; this test proves the
+ * promotion actually fires, so it cannot silently regress to a warning.
  *
  * A probe component is written under a real `src/modules/**` path so it is
  * matched by the flat config + tsconfig project, then linted via the ESLint CLI.

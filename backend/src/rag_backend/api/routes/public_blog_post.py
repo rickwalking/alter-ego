@@ -25,6 +25,7 @@ from rag_backend.api.schemas.public_blog_post import (
     to_public_summary,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_PUBLIC_BLOG_READ
+from rag_backend.domain.models.blog_document import InvalidBlogDocumentError
 from rag_backend.modules.publishing import (
     BlogPostModel,
     public_blog_visibility_clause,
@@ -110,4 +111,12 @@ async def get_public_blog_post(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_PUBLIC_BLOG_POST_NOT_FOUND,
         )
-    return to_public_detail(row)
+    try:
+        return to_public_detail(row)
+    except InvalidBlogDocumentError as exc:
+        # A published row with a non-v2 document is not renderable: uniform 404
+        # (ADR-0013), never a 500 and never a legacy adaptation (AE-0428).
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_PUBLIC_BLOG_POST_NOT_FOUND,
+        ) from exc

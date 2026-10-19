@@ -6,37 +6,11 @@
  * live here rather than inline in the `.tsx` files.
  */
 
-export interface AccessibilityCheckerProps {
-  postId: string | null;
-}
-
 export interface AiSuggestionPanelProps {
   postId: string;
   selectedText: string;
   onApplySuggestion: (text: string) => void;
   personaId?: string;
-}
-
-export interface BlogPostFiltersProps {
-  search: string;
-  status: string;
-  onSearchChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
-}
-
-export interface KeyboardShortcutsHelpProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export interface SeoPreviewProps {
-  postId: string | null;
-  title: string;
-  slug: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  excerpt?: string;
-  featuredImageUrl?: string | null;
 }
 
 export interface BlogPostVersion {

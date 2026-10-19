@@ -13,10 +13,5 @@
 export {
   carouselKeys,
   carouselListOptions,
-  carouselProjectsOptions,
   carouselProjectOptions,
-  carouselBlogOptions,
-  carouselBlogWithDesignOptions,
-  carouselDesignOptions,
-  carouselSlidesOptions,
 } from "./queries";

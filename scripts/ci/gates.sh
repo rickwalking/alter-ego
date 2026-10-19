@@ -124,6 +124,11 @@ gate_backend_dead_code()   { cd "$REPO_ROOT/backend" && uv run vulture src/ vult
 # Anti-hardcoded-prompt checker (AE-0244): prompts must live in the registry
 # (.md/.yaml), not inline in agents/ or application/services/. stdlib-only AST scan.
 gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_prompts.py; }
+# Blog-v1 dead-code regression guard (AE-0428): the removed v1 carousel-blog
+# surface (blog_image_map, v1 blog schemas/hooks/components, cleanup_blog_markdown)
+# must not reappear in backend/src or frontend/src. stdlib-only token scan. Runs in
+# both scopes because it spans both trees.
+gate_blog_v1_dead_code() { cd "$REPO_ROOT" && python3 scripts/check_blog_v1_dead_code.py; }
 # Redis factory enforcement (AE-0302): backend Redis clients must be built by
 # the sanctioned authenticated factory — no direct redis imports elsewhere.
 gate_backend_redis_factory() { cd "$REPO_ROOT" && python3 scripts/check_redis_factory.py; }
@@ -262,6 +267,7 @@ BACKEND_GATES=(
   docstrings:gate_backend_docstrings
   dead-code:gate_backend_dead_code
   inline-prompts:gate_backend_inline_prompts
+  blog-v1-dead-code:gate_blog_v1_dead_code
   redis-factory:gate_backend_redis_factory
   autopilot-env:gate_backend_autopilot_env
   healthcheck-loopback:gate_backend_healthcheck_loopback
@@ -281,6 +287,7 @@ FRONTEND_GATES=(
   component-types:gate_frontend_component_types
   duplication:gate_frontend_duplication
   dead-code:gate_frontend_dead_code
+  blog-v1-dead-code:gate_blog_v1_dead_code
   typecheck:gate_frontend_typecheck
   build:gate_frontend_build
   legacy-guard:gate_frontend_legacy_guard

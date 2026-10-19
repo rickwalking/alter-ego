@@ -19,19 +19,6 @@ import type {
 import type { BlogPostVersion } from "../components/types";
 import type { BlogPost, BlogVoicePersona } from "../types";
 
-export interface AccessibilityIssue {
-  code: string;
-  message: string;
-  severity: string;
-}
-
-export interface AccessibilityResult {
-  overall_score: number;
-  passed: boolean;
-  severity: string;
-  issues: AccessibilityIssue[];
-}
-
 export interface UseBlogAiState {
   loading: boolean;
   error: string | null;
@@ -42,21 +29,6 @@ export interface BlogPostFilters {
   search?: string;
   limit?: number;
   offset?: number;
-}
-
-export interface EditorShortcutHandlers {
-  onSave?: () => void;
-  onSubmitReview?: () => void;
-  onAiSuggest?: () => void;
-  onShowHelp?: () => void;
-}
-
-export interface SeoAnalysisResult {
-  overall_score: number;
-  passed: boolean;
-  severity: string;
-  issues: Array<{ code: string; message: string }>;
-  suggestions: string[];
 }
 
 /** A failed editor request (AE-0424): the typed kind + the API detail code. */

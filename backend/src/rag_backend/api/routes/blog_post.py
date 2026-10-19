@@ -212,7 +212,7 @@ async def get_blog_post(
     """Get a specific blog post (content always as a ``blog.v2`` document)."""
     post = await get_blog_post_for_read(db, post_id, current_user)
     response = BlogPostResponse.model_validate(post)
-    content = display_content(post.content, str(post.id))
+    content = display_content(post.content)
     return response.model_copy(update={"content": content})
 
 

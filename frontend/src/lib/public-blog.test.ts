@@ -69,7 +69,6 @@ const DESIGN = {
     slides: ["/api/carousels/p/slide-images/en/slide_2.jpg"],
     rendered_slides_pt: ["/api/carousels/p/slide-images/pt/slide_1.jpg"],
     rendered_slides_en: null,
-    blog_image_map: [{ slide_number: 2, heading: "x", alt: "" }],
   },
 };
 
@@ -121,7 +120,7 @@ describe("resolvePublicBlogView (AE-0423 v2 render)", () => {
     expect(view?.design.theme_name).toBe("designed-theme");
     expect(view?.design.images.hero).toBe("");
     expect(view?.design.images.slides).toEqual([]);
-    expect(view?.design.images.blog_image_map ?? null).toBeNull();
+    expect(view?.design.images.rendered_slides_pt).toBeNull();
     expect(JSON.stringify(view)).not.toContain("/slide-images/");
     expect(view?.sections).toHaveLength(2);
     expect(Object.keys(serverFetch)).not.toContain("fetchBlogWithDesign");

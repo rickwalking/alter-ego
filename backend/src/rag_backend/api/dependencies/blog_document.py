@@ -97,9 +97,16 @@ def assert_ready_to_publish(post: PublishCandidate) -> None:
         ) from exc
 
 
-def display_content(content: object, post_id: str) -> dict[str, object]:
-    """Editor read: the v2 document (legacy rows adapted in memory, temporary)."""
-    return BlogDocumentService.read_document(content, post_id).to_content()
+def display_content(content: object) -> dict[str, object]:
+    """Editor read: a valid v2 document, or the standard 422 document error.
+
+    A non-v2 row fails closed (there is no legacy adapter): the caller maps
+    :class:`InvalidBlogDocumentError` through :func:`raise_invalid_document`.
+    """
+    try:
+        return BlogDocumentService.read_document(content).to_content()
+    except InvalidBlogDocumentError as exc:
+        raise_invalid_document(exc)
 
 
 __all__ = [

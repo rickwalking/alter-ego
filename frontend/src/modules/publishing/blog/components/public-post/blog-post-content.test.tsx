@@ -40,9 +40,6 @@ function createDesign(
         "/api/carousels/1/slide-images/pt/slide_2.jpg",
       ],
       rendered_slides_en: null,
-      blog_image_map: [
-        { slide_number: 2, heading: "The Architecture", alt: "" },
-      ],
       ...overrides,
     },
     layout: {
@@ -190,22 +187,5 @@ describe("BlogPostContent (AE-0422, AE-0423)", () => {
     expect(container.innerHTML).not.toContain("alert(1)</script>");
     expect(renderedImageSources(container)).toEqual([]);
     expect(screen.getByText("Safe.")).toBeInTheDocument();
-  });
-
-  // Scenario: A design payload with blog_image_map is ignored (AE-0422)
-  it("ignores a legacy blog_image_map and shows no slide image", () => {
-    const design = createDesign({
-      blog_image_map: [
-        { slide_number: 2, heading: "The Architecture", alt: "" },
-      ],
-    });
-    const { container } = render(
-      <BlogPostContent
-        sections={[section("sec_1", "The Architecture", { body: "Body." })]}
-        design={design}
-      />,
-    );
-
-    expect(renderedImageSources(container)).toEqual([]);
   });
 });
