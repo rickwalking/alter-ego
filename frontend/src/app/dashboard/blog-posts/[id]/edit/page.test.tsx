@@ -1,8 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseBlogPostEditorResult } from "@/modules/publishing";
+import {
+  blogPost,
+  SEC_1,
+  v2Document,
+} from "@/modules/publishing/blog/editor.test-utils";
 
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature (Editor)
+// Scenarios: tests/features/blog_editor_ae0424.feature (editor wiring,
+// unsaved guard, conflict, migration banner, localized copy) and
+// tests/features/blog-dashboard-ae0411.feature (Editor)
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -11,54 +18,59 @@ vi.mock("next/navigation", () => ({
 }));
 
 const editorState = vi.fn<() => UseBlogPostEditorResult>();
+const confirmLeave = vi.fn(() => true);
+let capturedApply: ((text: string) => void) | null = null;
 vi.mock("@/modules/publishing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/publishing")>()),
   useBlogPostEditor: () => editorState(),
-  VersionHistorySidebar: () => null,
-  AiSuggestionPanel: () => null,
+  useBlogEditorData: () => ({
+    versions: [],
+    versionsLoading: false,
+    personas: [],
+    personaId: null,
+    setPersonaId: vi.fn(),
+  }),
+  useBlogEditorActions: () => ({
+    statusOf: () => ({ pending: false, error: null }),
+    generateImage: vi.fn(),
+    rewrite: vi.fn(),
+    generateTranslation: vi.fn(),
+  }),
+  useBlogReviewActions: () => ({ allowSelfReview: false, pending: false }),
+  useUnsavedChangesGuard: () => ({ confirmLeave }),
+  AiSuggestionPanel: ({
+    onApplySuggestion,
+  }: {
+    onApplySuggestion: (text: string) => void;
+  }) => {
+    capturedApply = onApplySuggestion;
+    return null;
+  },
 }));
 
 import BlogPostEditPage from "@/app/dashboard/blog-posts/[id]/edit/page";
 
 function state(
-  overrides: Partial<UseBlogPostEditorResult>,
+  overrides: Partial<UseBlogPostEditorResult> = {},
 ): UseBlogPostEditorResult {
   return {
-    post: {
-      id: "p-1",
-      title: "Stored",
-      slug: "s",
-      status: "draft",
-      content: {},
-      editor_comments: [],
-      version_history: [],
-      sources: [],
-      citations: [],
-      ai_suggestions: [],
-      ai_generation_metadata: {},
-      keywords: [],
-      view_count: 0,
-      like_count: 0,
-      comment_count: 0,
-      share_count: 0,
-      created_at: "2026-10-01T00:00:00Z",
-      updated_at: "2026-10-01T00:00:00Z",
-      lock_version: 1,
-    },
+    post: blogPost(),
     loading: false,
     loadFailed: false,
+    draft: { title: "GPT 5.6 saiu", excerpt: "", document: v2Document() },
+    language: "pt",
+    setLanguage: vi.fn(),
+    updateDraft: vi.fn(),
+    validation: { title: null, excerpt: null, document: {} },
+    dirty: false,
     saving: false,
-    title: "Stored",
-    setTitle: vi.fn(),
-    excerpt: "",
-    setExcerpt: vi.fn(),
-    bodyText: "# Body",
-    setBodyText: vi.fn(),
-    selectedText: "",
-    setSelectedText: vi.fn(),
-    validation: { title: null, excerpt: null },
-    saveError: null,
+    error: null,
+    setError: vi.fn(),
     handleSave: vi.fn().mockResolvedValue(true),
+    ensureSaved: vi.fn(),
+    applyServerPost: vi.fn(),
+    replaceFromServer: vi.fn(),
+    reload: vi.fn(),
     handleRestore: vi.fn(),
     ...overrides,
   };
@@ -67,11 +79,15 @@ function state(
 beforeEach(() => {
   push.mockReset();
   editorState.mockReset();
+  confirmLeave.mockReset();
+  confirmLeave.mockReturnValue(true);
+  capturedApply = null;
 });
 
-describe("BlogPostEditPage (AE-0411)", () => {
-  it("labels the fields with required and maxLength and shows the body", () => {
-    editorState.mockReturnValue(state({}));
+describe("BlogPostEditPage (AE-0424)", () => {
+  // Scenario: The editor shows one card per section (AC1)
+  it("shows the title/excerpt fields and one card per section", () => {
+    editorState.mockReturnValue(state());
     render(<BlogPostEditPage />);
     const title = screen.getByLabelText("Title");
     expect(title).toBeRequired();
@@ -80,84 +96,141 @@ describe("BlogPostEditPage (AE-0411)", () => {
       "maxLength",
       "500",
     );
-    expect(screen.getByLabelText("Content")).toHaveValue("# Body");
+    expect(screen.getAllByText(/^Section \d$/)).toHaveLength(3);
+    expect(screen.queryByLabelText("Content")).not.toBeInTheDocument();
   });
 
-  it("returns to the list after a successful save", async () => {
-    editorState.mockReturnValue(state({}));
-    render(<BlogPostEditPage />);
-    fireEvent.click(screen.getByText("Save changes"));
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith("/dashboard/blog-posts"),
-    );
-  });
-
-  // Scenario: A server rejection is shown and the user stays on the editor
-  it("stays on the editor and shows the error when the save fails", async () => {
-    const handleSave = vi.fn().mockResolvedValue(false);
-    editorState.mockReturnValue(
-      state({ handleSave, saveError: "validation_failed" }),
-    );
-    render(<BlogPostEditPage />);
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "The server rejected the changes",
-    );
-    fireEvent.click(screen.getByText("Save changes"));
-    await waitFor(() => expect(handleSave).toHaveBeenCalled());
+  it("saves only when dirty and stays on the editor", () => {
+    const handleSave = vi.fn().mockResolvedValue(true);
+    editorState.mockReturnValue(state({ handleSave }));
+    const { rerender } = render(<BlogPostEditPage />);
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    editorState.mockReturnValue(state({ handleSave, dirty: true }));
+    rerender(<BlogPostEditPage />);
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(handleSave).toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
 
-  // Scenario: An empty title cannot be saved
-  it("shows the title error and disables save when invalid", () => {
+  // Scenario: Leaving with unsaved changes is guarded
+  it("asks before going back with unsaved changes", () => {
+    editorState.mockReturnValue(state({ dirty: true }));
+    render(<BlogPostEditPage />);
+    confirmLeave.mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole("button", { name: "Back to list" }));
+    expect(push).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Back to list" }));
+    expect(push).toHaveBeenCalledWith("/dashboard/blog-posts");
+  });
+
+  // Scenario: A concurrent save conflict is surfaced
+  it("shows the conflict message and keeps the editor", () => {
     editorState.mockReturnValue(
       state({
-        title: "",
-        validation: { title: "titleRequired", excerpt: null },
+        dirty: true,
+        error: { kind: "version_conflict", detail: "version_conflict" },
+      }),
+    );
+    render(<BlogPostEditPage />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Your unsaved text is kept here",
+    );
+    expect(screen.getAllByText(/^Section \d$/)).toHaveLength(3);
+  });
+
+  // Scenario: A non-migrated row shows a blocking migration banner
+  it("shows the migration banner instead of the editor for a legacy row", () => {
+    editorState.mockReturnValue(state({ draft: null, validation: null }));
+    render(<BlogPostEditPage />);
+    expect(screen.getByTestId("migration-pending-banner")).toBeInTheDocument();
+    expect(screen.queryByText(/^Section \d$/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  });
+
+  it("shows the migration banner with the API error after a refused write", () => {
+    editorState.mockReturnValue(
+      state({
+        error: { kind: "migration_pending", detail: "blog_document_not_v2" },
+      }),
+    );
+    render(<BlogPostEditPage />);
+    expect(screen.getByText("blog_document_not_v2")).toBeInTheDocument();
+  });
+
+  // Scenario: An empty title cannot be saved
+  it("shows field errors", () => {
+    editorState.mockReturnValue(
+      state({
+        validation: {
+          title: "titleRequired",
+          excerpt: "excerptTooLong",
+          document: {},
+        },
       }),
     );
     render(<BlogPostEditPage />);
     expect(screen.getByText("The title is required.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Title")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
-    expect(screen.getByText("Save changes").closest("button")).toBeDisabled();
-  });
-
-  it("shows the excerpt limit error", () => {
-    editorState.mockReturnValue(
-      state({ validation: { title: null, excerpt: "excerptTooLong" } }),
-    );
-    render(<BlogPostEditPage />);
     expect(
       screen.getByText("The excerpt can have at most 500 characters."),
     ).toBeInTheDocument();
   });
 
-  it("forwards body edits and selections", () => {
-    const setBodyText = vi.fn();
-    const setSelectedText = vi.fn();
-    editorState.mockReturnValue(state({ setBodyText, setSelectedText }));
+  it("forwards title, excerpt and section edits into the draft", () => {
+    const updateDraft = vi.fn();
+    editorState.mockReturnValue(state({ updateDraft }));
     render(<BlogPostEditPage />);
-    const body = screen.getByLabelText("Content") as HTMLTextAreaElement;
-    fireEvent.change(body, { target: { value: "# New" } });
-    expect(setBodyText).toHaveBeenCalledWith("# New");
-    body.setSelectionRange(2, 5);
-    fireEvent.select(body);
-    expect(setSelectedText).toHaveBeenCalledWith("Bod");
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Novo" },
+    });
+    fireEvent.change(screen.getByLabelText("Excerpt"), {
+      target: { value: "Resumo" },
+    });
+    fireEvent.change(screen.getAllByLabelText("Heading")[0], {
+      target: { value: "H" },
+    });
+    const draft = { title: "x", excerpt: "", document: v2Document() };
+    const results = updateDraft.mock.calls.map(([edit]) =>
+      (edit as (d: typeof draft) => typeof draft)(draft),
+    );
+    expect(results[0].title).toBe("Novo");
+    expect(results[1].excerpt).toBe("Resumo");
+    expect(results[2].document.sections[0].heading).toBe("H");
   });
 
-  it("shows a load error when the post could not be loaded", () => {
-    editorState.mockReturnValue(state({ post: undefined, loadFailed: true }));
+  it("applies an AI suggestion to the selected section text", () => {
+    const updateDraft = vi.fn();
+    editorState.mockReturnValue(state({ updateDraft }));
     render(<BlogPostEditPage />);
+    const body = screen.getAllByLabelText(
+      "Body (markdown)",
+    )[0] as HTMLTextAreaElement;
+    body.setSelectionRange(0, 5);
+    fireEvent.select(body);
+    capturedApply?.("Texto");
+    const draft = { title: "x", excerpt: "", document: v2Document() };
+    const edit = updateDraft.mock.calls.at(-1)?.[0] as (
+      d: typeof draft,
+    ) => typeof draft;
+    expect(
+      edit(draft).document.sections.find((s) => s.id === SEC_1)?.body_md,
+    ).toBe("Texto um");
+  });
+
+  it("shows a load error and not-found", () => {
+    editorState.mockReturnValue(state({ post: undefined, loadFailed: true }));
+    const { rerender } = render(<BlogPostEditPage />);
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Could not load this post",
     );
+    editorState.mockReturnValue(state({ post: undefined }));
+    rerender(<BlogPostEditPage />);
+    expect(screen.getByText("Blog post not found.")).toBeInTheDocument();
   });
 
-  it("shows not-found for a missing post", () => {
-    editorState.mockReturnValue(state({ post: undefined }));
-    render(<BlogPostEditPage />);
-    expect(screen.getByText("Blog post not found.")).toBeInTheDocument();
+  it("shows a spinner while loading", () => {
+    editorState.mockReturnValue(state({ post: undefined, loading: true }));
+    const { container } = render(<BlogPostEditPage />);
+    expect(container.querySelector(".h-64")).not.toBeNull();
   });
 });

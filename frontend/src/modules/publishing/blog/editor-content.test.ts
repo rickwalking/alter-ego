@@ -1,140 +1,133 @@
 import { describe, expect, it } from "vitest";
+import { SEC_1, image, v2Document } from "./editor.test-utils";
 import {
+  BLOG_EDITOR_ERR_ALT_REQUIRED,
+  BLOG_EDITOR_ERR_BODY_TOO_LONG,
   BLOG_EDITOR_ERR_EXCERPT_TOO_LONG,
+  BLOG_EDITOR_ERR_HEADING_INVALID,
+  BLOG_EDITOR_ERR_NO_SECTIONS,
   BLOG_EDITOR_ERR_TITLE_REQUIRED,
   BLOG_EDITOR_ERR_TITLE_TOO_LONG,
   BLOG_EXCERPT_MAX_LENGTH,
   BLOG_TITLE_MAX_LENGTH,
   buildBlogPostUpdate,
   hasValidationErrors,
-  readEditableBody,
-  validateBlogEditorFields,
-  writeEditableBody,
+  validateBlogEditorDraft,
+  type BlogEditorDraft,
 } from "./editor-content";
+import { setCover, updateSection } from "./lib/editor-document";
 
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature
+// Scenarios: tests/features/blog_editor_ae0424.feature,
+// tests/features/blog-dashboard-ae0411.feature (Editor validation)
 
-const CAROUSEL_CONTENT = {
-  markdown: "# Body\n\nLine two",
-  translations: { en: "# EN body" },
-};
+function draft(overrides: Partial<BlogEditorDraft> = {}): BlogEditorDraft {
+  return {
+    title: "GPT 5.6 saiu",
+    excerpt: "",
+    document: v2Document(true),
+    ...overrides,
+  };
+}
 
-describe("readEditableBody", () => {
-  it("reads content.body for hand-authored posts", () => {
-    expect(readEditableBody({ body: "Hello", blocks: [] })).toEqual({
-      key: "body",
-      text: "Hello",
-    });
+describe("validateBlogEditorDraft", () => {
+  it("accepts a valid draft", () => {
+    const validation = validateBlogEditorDraft(draft());
+    expect(validation).toEqual({ title: null, excerpt: null, document: {} });
+    expect(hasValidationErrors(validation)).toBe(false);
   });
 
-  // Scenario: A carousel post body is read from content.markdown
-  it("reads content.markdown for carousel posts", () => {
-    expect(readEditableBody(CAROUSEL_CONTENT)).toEqual({
-      key: "markdown",
-      text: "# Body\n\nLine two",
-    });
-  });
-
-  it("prefers body when both keys exist", () => {
-    expect(readEditableBody({ body: "b", markdown: "m" }).key).toBe("body");
-  });
-
-  it("falls back to an empty body for other shapes", () => {
-    expect(readEditableBody({ blocks: [] })).toEqual({ key: "body", text: "" });
-    expect(readEditableBody(null)).toEqual({ key: "body", text: "" });
-    expect(readEditableBody({ body: 3 })).toEqual({ key: "body", text: "" });
-  });
-});
-
-describe("writeEditableBody", () => {
-  it("replaces only the edited key", () => {
+  it("mirrors the title and excerpt 422 rules", () => {
+    expect(validateBlogEditorDraft(draft({ title: "  " })).title).toBe(
+      BLOG_EDITOR_ERR_TITLE_REQUIRED,
+    );
     expect(
-      writeEditableBody(CAROUSEL_CONTENT, { key: "markdown", text: "new" }),
-    ).toEqual({ markdown: "new", translations: { en: "# EN body" } });
+      validateBlogEditorDraft(
+        draft({ title: "x".repeat(BLOG_TITLE_MAX_LENGTH + 1) }),
+      ).title,
+    ).toBe(BLOG_EDITOR_ERR_TITLE_TOO_LONG);
+    const excerpt = "x".repeat(BLOG_EXCERPT_MAX_LENGTH + 1);
+    const validation = validateBlogEditorDraft(draft({ excerpt }));
+    expect(validation.excerpt).toBe(BLOG_EDITOR_ERR_EXCERPT_TOO_LONG);
+    expect(hasValidationErrors(validation)).toBe(true);
   });
 
-  it("creates the key on empty content", () => {
-    expect(writeEditableBody(undefined, { key: "body", text: "x" })).toEqual({
-      body: "x",
+  // Scenario: An empty alt is rejected
+  it("requires alt text on section and cover images", () => {
+    let document = updateSection(v2Document(), "pt", {
+      id: SEC_1,
+      patch: { image: image(undefined, " ") },
     });
+    document = setCover(document, "pt", image(undefined, ""));
+    const issues = validateBlogEditorDraft(draft({ document })).document;
+    expect(issues[`pt:${SEC_1}`]).toBe(BLOG_EDITOR_ERR_ALT_REQUIRED);
+    expect(issues["pt:cover"]).toBe(BLOG_EDITOR_ERR_ALT_REQUIRED);
+  });
+
+  it("flags markdown headings, oversized bodies and an empty document", () => {
+    const heading = updateSection(v2Document(), "pt", {
+      id: SEC_1,
+      patch: { heading: "# Título" },
+    });
+    expect(
+      validateBlogEditorDraft(draft({ document: heading })).document[
+        `pt:${SEC_1}`
+      ],
+    ).toBe(BLOG_EDITOR_ERR_HEADING_INVALID);
+    const long = updateSection(v2Document(), "pt", {
+      id: SEC_1,
+      patch: { body_md: "x".repeat(20_001) },
+    });
+    expect(
+      validateBlogEditorDraft(draft({ document: long })).document[
+        `pt:${SEC_1}`
+      ],
+    ).toBe(BLOG_EDITOR_ERR_BODY_TOO_LONG);
+    const empty = { ...v2Document(), sections: [] };
+    expect(
+      validateBlogEditorDraft(draft({ document: empty })).document[
+        "pt:document"
+      ],
+    ).toBe(BLOG_EDITOR_ERR_NO_SECTIONS);
   });
 });
 
 describe("buildBlogPostUpdate", () => {
-  const original = {
-    title: "Title",
-    excerpt: "",
-    content: CAROUSEL_CONTENT,
-  };
-  const unchanged = {
-    title: "Title",
-    excerpt: "",
-    bodyText: CAROUSEL_CONTENT.markdown,
-  };
-
   it("returns null when nothing changed", () => {
-    expect(buildBlogPostUpdate(original, unchanged)).toBeNull();
+    expect(buildBlogPostUpdate(draft(), draft())).toBeNull();
   });
 
-  // Scenario: A title-only save does not send content
-  it("sends only the title on a title-only change", () => {
-    expect(
-      buildBlogPostUpdate(original, { ...unchanged, title: "New" }),
-    ).toEqual({ title: "New" });
-  });
-
-  it("sends only the excerpt on an excerpt-only change", () => {
-    expect(
-      buildBlogPostUpdate(original, { ...unchanged, excerpt: "Short" }),
-    ).toEqual({ excerpt: "Short" });
-  });
-
-  // Scenario: A body edit keeps every other content key
-  it("sends the full content with the edited body and the other keys", () => {
-    expect(
-      buildBlogPostUpdate(original, { ...unchanged, bodyText: "Edited" }),
-    ).toEqual({
-      content: { markdown: "Edited", translations: { en: "# EN body" } },
+  it("sends only the title on a title-only edit (content untouched)", () => {
+    expect(buildBlogPostUpdate(draft(), draft({ title: "Novo" }))).toEqual({
+      title: "Novo",
+    });
+    expect(buildBlogPostUpdate(draft(), draft({ excerpt: "Resumo" }))).toEqual({
+      excerpt: "Resumo",
     });
   });
-});
 
-describe("validateBlogEditorFields", () => {
-  const ok = { title: "T", excerpt: "", bodyText: "" };
-
-  it("accepts a normal post", () => {
-    const result = validateBlogEditorFields(ok);
-    expect(result).toEqual({ title: null, excerpt: null });
-    expect(hasValidationErrors(result)).toBe(false);
-  });
-
-  // Scenario: An empty title cannot be saved
-  it("requires a non-blank title", () => {
-    expect(validateBlogEditorFields({ ...ok, title: "" }).title).toBe(
-      BLOG_EDITOR_ERR_TITLE_REQUIRED,
-    );
-    expect(validateBlogEditorFields({ ...ok, title: "   " }).title).toBe(
-      BLOG_EDITOR_ERR_TITLE_REQUIRED,
+  // Scenario: Editing the EN document never mutates PT
+  it("sends the merged document with PT byte-identical on an EN edit", () => {
+    const original = draft();
+    const edited = updateSection(original.document, "en", {
+      id: original.document.translations.en.sections[0].id,
+      patch: { body_md: "Edited EN" },
+    });
+    const payload = buildBlogPostUpdate(original, draft({ document: edited }));
+    const content = payload?.content as typeof edited;
+    expect(content.translations.en.sections[0].body_md).toBe("Edited EN");
+    expect(JSON.stringify(content.sections)).toBe(
+      JSON.stringify(original.document.sections),
     );
   });
 
-  it("caps the title at the backend limit", () => {
-    const atLimit = "a".repeat(BLOG_TITLE_MAX_LENGTH);
+  it("treats a blank heading and null as the same (no spurious save)", () => {
+    const original = draft();
+    const blank = updateSection(original.document, "pt", {
+      id: "sec_00000000-0000-4000-8000-000000000003",
+      patch: { heading: "" },
+    });
     expect(
-      validateBlogEditorFields({ ...ok, title: atLimit }).title,
+      buildBlogPostUpdate(original, draft({ document: blank })),
     ).toBeNull();
-    const result = validateBlogEditorFields({ ...ok, title: `${atLimit}a` });
-    expect(result.title).toBe(BLOG_EDITOR_ERR_TITLE_TOO_LONG);
-    expect(hasValidationErrors(result)).toBe(true);
-  });
-
-  it("caps the excerpt at the backend limit", () => {
-    const atLimit = "e".repeat(BLOG_EXCERPT_MAX_LENGTH);
-    expect(
-      validateBlogEditorFields({ ...ok, excerpt: atLimit }).excerpt,
-    ).toBeNull();
-    const result = validateBlogEditorFields({ ...ok, excerpt: `${atLimit}e` });
-    expect(result.excerpt).toBe(BLOG_EDITOR_ERR_EXCERPT_TOO_LONG);
-    expect(hasValidationErrors(result)).toBe(true);
   });
 });

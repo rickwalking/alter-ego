@@ -2,34 +2,24 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  blogPost,
+  jsonResponse,
+  SEC_1,
+  v2Document,
+} from "../editor.test-utils";
+import { updateSection } from "../lib/editor-document";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature (Editor)
+// Scenarios: tests/features/blog_editor_ae0424.feature (section editing,
+// versions, concurrent save conflict, migration banner) and
+// tests/features/blog-dashboard-ae0411.feature (Editor load/save)
 
-vi.mock("@/lib/authenticated-fetch", () => ({
-  authenticatedFetch: vi.fn(),
-}));
+vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 const mockFetch = vi.mocked(authenticatedFetch);
-
-const CAROUSEL_POST = {
-  id: "p-9",
-  title: "Carousel title",
-  slug: "carousel-x",
-  status: "published",
-  excerpt: null,
-  content: { markdown: "# Long body", translations: { en: "# EN" } },
-  lock_version: 4,
-};
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 function wrapper({ children }: { children: ReactNode }): ReactNode {
   const client = new QueryClient({
@@ -38,15 +28,14 @@ function wrapper({ children }: { children: ReactNode }): ReactNode {
   return createElement(QueryClientProvider, { client }, children);
 }
 
-async function renderLoaded() {
-  mockFetch.mockResolvedValueOnce(jsonResponse(CAROUSEL_POST));
-  const hook = renderHook(() => useBlogPostEditor("p-9"), { wrapper });
-  await waitFor(() => expect(hook.result.current.post).toBeDefined());
-  await waitFor(() => expect(hook.result.current.bodyText).toBe("# Long body"));
+async function renderLoaded(post = blogPost()) {
+  mockFetch.mockResolvedValueOnce(jsonResponse(post));
+  const hook = renderHook(() => useBlogPostEditor("p-1"), { wrapper });
+  await waitFor(() => expect(hook.result.current.draft).not.toBeNull());
   return hook;
 }
 
-function lastPutBody(): Record<string, unknown> {
+function lastBody(): Record<string, unknown> {
   const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
   return JSON.parse(String(init?.body)) as Record<string, unknown>;
 }
@@ -55,130 +44,167 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-describe("useBlogPostEditor load (AE-0411)", () => {
-  // Scenario: The editor loads the full post through the detail endpoint
-  it("fetches the detail endpoint and fills the fields from content.markdown", async () => {
+describe("useBlogPostEditor load", () => {
+  it("loads the detail endpoint into a v2 draft", async () => {
     const { result } = await renderLoaded();
-    expect(String(mockFetch.mock.calls[0][0])).toBe("/api/blog-posts/p-9");
-    expect(result.current.title).toBe("Carousel title");
-    expect(result.current.excerpt).toBe("");
+    expect(mockFetch.mock.calls[0][0]).toBe("/api/blog-posts/p-1");
+    expect(result.current.draft?.document.sections).toHaveLength(3);
+    expect(result.current.language).toBe("pt");
+    expect(result.current.dirty).toBe(false);
   });
 
-  it("reports a missing post as undefined without a load error", async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: "nf" }, 404));
-    const { result } = renderHook(() => useBlogPostEditor("p-0"), { wrapper });
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.post).toBeUndefined();
-    expect(result.current.loadFailed).toBe(false);
+  // Scenario: A non-migrated row shows a blocking migration banner
+  it("never parses a legacy body: the draft is null (migration pending)", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(blogPost({ content: { markdown: "# x" } })),
+    );
+    const { result } = renderHook(() => useBlogPostEditor("p-1"), { wrapper });
+    await waitFor(() => expect(result.current.post).toBeDefined());
+    expect(result.current.draft).toBeNull();
+    expect(await result.current.handleSave()).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  it("flags a failed load", async () => {
+  it("reports a failed load", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({}, 500));
     const { result } = renderHook(() => useBlogPostEditor("p-1"), { wrapper });
     await waitFor(() => expect(result.current.loadFailed).toBe(true));
   });
 });
 
-describe("useBlogPostEditor save (AE-0411)", () => {
-  // Scenario: A title-only save does not send content
-  it("sends only the title with the loaded If-Match version", async () => {
+describe("useBlogPostEditor save", () => {
+  // Scenario: Editing a section heading and body persists it
+  it("PUTs the merged document with If-Match and takes the saved post", async () => {
     const { result } = await renderLoaded();
-    act(() => result.current.setTitle("New title"));
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({ ...CAROUSEL_POST, title: "New title", lock_version: 5 }),
+    act(() =>
+      result.current.updateDraft((d) => ({
+        ...d,
+        document: updateSection(d.document, "pt", {
+          id: SEC_1,
+          patch: { body_md: "Novo" },
+        }),
+      })),
     );
-    let saved = false;
-    await act(async () => {
-      saved = await result.current.handleSave();
+    expect(result.current.dirty).toBe(true);
+    const saved = blogPost({
+      lock_version: 3,
+      content: result.current.draft?.document,
     });
-    expect(saved).toBe(true);
-    const [url, init] = mockFetch.mock.calls[1];
-    expect(String(url)).toBe("/api/blog-posts/p-9");
-    expect(init?.method).toBe("PUT");
-    expect((init?.headers as Record<string, string>)["If-Match"]).toBe("4");
-    expect(lastPutBody()).toEqual({ title: "New title" });
+    mockFetch.mockResolvedValueOnce(jsonResponse(saved));
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.handleSave();
+    });
+    expect(ok).toBe(true);
+    const [, init] = mockFetch.mock.calls[1];
+    expect(new Headers(init?.headers).get("If-Match")).toBe("2");
+    const content = lastBody().content as ReturnType<typeof v2Document>;
+    expect(content.sections[0].body_md).toBe("Novo");
+    expect(content.sections[1]).toEqual(v2Document().sections[1]);
+    expect(result.current.post?.lock_version).toBe(3);
+    expect(result.current.dirty).toBe(false);
   });
 
-  // Scenario: A body edit keeps every other content key
-  it("keeps translations when the markdown body is edited", async () => {
+  it("does not call the API when nothing changed or the draft is invalid", async () => {
     const { result } = await renderLoaded();
-    act(() => result.current.setBodyText("# Edited"));
-    mockFetch.mockResolvedValueOnce(jsonResponse(CAROUSEL_POST));
     await act(async () => {
-      await result.current.handleSave();
+      expect(await result.current.handleSave()).toBe(true);
     });
-    expect(lastPutBody()).toEqual({
-      content: { markdown: "# Edited", translations: { en: "# EN" } },
-    });
-  });
-
-  it("sends nothing when nothing changed", async () => {
-    const { result } = await renderLoaded();
-    let saved = false;
+    act(() => result.current.updateDraft((d) => ({ ...d, title: " " })));
     await act(async () => {
-      saved = await result.current.handleSave();
+      expect(await result.current.handleSave()).toBe(false);
     });
-    expect(saved).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  // Scenario: An empty title cannot be saved
-  it("blocks an empty title client-side without a request", async () => {
+  // Scenario: A concurrent save conflict is surfaced
+  it("keeps the unsaved draft on a 409 conflict", async () => {
     const { result } = await renderLoaded();
-    act(() => result.current.setTitle(""));
-    expect(result.current.validation.title).toBe("titleRequired");
-    let saved = true;
+    act(() =>
+      result.current.updateDraft((d) => ({ ...d, title: "Meu texto" })),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ detail: "version_conflict" }, 409),
+    );
     await act(async () => {
-      saved = await result.current.handleSave();
+      expect(await result.current.handleSave()).toBe(false);
     });
-    expect(saved).toBe(false);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toEqual({
+      kind: "version_conflict",
+      detail: "version_conflict",
+    });
+    expect(result.current.draft?.title).toBe("Meu texto");
+    expect(result.current.dirty).toBe(true);
   });
 
-  // Scenario: A server rejection is shown and the user stays on the editor
-  it.each([
-    [422, "validation_failed"],
-    [409, "version_conflict"],
-    [500, "failed"],
-  ])("maps a %i save to %s and resolves false", async (status, code) => {
+  it("ensureSaved returns the locked post after saving pending edits", async () => {
     const { result } = await renderLoaded();
-    act(() => result.current.setTitle("Changed"));
-    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: "x" }, status));
-    let saved = true;
     await act(async () => {
-      saved = await result.current.handleSave();
+      expect(await result.current.ensureSaved()).toEqual({
+        id: "p-1",
+        lockVersion: 2,
+      });
     });
-    expect(saved).toBe(false);
-    expect(result.current.saveError).toBe(code);
-    expect(result.current.saving).toBe(false);
-  });
-
-  it("maps a network failure to a generic error instead of rejecting", async () => {
-    const { result } = await renderLoaded();
-    act(() => result.current.setTitle("Changed"));
-    mockFetch.mockRejectedValueOnce(new TypeError("network"));
-    let saved = true;
+    act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(blogPost({ title: "Novo", lock_version: 5 })),
+    );
     await act(async () => {
-      saved = await result.current.handleSave();
+      expect(await result.current.ensureSaved()).toEqual({
+        id: "p-1",
+        lockVersion: 5,
+      });
     });
-    expect(saved).toBe(false);
-    expect(result.current.saveError).toBe("failed");
+    mockFetch.mockRejectedValueOnce(new Error("offline"));
+    act(() => result.current.updateDraft((d) => ({ ...d, title: "Outro" })));
+    await act(async () => {
+      expect(await result.current.ensureSaved()).toBeNull();
+    });
+    expect(result.current.error?.kind).toBe("failed");
   });
 });
 
-describe("useBlogPostEditor restore (AE-0411)", () => {
-  // Scenario: Restoring a version reads either content shape
-  it("restores a markdown snapshot into the body", async () => {
+describe("useBlogPostEditor server answers", () => {
+  it("applyServerPost keeps other edits and merges the slot", async () => {
     const { result } = await renderLoaded();
     act(() =>
-      result.current.handleRestore({
-        version_number: 2,
-        title: "Old title",
-        snapshot: { markdown: "# Old body" },
-      }),
+      result.current.updateDraft((d) => ({ ...d, title: "Digitando" })),
     );
-    expect(result.current.title).toBe("Old title");
-    expect(result.current.excerpt).toBe("");
-    expect(result.current.bodyText).toBe("# Old body");
+    const server = blogPost({ lock_version: 3 });
+    act(() => result.current.applyServerPost(server, (draftDoc) => draftDoc));
+    expect(result.current.post?.lock_version).toBe(3);
+    expect(result.current.draft?.title).toBe("Digitando");
+  });
+
+  // Scenario: Restoring a version loads it into the editor
+  it("restores a version through the API and loads it", async () => {
+    const { result } = await renderLoaded();
+    const restored = blogPost({ title: "Versão 1", lock_version: 4 });
+    mockFetch.mockResolvedValueOnce(jsonResponse(restored));
+    await act(async () => {
+      expect(await result.current.handleRestore(1)).toBe(true);
+    });
+    expect(mockFetch.mock.calls[1][0]).toBe(
+      "/api/blog-posts/p-1/restore-version/1",
+    );
+    expect(result.current.draft?.title).toBe("Versão 1");
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ detail: "version_conflict" }, 409),
+    );
+    await act(async () => {
+      expect(await result.current.handleRestore(1)).toBe(false);
+    });
+    expect(result.current.error?.kind).toBe("version_conflict");
+  });
+
+  it("reload re-reads the post", async () => {
+    const { result } = await renderLoaded();
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(blogPost({ status: "under_review" })),
+    );
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.post?.status).toBe("under_review");
   });
 });

@@ -47,8 +47,12 @@ async def editor_clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
+    from rag_backend.api.middleware.rate_limiting import limiter
     from rag_backend.infrastructure.database.config import Base, close_db
 
+    # The in-memory limiter is process-wide: reset it so these request-heavy
+    # tests neither trip nor exhaust the budget of the next test file.
+    limiter.reset()
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'ae0424.db'}")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -60,6 +64,7 @@ async def editor_clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
         app, auth_headers_for(reviewer)
     ) as r:
         yield EditorClients(a, r, str(author.id), str(reviewer.id))
+    limiter.reset()
     db_config.c_engine = None
     await close_db()
     await engine.dispose()

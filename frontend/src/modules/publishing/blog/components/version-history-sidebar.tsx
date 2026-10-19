@@ -37,7 +37,7 @@ function clip(text: string): string {
 
 /**
  * Version history of a post (AE-0424, F-13): every save appends a snapshot,
- * listed here; restoring calls the restore route (a new snapshot records it)
+ * listed here newest first; restoring calls the restore route (a new snapshot records it)
  * and loads the restored content into the editor.
  */
 export function VersionHistorySidebar({
@@ -49,6 +49,9 @@ export function VersionHistorySidebar({
 }: VersionHistorySidebarProps): React.JSX.Element {
   const t = useTranslations("dashboard.blogPosts.versions");
   const [selected, setSelected] = useState<BlogPostVersion | null>(null);
+  const newestFirst = [...versions].sort(
+    (a, b) => b.version_number - a.version_number,
+  );
   return (
     <NeonCard>
       <NeonCardHeader className="pb-2">
@@ -62,7 +65,7 @@ export function VersionHistorySidebar({
           <p className="text-muted-foreground text-sm">{t("empty")}</p>
         )}
         <ul className="max-h-48 space-y-2 overflow-auto">
-          {versions.map((version) => (
+          {newestFirst.map((version) => (
             <li key={version.version_number}>
               <button
                 type="button"
