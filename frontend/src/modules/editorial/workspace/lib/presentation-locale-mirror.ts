@@ -1,4 +1,3 @@
-import type { PresentationLocaleKey } from "./presentation-slide-resolution";
 import {
   PRESENTATION_STRUCTURED_EXTRA_KEYS,
   PRESENTATION_STRUCTURED_ITEM_LIST_KEYS,
@@ -14,6 +13,8 @@ import {
  * with empty texts, keeping the non-text parts (``icon_name``,
  * ``content_kind``), so the reviewer can fill it in.
  */
+
+export type PresentationLocaleKey = "presentation_pt" | "presentation_en";
 
 const ITEM_TEXT_FIELDS = ["title", "body"] as const;
 const OBJECT_TEXT_FIELDS = ["title", "body", "quote", "attribution"] as const;

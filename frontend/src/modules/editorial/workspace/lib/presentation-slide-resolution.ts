@@ -5,13 +5,14 @@ import type {
 import {
   mirrorLocaleStructure,
   otherLocaleKey,
+  type PresentationLocaleKey,
 } from "./presentation-locale-mirror";
 import {
   presentationBody,
   presentationHeading,
 } from "./presentation-review-utils";
 
-export type PresentationLocaleKey = "presentation_pt" | "presentation_en";
+export type { PresentationLocaleKey } from "./presentation-locale-mirror";
 export type EditableCopyField = "heading" | "body";
 
 export interface SlideCopyEdit {
