@@ -304,6 +304,14 @@ Pending.
 - **(review 2) Prune grace window, cutover stash kept, budget reserved under the lock before
   the spend, transitions re-read their row `FOR UPDATE`** (submit/approve/reject/publish/
   unpublish/schedule/cancel), `docs/architecture/openapi.json` regenerated.
+- **(review 2) Gate-script fix `scripts/ci/ruff-strict-changed.sh`:** it resolved
+  `origin/main...HEAD` before `changed-backend-files.sh` ran `git fetch origin main --depth=1`,
+  which dropped the merge base on this stacked PR once main moved (#143 merged); every per-file
+  diff then failed and the gate died under `set -e` with no violation printed. It now lists the
+  files first, then resolves the range, and a file without hunks is "nothing to check". Not a
+  loosening: `test_ruff_strict_changed.py` reproduces the silent failure and proves a seeded
+  PLR0913 on a changed line still fails the gate. Publish/unpublish routes also moved to a
+  target dependency (<= 3 args).
 - **Image routes are owned by C.** C adds the editor endpoints; D reuses the same service/routes
   for bulk generation and adds no new routes. One route set.
 
