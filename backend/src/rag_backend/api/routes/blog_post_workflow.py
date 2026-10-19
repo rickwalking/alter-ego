@@ -1,5 +1,6 @@
 """API routes for blog post workflow transitions (Phase 3 WF-003)."""
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
@@ -302,19 +303,33 @@ async def reject_blog_post(
     return post
 
 
+# Path params are fields of the target dataclass (``Depends()``).
+PUBLISH_PATH = "/blog-posts/{post_id}/publish"
+UNPUBLISH_PATH = "/blog-posts/{post_id}/unpublish"
+
+
+@dataclass
+class PublishTarget:
+    """The post, session, caller, publishing facade and optional ``If-Match``.
+
+    Shared by publish and unpublish (keeps each route at <= 3 arguments).
+    """
+
+    post_id: UUID
+    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: EditorUser
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)]
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None
+
+
 @router.post(
-    "/blog-posts/{post_id}/publish",
+    PUBLISH_PATH,
     response_model=BlogPostResponse,
     summary="Publish blog post",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def publish_blog_post(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
+    request: Request, target: Annotated[PublishTarget, Depends()]
 ) -> BlogPostResponse:
     """Publish an approved blog post (author or admin only).
 
@@ -322,17 +337,18 @@ async def publish_blog_post(
     allowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``
     the editor sends is checked (409 when stale, AE-0424).
     """
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    db, current_user = target.db, target.current_user
+    post = await get_blog_post_for_user(db, target.post_id, current_user)
     # Transition under the row lock: an overlapping slot write (review reset)
     # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
-    await check_optional_if_match(post.lock_version, if_match)
+    await check_optional_if_match(post.lock_version, target.if_match)
     assert_ready_to_publish(post)
 
     old_status = post.status
 
-    await publishing.service.publish_blog(post)
+    await target.publishing.service.publish_blog(post)
     bump_lock_version(post)
 
     await _emit_status_change(
@@ -344,21 +360,17 @@ async def publish_blog_post(
 
 
 @router.post(
-    "/blog-posts/{post_id}/unpublish",
+    UNPUBLISH_PATH,
     response_model=BlogPostResponse,
     summary="Unpublish blog post",
 )
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def unpublish_blog_post(
-    request: Request,
-    post_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
-    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
-    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
+    request: Request, target: Annotated[PublishTarget, Depends()]
 ) -> BlogPostResponse:
     """Unpublish a blog post (optimistic-locked visibility flip; AE-0296)."""
-    post = await get_blog_post_for_user(db, post_id, current_user)
+    db, current_user, if_match = target.db, target.current_user, target.if_match
+    post = await get_blog_post_for_user(db, target.post_id, current_user)
     # Transition under the row lock: an overlapping slot write (review reset)
     # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
@@ -377,7 +389,7 @@ async def unpublish_blog_post(
         ) from exc
     old_status = post.status
 
-    await publishing.service.unpublish_blog(post)
+    await target.publishing.service.unpublish_blog(post)
     # A visibility flip is a versioned write like any other: bump the version
     # so a concurrent editor's stale If-Match is rejected instead of clobbered.
     post.lock_version = if_match + 1
