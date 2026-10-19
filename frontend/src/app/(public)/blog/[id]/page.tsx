@@ -62,7 +62,7 @@ export async function generateMetadata({
     ? truncateDescription(view.subtitle)
     : undefined;
   // OG image: the post's own cover only (never a carousel slide, AE-0423).
-  const image = view.cover?.url || undefined;
+  const image = view.cover?.url;
   return {
     title,
     description,
