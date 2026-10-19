@@ -1,29 +1,20 @@
 /**
- * Blog editor content helpers (AE-0411).
+ * Blog editor draft helpers (AE-0411 validation; AE-0424 `blog.v2` draft).
  *
- * Stored blog content comes in two shapes:
- *  - hand-authored posts: `{ body: string, ... }`
- *  - carousel posts (dual-write): `{ markdown: string, translations: {...} }`
- *
- * The editor edits one text field. These helpers read that field from either
- * shape and write it back **without dropping any other key**, and build an
- * update payload that only carries the fields the user actually changed —
- * so a title-only save never touches the stored content (B05).
+ * The editor edits a draft `{ title, excerpt, document }` where `document` is
+ * the strict `blog.v2` document (no v1 body/markdown branch). These helpers
+ * validate it with the backend's 422 rules and build a PUT payload that only
+ * carries what changed — a title-only save never touches the stored content.
  */
 
+import type { BlogDocument } from "@/schemas/blog-document";
+import {
+  BLOG_HEADING_MARKER,
+  BLOG_HEADING_MAX_LENGTH,
+  BLOG_SECTION_MAX_LENGTH,
+} from "@/constants/blog-editor";
+import { normalizeForSave } from "./lib/editor-document";
 import type { BlogPostUpdatePayload } from "./types";
-
-export const BLOG_CONTENT_BODY_KEY = "body";
-export const BLOG_CONTENT_MARKDOWN_KEY = "markdown";
-
-export type BlogContentBodyKey =
-  | typeof BLOG_CONTENT_BODY_KEY
-  | typeof BLOG_CONTENT_MARKDOWN_KEY;
-
-export interface EditableBody {
-  key: BlogContentBodyKey;
-  text: string;
-}
 
 /** Title limit — mirrors the backend `BlogPostUpdate.title` max_length. */
 export const BLOG_TITLE_MAX_LENGTH = 255;
@@ -33,77 +24,37 @@ export const BLOG_EXCERPT_MAX_LENGTH = 500;
 export const BLOG_EDITOR_ERR_TITLE_REQUIRED = "titleRequired";
 export const BLOG_EDITOR_ERR_TITLE_TOO_LONG = "titleTooLong";
 export const BLOG_EDITOR_ERR_EXCERPT_TOO_LONG = "excerptTooLong";
+export const BLOG_EDITOR_ERR_HEADING_INVALID = "headingInvalid";
+export const BLOG_EDITOR_ERR_BODY_TOO_LONG = "bodyTooLong";
+export const BLOG_EDITOR_ERR_ALT_REQUIRED = "altRequired";
+export const BLOG_EDITOR_ERR_NO_SECTIONS = "noSections";
 
 export type BlogEditorFieldError =
   | typeof BLOG_EDITOR_ERR_TITLE_REQUIRED
   | typeof BLOG_EDITOR_ERR_TITLE_TOO_LONG
   | typeof BLOG_EDITOR_ERR_EXCERPT_TOO_LONG;
 
-export interface BlogEditorFields {
+export type BlogDocumentIssue =
+  | typeof BLOG_EDITOR_ERR_HEADING_INVALID
+  | typeof BLOG_EDITOR_ERR_BODY_TOO_LONG
+  | typeof BLOG_EDITOR_ERR_ALT_REQUIRED
+  | typeof BLOG_EDITOR_ERR_NO_SECTIONS;
+
+/** Issue keys of the cover / the whole language in `validation.document`. */
+export const BLOG_COVER_ISSUE_KEY = "cover";
+export const BLOG_DOCUMENT_ISSUE_KEY = "document";
+
+export interface BlogEditorDraft {
   title: string;
   excerpt: string;
-  bodyText: string;
+  document: BlogDocument;
 }
 
 export interface BlogEditorValidation {
   title: BlogEditorFieldError | null;
   excerpt: BlogEditorFieldError | null;
-}
-
-/**
- * Read the editable text from stored content. `body` wins when present; a
- * carousel row's `markdown` is used otherwise; anything else edits a new
- * `body` field.
- */
-export function readEditableBody(
-  content: Record<string, unknown> | null | undefined,
-): EditableBody {
-  const body = content?.[BLOG_CONTENT_BODY_KEY];
-  if (typeof body === "string") {
-    return { key: BLOG_CONTENT_BODY_KEY, text: body };
-  }
-  const markdown = content?.[BLOG_CONTENT_MARKDOWN_KEY];
-  if (typeof markdown === "string") {
-    return { key: BLOG_CONTENT_MARKDOWN_KEY, text: markdown };
-  }
-  return { key: BLOG_CONTENT_BODY_KEY, text: "" };
-}
-
-/** Write `text` back under `key`, keeping every other stored key. */
-export function writeEditableBody(
-  content: Record<string, unknown> | null | undefined,
-  body: EditableBody,
-): Record<string, unknown> {
-  return { ...(content ?? {}), [body.key]: body.text };
-}
-
-/**
- * Build the PUT payload from what changed since load. Returns `null` when
- * nothing changed (no request needed).
- */
-export function buildBlogPostUpdate(
-  original: {
-    title: string;
-    excerpt: string;
-    content: Record<string, unknown>;
-  },
-  fields: BlogEditorFields,
-): BlogPostUpdatePayload | null {
-  const payload: BlogPostUpdatePayload = {};
-  if (fields.title !== original.title) {
-    payload.title = fields.title;
-  }
-  if (fields.excerpt !== original.excerpt) {
-    payload.excerpt = fields.excerpt;
-  }
-  const loaded = readEditableBody(original.content);
-  if (fields.bodyText !== loaded.text) {
-    payload.content = writeEditableBody(original.content, {
-      key: loaded.key,
-      text: fields.bodyText,
-    });
-  }
-  return Object.keys(payload).length > 0 ? payload : null;
+  /** Issues keyed by `<lang>:<sectionId>`, `<lang>:cover` or `<lang>:document`. */
+  document: Record<string, BlogDocumentIssue>;
 }
 
 function validateTitle(title: string): BlogEditorFieldError | null {
@@ -115,19 +66,92 @@ function validateTitle(title: string): BlogEditorFieldError | null {
     : null;
 }
 
+function headingIssue(heading: string | null): BlogDocumentIssue | null {
+  const trimmed = (heading ?? "").trim();
+  const invalid =
+    trimmed.startsWith(BLOG_HEADING_MARKER) ||
+    (heading ?? "").length > BLOG_HEADING_MAX_LENGTH;
+  return invalid ? BLOG_EDITOR_ERR_HEADING_INVALID : null;
+}
+
+function sectionIssue(
+  section: BlogDocument["sections"][number],
+): BlogDocumentIssue | null {
+  if (section.image && !section.image.alt.trim()) {
+    return BLOG_EDITOR_ERR_ALT_REQUIRED;
+  }
+  if (section.body_md.length > BLOG_SECTION_MAX_LENGTH) {
+    return BLOG_EDITOR_ERR_BODY_TOO_LONG;
+  }
+  return headingIssue(section.heading);
+}
+
+/** Section/cover issues of every language (mirrors the backend 422 rules). */
+export function validateDocument(
+  document: BlogDocument,
+): Record<string, BlogDocumentIssue> {
+  const issues: Record<string, BlogDocumentIssue> = {};
+  const languages = { pt: document, ...document.translations };
+  for (const [lang, doc] of Object.entries(languages)) {
+    if (doc.cover && !doc.cover.alt.trim()) {
+      issues[`${lang}:${BLOG_COVER_ISSUE_KEY}`] = BLOG_EDITOR_ERR_ALT_REQUIRED;
+    }
+    if (doc.sections.length === 0) {
+      issues[`${lang}:${BLOG_DOCUMENT_ISSUE_KEY}`] =
+        BLOG_EDITOR_ERR_NO_SECTIONS;
+    }
+    for (const section of doc.sections) {
+      const issue = sectionIssue(section);
+      if (issue) {
+        issues[`${lang}:${section.id}`] = issue;
+      }
+    }
+  }
+  return issues;
+}
+
 /** Client-side checks that mirror the backend 422 rules. */
-export function validateBlogEditorFields(
-  fields: BlogEditorFields,
+export function validateBlogEditorDraft(
+  draft: BlogEditorDraft,
 ): BlogEditorValidation {
   return {
-    title: validateTitle(fields.title),
+    title: validateTitle(draft.title),
     excerpt:
-      fields.excerpt.length > BLOG_EXCERPT_MAX_LENGTH
+      draft.excerpt.length > BLOG_EXCERPT_MAX_LENGTH
         ? BLOG_EDITOR_ERR_EXCERPT_TOO_LONG
         : null,
+    document: validateDocument(draft.document),
   };
 }
 
 export function hasValidationErrors(validation: BlogEditorValidation): boolean {
-  return validation.title !== null || validation.excerpt !== null;
+  return (
+    validation.title !== null ||
+    validation.excerpt !== null ||
+    Object.keys(validation.document).length > 0
+  );
+}
+
+function sameDocument(a: BlogDocument, b: BlogDocument): boolean {
+  return (
+    JSON.stringify(normalizeForSave(a)) === JSON.stringify(normalizeForSave(b))
+  );
+}
+
+/** The PUT payload of what changed since load, or `null` when nothing did. */
+export function buildBlogPostUpdate(
+  original: BlogEditorDraft,
+  draft: BlogEditorDraft,
+): BlogPostUpdatePayload | null {
+  const payload: BlogPostUpdatePayload = {};
+  if (draft.title !== original.title) {
+    payload.title = draft.title;
+  }
+  if (draft.excerpt !== original.excerpt) {
+    payload.excerpt = draft.excerpt;
+  }
+  if (!sameDocument(original.document, draft.document)) {
+    payload.content = normalizeForSave(draft.document);
+  }
+  return Object.keys(payload).length > 0 ? payload : null;
 }

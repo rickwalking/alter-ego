@@ -87,6 +87,23 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: "/api/notifications",
   CONTENT_CALENDAR: "/api/content-calendar",
   BLOG_SCHEDULE: (id: string) => `/api/blog-posts/${id}/schedule`,
+  /** Section editor routes (AE-0424, ADR-0025). */
+  BLOG_POST_COVER_IMAGE: (id: string) => `/api/blog-posts/${id}/cover/image`,
+  BLOG_POST_SECTION_IMAGE: (id: string, sectionId: string) =>
+    `/api/blog-posts/${id}/sections/${sectionId}/image`,
+  BLOG_POST_SECTION_REWRITE: (id: string, sectionId: string) =>
+    `/api/blog-posts/${id}/sections/${sectionId}/rewrite`,
+  BLOG_POST_TRANSLATION_EN: (id: string) =>
+    `/api/blog-posts/${id}/translations/en`,
+  BLOG_POST_RESTORE_VERSION: (id: string, versionNumber: number) =>
+    `/api/blog-posts/${id}/restore-version/${versionNumber}`,
+  BLOG_POST_SUBMIT_REVIEW: (id: string) =>
+    `/api/blog-posts/${id}/submit-review`,
+  BLOG_POST_APPROVE: (id: string) => `/api/blog-posts/${id}/approve`,
+  BLOG_POST_REJECT: (id: string) => `/api/blog-posts/${id}/reject`,
+  BLOG_POST_PUBLISH: (id: string) => `/api/blog-posts/${id}/publish`,
+  BLOG_POST_UNPUBLISH: (id: string) => `/api/blog-posts/${id}/unpublish`,
+  BLOG_EDITOR_SETTINGS: "/api/blog-editor/settings",
   BLOG_POST_SEO_ANALYZE: (id: string) => `/api/blog-posts/${id}/seo-analyze`,
   BLOG_POST_ACCESSIBILITY_CHECK: (id: string) =>
     `/api/blog-posts/${id}/accessibility-check`,

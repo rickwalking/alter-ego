@@ -15,8 +15,10 @@ export interface BlogPost {
   featured_image_url?: string | null;
   author_id?: string | null;
   reviewer_id?: string | null;
-  editor_comments: string[];
-  version_history: string[];
+  /** Reject reasons are `{text, author_id, status}` objects (AE-0424). */
+  editor_comments: Array<string | Record<string, unknown>>;
+  /** One entry per save/restore (AE-0424); the sidebar reads `/versions`. */
+  version_history: Record<string, unknown>[];
   sources: string[];
   citations: Record<string, unknown>[];
   ai_suggestions: Record<string, unknown>[];
@@ -73,4 +75,21 @@ export interface BlogPostUpdatePayload {
   status?: string | null;
   sources?: string[] | null;
   citations?: Record<string, unknown>[] | null;
+}
+
+/** `GET /api/blog-editor/settings` (AE-0424). */
+export interface BlogEditorSettings {
+  allow_self_review: boolean;
+}
+
+/** PATCH body of a cover/section image: alt (never blank) and caption. */
+export interface BlogImagePatch {
+  alt?: string;
+  caption?: string | null;
+}
+
+/** The persona fields the editor's voice picker needs (`GET /api/personas`). */
+export interface BlogVoicePersona {
+  id: string;
+  name: string;
 }
