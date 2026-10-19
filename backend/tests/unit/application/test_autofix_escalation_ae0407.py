@@ -203,7 +203,10 @@ class TestUnscoredJudge:
         assert result.score == 50.0
         assert scorer.texts == [CLEAN_BODY]
         patch = fix_patch({"persona_scores": {"slide_4": {"overall": 50.0}}}, [result])
-        assert patch["persona_scores"] == {"slide_4": {"overall": 50.0}}
+        # AE-0433: the kept score is marked for a re-score on the next tick.
+        assert patch["persona_scores"] == {
+            "slide_4": {"overall": 50.0, "rescore_pending": True, "unscored_ticks": 1}
+        }
 
     async def test_a_low_judged_score_is_still_a_voice_issue(self) -> None:
         run = _Run(

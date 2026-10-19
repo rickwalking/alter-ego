@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.slide_fix import (
     AUTOFIX_ESCALATION_ATTEMPTS,
     AUTOFIX_MODEL_ATTEMPTS,
+    PERSONA_UNSCORED_MAX_TICKS,
 )
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.autopilot.autofix_constants import (
@@ -81,6 +82,9 @@ class AutofixerConfig:
     # (None: ``slide_fix_model`` when set, else the reasoning role).
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
     slide_fix_escalation_model: SlideFixModelFactory | None = None
+    # AE-0433: unscored ticks before "persona_judge_unavailable"
+    # (AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS).
+    persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
 
 
 class InProcessContentAutofixer:
@@ -139,7 +143,7 @@ class InProcessContentAutofixer:
         metadata[LANGFUSE_FIELD_AGENT_NAME] = AGENT_NAME_SLIDE_FIXER
         with propagate_attributes(metadata=metadata):
             report = await run_slide_fix(request)
-        return _slide_fix_outcome(report)
+        return _slide_fix_outcome(report, self._config.persona_unscored_max_ticks)
 
     def _request(self, project_id: str, version: int) -> OwnerAutofixRequest:
         factory = self._config.engine_factory
@@ -161,7 +165,10 @@ def _trace(project_id: str, phase: str, owner: str) -> dict[str, str]:
     }
 
 
-def _slide_fix_outcome(report: SlideFixReport) -> SlideFixOutcome:
+def _slide_fix_outcome(report: SlideFixReport, max_ticks: int) -> SlideFixOutcome:
+    unscored = [
+        slide for slide in report.slides if slide.fixed and slide.unscored_ticks
+    ]
     return SlideFixOutcome(
         status=_STATUSES.get(report.status, AutofixStatus.NOTHING_TO_FIX),
         failing=tuple(
@@ -186,4 +193,6 @@ def _slide_fix_outcome(report: SlideFixReport) -> SlideFixOutcome:
             for attempt in report.attempts
         ),
         unfixable_rules=report.unfixable_rules,
+        unscored_slides=tuple(slide.slide_index for slide in unscored),
+        judge_unavailable=any(slide.unscored_ticks >= max_ticks for slide in unscored),
     )

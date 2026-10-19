@@ -65,6 +65,21 @@ failing slide (blocking rule or voice score under 70), then up to 2 more on the 
 | `AUTOPILOT_AUTOFIX_ATTEMPTS` | 3 (`AUTOFIX_MODEL_ATTEMPTS`) | fast-model attempts per failing slide |
 | `AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS` | 2 (`AUTOFIX_ESCALATION_ATTEMPTS`) | reasoning-model attempts after them (0 = off; on deploy.yml as a GitHub variable) |
 | `CONTENT_DRAFT_CONCURRENCY` | 4 | slides fixed in parallel |
+| `AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS` | 3 (`PERSONA_UNSCORED_MAX_TICKS`) | ticks a fixed slide may stay unscored before `persona_judge_unavailable` (AE-0433) |
+
+### Unscored persona judge (AE-0433)
+
+A judge call that times out or gives no score is not a verdict. The retry runs on the next
+model of the fast role's queue (`as_fallback()`), because the judge's 120 s timeout equals one
+queue model's timeout and the queue never got past its first model. When both calls give no
+score, the rewritten slide keeps its old score in `persona_scores` with
+`rescore_pending: true` and `unscored_ticks: N`. The gate still reads the old score, so the
+autopilot step does not escalate `persona_score_below_threshold` with no failing slide: it
+waits (`persona_rescore_pending`, run stays `generating`). On the next tick the slide's
+current copy is re-scored before any rewrite: a passing score fixes it as it is, a low score
+sends it back to the rewrite loop, and no score counts one more tick. Once a slide reaches
+`AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS`, the run escalates `persona_judge_unavailable`. The
+voice floor (70) is unchanged.
 
 ## Content-gate targeted repair (AE-0430)
 

@@ -14,6 +14,10 @@ from rag_backend.domain.constants.content_mode import (
     CONTENT_MODE_POV_NEWS,
     POV_THESIS_MAX_CHARS,
 )
+from rag_backend.modules.autopilot.autofix_constants import (
+    REASON_PERSONA_JUDGE_UNAVAILABLE,
+    TEXT_PERSONA_JUDGE_UNAVAILABLE,
+)
 from rag_backend.modules.autopilot.cover_constants import (
     REASON_COVER_RENDER_FAILED,
     TEXT_COVER_RENDER_FAILED,
@@ -101,6 +105,8 @@ POV_TEXT_BY_REASON: dict[str, str] = {
     REASON_HOOK_PHOTO_MISSING: TEXT_HOOK_PHOTO_MISSING,
     # AE-0418: a GrokBot cover switch whose re-render failed (any mode).
     REASON_COVER_RENDER_FAILED: TEXT_COVER_RENDER_FAILED,
+    # AE-0433: the persona judge stayed unavailable (any mode).
+    REASON_PERSONA_JUDGE_UNAVAILABLE: TEXT_PERSONA_JUDGE_UNAVAILABLE,
 }
 # ``AUTOPILOT_PERSONA_ID`` empty: the persona resolved by this name instead.
 AUTOPILOT_PERSONA_NAME = "Pedro"

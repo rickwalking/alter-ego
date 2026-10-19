@@ -32,6 +32,23 @@ LOG_FIELD_OUTCOME = "outcome"
 LOG_FIELD_MODEL_ROLE = "model_role"
 LOG_FIELD_FAILING_SLIDES = "failing_slides"
 
+# AE-0433: a judge that gave no score is not "below threshold". The run waits
+# for a re-score on the next tick, then escalates with its own reason.
+REASON_PERSONA_RESCORE_PENDING = "persona_rescore_pending"
+REASON_PERSONA_JUDGE_UNAVAILABLE = "persona_judge_unavailable"
+LOG_SLIDE_AUTOFIX_UNSCORED = "autopilot_slide_autofix_unscored"
+LOG_FIELD_UNSCORED_SLIDES = "unscored_slides"
+LOG_FIELD_JUDGE_UNAVAILABLE = "judge_unavailable"
+ESCALATION_UNSCORED_LINE = (
+    "- slides {slides}: pass every rule, but the persona judge gave no voice score"
+)
+ESCALATION_SLIDE_SEPARATOR = ", "
+TEXT_PERSONA_JUDGE_UNAVAILABLE = (
+    "⚠️ O juiz de voz da persona não respondeu em vários ticks seguidos: os "
+    "slides passam nas regras, mas ficaram sem nota de voz. Verifique a fila "
+    "de modelos (LLM_MODEL_QUEUE_FAST) e reenvie o carrossel."
+)
+
 # The Telegram escalation lists every slide the fix gave up on.
 ESCALATION_HEADER = "Autofix could not fix these slides:"
 ESCALATION_SLIDE_LINE = (

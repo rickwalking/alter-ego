@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.constants.blog_generation import (
@@ -13,9 +13,8 @@ from rag_backend.domain.constants.blog_generation import (
     DEFAULT_BLOG_IMAGE_CONCURRENCY,
 )
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
-from rag_backend.domain.constants.slide_fix import (
-    AUTOFIX_ESCALATION_ATTEMPTS,
-    AUTOFIX_MODEL_ATTEMPTS,
+from rag_backend.infrastructure.config.autopilot_autofix_settings import (
+    AutopilotAutofixSettings,
 )
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
@@ -38,7 +37,7 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
 )
 
 
-class Settings(BaseSettings):
+class Settings(AutopilotAutofixSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
@@ -249,28 +248,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_PERSONA_ID",
             "autopilot_persona_id",
-        ),
-    )
-
-    # AE-0401: model attempts per failing slide in the autopilot autofix loop
-    # (then the run escalates; the loop never spends a revise).
-    autopilot_autofix_attempts: int = Field(
-        default=AUTOFIX_MODEL_ATTEMPTS,
-        ge=1,
-        validation_alias=AliasChoices(
-            "AUTOPILOT_AUTOFIX_ATTEMPTS",
-            "autopilot_autofix_attempts",
-        ),
-    )
-
-    # AE-0407: then up to this many attempts on the reasoning model before
-    # the run escalates to the owner (0 turns the escalation off).
-    autopilot_autofix_escalation_attempts: int = Field(
-        default=AUTOFIX_ESCALATION_ATTEMPTS,
-        ge=0,
-        validation_alias=AliasChoices(
-            "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS",
-            "autopilot_autofix_escalation_attempts",
         ),
     )
 

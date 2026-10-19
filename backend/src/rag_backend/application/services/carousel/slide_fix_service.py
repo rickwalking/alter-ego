@@ -73,7 +73,9 @@ from rag_backend.domain.constants.slide_fix import (
     LOG_SLIDE_FIX_APPLIED,
     LOG_SLIDE_FIX_CONFLICT,
     LOG_SLIDE_FIX_NOOP,
+    PERSONA_SCORE_RESCORE_PENDING_KEY,
     PERSONA_SCORE_SLIDE_KEY,
+    PERSONA_SCORE_UNSCORED_TICKS_KEY,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_PERSONA_SCORES,
@@ -94,6 +96,23 @@ class SlideFixDeps:
     settings: SlideFixSettings
 
 
+_PENDING_KEYS = (PERSONA_SCORE_RESCORE_PENDING_KEY, PERSONA_SCORE_UNSCORED_TICKS_KEY)
+
+
+def _score_entry(previous: object, result: SlideFixResult) -> dict[str, object]:
+    """The slide's new entry; AE-0433: an unjudged copy is marked for a re-score."""
+    detail = dict(previous) if isinstance(previous, Mapping) else {}
+    if result.unscored_ticks > 0:
+        return {
+            **detail,
+            PERSONA_SCORE_OVERALL_KEY: result.score,
+            PERSONA_SCORE_RESCORE_PENDING_KEY: True,
+            PERSONA_SCORE_UNSCORED_TICKS_KEY: result.unscored_ticks,
+        }
+    kept = {key: value for key, value in detail.items() if key not in _PENDING_KEYS}
+    return {**kept, PERSONA_SCORE_OVERALL_KEY: result.score}
+
+
 def _scores_patch(
     state: Mapping[str, object], fixed: list[SlideFixResult]
 ) -> dict[str, object] | None:
@@ -105,9 +124,7 @@ def _scores_patch(
         if result.score is None:
             continue
         key = PERSONA_SCORE_SLIDE_KEY.format(index=result.slide_index)
-        previous = scores.get(key)
-        detail = dict(previous) if isinstance(previous, Mapping) else {}
-        scores[key] = {**detail, PERSONA_SCORE_OVERALL_KEY: result.score}
+        scores[key] = _score_entry(scores.get(key), result)
     return scores
 
 
@@ -204,6 +221,7 @@ class SlideFixService:
             LOG_SLIDE_FIX_APPLIED,
             project_id=command.project_id,
             slides=[result.slide_index for result in fixed],
+            unscored=[result.slide_index for result in fixed if result.unscored_ticks],
             still_failing=[
                 result.slide_index for result in results if not result.fixed
             ],

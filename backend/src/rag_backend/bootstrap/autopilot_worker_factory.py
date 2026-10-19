@@ -86,6 +86,9 @@ def build_autopilot_worker_steps(
                 autofix_escalation_attempts=(
                     settings.autopilot_autofix_escalation_attempts
                 ),
+                persona_unscored_max_ticks=(
+                    settings.autopilot_persona_unscored_max_ticks
+                ),
                 engine_factory=engine_factory,
                 stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
                 notifier_configured=notifier_is_configured(token, chat_id),

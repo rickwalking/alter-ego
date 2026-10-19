@@ -13,6 +13,11 @@ AE-0407: after ``settings.attempts`` failed attempts on the fast model, up to
 on, 4 and 5). A judge that gives no score leaves the slide unscored: it keeps
 its previous score and gets no voice issue. A field the model rewrote with a
 correct sentence case loses its AE-0366 casing marker.
+
+AE-0433: such a slide is returned with ``unscored_ticks`` (its stored score
+is stale), and on the next tick its current copy is re-scored before any
+rewrite: a passing score fixes it as it is, a low one goes back to the
+rewrite loop, and no score counts one more unscored tick.
 """
 
 from __future__ import annotations
@@ -96,6 +101,8 @@ class _State:
     target: SlideTarget
     attempts: tuple[FixAttempt, ...] = ()
     feedback: tuple[SlideIssue, ...] = ()
+    # AE-0433: the unscored ticks the slide had before this tick.
+    base_ticks: int = 0
 
     @property
     def codes(self) -> tuple[str, ...]:
@@ -135,7 +142,8 @@ async def _rescore(
     if scorer is None or not ctx.deck.scored:
         return state.target.score, True
     if not _copy_changed(state.target.record, candidate):
-        return state.target.score, True
+        # AE-0433: unchanged copy whose score is stale is still unjudged.
+        return state.target.score, state.target.unscored_ticks == 0
     score = await scorer.score(_score_text(candidate))
     # AE-0407: no score is not a verdict; keep the previous one.
     return (state.target.score, False) if score is None else (score, True)
@@ -152,7 +160,14 @@ async def _evaluate(
     score, judged = await _rescore(repaired, state, ctx)
     if judged and score is not None and score < ctx.settings.voice_floor:
         issues.append(_voice_issue(score, ctx.settings.voice_floor))
-    return replace(state.target, record=repaired, issues=tuple(issues), score=score)
+    ticks = 0 if judged else state.base_ticks + 1
+    return replace(
+        state.target,
+        record=repaired,
+        issues=tuple(issues),
+        score=score,
+        unscored_ticks=ticks,
+    )
 
 
 def _attempt(
@@ -207,7 +222,8 @@ async def _one_attempt(state: _State, ctx: LoopContext, stage: _Stage) -> _State
     after = tuple(dict.fromkeys(issue.code for issue in evaluated.issues))
     outcome = ATTEMPT_STILL_FAILING if evaluated.issues else ATTEMPT_FIXED
     attempt = _attempt(state, stage.role, (after, outcome))
-    return _State(target=evaluated, attempts=(*state.attempts, attempt))
+    attempts = (*state.attempts, attempt)
+    return replace(state, target=evaluated, attempts=attempts, feedback=())
 
 
 def _stages(ctx: LoopContext) -> tuple[_Stage, ...]:
@@ -222,21 +238,56 @@ def _stages(ctx: LoopContext) -> tuple[_Stage, ...]:
     return (fast, escalation)
 
 
+async def _judge_stale(target: SlideTarget, ctx: LoopContext) -> float | None:
+    scorer = ctx.tools.scorer
+    if scorer is None:
+        return None
+    try:
+        return await scorer.score(_score_text(target.record))
+    except Exception:  # a scorer failure is no score, as in ``judge_voice``
+        return None
+
+
+async def _rescore_stale(target: SlideTarget, ctx: LoopContext) -> SlideTarget:
+    """AE-0433: re-score a stale slide's current copy before any rewrite."""
+    if target.unscored_ticks == 0:
+        return target
+    score = await _judge_stale(target, ctx)
+    floor = ctx.settings.voice_floor
+    rules = tuple(
+        issue for issue in target.issues if issue.code != ISSUE_VOICE_SCORE_LOW
+    )
+    if score is None:
+        return replace(target, issues=rules, unscored_ticks=target.unscored_ticks + 1)
+    issues = rules if score >= floor else (*rules, _voice_issue(score, floor))
+    return replace(target, issues=issues, score=score, unscored_ticks=0)
+
+
+def _fixed(state: _State) -> SlideFixResult:
+    # A slide that never had a score has no stale score to re-score.
+    stale = state.target.score is not None
+    return SlideFixResult(
+        slide_index=state.target.slide_index,
+        fixed=True,
+        record=state.target.record,
+        issues=(),
+        attempts=state.attempts,
+        score=state.target.score,
+        unscored_ticks=state.target.unscored_ticks if stale else 0,
+    )
+
+
 async def fix_slide(target: SlideTarget, ctx: LoopContext) -> SlideFixResult:
     """Rewrite one slide until it passes, on the fast then the reasoning model."""
-    state = _State(target=target)
+    rescored = await _rescore_stale(target, ctx)
+    state = _State(target=rescored, base_ticks=target.unscored_ticks)
+    if not rescored.issues:
+        return _fixed(state)
     rounds = [stage for stage in _stages(ctx) for _ in range(stage.attempts)]
     for stage in rounds:
         state = await _one_attempt(state, ctx, stage)
         if state.attempts[-1].outcome == ATTEMPT_FIXED:
-            return SlideFixResult(
-                slide_index=target.slide_index,
-                fixed=True,
-                record=state.target.record,
-                issues=(),
-                attempts=state.attempts,
-                score=state.target.score,
-            )
+            return _fixed(state)
     return SlideFixResult(
         slide_index=target.slide_index,
         fixed=False,
