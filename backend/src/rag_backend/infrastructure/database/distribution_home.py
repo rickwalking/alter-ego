@@ -12,11 +12,13 @@ It exposes exactly two operations over the canonical ``origin='carousel'``
 ``blog_posts`` row (joined on ``project_id``):
 
 * :func:`write_distribution` — the **dual-write mirror**. Called from the
-  carousel-blog write chokepoint (``sync_carousel_blog_post``) so every carousel
-  write that lands the embedded copy ALSO lands it in the canonical home. The
-  embedded columns are retained during the AE-0205 transition (reversible
-  dual-write), but the canonical home — not the embedded column — is the source of
-  truth every reader consumes.
+  carousel repository's ``create_project`` / ``update_project`` so every carousel
+  write that lands the embedded copy ALSO lands it in the canonical home. It is a
+  no-op when the project has no ``origin='carousel'`` row, and it never touches a
+  row's ``content`` or ``status`` (AE-0422 removed the v1 blog-row upsert while
+  keeping this ADR-0011 distribution mirror). The embedded columns are retained
+  during the AE-0205 transition (reversible dual-write), but the canonical home —
+  not the embedded column — is the source of truth every reader consumes.
 * :func:`read_distribution` — the **read accessor**. Returns the canonical
   ``{caption, linkedin_post_pt, linkedin_post_en}`` payload for a project, or
   ``None`` when no carousel-origin row exists. Every application reader sources the
@@ -82,11 +84,13 @@ async def write_distribution(
 ) -> None:
     """Mirror the carousel's distribution copy into the canonical home (flush only).
 
-    No-op when no ``origin='carousel'`` row exists for the project: the row is
-    created by the carousel-blog dual-write only for body-bearing carousels (and by
-    the AE-0204 backfill for pre-existing ones), so a missing row means there is no
-    canonical home to populate. The row is flushed (not committed) so it shares the
-    caller's single transaction (the repository commits once).
+    No-op when no ``origin='carousel'`` row exists for the project. Since AE-0422 a
+    carousel save never creates a blog row (rows are created only by the blog
+    ``from-carousel``/``generate`` write path and the AE-0127/AE-0204 backfills), so
+    a missing row means there is no canonical home to populate. The row is flushed
+    (not committed) so it shares the caller's single transaction (the repository
+    commits once). Only ``distribution`` is written; ``content`` and ``status`` are
+    never touched.
     """
     row = await _carousel_blog_row(session, str(project.id))
     if row is None:

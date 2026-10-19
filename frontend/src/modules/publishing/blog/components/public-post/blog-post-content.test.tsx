@@ -1,28 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { extractH2Heading, resolveSlideImage } from "./blog-post-content";
+import { render, screen } from "@testing-library/react";
+import { BlogPostContent } from "./blog-post-content";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
-// Feature: Blog post content rendering with image map
-//   As a blog reader
-//   I want images to match the section headings
-//   So that the visual content is relevant and not random
+// Feature: Public blog body never renders carousel slides (AE-0422)
+// frontend/tests/features/blog_no_carousel_slides_ae0422.feature
 
-describe("extractH2Heading", () => {
-  it("extracts the H2 heading from markdown", () => {
-    const markdown = "## The Impact on Developers";
-    expect(extractH2Heading(markdown)).toBe("The Impact on Developers");
-  });
-
-  it("returns null when no H2 heading exists", () => {
-    const markdown = "Some paragraph without heading";
-    expect(extractH2Heading(markdown)).toBeNull();
-  });
-});
-
-describe("resolveSlideImage", () => {
-  const createDesign = (
-    imageMap?: Array<{ slide_number: number; heading: string; alt: string }>,
-  ): CarouselDesignResponse => ({
+function createDesign(
+  overrides: Partial<CarouselDesignResponse["images"]> = {},
+): CarouselDesignResponse {
+  return {
     colors: {
       primary: "#ff6b00",
       accent: "#00d4ff",
@@ -44,123 +31,127 @@ describe("resolveSlideImage", () => {
         "/api/carousels/1/images/slide_1",
         "/api/carousels/1/images/slide_2",
         "/api/carousels/1/images/slide_3",
-        "/api/carousels/1/images/slide_4",
-        "/api/carousels/1/images/slide_5",
-        "/api/carousels/1/images/slide_6",
-        "/api/carousels/1/images/slide_7",
       ],
-      rendered_slides_pt: null,
+      rendered_slides_pt: [
+        "/api/carousels/1/slide-images/pt/slide_1.jpg",
+        "/api/carousels/1/slide-images/pt/slide_2.jpg",
+      ],
       rendered_slides_en: null,
-      blog_image_map: imageMap,
+      blog_image_map: [
+        { slide_number: 2, heading: "The Architecture", alt: "" },
+      ],
+      ...overrides,
     },
     layout: {
       badge_label: "Tech",
       swipe_text: "Swipe →",
-      progress_segments: 7,
+      progress_segments: 3,
     },
     theme_name: "cybersecurity",
+  };
+}
+
+function renderedImageSources(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll("img")).map(
+    (img) => img.getAttribute("src") ?? "",
+  );
+}
+
+describe("BlogPostContent (AE-0422)", () => {
+  // Scenario: No rendered carousel slide appears in the body
+  //   Given the carousel design exposes rendered_slides_pt
+  //   When an anonymous visitor opens /blog/{id}
+  //   Then no image in the article body has a src containing "/slide-images/"
+  //   And the article body renders only text sections
+  it("renders text sections without any rendered carousel slide", () => {
+    const { container } = render(
+      <BlogPostContent
+        markdown={"# Title\n\nIntro paragraph.\n\n## The Architecture\n\nBody."}
+        design={createDesign()}
+      />,
+    );
+
+    const sources = renderedImageSources(container);
+    expect(sources.some((src) => src.includes("/slide-images/"))).toBe(false);
+    expect(screen.getByText("Intro paragraph.")).toBeInTheDocument();
+    expect(screen.getByText("Body.")).toBeInTheDocument();
   });
 
-  it("returns the correct slide image when heading matches image map", () => {
-    const design = createDesign([
-      {
-        slide_number: 3,
-        heading: "The Architecture",
-        alt: "Architecture diagram",
-      },
-    ]);
-    const slideImages = design.images.slides;
-    const markdown = "## The Architecture\n\nSome content here.";
+  // Scenario: A section with no image renders text only
+  //   Given a section whose image is absent
+  //   When the blog page renders
+  //   Then that section shows its heading and body text
+  //   And no placeholder broken image is shown
+  it("renders a section heading and body with no placeholder image", () => {
+    const { container } = render(
+      <BlogPostContent
+        markdown={"## The Architecture\n\nBody."}
+        design={createDesign()}
+      />,
+    );
 
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 2,
-    });
-
-    expect(result).toBe("/api/carousels/1/images/slide_3");
+    expect(
+      screen.getByRole("heading", { name: "The Architecture" }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("img")).toHaveLength(0);
   });
 
-  it("returns null when heading has no matching image map entry", () => {
-    const design = createDesign([
-      { slide_number: 2, heading: "Different Heading", alt: "" },
-    ]);
-    const slideImages = design.images.slides;
-    const markdown = "## The Architecture\n\nSome content here.";
+  // Scenario: Theme still comes from the carousel design
+  //   Given the carousel design exposes colors and typography
+  //   When the blog page renders
+  //   Then the section headings use the design typography
+  //   And no image URL is taken from the design
+  it("applies the design typography without taking any design image", () => {
+    const design = createDesign();
+    const { container } = render(
+      <BlogPostContent markdown={"## Heading\n\nBody."} design={design} />,
+    );
 
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 1,
-    });
-
-    expect(result).toBeNull();
+    const heading = screen.getByRole("heading", { name: "Heading" });
+    expect(heading.style.fontFamily).toMatch(/Segoe UI/);
+    expect(renderedImageSources(container)).toEqual([]);
   });
 
-  it("returns null for out-of-range slide numbers", () => {
-    const design = createDesign([
-      { slide_number: 10, heading: "The Architecture", alt: "" },
-    ]);
-    const slideImages = design.images.slides;
-    const markdown = "## The Architecture\n\nSome content here.";
+  // Scenario: The title is rendered exactly once
+  //   Given the stored legacy markdown starts with "# <title>"
+  //   When the blog page renders
+  //   Then the page contains exactly one H1 with the post title
+  it("strips the leading H1 so the body has no duplicate title", () => {
+    render(
+      <BlogPostContent
+        markdown={"# Opinião impopular\n\nBody text."}
+        design={createDesign()}
+      />,
+    );
 
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 1,
-    });
-
-    expect(result).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Opinião impopular" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Body text.")).toBeInTheDocument();
   });
 
-  it("falls back to positional mapping when no image map exists", () => {
-    const design = createDesign(undefined);
-    const slideImages = design.images.slides;
-    // First section after intro (index 1) gets slide_2 (first content slide)
-    const markdown = "## Some Section\n\nContent.";
-
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 1,
+  // Scenario: A design payload with blog_image_map is ignored
+  //   Given the carousel design payload still contains blog_image_map
+  //   When the public blog page renders the post
+  //   Then the body does not map any image positionally
+  //   And no carousel slide image is shown
+  it("ignores a legacy blog_image_map and shows no slide image", () => {
+    const design = createDesign({
+      blog_image_map: [
+        { slide_number: 2, heading: "The Architecture", alt: "" },
+      ],
+      slides: [
+        "/api/carousels/1/images/slide_1",
+        "/api/carousels/1/images/slide_2",
+      ],
     });
+    const { container } = render(
+      <BlogPostContent
+        markdown={"## The Architecture\n\nBody."}
+        design={design}
+      />,
+    );
 
-    expect(result).toBe("/api/carousels/1/images/slide_2");
-  });
-
-  it("returns null for positional mapping when section index is 0 (intro)", () => {
-    const design = createDesign(undefined);
-    const slideImages = design.images.slides;
-    const markdown = "## Intro Section\n\nContent.";
-
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 0,
-    });
-
-    expect(result).toBeNull();
-  });
-
-  it("returns null when no H2 heading exists in markdown", () => {
-    const design = createDesign([
-      { slide_number: 2, heading: "The Architecture", alt: "" },
-    ]);
-    const slideImages = design.images.slides;
-    const markdown = "Just a paragraph without heading.";
-
-    const result = resolveSlideImage({
-      sectionMarkdown: markdown,
-      design,
-      slideImages,
-      sectionIndex: 1,
-    });
-
-    expect(result).toBeNull();
+    expect(renderedImageSources(container)).toEqual([]);
   });
 });

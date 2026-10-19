@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
+from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
@@ -22,6 +23,7 @@ from tests.integration.carousel_consolidation.helpers import (
     create_carousel,
     create_minimal_carousel_artifacts,
     create_user,
+    seed_carousel_blog_row,
     set_carousel_status,
     set_workflow_status,
 )
@@ -76,15 +78,38 @@ class TestBlogVisibility:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_public_blog_when_is_public(self, client: AsyncClient) -> None:
+    async def test_public_blog_when_row_published(self, client: AsyncClient) -> None:
+        # Scenario: A public carousel with a published blog row is readable (AE-0422).
+        # Since AE-0422 the public read is gated on the canonical row's ``status``
+        # (ADR-0025: a carousel going public never publishes its blog), so the row
+        # is seeded ``published`` instead of relying on ``is_public`` alone.
         editor = await create_user("public@example.com", UserRole.EDITOR)
         project_id = await create_carousel(
             editor,
             is_public=True,
             blog_markdown="# Public\n\nVisible",
         )
+        await seed_carousel_blog_row(project_id, status=BlogPostStatus.PUBLISHED)
         response = await client.get(f"/api/carousels/{project_id}/blog/pt")
         assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_public_carousel_with_draft_row_is_hidden(
+        self, client: AsyncClient
+    ) -> None:
+        # Scenario: A public carousel whose blog row is a draft 404s anonymously
+        # (the hidden-post gate, AE-0422 / ADR-0013 uniform 404).
+        editor = await create_user("hidden@example.com", UserRole.EDITOR)
+        project_id = await create_carousel(
+            editor,
+            is_public=True,
+            blog_markdown="# Hidden\n\nNot yet",
+        )
+        await seed_carousel_blog_row(project_id, status=BlogPostStatus.DRAFT)
+        default = await client.get(f"/api/carousels/{project_id}/blog")
+        localized = await client.get(f"/api/carousels/{project_id}/blog/pt")
+        assert default.status_code == 404
+        assert localized.status_code == 404
 
 
 class TestPreviewRoutes:
@@ -161,8 +186,11 @@ class TestPublishSeparation:
         payload = response.json()
         assert payload["is_public"] is True
 
+        # AE-0422 / ADR-0025: publishing the carousel never publishes its blog,
+        # so the anonymous read stays a uniform 404 until the blog row itself is
+        # published (the publish/hide separation this scenario guards).
         public_response = await client.get(f"/api/carousels/{project_id}/blog/pt")
-        assert public_response.status_code == 200
+        assert public_response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_publish_rejected_without_workflow_approval(

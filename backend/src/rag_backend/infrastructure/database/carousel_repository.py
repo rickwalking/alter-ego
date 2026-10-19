@@ -2,9 +2,10 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.constants.distribution import (
     DISTRIBUTION_CAPTION_KEY,
     DISTRIBUTION_LINKEDIN_POST_EN_KEY,
@@ -19,23 +20,54 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.domain.protocols.repositories import _ProjectQuery
-from rag_backend.infrastructure.database.carousel_blog_dual_write import (
-    detach_carousel_blog_posts,
-    sync_carousel_blog_post,
+from rag_backend.infrastructure.database.distribution_home import (
+    read_distribution,
+    write_distribution,
 )
-from rag_backend.infrastructure.database.distribution_home import read_distribution
 from rag_backend.infrastructure.database.models import (
     CarouselImageGenerationModel,
     CarouselProjectModel,
     CarouselSlideModel,
     ResearchSourceModel,
 )
+from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
 )
 
 _ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
 _ERR_SLIDE_NOT_FOUND = "Carousel slide {} not found"
+
+
+async def _detach_carousel_blog_posts(
+    session: AsyncSession,
+    project_id: str,
+) -> None:
+    """Flip the project's carousel-origin blog rows out of ``published`` (AE-0296).
+
+    Called right before the project row is deleted. The FK is ``ON DELETE SET
+    NULL``, so without this flip a published carousel-origin post would survive
+    its parent's deletion as an orphan that is still publicly visible yet
+    unmanageable. Reverting it to ``draft`` (clearing publish stamps, bumping
+    ``lock_version``) makes the detached row invisible publicly and
+    hard-deletable like a standalone one. Flushed, not committed — shares the
+    caller's delete transaction.
+    """
+    await session.execute(
+        update(BlogPostModel)
+        .where(
+            BlogPostModel.project_id == project_id,
+            BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+            BlogPostModel.status == BlogPostStatus.PUBLISHED.value,
+        )
+        .values(
+            status=BlogPostStatus.DRAFT.value,
+            published_at=None,
+            submitted_for_review_at=None,
+            lock_version=BlogPostModel.lock_version + 1,
+        )
+    )
+    await session.flush()
 
 
 class PostgresCarouselRepository(CarouselRepository):
@@ -49,7 +81,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = CarouselProjectModel.from_entity(project)
         self._session.add(model)
         await self._session.flush()
-        await sync_carousel_blog_post(self._session, project)
+        await write_distribution(self._session, project)
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
@@ -142,7 +174,7 @@ class PostgresCarouselRepository(CarouselRepository):
             raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project.id))
         model.update_from_entity(project)
         await self._session.flush()
-        await sync_carousel_blog_post(self._session, project)
+        await write_distribution(self._session, project)
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
@@ -161,7 +193,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = result.scalar_one_or_none()
         if model is None:
             return False
-        await detach_carousel_blog_posts(self._session, str(project_id))
+        await _detach_carousel_blog_posts(self._session, str(project_id))
         await self._session.delete(model)
         await self._session.flush()
         await self._session.commit()

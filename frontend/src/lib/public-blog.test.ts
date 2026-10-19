@@ -128,19 +128,26 @@ describe("resolvePublicBlogView sanitizing (AE-0412)", () => {
     },
   };
 
-  // Scenario: Post page maps preview hero and slide URLs to public routes
-  it("maps preview image URLs to public routes keeping lang", async () => {
+  // Feature: Public blog body never renders carousel slides (AE-0422)
+  // frontend/tests/features/blog_no_carousel_slides_ae0422.feature
+  // Scenario: Theme still comes from the carousel design
+  //   Given the carousel design exposes colors and typography
+  //   When the blog page renders
+  //   Then the section headings use the design typography
+  //   And no image URL is taken from the design
+  it("keeps carousel theme tokens but drops every design image", async () => {
     mockFetchPost.mockResolvedValue(CAROUSEL_POST);
     mockFetchDesign.mockResolvedValue(PREVIEW_DESIGN_DATA);
 
     const view = await resolvePublicBlogView("post-2", "en");
-    expect(view?.design.images.hero).toBe(
-      "/api/carousels/p/images/slide_1.jpg?lang=en",
-    );
-    expect(view?.design.images.slides).toEqual([
-      "/api/carousels/p/images/slide_2.jpg?lang=en",
-      "/api/carousels/p/slide-images/en/slide_3.jpg",
-    ]);
+    expect(view?.design.theme_name).toBe(FALLBACK_DESIGN_TOKENS.theme_name);
+    expect(view?.design.typography).toEqual(FALLBACK_DESIGN_TOKENS.typography);
+    // No carousel design image reaches the public page — not even as a
+    // rendered `/slide-images/` URL (AE-0422, ADR-0025).
+    expect(view?.design.images.hero).toBe("");
+    expect(view?.design.images.slides).toEqual([]);
+    expect(view?.design.images.rendered_slides_pt ?? null).toBeNull();
+    expect(view?.design.images.blog_image_map ?? null).toBeNull();
   });
 
   // Scenario: A placeholder title falls back to a real title

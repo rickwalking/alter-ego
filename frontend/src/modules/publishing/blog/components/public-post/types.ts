@@ -17,13 +17,11 @@ export interface BlogPostAdminPanelProps {
 export interface BlogPostContentProps {
   markdown: string;
   design: CarouselDesignResponse;
-  slideImages: string[];
 }
 
 export interface SectionProps {
   markdown: string;
   design: CarouselDesignResponse;
-  slideImage: string | null;
 }
 
 export interface BlogPostHeaderProps {
@@ -38,13 +36,6 @@ export interface BlogPostHeroProps {
   imageUrl: string;
   title: string;
   design: CarouselDesignResponse;
-}
-
-export interface ResolveSlideImageOptions {
-  sectionMarkdown: string;
-  design: CarouselDesignResponse;
-  slideImages: string[];
-  sectionIndex: number;
 }
 
 export interface PublicCoverImageProps {

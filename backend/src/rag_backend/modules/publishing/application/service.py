@@ -197,6 +197,10 @@ class PublishingService:
         port = self._require_read_port()
         return await port.project_carousel_blog_i18n(project, language)
 
+    async def carousel_blog_is_published(self, project_id: UUID) -> bool:
+        """Whether the carousel's blog row is published (public-visibility gate)."""
+        return await self._require_read_port().is_carousel_blog_published(project_id)
+
     async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
         """Project the content-calendar entries in the query's date range."""
         return await self._require_read_port().project_calendar(query)
