@@ -16,6 +16,7 @@ from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.domain.constants.slide_fix import (
     AUTOFIX_ESCALATION_ATTEMPTS,
     AUTOFIX_MODEL_ATTEMPTS,
+    PERSONA_UNSCORED_MAX_TICKS,
 )
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
@@ -271,6 +272,17 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS",
             "autopilot_autofix_escalation_attempts",
+        ),
+    )
+
+    # AE-0433: ticks a fixed slide may stay unscored (persona judge down)
+    # before the run escalates "persona_judge_unavailable".
+    autopilot_persona_unscored_max_ticks: int = Field(
+        default=PERSONA_UNSCORED_MAX_TICKS,
+        ge=1,
+        validation_alias=AliasChoices(
+            "AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS",
+            "autopilot_persona_unscored_max_ticks",
         ),
     )
 

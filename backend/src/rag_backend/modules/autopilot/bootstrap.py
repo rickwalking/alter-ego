@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.slide_fix import (
     AUTOFIX_ESCALATION_ATTEMPTS,
     AUTOFIX_MODEL_ATTEMPTS,
+    PERSONA_UNSCORED_MAX_TICKS,
 )
 from rag_backend.domain.protocols.social import SocialPublisher
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -254,6 +255,8 @@ class AutopilotTickConfig:
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
     # AE-0407: AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS, reasoning-model attempts.
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
+    # AE-0433: AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS.
+    persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
 
 
 class AutopilotRunnerTickAdapter:
@@ -309,6 +312,7 @@ def _runner_deps(
             engine_factory=config.engine_factory,
             autofix_attempts=config.autofix_attempts,
             autofix_escalation_attempts=config.autofix_escalation_attempts,
+            persona_unscored_max_ticks=config.persona_unscored_max_ticks,
         )
     )
     return RunnerDependencies(

@@ -73,13 +73,19 @@ class SlideIssue:
 
 @dataclass(frozen=True)
 class SlideTarget:
-    """A slide to fix: its record, what fails, its voice score and role."""
+    """A slide to fix: its record, what fails, its voice score and role.
+
+    AE-0433: ``unscored_ticks`` > 0 means the stored score is stale (the
+    judge gave no score for the current copy on that many ticks): the copy
+    is re-scored before any rewrite.
+    """
 
     slide_index: int
     record: dict[str, object]
     issues: tuple[SlideIssue, ...]
     score: float | None = None
     role: str = ""
+    unscored_ticks: int = 0
 
 
 @dataclass(frozen=True)
@@ -106,7 +112,11 @@ class FixAttempt:
 
 @dataclass(frozen=True)
 class SlideFixResult:
-    """Where one slide ended: fixed or not, its copy, score and attempts."""
+    """Where one slide ended: fixed or not, its copy, score and attempts.
+
+    AE-0433: a fixed slide whose copy the judge could not score keeps its
+    old ``score`` and counts ``unscored_ticks`` (> 0) for a re-score.
+    """
 
     slide_index: int
     fixed: bool
@@ -114,6 +124,7 @@ class SlideFixResult:
     issues: tuple[SlideIssue, ...]
     attempts: tuple[FixAttempt, ...]
     score: float | None = None
+    unscored_ticks: int = 0
 
 
 @dataclass(frozen=True)

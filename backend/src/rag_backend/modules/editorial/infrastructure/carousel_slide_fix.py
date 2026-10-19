@@ -30,6 +30,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
 from rag_backend.modules.editorial.infrastructure.pov_inputs import PovInputsAcl
 
 if TYPE_CHECKING:
+    from rag_backend.agents.persona_agent import PersonaAgent
     from rag_backend.application.services.carousel.persona_judge import VoiceJudge
     from rag_backend.application.services.carousel.slide_fix_types import (
         SlideFixOutcome,
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
         SlideFixTools,
         SlideRewriter,
     )
+    from rag_backend.domain.models.persona import PersonaProfile
 
 SlideFixModelFactory = Callable[[], BaseChatModel]
 
@@ -82,6 +84,8 @@ class SlideFixSlideReport:
     rules: tuple[str, ...]
     text: str
     attempts: int
+    # AE-0433: > 0 when the judge could not score the slide's copy.
+    unscored_ticks: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -110,10 +114,12 @@ class _PersonaScorer:
     """``VoiceScorer`` on ``PersonaAgent.evaluate_match`` (0-100 overall).
 
     AE-0407: retried once; None (unscored) when the judge gave no score.
+    AE-0433: the retry runs on ``fallback`` (the next model of the queue).
     """
 
-    def __init__(self, agent: VoiceJudge) -> None:
+    def __init__(self, agent: VoiceJudge, fallback: VoiceJudge | None = None) -> None:
         self._agent = agent
+        self._fallback = fallback
 
     async def score(self, text: str) -> float | None:
         from rag_backend.application.services.carousel.persona_judge import judge_voice
@@ -121,7 +127,7 @@ class _PersonaScorer:
             overall_score,
         )
 
-        result = await judge_voice(self._agent, text)
+        result = await judge_voice(self._agent, text, self._fallback)
         return None if result is None else overall_score(result)
 
 
@@ -154,6 +160,21 @@ def _escalation_model(request: SlideFixRequest) -> BaseChatModel | None:
     return _role_model(LLM_ROLE_REASONING)
 
 
+def _fallback_llm(llm: BaseChatModel) -> BaseChatModel | None:
+    """The next model of the role's queue (or its fallback); None at the end."""
+    from rag_backend.infrastructure.external.routed_chat_model import HasFallback
+
+    return llm.as_fallback() if isinstance(llm, HasFallback) else None
+
+
+def _fallback_judge(persona: PersonaProfile, llm: BaseChatModel) -> PersonaAgent | None:
+    """The persona judge on the fallback model of ``llm`` (AE-0433)."""
+    from rag_backend.agents.persona_agent import PersonaAgent
+
+    fallback = _fallback_llm(llm)
+    return None if fallback is None else PersonaAgent(persona=persona, llm=fallback)
+
+
 def _escalation_rewriter(request: SlideFixRequest) -> SlideRewriter | None:
     from rag_backend.infrastructure.monitoring_langfuse import (
         get_langfuse_runnable_config,
@@ -182,7 +203,7 @@ async def _tools(request: SlideFixRequest, llm: BaseChatModel) -> SlideFixTools:
     agent = PersonaAgent(persona=persona, llm=llm)
     return SlideFixTools(
         rewriter=rewriter,
-        scorer=_PersonaScorer(agent),
+        scorer=_PersonaScorer(agent, _fallback_judge(persona, llm)),
         style_guide=agent.style_guide(),
         escalation_rewriter=escalation,
     )
@@ -199,6 +220,7 @@ def _slide(result: SlideFixResult) -> SlideFixSlideReport:
         rules=tuple(dict.fromkeys(issue.code for issue in result.issues)),
         text=current_text(result),
         attempts=len(result.attempts),
+        unscored_ticks=result.unscored_ticks,
     )
 
 

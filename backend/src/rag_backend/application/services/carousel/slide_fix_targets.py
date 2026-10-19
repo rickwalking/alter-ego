@@ -27,7 +27,9 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.slide_fix import (
     ISSUE_VOICE_SCORE_LOW,
     ISSUE_VOICE_SCORE_MESSAGE,
+    PERSONA_SCORE_RESCORE_PENDING_KEY,
     PERSONA_SCORE_SLIDE_KEY,
+    PERSONA_SCORE_UNSCORED_TICKS_KEY,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_OUTLINE,
@@ -84,19 +86,46 @@ def overall_score(value: object) -> float | None:
     return stored_overall(value)
 
 
-def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
-    """Voice scores (0-100) by slide index; unscored slides are left out."""
+def _slide_entries(state: Mapping[str, object]) -> dict[int, object]:
+    """The ``slide_N`` persona-score entries by slide index."""
     raw = state.get(STATE_FIELD_PERSONA_SCORES)
     if not isinstance(raw, Mapping):
         return {}
-    scores: dict[int, float] = {}
+    prefix = PERSONA_SCORE_SLIDE_KEY.format(index="")
+    entries: dict[int, object] = {}
     for key, value in raw.items():
-        prefix = PERSONA_SCORE_SLIDE_KEY.format(index="")
         suffix = str(key).removeprefix(prefix)
+        if str(key).startswith(prefix) and suffix.isdigit():
+            entries[int(suffix)] = value
+    return entries
+
+
+def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
+    """Voice scores (0-100) by slide index; unscored slides are left out."""
+    scores: dict[int, float] = {}
+    for index, value in _slide_entries(state).items():
         score = overall_score(value)
-        if str(key).startswith(prefix) and suffix.isdigit() and score is not None:
-            scores[int(suffix)] = score
+        if score is not None:
+            scores[index] = score
     return scores
+
+
+def _ticks(entry: object) -> int:
+    """The unscored-tick count of a ``rescore_pending`` entry, else 0."""
+    if not isinstance(entry, Mapping):
+        return 0
+    if entry.get(PERSONA_SCORE_RESCORE_PENDING_KEY) is not True:
+        return 0
+    ticks = entry.get(PERSONA_SCORE_UNSCORED_TICKS_KEY)
+    if isinstance(ticks, bool) or not isinstance(ticks, int):
+        return 1
+    return max(1, ticks)
+
+
+def unscored_ticks(state: Mapping[str, object]) -> dict[int, int]:
+    """AE-0433: slides whose stored score is stale, with their unscored ticks."""
+    ticks = {index: _ticks(entry) for index, entry in _slide_entries(state).items()}
+    return {index: count for index, count in ticks.items() if count > 0}
 
 
 def _roles(state: Mapping[str, object]) -> dict[int, str]:
@@ -133,6 +162,7 @@ def select_targets(query: TargetQuery) -> TargetSelection:
     rules = slide_issues(query.records, query.policy_version)
     voice = _voice_issues(query)
     scores = slide_scores(query.state)
+    pending = unscored_ticks(query.state)
     roles = _roles(query.state)
     targets: list[SlideTarget] = []
     for index in sorted(set(rules) | set(voice)):
@@ -149,6 +179,7 @@ def select_targets(query: TargetQuery) -> TargetSelection:
                 issues=tuple(issues),
                 score=scores.get(index),
                 role=roles.get(index, ""),
+                unscored_ticks=pending.get(index, 0),
             )
         )
     unfixable = tuple(dict.fromkeys(issue.code for issue in rules.get(-1, [])))
@@ -162,4 +193,5 @@ __all__ = [
     "select_targets",
     "slide_issues",
     "slide_scores",
+    "unscored_ticks",
 ]

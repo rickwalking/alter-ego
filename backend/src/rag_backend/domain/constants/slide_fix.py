@@ -37,6 +37,14 @@ VAR_QUALITY_RUBRIC = "quality_rubric"
 # Persona-score keys the content phase writes ("slide_3").
 PERSONA_SCORE_SLIDE_KEY = "slide_{index}"
 
+# AE-0433: a fixed slide the judge could not score keeps its old ``overall``
+# and is marked for a re-score on the next tick, with the unscored count.
+PERSONA_SCORE_RESCORE_PENDING_KEY = "rescore_pending"
+PERSONA_SCORE_UNSCORED_TICKS_KEY = "unscored_ticks"
+# AE-0433: after this many unscored ticks the run escalates
+# "persona_judge_unavailable" (AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS).
+PERSONA_UNSCORED_MAX_TICKS = 3
+
 # Issue codes that are not presentation rules.
 ISSUE_VOICE_SCORE_LOW = "voice_score_low"
 ISSUE_VOICE_SCORE_MESSAGE = "Voice match score {score:.0f} is under {floor:.0f}"
@@ -71,7 +79,10 @@ __all__ = [
     "LOG_SLIDE_FIX_NOOP",
     "MODEL_ROLE_FAST",
     "MODEL_ROLE_REASONING",
+    "PERSONA_SCORE_RESCORE_PENDING_KEY",
     "PERSONA_SCORE_SLIDE_KEY",
+    "PERSONA_SCORE_UNSCORED_TICKS_KEY",
+    "PERSONA_UNSCORED_MAX_TICKS",
     "SLIDE_FIX_PROMPT_DOMAIN",
     "SLIDE_FIX_PROMPT_NAME",
     "SLIDE_FIX_PROMPT_VERSION",

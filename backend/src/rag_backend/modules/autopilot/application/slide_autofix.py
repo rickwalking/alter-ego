@@ -10,6 +10,13 @@ written through the editorial facade, and the gate is read again. A clean
 gate is approved; otherwise the run escalates to the owner with every slide
 the fix gave up on. The revise budget is never spent on these reasons; other
 reasons (research, outline, images, forbidden phrases) keep revise/escalate.
+
+AE-0433: a fixed slide the persona judge could not score keeps its old
+(stale) voice score, so the gate read again can still fail on the voice
+floor with no slide failing. That is not "below threshold": the run waits
+(stays generating) for the re-score on the next tick and, once a slide
+stayed unscored for the configured ticks, escalates
+``persona_judge_unavailable``.
 """
 
 from __future__ import annotations
@@ -27,19 +34,27 @@ from rag_backend.modules.autopilot.autofix_constants import (
     ESCALATION_MAX_SLIDES,
     ESCALATION_RULE_SEPARATOR,
     ESCALATION_SLIDE_LINE,
+    ESCALATION_SLIDE_SEPARATOR,
     ESCALATION_TEXT_ELLIPSIS,
     ESCALATION_TEXT_MAX_CHARS,
+    ESCALATION_UNSCORED_LINE,
     LOG_FIELD_ATTEMPT,
     LOG_FIELD_FAILING_SLIDES,
+    LOG_FIELD_JUDGE_UNAVAILABLE,
     LOG_FIELD_MODEL_ROLE,
     LOG_FIELD_OUTCOME,
     LOG_FIELD_RULES_AFTER,
     LOG_FIELD_RULES_BEFORE,
     LOG_FIELD_SLIDE,
+    LOG_FIELD_UNSCORED_SLIDES,
     LOG_SLIDE_AUTOFIX,
     LOG_SLIDE_AUTOFIX_CONFLICT,
     LOG_SLIDE_AUTOFIX_ESCALATED,
+    LOG_SLIDE_AUTOFIX_UNSCORED,
+    REASON_PERSONA_JUDGE_UNAVAILABLE,
+    REASON_PERSONA_RESCORE_PENDING,
 )
+from rag_backend.modules.autopilot.constants import REASON_PERSONA_SCORE
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixStatus,
     FailingSlide,
@@ -144,6 +159,38 @@ def _escalate(read: GateRead, outcome: SlideFixOutcome) -> GateRead:
     return GateRead(run=read.run, snapshot=read.snapshot, decision=decision)
 
 
+def _judge_pending(read: GateRead, outcome: SlideFixOutcome) -> bool:
+    """The gate fails only on the stale voice score of unscored slides."""
+    return (
+        read.decision.reason == REASON_PERSONA_SCORE
+        and bool(outcome.unscored_slides)
+        and not outcome.failing
+        and not outcome.unfixable_rules
+    )
+
+
+def _unscored(read: GateRead, outcome: SlideFixOutcome) -> GateRead:
+    """Wait for the re-score, or escalate once the judge stayed down (AE-0433)."""
+    slides = list(outcome.unscored_slides)
+    extra = {
+        LOG_FIELD_UNSCORED_SLIDES: slides,
+        LOG_FIELD_JUDGE_UNAVAILABLE: outcome.judge_unavailable,
+    }
+    _log(LOG_SLIDE_AUTOFIX_UNSCORED, read, extra)
+    if not outcome.judge_unavailable:
+        decision = PolicyDecision(
+            action=GateAction.WAIT, reason=REASON_PERSONA_RESCORE_PENDING
+        )
+        return GateRead(run=read.run, snapshot=read.snapshot, decision=decision)
+    joined = ESCALATION_SLIDE_SEPARATOR.join(str(slide) for slide in slides)
+    decision = PolicyDecision(
+        action=GateAction.ESCALATE,
+        reason=REASON_PERSONA_JUDGE_UNAVAILABLE,
+        detail=ESCALATION_UNSCORED_LINE.format(slides=joined),
+    )
+    return GateRead(run=read.run, snapshot=read.snapshot, decision=decision)
+
+
 class SlideAutofixStep:
     """At most one model fix per tick, between the repair and the decision."""
 
@@ -154,8 +201,10 @@ class SlideAutofixStep:
         """The gate to act on; None when the fix lost the lock (next tick).
 
         Returns ``read`` unchanged when no model fix applies, the gate read
-        again when it is now clean (or fails for another reason), else an
-        escalation that lists the slides still failing.
+        again when it is now clean (or fails for another reason), a wait or
+        a ``persona_judge_unavailable`` escalation when only unscored slides
+        hold it (AE-0433), else an escalation that lists the slides still
+        failing.
         """
         fixer = self._deps.fixer
         if fixer is None or not needs_model_fix(read):
@@ -176,6 +225,8 @@ class SlideAutofixStep:
         )
         if not needs_model_fix(fresh):
             return fresh
+        if _judge_pending(fresh, outcome):
+            return _unscored(fresh, outcome)
         return _escalate(fresh, outcome)
 
     async def _reread(self, read: GateRead) -> GateRead:

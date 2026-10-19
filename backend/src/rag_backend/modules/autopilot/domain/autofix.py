@@ -118,12 +118,19 @@ class FailingSlide:
 
 @dataclass(frozen=True, kw_only=True)
 class SlideFixOutcome:
-    """What the model fix wrote and which slides are still failing (AE-0401)."""
+    """What the model fix wrote and which slides are still failing (AE-0401).
+
+    AE-0433: ``unscored_slides`` passed every rule but the judge gave no
+    score (a re-score is pending); ``judge_unavailable`` is set once one of
+    them stayed unscored for the configured number of ticks.
+    """
 
     status: AutofixStatus
     failing: tuple[FailingSlide, ...] = ()
     attempts: tuple[SlideFixAttemptRecord, ...] = ()
     unfixable_rules: tuple[str, ...] = ()
+    unscored_slides: tuple[int, ...] = ()
+    judge_unavailable: bool = False
 
 
 class SlideFixer(Protocol):
