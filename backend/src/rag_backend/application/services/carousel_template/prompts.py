@@ -100,7 +100,9 @@ def build_caption_prompt(
 
 
 def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str:
-    """AE-0366: PT -> EN slide translation prompt (v6, carries the rubric).
+    """AE-0366: PT -> EN slide translation prompt (carries the rubric).
+
+    AE-0430: v8 also translates the TL;DR strip and the structured item texts.
 
     Same lazy registry import as the three builders above: the
     carousel_template.prompts -> agents.prompts.registry pair is already in the
@@ -109,13 +111,15 @@ def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str
     from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
         render_prompt,
     )
-    from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
+    from rag_backend.domain.constants.carousel import (
+        CAROUSEL_TRANSLATION_PROMPT_VERSION,
+    )
 
     prompt_text, _ = render_prompt(
         "carousel",
         "slide_translations",
         variables={"slides_json": slides_json, "quality_rubric": quality_rubric},
-        version=CAROUSEL_PROMPT_VERSION_V6,
+        version=CAROUSEL_TRANSLATION_PROMPT_VERSION,
     )
     return prompt_text
 
@@ -162,5 +166,28 @@ def build_slide_fix_prompt(variables: dict[str, object]) -> str:
         SLIDE_FIX_PROMPT_NAME,
         variables=variables,
         version=SLIDE_FIX_PROMPT_VERSION,
+    )
+    return prompt_text
+
+
+def build_gate_field_repair_prompt(variables: dict[str, object]) -> str:
+    """AE-0430: rewrite only the fields the content gate blocked.
+
+    Same baselined lazy registry import as the builders above.
+    """
+    from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
+        render_prompt,
+    )
+    from rag_backend.domain.constants.content_gate_repair import (
+        GATE_REPAIR_PROMPT_DOMAIN,
+        GATE_REPAIR_PROMPT_NAME,
+        GATE_REPAIR_PROMPT_VERSION,
+    )
+
+    prompt_text, _ = render_prompt(
+        GATE_REPAIR_PROMPT_DOMAIN,
+        GATE_REPAIR_PROMPT_NAME,
+        variables=variables,
+        version=GATE_REPAIR_PROMPT_VERSION,
     )
     return prompt_text

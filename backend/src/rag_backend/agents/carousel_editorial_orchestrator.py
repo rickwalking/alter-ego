@@ -10,6 +10,10 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.research_enrichment import enrich_sources
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
+from rag_backend.application.services.carousel.content_gate_repair import (
+    LlmGateFieldRepairer,
+    LlmGateRepairConfig,
+)
 from rag_backend.application.services.carousel.editorial_workflow_generators import (
     synthesize_research,
 )
@@ -28,6 +32,7 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.protocols import ResearchEnrichmentParams
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class CarouselEditorialOrchestrator:
@@ -50,6 +55,13 @@ class CarouselEditorialOrchestrator:
                 llm=roles.fast,
                 image_registry=image_registry,
                 draft_concurrency=roles.draft_concurrency,
+                # AE-0430: field repair of a blocked content gate (fast model).
+                gate_repairer=LlmGateFieldRepairer(
+                    LlmGateRepairConfig(
+                        llm=roles.fast,
+                        runnable_config=get_langfuse_runnable_config,
+                    )
+                ),
             )
         )
         self._engine = CarouselWorkflowEngine(

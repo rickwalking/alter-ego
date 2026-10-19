@@ -26,6 +26,15 @@ from rag_backend.application.services.carousel.content_feedback_lifecycle import
     active_feedback_notes,
     consume_feedback_notes,
 )
+from rag_backend.application.services.carousel.content_gate_repair import (
+    GateFieldRepairer,
+)
+from rag_backend.application.services.carousel.content_gate_repair_flow import (
+    GateRepairContext,
+    gate_violation_note,
+    repair_blocked_content_gate,
+    visible_copy_changed,
+)
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     apply_design_tokens,
@@ -49,6 +58,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_OUTLINE,
     PHASE_STATUS_FAILED,
     WORKFLOW_ERROR_KEY,
+)
+from rag_backend.domain.constants.content_feedback import (
+    FEEDBACK_STATUS_APPLIED,
+    FEEDBACK_STATUS_UNCHANGED,
 )
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
@@ -98,6 +111,8 @@ class PhaseArtifactRunnerConfig:
     slide_draft_retry: SlideDraftRetryFn | None = None
     # AE-0391: slides drafted / persona-scored concurrently (bounded).
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
+    # AE-0430: rewrites only the fields a blocked content gate names.
+    gate_repairer: GateFieldRepairer | None = None
 
 
 _TRANSLATIONS_EN_KEY = "translations_en"
@@ -123,6 +138,22 @@ def _review_translations(
     if fresh is not None or STATE_FIELD_SLIDE_DRAFTS in updates:
         return fresh
     return state.get(_TRANSLATIONS_EN_KEY)
+
+
+def _settle_used_notes(
+    state: CarouselWorkflowState,
+    updates: dict[str, object],
+) -> dict[str, object]:
+    """AE-0405: the notes a regeneration used move to the history.
+
+    AE-0430: as "unchanged" when the visible slide copy did not change.
+    """
+    status = (
+        FEEDBACK_STATUS_APPLIED
+        if visible_copy_changed(state, updates)
+        else FEEDBACK_STATUS_UNCHANGED
+    )
+    return consume_feedback_notes(state, PHASE_CONTENT, status)
 
 
 @dataclass(frozen=True)
@@ -158,6 +189,7 @@ class PhaseArtifactRunner:
         self._workflow_input = config.workflow_input
         self._slide_draft_retry = config.slide_draft_retry
         self._draft_concurrency = config.draft_concurrency
+        self._gate_repairer = config.gate_repairer
 
     def with_context(
         self,
@@ -176,6 +208,7 @@ class PhaseArtifactRunner:
                 workflow_input=workflow_input or self._workflow_input,
                 slide_draft_retry=self._slide_draft_retry,
                 draft_concurrency=self._draft_concurrency,
+                gate_repairer=self._gate_repairer,
             )
         )
 
@@ -223,8 +256,11 @@ class PhaseArtifactRunner:
             for draft in (state.get("slide_drafts") or [])
             if isinstance(draft, dict)
         ]
+        notes = self._content_revision_notes(state)
+        # AE-0430: a revision also gets the gate's blocking violations.
+        violations = gate_violation_note(state) if notes else None
         return ContentRegenInputs(
-            revision_notes=self._content_revision_notes(state),
+            revision_notes=[*notes, violations] if violations else notes,
             previous_drafts=prior_drafts,
             mode=await self._mode_brief(state),
         )
@@ -333,15 +369,14 @@ class PhaseArtifactRunner:
         updates.update(outline_updates)
         regen = await self._regen_inputs(state)
         should_regenerate = not state.get("slide_drafts") or bool(regen.revision_notes)
-        if should_regenerate and isinstance(outline, list):
+        regenerated = should_regenerate and isinstance(outline, list)
+        if regenerated:
             draft_updates = await self._generate_content_drafts(
                 resolved, outline, regen
             )
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
             updates.update(draft_updates)
-            # AE-0405: the notes this regeneration used move to the history.
-            updates.update(consume_feedback_notes(state, PHASE_CONTENT))
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
@@ -389,7 +424,34 @@ class PhaseArtifactRunner:
                 )
             )
         )
+        await self._repair_content_gate(state, updates, resolved)
+        if regenerated:
+            updates.update(_settle_used_notes(state, updates))
         return updates
+
+    async def _repair_content_gate(
+        self,
+        state: CarouselWorkflowState,
+        updates: dict[str, object],
+        resolved: EditorialWorkflowStartInput,
+    ) -> None:
+        """AE-0430: targeted field repair of a blocked content gate (in place)."""
+        style_guide = (
+            PersonaAgent(resolved.persona, self._llm).style_guide()
+            if resolved.persona
+            else ""
+        )
+        updates.update(
+            await repair_blocked_content_gate(
+                state,
+                updates,
+                GateRepairContext(
+                    repairer=self._gate_repairer,
+                    style_guide=style_guide,
+                    project_id=str(state.get("project_id", "")),
+                ),
+            )
+        )
 
     def _resolve_slide_draft_retry(
         self,
