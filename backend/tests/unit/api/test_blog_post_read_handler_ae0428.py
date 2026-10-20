@@ -69,14 +69,16 @@ def _handler() -> GetBlogPostHandler:
 async def test_valid_v2_row_returns_parsed_content(monkeypatch) -> None:
     row = _row(v2_content("Corpo"))
     monkeypatch.setattr(
-        blog_post_routes, "get_blog_post_for_read", lambda db, post_id, user: _return(row)
+        blog_post_routes,
+        "get_blog_post_for_read",
+        lambda db, post_id, user: _return(row),
     )
 
     result = await _handler()(
-        request=None,  # type: ignore[arg-type]
+        request=None,
         post_id=UUID(POST_ID),
-        db=None,  # type: ignore[arg-type]
-        current_user=None,  # type: ignore[arg-type]
+        db=None,
+        current_user=None,
     )
 
     assert result.id == UUID(POST_ID)
@@ -94,15 +96,17 @@ async def test_non_v2_row_fails_closed_with_422(monkeypatch) -> None:
     legacy: dict[str, object] = {"markdown": "## A\n\nCorpo"}
     row = _row(legacy)
     monkeypatch.setattr(
-        blog_post_routes, "get_blog_post_for_read", lambda db, post_id, user: _return(row)
+        blog_post_routes,
+        "get_blog_post_for_read",
+        lambda db, post_id, user: _return(row),
     )
 
     with pytest.raises(HTTPException) as excinfo:
         await _handler()(
-            request=None,  # type: ignore[arg-type]
+            request=None,
             post_id=UUID(POST_ID),
-            db=None,  # type: ignore[arg-type]
-            current_user=None,  # type: ignore[arg-type]
+            db=None,
+            current_user=None,
         )
 
     assert excinfo.value.status_code == 422

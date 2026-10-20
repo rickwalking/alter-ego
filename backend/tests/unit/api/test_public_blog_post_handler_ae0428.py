@@ -84,9 +84,9 @@ async def test_published_v2_row_returns_public_detail() -> None:
     row = _published_row(v2_content("Corpo"))
 
     result = await _handler()(
-        request=None,  # type: ignore[arg-type]
+        request=None,
         post_id=UUID(POST_ID),
-        db=_FakeDb(row),  # type: ignore[arg-type]
+        db=_FakeDb(row),
     )
 
     assert result.id == UUID(POST_ID)
@@ -101,9 +101,9 @@ async def test_published_non_v2_row_fails_closed_with_404() -> None:
 
     with pytest.raises(HTTPException) as excinfo:
         await _handler()(
-            request=None,  # type: ignore[arg-type]
+            request=None,
             post_id=UUID(POST_ID),
-            db=_FakeDb(row),  # type: ignore[arg-type]
+            db=_FakeDb(row),
         )
 
     assert excinfo.value.status_code == 404
