@@ -1,6 +1,6 @@
 # AE-0434 — Final export fails with image_decode_timeout: export expects artwork the images phase never made
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -155,3 +155,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #155 (4f3bc3f, 2026-10-19), deployed. Prod: carousel 5344b6c6 images gate approved, export rendered all slides + PDF; published to Instagram 2026-10-20 08:53Z. Follow-up (precise missing-image reason) shipped in AE-0439.

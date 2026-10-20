@@ -1,6 +1,6 @@
 # AE-0439 — QA 2026-10-19 fix wave: minors F-07/F-12/F-13/F-14 + #154/#155 follow-ups
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -215,3 +215,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #161 (6827a12, 2026-10-20).

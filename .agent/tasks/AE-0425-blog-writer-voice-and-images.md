@@ -1,6 +1,6 @@
 # AE-0425 — Blog writer (voice) + GPT images + generation entry points (D)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P1
 Type: Feature
@@ -365,4 +365,4 @@ None.
 
 ## Final Summary
 
-Pending.
+**Merged and closed (orchestrator, 2026-10-20).** Merged #146 (1b59bee, 2026-10-19), carrying #148 (AE-0426). Deployed.

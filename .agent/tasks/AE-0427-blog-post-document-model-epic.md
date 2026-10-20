@@ -1,6 +1,6 @@
 # AE-0427 — Blog post document model epic (posts own structure, voice and images)
 
-Status: Intake
+Status: Done
 Tier: T3
 Priority: High
 Type: Epic
@@ -199,4 +199,4 @@ None.
 
 ## Final Summary
 
-Pending.
+**Merged and closed (orchestrator, 2026-10-20).** Epic complete: AE-0422..AE-0426 and AE-0428 merged and deployed (#143-#149, last 4f811e6 on 2026-10-20). Prod `--verify` after the fail-safe removal: scanned=31 non_v2=0. QA wave 2026-10-19 verified the stack on prod; its findings shipped as AE-0435..AE-0440.

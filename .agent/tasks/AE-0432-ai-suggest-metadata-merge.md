@@ -1,6 +1,6 @@
 # AE-0432 — ai-suggest / ai-improve merge metadata onto the latest row
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -113,4 +113,4 @@ None.
 
 ## Final Summary
 
-Pending.
+**Merged and closed (orchestrator, 2026-10-20).** Merged #153 (02edb8a, 2026-10-19), deployed.

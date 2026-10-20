@@ -1,6 +1,6 @@
 # AE-0440 — Editor workflow stream loops on 401 forever; the page looks stuck
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -131,3 +131,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #156 (8571609, 2026-10-20), deployed in 77eca74. Incident: owner tab on 5344b6c6 had looped on 401 every 6 s since the 03:02Z deploy (~3,000 requests).

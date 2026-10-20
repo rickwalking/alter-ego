@@ -1,6 +1,6 @@
 # AE-0430 — Content gate violations survive generation and revision; no targeted repair
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -252,3 +252,5 @@ None.
 ## Final Summary
 
 Pending QA / merge.
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #151 (c9aac81, 2026-10-19), deployed. Scaffold leaks it missed (**PT-BR**, CTA creator:) were fixed in AE-0436.

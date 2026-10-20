@@ -1,6 +1,6 @@
 # AE-0436 — Carousel scaffold label leaks (**PT-BR**, CTA creator:) and EN ** emphasis survive the content gate
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -261,3 +261,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #158 (86dea0a, 2026-10-20) after one orchestrator review round (detector and stripper share positional rules; invariant test: everything flagged is strippable).

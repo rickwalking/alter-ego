@@ -1,6 +1,6 @@
 # AE-0424 — Section editor, per-section/cover images, versions on save, publish button (C)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P1
 Type: Feature
@@ -370,4 +370,4 @@ None.
 
 ## Final Summary
 
-Pending.
+**Merged and closed (orchestrator, 2026-10-20).** Merged #147 into the AE-0423 branch (34ff073), shipped to main with #145 (b20a12d, 2026-10-19) after two re-reviews.

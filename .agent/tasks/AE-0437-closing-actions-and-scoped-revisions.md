@@ -1,6 +1,6 @@
 # AE-0437 — Closing actions are never generated or repaired, the editor cannot add them, and revisions rewrite slides they were not asked to touch
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: P1
 Type: Bug
@@ -193,3 +193,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #159 (18fe2bc, 2026-10-20), deployed.

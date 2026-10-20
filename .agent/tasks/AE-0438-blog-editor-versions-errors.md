@@ -1,6 +1,6 @@
 # AE-0438 — Blog editor: v1 = original AI draft (F-05), rewrite heading dup (F-08), surface errors (F-11)
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -179,3 +179,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #160 (77eca74, 2026-10-20), deployed. Prod: backup /root/backups/blog_posts-pre-ae0438-20261020T122727Z.sql.gz, then `blog_empty_versions --count` 12 posts x 1 empty entry, `--apply` changed=12, `--verify` 0.
