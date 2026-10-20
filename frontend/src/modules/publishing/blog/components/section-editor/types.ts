@@ -77,7 +77,6 @@ export interface MigrationBannerProps {
 export interface ReviewBarProps {
   status: string;
   scheduledPublishAt: string | null;
-  allowSelfReview: boolean;
   /** Pending edits or a running action disable the workflow controls. */
   disabled: boolean;
   /** The failed review/publish action, shown in the bar (AE-0438, F-11). */

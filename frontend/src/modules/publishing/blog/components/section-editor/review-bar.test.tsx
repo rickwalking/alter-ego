@@ -11,7 +11,6 @@ function props(overrides: Partial<ReviewBarProps> = {}): ReviewBarProps {
   return {
     status: "draft",
     scheduledPublishAt: null,
-    allowSelfReview: false,
     disabled: false,
     error: null,
     onSubmitReview: vi.fn(),
@@ -27,15 +26,12 @@ function props(overrides: Partial<ReviewBarProps> = {}): ReviewBarProps {
 }
 
 describe("ReviewBar", () => {
-  // Scenario: Self-review is rejected when disabled -> a distinct reviewer
-  it("needs a reviewer id on a draft without self-review", () => {
+  // Scenario: A distinct reviewer can still be named (AE-0441)
+  it("submits to a typed reviewer id", () => {
     const p = props();
     render(<ReviewBar {...p} />);
-    expect(
-      screen.queryByRole("button", { name: "Publish now" }),
-    ).not.toBeInTheDocument();
     const submit = screen.getByRole("button", { name: "Submit for review" });
-    expect(submit).toBeDisabled();
+    expect(submit).toBeEnabled();
     fireEvent.change(screen.getByLabelText("Reviewer ID"), {
       target: { value: " rev-1 " },
     });
@@ -51,10 +47,12 @@ describe("ReviewBar", () => {
     expect(p.onPublish).toHaveBeenCalled();
   });
 
-  // Scenario: Publish now auto-approves when self-review is enabled
-  it("offers Publish now and a self submit with self-review", () => {
-    const p = props({ allowSelfReview: true });
+  // Scenarios: Publish now auto-approves the owner's draft; Self-review is
+  // allowed for the single author (empty reviewer field = the author)
+  it("always offers Publish now and a self submit on a draft", () => {
+    const p = props();
     render(<ReviewBar {...p} />);
+    expect(screen.getByText(/leave it empty/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Publish now" }));
     expect(p.onPublishNow).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
@@ -116,15 +114,11 @@ describe("ReviewBar", () => {
     expect(screen.getByText("Published")).toBeInTheDocument();
   });
 
-  // Scenario: Submitting your own post for review names the guard (AE-0438, F-11)
-  it("shows the self-review error inside the review bar", () => {
-    const p = props({
-      error: { kind: "status_guard", detail: "self_review_not_allowed" },
-    });
+  // Scenario: A publish blocked by the status guard is explained (AE-0438, F-11)
+  it("shows the status-guard error inside the review bar", () => {
+    const p = props({ error: { kind: "status_guard", detail: null } });
     render(<ReviewBar {...p} />);
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "cannot review your own post",
-    );
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
   it("shows a generic failure with the code-specific copy when known", () => {

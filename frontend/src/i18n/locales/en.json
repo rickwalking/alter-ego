@@ -1280,7 +1280,7 @@
             "archived": "Archived"
           },
           "reviewer": "Reviewer ID",
-          "reviewerHint": "A different editor must review this post.",
+          "reviewerHint": "Optional: leave it empty to review the post yourself.",
           "submit": "Submit for review",
           "approve": "Approve",
           "reject": "Reject",
@@ -1314,8 +1314,6 @@
           "failed": "The action failed. Try again.",
           "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP.",
           "code": {
-            "self_review": "You cannot review your own post. Choose a different reviewer to submit it.",
-            "reviewer_required": "A reviewer is required to submit this post for review.",
             "version_empty": "This version has no content (it holds the pre-write empty draft). Choose another version.",
             "empty_document": "The document needs at least one section with text.",
             "not_publishable": "This post cannot be published yet: it needs valid content and the AI label.",

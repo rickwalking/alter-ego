@@ -83,11 +83,6 @@ export interface BlogPostUpdatePayload {
   citations?: Record<string, unknown>[] | null;
 }
 
-/** `GET /api/blog-editor/settings` (AE-0424). */
-export interface BlogEditorSettings {
-  allow_self_review: boolean;
-}
-
 /** PATCH body of a cover/section image: alt (never blank) and caption. */
 export interface BlogImagePatch {
   alt?: string;

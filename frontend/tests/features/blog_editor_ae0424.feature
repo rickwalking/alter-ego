@@ -242,22 +242,20 @@ Feature: Blog section editor, images, versions and publish (AE-0424)
     And scheduled_publish_at is null
     And the review controls are shown again
 
+  # AE-0441: the author may always review their own post (no setting).
   Scenario: Self-review is allowed for the single author
-    Given BLOG_ALLOW_SELF_REVIEW is true
-    And the owner is the only editor
-    When the owner submits and approves their own post
+    Given the owner is the only editor
+    When the owner submits their own draft with an empty reviewer field
+    And the owner approves it
     Then the post reaches "approved"
 
-  Scenario: Self-review is rejected when disabled
-    Given BLOG_ALLOW_SELF_REVIEW is false
-    And the owner is the author
-    When the owner submits their own post for review
-    Then a 400 self-review error is shown
-    And the post stays "draft"
+  Scenario: A distinct reviewer can still be named
+    Given a valid draft
+    When the owner types a reviewer id and submits for review
+    Then submit-review is called with that reviewer id
 
-  Scenario: Publish now auto-approves when self-review is enabled
-    Given BLOG_ALLOW_SELF_REVIEW is true
-    And a valid draft
+  Scenario: Publish now auto-approves the owner's draft
+    Given a valid draft
     When the owner clicks "Publish now"
     Then the post is submitted and self-approved in the same request flow
     And the post status is "published"

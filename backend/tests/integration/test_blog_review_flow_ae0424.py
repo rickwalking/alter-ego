@@ -1,12 +1,13 @@
 """API tests: review, self-review, publish guard and scheduling (AE-0424).
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
-(review + scheduled publish, publish guard).
+(review + scheduled publish, publish guard). AE-0441 removed the blog
+"a different editor must review" rule: the author may review their own post.
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -14,18 +15,16 @@ import pytest
 from httpx import AsyncClient
 
 from rag_backend.domain.constants.blog_document import ERR_BLOG_NOT_PUBLISHABLE
-from rag_backend.domain.constants.blog_editor import (
-    ERR_BLOG_REVIEWER_REQUIRED,
-    ERR_BLOG_SCHEDULE_NOT_SET,
-)
+from rag_backend.domain.constants.blog_editor import ERR_BLOG_SCHEDULE_NOT_SET
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.optimistic_locking import (
     ERR_VERSION_CONFLICT,
     HTTP_HEADER_IF_MATCH,
 )
 from rag_backend.domain.constants.workflow_validation import (
+    CONTENT_TYPE_BLOG_POST,
+    ERR_REVIEWER_INVALID,
     ERR_SCHEDULE_IN_PAST,
-    ERR_SELF_REVIEW,
 )
 from tests.blog_v2_support import v2_content
 from tests.integration.blog_editor_support_ae0424 import (
@@ -48,14 +47,6 @@ async def clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
         yield built
 
 
-@pytest.fixture
-def self_review(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    from rag_backend.infrastructure.config.settings import get_settings
-
-    monkeypatch.setattr(get_settings(), "blog_allow_self_review", True)
-    yield
-
-
 async def _submit(client: AsyncClient, post_id: str, reviewer: str | None = None):
     params = {"reviewer_id": reviewer} if reviewer else None
     return await client.post(f"{BLOG_POSTS_URL}/{post_id}/submit-review", params=params)
@@ -73,25 +64,18 @@ class TestReview:
         assert response.status_code == 200, response.text
         assert response.json()["status"] == BlogPostStatus.UNDER_REVIEW.value
 
-    # Scenario: Submit review rejects the author when self-review is disabled
-    async def test_self_review_disabled_is_400(self, clients: EditorClients) -> None:
+    # Scenario: The author may name themselves as the reviewer
+    async def test_author_names_themselves(self, clients: EditorClients) -> None:
         post = await create_post(clients.author, v2_content())
         response = await _submit(clients.author, post["id"], clients.author_id)
-        assert response.status_code == 400
-        assert response.json()["detail"] == ERR_SELF_REVIEW
-        assert (await get_post(clients.author, post["id"]))["status"] == "draft"
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["status"] == BlogPostStatus.UNDER_REVIEW.value
+        assert body["reviewer_id"] == clients.author_id
 
-    async def test_missing_reviewer_without_self_review_is_400(
+    # Scenario: Submit review without a reviewer assigns the author
+    async def test_missing_reviewer_assigns_the_author(
         self, clients: EditorClients
-    ) -> None:
-        post = await create_post(clients.author, v2_content())
-        response = await _submit(clients.author, post["id"])
-        assert response.status_code == 400
-        assert response.json()["detail"] == ERR_BLOG_REVIEWER_REQUIRED
-
-    # Scenario: Self-review stores the author as reviewer when enabled
-    async def test_self_review_enabled_assigns_the_author(
-        self, clients: EditorClients, self_review: None
     ) -> None:
         post = await create_post(clients.author, v2_content())
         response = await _submit(clients.author, post["id"])
@@ -99,16 +83,49 @@ class TestReview:
         body = response.json()
         assert body["status"] == BlogPostStatus.UNDER_REVIEW.value
         assert body["reviewer_id"] == clients.author_id
-        approve = await clients.author.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
-        assert approve.status_code == 200, approve.text
-        assert approve.json()["status"] == APPROVED
 
-    async def test_self_review_enabled_accepts_explicit_author(
-        self, clients: EditorClients, self_review: None
+    # Scenario: The single author submits, approves and publishes their own post
+    async def test_single_author_end_to_end(self, clients: EditorClients) -> None:
+        post = await create_post(clients.author, v2_content())
+        submitted = await _submit(clients.author, post["id"])
+        assert submitted.status_code == 200, submitted.text
+        url = f"{BLOG_POSTS_URL}/{post['id']}"
+        approved = await clients.author.post(f"{url}/approve")
+        assert approved.status_code == 200, approved.text
+        assert approved.json()["status"] == APPROVED
+        published = await clients.author.post(
+            f"{url}/publish", headers=if_match(approved.json())
+        )
+        assert published.status_code == 200, published.text
+        assert published.json()["status"] == BlogPostStatus.PUBLISHED.value
+        public = await clients.author.get(f"/api/public/blog-posts/{post['id']}")
+        assert public.status_code == 200, public.text
+
+    # Scenario: Submit review still rejects an unknown reviewer
+    async def test_unknown_reviewer_is_400(self, clients: EditorClients) -> None:
+        post = await create_post(clients.author, v2_content())
+        response = await _submit(clients.author, post["id"], "no-such-user")
+        assert response.status_code == 400
+        assert response.json()["detail"] == ERR_REVIEWER_INVALID
+        assert (await get_post(clients.author, post["id"]))["status"] == "draft"
+
+    # Scenario: Assigning the author as the reviewer from the review panel is allowed
+    async def test_assign_review_accepts_the_author(
+        self, clients: EditorClients
     ) -> None:
         post = await create_post(clients.author, v2_content())
-        response = await _submit(clients.author, post["id"], clients.author_id)
+        response = await clients.author.post(
+            "/api/notifications/assign-review",
+            json={
+                "reviewer_id": clients.author_id,
+                "content_id": post["id"],
+                "content_type": CONTENT_TYPE_BLOG_POST,
+                "title": "Revisar",
+            },
+        )
         assert response.status_code == 200, response.text
+        stored = await get_post(clients.author, post["id"])
+        assert stored["reviewer_id"] == clients.author_id
 
     # Scenario: Approve moves under_review to approved
     async def test_reviewer_approves(self, clients: EditorClients) -> None:
@@ -343,16 +360,3 @@ class TestSchedule:
         await put(clients.author, post, {"content": v2_content("Editado")})
         stored = await get_post(clients.author, post["id"])
         assert (stored["status"], stored["scheduled_publish_at"]) == ("draft", None)
-
-
-class TestEditorSettings:
-    async def test_self_review_flag_defaults_off(self, clients: EditorClients) -> None:
-        response = await clients.author.get("/api/blog-editor/settings")
-        assert response.status_code == 200
-        assert response.json() == {"allow_self_review": False}
-
-    async def test_self_review_flag_on(
-        self, clients: EditorClients, self_review: None
-    ) -> None:
-        response = await clients.author.get("/api/blog-editor/settings")
-        assert response.json() == {"allow_self_review": True}

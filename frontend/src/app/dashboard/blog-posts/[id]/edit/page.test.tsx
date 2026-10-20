@@ -40,7 +40,6 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
     generateTranslation: vi.fn(),
   }),
   useBlogReviewActions: () => ({
-    allowSelfReview: false,
     pending: false,
     error: null,
   }),

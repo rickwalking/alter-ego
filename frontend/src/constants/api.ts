@@ -110,7 +110,6 @@ export const API_ENDPOINTS = {
   BLOG_POST_REJECT: (id: string) => `/api/blog-posts/${id}/reject`,
   BLOG_POST_PUBLISH: (id: string) => `/api/blog-posts/${id}/publish`,
   BLOG_POST_UNPUBLISH: (id: string) => `/api/blog-posts/${id}/unpublish`,
-  BLOG_EDITOR_SETTINGS: "/api/blog-editor/settings",
   BLOG_POST_SEO_ANALYZE: (id: string) => `/api/blog-posts/${id}/seo-analyze`,
   BLOG_POST_ACCESSIBILITY_CHECK: (id: string) =>
     `/api/blog-posts/${id}/accessibility-check`,

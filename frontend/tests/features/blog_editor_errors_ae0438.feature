@@ -19,13 +19,6 @@ Feature: Blog editor errors are visible and translated (AE-0438, F-11)
     When the owner restores that version
     Then the sidebar shows the empty-version message
 
-  Scenario: Submitting your own post for review names the guard
-    Given BLOG_ALLOW_SELF_REVIEW is false
-    And the owner submits the post with their own reviewer id
-    When the API answers 400 with detail "self_review_not_allowed"
-    Then the review bar shows the self-review message
-    And the post stays "draft"
-
   Scenario: A publish blocked by the status guard is explained
     Given a draft post
     When the owner clicks Publish and the API answers 400

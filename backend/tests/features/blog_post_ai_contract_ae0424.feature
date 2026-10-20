@@ -121,18 +121,38 @@ Feature: Blog AI contract, section rewrite and versions on save (AE-0424)
     When the editor POSTs /blog-posts/{id}/submit-review?reviewer_id=...
     Then the post status is "under_review"
 
-  Scenario: Submit review rejects the author when self-review is disabled
-    Given BLOG_ALLOW_SELF_REVIEW is false
-    And the author is the only candidate reviewer
-    When the editor POSTs /blog-posts/{id}/submit-review?reviewer_id=<author>
-    Then the API responds 400 with ERR_SELF_REVIEW
-    And the post stays "draft"
-
-  Scenario: Self-review stores the author as reviewer when enabled
-    Given BLOG_ALLOW_SELF_REVIEW is true
-    When the author submits their own post for review
+  # AE-0441: the "a different editor must review" rule is removed for blog
+  # posts (single-author deployment); the carousel workflow keeps its own rule.
+  Scenario: The author may name themselves as the reviewer
+    Given a draft v2 post
+    When the author POSTs /blog-posts/{id}/submit-review?reviewer_id=<author>
     Then the post status is "under_review"
     And reviewer_id is the author
+
+  Scenario: Submit review without a reviewer assigns the author
+    Given a draft v2 post
+    When the author POSTs /blog-posts/{id}/submit-review with no reviewer_id
+    Then the post status is "under_review"
+    And reviewer_id is the author
+
+  Scenario: The single author submits, approves and publishes their own post
+    Given a draft v2 post with a non-empty section
+    When the author submits it for review with no reviewer
+    And the author approves it
+    And the author publishes it
+    Then the post status is "published"
+    And the post is readable on the public API
+
+  Scenario: Submit review still rejects an unknown reviewer
+    Given a draft v2 post
+    When the author POSTs /blog-posts/{id}/submit-review?reviewer_id=<unknown user>
+    Then the API responds 400
+    And the post stays "draft"
+
+  Scenario: Assigning the author as the reviewer from the review panel is allowed
+    Given a draft v2 post
+    When the author POSTs /notifications/assign-review with reviewer_id=<author>
+    Then reviewer_id is the author
 
   Scenario: Approve moves under_review to approved
     Given an under_review post assigned to reviewer R

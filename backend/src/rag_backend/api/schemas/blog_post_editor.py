@@ -34,14 +34,7 @@ class BlogSectionRewriteRequest(BaseModel):
     persona_id: str | None = Field(default=None, max_length=36)
 
 
-class BlogEditorSettingsResponse(BaseModel):
-    """Deployment switches the editor needs to pick its review controls."""
-
-    allow_self_review: bool
-
-
 __all__ = [
-    "BlogEditorSettingsResponse",
     "BlogImageGenerateRequest",
     "BlogImagePatchRequest",
     "BlogSectionRewriteRequest",

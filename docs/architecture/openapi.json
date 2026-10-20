@@ -105,20 +105,6 @@
         "title": "ApplyStrategyResponse",
         "type": "object"
       },
-      "BlogEditorSettingsResponse": {
-        "description": "Deployment switches the editor needs to pick its review controls.",
-        "properties": {
-          "allow_self_review": {
-            "title": "Allow Self Review",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "allow_self_review"
-        ],
-        "title": "BlogEditorSettingsResponse",
-        "type": "object"
-      },
       "BlogFromCarouselRequest": {
         "description": "``POST /blog-posts/from-carousel``: always creates a draft.",
         "properties": {
@@ -9384,33 +9370,6 @@
         ]
       }
     },
-    "/api/blog-editor/settings": {
-      "get": {
-        "description": "``allow_self_review`` mirrors ``BLOG_ALLOW_SELF_REVIEW`` (default false).",
-        "operationId": "get_blog_editor_settings_api_blog_editor_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BlogEditorSettingsResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Blog editor deployment settings",
-        "tags": [
-          "blog_post_workflow"
-        ]
-      }
-    },
     "/api/blog-images/{post_id}/{filename}": {
       "get": {
         "description": "Serve a stored blog image (only ``<uuid4>.<jpg|png|webp>`` names).",
@@ -11374,7 +11333,7 @@
     },
     "/api/blog-posts/{post_id}/submit-review": {
       "post": {
-        "description": "Submit a blog post for review.\n\n``BLOG_ALLOW_SELF_REVIEW`` (default false, AE-0424) lets the author be the\nreviewer (and is the reviewer when none is given); otherwise a distinct\nreviewer is required.",
+        "description": "Submit a blog post for review.\n\nThe author may review their own post (AE-0441, single-author deployment):\nwith no ``reviewer_id`` the author is the reviewer.",
         "operationId": "submit_blog_post_for_review_api_blog_posts__post_id__submit_review_post",
         "parameters": [
           {

@@ -120,8 +120,8 @@ Notes:
   "non-published ⇒ public 404" (ADR-0013).
 - `under_review` / `approved` and scheduled publication **are part of the editor UX** (owner
   revision): `draft → under_review → approved → published`, or `approved → scheduled` with a future
-  `scheduled_publish_at`. The existing routes are kept; the owner can self-approve behind
-  `BLOG_ALLOW_SELF_REVIEW` in the single-author deployment.
+  `scheduled_publish_at`. The existing routes are kept; the owner may review and approve their own
+  post (AE-0441: the self-review rule and its `BLOG_ALLOW_SELF_REVIEW` switch are removed).
 - Generation is **per-post metadata** (`ai_generation_metadata.generation.status`), orthogonal to
   the editorial status: a post can be `draft` + `generation_in_progress`.
 - `generation_failed` never loses the row: the draft exists with whatever sections were written.
@@ -261,8 +261,7 @@ sequenceDiagram
 
 Publishing validates the document shape (at least one non-empty section) and requires `status =
 approved`; a `draft` cannot jump straight to `published`. "Publish now" on a draft first runs
-submit-review + self-approve when `BLOG_ALLOW_SELF_REVIEW` is enabled; when it is disabled the
-button is hidden and the editor links to the review flow. A missing cover is allowed: the public
+submit-review (the author as reviewer) + self-approve (AE-0441). A missing cover is allowed: the public
 renderer uses a neutral default and cards/OG use a deterministic fallback (never a carousel slide).
 
 ### 3.5 Review + scheduled publish
@@ -307,9 +306,9 @@ sequenceDiagram
 The routes already exist (`api/routes/blog_post_workflow.py`); the plan adds editor controls and
 feature tests. Any content edit while `under_review`/`approved`/scheduled resets `status = draft`
 and clears `scheduled_publish_at`, so a review never approves unseen content and the sweep skips
-edited posts. `BLOG_ALLOW_SELF_REVIEW` (default **false**) bypasses only the submit-time
-`ERR_SELF_REVIEW` check and stores the author as `reviewer_id`, so the existing
-`assert_blog_post_reviewer_or_admin` accepts the subsequent approve/reject.
+edited posts. The author may be the reviewer (AE-0441): with no `reviewer_id` the author is
+stored as `reviewer_id`, so the existing `assert_blog_post_reviewer_or_admin` accepts the
+subsequent approve/reject; a named reviewer must still be a valid editor.
 `unpublish` remains the way back to `draft` (uniform public 404, ADR-0013).
 
 ### 3.6 Switch PT/EN
@@ -609,8 +608,8 @@ algorithm into `content.translations.en = {"schema":"blog.v2","cover":null,"sect
     slots and stored images `<= N+1`.
   - `ai-suggest` — fenced envelope stripped; nested envelope unwrapped; non-JSON degrades to raw.
   - version snapshot appended on PUT in the same transaction.
-  - review/schedule guards — `submit-review` requires a reviewer (or `BLOG_ALLOW_SELF_REVIEW`,
-    which stores the author as reviewer), `approve`/`reject` only from `under_review`, `schedule`
+  - review/schedule guards — `submit-review` assigns the author when no reviewer is named
+    (the author may self-review, AE-0441), `approve`/`reject` only from `under_review`, `schedule`
     only from `approved` and never in the past, `publish` only from `approved`, cancel-schedule
     leaves `approved`, and an edit after approval resets to `draft` + clears the schedule.
 - **Contract** (`.feature` under `backend/tests/features/`)
@@ -671,7 +670,7 @@ Resolved by the owner revision (2026-10-18):
    `BLOG_IMAGE_MAX` is removed; `BLOG_IMAGE_COST_CAP` is the only spend ceiling.
 2. **Scheduled publish / review** — **in scope**: keep the existing `submit-review` → `approve` /
    `reject` and `schedule` routes, add editor controls, and cover the transitions with feature tests.
-   `BLOG_ALLOW_SELF_REVIEW` (default **false**) keeps the single-author flow usable when enabled.
+   The author may review their own post (AE-0441; `BLOG_ALLOW_SELF_REVIEW` was removed).
 3. **PT/EN language buttons** — **in scope**: they switch the whole document in the editor (PT edits
    `content.sections`, EN edits `content.translations.en.sections`, inactive language preserved) and
    the rendered document on the public page (`?lang=pt|en`, PT fallback).
