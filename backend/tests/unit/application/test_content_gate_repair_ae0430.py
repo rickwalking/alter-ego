@@ -64,11 +64,34 @@ def _items(payload: dict[str, object], key: str) -> list[dict[str, object]]:
 @pytest.mark.unit
 class TestProdFixture:
     def test_fixture_reproduces_the_prod_report(self) -> None:
-        """Background: the exported slides validate to the 12 prod blockers."""
+        """Background: the exported slides validate to the prod blockers.
+
+        AE-0436: the same exported state carries the label/emphasis leaks the
+        QA hand-noted (``**PT**`` on slide 1, ``**PT** ** **`` and
+        ``PT:\\nHeading:`` on slide 4, EN ``**…**`` on slide 3). The stricter
+        gate adds those 4 violations to the 12 stored ones.
+        """
         report = validate_localized_slides(prod_slides(), policy_version=POLICY_V4)
         stored = cast(dict[str, object], load_fixture()["content_gate_validation"])
+        stored_violations = cast(list[object], stored["violations"])
         assert report.blocking is True
-        assert len(report.violations) == len(cast(list[object], stored["violations"]))
+        stored_codes = [
+            cast(dict[str, object], v)["code"] for v in stored_violations
+        ]
+        codes = [violation.code for violation in report.violations]
+        assert sorted(stored_codes) == sorted(
+            [code for code in codes if code in set(stored_codes)]
+        )
+        new = {
+            (violation.locale, violation.field, violation.code)
+            for violation in report.violations
+            if violation.code not in set(stored_codes)
+        }
+        assert new == {
+            ("pt", "body", "drafting_scaffold_present"),
+            ("en", "body", "drafting_scaffold_present"),
+            ("en", "body", "emphasis_markup_locale_mismatch"),
+        }
 
 
 @pytest.mark.unit
@@ -83,7 +106,9 @@ class TestTargetedRepair:
         assert repairer.calls == [PROD_FAILING_IDS]
         assert outcome.report.blocking is False
         assert outcome.report.violations == []
-        assert outcome.changed_indices == frozenset({1, 3, 6})
+        # AE-0436: slide 4 joins the changed set (its PT/EN bodies carried the
+        # "**PT** ** **" / "PT:\nHeading:" leaks the stricter gate now flags).
+        assert outcome.changed_indices == frozenset({1, 3, 4, 6})
 
     async def test_over_limit_field_repaired_in_one_round(self) -> None:
         """Scenario: An over-limit field is repaired in one round."""

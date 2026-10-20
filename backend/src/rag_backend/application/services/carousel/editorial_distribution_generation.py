@@ -27,6 +27,10 @@ from rag_backend.application.services.carousel.editorial_translation_structure i
     structured_source,
     structured_translation,
 )
+from rag_backend.application.services.carousel.owner_autofix_paths import map_texts
+from rag_backend.application.services.carousel.owner_autofix_text import (
+    normalize_emphasis,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
@@ -40,6 +44,7 @@ from rag_backend.application.services.carousel_template.prompts import (
     build_slide_translation_prompt,
 )
 from rag_backend.domain.constants.ai_agents import PROMPT_EDITORIAL_CAPTION_FALLBACK
+from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
@@ -116,7 +121,12 @@ def _build_translation_payload(
             item[LONG_FORM_NOTES_KEY] = notes
         # AE-0430: the TL;DR and item texts travel too, so EN keeps PT's shape.
         item.update(structured_source(slide))
-        payload.append(item)
+        # AE-0436: PT emphasis travels as <strong>…</strong>, the EN convention,
+        # so the "keep every <strong> tag" instruction produces EN emphasis
+        # instead of the PT ** the model used to echo (F-09).
+        payload.append(
+            map_texts(item, lambda text: normalize_emphasis(LANGUAGE_EN, text))
+        )
     return payload
 
 

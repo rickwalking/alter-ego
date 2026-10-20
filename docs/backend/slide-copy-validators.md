@@ -24,6 +24,7 @@ live in `domain/constants/carousel_presentation.py`.
 | `wrong_language` | PT copy that reads as English, EN copy as Portuguese (4+ words, 2+ other-language stopwords outnumbering its own; EN copy also when the autofix's `looks_portuguese` matches: 1 PT stopword + an accented letter in 3+ words, AE-0413). Contracts without this rule (v3) report Portuguese EN copy as `translation_not_english` | model fix |
 | `repeated_text` | the same sentence twice in one slide, a doubled word ("o o", "the the"; "had had" is fine) | doubled word collapsed |
 | `structured_item_split` | an item title ending on "ou", "e", "de", "com", "or", "and", "of", "with" | model fix; the outline fill no longer cuts a key point there |
+| `emphasis_markup_locale_mismatch` (AE-0436) | PT copy with `<strong>`, EN copy with `**` (the AE-0403/AE-0414 convention is PT `**…**`, EN `<strong>…</strong>`) | balanced pairs rewritten into the locale's convention at write time (`normalize_emphasis`) |
 
 Legit copy is never flagged: `**bold**` (PT) and balanced `<strong>` (EN) emphasis, proper
 nouns, numbers, first-person Portuguese. The existing `heading_repeated_in_body` also blocks a
@@ -123,3 +124,36 @@ Related fixes from the same incident:
   and an EN payload built from the draft takes the EN section heading.
 - **Manual editor.** The editable EN column offers every structured field PT has (empty),
   so a remaining violation is always fixable by hand.
+
+## Label scaffolding and per-locale emphasis (AE-0436)
+
+Prod carousels `7acaf967` and `5344b6c6` shipped locale markers and field labels as
+visible copy: `**PT-BR**` at the start of a PT body (F-03), `**CTA creator: radar IA.**`
+at the end of an EN body (F-04), `**PT** ** **` / `PT: Heading:` garbage in existing
+drafts, and EN columns keeping PT-style `**…**` emphasis (F-09). The AE-0430 parser only
+recognised `**PT**`/`**EN**` at line starts, so every other variant passed the gate.
+
+One shared, data-driven detector now drives both sides:
+
+- `application/services/carousel/label_scaffolding.py` — the single definition of
+  **locale markers** (PT, PT-BR, pt_BR, EN, EN-US — bold or plain, with or without a
+  colon) and **field labels** (Heading, Body, Title, Subtitle, CTA, CTA creator, Summary,
+  TL;DR, Key points, …), detected **wherever they sit in the text**.
+- The **drafter parser** (`slide_scaffold_recovery`) splits/strips every variant at the
+  source: `**PT-BR**` sections, `PT: Heading:` chains, `**PT** ** **` lines.
+- The **content gate** (`contains_drafting_scaffold` → blocking
+  `drafting_scaffold_present`, v4/pov) flags any surviving marker or label on the exact
+  field (heading, body, item title/body), and the deterministic repair
+  (`deterministic_repair_slide_payload`) strips it — item texts included. The AE-0430
+  per-field LLM repair covers it too (it is code-agnostic).
+- The **prompt source** of the F-04 leak is fixed: `render_presentation_policy_context`
+  renders human budget labels ("owner name on the CTA card"), never raw snake_case schema
+  field names, and says the names are schema identifiers, never visible copy.
+
+Emphasis follows the per-locale convention as a gate rule, not just an editor hint:
+`emphasis_markup_locale_mismatch` (blocker, v4/pov) flags PT `<strong>` and EN `**`, and
+`normalize_emphasis` rewrites balanced pairs deterministically at write time (review
+repair and the autofix plan). The translation request sends PT emphasis already converted
+to `<strong>`, and the v9 translation prompt (`carousel/v9/slide_translations.yaml`,
+v8 kept) states the EN rule: `<strong>` only, never `**`, and never echo locale markers
+or field labels.

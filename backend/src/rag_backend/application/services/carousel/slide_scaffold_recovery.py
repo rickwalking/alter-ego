@@ -12,6 +12,12 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 
+from rag_backend.application.services.carousel.label_scaffolding import (
+    LOCALE_MARKERS,
+)
+from rag_backend.application.services.carousel.label_scaffolding import (
+    strip_scaffold_labels as _shared_strip_scaffold_labels,
+)
 from rag_backend.application.services.carousel.slide_parse_failures import (
     CANONICAL_KEY_CONTENT_KIND,
     CANONICAL_KEY_FEATURES,
@@ -46,28 +52,21 @@ _LOCALE_PAYLOAD_KEYS: dict[str, str] = {
     LANGUAGE_PT: STATE_FIELD_PRESENTATION_PT,
     LANGUAGE_EN: STATE_FIELD_PRESENTATION_EN,
 }
-_LOCALE_SECTION_TITLES: dict[str, str] = {
-    LANGUAGE_PT: "PT",
-    LANGUAGE_EN: "EN",
-}
 
-# AE-0430: a locale section is "## PT" or a bold-only "**PT**" / "**EN:**" line
-# (prod 5344b6c6 leaked "**PT**" into the visible PT body).
+# AE-0436: a locale section header is "## PT", a bold-only "**PT**" /
+# "**EN:**" line (AE-0430), or any locale-marker variant the model writes
+# ("**PT-BR**", "PT-BR:", ...). One shared alternation, longest-first.
+_LOCALE_MARKER_ALT = "|".join(re.escape(marker) for marker in LOCALE_MARKERS)
 _SECTION_PATTERN = re.compile(
-    r"^(?:##\s+(?P<title>.+?)|\*\*(?P<bold>PT|EN):?\*\*:?)\s*$",
+    rf"^(?:##\s+(?P<title>.+?)|\*\*(?P<bold>{_LOCALE_MARKER_ALT}):?\*\*:?)"
+    r"(?:\s*\*\*\s*\*\*)?\s*$",
     re.MULTILINE | re.IGNORECASE,
 )
-_SECTION_LINE = re.compile(r"^\s*(?:##\s+.*|\*\*(?:PT|EN):?\*\*:?\s*)$", re.IGNORECASE)
 _LABEL_LINE = re.compile(r"^\*\*(?P<label>[A-Za-z ]+):\*\*\s*(?P<value>.*)$")
-_INLINE_LABEL_PREFIX = re.compile(r"^\s*\*\*[A-Za-z ]+:\*\*\s*")
-_PLAIN_LABEL_PREFIX = re.compile(
-    r"^\s*(?:SLIDE\s*\d+|TITLE|BODY|KEY\s*POINTS)\s*:\s*",
-    re.IGNORECASE,
-)
 
 
 def split_scaffold_sections(raw: str) -> dict[str, str]:
-    """Split ``## <title>`` markdown sections into an upper-title → body map."""
+    """Split ``## <title>`` and bold locale-marker sections into a title→body map."""
     sections: dict[str, str] = {}
     matches = list(_SECTION_PATTERN.finditer(raw))
     for position, match in enumerate(matches):
@@ -92,10 +91,26 @@ def _labeled_values(section: str) -> dict[str, str]:
     return values
 
 
+# AE-0436: a PT locale reads its copy from the "PT" section, or the "PT-BR" /
+# "PT_BR" variant section when that is the only one the scaffold carries.
+_LOCALE_SECTION_TITLE_ALIASES: dict[str, tuple[str, ...]] = {
+    LANGUAGE_PT: ("PT", "PT-BR", "PT_BR"),
+    LANGUAGE_EN: ("EN", "EN-US", "EN_US"),
+}
+
+
+def _locale_section(sections: dict[str, str], locale: str) -> str:
+    """The locale's section body, from the canonical title or a variant alias."""
+    for title in _LOCALE_SECTION_TITLE_ALIASES.get(locale, ()):
+        section = sections.get(title)
+        if section:
+            return section
+    return ""
+
+
 def extract_scaffold_locale_copy(raw: str, locale: str) -> dict[str, str] | None:
     """Extract heading/body copy for one locale from a ``## PT / ## EN`` scaffold."""
-    section_title = _LOCALE_SECTION_TITLES.get(locale, "")
-    section = split_scaffold_sections(raw).get(section_title, "")
+    section = _locale_section(split_scaffold_sections(raw), locale)
     if not section:
         return None
     values = _labeled_values(section)
@@ -107,16 +122,8 @@ def extract_scaffold_locale_copy(raw: str, locale: str) -> dict[str, str] | None
 
 
 def strip_scaffold_labels(text: str) -> str:
-    """Drop section-header lines and strip scaffold label prefixes from copy."""
-    cleaned: list[str] = []
-    for line in text.splitlines():
-        if _SECTION_LINE.match(line):
-            continue
-        stripped = _INLINE_LABEL_PREFIX.sub("", line)
-        stripped = _PLAIN_LABEL_PREFIX.sub("", stripped)
-        if stripped.strip():
-            cleaned.append(stripped.strip())
-    return "\n".join(cleaned)
+    """Drop locale-marker lines and strip scaffold label prefixes from copy (AE-0436)."""
+    return _shared_strip_scaffold_labels(text)
 
 
 def recover_scaffold_body(text: str, locale: str) -> str:

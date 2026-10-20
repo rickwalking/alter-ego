@@ -180,6 +180,18 @@ def emphasis_unbalanced_detail(text: str) -> str:
     return ""
 
 
+def emphasis_locale_detail(text: str, *, portuguese: bool) -> str:
+    """Emphasis written with the OTHER locale's markup (AE-0436, AE-0403).
+
+    The convention: PT copy marks emphasis ``**…**``, EN copy
+    ``<strong>…</strong>``. PT copy carrying a ``<strong>`` tag, or EN copy
+    carrying ``**``, is a locale mismatch the write-time normalizer fixes.
+    """
+    if portuguese:
+        return "uses <strong> emphasis" if EMPHASIS_TAG_PATTERN.search(text) else ""
+    return "uses ** emphasis" if BOLD_MARK in text else ""
+
+
 def assistant_chatter_detail(text: str) -> str:
     """A chat preamble or a meta note about the task."""
     match = _CHATTER_START_PATTERN.search(text) or _CHATTER_ANYWHERE_PATTERN.search(
@@ -305,6 +317,7 @@ __all__ = [
     "MOJIBAKE_PATTERN",
     "assistant_chatter_detail",
     "doubled_word_detail",
+    "emphasis_locale_detail",
     "emphasis_unbalanced_detail",
     "encoding_detail",
     "ends_on_connector",

@@ -63,6 +63,29 @@ POLICY_CONTEXT_SECTION_RULES = "Visible text rules"
 POLICY_CONTEXT_SECTION_BUDGETS = "Copy budgets"
 POLICY_CONTEXT_SECTION_GEOMETRY = "Geometry ratios"
 POLICY_CONTEXT_SECTION_ICONS = "Lucide icon allowlist"
+# AE-0436: the raw schema field names used to leak into visible copy — the
+# model echoed ``cta_creator_name`` as "**CTA creator: radar IA.**" (F-04).
+POLICY_CONTEXT_BUDGET_SCHEMA_NOTE = (
+    "schema field names, never visible copy: do not write these names, or any "
+    "locale marker or field label, into the slide text"
+)
+# AE-0436: human labels for the budget field names rendered into prompts.
+POLICY_CONTEXT_BUDGET_LABELS: dict[str, str] = {
+    "intro_heading": "intro heading",
+    "intro_subtitle": "intro subtitle",
+    "summary_heading": "summary heading",
+    "summary_point_title": "summary point title",
+    "summary_point_body": "summary point body",
+    "content_heading": "content heading",
+    "content_body": "content body",
+    "feature_title": "feature title",
+    "feature_body": "feature body",
+    "closing_action_title": "closing action title",
+    "closing_action_body": "closing action body",
+    "cta_creator_name": "owner name on the CTA card",
+    "cta_handle": "owner handle on the CTA card",
+    "cta_website": "owner website on the CTA card",
+}
 
 
 def load_presentation_policy(version: str) -> CarouselPresentationPolicy:
@@ -136,7 +159,7 @@ def render_presentation_policy_context(policy: CarouselPresentationPolicy) -> st
         f"CTA avatar required: {policy.cta_avatar_required}",
         POLICY_CONTEXT_SECTION_RULES + ":",
         *rule_lines,
-        POLICY_CONTEXT_SECTION_BUDGETS + ":",
+        f"{POLICY_CONTEXT_SECTION_BUDGETS} ({POLICY_CONTEXT_BUDGET_SCHEMA_NOTE}):",
         *budget_lines,
         POLICY_CONTEXT_SECTION_GEOMETRY + ":",
         f"- viewport_standard: {policy.geometry.viewport_standard_width}x"
@@ -151,10 +174,11 @@ def render_presentation_policy_context(policy: CarouselPresentationPolicy) -> st
 
 
 def _format_budget(field_name: str, budget: TextBudget) -> str:
+    label = POLICY_CONTEXT_BUDGET_LABELS.get(field_name, field_name)
     if budget.max_lines is None:
-        return f"- {field_name}: max {budget.max_characters} characters"
+        return f"- {label}: max {budget.max_characters} characters"
     return (
-        f"- {field_name}: max {budget.max_characters} characters, "
+        f"- {label}: max {budget.max_characters} characters, "
         f"max {budget.max_lines} rendered lines"
     )
 

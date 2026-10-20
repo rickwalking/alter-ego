@@ -6,6 +6,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel.label_scaffolding import (
+    has_scaffold_labels,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     TextBudget,
@@ -29,10 +32,6 @@ _EN_DASH = "\u2013"
 _EMOJI_PATTERN = re.compile(
     r"[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F600-\U0001F64F]",
     flags=re.UNICODE,
-)
-_DRAFTING_SCAFFOLD_PATTERN = re.compile(
-    r"\b(?:SLIDE\s*\d+|TITLE|BODY|KEY\s*POINTS)\s*:",
-    flags=re.IGNORECASE,
 )
 
 # Slide type identifiers
@@ -63,8 +62,17 @@ def contains_forbidden_dash(text: str) -> bool:
 
 
 def contains_drafting_scaffold(text: str) -> bool:
-    """Return True when visible copy includes drafting scaffold labels."""
-    return bool(_DRAFTING_SCAFFOLD_PATTERN.search(text))
+    """Return True when visible copy includes drafting scaffold labels.
+
+    AE-0436: the shared detector covers locale markers in every variant
+    (``**PT-BR**``, ``PT:``, ``**EN:**``, a bare ``EN`` line) and field labels
+    (``Heading:``, ``Body:``, ``CTA creator:``, ``Summary:``, ``TL;DR:``, …).
+    Positional rules are shared with the stripper, so every flagged text is
+    deterministically repairable: bold labels count anywhere, plain labels and
+    locale markers only at a line start or as a whole-line marker (a
+    mid-sentence plain "body:" is real copy, not scaffolding).
+    """
+    return has_scaffold_labels(text)
 
 
 def first_cased_alpha(text: str) -> str | None:
@@ -122,7 +130,7 @@ def validate_visible_field(
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_DRAFTING_SCAFFOLD_PRESENT,
-                message="Visible text must not contain drafting scaffold labels",
+                message="Visible copy must not contain locale markers or drafting field labels",
                 slide_index=ctx.slide_index,
                 locale=ctx.locale,
                 field=ctx.field,
