@@ -66,6 +66,7 @@ from tests.blog_generation_fakes import (
     FakeScorer,
     FakeWriter,
     article,
+    english_gate,
     image_batch,
 )
 from tests.blog_v2_support import v2_content
@@ -99,15 +100,19 @@ class _World:
 def _build_generation(images_dir: Path, user_id: str) -> BlogGenerationService:
     from rag_backend.infrastructure.database.config import get_session_maker
 
+    gate = BlogQualityGate(QualityGateDeps(FakeWriter(), FakeScorer([80.0])))
     return BlogGenerationService(
         BlogGenerationDeps(
             writer=FakeWriter(draft_article=article(3)),
-            gate=BlogQualityGate(QualityGateDeps(FakeWriter(), FakeScorer([80.0]))),
+            gate=gate,
+            english=english_gate(gate),
             images=image_batch(images_dir, FakeImageGenerator()),
             store=SlotWriteGenerationStore(
                 get_session_maker(), RunOwner(user_id=user_id, image_cap=30)
             ),
-            timings=GenerationTimings(timeout_seconds=10, heartbeat_seconds=5),
+            timings=GenerationTimings(
+                text_timeout_seconds=10, image_wave_seconds=10, heartbeat_seconds=5
+            ),
         )
     )
 

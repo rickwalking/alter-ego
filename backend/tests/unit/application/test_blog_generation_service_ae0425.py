@@ -63,6 +63,8 @@ from tests.blog_generation_fakes import (
     FakeWriter,
     article,
     brief,
+    english_gate,
+    english_sections,
     image_batch,
     sections,
     writer_failure,
@@ -104,9 +106,14 @@ def _service(
         BlogGenerationDeps(
             writer=writer,
             gate=gate,
+            english=english_gate(gate),
             images=images,
             store=store,
-            timings=GenerationTimings(timeout_seconds=timeout, heartbeat_seconds=0.01),
+            timings=GenerationTimings(
+                text_timeout_seconds=timeout,
+                image_wave_seconds=timeout,
+                heartbeat_seconds=0.01,
+            ),
         )
     )
 
@@ -170,7 +177,7 @@ async def test_a_failed_image_makes_the_run_partial(tmp_path: Path) -> None:
     # Scenario: A failed image leaves the slot empty and does not fail the draft
     pt = list(sections(4))
     pt[2] = DraftSection(heading=FAIL_IMAGE_MARKER, body_md=pt[2].body_md)
-    draft = DraftArticle("T", tuple(pt), "T", sections(4, "Section"))
+    draft = DraftArticle("T", tuple(pt), "T", english_sections(4))
     store = FakeStore()
     outcome = await _service(tmp_path, FakeWriter(draft_article=draft), store).run(
         _job(4)
@@ -199,7 +206,7 @@ async def test_an_llm_failure_fails_without_storing_content(tmp_path: Path) -> N
 
 async def test_a_count_mismatch_is_never_stored(tmp_path: Path) -> None:
     # Scenario: A writer section-count mismatch is not silently stored
-    seven = DraftArticle("T", sections(7), "T", sections(7, "Section"))
+    seven = DraftArticle("T", sections(7), "T", english_sections(7))
     store = FakeStore()
     outcome = await _service(tmp_path, FakeWriter(draft_article=seven), store).run(
         _job(9)
@@ -413,7 +420,7 @@ async def _partial_store(tmp_path: Path) -> FakeStore:
     """A store holding a finished article whose section 3 image failed."""
     pt = list(sections(4))
     pt[2] = DraftSection(heading=FAIL_IMAGE_MARKER, body_md=pt[2].body_md)
-    draft = DraftArticle("T", tuple(pt), "T", sections(4, "Section"))
+    draft = DraftArticle("T", tuple(pt), "T", english_sections(4))
     store = FakeStore()
     await _service(tmp_path, FakeWriter(draft_article=draft), store).run(_job(4))
     missing = parse_blog_content(store.content).sections[2]

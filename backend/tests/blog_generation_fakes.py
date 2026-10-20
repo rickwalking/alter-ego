@@ -15,12 +15,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rag_backend.application.services.asset_cdn_service import AssetCdnService
+from rag_backend.application.services.blog.blog_english_gate import (
+    EnglishGateDeps,
+    EnglishLanguageGate,
+)
 from rag_backend.application.services.blog.blog_image_batch import (
     BlogImageBatchDeps,
     BlogImageBatchService,
 )
 from rag_backend.application.services.blog.blog_image_service import BlogImageService
 from rag_backend.application.services.blog.blog_image_store import BlogImageStore
+from rag_backend.application.services.blog.blog_quality_gate import BlogQualityGate
+from rag_backend.domain.models.blog_document import BlogLanguageDocument
 from rag_backend.domain.models.blog_generation import (
     DocumentApply,
     DraftArticle,
@@ -53,13 +59,29 @@ def sections(count: int, prefix: str = "Seção") -> tuple[DraftSection, ...]:
     )
 
 
+def english_sections(count: int) -> tuple[DraftSection, ...]:
+    """``count`` distinct ENGLISH sections (AE-0435: the EN gate checks the
+    language); the first is the lede (no heading)."""
+    return tuple(
+        DraftSection(
+            heading=None if index == 0 else f"Section {index + 1}",
+            body_md=(
+                f"Paragraph number {index + 1} has an idea of its own about the "
+                "subject, and it is told in the first person without repeating "
+                "anything that the other sections say."
+            ),
+        )
+        for index in range(count)
+    )
+
+
 def article(count: int = 4) -> DraftArticle:
     """A clean PT + EN article of ``count`` sections."""
     return DraftArticle(
         title="Título do artigo",
         sections=sections(count),
         en_title="Article title",
-        en_sections=sections(count, "Section"),
+        en_sections=english_sections(count),
     )
 
 
@@ -105,6 +127,51 @@ class FakeWriter:
     async def judge(self, request: JudgeRequest) -> tuple[str, ...]:
         self.judgements.append(request)
         return self.notes
+
+
+@dataclass
+class FakeTranslator:
+    """``BlogDocumentTranslator``: answers each call with the next queued
+    outcome (``"en"`` = English sections, ``"pt"`` = the source as is, an
+    exception = raised); the last outcome repeats."""
+
+    outcomes: list[object] = field(default_factory=lambda: ["en"])
+    calls: list[BlogLanguageDocument] = field(default_factory=list)
+
+    async def translate(
+        self, post_id: str, source: BlogLanguageDocument
+    ) -> BlogLanguageDocument:
+        self.calls.append(source)
+        outcome = self.outcomes.pop(0) if len(self.outcomes) > 1 else self.outcomes[0]
+        if isinstance(outcome, Exception):
+            raise outcome
+        if outcome == "pt":
+            return source
+        english = english_sections(len(source.sections))
+        return source.model_copy(
+            update={
+                "sections": [
+                    section.model_copy(
+                        update={
+                            "heading": translated.heading if section.heading else None,
+                            "body_md": translated.body_md,
+                        }
+                    )
+                    for section, translated in zip(
+                        source.sections, english, strict=True
+                    )
+                ]
+            }
+        )
+
+
+def english_gate(
+    gate: BlogQualityGate, translator: FakeTranslator | None = None
+) -> EnglishLanguageGate:
+    """The AE-0435 EN language gate over ``gate`` and a fake translator."""
+    return EnglishLanguageGate(
+        EnglishGateDeps(translator=translator or FakeTranslator(), gate=gate)
+    )
 
 
 @dataclass

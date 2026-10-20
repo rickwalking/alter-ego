@@ -338,7 +338,9 @@ class TestDesignResponse:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_design_images_have_no_blog_image_map(self, pres_env: PresEnv) -> None:
+    async def test_design_images_have_no_blog_image_map(
+        self, pres_env: PresEnv
+    ) -> None:
         """Scenario: the design payload has no blog image map (AE-0428)."""
         project_id = await pres_env.seed_project(is_public=True)
         async with pres_env.client_for(pres_env.owner) as client:
