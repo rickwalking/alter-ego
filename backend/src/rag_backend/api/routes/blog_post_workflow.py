@@ -133,6 +133,16 @@ async def _emit_status_change(
     )
 
 
+def resolve_blog_reviewer(
+    requested: str | None, author_id: str | None, current_user_id: str
+) -> str:
+    """The reviewer to assign: the requested one, else the post's author.
+
+    The author may review their own post (AE-0441, single-author deployment).
+    """
+    return requested or author_id or current_user_id
+
+
 @router.post(
     "/blog-posts/{post_id}/submit-review",
     response_model=BlogPostResponse,
@@ -160,7 +170,7 @@ async def submit_blog_post_for_review(
     assert_ready_to_publish(post)
     old_status = post.status
 
-    reviewer_id = reviewer_id or post.author_id or current_user.id
+    reviewer_id = resolve_blog_reviewer(reviewer_id, post.author_id, current_user.id)
     await validate_reviewer_user(db, reviewer_id)
 
     post.status = BlogPostStatus.UNDER_REVIEW.value
