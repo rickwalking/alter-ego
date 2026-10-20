@@ -191,7 +191,8 @@ class TestAppendVersion:
                 post_id="p1",
                 title=f"T{index}",
                 excerpt=None,
-                content={},
+                # A non-empty document (AE-0438: empty snapshots are skipped).
+                content=v2_content(f"Corpo {index}"),
                 author_id=None,
                 change_summary="Before save",
             )

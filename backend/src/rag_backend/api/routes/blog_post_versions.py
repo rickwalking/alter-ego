@@ -20,13 +20,19 @@ from rag_backend.api.schemas.blog_post import (
     BlogPostResponse,
     BlogPostVersionResponse,
 )
+from rag_backend.application.services.blog.blog_version_history import (
+    is_empty_document,
+)
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
     _AuditEntry,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_BLOG_VERSION_NOT_FOUND
-from rag_backend.domain.constants.blog_editor import VERSION_SUMMARY_RESTORE
+from rag_backend.domain.constants.blog_editor import (
+    ERR_BLOG_VERSION_EMPTY,
+    VERSION_SUMMARY_RESTORE,
+)
 from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.events.factory import get_event_publisher
@@ -85,6 +91,14 @@ async def restore_blog_post_version(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_BLOG_VERSION_NOT_FOUND.format(version_number=version_number),
+        )
+
+    # AE-0438 (F-05): a pre-fix empty snapshot (the generation bootstrap) cannot
+    # be restored — it would 422 on the section check. Name it for the editor.
+    if is_empty_document(version_data.get("snapshot")):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ERR_BLOG_VERSION_EMPTY,
         )
 
     # A restore is a content write: strict blog.v2, cover projection synced,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -33,6 +34,7 @@ from rag_backend.domain.constants.blog_editor import (
     ERR_BLOG_REWRITE_EMPTY,
     ERR_BLOG_REWRITE_TOO_LONG,
     PHASE_BLOG_SECTION_REWRITE,
+    REWRITE_NO_HEADING_INSTRUCTION,
 )
 from rag_backend.domain.constants.input_sanitizer import MAX_LLM_INPUT_LENGTH
 from rag_backend.domain.models.persona import PersonaProfile
@@ -197,6 +199,11 @@ class BlogPostAIService:
         fence is removed and the length is checked against the section limit;
         rendering relies on the markdown allow-list. A body longer than the LLM
         input limit is refused instead of being silently truncated.
+
+        AE-0438 (F-08): the model is told not to repeat the section heading and
+        a leading heading echo (bold, ``#`` or plain line equal to the heading)
+        is stripped from the result, so the heading is never duplicated into
+        the stored body.
         """
         if len(input_data.body_md) > MAX_LLM_INPUT_LENGTH:
             raise ValueError(ERR_BLOG_REWRITE_TOO_LONG)
@@ -205,11 +212,10 @@ class BlogPostAIService:
             raise ValueError(ERR_BLOG_PERSONA_REQUIRED)
         post_id = (input_data.trace or BlogAiTraceContext()).post_id or "unknown"
         agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
+        context = _rewrite_context(input_data.heading)
         with blog_ai_propagate(post_id, PHASE_BLOG_SECTION_REWRITE):
-            rewritten = await agent.enforce(
-                input_data.body_md, context=input_data.heading or ""
-            )
-        return _checked_rewrite(rewritten)
+            rewritten = await agent.enforce(input_data.body_md, context=context)
+        return _checked_rewrite(strip_heading_echo(rewritten, input_data.heading))
 
     async def _resolve_persona(
         self, input_data: _RewriteInput
@@ -245,6 +251,53 @@ def _checked_rewrite(rewritten: object) -> str:
     if len(text) > BLOG_SECTION_MAX_CHARS:
         raise ValueError(ERR_BLOG_REWRITE_TOO_LONG)
     return text
+
+
+def _rewrite_context(heading: str | None) -> str:
+    """The persona context: the section heading plus the no-heading instruction."""
+    if not heading:
+        return REWRITE_NO_HEADING_INSTRUCTION
+    return f"{heading}\n\n{REWRITE_NO_HEADING_INSTRUCTION}"
+
+
+_HEADING_BOLD_RE = re.compile(r"^\*\*(.+?)\*\*$", flags=re.DOTALL)
+_HEADING_EMPHASIS_RE = re.compile(r"^[_\*](.+?)[_\*]$", flags=re.DOTALL)
+
+
+def _normalize_heading(text: str) -> str:
+    """A heading with markers and case differences removed (F-08 echo match)."""
+    stripped = text.strip().lstrip("#").strip()
+    for pattern in (_HEADING_BOLD_RE, _HEADING_EMPHASIS_RE):
+        match = pattern.match(stripped)
+        if match is not None:
+            stripped = match.group(1).strip()
+            break
+    return re.sub(r"\s+", " ", stripped).casefold()
+
+
+def strip_heading_echo(body: object, heading: str | None) -> str:
+    """Remove a leading echo of the section heading from a rewrite result.
+
+    The model sometimes repeats the heading (``**H**``, ``# H`` or a plain line)
+    as the first line of the rewritten body (QA F-08). Leading blank lines are
+    skipped, then a first line that normalizes to the heading is dropped. A body
+    that starts differently is returned untouched. A non-string result degrades
+    to the empty string like the length check does.
+    """
+    text = body if isinstance(body, str) else ""
+    if not heading:
+        return text
+    expected = _normalize_heading(heading)
+    if not expected:
+        return text
+    lines = text.splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if lines and _normalize_heading(lines[0]) == expected:
+        lines.pop(0)
+        while lines and not lines[0].strip():
+            lines.pop(0)
+    return "\n".join(lines)
 
 
 __all__ = ["BlogPostAIService"]
