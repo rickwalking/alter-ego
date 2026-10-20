@@ -42,7 +42,6 @@ class MockEventSource {
 }
 
 const PAGE_PATH = "/dashboard/create/project-1";
-const originalEventSource = globalThis.EventSource;
 const originalLocation = globalThis.location;
 
 const runningState: EditorialWorkflowState = {
@@ -177,13 +176,11 @@ beforeEach(() => {
   lastProbeReply = { status: 200, body: probedState };
   fetchMock.mockClear();
   vi.stubGlobal("fetch", fetchMock);
-  // @ts-expect-error — swap in the mock for the duration of each test.
-  globalThis.EventSource = MockEventSource;
+  vi.stubGlobal("EventSource", MockEventSource);
   setVisibility("visible");
 });
 
 afterEach(() => {
-  globalThis.EventSource = originalEventSource;
   Object.defineProperty(globalThis, "location", {
     value: originalLocation,
     writable: true,
