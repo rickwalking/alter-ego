@@ -457,8 +457,12 @@ class TestEditorialWorkflowReviseAndFailure:
         assert phase_feedback.get(PHASE_FINAL_REVIEW) in (None, [])
         revision_counts = payload.get("revision_count", {})
         assert int(revision_counts.get(PHASE_CONTENT, 0)) >= 1
-        # Images survive a content-only send-back.
-        assert payload.get("image_assets") == images
+        # Images survive a content-only send-back (AE-0439: exposed as owner
+        # preview URLs, never as container paths).
+        assert payload.get("image_assets") == [
+            f"/api/carousels/{project_id}/preview/images/slide_{n}.jpg"
+            for n in range(1, 7)
+        ]
 
 
 class TestAssignedReviewerPreviewAccess:

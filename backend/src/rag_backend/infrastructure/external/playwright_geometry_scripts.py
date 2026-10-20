@@ -322,21 +322,31 @@ async (params) => {
     }
 
     const perImageTimeout = Math.min(timeoutPer, remaining);
+    let timedOut = false;
     try {
       await Promise.race([
         img.decode(),
         new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('timeout')), perImageTimeout);
+          setTimeout(() => {
+            timedOut = true;
+            reject(new Error('timeout'));
+          }, perImageTimeout);
         }),
       ]);
     } catch (_error) {
+      // AE-0439 (#155a): a rejection is not always a timeout. A file the
+      // browser never loaded (broken/missing src) is a load failure; only
+      // the race timer means the decode itself stalled.
+      const loadFailed = !timedOut && img.complete && img.naturalWidth === 0;
       reports.push({
         src: img.currentSrc || img.src,
         slide_number: null,
         decoded: false,
         natural_width: img.naturalWidth || 0,
         natural_height: img.naturalHeight || 0,
-        error_code: 'image_decode_timeout',
+        error_code: timedOut
+          ? 'image_decode_timeout'
+          : (loadFailed ? 'image_load_failed' : 'image_decode_failed'),
       });
       continue;
     }

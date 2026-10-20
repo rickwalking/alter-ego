@@ -25,6 +25,9 @@ from rag_backend.api.schemas.carousel_workflow import (
     SlideValidationReportResponse,
     SlideValidationViolationResponse,
 )
+from rag_backend.application.services.carousel.design_token_utils import (
+    image_asset_preview_urls,
+)
 from rag_backend.application.services.carousel.editorial_workflow_sse_build import (
     resolve_workflow_sse_error_message,
 )
@@ -250,6 +253,12 @@ def _error_message_field(state: dict[str, object]) -> str | None:
     return resolve_workflow_sse_error_message(cast(CarouselWorkflowState, state))
 
 
+def _image_assets_field(state: dict[str, object]) -> list[str]:
+    """Container image paths as owner preview URLs (AE-0439, QA F-13)."""
+    project_id = str(state.get(STATE_FIELD_PROJECT_ID) or "")
+    return image_asset_preview_urls(project_id, state.get(STATE_FIELD_IMAGE_ASSETS))
+
+
 # ── Field mapping ─────────────────────────────────────────────────────────────
 
 _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
@@ -259,7 +268,7 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     (STATE_FIELD_RESEARCH_FINDINGS, _list_field(STATE_FIELD_RESEARCH_FINDINGS)),
     (STATE_FIELD_OUTLINE, _list_field(STATE_FIELD_OUTLINE)),
     (STATE_FIELD_SLIDE_DRAFTS, _list_field(STATE_FIELD_SLIDE_DRAFTS)),
-    (STATE_FIELD_IMAGE_ASSETS, _list_field(STATE_FIELD_IMAGE_ASSETS)),
+    (STATE_FIELD_IMAGE_ASSETS, _image_assets_field),
     (STATE_FIELD_DESIGN_APPLIED, _bool_field(STATE_FIELD_DESIGN_APPLIED)),
     (STATE_FIELD_WORKFLOW_STATUS, _string_field(STATE_FIELD_WORKFLOW_STATUS)),
     (STATE_FIELD_PERSONA_SCORES, _dict_field(STATE_FIELD_PERSONA_SCORES)),

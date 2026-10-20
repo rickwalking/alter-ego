@@ -365,6 +365,12 @@ sequenceDiagram
   images are `<= N+1` because a failed slot stays `null`. Standalone generation has no project and
   uses the content-mode default. There is **no `BLOG_IMAGE_MAX`** setting; `BLOG_IMAGE_COST_CAP`
   remains the safety ceiling.
+- **The CTA slide counts as a section (AE-0439, QA F-07).** The role contract's `slide_count`
+  includes the CTA slide (Radar IA v4 7/8, POV 8-10), so "one section per slide" makes the CTA a
+  section like any other. A Radar IA create without an explicit count now stores
+  `NEWS_SLIDE_COUNT_MIN` 7 (the contract default) instead of `NULL`, and when `slide_count` is
+  null (legacy rows) the resolution prefers the **real deck size** (the persisted slide rows,
+  CTA included) over the legacy `slides_config`, which predates the v4 contract and sizes to 6.
 - **Concurrency and cost:** bounded worker pool (`BLOG_IMAGE_CONCURRENCY`, default 2); cover first,
   then sections; the whole step is best-effort and aborts when `BLOG_IMAGE_COST_CAP` is hit.
 - **Failure policy:** a failed image never blocks the draft — the section is stored with

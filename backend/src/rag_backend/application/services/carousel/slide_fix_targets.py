@@ -3,7 +3,10 @@
 A slide is a target when its PT or EN copy has a blocking violation, or (at
 the content gate) when its persona voice score is under the floor. Blocking
 rules without a slide (the slide count) cannot be fixed per slide: they are
-returned apart so the caller escalates them as they are.
+returned apart so the caller escalates them as they are. AE-0439 (#154 B):
+a slide whose stored score is stale (``rescore_pending``) is also a target
+at the content gate — with no issues, so the fix loop re-scores it without
+a rewrite instead of approving on the stale score.
 
 Pure: no DB, no LLM.
 """
@@ -27,9 +30,7 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.slide_fix import (
     ISSUE_VOICE_SCORE_LOW,
     ISSUE_VOICE_SCORE_MESSAGE,
-    PERSONA_SCORE_RESCORE_PENDING_KEY,
     PERSONA_SCORE_SLIDE_KEY,
-    PERSONA_SCORE_UNSCORED_TICKS_KEY,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_OUTLINE,
@@ -37,7 +38,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_INDEX,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
-from rag_backend.domain.persona_score import stored_overall
+from rag_backend.domain.persona_score import pending_rescores, stored_overall
 
 
 @dataclass(frozen=True)
@@ -110,22 +111,9 @@ def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
     return scores
 
 
-def _ticks(entry: object) -> int:
-    """The unscored-tick count of a ``rescore_pending`` entry, else 0."""
-    if not isinstance(entry, Mapping):
-        return 0
-    if entry.get(PERSONA_SCORE_RESCORE_PENDING_KEY) is not True:
-        return 0
-    ticks = entry.get(PERSONA_SCORE_UNSCORED_TICKS_KEY)
-    if isinstance(ticks, bool) or not isinstance(ticks, int):
-        return 1
-    return max(1, ticks)
-
-
 def unscored_ticks(state: Mapping[str, object]) -> dict[int, int]:
     """AE-0433: slides whose stored score is stale, with their unscored ticks."""
-    ticks = {index: _ticks(entry) for index, entry in _slide_entries(state).items()}
-    return {index: count for index, count in ticks.items() if count > 0}
+    return pending_rescores(state.get(STATE_FIELD_PERSONA_SCORES))
 
 
 def _roles(state: Mapping[str, object]) -> dict[int, str]:
@@ -157,15 +145,21 @@ def _voice_issues(query: TargetQuery) -> dict[int, tuple[float, SlideIssue]]:
 
 
 def select_targets(query: TargetQuery) -> TargetSelection:
-    """The failing slides, in slide order, each with every check it fails."""
+    """The failing slides, in slide order, each with every check it fails.
+
+    AE-0439 (#154 B): at the content gate, a slide whose stored score is
+    stale (``rescore_pending``) is also a target — with no issues, so the
+    fix loop only re-scores it (no rewrite). Without this, a stale PASSING
+    score lets the gate approve and the pending marker never clears.
+    """
     by_index = {record.get(STATE_FIELD_SLIDE_INDEX): record for record in query.records}
     rules = slide_issues(query.records, query.policy_version)
     voice = _voice_issues(query)
     scores = slide_scores(query.state)
-    pending = unscored_ticks(query.state)
+    pending = unscored_ticks(query.state) if query.phase == PHASE_CONTENT else {}
     roles = _roles(query.state)
     targets: list[SlideTarget] = []
-    for index in sorted(set(rules) | set(voice)):
+    for index in sorted(set(rules) | set(voice) | set(pending)):
         record = by_index.get(index)
         if index < 0 or record is None:
             continue

@@ -7,9 +7,10 @@ relocation (AE-0107 / AE-0110 / AE-0111 — workflow start/state/resume + the
 
 The golden snapshots capture the deterministic baseline of GET ``workflow/state``,
 POST ``workflow/start`` and POST ``workflow/resume`` INCLUDING the artifact URL
-fields the state response exposes (``image_assets`` image paths,
+fields the state response exposes (``image_assets`` owner preview URLs,
 ``blog_markdown``, ``design_applied``). Volatile fields (the workflow
-``project_id`` UUID, timestamps) are normalized via the diff helper.
+``project_id`` UUID — also inside ``image_assets`` URLs since AE-0439 — and
+timestamps) are normalized via the diff helper.
 
 The SSE stream test uses a DETERMINISTIC stub workflow service (fixed event
 sequence) and asserts event TYPES in order + ``id:``/``event:``/``data:``
@@ -123,9 +124,10 @@ async def _make_engine(db_path: str) -> AsyncEngine:
 def _fixture_state(project_id: str) -> CarouselWorkflowState:
     """Deterministic mid-workflow state INCLUDING artifact URL fields.
 
-    The state response surfaces artifact URLs via ``image_assets`` (image
-    paths), ``blog_markdown`` (blog artifact) and ``design_applied`` (design).
-    Paths are stable (no volatile UUID) so they snapshot byte-identically.
+    The state response surfaces artifact URLs via ``image_assets`` (owner
+    preview URLs since AE-0439), ``blog_markdown`` (blog artifact) and
+    ``design_applied`` (design). Paths are stable (no volatile UUID) so they
+    snapshot byte-identically.
     """
     state: CarouselWorkflowState = {
         "project_id": project_id,
@@ -404,7 +406,12 @@ class TestWorkflowStateBehavior:
         body = resp.json()
         assert body["current_phase"] == PHASE_CONTENT
         # Artifact URL fields are surfaced (AC: include artifact URLs).
-        assert body["image_assets"] == [ARTIFACT_IMAGE_1, ARTIFACT_IMAGE_2]
+        # AE-0439 (QA F-13): image_assets are owner preview URLs, never
+        # container paths.
+        assert body["image_assets"] == [
+            f"/api/carousels/{project_id}/preview/images/slide-1.png",
+            f"/api/carousels/{project_id}/preview/images/slide-2.png",
+        ]
         assert body["blog_markdown"] == ARTIFACT_BLOG_MARKDOWN
         assert body["design_applied"] is True
 

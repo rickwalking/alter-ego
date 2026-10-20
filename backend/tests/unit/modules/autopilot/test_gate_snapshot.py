@@ -85,6 +85,31 @@ def test_missing_persona_scores_stay_none() -> None:
     assert snapshot.persona_score is None
 
 
+def test_pending_rescores_are_listed_by_slide() -> None:
+    """AE-0439 (#154 B): the gate read sees the stale-score markers."""
+    state = {
+        FIELD_CURRENT_PHASE: "content",
+        FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING,
+        FIELD_PERSONA_SCORES: {
+            "slide_3": {FIELD_OVERALL: 80, "rescore_pending": True, "unscored_ticks": 2},
+            "slide_5": {FIELD_OVERALL: 70},
+        },
+    }
+    snapshot = assemble_snapshot(_parts(state, slides=6, lock=3))
+    assert snapshot.pending_rescores == (3,)
+    assert snapshot.persona_score == 70.0
+
+
+def test_no_pending_rescores_without_markers() -> None:
+    state = {
+        FIELD_CURRENT_PHASE: "content",
+        FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING,
+        FIELD_PERSONA_SCORES: {"slide_3": {FIELD_OVERALL: 80}},
+    }
+    snapshot = assemble_snapshot(_parts(state, slides=6, lock=3))
+    assert snapshot.pending_rescores == ()
+
+
 def test_research_findings_keep_content_summary_and_points() -> None:
     state = {
         "research_findings": [

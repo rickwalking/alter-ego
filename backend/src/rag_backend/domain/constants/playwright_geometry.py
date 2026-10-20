@@ -4,6 +4,9 @@ VIOLATION_FONT_UNAVAILABLE = "font_unavailable"
 VIOLATION_FONT_READY_TIMEOUT = "font_ready_timeout"
 VIOLATION_IMAGE_DECODE_FAILED = "image_decode_failed"
 VIOLATION_IMAGE_DECODE_TIMEOUT = "image_decode_timeout"
+# AE-0439 (#155a): the browser rejected the decode of an image that never
+# loaded (missing/broken file), kept apart from a real decode stall.
+VIOLATION_IMAGE_LOAD_FAILED = "image_load_failed"
 # AE-0434: an artwork ``src`` points at a file the images phase never wrote.
 VIOLATION_SLIDE_ARTWORK_MISSING = "slide_artwork_missing"
 VIOLATION_LAYOUT_COPY_ABOVE_BOUNDARY = "layout_copy_above_boundary"
@@ -63,6 +66,7 @@ __all__ = [
     "VIOLATION_FONT_UNAVAILABLE",
     "VIOLATION_IMAGE_DECODE_FAILED",
     "VIOLATION_IMAGE_DECODE_TIMEOUT",
+    "VIOLATION_IMAGE_LOAD_FAILED",
     "VIOLATION_LAYOUT_COPY_ABOVE_BOUNDARY",
     "VIOLATION_LAYOUT_COPY_DESCENDANT_OVERFLOW",
     "VIOLATION_LAYOUT_COPY_OVERFLOW",

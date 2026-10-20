@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from rag_backend.domain.persona_score import lowest_overall
+from rag_backend.domain.persona_score import lowest_overall, pending_rescores
 from rag_backend.modules.autopilot.constants import (
     BLOCKER_BLOCKING,
     BLOCKER_MISSING,
@@ -66,6 +66,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         parked_overdue=parts.parked_overdue,
         hero_images_total=parts.hero_images_total,
         quality_violations=_quality(state, phase) + _quotes(parts, phase),
+        pending_rescores=tuple(pending_rescores(state.get(FIELD_PERSONA_SCORES))),
         pov=parts.pov,
     )
 

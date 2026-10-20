@@ -8,8 +8,8 @@
     "design_recovery_hint": null,
     "error_message": null,
     "image_assets": [
-      "/media/carousel/fixture/slide-1.png",
-      "/media/carousel/fixture/slide-2.png"
+      "/api/carousels/<uuid>/preview/images/slide-1.png",
+      "/api/carousels/<uuid>/preview/images/slide-2.png"
     ],
     "linkedin_post_en": "",
     "linkedin_post_pt": "",

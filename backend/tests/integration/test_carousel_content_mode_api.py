@@ -60,7 +60,10 @@ class TestContentModeDefaults:
         assert data["content_mode"] == "news_analysis"
         assert data["pov_thesis"] is None
         assert data["pov_format"] is None
-        assert data["slide_count"] is None
+        # AE-0439 (QA F-07): a Radar IA create stores the v4 contract default
+        # (CTA slide included) instead of NULL, so the blog's section count
+        # never falls back to the legacy slides_config (6).
+        assert data["slide_count"] == 7
         assert data["cta_goal"] == "follow"
 
     # Scenario: Existing rows read as Radar IA

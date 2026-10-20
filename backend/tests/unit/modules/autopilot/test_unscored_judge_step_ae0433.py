@@ -21,7 +21,7 @@ from rag_backend.modules.autopilot.autofix_constants import (
     TEXT_PERSONA_JUDGE_UNAVAILABLE,
 )
 from rag_backend.modules.autopilot.bootstrap import AutopilotTickConfig
-from rag_backend.modules.autopilot.constants import REASON_PERSONA_SCORE
+from rag_backend.modules.autopilot.constants import REASON_PASSED, REASON_PERSONA_SCORE
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixStatus,
     SlideFixOutcome,
@@ -103,6 +103,62 @@ class TestUnscoredStep:
         assert result is not None
         assert result.decision.action is GateAction.ESCALATE
         assert result.decision.reason == REASON_CONTENT_QUALITY
+
+    async def test_a_passing_gate_with_pending_rescores_waits(self) -> None:
+        """AE-0439 (#154 B) Scenario: a stale PASSING score never approves."""
+        fixer = _Fixer(PENDING)
+        step, editorial = _step(fixer, _snapshot(pending_rescores=(3,)))
+        result = await step.apply(
+            _read(
+                REASON_PASSED,
+                action=GateAction.APPROVE,
+                pending_rescores=(3,),
+                persona_score=80.0,
+            )
+        )
+        assert result is not None
+        assert editorial.reads == 1
+        assert result.decision.action is GateAction.WAIT
+        assert result.decision.reason == REASON_PERSONA_RESCORE_PENDING
+
+    async def test_a_rescored_pending_slide_approves(self) -> None:
+        """AE-0439 (#154 B): once the judge scores the slide, the run proceeds."""
+        fixer = _Fixer(SlideFixOutcome(status=AutofixStatus.FIXED))
+        step, _ = _step(fixer, _snapshot())
+        result = await step.apply(
+            _read(
+                REASON_PASSED,
+                action=GateAction.APPROVE,
+                pending_rescores=(3,),
+                persona_score=80.0,
+            )
+        )
+        assert result is not None
+        assert result.decision.action is GateAction.APPROVE
+
+    async def test_a_forbidden_hit_alongside_the_voice_floor_does_not_wait(
+        self,
+    ) -> None:
+        """AE-0439 (#154 C): the wait fires only for a sole voice-floor failure."""
+        fixer = _Fixer(PENDING)
+        step, _ = _step(fixer, _snapshot(forbidden_hits=("ban",)))
+        result = await step.apply(
+            _read(REASON_PERSONA_SCORE, forbidden_hits=("ban",))
+        )
+        assert result is not None
+        assert result.decision.action is not GateAction.WAIT
+
+    async def test_a_quality_rule_alongside_the_voice_floor_does_not_wait(
+        self,
+    ) -> None:
+        """AE-0439 (#154 C): a blocking quality rule still escalates."""
+        fixer = _Fixer(PENDING)
+        step, _ = _step(
+            fixer, _snapshot(quality_violations=(QualityViolation(rule="x"),))
+        )
+        result = await step.apply(_read(REASON_PERSONA_SCORE))
+        assert result is not None
+        assert result.decision.action is not GateAction.WAIT
 
 
 def _report(*slides: SlideFixSlideReport) -> SlideFixReport:

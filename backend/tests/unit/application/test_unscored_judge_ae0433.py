@@ -332,6 +332,43 @@ class TestUnscoredTicks:
             (4, 2)
         ]
 
+    def test_a_pending_passing_slide_is_a_target_without_issues(self) -> None:
+        """AE-0439 (#154 B): a stale PASSING score still goes to the fix loop."""
+        deck = _deck()
+        state = _entries(
+            slide_4={"overall": 80, "rescore_pending": True, "unscored_ticks": 1}
+        )
+        selection = select_targets(
+            TargetQuery(
+                records=deck,
+                state=state,
+                policy_version=POV,
+                phase=PHASE_CONTENT,
+                voice_floor=70.0,
+            )
+        )
+        assert [t.slide_index for t in selection.targets] == [4]
+        target = selection.targets[0]
+        assert target.issues == ()
+        assert target.score == 80.0
+        assert target.unscored_ticks == 1
+
+    def test_a_pending_slide_is_not_a_target_off_the_content_gate(self) -> None:
+        deck = _deck()
+        state = _entries(
+            slide_4={"overall": 80, "rescore_pending": True, "unscored_ticks": 1}
+        )
+        selection = select_targets(
+            TargetQuery(
+                records=deck,
+                state=state,
+                policy_version=POV,
+                phase="design",
+                voice_floor=70.0,
+            )
+        )
+        assert selection.targets == ()
+
 
 def _result(score: float | None = 55.0, unscored_ticks: int = 0) -> SlideFixResult:
     return SlideFixResult(

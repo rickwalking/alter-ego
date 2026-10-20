@@ -147,6 +147,28 @@ def _to_public_image_url(url: object) -> object:
     return f"{match.group('base')}/images/{match.group('file')}?lang={lang}"
 
 
+def image_asset_preview_urls(project_id: str, assets: object) -> list[str]:
+    """``image_assets`` as owner preview URLs (AE-0439, QA F-13).
+
+    A container path (``/app/output/carousels/<id>/images/slide_1.jpg``) is
+    an internal detail: the state response and the review SSE payload expose
+    ``/api/carousels/{id}/preview/images/{file}`` instead. A value that is
+    already a URL passes through; non-string values are dropped.
+    """
+    urls: list[str] = []
+    if not isinstance(assets, list):
+        return urls
+    for asset in assets:
+        if not isinstance(asset, str) or not asset.strip():
+            continue
+        if asset.startswith(("http://", "https://", "/api/")):
+            urls.append(asset)
+            continue
+        filename = Path(asset).name
+        urls.append(f"/api/carousels/{project_id}/preview/images/{filename}")
+    return urls
+
+
 def _apply_public_image_urls(tokens: dict[str, object]) -> dict[str, object]:
     """AE-0412 (QA B08): a public carousel never exposes preview image URLs.
 

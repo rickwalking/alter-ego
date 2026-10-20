@@ -38,6 +38,10 @@ BLOG_IMAGE_MODEL: Final = "gpt-image-2"
 # Drafts: author/admin only, never stored by shared caches (ADR-0013).
 BLOG_IMAGE_CACHE_PUBLIC: Final = "public, max-age=3600, must-revalidate"
 BLOG_IMAGE_CACHE_PRIVATE: Final = "private, no-store"
+# AE-0439 (QA F-14): a draft-image 404 must never be cached at the edge
+# (Cloudflare's default browser TTL is 14400 s): pin no-store on it, or a
+# future publish keeps serving the cached 404 for hours.
+BLOG_IMAGE_CACHE_NOT_FOUND: Final = "no-store"
 # Per-post image budget (generate + regenerate count), BLOG_IMAGE_COST_CAP.
 BLOG_IMAGE_GENERATIONS_KEY: Final = "blog_image_generations"
 

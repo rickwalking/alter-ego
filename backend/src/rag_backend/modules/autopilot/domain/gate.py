@@ -144,6 +144,10 @@ class GateSnapshot:
     # AE-0392: blocking presentation rules (content and design gates), kept
     # apart from ``forbidden_hits`` so each is reported under its own reason.
     quality_violations: tuple[QualityViolation, ...] = ()
+    # AE-0433: slides whose stored voice score is stale (``rescore_pending``)
+    # and awaits a re-score. AE-0439: the gate read must not approve on a
+    # stale PASSING score, so the step re-scores these before approving.
+    pending_rescores: tuple[int, ...] = ()
     pov: bool = False
 
 
