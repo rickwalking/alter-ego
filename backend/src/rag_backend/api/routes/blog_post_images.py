@@ -70,6 +70,7 @@ from rag_backend.application.services.blog.blog_image_service import (
 )
 from rag_backend.domain.constants.ai_disclosure import AI_ACTION_GENERATE_IMAGE
 from rag_backend.domain.constants.blog_editor import (
+    BLOG_IMAGE_CACHE_NOT_FOUND,
     BLOG_IMAGE_CACHE_PRIVATE,
     BLOG_IMAGE_CACHE_PUBLIC,
     BLOG_IMAGE_FILENAME_PATTERN,
@@ -310,8 +311,16 @@ class ImageFileTarget:
 
 
 def _not_found() -> HTTPException:
+    """Uniform 404 (ADR-0013), never cached (AE-0439, QA F-14).
+
+    The edge caches uncached 404s (Cloudflare's default browser TTL is
+    14400 s); pinning ``no-store`` keeps a draft 404 from lingering after
+    the post is published.
+    """
     return HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail=ERR_BLOG_IMAGE_NOT_FOUND
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=ERR_BLOG_IMAGE_NOT_FOUND,
+        headers={CACHE_CONTROL_HEADER: BLOG_IMAGE_CACHE_NOT_FOUND},
     )
 
 

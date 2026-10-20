@@ -76,18 +76,23 @@ def build_progress_event(
 
 def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]:
     """Build a review gate snapshot for SSE consumers."""
+    from rag_backend.application.services.carousel.design_token_utils import (
+        image_asset_preview_urls,
+    )
     from rag_backend.application.services.carousel.presentation_review import (
         resolve_presentation_review_from_state,
     )
 
     review = resolve_presentation_review_from_state(state)
+    project_id = str(state.get("project_id", "") or "")
     return {
         "current_phase": str(state.get("current_phase", "")),
         "phase_status": str(state.get("phase_status", "")),
         "research_findings": list(state.get("research_findings") or []),
         "outline": list(state.get("outline") or []),
         "slide_drafts": list(state.get("slide_drafts") or []),
-        "image_assets": [str(asset) for asset in (state.get("image_assets") or [])],
+        # AE-0439 (QA F-13): preview URLs, never container paths.
+        "image_assets": image_asset_preview_urls(project_id, state.get("image_assets")),
         "design_applied": bool(state.get("design_applied")),
         "persona_scores": (
             dict(state.get("persona_scores"))
