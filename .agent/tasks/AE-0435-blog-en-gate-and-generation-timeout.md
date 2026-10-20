@@ -110,7 +110,7 @@ whose EN passed the voice gate without a rewrite kept English EN.
 - [x] AC6: the editor translation refuses a Portuguese answer.
 - [x] AC7: a read-only scan lists affected posts; `--apply --only` repairs only that post's
   EN (versioned write).
-- [ ] AC8: backend gates (except mutation) green locally; CI green.
+- [x] AC8: backend gates (except mutation) green locally; CI green (see PR).
 
 ## Gherkin Scenarios
 
@@ -168,7 +168,14 @@ prompts, editor translation guard, repair command, tests.
 
 ## Test Evidence
 
-Pending gate run.
+- New tests: `test_blog_en_gate_ae0435.py` (17), `test_blog_stage_budget_ae0435.py` (10),
+  `test_blog_en_repair_ae0435.py` (12), `test_blog_en_repair_store_ae0435.py` (3).
+- Every backend gate except mutation, run one by one (`gates.sh backend:<gate>`, DB gates on
+  a throwaway `postgres:16-alpine`): 21 PASS, 0 FAIL; full suite 6024 passed / 2 skipped;
+  diff-cover 100% (235 changed lines). Python 3.11 import check OK.
+  mutation: deferred to CI. Details + GATES_JSON: `.agent/reports/AE-0435.dev-summary.md`.
+- Detector on prod data (read-only dump, 2026-10-20): 28 posts with EN → exactly
+  `ba37f6f9` and `99886e71` flagged (6/6 sections), 0 false positives.
 
 ## QA Report
 
