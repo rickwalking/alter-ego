@@ -74,7 +74,6 @@ def generate_design_tokens(project: CarouselProject) -> DesignTokens:
                 f"/api/carousels/{project.id}/slide-images/en/slide_{i}"
                 for i in range(1, slide_count + 1)
             ],
-            "blog_image_map": project.blog_image_map,
         },
         layout={
             "badge_label": project.niche,

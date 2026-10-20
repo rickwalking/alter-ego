@@ -2,7 +2,7 @@
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 Strict v2 writes, the ``featured_image_url`` cover projection, the publish
-guard, the public projection and the temporary read fail-safe.
+guard, the public projection and the strict (fail-closed) read.
 """
 
 from __future__ import annotations
@@ -13,13 +13,11 @@ from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from structlog.testing import capture_logs
 
 from rag_backend.domain.constants.blog_document import (
     ERR_BLOG_DOCUMENT_NOT_V2,
     ERR_BLOG_NOT_PUBLISHABLE,
     ERR_INVALID_BLOG_DOCUMENT,
-    METRIC_BLOG_V2_NON_MIGRATED_ROWS,
 )
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
@@ -292,38 +290,24 @@ class TestPublicProjection:
         assert body["cover"]["alt"] == "Capa"
         assert body["translations"]["en"]["sections"][0]["heading"] == "What happened"
 
-    # Scenario: A non-migrated legacy row is read through the temporary fail-safe
-    async def test_legacy_public_row_reads_as_text_only_v2(
-        self, admin_client: AsyncClient
-    ) -> None:
+    # Scenario: A non-v2 public row fails closed with the uniform 404
+    async def test_legacy_public_row_is_404(self, admin_client: AsyncClient) -> None:
         post_id = await self._published(
             admin_client,
             {"markdown": "# GPT\n\n## A\n\nCorpo", "translations": {"en": "## E\n\nx"}},
         )
-        with capture_logs() as logs:
-            response = await admin_client.get(f"{PUBLIC_URL}/{post_id}")
+        response = await admin_client.get(f"{PUBLIC_URL}/{post_id}")
+        assert response.status_code == 404
 
-        assert response.status_code == 200
-        body = response.json()["content"]
-        assert body["schema"] == "blog.v2"
-        assert body["cover"] is None
-        assert [(s["heading"], s["body_md"], s["image"]) for s in body["sections"]] == [
-            ("A", "Corpo", None)
-        ]
-        assert body["translations"]["en"]["sections"][0]["body_md"] == "x"
-        assert SLIDE_IMAGES not in response.text
-        assert any(e["event"] == METRIC_BLOG_V2_NON_MIGRATED_ROWS for e in logs)
-        again = await admin_client.get(f"{PUBLIC_URL}/{post_id}")
-        assert again.json()["content"] == body
-
-    async def test_editor_read_of_a_legacy_row_is_v2(
+    # Scenario: A non-v2 editor read fails closed with the document error
+    async def test_editor_read_of_a_legacy_row_is_422(
         self, admin_client: AsyncClient
     ) -> None:
         post = await _create(admin_client, content=v2_content("Corpo"))
         await _set_fields(post["id"], content={"markdown": "## A\n\nCorpo"})
-        content = (await _get(admin_client, post["id"]))["content"]
-        assert content["schema"] == "blog.v2"
-        assert content["sections"][0]["heading"] == "A"
+        response = await admin_client.get(f"{BLOG_POSTS_URL}/{post['id']}")
+        assert response.status_code == 422
+        assert response.json()["detail"] == ERR_BLOG_DOCUMENT_NOT_V2
 
 
 class TestRestoreVersion:

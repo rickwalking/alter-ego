@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchCompletedProjects,
   fetchCarouselDesign,
-  fetchBlogWithDesignCombined,
   fetchPublicBlogPost,
   fetchPublicBlogPosts,
 } from "@/lib/server-fetch";
@@ -34,14 +33,6 @@ const MOCK_PROJECT_LIST = {
   total: 1,
   limit: 20,
   offset: 0,
-};
-
-const MOCK_BLOG = {
-  markdown: "# Test Blog Content",
-  title: "Test Title",
-  subtitle: "Test Subtitle",
-  language: "en",
-  available_languages: ["pt", "en"],
 };
 
 const MOCK_DESIGN = {
@@ -201,36 +192,6 @@ describe("server-fetch", () => {
     it("returns null on failure so the listing can fall open", async () => {
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("boom"));
       expect(await fetchPublicBlogPosts(20)).toBeNull();
-    });
-  });
-
-  describe("fetchBlogWithDesignCombined", () => {
-    it("returns combined data on success", async () => {
-      const MOCK_COMBINED = {
-        ...MOCK_BLOG,
-        design: MOCK_DESIGN,
-      };
-
-      vi.spyOn(globalThis, "fetch").mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(MOCK_COMBINED),
-      } as Response);
-
-      const result = await fetchBlogWithDesignCombined("test-id", "en");
-
-      expect(result).not.toBeNull();
-      expect(result!.title).toBe("Test Title");
-      expect(result!.design.theme_name).toBe("ai_competition");
-    });
-
-    it("returns null on fetch failure", async () => {
-      vi.spyOn(globalThis, "fetch").mockRejectedValue(
-        new Error("Network error"),
-      );
-
-      const result = await fetchBlogWithDesignCombined("test-id");
-
-      expect(result).toBeNull();
     });
   });
 });

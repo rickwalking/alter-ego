@@ -215,7 +215,6 @@ async def preview_carousel_design(
             slides=tokens["images"]["slides"],
             rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
             rendered_slides_en=tokens["images"].get("rendered_slides_en"),
-            blog_image_map=tokens["images"].get("blog_image_map"),
         ),
         layout=CarouselDesignLayout(**layout),
         theme_name=project.theme,

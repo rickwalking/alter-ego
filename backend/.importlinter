@@ -468,7 +468,6 @@ ignore_imports =
     rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.infrastructure.monitoring_langfuse
     rag_backend.application.services.carousel.editorial_workflow_service_helpers -> rag_backend.infrastructure.external.openai_embeddings
     rag_backend.application.services.carousel.image_generation_records -> rag_backend.infrastructure.logging
-    rag_backend.application.services.carousel.nodes.content.core -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.nodes.export -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.nodes.images -> rag_backend.infrastructure.external.openai_image
     rag_backend.application.services.carousel.nodes.images -> rag_backend.infrastructure.logging

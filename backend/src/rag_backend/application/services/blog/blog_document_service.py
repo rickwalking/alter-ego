@@ -3,25 +3,21 @@
 ``BlogDocumentService`` validates every write of ``blog_posts.content`` as
 ``blog.v2`` (strict: there is no v1 write path), keeps ``featured_image_url``
 equal to ``content.cover.url`` (the column is a projection of the cover), and
-guards publish. Reads go through :meth:`read_document`, which carries the
-**temporary** fail-safe for a row the cutover has not reached yet: the legacy
-markdown is adapted in memory to a text-only v2 document (never persisted,
-never a carousel slide, never a 500) and ``blog_v2_non_migrated_rows`` is
-emitted. AE-0428 deletes that adapter once prod ``--verify`` reports zero.
+guards publish. Reads go through :meth:`read_document`, which is strict too: a
+non-v2 row raises :class:`InvalidBlogDocumentError` (fails closed with the
+standard error/404) instead of adapting legacy markdown. The temporary AE-0423
+read fail-safe was removed in AE-0428 after the owner's prod verification:
+``python -m rag_backend.scripts.blog_v1_to_v2 --verify`` reported zero non-v2
+rows (translations included) on 2026-10-19.
 """
 
 from __future__ import annotations
 
-import itertools
-import uuid
 from dataclasses import dataclass
-
-import structlog
 
 from rag_backend.domain.constants.blog_document import (
     BLOG_HEADING_MARKER,
     BLOG_HEADING_MAX_CHARS,
-    BLOG_SECTION_ID_PREFIX,
     BLOG_SECTION_MAX_CHARS,
     ERR_BLOG_HEADING_INVALID,
     ERR_BLOG_NO_SECTIONS,
@@ -30,7 +26,6 @@ from rag_backend.domain.constants.blog_document import (
     GENERATION_KEY,
     GENERATION_STATUS_IN_PROGRESS,
     GENERATION_STATUS_KEY,
-    METRIC_BLOG_V2_NON_MIGRATED_ROWS,
 )
 from rag_backend.domain.models.blog_document import (
     BlogDocument,
@@ -38,16 +33,9 @@ from rag_backend.domain.models.blog_document import (
     BlogLanguageDocument,
     BlogSection,
     InvalidBlogDocumentError,
-    drop_invalid_translations,
     parse_blog_content,
 )
-from rag_backend.domain.models.blog_document_split import (
-    SectionIdFactory,
-    build_language_document,
-    migrate_content,
-)
-
-logger = structlog.get_logger(__name__)
+from rag_backend.domain.models.blog_document_split import build_language_document
 
 
 @dataclass(frozen=True)
@@ -136,46 +124,14 @@ class BlogDocumentService:
             raise InvalidBlogDocumentError(ERR_BLOG_NOT_PUBLISHABLE)
 
     @staticmethod
-    def read_document(content: object, post_id: str) -> BlogDocument:
-        """Parse for display; adapt a non-migrated legacy row (temporary)."""
-        try:
-            return parse_blog_content(content)
-        except InvalidBlogDocumentError as exc:
-            logger.warning(
-                METRIC_BLOG_V2_NON_MIGRATED_ROWS, post_id=post_id, reason=exc.code
-            )
-            return _adapt_in_memory(content, post_id)
+    def read_document(content: object) -> BlogDocument:
+        """Parse a stored document for display; a non-v2 row fails closed.
 
-
-def _stable_section_ids(post_id: str) -> SectionIdFactory:
-    """Deterministic ids so repeated reads of one legacy row are identical."""
-    counter = itertools.count()
-
-    def _next_id() -> str:
-        seed = f"{post_id}:{next(counter)}"
-        return f"{BLOG_SECTION_ID_PREFIX}{uuid.uuid5(uuid.NAMESPACE_URL, seed)}"
-
-    return _next_id
-
-
-def _adapt_in_memory(content: object, post_id: str) -> BlogDocument:
-    """Best text-only v2 view of a row that does not parse (never raises).
-
-    A v2-marked row keeps its PT document and loses only the translations that
-    do not parse; a legacy row is split like the cutover; anything else is one
-    empty section.
-    """
-    new_id = _stable_section_ids(post_id)
-    candidates = (
-        drop_invalid_translations(content),
-        migrate_content(content, new_id),
-    )
-    for candidate in candidates:
-        try:
-            return parse_blog_content(candidate)
-        except InvalidBlogDocumentError:
-            continue
-    return parse_blog_content(build_language_document("", new_id))
+        Raises :class:`InvalidBlogDocumentError` on anything that is not a valid
+        ``blog.v2`` document (the caller maps it to the standard 422/404). There
+        is no legacy-markdown adapter: after the cutover every row is v2.
+        """
+        return parse_blog_content(content)
 
 
 __all__ = [

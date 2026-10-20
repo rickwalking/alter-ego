@@ -51,7 +51,6 @@ function themeOnlyDesign(
       slides: [],
       rendered_slides_pt: null,
       rendered_slides_en: null,
-      blog_image_map: null,
     },
   };
 }

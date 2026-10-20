@@ -11,7 +11,6 @@
       "text_muted": "#94a3b8"
     },
     "images": {
-      "blog_image_map": null,
       "hero": "",
       "rendered_slides_en": [
         "/api/carousels/<uuid>/slide-images/en/slide_1.jpg",

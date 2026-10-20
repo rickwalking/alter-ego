@@ -233,18 +233,11 @@ class CarouselDesignTypography(BaseModel):
     font_family_badge: str
 
 
-class CarouselBlogImageMapEntry(BaseModel):
-    slide_number: int
-    heading: str
-    alt: str
-
-
 class CarouselDesignImages(BaseModel):
     hero: str
     slides: list[str]
     rendered_slides_pt: list[str] | None = None
     rendered_slides_en: list[str] | None = None
-    blog_image_map: list[CarouselBlogImageMapEntry] | None = None
 
 
 class CarouselDesignLayout(BaseModel):

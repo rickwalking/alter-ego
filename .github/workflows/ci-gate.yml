@@ -43,12 +43,14 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'scripts/check_blog_v1_dead_code.py'
               - 'scripts/ci/**'
               - 'scripts/metrics/**'
               - 'docker-compose.prod.yml'
               - '.github/workflows/deploy.yml'
             frontend:
               - 'frontend/**'
+              - 'scripts/check_blog_v1_dead_code.py'
               - 'scripts/ci/**'
             agent:
               - '.agent/**'

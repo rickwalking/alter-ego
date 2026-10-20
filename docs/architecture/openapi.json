@@ -119,6 +119,153 @@
         "title": "BlogEditorSettingsResponse",
         "type": "object"
       },
+      "BlogFromCarouselRequest": {
+        "description": "``POST /blog-posts/from-carousel``: always creates a draft.",
+        "properties": {
+          "language": {
+            "default": "pt",
+            "enum": [
+              "pt",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "persona_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Id"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "title": "BlogFromCarouselRequest",
+        "type": "object"
+      },
+      "BlogGenerateRequest": {
+        "description": "``POST /blog-posts/generate``: a standalone draft from a topic.",
+        "properties": {
+          "language": {
+            "default": "pt",
+            "enum": [
+              "pt",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "persona_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Id"
+          },
+          "source_urls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Source Urls",
+            "type": "array"
+          },
+          "topic": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "BlogGenerateRequest",
+        "type": "object"
+      },
+      "BlogGenerationAccepted": {
+        "description": "202 body: the draft row id and its generation state.",
+        "properties": {
+          "generation": {
+            "$ref": "#/components/schemas/BlogGenerationState"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "generation"
+        ],
+        "title": "BlogGenerationAccepted",
+        "type": "object"
+      },
+      "BlogGenerationConflict": {
+        "description": "409 body of ``from-carousel`` when the project already has a blog row.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "post_id": {
+            "title": "Post Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "post_id"
+        ],
+        "title": "BlogGenerationConflict",
+        "type": "object"
+      },
+      "BlogGenerationState": {
+        "description": "The run state returned by the 202 (the editor then polls ``GET``).",
+        "properties": {
+          "attempt": {
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "attempt"
+        ],
+        "title": "BlogGenerationState",
+        "type": "object"
+      },
       "BlogImageGenerateRequest": {
         "description": "Generate/regenerate a cover or section image; ``prompt`` is the scene.",
         "properties": {
@@ -1348,29 +1495,6 @@
         "title": "CarouselBlogI18nResponse",
         "type": "object"
       },
-      "CarouselBlogImageMapEntry": {
-        "properties": {
-          "alt": {
-            "title": "Alt",
-            "type": "string"
-          },
-          "heading": {
-            "title": "Heading",
-            "type": "string"
-          },
-          "slide_number": {
-            "title": "Slide Number",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "slide_number",
-          "heading",
-          "alt"
-        ],
-        "title": "CarouselBlogImageMapEntry",
-        "type": "object"
-      },
       "CarouselBlogResponse": {
         "properties": {
           "markdown": {
@@ -1536,20 +1660,6 @@
       },
       "CarouselDesignImages": {
         "properties": {
-          "blog_image_map": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/CarouselBlogImageMapEntry"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blog Image Map"
-          },
           "hero": {
             "title": "Hero",
             "type": "string"
@@ -9247,6 +9357,113 @@
         ]
       }
     },
+    "/api/blog-posts/from-carousel": {
+      "post": {
+        "description": "202 + a draft; 404 unknown project; 409 when the project has a blog row.",
+        "operationId": "create_blog_from_carousel_api_blog_posts_from_carousel_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogFromCarouselRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogGenerationAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown project"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogGenerationConflict"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate a draft blog post from a carousel",
+        "tags": [
+          "blog_generate"
+        ]
+      }
+    },
+    "/api/blog-posts/generate": {
+      "post": {
+        "description": "202 + a standalone draft (N = the content-mode default sections).",
+        "operationId": "generate_blog_post_api_blog_posts_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogGenerationAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate a standalone draft blog post from a topic",
+        "tags": [
+          "blog_generate"
+        ]
+      }
+    },
     "/api/blog-posts/{post_id}": {
       "delete": {
         "description": "Delete a blog post (optimistic-locked, origin-guarded; AE-0296).",
@@ -10037,6 +10254,55 @@
         "summary": "Generate the cover",
         "tags": [
           "blog_post_images"
+        ]
+      }
+    },
+    "/api/blog-posts/{post_id}/generation/retry": {
+      "post": {
+        "description": "202: a new lease/attempt on the same row (409 unless the run failed).",
+        "operationId": "retry_blog_generation_api_blog_posts__post_id__generation_retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogGenerationAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry a failed blog generation on the same draft",
+        "tags": [
+          "blog_generate"
         ]
       }
     },

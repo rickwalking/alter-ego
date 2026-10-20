@@ -75,11 +75,6 @@ Feature: Carousel Blog Integration
     Then the query key includes the project ID
     And the query is disabled when ID is empty
 
-  Scenario: useCarouselBlog uses default language
-    Given a carousel project ID "abc-123"
-    When useCarouselBlog is called without a language
-    Then the default language "pt" is used in the query
-
   Scenario: Blog post header renders badge with design tokens
     Given a BlogPostHeader with cybersecurity design tokens
     When the component is rendered

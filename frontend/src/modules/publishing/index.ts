@@ -6,11 +6,9 @@
  * folders. This barrel is the ONLY import surface for cross-context and `app/`
  * consumers; everything else under `modules/publishing/**` is internal.
  *
- * Hook disambiguation (glossary: the rejected name `CarouselArticle` is NOT
- * used; canonical = `BlogPost (origin = carousel)`):
- *   - `useCarouselBlogPosts` — carousel-origin blog posts (completed carousel
- *     projects rendered on the public `/blog` listing).
- *   - `useBlogPosts` — first-class blog posts (dashboard CRUD).
+ * Glossary: the rejected name `CarouselArticle` is NOT used; canonical =
+ * `BlogPost (origin = carousel)`. The v1 carousel-blog hooks were deleted in
+ * AE-0428 (the public `/blog` listing reads the public API directly).
  *
  * See `src/modules/README.md` for the public-contract convention.
  */
@@ -75,24 +73,7 @@ export type {
   BlogEditorFieldError,
   BlogEditorValidation,
 } from "./blog/editor-content";
-export {
-  useCarouselProject,
-  useCarouselProjects,
-  useCarouselBlogPosts,
-  useCarouselBlog,
-  useCarouselBlogWithDesign,
-  useCarouselDesign,
-  useCarouselSlides,
-} from "./blog/hooks/use-carousel-blog";
 export { useBlogAi } from "./blog/hooks/use-blog-ai";
-export { useAccessibilityCheck } from "./blog/hooks/use-accessibility-check";
-export type {
-  AccessibilityIssue,
-  AccessibilityResult,
-} from "./blog/hooks/types";
-export { useSeoAnalysis } from "./blog/hooks/use-seo-analysis";
-export type { SeoAnalysisResult } from "./blog/hooks/types";
-export { useEditorShortcuts } from "./blog/hooks/use-editor-shortcuts";
 
 /* --- blog: generation (AE-0425) --- */
 export { BlogGenerationStatus } from "./blog/generation/blog-generation-status";
@@ -104,19 +85,12 @@ export {
   GENERATION_TOPIC_MIN_CHARS,
 } from "./blog/generation/generation-constants";
 
-/* --- blog: adapters --- */
-export { mapProjectToBlogPostCard } from "./blog/adapters/blog-post-adapter";
-
 /* --- blog: listing components --- */
 export { NeonBlogPostCard } from "./blog/components/listing/neon-blog-post-card";
 export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/types";
 
 /* --- blog: components --- */
-export { AccessibilityChecker } from "./blog/components/accessibility-checker";
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
-export { BlogPostFilters as BlogPostFiltersPanel } from "./blog/components/blog-post-filters";
-export { KeyboardShortcutsHelp } from "./blog/components/keyboard-shortcuts-help";
-export { SeoPreview } from "./blog/components/seo-preview";
 export {
   snapshotText,
   VersionHistorySidebar,
@@ -132,7 +106,6 @@ export type { BlogPostVersion } from "./blog/components/types";
 /* --- blog: public-post components --- */
 export { BackLink } from "./blog/components/public-post/back-link";
 export { BlogLanguageSwitch } from "./blog/components/public-post/blog-language-switch";
-export { BlogPostAdminPanel } from "./blog/components/public-post/blog-post-admin-panel";
 export { BlogPostContent } from "./blog/components/public-post/blog-post-content";
 export { BlogPostHeader } from "./blog/components/public-post/blog-post-header";
 export { BlogPostHero } from "./blog/components/public-post/blog-post-hero";

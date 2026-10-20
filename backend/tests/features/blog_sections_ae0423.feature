@@ -1,8 +1,8 @@
 Feature: Blog document model (blog.v2), strict parser and one-shot cutover (AE-0423)
   A blog post owns a versioned, section-structured document in blog_posts.content.
   A one-shot backend command (not Alembic) rewrites v1 rows, including every string
-  translation. blog.v2 is the ONLY persisted shape: writes are strict and there is no
-  legacy write path. Until --verify passes, reads have a temporary text-only fail-safe.
+  translation. blog.v2 is the ONLY persisted shape: writes and reads are strict, there is no
+  legacy write path and no read adapter (the temporary fail-safe was removed in AE-0428).
 
   Background:
     Given a blog_posts row whose content is validated by BlogDocumentService
@@ -16,15 +16,14 @@ Feature: Blog document model (blog.v2), strict parser and one-shot cutover (AE-0
     Then it returns the cover and the three sections in order
     And each section carries its own stable id, heading, body_md and image
 
-  Scenario: A non-migrated legacy row is read through the temporary fail-safe
-    Given a public row whose content is legacy markdown (no schema)
+  Scenario: A non-v2 read fails closed with the standard error/404
+    Given a row whose content is legacy markdown (no schema)
     When the public projection reads it
-    Then it renders as a text-only blog.v2 document (cover null, images null, quality null)
+    Then it raises InvalidBlogDocumentError (no legacy adaptation)
+    And the public route answers the uniform 404
     And no carousel slide image is used
-    And the blog_v2_non_migrated_rows metric is emitted
-    And no 500 is returned
 
-  Scenario: Writes remain strict while the read fail-safe is active
+  Scenario: Writes are always strict
     Given a legacy markdown row
     When BlogDocumentService.save is called with the legacy shape
     Then it raises InvalidBlogDocumentError

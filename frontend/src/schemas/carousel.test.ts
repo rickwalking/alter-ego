@@ -5,8 +5,6 @@ import {
   carouselDesignImagesSchema,
   carouselDesignLayoutSchema,
   carouselDesignResponseSchema,
-  carouselBlogI18nResponseSchema,
-  carouselBlogWithDesignResponseSchema,
   carouselProjectResponseSchema,
   carouselProjectListResponseSchema,
   carouselSlideResponseSchema,
@@ -47,14 +45,6 @@ const VALID_DESIGN_RESPONSE = {
   images: VALID_DESIGN_IMAGES,
   layout: VALID_DESIGN_LAYOUT,
   theme_name: "ai_competition",
-};
-
-const VALID_BLOG_I18N = {
-  markdown: "# Title\n\nContent here",
-  title: "Test Title",
-  subtitle: "Test Subtitle",
-  language: "pt",
-  available_languages: ["pt", "en"],
 };
 
 const VALID_PROJECT = {
@@ -227,86 +217,6 @@ describe("Carousel Design Response Schema", () => {
   it("rejects design response missing theme_name", () => {
     const withoutTheme = omitKey(VALID_DESIGN_RESPONSE, "theme_name");
     const result = carouselDesignResponseSchema.safeParse(withoutTheme);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("Carousel Blog I18n Response Schema", () => {
-  // Scenario: Validate blog i18n response schema
-  it("validates complete blog i18n response", () => {
-    const result = carouselBlogI18nResponseSchema.safeParse(VALID_BLOG_I18N);
-    expect(result.success).toBe(true);
-  });
-
-  // Scenario: markdown field is present
-  it("requires markdown field", () => {
-    const withoutMarkdown = omitKey(VALID_BLOG_I18N, "markdown");
-    const result = carouselBlogI18nResponseSchema.safeParse(withoutMarkdown);
-    expect(result.success).toBe(false);
-  });
-
-  // Scenario: language field equals "pt"
-  it("preserves language field as string", () => {
-    const result = carouselBlogI18nResponseSchema.parse(VALID_BLOG_I18N);
-    expect(result.language).toBe("pt");
-  });
-
-  // Scenario: available_languages is an array
-  it("requires available_languages as array", () => {
-    const result = carouselBlogI18nResponseSchema.safeParse({
-      ...VALID_BLOG_I18N,
-      available_languages: "pt,en",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts null subtitle", () => {
-    const result = carouselBlogI18nResponseSchema.safeParse({
-      ...VALID_BLOG_I18N,
-      subtitle: null,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects missing title", () => {
-    const withoutTitle = omitKey(VALID_BLOG_I18N, "title");
-    const result = carouselBlogI18nResponseSchema.safeParse(withoutTitle);
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("Carousel Blog With Design Response Schema", () => {
-  // Scenario: Validate blog with design response schema
-  it("validates complete blog with design response", () => {
-    const payload = {
-      ...VALID_BLOG_I18N,
-      design: VALID_DESIGN_RESPONSE,
-    };
-    const result = carouselBlogWithDesignResponseSchema.safeParse(payload);
-    expect(result.success).toBe(true);
-  });
-
-  // Scenario: Both blog content and design tokens are present
-  it("contains both blog content and design tokens after parse", () => {
-    const payload = {
-      ...VALID_BLOG_I18N,
-      design: VALID_DESIGN_RESPONSE,
-    };
-    const result = carouselBlogWithDesignResponseSchema.parse(payload);
-    expect(result.markdown).toBe(VALID_BLOG_I18N.markdown);
-    expect(result.design).toEqual(VALID_DESIGN_RESPONSE);
-  });
-
-  it("rejects response missing design", () => {
-    const withoutDesign = omitKey(
-      {
-        ...VALID_BLOG_I18N,
-        design: VALID_DESIGN_RESPONSE,
-      },
-      "design",
-    );
-    const result =
-      carouselBlogWithDesignResponseSchema.safeParse(withoutDesign);
     expect(result.success).toBe(false);
   });
 });

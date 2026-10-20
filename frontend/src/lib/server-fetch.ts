@@ -6,7 +6,6 @@ import {
 } from "@/constants/api";
 import { SERVER_FETCH } from "@/constants/server-fetch";
 import {
-  carouselBlogWithDesignResponseSchema,
   carouselDesignResponseSchema,
   carouselProjectListResponseSchema,
 } from "@/schemas/carousel";
@@ -109,16 +108,5 @@ export async function fetchPublicBlogPost(
     API_ENDPOINTS.PUBLIC_BLOG_POST_BY_ID(id),
     publicBlogPostResponseSchema,
     { cache: "no-store" },
-  );
-}
-
-export async function fetchBlogWithDesignCombined(
-  id: string,
-  lang: string = "pt",
-): Promise<z.infer<typeof carouselBlogWithDesignResponseSchema> | null> {
-  return validatedFetch(
-    `${API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang)}?include_design=true`,
-    carouselBlogWithDesignResponseSchema,
-    { revalidate: SERVER_FETCH.BLOG_REVALIDATE_SECONDS },
   );
 }

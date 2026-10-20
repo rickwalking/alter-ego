@@ -50,8 +50,10 @@ Feature: Public blog body never renders carousel slides (AE-0422)
     When the hide-all criteria are evaluated
     Then the row is not selected
 
-  Scenario: A design payload with blog_image_map is ignored
-    Given the carousel design payload still contains blog_image_map
-    When the public blog page renders the post
-    Then the body does not map any image positionally
+  # RETIRED by AE-0428: the design payload no longer carries blog_image_map at
+  # all (removed end-to-end), so there is nothing to ignore.
+  Scenario: The design payload has no blog image map
+    Given the carousel design response schema
+    When a legacy blog_image_map key is present in a payload
+    Then the parsed design drops the key
     And no carousel slide image is shown
