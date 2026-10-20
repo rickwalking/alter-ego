@@ -17,7 +17,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.scripts import blog_empty_versions
