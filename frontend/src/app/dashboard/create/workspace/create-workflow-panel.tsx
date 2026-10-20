@@ -120,6 +120,11 @@ export function CreateWorkflowPanel({
         checkAgainDisabled={loading}
       />
     ) : null;
+  // AE-0440: the stream gave up; say so on every step instead of going stale.
+  const liveUpdatesNotice =
+    transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED ? (
+      <WorkflowLiveUpdatesDisconnected onRetry={reconnectLiveUpdates} />
+    ) : null;
 
   useEffect(() => {
     if (!autoStart || startedRef.current || hasActiveWorkflow) {
@@ -272,10 +277,7 @@ export function CreateWorkflowPanel({
         }}
       >
         {runProgressBanner}
-
-        {transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED && (
-          <WorkflowLiveUpdatesDisconnected onRetry={reconnectLiveUpdates} />
-        )}
+        {liveUpdatesNotice}
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           {tCreate("historicalHint", {
             phase: phaseLabel(viewPhase ?? viewStepId),
@@ -315,6 +317,7 @@ export function CreateWorkflowPanel({
       </div>
 
       {runProgressBanner}
+      {liveUpdatesNotice}
 
       {error && (
         <NeonAlert variant="destructive">
