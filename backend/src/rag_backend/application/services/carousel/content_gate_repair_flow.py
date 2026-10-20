@@ -34,6 +34,9 @@ from rag_backend.application.services.carousel.presentation_review_pipeline impo
     WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
     WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY,
 )
+from rag_backend.application.services.carousel.structure_fill import (
+    outline_from_state,
+)
 from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.content_gate_repair import (
     GATE_REVISION_NOTE_HEADER,
@@ -100,6 +103,8 @@ async def repair_blocked_content_gate(
             policy_version=_policy_version(merged),
             style_guide=context.style_guide,
             project_id=context.project_id,
+            # AE-0437: missing closing actions / summary points from the outline.
+            outline=outline_from_state(merged),
         )
     )
     if not outcome.changed_indices:

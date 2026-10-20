@@ -193,7 +193,14 @@ class TestResidualShapeMismatch:
         slides = prod_slides()
         en = _payload(slides, 6, "en")
         en.pop("actions")
-        repairer = FakeRepairer({})
+        # AE-0437: the copies must be translated to stay (see the scenario
+        # "A PT copy nobody translated is taken out of EN again").
+        answers = {
+            f"6:en:actions[{n}].{key}": f"Action {n} {key} in English"
+            for n in range(3)
+            for key in ("title", "body")
+        }
+        repairer = FakeRepairer(answers)
 
         outcome = await run_gate_repair(_command(repairer, slides))
 
@@ -203,3 +210,4 @@ class TestResidualShapeMismatch:
         actions = _items(_payload(outcome.slides, 6, "en"), "actions")
         pt_actions = _items(_payload(outcome.slides, 6, "pt"), "actions")
         assert [a["icon_name"] for a in actions] == [a["icon_name"] for a in pt_actions]
+        assert actions[0]["title"] == "Action 0 title in English"

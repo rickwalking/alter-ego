@@ -24,7 +24,7 @@ All slide drafts must exist **before** `phase_status: awaiting_human`.
 |---|------|---------|
 | 1 | `intro` | Hook + hero image prompt |
 | 2-4 | `content` | Deep information with stats/quotes/structured extras |
-| 5 | `closing` | Actionable takeaways as checklist (`features` array) |
+| 5 | `closing` | Actionable takeaways as checklist (`actions` array: exactly 3 `{icon_name, title, body}`) |
 | 6 | `cta` | Save + share prompt |
 
 Full JSON return shape and per-type body contracts: [`content-contracts.md`](../_shared/content-contracts.md).

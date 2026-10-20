@@ -155,6 +155,9 @@ FEATURE_TITLE_MAX_CHARS = 32
 FEATURE_BODY_MAX_CHARS = 100
 SUMMARY_TITLE_MAX_CHARS = 36
 SUMMARY_BODY_MAX_CHARS = 90
+# AE-0437: closing actions (contract ``closing_action_title|body``).
+CLOSING_ACTION_TITLE_MAX_CHARS = 30
+CLOSING_ACTION_BODY_MAX_CHARS = 90
 KEY_POINT_SEPARATORS: tuple[str, ...] = (": ", " \u2013 ", " \u2014 ", " - ")
 
 # Bounded EN re-translation (the only LLM call of the fix).

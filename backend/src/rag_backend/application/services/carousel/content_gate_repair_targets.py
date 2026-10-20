@@ -10,6 +10,14 @@ ids nobody asked for are ignored.
 A ``translation_shape_mismatch`` has no field: the EN payload first receives
 every structured field PT has and EN lacks (copied from PT), and each copied
 text becomes a "translate this" target.
+
+AE-0437: before that, ``fill_slide_structure`` fills the PT structure the
+gate needs and no model call can create (a closing slide's 3 actions, a
+summary's points, a body-less content slide's features) from the outline, and
+puts a closing slide's swapped ``features`` back under ``actions``. An EN
+answer that is still Portuguese is dropped (prod carousel 5344b6c6 stored
+"Eu olho para o computador, não para a demo" as its EN TL;DR), and a PT copy
+nobody translated is taken out of EN again (``drop_untranslated_copies``).
 """
 
 from __future__ import annotations
@@ -30,6 +38,9 @@ from rag_backend.application.services.carousel.owner_autofix_paths import (
     visible_paths,
     with_text,
 )
+from rag_backend.application.services.carousel.owner_autofix_text import (
+    looks_portuguese,
+)
 from rag_backend.application.services.carousel.presentation_casing_markers import (
     drop_casing_repair_markers,
 )
@@ -44,6 +55,12 @@ from rag_backend.application.services.carousel.presentation_validation_fields im
 from rag_backend.application.services.carousel.slide_parse_failures import (
     drop_parse_failure_marker,
 )
+from rag_backend.application.services.carousel.structure_fill import (
+    SlideRef,
+    StructureFillContext,
+    fill_missing_items,
+    move_closing_features,
+)
 from rag_backend.domain.constants.carousel import LANGUAGE_EN, LANGUAGE_PT
 from rag_backend.domain.constants.content_gate_repair import (
     GATE_REPAIR_MAX_TARGETS,
@@ -53,6 +70,7 @@ from rag_backend.domain.constants.content_gate_repair import (
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_INDEX,
+    STATE_FIELD_SLIDE_TYPE,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
 
@@ -150,6 +168,53 @@ def fill_missing_en_structure(
         if path.split("[")[0] in keys and text_at(filled, path)
     )
     return {**slide, PRESENTATION_EN_KEY: filled}, paths
+
+
+def fill_slide_structure(
+    slide: Mapping[str, object], context: StructureFillContext
+) -> dict[str, object]:
+    """The slide with its missing PT items filled and closing keys restored."""
+    pt = as_dict(slide.get(PRESENTATION_PT_KEY))
+    index = slide.get(STATE_FIELD_SLIDE_INDEX)
+    if pt is None or not isinstance(index, int):
+        return dict(slide)
+    slide_type = str(pt.get("slide_type") or slide.get(STATE_FIELD_SLIDE_TYPE) or "")
+    ref = SlideRef(index=index, slide_type=slide_type)
+    filled_pt = copy.deepcopy(pt)
+    fill_missing_items(filled_pt, ref, context)
+    updated: dict[str, object] = {**slide, PRESENTATION_PT_KEY: filled_pt}
+    en = as_dict(slide.get(PRESENTATION_EN_KEY))
+    if en is not None:
+        filled_en = copy.deepcopy(en)
+        move_closing_features(filled_en, slide_type)
+        updated[PRESENTATION_EN_KEY] = filled_en
+    return updated
+
+
+def drop_untranslated_copies(
+    slide: Mapping[str, object], original: Mapping[str, object] | None
+) -> dict[str, object]:
+    """Take PT copies nobody translated out of EN again (AE-0437).
+
+    A structured EN field the repair copied from PT (absent or shorter in the
+    original EN) that still equals the PT value goes back to the original.
+    """
+    pt = as_dict(slide.get(PRESENTATION_PT_KEY)) or {}
+    en = as_dict(slide.get(PRESENTATION_EN_KEY))
+    before = as_dict((original or {}).get(PRESENTATION_EN_KEY)) or {}
+    if en is None:
+        return dict(slide)
+    restored = dict(en)
+    for key in STRUCTURED_EXTRA_KEYS:
+        if pt.get(key) in (None, "", []) or restored.get(key) != pt.get(key):
+            continue
+        if not _missing(pt.get(key), before.get(key)):
+            continue
+        if key in before:
+            restored[key] = before[key]
+        else:
+            restored.pop(key, None)
+    return {**slide, PRESENTATION_EN_KEY: restored}
 
 
 def _views(slides: list[dict[str, object]]) -> dict[int, _SlideView]:
@@ -256,6 +321,13 @@ def _patched_slide(
     return updated
 
 
+def _accepted(target: FieldRepairTarget, text: str) -> bool:
+    """A new, non-empty answer; an EN answer must not be Portuguese."""
+    if not text or text == target.text:
+        return False
+    return target.locale != LANGUAGE_EN or not looks_portuguese(text)
+
+
 def apply_fixes(
     slides: list[dict[str, object]],
     targets: tuple[FieldRepairTarget, ...],
@@ -265,7 +337,7 @@ def apply_fixes(
     by_slide: dict[int, list[tuple[FieldRepairTarget, str]]] = {}
     for target in targets:
         text = texts.get(target.target_id, "").strip()
-        if text and text != target.text:
+        if _accepted(target, text):
             by_slide.setdefault(target.slide_index, []).append((target, text))
     patched: list[dict[str, object]] = []
     for slide in slides:
@@ -279,8 +351,10 @@ __all__ = [
     "FieldRepairTarget",
     "TargetPlan",
     "apply_fixes",
+    "drop_untranslated_copies",
     "field_budget",
     "fill_missing_en_structure",
+    "fill_slide_structure",
     "plan_targets",
     "target_id",
 ]

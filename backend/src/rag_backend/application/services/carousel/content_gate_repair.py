@@ -4,7 +4,9 @@ Prod carousel 5344b6c6 kept 12 blockers through two owner revisions: the
 fail-closed chain only re-drafts a whole slide once, without the violations,
 and nothing ever asked a model to fix the field that broke a rule.
 
-``run_gate_repair``: validate, fill PT structure EN lacks, send ONLY the failing
+``run_gate_repair``: fill the PT structure the outline can supply (AE-0437:
+closing actions, summary points, features), validate, fill PT structure EN
+lacks, send ONLY the failing
 fields (path, current text, exact limit, problems, slide heading, PT source)
 in one model call, patch the answers in by path, re-validate. At most
 ``GATE_REPAIR_MAX_ROUNDS`` rounds, then stop with what still blocks visible.
@@ -34,7 +36,9 @@ from rag_backend.application.services.carousel.content_gate_repair_targets impor
     FieldRepairTarget,
     TargetPlan,
     apply_fixes,
+    drop_untranslated_copies,
     fill_missing_en_structure,
+    fill_slide_structure,
     plan_targets,
 )
 from rag_backend.application.services.carousel.draft_blob_text import (
@@ -47,8 +51,15 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
+from rag_backend.application.services.carousel.presentation_policy_types import (
+    CarouselPresentationPolicy,
+)
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     validate_localized_slides,
+)
+from rag_backend.application.services.carousel.structure_fill import (
+    SlideOutline,
+    StructureFillContext,
 )
 from rag_backend.application.services.carousel_template.prompts import (
     build_gate_field_repair_prompt,
@@ -183,6 +194,7 @@ class GateRepairCommand:
     style_guide: str = ""
     project_id: str = ""
     max_rounds: int = GATE_REPAIR_MAX_ROUNDS
+    outline: Mapping[int, SlideOutline] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -195,13 +207,26 @@ class GateRepairOutcome:
     changed_indices: frozenset[int] = frozenset()
 
 
+def _policy(command: GateRepairCommand) -> CarouselPresentationPolicy:
+    return load_presentation_policy(
+        command.policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+
+
+def _fill_context(command: GateRepairCommand) -> StructureFillContext:
+    icons = _policy(command).lucide_icon_allowlist
+    return StructureFillContext(icons=icons, outline=command.outline)
+
+
 def _fill_structure(
-    slides: list[dict[str, object]],
+    slides: list[dict[str, object]], command: GateRepairCommand
 ) -> tuple[list[dict[str, object]], dict[int, tuple[str, ...]]]:
+    context = _fill_context(command)
     filled_slides: list[dict[str, object]] = []
     filled: dict[int, tuple[str, ...]] = {}
     for slide in slides:
-        updated, paths = fill_missing_en_structure(slide)
+        structured = fill_slide_structure(slide, context)
+        updated, paths = fill_missing_en_structure(structured)
         index = slide.get(STATE_FIELD_SLIDE_INDEX)
         if paths and isinstance(index, int):
             filled[index] = paths
@@ -256,13 +281,11 @@ async def _round(
     slides: list[dict[str, object]], command: GateRepairCommand
 ) -> tuple[list[dict[str, object]], tuple[str, ...]] | None:
     """One round; None when there is nothing (more) to ask or the model failed."""
-    slides, filled = _fill_structure(slides)
+    slides, filled = _fill_structure(slides, command)
     report = _validate(slides, command)
     if not report.blocking:
         return None
-    policy = load_presentation_policy(
-        command.policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
-    )
+    policy = _policy(command)
     blockers = [violation for violation in report.violations if violation.is_blocker]
     targets = plan_targets(TargetPlan(slides, blockers, policy, filled))
     if not targets:
@@ -277,6 +300,16 @@ async def _round(
     return apply_fixes(slides, targets, texts), ids
 
 
+def _without_untranslated(
+    slides: list[dict[str, object]], original: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    before = {slide.get(STATE_FIELD_SLIDE_INDEX): slide for slide in original}
+    return [
+        drop_untranslated_copies(slide, before.get(slide.get(STATE_FIELD_SLIDE_INDEX)))
+        for slide in slides
+    ]
+
+
 async def run_gate_repair(command: GateRepairCommand) -> GateRepairOutcome:
     """Repair the blocked fields, at most ``max_rounds`` model calls."""
     original = copy.deepcopy(command.slides)
@@ -288,7 +321,8 @@ async def run_gate_repair(command: GateRepairCommand) -> GateRepairOutcome:
             break
         slides, ids = result
         requested.append(ids)
-    slides, _ = _fill_structure(slides)
+    slides, _ = _fill_structure(slides, command)
+    slides = _without_untranslated(slides, original)
     report = _validate(slides, command)
     changed = _changed(original, slides)
     logger.info(
