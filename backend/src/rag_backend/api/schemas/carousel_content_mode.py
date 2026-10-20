@@ -128,10 +128,18 @@ class ContentModeRequestFields(BaseModel):
         return self.pov_format or DEFAULT_POV_FORMAT
 
     def resolved_slide_count(self) -> int | None:
-        """POV defaults to 9 slides; Radar IA keeps None unless asked for."""
+        """POV defaults to 9 slides; Radar IA to 7 (the v4 contract default).
+
+        AE-0439 (QA F-07): Radar IA kept ``None`` unless asked for, so the
+        wizard (which sends no count for news) stored ``NULL`` and the blog
+        fell back to the legacy ``slides_config`` (6) instead of the deck
+        size. The count includes the CTA slide (ADR-0025 §Count).
+        """
         if self.slide_count is not None:
             return self.slide_count
-        return POV_SLIDE_COUNT_DEFAULT if is_pov_family(self.resolved_mode) else None
+        if is_pov_family(self.resolved_mode):
+            return POV_SLIDE_COUNT_DEFAULT
+        return NEWS_SLIDE_COUNT_MIN
 
     def resolved_cta_goal(self) -> str:
         """The CTA goal; follow when omitted."""

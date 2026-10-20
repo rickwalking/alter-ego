@@ -83,7 +83,10 @@ class SqlCarouselMaterialSource:
             persona=persona,
             section_count=resolve_section_count(
                 SectionCountSource(
-                    project.slide_count, project.slides_config, project.content_mode
+                    project.slide_count,
+                    len(slides),
+                    project.slides_config,
+                    project.content_mode,
                 )
             ),
             slides=tuple(slides),

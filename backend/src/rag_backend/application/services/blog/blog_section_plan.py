@@ -2,8 +2,9 @@
 
 Owner revision of ADR-0025: the section count is the carousel's slide count,
 never a blog-only maximum. :func:`resolve_section_count` applies the order
-``project.slide_count`` → ``slide_count_from_config(slides_config)`` → the
-content-mode default (standalone posts have no project and use that default).
+``project.slide_count`` → the real deck size (the slide rows, CTA included;
+AE-0439) → ``slide_count_from_config(slides_config)`` → the content-mode
+default (standalone posts have no project and use that default).
 :func:`normalize_section_count` makes a writer that missed the count either fit
 exactly N sections (merge extras / split long sections on paragraph breaks)
 or fail with :class:`SectionCountMismatchError` — a wrong count is never stored.
@@ -35,9 +36,16 @@ _MIN_PARAGRAPHS_TO_SPLIT = 2
 
 @dataclass(frozen=True)
 class SectionCountSource:
-    """The carousel fields the count is derived from (all optional)."""
+    """The carousel fields the count is derived from (all optional).
+
+    ``deck_slide_count`` is the REAL deck size (the persisted slide rows,
+    CTA included). AE-0439 (QA F-07): a Radar IA create stored no
+    ``slide_count`` and the legacy ``slides_config`` (6) predates the v4
+    contract, so the real deck size must come first.
+    """
 
     slide_count: int | None = None
+    deck_slide_count: int | None = None
     slides_config: str | None = None
     content_mode: str | None = None
 
@@ -51,9 +59,17 @@ def default_section_count(content_mode: str | None) -> int:
 
 
 def resolve_section_count(source: SectionCountSource) -> int:
-    """``slide_count`` → deck size from ``slides_config`` → content-mode default."""
+    """``slide_count`` → real deck size → ``slides_config`` → mode default.
+
+    AE-0439: the order is the stored count first, then the real deck size
+    (the slide rows, CTA included), then the legacy config, then the
+    content-mode default (standalone posts have no project and use that
+    default). The CTA slide counts as a section (ADR-0025 §Count).
+    """
     if source.slide_count is not None and source.slide_count > 0:
         return source.slide_count
+    if source.deck_slide_count is not None and source.deck_slide_count > 0:
+        return source.deck_slide_count
     if source.slides_config and source.slides_config.strip():
         return slide_count_from_config(source.slides_config)
     return default_section_count(source.content_mode)
