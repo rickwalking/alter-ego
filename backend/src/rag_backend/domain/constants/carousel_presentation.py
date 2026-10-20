@@ -83,6 +83,11 @@ VIOLATION_CLOSING_ACTIONS_MISSING = "closing_actions_missing"
 VIOLATION_SUMMARY_POINTS_MISSING = "summary_points_missing"
 VIOLATION_TRANSLATION_NOT_ENGLISH = "translation_not_english"
 VIOLATION_EMPHASIS_MARKUP_INVALID = "emphasis_markup_invalid"
+# AE-0436: the per-locale emphasis convention (AE-0403/AE-0414) — PT ``**…**``,
+# EN ``<strong>…</strong>`` — is a gate rule, not just an editor hint: a field
+# written with the other locale's markup is a blocker the deterministic repair
+# normalizes at write time.
+VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH = "emphasis_markup_locale_mismatch"
 # Minimum complete items (title + body) the rubric requires per slide type.
 MIN_CLOSING_ACTIONS = 3
 MIN_SUMMARY_POINTS = 3
@@ -242,6 +247,7 @@ __all__ = [
     "VIOLATION_DASH_PUNCTUATION_FORBIDDEN",
     "VIOLATION_DRAFTING_SCAFFOLD_PRESENT",
     "VIOLATION_EMPHASIS_MARKUP_INVALID",
+    "VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH",
     "VIOLATION_EMPHASIS_UNBALANCED",
     "VIOLATION_ENCODING_GARBLED",
     "VIOLATION_HEADING_EMPTY",

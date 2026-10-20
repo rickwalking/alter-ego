@@ -41,10 +41,15 @@ from rag_backend.application.services.carousel.owner_autofix_text import (
     balance_strong,
     is_untranslated,
     looks_portuguese,
+    normalize_emphasis,
     restore_proper_nouns,
 )
 from rag_backend.application.services.carousel.presentation_casing import (
     repair_casing,
+)
+from rag_backend.application.services.carousel.presentation_content_rules import (
+    rule_active,
+    slide_type_of,
 )
 from rag_backend.application.services.carousel.presentation_policy_types import (
     CarouselPresentationPolicy,
@@ -58,6 +63,9 @@ from rag_backend.application.services.carousel.structure_fill import (
 )
 from rag_backend.domain.constants.carousel import LANGUAGE_EN, LANGUAGE_PT
 from rag_backend.domain.constants.carousel_autofix import AUTOFIX_TARGET_ID
+from rag_backend.domain.constants.carousel_presentation import (
+    VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,
+)
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_INDEX,
     STATE_FIELD_SLIDE_TYPE,
@@ -129,6 +137,14 @@ def _polish(
     )
     # AE-0401: JSON blobs, markup, emphasis, encoding, doubled words.
     cleaned = repair_copy_hygiene(cleaned, locale, context.policy)
+    # AE-0436: rewrite balanced emphasis into the locale's convention
+    # (PT **…**, EN <strong>…</strong>) when the policy declares the rule.
+    if rule_active(
+        context.policy,
+        VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,
+        slide_type_of(cleaned),
+    ):
+        cleaned = map_texts(cleaned, lambda text: normalize_emphasis(locale, text))
     return repair_casing(cleaned, locale, context.policy)
 
 

@@ -28,6 +28,7 @@ from collections.abc import Callable
 from rag_backend.application.services.carousel.copy_hygiene_text import (
     assistant_chatter_detail,
     doubled_word_detail,
+    emphasis_locale_detail,
     emphasis_unbalanced_detail,
     encoding_detail,
     item_split_detail,
@@ -55,6 +56,7 @@ from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_ASSISTANT_CHATTER,
     VIOLATION_BODY_TOO_SHORT,
     VIOLATION_COPY_TRUNCATED,
+    VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,
     VIOLATION_EMPHASIS_UNBALANCED,
     VIOLATION_ENCODING_GARBLED,
     VIOLATION_MARKUP_LEAK,
@@ -84,6 +86,10 @@ _MESSAGES: dict[str, str] = {
         "Markdown heading/list/table, backticks or escapes)"
     ),
     VIOLATION_EMPHASIS_UNBALANCED: "Bold emphasis ** is unbalanced or empty",
+    # AE-0436: PT uses **…**, EN uses <strong>…</strong> (AE-0403/AE-0414).
+    VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH: (
+        "Emphasis uses the other locale's markup (PT: **…**, EN: <strong>…</strong>)"
+    ),
     VIOLATION_ASSISTANT_CHATTER: (
         "Visible copy contains assistant chatter or a note about the task"
     ),
@@ -204,6 +210,15 @@ def copy_hygiene_violations(
         return []
     fields = visible_fields(command.payload)
     found = _field_codes(fields, active)
+    # AE-0436: the per-locale emphasis convention is locale-aware, so it is
+    # checked separately from the every-field rules.
+    if VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH in active:
+        portuguese = command.locale == LANGUAGE_PT
+        found.extend(
+            (VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH, (field, detail))
+            for field, text in fields
+            if (detail := emphasis_locale_detail(text, portuguese=portuguese))
+        )
     if VIOLATION_STRUCTURED_ITEM_SPLIT in active:
         found.extend(
             (VIOLATION_STRUCTURED_ITEM_SPLIT, (field, detail))

@@ -1,0 +1,44 @@
+---
+name: carousel_slide_translations
+version: "9.0.0"
+description: "Translate PT carousel slide copy to English, structured fields included, emphasis as <strong> (AE-0436)"
+
+template: |
+  Translate carousel slide copy from Portuguese to English.
+
+  Input slides (PT):
+  {{ slides_json }}
+
+  Return JSON only: {"slides_en": [{"slide_index": 1, "heading": "...", "body": "...", "long_form_notes": "..."}]}
+  Use the same slide_index values. Translate heading, body and long_form_notes
+  (when present; keep its paragraph breaks). Add nothing else.
+
+  A slide can also carry structured fields. Translate every one it has and
+  return it with the same name and shape:
+  - "tldr_strip": one short line; return it as a string.
+  - "features", "summary_points", "actions": lists of {"title", "body"}; return
+    the same number of items, in the same order, each {"title": "...", "body": "..."}.
+  Never drop a structured field and never add one the slide does not have.
+
+  Keep each text about as long as its Portuguese source or shorter: the slide
+  has a fixed character budget per field.
+
+  Keep the source casing conventions in English: sentence case for every
+  heading and sentence, and the canonical capitals of proper nouns, brands,
+  products and acronyms.
+
+  Emphasis (AE-0436): English copy marks emphasis with <strong>...</strong>
+  ONLY. Keep every <strong>...</strong> tag around the translated words it
+  emphasizes and never write **...** emphasis in the English output.
+
+  Never write locale markers (PT, PT-BR, EN, EN-US) or field labels (Heading:,
+  Body:, CTA creator:, TL;DR: ...) into any translated text.
+
+  {{ quality_rubric }}
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-20"
+  tags: ["carousel", "translation", "ae-0430", "ae-0436"]

@@ -82,7 +82,7 @@ visible_text_rules:
   - rule_id: bilingual_structural_parity
     summary: PT and EN slides share slide type, intent, and structured-extra shape.
   - rule_id: drafting_scaffold_forbidden
-    summary: No drafting labels such as SLIDE 3, TITLE, BODY, or source URLs on slides.
+    summary: "No drafting labels on slides: locale markers (PT, PT-BR, EN, EN-US) or field labels (Heading, Body, CTA creator, TL;DR), or source URLs."
   - rule_id: body_must_not_repeat_heading
     summary: Body copy must not repeat the heading text.
   - rule_id: accent_highlight_at_most_one
@@ -123,6 +123,10 @@ rule_severities:
   summary_points_missing: blocker
   translation_not_english: blocker
   emphasis_markup_invalid: blocker
+  # AE-0436: PT copy uses **…**, EN copy uses <strong>…</strong> (AE-0403/
+  # AE-0414). A field with the other locale's markup is a blocker; the
+  # deterministic repair normalizes it at write time.
+  emphasis_markup_locale_mismatch: blocker
   proper_noun_casing: blocker
   # AE-0401: copy-hygiene rules (presentation_copy_rules.py). Prod carousel
   # 98a2e2f0 shipped a fenced JSON blob, an HTML tag and a Markdown heading as

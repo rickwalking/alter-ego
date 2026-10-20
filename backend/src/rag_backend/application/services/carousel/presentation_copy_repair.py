@@ -6,6 +6,10 @@ import re
 from collections.abc import Mapping, Set
 from typing import TypedDict
 
+from rag_backend.application.services.carousel.owner_autofix_paths import map_texts
+from rag_backend.application.services.carousel.owner_autofix_text import (
+    normalize_emphasis,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
 )
@@ -21,6 +25,7 @@ from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_BODY_TOO_LONG,
     VIOLATION_DASH_PUNCTUATION_FORBIDDEN,
     VIOLATION_DRAFTING_SCAFFOLD_PRESENT,
+    VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,
     VIOLATION_HEADING_NOT_SENTENCE_CASE_EN,
     VIOLATION_HEADING_REPEATED_IN_BODY,
     VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
@@ -194,7 +199,7 @@ def _repair_scaffold_fields(
     codes: Set[str],
     locale: str,
 ) -> None:
-    """Strip drafting-scaffold labels from visible copy (AE-0309)."""
+    """Strip drafting-scaffold labels from visible copy (AE-0309, AE-0436)."""
     if VIOLATION_DRAFTING_SCAFFOLD_PRESENT not in codes:
         return
     body = payload.get("body")
@@ -203,6 +208,23 @@ def _repair_scaffold_fields(
     heading = payload.get("heading")
     if isinstance(heading, str) and heading:
         payload["heading"] = strip_scaffold_labels(heading) or heading
+    # AE-0436: item titles and bodies (and the TL;DR) are visible copy too.
+    payload.update(map_texts(payload, strip_scaffold_labels))
+
+
+def _repair_emphasis_locale(
+    payload: dict[str, object],
+    codes: Set[str],
+    locale: str,
+) -> None:
+    """Rewrite balanced emphasis into the locale's convention (AE-0436).
+
+    The mismatch rule is a blocker, so the repair must fully clear it or the
+    bounded repair discards the payload and the gate stays blocked (fail-closed).
+    """
+    if VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH not in codes:
+        return
+    payload.update(map_texts(payload, lambda text: normalize_emphasis(locale, text)))
 
 
 def deterministic_repair_slide_payload(
@@ -214,6 +236,7 @@ def deterministic_repair_slide_payload(
     repaired = dict(payload)
     codes = {violation.code for violation in violations}
     _repair_scaffold_fields(repaired, codes, locale)
+    _repair_emphasis_locale(repaired, codes, locale)
     _repair_text_field(
         RepairFieldCommand(
             payload=repaired, field="heading", violations=codes, locale=locale

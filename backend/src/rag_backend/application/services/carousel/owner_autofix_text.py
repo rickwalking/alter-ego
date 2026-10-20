@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 
+from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.carousel_autofix import (
     ENGLISH_MARKERS,
     PORTUGUESE_ACCENTS,
@@ -37,6 +38,9 @@ _MANGLED_PATTERN = re.compile(
 )
 _WORD_PATTERN = re.compile(r"[^\W\d_]+")
 _WHITESPACE_PATTERN = re.compile(r"\s+")
+# AE-0436: balanced emphasis pairs, for the per-locale convention rewrite.
+_STRONG_PAIR_PATTERN = re.compile(r"<strong>(.*?)</strong>", re.IGNORECASE | re.DOTALL)
+_BOLD_PAIR_PATTERN = re.compile(r"\*\*(.*?)\*\*", re.DOTALL)
 
 
 def _demangle(text: str) -> str:
@@ -94,6 +98,35 @@ def restore_proper_nouns(text: str, nouns: tuple[str, ...]) -> str:
     return result
 
 
+def _nonempty(inner: str) -> bool:
+    return bool(inner.strip())
+
+
+def normalize_emphasis(locale: str, text: str) -> str:
+    """Rewrite balanced emphasis into the locale's convention (AE-0436).
+
+    The convention (AE-0403/AE-0414): PT copy marks emphasis with ``**…**``,
+    EN copy with ``<strong>…</strong>``. Balanced pairs of the other locale's
+    markup are rewritten deterministically; an empty pair is left for the
+    emphasis rules (it is never real emphasis). Idempotent.
+    """
+    if locale == LANGUAGE_EN:
+        return _BOLD_PAIR_PATTERN.sub(
+            lambda match: (
+                f"<strong>{match.group(1)}</strong>"
+                if _nonempty(match.group(1))
+                else match.group(0)
+            ),
+            text,
+        )
+    return _STRONG_PAIR_PATTERN.sub(
+        lambda match: (
+            f"**{match.group(1)}**" if _nonempty(match.group(1)) else match.group(0)
+        ),
+        text,
+    )
+
+
 def lowercase_nouns(text: str, nouns: tuple[str, ...]) -> tuple[str, ...]:
     """The nouns the text writes fully lowercase (what the restore would fix)."""
     found: list[str] = []
@@ -145,5 +178,6 @@ __all__ = [
     "is_untranslated",
     "looks_portuguese",
     "lowercase_nouns",
+    "normalize_emphasis",
     "restore_proper_nouns",
 ]
