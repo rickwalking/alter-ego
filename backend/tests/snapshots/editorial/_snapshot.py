@@ -25,6 +25,7 @@ fields are captured verbatim.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -61,7 +62,12 @@ _EXTRA_VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({"project_id"})
 
 
 def _normalize_workflow_volatile(value: JsonValue) -> JsonValue:
-    """Recursively collapse the workflow ``project_id`` UUID to a placeholder."""
+    """Recursively collapse the workflow ``project_id`` UUID to a placeholder.
+
+    AE-0439 (QA F-13): ``image_assets`` are owner preview URLs of the shape
+    ``/api/carousels/<project-id>/preview/images/<file>``, so the volatile
+    UUID also appears INSIDE those strings and is collapsed the same way.
+    """
     if isinstance(value, dict):
         return {
             key: (
@@ -73,7 +79,12 @@ def _normalize_workflow_volatile(value: JsonValue) -> JsonValue:
         }
     if isinstance(value, list):
         return [_normalize_workflow_volatile(item) for item in value]
+    if isinstance(value, str):
+        return _PROJECT_URL_UUID.sub(f"/api/carousels/{PLACEHOLDER_UUID}/", value)
     return value
+
+
+_PROJECT_URL_UUID: Final = re.compile(r"/api/carousels/[0-9a-fA-F-]{36}/")
 
 
 def build_snapshot(response: Response) -> dict[str, JsonValue]:

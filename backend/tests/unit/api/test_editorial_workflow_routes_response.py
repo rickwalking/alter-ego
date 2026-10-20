@@ -44,6 +44,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
+    STATE_FIELD_IMAGE_ASSETS,
     STATE_FIELD_PHASE_PROGRESS,
     STATE_FIELD_PROJECT_ID,
     STATE_FIELD_STATUS,
@@ -457,6 +458,31 @@ class TestBuilder:
         }
         response = build_editorial_workflow_state_response(state)
         assert response.error_message == "Invalid JSON response from LLM"
+
+    def test_image_assets_become_preview_urls(self) -> None:
+        # AE-0439 (QA F-13) Scenario: image_assets map to owner preview URLs.
+        state = {
+            STATE_FIELD_PROJECT_ID: "7acaf967-0124-44db-8636-0589906b3c33",
+            STATE_FIELD_IMAGE_ASSETS: [
+                "/app/output/carousels/7acaf967-0124-44db-8636-0589906b3c33/images/slide_1.jpg",
+                "/app/output/carousels/7acaf967-0124-44db-8636-0589906b3c33/images/slide_3.jpg",
+                "https://example.com/cover.jpg",
+                "/api/carousels/other/preview/images/slide_1.jpg",
+            ],
+        }
+        response = build_editorial_workflow_state_response(state)
+        assert response.image_assets == [
+            "/api/carousels/7acaf967-0124-44db-8636-0589906b3c33/preview/images/slide_1.jpg",
+            "/api/carousels/7acaf967-0124-44db-8636-0589906b3c33/preview/images/slide_3.jpg",
+            "https://example.com/cover.jpg",
+            "/api/carousels/other/preview/images/slide_1.jpg",
+        ]
+
+    def test_image_assets_are_empty_when_absent(self) -> None:
+        response = build_editorial_workflow_state_response(
+            {STATE_FIELD_PROJECT_ID: "p"}
+        )
+        assert response.image_assets == []
 
 
 # ── deprecated wrapper ──────────────────────────────────────────────────────
