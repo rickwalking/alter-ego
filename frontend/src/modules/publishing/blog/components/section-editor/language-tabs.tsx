@@ -11,6 +11,7 @@ import {
   BLOG_CONTENT_EN,
   BLOG_CONTENT_LANGUAGES,
 } from "../../lib/editor-document";
+import { EditorErrorNotice } from "../editor-error-notice";
 import type { LanguageTabsProps } from "./types";
 
 /**
@@ -58,11 +59,7 @@ export function LanguageTabs({
         </NeonAlert>
       )}
       {missingEnglish && translationStatus.error && (
-        <NeonAlert variant="destructive" role="alert">
-          <NeonAlertDescription>
-            {t(`errors.${translationStatus.error.kind}`)}
-          </NeonAlertDescription>
-        </NeonAlert>
+        <EditorErrorNotice error={translationStatus.error} />
       )}
     </div>
   );

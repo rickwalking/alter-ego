@@ -38,6 +38,7 @@ export function BlogEditorSidebar({
         scheduledPublishAt={post.scheduled_publish_at ?? null}
         allowSelfReview={review.allowSelfReview}
         disabled={busy}
+        error={review.error}
         onSubmitReview={(reviewerId) => void review.submitForReview(reviewerId)}
         onApprove={() => void review.approve()}
         onReject={(reason) => void review.reject(reason)}
@@ -58,7 +59,7 @@ export function BlogEditorSidebar({
         loading={data.versionsLoading}
         currentText={snapshotText(draft.document)}
         disabled={busy}
-        onRestore={(versionNumber) => void editor.handleRestore(versionNumber)}
+        onRestore={(versionNumber) => editor.handleRestore(versionNumber)}
       />
       <AiSuggestionPanel
         postId={post.id}

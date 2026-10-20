@@ -9,6 +9,7 @@ import {
   BLOG_EDITOR_I18N_NAMESPACE,
   BLOG_REJECT_REASON_MAX_LENGTH,
 } from "@/constants/blog-editor";
+import { EditorErrorNotice } from "../editor-error-notice";
 import { ScheduleControl } from "./schedule-control";
 import type { ReviewBarProps } from "./types";
 
@@ -25,17 +26,18 @@ const STATUS = {
  * Review / publish / schedule controls (AE-0424), driven by the post status
  * and the existing workflow guards. With self-review enabled a draft offers
  * "Publish now"; otherwise it needs a distinct reviewer. Publishing a draft
- * is left to the API status guard, whose error is shown.
+ * is left to the API status guard, whose error is shown here (AE-0438, F-11).
  */
 export function ReviewBar(props: ReviewBarProps): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
-  const { status, disabled } = props;
+  const { status, disabled, error } = props;
   return (
     <div className="space-y-3 rounded border p-3" data-testid="review-bar">
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold">{t("review.title")}</span>
         <NeonBadge variant="outline">{t(`review.status.${status}`)}</NeonBadge>
       </div>
+      <EditorErrorNotice error={error} />
       {status === STATUS.DRAFT && <DraftControls {...props} />}
       {status === STATUS.UNDER_REVIEW && <UnderReviewControls {...props} />}
       {status === STATUS.APPROVED && (

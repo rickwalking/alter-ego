@@ -1299,7 +1299,27 @@
           "not_found": "Essa seção ou tradução não existe mais. Recarregue a página.",
           "ai_failed": "O serviço de IA falhou. Nada foi alterado — tente de novo.",
           "failed": "A ação falhou. Tente de novo.",
-          "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP."
+          "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP.",
+          "code": {
+            "self_review": "Você não pode revisar o seu próprio post. Escolha um revisor diferente para enviar à revisão.",
+            "reviewer_required": "É preciso escolher um revisor para enviar este post à revisão.",
+            "version_empty": "Essa versão não tem conteúdo (ela guarda o rascunho vazio anterior). Escolha outra versão.",
+            "empty_document": "O documento precisa de pelo menos uma seção com texto.",
+            "not_publishable": "Este post ainda não pode ser publicado: ele precisa de conteúdo válido e do rótulo de IA.",
+            "heading_invalid": "Um título de seção está inválido: ele não pode começar com # nem passar de 200 caracteres.",
+            "section_too_long": "Uma seção passou do limite de 20.000 caracteres.",
+            "section_not_found": "Essa seção não existe mais. Recarregue a página.",
+            "translation_exists": "A tradução em inglês já existe.",
+            "translation_failed": "A tradução falhou. Nada foi alterado — tente de novo.",
+            "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP.",
+            "image_persist_failed": "Não foi possível salvar a imagem gerada. Tente de novo.",
+            "image_generation_failed": "A geração da imagem falhou. Nada foi alterado — tente de novo.",
+            "persona_required": "Nenhuma persona está disponível para reescrever esta seção. Crie uma persona primeiro.",
+            "rewrite_too_long": "O texto da seção é longo demais para reescrever. Encurte a seção e tente de novo.",
+            "rewrite_empty": "A reescrita não retornou texto. Tente de novo.",
+            "alt_blank": "O texto alternativo da imagem não pode ficar vazio.",
+            "schedule_not_set": "Este post não tem agendamento."
+          }
         }
       },
       "generation": {

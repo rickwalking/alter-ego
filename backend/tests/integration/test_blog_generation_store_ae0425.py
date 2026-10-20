@@ -165,7 +165,9 @@ def _replace_with(body: str) -> DocumentApply:
 
 async def test_content_writes_go_through_the_slot_path(sessions: Sessions) -> None:
     # The article write: lease checked on the locked row, voice score
-    # mirrored, version snapshot taken (AE-0424 slot path), lock_version bumped.
+    # mirrored, lock_version bumped. AE-0438 (F-05): the pre-write state is
+    # the empty bootstrap, which is never snapshotted — the first version
+    # entry appears with the NEXT write and holds the stored article.
     lease = await _draft(sessions)
     store = _slot_store(sessions)
     await store.heartbeat(lease)
@@ -178,8 +180,14 @@ async def test_content_writes_go_through_the_slot_path(sessions: Sessions) -> No
     assert row.title == "Novo"
     assert row.lock_version == 2
     assert row.ai_generation_metadata["voice_score"] == 81.0
-    assert len(row.version_history) == 1
+    assert not row.version_history
     assert generation_of(row.ai_generation_metadata)["status"] == "complete"
+    await store.apply_document(lease, _replace_with("Corpo 2"))
+    row = await _row(sessions, lease.post_id)
+    assert [
+        entry["snapshot"]["sections"][0]["body_md"]
+        for entry in row.version_history
+    ] == ["Corpo"]
 
 
 async def test_a_stale_task_cannot_clobber_a_newer_lease(sessions: Sessions) -> None:
@@ -266,7 +274,9 @@ async def test_an_invalid_write_is_a_document_error(sessions: Sessions) -> None:
 
 async def test_the_article_replaces_an_unparseable_row(sessions: Sessions) -> None:
     # Review B: a legacy (non-v2) row cannot be slot-edited; the article
-    # write replaces it through the versioned write (old content snapshotted).
+    # write replaces it through the versioned write. AE-0438 (F-05): the
+    # legacy pre-write content is not a restorable document either, so no
+    # version entry is appended for it.
     lease = await _draft(sessions)
     async with sessions() as db:
         await db.execute(update(BlogPostModel).values(content={"markdown": "# old"}))
@@ -280,7 +290,7 @@ async def test_the_article_replaces_an_unparseable_row(sessions: Sessions) -> No
     row = await _row(sessions, lease.post_id)
     assert row.content["sections"][0]["body_md"] == "Novo artigo"
     assert row.ai_generation_metadata["voice_score"] == 80.0
-    assert len(row.version_history) == 1
+    assert not row.version_history
 
 
 async def test_a_parseable_row_takes_the_slot_path(sessions: Sessions) -> None:

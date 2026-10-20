@@ -6,6 +6,8 @@
  * live here rather than inline in the `.tsx` files.
  */
 
+import type { BlogEditorError } from "../types";
+
 export interface AiSuggestionPanelProps {
   postId: string;
   selectedText: string;
@@ -23,6 +25,11 @@ export interface BlogPostVersion {
   created_at?: string;
 }
 
+export interface EditorErrorNoticeProps {
+  /** The failed action's error; `null` renders nothing. */
+  error: BlogEditorError | null;
+}
+
 export interface VersionHistorySidebarProps {
   versions: BlogPostVersion[];
   loading: boolean;
@@ -30,5 +37,6 @@ export interface VersionHistorySidebarProps {
   currentText: string;
   /** Pending edits block a restore (it would replace them). */
   disabled: boolean;
-  onRestore: (versionNumber: number) => void;
+  /** Restores the version; resolves with the failure or `null` on success. */
+  onRestore: (versionNumber: number) => Promise<BlogEditorError | null>;
 }

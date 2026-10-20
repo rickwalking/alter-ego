@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import {
   BlogGenerationStatus,
   BlogSectionEditor,
+  EditorErrorNotice,
   MigrationBanner,
   isGenerationInProgress,
   applySuggestion,
@@ -21,7 +22,6 @@ import {
   BLOG_EDITOR_I18N_NAMESPACE,
 } from "@/constants/blog-editor";
 import { ROUTE_PATHS } from "@/constants/api";
-import { NEON_RED } from "@/constants/neon";
 import { BlogPostEditFields } from "@/app/dashboard/blog-posts/[id]/edit/blog-post-edit-fields";
 import { BlogEditorSidebar } from "@/app/dashboard/blog-posts/[id]/edit/blog-editor-sidebar";
 import type { BlogPostEditorViewProps } from "@/app/dashboard/blog-posts/types";
@@ -82,11 +82,7 @@ export function BlogPostEditorView({
         <BlogGenerationStatus postId={post.id} unsavedChanges={editor.dirty} />
       )}
       {migrationPending && <MigrationBanner detail={error?.detail ?? null} />}
-      {error && !migrationPending && (
-        <p className="mb-4 text-sm" style={{ color: NEON_RED }} role="alert">
-          {t(`errors.${error.kind}`)}
-        </p>
-      )}
+      {error && !migrationPending && <EditorErrorNotice error={error} />}
       {draft && validation && (
         <fieldset
           disabled={generating}

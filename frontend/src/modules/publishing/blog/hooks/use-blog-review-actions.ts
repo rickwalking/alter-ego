@@ -26,6 +26,7 @@ import {
   unpublishPost,
 } from "../blog-editor-requests";
 import type { BlogPost } from "../types";
+import type { BlogEditorError } from "./types";
 import { locked } from "./use-blog-post-editor";
 import type { BlogReviewActions, UseBlogPostEditorResult } from "./types";
 
@@ -45,6 +46,9 @@ export function useBlogReviewActions(
     queryFn: fetchEditorSettings,
   });
   const [pending, setPending] = useState(false);
+  // AE-0438 (F-11): the failed action's error is shown IN the review bar
+  // (with its code-specific copy), next to the control that failed.
+  const [error, setError] = useState<BlogEditorError | null>(null);
 
   const run = async (
     task: (post: BlogPost) => Promise<BlogPost>,
@@ -54,12 +58,12 @@ export function useBlogReviewActions(
       return;
     }
     setPending(true);
-    editor.setError(null);
+    setError(null);
     try {
       editor.replaceFromServer(await task(post));
     } catch (err) {
       await editor.reload();
-      editor.setError(
+      setError(
         err instanceof BlogEditorRequestError
           ? { kind: err.kind, detail: err.detail }
           : { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null },
@@ -72,6 +76,7 @@ export function useBlogReviewActions(
   return {
     allowSelfReview: settings.data?.allow_self_review ?? false,
     pending,
+    error,
     submitForReview: (reviewerId) =>
       run((post) => submitForReview(post.id, reviewerId)),
     approve: () => run((post) => approvePost(post.id)),

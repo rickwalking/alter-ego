@@ -105,12 +105,29 @@ describe("review controls", () => {
     await act(async () => {
       await result.current.review.publish();
     });
-    expect(result.current.editor.error).toEqual({
+    expect(result.current.review.error).toEqual({
       kind: "status_guard",
       detail: "invalid_status",
     });
     expect(result.current.editor.post?.status).toBe("draft");
     expect(result.current.review.pending).toBe(false);
+  });
+
+  // Scenario: Submitting your own post for review names the guard (AE-0438, F-11)
+  it("keeps the self-review detail code for the review bar copy", async () => {
+    const { result } = await renderReview(false, (url) =>
+      url.includes("submit-review")
+        ? jsonResponse({ detail: "self_review_not_allowed" }, 400)
+        : undefined,
+    );
+    await act(async () => {
+      await result.current.review.submitForReview("me");
+    });
+    expect(result.current.review.error).toEqual({
+      kind: "status_guard",
+      detail: "self_review_not_allowed",
+    });
+    expect(result.current.editor.post?.status).toBe("draft");
   });
 
   // Scenario: Publish now auto-approves when self-review is enabled
@@ -179,6 +196,26 @@ describe("review controls", () => {
     await act(async () => {
       await result.current.review.approve();
     });
-    expect(result.current.editor.error?.kind).toBe("failed");
+    expect(result.current.review.error?.kind).toBe("failed");
+  });
+
+  it("clears the review error on the next successful action", async () => {
+    let fail = true;
+    const { result } = await renderReview(false, (url) =>
+      url.endsWith("/approve")
+        ? fail
+          ? jsonResponse({ detail: "invalid_status" }, 400)
+          : jsonResponse(blogPost({ status: "approved" }))
+        : undefined,
+    );
+    await act(async () => {
+      await result.current.review.approve();
+    });
+    expect(result.current.review.error).not.toBeNull();
+    fail = false;
+    await act(async () => {
+      await result.current.review.approve();
+    });
+    expect(result.current.review.error).toBeNull();
   });
 });

@@ -2,6 +2,14 @@
  * Blog Post Types
  */
 
+import type { BlogEditorErrorKind } from "@/constants/blog-editor";
+
+/** A failed editor request (AE-0424): the typed kind + the API detail code. */
+export interface BlogEditorError {
+  kind: BlogEditorErrorKind;
+  detail: string | null;
+}
+
 export interface BlogPost {
   id: string;
   project_id?: string | null;

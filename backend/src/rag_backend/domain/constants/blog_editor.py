@@ -85,3 +85,14 @@ ERR_BLOG_TRANSLATION_FAILED: Final = "blog_translation_failed"
 ERR_BLOG_TRANSLATION_WRONG_LANGUAGE: Final = "blog_translation_wrong_language"
 ERR_BLOG_SCHEDULE_NOT_SET: Final = "blog_schedule_not_set"
 ERR_BLOG_REVIEWER_REQUIRED: Final = "blog_reviewer_required"
+# AE-0438 (F-05): a stored snapshot with no content (pre-fix bootstrap) cannot
+# be restored; the operator command ``blog_empty_versions`` repairs the history.
+ERR_BLOG_VERSION_EMPTY: Final = "blog_version_empty"
+
+# AE-0438 (F-08): the single-section rewrite must not echo the heading back as
+# the first line of the body; this instruction goes to the persona enforce call.
+REWRITE_NO_HEADING_INSTRUCTION: Final = (
+    "Rewrite only the body of this section. Do not repeat the heading above as "
+    "a title, a heading, a bold line or a plain line. Start directly with the "
+    "body text and return only the body text."
+)
