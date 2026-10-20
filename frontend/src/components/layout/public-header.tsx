@@ -8,6 +8,20 @@ import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
 const PUBLIC_HEADER_BRAND = "Pedro Marins";
 
+const PUBLIC_HEADER_LINK_STYLE = {
+  color: TEXT_MUTED,
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 500,
+  transition: "color 0.2s",
+} as const;
+
+const PUBLIC_HEADER_NAV_ITEMS = [
+  { href: PUBLIC_ROUTE_PATHS.CHAT, labelKey: "nav.chat" },
+  { href: PUBLIC_ROUTE_PATHS.BLOG, labelKey: "nav.blog" },
+  { href: PUBLIC_ROUTE_PATHS.CAROUSELS, labelKey: "nav.carousels" },
+] as const;
+
 type Translate = (key: string) => string;
 
 interface PublicHeaderNavProps {
@@ -21,42 +35,11 @@ export function PublicHeaderNav({
 }: PublicHeaderNavProps): React.ReactElement {
   return (
     <nav className="flex min-w-0 items-center gap-4 sm:gap-7">
-      <Link
-        href={PUBLIC_ROUTE_PATHS.CHAT}
-        style={{
-          color: TEXT_MUTED,
-          textDecoration: "none",
-          fontSize: "14px",
-          fontWeight: 500,
-          transition: "color 0.2s",
-        }}
-      >
-        {t("nav.chat")}
-      </Link>
-      <Link
-        href={PUBLIC_ROUTE_PATHS.BLOG}
-        style={{
-          color: TEXT_MUTED,
-          textDecoration: "none",
-          fontSize: "14px",
-          fontWeight: 500,
-          transition: "color 0.2s",
-        }}
-      >
-        {t("nav.blog")}
-      </Link>
-      <Link
-        href={PUBLIC_ROUTE_PATHS.CAROUSELS}
-        style={{
-          color: TEXT_MUTED,
-          textDecoration: "none",
-          fontSize: "14px",
-          fontWeight: 500,
-          transition: "color 0.2s",
-        }}
-      >
-        {t("nav.carousels")}
-      </Link>
+      {PUBLIC_HEADER_NAV_ITEMS.map((item) => (
+        <Link key={item.href} href={item.href} style={PUBLIC_HEADER_LINK_STYLE}>
+          {t(item.labelKey)}
+        </Link>
+      ))}
       <div
         className="hidden sm:block"
         aria-hidden="true"
