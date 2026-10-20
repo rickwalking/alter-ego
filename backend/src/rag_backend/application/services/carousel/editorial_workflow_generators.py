@@ -83,6 +83,9 @@ class SlideDraftGenerationParams:
     mode: ContentModeBrief | None = None
     # AE-0391: slides drafted at once (the CONTENT_DRAFT_CONCURRENCY setting).
     concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
+    # AE-0437: a scoped revision drafts only these slide indexes (None: all);
+    # every slide still sees the whole outline as sibling context.
+    only_slides: frozenset[int] | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,8 @@ class ContentRegenInputs:
     previous_drafts: list[dict[str, object]] = field(default_factory=list)
     # AE-0375: the project's content mode for this regeneration.
     mode: ContentModeBrief | None = None
+    # AE-0437: the slides a scoped revision may change (None: the whole deck).
+    scope: frozenset[int] | None = None
 
 
 async def synthesize_research(
@@ -240,12 +245,14 @@ def _others(bodies: list[str], index: int) -> list[str]:
 
 
 async def _redraft_duplicates(
-    runner: _SlideDraftRunner, drafts: list[dict[str, object]]
+    runner: _SlideDraftRunner,
+    drafts: list[dict[str, object]],
+    positions: list[int],
 ) -> list[dict[str, object]]:
     """Re-draft each near-duplicate slide at most once, keeping the more distinct."""
     bodies = [_draft_body(draft) for draft in drafts]
     for index in find_duplicate_slide_indices(bodies):
-        candidate = await runner.redraft_at(index, bodies[index])
+        candidate = await runner.redraft_at(positions[index], bodies[index])
         candidate_body = _draft_body(candidate)
         others = _others(bodies, index)
         improved = max_similarity_against(
@@ -257,6 +264,16 @@ async def _redraft_duplicates(
         else:
             logger.warning("carousel_slide_still_similar", slide_index=index)
     return drafts
+
+
+def _positions(params: SlideDraftGenerationParams) -> list[int]:
+    """Outline positions to draft: every slide, or the scoped ones (AE-0437)."""
+    only = params.only_slides
+    return [
+        position
+        for position, slide in enumerate(params.outline)
+        if only is None or int(slide.get(_SLIDE_INDEX_KEY, 0)) in only
+    ]
 
 
 async def generate_slide_drafts(
@@ -278,11 +295,13 @@ async def generate_slide_drafts(
         previous_drafts=params.previous_drafts or [],
         mode=params.mode,
     )
+    positions = _positions(params)
     drafts = await gather_bounded(
-        [partial(runner.draft_at, index) for index in range(len(params.outline))],
+        [partial(runner.draft_at, index) for index in positions],
         params.concurrency,
     )
-    return _with_quote_cards(await _redraft_duplicates(runner, drafts), params.mode)
+    redrafted = await _redraft_duplicates(runner, drafts, positions)
+    return _with_quote_cards(redrafted, params.mode)
 
 
 def _with_quote_cards(

@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from rag_backend.application.services.carousel.closing_actions import (
+    restore_closing_actions,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     OUTLINE_LEGACY_BODY_KEY,
     OUTLINE_LEGACY_HEADING_KEY,
@@ -161,6 +164,8 @@ def _build_locale_payload(
         value = source.get(key)
         if value is not None:
             payload[key] = value
+    # AE-0437: a closing checklist drafted as ``features`` is its actions.
+    restore_closing_actions(payload, slide_type)
     return _LocalePayloadBuild(payload=payload, failure_reason=failure_reason)
 
 
@@ -234,8 +239,12 @@ def build_localized_slide_with_failures(
         record: dict[str, object] = {
             SLIDE_INDEX_KEY: slide_index,
             "slide_type": slide_type,
-            PRESENTATION_PT_KEY: dict(presentation_pt),
-            PRESENTATION_EN_KEY: dict(presentation_en),
+            PRESENTATION_PT_KEY: restore_closing_actions(
+                dict(presentation_pt), slide_type
+            ),
+            PRESENTATION_EN_KEY: restore_closing_actions(
+                dict(presentation_en), slide_type
+            ),
         }
         return record, _canonical_key_failures(record, raw_draft)
     en_source = _resolve_en_source(slide, slide_index, translations_en)

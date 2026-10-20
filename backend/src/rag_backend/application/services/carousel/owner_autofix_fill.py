@@ -20,6 +20,8 @@ from rag_backend.application.services.carousel.sentence_case import (
     capitalize_first_letter,
 )
 from rag_backend.domain.constants.carousel_autofix import (
+    CLOSING_ACTION_BODY_MAX_CHARS,
+    CLOSING_ACTION_TITLE_MAX_CHARS,
     FEATURE_BODY_MAX_CHARS,
     FEATURE_TITLE_MAX_CHARS,
     FILL_MAX_ITEMS,
@@ -44,6 +46,9 @@ class ItemBudget:
 
 FEATURE_BUDGET = ItemBudget(title=FEATURE_TITLE_MAX_CHARS, body=FEATURE_BODY_MAX_CHARS)
 SUMMARY_BUDGET = ItemBudget(title=SUMMARY_TITLE_MAX_CHARS, body=SUMMARY_BODY_MAX_CHARS)
+CLOSING_BUDGET = ItemBudget(
+    title=CLOSING_ACTION_TITLE_MAX_CHARS, body=CLOSING_ACTION_BODY_MAX_CHARS
+)
 
 
 @dataclass(frozen=True)
@@ -141,6 +146,7 @@ def build_items(source: FillSource) -> list[dict[str, object]] | None:
 
 
 __all__ = [
+    "CLOSING_BUDGET",
     "FEATURE_BUDGET",
     "SUMMARY_BUDGET",
     "FillSource",

@@ -63,10 +63,10 @@ Canonical values live in `contracts/hero_lower_third_v1.yaml`.
 |------|--------------------|-----------------------------------|
 | `intro` | Hook subtitle, 2-3 sentences | Bullet list, checklist |
 | `content` | Dense paragraph with `<strong>` highlights for key terms | Bullet-only slides (unless user asked) |
-| `closing` | **Checklist of 3-4 actionable items**, each with a Lucide `icon_name` (`chart-column`, `book-open`, `wrench`, `flask-conical`, etc.). Renders via `.check-grid` / `.check-item` or `.feature-grid`. | Paragraph prose (floats at top of empty slide) |
+| `closing` | **Checklist of 3 actionable items** (`actions`), each with a Lucide `icon_name` (`chart-column`, `book-open`, `wrench`, `flask-conical`, etc.). Renders via `.check-grid` / `.check-item` or `.feature-grid`. | Paragraph prose (floats at top of empty slide) |
 | `cta` | Short punchy title + 2-3 sentence body + save/share buttons | Long essay |
 
-The content LLM must return `closing` slides as structured items (`features: [{icon_name, title, body}]`), not as one paragraph.
+The content LLM must return `closing` slides as structured items (`actions: [{icon_name, title, body}]`, exactly 3 complete items in PT and in EN), not as one paragraph and not under `features` (the gate blocks a closing slide without 3 complete actions: `closing_actions_missing`).
 
 ## Structured extras (one per slide)
 
@@ -82,7 +82,7 @@ Each content slide's `body` can be followed by **one** structured extra — do n
 
 **Mapping:** Benchmarks slide → `stats`. Architecture slide → `features`. Reaction slide → `insight`.
 
-The content LLM must return `features: [{icon_name, title, body}]` on the closing slide (and optionally on content slides) so the renderer emits a structured list instead of a prose wall.
+The content LLM must return `actions: [{icon_name, title, body}]` on the closing slide and may return `features` on content slides, so the renderer emits a structured list instead of a prose wall.
 
 ## ResearchSource entity
 

@@ -7,10 +7,19 @@ deterministic pipeline validates, then writes the repaired copy back through
 the same ``_slide_data_from_draft`` + ``pack_extras`` mapping the content
 pipeline uses — so a repaired projection is byte-identical to a freshly
 persisted one.
+
+The row has no ``actions`` column: ``_structured_from_presentation`` stores a
+closing slide's actions under ``features``. Reading a closing row back maps
+them to ``actions`` again (AE-0437: the autofix wrote the row's ``features``
+into the checkpoint, so prod carousel 5344b6c6 slide 6 kept its closing items
+under the wrong key).
 """
 
 from __future__ import annotations
 
+from rag_backend.application.services.carousel.closing_actions import (
+    restore_closing_actions,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     SLIDE_INDEX_KEY,
 )
@@ -49,7 +58,7 @@ def _locale_payload(
         value = structured_source.get(key)
         if value is not None:
             payload[key] = value
-    return payload
+    return restore_closing_actions(payload)
 
 
 def _localized_record_from_slide(slide: CarouselSlide) -> dict[str, object]:

@@ -18,6 +18,7 @@ import {
   applySlideCopyEdit,
   applySlideExtraEdit,
   applySlideStructuredItemEdit,
+  applySlideStructuredListEdit,
   BlockingSlidesNotice,
   buildSlideFieldErrors,
   changedLocalizedSlides,
@@ -37,6 +38,7 @@ import {
   type SlideExtraEdit,
   type SlideFieldErrorState,
   type SlideStructuredItemEdit,
+  type SlideStructuredListEdit,
 } from "@/modules/editorial";
 import {
   CONTENT_REVIEW_ID_PREFIX,
@@ -65,6 +67,8 @@ export interface ContentPhaseReviewProps {
 
 interface ManualFixesFooterProps {
   errors: SlideFieldErrorState;
+  /** The server still blocks approval (shows the blocking-slides hint). */
+  blocked: boolean;
   canSubmit: boolean;
   manualFixes: ContentManualFixesActions;
   onSubmit: () => void;
@@ -81,6 +85,7 @@ function validationStamp(state: EditorialWorkflowState): string {
 
 function ManualFixesFooter({
   errors,
+  blocked,
   canSubmit,
   manualFixes,
   onSubmit,
@@ -88,17 +93,19 @@ function ManualFixesFooter({
   const t = useTranslations("editorialWorkflow.review");
   return (
     <div className="space-y-2 rounded-md border border-destructive/30 p-3">
-      <BlockingSlidesNotice
-        message={t("fieldErrors.manualFixesHint")}
-        slideIndexes={errors.slideIndexes}
-        onSelectSlide={(slideIndex) =>
-          focusInvalidField(
-            CONTENT_REVIEW_ID_PREFIX,
-            errors.fieldErrors,
-            slideIndex,
-          )
-        }
-      />
+      {blocked ? (
+        <BlockingSlidesNotice
+          message={t("fieldErrors.manualFixesHint")}
+          slideIndexes={errors.slideIndexes}
+          onSelectSlide={(slideIndex) =>
+            focusInvalidField(
+              CONTENT_REVIEW_ID_PREFIX,
+              errors.fieldErrors,
+              slideIndex,
+            )
+          }
+        />
+      ) : null}
       <NeonButton
         size="sm"
         disabled={!canSubmit || manualFixes.submitting === true}
@@ -135,6 +142,7 @@ export function ContentPhaseReview({
     hasBlockingPresentationViolations(state) || contentGateBlocked;
   const promptCount = state.slide_image_prompts?.length ?? 0;
   const canEdit = editable && onSlidesChange !== undefined;
+  const hasChanges = slidesHaveCopyChanges(baselineSlides, localizedSlides);
 
   // AE-0403: once a manual-fix submission comes back (run finished), jump to
   // the first field that is still invalid (a DOM focus, not data fetching).
@@ -164,6 +172,11 @@ export function ContentPhaseReview({
         structuredItemFieldPath(edit.listKey, edit.itemIndex, edit.field),
       ),
     );
+  };
+
+  // AE-0437: add / remove a structured item slot (PT and EN together).
+  const handleListChange = (edit: SlideStructuredListEdit): void => {
+    onSlidesChange?.(applySlideStructuredListEdit(localizedSlides, edit));
   };
 
   const handleExtraChange = (edit: SlideExtraEdit): void => {
@@ -234,6 +247,7 @@ export function ContentPhaseReview({
             onCopyChange: canEdit ? handleCopyChange : undefined,
             onStructuredItemChange: canEdit ? handleItemChange : undefined,
             onExtraChange: canEdit ? handleExtraChange : undefined,
+            onStructuredListChange: canEdit ? handleListChange : undefined,
           };
 
           return (
@@ -275,10 +289,14 @@ export function ContentPhaseReview({
         })}
       </div>
 
-      {canEdit && manualFixes && approvalBlocked ? (
+      {/* AE-0437: unsaved edits can always be saved without approving, also
+          when the server is no longer blocking (prod carousel 5344b6c6: a
+          late-added EN TL;DR edit could only be sent by approving). */}
+      {canEdit && manualFixes && (approvalBlocked || hasChanges) ? (
         <ManualFixesFooter
           errors={errors}
-          canSubmit={slidesHaveCopyChanges(baselineSlides, localizedSlides)}
+          blocked={approvalBlocked}
+          canSubmit={hasChanges}
           manualFixes={manualFixes}
           onSubmit={submitManualFixes}
         />

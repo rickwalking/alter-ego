@@ -36,16 +36,16 @@ from rag_backend.application.services.carousel.owner_autofix_vocabulary import (
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
+from rag_backend.application.services.carousel.structure_fill import (
+    outline_from_state,
+)
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_LOCALIZED_SLIDES,
-    STATE_FIELD_OUTLINE,
     STATE_FIELD_PRESENTATION_POLICY_VERSION,
     STATE_FIELD_RESEARCH_FINDINGS,
-    STATE_FIELD_SLIDE_INDEX,
-    STATE_FIELD_SLIDE_TYPE,
 )
 from rag_backend.domain.protocols.repositories import CarouselRepository
 
@@ -100,18 +100,6 @@ def _dicts(state: Mapping[str, object] | None, key: str) -> list[Mapping[str, ob
     if not isinstance(raw, list):
         return []
     return [item for item in raw if isinstance(item, Mapping)]
-
-
-def _outline(state: Mapping[str, object] | None) -> dict[int, SlideOutline]:
-    outline: dict[int, SlideOutline] = {}
-    for position, item in enumerate(_dicts(state, STATE_FIELD_OUTLINE), start=1):
-        index = item.get(STATE_FIELD_SLIDE_INDEX)
-        outline[index if isinstance(index, int) else position] = SlideOutline(
-            title=str(item.get(_TITLE) or "").strip(),
-            key_points=_strings(item.get(_KEY_POINTS)),
-            slide_type=str(item.get(STATE_FIELD_SLIDE_TYPE) or ""),
-        )
-    return outline
 
 
 def _record_texts(records: list[dict[str, object]]) -> tuple[str, ...]:
@@ -173,7 +161,7 @@ def _source(parts: _SourceParts) -> AutofixSource:
     policy = load_presentation_policy(parts.version)
     state = parts.state
     records = parts.records
-    outline = _outline(state)
+    outline = outline_from_state(state)
     vocabulary = _vocabulary(
         _VocabularyInput(
             state=state,

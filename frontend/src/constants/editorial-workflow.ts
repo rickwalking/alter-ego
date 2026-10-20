@@ -147,3 +147,26 @@ export const EDITORIAL_RESUME_ERROR_CODES: ReadonlySet<string> = new Set([
  */
 export const DESIGN_VALIDATION_RECOVERY_HINT =
   "design_validation_blocked_edit_or_send_back";
+
+/**
+ * AE-0437: the structured item list each slide type renders (mirrors the
+ * backend gate: a summary needs ``summary_points``, a closing slide needs 3
+ * ``actions``, a content slide may carry ``features``). The editor offers this
+ * list even when it is empty, so a missing list can be filled by hand.
+ */
+export const SLIDE_TYPE_ITEM_LIST_KEY: Readonly<Record<string, string>> = {
+  summary: "summary_points",
+  closing: "actions",
+  content: "features",
+};
+
+/** AE-0437: most items a structured list holds (features allow 2-4). */
+export const STRUCTURED_LIST_MAX_ITEMS = 4;
+
+/** AE-0437: icons a new item takes by position (Lucide contract allowlist). */
+export const STRUCTURED_ITEM_DEFAULT_ICONS = [
+  "target",
+  "wrench",
+  "book-open",
+  "shield-check",
+] as const;

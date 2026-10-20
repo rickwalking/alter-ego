@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  editableStructuredListKey,
   fieldDomId,
   fieldErrorKey,
   isPresentationStructuredItemList,
@@ -21,6 +22,7 @@ import {
   type SlideExtraEdit,
   type SlideFieldErrors,
   type SlideStructuredItemEdit,
+  type SlideStructuredListEdit,
 } from "@/modules/editorial";
 import type { LocalizedSlideReview } from "@/modules/publishing";
 import {
@@ -51,12 +53,19 @@ export interface ContentLocaleFieldsProps {
   onStructuredItemChange?: (edit: SlideStructuredItemEdit) => void;
   /** AE-0414 (B11): free-text extras (tldr, CTA fields, insight text). */
   onExtraChange?: (edit: SlideExtraEdit) => void;
+  /** AE-0437: add / remove structured item slots. */
+  onStructuredListChange?: (edit: SlideStructuredListEdit) => void;
   fieldErrors: SlideFieldErrors;
+}
+
+interface StructuredList {
+  listKey: string;
+  items: Record<string, unknown>[];
 }
 
 function structuredList(
   presentation: Record<string, unknown>,
-): { listKey: string; items: Record<string, unknown>[] } | null {
+): StructuredList | null {
   for (const listKey of PRESENTATION_STRUCTURED_ITEM_LIST_KEYS) {
     const value = presentation[listKey];
     if (isPresentationStructuredItemList(value)) {
@@ -64,6 +73,25 @@ function structuredList(
     }
   }
   return null;
+}
+
+/**
+ * AE-0437: the list an editable column edits — the slide type's own key (a
+ * closing slide edits ``actions``), offered even when empty.
+ */
+function editableList(
+  presentation: Record<string, unknown>,
+  slideType: string,
+): StructuredList | null {
+  const listKey = editableStructuredListKey(presentation, slideType);
+  if (!listKey) {
+    return null;
+  }
+  const value = presentation[listKey];
+  const items = isPresentationStructuredItemList(value)
+    ? (value as Record<string, unknown>[])
+    : [];
+  return { listKey, items };
 }
 
 function editContext(
@@ -79,6 +107,7 @@ function editContext(
     fieldErrors: props.fieldErrors,
     onItemChange: props.onStructuredItemChange,
     onExtraChange: props.onExtraChange,
+    onListChange: props.onStructuredListChange,
   };
 }
 
@@ -96,7 +125,9 @@ function PresentationExtras({
         props.slide[otherLocaleKey(props.localeKey)],
       )
     : props.slide[props.localeKey];
-  const list = structuredList(presentation);
+  const list = context
+    ? editableList(presentation, props.slide.slide_type)
+    : structuredList(presentation);
   const extras = listStructuredExtras(presentation);
   return (
     <>

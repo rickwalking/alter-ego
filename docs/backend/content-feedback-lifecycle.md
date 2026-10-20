@@ -78,3 +78,30 @@ Logs: `content_feedback_applied`, `content_feedback_settled`, `content_artifacts
 Tests: `backend/tests/features/content_feedback_lifecycle_ae0405.feature`,
 `tests/unit/agents/test_content_feedback_replay_ae0405.py` (real engine and real runner; the
 drafting model is a spy) and `tests/unit/application/test_content_feedback_lifecycle_ae0405.py`.
+
+## Scoped revisions (AE-0437)
+
+Prod carousel 7acaf967: a revision asked to change only slides 2 and 6 re-drafted and stored
+every slide (slides 1, 3 and 7 changed; slide 3 lost its features). The scope is now enforced
+in code (`application/services/carousel/revision_scope.py`):
+
+- **Scope.** When the owner's active notes name slides ("slide 6", "slides 2 e 6",
+  "slides 2-4", the autopilot's "slide 6 (pt body): …"), the revision may change those slides
+  plus the slides the content gate currently blocks. A note that names no slide ("deixe o tom
+  mais leve") still rewrites the whole deck; a first draft is never scoped; numbers outside the
+  deck are ignored.
+- **Drafting.** `SlideDraftGenerationParams.only_slides` drafts only the scoped slides (each
+  still sees the whole outline as sibling context); the fresh drafts replace only their own
+  slides in `slide_drafts`.
+- **Kept slides.** After the review build, every slide outside the scope gets its stored
+  localized copy back through `apply_localized_slide_edits`, so drafts, translations and both
+  validation reports are recomputed over the merged deck.
+
+The content gate repair also fills structure the outline can supply (a closing slide's 3
+`actions`, a summary's points; `structure_fill.py`, shared with the owner autofix), drops an EN
+answer that is still Portuguese, and takes an untranslated PT copy out of EN again.
+
+Tests: `backend/tests/features/closing_actions_scoped_revisions_ae0437.feature`,
+`tests/unit/agents/test_scoped_revision_ae0437.py`,
+`tests/unit/application/test_revision_scope_ae0437.py`,
+`tests/unit/application/test_closing_actions_ae0437.py`.

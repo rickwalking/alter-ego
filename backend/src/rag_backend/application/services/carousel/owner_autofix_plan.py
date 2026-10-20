@@ -2,8 +2,9 @@
 
 Pure: no DB, no LLM. Per slide and locale, in this order:
 
-1. fill a content slide's empty features from its outline key points and a
-   summary slide's missing points (the EN side gets the PT items, which the
+1. fill a content slide's empty features from its outline key points, a
+   summary slide's missing points and a closing slide's missing actions
+   (``structure_fill``, AE-0437; the EN side gets the PT items, which the
    re-translate step then translates);
 2. balance ``<strong>`` tags and restore the carousel's proper nouns in every
    visible text, then the AE-0401 copy-hygiene repair (JSON blobs, markup,
@@ -30,15 +31,7 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_PT_KEY,
     as_dict,
 )
-from rag_backend.application.services.carousel.owner_autofix_fill import (
-    FEATURE_BUDGET,
-    SUMMARY_BUDGET,
-    FillSource,
-    build_items,
-    key_point_pairs,
-)
 from rag_backend.application.services.carousel.owner_autofix_paths import (
-    complete_items,
     map_texts,
     text_at,
     visible_paths,
@@ -56,33 +49,19 @@ from rag_backend.application.services.carousel.presentation_casing import (
 from rag_backend.application.services.carousel.presentation_policy_types import (
     CarouselPresentationPolicy,
 )
-from rag_backend.domain.constants.carousel import (
-    LANGUAGE_EN,
-    LANGUAGE_PT,
-    SLIDE_TYPE_CONTENT,
-    SLIDE_TYPE_SUMMARY,
+from rag_backend.application.services.carousel.structure_fill import (
+    SlideOutline,
+    SlideRef,
+    StructureFillContext,
+    fill_missing_items,
+    mirror_missing_items,
 )
-from rag_backend.domain.constants.carousel_autofix import (
-    AUTOFIX_TARGET_ID,
-    FILL_MIN_ITEMS,
-)
+from rag_backend.domain.constants.carousel import LANGUAGE_EN, LANGUAGE_PT
+from rag_backend.domain.constants.carousel_autofix import AUTOFIX_TARGET_ID
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_INDEX,
     STATE_FIELD_SLIDE_TYPE,
 )
-
-_FEATURES = "features"
-_SUMMARY_POINTS = "summary_points"
-_BODY = "body"
-
-
-@dataclass(frozen=True)
-class SlideOutline:
-    """The outline entry of one slide."""
-
-    title: str = ""
-    key_points: tuple[str, ...] = ()
-    slide_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -122,99 +101,22 @@ class AutofixPlan:
         return self.changed or bool(self.retranslate)
 
 
-@dataclass(frozen=True)
-class _Slide:
-    index: int
-    slide_type: str
-
-
 def _slide_index(record: Mapping[str, object]) -> int:
     value = record.get(STATE_FIELD_SLIDE_INDEX)
     return value if isinstance(value, int) else 0
 
 
-def _slide_of(record: Mapping[str, object], payload: Mapping[str, object]) -> _Slide:
+def _slide_of(record: Mapping[str, object], payload: Mapping[str, object]) -> SlideRef:
     slide_type = payload.get(STATE_FIELD_SLIDE_TYPE) or record.get(
         STATE_FIELD_SLIDE_TYPE
     )
-    return _Slide(index=_slide_index(record), slide_type=str(slide_type or ""))
+    return SlideRef(index=_slide_index(record), slide_type=str(slide_type or ""))
 
 
-def _summary_pairs(index: int, context: AutofixContext) -> tuple[tuple[str, str], ...]:
-    own = context.outline.get(index, SlideOutline())
-    pairs = key_point_pairs(own.key_points, SUMMARY_BUDGET.title)
-    if len(pairs) >= FILL_MIN_ITEMS:
-        return pairs
-    return tuple(
-        (entry.title, entry.key_points[0])
-        for _, entry in sorted(context.outline.items())
-        if entry.slide_type == SLIDE_TYPE_CONTENT and entry.title and entry.key_points
+def _fill_context(context: AutofixContext) -> StructureFillContext:
+    return StructureFillContext(
+        icons=context.policy.lucide_icon_allowlist, outline=context.outline
     )
-
-
-def _needs_features(payload: Mapping[str, object], slide_type: str) -> bool:
-    if slide_type != SLIDE_TYPE_CONTENT or str(payload.get(_BODY) or "").strip():
-        return False
-    return complete_items(payload, _FEATURES) < FILL_MIN_ITEMS
-
-
-def _needs_summary(payload: Mapping[str, object], slide_type: str) -> bool:
-    if slide_type != SLIDE_TYPE_SUMMARY:
-        return False
-    return complete_items(payload, _SUMMARY_POINTS) < FILL_MIN_ITEMS
-
-
-def _feature_items(
-    slide: _Slide, context: AutofixContext
-) -> list[dict[str, object]] | None:
-    points = context.outline.get(slide.index, SlideOutline()).key_points
-    return build_items(
-        FillSource(
-            pairs=key_point_pairs(points, FEATURE_BUDGET.title),
-            icons=context.policy.lucide_icon_allowlist,
-            budget=FEATURE_BUDGET,
-        )
-    )
-
-
-def _summary_items(
-    slide: _Slide, context: AutofixContext
-) -> list[dict[str, object]] | None:
-    return build_items(
-        FillSource(
-            pairs=_summary_pairs(slide.index, context),
-            icons=context.policy.lucide_icon_allowlist,
-            budget=SUMMARY_BUDGET,
-        )
-    )
-
-
-def _fill(payload: dict[str, object], slide: _Slide, context: AutofixContext) -> None:
-    """Fill a PT payload's missing items in place."""
-    if _needs_features(payload, slide.slide_type):
-        features = _feature_items(slide, context)
-        if features is not None:
-            payload[_FEATURES] = features
-    if _needs_summary(payload, slide.slide_type):
-        points = _summary_items(slide, context)
-        if points is not None:
-            payload[_SUMMARY_POINTS] = points
-
-
-def _mirror_fill(
-    english: dict[str, object], portuguese: Mapping[str, object], slide: _Slide
-) -> tuple[str, ...]:
-    """Give the EN payload the PT items it lacks; return the lists copied.
-
-    The copied items are Portuguese, so all of them are translated afterwards.
-    """
-    copied: list[str] = []
-    checks = ((_FEATURES, _needs_features), (_SUMMARY_POINTS, _needs_summary))
-    for list_field, needs in checks:
-        if needs(english, slide.slide_type) and complete_items(portuguese, list_field):
-            english[list_field] = copy.deepcopy(portuguese[list_field])
-            copied.append(list_field)
-    return tuple(copied)
 
 
 def _polish(
@@ -274,13 +176,13 @@ def _fix_record(record: Mapping[str, object], context: AutofixContext) -> _Recor
     if portuguese is None:
         return _RecordFix(record=fixed, targets=[])
     slide = _slide_of(fixed, portuguese)
-    _fill(portuguese, slide, context)
+    fill_missing_items(portuguese, slide, _fill_context(context))
     portuguese = _polish(portuguese, LANGUAGE_PT, context)
     fixed[PRESENTATION_PT_KEY] = portuguese
     english = as_dict(fixed.get(PRESENTATION_EN_KEY))
     if english is None:
         return _RecordFix(record=fixed, targets=[])
-    copied = _mirror_fill(english, portuguese, slide)
+    copied = mirror_missing_items(english, portuguese, slide)
     english = _polish(english, LANGUAGE_EN, context)
     fixed[PRESENTATION_EN_KEY] = english
     pair = _Pair(
