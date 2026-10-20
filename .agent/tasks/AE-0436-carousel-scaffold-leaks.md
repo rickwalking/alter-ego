@@ -125,7 +125,7 @@ Prod evidence (QA 2026-10-19 run, carousel `7acaf967`, read-only report
   v9 translation prompt forbids `**` in EN copy.
 - [x] AC7: rule-fires tests for the new gate rule on seeded violations; the
   real prod strings are fixtures; backend gates (except mutation, hotfix fast
-  path) green locally; Python 3.11 import check; CI green (pending).
+  path) green locally; Python 3.11 import check; CI green (PR #158).
 
 ## Gherkin Scenarios
 
