@@ -3,7 +3,8 @@
 from typing import Final
 
 PROMPT_DOMAIN: Final = "blog"
-PROMPT_VERSION: Final = "v1"
+# AE-0435: v2 judge/rewrite/draft are told the language to keep.
+PROMPT_VERSION: Final = "v2"
 PROMPT_DRAFT: Final = "draft"
 PROMPT_REWRITE: Final = "rewrite"
 PROMPT_JUDGE: Final = "judge"
