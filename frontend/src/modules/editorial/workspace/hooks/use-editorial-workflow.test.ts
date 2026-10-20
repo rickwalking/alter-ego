@@ -272,8 +272,6 @@ describe("useEditorialWorkflow", () => {
       await vi.advanceTimersByTimeAsync(EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[0]);
     });
 
-    const callsAfterFirstPoll = countStateFetches();
-
     await act(async () => {
       await vi.advanceTimersByTimeAsync(EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[0]);
     });
@@ -287,11 +285,15 @@ describe("useEditorialWorkflow", () => {
       EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
     );
 
+    // AE-0440: the reopened stream refetches the state once; after that no
+    // poll runs while SSE is primary.
+    const callsAfterReconnect = countStateFetches();
+
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
 
-    expect(countStateFetches()).toBe(callsAfterFirstPoll);
+    expect(countStateFetches()).toBe(callsAfterReconnect);
   });
 
   // Feature: Unified workflow progress in create workspace

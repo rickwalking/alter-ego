@@ -101,6 +101,7 @@ export function useEditorialWorkflow(
   const {
     enterPollingFallback,
     stopPollingFallback,
+    reconnectLiveUpdates,
     transportModeRef,
     workflowStateRef,
   } = useEditorialWorkflowSse({
@@ -187,6 +188,7 @@ export function useEditorialWorkflow(
     loading,
     error,
     transportMode,
+    reconnectLiveUpdates,
     start,
     resume,
     refreshState,

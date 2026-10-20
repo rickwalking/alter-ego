@@ -828,7 +828,10 @@
       }
     },
     "transport": {
-      "pollingFallback": "Fallback de polling ativo"
+      "pollingFallback": "Fallback de polling ativo",
+      "disconnectedTitle": "Atualizações ao vivo desconectadas",
+      "disconnectedHint": "Esta página parou de receber as atualizações do fluxo, então o que você vê pode estar desatualizado.",
+      "retry": "Tentar de novo"
     },
     "runProgress": {
       "title": "Revisão em andamento",

@@ -1,4 +1,5 @@
 import { renderWithProviders as render, screen } from "@/test/utils";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   CREATE_STEP_IDS,
@@ -37,6 +38,7 @@ const stateWithPrompts: EditorialWorkflowState = {
 
 function buildWorkflow(
   state: EditorialWorkflowState,
+  overrides?: Partial<ReturnType<typeof useEditorialWorkflow>>,
 ): ReturnType<typeof useEditorialWorkflow> {
   return {
     state,
@@ -44,6 +46,7 @@ function buildWorkflow(
     loading: false,
     error: null,
     transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+    reconnectLiveUpdates: vi.fn(),
     start: vi.fn(async () => state),
     resume: vi.fn(async () => state),
     refreshState: vi.fn(async () => state),
@@ -53,6 +56,7 @@ function buildWorkflow(
       state.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
     hasActiveWorkflow: true,
     runningAction: null,
+    ...overrides,
   };
 }
 
@@ -210,5 +214,60 @@ describe("CreateWorkflowPanel persona gate (AE-0415, B01)", () => {
     expect(
       screen.getByRole("button", { name: "Approve Phase" }),
     ).toBeDisabled();
+  });
+});
+
+// Feature: tests/features/workflow-stream-recovery-ae0440.feature
+describe("CreateWorkflowPanel live updates (AE-0440)", () => {
+  function renderWithTransport(
+    workflow: ReturnType<typeof useEditorialWorkflow>,
+    viewStepId: CreateStepId = CREATE_STEP_IDS.IMAGES,
+  ): void {
+    render(
+      <CreateWorkflowPanel
+        projectId={stateWithPrompts.project_id}
+        topic="AI security"
+        audience="Security leaders"
+        brief="Review AI security risks"
+        workflow={workflow}
+        viewStepId={viewStepId}
+        workflowStepId={CREATE_STEP_IDS.IMAGES}
+      />,
+    );
+  }
+
+  // Scenario: Live updates disconnect after the reconnect budget is spent
+  // Scenario: Retry reconnects a disconnected stream
+  it("shows the disconnected state and retries on click", async () => {
+    const reconnectLiveUpdates = vi.fn();
+    renderWithTransport(
+      buildWorkflow(stateWithPrompts, {
+        transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED,
+        reconnectLiveUpdates,
+      }),
+    );
+
+    expect(screen.getByText("Live updates disconnected")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(reconnectLiveUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the disconnected state on a past step too", () => {
+    renderWithTransport(
+      buildWorkflow(stateWithPrompts, {
+        transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED,
+      }),
+      CREATE_STEP_IDS.CONTENT,
+    );
+
+    expect(screen.getByTestId("live-updates-disconnected")).toBeInTheDocument();
+  });
+
+  it("hides the disconnected state while the stream is live", () => {
+    renderWithTransport(buildWorkflow(stateWithPrompts));
+
+    expect(
+      screen.queryByTestId("live-updates-disconnected"),
+    ).not.toBeInTheDocument();
   });
 });

@@ -66,3 +66,86 @@ describe("CreateWorkflowProgress", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+// Feature: tests/features/workflow-stream-recovery-ae0440.feature
+describe("CreateWorkflowProgress stale phase progress (AE-0440)", () => {
+  // Prod 5344b6c6: phase_progress is never cleared when the images phase ends.
+  const imagesProgress = {
+    phase: "generating_images",
+    label: "Generating 4 slide images in parallel",
+    current: 4,
+    total: 4,
+    slides: [{ number: 1, status: "done" as const }],
+  };
+
+  // Scenario: Image progress of a past phase is not shown as live work
+  it("hides image progress while a later send-back runs the content phase", () => {
+    const { container } = render(
+      <CreateWorkflowProgress
+        state={state({
+          current_phase: "content",
+          phase_progress: imagesProgress,
+        })}
+        loading={false}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("hides image progress while an approval of final review is loading", () => {
+    const { container } = render(
+      <CreateWorkflowProgress
+        state={state({
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          phase_progress: imagesProgress,
+        })}
+        loading
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("hides progress tagged with another editorial phase", () => {
+    const { container } = render(
+      <CreateWorkflowProgress
+        state={state({
+          current_phase: "content",
+          phase_progress: { phase: "outline", label: "Outlining" },
+        })}
+        loading={false}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  // Scenario: Image progress is shown while the images phase runs
+  it("shows image progress while the images phase runs", () => {
+    render(
+      <CreateWorkflowProgress
+        state={state({
+          current_phase: "images",
+          phase_progress: imagesProgress,
+        })}
+        loading={false}
+      />,
+    );
+    expect(
+      screen.getByText("Generating 4 slide images in parallel"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("4 / 4")).toBeInTheDocument();
+  });
+
+  // Scenario: Progress without a phase tag is shown for the running phase
+  it("shows untagged progress for the running phase", () => {
+    render(
+      <CreateWorkflowProgress
+        state={state({
+          current_phase: "images",
+          phase_progress: { label: "Generating images", current: 1, total: 4 },
+        })}
+        loading={false}
+      />,
+    );
+    expect(screen.getByText("Generating images")).toBeInTheDocument();
+  });
+});
