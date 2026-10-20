@@ -235,6 +235,21 @@ the dual-write upsert moved to AE-0422 (it would clobber v2); the delete-time de
   generation schemas that were missing from the stale committed artifact on main (174 component
   schemas; ticket-relevant removals unchanged).
 
+### 2026-10-19 — diff-cover: handler-level read tests (tracing artifact on main)
+
+- CI's `backend:diff-cover` failed on the two changed route lines
+  (`routes/blog_post.py:215`, `routes/public_blog_post.py:114-116,119`). Reproduced on
+  `origin/main` itself: coverage (both C and Python tracers) does not record lines after the
+  first `await` inside these rate-limited HTTP handlers even though they execute (proven with a
+  manual line tracer and by response assertions; a plain FastAPI probe and a direct handler call
+  trace fine). This is a pre-existing toolchain artifact on main, not a real gap.
+- Fix: new handler-level unit tests that call the read handlers directly (no HTTP transport):
+  `tests/unit/api/test_blog_post_read_handler_ae0428.py` (valid v2 → parsed content; non-v2 →
+  422 `blog_document_not_v2`) and `tests/unit/api/test_public_blog_post_handler_ae0428.py`
+  (valid v2 → public detail; non-v2 → uniform 404). They prove the AC8 fail-closed mapping at
+  the handler boundary and make diff-cover deterministic. Local `uv run diff-cover
+  coverage.xml --fail-under=75` on the changed lines: **100% (0 missing)**.
+
 ## Files Touched
 
 Backend — `blog_image_map` removal / strict read (AC1, AC8):
@@ -285,6 +300,8 @@ Tests / fixtures / artifact:
   `backend/tests/integration/test_presentation_safety_net.py`
 - `backend/tests/unit/application/test_blog_document_service_ae0423.py`,
   `backend/tests/unit/application/test_editorial_distribution_pack.py`
+- `backend/tests/unit/api/test_blog_post_read_handler_ae0428.py` (new),
+  `backend/tests/unit/api/test_public_blog_post_handler_ae0428.py` (new)
 - `backend/tests/snapshots/presentation/design.json`
 - `frontend/tests/features/blog.feature`, `frontend/tests/features/blog_no_carousel_slides_ae0422.feature`
 - `frontend/scripts/dead-code-baseline.json` (regenerated: 60 → 34)
@@ -348,6 +365,11 @@ Pending.
 
 ## Decision Log
 
+- **Handler-level read tests for the changed route lines.** The test toolchain on main does not
+  record post-await lines of these rate-limited HTTP handlers in coverage (reproduced on main with
+  both tracer cores; the lines provably execute). Rather than weaken diff-cover, the AC8 fail-closed
+  mapping is additionally tested by calling the handlers directly — real behavior tests, and they
+  make the gate deterministic.
 - **Delete, don't flag.** A v1 fallback would keep the positional-image failure class alive; ADR-0025
   drops v1 entirely, so the code goes with it.
 - **Same-name symbols need a map.** `BlogPostFilters` (type vs component), `useCarouselProject`
