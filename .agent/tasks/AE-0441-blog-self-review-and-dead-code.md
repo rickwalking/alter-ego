@@ -1,6 +1,6 @@
 # AE-0441 â€” Remove the blog "a different editor must review" rule + knip dead-code cleanup
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: P1
 Type: Bug
@@ -84,6 +84,8 @@ Dead-export ratchet baseline (`frontend/scripts/dead-code-baseline.json`): 34 â†
 - Duplicate export `DEFAULT_IMAGE_PRESET = FLAT_EDITORIAL_PRESET` (semantic alias, 6 callers).
 - knip configuration hints: drop the `src/**/*.d.ts` ignore and the non-matching
   `middleware` / `instrumentation` entry patterns.
+- `backend:pip-audit` fails locally on certifi GHSA-6q48-6c7w-9gw2 and 8 Pillow 12.3.0 CVEs (fixed in
+  Pillow 13.0.0, a major bump): needs its own deps ticket.
 - With 0 grandfathered dead exports, `DEAD_CODE_FULL_TREE_BLOCKING=1` can be flipped in CI
   (AE-0152 operating model).
 
@@ -128,7 +130,7 @@ None.
 
 ### 2026-10-20
 
-Ticket created from the orchestrator brief. Commit (a): Gherkin first, then the rule removal
+Ticket created from the orchestrator brief. PR #163. Commit (a): Gherkin first, then the rule removal
 (backend route/settings/schema/resource_access, frontend review bar/hook/types), tests, openapi,
 ADR/arch doc. Commit (b): knip dead files/exports cleanup and baseline ratchet.
 
@@ -151,7 +153,10 @@ ADR/arch doc. Commit (b): knip dead files/exports cleanup and baseline ratchet.
 
 ## Test Evidence
 
-TBD
+See `.agent/reports/AE-0441.dev-summary.md`. Every backend and frontend gate passes locally (each run
+on its own, Postgres set), except mutation, which is deferred to CI, and `backend:pip-audit`. That gate fails
+locally on new certifi/Pillow advisories that are unrelated to this diff; CI `backend / Security` is green.
+Backend tests: 6199 passed. Diff-cover: 100%. Frontend tests: 1693 passed.
 
 ## QA Report
 
