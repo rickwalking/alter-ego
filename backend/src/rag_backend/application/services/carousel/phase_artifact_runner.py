@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import TypedDict
+from typing import Protocol, TypedDict, runtime_checkable
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
@@ -82,6 +82,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_DRAFTS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.persona_score import on_hundred_scale_entry
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
@@ -747,6 +748,7 @@ class PhaseArtifactRunner:
         persona: PersonaProfile,
     ) -> dict[str, object]:
         persona_agent = PersonaAgent(persona=persona, llm=self._llm)
+        fallback = _fallback_judge(persona, self._llm)
         texts = {
             index: str(slide.get("draft_text", ""))
             for index, slide in enumerate(slide_drafts)
@@ -754,15 +756,45 @@ class PhaseArtifactRunner:
         }
         # AE-0391: scored concurrently (bounded), keyed back in slide order.
         # AE-0407: retried once; a slide the judge never scored is left out.
+        # AE-0433: the retry runs on the queue's next model (the fallback
+        # judge), so one slow first model cannot leave the run unscored.
         scores = await gather_bounded(
-            [partial(judge_voice, persona_agent, text) for text in texts.values()],
+            [
+                partial(judge_voice, persona_agent, text, fallback)
+                for text in texts.values()
+            ],
             self._draft_concurrency,
         )
+        # AE-0439 (QA F-12): store on 0-100 at write time — a raw 0-10 judge
+        # answer must never reach the checkpoint (prod stored overall 8.5).
         return {
-            f"slide_{index + 1}": score
+            f"slide_{index + 1}": on_hundred_scale_entry(score)
             for index, score in zip(texts, scores, strict=True)
             if score is not None
         }
 
 
 __all__ = ["PhaseArtifactRunner"]
+
+
+@runtime_checkable
+class _FallbackModel(Protocol):
+    """A chat model that hands a call to the next model of the queue (AE-0439).
+
+    Mirrors ``HasFallback`` without an application→infrastructure import.
+    """
+
+    def as_fallback(self) -> BaseChatModel | None:
+        """The model to re-issue a call on, or None when there is none."""
+        ...
+
+
+def _fallback_judge(persona: PersonaProfile, llm: BaseChatModel) -> PersonaAgent | None:
+    """The persona judge on ``llm``'s fallback model (AE-0439, #154 A).
+
+    The content-generation scoring retries a timed-out judge on the next
+    model of the role's queue, exactly like the editorial slide fix
+    (``carousel_slide_fix._fallback_judge``).
+    """
+    fallback = llm.as_fallback() if isinstance(llm, _FallbackModel) else None
+    return None if fallback is None else PersonaAgent(persona=persona, llm=fallback)
