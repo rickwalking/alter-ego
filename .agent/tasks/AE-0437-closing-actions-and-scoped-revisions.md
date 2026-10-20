@@ -166,7 +166,25 @@ Gherkin + tests.
 
 ## Test Evidence
 
-Pending (gate run below).
+Local gates, each run on its own (`bash scripts/ci/gates.sh <scope>:<gate>`) with a private
+Postgres (`DATABASE_URL` set), 2026-10-20:
+
+- backend: format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
+  docstrings, dead-code, inline-prompts, redis-factory, autopilot-env, healthcheck-loopback,
+  bandit, pip-audit, integrity, **test (6016 passed, 2 skipped)**, **diff-cover (98%)**,
+  migrations, schema-drift = PASS.
+- frontend: lint, lint-changed, component-types, duplication, dead-code, typecheck, build,
+  legacy-guard, legacy-inventory, format, security, integrity, test, schema-drift,
+  duplication-tests, dead-files = PASS.
+- mutation (backend + frontend): not run locally (shared machine, OOM rule); CI is the
+  source of truth.
+- New tests: backend 36 (`test_closing_actions_ae0437.py` 15, `test_revision_scope_ae0437.py`
+  18, `test_scoped_revision_ae0437.py` 3); frontend 13 (`presentation-structured-lists.test.ts`
+  8, `content-phase-review.item-slots.test.tsx` 5).
+
+```
+GATES_JSON: {"pass":37,"fail":0,"skip":0,"note":"every backend+frontend gate except mutation (deferred to CI)"}
+```
 
 ## QA Report
 
