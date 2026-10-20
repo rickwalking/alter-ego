@@ -4,7 +4,9 @@ The editor's EN tab is read-only until ``content.translations.en`` exists; this
 service builds it from the PT document, one section per (bounded-concurrency)
 LLM call, keeping each section's image and the cover (the same art serves both
 languages). Every EN section gets a fresh id. Any failed section fails the
-whole translation (nothing is stored), so EN is never half-written.
+whole translation (nothing is stored), so EN is never half-written, and so
+does a section the model answered in Portuguese (AE-0435: the carousel's
+``wrong_language`` detector, no model), so EN is never Portuguese.
 
 The owner's own text is delimited as data in the versioned template
 (``agents/prompts/blog/v1/translate_section.yaml``); it is not passed through
@@ -23,6 +25,9 @@ from rag_backend.application.services.blog.ai_envelope import strip_code_fence
 from rag_backend.application.services.blog_workflow_observability import (
     blog_ai_propagate,
 )
+from rag_backend.application.services.carousel.copy_hygiene_text import (
+    wrong_language_detail,
+)
 from rag_backend.domain.constants.blog_document import (
     BLOG_SCHEMA_V2,
     BLOG_SECTION_ID_PREFIX,
@@ -32,6 +37,7 @@ from rag_backend.domain.constants.blog_document import (
 )
 from rag_backend.domain.constants.blog_editor import (
     ERR_BLOG_TRANSLATION_FAILED,
+    ERR_BLOG_TRANSLATION_WRONG_LANGUAGE,
     PHASE_BLOG_TRANSLATION,
 )
 from rag_backend.domain.models.blog_document import (
@@ -119,6 +125,8 @@ class BlogTranslationService:
             except Exception as exc:
                 raise BlogTranslationError from exc
         heading, body = _parse_answer(raw or "")
+        if wrong_language_detail(f"{heading or ''}\n{body}", portuguese=False):
+            raise BlogTranslationError(ERR_BLOG_TRANSLATION_WRONG_LANGUAGE)
         return BlogSection(
             id=_new_id(),
             heading=heading if section.heading else None,

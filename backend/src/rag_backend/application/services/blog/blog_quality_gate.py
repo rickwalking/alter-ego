@@ -9,6 +9,9 @@ Per language (PT canonical, then ``translations.en``):
    the writer performs **exactly one** rewrite pass, then the article is
    re-normalized, re-stripped and re-scored. The second score is stored as is:
    there is never a second rewrite.
+4. EN only (AE-0435): a rewrite that switched the article to Portuguese is
+   discarded and the English sections from before it are kept (the PT persona
+   scorer's Portuguese suggestions used to pull the EN rewrite into Portuguese).
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ import structlog
 
 from rag_backend.application.services.blog.blog_quality_scan import (
     ScanInput,
+    portuguese_sections,
     scan_sections,
     strip_source_leaks,
 )
@@ -26,7 +30,9 @@ from rag_backend.application.services.blog.blog_section_plan import (
     normalize_section_count,
 )
 from rag_backend.domain.constants.blog_generation import (
+    LANGUAGE_EN,
     LANGUAGE_PT,
+    LOG_EN_REWRITE_DISCARDED,
     LOG_SOURCE_LEAK_STRIPPED,
 )
 from rag_backend.domain.constants.blog_voice import (
@@ -99,6 +105,21 @@ class BlogQualityGate:
         first = await self._assess(command, command.sections)
         if first.passed:
             return GatedLanguage(first.sections, first.voice, first.findings, 0)
+        rewritten = await self._rewrite(command, first)
+        if _switched_to_portuguese(command.language, first, rewritten):
+            logger.warning(LOG_EN_REWRITE_DISCARDED)
+            return GatedLanguage(
+                first.sections, first.voice, first.findings, MAX_REWRITE_PASSES
+            )
+        second = await self._assess(command, rewritten)
+        return GatedLanguage(
+            second.sections, second.voice, second.findings, MAX_REWRITE_PASSES
+        )
+
+    async def _rewrite(
+        self, command: GateCommand, first: _Assessment
+    ) -> tuple[DraftSection, ...]:
+        """The judge's notes → the single rewrite pass, re-normalized."""
         notes = await self._deps.writer.judge(
             JudgeRequest(
                 language=command.language,
@@ -115,11 +136,13 @@ class BlogQualityGate:
                 notes=notes,
             )
         )
-        normalized = normalize_section_count(rewritten, command.brief.section_count)
-        second = await self._assess(command, normalized)
-        return GatedLanguage(
-            second.sections, second.voice, second.findings, MAX_REWRITE_PASSES
-        )
+        return normalize_section_count(rewritten, command.brief.section_count)
+
+    async def assess(self, command: GateCommand) -> GatedLanguage:
+        """Score + scan ``command.sections`` without any rewrite (AE-0435: a
+        retranslated EN is stored with its own quality)."""
+        assessed = await self._assess(command, command.sections)
+        return GatedLanguage(assessed.sections, assessed.voice, assessed.findings, 0)
 
     async def _assess(
         self, command: GateCommand, sections: tuple[DraftSection, ...]
@@ -142,6 +165,15 @@ class BlogQualityGate:
         if dropped:
             logger.warning(LOG_SOURCE_LEAK_STRIPPED, sentences=dropped)
         return cleaned
+
+
+def _switched_to_portuguese(
+    language: str, before: _Assessment, after: tuple[DraftSection, ...]
+) -> bool:
+    """An EN rewrite that reads as Portuguese where the draft read as English."""
+    if language != LANGUAGE_EN:
+        return False
+    return bool(portuguese_sections(after)) and not portuguese_sections(before.sections)
 
 
 __all__ = ["BlogQualityGate", "GateCommand", "QualityGateDeps", "article_text"]

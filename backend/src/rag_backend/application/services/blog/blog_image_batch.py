@@ -9,12 +9,16 @@ generation needs on top of it:
   caller passes how many images the post may still generate, and only that
   many slots are attempted;
 * best-effort slots: a failed or capped slot stays ``null`` with an error that
-  names it; nothing here ever fails the draft.
+  names it; nothing here ever fails the draft;
+* a budget sized by the slot count (AE-0435): ``wave_seconds`` per wave of
+  ``concurrency`` images. When it runs out, the images that finished are kept
+  and every unfinished slot gets ``image_timeout`` (the retry fills it).
 """
 
 from __future__ import annotations
 
 import asyncio
+import math
 from dataclasses import dataclass
 
 import structlog
@@ -34,11 +38,13 @@ from rag_backend.domain.constants.blog_editor import PHASE_BLOG_SECTION_IMAGE
 from rag_backend.domain.constants.blog_generation import (
     AGENT_BLOG_IMAGES,
     ERR_IMAGE_COST_CAP,
+    ERR_IMAGE_TIMEOUT,
     ERROR_KEY_CODE,
     ERROR_KEY_REASON,
     ERROR_KEY_SLOT,
     LOG_IMAGE_FAILED,
     LOG_IMAGES_DONE,
+    LOG_IMAGES_TIMED_OUT,
 )
 from rag_backend.domain.models.blog_document import BlogImage
 from rag_backend.domain.models.blog_generation import GenerationTrace, ImageSubject
@@ -57,12 +63,13 @@ class BlogImageBatchDeps:
 
 @dataclass(frozen=True)
 class ImageBatchRequest:
-    """The slots to fill, in order (cover first), and how many images the
-    post may still generate."""
+    """The slots to fill, in order (cover first), how many images the post
+    may still generate and the budget of one wave (``None`` = unbounded)."""
 
     trace: GenerationTrace
     subjects: tuple[ImageSubject, ...]
     max_images: int
+    wave_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -94,12 +101,14 @@ class BlogImageBatchService:
         """Cover first, bounded concurrency, budget-capped; never raises per slot."""
         allowed = max(0, request.max_images)
         attempted = request.subjects[:allowed]
-        gate = asyncio.Semaphore(max(1, self._deps.concurrency))
-        outcomes = await asyncio.gather(
-            *(self._bounded(gate, (request.trace, subject)) for subject in attempted)
+        finished = await self._run_within_budget(request, attempted)
+        images = {o.slot: o.image for o in finished.values() if o.image is not None}
+        errors = [o.error for o in finished.values() if o.error is not None]
+        errors.extend(
+            _slot_error(subject.slot, ERR_IMAGE_TIMEOUT, ERR_IMAGE_TIMEOUT)
+            for subject in attempted
+            if subject.slot not in finished
         )
-        images = {o.slot: o.image for o in outcomes if o.image is not None}
-        errors = [o.error for o in outcomes if o.error is not None]
         errors.extend(
             _slot_error(subject.slot, ERR_IMAGE_COST_CAP, ERR_IMAGE_COST_CAP)
             for subject in request.subjects[allowed:]
@@ -113,6 +122,39 @@ class BlogImageBatchService:
             failed=len(errors),
         )
         return ImageBatchResult(images=images, errors=tuple(errors))
+
+    def budget_seconds(self, request: ImageBatchRequest, slots: int) -> float | None:
+        """``wave_seconds`` x ceil(slots / concurrency); ``None`` = unbounded."""
+        if request.wave_seconds is None:
+            return None
+        waves = math.ceil(slots / self._concurrency())
+        return request.wave_seconds * max(1, waves)
+
+    async def _run_within_budget(
+        self, request: ImageBatchRequest, attempted: tuple[ImageSubject, ...]
+    ) -> dict[str, _SlotOutcome]:
+        """Every slot's outcome as it finishes; unfinished slots are absent."""
+        finished: dict[str, _SlotOutcome] = {}
+        gate = asyncio.Semaphore(self._concurrency())
+
+        async def one(subject: ImageSubject) -> None:
+            outcome = await self._bounded(gate, (request.trace, subject))
+            finished[subject.slot] = outcome
+
+        try:
+            async with asyncio.timeout(self.budget_seconds(request, len(attempted))):
+                await asyncio.gather(*(one(subject) for subject in attempted))
+        except TimeoutError:
+            logger.warning(
+                LOG_IMAGES_TIMED_OUT,
+                post_id=request.trace.post_id,
+                finished=len(finished),
+                attempted=len(attempted),
+            )
+        return finished
+
+    def _concurrency(self) -> int:
+        return max(1, self._deps.concurrency)
 
     def discard(self, post_id: str, images: dict[str, BlogImage]) -> None:
         """Delete the stored files of ``images`` (their write failed)."""

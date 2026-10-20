@@ -13,6 +13,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.models.blog_document import BlogLanguageDocument
 from rag_backend.domain.models.blog_generation import (
     DocumentApply,
     DraftArticle,
@@ -39,6 +40,17 @@ class BlogArticleWriter(Protocol):
 
     async def judge(self, request: JudgeRequest) -> tuple[str, ...]:
         """Reasoning-model revision notes for the rewrite pass (may be empty)."""
+        ...
+
+
+class BlogDocumentTranslator(Protocol):
+    """PT -> EN translation of a language document (AE-0424's
+    ``BlogTranslationService``; AE-0435 reuses it to repair a wrong-language EN)."""
+
+    async def translate(
+        self, post_id: str, source: BlogLanguageDocument
+    ) -> BlogLanguageDocument:
+        """The EN document; raises ``BlogTranslationError`` on any failure."""
         ...
 
 
@@ -88,6 +100,7 @@ class BlogGenerationReaper(Protocol):
 
 __all__ = [
     "BlogArticleWriter",
+    "BlogDocumentTranslator",
     "BlogGenerationReaper",
     "BlogGenerationStore",
     "VoiceScorer",

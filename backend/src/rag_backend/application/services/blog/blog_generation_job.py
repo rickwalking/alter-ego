@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rag_backend.application.services.blog.blog_english_gate import (
+    EnglishLanguageGate,
+)
 from rag_backend.application.services.blog.blog_generated_document import (
     ImageTitles,
 )
@@ -24,9 +27,14 @@ from rag_backend.domain.protocols.blog_generation import (
 
 @dataclass(frozen=True)
 class GenerationTimings:
-    """Run bound and heartbeat cadence (seconds)."""
+    """Stage budgets and heartbeat cadence (seconds, AE-0435).
 
-    timeout_seconds: float
+    ``text_timeout_seconds`` bounds the writer + both gates + the EN repair;
+    the images stage gets ``image_wave_seconds`` per wave of concurrent images.
+    """
+
+    text_timeout_seconds: float
+    image_wave_seconds: float
     heartbeat_seconds: float
 
 
@@ -36,6 +44,7 @@ class BlogGenerationDeps:
 
     writer: BlogArticleWriter
     gate: BlogQualityGate
+    english: EnglishLanguageGate
     images: BlogImageBatchService
     store: BlogGenerationStore
     timings: GenerationTimings

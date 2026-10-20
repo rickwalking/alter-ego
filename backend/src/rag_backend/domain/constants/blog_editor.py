@@ -81,5 +81,7 @@ ERR_BLOG_REWRITE_TOO_LONG: Final = "blog_rewrite_too_long"
 ERR_BLOG_PERSONA_REQUIRED: Final = "blog_persona_required"
 ERR_BLOG_REWRITE_EMPTY: Final = "blog_rewrite_empty"
 ERR_BLOG_TRANSLATION_FAILED: Final = "blog_translation_failed"
+# AE-0435: the model answered a section in Portuguese (never stored as EN).
+ERR_BLOG_TRANSLATION_WRONG_LANGUAGE: Final = "blog_translation_wrong_language"
 ERR_BLOG_SCHEDULE_NOT_SET: Final = "blog_schedule_not_set"
 ERR_BLOG_REVIEWER_REQUIRED: Final = "blog_reviewer_required"
