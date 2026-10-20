@@ -24,6 +24,10 @@ from rag_backend.application.services.carousel.content_gate_repair import (
     GateRepairCommand,
     run_gate_repair,
 )
+from rag_backend.application.services.carousel.content_gate_repair_targets import (
+    drop_untranslated_copies,
+    fill_slide_structure,
+)
 from rag_backend.application.services.carousel.localized_slide_builder import (
     build_localized_slide,
 )
@@ -36,6 +40,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
 from rag_backend.application.services.carousel.structure_fill import (
+    StructureFillContext,
     outline_from_state,
 )
 from rag_backend.domain.models.carousel import CarouselSlide
@@ -371,3 +376,31 @@ class TestEnglishStaysEnglish:
             _payload(outcome.slides, 1, "en")["tldr_strip"]
             == (PROD_ANSWERS["1:en:tldr_strip"])
         )
+
+
+@pytest.mark.unit
+class TestRepairTargetHelpers:
+    def test_fill_slide_structure_needs_a_pt_payload_and_an_index(self) -> None:
+        context = StructureFillContext()
+        no_pt = {"slide_index": 6, "presentation_en": {}}
+        assert fill_slide_structure(no_pt, context) == no_pt
+        no_index = {"presentation_pt": {"slide_type": "closing"}}
+        assert fill_slide_structure(no_index, context) == no_index
+        pt_only = _closing_record({"features": _items(3, "Passo")}, {})
+        del pt_only["presentation_en"]
+        filled = fill_slide_structure(pt_only, context)
+        assert "presentation_en" not in filled
+        assert cast(dict[str, object], filled["presentation_pt"])["actions"]
+
+    def test_drop_untranslated_copies(self) -> None:
+        pt_items = _items(3, "Passo")
+        no_en = {"presentation_pt": {"actions": pt_items}}
+        assert drop_untranslated_copies(no_en, None) == no_en
+        # EN had a shorter list: the untranslated PT copy goes back to it.
+        copied = _closing_record({"actions": pt_items}, {"actions": pt_items})
+        original = _closing_record({"actions": pt_items}, {"actions": pt_items[:1]})
+        restored = drop_untranslated_copies(copied, original)
+        assert _payload([restored], 6, "en")["actions"] == pt_items[:1]
+        # EN already held the same items before the repair: nothing to undo.
+        kept = drop_untranslated_copies(copied, copied)
+        assert _payload([kept], 6, "en")["actions"] == pt_items
