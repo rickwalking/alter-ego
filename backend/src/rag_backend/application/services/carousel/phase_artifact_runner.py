@@ -46,6 +46,11 @@ from rag_backend.application.services.carousel.editorial_visual_pipeline import 
     generate_carousel_images,
 )
 from rag_backend.application.services.carousel.persona_judge import judge_voice
+from rag_backend.application.services.carousel.revision_scope import (
+    keep_unscoped_slides,
+    revision_scope,
+    scoped_draft_updates,
+)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -281,6 +286,8 @@ class PhaseArtifactRunner:
             revision_notes=[*notes, violations] if violations else notes,
             previous_drafts=prior_drafts,
             mode=await self._mode_brief(state),
+            # AE-0437: the owner's notes name the slides a revision may change.
+            scope=revision_scope(state, notes) if notes else None,
         )
 
     async def _mode_brief(
@@ -394,7 +401,7 @@ class PhaseArtifactRunner:
             )
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
-            updates.update(draft_updates)
+            updates.update(scoped_draft_updates(state, draft_updates, regen.scope))
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
@@ -442,6 +449,8 @@ class PhaseArtifactRunner:
                 )
             )
         )
+        if regenerated and regen.scope is not None:
+            updates.update(keep_unscoped_slides(state, updates, regen.scope))
         await self._repair_content_gate(state, updates, resolved)
         if regenerated:
             updates.update(_settle_used_notes(state, updates))
@@ -547,6 +556,7 @@ class PhaseArtifactRunner:
                     previous_drafts=regen.previous_drafts or None,
                     mode=regen.mode,
                     concurrency=self._draft_concurrency,
+                    only_slides=regen.scope,
                 ),
             )
         except ValueError as exc:
