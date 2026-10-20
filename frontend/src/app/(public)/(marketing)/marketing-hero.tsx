@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
+import { TEXT_MUTED } from "@/constants/neon";
 import { MarketingHeroTerminal } from "@/app/(public)/(marketing)/marketing-hero-terminal";
 import type { MarketingHeroProps } from "@/app/(public)/(marketing)/types";
 
@@ -11,36 +11,6 @@ export function MarketingHero({
     <section className="relative z-[1] min-h-[85vh] flex items-center py-[60px] max-[600px]:min-h-0 max-[600px]:py-10">
       <div className="max-w-[1200px] w-full mx-auto px-6 grid grid-cols-2 gap-[60px] items-center max-[900px]:grid-cols-1 max-[900px]:gap-10">
         <div className="min-w-0">
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "6px 14px",
-              borderRadius: "4px",
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "3px",
-              color: NEON_CYAN,
-              background: "rgba(0,212,255,0.15)",
-              border: `1px solid rgba(0,212,255,0.2)`,
-              marginBottom: "24px",
-            }}
-          >
-            <span
-              className="animate-[pulse-dot_2s_ease-in-out_infinite] motion-reduce:animate-none"
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: NEON_CYAN,
-                boxShadow: `0 0 8px ${NEON_CYAN}`,
-              }}
-            />
-            <span>{t("hero.badgeVersion")}</span>
-          </div>
           <h1
             className="text-[clamp(40px,6vw,72px)] font-black leading-[1.05] tracking-[-0.03em] mb-5 text-text-primary break-words"
             data-testid="hero-heading"

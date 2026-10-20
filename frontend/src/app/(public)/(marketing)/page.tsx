@@ -28,7 +28,7 @@ function HomePageContent({
     <>
       <MarketingDecorations />
       <MarketingHero t={t} tc={tc} />
-      <MarketingStats t={t} />
+      <MarketingStats t={t} carouselTotal={data.total} />
       <MarketingFeatures t={t} />
       <MarketingLatestPosts t={t} tb={tb} data={data} locale={locale} />
       <MarketingAbout t={t} />

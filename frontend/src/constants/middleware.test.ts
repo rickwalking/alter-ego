@@ -10,10 +10,11 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 
 describe("middleware route helpers", () => {
   describe("isPublicRoute", () => {
-    it("Then home, blog, and public chat are public", () => {
+    it("Then home, blog, carousels, and public chat are public", () => {
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.HOME)).toBe(true);
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.BLOG)).toBe(true);
       expect(isPublicRoute(`${PUBLIC_ROUTE_PATHS.BLOG}/my-post`)).toBe(true);
+      expect(isPublicRoute(PUBLIC_ROUTE_PATHS.CAROUSELS)).toBe(true);
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.CHAT)).toBe(true);
     });
 

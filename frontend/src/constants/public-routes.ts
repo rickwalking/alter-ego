@@ -2,6 +2,7 @@
 export const PUBLIC_ROUTE_PATHS = {
   HOME: "/",
   BLOG: "/blog",
+  CAROUSELS: "/carousels",
   CHAT: "/chat",
   LOGIN: "/login",
   /**

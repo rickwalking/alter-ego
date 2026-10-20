@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import {
   NEON_MAGENTA,
   NEON_PURPLE,
@@ -7,7 +9,10 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import { cn } from "@/lib/utils";
-import { MarketingPrimaryFeature } from "@/app/(public)/(marketing)/marketing-primary-feature";
+import {
+  MARKETING_CARD_FOCUS,
+  MarketingPrimaryFeature,
+} from "@/app/(public)/(marketing)/marketing-primary-feature";
 import { MarketingSectionEyebrow } from "@/app/(public)/(marketing)/marketing-section-eyebrow";
 import type { MarketingFeaturesProps } from "@/app/(public)/(marketing)/types";
 
@@ -18,6 +23,7 @@ interface SecondaryFeature {
   icon: string;
   title: string;
   desc: string;
+  href: string;
   accent: string;
   accentClass: string;
 }
@@ -30,6 +36,7 @@ function buildSecondaryFeatures(
       icon: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20M8 7h8M8 11h6",
       title: t("features.blog.title"),
       desc: t("features.blog.description"),
+      href: PUBLIC_ROUTE_PATHS.BLOG,
       accent: NEON_TEAL,
       accentClass: cn(
         FEATURE_SECONDARY_BASE,
@@ -40,6 +47,7 @@ function buildSecondaryFeatures(
       icon: "M3 3h18v18H3zM8 8h8v8H8zM3 12h5M16 12h5M12 3v5M12 16v5",
       title: t("features.carousels.title"),
       desc: t("features.carousels.description"),
+      href: PUBLIC_ROUTE_PATHS.CAROUSELS,
       accent: NEON_PURPLE,
       accentClass: cn(
         FEATURE_SECONDARY_BASE,
@@ -57,7 +65,16 @@ function SecondaryFeatureCard({
   testId?: string;
 }): React.ReactElement {
   return (
-    <div className={feat.accentClass} data-testid={testId}>
+    <Link
+      href={feat.href}
+      aria-label={feat.title}
+      className={cn(
+        feat.accentClass,
+        MARKETING_CARD_FOCUS,
+        "block no-underline text-inherit",
+      )}
+      data-testid={testId}
+    >
       <div
         style={{
           width: "48px",
@@ -96,7 +113,7 @@ function SecondaryFeatureCard({
       <p style={{ fontSize: "14px", color: TEXT_MUTED, lineHeight: 1.7 }}>
         {feat.desc}
       </p>
-    </div>
+    </Link>
   );
 }
 

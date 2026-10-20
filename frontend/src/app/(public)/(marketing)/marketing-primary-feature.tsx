@@ -1,11 +1,21 @@
+import Link from "next/link";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { NEON_CYAN, NEON_MAGENTA, TEXT_MUTED } from "@/constants/neon";
 import type { MarketingFeaturesProps } from "@/app/(public)/(marketing)/types";
+
+export const MARKETING_CARD_FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 
 export function MarketingPrimaryFeature({
   t,
 }: MarketingFeaturesProps): React.ReactElement {
   return (
-    <div className="col-span-2 grid grid-cols-2 gap-0 rounded-xl overflow-hidden border border-[rgba(0,212,255,0.12)] bg-bg-surface transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-[rgba(0,212,255,0.25)] hover:shadow-[0_0_30px_rgba(0,212,255,0.04)] max-[900px]:grid-cols-1">
+    <Link
+      href={PUBLIC_ROUTE_PATHS.CHAT}
+      aria-label={t("features.chat.title")}
+      data-testid="feature-primary"
+      className={`${MARKETING_CARD_FOCUS} col-span-2 grid grid-cols-2 gap-0 rounded-xl overflow-hidden border border-[rgba(0,212,255,0.12)] bg-bg-surface no-underline text-inherit transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-[rgba(0,212,255,0.25)] hover:shadow-[0_0_30px_rgba(0,212,255,0.04)] max-[900px]:grid-cols-1`}
+    >
       <div
         className="min-h-[280px] max-[900px]:min-h-[160px] max-[900px]:p-8"
         style={{
@@ -101,6 +111,6 @@ export function MarketingPrimaryFeature({
           {t("features.chat.description")}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }
