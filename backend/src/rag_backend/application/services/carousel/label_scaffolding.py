@@ -14,8 +14,18 @@ scaffolding, used by BOTH:
 - the content gate (``contains_drafting_scaffold`` → blocking
   ``drafting_scaffold_present``, deterministically reparable).
 
-Detection is positional: a marker or label is scaffolding wherever it sits in
-the text (line start, inline, bold or plain, with or without a colon).
+Detection and stripping share the SAME positional rules (orchestrator review,
+PR #158), so every flagged text is deterministically repairable:
+
+- a **bold field label** (``**Heading:**``, ``**CTA creator: radar IA.**``)
+  counts anywhere in the text;
+- a **plain** label or locale marker (``Heading:``, ``PT-BR:``, ``SLIDE 3:``)
+  counts only at a line start (optionally after a bold opener) or as a
+  whole-line marker — a mid-sentence plain "body:" is NOT scaffolding;
+- plain ``TL;DR:`` is always real copy (a legitimate rhetorical lead-in); only
+  its bold scaffold form (``**TL;DR:**``) counts;
+- a **bold locale marker** (``**PT-BR**``, ``**PT** ** **``) counts only at a
+  line start or as a whole line.
 
 Pure: no I/O, no policy, no locale.
 
@@ -53,21 +63,40 @@ FIELD_LABELS: tuple[str, ...] = (
 
 _LOCALE_ALT = "|".join(re.escape(marker) for marker in LOCALE_MARKERS)
 _LABEL_ALT = "|".join(re.escape(label) for label in FIELD_LABELS)
-_ANY_LABEL_ALT = f"{_LABEL_ALT}|SLIDE\\s*\\d+|TITLE|BODY|KEY\\s*POINTS"
-
-# ``**PT-BR**`` / ``**PT-BR:**`` / ``**PT**`` (bold locale marker, anywhere).
-_BOLD_LOCALE_PATTERN = re.compile(
-    rf"\*\*(?P<marker>{_LOCALE_ALT}):?\*\*", re.IGNORECASE
+# "TL;DR:" is a legitimate rhetorical lead-in in real slide copy
+# ("TL;DR: o custo caiu 3x." — orchestrator review), so the PLAIN form only
+# counts in its bold scaffold variant, never as a plain line-start label.
+_PLAIN_LINE_LABEL_ALT = "|".join(
+    re.escape(label) for label in FIELD_LABELS if label != "TL;DR"
 )
-# ``**Heading:**`` / ``**CTA creator:**`` (bold field label, anywhere).
-_BOLD_LABEL_PATTERN = re.compile(rf"\*\*(?P<label>{_LABEL_ALT}):?\*\*", re.IGNORECASE)
-# Plain ``PT-BR:`` / ``Heading:`` / ``SLIDE 3:`` prefixes, anywhere in the text.
-_PLAIN_PREFIX_PATTERN = re.compile(
-    rf"\b(?P<label>{_LOCALE_ALT}|{_ANY_LABEL_ALT})\s*:",
+
+# ``**Heading:**`` — a bold field label pair, anywhere in the text.
+_BOLD_LABEL_PATTERN = re.compile(rf"\*\*(?P<label>{_LABEL_ALT}):\*\*", re.IGNORECASE)
+# ``**CTA creator: radar IA.**`` — a bold label spanning the whole phrase.
+_BOLD_LABEL_PHRASE_PATTERN = re.compile(
+    rf"\*\*(?P<label>{_LABEL_ALT})\s*:\s*(?P<value>[^*\n]*)\*\*",
+    re.IGNORECASE,
+)
+# A bold label prefix left open: ``**Body:**`` or ``**Body:** rest``.
+_BOLD_LABEL_PREFIX_PATTERN = re.compile(
+    rf"\*\*(?:{_LABEL_ALT})\s*:(?:\*\*)?", re.IGNORECASE
+)
+# A label or locale marker (bold or plain) at the start of a line, colon after.
+# The trio keeps the legacy drafting labels the old stripper removed. TL;DR is
+# excluded from the plain form (it is a legitimate rhetorical lead-in).
+_LINE_LABEL_PREFIX_PATTERN = re.compile(
+    rf"^(?:\*\*)?\s*(?P<label>{_PLAIN_LINE_LABEL_ALT}|{_LOCALE_ALT}|SLIDE\s*\d+"
+    r"|TITLE|BODY|KEY\s*POINTS)\s*:(?:\*\*)?\s*",
+    re.IGNORECASE,
+)
+# A bold locale marker at the very start of a line (``**PT-BR** Inovação…``,
+# ``**PT** ** ** Na prática…`` — the empty-bold residue seen on 5344b6c6).
+_LINE_BOLD_LOCALE_PATTERN = re.compile(
+    rf"^\s*\*\*(?P<marker>{_LOCALE_ALT}):?\*\*:?(?:\s*\*\*\s*\*\*)?\s*",
     re.IGNORECASE,
 )
 # A line that is nothing but a locale marker: ``PT``, ``PT:``, ``**PT**``,
-# ``**PT:**`` or ``**PT** ** **`` (the empty-bold residue seen on 5344b6c6).
+# ``**PT:**`` or ``**PT** ** **``.
 _PURE_MARKER_LINE_PATTERN = re.compile(
     rf"^(?:\*\*)?\s*(?P<marker>{_LOCALE_ALT})\s*:?\s*(?:\*\*)?"
     r"(?:\s*\*\*\s*\*\*)?\s*$",
@@ -75,18 +104,6 @@ _PURE_MARKER_LINE_PATTERN = re.compile(
 )
 # A ``## <anything>`` scaffold section header line.
 _SECTION_HEADER_LINE_PATTERN = re.compile(r"^\s*##\s+")
-# A bold label that spans the whole phrase: ``**CTA creator: radar IA.**``.
-_BOLD_LABEL_PHRASE_PATTERN = re.compile(
-    rf"\*\*(?:{_LABEL_ALT})\s*:\s*(?P<value>[^*]*)\*\*",
-    re.IGNORECASE,
-)
-# A bold label prefix left open: ``**Body:**`` or ``**Body:** rest``.
-_BOLD_LABEL_PREFIX_PATTERN = re.compile(rf"\*\*(?:{_LABEL_ALT})\s*:", re.IGNORECASE)
-# A label (bold or plain, field or locale) at the start of a line.
-_LINE_LABEL_PREFIX_PATTERN = re.compile(
-    rf"^(?:\*\*)?\s*(?:{_LABEL_ALT}|{_LOCALE_ALT})\s*:(?:\*\*)?\s*",
-    re.IGNORECASE,
-)
 
 
 def _add(found: list[str], seen: set[str], label: str) -> None:
@@ -99,22 +116,29 @@ def _add(found: list[str], seen: set[str], label: str) -> None:
 def scaffold_label_details(text: str) -> tuple[str, ...]:
     """The locale markers and field labels found in ``text``, in order.
 
-    Covers every variant: bold or plain, with or without a colon, at the line
-    start or inline. A plain locale marker without a colon counts only as a
-    whole line, so a real word never matches.
+    Bold field labels count anywhere; plain labels and locale markers count
+    only at a line start (optionally after a bold opener) or as a whole-line
+    marker, so mid-sentence plain "body:" / "TL;DR:" copy is never flagged.
     """
     found: list[str] = []
     seen: set[str] = set()
-    for match in _BOLD_LOCALE_PATTERN.finditer(text):
-        _add(found, seen, match.group("marker"))
     for match in _BOLD_LABEL_PATTERN.finditer(text):
         _add(found, seen, match.group("label"))
-    for match in _PLAIN_PREFIX_PATTERN.finditer(text):
-        _add(found, seen, match.group("label").strip())
+    for match in _BOLD_LABEL_PHRASE_PATTERN.finditer(text):
+        _add(found, seen, match.group("label"))
     for line in text.splitlines():
-        match = _PURE_MARKER_LINE_PATTERN.match(line.strip())
-        if match is not None:
-            _add(found, seen, match.group("marker"))
+        work = line.strip()
+        marker = _PURE_MARKER_LINE_PATTERN.match(work)
+        if marker is not None:
+            _add(found, seen, marker.group("marker"))
+            continue
+        bold = _LINE_BOLD_LOCALE_PATTERN.match(work)
+        if bold is not None:
+            _add(found, seen, bold.group("marker"))
+            work = _LINE_BOLD_LOCALE_PATTERN.sub("", work, count=1).strip()
+        prefix = _LINE_LABEL_PREFIX_PATTERN.match(work)
+        if prefix is not None:
+            _add(found, seen, prefix.group("label").strip())
     return tuple(found)
 
 
@@ -130,7 +154,7 @@ def _strip_line(line: str) -> str:
     stripped = line.strip()
     if _PURE_MARKER_LINE_PATTERN.match(stripped):
         return ""
-    work = stripped
+    work = _LINE_BOLD_LOCALE_PATTERN.sub("", stripped, count=1).strip()
     # "PT: Heading: ..." chains two labels on one line: strip until stable.
     while True:
         shortened = _LINE_LABEL_PREFIX_PATTERN.sub("", work)
@@ -145,10 +169,10 @@ def _strip_line(line: str) -> str:
 def strip_scaffold_labels(text: str) -> str:
     """The text without scaffold section headers, locale markers and field labels.
 
-    Drops a line that is only a ``##`` header or a locale marker; strips label
-    prefixes at line starts; unwraps a bold ``**Label: value**`` phrase to its
-    value and drops an open bold ``**Label:**`` prefix anywhere. Lines left
-    empty are dropped. Returns the original text when nothing is found.
+    Drops a line that is only a ``##`` header or a locale marker; strips
+    bold-locale and label prefixes at line starts; unwraps a bold
+    ``**Label: value**`` phrase to its value and drops a bold ``**Label:**``
+    prefix anywhere. Lines left empty are dropped.
     """
     cleaned = [_strip_line(line) for line in text.splitlines()]
     return "\n".join(line for line in cleaned if line)

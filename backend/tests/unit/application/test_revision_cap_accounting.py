@@ -38,6 +38,14 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 _SLIDE_TYPE = "hero_content"
 _SCAFFOLD_BODY = "SLIDE 4: rascunho com scaffold TITLE: pendente"
+# AE-0436: a mid-sentence plain "TITLE:" is no longer scaffolding, and the
+# deterministic repair strips the line-start "SLIDE 4:", so the scaffold body
+# alone no longer keeps the gate blocked (invariant: everything flagged is
+# deterministically strippable). The blocking gate for these scenarios now
+# comes from an over-budget EN heading, which the repair never truncates.
+_OVER_BUDGET_EN_HEADING = (
+    "Title 4 keeps growing past the content heading budget of the contract"
+)
 
 
 def _blocking_localized_slides() -> list[dict[str, object]]:
@@ -52,7 +60,7 @@ def _blocking_localized_slides() -> list[dict[str, object]]:
             },
             "presentation_en": {
                 "slide_type": _SLIDE_TYPE,
-                "heading": "Title 4",
+                "heading": _OVER_BUDGET_EN_HEADING,
                 "body": "Body 4",
             },
         }

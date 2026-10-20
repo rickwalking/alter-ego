@@ -247,6 +247,16 @@ Pending.
   `**PT** ** **` / `PT:\nHeading:`, slide 3 EN `**…**`); the stricter gate now
   finds them, so the fake repairer answers those 4 fields with clean copy and
   the fixture test asserts the stored 12 violations plus the 4 new ones.
+- **Orchestrator review fix (positional rules shared with the stripper)**:
+  detection and stripping use the same positional rules, so every flagged
+  text is deterministically repairable (invariant test). Bold labels count
+  anywhere; plain labels/locale markers only at a line start or as a
+  whole-line marker; plain `TL;DR:` is always real copy (rhetorical lead-in);
+  mid-sentence plain "body:"/"title:" is not scaffolding. The revision-cap
+  fixture (`test_revision_cap_accounting.py`) was updated to the same intent:
+  the scaffold body alone can no longer keep a gate blocked (that was the
+  deadlock class), so the blocking gate there now comes from an over-budget
+  EN heading the repair never truncates.
 
 ## Blockers
 

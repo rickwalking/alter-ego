@@ -87,7 +87,7 @@ def _blockers(payload: dict[str, object], locale: str) -> set[tuple[str | None, 
 
 @pytest.mark.unit
 class TestLabelScaffoldingDetector:
-    """Scenarios: locale markers and field labels are detected anywhere."""
+    """Scenarios: locale markers and field labels are detected at their positions."""
 
     @pytest.mark.parametrize(
         ("text", "expected"),
@@ -101,10 +101,12 @@ class TestLabelScaffoldingDetector:
             ("PT: Heading: A versão", "PT"),
             ("PT", "PT"),
             ("en", "en"),
+            ("**PT** ** **", "PT"),
+            ("**PT-BR** Inovação não exige", "PT-BR"),
         ],
     )
     def test_locale_markers_in_every_variant(self, text: str, expected: str) -> None:
-        """Scenario: Locale markers in every variant are detected anywhere in copy."""
+        """Scenario: Locale markers in every variant are detected at their positions."""
         details = scaffold_label_details(text)
         assert expected in details
 
@@ -124,7 +126,7 @@ class TestLabelScaffoldingDetector:
         ],
     )
     def test_field_labels_in_every_variant(self, text: str, expected: str) -> None:
-        """Scenario: Field labels are detected anywhere in copy."""
+        """Scenario: Field labels are detected at their scaffold positions."""
         details = scaffold_label_details(text)
         assert expected in details
 
@@ -132,6 +134,23 @@ class TestLabelScaffoldingDetector:
         clean = "Inovação não exige bilhões: a pressão é sobre eficiência."
         assert not has_scaffold_labels(clean)
         assert scaffold_label_details(clean) == ()
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # Mid-sentence plain labels are real copy (orchestrator review).
+            "Mande o body: JSON com o prompt e o modelo.",
+            "Leia o title: da issue antes.",
+            "The response body: a JSON array.",
+            "TL;DR: o custo caiu 3x.",
+            # Bold emphasis without a label colon is plain copy.
+            "the **Summary** of the changes is short",
+        ],
+    )
+    def test_mid_sentence_plain_labels_are_not_scaffolding(self, text: str) -> None:
+        """Scenario: A mid-sentence plain label is real copy, not scaffolding."""
+        assert not has_scaffold_labels(text)
+        assert strip_scaffold_labels(text) == text
 
 
 @pytest.mark.unit
@@ -174,6 +193,32 @@ class TestDrafterStrip:
         pt = cast(dict[str, object], slides[0]["presentation_pt"])
         assert "PT-BR" not in str(pt["body"])
         assert str(pt["body"]).startswith("Inovação não exige bilhões.")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            PT_BR_BODY,
+            CTA_CREATOR_BODY,
+            PT_COLON_HEADING,
+            PT_STAR_STAR,
+            "**PT**\n**body:** Texto.\n**EN:**",
+            "**PT-BR** Inovação não exige **bilhões**",
+            "SLIDE 3: the twist",
+            "Intro **Heading:** here",
+            "**CTA: call now**",
+        ],
+    )
+    def test_every_flagged_text_is_deterministically_strippable(
+        self, text: str
+    ) -> None:
+        """Scenario: Everything the detector flags is deterministically strippable.
+
+        Invariant (orchestrator review): a blocking violation can never be one
+        the deterministic repair cannot clear, so a flagged text must stop
+        being flagged after ``strip_scaffold_labels`` runs.
+        """
+        assert has_scaffold_labels(text)
+        assert not has_scaffold_labels(strip_scaffold_labels(text))
 
 
 @pytest.mark.unit

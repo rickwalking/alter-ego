@@ -11,18 +11,26 @@ Feature: Carousel label scaffolding never reaches visible copy (AE-0436)
     Given the carousel presentation contracts hero_lower_third_v4 and pov_hook_v1
     And the AE-0430 content gate and deterministic repair are active
 
-  Scenario: Locale markers in every variant are detected anywhere in copy
+  Scenario: Locale markers in every variant are detected at their scaffold positions
     Given visible slide copy that contains a locale marker
     When the shared label-scaffolding detector runs on the text
     Then it reports the marker for "**PT-BR**", "**PT**", "**EN:**", "**EN-US**",
-      "PT-BR:", "PT: Heading:", and a bare "PT" line
+      "PT-BR:", "PT: Heading:", a bare "PT" line, and "**PT** ** **"
 
-  Scenario: Field labels are detected anywhere in copy
+  Scenario: Field labels are detected at their scaffold positions
     Given visible slide copy that contains a drafting field label
     When the shared label-scaffolding detector runs on the text
     Then it reports "Heading:", "Body:", "Title:", "CTA:", "CTA creator:",
-      "Summary:", "TL;DR:", "Key points:" and "SLIDE 3:" wherever they sit in
-      the text, bold or plain
+      "Summary:", "TL;DR:", "Key points:" and "SLIDE 3:" as bold pairs anywhere
+      or plain labels at a line start
+
+  Scenario: A mid-sentence plain label is real copy, not scaffolding
+    Given EN copy "The response body: a JSON array."
+    And EN copy "TL;DR: o custo caiu 3x."
+    And PT copy "Mande o body: JSON com o prompt e o modelo."
+    When the shared label-scaffolding detector runs on each text
+    Then none of them is flagged
+    And the deterministic repair leaves each text unchanged
 
   Scenario: The drafter strip removes PT-BR markers and PT: Heading: garbage
     Given the prod 5344b6c6 draft "**PT-BR**\nInovação não exige **bilhões**\nA pressão…"
@@ -77,6 +85,11 @@ Feature: Carousel label scaffolding never reaches visible copy (AE-0436)
     When the localized slides are validated with the v4 policy
     Then each field is a blocking emphasis_markup_locale_mismatch violation
     And the deterministic repair clears both violations
+
+  Scenario: Everything the detector flags is deterministically strippable
+    Given every fixture the label detector flags
+    When the drafter parser strips scaffold labels from each text
+    Then no stripped text is flagged anymore
 
   Scenario: The translation request sends PT emphasis as <strong>
     Given a PT draft body with "**eficiência**"

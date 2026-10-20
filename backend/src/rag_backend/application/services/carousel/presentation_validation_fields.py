@@ -66,9 +66,11 @@ def contains_drafting_scaffold(text: str) -> bool:
 
     AE-0436: the shared detector covers locale markers in every variant
     (``**PT-BR**``, ``PT:``, ``**EN:**``, a bare ``EN`` line) and field labels
-    (``Heading:``, ``Body:``, ``CTA creator:``, ``Summary:``, ``TL;DR:``, …),
-    wherever they sit in the text, so a variant the parser misses is still a
-    blocking violation instead of shipped copy.
+    (``Heading:``, ``Body:``, ``CTA creator:``, ``Summary:``, ``TL;DR:``, …).
+    Positional rules are shared with the stripper, so every flagged text is
+    deterministically repairable: bold labels count anywhere, plain labels and
+    locale markers only at a line start or as a whole-line marker (a
+    mid-sentence plain "body:" is real copy, not scaffolding).
     """
     return has_scaffold_labels(text)
 
