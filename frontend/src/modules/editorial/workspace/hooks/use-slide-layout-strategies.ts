@@ -32,8 +32,6 @@ const applyStrategyResponseSchema = z.object({
   message: z.string(),
 });
 
-export type StrategyInfo = z.infer<typeof strategyInfoSchema>;
-
 type StrategyListResponse = z.infer<typeof strategyListResponseSchema>;
 
 type ApplyStrategyResponse = z.infer<typeof applyStrategyResponseSchema>;

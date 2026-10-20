@@ -21,9 +21,6 @@ export const errorResponseSchema = z.object({
   }),
 });
 
-export type ApiResponse = z.infer<typeof apiResponseSchema>;
-export type ErrorResponse = z.infer<typeof errorResponseSchema>;
-
 function redirectToLoginAfterUnauthorized(): void {
   if (typeof window === "undefined") {
     return;

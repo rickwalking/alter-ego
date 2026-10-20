@@ -24,14 +24,6 @@ export const neonBadgeVariantSchema = z.enum([
 ]);
 export const neonBadgeSizeSchema = z.enum(["sm", "md"]);
 
-export const neonBadgePropsSchema = z.object({
-  variant: neonBadgeVariantSchema.default("cyan"),
-  size: neonBadgeSizeSchema.default("md"),
-  dot: z.boolean().default(false),
-  pulse: z.boolean().default(false),
-  outline: z.boolean().default(false),
-});
-
 export type NeonBadgeVariant = z.infer<typeof neonBadgeVariantSchema>;
 export type NeonBadgeSize = z.infer<typeof neonBadgeSizeSchema>;
 

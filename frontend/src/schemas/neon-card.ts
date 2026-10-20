@@ -17,13 +17,6 @@ export const neonCardAccentSchema = z.enum([
 ]);
 export const neonCardPaddingSchema = z.enum(["sm", "md", "lg"]);
 
-export const neonCardPropsSchema = z.object({
-  accent: neonCardAccentSchema.default("none"),
-  hover: z.boolean().default(false),
-  padding: neonCardPaddingSchema.default("md"),
-  onClick: z.function().args().returns(z.void()).optional(),
-});
-
 export type NeonCardAccent = z.infer<typeof neonCardAccentSchema>;
 export type NeonCardPadding = z.infer<typeof neonCardPaddingSchema>;
 

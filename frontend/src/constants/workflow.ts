@@ -35,7 +35,6 @@ export const WORKFLOW_PHASE_STATUS = {
 export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;
 
 export const LOCK_CONTENT_TYPE_BLOG = "blog_post";
-export const LOCK_CONTENT_TYPE_CAROUSEL = "carousel";
 
 export const HTTP_HEADER_IF_MATCH = "If-Match";
 

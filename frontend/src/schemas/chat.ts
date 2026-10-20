@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+/** @public Read by name by scripts/check-schema-drift.mjs (OpenAPI drift gate). */
 export const messageSourceSchema = z.object({
   document_id: z.string(),
   document_title: z.string(),
@@ -35,6 +36,7 @@ export const messageListResponseSchema = z.object({
   conversation_id: z.string(),
 });
 
+/** @public Read by name by scripts/check-schema-drift.mjs (OpenAPI drift gate). */
 export const chatRequestSchema = z.object({
   content: z.string().min(1).max(10000),
 });
@@ -45,12 +47,10 @@ export const chatResponseSchema = z.object({
   conversation_id: z.string(),
 });
 
-export type MessageSource = z.infer<typeof messageSourceSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type Conversation = z.infer<typeof conversationSchema>;
 export type ConversationListResponse = z.infer<
   typeof conversationListResponseSchema
 >;
 export type MessageListResponse = z.infer<typeof messageListResponseSchema>;
-export type ChatRequest = z.infer<typeof chatRequestSchema>;
 export type ChatResponse = z.infer<typeof chatResponseSchema>;

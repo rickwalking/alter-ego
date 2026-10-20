@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 
 export const handlers = [
   // Health check
@@ -66,5 +65,3 @@ export const handlers = [
     );
   }),
 ];
-
-export const server = setupServer(...handlers);

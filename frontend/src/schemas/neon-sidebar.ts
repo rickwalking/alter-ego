@@ -12,9 +12,4 @@ export const sidebarSectionSchema = z.object({
   items: z.array(sidebarItemSchema).min(1),
 });
 
-export const neonSidebarPropsSchema = z.object({
-  sections: z.array(sidebarSectionSchema).min(1),
-});
-
-export type SidebarItem = z.infer<typeof sidebarItemSchema>;
 export type SidebarSection = z.infer<typeof sidebarSectionSchema>;
