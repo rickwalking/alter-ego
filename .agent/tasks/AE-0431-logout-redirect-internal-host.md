@@ -1,6 +1,6 @@
 # AE-0431 — /auth/logout redirects to https://0.0.0.0:3000/login
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -170,3 +170,7 @@ Pending external QA.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #152 (4a4e01c, 2026-10-19), deployed, verified on prod (logout redirect uses the forwarded host).

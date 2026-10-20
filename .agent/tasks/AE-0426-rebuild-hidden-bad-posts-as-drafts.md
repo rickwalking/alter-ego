@@ -1,6 +1,6 @@
 # AE-0426 — Rebuild hidden bad posts as drafts via the new pipeline (E)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P2
 Type: Feature
@@ -269,3 +269,5 @@ never publishes, and stamps `hidden_bad_post.rebuilt_at` so re-runs are no-ops. 
 `--only <id>`; `--max-posts` defaults to 1 as a spend cap. Missing carousels/notes and published rows
 are reported and skipped (published only with `--include-published`); per-post failures do not abort
 the run, the summary always prints, and a failed post exits non-zero.
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #148 into the AE-0425 branch (8c29aab) and shipped with #146 (1b59bee, 2026-10-19); re-reviewed after merge (6 fixes verified). Prod: 11 hidden posts rebuilt as v2 drafts (voice 74-91, all images). Follow-ups deferred: --max-posts counts skipped rows, partial outcome never retried, wrong --only exits 0.

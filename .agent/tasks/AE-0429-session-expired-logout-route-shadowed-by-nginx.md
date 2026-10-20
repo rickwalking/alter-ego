@@ -1,6 +1,6 @@
 # AE-0429 — Expired session redirects to a backend 405 JSON page instead of /login
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P1
 Type: Bug
@@ -247,3 +247,5 @@ None.
 ## Final Summary
 
 Pending QA / merge.
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #150 (d1bf11c, 2026-10-19), deployed, verified on prod (expired session lands on /login?error=session_expired).

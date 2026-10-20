@@ -1,6 +1,6 @@
 # AE-0435 — Blog generation: EN stored in Portuguese + one 900 s budget kills finished runs
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -184,3 +184,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #157 (1211804, 2026-10-20), deployed in 77eca74. Prod: `regenerate_blog_en` scan found exactly 2 posts (99886e71, ba37f6f9); `--apply --only 99886e71` repaired=1 failed=0; rescan leaves only the QA post ba37f6f9 (left as is).

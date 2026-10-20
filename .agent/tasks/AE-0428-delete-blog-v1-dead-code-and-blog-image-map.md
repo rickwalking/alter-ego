@@ -1,6 +1,6 @@
 # AE-0428 — Delete blog v1 dead code and drop `blog_image_map` (F)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P2
 Type: Refactor
@@ -430,3 +430,5 @@ coming back. Distribution helpers and same-name live symbols are preserved and t
 2026-10-19 the branch was rebased onto `origin/main` (after the AE-0423/AE-0424 bases merged),
 keeping main's AE-0424 behaviour and re-applying only this PR's deletions; the AC8 prod gate is
 satisfied (owner-run `--verify` = 0 non-v2 rows on prod, 2026-10-19).
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged LAST as planned, #149 (4f811e6, 2026-10-20) after prod `--verify` = 0 non-v2 rows; deployed; `--verify` still 0 afterwards (scanned=31).

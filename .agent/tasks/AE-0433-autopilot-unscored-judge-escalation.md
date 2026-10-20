@@ -1,6 +1,6 @@
 # AE-0433 — Autopilot escalates a passing run when the persona judge times out
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -204,3 +204,5 @@ None.
 ## Final Summary
 
 Pending QA / merge.
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged #154 (329ae9c, 2026-10-19); first deploy failed on an npm ECONNRESET before any deploy step, re-run succeeded. Follow-ups (A/B/C) shipped in AE-0439.

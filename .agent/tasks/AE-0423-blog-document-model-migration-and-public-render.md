@@ -1,6 +1,6 @@
 # AE-0423 — Blog document model (blog.v2) + one-shot cutover + public render (B)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: P1
 Type: Feature
@@ -324,4 +324,4 @@ None.
 
 ## Final Summary
 
-Pending.
+**Merged and closed (orchestrator, 2026-10-20).** Merged #145 together with #147 (b20a12d, 2026-10-19). Prod: cutover ran in the deploy, changed=30; `--verify` scanned=30 non_v2=0. Backup before cutover: droplet /root/backups/blog_posts-pre-ae0423-20261019T174616Z.sql.gz.

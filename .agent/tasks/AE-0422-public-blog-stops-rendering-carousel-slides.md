@@ -1,6 +1,6 @@
 # AE-0422 — Public blog stops rendering carousel slides (A)
 
-Status: Review
+Status: Done
 Tier: T1
 Priority: P1
 Type: Bug
@@ -373,3 +373,5 @@ the page), the carousel write path no longer creates/overwrites/publishes blog r
 detach retained), and the AC6 hide action ships as a tested service + dry-run-default CLI. All seven
 acceptance criteria are met; every local gate is green. Production hiding is the orchestrator's
 owner-approved action.
+
+**Merged and closed (orchestrator, 2026-10-20).** Merged via #144 into the plan branch, shipped to main with #143 (6336338, 2026-10-19). Prod: hide script applied (27 published carousel posts -> draft + hidden_bad_post); public list 0 until rebuilt drafts are republished.
