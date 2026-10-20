@@ -10,7 +10,6 @@ Gherkin: tests/features/blog_carousel_minors_ae0439.feature
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from unittest.mock import MagicMock
 
@@ -103,7 +102,7 @@ class TestContentScoring:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Scenario: The content-generation judge retries on the queue's next model."""
-        primary = _RawJudge([asyncio.TimeoutError("slow")])
+        primary = _RawJudge([TimeoutError("slow")])
         fallback = _RawJudge([{"overall": 80.0}])
         _judge_factory(monkeypatch, primary, fallback)
         llm = _FallbackChat(

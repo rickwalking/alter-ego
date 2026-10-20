@@ -9,6 +9,7 @@ Gherkin: tests/features/blog_carousel_minors_ae0439.feature
 from __future__ import annotations
 
 import inspect
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -30,10 +31,12 @@ FILE = "337aacd2-0000-4000-8000-000000000001.png"
 CACHE_CONTROL_HEADER = "Cache-Control"
 NO_STORE = "no-store"
 
+GetBlogImageHandler = Callable[..., Awaitable[FileResponse]]
 
-def _handler():  # noqa: ANN202
+
+def _handler() -> GetBlogImageHandler:
     """The route function itself (slowapi wraps it; unwrap for a direct call)."""
-    return inspect.unwrap(image_routes.get_blog_image)
+    return cast(GetBlogImageHandler, inspect.unwrap(image_routes.get_blog_image))
 
 
 def _target(filename: str = FILE, user: object = None) -> ImageFileTarget:
@@ -54,12 +57,14 @@ def _row(status: str, author_id: str | None = None) -> SimpleNamespace:
 class TestBlogImageNotFoundCache:
     async def test_an_anonymous_draft_404_is_no_store(self) -> None:
         """Scenario: An anonymous draft blog image 404 is never cached."""
-        with patch(
-            "rag_backend.api.routes.blog_post_images.get_blog_post_by_id",
-            AsyncMock(return_value=_row(BlogPostStatus.DRAFT.value, "author")),
+        with (
+            patch(
+                "rag_backend.api.routes.blog_post_images.get_blog_post_by_id",
+                AsyncMock(return_value=_row(BlogPostStatus.DRAFT.value, "author")),
+            ),
+            pytest.raises(HTTPException) as info,
         ):
-            with pytest.raises(HTTPException) as info:
-                await _handler()(request=None, target=_target())
+            await _handler()(request=None, target=_target())
         assert info.value.status_code == 404
         assert info.value.headers[CACHE_CONTROL_HEADER] == NO_STORE
 
@@ -75,9 +80,9 @@ class TestBlogImageNotFoundCache:
                 "rag_backend.api.routes.blog_post_images.blog_images_store",
                 return_value=store,
             ),
+            pytest.raises(HTTPException) as info,
         ):
-            with pytest.raises(HTTPException) as info:
-                await _handler()(request=None, target=_target())
+            await _handler()(request=None, target=_target())
         assert info.value.status_code == 404
         assert info.value.headers[CACHE_CONTROL_HEADER] == NO_STORE
 

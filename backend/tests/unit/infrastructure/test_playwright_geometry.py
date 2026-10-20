@@ -119,8 +119,7 @@ class TestDecodeScriptReasons:
 
     def test_missing_and_stalled_images_report_precise_reasons(self) -> None:
         node = shutil.which("node")
-        if node is None:
-            pytest.skip("node is required to run the decode script")
+        assert node is not None, "node is required to run the decode script"
         harness = _DECODE_HARNESS % IMAGE_DECODE_SCRIPT
         result = subprocess.run(
             [node, "-e", harness],
