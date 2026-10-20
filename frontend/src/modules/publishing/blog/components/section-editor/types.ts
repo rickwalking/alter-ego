@@ -8,7 +8,7 @@ import type {
   BlogSection,
 } from "@/schemas/blog-document";
 import type { BlogDocumentIssue } from "../../editor-content";
-import type { SlotStatus } from "../../hooks/types";
+import type { BlogEditorError, SlotStatus } from "../../hooks/types";
 import type {
   BlogContentLanguage,
   BlogImageSlotRef,
@@ -80,6 +80,8 @@ export interface ReviewBarProps {
   allowSelfReview: boolean;
   /** Pending edits or a running action disable the workflow controls. */
   disabled: boolean;
+  /** The failed review/publish action, shown in the bar (AE-0438, F-11). */
+  error: BlogEditorError | null;
   onSubmitReview: (reviewerId: string | null) => void;
   onApprove: () => void;
   onReject: (reason: string) => void;

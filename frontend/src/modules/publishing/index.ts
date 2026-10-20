@@ -91,6 +91,7 @@ export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/t
 
 /* --- blog: components --- */
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
+export { EditorErrorNotice } from "./blog/components/editor-error-notice";
 export {
   snapshotText,
   VersionHistorySidebar,

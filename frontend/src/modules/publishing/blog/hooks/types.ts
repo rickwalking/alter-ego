@@ -9,7 +9,6 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DraftMergeFn, EditorSessionState } from "../lib/editor-session";
-import type { BlogEditorErrorKind } from "@/constants/blog-editor";
 import type { LockedPost } from "../blog-editor-requests";
 import type { BlogEditorDraft, BlogEditorValidation } from "../editor-content";
 import type {
@@ -17,7 +16,10 @@ import type {
   BlogImageSlotRef,
 } from "../lib/editor-document";
 import type { BlogPostVersion } from "../components/types";
-import type { BlogPost, BlogVoicePersona } from "../types";
+import type { BlogEditorError, BlogPost, BlogVoicePersona } from "../types";
+
+/** Re-export: the editor error shape lives in the domain types (AE-0438). */
+export type { BlogEditorError };
 
 export interface UseBlogAiState {
   loading: boolean;
@@ -29,12 +31,6 @@ export interface BlogPostFilters {
   search?: string;
   limit?: number;
   offset?: number;
-}
-
-/** A failed editor request (AE-0424): the typed kind + the API detail code. */
-export interface BlogEditorError {
-  kind: BlogEditorErrorKind;
-  detail: string | null;
 }
 
 /** The loaded post, the draft as loaded (`original`) and the edited draft. */
@@ -69,7 +65,8 @@ export interface UseBlogPostEditorResult {
   replaceFromServer: (post: BlogPost) => void;
   /** Re-read the post (after a multi-step flow failed midway). */
   reload: () => Promise<void>;
-  handleRestore: (versionNumber: number) => Promise<boolean>;
+  /** Restores the version; resolves with the failure or `null` on success. */
+  handleRestore: (versionNumber: number) => Promise<BlogEditorError | null>;
 }
 
 export interface BlogAiImproveParams {
@@ -101,6 +98,8 @@ export interface BlogReviewActions {
   /** `BLOG_ALLOW_SELF_REVIEW`: "Publish now" instead of explicit steps. */
   allowSelfReview: boolean;
   pending: boolean;
+  /** The last failed review/publish/schedule action (shown in the review bar). */
+  error: BlogEditorError | null;
   submitForReview: (reviewerId: string | null) => Promise<void>;
   approve: () => Promise<void>;
   reject: (reason: string) => Promise<void>;

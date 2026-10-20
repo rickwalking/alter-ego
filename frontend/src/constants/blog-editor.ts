@@ -33,6 +33,32 @@ export const BLOG_MIGRATION_PENDING_CODES = [
   "invalid_blog_document",
 ] as const;
 
+/**
+ * Backend `detail` codes with their own copy (AE-0438, F-11). The value is the
+ * message key under `dashboard.blogPosts.editor.errors.code.<value>`; codes not
+ * listed here fall back to the kind-level message (`errors.<kind>`).
+ */
+export const BLOG_EDITOR_ERROR_CODE_KEYS = {
+  self_review_not_allowed: "self_review",
+  blog_reviewer_required: "reviewer_required",
+  blog_version_empty: "version_empty",
+  blog_document_has_no_sections: "empty_document",
+  blog_document_not_publishable: "not_publishable",
+  blog_heading_invalid: "heading_invalid",
+  blog_section_too_long: "section_too_long",
+  blog_section_not_found: "section_not_found",
+  blog_translation_exists: "translation_exists",
+  blog_translation_failed: "translation_failed",
+  blog_image_budget_exhausted: "budget",
+  blog_image_persist_failed: "image_persist_failed",
+  blog_image_generation_failed: "image_generation_failed",
+  blog_persona_required: "persona_required",
+  blog_rewrite_too_long: "rewrite_too_long",
+  blog_rewrite_empty: "rewrite_empty",
+  blog_image_alt_blank: "alt_blank",
+  blog_schedule_not_set: "schedule_not_set",
+} as const;
+
 /** Write-time limits mirrored from `domain/constants/blog_document.py`. */
 export const BLOG_HEADING_MAX_LENGTH = 200;
 export const BLOG_SECTION_MAX_LENGTH = 20_000;

@@ -11,7 +11,9 @@ import {
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
 import { tryParseBlogContent } from "../lib/parse-blog-content";
+import { EditorErrorNotice } from "./editor-error-notice";
 import type { BlogPostVersion, VersionHistorySidebarProps } from "./types";
+import type { BlogEditorError } from "../types";
 
 const PREVIEW_CHARS = 400;
 const PARAGRAPH_BREAK = "\n\n";
@@ -38,7 +40,8 @@ function clip(text: string): string {
 /**
  * Version history of a post (AE-0424, F-13): every save appends a snapshot,
  * listed here newest first; restoring calls the restore route (a new snapshot records it)
- * and loads the restored content into the editor.
+ * and loads the restored content into the editor. A failed restore shows its
+ * error inline (AE-0438, F-11).
  */
 export function VersionHistorySidebar({
   versions,
@@ -49,9 +52,19 @@ export function VersionHistorySidebar({
 }: VersionHistorySidebarProps): React.JSX.Element {
   const t = useTranslations("dashboard.blogPosts.versions");
   const [selected, setSelected] = useState<BlogPostVersion | null>(null);
+  const [restoreError, setRestoreError] = useState<BlogEditorError | null>(
+    null,
+  );
   const newestFirst = [...versions].sort(
     (a, b) => b.version_number - a.version_number,
   );
+  const restore = async (versionNumber: number): Promise<void> => {
+    setRestoreError(null);
+    const error = await onRestore(versionNumber);
+    if (error) {
+      setRestoreError(error);
+    }
+  };
   return (
     <NeonCard>
       <NeonCardHeader className="pb-2">
@@ -95,12 +108,13 @@ export function VersionHistorySidebar({
               size="sm"
               variant="outline"
               disabled={disabled}
-              onClick={() => onRestore(selected.version_number)}
+              onClick={() => void restore(selected.version_number)}
             >
               {t("restore")}
             </NeonButton>
           </div>
         )}
+        <EditorErrorNotice error={restoreError} />
       </NeonCardContent>
     </NeonCard>
   );

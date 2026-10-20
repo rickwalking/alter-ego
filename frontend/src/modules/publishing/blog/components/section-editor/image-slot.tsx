@@ -17,6 +17,7 @@ import {
   BLOG_IMAGE_TEXT_MAX_LENGTH,
 } from "@/constants/blog-editor";
 import { NEON_RED } from "@/constants/neon";
+import { EditorErrorNotice } from "../editor-error-notice";
 import type { ImageSlotProps, ImageTextsProps } from "./types";
 
 const LABEL_CLASS = "mb-1 block text-xs font-semibold text-text-muted";
@@ -79,15 +80,14 @@ export function ImageSlot({
         disabled={busy}
         onChange={(e) => setPrompt(e.target.value)}
       />
-      {status.error && (
-        <NeonAlert variant="destructive" role="alert">
-          <NeonAlertDescription>
-            {status.error.kind === BLOG_EDITOR_ERROR_KINDS.AI_FAILED
-              ? t("image.failed")
-              : t(`errors.${status.error.kind}`)}
-          </NeonAlertDescription>
-        </NeonAlert>
-      )}
+      {status.error &&
+        (status.error.kind === BLOG_EDITOR_ERROR_KINDS.AI_FAILED ? (
+          <NeonAlert variant="destructive" role="alert">
+            <NeonAlertDescription>{t("image.failed")}</NeonAlertDescription>
+          </NeonAlert>
+        ) : (
+          <EditorErrorNotice error={status.error} />
+        ))}
       <div className="flex flex-wrap gap-2">
         <NeonButton
           size="sm"

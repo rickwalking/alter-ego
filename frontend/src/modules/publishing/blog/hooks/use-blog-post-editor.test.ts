@@ -10,6 +10,7 @@ import {
 } from "../editor.test-utils";
 import { updateSection } from "../lib/editor-document";
 import { useBlogPostEditor } from "./use-blog-post-editor";
+import type { BlogEditorError } from "./types";
 
 // Scenarios: tests/features/blog_editor_ae0424.feature (section editing,
 // versions, concurrent save conflict, migration banner) and
@@ -232,7 +233,7 @@ describe("useBlogPostEditor server answers", () => {
     const restored = blogPost({ title: "Versão 1", lock_version: 4 });
     mockFetch.mockResolvedValueOnce(jsonResponse(restored));
     await act(async () => {
-      expect(await result.current.handleRestore(1)).toBe(true);
+      expect(await result.current.handleRestore(1)).toBeNull();
     });
     expect(mockFetch.mock.calls[1][0]).toBe(
       "/api/blog-posts/p-1/restore-version/1",
@@ -241,10 +242,14 @@ describe("useBlogPostEditor server answers", () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({ detail: "version_conflict" }, 409),
     );
+    let failed: BlogEditorError | null = null;
     await act(async () => {
-      expect(await result.current.handleRestore(1)).toBe(false);
+      failed = await result.current.handleRestore(1);
     });
-    expect(result.current.error?.kind).toBe("version_conflict");
+    expect(failed).toEqual({
+      kind: "version_conflict",
+      detail: "version_conflict",
+    });
   });
 
   it("reload re-reads the post", async () => {

@@ -39,7 +39,11 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
     rewrite: vi.fn(),
     generateTranslation: vi.fn(),
   }),
-  useBlogReviewActions: () => ({ allowSelfReview: false, pending: false }),
+  useBlogReviewActions: () => ({
+    allowSelfReview: false,
+    pending: false,
+    error: null,
+  }),
   useUnsavedChangesGuard: () => ({ confirmLeave }),
   // AE-0425: the generation banner has its own tests (blog-generation-status).
   BlogGenerationStatus: (props: { unsavedChanges?: boolean }) => {

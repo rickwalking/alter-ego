@@ -1,11 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { v2Document } from "../editor.test-utils";
 import { snapshotText, VersionHistorySidebar } from "./version-history-sidebar";
 
 // Scenarios: Saving appends a version snapshot visible in the sidebar /
-// Restoring a version loads it into the editor
-// (tests/features/blog_editor_ae0424.feature)
+// Restoring a version loads it into the editor /
+// A failed restore shows its error in the version sidebar (AE-0438, F-11)
+// (tests/features/blog_editor_ae0424.feature, blog_editor_errors_ae0438.feature)
 
 describe("VersionHistorySidebar", () => {
   it("lists versions, previews the snapshot and restores", () => {
@@ -34,6 +35,31 @@ describe("VersionHistorySidebar", () => {
       screen.getByRole("button", { name: "Restore this version" }),
     );
     expect(onRestore).toHaveBeenCalledWith(1);
+  });
+
+  it("shows the restore error inside the sidebar", async () => {
+    const onRestore = vi.fn().mockResolvedValue({
+      kind: "validation",
+      detail: "blog_version_empty",
+    });
+    render(
+      <VersionHistorySidebar
+        versions={[{ version_number: 1, snapshot: v2Document() }]}
+        loading={false}
+        currentText="Agora"
+        disabled={false}
+        onRestore={onRestore}
+      />,
+    );
+    fireEvent.click(screen.getByText("Version 1"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Restore this version" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This version has no content",
+      ),
+    );
   });
 
   it("shows the loading and empty states", () => {

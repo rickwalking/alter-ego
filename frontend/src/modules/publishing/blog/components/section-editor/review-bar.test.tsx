@@ -13,6 +13,7 @@ function props(overrides: Partial<ReviewBarProps> = {}): ReviewBarProps {
     scheduledPublishAt: null,
     allowSelfReview: false,
     disabled: false,
+    error: null,
     onSubmitReview: vi.fn(),
     onApprove: vi.fn(),
     onReject: vi.fn(),
@@ -113,6 +114,27 @@ describe("ReviewBar", () => {
     rerender(<ReviewBar {...p} disabled />);
     expect(screen.getByRole("button", { name: "Unpublish" })).toBeDisabled();
     expect(screen.getByText("Published")).toBeInTheDocument();
+  });
+
+  // Scenario: Submitting your own post for review names the guard (AE-0438, F-11)
+  it("shows the self-review error inside the review bar", () => {
+    const p = props({
+      error: { kind: "status_guard", detail: "self_review_not_allowed" },
+    });
+    render(<ReviewBar {...p} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "cannot review your own post",
+    );
+  });
+
+  it("shows a generic failure with the code-specific copy when known", () => {
+    const p = props({
+      error: { kind: "failed", detail: "blog_document_not_publishable" },
+    });
+    render(<ReviewBar {...p} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "cannot be published yet",
+    );
   });
 });
 

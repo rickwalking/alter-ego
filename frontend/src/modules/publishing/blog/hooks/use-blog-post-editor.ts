@@ -181,19 +181,19 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     }
   };
 
-  const handleRestore = async (versionNumber: number): Promise<boolean> => {
+  const handleRestore = async (
+    versionNumber: number,
+  ): Promise<BlogEditorError | null> => {
     if (!session) {
-      return false;
+      return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
     }
-    setError(null);
     try {
       replaceFromServer(
         await restoreVersion(locked(session.base), versionNumber),
       );
-      return true;
+      return null;
     } catch (err) {
-      setError(toEditorError(err));
-      return false;
+      return toEditorError(err);
     }
   };
 

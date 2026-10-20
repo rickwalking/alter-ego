@@ -1293,7 +1293,27 @@
           "not_found": "That section or translation no longer exists. Reload the page.",
           "ai_failed": "The AI service failed. Nothing was changed — try again.",
           "failed": "The action failed. Try again.",
-          "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP."
+          "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP.",
+          "code": {
+            "self_review": "You cannot review your own post. Choose a different reviewer to submit it.",
+            "reviewer_required": "A reviewer is required to submit this post for review.",
+            "version_empty": "This version has no content (it holds the pre-write empty draft). Choose another version.",
+            "empty_document": "The document needs at least one section with text.",
+            "not_publishable": "This post cannot be published yet: it needs valid content and the AI label.",
+            "heading_invalid": "A section heading is invalid: it cannot start with # or exceed 200 characters.",
+            "section_too_long": "A section exceeded the 20,000-character limit.",
+            "section_not_found": "That section no longer exists. Reload the page.",
+            "translation_exists": "The English translation already exists.",
+            "translation_failed": "The translation failed. Nothing was changed — try again.",
+            "budget": "This post used its whole image budget. Remove or reuse existing images, or ask an admin to raise BLOG_IMAGE_COST_CAP.",
+            "image_persist_failed": "The generated image could not be saved. Try again.",
+            "image_generation_failed": "The image generation failed. Nothing was changed — try again.",
+            "persona_required": "No persona is available to rewrite this section. Create a persona first.",
+            "rewrite_too_long": "The section text is too long to rewrite. Shorten it and try again.",
+            "rewrite_empty": "The rewrite returned no text. Try again.",
+            "alt_blank": "The image alt text cannot be empty.",
+            "schedule_not_set": "This post has no schedule."
+          }
         }
       },
       "generation": {

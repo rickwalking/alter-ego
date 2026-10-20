@@ -11,16 +11,13 @@ import {
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
 import {
-  NeonAlert,
-  NeonAlertDescription,
-} from "@/components/molecules/neon-alert";
-import {
   BLOG_EDITOR_I18N_NAMESPACE,
   BLOG_HEADING_MAX_LENGTH,
   BLOG_SECTION_MAX_LENGTH,
 } from "@/constants/blog-editor";
 import { NEON_RED } from "@/constants/neon";
 import { BLOG_EDITOR_ERR_ALT_REQUIRED } from "../../editor-content";
+import { EditorErrorNotice } from "../editor-error-notice";
 import { ImageSlot } from "./image-slot";
 import type { SectionCardProps } from "./types";
 
@@ -140,11 +137,7 @@ export function SectionCard({
           </NeonButton>
         </div>
         {rewriteStatus.error && (
-          <NeonAlert variant="destructive" role="alert">
-            <NeonAlertDescription>
-              {t(`errors.${rewriteStatus.error.kind}`)}
-            </NeonAlertDescription>
-          </NeonAlert>
+          <EditorErrorNotice error={rewriteStatus.error} />
         )}
         <ImageSlot
           slotId={`${prefix}-image`}
