@@ -182,6 +182,15 @@ export {
   type StructuredItemField,
 } from "./workspace/lib/presentation-slide-resolution";
 
+/* --- workspace: add / remove structured list items (AE-0437) --- */
+export {
+  applySlideStructuredListEdit,
+  canAddStructuredItem,
+  editableStructuredListKey,
+  type SlideStructuredListEdit,
+  type StructuredListOperation,
+} from "./workspace/lib/presentation-structured-lists";
+
 /* --- workspace: mirror the other locale's structured fields (AE-0430) --- */
 export {
   mirrorLocaleStructure,

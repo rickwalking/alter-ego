@@ -1,7 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
 import {
+  canAddStructuredItem,
   fieldDomId,
   fieldErrorKey,
   INSIGHT_QUOTE_EXTRA_KEY,
@@ -14,6 +16,7 @@ import {
   type SlideExtraEdit,
   type SlideFieldErrors,
   type SlideStructuredItemEdit,
+  type SlideStructuredListEdit,
 } from "@/modules/editorial";
 import type { LocalizedSlideReview } from "@/modules/publishing";
 import { ContentCopyField } from "./content-phase-copy-field";
@@ -42,6 +45,8 @@ export interface StructuredEditContext {
   fieldErrors: SlideFieldErrors;
   onItemChange: (edit: SlideStructuredItemEdit) => void;
   onExtraChange: (edit: SlideExtraEdit) => void;
+  /** AE-0437: add / remove item slots (PT and EN together). */
+  onListChange?: (edit: SlideStructuredListEdit) => void;
 }
 
 /**
@@ -85,10 +90,94 @@ function fieldProps(
   };
 }
 
+function listLabel(
+  tCopy: ReturnType<typeof useTranslations>,
+  listKey: string,
+): string {
+  return LABELLED_LISTS.has(listKey) ? tCopy(`itemLists.${listKey}`) : listKey;
+}
+
+/** AE-0437: "remove this item" (both locales, same position). */
+function RemoveItemButton({
+  context,
+  listKey,
+  itemIndex,
+}: {
+  context: StructuredEditContext;
+  listKey: string;
+  itemIndex: number;
+}): React.ReactElement | null {
+  const tCopy = useTranslations("editorialWorkflow.review.copyField");
+  const onListChange = context.onListChange;
+  if (!onListChange) {
+    return null;
+  }
+  return (
+    <NeonButton
+      type="button"
+      size="sm"
+      variant="ghost"
+      className="ml-auto h-6 px-2"
+      onClick={() =>
+        onListChange({
+          slideIndex: context.slide.slide_index,
+          listKey,
+          operation: "remove",
+          itemIndex,
+        })
+      }
+    >
+      {tCopy("removeItem", {
+        list: listLabel(tCopy, listKey),
+        index: itemIndex + 1,
+      })}
+    </NeonButton>
+  );
+}
+
+/** AE-0437: "add an item" slot under the list (empty lists included). */
+function AddItemButton({
+  context,
+  listKey,
+  items,
+}: {
+  context: StructuredEditContext;
+  listKey: string;
+  items: Record<string, unknown>[];
+}): React.ReactElement | null {
+  const tCopy = useTranslations("editorialWorkflow.review.copyField");
+  const onListChange = context.onListChange;
+  if (!onListChange || !canAddStructuredItem(items)) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <NeonButton
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() =>
+          onListChange({
+            slideIndex: context.slide.slide_index,
+            listKey,
+            operation: "add",
+          })
+        }
+      >
+        {tCopy("addItem", { list: listLabel(tCopy, listKey) })}
+      </NeonButton>
+      <span className="text-[var(--color-text-muted)] text-xs">
+        {tCopy("itemSlotsHint")}
+      </span>
+    </div>
+  );
+}
+
 /**
  * AE-0414 (B11): every item of a structured list (summary points, features,
  * closing actions) with an editable title and body, addressed by the same
- * ``list[i].field`` path the validator flags.
+ * ``list[i].field`` path the validator flags. AE-0437: items can be added
+ * (also to an empty list) and removed.
  */
 export function EditableStructuredItems({
   context,
@@ -101,53 +190,65 @@ export function EditableStructuredItems({
 }): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   return (
-    <ul className="space-y-2 pt-1">
-      {items.map((item, itemIndex) => (
-        <li
-          key={`${listKey}-${itemIndex}`}
-          className="space-y-1 rounded-md border border-[var(--color-border)] p-2"
-        >
-          <p className="flex items-center gap-2 font-medium text-[var(--color-text-muted)] text-xs">
-            {typeof item.icon_name === "string" && item.icon_name.trim() ? (
-              <PresentationIconPreview
-                iconName={item.icon_name.trim()}
-                className="h-3.5 w-3.5 text-[var(--color-text)]"
+    <div className="space-y-2 pt-1">
+      <ul className="space-y-2">
+        {items.map((item, itemIndex) => (
+          <li
+            key={`${listKey}-${itemIndex}`}
+            className="space-y-1 rounded-md border border-[var(--color-border)] p-2"
+          >
+            <div className="flex items-center gap-2 font-medium text-[var(--color-text-muted)] text-xs">
+              {typeof item.icon_name === "string" && item.icon_name.trim() ? (
+                <PresentationIconPreview
+                  iconName={item.icon_name.trim()}
+                  className="h-3.5 w-3.5 text-[var(--color-text)]"
+                />
+              ) : null}
+              <span>
+                {tCopy("itemHeading", {
+                  list: listLabel(tCopy, listKey),
+                  index: itemIndex + 1,
+                })}
+              </span>
+              <RemoveItemButton
+                context={context}
+                listKey={listKey}
+                itemIndex={itemIndex}
               />
-            ) : null}
-            {tCopy("itemHeading", {
-              list: LABELLED_LISTS.has(listKey)
-                ? tCopy(`itemLists.${listKey}`)
-                : listKey,
-              index: itemIndex + 1,
-            })}
-          </p>
-          {ITEM_TEXT_FIELDS.map((field) => (
-            <ContentCopyField
-              key={field}
-              {...fieldProps(
-                context,
-                structuredItemFieldPath(listKey, itemIndex, field),
-              )}
-              label={tCopy(field === "title" ? "itemTitle" : "itemBody")}
-              value={asText(item[field])}
-              rows={field === "title" ? 1 : 2}
-              localeKey={context.localeKey}
-              budget={resolveItemBudget(listKey, field, context.policyVersion)}
-              onChange={(value) =>
-                context.onItemChange({
-                  slideIndex: context.slide.slide_index,
-                  locale: context.localeKey,
+            </div>
+            {ITEM_TEXT_FIELDS.map((field) => (
+              <ContentCopyField
+                key={field}
+                {...fieldProps(
+                  context,
+                  structuredItemFieldPath(listKey, itemIndex, field),
+                )}
+                label={tCopy(field === "title" ? "itemTitle" : "itemBody")}
+                value={asText(item[field])}
+                rows={field === "title" ? 1 : 2}
+                localeKey={context.localeKey}
+                budget={resolveItemBudget(
                   listKey,
-                  itemIndex,
                   field,
-                  value,
-                })
-              }
-            />
-          ))}
-        </li>
-      ))}
-    </ul>
+                  context.policyVersion,
+                )}
+                onChange={(value) =>
+                  context.onItemChange({
+                    slideIndex: context.slide.slide_index,
+                    locale: context.localeKey,
+                    listKey,
+                    itemIndex,
+                    field,
+                    value,
+                  })
+                }
+              />
+            ))}
+          </li>
+        ))}
+      </ul>
+      <AddItemButton context={context} listKey={listKey} items={items} />
+    </div>
   );
 }
 

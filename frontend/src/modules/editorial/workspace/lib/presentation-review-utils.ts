@@ -180,11 +180,14 @@ export function listStructuredExtras(
     if (value === undefined || value === null) {
       return [];
     }
+    // AE-0437: an item list (even an empty one) is edited as a list, never
+    // shown as a raw "Campo estruturado: actions []" extra.
     if (
       PRESENTATION_STRUCTURED_ITEM_LIST_KEYS.includes(
         key as (typeof PRESENTATION_STRUCTURED_ITEM_LIST_KEYS)[number],
       ) &&
-      isPresentationStructuredItemList(value)
+      (isPresentationStructuredItemList(value) ||
+        (Array.isArray(value) && value.length === 0))
     ) {
       return [];
     }

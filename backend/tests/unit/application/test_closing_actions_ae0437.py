@@ -297,7 +297,7 @@ class TestGateRepairFillsStructure:
         pt_actions = cast(
             list[dict[str, object]], _payload(outcome.slides, 6, "pt")["actions"]
         )
-        assert [a["title"] for a in pt_actions][0] == "Teste controlado"
+        assert pt_actions[0]["title"] == "Teste controlado"
         assert (
             len(cast(list[object], _payload(outcome.slides, 2, "pt")["summary_points"]))
             == 3

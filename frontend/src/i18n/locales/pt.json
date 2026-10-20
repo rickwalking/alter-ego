@@ -774,6 +774,9 @@
         "itemHeading": "{list} {index}",
         "itemTitle": "Título do item",
         "itemBody": "Corpo do item",
+        "addItem": "Adicionar {list}",
+        "removeItem": "Remover {list} {index}",
+        "itemSlotsHint": "Adicionar ou remover um item muda o PT e o EN juntos.",
         "itemLists": {
           "summary_points": "Ponto de resumo",
           "features": "Destaque",
