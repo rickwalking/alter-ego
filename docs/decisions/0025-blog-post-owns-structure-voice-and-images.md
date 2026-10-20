@@ -306,7 +306,9 @@ sequenceDiagram
   The task records `generation = {status, started_at, heartbeat_at, lease_id, attempt, errors}` and
   heartbeats; each write checks the lease (`WHERE lease_id = :mine`) like the carousel run-epoch
   fence, so a duplicate worker cannot clobber the row. `BLOG_GENERATION_TIMEOUT_SECONDS` (default
-  900) wraps the run with `asyncio.wait_for`; `CancelledError` marks the row recoverable-failed and
+  900) wraps the run with `asyncio.wait_for` (superseded by AE-0435: per-stage budgets
+  `BLOG_GENERATION_TEXT_TIMEOUT_SECONDS` for the text and `BLOG_IMAGE_WAVE_TIMEOUT_SECONDS` per image
+  wave; an images timeout keeps the finished images and ends `partial`); `CancelledError` marks the row recoverable-failed and
   re-raises. A deploy/restart kills in-process tasks, so the existing periodic
   `run_workflow_workers` tick (`workflow_workers.py:212-260`, every
   `workflow_worker_interval_seconds`, default 60) gains a **blog generation reaper** that runs

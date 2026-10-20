@@ -9,8 +9,9 @@ from pydantic_settings import SettingsConfigDict
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.constants.blog_generation import (
     DEFAULT_BLOG_GENERATION_STALE_SECONDS,
-    DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS,
+    DEFAULT_BLOG_GENERATION_TEXT_TIMEOUT_SECONDS,
     DEFAULT_BLOG_IMAGE_CONCURRENCY,
+    DEFAULT_BLOG_IMAGE_WAVE_TIMEOUT_SECONDS,
 )
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.infrastructure.config.autopilot_autofix_settings import (
@@ -300,11 +301,15 @@ class Settings(AutopilotAutofixSettings):
     workflow_run_reap_observations: int = 3
     workflow_run_overdue_minutes: int = 60
     # AE-0425 (ADR-0025): blog writer + GPT images. Concurrency of the image
-    # step (the per-post cap is AE-0424's blog_image_cost_cap), the run bound
-    # and the heartbeat age after which the worker-tick reaper fails a run.
+    # step (the per-post cap is AE-0424's blog_image_cost_cap), the stage
+    # budgets (AE-0435: text stage; images = per-wave budget x ceil(slots /
+    # concurrency)) and the heartbeat age after which the reaper fails a run.
     blog_image_concurrency: int = Field(default=DEFAULT_BLOG_IMAGE_CONCURRENCY, ge=1)
-    blog_generation_timeout_seconds: int = Field(
-        default=DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS, ge=1
+    blog_generation_text_timeout_seconds: int = Field(
+        default=DEFAULT_BLOG_GENERATION_TEXT_TIMEOUT_SECONDS, ge=1
+    )
+    blog_image_wave_timeout_seconds: int = Field(
+        default=DEFAULT_BLOG_IMAGE_WAVE_TIMEOUT_SECONDS, ge=1
     )
     blog_generation_stale_seconds: int = Field(
         default=DEFAULT_BLOG_GENERATION_STALE_SECONDS, ge=1

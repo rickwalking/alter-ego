@@ -20,6 +20,11 @@ from rag_backend.agents.blog_writer import (
 from rag_backend.api.dependencies.blog_editor import (
     blog_images_store,
     build_blog_image_service,
+    build_blog_translation_service,
+)
+from rag_backend.application.services.blog.blog_english_gate import (
+    EnglishGateDeps,
+    EnglishLanguageGate,
 )
 from rag_backend.application.services.blog.blog_generation_job import (
     BlogGenerationDeps,
@@ -82,11 +87,21 @@ def _image_batch(settings: Settings) -> BlogImageBatchService:
     )
 
 
+def _timings(settings: Settings) -> GenerationTimings:
+    """The AE-0435 stage budgets: text stage, then per image wave."""
+    return GenerationTimings(
+        text_timeout_seconds=settings.blog_generation_text_timeout_seconds,
+        image_wave_seconds=settings.blog_image_wave_timeout_seconds,
+        heartbeat_seconds=BLOG_GENERATION_HEARTBEAT_SECONDS,
+    )
+
+
 def build_generation_service(
     persona: PersonaProfile, user_id: str
 ) -> BlogGenerationService:
     """The service for one run (voice scorer bound to its persona; content
-    writes recorded as ``user_id``'s through AE-0424's slot-write path)."""
+    writes recorded as ``user_id``'s through AE-0424's slot-write path; the
+    EN language repair uses the editor's PT -> EN translation, AE-0435)."""
     container = get_container()
     settings = container.settings()
     roles = container.llm_service().role_models
@@ -96,19 +111,20 @@ def build_generation_service(
     gate = BlogQualityGate(
         QualityGateDeps(writer=writer, scorer=PersonaVoiceScorer(persona, roles.fast))
     )
+    english = EnglishLanguageGate(
+        EnglishGateDeps(translator=build_blog_translation_service(), gate=gate)
+    )
     return BlogGenerationService(
         BlogGenerationDeps(
             writer=writer,
             gate=gate,
+            english=english,
             images=_image_batch(settings),
             store=SlotWriteGenerationStore(
                 get_session_maker(),
                 RunOwner(user_id=user_id, image_cap=settings.blog_image_cost_cap),
             ),
-            timings=GenerationTimings(
-                timeout_seconds=settings.blog_generation_timeout_seconds,
-                heartbeat_seconds=BLOG_GENERATION_HEARTBEAT_SECONDS,
-            ),
+            timings=_timings(settings),
         )
     )
 

@@ -39,10 +39,14 @@ class ImageTitles:
 
 @dataclass(frozen=True)
 class GeneratedLanguages:
-    """Both gated languages plus the titles used for cover subjects/alt."""
+    """Both gated languages plus the titles used for cover subjects/alt.
+
+    ``en`` is ``None`` when the EN gate could not obtain English (AE-0435):
+    the document is then stored without ``translations.en``.
+    """
 
     pt: GatedLanguage
-    en: GatedLanguage
+    en: GatedLanguage | None
     title: str
     en_title: str
 
@@ -71,20 +75,30 @@ def _sections(gated: GatedLanguage, ids: list[str]) -> list[BlogSection]:
     ]
 
 
+def _language(
+    gated: GatedLanguage, ids: list[str], checked_at: str
+) -> BlogLanguageDocument:
+    return BlogLanguageDocument.model_validate({
+        KEY_SCHEMA: BLOG_SCHEMA_V2,
+        "sections": _sections(gated, ids),
+        "quality": _quality(gated, checked_at),
+    })
+
+
 def build_generated_document(
     languages: GeneratedLanguages, checked_at: str
 ) -> BlogDocument:
     """The image-less document (PT + EN, scored) with fresh shared section ids."""
     ids = [_new_section_id() for _ in languages.pt.sections]
-    english = BlogLanguageDocument.model_validate({
-        KEY_SCHEMA: BLOG_SCHEMA_V2,
-        "sections": _sections(languages.en, ids),
-        "quality": _quality(languages.en, checked_at),
-    })
+    translations = (
+        {}
+        if languages.en is None
+        else {LANGUAGE_EN: _language(languages.en, ids, checked_at)}
+    )
     return BlogDocument.model_validate({
         KEY_SCHEMA: BLOG_SCHEMA_V2,
         "sections": _sections(languages.pt, ids),
-        "translations": {LANGUAGE_EN: english},
+        "translations": translations,
         "quality": _quality(languages.pt, checked_at),
     })
 

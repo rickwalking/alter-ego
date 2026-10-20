@@ -67,6 +67,11 @@ ERR_INVALID_GENERATED_DOCUMENT: Final = "invalid_generated_document"
 ERR_SECTION_COUNT_MISMATCH: Final = "section_count_mismatch"
 ERR_IMAGE_FAILED: Final = "image_failed"
 ERR_IMAGE_COST_CAP: Final = "image_cost_cap_reached"
+# AE-0435: a slot still running when the images budget ran out (retry fills it).
+ERR_IMAGE_TIMEOUT: Final = "image_timeout"
+# AE-0435: the EN translation still read as Portuguese after the bounded
+# retranslations; the article is stored without ``translations.en``.
+ERR_EN_WRONG_LANGUAGE: Final = "en_translation_wrong_language"
 ERR_GENERATION_IN_PROGRESS: Final = "blog_generation_in_progress"
 ERR_GENERATION_NOT_RETRYABLE: Final = "blog_generation_not_retryable"
 ERR_BLOG_POST_EXISTS_FOR_PROJECT: Final = "blog_post_exists_for_project"
@@ -81,7 +86,14 @@ IMAGE_SLOT_COVER: Final = "cover"
 
 # --- defaults (Settings) ----------------------------------------------------
 DEFAULT_BLOG_IMAGE_CONCURRENCY: Final = 2
-DEFAULT_BLOG_GENERATION_TIMEOUT_SECONDS: Final = 900
+# AE-0435 stage budgets (prod 2026-10-19/20, 12 runs). Text stage (writer + both
+# gates + EN repair): 37 s - 3 min, worst 14.7 min while other runs held the model
+# queue → 30 min. Images: 135-224 s per concurrency wave (gpt-image) → 360 s per
+# wave, times ceil(slots / concurrency); 10 slots at concurrency 2 = 30 min.
+DEFAULT_BLOG_GENERATION_TEXT_TIMEOUT_SECONDS: Final = 1800
+DEFAULT_BLOG_IMAGE_WAVE_TIMEOUT_SECONDS: Final = 360
+# Retranslations of a wrong-language EN (each one call per section).
+BLOG_EN_MAX_RETRANSLATIONS: Final = 2
 DEFAULT_BLOG_GENERATION_STALE_SECONDS: Final = 180
 BLOG_GENERATION_HEARTBEAT_SECONDS: Final = 30.0
 # The owner persona used when neither the request nor the project names one
@@ -101,6 +113,10 @@ LOG_GENERATION_LEASE_LOST: Final = "blog_generation_lease_lost"
 LOG_GENERATION_REAPED: Final = "blog_generation_reaped"
 LOG_IMAGE_FAILED: Final = "blog_image_failed"
 LOG_IMAGES_DONE: Final = "blog_images_done"
+LOG_IMAGES_TIMED_OUT: Final = "blog_images_timed_out"
+LOG_EN_WRONG_LANGUAGE: Final = "blog_en_wrong_language"
+LOG_EN_RETRANSLATION_FAILED: Final = "blog_en_retranslation_failed"
+LOG_EN_REWRITE_DISCARDED: Final = "blog_en_rewrite_language_switch_discarded"
 # Version-history summary of the generation's own writes (AE-0424 slot path).
 VERSION_SUMMARY_GENERATION: Final = "Before blog generation"
 LOG_SOURCE_LEAK_STRIPPED: Final = "blog_source_leak_stripped"

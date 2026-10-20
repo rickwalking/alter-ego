@@ -174,8 +174,12 @@ is untouched.
 existing tracked fire-and-forget pattern (`asyncio.create_task` + `_background_tasks` set +
 cancel-on-shutdown, like `editorial_workflow_resume_runner.schedule_background_resume`), not FastAPI
 `BackgroundTasks`/Celery. It writes `generation = {status, started_at, heartbeat_at, lease_id,
-attempt, errors}` and heartbeats; writes are lease-fenced. `BLOG_GENERATION_TIMEOUT_SECONDS` (default
-900) bounds the run. A restart kills the task, so the existing `run_workflow_workers` tick (default
+attempt, errors}` and heartbeats; writes are lease-fenced. Each stage has its own budget (AE-0435): the
+text stage (writer + both gates + the EN language repair) is bounded by
+`BLOG_GENERATION_TEXT_TIMEOUT_SECONDS` (default 1800) and fails the run on timeout; the images stage
+gets `BLOG_IMAGE_WAVE_TIMEOUT_SECONDS` (default 360) per wave of `BLOG_IMAGE_CONCURRENCY` images, keeps
+the images that finished in time and marks the rest `image_timeout`, so the run ends `partial` and its
+retry is images-only. A restart kills the task, so the existing `run_workflow_workers` tick (default
 every 60 s) reaps rows whose heartbeat is older than `BLOG_GENERATION_STALE_SECONDS` (default 180) to
 `failed` / `ERR_GENERATION_INTERRUPTED` / `recoverable=true`, preserving partial content; retry is
 owner-triggered (no automatic re-enqueue, to avoid duplicate spend).

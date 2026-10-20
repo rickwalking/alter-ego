@@ -4,7 +4,9 @@ One run = one lease on one draft row. A full run:
 
 1. drafts ONE continuous article (PT + EN) from the brief (``blog_generation``),
 2. normalizes it to exactly N sections (N = the carousel slide count),
-3. gates each language (voice score + deterministic scan + one rewrite at most),
+3. gates each language (voice score + deterministic scan + one rewrite at most)
+   and checks that the EN is English (AE-0435: a Portuguese EN is retranslated,
+   bounded; if it stays Portuguese the article is stored without EN),
 4. stores the scored, image-less document (lease-fenced; refuses to overwrite
    an owner save),
 5. generates the empty image slots (cover + N sections, ``blog_section_image``)
@@ -13,12 +15,15 @@ One run = one lease on one draft row. A full run:
    made during the image step is kept; a section deleted meanwhile is skipped)
    and finishes ``complete`` or ``partial``.
 
-An images-only job (a retry of a post whose article exists) skips 1-4. The
-whole run is bounded by ``BLOG_GENERATION_TIMEOUT_SECONDS`` and heartbeats
-while it works; a heartbeat failure is logged and never ends the run. A
-writer/count/document failure finishes ``failed`` without storing anything as
-if valid; cancellation finishes ``failed`` + recoverable and re-raises. A lost
-lease stops the run silently. The post always stays a draft.
+An images-only job (a retry of a post whose article exists) skips 1-4. Each
+stage has its own budget (AE-0435): 1-3 ``BLOG_GENERATION_TEXT_TIMEOUT_SECONDS``
+(timeout → ``failed``), 5 ``BLOG_IMAGE_WAVE_TIMEOUT_SECONDS`` per image wave
+(timeout → the finished images are kept and the run ends ``partial``, so the
+retry is images-only). The run heartbeats while it works; a heartbeat failure
+is logged and never ends the run. A writer/count/document failure finishes
+``failed`` without storing anything as if valid; cancellation finishes
+``failed`` + recoverable and re-raises. A lost lease stops the run silently.
+The post always stays a draft.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ import structlog
 from rag_backend.application.services.blog.blog_document_service import (
     BlogDocumentService,
 )
+from rag_backend.application.services.blog.blog_english_gate import EnglishCheck
 from rag_backend.application.services.blog.blog_generated_document import (
     GeneratedLanguages,
     ImageTitles,
@@ -58,6 +64,7 @@ from rag_backend.application.services.blog_workflow_observability import (
 )
 from rag_backend.domain.constants.blog_generation import (
     AGENT_BLOG_WRITER,
+    ERR_EN_WRONG_LANGUAGE,
     ERR_GENERATION_CANCELLED,
     ERR_GENERATION_CONFLICT,
     ERR_GENERATION_FAILED,
@@ -86,6 +93,7 @@ from rag_backend.domain.models.blog_document import (
 from rag_backend.domain.models.blog_generation import (
     DocumentApply,
     DraftArticle,
+    GatedLanguage,
     GenerationConflictError,
     GenerationLease,
     GenerationOutcome,
@@ -103,6 +111,8 @@ _FAILURE_CODES: dict[type[Exception], str] = {
     SectionCountMismatchError: ERR_SECTION_COUNT_MISMATCH,
     InvalidBlogDocumentError: ERR_INVALID_GENERATED_DOCUMENT,
     GenerationConflictError: ERR_GENERATION_CONFLICT,
+    # The text-stage budget ran out (AE-0435); nothing was stored.
+    TimeoutError: ERR_GENERATION_TIMEOUT,
 }
 
 
@@ -127,10 +137,7 @@ class BlogGenerationService:
     async def run(self, job: GenerationJob) -> GenerationOutcome | None:
         """Run the job; the recorded outcome (``None`` if the lease was lost)."""
         try:
-            async with asyncio.timeout(self._deps.timings.timeout_seconds):
-                outcome = await self._with_heartbeat(job)
-        except TimeoutError:
-            outcome = _failure(ERR_GENERATION_TIMEOUT, ERR_GENERATION_TIMEOUT)
+            outcome = await self._with_heartbeat(job)
         except asyncio.CancelledError:
             await self._finish(
                 job, _failure(ERR_GENERATION_CANCELLED, ERR_GENERATION_CANCELLED)
@@ -202,7 +209,12 @@ class BlogGenerationService:
         # any provider spend (kept even when a slot later fails: it may be billed).
         granted = await self._deps.store.reserve_images(job.lease, len(subjects))
         result = await self._deps.images.generate(
-            ImageBatchRequest(trace=job.trace, subjects=subjects, max_images=granted)
+            ImageBatchRequest(
+                trace=job.trace,
+                subjects=subjects,
+                max_images=granted,
+                wave_seconds=self._deps.timings.image_wave_seconds,
+            )
         )
         if result.images:
             await self._attach(job, result, titles)
@@ -249,21 +261,29 @@ class BlogGenerationService:
             agent_name=AGENT_BLOG_WRITER,
         )
         with blog_phase_trace(scope):
-            article = await self._deps.writer.draft(brief)
-            return await self._gate(brief, article)
+            async with asyncio.timeout(self._deps.timings.text_timeout_seconds):
+                article = await self._deps.writer.draft(brief)
+                pt, en = await self._gate(brief, article)
+                english = await self._deps.english.ensure(
+                    EnglishCheck(job.lease.post_id, pt, en, brief)
+                )
+        return GeneratedLanguages(
+            pt=pt,
+            en=english,
+            title=article.title or brief.title,
+            en_title=article.en_title or article.title or brief.title,
+        )
 
     async def _gate(
         self, brief: WriterBrief, article: DraftArticle
-    ) -> GeneratedLanguages:
+    ) -> tuple[GatedLanguage, GatedLanguage]:
         count = brief.section_count
         pt = normalize_section_count(article.sections, count)
         en = normalize_section_count(article.en_sections, count)
         gate = self._deps.gate
-        return GeneratedLanguages(
-            pt=await gate.run(GateCommand(LANGUAGE_PT, pt, brief)),
-            en=await gate.run(GateCommand(LANGUAGE_EN, en, brief)),
-            title=article.title or brief.title,
-            en_title=article.en_title or article.title or brief.title,
+        return (
+            await gate.run(GateCommand(LANGUAGE_PT, pt, brief)),
+            await gate.run(GateCommand(LANGUAGE_EN, en, brief)),
         )
 
     async def _store(
@@ -291,7 +311,8 @@ def _place_article(latest: BlogDocument, article: BlogDocument) -> BlogDocument:
 def _outcome(
     job: GenerationJob, languages: GeneratedLanguages | None, result: ImageBatchResult
 ) -> GenerationOutcome:
-    status = GENERATION_STATUS_PARTIAL if result.errors else GENERATION_STATUS_COMPLETE
+    errors = (*_language_errors(languages), *result.errors)
+    status = GENERATION_STATUS_PARTIAL if errors else GENERATION_STATUS_COMPLETE
     logger.info(
         LOG_GENERATION_FINISHED,
         post_id=job.lease.post_id,
@@ -299,18 +320,33 @@ def _outcome(
         status=status,
         images_only=languages is None,
         voice_score=languages.pt.voice.overall if languages else None,
-        voice_score_en=languages.en.voice.overall if languages else None,
+        voice_score_en=_en_score(languages),
         rewrite_passes=languages.pt.rewrite_passes if languages else None,
         image_count=len(result.images),
     )
     return GenerationOutcome(
         status=status,
-        errors=result.errors,
-        recoverable=bool(result.errors),
+        errors=errors,
+        recoverable=bool(errors),
         image_count=len(result.images),
         # A standalone post takes the writer's title (with the final status).
         title=languages.title if job.retitle and languages else None,
     )
+
+
+def _language_errors(
+    languages: GeneratedLanguages | None,
+) -> tuple[dict[str, object], ...]:
+    """``en_translation_wrong_language`` when the EN could not be made English."""
+    if languages is None or languages.en is not None:
+        return ()
+    return ({ERROR_KEY_CODE: ERR_EN_WRONG_LANGUAGE, ERROR_KEY_REASON: LANGUAGE_EN},)
+
+
+def _en_score(languages: GeneratedLanguages | None) -> float | None:
+    if languages is None or languages.en is None:
+        return None
+    return languages.en.voice.overall
 
 
 def _now() -> str:

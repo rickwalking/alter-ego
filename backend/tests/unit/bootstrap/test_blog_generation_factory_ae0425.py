@@ -13,6 +13,9 @@ from pathlib import Path
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from rag_backend.application.services.blog.blog_translation_service import (
+    BlogTranslationService,
+)
 from rag_backend.bootstrap import blog_generation
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.config.settings import get_settings
@@ -84,9 +87,16 @@ def test_service_is_wired_with_the_role_models_and_gpt_image(
     deps = service._deps
     assert deps.writer._models.fast is container.roles.fast
     assert deps.writer._models.reasoning is container.roles.reasoning
+    # AE-0435 stage budgets come from settings.
+    settings = get_settings()
     assert (
-        deps.timings.timeout_seconds == get_settings().blog_generation_timeout_seconds
+        deps.timings.text_timeout_seconds
+        == settings.blog_generation_text_timeout_seconds
     )
+    assert deps.timings.image_wave_seconds == settings.blog_image_wave_timeout_seconds
+    # AE-0435: the EN repair reuses the editor's translation and the same gate.
+    assert isinstance(deps.english._deps.translator, BlogTranslationService)
+    assert deps.english._deps.gate is deps.gate
     # The one image path (AE-0424): the batch wraps the editor's service.
     assert deps.images._deps.images is editor_image_service
     assert deps.images._deps.concurrency == get_settings().blog_image_concurrency
@@ -107,7 +117,9 @@ def test_settings_defaults() -> None:
     settings = get_settings()
     assert settings.blog_image_concurrency == 2
     assert settings.blog_image_cost_cap == 30
-    assert settings.blog_generation_timeout_seconds == 900
+    # AE-0435: text stage 30 min; images 6 min per wave of concurrent images.
+    assert settings.blog_generation_text_timeout_seconds == 1800
+    assert settings.blog_image_wave_timeout_seconds == 360
     assert settings.blog_generation_stale_seconds == 180
 
 

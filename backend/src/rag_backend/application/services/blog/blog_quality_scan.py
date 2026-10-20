@@ -5,6 +5,9 @@ No model is involved here, so every finding is reproducible:
 * :func:`scan_sections` — sentences restated across the article (F-03),
   sentences copied verbatim from a source note, and banned stock phrases
   (the list is data, ``domain/constants/blog_voice.py``).
+* :func:`portuguese_sections` — the EN sections that read as Portuguese
+  (AE-0435; the carousel's AE-0413/AE-0430 ``wrong_language`` detector), so a
+  Portuguese text is never stored as ``translations.en``.
 * :func:`strip_source_leaks` — drops any PT sentence that is a verbatim copy of
   the (English) research findings, so a research intro can never leak into the
   Portuguese body (F-05 class). The EN translation is not touched.
@@ -18,6 +21,9 @@ from dataclasses import dataclass
 
 import structlog
 
+from rag_backend.application.services.carousel.copy_hygiene_text import (
+    wrong_language_detail,
+)
 from rag_backend.domain.constants.blog_generation import LANGUAGE_EN, LOG_ENGLISH_IN_PT
 from rag_backend.domain.constants.blog_voice import (
     BANNED_PHRASES_EN,
@@ -120,10 +126,26 @@ def _english_sections(scan: ScanInput) -> list[str]:
     if scan.language == LANGUAGE_EN:
         return []
     return [
-        section.heading or f"#{index + 1}"
+        section_label(section, index)
         for index, section in enumerate(scan.sections)
         if reads_as_english(section.body_md)
     ]
+
+
+def section_label(section: DraftSection, index: int) -> str:
+    """How a finding names a section: its heading, else ``#<position>``."""
+    return section.heading or f"#{index + 1}"
+
+
+def portuguese_sections(sections: tuple[DraftSection, ...]) -> tuple[str, ...]:
+    """The EN sections (heading + body) that read as Portuguese (no model)."""
+    return tuple(
+        section_label(section, index)
+        for index, section in enumerate(sections)
+        if wrong_language_detail(
+            f"{section.heading or ''}\n{section.body_md}", portuguese=False
+        )
+    )
 
 
 def scan_sections(scan: ScanInput) -> QualityFindings:
@@ -187,8 +209,10 @@ def strip_source_leaks(
 __all__ = [
     "ScanInput",
     "normalize_sentence",
+    "portuguese_sections",
     "reads_as_english",
     "scan_sections",
+    "section_label",
     "split_sentences",
     "strip_source_leaks",
 ]

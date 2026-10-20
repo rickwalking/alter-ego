@@ -42,6 +42,7 @@ from tests.blog_generation_fakes import (
     FakeScorer,
     FakeWriter,
     article,
+    english_gate,
     image_batch,
     writer_failure,
 )
@@ -89,17 +90,19 @@ class _Harness:
         from rag_backend.infrastructure.database.config import get_session_maker
 
         self.personas.append(persona)
+        gate = BlogQualityGate(QualityGateDeps(self.writer, FakeScorer(scores=[80.0])))
         return BlogGenerationService(
             BlogGenerationDeps(
                 writer=self.writer,
-                gate=BlogQualityGate(
-                    QualityGateDeps(self.writer, FakeScorer(scores=[80.0]))
-                ),
+                gate=gate,
+                english=english_gate(gate),
                 images=image_batch(self.images_dir, self.generator),
                 store=SlotWriteGenerationStore(
                     get_session_maker(), RunOwner(user_id=user_id, image_cap=30)
                 ),
-                timings=GenerationTimings(timeout_seconds=10, heartbeat_seconds=5),
+                timings=GenerationTimings(
+                    text_timeout_seconds=10, image_wave_seconds=10, heartbeat_seconds=5
+                ),
             )
         )
 

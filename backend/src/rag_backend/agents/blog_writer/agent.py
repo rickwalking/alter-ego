@@ -152,6 +152,7 @@ class BlogWriterAgent:
         """Reasoning-model revision notes; best-effort (``()`` on failure)."""
         suggestions = request.voice.breakdown.get("suggestions", [])
         variables: dict[str, object] = {
+            "language_name": LANGUAGE_NAMES.get(request.language, request.language),
             "voice_score": round(request.voice.overall, 1),
             "threshold": VOICE_SCORE_THRESHOLD,
             "repeated": list(request.findings.repeated_sentences),
