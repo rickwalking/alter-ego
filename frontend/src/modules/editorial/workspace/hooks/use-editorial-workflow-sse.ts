@@ -18,6 +18,7 @@ import {
   resolveWorkflowEventPayload,
   shouldPollWorkflowState,
 } from "./use-editorial-workflow-utils";
+import { useWorkflowStreamReconnect } from "./use-workflow-stream-reconnect";
 import type {
   UseEditorialWorkflowSseParams,
   WorkflowEventPayload,
@@ -55,13 +56,14 @@ export function useEditorialWorkflowSse({
 }: UseEditorialWorkflowSseParams): {
   enterPollingFallback: () => void;
   stopPollingFallback: () => void;
+  reconnectLiveUpdates: () => void;
   transportModeRef: RefObject<EditorialWorkflowTransportMode>;
   workflowStateRef: RefObject<EditorialWorkflowState | null>;
 } {
   const pollTimeoutRef = useRef<number | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
   const backoffIndexRef = useRef(0);
   const sourceRef = useRef<EventSource | null>(null);
+  const connectRef = useRef<(() => void) | null>(null);
   const transportModeRef = useRef(transportMode);
   const workflowStateRef = useRef(state);
   const phaseStatusRef = useRef(state?.phase_status);
@@ -79,13 +81,6 @@ export function useEditorialWorkflowSse({
     }
   }, []);
 
-  const clearReconnectTimeout = useCallback((): void => {
-    if (reconnectTimeoutRef.current !== null) {
-      window.clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-  }, []);
-
   const stopPollingFallback = useCallback((): void => {
     clearPollTimeout();
     backoffIndexRef.current = 0;
@@ -96,6 +91,33 @@ export function useEditorialWorkflowSse({
     setTransportMode(EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK);
     backoffIndexRef.current = 0;
   }, [setTransportMode]);
+
+  const markDisconnected = useCallback((): void => {
+    clearPollTimeout();
+    transportModeRef.current = EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED;
+    setTransportMode(EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED);
+  }, [clearPollTimeout, setTransportMode]);
+
+  const applyProbedState = useCallback(
+    (next: EditorialWorkflowState): void => {
+      workflowStateRef.current = next;
+      phaseStatusRef.current = next.phase_status;
+      setState(next);
+      setPhaseEvents((prev) => appendUniquePhase(prev, next.current_phase));
+    },
+    [setPhaseEvents, setState],
+  );
+
+  const { handleStreamError, handleStreamOpen, reconnectNow, cancelReconnect } =
+    useWorkflowStreamReconnect({
+      projectId,
+      connectRef,
+      sourceRef,
+      applyProbedState,
+      refreshState,
+      enterPollingFallback,
+      markDisconnected,
+    });
 
   const schedulePollFallbackRef = useRef<(() => void) | null>(null);
 
@@ -120,7 +142,13 @@ export function useEditorialWorkflowSse({
     pollTimeoutRef.current = window.setTimeout(() => {
       void refreshState().then((workflowState) => {
         if (!workflowState) {
-          stopPollingFallback();
+          // AE-0440: a poll answered after a disconnect must not hide it.
+          if (
+            transportModeRef.current ===
+            EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK
+          ) {
+            stopPollingFallback();
+          }
           return;
         }
         backoffIndexRef.current = Math.min(
@@ -144,7 +172,8 @@ export function useEditorialWorkflowSse({
   useEffect(() => {
     if (!sseEnabled) {
       clearPollTimeout();
-      clearReconnectTimeout();
+      cancelReconnect();
+      connectRef.current = null;
       sourceRef.current?.close();
       sourceRef.current = null;
       return;
@@ -210,7 +239,6 @@ export function useEditorialWorkflowSse({
 
     const connectSse = (): void => {
       sourceRef.current?.close();
-      clearReconnectTimeout();
 
       const source = new EventSource(
         API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId),
@@ -255,23 +283,25 @@ export function useEditorialWorkflowSse({
 
       source.onopen = () => {
         stopPollingFallback();
+        handleStreamOpen();
       };
 
+      // AE-0440: EventSource hides the status of a failed stream; the
+      // reconnect hook probes auth before (and instead of) reconnecting.
       source.onerror = () => {
         source.close();
         sourceRef.current = null;
-        enterPollingFallback();
-        reconnectTimeoutRef.current = window.setTimeout(() => {
-          connectSse();
-        }, EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[0]);
+        handleStreamError();
       };
     };
 
+    connectRef.current = connectSse;
     connectSse();
 
     return () => {
       clearPollTimeout();
-      clearReconnectTimeout();
+      cancelReconnect();
+      connectRef.current = null;
       sourceRef.current?.close();
       sourceRef.current = null;
     };
@@ -279,8 +309,10 @@ export function useEditorialWorkflowSse({
     projectId,
     sseEnabled,
     clearPollTimeout,
-    clearReconnectTimeout,
+    cancelReconnect,
     enterPollingFallback,
+    handleStreamError,
+    handleStreamOpen,
     refreshState,
     setError,
     setPhaseEvents,
@@ -307,6 +339,7 @@ export function useEditorialWorkflowSse({
   return {
     enterPollingFallback,
     stopPollingFallback,
+    reconnectLiveUpdates: reconnectNow,
     transportModeRef,
     workflowStateRef,
   };

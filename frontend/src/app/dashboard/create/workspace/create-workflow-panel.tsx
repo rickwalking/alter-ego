@@ -22,6 +22,7 @@ import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase
 import { CreateStepHistoryPanel } from "@/app/dashboard/create/workspace/create-step-history-panel";
 import { CreateWorkflowProgress } from "@/app/dashboard/create/workspace/create-workflow-progress";
 import { CreateWorkflowControls } from "@/app/dashboard/create/workspace/create-workflow-controls";
+import { WorkflowLiveUpdatesDisconnected } from "@/app/dashboard/create/workspace/workflow-live-updates-disconnected";
 import {
   CREATE_STEP_IDS,
   CREATE_STEP_TO_EDITORIAL_PHASE,
@@ -93,6 +94,7 @@ export function CreateWorkflowPanel({
     loading,
     error,
     transportMode,
+    reconnectLiveUpdates,
     start,
     approve,
     revise,
@@ -270,6 +272,10 @@ export function CreateWorkflowPanel({
         }}
       >
         {runProgressBanner}
+
+        {transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED && (
+          <WorkflowLiveUpdatesDisconnected onRetry={reconnectLiveUpdates} />
+        )}
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           {tCreate("historicalHint", {
             phase: phaseLabel(viewPhase ?? viewStepId),

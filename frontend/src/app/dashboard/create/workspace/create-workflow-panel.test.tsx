@@ -44,6 +44,7 @@ function buildWorkflow(
     loading: false,
     error: null,
     transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+    reconnectLiveUpdates: vi.fn(),
     start: vi.fn(async () => state),
     resume: vi.fn(async () => state),
     refreshState: vi.fn(async () => state),

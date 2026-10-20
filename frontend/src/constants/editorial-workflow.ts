@@ -42,10 +42,23 @@ export const EDITORIAL_PHASES = {
   PUBLISHED: "published",
 } as const;
 
+/**
+ * AE-0440: the image node stamps ``phase_progress.phase`` with the legacy
+ * carousel status (``generating_images``), not the editorial phase it belongs
+ * to. Tags not listed here are already editorial phase names.
+ */
+export const PHASE_PROGRESS_TAG_TO_EDITORIAL_PHASE: Readonly<
+  Record<string, string>
+> = {
+  generating_images: EDITORIAL_PHASES.IMAGES,
+};
+
 /** Workflow state transport modes for UI observability. */
 export const EDITORIAL_WORKFLOW_TRANSPORT_MODE = {
   SSE: "sse",
   POLLING_FALLBACK: "polling-fallback",
+  /** AE-0440: reconnects gave up (budget spent, workflow gone or auth lost). */
+  DISCONNECTED: "disconnected",
 } as const;
 
 export type EditorialWorkflowTransportMode =
@@ -55,6 +68,30 @@ export type EditorialWorkflowTransportMode =
 export const EDITORIAL_WORKFLOW_POLL_BACKOFF_MS = [
   5_000, 10_000, 30_000,
 ] as const;
+
+/**
+ * AE-0440: stream reconnects walk the backoff array above (last delay reused)
+ * and give up after this many attempts in a row; the editor then shows a
+ * visible "live updates disconnected" state with a retry button.
+ */
+export const EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS = 5;
+
+/**
+ * AE-0440: EventSource cannot see the HTTP status of a failed stream, so a
+ * stream error is followed by a GET workflow/state probe through the api-client
+ * (whose 401 path is the session-expired redirect). The probe's verdict:
+ * OK (state refetched, reconnect), AUTH_FAILED (redirected, never reconnect),
+ * GONE (no workflow, stop) or TRANSIENT (backend unreachable, back off).
+ */
+export const WORKFLOW_STREAM_PROBE_OUTCOME = {
+  OK: "ok",
+  AUTH_FAILED: "auth_failed",
+  GONE: "gone",
+  TRANSIENT: "transient",
+} as const;
+
+export type WorkflowStreamProbeOutcome =
+  (typeof WORKFLOW_STREAM_PROBE_OUTCOME)[keyof typeof WORKFLOW_STREAM_PROBE_OUTCOME];
 
 /** Resume polling while backend continues after proxy/client timeout. */
 export const EDITORIAL_WORKFLOW_RESUME_POLL_INTERVAL_MS = 5_000;

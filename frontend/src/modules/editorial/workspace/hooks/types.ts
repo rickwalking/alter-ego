@@ -7,7 +7,10 @@
  */
 
 import type { Dispatch, RefObject, SetStateAction } from "react";
-import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workflow";
+import type {
+  EditorialWorkflowTransportMode,
+  WorkflowStreamProbeOutcome,
+} from "@/constants/editorial-workflow";
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
@@ -46,6 +49,36 @@ export interface UseEditorialWorkflowSseParams {
   setTransportMode: Dispatch<SetStateAction<EditorialWorkflowTransportMode>>;
   setError: Dispatch<SetStateAction<string | null>>;
   refreshState: () => Promise<EditorialWorkflowState | null>;
+}
+
+/** AE-0440: the verdict of the auth probe that follows a stream error. */
+export interface WorkflowStreamProbeResult {
+  outcome: WorkflowStreamProbeOutcome;
+  /** The refetched workflow state, present only when `outcome` is OK. */
+  state?: EditorialWorkflowState;
+}
+
+export interface UseWorkflowStreamReconnectParams {
+  projectId: string;
+  /** Opens a fresh stream (set by the SSE effect on every run). */
+  connectRef: RefObject<(() => void) | null>;
+  /** The live stream, or null while waiting to reconnect / disconnected. */
+  sourceRef: RefObject<EventSource | null>;
+  applyProbedState: (state: EditorialWorkflowState) => void;
+  refreshState: () => Promise<EditorialWorkflowState | null>;
+  enterPollingFallback: () => void;
+  markDisconnected: () => void;
+}
+
+export interface WorkflowStreamReconnectApi {
+  /** Stream onerror: probe auth, then reconnect with backoff or give up. */
+  handleStreamError: () => void;
+  /** Stream onopen: reset the budget; a reconnect refetches the state. */
+  handleStreamOpen: () => void;
+  /** Reopen at once with a fresh budget (retry button, tab regain). */
+  reconnectNow: () => void;
+  /** Drop pending reconnects and in-flight probes (unmount, disable). */
+  cancelReconnect: () => void;
 }
 
 export interface EditorialWorkflowResumeAcceptedResponse {
