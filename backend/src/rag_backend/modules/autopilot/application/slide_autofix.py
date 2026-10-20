@@ -160,12 +160,25 @@ def _escalate(read: GateRead, outcome: SlideFixOutcome) -> GateRead:
 
 
 def _judge_pending(read: GateRead, outcome: SlideFixOutcome) -> bool:
-    """The gate fails only on the stale voice score of unscored slides."""
+    """Only the stale voice scores hold the gate: wait for the re-score.
+
+    AE-0433: the gate fails on the voice floor, no slide is still failing
+    and no rule is unfixable. AE-0439 (#154 B/C): the gate may already PASS
+    on a stale score (the read path ignores the pending marker) — the run
+    still waits, and never approves on the stale score; and the wait fires
+    only when the persona reason is the SOLE failure: a forbidden hit, a
+    blocking quality rule or an engine refusal alongside it escalates
+    instead of waiting forever.
+    """
+    if not outcome.unscored_slides or outcome.failing or outcome.unfixable_rules:
+        return False
+    if read.decision.action is GateAction.APPROVE:
+        return True
     return (
         read.decision.reason == REASON_PERSONA_SCORE
-        and bool(outcome.unscored_slides)
-        and not outcome.failing
-        and not outcome.unfixable_rules
+        and not read.snapshot.forbidden_hits
+        and not read.snapshot.quality_violations
+        and not read.snapshot.engine_blocker
     )
 
 
@@ -204,10 +217,14 @@ class SlideAutofixStep:
         again when it is now clean (or fails for another reason), a wait or
         a ``persona_judge_unavailable`` escalation when only unscored slides
         hold it (AE-0433), else an escalation that lists the slides still
-        failing.
+        failing. AE-0439 (#154 B): pending re-scores are fixed even when the
+        gate PASSES on their stale scores, so a stale score is never
+        approved and the markers clear once the judge scores again.
         """
         fixer = self._deps.fixer
-        if fixer is None or not needs_model_fix(read):
+        if fixer is None or (
+            not needs_model_fix(read) and not read.snapshot.pending_rescores
+        ):
             return read
         outcome = await fixer.fix_slides(
             SlideFixCommand(
@@ -223,11 +240,11 @@ class SlideAutofixStep:
         fresh = (
             await self._reread(read) if outcome.status is AutofixStatus.FIXED else read
         )
-        if not needs_model_fix(fresh):
-            return fresh
         if _judge_pending(fresh, outcome):
             return _unscored(fresh, outcome)
-        return _escalate(fresh, outcome)
+        if needs_model_fix(fresh):
+            return _escalate(fresh, outcome)
+        return fresh
 
     async def _reread(self, read: GateRead) -> GateRead:
         project_id = read.run.carousel_project_id or ""
