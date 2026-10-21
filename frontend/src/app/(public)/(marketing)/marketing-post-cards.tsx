@@ -6,38 +6,19 @@ import {
   TEXT_DIM,
   TEXT_MUTED,
 } from "@/constants/neon";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
-import {
-  formatPublicDate,
-  resolveDisplayTitle,
-  toCategoryLabel,
-} from "@/lib/public-blog-text";
+import { formatPublicDate, toCategoryLabel } from "@/lib/public-blog-text";
 import { PublicCoverImage } from "@/modules/publishing";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
-import { truncateWords } from "@/app/(public)/(marketing)/marketing-helpers";
-import { firstNonBlank } from "@/lib/utils";
+import {
+  cardLocale,
+  localizedSubtitle,
+  localizedTitle,
+  truncateWords,
+} from "@/app/(public)/(marketing)/marketing-helpers";
 import type { MarketingPostProps } from "@/app/(public)/(marketing)/types";
 
 const POST_FALLBACK_CATEGORY = "Post";
-
-function localizedTitle(
-  post: MarketingPostProps["post"],
-  locale: string,
-): string {
-  const localized =
-    locale === "en" ? [post.title_en, post.title] : [post.title, post.title_en];
-  return resolveDisplayTitle([...localized, post.topic]) || post.topic;
-}
-
-function localizedSubtitle(
-  post: MarketingPostProps["post"],
-  locale: string,
-): string {
-  return locale === "en"
-    ? firstNonBlank([post.subtitle_en, post.subtitle, post.topic])
-    : firstNonBlank([post.subtitle, post.topic]);
-}
 
 function heroImageUrl(post: MarketingPostProps["post"]): string {
   const tokens = post.design_tokens as
@@ -49,10 +30,7 @@ function heroImageUrl(post: MarketingPostProps["post"]): string {
 }
 
 function formatPostDate(createdAt: string, locale: string): string {
-  const supported = SUPPORTED_LOCALES.includes(locale as SupportedLocale)
-    ? (locale as SupportedLocale)
-    : DEFAULT_LOCALE;
-  return formatPublicDate(createdAt, supported);
+  return formatPublicDate(createdAt, cardLocale(locale));
 }
 
 function categoryLabel(post: MarketingPostProps["post"]): string {
@@ -103,7 +81,7 @@ export function FeaturedPostCard({
 }: MarketingPostProps): React.ReactElement {
   return (
     <Link
-      href={`/blog/${post.id}`}
+      href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}
       className="transform rounded-xl overflow-hidden border border-[rgba(0,212,255,0.1)] bg-bg-surface flex flex-col no-underline text-inherit transition-all duration-300 min-w-0 hover:border-[rgba(0,212,255,0.2)] hover:shadow-[0_0_30px_rgba(0,212,255,0.03)] hover:-translate-y-1 active:-translate-y-1 motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0"
     >
       <FeaturedPostImage imageUrl={heroImageUrl(post)} />
@@ -175,7 +153,7 @@ export function SecondaryPostLink({
 }: MarketingPostProps): React.ReactElement {
   return (
     <Link
-      href={`/blog/${post.id}`}
+      href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}
       className="rounded-lg border border-neon-card-border bg-bg-card p-5 no-underline text-inherit block transition-all duration-300 min-w-0 hover:border-white/10 hover:bg-bg-elevated"
     >
       <span

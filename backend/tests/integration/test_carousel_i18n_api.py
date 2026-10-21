@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 
+from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.domain.models import CarouselProject, CarouselStatus, CarouselTheme
 
 
@@ -195,7 +196,12 @@ class TestCarouselImageEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_carousel_image_not_generated(self, client):
-        """Given carousel without output, when GET /images/, then returns 404."""
+        """Given a private carousel without output, GET /images/ is the unknown-id 404.
+
+        AE-0446 (ADR-0013): visibility is checked before output, so an anonymous
+        caller cannot tell a private, unrendered carousel from a missing one
+        (tests/features/public_carousel_404_parity_ae0446.feature).
+        """
         payload = {
             "topic": "Image Not Generated",
             "audience": "Everyone",
@@ -206,8 +212,7 @@ class TestCarouselImageEndpoint:
 
         response = await client.get(f"/api/carousels/{carousel_id}/images/slide_1.jpg")
         assert response.status_code == 404
-        data = response.json()
-        assert "not yet generated" in data["detail"]
+        assert response.json()["detail"] == ERR_CAROUSEL_NOT_FOUND
 
 
 @pytest.mark.integration

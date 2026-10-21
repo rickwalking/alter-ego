@@ -6,22 +6,26 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException
 
+from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.application.services.carousel.artifact_health import (
     CarouselArtifactHealthRequest,
     evaluate_carousel_artifacts,
     format_artifact_health_errors,
 )
-from rag_backend.domain.constants.access_control import ERR_CAROUSEL_NOT_PUBLIC
 from rag_backend.domain.models import CarouselProject, CarouselSlide, User
 from rag_backend.domain.models.carousel import CarouselStatus
 
 
 def assert_carousel_public(project: CarouselProject) -> None:
-    """Allow only published carousels on public media routes."""
+    """Allow only published carousels on public media routes.
+
+    The 404 detail is the unknown-id one, so a private carousel cannot be told
+    apart from a missing one (ADR-0013, AE-0446).
+    """
     if project.is_public:
         return
-    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_PUBLIC)
+    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
 
 
 def assert_carousel_public_completed(project: CarouselProject) -> None:
@@ -33,7 +37,7 @@ def assert_carousel_public_completed(project: CarouselProject) -> None:
     """
     if project.is_public and project.status == CarouselStatus.COMPLETED:
         return
-    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_PUBLIC)
+    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
 
 
 def assert_carousel_project_access(

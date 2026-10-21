@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 
 from rag_backend.domain.constants.langfuse_tracing import TRACE_REQUIRED_FIELDS
-from rag_backend.infrastructure import langfuse_phase_trace
+from rag_backend.infrastructure import langfuse_client, langfuse_phase_trace
 from rag_backend.infrastructure.langfuse_phase_trace import (
     WorkflowTraceScope,
     build_phase_trace,
@@ -142,6 +142,28 @@ class TestPhaseTrace:
         }
         assert collector.current() is None
         assert wait_for_flushes(collector)
+
+    def test_flush_is_not_dropped_when_global_slots_are_exhausted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # AE-0446: reproduces the mutation-baseline failure deterministically.
+        # Hung real exporters (left by another test) held every process-wide
+        # flush slot, so this test's flush was dropped. The collector now runs
+        # on its own slot pool.
+        held = langfuse_client._FLUSH_SLOTS
+        taken = 0
+        while held.acquire(blocking=False):
+            taken += 1
+        try:
+            collector = install_trace_collector(monkeypatch)
+
+            with phase_trace({"phase": "design"}):
+                pass
+
+            assert wait_for_flushes(collector)
+        finally:
+            for _ in range(taken):
+                held.release()
 
     def test_flushes_when_the_phase_fails(
         self, monkeypatch: pytest.MonkeyPatch

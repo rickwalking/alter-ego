@@ -7,11 +7,11 @@ import { SERVER_FETCH } from "@/constants/server-fetch";
 import { getRequestLocale } from "@/i18n/request-locale";
 import { fetchPublicCarousels } from "@/lib/server-fetch";
 import { buildPublicCarouselCards } from "@/lib/public-carousels";
-import { CarouselBackLink } from "./carousel-back-link";
-import { CarouselCard } from "./carousel-card";
-import { CarouselEmptyState } from "./carousel-empty-state";
-import { CarouselPageBackground } from "./carousel-page-background";
-import { CarouselPagination } from "./carousel-pagination";
+import { CarouselBackLink } from "@/app/(public)/carousels/carousel-back-link";
+import { CarouselCard } from "@/app/(public)/carousels/carousel-card";
+import { CarouselEmptyState } from "@/app/(public)/carousels/carousel-empty-state";
+import { CarouselPageBackground } from "@/app/(public)/carousels/carousel-page-background";
+import { CarouselPagination } from "@/app/(public)/carousels/carousel-pagination";
 
 export const dynamic = "force-dynamic";
 
