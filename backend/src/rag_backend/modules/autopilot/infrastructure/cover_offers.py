@@ -84,6 +84,18 @@ class SqlCoverOffers:
             return None
         return slide_cover_for(found[0])
 
+    async def offered_cover(self, run: AutopilotRun) -> SlideCover | None:
+        """AE-0445: the run's cover as a slide cover, chosen or not.
+
+        None when the topic has no cover or its stored file is gone.
+        """
+        found = await self._cover(run)
+        if found is None:
+            return None
+        if await self._images.image_file(found[0].creator_asset_id) is None:
+            return None
+        return slide_cover_for(found[0])
+
     async def _cover(self, run: AutopilotRun) -> tuple[CoverAsset, bool] | None:
         topic = await self._topics.get_topic(run.topic_candidate_id)
         if topic is None or topic.cover_asset_id is None:
@@ -153,6 +165,21 @@ def cover_review_facts(
     )
 
 
+class ProjectCoverOffer:
+    """AE-0445: the GrokBot cover offered to a carousel's autopilot run."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._runs = SqlAlchemyAutopilotRepository(session)
+        self._offers = cover_offers(session)
+
+    async def offer(self, project_id: str) -> SlideCover | None:
+        """None when no run made the carousel or its topic has no cover."""
+        run = await self._runs.find_by_carousel(project_id)
+        if run is None:
+            return None
+        return await self._offers.offered_cover(run)
+
+
 def cover_offers(session: AsyncSession) -> SqlCoverOffers:
     """The offers of one session (topics, covers and the image store)."""
     return SqlCoverOffers(
@@ -165,6 +192,7 @@ def cover_offers(session: AsyncSession) -> SqlCoverOffers:
 __all__ = [
     "CoverFactsSources",
     "CoverReviewFacts",
+    "ProjectCoverOffer",
     "SqlCoverChoices",
     "SqlCoverOffers",
     "cover_offers",

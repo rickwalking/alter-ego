@@ -61,7 +61,7 @@ def _reject_if_run_active(phase_status: str) -> None:
         )
 
 
-def _raise_republish_failure(errors: tuple[str, ...]) -> None:
+def raise_republish_failure(errors: tuple[str, ...]) -> None:
     """Map a preserved-project finalize failure onto the right HTTP status."""
     if ERR_ARTIFACT_BUILD_CONFLICT in errors:
         raise CarouselConflictError(
@@ -103,7 +103,7 @@ async def republish_carousel(
 
     result = await republish_completed_carousel(db, str(project_id))
     if not result.completed:
-        _raise_republish_failure(result.errors)
+        raise_republish_failure(result.errors)
 
     # AE-0314: a successful republish (client-triggered or watchdog-swept)
     # clears the server-guaranteed rebuild marker so the publish page leaves the
@@ -124,4 +124,4 @@ async def republish_carousel(
     )
 
 
-__all__ = ["router"]
+__all__ = ["raise_republish_failure", "router"]
