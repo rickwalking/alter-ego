@@ -1,6 +1,6 @@
 # AE-0445 — Change the slide-1 cover photo of a Ponto de Vista carousel on the publish step
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: P1
 Type: Feature
