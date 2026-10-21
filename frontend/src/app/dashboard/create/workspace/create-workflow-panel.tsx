@@ -1,56 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
-import {
-  NeonAlert,
-  NeonAlertDescription,
-} from "@/components/molecules/neon-alert";
-import { NeonBadge } from "@/components/atoms/neon-badge";
-import {
-  EDITORIAL_PHASES,
-  EDITORIAL_WORKFLOW_STATUS,
-  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
-  PERSONA_VOICE_MATCH_MIN_SCORE,
-  type FinalReviewSendBackPhase,
-} from "@/constants/editorial-workflow";
-import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import { CreateRunProgressBanner } from "@/app/dashboard/create/workspace/create-run-progress-banner";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
-import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase-review";
-import { CreateStepHistoryPanel } from "@/app/dashboard/create/workspace/create-step-history-panel";
 import { CreateWorkflowProgress } from "@/app/dashboard/create/workspace/create-workflow-progress";
 import { CreateWorkflowControls } from "@/app/dashboard/create/workspace/create-workflow-controls";
-import { WorkflowLiveUpdatesDisconnected } from "@/app/dashboard/create/workspace/workflow-live-updates-disconnected";
-import {
-  CREATE_STEP_IDS,
-  CREATE_STEP_TO_EDITORIAL_PHASE,
-  EDITORIAL_PHASE_TO_STEP,
-  isHistoricalCreateStep,
-  type CreateStepId,
-} from "@/app/dashboard/create/step-ids";
-import { shouldShowLiveWorkflowControls } from "@/app/dashboard/create/workspace/create-workflow-live-controls";
-import type { LocalizedSlideReview } from "@/modules/publishing";
-import {
-  hasBlockingPresentationViolations,
-  localizedSlidesHaveBudgetViolations,
-  resolveLocalizedSlides,
-  slidesHaveCopyChanges,
-} from "@/modules/editorial";
+import type { CreateStepId } from "@/app/dashboard/create/step-ids";
 import { ImagePromptReview } from "@/modules/editorial";
-import { personaScoreShortfalls } from "@/app/dashboard/create/workspace/persona-score";
-import { usePhaseLabel } from "@/app/dashboard/create/workspace/editorial-phase-labels";
-import type { useEditorialWorkflow } from "@/modules/editorial";
-
-type CreateWorkflowApi = ReturnType<typeof useEditorialWorkflow>;
-
-const PHASE_REVIEW_STEPS: ReadonlySet<CreateStepId> = new Set([
-  CREATE_STEP_IDS.RESEARCH,
-  CREATE_STEP_IDS.OUTLINE,
-  CREATE_STEP_IDS.CONTENT,
-  CREATE_STEP_IDS.REVIEW,
-]);
+import {
+  approvalGates,
+  revisionActions,
+  stepVisibility,
+  useContentEdits,
+  usePersonaShortfallDetail,
+  useWorkflowFeedback,
+  useWorkflowLifecycle,
+  type CreateWorkflowApi,
+} from "./create-workflow-panel-state";
+import {
+  HistoricalStepView,
+  PhaseEventBadges,
+  WorkflowPanelFrame,
+  WorkflowErrorAlert,
+  WorkflowPanelHeader,
+  WorkflowRunNotices,
+} from "./create-workflow-panel-parts";
 
 interface CreateWorkflowPanelProps {
   projectId: string;
@@ -70,275 +43,67 @@ export function CreateWorkflowPanel({
   topic,
   audience,
   brief,
-  sources = [],
-  autoStart = false,
+  sources,
+  autoStart,
   onPublished,
   workflow,
   viewStepId,
   workflowStepId,
 }: CreateWorkflowPanelProps): React.JSX.Element {
-  const t = useTranslations("editorialWorkflow");
-  const tCreate = useTranslations("create.stepHistory");
-  const phaseLabel = usePhaseLabel();
-  const startedRef = useRef(false);
-  const [feedback, setFeedback] = useState("");
-  const [feedbackError, setFeedbackError] = useState<string | null>(null);
-  const [editedContentSlides, setEditedContentSlides] = useState<
-    LocalizedSlideReview[] | null
-  >(null);
-  const [sendBackTarget, setSendBackTarget] =
-    useState<FinalReviewSendBackPhase>(EDITORIAL_PHASES.CONTENT);
-  const {
+  const { state, phaseEvents, loading, error, revise, refreshState } = workflow;
+  useWorkflowLifecycle(
+    workflow,
+    { autoStart, input: { topic, audience, brief, sources } },
+    onPublished,
+  );
+  const content = useContentEdits(state);
+  const feedback = useWorkflowFeedback(state, revise);
+  const persona = usePersonaShortfallDetail(state);
+  const gates = approvalGates(state, content);
+  const view = stepVisibility(
     state,
-    phaseEvents,
-    loading,
-    error,
-    transportMode,
-    reconnectLiveUpdates,
-    start,
-    approve,
-    revise,
-    refreshState,
-    awaitingHumanReview,
-    hasActiveWorkflow,
-    runningAction,
-  } = workflow;
-
-  // AE-0315: live in-progress banner on EVERY step while a run executes.
-  const runInProgress =
-    state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
-  const runProgressBanner = runInProgress ? (
-    <CreateRunProgressBanner
-      currentPhase={state.current_phase}
-      runStartedAt={state.run_started_at}
-      runStage={state.run_stage}
-      runningAction={runningAction}
-      onCheckAgain={() => {
-        void refreshState();
-      }}
-      checkAgainDisabled={loading}
-    />
-  ) : null;
-  // AE-0440: the stream gave up; say so on every step instead of going stale.
-  const liveUpdatesNotice =
-    transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED ? (
-      <WorkflowLiveUpdatesDisconnected onRetry={reconnectLiveUpdates} />
-    ) : null;
-
-  useEffect(() => {
-    if (!autoStart || startedRef.current || hasActiveWorkflow) {
-      return;
-    }
-    startedRef.current = true;
-    void start({ topic, audience, brief, sources });
-  }, [autoStart, hasActiveWorkflow, topic, audience, brief, sources, start]);
-
-  useEffect(() => {
-    if (
-      state?.workflow_status ===
-        EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH &&
-      onPublished
-    ) {
-      onPublished();
-    }
-  }, [state?.workflow_status, onPublished]);
-
-  const baselineContentSlides = useMemo(
-    () => (state ? resolveLocalizedSlides(state) : []),
-    [state],
+    { viewStepId, workflowStepId },
+    workflow.awaitingHumanReview,
+  );
+  const { actionsLocked, designRecovery, contentManualFixes } = revisionActions(
+    workflow,
+    view.showLiveControls,
   );
 
-  const previousLockVersion = useRef(state?.lock_version);
-  useEffect(() => {
-    const current = state?.lock_version;
-    if (previousLockVersion.current !== current) {
-      previousLockVersion.current = current;
-      // Reset local edits when upstream state advances (e.g., approval)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEditedContentSlides(null);
-    }
-  }, [state?.lock_version]);
-
-  const contentSlides = editedContentSlides ?? baselineContentSlides;
-  const contentHasEdits =
-    editedContentSlides !== null &&
-    slidesHaveCopyChanges(baselineContentSlides, editedContentSlides);
-
-  const handleRevise = (): void => {
-    const trimmed = feedback.trim();
-    if (!trimmed) {
-      setFeedbackError(t("feedback.required"));
-      return;
-    }
-    setFeedbackError(null);
-    const reviseOptions =
-      state?.current_phase === EDITORIAL_PHASES.FINAL_REVIEW
-        ? { targetPhase: sendBackTarget }
-        : undefined;
-    void Promise.resolve(revise(trimmed, reviseOptions)).then(() => {
-      setFeedback("");
-    });
-  };
-
-  // AE-0415 (B01): one 0-100 scale (a 0-10 answer reads x10) and unscored
-  // slides ignored, as the backend gate does (AE-0407); name the slides.
-  const personaShortfalls =
-    state?.current_phase === EDITORIAL_PHASES.CONTENT
-      ? personaScoreShortfalls(state.persona_scores)
-      : [];
-  const personaApproveBlocked = personaShortfalls.length > 0;
-  const personaShortfallDetail = personaApproveBlocked
-    ? t("persona.belowThresholdSlides", {
-        slides: personaShortfalls
-          .map((item) =>
-            t("persona.slideScore", {
-              slide: item.slideNumber ?? item.key,
-              score: item.score,
-            }),
-          )
-          .join(", "),
-        threshold: PERSONA_VOICE_MATCH_MIN_SCORE,
-      })
-    : null;
-  const presentationApproveBlocked = hasBlockingPresentationViolations(state);
-  const editBudgetBlocked =
-    state?.current_phase === EDITORIAL_PHASES.CONTENT &&
-    contentHasEdits &&
-    localizedSlidesHaveBudgetViolations(
-      contentSlides,
-      state.presentation_policy_version,
-    );
-  const showPublishLink =
-    state?.workflow_status === EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH;
-
-  const viewPhase = CREATE_STEP_TO_EDITORIAL_PHASE[viewStepId];
-  const isHistoricalStep =
-    state !== null && isHistoricalCreateStep(viewStepId, workflowStepId);
-  const isLiveStep =
-    viewPhase !== undefined &&
-    state?.current_phase !== undefined &&
-    EDITORIAL_PHASE_TO_STEP[state.current_phase] === viewStepId &&
-    viewStepId === workflowStepId;
-  const showLiveControls = shouldShowLiveWorkflowControls({
-    state,
-    viewStepId,
-    workflowStepId,
-    awaitingHumanReview,
-  });
-  const contentEditable =
-    state?.current_phase === EDITORIAL_PHASES.CONTENT && showLiveControls;
-  // AE-0415 (B15): nothing that mutates the project while a run executes.
-  const actionsLocked = loading || runInProgress;
-  // AE-0310: design-step recovery — blocking content-level violations at the
-  // design gate are only resolvable by direct edits or a content send-back;
-  // a plain revise is a provable no-op there, so it is disabled.
-  const designReviseBlocked =
-    state?.current_phase === EDITORIAL_PHASES.DESIGN &&
-    (hasBlockingPresentationViolations(state) ||
-      Boolean(state.design_recovery_hint));
-  const designRecovery = {
-    onSubmitEditedSlides: (slides: LocalizedSlideReview[]): void => {
-      void revise("", { editedLocalizedSlides: slides });
-    },
-    onSendBackToContent: (sendBackFeedback: string): void => {
-      void revise(sendBackFeedback, { targetPhase: EDITORIAL_PHASES.CONTENT });
-    },
-    disabled: actionsLocked || !showLiveControls,
-  };
-  // AE-0403: the edits ARE the input, so an edits-only revise saves and
-  // re-validates them without approving the content step (AE-0310 semantics).
-  const contentManualFixes = {
-    onSubmit: (slides: LocalizedSlideReview[]): void => {
-      void revise("", { editedLocalizedSlides: slides });
-    },
-    submitting: actionsLocked,
-  };
-  // AE-0415 (B13): the research and outline gates show what is reviewed too.
-  const showPhaseReview =
-    Boolean(state) &&
-    (isLiveStep || isHistoricalCreateStep(viewStepId, workflowStepId)) &&
-    PHASE_REVIEW_STEPS.has(viewStepId);
-  const showImagePromptReview =
-    viewStepId === CREATE_STEP_IDS.IMAGES &&
-    (state?.slide_image_prompts?.length ?? 0) > 0;
-
-  if (isHistoricalStep) {
+  if (view.isHistoricalStep && state) {
     return (
-      <div
-        className="space-y-4"
-        style={{
-          background: "var(--bg-card, #0d1324)",
-          border: "1px solid rgba(255,255,255,0.06)",
-          borderRadius: "8px",
-          padding: "20px",
-        }}
-      >
-        {runProgressBanner}
-        {liveUpdatesNotice}
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          {tCreate("historicalHint", {
-            phase: phaseLabel(viewPhase ?? viewStepId),
-          })}
-        </p>
-        <CreateStepHistoryPanel viewStepId={viewStepId} state={state} />
-      </div>
+      <HistoricalStepView
+        workflow={workflow}
+        viewStepId={viewStepId}
+        state={state}
+      />
     );
   }
 
   return (
-    <div
-      className="space-y-4"
-      style={{
-        background: "var(--bg-card, #0d1324)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderRadius: "8px",
-        padding: "20px",
-      }}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-semibold">{t("title")}</h3>
-        <div className="flex items-center gap-2">
-          {transportMode ===
-            EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK && (
-            <NeonBadge variant="outline">
-              {t("transport.pollingFallback")}
-            </NeonBadge>
-          )}
-          {hasActiveWorkflow && (
-            <WorkflowStatusBadge
-              status={state?.phase_status ?? null}
-              label={phaseLabel(state?.current_phase)}
-            />
-          )}
-        </div>
-      </div>
+    <WorkflowPanelFrame>
+      <WorkflowPanelHeader workflow={workflow} />
+      <WorkflowRunNotices workflow={workflow} />
 
-      {runProgressBanner}
-      {liveUpdatesNotice}
+      <WorkflowErrorAlert error={error} />
 
-      {error && (
-        <NeonAlert variant="destructive">
-          <NeonAlertDescription>{error}</NeonAlertDescription>
-        </NeonAlert>
-      )}
-
-      {isLiveStep ? (
+      {view.isLiveStep ? (
         <CreateWorkflowProgress state={state} loading={loading} />
       ) : null}
 
       <CreateWorkflowArtifacts state={state} />
 
-      {showImagePromptReview && (
+      {view.showImagePromptReview && (
         <ImagePromptReview prompts={state?.slide_image_prompts} readOnly />
       )}
 
-      {state && showPhaseReview && (
+      {state && view.showPhaseReview && (
         <CreatePhaseReview
           projectId={projectId}
           state={state}
-          contentEditable={contentEditable}
-          contentSlides={contentSlides}
-          onContentSlidesChange={setEditedContentSlides}
+          contentEditable={view.contentEditable}
+          contentSlides={content.contentSlides}
+          onContentSlidesChange={content.setEditedContentSlides}
           contentManualFixes={contentManualFixes}
           designRecovery={designRecovery}
           onRepaired={() => void refreshState()}
@@ -349,41 +114,23 @@ export function CreateWorkflowPanel({
       {state && (
         <CreateWorkflowControls
           state={state}
-          showLiveControls={showLiveControls}
+          showLiveControls={view.showLiveControls}
           loading={loading}
-          feedback={feedback}
-          setFeedback={setFeedback}
-          feedbackError={feedbackError}
-          setFeedbackError={setFeedbackError}
-          sendBackTarget={sendBackTarget}
-          setSendBackTarget={setSendBackTarget}
-          handleRevise={handleRevise}
+          {...feedback}
           approve={(options) => {
-            void approve(options);
+            void workflow.approve(options);
           }}
-          contentHasEdits={contentHasEdits}
-          contentSlides={contentSlides}
-          personaApproveBlocked={personaApproveBlocked}
-          personaShortfallDetail={personaShortfallDetail}
-          presentationApproveBlocked={presentationApproveBlocked}
-          editBudgetBlocked={editBudgetBlocked}
-          designReviseBlocked={designReviseBlocked}
-          showPublishLink={showPublishLink}
+          contentHasEdits={content.contentHasEdits}
+          contentSlides={content.contentSlides}
+          {...persona}
+          {...gates}
         />
       )}
 
-      {phaseEvents.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {phaseEvents.map((phase) => (
-            <NeonBadge
-              key={phase}
-              variant={phase === state?.current_phase ? "default" : "outline"}
-            >
-              {phaseLabel(phase)}
-            </NeonBadge>
-          ))}
-        </div>
-      )}
-    </div>
+      <PhaseEventBadges
+        phaseEvents={phaseEvents}
+        currentPhase={state?.current_phase}
+      />
+    </WorkflowPanelFrame>
   );
 }
