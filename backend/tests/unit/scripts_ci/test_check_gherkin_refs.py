@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 import scripts.check_gherkin_refs as gate
 
 _FEATURE = """Feature: Seeded
