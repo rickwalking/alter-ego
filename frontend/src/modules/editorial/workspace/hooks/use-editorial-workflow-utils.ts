@@ -169,69 +169,33 @@ function mergeRunMetadata(
   };
 }
 
-export function mergeWorkflowState(
-  projectId: string,
+type CarriedWorkflowFields = Omit<
+  EditorialWorkflowState,
+  | "project_id"
+  | "current_phase"
+  | "phase_status"
+  | "research_findings"
+  | "outline"
+  | "slide_drafts"
+  | "run_started_at"
+  | "run_stage"
+>;
+
+/**
+ * Fields every event carries forward: the payload's value, else the previous
+ * state's (AE-0447: never drop the CAS ``lock_version`` the actions send).
+ */
+function mergeCarriedFields(
   prev: EditorialWorkflowState | null,
   payload: WorkflowEventPayload,
-): EditorialWorkflowState {
-  const normalizedProgress = normalizeProgressPayload(payload);
-  const runMetadata = mergeRunMetadata(prev, payload);
-
-  if (isFullWorkflowState(payload, projectId)) {
-    return {
-      ...runMetadata,
-      project_id: payload.project_id ?? projectId,
-      current_phase: payload.current_phase ?? payload.phase ?? "",
-      phase_status: payload.phase_status,
-      research_findings: payload.research_findings,
-      outline: payload.outline,
-      slide_drafts: payload.slide_drafts,
-      slide_image_prompts:
-        payload.slide_image_prompts ?? prev?.slide_image_prompts ?? null,
-      image_assets: payload.image_assets ?? prev?.image_assets ?? [],
-      design_applied: payload.design_applied ?? prev?.design_applied ?? false,
-      phase_progress:
-        normalizedProgress ??
-        payload.phase_progress ??
-        prev?.phase_progress ??
-        null,
-      rubric_scores: payload.rubric_scores ?? prev?.rubric_scores,
-      persona_scores: payload.persona_scores ?? prev?.persona_scores,
-      caption: payload.caption ?? prev?.caption,
-      blog_markdown: payload.blog_markdown ?? prev?.blog_markdown,
-      linkedin_post_pt: payload.linkedin_post_pt ?? prev?.linkedin_post_pt,
-      linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
-      workflow_status: payload.workflow_status ?? prev?.workflow_status,
-      status: payload.status ?? prev?.status ?? "draft",
-      presentation_policy_version:
-        payload.presentation_policy_version ??
-        prev?.presentation_policy_version,
-      localized_slides: payload.localized_slides ?? prev?.localized_slides,
-      // AE-0447: an SSE event must never drop the CAS version the actions send.
-      lock_version: payload.lock_version ?? prev?.lock_version,
-      presentation_validation:
-        payload.presentation_validation ?? prev?.presentation_validation,
-    };
-  }
-
+): CarriedWorkflowFields {
   return {
-    ...runMetadata,
-    project_id: projectId,
-    current_phase:
-      payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
-    phase_status: (payload.phase_status ??
-      prev?.phase_status ??
-      "") as import("@/modules/editorial/workspace/types-ai").WorkflowPhaseStatus,
-    research_findings:
-      payload.research_findings ?? prev?.research_findings ?? [],
-    outline: payload.outline ?? prev?.outline ?? [],
-    slide_drafts: payload.slide_drafts ?? prev?.slide_drafts ?? [],
     slide_image_prompts:
       payload.slide_image_prompts ?? prev?.slide_image_prompts ?? null,
     image_assets: payload.image_assets ?? prev?.image_assets ?? [],
     design_applied: payload.design_applied ?? prev?.design_applied ?? false,
     phase_progress:
-      normalizedProgress ??
+      normalizeProgressPayload(payload) ??
       payload.phase_progress ??
       prev?.phase_progress ??
       null,
@@ -249,6 +213,43 @@ export function mergeWorkflowState(
     lock_version: payload.lock_version ?? prev?.lock_version,
     presentation_validation:
       payload.presentation_validation ?? prev?.presentation_validation,
+  };
+}
+
+export function mergeWorkflowState(
+  projectId: string,
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): EditorialWorkflowState {
+  const carried = {
+    ...mergeRunMetadata(prev, payload),
+    ...mergeCarriedFields(prev, payload),
+  };
+
+  if (isFullWorkflowState(payload, projectId)) {
+    return {
+      ...carried,
+      project_id: payload.project_id ?? projectId,
+      current_phase: payload.current_phase ?? payload.phase ?? "",
+      phase_status: payload.phase_status,
+      research_findings: payload.research_findings,
+      outline: payload.outline,
+      slide_drafts: payload.slide_drafts,
+    };
+  }
+
+  return {
+    ...carried,
+    project_id: projectId,
+    current_phase:
+      payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
+    phase_status: (payload.phase_status ??
+      prev?.phase_status ??
+      "") as import("@/modules/editorial/workspace/types-ai").WorkflowPhaseStatus,
+    research_findings:
+      payload.research_findings ?? prev?.research_findings ?? [],
+    outline: payload.outline ?? prev?.outline ?? [],
+    slide_drafts: payload.slide_drafts ?? prev?.slide_drafts ?? [],
   };
 }
 

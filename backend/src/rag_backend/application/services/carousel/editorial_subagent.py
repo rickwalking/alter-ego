@@ -30,10 +30,6 @@ WorkflowStartFn = Callable[
 ]
 
 
-class EditorialSubAgentState(dict):
-    """Minimal state for editorial subagent handshake."""
-
-
 def _parse_request(messages: Sequence[AnyMessage]) -> dict[str, object]:
     for msg in reversed(messages):
         if not isinstance(msg, HumanMessage):

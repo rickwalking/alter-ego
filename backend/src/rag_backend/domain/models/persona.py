@@ -51,12 +51,6 @@ class PersonaProfile:
             self.forbidden_phrases.append(phrase)
             self.updated_at = datetime.utcnow()
 
-    def add_preferred_phrase(self, phrase: str) -> None:
-        """Add a phrase that characterizes this voice."""
-        if phrase not in self.preferred_phrases:
-            self.preferred_phrases.append(phrase)
-            self.updated_at = datetime.utcnow()
-
     def add_writing_sample(self, sample: str) -> None:
         """Add a writing sample for voice analysis."""
         self.writing_samples.append(sample)

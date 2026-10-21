@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import cast
 
@@ -353,21 +352,3 @@ async def run_export_preflight(
         warning_codes=[item.code for item in warnings],
     )
     return report
-
-
-def format_preflight_report(report: PreflightReport) -> str:
-    """Serialize a preflight report for logs or error detail."""
-    payload = {
-        "passed": report.passed,
-        "scale": report.scale,
-        "geometry_skipped": report.geometry_skipped,
-        "blocking_violations": [
-            {
-                "code": item.code,
-                "slide_number": item.slide_number,
-                "message": item.message,
-            }
-            for item in report.blocking_violations
-        ],
-    }
-    return json.dumps(payload, sort_keys=True)

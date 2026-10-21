@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { responseErrorDetail } from "@/lib/response-error";
 
 interface UserItem {
   id: string;
@@ -38,10 +39,9 @@ export function DeleteUserDialog({
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          detail?: string;
-        };
-        throw new Error(data.detail ?? t("deleteError"));
+        throw new Error(
+          (await responseErrorDetail(response)) ?? t("deleteError"),
+        );
       }
 
       onSuccess();

@@ -7,7 +7,6 @@ from pinecone import Pinecone, ServerlessSpec
 from rag_backend.domain.constants.retry import PINECONE_MAX_ATTEMPTS
 from rag_backend.domain.models import DocumentChunk, HybridSearchParams, SearchResult
 from rag_backend.domain.retry import retry_sync
-from rag_backend.domain.types import StatsResponse
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.logging import get_logger
 
@@ -200,15 +199,3 @@ class PineconeVectorStore:
             )
 
         return search_results
-
-    async def get_stats(self) -> StatsResponse:
-        """Get vector store statistics."""
-        index = await self._get_index()
-        for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
-            with attempt:
-                stats = index.describe_index_stats()
-        return {
-            "total_vectors": stats.total_vector_count,
-            "dimension": stats.dimension,
-            "index_fullness": stats.index_fullness,
-        }

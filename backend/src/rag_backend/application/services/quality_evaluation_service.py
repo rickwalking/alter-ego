@@ -14,7 +14,6 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     _ScoreParams,
     _TraceConfig,
     add_quality_score,
-    add_voice_match_score,
     create_workflow_trace,
 )
 
@@ -98,35 +97,6 @@ class QualityEvaluationService:
                         )
 
         return result
-
-    async def evaluate_voice_and_quality(
-        self,
-        rubric: QualityRubric,
-        *,
-        content: str,
-        voice_score: float,
-        sources: list[str] | None = None,
-        project_id: UUID | None = None,
-    ) -> dict[str, object]:
-        """Combine rubric evaluation with voice match score on trace."""
-        evaluation = await self.evaluate_with_thresholds(
-            rubric=rubric,
-            content=content,
-            sources=sources,
-            project_id=project_id,
-        )
-        if project_id is not None:
-            trace = create_workflow_trace(
-                config=_TraceConfig(
-                    project_id=project_id,
-                    user_id="system",
-                    content_type="carousel",
-                    metadata={"phase": "voice_check"},
-                ),
-            )
-            add_voice_match_score(trace=trace, score=voice_score)
-        evaluation["voice_match_score"] = voice_score
-        return evaluation
 
 
 __all__ = ["QualityEvaluationService"]
