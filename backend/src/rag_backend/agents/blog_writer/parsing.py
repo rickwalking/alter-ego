@@ -1,4 +1,4 @@
-"""Parse the blog writer's JSON into domain value objects (AE-0425).
+"""Parse the blog writer's JSON into domain value objects.
 
 A structural problem raises ``ValueError`` so ``ainvoke_json`` re-rolls /
 repairs / falls back before the writer gives up. Headings lose any leading

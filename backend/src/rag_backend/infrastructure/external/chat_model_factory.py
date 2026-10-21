@@ -1,4 +1,4 @@
-"""Provider-agnostic chat-model factory (AE-0285).
+"""Provider-agnostic chat-model factory.
 
 The backend's chat LLM is selectable between Anthropic (Claude) and GLM (via the
 OpenCode Go OpenAI-compatible endpoint) so carousel/chat generation can run on
@@ -6,6 +6,16 @@ GLM 5.2 to cut Anthropic spend, with Anthropic kept as a toggleable fallback.
 
 Every consumer only depends on the LangChain ``BaseChatModel`` contract, so the
 provider is swapped here with no downstream change.
+
+The generation defaults are identical across providers so a swap does not
+silently change output length or behaviour. 32K max tokens: bilingual PT+EN
+slide arrays plus two full blog posts overflow smaller caps mid-JSON.
+
+OpenCode Go rejects every request without a conversation header with ``400
+MissingSessionID``, which the workflow-start route surfaced as a 503
+``provider_unavailable``. Its docs also ask callers to send their own user agent
+instead of the SDK's ``OpenAI/Python``. Both go on the client as default
+headers so every call through it complies.
 """
 
 import uuid
@@ -30,20 +40,10 @@ from rag_backend.infrastructure.external.routed_chat_model import RoutedChatMode
 LLM_PROVIDER_ANTHROPIC = "anthropic"
 LLM_PROVIDER_GLM = "glm"
 
-# Shared generation defaults (kept identical across providers so a swap does not
-# silently change output length/behaviour). 32K tokens: bilingual PT+EN slide
-# arrays plus two full blog posts overflow smaller caps mid-JSON.
 _TEMPERATURE = 0.7
 _MAX_TOKENS = 32000
 _MAX_RETRIES = 3
 
-# AE-0330: OpenCode Go rejects every request that carries no conversation header
-# with ``400 MissingSessionID`` ("Request is missing x-opencode-session and
-# cannot be routed efficiently"), which the workflow-start route then surfaced as
-# a 503 ``provider_unavailable`` — observed live in prod 2026-09-14. Their docs
-# also ask callers to identify with their own user agent instead of the generic
-# ``OpenAI/Python`` the SDK sends by default. Both go on the client as default
-# headers so every call made through it complies.
 _OPENCODE_SESSION_HEADER = "x-opencode-session"
 _USER_AGENT_HEADER = "User-Agent"
 _OPENCODE_SESSION_PREFIX = "alter-ego-"
@@ -68,7 +68,7 @@ def _opencode_headers(settings: Settings) -> dict[str, str]:
 def _build_glm_model(settings: Settings, model: str | None = None) -> ChatOpenAI:
     """A model (GLM by default) via the OpenCode Go OpenAI-compatible endpoint.
 
-    AE-0391: the same endpoint/key/session header serves the DeepSeek models,
+    The same endpoint/key/session header serves the DeepSeek models,
     so ``model`` selects any id the endpoint lists.
     """
     return ChatOpenAI(
@@ -103,7 +103,7 @@ def _role_model_id(settings: Settings, role: str) -> str:
 
 
 def _role_fallback_id(settings: Settings, role: str) -> str:
-    """AE-0395: each role falls back to its own fast model (no longer GLM)."""
+    """Each role falls back to its own fast model (no longer GLM)."""
     return {
         LLM_ROLE_REASONING: settings.llm_model_fallback_reasoning,
     }.get(role, settings.llm_model_fallback)
@@ -115,7 +115,7 @@ def role_timeout(role: str) -> float:
 
 
 def _build_role_model(settings: Settings, role: str) -> BaseChatModel:
-    """AE-0399: the role's model queue when configured, else AE-0391 routing."""
+    """The role's model queue when configured, else the primary + fallback routing."""
     from rag_backend.infrastructure.external.model_queue_factory import (
         build_queue_model,
     )
@@ -127,7 +127,7 @@ def _build_role_model(settings: Settings, role: str) -> BaseChatModel:
 
 
 def _build_routed_model(settings: Settings, role: str) -> RoutedChatModel:
-    """AE-0391: the role's model with a per-call timeout and its fallback."""
+    """The role's model with a per-call timeout and its fallback."""
     return RoutedChatModel(
         primary=_build_glm_model(settings, _role_model_id(settings, role)),
         fallback=_build_glm_model(settings, _role_fallback_id(settings, role)),
@@ -149,7 +149,7 @@ def build_chat_model(settings: Settings, role: str | None = None) -> BaseChatMod
     empty key (CI, or a prod not yet given the secret) it falls back to Anthropic
     and warns, so a missing key degrades gracefully instead of breaking generation.
 
-    AE-0391: a ``role`` (reasoning / fast) routes the call to that role's model
+    A ``role`` (reasoning / fast) routes the call to that role's model
     on the OpenCode Go endpoint, wrapped with the GLM fallback. Without a role
     (chat / RAG agents) the single ``glm_model`` is built as before.
     """
@@ -167,7 +167,7 @@ def build_chat_model(settings: Settings, role: str | None = None) -> BaseChatMod
 
 
 def build_role_models(settings: Settings) -> ChatModelRoles:
-    """AE-0391: the carousel pipeline's reasoning and fast chat models."""
+    """The carousel pipeline's reasoning and fast chat models."""
     return ChatModelRoles(
         reasoning=build_chat_model(settings, LLM_ROLE_REASONING),
         fast=build_chat_model(settings, LLM_ROLE_FAST),

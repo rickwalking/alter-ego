@@ -1,4 +1,4 @@
-"""Pure Telegram copy, keyboards, and event classification (AE-0355).
+"""Pure Telegram copy, keyboards, and event classification.
 
 Gherkin: tests/features/autopilot_telegram_notify.feature
 """

@@ -1,7 +1,7 @@
-"""Custom-palette catalog CRUD API (AE-0270).
+"""Custom-palette catalog CRUD API.
 
 Exposes ``GET/POST/PATCH/DELETE /palettes`` behind the ``palette_catalog`` feature
-flag (default ON since AE-0271 shipped the frontend — skeptical G6). Roots are
+flag (default ON since the frontend shipped). Roots are
 read-only (403); custom palettes are editable by any authenticated user (D7);
 delete is a soft archive (D4). Request-shape security (strict hex, name XSS,
 keyword guards) lives in the Pydantic schema; this module owns auth, the feature

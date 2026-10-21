@@ -1,4 +1,4 @@
-"""The owner's slide-1 choice on Telegram (AE-0418, ADR-0024). No I/O.
+"""The owner's slide-1 choice on Telegram (ADR-0024). No I/O.
 
 When a run's topic carries a GrokBot cover, the thesis message (POV modes) and
 the review message (every mode) show the cover and a toggle: "Usar capa do

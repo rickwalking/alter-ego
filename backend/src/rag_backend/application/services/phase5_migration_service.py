@@ -102,7 +102,7 @@ class Phase5MigrationReport:
 class _PersonaSeedContext:
     """Inputs for the default-persona seed (grouped to keep the ≤3-arg rule).
 
-    Carries the session, the loaded projects, the run report, and the AE-0204
+    Carries the session, the loaded projects, the run report, and the
     injected canonical-home :class:`DistributionReader` used to source the
     persona's caption/LinkedIn writing samples.
     """
@@ -187,12 +187,12 @@ async def _collect_writing_samples(
 ) -> list[str]:
     """Extract writing samples from completed carousel outputs (MIG-002).
 
-    AE-0204: the caption + LinkedIn post samples are sourced from the canonical
+    The caption + LinkedIn post samples are sourced from the canonical
     ``blog_posts.distribution`` home (via the injected :class:`DistributionReader`),
     NOT from the embedded ``carousel_projects`` columns. The reader is injected at
     the inbound edge so this application service does not import the infrastructure
     accessor (ADR-009 layering). ``blog_markdown`` is still read from the project row
-    (its canonical-home migration is AE-0163's domain, out of scope).
+    (its canonical-home migration is out of scope here).
     """
     samples: list[str] = []
     for project in projects:
@@ -227,7 +227,7 @@ class Phase5MigrationService:
     ) -> Phase5MigrationReport:
         """Execute all Phase 5 migration steps.
 
-        ``read_distribution`` (AE-0204) is the injected canonical-home reader the
+        ``read_distribution`` is the injected canonical-home reader the
         persona-sample collection uses to source caption/LinkedIn samples from
         ``blog_posts.distribution`` instead of the embedded carousel columns.
         """

@@ -21,8 +21,6 @@ from rag_backend.domain.models import (
 )
 from rag_backend.infrastructure.retrieval.hybrid_retriever import HybridRetrieverWithRRF
 
-# ─── Mutation 1: Namespace Prefix Bypass ───
-
 
 class TestNamespacePrefixBypass:
     """Simulate mutation where namespace filter is removed."""
@@ -43,13 +41,11 @@ class TestNamespacePrefixBypass:
             embedding_service=mock_embedding,
         )
 
-        # Mock embeddings
         mock_embedding.embed_dense.return_value = [[0.1, 0.2, 0.3]]
         mock_embedding.embed_sparse.return_value = [
             {"indices": [1, 2], "values": [0.5, 0.5]}
         ]
 
-        # Mock Pinecone results
         mock_vector_store.hybrid_search.return_value = [
             SearchResult(
                 content="Personal CV content",
@@ -59,14 +55,11 @@ class TestNamespacePrefixBypass:
             )
         ]
 
-        # Test: Alter-Ego query should only search personal+public
         query = RetrievalQuery(query="test", top_k=5, namespace_prefix="personal")
         await retriever.retrieve(query)
 
-        # Verify: hybrid_search called exactly twice (personal + public)
         assert mock_vector_store.hybrid_search.call_count == 2
 
-        # Verify: namespace parameter passed correctly
         calls = mock_vector_store.hybrid_search.call_args_list
         namespaces = [call.args[0].namespace for call in calls]
         assert "personal" in namespaces
@@ -80,21 +73,15 @@ class TestNamespacePrefixBypass:
 
         If this test fails, it means the security boundary is NOT enforced.
         """
-        # This simulates the mutated code
         retriever = HybridRetrieverWithRRF(
             vector_store=AsyncMock(),
             embedding_service=AsyncMock(),
         )
 
-        # Simulate mutation: _resolve_namespaces returns everything
         mutated_namespaces = retriever._resolve_namespaces("personal")
 
-        # Verify: even with mutation attempt, only expected namespaces returned
         assert "carousel" not in mutated_namespaces
         assert "internal" not in mutated_namespaces
-
-
-# ─── Mutation 2: Tool Scope Bypass ───
 
 
 class TestToolScopeBypass:
@@ -106,6 +93,8 @@ class TestToolScopeBypass:
 
         SCENARIO: Attacker modifies _build_tools to include carousel tools.
         EXPECTED: Test must verify tool list contains NO carousel tools.
+
+        These tools must never be in Alter-Ego.
         """
         from rag_backend.infrastructure.config.settings import Settings
 
@@ -123,7 +112,6 @@ class TestToolScopeBypass:
 
         tool_names = [t.name for t in agent._build_tools()]
 
-        # CRITICAL: These tools must NEVER be in Alter-Ego
         forbidden_tools = [
             "generate_carousel",
             "refine_carousel_copy",
@@ -161,9 +149,6 @@ class TestToolScopeBypass:
         )
 
 
-# ─── Mutation 3: Document Scope Default Bypass ───
-
-
 class TestDocumentScopeDefault:
     """Simulate mutation where Document default scope changes."""
 
@@ -197,9 +182,6 @@ class TestDocumentScopeDefault:
         assert public_doc.is_public is True
 
 
-# ─── Mutation 4: CORS Origin Bypass ───
-
-
 class TestCORSOriginEnforcement:
     """Simulate mutation where CORS allows all origins in production."""
 
@@ -212,7 +194,6 @@ class TestCORSOriginEnforcement:
         """
         from rag_backend.infrastructure.config.settings import Settings
 
-        # Simulate production environment
         settings = Settings(
             debug=False,
             allowed_origins="https://marinssolutions.com",
@@ -225,9 +206,6 @@ class TestCORSOriginEnforcement:
             "SECURITY VIOLATION: CORS allows all origins in production!"
         )
         assert "marinssolutions.com" in settings.allowed_origins
-
-
-# ─── Mutation 5: Agent Origin Header Bypass ───
 
 
 class TestAgentOriginHeader:
@@ -250,9 +228,6 @@ class TestAgentOriginHeader:
         assert response.headers["X-Agent-Origin"] == "alter-ego"
 
 
-# ─── Mutation 6: Role-Based Access Bypass ───
-
-
 class TestRoleAccessBoundary:
     """Simulate mutation where role checks are bypassed."""
 
@@ -262,11 +237,12 @@ class TestRoleAccessBoundary:
 
         SCENARIO: Attacker bypasses auth check in carousel routes.
         EXPECTED: Test must verify anonymous users have no role.
+
+        get_optional_user returns None for anonymous users in a real request; the
+        integration tests cover it.
         """
 
-        # In a real request context, get_optional_user returns None for anonymous
-        # This test verifies that None is handled correctly
-        assert True  # Integration test covers this
+        assert True
 
     def test_editor_cannot_access_admin_endpoints(self):
         """MUTATION: If admin check is removed,
@@ -274,12 +250,10 @@ class TestRoleAccessBoundary:
 
         SCENARIO: Attacker removes admin_only decorator.
         EXPECTED: Test must verify 403 response.
+
+        Covered by the integration tests and Gherkin scenarios.
         """
-        # Covered by integration tests and Gherkin scenarios
         assert True
-
-
-# ─── Mutation 7: Vector Store Namespace Bypass ───
 
 
 class TestVectorStoreNamespace:
@@ -299,7 +273,6 @@ class TestVectorStoreNamespace:
             PineconeVectorStore,
         )
 
-        # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.upsert_chunks)
         assert "namespace" in sig.parameters, (
             "MUTATION DETECTED: namespace parameter removed from upsert_chunks!"
@@ -315,14 +288,10 @@ class TestVectorStoreNamespace:
             PineconeVectorStore,
         )
 
-        # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.delete_by_document)
         assert "namespace" in sig.parameters, (
             "MUTATION DETECTED: namespace parameter removed from delete_by_document!"
         )
-
-
-# ─── Mutation 8: Retrieval Query Scope Bypass ───
 
 
 class TestRetrievalQueryScope:
@@ -350,13 +319,3 @@ class TestRetrievalQueryScope:
         query = RetrievalQuery(query="test")
 
         assert query.namespace_prefix is None
-
-
-# ─── Summary ───
-
-# Run these tests to verify mutation resilience:
-# uv run pytest tests/unit/test_mutation_agent_split.py -v
-
-# If any test fails after code changes, investigate immediately:
-# - A failing test may indicate a real security vulnerability
-# - Or the test needs updating to match intended behavior

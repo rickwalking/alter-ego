@@ -1,4 +1,4 @@
-"""Image bridge job store on real Postgres (AE-0393, AC6/AC11).
+"""Image bridge job store on real Postgres.
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: The waiter works across processes

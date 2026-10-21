@@ -1,4 +1,4 @@
-"""POST /api/v1/image-bridge/jobs/{job_id}/result (AE-0393, contract 2.2).
+"""POST /api/v1/image-bridge/jobs/{job_id}/result (contract 2.2).
 
 No JWT and no service key: the per-job one-time token in
 ``X-Image-Bridge-Token`` authenticates. An unknown job and a bad token get

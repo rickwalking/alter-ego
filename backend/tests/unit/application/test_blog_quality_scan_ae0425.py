@@ -1,4 +1,4 @@
-"""Deterministic quality scan + section plan of the blog writer (AE-0425).
+"""Deterministic quality scan + section plan of the blog writer.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -197,7 +197,8 @@ class TestNormalizeCount:
 
 
 class TestEnglishInPortuguese:
-    # Review (low): a PT section that reads as English is a finding (F-05).
+    """A PT section that reads as English is a finding."""
+
     ENGLISH = (
         "The agents are changing the way that we work, and it is clear that this "
         "is only the start of the shift for the teams that have them."

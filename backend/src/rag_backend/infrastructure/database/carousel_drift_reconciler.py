@@ -1,6 +1,6 @@
-"""Autonomous projection↔checkpoint drift reconciler for carousels (AE-0311).
+"""Autonomous projection↔checkpoint drift reconciler for carousels.
 
-Runs in the workflow-workers tick AFTER the reaper (pinned AE-0315 ordering).
+Runs in the workflow-workers tick AFTER the reaper (pinned ordering).
 A repair that dies between its projection commit and its checkpoint write
 leaves a **repaired projection with a stale blocking checkpoint report** — and
 "the client retries" assumes a retry nobody guarantees. This watchdog closes
@@ -12,6 +12,9 @@ writes the checkpoint through the engine wrapper, stamping the row's CURRENT
 
 The repair is idempotent by design, so converging a just-reaped row (its
 checkpoint is untouched by the reaper) is safe and epoch-fenced.
+
+``_Recomputed`` is the repaired slides, the fresh report dict, and whether the
+projection still blocks after the (idempotent) re-repair.
 """
 
 from __future__ import annotations
@@ -56,8 +59,6 @@ _CHECKPOINT_PHASE_KEY = "current_phase"
 _CHECKPOINT_PHASE_STATUS_KEY = "phase_status"
 _REPORT_BLOCKING_KEY = "blocking"
 
-# Recompute result: repaired slides, the fresh report dict, and whether the
-# projection is still blocking after the (idempotent) re-repair.
 _Recomputed = tuple[list[dict[str, object]], dict[str, object], bool]
 
 
@@ -78,7 +79,7 @@ class CarouselDriftReconcilerRepository:
         return converged
 
     async def _reconcile_failed_phase_drift(self, db: AsyncSession) -> int:
-        """AE-0320: converge rows a dead run left ``failed`` behind a parked
+        """Converge rows a dead run left ``failed`` behind a parked
         checkpoint at a DIFFERENT phase.
 
         A resume run that completed its phase work (checkpoint advanced and
@@ -104,7 +105,13 @@ class CarouselDriftReconcilerRepository:
         db: AsyncSession,
         row: CarouselProjectModel,
     ) -> bool:
-        """Converge one failed row onto its parked checkpoint phase."""
+        """Converge one failed row onto its parked checkpoint phase.
+
+        The write CASes on ``run_epoch`` like the reaper flip (a replacement run's
+        writes must never be clobbered), and is savepoint-scoped and lock-timeout
+        bounded so a locked row can neither wedge the tick nor roll back sibling
+        convergences.
+        """
         project_id = str(row.id)
         from_phase = str(row.current_phase or "")
         seen_epoch = int(row.run_epoch or 0)
@@ -112,10 +119,6 @@ class CarouselDriftReconcilerRepository:
         target = _parked_checkpoint_phase(state)
         if target is None or target == from_phase:
             return False
-        # AE-0320 (external review r1 #6/#7): CAS on run_epoch like the reaper
-        # flip (a replacement run's writes must never be clobbered), and the
-        # write is savepoint-scoped + lock-timeout-bounded so a locked row can
-        # neither wedge the tick nor roll back sibling convergences.
         try:
             async with db.begin_nested():
                 await apply_run_write_lock_timeout(db)
@@ -202,7 +205,7 @@ async def _recompute_from_projection(
 ) -> _Recomputed | None:
     """Validate the authoritative projection AS-IS (no re-repair).
 
-    The projection is authoritative and — in the AE-0311 drift scenario — was
+    The projection is authoritative and — in the drift scenario — was
     already repaired by the failed repair (projection commits first). We only
     converge when it validates clean: a still-blocking projection is not drift
     (it needs the repair endpoint, not a checkpoint overwrite from stale copy).

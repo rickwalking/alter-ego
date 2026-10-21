@@ -9,7 +9,7 @@ single commit owner, ADR-0009 §9); these routes never call ``db.commit()``.
 
 Cookies (``access_token`` attributes), the HS256 JWT payload, bcrypt, and status
 codes are byte-identical to the pre-refactor routes: the JWT/bcrypt still come
-from the UNCHANGED ``infrastructure.auth`` via the identity adapters (AE-0099).
+from the UNCHANGED ``infrastructure.auth`` via the identity adapters.
 """
 
 from typing import Annotated

@@ -78,7 +78,7 @@ class AutopilotRunRepository(Protocol):
         ...
 
     async def confirm_thesis(self, command: ThesisConfirmCommand) -> bool:
-        """AE-0377: store the thesis and move awaiting_thesis -> queued (CAS)."""
+        """Store the thesis and move awaiting_thesis -> queued (CAS)."""
         ...
 
     async def find_by_carousel(self, project_id: str) -> AutopilotRun | None:
@@ -127,7 +127,7 @@ class Clock(Protocol):
 
 
 class Notifier(Protocol):
-    """Sends owner notices. AE-0355's Telegram adapter implements this."""
+    """Sends owner notices. The Telegram adapter implements this."""
 
     async def send_review(self, notice: ReviewNotice) -> ReviewSendResult:
         """Upload the slide album and the action keyboard."""
@@ -175,7 +175,7 @@ class Sleeper(Protocol):
 
 
 class PublishNotifier(Protocol):
-    """Tells the owner a publish finished or failed. AE-0355 sends Telegram."""
+    """Tells the owner a publish finished or failed, on Telegram."""
 
     async def notify(self, notice: PublishNotice) -> None:
         """Record or deliver one notice. Must not call Instagram."""
@@ -380,7 +380,7 @@ class TopicIntakeStore(Protocol):
         ...
 
     async def news_runs_created_between(self, window: DayWindow) -> int:
-        """AE-0377: Radar IA runs (topic mode NULL or news) in the window."""
+        """Radar IA runs (topic mode NULL or news) in the window."""
         ...
 
     async def add_candidate(self, candidate: TopicCandidate) -> bool:
@@ -388,7 +388,7 @@ class TopicIntakeStore(Protocol):
         ...
 
     async def remove_candidate(self, candidate_id: UUID) -> None:
-        """AE-0418: delete a candidate this batch inserted (its cover was lost)."""
+        """Delete a candidate this batch inserted (its cover was lost)."""
         ...
 
     async def lock_intake(self) -> None:

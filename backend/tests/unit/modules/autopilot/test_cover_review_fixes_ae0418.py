@@ -1,4 +1,4 @@
-"""PR #136 review fixes: shared cover images and a failed re-render (AE-0418).
+"""PR #136 review fixes: shared cover images and a failed re-render.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: Sweeping an unused cover keeps a used cover with the same bytes

@@ -3,8 +3,8 @@
 The public facade re-exports :class:`AuthCommandHandler`; cross-module code and
 the inbound HTTP adapters never import this path directly.
 
-This is a **behavior-preserving** orchestration layer (AE-0099) over the AE-0098
-``AuthenticationService`` and the user repository. Each handler maps a typed
+This is a **behavior-preserving** orchestration layer over the ``AuthenticationService``
+and the user repository. Each handler maps a typed
 auth command onto the exact persistence/JWT/bcrypt calls the legacy
 ``/api/auth`` routes make today, so the wire behavior (HS256 payload, bcrypt,
 status codes, cookies) stays byte-identical when the routes move behind the
@@ -16,7 +16,7 @@ set ``hashed_password`` and call ``repository.update`` inside the request-scoped
 Unit of Work (the single commit owner, ADR-0009 §9). The legacy route's
 known-and-snapshotted post-update lazy-load behavior is preserved because the
 same repository ``update`` runs against the same session — no behavior is added
-or papered over here (AE-0097 finding stays locked).
+or papered over here (the snapshotted finding stays locked).
 """
 
 from __future__ import annotations

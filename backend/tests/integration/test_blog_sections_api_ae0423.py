@@ -1,4 +1,4 @@
-"""API tests for the blog.v2 document contract (AE-0423, ADR-0025).
+"""API tests for the blog.v2 document contract (ADR-0025).
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 Strict v2 writes, the ``featured_image_url`` cover projection, the publish
@@ -46,7 +46,7 @@ def _image(url: str = "https://cdn.example/x.jpg", alt: str = "Diagrama") -> dic
 
 @pytest.fixture
 async def admin_client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
-    """Admin client on a per-test SQLite file (see AE-0390)."""
+    """Admin client on a per-test SQLite file."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
@@ -314,12 +314,12 @@ class TestRestoreVersion:
     async def test_restoring_a_legacy_snapshot_is_422(
         self, admin_client: AsyncClient
     ) -> None:
+        """Restore is a content write, so it carries If-Match."""
         post = await _create(admin_client, content=v2_content("Corpo"))
         await _set_fields(
             post["id"],
             version_history=[{"version_number": 1, "snapshot": {"markdown": "x"}}],
         )
-        # AE-0424: restore is a content write, so it carries If-Match.
         response = await admin_client.post(
             f"{BLOG_POSTS_URL}/{post['id']}/restore-version/1",
             headers={HTTP_HEADER_IF_MATCH: str(post["lock_version"])},

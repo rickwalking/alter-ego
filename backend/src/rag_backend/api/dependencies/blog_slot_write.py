@@ -1,4 +1,4 @@
-"""Shared write path of the per-slot editor routes (AE-0424; reused by AE-0425).
+"""Shared write path of the per-slot editor routes (also used by bulk generation).
 
 A slot action (image, rewrite, translation) spends 10-60 s on a provider. The
 contract that keeps that paid result:
@@ -66,14 +66,17 @@ MetadataEdit = Callable[[dict[str, object]], dict[str, object]]
 
 @dataclass(frozen=True)
 class SlotEdit:
-    """One post-spend slot write onto the latest document of ``post_id``."""
+    """One post-spend slot write onto the latest document of ``post_id``.
+
+    metadata_edit carries an extra ai_generation_metadata change in the same write (the
+    image budget).
+    """
 
     post_id: UUID | str
     user_id: str
     edit: DocumentEdit
     events: WorkflowEventService
     ai_action: str | None = None
-    # Extra ``ai_generation_metadata`` change in the same write (image budget).
     metadata_edit: MetadataEdit | None = None
     discard: Callable[[], None] | None = None
     change_summary: str = VERSION_SUMMARY_SAVE

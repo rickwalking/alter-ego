@@ -1,4 +1,4 @@
-"""Instagram Story records, results, and ports (AE-0369). No I/O.
+"""Instagram Story records, results, and ports. No I/O.
 
 The Story announces a carousel that was just posted. It is optional: a
 Story failure is recorded and told to the owner, never turned into a

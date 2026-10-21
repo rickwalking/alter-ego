@@ -70,7 +70,7 @@ class HeroContentStrategy:
 
 
 def _swipe_html(language: str) -> str:
-    """The swipe hint shown on slide 2, in the slide's locale (AE-0372)."""
+    """The swipe hint shown on slide 2, in the slide's locale."""
     return f'<div class="s1-swipe">{swipe_text_for(language)}</div>'
 
 

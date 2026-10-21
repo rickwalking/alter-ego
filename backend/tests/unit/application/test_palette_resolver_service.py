@@ -1,7 +1,6 @@
-"""Unit tests for the generation-time palette resolver service (AE-0269).
+"""Unit tests for the generation-time palette resolver service.
 
 Feature: Custom palettes resolve and snapshot at generation
-(.agent/tasks/AE-0269-custom-palette-persistence-db-backed-resolver-snapshot.md)
 
 Pure logic over a fake repository: the root + custom union, mode-derived image
 style (a light palette never gets a dark strategy, D3), AUTO matching custom
@@ -111,18 +110,21 @@ class TestPaletteResolverService:
         assert resolved.image_style in {IMAGE_STYLE_DEFAULT, IMAGE_STYLE_FLAT_EDITORIAL}
 
     async def test_repo_failure_degrades_to_registry(self) -> None:
-        # G2: a repo error must NOT raise; it falls back to registry resolution.
+        """A repo error must not raise; it falls back to registry resolution."""
         svc = PaletteResolverService(_FakeRepo(fail=True))
         resolved = await svc.resolve(_project("auto", topic="security exploit breach"))
-        assert resolved.resolved_ref  # resolved something, did not raise
+        assert resolved.resolved_ref
 
     async def test_unknown_custom_uuid_falls_back_to_registry(self) -> None:
-        svc = PaletteResolverService(_FakeRepo())  # empty repo
+        """With an empty repo it degrades to a root palette without raising."""
+        svc = PaletteResolverService(_FakeRepo())
         resolved = await svc.resolve(_project(str(uuid4())))
-        assert resolved.resolved_ref  # degrades to a root palette, no raise
+        assert resolved.resolved_ref
 
     async def test_snapshot_project_theme_freezes_onto_project(self) -> None:
-        # The write-hook API: resolve + freeze the result onto theme_snapshot (D9).
+        """The write-hook API resolves the palette and freezes the result onto
+        theme_snapshot.
+        """
         palette = _custom(PaletteMode.LIGHT, pid=uuid4())
         project = _project(str(palette.id))
         assert project.theme_snapshot is None

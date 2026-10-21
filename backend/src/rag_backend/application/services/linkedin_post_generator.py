@@ -10,6 +10,11 @@ LinkedIn limits:
   output in paragraphs + line breaks only.
 - First two lines get "see more" previewed, so the model is instructed
   to front-load the hook.
+
+The prompt stays an inline guarded ``_TEMPLATE`` constant: the prompt registry lives
+under ``agents``, and wiring it here would add a forbidden ``application -> agents``
+import edge (enforced by import-linter and the arch ratchet). The ``*_TEMPLATE`` name is
+the allowed escape of the inline-prompt checker.
 """
 
 from __future__ import annotations
@@ -32,14 +37,6 @@ LINKEDIN_MAX_CHARS = 3000
 _LANG_EN = "en"
 _LANG_PT = "pt"
 
-# Guarded inline prompt template (AE-0243/AE-0244). This file lives in the
-# `application` layer; the prompt registry lives under `agents`, so wiring it via
-# `render_prompt` would create a forbidden `application -> agents` import edge
-# (enforced by the import-linter contract + the down-only arch-ratchet, which must
-# not be gamed). It therefore stays a guarded `_TEMPLATE` constant — the same
-# sanctioned pattern as `carousel_refinement`'s `*_TEMPLATE` fallbacks (the
-# `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
-# quality prompts (both in the `agents` layer) ARE registry-migrated by AE-0243.
 _LINKEDIN_PROMPT_TEMPLATE = (
     "You are writing a LinkedIn post in {lang_name} from the blog\n"
     "content below. Match the author's voice exactly.\n"

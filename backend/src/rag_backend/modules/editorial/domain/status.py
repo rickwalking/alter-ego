@@ -5,7 +5,7 @@ canonical, single source of truth for its status language: the shared module
 ``rag_backend.domain.constants.carousel_workflow``. That file is imported by the
 existing workflow engine, routes, and services.
 
-**Re-export, not new strings (AE-0108 constraint).** This module introduces NO
+**Re-export, not new strings.** This module introduces NO
 new status strings. It re-exports the canonical phase / phase-status /
 review-action / interrupt-type constants so the editorial module exposes the
 same workflow status language under its own domain namespace while the legacy

@@ -28,13 +28,10 @@ async def fix_design_tokens_and_subtitles() -> None:
         if not isinstance(tokens, dict):
             tokens = {}
 
-        # --- 1. Add rendered_slides_* to design_tokens if missing ---
         images = tokens.get("images", {})
         if not isinstance(images, dict):
             images = {}
 
-        # Determine actual slide count from rendered slide directories
-        # Fall back to slides array count, then default to 4
         output_dir = row["output_dir"] or ""
         slide_count = 0
         if output_dir:
@@ -67,7 +64,6 @@ async def fix_design_tokens_and_subtitles() -> None:
         if needs_update:
             tokens["images"] = images
 
-        # --- 2. Extract subtitle_en from English blog if missing ---
         subtitle_en = row["subtitle_en"]
         translations = row["blog_translations"] or {}
         if isinstance(translations, str):
@@ -75,7 +71,6 @@ async def fix_design_tokens_and_subtitles() -> None:
 
         if not subtitle_en and translations.get("en"):
             en_markdown = translations["en"]
-            # Extract first paragraph as subtitle
             lines = en_markdown.strip().split("\n")
             paragraphs = []
             for line in lines:

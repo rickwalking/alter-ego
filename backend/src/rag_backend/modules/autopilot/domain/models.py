@@ -2,7 +2,7 @@
 
 Private to the module. Column shapes follow
 ``docs/architecture/grokbot-autopilot.md`` §4. ``why_viral`` is included
-because AE-0350's scope and the §5 scout output contract both require it
+because the scope and the §5 scout output contract both require it
 (the §4 column list omitted it).
 """
 
@@ -19,7 +19,12 @@ from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
 
 class AutopilotRunState(StrEnum):
-    """Legal states of an autopilot run (architecture §4)."""
+    """Legal states of an autopilot run (architecture §4).
+
+    ``SCHEDULED``: approved, waiting for the owner's publish time.
+    ``AWAITING_THESIS``: a POV run waits for the owner to confirm the scout's
+    thesis.
+    """
 
     QUEUED = "queued"
     GENERATING = "generating"
@@ -27,14 +32,12 @@ class AutopilotRunState(StrEnum):
     REWORKING = "reworking"
     ESCALATED = "escalated"
     FAILED = "failed"
-    # AE-0370: approved, waiting for the owner's publish time.
     SCHEDULED = "scheduled"
     PUBLISHING = "publishing"
     PUBLISHED = "published"
     PUBLISH_FAILED = "publish_failed"
     REJECTED = "rejected"
     EXPIRED = "expired"
-    # AE-0377: a POV run waits for the owner to confirm the scout's thesis.
     AWAITING_THESIS = "awaiting_thesis"
 
 
@@ -48,15 +51,18 @@ class TransitionPair:
 
 @dataclass(frozen=True, kw_only=True)
 class TransitionCommand:
-    """One compare-and-set request. One object keeps the call under 3 args."""
+    """One compare-and-set request. One object keeps the call under 3 args.
+
+    ``scheduled_at`` is the publish time stored when the run enters ``scheduled``;
+    ``detail`` is extra escalation copy for the owner, carried on the state-changed
+    event.
+    """
 
     run_id: UUID
     expected: AutopilotRunState
     new: AutopilotRunState
     reason: str
-    # AE-0370: the publish time stored when the run enters ``scheduled``.
     scheduled_at: datetime | None = None
-    # AE-0401: extra escalation copy for the owner (the state-changed event).
     detail: str = ""
 
     def pair(self) -> TransitionPair:
@@ -66,7 +72,7 @@ class TransitionCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class ThesisConfirmCommand:
-    """AE-0377: store the owner's thesis and requeue the run in one CAS."""
+    """Store the owner's thesis and requeue the run in one CAS."""
 
     run_id: UUID
     thesis: str
@@ -75,7 +81,14 @@ class ThesisConfirmCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class TopicCandidate:
-    """A scout topic stored for dedupe and for the run that consumes it."""
+    """A scout topic stored for dedupe and for the run that consumes it.
+
+    ``image_style`` and ``image_guidance`` are the scout's image preset and optional
+    visual direction. ``content_mode`` is Radar IA (None or ``news_analysis``) or
+    POV with the scout's ``thesis_draft``. ``pov_format`` and ``slide_count`` are
+    None for the default. ``quotes`` are the verified quotes of a ``pov_news`` topic
+    (empty otherwise); ``cover_asset_id`` is the GrokBot cover the scout attached.
+    """
 
     candidate_id: UUID
     title: str
@@ -88,54 +101,52 @@ class TopicCandidate:
     score: int
     signal_hash: str
     status: str
-    # AE-0361: the scout's image preset and optional visual direction.
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str | None = None
-    # AE-0377: Radar IA (None / news_analysis) or POV with the scout's draft.
     content_mode: str | None = None
     thesis_draft: str | None = None
-    # PR #106 review: the scout v3 POV format and slide count (None = default).
     pov_format: str | None = None
     slide_count: int | None = None
-    # AE-0406: the verified quotes of a ``pov_news`` topic (empty otherwise).
     quotes: tuple[NewsQuote, ...] = ()
-    # AE-0418: the GrokBot cover the scout attached (None = no cover).
     cover_asset_id: UUID | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class AutopilotRun:
-    """One autopilot run. ``carousel_project_id`` is null until generation."""
+    """One autopilot run. ``carousel_project_id`` is null until generation.
+
+    ``publish_attempts`` counts publish attempts only; start failures count in
+    ``start_attempts``. ``ig_container_created_at`` is set when the container id is
+    first stored: ``updated_at`` moves on every retry, so it cannot answer the 24h
+    container-reuse rule. ``rework_phase`` and ``rework_feedback`` are the owner
+    rework the webhook queued for the runner. ``escalated_version`` is the workflow
+    lock version at escalation; a different version at final review means the owner
+    changed the carousel in the web UI. ``pov_thesis`` is the thesis the owner
+    confirmed (POV runs only) and ``cover_chosen`` turns True once the owner chose
+    the GrokBot cover for slide 1. ``scheduled_at`` is when a ``scheduled`` run is
+    due; it is kept after the due tick so the published notice can say how late it
+    went out.
+    """
 
     run_id: UUID
     topic_candidate_id: UUID
     carousel_project_id: str | None
     state: AutopilotRunState
     state_reason: str | None
-    # Publish attempts only. Start failures count in ``start_attempts``.
     publish_attempts: int
     telegram_message_ids: tuple[int, ...]
     ig_container_id: str | None
     ig_post_id: str | None
     ig_permalink: str | None
-    # Set when the container id is first stored. ``updated_at`` moves on every
-    # retry, so it cannot answer the 24h container-reuse rule.
     ig_container_created_at: datetime | None = None
     updated_at: datetime | None = None
     notice_log: NoticeLog = field(default_factory=NoticeLog)
     start_attempts: int = 0
-    # Owner rework the webhook queued for the runner (phase + feedback text).
     rework_phase: str | None = None
     rework_feedback: str | None = None
-    # Workflow lock version when the run was escalated. A different version
-    # at final review means the owner changed the carousel in the web UI.
     escalated_version: int | None = None
-    # AE-0377: the thesis the owner confirmed (POV runs only).
     pov_thesis: str | None = None
-    # AE-0418: True once the owner chose the GrokBot cover for slide 1.
     cover_chosen: bool = False
-    # AE-0370: when a ``scheduled`` run is due. Kept after the due tick so the
-    # published notice can say how late it went out.
     scheduled_at: datetime | None = None
 
 

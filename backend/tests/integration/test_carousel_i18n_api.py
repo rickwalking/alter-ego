@@ -136,7 +136,6 @@ class TestCarouselDesignEndpoints:
         carousel_id = create_resp.json()["id"]
         await _set_carousel_public(carousel_id)
 
-        # Simulate completed project with design tokens
         from sqlalchemy.ext.asyncio import async_sessionmaker
 
         import rag_backend.infrastructure.database.config as db_config
@@ -198,7 +197,7 @@ class TestCarouselImageEndpoint:
     async def test_get_carousel_image_not_generated(self, client):
         """Given a private carousel without output, GET /images/ is the unknown-id 404.
 
-        AE-0446 (ADR-0013): visibility is checked before output, so an anonymous
+        Per ADR-0013, visibility is checked before output, so an anonymous
         caller cannot tell a private, unrendered carousel from a missing one
         (tests/features/public_carousel_404_parity_ae0446.feature).
         """

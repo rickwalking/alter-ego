@@ -229,6 +229,9 @@ class _Claims:
 
 class _Gateway:
     def __init__(self) -> None:
+        """``published_before`` models an expired stored container that may already be
+        published.
+        """
         self.opens = 0
         self.finishes = 0
         self.permalink_calls = 0
@@ -242,7 +245,6 @@ class _Gateway:
         self.fail_finish: InstagramCallError | None = None
         self.fail_permalink = False
         self.order: list[str] = []
-        # QA r2 R4: an expired stored container may already be published.
         self.published_before = False
         self.checked: list[str] = []
         self.crash_finish = False
@@ -579,9 +581,9 @@ class TestPublishBranches:
         snapshot: CarouselPublishSnapshot | None,
         reason: str,
     ) -> None:
+        """The clock advances past the approve-release grace window."""
         repo, gateway, clock = _Repo(), _Gateway(), _Clock()
         run = _store(repo, _run())
-        # Past the approve-release grace window (QA r2 R4c).
         clock.advance(RELEASE_GRACE_SECONDS + 1)
         job = _job(repo, gateway, _Source(snapshot), clock, _Notifier())
 

@@ -1,14 +1,14 @@
-"""Golden-snapshot diff helper for the publishing carousel surface (AE-0125).
+"""Golden-snapshot diff helper for the publishing carousel surface.
 
 The enforceable byte-identical baseline for Phase 6 (publishing /
 blog-post CRUD / distribution / calendar / board / analytics). Phase 6 moves
 the blog/publishing/distribution + read routes behind facades and adds an
-additive migration + outbox; the later slices (AE-0128 / AE-0129 / AE-0131)
+additive migration + outbox; the later slices
 diff the live response against the committed baseline this module captures on
 the current, pre-refactor code (diff == 0).
 
 CRITICAL: this baseline INCLUDES the current carousel publish flow that sets
-``is_public=True`` (the approval->release conflation) so AE-0128's release
+``is_public=True`` (the approval->release conflation) so the release
 command can be proven to diff to zero against it.
 
 The normalization is shared with the Identity helper
@@ -35,6 +35,14 @@ This module is the single import surface for publishing snapshot tests (mirrors
 the presentation/editorial helpers). The committed snapshots live under
 ``tests/snapshots/publishing/``. Run with ``--snapshot-update`` (flag registered
 in tests/conftest.py) to regenerate from current, pre-refactor behavior.
+
+Extra volatile UUID fields cover the generic resource ids of blog-post / carousel /
+calendar / board responses (version_history entries carry the post id as
+``content_id``). Extra timestamp fields are ISO datetimes outside the Identity
+``created_at`` / ``updated_at`` set: ``event_date`` / ``start`` / ``end`` are anchored
+on ``now`` and the publish lifecycle timestamps are set on release. The analytics
+velocity bucket key is a DATE-only string anchored on ``now`` that does not match the
+ISO-datetime regex, so it is normalized via its own field name and date matcher.
 """
 
 from __future__ import annotations
@@ -70,20 +78,14 @@ __all__ = [
 
 _SNAPSHOT_DIR: Final = Path(__file__).parent
 
-# Generic resource UUID fields the auth-scoped Identity normalizer does not
-# target. Present across blog-post / carousel / calendar / board responses.
 _EXTRA_VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({
     "project_id",
     "owner_id",
     "author_id",
     "reviewer_id",
-    # AE-0424: version_history entries carry the post id as ``content_id``.
     "content_id",
 })
 
-# ISO datetime fields not keyed by the Identity ``created_at`` / ``updated_at``
-# set. ``event_date`` / ``start`` / ``end`` are request- or row-derived and
-# anchored on ``now``; the publish lifecycle timestamps are set on release.
 _EXTRA_VOLATILE_TIMESTAMP_FIELDS: Final[frozenset[str]] = frozenset({
     "event_date",
     "start",
@@ -94,9 +96,6 @@ _EXTRA_VOLATILE_TIMESTAMP_FIELDS: Final[frozenset[str]] = frozenset({
     "scheduled_publish_at",
 })
 
-# The analytics velocity bucket key is a DATE-only string (YYYY-MM-DD) anchored
-# on ``now`` — volatile, but does NOT match the ISO-datetime regex (no time
-# component), so it is normalized via its own field name + date matcher.
 PLACEHOLDER_DATE: Final = "<date>"
 _VOLATILE_DATE_FIELDS: Final[frozenset[str]] = frozenset({"week_start"})
 _DATE_RE: Final = re.compile(r"^\d{4}-\d{2}-\d{2}$")

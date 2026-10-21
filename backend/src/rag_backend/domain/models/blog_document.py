@@ -1,4 +1,4 @@
-"""The blog post document model (``blog.v2``, AE-0423, ADR-0025).
+"""The blog post document model (``blog.v2``, ADR-0025).
 
 ``blog_posts.content`` holds exactly one shape: a versioned, section-structured
 document with a cover, ordered sections (stable ids, own image) and per-language
@@ -105,7 +105,7 @@ class BlogSection(BaseModel):
 
 
 class BlogRepetition(BaseModel):
-    """Repetition findings of the quality gate (AE-0425 writes them)."""
+    """Repetition findings of the quality gate (the blog writer writes them)."""
 
     model_config = _FORBID_EXTRA
 

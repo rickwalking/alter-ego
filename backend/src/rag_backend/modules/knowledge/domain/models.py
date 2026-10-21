@@ -1,6 +1,6 @@
 """Domain entities and value objects for the knowledge bounded context.
 
-Phase 2 is a **behavior-preserving** extraction (ADR-0009; AE-0089). The
+Phase 2 is a **behavior-preserving** extraction (ADR-0009). The
 knowledge aggregate and its value objects continue to live at their legacy
 location ``rag_backend.domain.models.documents`` so the ~50+ existing callers
 (agents, carousel, conversation, container, routes) keep importing the exact
@@ -25,8 +25,6 @@ from rag_backend.domain.models.documents import (
     SearchResult,
 )
 
-# The knowledge aggregate. Same class object as ``Document`` so existing
-# callers and adapters remain compatible during the behavior-preserving phase.
 KnowledgeDocument = Document
 
 __all__ = [

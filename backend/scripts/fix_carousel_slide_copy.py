@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Tighten carousel slide copy and re-render without regenerating images."""
+"""Tighten carousel slide copy and re-render without regenerating images.
+
+The copy is a compact lower-third: a short title plus 2-3 tight lines. It uses
+``**bold**`` (not ``<strong>``) so ``_render_inline`` emits proper emphasis tags.
+"""
 
 from __future__ import annotations
 
@@ -34,8 +38,6 @@ from rag_backend.infrastructure.logging import setup_logging
 
 PROJECT_ID = "eeaf0d66-1130-41b3-9c16-7ded632b8821"
 
-# Compact lower-third copy modeled on f2231ece: short title + 2-3 tight lines.
-# Use **bold** (not <strong>) so _render_inline emits proper emphasis tags.
 SLIDE_COPY_PT: dict[int, dict[str, str]] = {
     1: {
         "heading": "Fable 5 e Mythos 5 chegaram juntos",
@@ -183,9 +185,9 @@ async def _sync_workflow_checkpoint(project_id: str) -> None:
         raw_drafts = state.get("slide_drafts")
         if not isinstance(raw_drafts, list):
             return
-        drafts = normalize_slide_drafts(
-            [slide for slide in raw_drafts if isinstance(slide, dict)]
-        )
+        drafts = normalize_slide_drafts([
+            slide for slide in raw_drafts if isinstance(slide, dict)
+        ])
         for draft in drafts:
             slide_index = int(draft.get("slide_index") or 0)
             copy = SLIDE_COPY_PT.get(slide_index)
@@ -296,7 +298,9 @@ async def _run(project_id: UUID) -> int:
         print(f"json_blobs={html.count(chr(123) + chr(39) + 'pt')}")
         print(f"escaped_strong={html.count('&lt;strong&gt;')}")
         for slide_number, copy in sorted(SLIDE_COPY_PT.items()):
-            print(f"slide_{slide_number}: {copy['heading'][:50]} | body={len(copy['body'])}")
+            print(
+                f"slide_{slide_number}: {copy['heading'][:50]} | body={len(copy['body'])}"
+            )
         return 0
 
     await close_db()

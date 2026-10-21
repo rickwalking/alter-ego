@@ -1,10 +1,10 @@
-"""``ContentAutofixer`` backed by the editorial facade (AE-0367).
+"""``ContentAutofixer`` backed by the editorial facade.
 
 The engine factory is optional: without it the inspection reads only the
 slide rows (no outline key points, no research vocabulary) and the fix cannot
 re-translate EN. The webhook, the notifier and the worker all pass one.
 
-AE-0401: ``fix_slides`` is the model fix of the slides a gate repair left
+``fix_slides`` is the model fix of the slides a gate repair left
 failing, traced with ``phase=autofix`` and ``agent_name=slide_fixer``.
 """
 
@@ -69,21 +69,24 @@ _STATUSES: dict[str, AutofixStatus] = {
 
 @dataclass(frozen=True, kw_only=True)
 class AutofixerConfig:
-    """The bound session and, when available, the editorial engine factory."""
+    """The bound session and, when available, the editorial engine factory.
+
+    ``autofix_attempts`` is the model attempts per failing slide
+    (``AUTOPILOT_AUTOFIX_ATTEMPTS``) and ``autofix_escalation_attempts`` the
+    reasoning-model attempts after them (``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS``).
+    The model factories are for tests: ``slide_fix_model`` replaces the fast role,
+    and ``slide_fix_escalation_model`` (None: ``slide_fix_model`` when set, else the
+    reasoning role) the escalation model. ``persona_unscored_max_ticks``
+    (``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``) is how many ticks may pass unscored
+    before ``persona_judge_unavailable``.
+    """
 
     session: AsyncSession
     engine_factory: EngineFactory | None = None
-    # AE-0401: model attempts per failing slide (AUTOPILOT_AUTOFIX_ATTEMPTS)
-    # and, for tests, the model the slide fix uses instead of the fast role.
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
     slide_fix_model: SlideFixModelFactory | None = None
-    # AE-0407: reasoning-model attempts after the fast ones
-    # (AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS) and, for tests, their model
-    # (None: ``slide_fix_model`` when set, else the reasoning role).
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
     slide_fix_escalation_model: SlideFixModelFactory | None = None
-    # AE-0433: unscored ticks before "persona_judge_unavailable"
-    # (AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS).
     persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
 
 
@@ -112,7 +115,7 @@ class InProcessContentAutofixer:
         )
 
     async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
-        """Repair a content/design gate's checkpoint copy (AE-0392)."""
+        """Repair a content/design gate's checkpoint copy."""
         request = self._request(command.project_id, command.expected_version)
         owner = await read_project_owner_id(command.project_id, self._config.session)
         metadata = _trace(command.project_id, command.phase, owner)
@@ -125,7 +128,7 @@ class InProcessContentAutofixer:
         )
 
     async def fix_slides(self, command: SlideFixCommand) -> SlideFixOutcome:
-        """Model-fix the slides still failing at a gate (AE-0401)."""
+        """Model-fix the slides still failing at a gate."""
         factory = self._config.engine_factory
         request = SlideFixRequest(
             session=self._config.session,

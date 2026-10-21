@@ -79,8 +79,10 @@ class TestSlideLayoutRegistry:
         assert strategy.strategy_name == "cta_centered"
 
     def test_bootstrap_registers_all_thirteen(self, registry):
-        # AE-0376: + hook_face, statement, save_checklist, cta_follow (POV).
-        # AE-0418: + cover_card (the GrokBot screenshot cover on slide 1).
+        """The thirteen include the POV strategies (hook_face, statement,
+        save_checklist, cta_follow) and cover_card (the GrokBot screenshot cover on
+        slide 1).
+        """
         result = registry.list()
         assert len(result) == 13
 

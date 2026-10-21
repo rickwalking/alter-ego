@@ -1,4 +1,4 @@
-"""Public projection of a ``blog.v2`` document (AE-0423, ADR-0013, ADR-0025).
+"""Public projection of a ``blog.v2`` document (ADR-0013, ADR-0025).
 
 The public lean read serializes an explicit allow-list of the document:
 ``schema``, ``cover{url,alt,caption,source,created_at}``,

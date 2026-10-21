@@ -1,4 +1,4 @@
-"""Public carousel images for anonymous visitors (AE-0412, QA B08).
+"""Public carousel images for anonymous visitors (QA B08).
 
 Gherkin: tests/features/public_carousel_images_ae0412.feature
 """

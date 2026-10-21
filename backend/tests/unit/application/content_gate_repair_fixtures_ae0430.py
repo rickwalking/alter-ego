@@ -1,8 +1,13 @@
-"""Shared fakes and the prod fixture for the AE-0430 content-gate repair tests.
+"""Shared fakes and the prod fixture for the content-gate repair tests.
 
 ``tests/fixtures/ae0430_carousel_5344_content_gate.json`` is the read-only
 export of prod carousel 5344b6c6 (2026-10-19): its 7 localized slides and the
 12 blocking violations the owner could not clear with two revisions.
+
+PROD_ANSWERS holds within-limit rewrites of the 12 prod fields, as a limit-respecting
+model would answer. The same exported state also carries the label and emphasis leaks
+the QA noted ("**PT**", "**PT** ** **", a "PT:" line before "Heading:", EN "**…**"); the
+gate flags them, so the fake model answers those 4 fields with clean copy too.
 """
 
 from __future__ import annotations
@@ -23,10 +28,6 @@ FIXTURE = (
 )
 POLICY_V4 = "hero_lower_third_v4"
 
-# Within-limit rewrites of the 12 prod fields, as a limit-respecting model would answer.
-# AE-0436: the same exported state also carries the label/emphasis leaks the QA
-# hand-noted ("**PT**", "**PT** ** **", "PT:\nHeading:", EN "**…**"); the gate
-# now flags them, so the fake model also answers those 4 fields with clean copy.
 PROD_ANSWERS: dict[str, str] = {
     "1:en:heading": "Grok Bot booked a table. Nobody talked about the computer.",
     "1:en:body": (

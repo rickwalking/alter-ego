@@ -1,4 +1,4 @@
-"""Exceptions of the image bridge module (AE-0393).
+"""Exceptions of the image bridge module.
 
 ``ImageBridgeJobError`` is a ``RuntimeError`` so a bridge failure keeps the
 contract of ``OpenAIImageService``: the images phase sees a ``RuntimeError``

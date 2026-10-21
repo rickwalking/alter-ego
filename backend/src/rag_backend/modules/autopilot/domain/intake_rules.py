@@ -1,9 +1,9 @@
-"""Per-topic refusal rules of topic intake (split from ``intake.py``, AE-0406).
+"""Per-topic refusal rules of topic intake (split from ``intake.py``).
 
 Pure. Each rule names the reason code and, when one field caused it, that
 field (``audience``, ``quotes[1].excerpt``) so the scout can fix one topic
 without guessing. The order is the contract's: text, URLs, sources, thesis,
-the carousel defaults, the ``pov_news`` quotes, then (AE-0418) the cover.
+the carousel defaults, the ``pov_news`` quotes, then the cover.
 """
 
 from __future__ import annotations
@@ -55,7 +55,6 @@ from rag_backend.modules.autopilot.quote_constants import (
     REASON_QUOTE_INVALID,
 )
 
-# The field each carousel-default reason is about.
 _CAROUSEL_FIELDS: dict[str, str] = {
     REASON_IMAGE_STYLE_UNSUPPORTED: FIELD_IMAGE_STYLE,
     REASON_AUDIENCE_NOT_SIMPLE: FIELD_AUDIENCE,
@@ -89,7 +88,6 @@ class TopicFields:
     content_mode: str
     thesis_draft: str | None
     quotes: tuple[NewsQuote, ...] = ()
-    # AE-0418: the GrokBot cover the topic names (None = no cover).
     cover_asset_id: str | None = None
 
 
@@ -103,13 +101,15 @@ class RuleFacts:
 
 
 def refusal_for(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
-    """The first rule the topic breaks, or None when it may be stored."""
+    """The first rule the topic breaks, or None when it may be stored.
+
+    A POV topic (``pov`` or ``pov_news``) needs the draft thesis.
+    """
     for rule in (_blank, _url_in_text, _missing_source):
         found = rule(topic, facts)
         if found is not None:
             return found
     if is_pov_family(topic.content_mode) and not topic.thesis_draft:
-        # AE-0377: a POV topic (``pov`` / ``pov_news``) needs the draft thesis.
         return Refusal(reason=REASON_THESIS_MISSING, field=FIELD_THESIS_DRAFT)
     carousel = _carousel_refusal(topic)
     if carousel is not None:
@@ -173,7 +173,7 @@ def _carousel_refusal(topic: TopicFields) -> Refusal | None:
 
 
 def _quotes_refusal(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
-    """AE-0406: quotes belong to ``pov_news``; each one must be verified."""
+    """Quotes belong to ``pov_news``; each one must be verified."""
     if not topic.quotes:
         return None
     if not is_pov_news(topic.content_mode):
@@ -188,7 +188,7 @@ def _quotes_refusal(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
 
 
 def _cover_refusal(topic: TopicFields, facts: RuleFacts) -> Refusal | None:
-    """AE-0418: the cover must exist, be fresh, unused, and (screenshot) sourced."""
+    """The cover must exist, be fresh, unused, and (screenshot) sourced."""
     if topic.cover_asset_id is None:
         return None
     reason = cover_reason(

@@ -74,7 +74,7 @@ def blog_ai_propagate(post_id: str, phase: str) -> AbstractContextManager[PhaseT
 
 @dataclass(frozen=True)
 class BlogPhaseScope:
-    """Langfuse metadata of one blog generation phase (AE-0425)."""
+    """Langfuse metadata of one blog generation phase."""
 
     project_id: str
     user_id: str
@@ -90,8 +90,8 @@ def blog_phase_trace(
     """Run the enclosed LLM/image calls in the named ``workflow_<phase>`` trace.
 
     Carries the required metadata (``project_id``, ``phase``, ``agent_name``,
-    ``user_id``) with ``content_type="blog_post"`` (AE-0425, AC9).
-    ``trace_input`` is the phase brief recorded on the trace/span (AE-0442).
+    ``user_id``) with ``content_type="blog_post"`` (AC9).
+    ``trace_input`` is the phase brief recorded on the trace/span.
     """
     metadata = {
         TRACE_FIELD_PROJECT_ID: scope.project_id,

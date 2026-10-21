@@ -1,11 +1,11 @@
-"""Unit tests for the completed-project slide-edit route handler (AE-0314).
+"""Unit tests for the completed-project slide-edit route handler.
 
 Feature: Edit carousel text without regenerating images
   (see tests/features/carousel_text_edit_no_regen.feature)
 
 Exercises the thin HTTP adapter directly: auth is delegated to
 ``get_carousel_project_for_workflow_user`` (patched), the service to a stub. Pins
-the completed-only guard, the sanitize-on-the-wire boundary (AE-0289), and typed
+the completed-only guard, the sanitize-on-the-wire boundary, and typed
 409 conflict propagation.
 """
 
@@ -120,7 +120,9 @@ class TestSlideEditRoute:
         assert response.updated_slides == [1]
 
     async def test_sanitizes_edited_copy_on_the_wire(self) -> None:
-        # AE-0289 boundary: markup is stripped before it reaches the service.
+        """Markup is stripped before it reaches the service, but case is preserved
+        (sanitize_display_input, not lowercasing).
+        """
         model = _project_model(status=CarouselStatus.COMPLETED.value)
         service = MagicMock()
         service.edit = AsyncMock(return_value=_result())
@@ -134,7 +136,6 @@ class TestSlideEditRoute:
         sanitized_pt = command.edited_slides[0]["presentation_pt"]
         heading = cast(str, cast(dict[str, object], sanitized_pt)["heading"])
         assert "<" not in heading and ">" not in heading
-        # Case is preserved (sanitize_display_input, not lowercasing).
         assert "Keep Case" in heading
 
     async def test_typed_conflict_propagates(self) -> None:

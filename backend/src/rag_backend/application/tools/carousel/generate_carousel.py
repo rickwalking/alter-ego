@@ -29,8 +29,6 @@ class SubagentWorkflowStartRequest:
 
 
 WorkflowStartResult = str
-# Type alias uses string to avoid circular import via agents.py at module level
-# The actual import happens lazily inside build_generate_carousel_tool
 WorkflowStarter = Callable[..., Awaitable[WorkflowStartResult]]
 
 
@@ -67,7 +65,6 @@ def build_generate_carousel_tool(
             theme=validated_theme,
             language=language,
             owner_id=access.owner_user_id,
-            # AE-0312: stamp v2 so PT casing rules apply to new carousels.
             presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
         )
 

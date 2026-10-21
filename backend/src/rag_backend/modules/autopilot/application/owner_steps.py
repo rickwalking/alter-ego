@@ -1,4 +1,10 @@
-"""Compare-and-set steps the owner webhook is allowed to request."""
+"""Compare-and-set steps the owner webhook is allowed to request.
+
+``APPROVE_REFUSED_STEP``: the editorial approve refused the owner's Approve, so
+the review stays open. ``COVER_STEP``: "Usar capa do Grok" on the review queues
+a slide-1 re-render. ``AUTOFIX_STEP``: "Fix issues" queues a deterministic
+repair for the worker tick.
+"""
 
 from __future__ import annotations
 
@@ -57,19 +63,16 @@ REWORK_STEP = OwnerStep(
     new=_REWORKING,
     reason=REASON_OWNER_REWORK,
 )
-# The editorial approve refused the owner's Approve: the review stays open.
 APPROVE_REFUSED_STEP = OwnerStep(
     expected=_PUBLISHING,
     new=_AWAITING,
     reason=REASON_APPROVE_REFUSED,
 )
-# AE-0418: "Usar capa do Grok" on the review queues a slide-1 re-render.
 COVER_STEP = OwnerStep(
     expected=_AWAITING,
     new=_REWORKING,
     reason=REASON_COVER_SWITCH,
 )
-# AE-0367: "Fix issues" queues a deterministic repair for the worker tick.
 AUTOFIX_STEP = OwnerStep(
     expected=_AWAITING,
     new=_REWORKING,

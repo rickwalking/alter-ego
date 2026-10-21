@@ -1,4 +1,4 @@
-"""AE-0368: the publishing-limit read asks for ``config`` and tolerates its absence.
+"""The publishing-limit read asks for ``config`` and tolerates its absence.
 
 Response shapes are the ones verified live on ``graph.instagram.com/v23.0``.
 
@@ -6,6 +6,8 @@ Gherkin: tests/features/autopilot_instagram_publish.feature
   Scenario: The quota read requests the config field
   Scenario: A quota body without config falls back to the documented limit
   Scenario: An unreadable quota fails the run instead of looping forever
+
+The ``_BODY_*`` constants are live Graph v23.0 response bodies.
 """
 
 from __future__ import annotations
@@ -52,7 +54,6 @@ from tests.unit.modules.autopilot.test_instagram_publish_job import (
 
 _HOST = "graph.instagram.com"
 _LIMIT_PATH = "content_publishing_limit"
-# Live v23.0 bodies (AE-0368 evidence).
 _BODY_WITHOUT_FIELDS: dict[str, object] = {"data": [{"quota_usage": 0}]}
 _BODY_WITH_FIELDS: dict[str, object] = {
     "data": [

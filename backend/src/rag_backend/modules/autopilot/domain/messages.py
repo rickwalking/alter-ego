@@ -125,15 +125,17 @@ class ScoreSummary:
 
 @dataclass(frozen=True, kw_only=True)
 class StatusCopy:
-    """Facts a status message may quote."""
+    """Facts a status message may quote.
+
+    ``extras`` carries the Story outcome and the music nudge of a published notice;
+    ``detail`` the slides the model fix gave up on (escalations only).
+    """
 
     reason: str
     link: str
     permalink: str
     days_remaining: int | None
-    # AE-0369: the Story outcome and the music nudge of a published notice.
     extras: PostExtras | None = None
-    # AE-0401: the slides the model fix gave up on (escalations only).
     detail: str = ""
 
 
@@ -147,7 +149,7 @@ def callback_data(prefix: str, run_id: UUID) -> str:
 
 
 def review_keyboard(run_id: UUID) -> InlineKeyboard:
-    """Approve, Rework, and Reject for one run; ``🗓 Agendar`` below (AE-0404)."""
+    """Approve, Rework, and Reject for one run; ``🗓 Agendar`` below."""
     actions = (
         (BUTTON_APPROVE, CALLBACK_APPROVE_PREFIX),
         (BUTTON_REWORK, CALLBACK_REWORK_PREFIX),

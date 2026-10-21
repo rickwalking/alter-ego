@@ -1,8 +1,13 @@
-"""Langfuse trace attributes for workflow phases (AE-0390).
+"""Langfuse trace attributes for workflow phases.
 
 Every editorial phase LLM call runs inside a trace named ``workflow_<phase>``
 that carries the five metadata keys below and the three tags
 ``phase:<phase>``, ``agent:<agent_name>``, ``content:<content_type>``.
+
+The agent and content-type defaults apply when no caller scope names them: the
+HTTP editorial path has no agent of its own, and the autopilot overrides it with
+``autopilot``. Langfuse rejects propagated metadata values longer than
+``TRACE_METADATA_VALUE_MAX_CHARS``.
 """
 
 TRACE_FIELD_PROJECT_ID = "project_id"
@@ -27,7 +32,6 @@ TRACE_TAG_PHASE_TEMPLATE = "phase:{value}"
 TRACE_TAG_AGENT_TEMPLATE = "agent:{value}"
 TRACE_TAG_CONTENT_TEMPLATE = "content:{value}"
 
-# Trace/span I/O and generation naming (AE-0442).
 TRACE_STATUS_FIELD = "status"
 TRACE_OUTPUT_STATUS_COMPLETED = "completed"
 TRACE_OUTPUT_STATUS_ERROR = "error"
@@ -39,13 +43,10 @@ TRACE_IO_VALUE_MAX_CHARS = 2000
 TRACE_INPUT_TOPIC = "topic"
 TRACE_OUTPUT_UPDATED_KEYS = "updated_keys"
 
-# Defaults when no caller scope names them. The HTTP editorial path has no
-# agent of its own; the autopilot overrides it with ``autopilot``.
 TRACE_AGENT_EDITORIAL_WORKFLOW = "editorial_workflow"
 TRACE_CONTENT_TYPE_CAROUSEL = "carousel"
 TRACE_VALUE_UNKNOWN = "unknown"
 
-# Langfuse rejects propagated metadata values longer than this.
 TRACE_METADATA_VALUE_MAX_CHARS = 200
 
 __all__ = [

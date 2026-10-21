@@ -1,4 +1,8 @@
-"""Domain errors for the autopilot bounded context."""
+"""Domain errors for the autopilot bounded context.
+
+``InvalidAutopilotTransition`` is the alias the ticket and the Gherkin use for
+``InvalidAutopilotTransitionError``.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ from rag_backend.modules.autopilot.notify_constants import (
 class InvalidAutopilotTransitionError(Exception):
     """The requested state pair is not in the architecture §4 table.
 
-    Raised as ``InvalidAutopilotTransition`` (AE-0350). The class carries the
+    Raised as ``InvalidAutopilotTransition``. The class carries the
     ``Error`` suffix the linter requires; the alias is the name the ticket
     and the feature file use.
     """
@@ -39,7 +43,6 @@ class InvalidAutopilotTransitionError(Exception):
         return self.pair.new
 
 
-# Ticket and Gherkin name for InvalidAutopilotTransitionError.
 InvalidAutopilotTransition = InvalidAutopilotTransitionError
 
 

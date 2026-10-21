@@ -36,23 +36,23 @@ def _harden(value: str) -> str:
 def sanitize_llm_input(value: str) -> str:
     """Strip injection-prone characters and patterns from text fed to an LLM.
 
-    AE-0413: this used to lowercase the whole text (the patterns were matched
+    this used to lowercase the whole text (the patterns were matched
     on a lowercased copy). Topic, brief, audience and reviewer feedback reached
     the outline and drafting prompts in lowercase, and the model mirrored it:
     about 30 sentence-case blockers per run. The anti-injection intent is kept
     (``< > ( )`` stripped, injection phrases removed case-insensitively,
     length capped); only the case is preserved now. Same hardening as
-    :func:`sanitize_display_input` (AE-0289).
+    :func:`sanitize_display_input`.
     """
     return _harden(value)
 
 
 def sanitize_display_input(value: str) -> str:
-    """Sanitize user-edited FINAL published copy while PRESERVING case (AE-0289).
+    """Sanitize user-edited FINAL published copy while PRESERVING case.
 
     Edited carousel slide copy is final display content; lowercasing it
     corrupted headings, acronyms and proper nouns and broke sentence-case
-    validation. Since AE-0413 :func:`sanitize_llm_input` preserves case too, so
+    validation. :func:`sanitize_llm_input` now preserves case too, so
     both apply the same hardening: strip ``< > ( )`` and injection patterns
     (case-insensitively) and cap the length.
     """

@@ -188,7 +188,11 @@ class TestStreamChatResponse:
     async def test_successful_streaming_yields_tokens_and_complete(
         self, mock_db, mock_conversation
     ):
-        """Given valid agent, when streaming, then yields tokens and complete event."""
+        """Given valid agent, when streaming, then yields tokens and complete event.
+
+        Keep-alive pings are skipped; both the user and the assistant message are
+        persisted.
+        """
         conv_id = mock_conversation.id
         agent = MockAgent(
             chunks=[
@@ -224,30 +228,29 @@ class TestStreamChatResponse:
                     agent_builder=lambda: agent,
                 ),
             ):
-                # Skip keep-alive pings
                 if not event.startswith(": ping"):
                     events.append(event)
 
-        # Should have token events + complete event
         parsed_events = [_parse_sse_event(e) for e in events]
         types = [e["type"] for e in parsed_events]
         assert SSE_EVENT_TOKEN in types
         assert SSE_EVENT_COMPLETE in types
 
-        # Verify user message was persisted
         mock_msg_repo.create.assert_called()
         call_args = mock_msg_repo.create.call_args_list[0][0][0]
         assert call_args.role == MessageRole.USER
         assert call_args.content == "Hi"
 
-        # Verify assistant message was persisted
         assistant_call = mock_msg_repo.create.call_args_list[1][0][0]
         assert assistant_call.role == MessageRole.ASSISTANT
         assert assistant_call.content == "Hello world"
 
     @pytest.mark.asyncio
     async def test_agent_error_yields_error_event(self, mock_db, mock_conversation):
-        """Given agent that raises, when streaming, then yields error event."""
+        """Given agent that raises, when streaming, then yields error event.
+
+        Only the user message is persisted; the assistant message is not.
+        """
         agent = MockAgent(error=RuntimeError("Agent failed"))
 
         with (
@@ -285,8 +288,7 @@ class TestStreamChatResponse:
         error_event = next(e for e in parsed_events if e["type"] == SSE_EVENT_ERROR)
         assert "Agent failed" in error_event["content"]
 
-        # Assistant message should NOT be persisted on error
-        assert mock_msg_repo.create.call_count == 1  # Only user message
+        assert mock_msg_repo.create.call_count == 1
 
     @pytest.mark.asyncio
     async def test_tool_result_sanitization(self, mock_db, mock_conversation):
@@ -378,7 +380,6 @@ class TestHelperFunctions:
 
         task = asyncio.create_task(_keep_alive_task(queue, 0.05, stop_event))
 
-        # Wait for at least one ping
         await asyncio.sleep(0.08)
         stop_event.set()
 
@@ -403,5 +404,4 @@ class TestHelperFunctions:
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-        # Should not have any pings since we stopped immediately
         assert queue.empty()

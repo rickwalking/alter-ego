@@ -1,9 +1,13 @@
 """add palettes catalog table + carousel theme widening + theme_snapshot
 
-Creates the global custom-palette catalog (AE-0269), widens
+Creates the global custom-palette catalog, widens
 ``carousel_projects.theme`` from varchar(30) to varchar(64) so it can hold a
 36-char custom-palette UUID reference, and adds the ``theme_snapshot`` JSONB
 column that freezes a carousel's resolved palette at generation (ADR-0019 D9).
+
+Active palette names are unique (archived rows are excluded so a name frees up
+on archive); slugs are globally unique, archived rows included. Root theme keys
+and ``"auto"`` still fit the widened ``theme`` column.
 
 All changes are additive / widening (no data rewrite, no narrowing), so the
 upgrade is safe on the drifted prod DB. Recovery is roll-forward.
@@ -54,8 +58,6 @@ def upgrade() -> None:
             server_default=sa.func.now(),
         ),
     )
-    # Active names unique (archived excluded so a name frees up on archive);
-    # slugs globally unique (incl. archived).
     op.create_index(
         "uq_palettes_name_active",
         "palettes",
@@ -65,8 +67,6 @@ def upgrade() -> None:
     )
     op.create_index("uq_palettes_slug", "palettes", ["slug"], unique=True)
 
-    # Widen theme to hold a 36-char custom-palette UUID reference (AE-0268 left
-    # it varchar(30); root keys + "auto" still fit). Widening only — no rewrite.
     op.alter_column(
         "carousel_projects",
         "theme",
@@ -75,7 +75,6 @@ def upgrade() -> None:
         existing_nullable=False,
     )
 
-    # Snapshot of the resolved palette frozen at generation (D9).
     op.add_column(
         "carousel_projects",
         sa.Column("theme_snapshot", sa.JSON(), nullable=True),

@@ -3,6 +3,12 @@
 Lifted during the LangGraph refactor so workflow nodes and refinement
 service share the same data shapes without circular imports. Pure-data / pure-function module — no side effects,
 no repository or LLM dependencies.
+
+Feature cards are capped at 4 because the ``.feature-grid`` CSS is tuned for 2-4 items
+and 5 or more overflow the slide footer. A carousel holds at most 10 slides, Instagram's
+limit, so the POV contract (8-10 slides) fits; the fixed 7-slide decks keep
+``LEGACY_SLIDE_COUNT``. ``IMAGE_PRESET_DISPLAY`` gives the preset name shown in the
+phase-progress label during image generation.
 """
 
 from __future__ import annotations
@@ -16,18 +22,11 @@ from rag_backend.application.services.carousel.presentation_copy_repair import (
 )
 from rag_backend.domain.models import CarouselSlide
 
-# Hard cap on closing/content slide feature cards. The .feature-grid CSS
-# is tuned for 2-4 items; 5+ overflow past the slide footer.
 MAX_FEATURE_ITEMS = 4
 
-# Maximum number of slides in a carousel (includes intro, summary, content,
-# closing, and CTA). AE-0374: 10, Instagram's carousel limit, so the POV
-# contract (8-10 slides) fits. The fixed 7-slide decks keep LEGACY_SLIDE_COUNT.
 MAX_SLIDES = 10
 LEGACY_SLIDE_COUNT = 7
 
-# Fields copied from SlideData into the persisted `extras` JSON. Listed
-# here so `pack_extras` stays a one-liner loop instead of four branches.
 EXTRAS_FIELDS: tuple[str, ...] = (
     "features",
     "stats",
@@ -39,8 +38,6 @@ EXTRAS_FIELDS: tuple[str, ...] = (
     "long_form_notes",
 )
 
-# (image_model, image_style) → human-readable preset name, surfaced in
-# the phase-progress label during image gen.
 IMAGE_PRESET_DISPLAY: dict[tuple[str, str], str] = {
     ("openai", "comic_neon"): "OpenAI Comic Neon",
     ("openai", "cinematic"): "OpenAI Cinematic Photoreal",
@@ -68,34 +65,29 @@ class SlideDict(TypedDict, total=False):
 
 @dataclass
 class SlideData:
-    """Structured slide data from content synthesis."""
+    """Structured slide data from content synthesis.
+
+    ``features`` are checklist items for closing and feature slides (``{"icon", "title",
+    "body"}``); ``stats`` are big-number cards in a 3-column grid (``{"value", "label",
+    "detail"}``); ``insight`` is one quote with attribution in an accent-bordered card.
+    ``translation_en`` is the EN counterpart of heading, body, features, stats and
+    insight; None means EN renders fall back to PT. ``summary_points`` are the three
+    snapshot cards of the summary slide, ``tldr_strip`` is the one-sentence strip under
+    the intro subtitle, and ``long_form_notes`` are extended notes for the blog,
+    separate from the constrained slide copy.
+    """
 
     slide_number: int
     slide_type: str
     heading: str
     body: str
     image_prompt: str | None = None
-    # Structured checklist items for closing/feature slides. Each item is
-    # `{"icon": "📝", "title": "...", "body": "..."}`. None for plain-prose
-    # slides (intro, CTA, most content slides).
     features: list[dict[str, str]] | None = None
-    # Big-number stat cards rendered as a 3-column grid. Each item is
-    # `{"value": "80.2%", "label": "SWE-Bench Verified", "detail": "(era 68.9%)"}`.
     stats: list[dict[str, str]] | None = None
-    # A single quoted insight with attribution rendered as an accent-
-    # bordered card. Shape: `{"quote": "...", "attribution": "..."}`.
     insight: dict[str, str] | None = None
-    # Parallel EN counterpart to (heading, body, features, stats, insight)
-    # for bilingual rendering. None = no translation provided; we fall
-    # back to PT when rendering EN slides.
     translation_en: dict[str, object] | None = None
-    # Three snapshot cards for the summary slide (slide 2). Each item is
-    # `{"icon": "🎯", "title": "...", "body": "..."}`. None for non-summary slides.
     summary_points: list[dict[str, str]] | None = None
-    # One-sentence TLDR strip rendered on the intro slide (slide 1) below
-    # the subtitle. None when the intro has no strip.
     tldr_strip: str | None = None
-    # Extended notes for blog composition, separate from constrained slide copy.
     long_form_notes: str | None = None
 
 
@@ -206,6 +198,10 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
     For 'pt' we return the originals untouched. For 'en' we swap heading,
     body, features, stats, insight, summary_points, tldr_strip from
     `translation_en` when present.
+
+    The ``translation_en`` payload is the EN render source, so the EN sentence-case
+    repair is applied here: all-lowercase EN copy cannot reach the renderer even when
+    the localized-slides repair path was bypassed.
     """
     if language == "pt":
         return slides
@@ -221,10 +217,6 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
         en_insight = en.get("insight") if isinstance(en, dict) else None
         en_summary_points = en.get("summary_points") if isinstance(en, dict) else None
         en_tldr_strip = en.get("tldr_strip") if isinstance(en, dict) else None
-        # AE-0211: the `translation_en` payload is the EN render source. Apply
-        # the deterministic EN sentence-case repair here so all-lowercase EN
-        # headings/bodies cannot reach the renderer even when the localized_slides
-        # repair path was bypassed (dual-representation gap).
         en_heading = repair_text_sentence_case_en(str(en.get("heading") or sd.heading))
         en_body = repair_text_sentence_case_en(str(en.get("body") or sd.body))
         swapped.append(

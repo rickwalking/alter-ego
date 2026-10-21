@@ -1,7 +1,11 @@
-"""Deterministic "Ponto de Vista" text checks (AE-0375, growth plan 16.3 C).
+"""Deterministic "Ponto de Vista" text checks (growth plan 16.3 C).
 
 Pure functions over visible copy: the hook word count, first-person presence,
 and whether the thesis shows up on slides 1-2. They never call a model.
+
+First-person markers are PT singular forms, matched as whole words with accents folded
+(the format asks for at least 3 first-person slides). Thesis stopwords are words too
+common (folded, at least 4 letters) to show the thesis is present.
 """
 
 from __future__ import annotations
@@ -12,8 +16,6 @@ from collections.abc import Iterable
 
 from rag_backend.domain.constants.content_mode import HOOK_MAX_WORDS
 
-# PT first-person singular markers (growth plan 16.3 C: ">=3 slides in first
-# person"). Whole words, accents folded.
 FIRST_PERSON_MARKERS: frozenset[str] = frozenset({
     "eu",
     "meu",
@@ -24,7 +26,6 @@ FIRST_PERSON_MARKERS: frozenset[str] = frozenset({
     "me",
 })
 MIN_FIRST_PERSON_SLIDES = 3
-# Words too common to show the thesis is present (folded, >= 4 letters).
 THESIS_STOPWORDS: frozenset[str] = frozenset({
     "para",
     "como",

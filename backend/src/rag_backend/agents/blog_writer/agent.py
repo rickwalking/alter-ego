@@ -1,4 +1,4 @@
-"""BlogWriterAgent — the blog writer façade (AE-0425, ADR-0025, ADR-0016).
+"""BlogWriterAgent — the blog writer façade (ADR-0025, ADR-0016).
 
 Implements the ``BlogArticleWriter`` port. Model routing (ADR-0014):
 

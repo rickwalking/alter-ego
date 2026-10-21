@@ -1,4 +1,4 @@
-"""HTTP bundle for GET /api/autopilot/signals (AE-0352).
+"""HTTP bundle for GET /api/autopilot/signals.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: Bundle combines all free sources
@@ -142,11 +142,11 @@ async def _client(service: SignalsService) -> AsyncIterator[AsyncClient]:
 async def test_endpoint_returns_every_source_without_duplicate_urls(
     configured_key: None,
 ) -> None:
+    """The second hn URL repeats the first source's URL and must be dropped."""
     del configured_key
     collectors = tuple(
         _Collector(source, f"https://example.com/{source}") for source in _SOURCES
     )
-    # The second hn URL repeats the first source's URL and must be dropped.
     repeated = (
         *collectors[:1],
         _Collector(SOURCE_HN, "https://example.com/x_search"),

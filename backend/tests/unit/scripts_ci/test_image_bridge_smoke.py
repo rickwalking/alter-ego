@@ -1,4 +1,4 @@
-"""Smoke CLI for the image bridge (AE-0393, rollout step 3).
+"""Smoke CLI for the image bridge (rollout step 3).
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Grok Bot returns an image (one job end to end, reported)

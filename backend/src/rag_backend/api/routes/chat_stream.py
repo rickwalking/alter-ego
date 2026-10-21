@@ -12,14 +12,14 @@ module's ``ConversationStreamHandler`` (resolved via ``get_conversation_stream_h
 at the edge). Agent construction routes through the request-scoped
 ``ChatAgentFactory`` adapter and the module-level builder seam below, so the SSE
 event types/order, ``id:``/``data:`` framing, keep-alive cadence, ``Last-Event-ID``
-resume, the ``metadata.project_id`` AlterEgo/RAG routing, and the AE-0093
-knowledge-facade wiring stay byte-identical (AE-0102). The persist/commit of chat
+resume, the ``metadata.project_id`` AlterEgo/RAG routing, and the
+knowledge-facade wiring stay byte-identical. The persist/commit of chat
 messages is owned by the streaming service the runner wraps; this route never
 calls ``db.commit()``.
 
 The module-level ``build_alter_ego_agent`` / ``build_rag_agent`` names are the
 ACTUAL functions the streaming path calls (via the route-local agent builders),
-so the AE-0097 safety net's monkeypatch keeps overriding agent construction
+so the safety net's monkeypatch keeps overriding agent construction
 without a live LLM/Pinecone.
 """
 
@@ -82,7 +82,7 @@ class _AlterEgoAgentBuilder:
 
     Reuses the DI-built factory's bound session + container and routes
     construction through THIS module's ``build_alter_ego_agent`` name so the
-    AE-0097 safety net (which monkeypatches it) keeps overriding agent
+    safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM — the knowledge-facade wiring stays identical.
     """
 

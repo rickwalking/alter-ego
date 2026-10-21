@@ -37,7 +37,7 @@ from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
-from rag_backend.infrastructure.database.palette_repository import (  # integrity-ok: AE-0269 human-approved app->infra edge (image pipeline already builds repos inline here; baseline 61->62)
+from rag_backend.infrastructure.database.palette_repository import (  # integrity-ok: human-approved app->infra edge (image pipeline already builds repos inline here; baseline 61->62)
     PostgresPaletteRepository,
 )
 
@@ -146,7 +146,7 @@ async def _ensure_theme_snapshot(
     UUID themes REQUIRE this (the pure render-path resolver cannot look a UUID
     up); it also freezes AUTO so later catalog changes can't alter the carousel.
     The ``palette_repository`` import here is the one reviewed application->infra
-    edge for AE-0269 (registered in the AE-0082 baseline) — the carousel image
+    edge (registered in the import baseline) — the carousel image
     pipeline already constructs its repos inline at this same point.
     """
     if project.theme_snapshot is not None:
@@ -163,7 +163,13 @@ async def generate_carousel_images(
     db: AsyncSession,
     ctx: CarouselImageGenerationContext,
 ) -> list[str]:
-    """Generate hero images and return their filesystem paths."""
+    """Generate hero images and return their filesystem paths.
+
+    Editorial owns the workflow phase_progress write and SSE: the presentation image
+    node reports progress through the callback instead of writing workflow state. The
+    settings-backed provider rate-limit controls are injected here so the image node
+    stays free of infrastructure imports.
+    """
     repo = PostgresCarouselRepository(session=db)
     project = await repo.get_project_by_id(UUID(ctx.project_id))
     if project is None or not ctx.slides:
@@ -182,13 +188,7 @@ async def generate_carousel_images(
             output_dir=output_dir,
             repo=repo,
             image_registry=ctx.image_registry,
-            # AE-0121: editorial owns the workflow ``phase_progress`` write + SSE;
-            # the presentation image node reports progress through this callback
-            # instead of writing workflow state itself.
             progress_port=EditorialProgressReporter(repo, project),
-            # AE-0208: inject the settings-backed provider-rate-limit controls
-            # here (infrastructure-aware caller) so the image node stays free of
-            # infrastructure imports.
             concurrency=settings.carousel_image_concurrency,
             max_attempts=settings.carousel_image_max_attempts,
         )
@@ -201,6 +201,10 @@ async def _collect_generated_image_paths(
     project_id: UUID,
     output_dir: Path,
 ) -> list[str]:
+    """List the generated slide images in numeric slide order.
+
+    Numeric order makes slide_10 sort after slide_9, not after slide_1.
+    """
     refreshed = await repo.get_slides_by_project(project_id)
     asset_paths = [
         str(slide.image_path)
@@ -212,7 +216,6 @@ async def _collect_generated_image_paths(
     images_dir = output_dir / "images"
     if not images_dir.is_dir():
         return []
-    # AE-0374: numeric order, so slide_10 sorts after slide_9 (not after slide_1).
     return [
         str(path)
         for path in sorted(images_dir.glob("slide_*.jpg"), key=_slide_file_number)

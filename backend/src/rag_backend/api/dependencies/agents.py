@@ -128,7 +128,7 @@ def build_agent_for_conversation(
 def _build_knowledge_search(db: AsyncSession, container: Container) -> KnowledgeService:
     """Build the request-scoped knowledge facade for agent retrieval.
 
-    Agents resolve hybrid search through the module's public facade (AE-0093),
+    Agents resolve hybrid search through the module's public facade,
     matching ``get_knowledge_service`` so the agent search tool and
     ``/api/search`` share the same search path. The facade is search-only here
     (no write use case runs), so its repository/pipeline/UoW are constructed but
@@ -197,8 +197,11 @@ async def _start_editorial_workflow_for_rag(
     *,
     ctx: WorkflowContext,
 ) -> str:
-    # AE-0317: URL scraping now happens inside the workflow service's research
-    # enrichment (single guarded choke point) — no route-edge scraping here.
+    """Start the editorial workflow for a RAG chat request.
+
+    URL scraping happens inside the workflow service's research enrichment (a single
+    guarded choke point), never at the route edge.
+    """
     sources = _sanitize_url_sources(request.source_urls)
     state = await ctx.workflow_service.start_workflow(
         project_id=project_id,

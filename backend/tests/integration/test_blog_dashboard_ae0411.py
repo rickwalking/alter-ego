@@ -1,6 +1,8 @@
-"""Integration tests for the blog dashboard fixes (AE-0411).
+"""Integration tests for the blog dashboard fixes.
 
 Feature: blog_dashboard_ae0411.feature
+
+Content is a blog.v2 document (the only accepted write shape).
 """
 
 from collections.abc import AsyncIterator
@@ -22,13 +24,12 @@ from tests.integration.conftest import auth_headers_for, create_test_user
 
 BLOG_POSTS_URL = "/api/blog-posts"
 UNTITLED = "Untitled draft"
-# AE-0423: content is a blog.v2 document (the only accepted write shape).
 CAROUSEL_BODY = v2_content("Long body")
 
 
 @pytest.fixture
 async def admin_client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
-    """Admin-authenticated client on a per-test SQLite file (see AE-0390)."""
+    """Admin-authenticated client on a per-test SQLite file."""
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config

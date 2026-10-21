@@ -1,4 +1,4 @@
-"""Domain model of an image bridge job (AE-0393).
+"""Domain model of an image bridge job.
 
 Private to the module. A job is one image request sent to the Grok Bot. It
 is ``pending`` until the callback records an image (``succeeded``) or an

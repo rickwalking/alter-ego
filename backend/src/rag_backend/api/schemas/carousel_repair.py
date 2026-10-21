@@ -1,4 +1,4 @@
-"""Response schemas for the deterministic carousel repair endpoint (AE-0311)."""
+"""Response schemas for the deterministic carousel repair endpoint."""
 
 from __future__ import annotations
 

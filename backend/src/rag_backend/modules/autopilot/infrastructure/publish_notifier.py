@@ -1,6 +1,6 @@
 """Persist a publish notice on the transactional outbox.
 
-AE-0355 delivers ``content.autopilot.*`` to Telegram. This adapter only
+Delivers ``content.autopilot.*`` to Telegram. This adapter only
 records the notice in the same session as the state change.
 """
 

@@ -1,4 +1,4 @@
-"""HTTP and persistence behavior for owner webhook actions (AE-0356).
+"""HTTP and persistence behavior for owner webhook actions.
 
 Gherkin: tests/features/autopilot_owner_actions.feature
 """

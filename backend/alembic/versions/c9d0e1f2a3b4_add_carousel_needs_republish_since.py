@@ -1,9 +1,9 @@
-"""add carousel needs_republish_since marker (AE-0314)
+"""add carousel needs_republish_since marker
 
 Adds one nullable timestamp column to ``carousel_projects``:
 
 - ``needs_republish_since`` — stamped in the SAME transaction as a
-  post-completion slide-text edit (AE-0314). NULL means "no rebuild owed".
+  post-completion slide-text edit. NULL means "no rebuild owed".
   A non-NULL value older than a few minutes is swept by the workflow
   watchdog, which republishes the carousel from its persisted slides and
   clears the marker — the server-guaranteed republish (cold-critic r6: a

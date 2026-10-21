@@ -1,4 +1,4 @@
-"""Chat-agent factory port for the conversation bounded context (AE-0100).
+"""Chat-agent factory port for the conversation bounded context.
 
 The **agent-factory port** is the boundary-safe contract the chat routes and the
 streaming service depend on to obtain the conversation's agent: a single
@@ -31,7 +31,7 @@ class ChatAgentFactory(Protocol):
 
     Implemented by the concrete adapter that wraps the existing
     ``build_agent_for_conversation`` (which itself routes on
-    ``metadata.project_id`` and wires the AE-0093 knowledge facade). Inbound
+    ``metadata.project_id`` and wires the knowledge facade). Inbound
     adapters (the chat routes, the streaming service) depend on this port so they
     never reach past the module to construct agents themselves, and so the
     routing + knowledge-facade wiring stay identical (no behavior change).

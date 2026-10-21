@@ -1,8 +1,8 @@
-"""Invariants for the palette registry single source of truth (AE-0266).
+"""Invariants for the palette registry single source of truth.
 
 Gherkin: tests/features/carousel_design_refinement.feature
 
-These guards make the bug classes from AE-0264 unrepresentable: enum/registry
+These guards make these bug classes unrepresentable: enum/registry
 drift, a light palette in the AUTO (dark) rotation pool, and desynced derived
 lookup maps.
 """
@@ -34,9 +34,9 @@ class TestRegistryInvariants:
         assert len(keys) == len(set(keys))
 
     def test_enum_matches_registry_keys(self) -> None:
-        # The CarouselTheme enum is hand-written; this guard fails CI if a
-        # palette is added to the registry without its enum member (or vice
-        # versa) — the AE-0264 drift class.
+        """The CarouselTheme enum is hand-written; this guard fails CI if a palette is
+        added to the registry without its enum member, or vice versa.
+        """
         enum_keys = {t.value for t in CarouselTheme} - {_AUTO}
         registry_keys = {
             d.key for d in PALETTE_REGISTRY if d.kind is not PaletteKind.BRAND

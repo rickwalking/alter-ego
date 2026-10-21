@@ -24,7 +24,6 @@ _TRANSLATION_EN_FIELD = "translation_en"
 _FEATURES_FIELD = "features"
 _CONTENT_KIND_FIELD = "content_kind"
 
-# Structural signature constants
 _STRUCTURAL_SIG_SUMMARY_POINTS = "summary_points"
 _STRUCTURAL_SIG_ACTIONS = "actions"
 _STRUCTURAL_SIG_INTRO_TLDR = "intro:tldr"

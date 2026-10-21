@@ -1,4 +1,4 @@
-"""Helpers of the blog generation routes (AE-0425, ADR-0025).
+"""Helpers of the blog generation routes (ADR-0025).
 
 Loads the raw material of a carousel (persisted slides + the workflow
 checkpoint's research and outline), resolves the persona and the section count
@@ -99,14 +99,17 @@ class CarouselLoad:
 
 @dataclass(frozen=True)
 class PreparedRun:
-    """A brief ready to run, plus the row facts the draft needs."""
+    """A brief ready to run, plus the row facts the draft needs.
+
+    retitle is set for a standalone post, which takes the writer's title; a carousel
+    post keeps its own. titles and image_slots drive an images-only retry (brief is
+    None).
+    """
 
     brief: WriterBrief | None
     title: str
     warnings: tuple[str, ...]
-    # A standalone post takes the writer's title; a carousel post keeps its own.
     retitle: bool = False
-    # Images-only retry (``brief is None``): the titles and the empty slots.
     titles: ImageTitles | None = None
     image_slots: int = 0
 
@@ -200,7 +203,7 @@ def prepare_images_only(post: BlogPostRow) -> PreparedRun:
 def has_article(content: object) -> bool:
     """True when the stored ``blog.v2`` document has a non-empty section.
 
-    Strict parse (no read fail-safe, which AE-0428 removes): a row that does
+    Strict parse (no read fail-safe): a row that does
     not parse has no article to keep, so the retry runs the full writer (which
     replaces it) instead of failing with a 500.
     """

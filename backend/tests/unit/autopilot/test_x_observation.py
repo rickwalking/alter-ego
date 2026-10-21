@@ -1,4 +1,4 @@
-"""Pure classification of Grok Bot X observations (AE-0360).
+"""Pure classification of Grok Bot X observations.
 
 Gherkin: tests/features/autopilot_grok_bot_scout.feature
 """
@@ -91,7 +91,7 @@ def test_profile_url_is_rejected() -> None:
 
 
 def test_query_string_is_not_a_status_url() -> None:
-    """The AE-0352 regex does not allow a query."""
+    """The status-URL regex does not allow a query."""
     moment = _moment(timedelta(hours=1))
     item = classify_post(_post(_url(moment) + "?s=1"), _AS_OF)
     assert item.reason == REASON_NOT_STATUS_URL

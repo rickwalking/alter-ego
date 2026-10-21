@@ -3,7 +3,7 @@
 **This file is the module's public API.** Cross-module code SHALL import only
 the symbols re-exported here (also re-exported from the package ``__init__``);
 everything else under ``rag_backend.modules.knowledge.*`` is private to the
-module. The dedicated Import Linter facade contract is added in AE-0095.
+module. The dedicated Import Linter facade contract is added later.
 
 The facade exposes:
 

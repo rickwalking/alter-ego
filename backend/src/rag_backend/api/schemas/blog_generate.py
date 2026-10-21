@@ -1,4 +1,4 @@
-"""Schemas of the blog generation entry points (AE-0425, ADR-0025)."""
+"""Schemas of the blog generation entry points (ADR-0025)."""
 
 from __future__ import annotations
 
@@ -15,22 +15,27 @@ MAX_SOURCE_URLS = 10
 
 
 class BlogFromCarouselRequest(BaseModel):
-    """``POST /blog-posts/from-carousel``: always creates a draft."""
+    """``POST /blog-posts/from-carousel``: always creates a draft.
+
+    The document is always PT canonical plus an EN translation; language records which
+    one the owner asked to edit first.
+    """
 
     project_id: UUID
     persona_id: UUID | None = None
-    # The document is always PT canonical + an EN translation; ``language``
-    # records which one the owner asked to edit first.
     language: BlogLanguage = "pt"
 
 
 class BlogGenerateRequest(BaseModel):
-    """``POST /blog-posts/generate``: a standalone draft from a topic."""
+    """``POST /blog-posts/generate``: a standalone draft from a topic.
+
+    source_urls are references for the writer and are never fetched by the backend (no
+    SSRF surface).
+    """
 
     topic: str = Field(..., min_length=TOPIC_MIN_CHARS, max_length=TOPIC_MAX_CHARS)
     persona_id: UUID | None = None
     language: BlogLanguage = "pt"
-    # References for the writer; never fetched by the backend (no SSRF).
     source_urls: list[HttpUrl] = Field(default_factory=list, max_length=MAX_SOURCE_URLS)
 
 

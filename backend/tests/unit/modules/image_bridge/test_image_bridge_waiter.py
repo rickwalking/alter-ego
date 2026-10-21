@@ -1,4 +1,4 @@
-"""``GrokBotImageService``: job, webhook, wait, normalize (AE-0393).
+"""``GrokBotImageService``: job, webhook, wait, normalize.
 
 Gherkin: tests/features/image_bridge.feature
 """
@@ -221,8 +221,8 @@ class _RacingRepository(_DelegatingRepository):
     expired_calls: list[UUID] = field(default_factory=list)
 
     async def expire(self, deadline: JobDeadline) -> bool:
+        """Simulates the other worker recording the image just before the deadline."""
         self.expired_calls.append(deadline.job_id)
-        # The other worker recorded the image just before the deadline.
         before_deadline = self.clock.now().replace(year=2000)
         await self.inner.succeed(
             JobSuccess(deadline.job_id, png_bytes(), before_deadline)

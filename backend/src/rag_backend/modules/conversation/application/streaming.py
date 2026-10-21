@@ -1,4 +1,4 @@
-"""Streaming chat use case for the conversation bounded context (AE-0102).
+"""Streaming chat use case for the conversation bounded context.
 
 Private to the module — the public facade re-exports the streaming handler and
 its command/ports; cross-module code never imports this path directly. The
@@ -6,7 +6,7 @@ streaming handler is the use-case entry point the thin SSE route adapters
 (``chat_stream.py``) delegate to so that agent construction and the SSE
 orchestration go through one module contract.
 
-Behavior-preserving (AE-0102): the handler does NOT reimplement the SSE wire. It
+Behavior-preserving: the handler does NOT reimplement the SSE wire. It
 delegates to an injected :class:`StreamChatRunner` port (the concrete adapter
 wraps the existing ``stream_chat_response`` service), so the SSE event
 types/order (token/sources/complete/error/tool_result), the ``id:``/``data:``
@@ -14,12 +14,12 @@ framing, the keep-alive ping cadence, ``Last-Event-ID`` resume, and the
 persistence-then-stream order stay byte-identical to the legacy path. The agent
 is built through a :class:`ChatAgentBuilder` (bound at the edge to the
 ``ChatAgentFactory`` adapter + the monkeypatch-friendly builder seam), so the
-``metadata.project_id`` AlterEgo/RAG routing and the AE-0093 knowledge-facade
+``metadata.project_id`` AlterEgo/RAG routing and the knowledge-facade
 wiring stay identical.
 
 The application layer imports only ports, framework-free types, and the agent
 return types — never a concrete Postgres repository, the SSE service's
-``AsyncSession``-bound config, or the global container (AE-0102 AC). The
+``AsyncSession``-bound config, or the global container. The
 request-scoped session is bound into the concrete runner adapter at the inbound
 edge (see ``infrastructure/stream_runner.py``).
 """
@@ -54,7 +54,7 @@ class ChatAgentBuilder(Protocol):
 
     Implemented at the inbound edge by a route-local builder that reuses the
     ``ChatAgentFactory`` adapter's bound session/container and routes agent
-    construction through the module-level builder seam (so the AE-0097 safety net
+    construction through the module-level builder seam (so the safety net
     keeps overriding agent construction). The handler stays free of any
     framework or container reference.
     """

@@ -1,8 +1,8 @@
-""" "Ponto de Vista" outline and hook candidates for ``OutlineAgent`` (AE-0375).
+""" "Ponto de Vista" outline and hook candidates for ``OutlineAgent``.
 
 A mixin so ``outline_agent.py`` stays small and the editorial generators keep
 importing a single agent module. Prompts live in ``carousel_pov/v1`` (and, for
-``pov_news``, ``carousel_pov_news/v1``, AE-0406: ``PovThesis.prompt_domain``); the model
+``pov_news``, ``carousel_pov_news/v1``, by ``PovThesis.prompt_domain``); the model
 may sharpen the owner's thesis, never invent it. Roles are NOT trusted from the
 model: the caller stamps them by position from the contract afterwards.
 """
@@ -96,7 +96,11 @@ class PovOutlineMixin:
     async def generate_pov_outline(
         self: _AgentState, request: PovOutlineRequest
     ) -> list[dict[str, object]]:
-        """Plan the POV deck in the contract's role order."""
+        """Plan the POV deck in the contract's role order.
+
+        persona_context is the project's persona, explicitly empty only when the project
+        has none.
+        """
         prompt, _ = render_prompt(
             request.pov.prompt_domain,
             POV_PROMPT_OUTLINE,
@@ -111,8 +115,6 @@ class PovOutlineMixin:
                 "slide_count": len(request.roles),
                 "presentation_policy_context": request.policy_context,
                 "phase": PHASE_OUTLINE,
-                # PR #106 review: the project's persona (explicitly empty
-                # only when the project has none).
                 "persona_context": pov_persona_context(request.persona),
                 "revision_notes": "",
             },
@@ -153,7 +155,7 @@ class PovOutlineMixin:
     async def radar_hook_candidates(
         self: _AgentState, request: RadarHookRequest
     ) -> list[str]:
-        """AE-0376: five Radar IA hooks from the brief and the sources only."""
+        """Five Radar IA hooks from the brief and the sources only."""
         prompt, _ = render_prompt(
             RADAR_PROMPT_DOMAIN,
             RADAR_PROMPT_HOOK,

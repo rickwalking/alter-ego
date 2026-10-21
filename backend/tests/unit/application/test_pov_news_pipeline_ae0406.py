@@ -1,4 +1,4 @@
-"""The ``pov_news`` pipeline: brief, prompts, quote cards, render, caption (AE-0406).
+"""The ``pov_news`` pipeline: brief, prompts, quote cards, render, caption.
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """

@@ -52,7 +52,6 @@ from rag_backend.domain.constants.presentation_policy import (
 )
 from rag_backend.infrastructure.config.settings import get_settings
 
-# Workflow state key constants
 _STATE_OUTLINE = "outline"
 _STATE_SLIDE_DRAFTS = "slide_drafts"
 _STATE_CURRENT_PHASE = "current_phase"

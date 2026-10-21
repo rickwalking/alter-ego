@@ -1,4 +1,4 @@
-"""Quote cards, the caption footer and stored quote rows (AE-0406, ADR-0023).
+"""Quote cards, the caption footer and stored quote rows (ADR-0023).
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """
@@ -64,6 +64,9 @@ def test_mode_predicates() -> None:
 
 # Scenario: A quote is placed verbatim by id, at most twice
 def test_cards_are_placed_on_point_and_twist_at_most_twice() -> None:
+    """Slot 1 is the hook (not a quote role), slot 5 would reuse q1, slot 7 is past the
+    two-card cap and slot 8 is an unknown id.
+    """
     drafts = [
         _draft(1, "hook", "q1"),
         _draft(4, "point", "q1"),
@@ -74,12 +77,12 @@ def test_cards_are_placed_on_point_and_twist_at_most_twice() -> None:
     ]
     placed = place_quote_cards(drafts, (_Q1, _Q2))
     cards = {d["slide_index"]: d.get("insight") for d in placed}
-    assert cards[1] is None  # hook is not a quote role
+    assert cards[1] is None
     assert cards[4] == quote_card(_Q1, _Q1.text_pt)
-    assert cards[5] is None  # q1 already used
+    assert cards[5] is None
     assert cards[6] == quote_card(_Q2, _Q2.text_pt)
-    assert cards[7] is None  # two cards already
-    assert cards[8] is None  # unknown id
+    assert cards[7] is None
+    assert cards[8] is None
     assert all("quote_id" not in d for d in placed)
 
 
@@ -101,6 +104,7 @@ def test_card_shape() -> None:
 
 
 def test_en_cards_follow_the_placed_pt_cards() -> None:
+    """The input translations are left untouched."""
     placed = place_quote_cards([_draft(4, "point", "q1"), _draft(5, "point")], (_Q1,))
     translations: dict[int, dict[str, object]] = {
         4: {"heading": "EN", "body": "EN body"},
@@ -110,7 +114,7 @@ def test_en_cards_follow_the_placed_pt_cards() -> None:
     assert result[4]["insight"] == quote_card(_Q1, _Q1.text_en)
     assert result[4]["heading"] == "EN"
     assert "insight" not in result[5]
-    assert "insight" not in translations[4]  # input untouched
+    assert "insight" not in translations[4]
 
 
 def test_en_cards_skip_missing_translations_and_unknown_ids() -> None:
@@ -169,7 +173,6 @@ def test_footer_labels_dedupes_and_keeps_source_order() -> None:
     )
 
 
-# PR #124 review: @handles dedupe case-insensitively, first spelling kept.
 def test_footer_dedupes_handles_case_insensitively() -> None:
     sources = (
         "https://x.com/KanishkSJ01/status/1",
@@ -210,7 +213,6 @@ def test_bad_rows_are_skipped() -> None:
     assert quote_from_row({**_Q1.to_row(), "name": 3}) is None
 
 
-# QA mutation review: the 2-card cap, its gate boundary and odd shapes.
 _Q3 = quote(quote_id="q3", text_pt="Terceira.", text_en="Third.")
 
 

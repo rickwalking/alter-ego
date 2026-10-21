@@ -1,4 +1,4 @@
-"""The model fix of ONE failing slide, at most N attempts (AE-0401).
+"""The model fix of ONE failing slide, at most N attempts.
 
 Each attempt sends the slide's current copy and every check it still fails;
 the answer is read fence-aware, goes through the deterministic repair (the
@@ -8,13 +8,13 @@ timeout or an unparseable answer counts as an attempt. The next attempt
 starts from the last usable copy with the checks that copy still fails, so a
 fix that breaks another rule is retried with the new violations.
 
-AE-0407: after ``settings.attempts`` failed attempts on the fast model, up to
+After ``settings.attempts`` failed attempts on the fast model, up to
 ``settings.escalation_attempts`` more run on the reasoning model (numbered
 on, 4 and 5). A judge that gives no score leaves the slide unscored: it keeps
 its previous score and gets no voice issue. A field the model rewrote with a
-correct sentence case loses its AE-0366 casing marker.
+correct sentence case loses its casing-repair marker.
 
-AE-0433: such a slide is returned with ``unscored_ticks`` (its stored score
+An unscored slide is returned with ``unscored_ticks`` (its stored score
 is stale), and on the next tick its current copy is re-scored before any
 rewrite: a passing score fixes it as it is, a low one goes back to the
 rewrite loop, and no score counts one more unscored tick.
@@ -98,10 +98,11 @@ class _Stage:
 
 @dataclass(frozen=True)
 class _State:
+    """``base_ticks`` counts the unscored ticks the slide had before this tick."""
+
     target: SlideTarget
     attempts: tuple[FixAttempt, ...] = ()
     feedback: tuple[SlideIssue, ...] = ()
-    # AE-0433: the unscored ticks the slide had before this tick.
     base_ticks: int = 0
 
     @property
@@ -137,15 +138,17 @@ def _copy_changed(before: Mapping[str, object], after: Mapping[str, object]) -> 
 async def _rescore(
     candidate: dict[str, object], state: _State, ctx: LoopContext
 ) -> tuple[float | None, bool]:
-    """The candidate's score and whether it was judged (False: unscored)."""
+    """The candidate's score and whether it was judged (False: unscored).
+
+    Unchanged copy whose score is stale is still unjudged, and a missing score is not a
+    verdict, so the previous one is kept.
+    """
     scorer = ctx.tools.scorer
     if scorer is None or not ctx.deck.scored:
         return state.target.score, True
     if not _copy_changed(state.target.record, candidate):
-        # AE-0433: unchanged copy whose score is stale is still unjudged.
         return state.target.score, state.target.unscored_ticks == 0
     score = await scorer.score(_score_text(candidate))
-    # AE-0407: no score is not a verdict; keep the previous one.
     return (state.target.score, False) if score is None else (score, True)
 
 
@@ -207,6 +210,7 @@ async def _candidate(
 
 
 async def _one_attempt(state: _State, ctx: LoopContext, stage: _Stage) -> _State:
+    """A provider, timeout or scorer failure counts as an attempt."""
     try:
         candidate = await _candidate(state, ctx, stage)
         if candidate is None:
@@ -215,7 +219,7 @@ async def _one_attempt(state: _State, ctx: LoopContext, stage: _Stage) -> _State
             )
             return _failed(state, stage.role, (ATTEMPT_UNPARSEABLE, unusable))
         evaluated = await _evaluate(candidate, state, ctx)
-    except Exception as exc:  # a provider/timeout/scorer failure counts as an attempt
+    except Exception as exc:
         message = _MESSAGE_MODEL_ERROR.format(error=type(exc).__name__)
         error = SlideIssue(code=ISSUE_MODEL_ERROR, message=message)
         return _failed(state, stage.role, (ATTEMPT_MODEL_ERROR, error))
@@ -227,7 +231,7 @@ async def _one_attempt(state: _State, ctx: LoopContext, stage: _Stage) -> _State
 
 
 def _stages(ctx: LoopContext) -> tuple[_Stage, ...]:
-    """The fast model, then the reasoning model when one is wired (AE-0407)."""
+    """The fast model, then the reasoning model when one is wired."""
     fast = _Stage(ctx.tools.rewriter, MODEL_ROLE_FAST, max(1, ctx.settings.attempts))
     stronger = ctx.tools.escalation_rewriter
     if stronger is None or ctx.settings.escalation_attempts <= 0:
@@ -239,17 +243,18 @@ def _stages(ctx: LoopContext) -> tuple[_Stage, ...]:
 
 
 async def _judge_stale(target: SlideTarget, ctx: LoopContext) -> float | None:
+    """A scorer failure is no score, as in ``judge_voice``."""
     scorer = ctx.tools.scorer
     if scorer is None:
         return None
     try:
         return await scorer.score(_score_text(target.record))
-    except Exception:  # a scorer failure is no score, as in ``judge_voice``
+    except Exception:
         return None
 
 
 async def _rescore_stale(target: SlideTarget, ctx: LoopContext) -> SlideTarget:
-    """AE-0433: re-score a stale slide's current copy before any rewrite."""
+    """Re-score a stale slide's current copy before any rewrite."""
     if target.unscored_ticks == 0:
         return target
     score = await _judge_stale(target, ctx)
@@ -264,7 +269,7 @@ async def _rescore_stale(target: SlideTarget, ctx: LoopContext) -> SlideTarget:
 
 
 def _fixed(state: _State) -> SlideFixResult:
-    # A slide that never had a score has no stale score to re-score.
+    """A slide that never had a score has no stale score to re-score."""
     stale = state.target.score is not None
     return SlideFixResult(
         slide_index=state.target.slide_index,

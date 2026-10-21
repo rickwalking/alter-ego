@@ -1,11 +1,11 @@
-"""Canonical distribution home accessor: ``blog_posts.distribution`` (AE-0204).
+"""Canonical distribution home accessor: ``blog_posts.distribution``.
 
 This module is the single accessor over the canonical home of a carousel's
 distribution copy — the Instagram **caption** and the **LinkedIn posts**
-(``linkedin_post_pt`` / ``linkedin_post_en``). Per AE-0204 these three fields move
+(``linkedin_post_pt`` / ``linkedin_post_en``). These three fields move
 from the embedded ``carousel_projects`` columns to the ``blog_posts.distribution``
 JSONB column (mirroring the existing ``blog_posts.content`` JSONB pattern,
-ADR-0006), so the embedded columns can later be dropped (AE-0205) without data
+ADR-0006), so the embedded columns can later be dropped without data
 loss or a broken IG/LinkedIn publish.
 
 It exposes exactly two operations over the canonical ``origin='carousel'``
@@ -15,19 +15,19 @@ It exposes exactly two operations over the canonical ``origin='carousel'``
   carousel repository's ``create_project`` / ``update_project`` so every carousel
   write that lands the embedded copy ALSO lands it in the canonical home. It is a
   no-op when the project has no ``origin='carousel'`` row, and it never touches a
-  row's ``content`` or ``status`` (AE-0422 removed the v1 blog-row upsert while
-  keeping this ADR-0011 distribution mirror). The embedded columns are retained
-  during the AE-0205 transition (reversible dual-write), but the canonical home —
+  row's ``content`` or ``status`` (the v1 blog-row upsert is gone; only this ADR-0011
+  distribution mirror remains). The embedded columns are retained
+  during the transition (reversible dual-write), but the canonical home —
   not the embedded column — is the source of truth every reader consumes.
 * :func:`read_distribution` — the **read accessor**. Returns the canonical
   ``{caption, linkedin_post_pt, linkedin_post_en}`` payload for a project, or
   ``None`` when no carousel-origin row exists. Every application reader sources the
   three fields through this accessor (directly, or via the carousel repository
   overlay that stamps a freshly-loaded entity from the canonical home), so the
-  embedded ORM columns have ZERO application readers for these fields (AE-0204).
+  embedded ORM columns have ZERO application readers for these fields.
 
 ``caption_en`` is deliberately NOT given a home here — it is write-dead and is
-handled by AE-0206.
+handled separately.
 """
 
 from __future__ import annotations
@@ -84,9 +84,9 @@ async def write_distribution(
 ) -> None:
     """Mirror the carousel's distribution copy into the canonical home (flush only).
 
-    No-op when no ``origin='carousel'`` row exists for the project. Since AE-0422 a
+    No-op when no ``origin='carousel'`` row exists for the project. A
     carousel save never creates a blog row (rows are created only by the blog
-    ``from-carousel``/``generate`` write path and the AE-0127/AE-0204 backfills), so
+    ``from-carousel``/``generate`` write path and the backfills), so
     a missing row means there is no canonical home to populate. The row is flushed
     (not committed) so it shares the caller's single transaction (the repository
     commits once). Only ``distribution`` is written; ``content`` and ``status`` are

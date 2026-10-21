@@ -5,13 +5,16 @@ would leave the seed behind. The package is copied into a temporary
 directory, the seed is planted there, and ``PYTHONPATH`` points
 ``lint-imports`` at the copy. The real ``.importlinter`` is used, limited to
 one contract, with the grimp cache disabled.
+
+_LINT_IMPORTS is the absolute path to the venv console script, so there is no PATH
+lookup.
 """
 
 from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0354 — rule-fires test must run the lint-imports CLI
+import subprocess  # noqa: S404  # integrity-ok: rule-fires test must run the lint-imports CLI
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +24,6 @@ _PACKAGE = "rag_backend"
 _CONFIG = BACKEND / ".importlinter"
 _IGNORED = shutil.ignore_patterns("__pycache__", "*.pyc")
 _PYTHONPATH = "PYTHONPATH"
-# Absolute path to the venv console script (no PATH lookup).
 _LINT_IMPORTS = Path(sys.executable).with_name("lint-imports")
 
 
@@ -42,7 +44,7 @@ def run_seeded_lint(
     shutil.copytree(BACKEND / "src" / _PACKAGE, root / _PACKAGE, ignore=_IGNORED)
     (root / _PACKAGE / seed.relative_path).write_text(seed.source, encoding="utf-8")
     env = {**os.environ, _PYTHONPATH: str(root)}
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0354 — fixed venv executable, test-controlled args
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed venv executable, test-controlled args
         [
             str(_LINT_IMPORTS),
             "--config",

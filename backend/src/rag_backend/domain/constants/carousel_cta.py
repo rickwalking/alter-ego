@@ -1,7 +1,9 @@
-"""CTA slide copy variants by goal (AE-0372, growth plan 16.3 F / 16.4 #5).
+"""CTA slide copy variants by goal (growth plan 16.3 F / 16.4 #5).
 
 One specific action per carousel instead of the generic "Siga para mais
 conteúdo como esse". ``{handle}`` is the creator handle, ``@`` included.
+
+``DEFAULT_CTA_HANDLE`` is used when the project has no creator handle.
 """
 
 from __future__ import annotations
@@ -16,7 +18,6 @@ CTA_GOALS: frozenset[str] = frozenset({
     CTA_GOAL_COMMENT,
 })
 
-# The creator handle when the project has none (was inline in strategies/cta.py).
 DEFAULT_CTA_HANDLE = "pedromarins.ai"
 
 CTA_COPY_PT: dict[str, str] = {

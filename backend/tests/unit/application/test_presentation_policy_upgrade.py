@@ -1,4 +1,4 @@
-"""In-flight presentation-policy upgrade migration tests (AE-0312).
+"""In-flight presentation-policy upgrade migration tests.
 
 Gherkin: tests/features/carousel_pt_casing_severity.feature
 """
@@ -94,6 +94,7 @@ class TestUpgradeRevalidates:
     """
 
     def test_upgrade_bumps_version_and_stores_v2_report(self) -> None:
+        """Casing is warning-severity, so the fresh report does not block."""
         updates = build_policy_upgrade_updates(_parked_v1_state())
 
         assert updates[WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY] == (
@@ -102,12 +103,10 @@ class TestUpgradeRevalidates:
         report = _report(updates)
         codes = {violation["code"] for violation in report["violations"]}
         assert VIOLATION_HEADING_NOT_SENTENCE_CASE_PT in codes
-        # Casing is warning-severity, so the fresh report does not block.
         assert report["blocking"] is False
 
     def test_downgrade_restores_v1_and_drops_casing_warnings(self) -> None:
         upgraded = build_policy_upgrade_updates(_parked_v1_state())
-        # Feed the upgraded state back through the downgrade path.
         state = {**_parked_v1_state(), **upgraded}
         downgraded = build_policy_downgrade_updates(state)
 

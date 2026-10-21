@@ -40,7 +40,6 @@ _SLIDE_FILENAME_PREFIX = "slide_"
 _SLIDE_IMAGE_EXTENSION = ".jpg"
 _MIN_JPEG_BYTES = 1024
 
-# asyncpg Record column name constants
 _COL_ID = "id"
 _COL_OUTPUT_DIR = "output_dir"
 _COL_IMAGE_MODEL = "image_model"
@@ -89,7 +88,9 @@ async def _get_connection() -> asyncpg.Connection:
     return await asyncpg.connect(dsn)
 
 
-async def _find_projects(conn: asyncpg.Connection, project_id: str | None) -> list[asyncpg.Record]:
+async def _find_projects(
+    conn: asyncpg.Connection, project_id: str | None
+) -> list[asyncpg.Record]:
     if project_id:
         return await conn.fetch(
             "SELECT id, output_dir, image_model, image_style, theme FROM carousel_projects WHERE id = $1",
@@ -100,14 +101,18 @@ async def _find_projects(conn: asyncpg.Connection, project_id: str | None) -> li
     )
 
 
-async def _find_slides(conn: asyncpg.Connection, project_id: str) -> list[asyncpg.Record]:
+async def _find_slides(
+    conn: asyncpg.Connection, project_id: str
+) -> list[asyncpg.Record]:
     return await conn.fetch(
         "SELECT id, slide_number, slide_type, image_path, metadata FROM carousel_slides WHERE project_id = $1 ORDER BY slide_number",
         project_id,
     )
 
 
-async def _existing_generation_keys(conn: asyncpg.Connection, project_id: str) -> set[str]:
+async def _existing_generation_keys(
+    conn: asyncpg.Connection, project_id: str
+) -> set[str]:
     rows = await conn.fetch(
         "SELECT generation_key FROM carousel_image_generations WHERE project_id = $1",
         project_id,
@@ -160,7 +165,10 @@ def _resolve_image_path(
     if abs_path.is_file():
         return abs_path
     if images_dir.is_dir():
-        candidate = images_dir / f"{_SLIDE_FILENAME_PREFIX}{slide[_COL_SLIDE_NUMBER]}{_SLIDE_IMAGE_EXTENSION}"
+        candidate = (
+            images_dir
+            / f"{_SLIDE_FILENAME_PREFIX}{slide[_COL_SLIDE_NUMBER]}{_SLIDE_IMAGE_EXTENSION}"
+        )
         return candidate if candidate.is_file() else None
     return None
 
@@ -234,7 +242,9 @@ async def _process_project_slides(
 async def recover_project(opts: _RecoverProjectOptions) -> tuple[int, int]:
     output_dir = _resolve_output_dir(opts.project)
     if output_dir is None:
-        print(f"  Skipping {opts.project[_COL_ID]}: no output_dir or directory not found")
+        print(
+            f"  Skipping {opts.project[_COL_ID]}: no output_dir or directory not found"
+        )
         return 0, 0
 
     existing_keys = await _existing_generation_keys(opts.conn, opts.project[_COL_ID])
@@ -257,9 +267,17 @@ async def report_relative_dirs(conn: asyncpg.Connection) -> list[asyncpg.Record]
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Recover carousel image generation records")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would be done without writing to DB")
-    parser.add_argument("--project-id", type=str, default=None, help="Limit to a single project UUID")
+    parser = argparse.ArgumentParser(
+        description="Recover carousel image generation records"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would be done without writing to DB",
+    )
+    parser.add_argument(
+        "--project-id", type=str, default=None, help="Limit to a single project UUID"
+    )
     args = parser.parse_args()
 
     run_mode = RunMode.DRY_RUN if args.dry_run else RunMode.LIVE

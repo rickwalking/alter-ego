@@ -21,7 +21,7 @@ or a concrete Postgres repository; the concrete adapters live in
 ``rag_backend.modules.editorial.infrastructure`` and delegate to the existing
 ACL / write owner / services (behavior-preserving).
 
-**Re-export, not relocation (AE-0108 constraint) for ``CarouselRepository``.**
+**Re-export, not relocation for ``CarouselRepository``.**
 That Protocol is defined in the SHARED protocol file
 ``rag_backend.domain.protocols.repositories`` which is imported by the carousel
 routes, the workflow engine, services, and the container. Physically moving the
@@ -69,7 +69,7 @@ class SourceMaterialPort(Protocol):
 class ReviewerAssignmentPort(Protocol):
     """Assign a human reviewer to a carousel project (workflow-owned write).
 
-    Backed by the AE-0107 single write owner via the ACL so the
+    Backed by the single write owner via the ACL so the
     ``assigned_reviewer_id`` write stays byte-identical and routed through the
     one owner; the application layer never touches the carousel ORM.
     """
@@ -103,7 +103,7 @@ class ReviewDecisionPort(Protocol):
 class OptimisticLockingPort(Protocol):
     """The ``lock_version`` optimistic-lock compare-and-swap (resume path).
 
-    Delegates UNCHANGED to the AE-0107 owner's ``bump_resume_lock_version``
+    Delegates UNCHANGED to the owner's ``bump_resume_lock_version``
     (which delegates to :meth:`OptimisticLockService.bump_carousel_version`), so
     the expected-version contract and its pairing with the artifact-activation
     CAS are preserved exactly.

@@ -55,7 +55,6 @@ class TestPostgresDocumentRepository:
         self, document_repository, sample_documents
     ):
         """Should filter documents by status."""
-        # Create documents with different statuses
         doc1 = Document(content="Test1", title="Test1")
         doc1.status = DocumentStatus.COMPLETED
         doc2 = Document(content="Test2", title="Test2")
@@ -73,7 +72,6 @@ class TestPostgresDocumentRepository:
         """Should update an existing document."""
         created = await document_repository.create(sample_document)
 
-        # Modify the document
         created.title = "Updated Title"
         created.mark_completed(chunk_count=10)
 
@@ -86,8 +84,8 @@ class TestPostgresDocumentRepository:
     async def test_scope_and_is_public_round_trip(self, document_repository):
         """Should persist non-default scope and is_public across reload.
 
-        Scenario: scope and is_public round-trip (AE-0090
-        full-field document persistence Gherkin) — given a document with
+        Scenario: scope and is_public round-trip (full-field
+        document persistence Gherkin) — given a document with
         scope INTERNAL and is_public false, when saved and reloaded, then
         scope is INTERNAL and is_public is false.
         """
@@ -127,7 +125,6 @@ class TestPostgresDocumentRepository:
         self, document_repository, sample_document
     ):
         """Should raise error when updating non-existent document."""
-        # Create a document but don't save it
         document = sample_document
         document.id = uuid4()
 
@@ -142,7 +139,6 @@ class TestPostgresDocumentRepository:
 
         assert deleted is True
 
-        # Verify deletion
         retrieved = await document_repository.get_by_id(created.id)
         assert retrieved is None
 

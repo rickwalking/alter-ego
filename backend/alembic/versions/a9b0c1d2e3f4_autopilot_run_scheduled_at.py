@@ -4,7 +4,7 @@ Revision ID: a9b0c1d2e3f4
 Revises: f8a9b0c1d2e3
 Create Date: 2026-10-15
 
-AE-0370: ADDITIVE. One nullable column, ``autopilot_runs.scheduled_at``
+ADDITIVE. One nullable column, ``autopilot_runs.scheduled_at``
 (TIMESTAMPTZ), holds the owner's publish time while a run is ``scheduled``,
 plus the index ``(state, scheduled_at)`` the due scan reads. Existing rows keep
 NULL, which means "not scheduled". No existing column is altered or dropped,

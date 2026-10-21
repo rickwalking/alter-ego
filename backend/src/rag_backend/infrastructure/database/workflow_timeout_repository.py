@@ -1,4 +1,4 @@
-"""Stuck-workflow auto-reject repository (AE-0210).
+"""Stuck-workflow auto-reject repository.
 
 Implements :class:`StuckWorkflowAutoRejector`. CLAUDE.md mandates
 "Auto-reject after timeout; never leave workflows stuck." The
@@ -7,6 +7,10 @@ actual terminal transition so a workflow is never left pending forever.
 
 It lives in infrastructure (owns the ORM query + transition) so the worker /
 application layer gains no new infrastructure import.
+
+Only non-terminal phase statuses are eligible for auto-reject: ``in_progress``
+is excluded (a workflow may be running or resuming) and terminal states
+(approved, rejected, failed) are excluded by construction.
 """
 
 from __future__ import annotations
@@ -43,15 +47,11 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-# Non-terminal phase-status values eligible for auto-reject. ``in_progress`` is
-# excluded (a workflow may be actively running / resuming); terminal states
-# (``approved``, ``rejected``, ``failed``) are excluded by construction.
 _AUTO_REJECT_ELIGIBLE_PHASE_STATUSES: frozenset[str] = frozenset({
     PHASE_STATUS_PENDING,
     PHASE_STATUS_AWAITING_HUMAN,
 })
 
-# Metadata key tagging the emitted phase-changed event source.
 _EVENT_SOURCE_KEY = "source"
 
 

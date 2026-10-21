@@ -34,15 +34,34 @@ from rag_backend.infrastructure.database.models.carousel_content_mode import (
 
 
 class CarouselProjectModel(CarouselContentModeColumns, Base):
-    """SQLAlchemy model for CarouselProject entity."""
+    """SQLAlchemy model for CarouselProject entity.
+
+    - ``is_public`` is the public-release flag written by the publishing release
+      port; ``Mapped[bool]`` types the byte-identical ``is_public=True`` write, and
+      ``Mapped`` on ``error_message`` types the auto-reject write.
+    - ``image_model`` defaults to openai, the only funded provider (``comic_neon``
+      runs on it).
+    - ``theme`` is 64 chars wide to hold a custom-palette UUID; ``theme_snapshot``
+      is the resolved palette frozen at generation.
+    - ``run_started_at`` / ``run_heartbeat_at`` (run-progress visibility + zombie
+      fencing) are stamped when ``phase_status`` moves INTO ``in_progress`` and
+      cleared ATOMICALLY (same flush UPDATE) on any value-changing move out of it,
+      enforced by the ``before_update`` listener in ``carousel_run_guard.py``, not
+      per call site. ``run_epoch`` is the monotonic fencing token; only the
+      stale-run reaper increments it.
+    - ``needs_republish_since`` is the server-guaranteed republish marker, stamped
+      in the SAME transaction as a post-completion slide-text edit; the workflow
+      watchdog republishes any marked project older than a few minutes and clears
+      it, so a corrected carousel never keeps serving a stale PDF.
+    - The run columns and the republish marker are deliberately NOT mapped onto
+      the domain entity (the marker is read-only there), so the
+      ``update_from_entity`` hydrator can never clobber them.
+    """
 
     __tablename__ = "carousel_projects"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    # Public-release (visibility) flag — written by the publishing release port
-    # (AE-0128); SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as
-    # ``bool`` for the byte-identical ``is_public=True`` release write.
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     topic = Column(String(500), nullable=False)
     audience = Column(String(500), nullable=False)
@@ -59,12 +78,9 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     aspect_ratio = Column(String(20), nullable=False, default="1080x1350")
     language = Column(String(10), nullable=False, default="pt-BR")
     generate_images = Column(Integer, default=1, nullable=False)
-    # AE-0308: openai is the only funded provider; comic_neon now runs on it.
     image_model = Column(String(30), nullable=False, server_default="openai")
     image_style = Column(String(30), nullable=False, server_default="comic_neon")
-    # Widened to 64 (AE-0269 migration a7b8c9d0e1f2) to hold a custom-palette UUID.
     theme = Column(String(64), nullable=False, default=CarouselTheme.AUTO.value)
-    # Resolved palette frozen at generation (AE-0269 D9).
     theme_snapshot = Column(JSON, nullable=True)
     primary_color = Column(String(20), nullable=True)
     accent_color = Column(String(20), nullable=True)
@@ -83,14 +99,12 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default=CarouselStatus.PENDING.value
     )
-    # AE-0210: ``Mapped[...]`` so the auto-reject write types as ``str | None``.
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_dir = Column(String(500), nullable=True)
     pdf_path = Column(String(500), nullable=True)
     pdf_path_en = Column(String(500), nullable=True)
     phase_progress = Column(JSON, nullable=True)
 
-    # NEW: Workflow extension fields
     creative_brief = Column(Text, nullable=True)
     persona_id = Column(String(36), ForeignKey("persona_profiles.id"), nullable=True)
     assigned_reviewer_id: Mapped[str | None] = mapped_column(
@@ -106,14 +120,6 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     )
     lock_version = Column(Integer, default=1, nullable=False)
 
-    # AE-0315: run-progress visibility + zombie fencing. ``run_started_at`` /
-    # ``run_heartbeat_at`` are stamped when ``phase_status`` transitions INTO
-    # ``in_progress`` and cleared ATOMICALLY (same flush UPDATE) on any
-    # value-changing transition out of it — enforced by the ``before_update``
-    # listener in ``infrastructure/database/carousel_run_guard.py``, not per
-    # call site. ``run_epoch`` is the monotonic fencing token; only the
-    # stale-run reaper increments it. Deliberately NOT mapped onto the domain
-    # entity so the ``update_from_entity`` hydrator can never clobber them.
     run_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -124,17 +130,10 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
         Integer, nullable=False, default=0, server_default="0"
     )
 
-    # AE-0314: server-guaranteed republish marker. Stamped in the SAME
-    # transaction as a post-completion slide-text edit; the workflow watchdog
-    # republishes any marked project older than a few minutes and clears it, so
-    # a corrected carousel never keeps serving a stale PDF (cold-critic r6).
-    # Deliberately NOT mapped onto the domain entity (like the run columns) so
-    # the ``update_from_entity`` hydrator can never clobber it.
     needs_republish_since: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
-    # Creator watermark metadata
     creator_name = Column(String(100), nullable=True)
     creator_handle = Column(String(100), nullable=True)
     creator_avatar_url = Column(String(500), nullable=True)
@@ -214,7 +213,6 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
             pdf_path=self.pdf_path,
             pdf_path_en=self.pdf_path_en,
             phase_progress=self.phase_progress,
-            # NEW: workflow extension fields
             creative_brief=self.creative_brief,
             persona_id=self.persona_id,
             rubric_id=self.rubric_id,
@@ -235,7 +233,6 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
             presentation_policy_checksum=self.presentation_policy_checksum,
             artifact_version=self.artifact_version,
             slide_layout_strategy=self.slide_layout_strategy,
-            # AE-0314: read-only marker (never written back via update_from_entity).
             needs_republish_since=self.needs_republish_since,
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -278,7 +275,6 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
             pdf_path=entity.pdf_path,
             pdf_path_en=entity.pdf_path_en,
             phase_progress=entity.phase_progress,
-            # NEW: workflow extension fields
             creative_brief=entity.creative_brief,
             persona_id=entity.persona_id,
             rubric_id=entity.rubric_id,
@@ -327,7 +323,6 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
         self.pdf_path = entity.pdf_path
         self.pdf_path_en = entity.pdf_path_en
         self.phase_progress = entity.phase_progress
-        # NEW: workflow extension fields
         self.creative_brief = entity.creative_brief
         self.persona_id = entity.persona_id
         self.rubric_id = entity.rubric_id

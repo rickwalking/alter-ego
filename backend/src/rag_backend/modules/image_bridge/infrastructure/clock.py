@@ -1,4 +1,4 @@
-"""System ``BridgeClock`` (AE-0393)."""
+"""System ``BridgeClock``."""
 
 from __future__ import annotations
 

@@ -1,12 +1,12 @@
-"""Contract/adapter tests for the legacy carousel ACL (AE-0109).
+"""Contract/adapter tests for the legacy carousel ACL.
 
-These cover the AE-0109 acceptance criteria at the adapter boundary:
+These cover the acceptance criteria at the adapter boundary:
 
 * **Mapping round-trip** — a legacy ``CarouselProjectModel`` translates into the
   editorial aggregate (``EditorialProject`` + ``EditorialWorkflow``) with the
   workflow-owned fields mapped (``current_phase`` -> ``phase``, ``phase_status``,
   ``workflow_status``) and the canonical ``CarouselProject`` entity surfaced;
-* **Write delegation** — every workflow-owned write goes THROUGH the AE-0107
+* **Write delegation** — every workflow-owned write goes THROUGH the
   ``CarouselProjectWriteOwner`` (the ACL never mutates the ORM row itself); the
   delegation is proven by the resulting persisted DB state;
 * **Concurrency + checkpoint identity preserved** — the ``lock_version`` token is
@@ -14,7 +14,7 @@ These cover the AE-0109 acceptance criteria at the adapter boundary:
   optimistic-lock expected-version contract; the LangGraph checkpoint
   ``thread_id`` equals the project id, unchanged.
 
-Behavior-preserving adapter; verified here + by the AE-0106 safety net (Gherkin
+Behavior-preserving adapter; verified here + by the editorial safety net (Gherkin
 not applicable per the ticket). External clients are never constructed; the tests
 use an in-memory SQLite session — no API keys required.
 """
@@ -103,7 +103,7 @@ async def _seed_project(
 
 
 def _acl(session: AsyncSession) -> LegacyCarouselAcl:
-    """Build the ACL over a real AE-0107 write owner (no model mutation here)."""
+    """Build the ACL over a real write owner (no model mutation here)."""
     return LegacyCarouselAcl(session, CarouselProjectWriteOwner(session))
 
 
@@ -127,7 +127,6 @@ class TestReadSideMapping:
         assert isinstance(view, EditorialProjectView)
         assert isinstance(view.project, EditorialProject)
         assert isinstance(view.project.workflow, EditorialWorkflow)
-        # workflow-owned fields mapped (current_phase -> phase).
         assert view.project.workflow.phase == PHASE_DESIGN
         assert view.project.workflow.phase_status == PHASE_STATUS_IN_PROGRESS
         assert view.project.workflow.workflow_status == (
@@ -173,17 +172,17 @@ class TestCheckpointAndLockPreserved:
     async def test_checkpoint_thread_id_equals_project_id(
         self, session: AsyncSession
     ) -> None:
+        """The LangGraph checkpoint identifier stays thread_id == project_id."""
         project_id = await _seed_project(session)
         view = await _acl(session).load_editorial(project_id)
 
         assert view is not None
-        # LangGraph checkpoint identifier: thread_id == project_id, unchanged.
         assert view.checkpoint_thread_id == project_id
         assert view.checkpoint_thread_id == str(view.project.project.id)
 
 
 class TestWriteDelegation:
-    """Scenario: every workflow-owned write goes THROUGH the AE-0107 owner."""
+    """Scenario: every workflow-owned write goes THROUGH the write owner."""
 
     @pytest.mark.asyncio
     async def test_assign_reviewer_persists_via_owner(
@@ -203,6 +202,10 @@ class TestWriteDelegation:
     async def test_sync_workflow_persists_phase_columns_via_owner(
         self, session: AsyncSession
     ) -> None:
+        """Caption is not synced onto the embedded column because its canonical home is
+        blog_posts.distribution; ``caption`` stays in ``state`` to prove the sync
+        ignores it, while blog_markdown remains synced.
+        """
         project_id = await _seed_project(session)
         acl = _acl(session)
         state: CarouselWorkflowState = {
@@ -221,11 +224,7 @@ class TestWriteDelegation:
         assert model.current_phase == PHASE_DESIGN
         assert model.phase_status == PHASE_STATUS_IN_PROGRESS
         assert model.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
-        # AE-0204: caption is NOT synced onto the embedded column anymore — it has a
-        # canonical home (blog_posts.distribution); the checkpoint sync is decoupled.
-        # ``caption`` stays in ``state`` to prove the sync intentionally ignores it.
         assert model.caption is None
-        # blog_markdown remains synced (AE-0163's domain).
         assert model.blog_markdown == _BLOG
 
     @pytest.mark.asyncio
@@ -244,7 +243,6 @@ class TestWriteDelegation:
 
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
-        # The owner's byte-identical sync sets status=FAILED on a failed phase.
         assert model.status == CarouselStatus.FAILED.value
 
     @pytest.mark.asyncio
@@ -288,6 +286,5 @@ class TestLockVersionBumpDelegation:
         project_id = await _seed_project(session, lock_version=1)
         acl = _acl(session)
 
-        # The CAS expected-version contract is preserved: a stale version raises.
         with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
             await acl.bump_resume_lock_version(project_id, expected_version=99)

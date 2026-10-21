@@ -49,11 +49,9 @@ class DocumentProcessingPipeline:
             scope=document.scope.value,
         )
         try:
-            # Update status to processing
             document.update_status(DocumentStatus.PROCESSING)
             await self._document_repository.update(document)
 
-            # Process document into chunks with embeddings
             chunks = await self._document_processor.process(document)
 
             if not chunks:
@@ -68,13 +66,11 @@ class DocumentProcessingPipeline:
                 chunk_count=len(chunks),
             )
 
-            # Store chunks in vector store under scope-based namespace
             namespace = document.scope.value
             await self._vector_store.upsert_chunks(
                 chunks, document.id, namespace=namespace
             )
 
-            # Mark as completed
             document.mark_completed(chunk_count=len(chunks))
             await self._document_repository.update(document)
 
@@ -89,7 +85,6 @@ class DocumentProcessingPipeline:
                 "pipeline_failed",
                 document_id=str(document.id),
             )
-            # Mark as failed
             document.mark_failed(str(e))
             await self._document_repository.update(document)
             raise
@@ -104,6 +99,9 @@ class DocumentProcessingPipeline:
 
         Returns:
             The reprocessed document
+
+        Existing chunks are deleted from the current scope's namespace before
+        reprocessing.
         """
         from uuid import UUID
 
@@ -111,12 +109,10 @@ class DocumentProcessingPipeline:
         if not document:
             raise ValueError(_ERR_DOCUMENT_NOT_FOUND.format(document_id))
 
-        # Delete existing chunks from vector store (using current scope namespace)
         await self._vector_store.delete_by_document(
             document.id, namespace=document.scope.value
         )
 
-        # Reset status and reprocess
         document.update_status(DocumentStatus.PENDING)
         document.error_message = None
         document.chunk_count = 0
@@ -132,19 +128,18 @@ class DocumentProcessingPipeline:
 
         Returns:
             True if deleted successfully
+
+        The vector-store chunks are deleted before the database row.
         """
         from uuid import UUID
 
         doc_id = UUID(document_id)
 
-        # Get document to determine namespace
         document = await self._document_repository.get_by_id(doc_id)
         namespace = document.scope.value if document else None
 
-        # Delete from vector store first
         await self._vector_store.delete_by_document(doc_id, namespace=namespace)
 
-        # Delete from database
         return await self._document_repository.delete(doc_id)
 
     def estimate_processing_time(self, document: Document) -> dict[str, object]:
@@ -152,13 +147,15 @@ class DocumentProcessingPipeline:
 
         Returns:
             Dictionary with estimates
+
+        The estimates are rough per-chunk costs: 10 ms chunking, 100 ms embedding and 5
+        ms upsert.
         """
         estimated_chunks = self._document_processor.estimate_chunks(document.content)
 
-        # Rough estimates based on typical processing times
-        chunking_time = estimated_chunks * 0.01  # 10ms per chunk
-        embedding_time = estimated_chunks * 0.1  # 100ms per chunk for embedding
-        upsert_time = estimated_chunks * 0.005  # 5ms per chunk for upsert
+        chunking_time = estimated_chunks * 0.01
+        embedding_time = estimated_chunks * 0.1
+        upsert_time = estimated_chunks * 0.005
 
         total_time = chunking_time + embedding_time + upsert_time
 

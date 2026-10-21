@@ -1,4 +1,4 @@
-"""The Telegram day/time picker over the owner-action service (AE-0404).
+"""The Telegram day/time picker over the owner-action service.
 
 Gherkin: tests/features/telegram_schedule_picker_ae0404.feature
 """
@@ -90,7 +90,7 @@ class _RacingRuns(_Runs):
 def _picker_world(
     default_publish: str = "now", signals: _Signals | None = None
 ) -> tuple[_World, _Signals]:
-    """AE-0370's world on Friday 16/10 10:00, with a signals source wired."""
+    """The scheduling world on Friday 16/10 10:00, with a signals source wired."""
     world = _world(default_publish=default_publish)
     world.clock.at = _local(16, 10)
     return world, _wire(world, signals or _Signals(), default_publish)
@@ -153,8 +153,9 @@ async def test_auto_scheduled_message_offers_mudar_dia_horario() -> None:
 
 @pytest.mark.asyncio
 async def test_auto_slot_follows_the_audience_peak() -> None:
+    """Hour 23 UTC is 20:00 in São Paulo."""
     audience = dict.fromkeys(range(24), 10)
-    audience[23] = 90  # 20:00 São Paulo
+    audience[23] = 90
     source = _Signals(signals=ScheduleSignals(audience=audience))
     world, _ = _picker_world(default_publish="next_slot", signals=source)
     await _handle(world, _tap(1, world.data("approve")))
@@ -248,6 +249,7 @@ async def test_slot_schedules_an_awaiting_run_with_its_reason() -> None:
 # Scenario: Confirming a slot reschedules a scheduled run
 @pytest.mark.asyncio
 async def test_slot_reschedules_a_scheduled_run_idempotently() -> None:
+    """Final review was approved when the run was first scheduled, not again."""
     world, _ = _picker_world()
     _scheduled(world, _local(20, 12))
     await _handle(world, _tap(1, world.data("sched")))
@@ -262,7 +264,6 @@ async def test_slot_reschedules_a_scheduled_run_idempotently() -> None:
     assert world.messenger.answers[-1].text == ANSWER_SCHEDULED
     await _handle(world, _tap(3, _slot(world, _local(21, 18))))
     assert world.runs.run.scheduled_at == _local(21, 18)
-    # Final review was approved when it was first scheduled; not again.
     assert world.editorial.resumes == []
 
 

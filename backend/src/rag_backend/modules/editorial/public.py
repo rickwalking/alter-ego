@@ -8,7 +8,7 @@ phases.
 
 The facade exposes:
 
-* ``EditorialService`` — the use-case entry point (scaffolding; AE-0108);
+* ``EditorialService`` — the use-case entry point (scaffolding);
 * ``EditorialProject`` / ``EditorialWorkflow`` — the editorial aggregate and its
   workflow value object (new, fully typed);
 * ``CarouselProject`` / ``CarouselSlide`` / ``CarouselStatus`` /
@@ -24,7 +24,7 @@ The facade exposes:
 * ``CarouselAutomationAcl`` and the ``build_start_input`` /
   ``build_resume_input`` / ``content_approve_blocker`` / ``is_provider_outage``
   helpers — the in-process automation seam the autopilot module drives the
-  workflow through (AE-0348 QA r1), so it imports no legacy carousel code.
+  workflow through (QA r1), so it imports no legacy carousel code.
 
 Consumers SHALL NOT import internals such as
 ``rag_backend.modules.editorial.application.service`` or

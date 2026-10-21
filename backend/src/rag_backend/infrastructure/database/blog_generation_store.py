@@ -1,11 +1,11 @@
-"""Lease-fenced run-state persistence of a blog generation (AE-0425, ADR-0025).
+"""Lease-fenced run-state persistence of a blog generation (ADR-0025).
 
 The run's metadata writes (heartbeat, final status) are a compare-and-set:
 ``WHERE id = :post AND generation.lease_id = :mine AND lock_version = :seen``.
 A new attempt (retry) and the reaper rotate the lease **and** bump
 ``lock_version``, so a stale/duplicate task's write affects zero rows and
 raises :class:`LeaseLostError`; it can never clobber a newer run. CONTENT
-writes do not go through here: they use AE-0424's slot-write path (row lock,
+writes do not go through here: they use the slot-write path (row lock,
 apply onto the latest document, version snapshot), see
 ``bootstrap/blog_generation_store.py``.
 """
@@ -81,9 +81,12 @@ class SqlBlogGenerationStore:
     """``BlogGenerationStore`` over ``blog_posts`` (one instance per run)."""
 
     def __init__(self, sessions: SessionFactory) -> None:
+        """Hold the session factory and a lock serializing this run's own writes.
+
+        The lock keeps heartbeat and content writes from overwriting each other's
+        read-modify-write of the metadata.
+        """
         self._sessions = sessions
-        # Serializes this run's own writes (heartbeat vs content) so one
-        # read-modify-write of the metadata never overwrites another.
         self._lock = asyncio.Lock()
 
     async def heartbeat(self, lease: GenerationLease) -> None:
@@ -122,7 +125,7 @@ class SqlBlogGenerationStore:
             raise LeaseLostError(lease.post_id)
 
     async def _try_once(self, lease: GenerationLease, mutation: _Mutation) -> bool:
-        # ``begin()`` commits on exit (rolls back on a raise).
+        """Apply one mutation in its own transaction; ``begin()`` commits on exit."""
         async with self._sessions.begin() as session:
             row = await _read(session, lease.post_id)
             if row is None or lease_of(row.metadata) != lease.lease_id:

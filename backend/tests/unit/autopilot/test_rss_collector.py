@@ -1,4 +1,4 @@
-"""RSS, Atom, and the Anthropic sitemap (AE-0352).
+"""RSS, Atom, and the Anthropic sitemap.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: Bundle combines all free sources

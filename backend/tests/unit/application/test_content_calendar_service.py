@@ -1,6 +1,8 @@
-"""Unit tests for ContentCalendarService (SCHED-002)."""
+"""Unit tests for ContentCalendarService (SCHED-002).
 
-# Gherkin: tests/features/phase3_workflow_collaboration.feature
+Gherkin: tests/features/phase3_workflow_collaboration.feature.
+"""
+
 # Scenario: View calendar entries
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Export preflight names missing slide artwork (AE-0434).
+"""Export preflight names missing slide artwork.
 
 Gherkin: tests/features/carousel_export_artwork_ae0434.feature
 """

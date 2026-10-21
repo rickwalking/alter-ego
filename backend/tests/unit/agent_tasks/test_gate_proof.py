@@ -1,12 +1,16 @@
 """Rule-fires + coupling tests for the GATES_JSON proof and declared QA mode.
 
-AE-0258 (gate proof) + AE-0260 (declared mode). Per the AE-0180 rule-fires
-standard, each new check ships a test proving it FIRES on a seeded violation
-(rejects a no-block / fail>0 / no-mode report), not merely that the tree passes.
+Per the rule-fires standard, each new check ships a test proving it FIRES on a
+seeded violation (rejects a no-block / fail>0 / no-mode report), not merely that
+the tree passes.
+
+``_BASH`` is an absolute interpreter so the coupling test never relies on a partial path
+(S607). ``_GATES_JSON_PASS`` mirrors the line printed by scripts/ci/gates.sh
+print_summary.
 """
 
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0258 — the gates.sh↔parser coupling test must run the real bash gate (mirrors test_diff_base.py)
+import subprocess  # noqa: S404  # integrity-ok: the gates.sh↔parser coupling test must run the real bash gate (mirrors test_diff_base.py)
 from pathlib import Path
 
 import pytest
@@ -15,10 +19,8 @@ from scripts.agent_tasks.gate_proof import evaluate_gate_proof, evaluate_qa_mode
 from scripts.agent_tasks.schema import can_transition, parse_ticket
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-# Absolute interpreter so the coupling test never relies on a partial path (S607).
 _BASH = shutil.which("bash") or "bash"
 
-# A genuine PASS GATES_JSON line (mirrors scripts/ci/gates.sh print_summary).
 _GATES_JSON_PASS = 'GATES_JSON: {"pass":7,"fail":0,"skip":0,"results":[]}'
 _GATES_JSON_FAIL = 'GATES_JSON: {"pass":5,"fail":2,"skip":0,"results":[]}'
 _GATES_JSON_SKIP = 'GATES_JSON: {"pass":4,"fail":0,"skip":3,"results":[]}'
@@ -62,7 +64,6 @@ def _setup_reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return reports
 
 
-# --- AE-0258 rule-fires: dev-summary GATES_JSON gates Dev Complete ------------
 # Scenario: a dev-summary without GATES_JSON cannot reach Dev Complete
 def test_dev_complete_blocked_without_gates_json(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -90,19 +91,19 @@ def test_dev_complete_passes_with_gates_json(
     assert errors == [], errors
 
 
-# Backward-compat: WITHOUT the flag (the retroactive sweep path) the proof is
-# NOT required — grandfathers the 164 pre-existing tickets.
 def test_dev_complete_grandfathered_without_flag(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Without the flag (the retroactive sweep path) the proof is NOT required, which
+    grandfathers the pre-existing tickets.
+    """
     _setup_reports(tmp_path, monkeypatch)
     ticket = parse_ticket(_dev_complete_ticket(tmp_path))
     assert ticket is not None
-    errors = can_transition(ticket, STATUS_DEV_COMPLETE)  # default: no enforcement
+    errors = can_transition(ticket, STATUS_DEV_COMPLETE)
     assert errors == [], errors
 
 
-# --- AE-0258 rule-fires: fail>0 blocks; skip>0 warns-but-passes --------------
 def test_proof_rejects_fail_gt_zero() -> None:
     outcome = evaluate_gate_proof(
         _written("x.qa.md", f"AE-1 {_GATES_JSON_FAIL}"), "report"
@@ -135,11 +136,11 @@ def teardown_module(_module: object) -> None:
         _TMP.rmdir()
 
 
-# --- AE-0258 coupling test: a REAL gates.sh line parses ----------------------
-# Runs an actual single fast gate and feeds its GATES_JSON line to the parser,
-# proving the validator stays coupled to the real script's output format.
 def test_real_gates_sh_line_parses(tmp_path: Path) -> None:
-    proc = subprocess.run(  # noqa: S603  # integrity-ok: AE-0258 — fixed bash path, fixed gate args, repo-controlled script
+    """Runs an actual single fast gate and feeds its GATES_JSON line to the parser,
+    proving the validator stays coupled to the real script's output format.
+    """
+    proc = subprocess.run(  # noqa: S603  # integrity-ok: fixed bash path, fixed gate args, repo-controlled script
         [_BASH, "scripts/ci/gates.sh", "backend:lint", "--changed-only"],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -153,11 +154,9 @@ def test_real_gates_sh_line_parses(tmp_path: Path) -> None:
     report = tmp_path / "real.qa.md"
     report.write_text(f"AE-1\n{gates_line}\n", encoding="utf-8")
     outcome = evaluate_gate_proof(report, "report")
-    # A real PASS line parses cleanly (no "no parseable field" error).
     assert not any("no parseable" in e for e in outcome.errors), outcome.errors
 
 
-# --- AE-0258: wave-report reference satisfies the proof ----------------------
 def test_wave_report_reference_satisfies_proof(tmp_path: Path) -> None:
     (tmp_path / "wave-2a.qa.md").write_text(
         f"# Wave 2a\nAE-1\n{_GATES_JSON_PASS}\n", encoding="utf-8"
@@ -170,7 +169,6 @@ def test_wave_report_reference_satisfies_proof(tmp_path: Path) -> None:
     assert outcome.errors == [], outcome.errors
 
 
-# --- AE-0260 rule-fires: declared QA mode ------------------------------------
 def _review_ticket(tmp_path: Path) -> Path:
     path = tmp_path / "AE-9991-test.md"
     path.write_text(

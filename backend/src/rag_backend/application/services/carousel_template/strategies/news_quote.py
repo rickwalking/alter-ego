@@ -1,4 +1,4 @@
-"""The ``pov_news`` quote card: verbatim quote + attribution row (AE-0406).
+"""The ``pov_news`` quote card: verbatim quote + attribution row.
 
 Phase 1 of spec §4: an initial-letter circle (accent fill, first letter of
 ``name``), the name, and ``@handle · X``. Never a URL. Every value comes from

@@ -5,7 +5,7 @@ command/query, delegates to the request-scoped handlers (resolved via the
 ``get_conversation_handlers`` DI provider at the edge — never the global DI
 container here), and maps the returned domain entity/result onto the HTTP
 response. Writes commit through the module's Unit of Work (the single commit
-owner); these routes never call ``db.commit()`` (AE-0101). The anon_token
+owner); these routes never call ``db.commit()``. The anon_token
 Set-Cookie attributes, the ``X-Agent-Origin`` header, rate limits, access checks
 (shared ``resource_access`` / ``carousel_access``), status codes, and response
 shapes stay byte-identical. Non-stream chat only — SSE stays in chat_stream.py.
@@ -86,7 +86,7 @@ class _RouteChatAgentFactory:
     """Route-local ``ChatAgentFactory`` bound to the patchable builder seam.
 
     Delegates to THIS module's ``build_agent_for_conversation`` name so the
-    AE-0097 safety net (which monkeypatches it) keeps overriding agent
+    safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM, while reusing the request session +
     container from the DI-built factory — routing + wiring stay byte-identical.
     """

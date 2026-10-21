@@ -1,4 +1,4 @@
-"""ORM-level run-progress invariants + epoch fence for carousels (AE-0315).
+"""ORM-level run-progress invariants + epoch fence for carousels.
 
 Two enforcement mechanisms live here, both registered once at import time
 (via ``infrastructure.database.models``):
@@ -26,6 +26,9 @@ Two enforcement mechanisms live here, both registered once at import time
 
 The module also registers the async run-epoch reader used by the workflow
 engine's checkpoint-commit boundary (layer b) through the domain DI seam.
+
+The guards self-register on import: the models package re-exports this module,
+so the listeners attach as soon as the ORM models are importable.
 """
 
 from __future__ import annotations
@@ -60,15 +63,17 @@ def _sync_run_columns_on_phase_transition(
     _connection: Connection,
     target: CarouselProjectModel,
 ) -> None:
-    """Stamp/clear run columns atomically with a phase_status value change."""
+    """Stamp/clear run columns atomically with a phase_status value change.
+
+    A no-op hydrate (``update_from_entity`` re-writing the same value) never
+    spuriously clears a live run's columns.
+    """
     history = get_history(target, _PHASE_STATUS_ATTR)
     if not history.has_changes():
         return
     new_value = history.added[0] if history.added else target.phase_status
     old_value = history.deleted[0] if history.deleted else None
     if old_value == new_value:
-        # No-op hydrate (e.g. update_from_entity re-writing the same value):
-        # never spuriously clear a live run's columns.
         return
     if new_value == PHASE_STATUS_IN_PROGRESS:
         now = datetime.now(UTC)
@@ -152,8 +157,6 @@ def register_carousel_run_guards() -> None:
     register_run_epoch_reader(_read_current_run_epoch)
 
 
-# Self-register on import: the models package re-exports this module, so the
-# listeners are attached as soon as the ORM models are importable.
 register_carousel_run_guards()
 
 __all__ = ["register_carousel_run_guards"]

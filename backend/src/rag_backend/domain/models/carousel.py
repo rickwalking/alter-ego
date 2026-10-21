@@ -63,20 +63,22 @@ class CarouselStatus(StrEnum):
 
 
 class CarouselTheme(StrEnum):
-    """Predefined themes for carousel content generation."""
+    """Predefined themes for carousel content generation.
+
+    The dark variants pair with the neon/neo-anime image styles; the light /
+    editorial palettes pair with the ``flat_editorial`` image style.
+    """
 
     CYBERSECURITY = "cybersecurity"
     AI_COMPETITION = "ai_competition"
     DEVELOPER_SKILLS = "developer_skills"
     SOURCE_CODE = "source_code"
     SOCIAL_ENGINEERING = "social_engineering"
-    # Dark variants (pair with the neon/neo-anime image styles).
     PLASMA_MAGENTA = "plasma_magenta"
     ACID_LIME = "acid_lime"
     MONO_INDIGO = "mono_indigo"
     EMBER_CRIMSON = "ember_crimson"
     BLUEPRINT = "blueprint"
-    # Light / editorial palettes (pair with the flat_editorial image style).
     RISOGRAPH = "risograph"
     PAPER_EDITORIAL = "paper_editorial"
     CLINICAL_MINT = "clinical_mint"
@@ -84,7 +86,7 @@ class CarouselTheme(StrEnum):
 
 
 def validate_theme_reference(ref: str) -> str:
-    """Validate a project ``theme`` reference and return it (AE-0268/0271).
+    """Validate a project ``theme`` reference and return it.
 
     A theme is a root key, the ``"auto"`` sentinel, or a **custom-palette UUID**.
     Custom palettes cannot be enum members, so a UUID-shaped reference is accepted
@@ -117,6 +119,33 @@ class ResearchSourceType(StrEnum):
 
 @dataclass
 class CarouselProject:
+    """A carousel project and its generation state.
+
+    - ``theme`` is a string reference: a root palette key, the ``auto`` sentinel,
+      or a custom palette UUID. ``CarouselTheme`` is the canonical root-key list,
+      not this field's type.
+    - ``theme_snapshot`` is the resolved palette frozen at generation (keys
+      primary/accent/background/mode/resolved_ref/resolved_at). Render reads this
+      snapshot, not a live lookup, so palette edits never alter an already
+      generated carousel.
+    - ``custom_visual_details`` is project-level visual direction injected into
+      every slide image prompt; image-phase revision feedback is appended here so a
+      revision actually changes the rendered scene.
+    - ``creator_*`` is the watermark metadata; ``template_version`` serves A/B
+      testing and rollback.
+    - ``content_mode`` NULL means Radar IA (news_analysis). The POV inputs are
+      create-only; ``hook_text`` and ``hook_asset_id`` are owner edits (hook picker,
+      slide-1 photo).
+    - ``pov_quotes`` / ``pov_sources`` are a ``pov_news`` project's scout-verified
+      quotes and the topic's sources in order (the caption footer); create-only.
+    - ``slide_cover`` is the GrokBot cover the owner chose for slide 1 (None = the
+      default slide 1), an owner edit like the hook photo.
+    - ``needs_republish_since`` is a read-only view of the server-guaranteed
+      republish marker. Only the write owner (mark/clear) writes it; it is never
+      round-tripped through the ORM ``update_from_entity`` hydrator, so it cannot be
+      clobbered.
+    """
+
     topic: str
     audience: str
     niche: str
@@ -131,13 +160,7 @@ class CarouselProject:
     generate_images: bool = True
     image_model: str = IMAGE_MODEL_DEFAULT
     image_style: str = IMAGE_STYLE_DEFAULT
-    # Theme is a string reference (AE-0268): a root palette key, the "auto"
-    # sentinel, or (from AE-0269) a custom palette UUID. The CarouselTheme enum
-    # is retained as the canonical root-key list, not as this field's type.
     theme: str = CarouselTheme.AUTO.value
-    # Resolved palette frozen at generation (AE-0269 D9): keys primary/accent/
-    # background/mode/resolved_ref/resolved_at. Render reads this snapshot, not a
-    # live lookup, so palette edits never alter an already-generated carousel.
     theme_snapshot: dict[str, str] | None = None
     primary_color: str | None = None
     accent_color: str | None = None
@@ -159,15 +182,11 @@ class CarouselProject:
     persona_id: str | None = None
     rubric_id: str | None = None
     instructions: str | None = None
-    # Project-level visual direction injected into every slide image prompt
-    # (AE-0263 backdrop / custom scene details). Image-phase revision feedback
-    # is appended here so a revision actually changes the rendered scene (AE-0261).
     custom_visual_details: str | None = None
     current_phase: str = "brief"
     phase_status: str = "pending"
     is_public: bool = False
     owner_id: str | None = None
-    # Creator watermark metadata
     creator_name: str | None = None
     creator_handle: str | None = None
     creator_avatar_url: str | None = None
@@ -177,13 +196,8 @@ class CarouselProject:
     presentation_policy_version: str | None = None
     presentation_policy_checksum: str | None = None
     artifact_version: str | None = None
-    # Template version for A/B testing and rollback
     template_version: str = "v2"
-    # Slide layout strategy for visual formatting
     slide_layout_strategy: str | None = None
-    # AE-0373 (ADR-0021): content mode and the "Ponto de Vista" inputs. NULL mode
-    # means Radar IA (news_analysis). The POV inputs are create-only; hook_text and
-    # hook_asset_id are owner edits (hook picker, slide-1 photo).
     content_mode: str | None = None
     pov_thesis: str | None = None
     pov_personal_proof: str | None = None
@@ -193,16 +207,9 @@ class CarouselProject:
     hook_text: str | None = None
     hook_asset_id: UUID | None = None
     hook_asset_staged_path: str | None = None
-    # AE-0406 (ADR-0023): a ``pov_news`` project's scout-verified quotes and the
-    # topic's sources in order (the caption footer). Create-only.
     pov_quotes: tuple[NewsQuote, ...] = ()
     pov_sources: tuple[str, ...] = ()
-    # AE-0418 (ADR-0024): the GrokBot cover the owner chose for slide 1
-    # (None = the default slide 1). An owner edit, like the hook photo.
     slide_cover: SlideCover | None = None
-    # AE-0314: read-only view of the server-guaranteed republish marker. Written
-    # ONLY by the write owner (mark/clear); never round-tripped through the ORM
-    # ``update_from_entity`` hydrator, so it cannot be clobbered.
     needs_republish_since: datetime | None = None
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)

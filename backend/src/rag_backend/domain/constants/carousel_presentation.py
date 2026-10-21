@@ -1,4 +1,18 @@
-"""Constants for the carousel presentation contract (hero_lower_third_v1)."""
+"""Constants for the carousel presentation contract (hero_lower_third_v1).
+
+A report blocks approval only while a blocker-severity violation remains; warnings show
+in the review panel without blocking. An absent severity defaults to blocker, so a
+missing policy tag can never silently unblock a rule. The per-locale emphasis convention
+(PT ``**...**``, EN ``<strong>...</strong>``) is a gate rule: a field written with the
+other locale's markup is a blocker the deterministic repair normalizes at write time.
+Copy-hygiene rules exist because a fenced JSON blob, an HTML tag and a Markdown heading
+once became visible slide copy. EN copy identical to PT counts as untranslated only past
+``MIN_UNTRANSLATED_COMPARE_CHARS``, so a brand-only heading ("Argon") is not flagged. A
+content slide body needs at least ``MIN_CONTENT_BODY_WORDS`` words unless its features
+carry the copy, and a field's language is judged from that many words; wrong language
+needs ``MIN_WRONG_LANGUAGE_MARKERS`` other-language markers, and a repeated sentence
+needs ``MIN_REPEATED_SENTENCE_WORDS`` words.
+"""
 
 PRESENTATION_POLICY_LEGACY_NEON_V2 = "legacy_neon_v2"
 PRESENTATION_POLICY_HERO_LOWER_THIRD_V1 = "hero_lower_third_v1"
@@ -54,10 +68,6 @@ ERR_BLOCKING_VALID_REPORT = "blocking cannot be true when validation_status is v
 VALIDATION_STATUS_VALID = "valid"
 VALIDATION_STATUS_INVALID = "invalid"
 
-# Violation severity tiers (AE-0312). A report blocks approval only when at
-# least one blocker-severity violation remains; warnings surface in the review
-# panel without blocking. The code-level default for an absent severity is
-# BLOCKER so a missing policy tag can never silently unblock a rule.
 SEVERITY_BLOCKER = "blocker"
 SEVERITY_WARNING = "warning"
 DEFAULT_VIOLATION_SEVERITY = SEVERITY_BLOCKER
@@ -75,29 +85,18 @@ VIOLATION_HEADING_EMPTY = "heading_empty"
 VIOLATION_HEADING_NOT_SENTENCE_CASE_EN = "heading_not_sentence_case_en"
 VIOLATION_HEADING_NOT_SENTENCE_CASE_PT = "heading_not_sentence_case_pt"
 VIOLATION_BODY_NOT_SENTENCE_CASE_PT = "body_not_sentence_case_pt"
-# AE-0366: EN body sentence case + a non-empty copy area under the heading.
 VIOLATION_BODY_NOT_SENTENCE_CASE_EN = "body_not_sentence_case_en"
 VIOLATION_BODY_EMPTY = "body_empty"
-# AE-0366 quality rubric: objective structure/markup/translation checks.
 VIOLATION_CLOSING_ACTIONS_MISSING = "closing_actions_missing"
 VIOLATION_SUMMARY_POINTS_MISSING = "summary_points_missing"
 VIOLATION_TRANSLATION_NOT_ENGLISH = "translation_not_english"
 VIOLATION_EMPHASIS_MARKUP_INVALID = "emphasis_markup_invalid"
-# AE-0436: the per-locale emphasis convention (AE-0403/AE-0414) — PT ``**…**``,
-# EN ``<strong>…</strong>`` — is a gate rule, not just an editor hint: a field
-# written with the other locale's markup is a blocker the deterministic repair
-# normalizes at write time.
 VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH = "emphasis_markup_locale_mismatch"
-# Minimum complete items (title + body) the rubric requires per slide type.
 MIN_CLOSING_ACTIONS = 3
 MIN_SUMMARY_POINTS = 3
 MIN_CONTENT_FEATURES_WITHOUT_BODY = 3
-# EN copy identical to PT copy is "not translated" only past this length, so a
-# brand-only heading ("Argon") that is legitimately the same is not flagged.
 MIN_UNTRANSLATED_COMPARE_CHARS = 12
 VIOLATION_PROPER_NOUN_CASING = "proper_noun_casing"
-# AE-0401: copy-hygiene rules (prod carousel 98a2e2f0: a fenced JSON blob, an
-# HTML tag and a Markdown heading became visible slide copy).
 VIOLATION_STRUCTURED_PAYLOAD_IN_COPY = "structured_payload_in_copy"
 VIOLATION_MARKUP_LEAK = "markup_leak"
 VIOLATION_EMPHASIS_UNBALANCED = "emphasis_unbalanced"
@@ -108,15 +107,10 @@ VIOLATION_COPY_TRUNCATED = "copy_truncated"
 VIOLATION_BODY_TOO_SHORT = "body_too_short"
 VIOLATION_WRONG_LANGUAGE = "wrong_language"
 VIOLATION_REPEATED_TEXT = "repeated_text"
-# An item title cut mid-phrase, its rest pushed into the item body.
 VIOLATION_STRUCTURED_ITEM_SPLIT = "structured_item_split"
-# A content slide body needs at least this many words (unless its features
-# carry the copy); a field is judged for its language from this many words.
 MIN_CONTENT_BODY_WORDS = 8
 MIN_LANGUAGE_CHECK_WORDS = 4
-# Other-language marker words needed before copy reads as the wrong language.
 MIN_WRONG_LANGUAGE_MARKERS = 2
-# A sentence counts as repeated only from this many words.
 MIN_REPEATED_SENTENCE_WORDS = 3
 VIOLATION_VISIBLE_EMOJI_FORBIDDEN = "visible_emoji_forbidden"
 VIOLATION_DASH_PUNCTUATION_FORBIDDEN = "dash_punctuation_forbidden"

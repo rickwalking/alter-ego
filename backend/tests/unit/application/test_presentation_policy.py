@@ -110,7 +110,7 @@ class TestPresentationPolicy:
         assert "visible_emoji_forbidden" in context
 
     def test_load_v2_exposes_casing_rules_and_severities(self) -> None:
-        """AE-0312: v2 carries PT casing rules, proper nouns, and severities."""
+        """Policy v2 carries PT casing rules, proper nouns, and severities."""
         policy = load_presentation_policy(
             PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2
         )
@@ -123,14 +123,14 @@ class TestPresentationPolicy:
         assert policy.is_casing_warning(VIOLATION_PROPER_NOUN_CASING) is True
 
     def test_loader_rejects_v2_casing_rule_without_severity(self) -> None:
-        """Rule-fires (AE-0180): a casing rule with no severity fails the load."""
+        """Rule-fires: a casing rule with no severity fails the load."""
         casing_rules = (CasingRulePolicy(code="heading_not_sentence_case_pt"),)
 
         with pytest.raises(PresentationPolicyError):
             _assert_casing_rules_have_severity(casing_rules, {})
 
     def test_loader_rejects_invalid_severity_value(self) -> None:
-        """Rule-fires (AE-0180): an invalid severity value fails the load."""
+        """Rule-fires: an invalid severity value fails the load."""
         with pytest.raises(PresentationPolicyError):
             _parse_rule_severities({"heading_empty": "not_a_severity"})
 
@@ -146,7 +146,7 @@ class TestPresentationPolicy:
         assert rules[0].exempt_slide_types == frozenset({"cta"})
 
     def test_unknown_policy_version_falls_back_to_v1(self) -> None:
-        """AE-0312 rollback safety: an unknown version falls back to v1, never raises.
+        """An unknown version falls back to v1, never raises.
 
         Scenario: a code rollback after the in-flight upgrade migration cannot
         freeze v2-stamped rows (see carousel_pt_casing_severity.feature).

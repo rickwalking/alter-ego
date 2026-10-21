@@ -14,15 +14,18 @@ class StrategyNotFoundError(LookupError):
 
 @dataclass(frozen=True)
 class ExportConfig:
-    """Configuration for carousel slide export."""
+    """Configuration for carousel slide export.
+
+    ``policy_version`` and ``slide_count`` give the export preflight the project's
+    contract and deck size, so a ranged (role) deck is checked against its own slide
+    map, not the v1 one.
+    """
 
     width: int = 1080
     height: int = 1350
     css_overrides: str | None = None
     quality: int = 95
     hd: bool = False
-    # AE-0374: the project's contract and deck size, so the export preflight
-    # checks a ranged (role) deck against its own slide map, not the v1 one.
     policy_version: str | None = None
     slide_count: int | None = None
 
@@ -88,7 +91,7 @@ class ResearchTool(Protocol):
 
 @dataclass(frozen=True)
 class ResearchEnrichmentParams:
-    """Topic + research tool bundle for one enrichment run (AE-0317).
+    """Topic + research tool bundle for one enrichment run.
 
     Lives next to :class:`ResearchTool` (not in ``domain.models``) so the
     domain layer keeps zero internal import cycles. ``research_tool=None``

@@ -1,7 +1,7 @@
 """Application-layer collaborator ports for the identity bounded context.
 
 The identity services delegate all JWT and bcrypt work to the UNCHANGED
-``rag_backend.infrastructure.auth`` module (AE-0098 constraint — JWT/bcrypt are
+``rag_backend.infrastructure.auth`` module (by design, JWT/bcrypt are
 not reimplemented). To keep the application/domain layers free of direct
 infrastructure imports (Clean Architecture; the module exit-gate convention,
 module-conventions.md §7d), the concrete ``infrastructure.auth`` functions are

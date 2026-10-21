@@ -1,4 +1,4 @@
-"""Blog generation entry points end to end (AE-0425, ADR-0025).
+"""Blog generation entry points end to end (ADR-0025).
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 The run uses the real routes, the real tracked runner and the real
@@ -58,7 +58,10 @@ POSTS = "/api/blog-posts"
 @pytest.fixture(autouse=True)
 def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolate from any Langfuse client an earlier test configured (its flush
-    to an unreachable host would eat the run's timeout)."""
+    to an unreachable host would eat the run's timeout).
+
+    The editor's single-image service traces with its own helper, so it is patched too.
+    """
     from contextlib import nullcontext
 
     from rag_backend.application.services.blog import (
@@ -72,7 +75,6 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
             "blog_phase_trace",
             lambda _scope, **_kwargs: nullcontext(MagicMock()),
         )
-    # The editor's single-image service (AE-0424) traces with its own helper.
     from rag_backend.application.services.blog import blog_image_service as _single
 
     monkeypatch.setattr(_single, "blog_ai_propagate", lambda *_a: nullcontext())
@@ -114,6 +116,7 @@ class _Harness:
 
 @pytest.fixture
 async def harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Harness:
+    """The editor's store and serving route are the only image path."""
     from rag_backend.api.routes import blog_post_images
     from rag_backend.application.services.asset_cdn_service import AssetCdnService
     from rag_backend.application.services.blog.blog_image_store import BlogImageStore
@@ -121,7 +124,6 @@ async def harness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Harness:
     images = tmp_path / "blog-images"
     built = _Harness(images)
     monkeypatch.setattr(blog_generate_support, "build_generation_service", built.build)
-    # The editor's (AE-0424) store + serving route is the only image path.
     store = BlogImageStore(root=images, cdn=AssetCdnService())
     monkeypatch.setattr(blog_post_images, "blog_images_store", lambda: store)
     return built
@@ -230,7 +232,6 @@ async def test_from_carousel_creates_a_draft_and_completes(
         == post["content"]["quality"]["voice_score"]
     )
     assert harness.writer.drafts[0].section_count == 9
-    # The cover is served from the blog-images store to its author.
     image = await client.get(post["content"]["cover"]["url"])
     assert image.status_code == 200
     assert image.headers["content-type"] == "image/jpeg"
@@ -360,7 +361,10 @@ async def test_retry_while_in_progress_is_refused(
 async def test_a_partial_run_retries_only_its_missing_images(
     client: AsyncClient, harness: _Harness
 ) -> None:
-    # Review fix 3: the retry of a post whose article exists never rewrites it.
+    """The retry of a post whose article exists never rewrites it (the writer runs
+    once). All 8 slots are reserved before the spend (the failed one may be billed) and
+    are counted on the per-post cap across attempts.
+    """
     draft = article(7)
     pt = list(draft.sections)
     pt[3] = DraftSection(heading=FAIL_IMAGE_MARKER, body_md=pt[3].body_md)
@@ -372,7 +376,6 @@ async def test_a_partial_run_retries_only_its_missing_images(
     partial = await _settled(client, post_id)
     generation = partial["ai_generation_metadata"]["generation"]
     assert generation["status"] == "partial"
-    # Reserved before the spend: all 8 slots (the failed one may be billed).
     assert partial["ai_generation_metadata"]["blog_image_generations"] == 8
     bodies = [s["body_md"] for s in partial["content"]["sections"]]
 
@@ -384,9 +387,8 @@ async def test_a_partial_run_retries_only_its_missing_images(
     assert generation["status"] == "complete"
     assert generation["mode"] == "images_only"
     assert generation["image_slots"] == 1
-    # Counted on AE-0424's per-post cap across attempts.
     assert done["ai_generation_metadata"]["blog_image_generations"] == 9
-    assert len(harness.writer.drafts) == 1  # the writer ran once, never again
+    assert len(harness.writer.drafts) == 1
     assert [s["body_md"] for s in done["content"]["sections"]] == bodies
     assert done["content"]["sections"][3]["image"] is not None
 
@@ -394,7 +396,10 @@ async def test_a_partial_run_retries_only_its_missing_images(
 async def test_retry_of_an_unparseable_row_reruns_the_writer(
     client: AsyncClient, harness: _Harness
 ) -> None:
-    # AE-0428 review: a row that does not parse is "no article" (never a 500).
+    """A row that does not parse is "no article" (never a 500): the full writer runs
+    again and REPLACES the row with the new v2 document (a full-document write), so the
+    paid retry is not a dead end.
+    """
     from sqlalchemy import update
 
     from rag_backend.infrastructure.database.config import get_session_maker
@@ -416,9 +421,7 @@ async def test_retry_of_an_unparseable_row_reruns_the_writer(
     retry = await client.post(f"{POSTS}/{post_id}/generation/retry")
     assert retry.status_code == 202, retry.text
     done = await _settled(client, post_id)
-    assert len(harness.writer.drafts) == 2  # the full writer ran again
-    # Review B: the unparseable row is REPLACED by the new v2 document (a
-    # full-document write), so the paid retry is not a dead end.
+    assert len(harness.writer.drafts) == 2
     assert done["ai_generation_metadata"]["generation"]["status"] == "complete"
     assert done["content"]["schema"] == "blog.v2"
     assert len(done["content"]["sections"]) == 7
@@ -428,7 +431,7 @@ async def test_retry_of_an_unparseable_row_reruns_the_writer(
 async def test_generated_images_are_served_by_the_editor_route(
     client: AsyncClient, harness: _Harness
 ) -> None:
-    # Review fix 4: one image store/route (AE-0424's): uuid4 names, public.
+    """There is one image store and route (the editor's): uuid4 names, public."""
     harness.writer.draft_article = article(7)
     response = await client.post(GENERATE, json={"topic": "Tema servido"})
     post = await _settled(client, response.json()["id"])

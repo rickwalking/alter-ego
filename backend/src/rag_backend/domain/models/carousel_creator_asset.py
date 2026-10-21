@@ -11,6 +11,8 @@ from rag_backend.domain.clock import utc_now
 
 @dataclass
 class CarouselCreatorAsset:
+    """A managed creator asset; ``role`` is its photo-library role (hook/cta/pov)."""
+
     owner_id: str
     content_sha256: str
     media_type: str
@@ -18,7 +20,6 @@ class CarouselCreatorAsset:
     height: int
     relative_path: str
     id: UUID = field(default_factory=uuid4)
-    # AE-0373: photo library role (hook / cta / pov) and an optional pose tag.
     role: str | None = None
     pose_tag: str | None = None
     created_at: datetime = field(default_factory=utc_now)
@@ -27,7 +28,7 @@ class CarouselCreatorAsset:
 
 @dataclass(frozen=True)
 class CreatorAssetLibraryQuery:
-    """AE-0376: list an owner's photo library, optionally by role."""
+    """List an owner's photo library, optionally by role."""
 
     owner_id: str
     role: str | None = None
@@ -36,7 +37,7 @@ class CreatorAssetLibraryQuery:
 
 @dataclass(frozen=True)
 class CreatorAssetTags:
-    """AE-0376: an asset's library role (hook / cta / pov) and pose tag."""
+    """An asset's library role (hook / cta / pov) and pose tag."""
 
     asset_id: UUID
     role: str | None = None

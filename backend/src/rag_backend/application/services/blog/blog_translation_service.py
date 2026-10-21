@@ -1,11 +1,11 @@
-"""PT -> EN translation of a blog document (AE-0424 "Generate EN translation").
+"""PT -> EN translation of a blog document (the editor's "Generate EN translation").
 
 The editor's EN tab is read-only until ``content.translations.en`` exists; this
 service builds it from the PT document, one section per (bounded-concurrency)
 LLM call, keeping each section's image and the cover (the same art serves both
 languages). Every EN section gets a fresh id. Any failed section fails the
 whole translation (nothing is stored), so EN is never half-written, and so
-does a section the model answered in Portuguese (AE-0435: the carousel's
+does a section the model answered in Portuguese (the carousel's
 ``wrong_language`` detector, no model), so EN is never Portuguese.
 
 The owner's own text is delimited as data in the versioned template

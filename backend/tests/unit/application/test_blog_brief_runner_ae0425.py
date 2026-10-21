@@ -1,4 +1,4 @@
-"""Writer brief from a carousel, the tracked runner, the document (AE-0425).
+"""Writer brief from a carousel, the tracked runner, the document.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -108,6 +108,7 @@ def _gated(count: int, prefix: str) -> GatedLanguage:
 
 
 def test_document_shares_ids_and_attaches_images_by_slot() -> None:
+    """The lede has no heading."""
     languages = GeneratedLanguages(
         _gated(3, "Seção"), _gated(3, "Section"), "Título", "Title"
     )
@@ -120,7 +121,7 @@ def test_document_shares_ids_and_attaches_images_by_slot() -> None:
         "cover",
         *(s.id for s in document.sections),
     ]
-    assert subjects[1].heading == "Título"  # the lede has no heading
+    assert subjects[1].heading == "Título"
     image = BlogImage(url="/api/blog-images/p/a.jpg", alt="Título")
     attached = attach_images(
         document,
@@ -192,7 +193,7 @@ async def test_shutdown_cancels_in_flight_runs() -> None:
 
 
 def test_attach_keeps_owner_images_and_skips_filled_slots() -> None:
-    # Review fix 2/3: only EMPTY slots are filled; a retry asks only for gaps.
+    """Only empty slots are filled, so a retry asks only for the gaps."""
     languages = GeneratedLanguages(
         _gated(2, "Seção"), _gated(2, "Section"), "Título", "Title"
     )

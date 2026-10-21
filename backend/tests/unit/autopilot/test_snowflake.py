@@ -1,4 +1,4 @@
-"""Snowflake timestamp round-trip (AE-0352).
+"""Snowflake timestamp round-trip.
 
 Gherkin: tests/features/autopilot_signals.feature
 The X scenario depends on this pure function for the 48 hour cutoff.

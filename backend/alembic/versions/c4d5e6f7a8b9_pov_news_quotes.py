@@ -4,7 +4,7 @@ Revision ID: c4d5e6f7a8b9
 Revises: a0e4f0a4b4c4
 Create Date: 2026-10-16
 
-AE-0406 (ADR-0023): ADDITIVE. ``topic_candidates`` gains ``quotes`` (the scout's
+ADR-0023: ADDITIVE. ``topic_candidates`` gains ``quotes`` (the scout's
 verified quotes of a ``pov_news`` topic); ``carousel_projects`` gains
 ``pov_quotes`` (the same quotes, carried onto the carousel) and ``pov_sources``
 (the topic's sources in order, for the caption footer). Every column is
@@ -12,9 +12,9 @@ nullable JSON; no existing column is altered or dropped. ``content_mode`` is a
 plain ``String(20)`` with no enum or check constraint, so ``pov_news`` needs no
 change there. ``downgrade`` drops the three columns.
 
-Idempotent like the AE-0371 revisions: prod has no ``alembic_version`` table and
-applies the SQL by hand, so each column is added only when missing and dropped
-only when present.
+Idempotent like the earlier autopilot revisions: prod has no
+``alembic_version`` table and applies the SQL by hand, so each column is added
+only when missing and dropped only when present.
 """
 
 from __future__ import annotations

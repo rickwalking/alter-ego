@@ -1,18 +1,18 @@
-"""Idempotent republish of a completed carousel's artifacts (AE-0313).
+"""Idempotent republish of a completed carousel's artifacts.
 
 Re-renders slides/PDFs from the persisted slide data, health-checks the fresh
 pre-promotion outputs, then builds and activates a new content-addressed
 artifact version — all under the shared per-project advisory lock so a republish
-can never interleave with AE-0311's repair, AE-0314's slide edit, or another
+can never interleave with a repair, a slide edit, or another
 republish.
 
-Lock scope (pinned by AE-0313 cold-critic r3): the session-scoped advisory lock
+Lock scope: the session-scoped advisory lock
 is acquired ONCE for the whole pipeline — the digest/manifest computation, the
 ``activate_build`` CAS, and the ``write_current_index`` all sit inside a single
-critical section. The lock lives on its own connection (AE-0316) so it spans the
+critical section. The lock lives on its own connection so it spans the
 finalize pipeline's transactions.
 
-The non-blocking acquire raises AE-0316's ``mutation_in_progress`` conflict when
+The non-blocking acquire raises the ``mutation_in_progress`` conflict when
 another holder has the lock; the republish path re-labels that as the more
 specific ``build_in_progress`` (an artifact build/republish is already running),
 while any conflict raised INSIDE the critical section propagates unchanged.

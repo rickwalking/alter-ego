@@ -34,19 +34,16 @@ _EMOJI_PATTERN = re.compile(
     flags=re.UNICODE,
 )
 
-# Slide type identifiers
 _SLIDE_TYPE_INTRO = "intro"
 _SLIDE_TYPE_SUMMARY = "summary"
 _SLIDE_TYPE_CONTENT = "content"
 
-# Budget key identifiers
 _BUDGET_KEY_INTRO_HEADING = "intro_heading"
 _BUDGET_KEY_SUMMARY_HEADING = "summary_heading"
 _BUDGET_KEY_CONTENT_HEADING = "content_heading"
 _BUDGET_KEY_CONTENT_BODY = "content_body"
 _BUDGET_KEY_INTRO_SUBTITLE = "intro_subtitle"
 
-# Structured item field identifiers
 _ITEM_FIELD_TITLE = "title"
 _ITEM_FIELD_BODY = "body"
 
@@ -64,7 +61,7 @@ def contains_forbidden_dash(text: str) -> bool:
 def contains_drafting_scaffold(text: str) -> bool:
     """Return True when visible copy includes drafting scaffold labels.
 
-    AE-0436: the shared detector covers locale markers in every variant
+    The shared detector covers locale markers in every variant
     (``**PT-BR**``, ``PT:``, ``**EN:**``, a bare ``EN`` line) and field labels
     (``Heading:``, ``Body:``, ``CTA creator:``, ``Summary:``, ``TL;DR:``, …).
     Positional rules are shared with the stripper, so every flagged text is

@@ -65,7 +65,7 @@ def rewrite_asset_paths(html: str, up: str) -> str:
     """Point ``images/`` and ``assets/`` at the export root from a language dir.
 
     The slides are exported from ``<output>/<lang>/`` (HD: ``<lang>/hd/``);
-    AE-0376 adds ``assets/`` so the POV slide-1 photo and uploaded avatars,
+    adds ``assets/`` so the POV slide-1 photo and uploaded avatars,
     staged under ``<output>/assets/creators/``, resolve too.
     """
     for directory in (SHARED_IMAGES_DIR_NAME, ARTIFACT_ASSETS_DIR):
@@ -77,7 +77,11 @@ def rewrite_asset_paths(html: str, up: str) -> str:
 async def render_language(
     config: BilingualExportConfig,
 ) -> None:
-    """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
+    """Export a single language's slide JPGs + PDF into `<output>/<lang>/`.
+
+    HD slides (2160x2700, for archive and retina) are exported too, non-blocking: if HD
+    fails the standard slides are still available.
+    """
     lang_dir = config.output_dir / config.language
     lang_dir.mkdir(parents=True, exist_ok=True)
     if config.language == LANGUAGE_PT:
@@ -93,8 +97,6 @@ async def render_language(
         output_dir=str(lang_dir),
         config=ExportConfig(policy_version=policy_version, slide_count=slide_count),
     )
-    # Export HD slides too (2160x2700 for archive/retina). Non-blocking:
-    # if HD fails the standard slides are still available.
     try:
         hd_dir = lang_dir / HD_SUBDIR_NAME
         hd_dir.mkdir(parents=True, exist_ok=True)

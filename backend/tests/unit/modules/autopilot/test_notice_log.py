@@ -1,4 +1,4 @@
-"""Notice ledger round-trip (AE-0355)."""
+"""Notice ledger round-trip."""
 
 from __future__ import annotations
 

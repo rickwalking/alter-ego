@@ -1,4 +1,4 @@
-"""Shared repository contract tests for the UserRepository port (AE-0098).
+"""Shared repository contract tests for the UserRepository port.
 
 One parametrized contract suite runs the SAME assertions against BOTH:
 
@@ -8,16 +8,21 @@ One parametrized contract suite runs the SAME assertions against BOTH:
 
 Because both adapters are exercised by identical scenarios, any divergence in
 observable behavior surfaces as a test failure — pinning the port's contract so
-adapter swaps stay safe (mirrors the AE-0094 ``DocumentRepository`` contract).
+adapter swaps stay safe (mirrors the ``DocumentRepository`` contract).
 
 The Postgres adapter runs against the SQLite in-memory database used across the
 backend test suite (per ``backend/CLAUDE.md`` — "Use SQLite in-memory for
 database tests"), so it is always available in CI; no skip is required.
 
-The contract also proves the AE-0098 **object-identity shim**: the
+The contract also proves the **object-identity shim**: the
 ``UserRepository`` re-exported by the identity module is the IDENTICAL Protocol
 object as the legacy ``domain.protocols.repositories.UserRepository``, so
 existing callers keep resolving.
+
+``_SHIM_IDENTITY`` checks that the identity module re-exports the same Protocol object,
+never a copy, so the legacy callers of ``domain.protocols.repositories.UserRepository``
+keep resolving to the identical object. ``_PORT_CHECK`` lets mypy --strict prove the
+fake implements the shipped UserRepository port.
 """
 
 from uuid import UUID, uuid4
@@ -34,8 +39,6 @@ from rag_backend.modules.identity.domain.ports import (
     UserRepository as ModuleUserRepository,
 )
 
-# --- Constants (no magic strings) -------------------------------------------
-
 _FAKE = "fake"
 _POSTGRES = "postgres"
 _ERR_NOT_FOUND_FRAGMENT = "not found"
@@ -44,14 +47,7 @@ _DEFAULT_LIMIT = 100
 _DEFAULT_OFFSET = 0
 
 
-# --- Object-identity shim (AE-0098 AC) ---------------------------------------
-# The identity module re-exports the SAME Protocol object, never a copy, so the
-# ~50+ legacy callers of ``domain.protocols.repositories.UserRepository`` keep
-# resolving to the identical object after the shim lands.
 _SHIM_IDENTITY: bool = LegacyUserRepository is ModuleUserRepository
-
-
-# --- Fake in-memory adapter --------------------------------------------------
 
 
 class FakeUserRepository:
@@ -128,13 +124,7 @@ class FakeUserRepository:
         return sum(1 for user in self._store.values() if user.role == role)
 
 
-# Static Protocol conformance: the fake satisfies the shipped UserRepository
-# port. mypy --strict checks this assignment, satisfying the AC that the fake
-# implements the port and is type-checked.
 _PORT_CHECK: ModuleUserRepository = FakeUserRepository()
-
-
-# --- Test data helpers -------------------------------------------------------
 
 
 def _user(email: str, role: UserRole = UserRole.EDITOR) -> User:
@@ -146,22 +136,18 @@ def _user(email: str, role: UserRole = UserRole.EDITOR) -> User:
     )
 
 
-# --- Parametrization fixtures ------------------------------------------------
-
-
 @pytest.fixture(params=[_FAKE, _POSTGRES])
 def repo(request: pytest.FixtureRequest) -> ModuleUserRepository:
-    """Return each adapter in turn so every contract test runs against both."""
+    """Return each adapter in turn so every contract test runs against both.
+
+    The SQLite in-memory db_session is always available, so the Postgres-port adapter
+    always runs with no skip path.
+    """
     if request.param == _FAKE:
         return FakeUserRepository()
 
-    # SQLite in-memory db_session is always available (backend/CLAUDE.md), so the
-    # Postgres-port adapter always runs — no skip path.
     db_session: AsyncSession = request.getfixturevalue("db_session")
     return PostgresUserRepository(db_session)
-
-
-# --- Contract suite ----------------------------------------------------------
 
 
 @pytest.mark.unit

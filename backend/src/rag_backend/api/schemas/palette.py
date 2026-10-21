@@ -1,4 +1,4 @@
-"""Request/response schemas for the custom-palette catalog (AE-0270).
+"""Request/response schemas for the custom-palette catalog.
 
 Security lives here (skeptical G5/G8): the three colour fields are validated as a
 **strict** ``#rrggbb`` allow-list so no free text can reach the LLM image prompt;
@@ -6,6 +6,9 @@ the display name rejects the obvious XSS characters and is length-capped; keywor
 are trimmed, lower-cased, de-duplicated, count/length-capped, and rejected when
 they collide with a curated *root brand* keyword (which would let a custom palette
 hijack brand AUTO-detection). All of these raise a 422 before any DB write.
+
+_ROOT_BRAND_KEYWORDS flattens every curated brand keyword: a custom keyword in this set
+would steal a brand's AUTO match, so creation and edit reject it.
 """
 
 from __future__ import annotations
@@ -32,8 +35,6 @@ from rag_backend.domain.constants.palette_catalog import (
 )
 from rag_backend.domain.constants.palette_types import PaletteMode
 
-# Flattened union of every curated brand keyword — a custom keyword that lands in
-# this set would steal a brand's AUTO match, so creation/edit rejects it.
 _ROOT_BRAND_KEYWORDS: frozenset[str] = frozenset(
     keyword.lower() for keywords in BRAND_KEYWORDS.values() for keyword in keywords
 )

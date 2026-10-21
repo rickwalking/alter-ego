@@ -14,7 +14,12 @@ from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
 @dataclass(frozen=True, kw_only=True)
 class ReviewNotice:
-    """One album plus the keyboard message for a revision."""
+    """One album plus the keyboard message for a revision.
+
+    ``profile`` is the ``Audience · Niche · Style`` line above the caption preview.
+    ``fixable`` adds the “Fix issues” button under the quality issue lines.
+    ``cover`` drives the GrokBot cover preview and the slide-1 toggle.
+    """
 
     chat_id: str
     run_id: UUID
@@ -24,12 +29,9 @@ class ReviewNotice:
     caption: str
     slide_paths: tuple[str, ...]
     prior_album_ids: tuple[int, ...]
-    # AE-0361: ``Audience · Niche · Style`` above the caption preview.
     profile: str = ""
-    # AE-0367: quality issue lines; ``fixable`` adds the "Fix issues" button.
     issues: tuple[str, ...] = ()
     fixable: bool = False
-    # AE-0418: the GrokBot cover preview and the slide-1 toggle.
     cover: CoverOffer | None = None
 
 
@@ -43,13 +45,16 @@ class ReviewSendResult:
 
 @dataclass(frozen=True, kw_only=True)
 class StatusNotice:
-    """A single text message, with a keyboard only when an action is offered."""
+    """A single text message, with a keyboard only when an action is offered.
+
+    When ``photo_path`` is set the notice is sent as a photo with ``text`` as its
+    caption.
+    """
 
     chat_id: str
     run_id: UUID
     text: str
     keyboard: InlineKeyboard | None
-    # AE-0418: sent as a photo with ``text`` as its caption when set.
     photo_path: str | None = None
 
 

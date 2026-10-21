@@ -1,6 +1,8 @@
-"""Unit tests for OptimisticLockService (WF-005)."""
+"""Unit tests for OptimisticLockService (WF-005).
 
-# Gherkin: tests/features/phase3_workflow_collaboration.feature
+Gherkin: tests/features/phase3_workflow_collaboration.feature.
+"""
+
 # Scenario: Version conflict on blog post update
 
 from __future__ import annotations

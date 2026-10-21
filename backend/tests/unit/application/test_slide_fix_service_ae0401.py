@@ -1,4 +1,4 @@
-"""AE-0401: the slide-fix service, its targets, prompt and answer parsing.
+"""The slide-fix service, its targets, prompt and answer parsing.
 
 Gherkin: tests/features/autopilot_slide_autofix_ae0401.feature
 (scenario "A low voice score on one slide is rewritten and re-scored") and
@@ -294,7 +294,7 @@ class TestTargetsAndPrompt:
         [({"overall": 72}, 72.0), (55, 55.0), ({"overall": True}, None), ("x", None)],
     )
     def test_overall_score(self, value: object, expected: float | None) -> None:
-        # AE-0407: an unreadable overall is unscored (None), not 0.
+        """An unreadable overall is unscored (None), not 0."""
         assert overall_score(value) == expected
 
     def test_slide_scores_ignores_bad_shapes(self) -> None:

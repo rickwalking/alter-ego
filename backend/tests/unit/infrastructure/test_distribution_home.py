@@ -1,4 +1,4 @@
-"""Unit tests for the canonical distribution home accessor (AE-0204).
+"""Unit tests for the canonical distribution home accessor.
 
 Prove the ``blog_posts.distribution`` accessor reads + writes the
 ``{caption, linkedin_post_pt, linkedin_post_en}`` payload SOLELY on the
@@ -6,7 +6,7 @@ Prove the ``blog_posts.distribution`` accessor reads + writes the
 
 Gherkin not applicable — this is a focused accessor unit test; the behavioral
 contract (byte-identical caption/LinkedIn served from the home) is asserted by the
-AE-0125 publishing safety net.
+publishing safety net.
 """
 
 from __future__ import annotations

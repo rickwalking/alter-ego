@@ -152,25 +152,30 @@ class ManualPublishOutcome:
 
 @dataclass(frozen=True, kw_only=True)
 class PostExtras:
-    """What the published notice adds: the Story outcome and the music style."""
+    """What the published notice adds: the Story outcome and the music style.
+
+    ``late_minutes`` is how late a scheduled run went out, set only when over the
+    threshold.
+    """
 
     story_status: str
     story_error: str | None
     music_style: str
-    # AE-0370: minutes a scheduled run went out late, when over the threshold.
     late_minutes: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class PublishNotice:
-    """What the owner is told. AE-0355 renders this on Telegram."""
+    """What the owner is told. The Telegram notifier renders this.
+
+    ``extras`` carries the Story outcome and the music nudge on a published notice.
+    """
 
     run_id: UUID
     outcome: str
     permalink: str | None
     error_code: str | None
     offer_retry: bool
-    # AE-0369: the Story outcome and the music nudge, on a published notice.
     extras: PostExtras | None = None
 
 

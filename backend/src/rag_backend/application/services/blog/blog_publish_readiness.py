@@ -1,4 +1,4 @@
-"""One publish guard for every path to ``published`` (AE-0424 review).
+"""One publish guard for every path to ``published``.
 
 "Publish now", submit-for-review, schedule and the due-post sweep all check the
 same two things: the ``blog.v2`` document has >= 1 non-empty section, and the

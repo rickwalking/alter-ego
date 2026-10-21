@@ -1,8 +1,8 @@
-"""Hidden-post rebuild end to end (AE-0426, ADR-0025).
+"""Hidden-post rebuild end to end (ADR-0025).
 
 Feature: backend/tests/features/blog_rebuild_hidden_ae0426.feature
 
-The real SQL store, the real carousel material source and the real AE-0425
+The real SQL store, the real carousel material source and the real
 generation service run against a file SQLite DB; only the LLM writer, the voice
 scorer and the image provider are fakes.
 """

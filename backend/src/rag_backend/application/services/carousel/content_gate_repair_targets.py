@@ -1,4 +1,4 @@
-"""Which fields the content-gate repair rewrites, and how answers are applied (AE-0430).
+"""Which fields the content-gate repair rewrites, and how answers are applied.
 
 Pure: no DB, no LLM. A target is one visible text (``heading``, ``body``,
 ``tldr_strip`` or ``<list>[<n>].title|body``) of one locale of one slide that
@@ -11,13 +11,16 @@ A ``translation_shape_mismatch`` has no field: the EN payload first receives
 every structured field PT has and EN lacks (copied from PT), and each copied
 text becomes a "translate this" target.
 
-AE-0437: before that, ``fill_slide_structure`` fills the PT structure the
+before that, ``fill_slide_structure`` fills the PT structure the
 gate needs and no model call can create (a closing slide's 3 actions, a
 summary's points, a body-less content slide's features) from the outline, and
 puts a closing slide's swapped ``features`` back under ``actions``. An EN
 answer that is still Portuguese is dropped (prod carousel 5344b6c6 stored
 "Eu olho para o computador, não para a demo" as its EN TL;DR), and a PT copy
 nobody translated is taken out of EN again (``drop_untranslated_copies``).
+
+_ITEM_BUDGET_KEYS maps an item list to its (title budget key, body budget key), as the
+validator reads them.
 """
 
 from __future__ import annotations
@@ -77,7 +80,6 @@ from rag_backend.domain.models.carousel_presentation import SlideValidationViola
 _HEADING = "heading"
 _BODY = "body"
 _ITEM_PATH = re.compile(r"^(\w+)\[\d+\]\.(title|body)$")
-# Item list -> (title budget key, body budget key), as the validator reads them.
 _ITEM_BUDGET_KEYS: dict[str, tuple[str, str]] = {
     "features": ("feature_title", "feature_body"),
     "summary_points": ("summary_point_title", "summary_point_body"),
@@ -194,7 +196,7 @@ def fill_slide_structure(
 def drop_untranslated_copies(
     slide: Mapping[str, object], original: Mapping[str, object] | None
 ) -> dict[str, object]:
-    """Take PT copies nobody translated out of EN again (AE-0437).
+    """Take PT copies nobody translated out of EN again.
 
     A structured EN field the repair copied from PT (absent or shorter in the
     original EN) that still equals the PT value goes back to the original.
@@ -309,13 +311,16 @@ def _patched_slide(
     slide: dict[str, object],
     fixes: list[tuple[FieldRepairTarget, str]],
 ) -> dict[str, object]:
+    """Return the slide with the rewritten field applied.
+
+    The rewritten copy supersedes the stored parse and casing markers (as an owner edit
+    does), so a fixed field can clear inside the repair loop.
+    """
     updated = dict(slide)
     for target, text in fixes:
         key = _LOCALE_KEYS[target.locale]
         payload = as_dict(updated.get(key)) or {}
         updated[key] = with_text(payload, target.field, text)
-        # The rewritten copy supersedes the stored parse/casing markers (as an
-        # owner edit does), so a fixed field can clear inside the loop.
         drop_parse_failure_marker(updated, target.locale)
         drop_casing_repair_markers(updated, target.locale)
     return updated

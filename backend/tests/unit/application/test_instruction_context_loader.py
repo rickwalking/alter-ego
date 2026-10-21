@@ -90,7 +90,7 @@ class TestInstructionContextLoader:
             loader.load(InstructionContextRequest(phase="research", locale="pt-BR"))
 
     def test_sibling_context_is_rendered(self) -> None:
-        """AE-0291: other slides' outline is injected so a slide can differentiate."""
+        """Other slides' outline is injected so a slide can differentiate."""
         loader = CarouselInstructionContextLoader()
         result = loader.load(
             InstructionContextRequest(
@@ -105,7 +105,7 @@ class TestInstructionContextLoader:
         assert "- Slide 2: Origins — history, roots" in result.instruction
 
     def test_revision_notes_render_imperatively_with_previous_draft(self) -> None:
-        """AE-0291: regeneration framing + previous draft, imperative header once."""
+        """Regeneration framing + previous draft, imperative header once."""
         loader = CarouselInstructionContextLoader()
         result = loader.load(
             InstructionContextRequest(
@@ -123,11 +123,15 @@ class TestInstructionContextLoader:
         assert "The rejected copy." in result.instruction
 
     def test_revision_and_sibling_survive_truncation_before_shared(self) -> None:
-        """AE-0291: with an OVERSIZED shared-standards blob that forces truncation,
+        """With an OVERSIZED shared-standards blob that forces truncation,
         the reviewer notes + sibling context survive because they are ordered before
-        the shared standards (which the tail-truncation drops first)."""
+        the shared standards (which the tail-truncation drops first).
+
+        The oversized shared blob (about 38k chars) forces truncation; the notes and
+        sibling context survive because they precede the shared section.
+        """
         loader = CarouselInstructionContextLoader()
-        oversized = "SHARED_BOILERPLATE " * 2000  # ~38k chars, well over the cap
+        oversized = "SHARED_BOILERPLATE " * 2000
         with patch(
             "rag_backend.application.services.carousel.instruction_context_loader"
             ".read_runtime_shared_markdown",
@@ -143,10 +147,8 @@ class TestInstructionContextLoader:
                 )
             )
 
-        # Truncation actually fired (the oversized shared blob was cut).
         assert len(result.instruction) <= INSTRUCTION_CONTEXT_MAX_CHARS
         assert "[instruction context truncated]" in result.instruction
-        # Notes + sibling context survived because they precede the shared section.
         assert "Keep this reviewer note." in result.instruction
         assert "Keep this sibling outline." in result.instruction
         assert SECTION_SIBLING in result.instruction

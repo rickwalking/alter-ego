@@ -1,7 +1,7 @@
-"""API tests: review, self-review, publish guard and scheduling (AE-0424).
+"""API tests: review, self-review, publish guard and scheduling.
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
-(review + scheduled publish, publish guard). AE-0441 removed the blog
+(review + scheduled publish, publish guard). There is no blog
 "a different editor must review" rule: the author may review their own post.
 """
 
@@ -163,7 +163,7 @@ class TestTransitionsAreVersioned:
         assert approved.json()["lock_version"] == post["lock_version"] + 2
 
     # Scenario: Editing after approval resets the post to draft (a save that
-    # was prepared before the approval cannot silently skip the reset).
+    #   was prepared before the approval cannot silently skip the reset).
     async def test_save_prepared_before_approval_conflicts(
         self, clients: EditorClients
     ) -> None:
@@ -174,11 +174,12 @@ class TestTransitionsAreVersioned:
         assert stale.status_code == 409
         assert (await get_post(clients.author, post["id"]))["status"] == APPROVED
 
-    # AE-0424 review round 2: transitions re-read their row FOR UPDATE, so an
-    # approve overlapping a committed slot write sees its reset to draft.
     async def test_transitions_lock_the_row(
         self, clients: EditorClients, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Transitions re-read their row FOR UPDATE, so an approve overlapping a
+        committed slot write sees its reset to draft.
+        """
         from rag_backend.api.routes import blog_post_schedule, blog_post_workflow
 
         locked: list[str] = []
@@ -206,7 +207,6 @@ class TestTransitionsAreVersioned:
         submitted = (
             await _submit(clients.author, post["id"], clients.reviewer_id)
         ).json()
-        # A content write committed first: the post is back to draft.
         await put(clients.author, submitted, {"content": v2_content("Editado")})
         approve = await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
         assert approve.status_code == 400

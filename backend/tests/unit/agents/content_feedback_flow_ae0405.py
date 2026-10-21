@@ -1,4 +1,4 @@
-"""Shared harness for the AE-0405 content-feedback lifecycle tests.
+"""Shared harness for the content-feedback lifecycle tests.
 
 A real ``CarouselWorkflowEngine`` (in-memory checkpointer) and a real
 ``PhaseArtifactRunner``; only the drafting model is a fake: a spy standing in
@@ -230,7 +230,7 @@ def edited_slide(state: CarouselWorkflowState, index: int) -> dict[str, object]:
 
 
 def manual_fixes(*slides: dict[str, object]) -> Review:
-    """The AE-0403 "Submit manual fixes": an edits-only revise, no feedback."""
+    """The "Submit manual fixes": an edits-only revise, no feedback."""
     return Review(
         action=REVIEW_ACTION_REVISE,
         structured={STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY: list(slides)},

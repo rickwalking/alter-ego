@@ -1,4 +1,4 @@
-"""AE-0437: closing actions are drafted, kept, filled and repaired; EN stays EN.
+"""Closing actions are drafted, kept, filled and repaired; EN stays EN.
 
 Gherkin: tests/features/closing_actions_scoped_revisions_ae0437.feature
 (sections A, B and C). The validator, the policy and the prod 5344b6c6
@@ -97,9 +97,6 @@ def _context(points: tuple[str, ...]) -> AutofixContext:
     )
 
 
-# --- A: the closing slide keeps its items under "actions" -----------------
-
-
 @pytest.mark.unit
 class TestClosingKey:
     def test_drafting_instructions_ask_for_actions(self) -> None:
@@ -186,9 +183,6 @@ class TestClosingKey:
         }
 
 
-# --- B: deterministic repair of missing structure -------------------------
-
-
 @pytest.mark.unit
 class TestAutofixFillsActions:
     def test_missing_actions_come_from_the_outline(self) -> None:
@@ -256,9 +250,6 @@ class TestAutofixFillsActions:
         assert outline[6] == SlideOutline()
         assert outline_from_state(None) == {}
         assert outline_from_state({"outline": "x"}) == {}
-
-
-# --- B + C: the content gate repair -----------------------------------------
 
 
 def _without_items() -> list[dict[str, object]]:
@@ -393,14 +384,15 @@ class TestRepairTargetHelpers:
         assert cast(dict[str, object], filled["presentation_pt"])["actions"]
 
     def test_drop_untranslated_copies(self) -> None:
+        """When EN had a shorter list, the untranslated PT copy goes back to it; when EN
+        already held the same items before the repair, there is nothing to undo.
+        """
         pt_items = _items(3, "Passo")
         no_en = {"presentation_pt": {"actions": pt_items}}
         assert drop_untranslated_copies(no_en, None) == no_en
-        # EN had a shorter list: the untranslated PT copy goes back to it.
         copied = _closing_record({"actions": pt_items}, {"actions": pt_items})
         original = _closing_record({"actions": pt_items}, {"actions": pt_items[:1]})
         restored = drop_untranslated_copies(copied, original)
         assert _payload([restored], 6, "en")["actions"] == pt_items[:1]
-        # EN already held the same items before the repair: nothing to undo.
         kept = drop_untranslated_copies(copied, copied)
         assert _payload([kept], 6, "en")["actions"] == pt_items

@@ -1,4 +1,8 @@
-"""Aggregated carousel API router."""
+"""Aggregated carousel API router.
+
+The creator-asset library router is included before CRUD so "/creator-assets" is not
+read as "/{project_id}".
+"""
 
 from fastapi import APIRouter
 
@@ -24,7 +28,6 @@ PREFIX = "/carousels"
 router = APIRouter(tags=["carousels"])
 router.include_router(admin_router, prefix="")
 router.include_router(strategies_router, prefix=PREFIX)
-# AE-0376: before CRUD so "/creator-assets" is not read as "/{project_id}".
 router.include_router(creator_asset_library_router, prefix=PREFIX)
 router.include_router(crud_router, prefix=PREFIX)
 router.include_router(creator_assets_router, prefix=PREFIX)

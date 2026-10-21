@@ -4,7 +4,7 @@ Revision ID: c3d4e5f6a7b8
 Revises: b2c3d4e5f6a7
 Create Date: 2026-06-15 12:00:00.000000
 
-AE-0130: ADDITIVE, behavior-preserving, reversible.
+ADDITIVE, behavior-preserving, reversible.
 
 Adds the ``event_outbox`` table backing the transactional-outbox publish path.
 ``WorkflowEventService.emit`` writes one row here in the **same transaction** as
@@ -25,13 +25,11 @@ from sqlalchemy.dialects.postgresql import JSON
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "c3d4e5f6a7b8"
 down_revision = "b2c3d4e5f6a7"
 branch_labels = None
 depends_on = None
 
-# --- Constants -----------------------------------------------------------------
 _TABLE = "event_outbox"
 
 

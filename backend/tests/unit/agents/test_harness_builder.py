@@ -1,4 +1,4 @@
-"""Tests for the shared Deep Agents harness builder + presets (AE-0248).
+"""Tests for the shared Deep Agents harness builder + presets.
 
 Covers tests/features/agent_harness.feature:
 - chat agent built via the harness builder with summarization, no checkpointer
@@ -122,7 +122,6 @@ def test_workflow_agent_passes_checkpointer_through(
 # Scenario: The summarization preset caps chat context-window growth
 def test_summarization_preset_uses_message_thresholds() -> None:
     preset = build_summarization_middleware(_stub_model())
-    # Trigger/keep are configured in messages, capping window growth.
     assert SUMMARIZATION_TRIGGER_MESSAGES > SUMMARIZATION_KEEP_MESSAGES > 0
     assert preset is not None
 

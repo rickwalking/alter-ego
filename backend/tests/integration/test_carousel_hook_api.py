@@ -1,4 +1,4 @@
-"""The owner's slide-1 hook pick (AE-0375).
+"""The owner's slide-1 hook pick.
 
 Gherkin: tests/features/carousel_pov_prompts.feature (Hook pick)
 """

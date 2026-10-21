@@ -1,4 +1,4 @@
-"""Music suggestion and the published notice copy (AE-0369).
+"""Music suggestion and the published notice copy.
 
 Gherkin: tests/features/autopilot_story_and_music.feature
 """
@@ -54,7 +54,7 @@ class TestMusicStyle:
         assert music_style_for("Cybersecurity for devs", "comic_neon") == "dark synth"
 
     def test_ai_inside_a_word_does_not_match(self) -> None:
-        # "Culinária" ends in "ia" but is one word, not the word "IA".
+        """ "Culinária" ends in "ia" but is one word, not the word "IA"."""
         assert music_style_for("Culinária", "neo_anime") == "lo-fi beats"
 
 

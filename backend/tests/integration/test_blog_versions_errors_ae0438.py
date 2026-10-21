@@ -1,4 +1,4 @@
-"""Integration tests for the AE-0438 blog version fixes (F-05).
+"""Integration tests for the blog version fixes.
 
 Feature: backend/tests/features/blog_versions_errors_ae0438.feature
 API: the generation write path never snapshots the empty bootstrap; restoring a

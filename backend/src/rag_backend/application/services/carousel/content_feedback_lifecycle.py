@@ -1,4 +1,4 @@
-"""Reviewer feedback-note lifecycle (AE-0405).
+"""Reviewer feedback-note lifecycle.
 
 A revision note steers the ONE regeneration that uses it. ``phase_feedback``
 keeps the active note texts (shape unchanged for the API); the tagged entries
@@ -10,6 +10,9 @@ moves to ``phase_feedback_history`` with its status:
 - ``migrated``: a legacy untagged note that predates the last regeneration.
 
 Pure functions over the workflow state; each returns the state updates to write.
+
+A _SettleRule decides the history status of an active note, or returns None to keep it
+active.
 """
 
 from __future__ import annotations
@@ -87,7 +90,6 @@ class _Active:
     tag: FeedbackNote | None
 
 
-# Decides the history status of an active note, or None to keep it active.
 _SettleRule = Callable[[_Active], str | None]
 
 
@@ -238,7 +240,7 @@ def consume_feedback_notes(
 ) -> dict[str, object]:
     """Updates moving every active ``phase`` note to the history (it was just used).
 
-    AE-0430: the caller passes ``unchanged`` when the regeneration left the
+    the caller passes ``unchanged`` when the regeneration left the
     visible copy as it was, so the history never says "applied" for a no-op.
     """
     updates, moved = _settle(state, phase, lambda _active: status)

@@ -1,4 +1,4 @@
-"""Targeted edits of one slot of a ``blog.v2`` document (AE-0424).
+"""Targeted edits of one slot of a ``blog.v2`` document.
 
 The image, rewrite and translation routes change exactly one thing — a cover,
 a section image, a section body or the EN translation — of the language the

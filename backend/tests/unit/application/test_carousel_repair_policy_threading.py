@@ -1,9 +1,9 @@
-"""Policy-version threading into content validation (AE-0311 deliverable 3).
+"""Policy-version threading into content validation.
 
-A v2-stamped project must fire the AE-0312 casing rules live at the content
-gate; a legacy NULL/v1 project keeps v1 semantics. This absorbed the gap left
-open by AE-0312 (the stamped column was never threaded into workflow state or
-the content-phase validation command).
+A v2-stamped project must fire the v2 casing rules live at the content
+gate; a legacy NULL/v1 project keeps v1 semantics. This closes the gap left
+open when the policy shipped (the stamped column was never threaded into
+workflow state or the content-phase validation command).
 """
 
 from __future__ import annotations
@@ -170,6 +170,10 @@ class TestFullChainEndToEnd:
     async def test_v2_column_reaches_the_content_gate(
         self, test_engine: AsyncEngine
     ) -> None:
+        """Under v2 the bounded repair (which includes the policy-gated repair_casing)
+        fixes the lowercase copy, the strongest proof the column reached the gate; under
+        v1 the same input passes through untouched.
+        """
         async with _factory(test_engine)() as db:
             pid = await _add_project(db, _V2)
             resolved = (
@@ -188,10 +192,6 @@ class TestFullChainEndToEnd:
         updates = await build_fail_closed_review_updates(command)
         report = updates["presentation_validation"]
         assert isinstance(report, dict)
-        # v2 threaded through: the bounded repair (which includes AE-0312's
-        # policy-gated repair_casing) FIXES the lowercase copy — the strongest
-        # proof the column reached the gate. Under v1 the same input passes
-        # through untouched (no casing rules, no mutation).
         slides = updates["localized_slides"]
         assert isinstance(slides, list)
         payload = slides[0]["presentation_pt"]
@@ -212,7 +212,7 @@ class TestFullChainEndToEnd:
                     db, pid
                 )
             )
-        assert resolved is not None  # narrows str | None for the TypedDict
+        assert resolved is not None
         command = FailClosedReviewCommand(
             project_id=pid,
             slide_drafts=_lowercase_proper_noun_drafts(),
@@ -225,4 +225,4 @@ class TestFullChainEndToEnd:
         assert isinstance(slides, list)
         payload = slides[0]["presentation_pt"]
         assert isinstance(payload, dict)
-        assert "claude" in str(payload["body"])  # untouched under v1
+        assert "claude" in str(payload["body"])

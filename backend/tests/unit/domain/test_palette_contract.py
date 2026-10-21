@@ -1,4 +1,4 @@
-"""Unit tests for the palette contract projection + committed artifact (AE-0266 Ph3).
+"""Unit tests for the palette contract projection + committed artifact.
 
 The contract is the single source of truth the frontend palette-drift gate
 diffs against. These tests pin its shape, guarantee every user-selectable theme
@@ -6,6 +6,8 @@ carries both labels (so the UI dropdown is never label-less), exclude brand
 palettes (auto-detected, never offered in the UI), and — crucially — fail if
 the committed ``docs/contracts/palettes.json`` drifts from the live registries
 (the staleness guard the CI ``--check`` enforces, reproduced as a unit test).
+
+_REPO_ROOT walks up from backend/tests/unit/domain/ to the repo root.
 """
 
 import json
@@ -20,7 +22,6 @@ from rag_backend.application.services.carousel.palette_contract import (
 from rag_backend.domain.constants.carousel_themes import PALETTE_REGISTRY
 from rag_backend.domain.constants.palette_types import PaletteKind
 
-# backend/tests/unit/domain/ -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "contracts" / "palettes.json"
 
@@ -46,7 +47,7 @@ class TestPaletteContract:
         assert theme_keys.isdisjoint(brand_keys)
 
     def test_every_theme_has_both_labels(self) -> None:
-        # A label-less FE dropdown row is the failure this guards against.
+        """A label-less FE dropdown row is the failure this guards against."""
         for theme in build_palette_contract()["themes"]:
             assert theme["label_en"], f"{theme['key']} missing label_en"
             assert theme["label_pt"], f"{theme['key']} missing label_pt"
@@ -55,7 +56,7 @@ class TestPaletteContract:
         presets = build_palette_contract()["image_presets"]
         pairs = [(p["model"], p["style"]) for p in presets]
         assert pairs == sorted(pairs)
-        assert pairs  # non-empty
+        assert pairs
 
     def test_light_theme_keys_match_light_rows(self) -> None:
         contract = build_palette_contract()
@@ -64,12 +65,13 @@ class TestPaletteContract:
         assert set(light) == {k for k, m in modes.items() if m == "light"}
 
     def test_committed_artifact_is_not_stale(self) -> None:
-        # Reproduces `export_palettes.py --check`: the committed file MUST equal
-        # the freshly projected registries. Regenerate with
-        # `uv run python backend/scripts/export_palettes.py` when the registry
-        # changes. This test lives under tests/unit/domain (not the mutmut
-        # tests_dir) because mutmut does not copy the repo-root docs/ artifact
-        # into its sandbox; the normal Test & Coverage gate still runs it.
+        """Reproduces `export_palettes.py --check`: the committed file must equal the
+        freshly projected registries. Regenerate it with `uv run python
+        backend/scripts/export_palettes.py` when the registry changes. The test lives
+        under tests/unit/domain, not the mutmut tests_dir, because mutmut does not copy
+        the repo-root docs/ artifact into its sandbox; the Test & Coverage gate still
+        runs it.
+        """
         assert _ARTIFACT_PATH.exists(), f"missing artifact: {_ARTIFACT_PATH}"
         assert _ARTIFACT_PATH.read_text(encoding="utf-8") == _serialize(
             build_palette_contract()

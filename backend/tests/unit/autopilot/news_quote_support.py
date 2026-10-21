@@ -1,4 +1,4 @@
-"""Shared builders for the ``pov_news`` quote tests (AE-0406)."""
+"""Shared builders for the ``pov_news`` quote tests."""
 
 from __future__ import annotations
 

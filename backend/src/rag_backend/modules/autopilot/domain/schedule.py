@@ -1,4 +1,4 @@
-"""Publish-time rules for the owner's schedule (AE-0370, AE-0404). Pure, no I/O.
+"""Publish-time rules for the owner's schedule. Pure, no I/O.
 
 Every time is computed in America/Sao_Paulo and returned in UTC, so the
 server's own zone never matters.
@@ -80,13 +80,13 @@ def parse_owner_time(text: str, now: datetime) -> TimeChoice:
 
 
 def day_label(day: date) -> str:
-    """``Ter 20/10``: the Portuguese weekday and the date (AE-0404)."""
+    """``Ter 20/10``: the Portuguese weekday and the date."""
     weekday = WEEKDAY_ABBREVIATIONS[day.weekday()]
     return DAY_LABEL_FORMAT.format(weekday=weekday, date=day.strftime(DAY_DATE_FORMAT))
 
 
 def when_label(at: datetime) -> str:
-    """``Ter 20/10 12:00`` in the owner's zone (AE-0404)."""
+    """``Ter 20/10 12:00`` in the owner's zone."""
     local = at.astimezone(schedule_zone())
     return f"{day_label(local.date())} {local.strftime(LOCAL_TIME_FORMAT)}"
 

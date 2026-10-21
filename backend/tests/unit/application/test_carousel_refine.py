@@ -98,7 +98,7 @@ class TestResolveRefineTarget:
         repo = _repo_with_slides()
         original, setter = await _resolve_refine_target(proj, "blog_footer", repo)
         assert original is None
-        await setter("whatever")  # no-op, should not raise
+        await setter("whatever")
         repo.update_project.assert_not_awaited()
         repo.update_slide.assert_not_awaited()
 

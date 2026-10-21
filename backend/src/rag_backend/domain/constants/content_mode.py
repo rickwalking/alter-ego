@@ -1,10 +1,17 @@
-"""Carousel content modes and the "Ponto de Vista" inputs (AE-0373, ADR-0021).
+"""Carousel content modes and the "Ponto de Vista" inputs (ADR-0021).
 
 ``news_analysis`` ("Radar IA") is the default and the meaning of every row whose
 ``content_mode`` is NULL. ``pov`` ("Ponto de Vista") carries the owner's thesis:
-the model may sharpen it, never invent it. ``pov_news`` (AE-0406, ADR-0023) is a
+the model may sharpen it, never invent it. ``pov_news`` (ADR-0023) is a
 POV-family mode: the same contract, thesis step and validators, told as news
 analysis through the owner's point of view, with scout-verified quotes.
+
+The POV family modes take every "is this a POV deck?" branch (thesis step, slide-1
+photo, the POV contract, role layouts, voice gate); voice-specific branches (prompt
+family, caption footer) switch on the exact mode. Each POV format picks the outline
+narrative and the layout of the point slides. Slide counts: POV 8-10 (default 9); Radar
+IA 7, or 8 with the optional twist. Slide 1 of a POV deck is the owner's photo and is
+never optional.
 """
 
 from __future__ import annotations
@@ -18,13 +25,8 @@ CONTENT_MODES: frozenset[str] = frozenset({
     CONTENT_MODE_POV,
     CONTENT_MODE_POV_NEWS,
 })
-# AE-0406: the modes that take every "is this a POV deck?" branch (thesis step,
-# slide-1 photo, pov_hook_v1, role layouts, voice gate). Voice-specific
-# branches (prompt family, caption footer) switch on the exact mode.
 POV_FAMILY_MODES: frozenset[str] = frozenset({CONTENT_MODE_POV, CONTENT_MODE_POV_NEWS})
 
-# POV formats (growth plan 16.3 B): each picks the outline narrative and the
-# layout of the point slides.
 POV_FORMAT_OPINION = "opiniao"
 POV_FORMAT_HOW_I = "como_eu_faco"
 POV_FORMAT_MISTAKES = "erros_e_mitos"
@@ -37,7 +39,6 @@ POV_FORMATS: frozenset[str] = frozenset({
     POV_FORMAT_COMPARISON,
 })
 
-# Field limits (growth plan 16.3 A).
 POV_THESIS_MAX_CHARS = 280
 POV_PERSONAL_PROOF_MAX_CHARS = 500
 POV_FORMAT_MAX_CHARS = 30
@@ -47,7 +48,6 @@ HOOK_TEXT_COLUMN_CHARS = 120
 HOOK_TEXT_MAX_CHARS = 60
 HOOK_MAX_WORDS = 10
 
-# Slide counts: POV 8-10 (default 9); Radar IA 7, or 8 with the optional twist.
 POV_SLIDE_COUNT_MIN = 8
 POV_SLIDE_COUNT_MAX = 10
 POV_SLIDE_COUNT_DEFAULT = 9
@@ -65,7 +65,6 @@ ERR_CTA_GOAL_UNKNOWN = "cta_goal must be one of {}, got {!r}"
 ERR_HOOK_BLANK = "hook_text must not be blank"
 ERR_HOOK_TOO_MANY_WORDS = "hook_text must have at most {} words"
 ERR_HOOK_NOT_SUPPORTED = "hook_not_supported_for_this_carousel"
-# PR #106 review: slide 1 of a POV deck is the owner's photo, never optional.
 ERR_POV_HOOK_PHOTO_REQUIRED = (
     "hook_asset_id is required when content_mode is 'pov': "
     "choose the slide-1 photo (role hook) from your photo library"

@@ -1,4 +1,4 @@
-"""Locale-safe sentence-case detection and repair for visible slide copy (AE-0366).
+"""Locale-safe sentence-case detection and repair for visible slide copy.
 
 Pure text helpers shared by the presentation casing rules and the deterministic
 repair. A text "starts lowercase" when its first significant character (after
@@ -10,9 +10,12 @@ Text that opens with an intentionally lowercase token from the policy allowlist
 The repair only ever uppercases that first letter. It never guesses proper
 nouns: restoring "argon" to "Argon" is left to regeneration.
 
-AE-0407: a text whose first significant word is an ``@handle`` or a URL
+A text whose first significant word is an ``@handle`` or a URL
 (``http://``, ``https://``, ``www.``) keeps its case: it is the source's, so
 ``@taylorhbuilds`` never becomes ``@Taylorhbuilds``.
+
+A sentence boundary is end punctuation (including a trailing "..." run) followed by
+whitespace.
 """
 
 from __future__ import annotations
@@ -21,7 +24,6 @@ import re
 from collections.abc import Iterable
 
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
-# Sentence boundary: end punctuation (incl. a trailing "..." run) then whitespace.
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 _HANDLE_MARK = "@"
 _URL_START = re.compile(r"(?:https?://|www\.)", flags=re.IGNORECASE)
@@ -54,7 +56,7 @@ def _allowlisted_at(text: str, index: int, allowlist: Iterable[str]) -> bool:
 
 
 def _handle_or_url_at(text: str, index: int) -> bool:
-    """True when an ``@handle`` or a URL starts at ``index`` (AE-0407)."""
+    """True when an ``@handle`` or a URL starts at ``index``."""
     after_mark = index > 0 and text[index - 1] == _HANDLE_MARK
     return after_mark or _URL_START.match(text, index) is not None
 
@@ -109,12 +111,15 @@ def capitalize_first_letter(text: str, allowlist: Iterable[str] = ()) -> str:
 
 
 def capitalize_sentence_starts(text: str, allowlist: Iterable[str] = ()) -> str:
-    """Uppercase the first letter of every sentence, preserving markup."""
+    """Uppercase the first letter of every sentence, preserving markup.
+
+    Each swap replaces one character with one character, so the boundary offsets stay
+    valid.
+    """
     if not text:
         return text
     starts = [0, *[match.end() for match in _SENTENCE_BOUNDARY.finditer(text)]]
     result = text
-    # Each swap is 1 char for 1 char, so the boundary offsets stay valid.
     for start in starts:
         result = capitalize_at(result, start, allowlist)
     return result

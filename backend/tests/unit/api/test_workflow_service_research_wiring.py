@@ -1,4 +1,4 @@
-"""AE-0317 review r1 (m9): the kill switch must actually gate the wiring.
+"""The kill switch must actually gate the wiring.
 
 Scenario: Enrichment disabled restores legacy behavior
 (tests/features/research_enrichment.feature) — flag→wiring half.

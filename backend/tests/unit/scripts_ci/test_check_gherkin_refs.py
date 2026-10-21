@@ -1,4 +1,4 @@
-"""Rule-fires regression test for the Gherkin reference ratchet (AE-0446/AE-0180).
+"""Rule-fires regression test for the Gherkin reference ratchet.
 
 Proves the gate FIRES on a seeded scenario no test references (exit 1), accepts
 a reference wrapped over two comment lines, tolerates grandfathered scenarios,

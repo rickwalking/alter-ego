@@ -1,4 +1,4 @@
-"""POV art style and palette rotation for autopilot carousels (AE-0395).
+"""POV art style and palette rotation for autopilot carousels.
 
 Gherkin: tests/features/autopilot_variety_ae0395.feature and
 tests/features/autopilot_pov_thesis.feature ("POV point-slide art follows the
@@ -76,7 +76,8 @@ def test_every_rotation_theme_exists_and_is_dark() -> None:
 
 # Scenario: The day follows São Paulo, not UTC
 def test_the_day_follows_sao_paulo() -> None:
-    late_sp = datetime(2026, 10, 18, 2, 30, tzinfo=UTC)  # 23:30 on 10-17 in São Paulo
+    """02:30 UTC on 10-18 is still 23:30 on 10-17 in São Paulo."""
+    late_sp = datetime(2026, 10, 18, 2, 30, tzinfo=UTC)
     same_sp_day = datetime(2026, 10, 17, 15, 0, tzinfo=UTC)
     assert rotated_theme(late_sp) == rotated_theme(same_sp_day)
 

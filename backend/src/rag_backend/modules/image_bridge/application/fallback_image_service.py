@@ -1,4 +1,4 @@
-"""Primary image service with an OpenAI fallback (AE-0393, ADR-0022).
+"""Primary image service with an OpenAI fallback (ADR-0022).
 
 Any exception from the primary (the Grok Bot bridge) runs the fallback
 (``OpenAIImageService``) when the fallback is enabled; otherwise the

@@ -1,11 +1,11 @@
-"""Targeted repair of the fields the content gate blocks (AE-0430).
+"""Targeted repair of the fields the content gate blocks.
 
 Prod carousel 5344b6c6 kept 12 blockers through two owner revisions: the
 fail-closed chain only re-drafts a whole slide once, without the violations,
 and nothing ever asked a model to fix the field that broke a rule.
 
-``run_gate_repair``: fill the PT structure the outline can supply (AE-0437:
-closing actions, summary points, features), validate, fill PT structure EN
+``run_gate_repair``: fill the PT structure the outline can supply
+(closing actions, summary points, features), validate, fill PT structure EN
 lacks, send ONLY the failing
 fields (path, current text, exact limit, problems, slide heading, PT source)
 in one model call, patch the answers in by path, re-validate. At most
@@ -237,12 +237,16 @@ def _fill_structure(
 async def _ask(
     command: GateRepairCommand, targets: tuple[FieldRepairTarget, ...]
 ) -> dict[str, str] | None:
+    """Ask the model for a field rewrite.
+
+    Any provider or parse failure keeps the current copy.
+    """
     try:
         return await asyncio.wait_for(
             command.repairer.repair(FieldRepairRequest(targets, command.style_guide)),
             timeout=GATE_REPAIR_TIMEOUT_SECONDS,
         )
-    except Exception as exc:  # any provider/parse failure keeps the current copy
+    except Exception as exc:
         logger.warning(
             LOG_GATE_REPAIR_MODEL_FAILED,
             project_id=command.project_id,

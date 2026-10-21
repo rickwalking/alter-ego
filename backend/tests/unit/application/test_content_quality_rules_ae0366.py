@@ -1,4 +1,4 @@
-"""AE-0366: sentence-case guards, repair, and the objective rubric validators.
+"""Sentence-case guards, repair, and the objective rubric validators.
 
 Gherkin: tests/features/carousel_content_quality_ae0366.feature
 """
@@ -383,6 +383,7 @@ class TestProdShapedDrafts:
         assert report["violations"] == []
 
     def test_repaired_copy_is_capitalized_without_guessing_nouns(self) -> None:
+        """ "gemini" is not a configured proper noun, so it is not guessed."""
         updates = build_presentation_review_updates(prod_drafts(), policy_version=_V3)
         slides = updates["localized_slides"]
         assert isinstance(slides, list)
@@ -390,7 +391,6 @@ class TestProdShapedDrafts:
         slide5_pt = slides[4]["presentation_pt"]
         slide6_pt = slides[5]["presentation_pt"]
 
-        # "gemini" is not a configured proper noun: it is NOT guessed.
         assert slide5_pt["heading"] == FIXED_HEADING_5
         assert slide6_pt["heading"] == "O que muda para devs no Brasil"
         assert slide6_pt["body"] == FIXED_BODY_6

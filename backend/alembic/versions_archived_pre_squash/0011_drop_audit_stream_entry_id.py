@@ -1,4 +1,4 @@
-"""Drop workflow_audit_log.stream_entry_id (AE-0074).
+"""Drop workflow_audit_log.stream_entry_id.
 
 Events are published only after the owning transaction commits, so the
 audit row can no longer store the Redis stream entry id returned by

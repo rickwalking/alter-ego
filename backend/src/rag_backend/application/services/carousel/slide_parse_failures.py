@@ -1,11 +1,17 @@
 """Typed per-locale slide parse failures for the fail-closed content gate.
 
-AE-0309: a drafting parse failure must never silently store the raw drafting
+A drafting parse failure must never silently store the raw drafting
 scaffold as visible slide copy. The localized slide builder reports typed
 :class:`SlideParseFailure` values instead of falling back to the raw draft;
 unrecovered failures are persisted as slide-level markers so every validation
 path (write, read resolvers, approval blocking checks) derives a blocking
 ``slide_parse_failed`` violation from them.
+
+Unrecovered parse failures are stored under a slide-level marker key next to the
+localized payloads, so read-path validation stays fail-closed after a restart. Every
+canonical locale payload carries ``slide_type``, ``heading`` and ``body``; content
+slides also carry ``content_kind`` (and ``features`` for the features kind). A partial
+dict is itself a parse failure.
 """
 
 from __future__ import annotations
@@ -31,8 +37,6 @@ from rag_backend.domain.models.carousel_presentation import SlideValidationViola
 PARSE_FAILURE_RAW_DRAFT_FALLBACK = "raw_draft_fallback"
 PARSE_FAILURE_MISSING_CANONICAL_KEYS = "missing_canonical_keys"
 
-# Slide-level marker key for unrecovered parse failures. Stored alongside the
-# localized payloads so read-path validation stays fail-closed after a restart.
 SLIDE_PARSE_FAILURES_KEY = "parse_failures"
 PARSE_FAILURE_FIELD_LOCALE = "locale"
 PARSE_FAILURE_FIELD_REASON = "reason"
@@ -42,9 +46,6 @@ PARSE_FAILURE_MESSAGE = (
     "the raw draft was withheld from the visible body"
 )
 
-# Canonical locale payload shape (AE-0309): every payload carries these keys;
-# content slides must additionally carry content_kind (+ features for the
-# features kind). A partial dict is itself a parse failure.
 CANONICAL_LOCALE_KEYS: tuple[str, ...] = ("slide_type", "heading", "body")
 CANONICAL_KEY_CONTENT_KIND = "content_kind"
 CANONICAL_KEY_FEATURES = "features"

@@ -2,6 +2,8 @@
 
 A failed check revises at most twice (design: once), then escalates. ``final_review``
 is never approved. The persona floor is the persona module's constant.
+
+Reasons in ``_NO_REVISE_REASONS`` escalate at once: revising cannot fix them.
 """
 
 from __future__ import annotations
@@ -85,7 +87,7 @@ def decide(snapshot: GateSnapshot) -> PolicyDecision:
 
 
 def _before_gate(snapshot: GateSnapshot) -> PolicyDecision | None:
-    """A stale or failed run, then a parked workflow (AE-0363), come first."""
+    """A stale or failed run, then a parked workflow, come first."""
     terminal = _terminal(snapshot)
     if terminal is not None:
         return terminal
@@ -103,7 +105,7 @@ def _terminal(snapshot: GateSnapshot) -> PolicyDecision | None:
 
 
 def _parked(snapshot: GateSnapshot) -> PolicyDecision:
-    """Never wait on a parked workflow past the grace period (AE-0363)."""
+    """Never wait on a parked workflow past the grace period."""
     if not snapshot.parked_overdue:
         return PolicyDecision(action=GateAction.WAIT, reason=REASON_WAITING)
     if snapshot.phase_status in REDRIVABLE_PHASE_STATUSES:
@@ -137,13 +139,13 @@ def _outline(snapshot: GateSnapshot) -> str | None:
 
 
 def _content(snapshot: GateSnapshot) -> str | None:
-    """Mirror the engine's content-approve rule (AE-0364).
+    """Mirror the engine's content-approve rule.
 
     The engine enforces the voice floor only when persona scores exist; a
     Radar IA run with no persona has none, so the voice check is skipped.
     PR #106 review: a POV run is never approved unscored; it escalates with
     ``persona_not_scored`` (a revise cannot add the missing persona).
-    Forbidden phrases, blocking presentation rules (AE-0392) and the engine's
+    Forbidden phrases, blocking presentation rules and the engine's
     refusal still apply.
     """
     score = snapshot.persona_score
@@ -173,7 +175,7 @@ def _revise_cap(phase: str) -> int:
 
 
 def _design(snapshot: GateSnapshot) -> str | None:
-    """Blocking presentation rules are content quality (AE-0392).
+    """Blocking presentation rules are content quality.
 
     A missing or rule-less blocking report stays a design failure.
     """
@@ -185,7 +187,7 @@ def _design(snapshot: GateSnapshot) -> str | None:
 
 
 def _images(snapshot: GateSnapshot) -> str | None:
-    """One valid hero JPEG per slide the image phase illustrates (AE-0365).
+    """One valid hero JPEG per slide the image phase illustrates.
 
     The CTA slide uses the owner avatar, so a 7-slide run stores 6 hero
     images. The count comes from the pipeline's own slide filter, not from
@@ -202,7 +204,7 @@ def _images(snapshot: GateSnapshot) -> str | None:
 
 
 def _valid_jpeg(image: ImageFact) -> bool:
-    """A present JPEG with a decodable size (AE-0362).
+    """A present JPEG with a decodable size.
 
     ``image_assets`` are the raw hero images (OpenAI renders 1536x1024), not
     the 1080x1350 slides: those are composed later, at finalize. Requiring the
@@ -211,7 +213,6 @@ def _valid_jpeg(image: ImageFact) -> bool:
     return image.present and image.is_jpeg and image.width > 0 and image.height > 0
 
 
-# Escalate at once: revising cannot fix these.
 _NO_REVISE_REASONS = frozenset({REASON_PERSONA_NOT_SCORED})
 
 _ENGINE_REASONS: dict[str, str] = {

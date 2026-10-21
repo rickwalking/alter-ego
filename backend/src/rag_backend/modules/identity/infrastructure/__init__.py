@@ -1,6 +1,6 @@
 """Infrastructure layer for the identity bounded context (private).
 
-**JWT/bcrypt are NOT reimplemented or relocated (AE-0098).** The single source
+**JWT/bcrypt are NOT reimplemented or relocated.** The single source
 of JWT/bcrypt logic stays at ``rag_backend.infrastructure.auth`` and the user
 persistence adapter stays at
 ``rag_backend.infrastructure.database.user_repository``. This subpackage holds

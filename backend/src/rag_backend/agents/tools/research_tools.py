@@ -1,11 +1,11 @@
-"""LangChain @tool adapters wrapping the web research service (AE-0249, ADR-0016).
+"""LangChain @tool adapters wrapping the web research service (ADR-0016).
 
 ``build_scrape_url_tool`` and ``build_search_web_tool`` are **thin façades**: each
 captures a :class:`ResearchTool` Protocol implementation by closure and delegates
 to it. They own no business logic and no infrastructure — the Playwright/DDG work
 stays in the ``application`` service behind the Protocol, so the agents package
 never imports ``rag_backend.application`` (the ``agents -> application`` edge stays
-frozen at its AE-0082 baseline).
+frozen at its baseline).
 """
 
 from __future__ import annotations

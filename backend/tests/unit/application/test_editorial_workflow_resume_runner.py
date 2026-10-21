@@ -55,7 +55,6 @@ def _make_params(
 
 
 _RUNNER = "rag_backend.application.services.carousel.editorial_workflow_resume_runner"
-# AE-0417: the interval heartbeat loop lives in its own module.
 _HEARTBEAT = (
     "rag_backend.application.services.carousel.editorial_workflow_run_heartbeat"
 )
@@ -63,12 +62,15 @@ _HEARTBEAT = (
 
 @pytest.fixture(autouse=True)
 def _patch_run_progress_seams() -> Generator[None, None, None]:
-    """AE-0315 seams: fence/heartbeat/stage helpers open their own sessions
+    """Fence/heartbeat/stage helpers open their own sessions
     via the global factory; patch them so these tests stay hermetic (no
-    dependency on init_db side effects from unrelated tests)."""
+    dependency on init_db side effects from unrelated tests).
+
+    The trace scope reads the owner through its own session, and stage-boundary beats
+    use the single-attempt variant.
+    """
     with (
         patch(f"{_RUNNER}.read_run_fence", new=AsyncMock(return_value=None)),
-        # AE-0390: the trace scope reads the owner through its own session.
         patch(
             f"{_RUNNER}.open_run_trace_scope",
             new=AsyncMock(side_effect=lambda *_: nullcontext()),
@@ -77,7 +79,6 @@ def _patch_run_progress_seams() -> Generator[None, None, None]:
             f"{_HEARTBEAT}.write_run_heartbeat_with_retry",
             new=AsyncMock(return_value=True),
         ),
-        # AE-0320: stage-boundary beats use the single-attempt variant.
         patch(
             f"{_RUNNER}.write_run_heartbeat_once",
             new=AsyncMock(return_value=True),
@@ -186,7 +187,7 @@ class TestDetectResumeStuck:
         assert result is False
 
     def test_reject_same_phase_not_stuck(self) -> None:
-        """AE-0027: Given reject action and phase unchanged, returns False
+        """Given reject action and phase unchanged, returns False
         (reject legitimately returns to same phase)."""
         result = _detect_resume_stuck(
             _make_params(REVIEW_ACTION_REJECT),
@@ -231,7 +232,7 @@ class TestScheduleBackgroundResume:
 
 @pytest.fixture(autouse=True)
 def _no_project_persona() -> Iterator[AsyncMock]:
-    """AE-0397: the resume loads the project's persona; these tests use none."""
+    """The resume loads the project's persona; these tests use none."""
     with patch(
         "rag_backend.application.services.carousel.resume_persona.load_project_persona",
         new_callable=AsyncMock,
@@ -702,7 +703,7 @@ class TestExecuteBackgroundResume:
 
     @pytest.mark.asyncio
     async def test_cancellation_releases_lock_and_reraises(self) -> None:
-        """AE-0209: a cancelled background task releases the in_progress lock.
+        """A cancelled background task releases the in_progress lock.
 
         CancelledError is a BaseException, so the generic ``except Exception``
         never catches it — the dedicated handler must mark the workflow failed
@@ -752,7 +753,7 @@ class TestExecuteBackgroundResume:
 
 @pytest.mark.unit
 class TestMarkBackgroundResumeFailed:
-    """AE-0027: _mark_background_resume_failed updates DB and publishes error."""
+    """_mark_background_resume_failed updates DB and publishes error."""
 
     @pytest.mark.asyncio
     async def test_updates_project_phase_status_and_publishes_error(self) -> None:
@@ -861,7 +862,7 @@ class TestMarkBackgroundResumeFailed:
 
 @pytest.mark.unit
 class TestRevertBackgroundResumeStuck:
-    """AE-0027: _revert_background_resume_stuck reverts DB and publishes error."""
+    """_revert_background_resume_stuck reverts DB and publishes error."""
 
     @pytest.mark.asyncio
     async def test_reverts_db_phase_status_to_awaiting_human(self) -> None:

@@ -1,4 +1,8 @@
-"""Rendered image prompt packages for carousel slide generation."""
+"""Rendered image prompt packages for carousel slide generation.
+
+Combos the strategy registry does not cover fall back to the dark default strategy as
+defence in depth; API validation already rejects unsupported combos.
+"""
 
 from __future__ import annotations
 
@@ -86,8 +90,7 @@ def _compose_scene(scene: str, custom_visual_details: str | None) -> str:
 
     The details ride inside the scene (the ``Scene:`` trailer the strategy
     appends), so they reach the model AND change the rendered prompt hash —
-    which busts the per-prompt image reuse so a revision actually regenerates
-    (AE-0261). Empty details leave the scene byte-identical (AE-0263).
+    which busts the per-prompt image reuse so a revision actually regenerates. Empty details leave the scene byte-identical.
     """
     details = (custom_visual_details or "").strip()
     if not details:
@@ -105,8 +108,6 @@ def sha256_parts(parts: Sequence[str]) -> str:
     return digest.hexdigest()
 
 
-# Dark default for any combo the registry doesn't cover (defence in depth;
-# API validation rejects unsupported combos before they reach here).
 _DEFAULT_STRATEGY = OpenAIComicNeonStrategy
 
 

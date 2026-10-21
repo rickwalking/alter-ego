@@ -1,11 +1,11 @@
-"""Anti-corruption layer: legacy carousel/blog persistence ↔ publishing (AE-0128).
+"""Anti-corruption layer: legacy carousel/blog persistence ↔ publishing.
 
 This module is the **single** seam between the publishing bounded context and the
 legacy carousel + blog persistence. It is the **only** file under
 ``rag_backend.modules.publishing`` that imports the carousel/blog ORM for the
 release / visibility / schedule writes; the publishing application and domain
-layers stay free of it (the layering is enforced by check-integrity + the AE-0132
-import contract). Everything it writes is byte-identical to the pre-AE-0128
+layers stay free of it (the layering is enforced by check-integrity + the import
+contract). Everything it writes is byte-identical to the legacy
 scattered route/service writes — only the *ownership* and the *commit boundary*
 are consolidated here.
 
@@ -25,7 +25,7 @@ It backs three publishing domain ports:
   ``scheduled_publish_at`` write + scheduled event, flush only; the route
   commits); ``process_due_posts`` delegates UNCHANGED to the same service's sweep.
 
-Behavior-preserving (AE-0128): no write here changes a status value, a timestamp,
+Behavior-preserving: no write here changes a status value, a timestamp,
 a visibility flag, the event payloads, or the commit count relative to the legacy
 paths; the ``is_public`` semantics + the approval gate (which stays at the route)
 are untouched. The carousel ORM uses the legacy ``Column(...)`` declaration style,
@@ -33,6 +33,10 @@ so its instance attributes type as ``Column[T]`` under mypy; the carousel releas
 write reuses the model's plain attribute assignment exactly as the legacy route
 did (no ``Mapped[...]`` migration is in scope and none is needed — the values are
 identical).
+
+A release or visibility write handed a non-canonical object raises a programmer-error
+sentinel (a wiring or type bug, never a request path), mirroring the editorial ACL's
+defensive typing seam so the domain ports can stay ORM-free.
 """
 
 from __future__ import annotations
@@ -52,9 +56,6 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.modules.publishing.domain.ports import CarouselRepository
 from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
-# Programmer-error sentinel for a release/visibility write handed a non-canonical
-# object (a wiring/type bug, never a request path); mirrors the editorial ACL's
-# defensive typing seam so the domain ports can stay ORM-free (pass ``object``).
 _ERR_NOT_CAROUSEL = "release_public expected a CarouselProject entity"
 _ERR_NOT_BLOG_POST = "blog visibility/schedule write expected a BlogPostModel row"
 _ERR_NO_SCHEDULER = "blog schedule write invoked without a scheduled-publish service"
@@ -81,7 +82,6 @@ class LegacyPublishingAcl:
         self._scheduler = scheduler
         self._uow = SqlAlchemyUnitOfWork(session)
 
-    # --- CarouselReleasePort: is_public public-release write -------------------
     async def release_public(self, project: object, project_id: str) -> object:
         """Mark the carousel publicly released; return the updated entity.
 
@@ -104,7 +104,6 @@ class LegacyPublishingAcl:
             await self._uow.commit()
         return updated
 
-    # --- BlogVisibilityPort: publish / unpublish status writes ----------------
     @staticmethod
     async def mark_published(post: object) -> None:
         """Set the blog row to PUBLISHED with ``published_at`` now (flush only).
@@ -133,7 +132,6 @@ class LegacyPublishingAcl:
         row.published_at = None
         row.submitted_for_review_at = None
 
-    # --- BlogSchedulePort: schedule write + due-post sweep --------------------
     async def schedule_publish(self, post: object, scheduled_at: datetime) -> None:
         """Stamp ``scheduled_publish_at`` + emit the scheduled event (flush only).
 

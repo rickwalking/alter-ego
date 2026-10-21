@@ -266,7 +266,6 @@ class TestAssignContentReviewer:
 
         assert post.reviewer_id == "reviewer-1"
 
-    # AE-0441: the blog author may assign themselves as the reviewer.
     async def test_allows_the_author_as_reviewer(self) -> None:
         db = AsyncMock()
         post = MagicMock(author_id="author-1", reviewer_id=None)

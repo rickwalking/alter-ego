@@ -1,4 +1,4 @@
-"""Prod-shaped slide drafts for AE-0366 (carousel 8e350d6e, PT-BR, GLM).
+"""Prod-shaped slide drafts for the content quality tests (8e350d6e, PT-BR, GLM).
 
 Every draft carries the prod key set: slide_index, title, key_points,
 slide_type, tldr_strip, draft_text, presentation_pt, presentation_en,

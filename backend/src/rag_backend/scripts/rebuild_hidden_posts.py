@@ -1,8 +1,8 @@
-"""Rebuild AE-0422's hidden carousel-origin posts as v2 drafts (AE-0426).
+"""Rebuild the hidden carousel-origin posts as v2 drafts.
 
-One-off operator action: every ``blog_posts`` row carrying the AE-0422 hide
+One-off operator action: every ``blog_posts`` row carrying the hide
 marker (``ai_generation_metadata.hidden_bad_post`` present, ``rebuilt_at``
-absent) is rebuilt through the AE-0425 writer pipeline and left a ``draft`` for
+absent) is rebuilt through the writer pipeline and left a ``draft`` for
 owner review. Selection is by that durable marker, never by ``status`` (hiding
 already flipped the rows to ``draft``). Idempotent and resumable: a successful
 rebuild stamps ``hidden_bad_post.rebuilt_at`` and is skipped on the next run.

@@ -1,6 +1,8 @@
 """Integration tests for admin re-render slides endpoint.
 
 Feature: Admin Re-render Missing Slides
+
+A deterministic test secret is used so token generation matches the server.
 """
 
 import os
@@ -14,7 +16,6 @@ from httpx import ASGITransport, AsyncClient
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User, UserRole
 
-# Use deterministic test secret so token generation matches server
 TEST_SECRET = "test-secret-for-admin-tests-32chars!!"
 
 

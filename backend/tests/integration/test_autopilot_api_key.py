@@ -1,4 +1,4 @@
-"""HTTP behavior for the autopilot service API key (AE-0351).
+"""HTTP behavior for the autopilot service API key.
 
 Gherkin: tests/features/autopilot_api_key.feature
 """
@@ -96,6 +96,9 @@ async def scout_disabled(disabled_key: None) -> AsyncIterator[AsyncClient]:
 
 
 async def _open_client() -> AsyncIterator[AsyncClient]:
+    """Auth tests must not collect live signals, so the signals bundle is replaced by an
+    idle fake.
+    """
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
@@ -109,7 +112,6 @@ async def _open_client() -> AsyncIterator[AsyncClient]:
         await conn.run_sync(Base.metadata.create_all)
     db_config.c_engine = engine
     app = create_app()
-    # Auth tests must not collect live signals (AE-0352 owns the bundle).
     setattr(app.state, APP_STATE_SIGNALS, _IdleSignals())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

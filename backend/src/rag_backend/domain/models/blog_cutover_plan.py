@@ -1,4 +1,4 @@
-"""Pure per-row plan of the blog v1 -> v2 cutover (AE-0423, ADR-0025).
+"""Pure per-row plan of the blog v1 -> v2 cutover (ADR-0025).
 
 Given one ``blog_posts`` row, decide the column values ``--apply`` or
 ``--rollback`` writes (the DB runner only executes them):
@@ -116,9 +116,12 @@ def _stash_featured(metadata: object, featured: str) -> dict[str, object]:
 def _content_values(
     row: CutoverRowState, content: dict[str, object]
 ) -> CutoverRowChange:
+    """Return the column values and content for one row's cutover.
+
+    A repaired v2 row keeps its cover, so its projection stays as is.
+    """
     values: dict[str, object] = {COLUMN_CONTENT: content}
     if is_v2_language_document(row.content):
-        # A repaired v2 row keeps its cover, so its projection stays as is.
         return CutoverRowChange(values, content)
     values[COLUMN_FEATURED_IMAGE_URL] = None
     if not row.featured_image_url:

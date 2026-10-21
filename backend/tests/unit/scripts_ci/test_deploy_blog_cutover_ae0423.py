@@ -1,4 +1,4 @@
-"""Deploy ordering of the blog v1 -> v2 cutover step (AE-0423, ADR-0025).
+"""Deploy ordering of the blog v1 -> v2 cutover step (ADR-0025).
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 Scenario: The deploy runs the cutover after Postgres and before the app stack

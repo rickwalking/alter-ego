@@ -1,6 +1,8 @@
-"""Unit tests for ScheduledPublishService (SCHED-001)."""
+"""Unit tests for ScheduledPublishService (SCHED-001).
 
-# Gherkin: tests/features/phase3_workflow_collaboration.feature
+Gherkin: tests/features/phase3_workflow_collaboration.feature.
+"""
+
 # Scenario: Scheduled post publishes at due time
 
 from __future__ import annotations
@@ -72,7 +74,7 @@ async def test_process_due_posts_is_idempotent(test_engine) -> None:
 
 @pytest.mark.asyncio
 async def test_unpublishable_post_is_never_published_by_the_sweep(test_engine) -> None:
-    """AE-0424 review: the sweep runs the publish guard (empty document)."""
+    """The sweep runs the publish guard (empty document)."""
     session_factory = async_sessionmaker(
         test_engine, class_=AsyncSession, expire_on_commit=False
     )

@@ -170,7 +170,6 @@
     "backend/tests/features/carousel_content_generation.feature::Template instructs LLM to omit title from markdown body",
     "backend/tests/features/carousel_content_generation.feature::Template sets badge_label to project niche",
     "backend/tests/features/carousel_content_mode.feature::Downgrading over objects that are already gone",
-    "backend/tests/features/carousel_content_mode.feature::Fresh upgrade adds the AE-0371 schema",
     "backend/tests/features/carousel_content_mode.feature::POV create binds and stages the chosen photo",
     "backend/tests/features/carousel_content_mode.feature::POV create needs the slide-1 photo",
     "backend/tests/features/carousel_content_mode.feature::POV fields on a Radar IA request",

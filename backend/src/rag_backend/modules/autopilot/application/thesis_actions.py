@@ -1,4 +1,4 @@
-"""Owner thesis buttons and the edited-thesis reply (AE-0377, ADR-0021 D10).
+"""Owner thesis buttons and the edited-thesis reply (ADR-0021 D10).
 
 A mixin for ``OwnerActionService`` so the webhook keeps one entry point, one
 owner allowlist and one deferred-reply buffer. Confirm and the edit reply use

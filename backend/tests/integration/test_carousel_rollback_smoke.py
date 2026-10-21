@@ -1,4 +1,4 @@
-"""Trace-correlated rollback smoke comparison (AE-0113 / ADR-0009 §2, §7).
+"""Trace-correlated rollback smoke comparison (ADR-0009 §2, §7).
 
 Runnable, deterministic portion of the scaled-down carousel rollback drill.
 The live ``pg_restore`` step is operator-run (no live Postgres in CI; see
@@ -142,7 +142,6 @@ class TestCarouselRollbackSmokeComparison:
         assert baseline is not None
         assert len(baseline.audit_trace) == 2
 
-        # --- forward change: mutate the row and append a drift audit event ---
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
         model.workflow_status = "approved_for_publish"
@@ -163,10 +162,8 @@ class TestCarouselRollbackSmokeComparison:
 
         post_change = await drill.snapshot_carousel_state(session, project_id)
         assert post_change is not None
-        # Forward change is observable -> baseline differs from post-change.
         assert not drill.compare_snapshots(baseline, post_change).matched
 
-        # --- restore-from-backup: revert row + drop the drift event ----------
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
         model.workflow_status = WORKFLOW_STATUS_BASELINE
@@ -185,12 +182,14 @@ class TestCarouselRollbackSmokeComparison:
 
     @pytest.mark.asyncio
     async def test_incomplete_restore_is_detected(self, session: AsyncSession) -> None:
-        """The smoke comparison flags residual drift after a partial restore."""
+        """The smoke comparison flags residual drift after a partial restore.
+
+        The restore reverts scalar fields but FORGETS to drop the drift event.
+        """
         drill = _load_drill()
         project_id = await _seed_baseline(session)
         baseline = await drill.snapshot_carousel_state(session, project_id)
 
-        # Restore reverts scalar fields but FORGETS to drop the drift event.
         session.add(
             WorkflowAuditLogModel(
                 event_id=str(uuid4()),

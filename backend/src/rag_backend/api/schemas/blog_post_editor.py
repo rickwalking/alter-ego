@@ -1,4 +1,4 @@
-"""Pydantic schemas of the blog section editor routes (AE-0424, ADR-0025)."""
+"""Pydantic schemas of the blog section editor routes (ADR-0025)."""
 
 from pydantic import BaseModel, Field, field_validator
 

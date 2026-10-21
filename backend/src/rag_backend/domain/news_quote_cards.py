@@ -1,4 +1,4 @@
-"""Quote cards of ``pov_news`` decks (AE-0406, ADR-0023, spec §4). Pure.
+"""Quote cards of ``pov_news`` decks (ADR-0023, spec §4). Pure.
 
 The content model never writes a quote: on a point or twist slide it may
 return ``quote_id``. Code then places the card with the supplied text, verbatim

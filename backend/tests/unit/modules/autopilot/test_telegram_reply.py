@@ -1,4 +1,4 @@
-"""Telegram reply client and setWebhook helper (AE-0356)."""
+"""Telegram reply client and setWebhook helper."""
 
 from __future__ import annotations
 

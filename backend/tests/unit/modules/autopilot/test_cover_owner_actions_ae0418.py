@@ -1,4 +1,4 @@
-"""Owner taps on "Usar capa do Grok" and back (AE-0418, ADR-0024).
+"""Owner taps on "Usar capa do Grok" and back (ADR-0024).
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: "Usar capa do Grok" at the thesis switches slide 1 to the cover, and back

@@ -1,4 +1,4 @@
-"""CSS for the "Ponto de Vista" layouts (AE-0376, growth plan 16.3 B/D).
+"""CSS for the "Ponto de Vista" layouts (growth plan 16.3 B/D).
 
 Solid palette backgrounds with a subtle texture instead of generated art,
 large left-aligned type, one accent colour, the owner's cut-out photo on

@@ -1,4 +1,4 @@
-"""Provider and lock outcomes of the in-process editorial driver (AE-0354, AE-0363)."""
+"""Provider and lock outcomes of the in-process editorial driver."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ class _StartBoom:
 
 
 class _Operation:
-    """Stands in for the run-owned facade operation (AE-0363)."""
+    """Stands in for the run-owned facade operation."""
 
     def __init__(self, error: BaseException | None = None) -> None:
         self._error = error
@@ -121,7 +121,10 @@ async def test_version_conflict_does_not_resume_again(
 async def test_target_phase_is_structured_feedback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Rework feedback names the phase the editorial revise should reopen."""
+    """Rework feedback names the phase the editorial revise should reopen.
+
+    The autopilot's gate feedback is tagged as autopilot feedback.
+    """
     session = AsyncMock()
     operation = _Operation()
     monkeypatch.setattr(editorial_driver, "run_automation_phase", operation)
@@ -138,7 +141,6 @@ async def test_target_phase_is_structured_feedback(
     run = operation.runs[0]
     assert isinstance(run, AutomationRun)
     assert result.status is ResumeStatus.APPLIED
-    # AE-0405: the autopilot's gate feedback is tagged as autopilot feedback.
     assert run.structured_feedback == {
         "target_phase": "images",
         "feedback_source": "autopilot",
@@ -152,7 +154,7 @@ async def test_target_phase_is_structured_feedback(
 async def test_content_gate_feedback_is_tagged_autopilot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Scenario: Autopilot gate feedback is tagged (AE-0405 feature)."""
+    """Scenario: Autopilot gate feedback is tagged."""
     session = AsyncMock()
     operation = _Operation()
     monkeypatch.setattr(editorial_driver, "run_automation_phase", operation)
@@ -210,7 +212,7 @@ async def test_revision_cap_and_resume_outage(monkeypatch: pytest.MonkeyPatch) -
 async def test_in_flight_and_not_parked_are_refusals(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """AE-0363: a run in flight or nothing parked changes nothing."""
+    """A run in flight or nothing parked changes nothing."""
     session = AsyncMock()
     busy = _Operation(ValueError(ERR_RESUME_ALREADY_IN_PROGRESS))
     monkeypatch.setattr(editorial_driver, "run_automation_phase", busy)

@@ -1,4 +1,4 @@
-"""Unit tests for cross-slide content distinctness metrics (AE-0291)."""
+"""Unit tests for cross-slide content distinctness metrics."""
 
 from __future__ import annotations
 

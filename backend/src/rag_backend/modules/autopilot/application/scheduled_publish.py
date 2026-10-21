@@ -1,4 +1,4 @@
-"""Hand due ``scheduled`` runs to the publish job (AE-0370).
+"""Hand due ``scheduled`` runs to the publish job.
 
 Instagram has no native scheduling and containers expire after 24 hours, so
 nothing is sent to Graph while a run waits. When ``now >= scheduled_at`` the

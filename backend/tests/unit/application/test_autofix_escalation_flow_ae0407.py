@@ -1,4 +1,4 @@
-"""AE-0407: the escalation to the reasoning model, on the real engine and runner.
+"""The escalation to the reasoning model, on the real engine and runner.
 
 Real: the SQLite rows and lock version, the LangGraph checkpoint, the
 editorial facade, the autopilot snapshot, policy and runner. Fake: both

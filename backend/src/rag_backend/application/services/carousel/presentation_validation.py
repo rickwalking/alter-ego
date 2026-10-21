@@ -226,7 +226,11 @@ def _validate_structured_sections(
 def validate_slide_payload(
     command: ValidatePayloadCommand,
 ) -> list[SlideValidationViolation]:
-    """Validate one slide payload deterministically."""
+    """Validate one slide payload deterministically.
+
+    Sentence case (PT and EN, items too), proper nouns and the structural and markup
+    rubric rules are no-ops for v1 policies.
+    """
     active_policy = command.policy or load_presentation_policy(
         DEFAULT_PRESENTATION_POLICY_VERSION
     )
@@ -279,8 +283,6 @@ def validate_slide_payload(
     _validate_heading_not_in_body(heading, body, ctx)
     _validate_copy_budgets(slide_type, (heading, body), ctx)
     _validate_structured_sections(command.payload, active_policy, ctx)
-    # AE-0312/AE-0366: sentence case (PT + EN, items too), proper nouns, and the
-    # structural/markup rubric rules. No-op for v1 policies.
     casing = CasingCheckCommand(
         payload=command.payload,
         locale=command.locale,
@@ -292,7 +294,6 @@ def validate_slide_payload(
         casing.payload, casing.locale, casing.policy, casing.slide_index
     )
     violations.extend(content_rule_violations(rules))
-    # AE-0401: JSON/markup/chatter/placeholder/encoding/truncation/language.
     violations.extend(copy_hygiene_violations(rules))
     return violations
 
@@ -319,7 +320,7 @@ def build_validation_report(
 ) -> SlideValidationReport:
     """Build a consistent validation report from collected violations.
 
-    AE-0312: ``blocking`` is derived from severity — the report blocks only
+    ``blocking`` is derived from severity — the report blocks only
     when at least one blocker-severity violation remains, so warning-tier
     casing violations surface in the review panel without blocking approval.
     The stored report therefore always agrees with the approval-gate decision.

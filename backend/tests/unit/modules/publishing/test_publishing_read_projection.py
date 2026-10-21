@@ -1,4 +1,4 @@
-"""Unit tests for the publishing read projection ports (AE-0131).
+"""Unit tests for the publishing read projection ports.
 
 These tests prove the behavior-preserving extraction of the public/editor READ
 surfaces — the carousel ``/blog`` (+lang) projection, the content-calendar, the
@@ -7,7 +7,7 @@ workflow-board, the editorial-analytics, and the blog-post CRUD persistence rows
 read seam):
 
 * the carousel-blog projection sources the body + the 404 signal SOLELY from the
-  AE-0127/AE-0163 ``origin='carousel'`` ``blog_posts`` row (the embedded carousel
+  ``origin='carousel'`` ``blog_posts`` row (the embedded carousel
   ``blog_markdown`` column is no longer read), resolving title/subtitle from the
   row with the project title/topic/subtitle fallback (byte-identical fields), and
   maps an absent/body-less row to ``None`` (the route's legacy 404);
@@ -20,8 +20,8 @@ read seam):
   a read use case has no wired port.
 
 Deterministic; no live keys. SQLite in-memory backs the ORM-touching reads.
-Behavior-preserving extraction; the live-response diff is asserted by the AE-0125
-safety net (Gherkin not applicable — see ticket AE-0131).
+Behavior-preserving extraction; the live-response diff is asserted by the publishing
+safety net (Gherkin not applicable).
 """
 
 from __future__ import annotations
@@ -97,11 +97,11 @@ def _carousel_entity() -> CarouselProject:
     )
 
 
-# ==============================================================================
-# Pure markdown helpers (byte-identical to the legacy route helpers)
-# ==============================================================================
 class TestReadProjectionHelpers:
-    """The markdown title/subtitle/body helpers replicate the legacy logic."""
+    """The markdown title/subtitle/body helpers replicate the legacy logic.
+
+    The helpers are byte-identical to the legacy route helpers.
+    """
 
     def test_extract_title_and_subtitle_splits_heading(self) -> None:
         """Scenario: a ``# Title: Subtitle`` heading splits on the colon."""
@@ -120,7 +120,7 @@ class TestReadProjectionHelpers:
         assert extract_first_paragraph("# H\n\nFirst para\n\nSecond") == "First para"
 
     def test_resolve_blog_body_sources_from_row(self) -> None:
-        """Scenario: the body is sourced from the origin='carousel' row (AE-0163)."""
+        """Scenario: the body is sourced from the origin='carousel' row."""
         row = BlogPostModel.from_entity({
             "title": "Row",
             "slug": "row",
@@ -129,7 +129,7 @@ class TestReadProjectionHelpers:
         assert resolve_blog_body(row) == "ROW BODY"
 
     def test_resolve_blog_body_none_when_no_row_or_body(self) -> None:
-        """Scenario: an absent row or empty body yields None (AE-0163, no fallback).
+        """Scenario: an absent row or empty body yields None (no fallback).
 
         The embedded ``blog_markdown`` column is no longer read; the body comes
         solely from the dual-write/backfill row.
@@ -139,11 +139,11 @@ class TestReadProjectionHelpers:
         assert resolve_blog_body(row) is None
 
 
-# ==============================================================================
-# Carousel-blog projection (AE-0163: sourced solely from the origin='carousel' row)
-# ==============================================================================
 class TestCarouselBlogProjection:
-    """The carousel-blog projection mirrors the legacy media-route fields."""
+    """The carousel-blog projection mirrors the legacy media-route fields.
+
+    The carousel blog is sourced solely from the origin='carousel' row.
+    """
 
     @staticmethod
     def _add_carousel_row(
@@ -154,7 +154,7 @@ class TestCarouselBlogProjection:
         excerpt: str | None,
         markdown: str,
     ) -> None:
-        """Insert the canonical origin='carousel' row (AE-0127/AE-0163 shape)."""
+        """Insert the canonical origin='carousel' row."""
         session.add(
             BlogPostModel.from_entity({
                 "project_id": str(project.id),
@@ -170,7 +170,7 @@ class TestCarouselBlogProjection:
     async def test_no_row_returns_none(self, db_session: AsyncSession) -> None:
         """Scenario: with no origin='carousel' row, the projection is None (404).
 
-        The embedded ``blog_markdown`` column is no longer read (AE-0163); the body
+        The embedded ``blog_markdown`` column is no longer read; the body
         + 404 signal come solely from the dual-write/backfill row.
         """
         acl = PublishingReadAcl(db_session)
@@ -200,7 +200,11 @@ class TestCarouselBlogProjection:
         self, db_session: AsyncSession
     ) -> None:
         """Scenario: the row supplies the body; empty title/excerpt fall back to the
-        project title/subtitle (the AE-0127 row shape — excerpt NULL — preserved)."""
+        project title/subtitle (the legacy row shape — excerpt NULL — preserved).
+
+        The body comes from the row; an empty row title and excerpt fall back to the
+        project.
+        """
         project = _carousel_entity()
         self._add_carousel_row(
             db_session,
@@ -213,9 +217,9 @@ class TestCarouselBlogProjection:
         acl = PublishingReadAcl(db_session)
         projection = await acl.project_carousel_blog(project)
         assert projection is not None
-        assert projection.markdown == "BACKFILL BODY"  # body from the row
-        assert projection.title == "Embedded Title"  # empty row title -> project
-        assert projection.subtitle == "Embedded Subtitle"  # empty excerpt -> project
+        assert projection.markdown == "BACKFILL BODY"
+        assert projection.title == "Embedded Title"
+        assert projection.subtitle == "Embedded Subtitle"
 
     @pytest.mark.asyncio
     async def test_row_without_body_returns_none(
@@ -240,7 +244,7 @@ class TestCarouselBlogProjection:
     async def test_public_visibility_gate(self, db_session: AsyncSession) -> None:
         """Scenario: only a ``published`` row passes the public-visibility gate.
 
-        AE-0422: anonymous callers of the legacy ``/blog`` read are gated on the
+        Anonymous callers of the legacy ``/blog`` read are gated on the
         row status; a hidden (draft) or absent row must not be public.
         """
         project = _carousel_entity()
@@ -302,9 +306,6 @@ class TestCarouselBlogProjection:
         assert await acl.project_carousel_blog_i18n(project, "en") is None
 
 
-# ==============================================================================
-# Calendar / board / analytics projections
-# ==============================================================================
 class TestAggregateProjections:
     """The calendar/board/analytics projections aggregate the legacy rows."""
 
@@ -402,9 +403,6 @@ class TestAggregateProjections:
         assert len(projection.velocity_by_week) == 4
 
 
-# ==============================================================================
-# Blog-CRUD port + service forwarding
-# ==============================================================================
 class TestBlogCrudPortAndService:
     """The blog-CRUD port and the service forward to the read ACL."""
 

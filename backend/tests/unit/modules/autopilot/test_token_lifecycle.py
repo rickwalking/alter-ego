@@ -1,4 +1,4 @@
-"""Instagram token clocks, Graph parsing, and the refresh client (AE-0358).
+"""Instagram token clocks, Graph parsing, and the refresh client.
 
 Gherkin: tests/features/autopilot_ig_token.feature
 """

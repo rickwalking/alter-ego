@@ -1,7 +1,7 @@
-"""Golden-snapshot diff helper for editorial carousel workflow endpoints (AE-0106).
+"""Golden-snapshot diff helper for editorial carousel workflow endpoints.
 
 The enforceable byte-identical baseline for the Phase 4 carousel workflow slice
-(AE-0107 / AE-0110 / AE-0111 move workflow start/state/resume + the
+(moving workflow start/state/resume + the
 ``carousel_projects`` writers behind editorial handlers + an ACL). This helper
 lets those slices assert the live response is identical to the committed snapshot
 captured on the current, pre-refactor code (diff == 0).
@@ -20,6 +20,12 @@ refactor must preserve — INCLUDING the artifact URL fields the state response
 exposes (``image_assets`` image paths, ``blog_markdown``, ``design_applied``).
 The fixtures use STABLE artifact paths (no embedded volatile UUID) so those
 fields are captured verbatim.
+
+The normalization primitives are re-exported so this module is the single import surface
+for editorial snapshot tests. Workflow responses (state / resume) carry a volatile
+``project_id`` UUID that the auth-scoped Identity normalizer does not target; it is
+normalized here so the baseline asserts a well-formed UUID without pinning the per-run
+value.
 """
 
 from __future__ import annotations
@@ -41,8 +47,6 @@ from tests.snapshots.identity._snapshot import (
 if TYPE_CHECKING:
     from httpx import Response
 
-# Re-export the normalization primitives so this module is the single import
-# surface for editorial snapshot tests (mirrors the Conversation helper).
 __all__ = [
     "assert_matches_snapshot",
     "build_snapshot",
@@ -54,17 +58,13 @@ __all__ = [
 
 _SNAPSHOT_DIR: Final = Path(__file__).parent
 
-# Workflow responses (state / resume) carry a volatile ``project_id`` UUID that
-# the shared Identity normalizer does not target (its field set is auth-scoped).
-# Normalize it here so the byte-identical baseline asserts the field is a
-# well-formed UUID without pinning the per-run value.
 _EXTRA_VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({"project_id"})
 
 
 def _normalize_workflow_volatile(value: JsonValue) -> JsonValue:
     """Recursively collapse the workflow ``project_id`` UUID to a placeholder.
 
-    AE-0439 (QA F-13): ``image_assets`` are owner preview URLs of the shape
+    ``image_assets`` are owner preview URLs of the shape
     ``/api/carousels/<project-id>/preview/images/<file>``, so the volatile
     UUID also appears INSIDE those strings and is collapsed the same way.
     """

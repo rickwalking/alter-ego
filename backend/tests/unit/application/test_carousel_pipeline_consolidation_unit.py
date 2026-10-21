@@ -33,9 +33,10 @@ class TestCarouselSkillsProgressiveDisclosure:
     """Scenario: RAG parent agent does not load full carousel pipeline skill."""
 
     def test_editorial_subagent_prompt_excludes_monolithic_bundle(self) -> None:
-        # AE-0249: subagent specs use the DeepAgents prompt field (the
-        # skill references are embedded in the prompt, not a bespoke
-        # ``skills`` key). The monolithic SKILL.md bundle stays excluded.
+        """Subagent specs use the DeepAgents prompt field (skill references are embedded
+        in the prompt, not a bespoke skills key); the monolithic SKILL.md bundle stays
+        excluded.
+        """
         subagent = build_editorial_carousel_subagent(AsyncMock())
         assert "skills" not in subagent
         prompt = subagent["prompt"]
@@ -79,6 +80,7 @@ class TestGenerateCarouselTool:
         assert str(created.id) in str(result)
 
     async def test_generate_carousel_sanitizes_prompt_inputs(self) -> None:
+        """The audience keeps its case."""
         repo = AsyncMock()
         created = CarouselProject(
             topic="Topic",
@@ -107,7 +109,7 @@ class TestGenerateCarouselTool:
         assert project_id == str(created.id)
         assert "ignore previous instructions" not in workflow_request.topic
         assert workflow_request.topic == ""
-        assert workflow_request.audience == "Developers"  # AE-0413: case kept
+        assert workflow_request.audience == "Developers"
         assert workflow_request.brief == workflow_request.topic
         assert workflow_request.source_urls == []
 
@@ -219,7 +221,7 @@ def _research_tool_mock() -> AsyncMock:
 class TestScrapeUrlSources:
     """Feature: URL Source Extraction in Editorial Workflow.
 
-    AE-0317: the route-edge ``_scrape_url_sources`` was consolidated into the
+    the route-edge ``_scrape_url_sources`` was consolidated into the
     workflow service's ``enrich_sources`` (single SSRF-guarded choke point).
     These scenarios are preserved against the new entry point.
     """
@@ -258,9 +260,12 @@ class TestScrapeUrlSources:
     async def test_graceful_degradation_on_failure(self) -> None:
         """Scenario: URL scraping fails gracefully.
 
-        QA F-4 (AE-0008): when scrape_url raises, the original URL content is
+        QA F-4: when scrape_url raises, the original URL content is
         retained AND a structured warning with the ``research_url_scrape_failed``
         event is emitted for observability.
+
+        The original URL content is retained and a warning with the failed URL and error
+        is logged.
         """
         mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(side_effect=ConnectionError("Network error"))
@@ -274,9 +279,7 @@ class TestScrapeUrlSources:
         with capture_logs() as logs:
             result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_awaited_once()
-        # Original URL content is retained on failure.
         assert result[0]["content"] == "https://example.com/article"
-        # Graceful-degradation warning is logged with the failed URL + error.
         warnings = [
             entry for entry in logs if entry["event"] == "research_url_scrape_failed"
         ]
@@ -327,10 +330,13 @@ class TestScrapeUrlSources:
     async def test_bare_url_without_source_type_is_scraped(self) -> None:
         """Scenario: Bare URL content is scraped even without source_type=='url'.
 
-        QA F-5 (AE-0008): documents the intentional superset behavior. A source
+        QA F-5: documents the intentional superset behavior. A source
         whose ``content`` is a bare http(s) URL gets scraped even when its
         ``source_type`` is not ``url`` (e.g. a RAG agent note embedding a URL),
         while a plain-text document source is left untouched.
+
+        A bare URL is scraped even when source_type is not "url", while a plain-text
+        document source is not.
         """
         mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(return_value="Scraped note body")
@@ -347,16 +353,14 @@ class TestScrapeUrlSources:
             },
         ]
         result = await enrich_sources(sources, _enrichment_params(mock_tool))
-        # Superset branch: bare URL scraped despite source_type != "url".
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com/embedded")
         assert result[0]["content"] == "Scraped note body"
-        # Plain-text document source is NOT scraped.
         assert result[1]["content"] == "Just some prose, not a URL"
 
 
 @pytest.mark.unit
 class TestEdgeScrapingConsolidation:
-    """AE-0317 review r1 (M4): all entry points enrich via the service path.
+    """All entry points enrich via the service path.
 
     Regression against re-introducing route-edge scraping: the RAG workflow
     starter must hand the ORIGINAL url content to the workflow service (which
@@ -364,6 +368,9 @@ class TestEdgeScrapingConsolidation:
     """
 
     async def test_rag_workflow_start_passes_unscraped_urls_to_service(self) -> None:
+        """The edge does not scrape: the bare URL reaches the service, whose research
+        enrichment is the single guarded scrape choke point.
+        """
         from unittest.mock import MagicMock
 
         from rag_backend.api.dependencies.agents import (
@@ -399,8 +406,6 @@ class TestEdgeScrapingConsolidation:
         workflow_input = workflow_service.start_workflow.await_args.kwargs[
             "workflow_input"
         ]
-        # The edge does NOT scrape: the bare URL reaches the service, whose
-        # research enrichment is the single guarded scrape choke point.
         assert workflow_input.sources[0]["content"] == "https://example.com/article"
         assert workflow_input.sources[0]["source_type"] == "url"
 

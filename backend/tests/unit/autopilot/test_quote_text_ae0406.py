@@ -1,6 +1,8 @@
-"""Excerpt normalisation and matching (AE-0406, spec §4).
+"""Excerpt normalisation and matching (spec §4).
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
+
+Curly quotes are built from code points because ruff RUF001 flags them as literals.
 """
 
 from __future__ import annotations
@@ -13,7 +15,6 @@ from rag_backend.modules.autopilot.domain.quote_text import (
 )
 from tests.unit.autopilot.news_quote_support import EXCERPT, POST_TEXT
 
-# Curly quotes built from code points (ruff RUF001 flags them as literals).
 _LDQ, _RDQ, _LSQ, _RSQ = chr(0x201C), chr(0x201D), chr(0x2018), chr(0x2019)
 
 
@@ -72,9 +73,9 @@ def test_spaced_and_word_count() -> None:
     assert word_count("  one two\nthree ") == 3
 
 
-# QA mutation review: the stored text is cut at exactly 600 characters.
 def test_the_cut_is_exactly_600_characters() -> None:
-    at_cut = "a" * 594 + " tail"  # 599 characters
+    """The at-cut input is 599 characters long and the past-cut input 601."""
+    at_cut = "a" * 594 + " tail"
     assert excerpt_in_post("a tail", at_cut + "x") is True
-    past_cut = "a" * 596 + " tail"  # 601 characters
+    past_cut = "a" * 596 + " tail"
     assert excerpt_in_post("a tail", past_cut) is False

@@ -1,6 +1,6 @@
 """Background execution for async editorial workflow resume (RW-010-RW-013).
 
-AE-0315: the background task is a *run-owned* execution context — it captures
+the background task is a *run-owned* execution context — it captures
 the row's ``run_epoch`` into the ``carousel_run_epoch`` contextvar at start
 (fencing every ORM flush, checkpoint commit, and raw-SQL site against a
 reaper flip), heartbeats ``run_heartbeat_at`` on a fixed interval and at
@@ -92,7 +92,7 @@ class BackgroundResumeParams:
     """Inputs required to resume a workflow in the background.
 
     ``action`` is a review action, or ``RUN_ACTION_REDRIVE`` to re-run a
-    parked pending node without a review decision (AE-0363).
+    parked pending node without a review decision.
     """
 
     project_id: str
@@ -139,9 +139,9 @@ async def execute_resume_run(
     """Run-owned wrapper: fence capture, heartbeat task, fenced-zombie exit.
 
     The HTTP route schedules it as a task. The autopilot tick awaits it
-    inline after committing its own transaction (AE-0363), so both callers
+    inline after committing its own transaction, so both callers
     get the same heartbeat, run events, epoch fence, failure marking, and
-    (AE-0390) the Langfuse trace scope: project, owner, and the caller's agent.
+    the Langfuse trace scope: project, owner, and the caller's agent.
     """
     try:
         with await open_run_trace_scope(params.project_id, params.reviewer_id):
@@ -154,15 +154,18 @@ async def _execute_owned_run(
     service: EditorialWorkflowService,
     params: BackgroundResumeParams,
 ) -> None:
+    """Run the resume while this run still owns the project row.
+
+    When reaped mid-flight, the reaper owns the row (epoch bumped) and already published
+    run.finished(stale), and a replacement run is free to start, so this zombie touches
+    nothing else.
+    """
     fence = await read_run_fence(params.project_id)
     token = carousel_run_epoch_var.set(fence) if fence is not None else None
     heartbeat = start_heartbeat(fence)
     try:
         await _run_background_resume(service, params)
     except StaleRunEpochError:
-        # Reaped mid-flight: the reaper owns the row (epoch bumped), already
-        # published run.finished(stale), and the replacement run is free to
-        # start. This zombie must not touch anything else.
         logger.warning(LOG_EVENT_RUN_FENCED, project_id=params.project_id)
     finally:
         if token is not None:
@@ -173,7 +176,7 @@ async def _execute_owned_run(
 async def _beat_and_stage(ctx: CarouselRunContext | None, stage: str) -> None:
     """Emit a stage boundary and refresh the heartbeat alongside it.
 
-    AE-0320: this is awaited INLINE by the run's main coroutine, whose session
+    this is awaited INLINE by the run's main coroutine, whose session
     may hold flushed-but-uncommitted writes on the same row — the beat must be
     single-attempt and lock-timeout-bounded (soft-fail) or it self-deadlocks
     the run (prod incident 2026-07-18). Liveness is owned by the interval
@@ -189,6 +192,14 @@ async def _run_background_resume(
     service: EditorialWorkflowService,
     params: BackgroundResumeParams,
 ) -> None:
+    """Run a resume in the background and release the lock on any failure.
+
+    A cancelled task (shutdown, kill) must not leave the workflow holding the
+    in_progress lock. CancelledError is a BaseException that the generic handler never
+    catches, so the lock is released (marked failed and recoverable) and the
+    cancellation re-raised. When the reaper caused the cancel the epoch is already
+    fenced, so the mark-failed write is rejected and skipped.
+    """
     session_factory = get_session_maker()
     ctx = carousel_run_epoch_var.get()
     async with session_factory() as db:
@@ -252,14 +263,6 @@ async def _run_background_resume(
                 ),
             )
         except asyncio.CancelledError:
-            # AE-0209: a cancelled background task (e.g. shutdown/kill) must not
-            # leave the workflow holding the in_progress lock. ``CancelledError``
-            # is a BaseException, so the generic ``except Exception`` below never
-            # catches it — release the lock (mark failed/recoverable) then
-            # re-raise to honor cooperative cancellation. AE-0315: when the
-            # cancel came from the reaper the epoch is already fenced — the
-            # mark-failed write is rejected and skipped (the reaper owns the
-            # row and published run.finished(stale)).
             await db.rollback()
             logger.warning(
                 "background_resume_cancelled",
@@ -300,9 +303,11 @@ async def _run_phase(
     params: BackgroundResumeParams,
     db: AsyncSession,
 ) -> CarouselWorkflowState:
-    """Apply the review decision, or re-run the parked node (AE-0363)."""
+    """Apply the review decision, or re-run the parked node.
+
+    The re-driven phase drafts and scores with the project's persona too.
+    """
     if params.action == RUN_ACTION_REDRIVE:
-        # AE-0421: the re-driven phase drafts and scores with the persona too.
         persona = await resume_persona.load_project_persona(db, params.project_id)
         return await service.redrive_pending_phase(params.project_id, db, persona)
     return await service.resume_workflow(

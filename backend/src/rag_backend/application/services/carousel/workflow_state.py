@@ -11,7 +11,16 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 
 class CarouselWorkflowState(TypedDict, total=False):
-    """State for human-in-the-loop carousel workflow."""
+    """State for human-in-the-loop carousel workflow.
+
+    ``content_gate_validation`` is the fail-closed content-gate report (empty when the
+    content build ended non-blocking; mirrored into the content interrupt payload).
+    ``design_recovery_hint`` is set by the design ensure while the validation report
+    still blocks ("" once it passes) and is mirrored into the design interrupt payload
+    and the state response for the recovery UI. ``phase_feedback_notes`` holds tagged
+    active notes, the consumed-note history and the parked-content marker; keys outside
+    this schema are dropped by LangGraph.
+    """
 
     project_id: str
     current_phase: str
@@ -49,16 +58,9 @@ class CarouselWorkflowState(TypedDict, total=False):
     presentation_policy_version: str
     localized_slides: list[dict[str, object]]
     presentation_validation: dict[str, object]
-    # AE-0309: fail-closed content-gate report (empty dict when the content
-    # build ended non-blocking; mirrored into the content interrupt payload).
     content_gate_validation: dict[str, object]
-    # AE-0310: hint code set by the design ensure while the fresh validation
-    # report still blocks ("" once it passes); mirrored into the design
-    # interrupt payload and the state response for the recovery UI.
     design_recovery_hint: str
     translations_en: dict[str, object]
-    # AE-0405: tagged active notes, consumed-note history and the parked-content
-    # marker (keys outside this schema are dropped by LangGraph).
     phase_feedback_notes: dict[str, list[dict[str, str]]]
     phase_feedback_history: dict[str, list[dict[str, str]]]
     content_artifacts_parked: bool

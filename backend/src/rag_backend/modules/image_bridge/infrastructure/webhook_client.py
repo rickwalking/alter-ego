@@ -1,4 +1,4 @@
-"""httpx client for the Grok Bot webhook (AE-0393, contract section 2.1).
+"""httpx client for the Grok Bot webhook (contract section 2.1).
 
 The auth header name and value are configuration, so they match whatever
 the Cursor webhook expects. Neither the URL, the auth value nor the body
@@ -26,13 +26,15 @@ from rag_backend.modules.image_bridge.domain.models import WebhookRequest
 
 @dataclass(frozen=True)
 class WebhookClientConfig:
-    """Where and how to POST the job."""
+    """Where and how to POST the job.
+
+    Tests inject ``httpx.MockTransport``; prod uses the default transport.
+    """
 
     url: SecretStr
     auth_value: SecretStr
     auth_header: str = DEFAULT_WEBHOOK_AUTH_HEADER
     timeout_seconds: float = WEBHOOK_TIMEOUT_SECONDS
-    # Tests inject ``httpx.MockTransport``; prod uses the default transport.
     transport: httpx.AsyncBaseTransport | None = None
 
 
@@ -43,7 +45,11 @@ class HttpxGrokBotWebhook:
         self._config = config
 
     async def deliver(self, request: WebhookRequest) -> None:
-        """POST the job; a non-2xx answer or a transport error raises."""
+        """POST the job; a non-2xx answer or a transport error raises.
+
+        A transport error reports only its type: httpx messages can echo the
+        URL.
+        """
         try:
             async with httpx.AsyncClient(
                 timeout=self._config.timeout_seconds,
@@ -55,7 +61,6 @@ class HttpxGrokBotWebhook:
                     headers=self._headers(),
                 )
         except httpx.HTTPError as exc:
-            # The type only: httpx messages can echo the URL.
             reason = type(exc).__name__
             raise WebhookDeliveryError(
                 ERR_WEBHOOK_TRANSPORT.format(reason=reason)

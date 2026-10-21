@@ -35,13 +35,15 @@ class TestPdfSlideBuilder:
         assert pdf_file.exists()
         assert pdf_file.name == "carousel.pdf"
 
-        # Use pypdf to count pages (already a project dep).
         import pypdf
 
         reader = pypdf.PdfReader(str(pdf_file))
         assert len(reader.pages) == 7
 
     def test_single_slide_page_aspect_ratio_is_preserved(self, tmp_path: Path) -> None:
+        """img2pdf converts pixels to PDF points at 96 to 72 DPI, so the point size is
+        smaller than the pixel size, but the 4:5 aspect ratio is preserved exactly.
+        """
         slide = tmp_path / "only.jpg"
         _make_jpg(slide, width=1080, height=1350)
         PdfSlideBuilder().build([str(slide)], str(tmp_path))
@@ -50,9 +52,6 @@ class TestPdfSlideBuilder:
 
         reader = pypdf.PdfReader(str(tmp_path / "carousel.pdf"))
         page = reader.pages[0]
-        # img2pdf converts pixels to PDF points at 96→72 DPI, so the raw
-        # point size is smaller than the pixel size, but the 4:5 aspect
-        # ratio is preserved byte-accurately.
         width = float(page.mediabox.width)
         height = float(page.mediabox.height)
         assert width / height == pytest.approx(1080 / 1350, rel=1e-3)

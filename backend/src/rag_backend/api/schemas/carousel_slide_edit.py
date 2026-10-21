@@ -1,4 +1,4 @@
-"""Schemas for the completed-project slide-text edit endpoint (AE-0314)."""
+"""Schemas for the completed-project slide-text edit endpoint."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ class CarouselSlideEditRequest(BaseModel):
 
 
 class SlideFieldViolation(BaseModel):
-    """One violation addressed to the form field it belongs to (AE-0403).
+    """One violation addressed to the form field it belongs to.
 
     ``item_list``/``item_index``/``item_field`` are set for structured items
     (e.g. ``summary_points`` item 0 ``body``) and ``None`` for heading/body.
@@ -38,7 +38,7 @@ class SlideFieldViolation(BaseModel):
 class CarouselSlideEditResponse(BaseModel):
     """Result of a completed-project slide edit: fresh report + republish marker.
 
-    AE-0403: ``field_violations`` restates ``validation.violations`` per form
+    ``field_violations`` restates ``validation.violations`` per form
     field (additive; ``validation`` keeps its contract).
     """
 

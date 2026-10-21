@@ -4,14 +4,14 @@ Revision ID: a0e4f0a4b4c4
 Revises: d3e4f5a6b7c8
 Create Date: 2026-10-16
 
-AE-0404: ADDITIVE. One new table, ``instagram_audience_hours``: one row per
+ADDITIVE. One new table, ``instagram_audience_hours``: one row per
 Instagram account caching the Graph ``online_followers`` insight (followers
 online per UTC hour) for the Telegram schedule picker's recommendations.
 ``checked_at`` is the last Graph attempt (read at most once a day);
 ``fetched_at`` is the last success. No existing table or column is altered or
 dropped. ``downgrade`` drops the table.
 
-Idempotent like the AE-0371 revisions: prod has no ``alembic_version`` and the
+Idempotent like the earlier autopilot revisions: prod has no ``alembic_version`` and the
 backend creates missing tables at startup, so upgrade skips an existing table
 and downgrade skips a missing one.
 """

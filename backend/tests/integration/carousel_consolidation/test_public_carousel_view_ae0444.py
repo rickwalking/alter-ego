@@ -1,4 +1,4 @@
-"""Public carousel viewer + feed projection (AE-0444).
+"""Public carousel viewer + feed projection.
 
 Gherkin: tests/features/public_carousel_view_ae0444.feature
 """

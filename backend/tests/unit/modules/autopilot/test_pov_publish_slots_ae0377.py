@@ -1,6 +1,8 @@
-"""POV slots in AE-0370's publish choice (AE-0377, roadmap R6).
+"""POV slots in the scheduled publish choice (roadmap R6).
 
 Gherkin: tests/features/autopilot_pov_thesis.feature (POV slots wired section)
+
+_THU_1PM is Thursday 2026-10-15 13:00 in São Paulo, after today's noon slot.
 """
 
 from __future__ import annotations
@@ -21,7 +23,6 @@ from tests.unit.modules.autopilot.test_schedule_webhook_ae0370 import (
 
 _S = AutopilotRunState
 _THESIS = "A IA escreve código; decidir o que construir continua sendo do dev."
-# Thursday 2026-10-15 13:00 São Paulo: today's noon slot has passed.
 _THU_1PM = _local(15, 13)
 
 

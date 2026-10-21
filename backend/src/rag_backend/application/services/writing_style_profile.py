@@ -37,10 +37,13 @@ _CACHE_FILENAME = "scraped_snippets.json"
 
 @dataclass(frozen=True)
 class VoiceSample:
-    """A single writing-style example."""
+    """A single writing-style example.
+
+    ``language`` is "pt", "en" or "mixed".
+    """
 
     source_url: str
-    language: str  # "pt" | "en" | "mixed"
+    language: str
     text: str
 
 

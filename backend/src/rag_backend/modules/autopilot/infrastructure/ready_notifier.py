@@ -1,6 +1,6 @@
 """Stage ``content.autopilot.ready_for_owner`` on the transactional outbox.
 
-AE-0355 delivers the event to Telegram. This adapter only records it in
+Delivers the event to Telegram. This adapter only records it in
 the same session as the state change.
 """
 

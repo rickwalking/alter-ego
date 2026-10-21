@@ -59,11 +59,12 @@ class TestAlterEgoPromptLoading:
 
     # Scenario: v3 prompt does not contain forbidden phrases
     def test_v3_prompt_no_forbidden_phrases(self) -> None:
-        """Given the v3 prompt, then it must not contain robotic corporate phrases."""
+        """Given the v3 prompt, then it must not contain robotic corporate phrases.
+
+        Many forbidden phrases appear in the prompt as "never say X" negative examples,
+        so those are excluded from the list.
+        """
         prompt = get_system_prompt("alter_ego", version="v3")
-        # Phrases that the prompt must never instruct the model to output.
-        # Note: many forbidden phrases appear in the prompt as "never say X"
-        # negative examples — those are excluded from this list.
         forbidden = [
             "I was designed",
             "I was trained",

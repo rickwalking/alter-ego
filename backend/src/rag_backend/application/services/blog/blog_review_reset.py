@@ -1,4 +1,4 @@
-"""Approval is invalidated by edits (AE-0424, ADR-0025).
+"""Approval is invalidated by edits (ADR-0025).
 
 A content edit while a post is ``under_review`` or ``approved`` (scheduled or
 not) returns it to ``draft`` and clears the schedule and review stamps, so a

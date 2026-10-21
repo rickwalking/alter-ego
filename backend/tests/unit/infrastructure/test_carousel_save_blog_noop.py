@@ -1,4 +1,4 @@
-"""Carousel saves never touch blog posts (AE-0422).
+"""Carousel saves never touch blog posts.
 
 Scenarios (backend/tests/features/blog_no_carousel_slides_ae0422.feature):
 
@@ -85,7 +85,6 @@ class TestCarouselSaveNeverTouchesBlogPosts:
     ) -> None:
         created = await carousel_repository.create_project(_project())
 
-        # Save again (update path).
         loaded = await carousel_repository.get_project_by_id(created.id)
         assert loaded is not None
         await carousel_repository.update_project(loaded)
@@ -145,7 +144,7 @@ class TestCarouselSaveNeverTouchesBlogPosts:
     async def test_saving_still_mirrors_distribution_for_an_existing_row(
         self, carousel_repository, db_session
     ) -> None:
-        """ADR-0011 distribution home is preserved (AE-0422 decision).
+        """ADR-0011 distribution home is preserved.
 
         Dropping the v1 blog-row upsert keeps the canonical distribution mirror:
         an existing ``origin='carousel'`` row still receives the caption, but its

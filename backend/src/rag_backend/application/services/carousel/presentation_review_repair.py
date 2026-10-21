@@ -64,9 +64,11 @@ def _deterministic_repair_for_policy(
         violations: tuple[SlideValidationViolation, ...],
         locale: str,
     ) -> dict[str, object]:
+        """Copy hygiene runs first: a JSON blob must be read before a length trim cuts
+        it, and the other repairs then act on what the unwrapped copy violates. The
+        casing repair runs last and is a no-op on v1 policies.
+        """
         await asyncio.sleep(0)
-        # AE-0401 first: a JSON blob must be read before a length trim cuts it,
-        # and the other repairs then act on what the unwrapped copy violates.
         repaired = repair_copy_hygiene(payload, locale, policy)
         if repaired != dict(payload):
             violations = tuple(
@@ -76,7 +78,6 @@ def _deterministic_repair_for_policy(
             )
         repaired = deterministic_repair_slide_payload(repaired, violations, locale)
         repaired = repair_body_length_and_heading(repaired, violations, policy)
-        # AE-0312: deterministic casing repair (policy-version gated — no-op on v1).
         return repair_casing(repaired, locale, policy)
 
     return _repair

@@ -1,4 +1,4 @@
-"""AE-0416: PT blog body without the English research intro; Rejected board column.
+"""PT blog body without the English research intro; Rejected board column.
 
 Scenarios: see tests/features/qa_followups_ae0416.feature.
 """

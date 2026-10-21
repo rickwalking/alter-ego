@@ -65,14 +65,16 @@ from rag_backend.domain.persona_score import lowest_overall
 
 @dataclass(frozen=True)
 class RevisionCapValidationContext:
-    """Inputs for revision cap validation during workflow resume."""
+    """Inputs for revision cap validation during workflow resume.
+
+    structured_feedback is the sanitized structured feedback that makes the cap check
+    target-aware (send-backs consume the target phase's budget; edits consume none).
+    """
 
     project_id: str
     project_title: str
     db: AsyncSession | None = None
     notifications: NotificationService | None = None
-    # AE-0310: sanitized structured feedback so the cap check is target-aware
-    # (send-backs consume the TARGET phase's budget; edits consume none).
     structured_feedback: dict[str, object] | None = None
 
 
@@ -100,11 +102,14 @@ class ResumeContext(TypedDict):
 
 
 def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None:
-    """Reject content approval when persona voice match is below threshold."""
+    """Reject content approval when persona voice match is below threshold.
+
+    Scores use the 0-100 scale and unscored entries are skipped, as the autopilot reads
+    them.
+    """
     current_phase = str(prior.get("current_phase", ""))
     if current_phase != PHASE_CONTENT:
         return
-    # AE-0407: 0-100 scale, unscored entries skipped (as the autopilot reads).
     min_score = lowest_overall(prior.get("persona_scores"))
     if min_score is not None and min_score < VOICE_MATCH_MIN_SCORE:
         raise ValueError(ERR_PERSONA_SCORE_TOO_LOW)
@@ -133,7 +138,7 @@ def resolve_revision_cap_phase(
     prior: CarouselWorkflowState,
     structured_feedback: dict[str, object] | None,
 ) -> str | None:
-    """Return the phase whose revision budget a revise consumes (AE-0310).
+    """Return the phase whose revision budget a revise consumes.
 
     Accounting rule (pinned by the ticket):
     - a send-back charges the TARGET phase — the phase whose LLM re-runs
@@ -162,7 +167,7 @@ async def validate_revision_cap(
 ) -> None:
     """Reject revise when the charged phase's revision cap is exceeded.
 
-    Target-aware (AE-0310): send-backs evaluate the TARGET phase's counter,
+    Target-aware: send-backs evaluate the TARGET phase's counter,
     plain revises the current phase's; uncapped submissions skip the check.
     """
     phase = resolve_revision_cap_phase(prior, ctx.structured_feedback)
@@ -191,11 +196,13 @@ async def record_feedback_correction(
     _orchestrator: CarouselEditorialOrchestrator,
     ctx: FeedbackCorrectionContext,
 ) -> None:
-    """Persist reviewer edits for feedback learning (CP-007)."""
+    """Persist reviewer edits for feedback learning (CP-007).
+
+    On a final-review send-back the correction belongs to the target phase (for example
+    content), not the current checkpoint phase.
+    """
     if ctx.db is None or ctx.persona is None or not ctx.feedback:
         return
-    # AE-0288: on a final-review send-back the correction belongs to the target
-    # phase (e.g. content), not the current checkpoint phase (final_review).
     target = _resume_target_phase(ctx.structured_feedback)
     phase = (
         target
@@ -248,7 +255,11 @@ def _feedback_corrected_text(
 async def prepare_resume_workflow(
     context: ResumeContext,
 ) -> None:
-    """Validate resume preconditions and persist revise feedback."""
+    """Validate resume preconditions and persist revise feedback.
+
+    Notes no regeneration will use are settled before a new one is filed, and the
+    revision count is incremented only when a phase budget is charged.
+    """
     prior = context["prior"]
     if prior is None:
         return
@@ -257,7 +268,6 @@ async def prepare_resume_workflow(
         validate_content_approve_persona_score(prior)
         validate_content_approve_presentation(prior)
     engine = context["orchestrator"].engine
-    # AE-0405: settle notes no regeneration will use BEFORE filing a new one.
     prior = await settle_feedback_before_resume(engine, prior, action)
     if action == REVIEW_ACTION_REVISE:
         structured = context.get("structured_feedback")
@@ -268,7 +278,6 @@ async def prepare_resume_workflow(
                 prior=prior,
                 feedback=context["feedback"],
                 target_phase=_resume_target_phase(structured),
-                # AE-0310: increment only when a phase budget is charged.
                 count_revision=resolve_revision_cap_phase(prior, structured)
                 is not None,
                 source=_feedback_source(structured),
@@ -277,7 +286,7 @@ async def prepare_resume_workflow(
 
 
 def _feedback_source(structured_feedback: dict[str, object] | None) -> str:
-    """AE-0405: autopilot gate feedback is tagged; anything else is human."""
+    """Autopilot gate feedback is tagged; anything else is human."""
     if not isinstance(structured_feedback, dict):
         return FEEDBACK_SOURCE_HUMAN
     source = structured_feedback.get(STRUCTURED_FEEDBACK_SOURCE_KEY)

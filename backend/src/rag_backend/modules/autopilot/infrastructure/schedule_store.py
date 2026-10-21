@@ -1,4 +1,4 @@
-"""SQLAlchemy reader for due ``scheduled`` runs (AE-0370).
+"""SQLAlchemy reader for due ``scheduled`` runs.
 
 Split from ``repository.py`` so the adapter stays under 400 lines.
 """

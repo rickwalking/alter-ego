@@ -1,4 +1,4 @@
-"""AE-0413: EN translations, re-draft notes, language check, casing message,
+"""EN translations, re-draft notes, language check, casing message,
 feedback history and research relevance (REPORT B03, B12, B14, B16).
 
 Gherkin: tests/features/content_gate_backend_ae0413.feature
@@ -295,7 +295,7 @@ def _stored_state(**extra: object) -> dict[str, object]:
 
 @pytest.mark.unit
 class TestReadOnlyStateResponse:
-    """AE-0413 (AE-0414 trace): the state GET never rewrites the copy or the policy."""
+    """The state GET never rewrites the copy or the policy."""
 
     @staticmethod
     def _build(state: dict[str, object]) -> object:

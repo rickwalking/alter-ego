@@ -1,4 +1,4 @@
-"""Radar IA quick fixes (AE-0372).
+"""Radar IA quick fixes.
 
 Gherkin: tests/features/radar_ia_quick_fixes.feature
 """

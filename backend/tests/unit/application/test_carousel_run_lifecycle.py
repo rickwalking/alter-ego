@@ -1,4 +1,4 @@
-"""Unit tests for AE-0315 run lifecycle: fence layer (b), events, heartbeat.
+"""Unit tests for the run lifecycle: fence layer (b), events, heartbeat.
 
 Feature: tests/features/carousel_run_progress_reaper.feature
 Covers the checkpoint-commit fence semantics, the run.* SSE publishers, the
@@ -107,7 +107,7 @@ class TestCheckpointCommitFence:
             register_run_epoch_reader(None)
 
     async def test_unset_contextvar_passes_without_reading(self) -> None:
-        # User/API contexts are never fenced (pinned r6).
+        """User and API contexts are never fenced."""
         register_run_epoch_reader(_stub_reader(current_epoch=99))
         try:
             await ensure_checkpoint_commit_allowed(_PROJECT_ID)
@@ -158,7 +158,7 @@ class TestRunLifecycleEvents:
                 RUN_FINISHED_REASON_COMPLETED,
                 final_phase_status=PHASE_STATUS_AWAITING_HUMAN,
             )
-        assert get_run_stage(_PROJECT_ID) == RUN_STAGE_GENERATING  # fallback
+        assert get_run_stage(_PROJECT_ID) == RUN_STAGE_GENERATING
         event = hub.publish.await_args.args[1]
         assert event["event"] == SSE_EVENT_RUN_FINISHED
         assert event["reason"] == RUN_FINISHED_REASON_COMPLETED
@@ -253,10 +253,13 @@ class TestRunMetadataResponse:
 
 @pytest.mark.asyncio
 class TestHeartbeatLockSafety:
-    """AE-0320 scenarios (tests/features/carousel_run_lock_safety.feature)."""
+    """Scenarios of tests/features/carousel_run_lock_safety.feature."""
 
     async def test_single_attempt_beat_never_raises_and_logs(self, monkeypatch) -> None:
-        """Scenario: Stage-boundary beat is single-attempt and never raises."""
+        """Scenario: Stage-boundary beat is single-attempt and never raises.
+
+        There is a single attempt, no retry loop.
+        """
         from structlog.testing import capture_logs
 
         attempts: list[int] = []
@@ -272,7 +275,7 @@ class TestHeartbeatLockSafety:
             ok = await carousel_run_progress.write_run_heartbeat_once(_PROJECT_ID, 0)
 
         assert ok is False
-        assert len(attempts) == 1  # single attempt — no retry loop
+        assert len(attempts) == 1
         warned = [
             log for log in logs if log["event"] == "carousel_run_heartbeat_failed"
         ]

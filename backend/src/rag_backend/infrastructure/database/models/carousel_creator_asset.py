@@ -21,7 +21,10 @@ from rag_backend.infrastructure.database.config import Base
 
 
 class CarouselCreatorAssetModel(Base):
-    """Persisted normalized creator avatar/branding asset."""
+    """Persisted normalized creator avatar/branding asset.
+
+    ``role`` is the photo-library role (hook/cta/pov); ``pose_tag`` is optional.
+    """
 
     __tablename__ = "carousel_creator_assets"
 
@@ -36,7 +39,6 @@ class CarouselCreatorAssetModel(Base):
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     relative_path = Column(String(500), nullable=False)
-    # AE-0373: photo library role (hook / cta / pov) and an optional pose tag.
     role: Mapped[str | None] = mapped_column(String(16), nullable=True)
     pose_tag: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

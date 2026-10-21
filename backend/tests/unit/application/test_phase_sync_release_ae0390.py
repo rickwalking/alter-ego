@@ -1,4 +1,4 @@
-"""The phase sync commits before anything else runs on the row (AE-0390).
+"""The phase sync commits before anything else runs on the row.
 
 Gherkin: tests/features/workflow_tracing_and_heartbeat.feature
   Scenario: The phase sync releases the project row before finalize, events and beats

@@ -1,4 +1,4 @@
-"""Variable slide count and slide roles (AE-0374).
+"""Variable slide count and slide roles.
 
 Gherkin: tests/features/carousel_variable_slide_count.feature
 """
@@ -228,8 +228,8 @@ class TestOutlineNormalization:
 
     # Scenario: Role outline keeps roles up to 10 slides
     def test_role_outline_keeps_ten(self) -> None:
+        """The model returned 11 slides; stamping keeps the contract's 10."""
         policy = load_presentation_policy(_POV)
-        # The model returned 11 slides: stamping keeps the contract's 10.
         stamped = stamp_outline_roles(_outline(11), policy)
         normalized = normalize_editorial_outline(stamped)
         assert len(normalized) == 10
@@ -260,11 +260,11 @@ class TestDeckRule:
 
     @pytest.mark.parametrize("count", [8, 9, 10])
     def test_pov_deck_in_range(self, count: int) -> None:
+        """The POV rubric may fire on an empty deck; the size rule must not."""
         codes = {
             v.code
             for v in deck_violations([{}] * count, load_presentation_policy(_POV))
         }
-        # AE-0375's POV rubric may fire on an empty deck; the size rule must not.
         assert "slide_count_invalid" not in codes
 
     # Scenario: Legacy decks never get the deck rule
@@ -281,7 +281,7 @@ class TestDeckRule:
 
 @pytest.mark.unit
 class TestSlideFileOrder:
-    """AE-0374: generated slide images sort numerically (slide_10 after slide_9)."""
+    """Generated slide images sort numerically (slide_10 after slide_9)."""
 
     def test_numeric_order(self, tmp_path) -> None:
         from rag_backend.application.services.carousel import (

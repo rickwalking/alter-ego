@@ -1,6 +1,6 @@
 """Approve final review and release the carousel for an owner tap.
 
-Shared by publish-now and scheduling (AE-0370). A carousel whose workflow is
+Shared by publish-now and scheduling. A carousel whose workflow is
 already ``approved_for_publish`` (a schedule the owner cancelled) is not
 approved a second time.
 """
@@ -29,11 +29,13 @@ from rag_backend.modules.editorial.public import (
 
 @dataclass(frozen=True, kw_only=True)
 class FinalReviewApproval:
-    """The editorial approve and the public release, for one request."""
+    """The editorial approve and the public release, for one request.
+
+    Without ``carousels`` the approve is always sent.
+    """
 
     editorial: EditorialDriver
     release_port: CarouselReleaser
-    # None: always send the approve (the AE-0356 behaviour).
     carousels: CarouselPublishSource | None = None
 
     async def approve(self, run: AutopilotRun) -> ResumeStatus:

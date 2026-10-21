@@ -1,4 +1,4 @@
-"""Statement strategy: big text, no artwork (AE-0376, POV rehook/pov/point)."""
+"""Statement strategy: big text, no artwork (POV rehook/pov/point)."""
 
 from collections.abc import Mapping
 

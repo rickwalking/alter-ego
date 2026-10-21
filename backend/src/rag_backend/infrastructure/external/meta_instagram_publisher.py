@@ -12,8 +12,11 @@ published again: its media id is recovered from the account's recent media.
 
 ``META_IG_GRAPH_BASE`` selects the host. The default is Instagram Login
 (``graph.instagram.com``). Page tokens can select ``graph.facebook.com``.
-The access token comes from an ``InstagramTokenProvider``. AE-0358's
-encrypted store is the production provider.
+The access token comes from an ``InstagramTokenProvider``. The
+encrypted credential store is the production provider.
+
+Tests patch ``_POLL_INTERVAL_SECONDS`` and ``_REQUEST_DEADLINE_SECONDS`` to skip
+the real poll sleep and shorten the deadline.
 """
 
 from __future__ import annotations
@@ -89,7 +92,6 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-# Tests patch these to skip the real poll sleep and to shorten the deadline.
 _POLL_INTERVAL_SECONDS = META_POLL_INTERVAL_SECONDS
 _REQUEST_DEADLINE_SECONDS: float = GRAPH_REQUEST_DEADLINE_SECONDS
 
@@ -272,14 +274,16 @@ class MetaInstagramPublisher:
         return link
 
     async def content_publishing_remaining(self) -> int:
-        """Quota left (``quota_total - quota_usage``). Unreadable is transient."""
+        """Quota left (``quota_total - quota_usage``). Unreadable is transient.
+
+        Without ``fields`` Graph omits ``config``.
+        """
         payload = await self._request(
             _GraphCall(
                 method=HTTP_GET,
                 path=GRAPH_PATH_PUBLISHING_LIMIT.format(
                     ig_user_id=self._config.ig_user_id
                 ),
-                # Without ``fields`` Graph omits ``config`` (AE-0368).
                 query={FIELD_FIELDS: PUBLISHING_LIMIT_FIELDS},
             )
         )
@@ -351,6 +355,11 @@ class MetaInstagramPublisher:
         raise last_error
 
     async def _send(self, call: _GraphCall, token: str) -> httpx.Response:
+        """Send one Graph call under its overall deadline.
+
+        The per-request deadline bounds the worst-case publish time that the
+        publish-claim stale window is derived from.
+        """
         form = dict(call.form or {})
         query = dict(call.query or {})
         if call.method == HTTP_POST:
@@ -366,8 +375,6 @@ class MetaInstagramPublisher:
                     params=query or None,
                 )
         except TimeoutError as exc:
-            # One overall deadline per request bounds the worst-case publish
-            # time the publish-claim stale window is derived from (QA r2 R4a).
             logger.warning("instagram_graph_request_deadline", path=call.path)
             raise httpx.TimeoutException(ERR_INSTAGRAM_API_REQUEST_FAILED) from exc
         except httpx.HTTPError:

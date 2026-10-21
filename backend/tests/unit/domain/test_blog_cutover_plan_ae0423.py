@@ -1,4 +1,4 @@
-"""Unit tests for the per-row cutover plan (AE-0423 review fixes).
+"""Unit tests for the per-row cutover plan (review fixes).
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 """
@@ -66,6 +66,7 @@ class TestStrictVerifyAndRepair:
 
     # Scenario: A v2 row with an invalid translation keeps its PT document
     def test_apply_drops_only_the_invalid_translations(self) -> None:
+        """The cover, and so its projection, is untouched on a repaired v2 row."""
         bad = {**V2, "translations": {"en-US": EN, "en": EN, "es": "## E\n\nx"}}
         change = plan_apply(_state(content=bad, featured_image_url="https://c/x"))
         assert change is not None
@@ -74,7 +75,6 @@ class TestStrictVerifyAndRepair:
         assert content["sections"] == V2["sections"]
         assert set(content["translations"]) == {"en", "es"}
         assert is_valid_v2_content(content)
-        # The cover (and so its projection) is untouched on a repaired v2 row.
         assert COLUMN_FEATURED_IMAGE_URL not in change.values
 
     def test_drop_invalid_translations_is_none_when_nothing_to_drop(self) -> None:

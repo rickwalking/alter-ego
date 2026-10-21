@@ -1,7 +1,13 @@
-"""Telegram owner-notice constants (AE-0355).
+"""Telegram owner-notice constants.
 
 Kept beside ``constants.py`` so neither file exceeds the 400-line limit.
 The bot token is never written to a log.
+
+A run with no persona has no scores, and the owner sees that on the review. The
+escalation detail goes between the reason and the link. Owner reviews expire after 72 h
+and may be reopened without regeneration; an escalated run can be closed by the runner
+(72 h, or carousel rejected), and a publish can be held by an unfinished Instagram
+container.
 """
 
 from rag_backend.modules.autopilot.constants import (
@@ -10,7 +16,6 @@ from rag_backend.modules.autopilot.constants import (
     EVENT_TYPE_STATE_CHANGED,
 )
 
-# Telegram owner notices (AE-0355). The bot token is never written to a log.
 REASON_NOTIFIER_UNCONFIGURED = "notifier_unconfigured"
 EVENT_TYPE_IG_EXPIRING = "content.autopilot.ig_token_expiring"
 PAYLOAD_REVISION = "revision"
@@ -42,7 +47,6 @@ CALLBACK_DATA_MAX_BYTES = 64
 CALLBACK_APPROVE_PREFIX = "ap:approve:"
 CALLBACK_REWORK_PREFIX = "ap:rework:"
 CALLBACK_REJECT_PREFIX = "ap:reject:"
-# AE-0367: deterministic content repair of the reviewed carousel.
 CALLBACK_FIX_PREFIX = "ap:fix:"
 PERSONA_SCORE_FORMAT = ".0f"
 PATH_OWNER_UI = "/dashboard/create"
@@ -51,20 +55,17 @@ BUTTON_REWORK = "\u270f\ufe0f Rework"
 BUTTON_REJECT = "\U0001f5d1 Reject"
 BUTTON_RETRY = "\U0001f501 Retry"
 BUTTON_FIX = "\U0001f6e0 Fix issues"
-# AE-0367: quality issues listed under the review caption preview.
 ISSUES_HEADER = "\u26a0\ufe0f Issues:"
 ISSUE_BULLET = "\u2022 {line}"
 ISSUES_SEPARATOR = "\n\n"
 LOG_REVIEW_ISSUES_FAILED = "autopilot_review_issues_failed"
 LABEL_PERSONA = "Persona:"
 LABEL_SOURCES = "sources"
-# AE-0364: a run with no persona has no scores; the owner sees it on the review.
 LABEL_PERSONA_NOT_SCORED = "not scored"
 CAPTION_TEMPLATE = "{title}\n{persona} {score} \u00b7 {sources} {sources_label}"
 TEXT_CAPTION_MISSING = "Review the slides above."
 TEXT_ESCALATED = "Escalated: {reason}"
 TEXT_ESCALATED_WITH_LINK = "Escalated: {reason}\n{link}"
-# AE-0401: the escalation detail goes between the reason and the link.
 TEXT_ESCALATED_DETAIL = "{reason}\n{detail}"
 TEXT_FAILED = "Failed: {reason}"
 TEXT_PUBLISH_FAILED = "\u274c publish failed: {reason}"
@@ -83,15 +84,12 @@ KIND_PUBLISHED = "published"
 KIND_PUBLISH_FAILED = "publish_failed"
 KIND_IG_EXPIRING = "ig_token_expiring"
 KIND_REMINDER = "reminder"
-# QA r1: 72 h owner expiry and a review reopened without regeneration.
 KIND_EXPIRED = "expired"
 KIND_REVIEW_REOPENED = "review_reopened"
 TEXT_EXPIRED = "Review expired after 72 hours. The carousel stays private."
 TEXT_REVIEW_REOPENED = "The review is open again ({reason})."
-# QA r2 R1: an escalated run closed by the runner (72 h, or carousel rejected).
 KIND_ESCALATION_CLOSED = "escalation_closed"
 TEXT_ESCALATION_CLOSED = "Escalation closed ({reason}). The carousel stays private."
-# QA r3 Q2: a publish held by an unfinished Instagram container.
 KIND_PUBLISH_HELD = "publish_held"
 TEXT_PUBLISH_HELD = (
     "\u23f3 Instagram publish has been held for over {minutes} minutes by an "

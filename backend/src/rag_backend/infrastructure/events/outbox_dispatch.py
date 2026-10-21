@@ -1,4 +1,4 @@
-"""Outbox dispatch plumbing for the transactional outbox (AE-0130).
+"""Outbox dispatch plumbing for the transactional outbox.
 
 Infrastructure-side helpers the application ``WorkflowEventService`` composes so
 it never imports the ORM model, the session maker, or the relay directly (those
@@ -101,6 +101,8 @@ async def relay_after_commit(publisher: EventPublisherProtocol) -> None:
     transport outage cannot spin: those rows are retried on the next emit's drain.
     Failures are logged, never raised — unpublished rows are retried later
     (at-least-once).
+
+    A transport or session failure must not propagate to the caller.
     """
     from rag_backend.infrastructure.database.config import get_session_maker
 
@@ -114,7 +116,7 @@ async def relay_after_commit(publisher: EventPublisherProtocol) -> None:
                 processed = result.published + result.failed
                 if processed < _DEFAULT_BATCH_SIZE or result.published == 0:
                     break
-    except Exception as exc:  # transport/session failure must not propagate
+    except Exception as exc:
         logger.warning("outbox_relay_pass_failed", error=str(exc))
 
 

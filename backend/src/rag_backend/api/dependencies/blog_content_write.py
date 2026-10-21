@@ -1,4 +1,4 @@
-"""The one versioned write path for a blog post's content (AE-0424).
+"""The one versioned write path for a blog post's content.
 
 PUT, restore-version, the image routes, rewrite-section and the EN translation
 all mutate ``blog_posts.content``; every one of them goes through
@@ -63,13 +63,16 @@ class BlogPostRow(Protocol):
 
 @dataclass(frozen=True)
 class ContentWrite:
-    """One versioned content write of ``post`` by ``user_id``."""
+    """One versioned content write of ``post`` by ``user_id``.
+
+    events is built by the route, which already owns the settings and event-publisher
+    edge.
+    """
 
     post: BlogPostRow
     if_match: int | None
     values: dict[str, object]
     user_id: str
-    # Built by the route (it already owns the settings/event-publisher edge).
     events: WorkflowEventService
     change_summary: str = VERSION_SUMMARY_SAVE
 
@@ -99,7 +102,7 @@ def bump_lock_version(post: VersionedRow) -> None:
 
     Submit / approve / reject / publish / schedule / cancel bump the lock so a
     slot write or save prepared against the pre-transition state cannot land
-    without the review reset being decided on the new state (AE-0424 review).
+    without the review reset being decided on the new state.
     """
     post.lock_version = int(post.lock_version or 1) + 1
 

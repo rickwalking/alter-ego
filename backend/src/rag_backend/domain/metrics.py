@@ -16,7 +16,6 @@ class ViolationEntry(TypedDict, total=False):
     actual: int
 
 
-# Maximum allowed complexity metrics (industry standard)
 MAX_COMPLEXITY = 10
 MAX_BRANCHES = 6
 MAX_STATEMENTS = 40
@@ -25,7 +24,6 @@ MAX_RETURNS = 3
 MAX_LOCALS = 10
 MAX_NESTED = 3
 
-# Mapping of metric names to their thresholds
 COMPLEXITY_THRESHOLDS: dict[str, int] = {
     "complexity": MAX_COMPLEXITY,
     "branches": MAX_BRANCHES,

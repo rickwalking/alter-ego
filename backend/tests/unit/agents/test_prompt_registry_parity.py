@@ -1,9 +1,9 @@
-"""Golden-output parity tests for the AE-0243 prompt-registry migration.
+"""Golden-output parity tests for the prompt-registry migration.
 
 Each test reconstructs the exact legacy inline f-string (the golden) and asserts
 the registry-rendered prompt is byte-for-byte identical — proving the move from
 inline f-strings to agents/prompts/**/*.yaml preserved behavior (whitespace,
-ordering, and trailing-newline included). See AE-0243 arch-plan §12.
+ordering, and trailing-newline included).
 """
 
 from __future__ import annotations
@@ -21,8 +21,10 @@ from rag_backend.domain.models.persona import PersonaProfile
 def test_persona_enforce_falls_back_when_registry_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Registry-unavailable path (AE-0243): the call site degrades to the 1-line
-    # fallback instead of crashing.
+    """When the registry is unavailable the call site degrades to the one-line fallback
+    instead of crashing.
+    """
+
     def _raise(*_a: object, **_k: object) -> tuple[str, dict[str, object]]:
         raise PromptNotFoundError("simulated missing prompt")
 
@@ -194,9 +196,10 @@ Format as JSON with experience, expertise, authoritativeness, trustworthiness, o
 
 
 def test_linkedin_template_format_parity() -> None:
-    # LinkedIn's prompt stays an inline guarded `_TEMPLATE` constant (it lives in
-    # the `application` layer; see linkedin_post_generator for the DDD rationale).
-    # This asserts the `.format()` template still produces the legacy output.
+    """LinkedIn's prompt stays an inline guarded _TEMPLATE constant in the application
+    layer (see linkedin_post_generator for the rationale); this asserts the .format()
+    template still produces the legacy output.
+    """
     from rag_backend.application.services import linkedin_post_generator as lpg
 
     result = lpg._build_prompt(

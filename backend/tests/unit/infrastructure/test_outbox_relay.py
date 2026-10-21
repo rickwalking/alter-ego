@@ -1,4 +1,4 @@
-"""Unit tests for the transactional outbox + relay (AE-0130).
+"""Unit tests for the transactional outbox + relay.
 
 Gherkin: tests/features/transactional_outbox.feature
 
@@ -166,10 +166,10 @@ async def test_relay_rerun_is_idempotent(db_session: AsyncSession) -> None:
     second = await relay.run_once(db_session)
 
     assert first.published == 1
-    assert second.published == 0  # already marked -> not re-selected
-    assert len(get_memory_events()) == 1  # exactly one delivery total
+    assert second.published == 0
+    assert len(get_memory_events()) == 1
     rows = await _all_outbox(db_session)
-    assert rows[0].attempts == 1  # no extra attempt on the no-op pass
+    assert rows[0].attempts == 1
 
 
 # Scenario: at-least-once — a failed publish leaves the row for the next pass.
@@ -183,8 +183,8 @@ async def test_relay_retries_unpublished_after_failure(
     failed = await OutboxRelay(_FailingPublisher()).run_once(db_session)
     assert failed.published == 0
     assert failed.failed == 1
-    assert len(await _unpublished_outbox(db_session)) == 1  # retried later
-    assert (await _all_outbox(db_session))[0].attempts == 1  # failure counted
+    assert len(await _unpublished_outbox(db_session)) == 1
+    assert (await _all_outbox(db_session))[0].attempts == 1
 
     retried = await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
     assert retried.published == 1
@@ -192,7 +192,7 @@ async def test_relay_retries_unpublished_after_failure(
     assert len(events) == 1
     assert events[0][1][EVENT_FIELD_EVENT_ID] == event_id
     assert len(await _published_outbox(db_session)) == 1
-    assert (await _all_outbox(db_session))[0].attempts == 2  # failed + successful
+    assert (await _all_outbox(db_session))[0].attempts == 2
 
 
 # Scenario: relayed payload is byte-identical to the legacy stream_event dict.
@@ -202,8 +202,6 @@ async def test_relayed_payload_is_identical(db_session: AsyncSession) -> None:
     event_id = await _emit(db_session)
     rows = await _all_outbox(db_session)
     expected_timestamp = rows[0].event_timestamp
-    # Parity with the legacy path: tz-aware ISO string (datetime.now(UTC).isoformat()),
-    # dialect-proof — SQLite would strip the offset from a created_at round-trip.
     assert expected_timestamp.endswith("+00:00")
 
     await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
@@ -274,14 +272,14 @@ async def test_relay_after_commit_drains_multiple_batches(
     run_once = _patch_relay_loop(
         monkeypatch,
         [
-            OutboxRelayResult(published=_DEFAULT_BATCH_SIZE, failed=0),  # full -> more
-            OutboxRelayResult(published=3, failed=0),  # non-full -> drained
+            OutboxRelayResult(published=_DEFAULT_BATCH_SIZE, failed=0),
+            OutboxRelayResult(published=3, failed=0),
         ],
     )
 
     await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
 
-    assert run_once.await_count == 2  # looped once more, then stopped
+    assert run_once.await_count == 2
 
 
 # Scenario: an all-failed full batch stops the loop (no infinite spin on outage).
@@ -297,7 +295,7 @@ async def test_relay_after_commit_stops_on_no_progress(
 
     await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
 
-    assert run_once.await_count == 1  # no forward progress -> no second pass
+    assert run_once.await_count == 1
 
 
 # Scenario: a relay pass with no database engine is logged, never raised (AE-0446).

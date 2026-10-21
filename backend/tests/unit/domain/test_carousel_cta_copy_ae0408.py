@@ -1,4 +1,4 @@
-"""AE-0408: the CTA copy never promises a weekday schedule (owner feedback, be190a0c)."""
+"""The CTA copy never promises a weekday schedule (owner feedback, be190a0c)."""
 
 from __future__ import annotations
 

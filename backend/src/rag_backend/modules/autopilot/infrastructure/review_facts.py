@@ -46,12 +46,16 @@ class CarouselReviewFacts:
         )
 
     async def _issues(self, project_id: str) -> QualityIssues:
-        """AE-0367: the quality issues the review lists, and the fix button."""
+        """The quality issues the review lists, and the fix button.
+
+        An inspection error is logged and the review still goes out without the
+        list.
+        """
         if self._autofixer is None:
             return QualityIssues()
         try:
             return await self._autofixer.inspect(project_id)
-        except Exception as exc:  # the review still goes out without the list
+        except Exception as exc:
             logger.warning(
                 LOG_REVIEW_ISSUES_FAILED,
                 project_id=project_id,

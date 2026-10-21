@@ -1,6 +1,9 @@
-"""Carousel content mode on create and read (AE-0373, ADR-0021).
+"""Carousel content mode on create and read (ADR-0021).
 
 Gherkin: tests/features/carousel_content_mode.feature
+
+``_ANY_PHOTO`` is a syntactically valid photo id for the schema-level 422 cases; the 201
+cases upload a real photo (``hook_photo_id``).
 """
 
 from __future__ import annotations
@@ -15,8 +18,6 @@ from tests.integration.hook_photo_support import hook_photo_id
 
 _THESIS = "A IA escreve código. Quem decide ainda é você."
 _BASE = {"topic": "Julgamento técnico", "audience": "Devs", "niche": "IA"}
-# PR #106 review: a syntactically valid photo id for the schema-level 422 cases;
-# the 201 cases upload a real photo (``hook_photo_id``).
 _ANY_PHOTO = "00000000-0000-4000-8000-0000000000aa"
 
 
@@ -56,13 +57,14 @@ class TestContentModeDefaults:
     # Scenario: Default mode is Radar IA
     @pytest.mark.asyncio
     async def test_default_mode_is_radar_ia(self, client: AsyncClient) -> None:
+        """A Radar IA create stores the v4 contract default (CTA slide included) instead
+        of NULL, so the blog's section count never falls back to the legacy
+        slides_config (6).
+        """
         data = await _create(client, dict(_BASE))
         assert data["content_mode"] == "news_analysis"
         assert data["pov_thesis"] is None
         assert data["pov_format"] is None
-        # AE-0439 (QA F-07): a Radar IA create stores the v4 contract default
-        # (CTA slide included) instead of NULL, so the blog's section count
-        # never falls back to the legacy slides_config (6).
         assert data["slide_count"] == 7
         assert data["cta_goal"] == "follow"
 
@@ -168,7 +170,6 @@ class TestContentModeRejections:
             "pov-7-slides",
             "pov-11-slides",
             "unknown-format",
-            # PR #106 review: POV needs the slide-1 photo; Radar IA rejects it.
             "pov-missing-photo",
             "photo-on-radar",
             "unknown-mode",
@@ -182,6 +183,7 @@ class TestContentModeRejections:
     async def test_rejected_with_422(
         self, client: AsyncClient, body: dict[str, object]
     ) -> None:
+        """POV needs the slide-1 photo; Radar IA rejects it."""
         response = await client.post("/api/carousels", json=body)
         assert response.status_code == 422
 

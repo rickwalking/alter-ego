@@ -1,4 +1,4 @@
-"""``field`` names on topic-intake rejections (AE-0406, spec §6).
+"""``field`` names on topic-intake rejections (spec §6).
 
 A rejection carries ``field`` when one field caused it, so the scout can fix
 that topic. The names are the request's JSON keys.

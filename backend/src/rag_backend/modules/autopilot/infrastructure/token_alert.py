@@ -1,4 +1,8 @@
-"""Telegram alert for a failing Instagram token. The bot token is not logged."""
+"""Telegram alert for a failing Instagram token. The bot token is not logged.
+
+Status notices require a run id. A credential is not a run, so the alert uses a
+placeholder id, which is not sent to Telegram when the keyboard is empty.
+"""
 
 from __future__ import annotations
 
@@ -27,8 +31,6 @@ from rag_backend.modules.autopilot.notify_constants import TELEGRAM_HTTP_TIMEOUT
 
 logger = structlog.get_logger()
 
-# Status notices require a run id. A credential is not a run, and the id is
-# not sent to Telegram when the keyboard is empty.
 _ALERT_RUN_ID = UUID(int=0)
 
 

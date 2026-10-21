@@ -1,7 +1,7 @@
-"""AE-0437: a revision re-drafts only the slides it names (QA F-10).
+"""A revision re-drafts only the slides it names (QA F-10).
 
 Gherkin: tests/features/closing_actions_scoped_revisions_ae0437.feature
-(section D). Real engine + real artifact runner (the AE-0405 harness); the
+(section D). Real engine + real artifact runner (the content feedback harness); the
 drafting model is a spy that, like a model ignoring the prompt, returns a
 fresh draft for EVERY slide, so the scope must be enforced in code.
 """
@@ -74,11 +74,14 @@ class TestScopedRevision:
     async def test_named_slide_is_the_only_one_redrafted(
         self, model: _ScopeSpy
     ) -> None:
-        """Scenario: A scoped revision re-drafts only the named and blocked slides."""
+        """Scenario: A scoped revision re-drafts only the named and blocked slides.
+
+        A first draft is never scoped.
+        """
         engine = build_engine(model)
         await park_at_content(engine)
         parked = await state_of(engine)
-        assert model.scopes == [None]  # a first draft is never scoped
+        assert model.scopes == [None]
 
         await review(engine, Review(action=REVIEW_ACTION_REVISE, feedback=_SCOPED_NOTE))
 

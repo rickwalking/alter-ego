@@ -1,4 +1,4 @@
-"""Telegram keyboards for publish-now and scheduling (AE-0370, AE-0404). Pure."""
+"""Telegram keyboards for publish-now and scheduling. Pure."""
 
 from __future__ import annotations
 

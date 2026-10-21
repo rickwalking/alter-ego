@@ -13,20 +13,18 @@ the prompt instructions instead so the LLM generalizes to any brand.
 
 Applied ONLY to OpenAI providers (gpt-image-2). Gemini's comic-neon style
 is already abstract enough that it rarely hits the same filters.
+
+Prefer updating the prompt template over expanding the analogy map: the prompt
+generalizes to any brand, the map only catches specific slips. Keys are lower-cased and
+matched case-insensitively as whole words, longest first, so "elon musk" matches before
+"musk".
 """
 
 from __future__ import annotations
 
 import re
 
-# Fallback map for known trigger words that the LLM prompt may miss.
-# Keys are lower-cased; matching is case-insensitive.
-# Values are the replacement text.
-# NOTE: Prefer updating the prompt template over expanding this map.
-#       The prompt generalizes to any brand; this map only catches
-#       specific slips.
 _ANALOGY_MAP: dict[str, str] = {
-    # People
     "elon musk": "a tech CEO",
     "musk": "a tech CEO",
     "jeff bezos": "an e-commerce founder",
@@ -35,7 +33,6 @@ _ANALOGY_MAP: dict[str, str] = {
     "sundar pichai": "a search engine CEO",
     "tim cook": "a consumer electronics CEO",
     "satya nadella": "a cloud computing CEO",
-    # Companies / brands
     "spacex": "a space exploration company",
     "cursor": "an AI coding tool",
     "openai": "an AI research lab",
@@ -54,24 +51,19 @@ _ANALOGY_MAP: dict[str, str] = {
     "nvidia": "a chip manufacturer",
     "intel": "a processor company",
     "amd": "a semiconductor firm",
-    # Political / controversial
     "donald trump": "a political figure",
     "joe biden": "a political figure",
     "putin": "a world leader",
     "xi jinping": "a world leader",
     "kim jong-un": "a world leader",
-    # Weapons / military (often flagged in photoreal)
     "missile": "a rocket",
     "nuclear": "energy core",
     "war": "conflict",
     "battle": "confrontation",
-    # Drugs / adult content words that sometimes slip in
     "cocaine": "white powder",
     "heroin": "substance",
 }
 
-# Compile a single regex that matches any of the keys as whole words.
-# We sort by length (longest first) so "elon musk" matches before "musk".
 _sorted_keys = sorted(_ANALOGY_MAP.keys(), key=len, reverse=True)
 _PATTERN = re.compile(
     r"\b(" + "|".join(re.escape(k) for k in _sorted_keys) + r")\b",

@@ -1,11 +1,11 @@
-"""``blog.v2`` content handling at the blog-post API edge (AE-0423, ADR-0025).
+"""``blog.v2`` content handling at the blog-post API edge (ADR-0025).
 
 Every route that writes ``blog_posts.content`` goes through
 ``BlogDocumentService`` here, so the strict v2 shape and the
 ``featured_image_url == content.cover.url`` projection are enforced in one
 place. ``featured_image_url`` is never taken from a client: it is derived from
 the cover. An invalid document is a 422 whose ``detail`` starts with the
-error code (the editor keys its "migration pending" banner on it, AE-0424).
+error code (the editor keys its "migration pending" banner on it).
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def cover_write(content: object, cover: BlogImage | None) -> BlogDocumentWrite:
 def assert_ready_to_publish(post: PublishCandidate) -> None:
     """422 unless publishable: >= 1 non-empty section and a valid AI label.
 
-    Shared by publish, submit-for-review and schedule (AE-0424 review); the
+    Shared by publish, submit-for-review and schedule; the
     due-post sweep runs the same application guard.
     """
     try:

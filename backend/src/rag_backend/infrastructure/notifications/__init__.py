@@ -1,1 +1,1 @@
-"""Operator notifications (AE-0399)."""
+"""Operator notifications."""

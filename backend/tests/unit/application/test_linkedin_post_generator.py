@@ -107,7 +107,7 @@ class TestLinkedInPostGenerationEdgeCases:
         assert post.text == "real content here"
 
     async def test_truncates_oversized_output_on_boundary(self) -> None:
-        paragraph = "This is a sentence. " * 200  # ~4000 chars
+        paragraph = "This is a sentence. " * 200
         llm = AsyncMock()
         llm.generate = AsyncMock(return_value=paragraph)
         gen = LinkedInPostGenerator(llm, _style())

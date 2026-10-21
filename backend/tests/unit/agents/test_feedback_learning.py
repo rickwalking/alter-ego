@@ -618,7 +618,11 @@ class TestFeedbackLearningLoop:
     async def test_suggest_improvements_returns_exact_top_three_sorted(
         self, loop: FeedbackLearningLoop, mock_repository: MagicMock
     ) -> None:
-        """Given 4 entries, when suggesting, then returns exactly 3 sorted by similarity."""
+        """Given 4 entries, when suggesting, then returns exactly 3 sorted by similarity.
+
+        The fake embeddings give candidates A, B, C (a zero vector) and D similarities
+        of 1.0, 0.0, 0.0 and 0.5 against the content.
+        """
         mock_repository.list_all_by_persona.return_value = [
             PersonaCorrectionRecord("A", "A1", "c", "tone"),
             PersonaCorrectionRecord("B", "B1", "c", "tone"),
@@ -627,11 +631,11 @@ class TestFeedbackLearningLoop:
         ]
         loop.embeddings.embed = AsyncMock(
             side_effect=[
-                [1.0, 0.0],  # content
-                [1.0, 0.0],  # A -> similarity 1.0
-                [0.0, 1.0],  # B -> similarity 0.0
-                [0.0, 0.0],  # C -> similarity 0.0 (zero vector)
-                [0.5, 0.0],  # D -> similarity 0.5
+                [1.0, 0.0],
+                [1.0, 0.0],
+                [0.0, 1.0],
+                [0.0, 0.0],
+                [0.5, 0.0],
             ]
         )
         result = await loop.suggest_improvements("content", "persona-1")

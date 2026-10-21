@@ -1,9 +1,9 @@
 """Admin carousel maintenance routes.
 
-Thin HTTP adapters (AE-0120). The bulk design-token refresh and slide-render
+Thin HTTP adapters. The bulk design-token refresh and slide-render
 endpoints delegate their data operations to the presentation
 :class:`PresentationHandlers` (via the presentation facade): the design-token
-refresh persists through the AE-0118 single write owner + the platform UoW (the
+refresh persists through the single write owner + the platform UoW (the
 route never calls ``session.commit()`` directly), and the render-slides loop runs
 through the refinement service behind the handler. The route supplies the on-disk
 ``_slide_missing`` skip probe (it owns the rendering/disk details) and maps the

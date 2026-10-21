@@ -1,4 +1,4 @@
-"""Shared Deep Agents harness — typed build config (AE-0248).
+"""Shared Deep Agents harness — typed build config.
 
 ``DeepAgentConfig`` groups the inputs to :func:`build_deep_agent` so the builder
 stays within the project's 3-argument limit and every field is statically typed
@@ -8,6 +8,8 @@ already-validated internal composition inputs, not an API/service boundary.
 The harness stays **generic**: it must not import ``rag_backend.application`` (the
 ``agents -> application`` edge is a down-only ratchet), so this config carries only
 LangChain/Deep-Agents primitives, never carousel/chat domain objects.
+
+The AGENT_KIND_* sentinel tags drive the builder's no-chat-checkpointer guard.
 """
 
 from __future__ import annotations
@@ -21,7 +23,6 @@ from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.base import BaseStore
 
-# Sentinel agent-kind tags — drive the no-chat-checkpointer guard in the builder.
 AGENT_KIND_CHAT = "chat"
 AGENT_KIND_WORKFLOW = "workflow"
 
@@ -42,7 +43,7 @@ class DeepAgentConfig:
         memory: per-agent ``AGENTS.md`` memory file paths passed to
             ``create_deep_agent(memory=...)``.
         checkpointer: workflow checkpointer; MUST be ``None`` for chat agents
-            (enforced by the AE-0247 guard inside the builder).
+            (enforced by the chat-checkpointer guard inside the builder).
         store: optional ``BaseStore`` for cross-thread memory.
     """
 

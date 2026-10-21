@@ -94,7 +94,7 @@ __all__ = [
 
 
 def project_cover_offer(session: AsyncSession) -> ProjectCoverOffer:
-    """AE-0445: the GrokBot cover offered to a carousel's run (``offer(id)``)."""
+    """The GrokBot cover offered to a carousel's run (``offer(id)``)."""
     from rag_backend.modules.autopilot.infrastructure.cover_offers import (
         ProjectCoverOffer,
     )

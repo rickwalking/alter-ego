@@ -1,4 +1,4 @@
-"""Research fetch parity with the old Chromium scrape (AE-0348 QA r3 Q5, Q6).
+"""Research fetch parity with the old Chromium scrape (QA r3 Q5, Q6).
 
 The fetch has one overall deadline, renders only text documents, looks like
 a browser, decodes by header / meta charset, and the rendered HTML can never
@@ -69,9 +69,6 @@ def _body(content: bytes, content_type: str | None) -> _Handler:
     return handler
 
 
-# --- Q5: one overall deadline -------------------------------------------------
-
-
 # Scenario: A research fetch ends at one overall deadline
 @pytest.mark.asyncio
 async def test_slow_hops_together_hit_the_overall_deadline(
@@ -92,9 +89,6 @@ async def test_slow_hops_together_hit_the_overall_deadline(
 
 def test_the_deadline_is_15_seconds() -> None:
     assert research_fetch.RESEARCH_FETCH_DEADLINE_SECONDS == 15.0
-
-
-# --- Q5: content type ---------------------------------------------------------
 
 
 # Scenario: Only text documents are rendered
@@ -166,9 +160,6 @@ async def test_plain_text_is_returned_without_chromium(
     assert fake.launched is False
 
 
-# --- Q5: browser headers and charset -----------------------------------------
-
-
 # Scenario: The fetch sends browser headers and honours the page charset
 @pytest.mark.asyncio
 async def test_the_production_client_sends_browser_headers() -> None:
@@ -211,9 +202,6 @@ async def test_the_page_charset_is_honoured(
         assert document.html.endswith("caf�")
         return
     assert document.html == expected
-
-
-# --- Q6: no DNS prefetch or preconnect ----------------------------------------
 
 
 # Scenario: Resource hints in the page never reach the network

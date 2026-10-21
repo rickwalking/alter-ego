@@ -1,4 +1,4 @@
-"""Hacker News, Hugging Face, Bluesky, and GitHub collectors (AE-0352).
+"""Hacker News, Hugging Face, Bluesky, and GitHub collectors.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: Bundle combines all free sources

@@ -1,18 +1,21 @@
-"""Constants for the content-gate targeted field repair (AE-0430).
+"""Constants for the content-gate targeted field repair.
 
 When the content gate blocks, the failing fields (and only those) go to the
 model with their slide/locale/field path, current text, exact limit and the
 rule they break; the answers are patched in by path and re-validated, at most
 ``GATE_REPAIR_MAX_ROUNDS`` times.
+
+Each repair round after the gate blocks is one model call, and one round sends a bounded
+number of fields (the rest wait for the next round). The model answers ``{"fixes":
+[{"id": "...", "text": "..."}]}`` with target ids ``<slide>:<locale>:<field path>``. A
+field filled from PT for a shape mismatch gets the missing-EN problem.
 """
 
 from __future__ import annotations
 
 from typing import Final
 
-# Repair rounds after the gate blocks (each round is one model call).
 GATE_REPAIR_MAX_ROUNDS: Final[int] = 2
-# Fields sent in one round (cost bound; the rest wait for the next round).
 GATE_REPAIR_MAX_TARGETS: Final[int] = 40
 GATE_REPAIR_TIMEOUT_SECONDS: Final[float] = 180.0
 
@@ -20,16 +23,13 @@ GATE_REPAIR_PROMPT_DOMAIN: Final[str] = "carousel_gate_repair"
 GATE_REPAIR_PROMPT_NAME: Final[str] = "field_repair"
 GATE_REPAIR_PROMPT_VERSION: Final[str] = "v1"
 
-# Prompt variables.
 GATE_REPAIR_VAR_FIELDS_JSON: Final[str] = "fields_json"
 GATE_REPAIR_VAR_STYLE_GUIDE: Final[str] = "style_guide"
 
-# Model answer: {"fixes": [{"id": "...", "text": "..."}]}.
 GATE_REPAIR_JSON_FIXES_KEY: Final[str] = "fixes"
 GATE_REPAIR_JSON_ID_KEY: Final[str] = "id"
 GATE_REPAIR_JSON_TEXT_KEY: Final[str] = "text"
 
-# One field the model is asked to rewrite (keys of the JSON it sees).
 GATE_REPAIR_FIELD_SLIDE: Final[str] = "slide"
 GATE_REPAIR_FIELD_LOCALE: Final[str] = "locale"
 GATE_REPAIR_FIELD_PATH: Final[str] = "field"
@@ -40,15 +40,12 @@ GATE_REPAIR_FIELD_MAX_LINES: Final[str] = "max_lines"
 GATE_REPAIR_FIELD_PROBLEMS: Final[str] = "problems"
 GATE_REPAIR_FIELD_SLIDE_HEADING: Final[str] = "slide_heading"
 
-# Target id: "<slide>:<locale>:<field path>".
 GATE_REPAIR_TARGET_ID: Final[str] = "{slide}:{locale}:{field}"
-# The problem a field gets when it was filled from PT for a shape mismatch.
 GATE_REPAIR_PROBLEM_MISSING_EN: Final[str] = (
     "translation_shape_mismatch: missing in English; translate the Portuguese source"
 )
 GATE_REPAIR_PROBLEM_LINE: Final[str] = "{code}: {message}"
 
-# The violations a content revision request carries (one line each).
 GATE_REVISION_NOTE_HEADER: Final[str] = (
     "Content gate violations to fix (keep every limit):"
 )

@@ -1,4 +1,4 @@
-"""GrokBot cover rules, credit and the Telegram toggle (AE-0418). Pure.
+"""GrokBot cover rules, credit and the Telegram toggle. Pure.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
 """
@@ -74,9 +74,6 @@ def _reason(
     return cover_reason(CoverCheck(asset_id=asset_id, sources=sources), facts)
 
 
-# --- Upload form ------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("kind", "source", "code"),
     [
@@ -105,9 +102,6 @@ def test_clean_source_canonicalizes_x_and_other_urls() -> None:
 def test_source_key_matches_x_status_across_hosts() -> None:
     assert source_key("https://twitter.com/poteto/status/2111133080526495985") == _X
     assert source_key("https://example.com/post/") == "https://example.com/post"
-
-
-# --- Topic rule ---------------------------------------------------------------------
 
 
 def test_fresh_unused_ai_image_is_allowed() -> None:
@@ -162,9 +156,6 @@ def test_parse_asset_id() -> None:
     assert parse_asset_id("nope") is None
 
 
-# --- Credit and the project field ---------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("url", "credit"),
     [
@@ -210,9 +201,6 @@ def test_slide_cover_row_round_trip_and_malformed_rows() -> None:
     assert slide_cover_from_row({**row, "asset_id": "nope"}) is None
     assert slide_cover_from_row({**row, "asset_id": 7}) is None
     assert slide_cover_from_row({**row, "staged_path": None}) is None
-
-
-# --- Telegram toggle ----------------------------------------------------------------
 
 
 _OFFER = CoverOffer(

@@ -1,9 +1,11 @@
 """Carousel theme palettes, brand palettes, and keyword mappings.
 
-Single source of truth: ``PALETTE_REGISTRY`` (AE-0266). The legacy lookup dicts
+Single source of truth: ``PALETTE_REGISTRY``. The legacy lookup dicts
 and key sets below are DERIVED from it, so adding a palette is one registry row
 and the views can never desync. Brand keywords sit on the brand's own row next
 to its colors.
+
+Do not hand-edit the derived views; add a ``PALETTE_REGISTRY`` row instead.
 """
 
 from rag_backend.domain.constants.palette_types import (
@@ -419,7 +421,6 @@ PALETTE_REGISTRY: tuple[PaletteDescriptor, ...] = (
     ),
 )
 
-# --- Derived views (do not hand-edit; add a PALETTE_REGISTRY row instead) ---
 _BRANDS = tuple(d for d in PALETTE_REGISTRY if d.kind is PaletteKind.BRAND)
 _NON_BRAND = tuple(d for d in PALETTE_REGISTRY if d.kind is not PaletteKind.BRAND)
 

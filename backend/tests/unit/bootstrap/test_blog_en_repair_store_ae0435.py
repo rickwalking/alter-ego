@@ -1,4 +1,4 @@
-"""The SQL store + composition of the one-shot EN repair (AE-0435).
+"""The SQL store + composition of the one-shot EN repair.
 
 Feature: backend/tests/features/blog_generation_en_gate_timeout_ae0435.feature
 """

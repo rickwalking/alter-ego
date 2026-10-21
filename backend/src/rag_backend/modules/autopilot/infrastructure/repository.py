@@ -97,7 +97,7 @@ class SqlAlchemyAutopilotRepository:
         return True
 
     async def confirm_thesis(self, command: ThesisConfirmCommand) -> bool:
-        """AE-0377: store the owner's thesis and requeue, in one CAS."""
+        """Store the owner's thesis and requeue, in one CAS."""
         transition = TransitionCommand(
             run_id=command.run_id,
             expected=AutopilotRunState.AWAITING_THESIS,
@@ -300,7 +300,10 @@ class SqlAlchemyAutopilotRepository:
 
 
 def _transition_statement(command: TransitionCommand) -> Update:
-    """Entering ``publishing`` restarts the publish retry budget (QA r1 B2/B3)."""
+    """Entering ``publishing`` restarts the publish retry budget (QA r1 B2/B3).
+
+    Entering ``scheduled`` stores the publish time; a cancel clears it.
+    """
     statement = (
         update(AutopilotRunModel)
         .where(
@@ -315,7 +318,6 @@ def _transition_statement(command: TransitionCommand) -> Update:
     )
     if command.new is AutopilotRunState.PUBLISHING:
         statement = statement.values(publish_attempts=0)
-    # AE-0370: entering ``scheduled`` stores the time; cancel clears it.
     if command.new is AutopilotRunState.SCHEDULED:
         return statement.values(scheduled_at=command.scheduled_at)
     if clears_schedule(command):

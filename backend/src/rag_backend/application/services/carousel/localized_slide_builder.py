@@ -125,7 +125,7 @@ class _LocalePayloadBuild:
 def _resolve_locale_body(source: Mapping[str, object]) -> tuple[str, str | None]:
     """Resolve visible body copy; never dump a raw scaffold draft into body.
 
-    AE-0309: when locale extraction fails and only the raw ``draft_text`` is
+    When locale extraction fails and only the raw ``draft_text`` is
     available, plain clean copy is still accepted (legacy drafts store their
     body there), but scaffold/blob-looking drafts return a typed failure
     instead of leaking the whole raw draft into visible copy.
@@ -164,7 +164,6 @@ def _build_locale_payload(
         value = source.get(key)
         if value is not None:
             payload[key] = value
-    # AE-0437: a closing checklist drafted as ``features`` is its actions.
     restore_closing_actions(payload, slide_type)
     return _LocalePayloadBuild(payload=payload, failure_reason=failure_reason)
 
@@ -179,7 +178,7 @@ def _canonical_key_failures(
     record: Mapping[str, object],
     raw_draft: str,
 ) -> list[SlideParseFailure]:
-    """Flag locale payloads missing the canonical key set (AE-0309)."""
+    """Flag locale payloads missing the canonical key set."""
     slide_index_value = record.get(SLIDE_INDEX_KEY)
     slide_index = slide_index_value if isinstance(slide_index_value, int) else 0
     failures: list[SlideParseFailure] = []

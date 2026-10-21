@@ -1,4 +1,4 @@
-"""Transaction-scoped Postgres lock timeout for run-column writers (AE-0320).
+"""Transaction-scoped Postgres lock timeout for run-column writers.
 
 The background resume runner holds its main session's transaction (flushed row
 updates + notification inserts) while stage-boundary heartbeats and the stale
@@ -11,8 +11,11 @@ of five gate approvals wedged until manual ``pg_terminate_backend``).
 ``SET LOCAL lock_timeout`` bounds every such write to a fail-fast error the
 caller treats as a soft failure (heartbeat: retry/skip; reaper: next tick).
 SQLite (unit tests) has no lock_timeout and its file lock never exhibits the
-cross-session row-lock wait — dialect-gated no-op, mirroring the AE-0316
+cross-session row-lock wait — dialect-gated no-op, mirroring the
 advisory-lock pattern.
+
+``_SET_LOCK_TIMEOUT_SQL`` is assembled once from a trusted int constant; no
+request data ever reaches the string.
 """
 
 from __future__ import annotations
@@ -24,8 +27,6 @@ from rag_backend.domain.constants.carousel_run import RUN_WRITE_LOCK_TIMEOUT_MS
 
 _POSTGRESQL_DIALECT = "postgresql"
 
-# Static statement assembled once from a trusted module constant (an int) —
-# no request data ever reaches this string.
 _SET_LOCK_TIMEOUT_SQL = text(
     "SET LOCAL lock_timeout = '" + str(int(RUN_WRITE_LOCK_TIMEOUT_MS)) + "ms'"
 )

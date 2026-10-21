@@ -1,4 +1,4 @@
-"""Instagram insights: KPI rules, the refresh service and the Graph reader (AE-0378).
+"""Instagram insights: KPI rules, the refresh service and the Graph reader.
 
 Gherkin: tests/features/instagram_insights.feature
 """

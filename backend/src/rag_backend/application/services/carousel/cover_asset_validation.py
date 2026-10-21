@@ -1,4 +1,4 @@
-"""Validate and normalise a GrokBot slide-1 cover upload (AE-0418, ADR-0024).
+"""Validate and normalise a GrokBot slide-1 cover upload (ADR-0024).
 
 The real bytes decide the format (PNG or JPEG only, never the declared type).
 An ``ai_image`` is centre-cropped to 4:5 and must be at least 1080x1350 after

@@ -1,4 +1,4 @@
-"""ddgs adapter and collector wiring (AE-0352).
+"""ddgs adapter and collector wiring.
 
 The default resolver is ``none``. Building the service does not open a socket.
 """

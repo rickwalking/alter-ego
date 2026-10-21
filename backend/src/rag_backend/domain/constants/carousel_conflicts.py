@@ -1,4 +1,4 @@
-"""Typed conflict codes for carousel 409 responses (AE-0316).
+"""Typed conflict codes for carousel 409 responses.
 
 The three legacy resume conflict causes keep their historical detail strings
 as their machine-readable codes so existing clients (which string-compare

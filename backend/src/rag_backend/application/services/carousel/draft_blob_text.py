@@ -1,4 +1,4 @@
-"""Read a slide draft that the model wrote as a JSON object (AE-0400).
+"""Read a slide draft that the model wrote as a JSON object.
 
 Models sometimes answer a slide draft with its bilingual JSON object instead
 of the copy, and sometimes wrap it in a Markdown code fence (```` ```json ````).

@@ -1,4 +1,4 @@
-"""Unit tests for target-aware revision-cap accounting (AE-0310).
+"""Unit tests for target-aware revision-cap accounting.
 
 Feature: Design-step recovery from content-level violations
 (see features/carousel_design_phase_recovery.feature)
@@ -6,6 +6,11 @@ Feature: Design-step recovery from content-level violations
 Scenario Outline: Send-backs consume the target phase's revision budget
 Scenario: Direct edits remain available after all caps are exhausted
 Scenario: Plain design revise while blocking consumes no design budget
+
+A mid-sentence plain "TITLE:" is not scaffolding and the deterministic repair strips the
+line-start "SLIDE 4:", so the scaffold body alone no longer keeps the gate blocked
+(everything flagged is deterministically strippable). The blocking gate for these
+scenarios comes from _OVER_BUDGET_EN_HEADING, which the repair never truncates.
 """
 
 from __future__ import annotations
@@ -38,11 +43,6 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 _SLIDE_TYPE = "hero_content"
 _SCAFFOLD_BODY = "SLIDE 4: rascunho com scaffold TITLE: pendente"
-# AE-0436: a mid-sentence plain "TITLE:" is no longer scaffolding, and the
-# deterministic repair strips the line-start "SLIDE 4:", so the scaffold body
-# alone no longer keeps the gate blocked (invariant: everything flagged is
-# deterministically strippable). The blocking gate for these scenarios now
-# comes from an over-budget EN heading, which the repair never truncates.
 _OVER_BUDGET_EN_HEADING = (
     "Title 4 keeps growing past the content heading budget of the contract"
 )

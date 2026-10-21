@@ -1,10 +1,15 @@
 """Deterministic recovery of slide locale payloads from drafting scaffolds.
 
-AE-0309: when the localized slide builder reports a typed parse failure (the
+When the localized slide builder reports a typed parse failure (the
 draft output was a raw ``## PT / **Heading:** / **Body:**`` scaffold or the
 built payload misses canonical keys), this module attempts a bounded
 deterministic repair — scaffold section extraction, label stripping, and
 canonical shape normalization — before the single LLM retry runs.
+
+A locale section header is "## PT", a bold-only "**PT**" or "**EN:**" line, or any
+locale-marker variant the model writes ("**PT-BR**", "PT-BR:"), matched by one shared
+longest-first alternation. A PT locale reads its copy from the "PT" section, or from a
+"PT-BR" / "PT_BR" section when that is the only one the scaffold carries.
 """
 
 from __future__ import annotations
@@ -53,9 +58,6 @@ _LOCALE_PAYLOAD_KEYS: dict[str, str] = {
     LANGUAGE_EN: STATE_FIELD_PRESENTATION_EN,
 }
 
-# AE-0436: a locale section header is "## PT", a bold-only "**PT**" /
-# "**EN:**" line (AE-0430), or any locale-marker variant the model writes
-# ("**PT-BR**", "PT-BR:", ...). One shared alternation, longest-first.
 _LOCALE_MARKER_ALT = "|".join(re.escape(marker) for marker in LOCALE_MARKERS)
 _SECTION_PATTERN = re.compile(
     rf"^(?:##\s+(?P<title>.+?)|\*\*(?P<bold>{_LOCALE_MARKER_ALT}):?\*\*:?)"
@@ -91,8 +93,6 @@ def _labeled_values(section: str) -> dict[str, str]:
     return values
 
 
-# AE-0436: a PT locale reads its copy from the "PT" section, or the "PT-BR" /
-# "PT_BR" variant section when that is the only one the scaffold carries.
 _LOCALE_SECTION_TITLE_ALIASES: dict[str, tuple[str, ...]] = {
     LANGUAGE_PT: ("PT", "PT-BR", "PT_BR"),
     LANGUAGE_EN: ("EN", "EN-US", "EN_US"),
@@ -122,7 +122,7 @@ def extract_scaffold_locale_copy(raw: str, locale: str) -> dict[str, str] | None
 
 
 def strip_scaffold_labels(text: str) -> str:
-    """Drop locale-marker lines and strip scaffold label prefixes from copy (AE-0436)."""
+    """Drop locale-marker lines and strip scaffold label prefixes from copy."""
     return _shared_strip_scaffold_labels(text)
 
 
@@ -182,7 +182,7 @@ def _heading_is_fallback(
 ) -> bool:
     """True when the heading is empty, or an EN heading that is the PT title.
 
-    AE-0430: without a translation the EN payload is built from the draft, so
+    Without a translation the EN payload is built from the draft, so
     its heading is the PT title; the scaffold's EN section heading is better.
     """
     heading = str(payload.get(_KEY_HEADING) or "").strip()

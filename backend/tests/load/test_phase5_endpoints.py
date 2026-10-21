@@ -39,7 +39,7 @@ async def session() -> AsyncSession:
 
 
 def _reader(db: AsyncSession):
-    """Bind the canonical-home reader to the test session (AE-0204 DI)."""
+    """Bind the canonical-home reader to the test session (DI)."""
 
     async def _read(project_id: str) -> dict[str, str | None] | None:
         return await read_distribution(db, project_id)
@@ -48,6 +48,7 @@ def _reader(db: AsyncSession):
 
 
 def _seed_projects(count: int) -> list[object]:
+    """The caption sample lives in the canonical distribution home."""
     now = datetime.now(UTC)
     rows: list[object] = []
     for index in range(count):
@@ -69,7 +70,6 @@ def _seed_projects(count: int) -> list[object]:
                 updated_at=now,
             )
         )
-        # AE-0204: the caption sample lives in the canonical distribution home.
         rows.append(
             BlogPostModel.from_entity({
                 "id": str(uuid.uuid4()),

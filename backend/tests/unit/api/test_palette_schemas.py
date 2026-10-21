@@ -1,4 +1,4 @@
-"""Unit tests for palette CRUD request validation (AE-0270).
+"""Unit tests for palette CRUD request validation.
 
 Feature: Custom palette CRUD API (tests/features/palette_crud_api.feature)
 Covers the prompt-injection hex guard, name XSS guard, and keyword guards that
@@ -92,8 +92,9 @@ class TestKeywordValidation:
 class TestUpdateRequest:
     # Scenario: Editing rejects a slug change
     def test_rejects_slug_field(self) -> None:
-        # Pass via a dict so the extra="forbid" rejection is exercised at runtime
-        # (a literal slug= kwarg would be a static type error, not a value test).
+        """The slug is passed via a dict so the extra="forbid" rejection is exercised at
+        runtime (a literal slug= kwarg would be a static type error, not a value test).
+        """
         with pytest.raises(ValidationError):
             PaletteUpdateRequest.model_validate({"slug": "hacked"})
 

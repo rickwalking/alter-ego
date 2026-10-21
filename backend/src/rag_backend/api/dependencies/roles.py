@@ -77,7 +77,6 @@ async def require_editor(
     return current_user
 
 
-# Type aliases for use in route dependencies
 CurrentUser = Annotated[UserModel, Depends(get_current_user)]
 AdminUser = Annotated[UserModel, Depends(require_admin)]
 EditorUser = Annotated[UserModel, Depends(require_editor)]

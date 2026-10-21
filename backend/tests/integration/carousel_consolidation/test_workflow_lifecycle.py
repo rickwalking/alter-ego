@@ -299,7 +299,7 @@ class TestEditorialWorkflowLifecycle:
     ) -> None:
         """Scenario: Caption endpoint does not run full legacy pipeline.
 
-        AE-0204: the caption is sourced from the canonical ``blog_posts.distribution``
+        The caption is sourced from the canonical ``blog_posts.distribution``
         home, so the stored caption is seeded on the project's ``origin='carousel'``
         blog row (not the embedded carousel column).
         """

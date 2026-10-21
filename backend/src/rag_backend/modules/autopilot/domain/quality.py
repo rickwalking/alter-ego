@@ -1,4 +1,4 @@
-"""Content-quality violations: read from a gate, reported to a revise (AE-0392).
+"""Content-quality violations: read from a gate, reported to a revise.
 
 Pure. The snapshot reads the blocking violations of the gate's validation
 report; the runner turns them into the ``Measured`` value (``rule@slide``

@@ -7,7 +7,7 @@ The service wires to the presentation **ports** (Protocols in
 ``rag_backend.modules.presentation.domain.ports``) via manual constructor
 injection (ADR-0009 §9). It depends ONLY on those contracts — never on the
 carousel ORM or a concrete Postgres repository — so the persistence/policy
-details stay behind the adapters built at the inbound edge (AE-0118/0119).
+details stay behind the adapters built at the inbound edge.
 
 It exposes:
 
@@ -100,7 +100,6 @@ class PresentationService:
         return port
 
 
-# Message template for a use case invoked without its required port wired.
 _ERR_NO_PORT = "presentation port not wired: {name}"
 
 

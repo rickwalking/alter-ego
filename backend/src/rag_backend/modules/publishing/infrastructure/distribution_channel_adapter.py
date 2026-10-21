@@ -1,4 +1,4 @@
-"""Channel-delivery adapter for the publishing distribution port (AE-0129).
+"""Channel-delivery adapter for the publishing distribution port.
 
 This adapter is the infrastructure backing for the publishing
 :class:`~rag_backend.modules.publishing.domain.ports.DistributionPublisher`
@@ -9,7 +9,7 @@ injected here and the vendor SDK imports stay in that adapter's module
 (``infrastructure/external/meta_instagram_publisher.py``), never in the
 publishing inner layers.
 
-Behavior-preserving (AE-0129): ``publish_instagram`` forwards the EXACT caption +
+Behavior-preserving: ``publish_instagram`` forwards the EXACT caption +
 public image URLs the route built to the vendor publisher and maps the vendor
 ``PublishResult`` one-to-one into the publishing
 :class:`~rag_backend.modules.publishing.domain.models.DistributionResult` — the
@@ -18,7 +18,7 @@ public image URLs the route built to the vendor publisher and maps the vendor
 already-persisted caption from the
 :class:`~rag_backend.modules.publishing.domain.models.Publication` view (no LLM
 call), identical to the legacy ``project.caption or ""`` route read. Mirrors the
-presentation image-provider adapter pattern (AE-0119).
+presentation image-provider adapter pattern.
 """
 
 from __future__ import annotations

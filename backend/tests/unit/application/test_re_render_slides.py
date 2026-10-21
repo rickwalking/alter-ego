@@ -59,6 +59,7 @@ class TestExtrasRoundTrip:
 
     # Scenario: Unpack restores features from a DB slide with extras
     def test_unpack_restores_features_from_db_slide(self) -> None:
+        """image_prompt is None so unpack falls back to the extras."""
         slide = make_test_slide(
             3,
             extras={
@@ -68,7 +69,7 @@ class TestExtrasRoundTrip:
                 "image_prompt": "scene from extras",
             },
         )
-        slide.image_prompt = None  # ensure unpack falls back to extras
+        slide.image_prompt = None
         sd = unpack_extras(slide)
         assert sd.features == [{"icon": "📝", "title": "T", "body": "B"}]
         assert sd.image_prompt == "scene from extras"

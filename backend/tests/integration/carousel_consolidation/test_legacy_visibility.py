@@ -79,10 +79,11 @@ class TestBlogVisibility:
 
     @pytest.mark.asyncio
     async def test_public_blog_when_row_published(self, client: AsyncClient) -> None:
+        """The public read is gated on the canonical row's ``status`` (ADR-0025: a
+        carousel going public never publishes its blog), so the row is seeded
+        ``published`` instead of relying on ``is_public`` alone.
+        """
         # Scenario: A public carousel with a published blog row is readable (AE-0422).
-        # Since AE-0422 the public read is gated on the canonical row's ``status``
-        # (ADR-0025: a carousel going public never publishes its blog), so the row
-        # is seeded ``published`` instead of relying on ``is_public`` alone.
         editor = await create_user("public@example.com", UserRole.EDITOR)
         project_id = await create_carousel(
             editor,
@@ -98,7 +99,7 @@ class TestBlogVisibility:
         self, client: AsyncClient
     ) -> None:
         # Scenario: A public carousel whose blog row is a draft 404s anonymously
-        # (the hidden-post gate, AE-0422 / ADR-0013 uniform 404).
+        #   .
         editor = await create_user("hidden@example.com", UserRole.EDITOR)
         project_id = await create_carousel(
             editor,
@@ -172,7 +173,12 @@ class TestPublishSeparation:
 
     @pytest.mark.asyncio
     async def test_explicit_publish_sets_is_public(self, client: AsyncClient) -> None:
-        """Scenario: Explicit publish sets is_public."""
+        """Scenario: Explicit publish sets is_public.
+
+        Publishing the carousel never publishes its blog, so the anonymous blog read
+        stays a uniform 404 until the blog row itself is published (the publish/hide
+        separation).
+        """
         editor = await create_user("publish@example.com", UserRole.EDITOR)
         project_id = await create_carousel(editor, is_public=False)
         await create_minimal_carousel_artifacts(project_id)
@@ -186,9 +192,6 @@ class TestPublishSeparation:
         payload = response.json()
         assert payload["is_public"] is True
 
-        # AE-0422 / ADR-0025: publishing the carousel never publishes its blog,
-        # so the anonymous read stays a uniform 404 until the blog row itself is
-        # published (the publish/hide separation this scenario guards).
         public_response = await client.get(f"/api/carousels/{project_id}/blog/pt")
         assert public_response.status_code == 404
 

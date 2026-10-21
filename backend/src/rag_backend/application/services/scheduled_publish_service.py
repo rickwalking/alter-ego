@@ -32,7 +32,7 @@ LOG_SCHEDULED_PUBLISH_BLOCKED = "blog_scheduled_publish_blocked"
 def _publishable(post: BlogPostModel) -> bool:
     """Run the publish guard; a blocked post loses its schedule, stays approved.
 
-    AE-0424 review: the sweep must not publish what "Publish" would refuse
+    The sweep must not publish what "Publish" would refuse
     (empty document or missing AI disclosure). Clearing the schedule stops the
     sweep retrying every tick; the owner sees the post approved, unscheduled.
     """

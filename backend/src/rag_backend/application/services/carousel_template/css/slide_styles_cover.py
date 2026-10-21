@@ -1,4 +1,4 @@
-"""CSS for the GrokBot screenshot cover on slide 1 (AE-0418, ADR-0024).
+"""CSS for the GrokBot screenshot cover on slide 1 (ADR-0024).
 
 The screenshot sits as a centred card on the solid ``.pov-solid`` background:
 rounded corners, a soft shadow, aspect kept (never cropped), the title above

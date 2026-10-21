@@ -1,4 +1,4 @@
-"""Per-post Instagram insights and the dashboard KPIs (AE-0378, ADR-0021 D11).
+"""Per-post Instagram insights and the dashboard KPIs (ADR-0021 D11).
 
 Pure values and rules: when a snapshot is due, and the plan's Section-13
 ratios (follows per post, shares per 100 views). Every metric is optional:

@@ -4,7 +4,7 @@ The identity port is:
 
 * ``UserRepository`` — user persistence (create/get/list/update/delete/count).
 
-**Re-export, not relocation (AE-0098 / behavior-preserving).** The
+**Re-export, not relocation (behavior-preserving).** The
 ``UserRepository`` Protocol is defined in the SHARED protocol file
 ``rag_backend.domain.protocols.repositories`` which is imported by ~50+
 non-identity callers (the container, routes, dependencies, the Postgres

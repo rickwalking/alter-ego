@@ -134,6 +134,9 @@ class TestResolverChain:
         Given state with valid "presentation_validation" key
         When resolve_presentation_review_from_state is called
         Then the validation resolver returns the result (fast path).
+
+        The identity of the validation dict proves the fast path returned it untouched,
+        so no later resolver re-validated the slides.
         """
         validation = {"blocking": False, "violations": []}
         state = {
@@ -142,8 +145,6 @@ class TestResolverChain:
             "presentation_policy_version": "v1",
         }
         resolved = resolve_presentation_review_from_state(state)
-        # Identity of the validation dict proves the fast path returned it
-        # untouched, i.e. no later resolver re-validated the slides.
         assert resolved["presentation_validation"] is validation
         assert resolved["localized_slides"] == [{"slide_index": 9}]
 
@@ -194,6 +195,8 @@ class TestAsyncSyncParity:
         Given identical inputs for sync and async variants
         When both functions complete
         Then their outputs are identical.
+
+        validated_at timestamps differ by wall clock, so everything else is compared.
         """
         drafts = [dict(_INTRO_DRAFT)]
         translations: dict[int, dict[str, object]] = {
@@ -205,7 +208,6 @@ class TestAsyncSyncParity:
         async_result = await build_presentation_review_updates_async(
             drafts, translations_en=translations
         )
-        # validated_at timestamps differ by wall clock; compare everything else.
         assert _strip_validated_at(sync_result) == _strip_validated_at(async_result)
 
     @pytest.mark.asyncio

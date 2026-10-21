@@ -1,8 +1,8 @@
-"""The autopilot model fix of failing slides, in-process (AE-0401).
+"""The autopilot model fix of failing slides, in-process.
 
 ``run_slide_fix`` builds the fast-role model (``build_chat_model(settings,
 LLM_ROLE_FAST)``), the reasoning-role model for the escalation attempts
-(AE-0407; not built when they are off), the project's persona
+(not built when they are off), the project's persona
 (``PovInputsAcl.project_persona``) for the style guide and the voice re-score,
 and delegates to the carousel ``SlideFixService``. Imports are lazy like the
 rest of the automation seam (the editorial facade loads while the ORM
@@ -77,14 +77,17 @@ class SlideFixAttemptReport:
 
 @dataclass(frozen=True, kw_only=True)
 class SlideFixSlideReport:
-    """Where one slide ended, with its current PT text for the owner."""
+    """Where one slide ended, with its current PT text for the owner.
+
+    ``unscored_ticks`` is above zero when the judge could not score the slide's
+    copy.
+    """
 
     slide_index: int
     fixed: bool
     rules: tuple[str, ...]
     text: str
     attempts: int
-    # AE-0433: > 0 when the judge could not score the slide's copy.
     unscored_ticks: int = 0
 
 
@@ -113,8 +116,8 @@ class _ModelRewriter:
 class _PersonaScorer:
     """``VoiceScorer`` on ``PersonaAgent.evaluate_match`` (0-100 overall).
 
-    AE-0407: retried once; None (unscored) when the judge gave no score.
-    AE-0433: the retry runs on ``fallback`` (the next model of the queue).
+    Retried once; None (unscored) when the judge gave no score.
+    The retry runs on ``fallback`` (the next model of the queue).
     """
 
     def __init__(self, agent: VoiceJudge, fallback: VoiceJudge | None = None) -> None:
@@ -147,7 +150,7 @@ def _model(request: SlideFixRequest) -> BaseChatModel:
 
 
 def _escalation_model(request: SlideFixRequest) -> BaseChatModel | None:
-    """The reasoning model, or None when the escalation is off (AE-0407)."""
+    """The reasoning model, or None when the escalation is off."""
     if request.escalation_attempts <= 0:
         return None
     factory = request.escalation_model_factory or request.model_factory
@@ -168,7 +171,7 @@ def _fallback_llm(llm: BaseChatModel) -> BaseChatModel | None:
 
 
 def _fallback_judge(persona: PersonaProfile, llm: BaseChatModel) -> PersonaAgent | None:
-    """The persona judge on the fallback model of ``llm`` (AE-0433)."""
+    """The persona judge on the fallback model of ``llm``."""
     from rag_backend.agents.persona_agent import PersonaAgent
 
     fallback = _fallback_llm(llm)

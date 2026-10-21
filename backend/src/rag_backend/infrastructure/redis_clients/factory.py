@@ -1,4 +1,4 @@
-"""Single sanctioned Redis client factory (AE-0302).
+"""Single sanctioned Redis client factory.
 
 Every backend Redis client is built here — and only here. Direct
 ``redis.Redis(...)`` / ``Redis.from_url(...)`` construction outside this module
@@ -46,8 +46,8 @@ class RedisConfigError(RuntimeError):
 class RedisConnectionConfig:
     """Per-consumer connection semantics the factory must preserve.
 
-    A blocking Streams reader and a cache have different needs (AE-0302:
-    "no param loss") — the factory forwards these verbatim instead of
+    A blocking Streams reader and a cache have different needs ("no param
+    loss") — the factory forwards these verbatim instead of
     flattening every consumer onto one connection profile.
     """
 

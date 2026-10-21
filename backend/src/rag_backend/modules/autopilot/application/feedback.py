@@ -2,7 +2,7 @@
 
 The sentence lives in ``agents/prompts/autopilot/v2/revise_feedback.yaml``.
 This module fills the phase, reason, measured detail and, for a
-content-quality failure, one line per failing slide (AE-0392).
+content-quality failure, one line per failing slide.
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ def gate_feedback(snapshot: GateSnapshot, reason: str) -> str:
 
 
 def measured_detail(snapshot: GateSnapshot, reason: str) -> str:
-    """What the failed check measured. Never empty (AE-0392)."""
+    """What the failed check measured. Never empty."""
     measure = _MEASURES.get(reason)
     detail = measure(snapshot) if measure is not None else ""
     return detail or snapshot.engine_blocker or reason

@@ -124,7 +124,7 @@ class TestEvaluateCarouselArtifacts:
         request = CarouselArtifactHealthRequest(project=project, slides=[])
         report = evaluate_carousel_artifacts(request)
         assert not report.ok
-        assert report.errors  # has at least one error
+        assert report.errors
 
     def test_cta_excluded_from_raw_image_validation(self) -> None:
         project = _make_project(generate_images=True)

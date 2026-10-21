@@ -1,4 +1,4 @@
-"""Typed conflict-detail response schema for carousel 409s (AE-0316)."""
+"""Typed conflict-detail response schema for carousel 409s."""
 
 from __future__ import annotations
 

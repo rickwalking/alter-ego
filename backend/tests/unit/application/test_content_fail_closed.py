@@ -1,6 +1,13 @@
-"""Unit tests for the AE-0309 fail-closed content review chain.
+"""Unit tests for the fail-closed content review chain.
 
 Gherkin: tests/features/carousel_content_fail_closed.feature
+
+INCIDENT_SCAFFOLD_DRAFT reproduces a prod incident: the PT extraction failed and the
+entire raw drafting scaffold (about 1147 chars of "## PT / **Heading:** / **Body:** /
+**Features:** / ## EN / ## Image Prompt") was stored as presentation_pt.body.
+UNRECOVERABLE_SCAFFOLD_DRAFT carries no extractable copy: extraction, label stripping
+and shape normalization all fail, so only the LLM retry (or the blocking report) can
+resolve it.
 """
 
 from __future__ import annotations
@@ -50,10 +57,6 @@ _PROJECT_ID = "38affb3e-c219-4c56-9838-9cae7094f767"
 _GATE_KEY = STATE_FIELD_CONTENT_GATE_VALIDATION
 _SCAFFOLD_LABELS = ("## PT", "## EN", "## Image Prompt", "**Heading:**", "**Body:**")
 
-# Reproduction of the prod incident payload (project 38affb3e, slide 4,
-# 2026-07-07): the PT extraction failed and the ENTIRE raw drafting scaffold
-# (~1147 chars, "## PT / **Heading:** / **Body:** / **Features:** / ## EN /
-# ## Image Prompt") was stored as presentation_pt.body.
 INCIDENT_SCAFFOLD_DRAFT = """## PT
 **Heading:** O disparo silencioso que corrompeu o slide quatro
 **Body:** A verdade incomoda: equipes tratam a regeneracao de conteudo como uma operacao segura, mas cada nova rodada reescreve artefatos que ja tinham sido aprovados pelo revisor humano. Quando o parser falha, o texto bruto inteiro vaza para o corpo visivel do slide e ninguem percebe ate a fase de design apontar as violacoes. O custo real aparece horas depois, em cirurgia manual de checkpoint em producao, num fluxo que deveria ter travado no proprio passo de conteudo.
@@ -68,9 +71,6 @@ INCIDENT_SCAFFOLD_DRAFT = """## PT
 Neon comic panel of a robot editor shredding a corrupted slide, dark plasma background, high contrast lighting.
 """
 
-# A draft whose scaffold carries no extractable copy: extraction, label
-# stripping, and shape normalization all fail, so only the LLM retry (or the
-# blocking report) can resolve it.
 UNRECOVERABLE_SCAFFOLD_DRAFT = (
     "## PT\n**Heading:**\n**Body:**\n## EN\n**Heading:**\n**Body:**\n"
 )
@@ -361,7 +361,7 @@ class TestUnrepairableBlocksAtContentReview:
     def test_content_interrupt_payload_carries_gate_report(
         self, mock_interrupt: MagicMock
     ) -> None:
-        """The interrupt payload mirrors the blocking gate report (AE-0309)."""
+        """The interrupt payload mirrors the blocking gate report."""
         mock_interrupt.return_value = {"action": "approve"}
         gate_report = {"blocking": True, "violations": []}
         state = get_initial_carousel_state(_PROJECT_ID, {"topic": "AI"})
@@ -411,7 +411,7 @@ class TestCleanDraftsUnaffected:
 class TestBlockingFlagIsTheOnlyTrigger:
     """Scenario: A non-blocking report never consumes the retry or the interrupt.
 
-    AE-0312 forward-compatibility (cold-critic r6): a report that carries
+    forward-compatibility (cold-critic r6): a report that carries
     violations with blocking=False (future warning-severity rules) must not
     consume the LLM retry and must not attach the blocking gate report.
     """
@@ -515,7 +515,7 @@ class TestCanonicalKeys:
 
 @pytest.mark.unit
 class TestBuilderNeverFallsBackToRawDraft:
-    """AE-0309: _build_locale_payload never stores the raw draft as body."""
+    """_build_locale_payload never stores the raw draft as body."""
 
     def test_scaffold_draft_yields_typed_failure_and_empty_body(self) -> None:
         slides, failures = build_localized_slides_with_failures([

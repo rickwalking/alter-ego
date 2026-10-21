@@ -1,4 +1,4 @@
-"""Route-level tests for the palette CRUD API (AE-0270).
+"""Route-level tests for the palette CRUD API.
 
 Feature: Custom palette CRUD API (tests/features/palette_crud_api.feature)
 Drives the real FastAPI app over an in-memory SQLite DB, asserting the feature
@@ -92,10 +92,11 @@ class TestCreateAndList:
     # Scenario: Concurrent duplicate active name -> 409
     @pytest.mark.asyncio
     async def test_duplicate_name_conflict(self, client: AsyncClient) -> None:
-        # The DB partial-unique index + IntegrityError->409 mapping is what makes
-        # the *concurrent* case safe (F3); a second create of the same active name
-        # exercises exactly that path (true simultaneity needs two DB sessions,
-        # which the in-memory single-session client cannot model).
+        """The DB partial-unique index plus the IntegrityError-to-409 mapping is what
+        makes the concurrent case safe; a second create of the same active name
+        exercises that path (true simultaneity needs two DB sessions, which the in-
+        memory single-session client cannot model).
+        """
         first = await client.post("/api/palettes", json=_PAYLOAD)
         assert first.status_code == 201
         second = await client.post("/api/palettes", json=_PAYLOAD)
@@ -173,6 +174,9 @@ class TestGating:
     # Scenario: The catalog is gated by a feature flag (writes too, not just GET)
     @pytest.mark.asyncio
     async def test_disabled_flag_blocks_writes(self) -> None:
+        """Auth is satisfied, so the 503 proves the router-level flag gate (not auth)
+        blocks the write endpoint.
+        """
         get_settings.cache_clear()
         os.environ["FEATURE_FLAG_PALETTE_CATALOG"] = "false"
         os.environ["SECRET_KEY"] = "test-secret-for-palette-routes-aaaaa!"
@@ -182,8 +186,6 @@ class TestGating:
             await conn.run_sync(Base.metadata.create_all)
         db_config.c_engine = engine
         app = create_app()
-        # Auth is satisfied so the 503 proves the router-level flag gate (not auth)
-        # blocks the write endpoint when the flag is off.
         app.dependency_overrides[require_authenticated_user] = lambda: _FAKE_USER
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:

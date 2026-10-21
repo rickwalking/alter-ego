@@ -1,4 +1,4 @@
-"""Ask the owner to confirm a POV run's thesis on Telegram (AE-0377).
+"""Ask the owner to confirm a POV run's thesis on Telegram.
 
 Runs on the worker's Telegram tick, after the runner moved a POV run to
 ``awaiting_thesis``. The prompt is sent once per run: the run's notice ledger
@@ -50,7 +50,10 @@ LOG_PROMPT_FAILED = "prompt_failed"
 
 @dataclass(frozen=True, kw_only=True)
 class ThesisPromptDependencies:
-    """Ports for one Telegram tick."""
+    """Ports for one Telegram tick.
+
+    ``covers`` previews the topic's GrokBot cover before the prompt.
+    """
 
     runs: AutopilotRunRepository
     topics: TopicCandidateRepository
@@ -58,7 +61,6 @@ class ThesisPromptDependencies:
     notifier: Notifier
     chat_id: str
     configured: bool
-    # AE-0418: the topic's GrokBot cover, previewed before the prompt.
     covers: CoverOffers | None = None
 
 
@@ -116,7 +118,7 @@ class ThesisPromptService:
         return await covers.offer(run) if covers is not None else None
 
     async def _preview(self, run: AutopilotRun, offer: CoverOffer | None) -> NoticeLog:
-        """AE-0418: send the cover photo once, just before the prompt.
+        """Send the cover photo once, just before the prompt.
 
         A preview that cannot be sent is logged; the prompt still goes out.
         """

@@ -306,6 +306,12 @@ class CarouselDraftPackage(BaseModel):
 
 
 class SlideValidationViolation(BaseModel):
+    """One presentation-rule violation on a slide.
+
+    ``severity`` defaults to BLOCKER so a rule that forgets to set it can never
+    silently unblock.
+    """
+
     model_config = _FORBID_EXTRA
 
     code: str
@@ -313,8 +319,6 @@ class SlideValidationViolation(BaseModel):
     slide_index: int | None = None
     locale: str | None = None
     field: str | None = None
-    # AE-0312: severity tier. Absent-severity defaults to BLOCKER at the model
-    # level so a rule that forgets to set it can never silently unblock.
     severity: ViolationSeverity = SEVERITY_BLOCKER
 
     @property

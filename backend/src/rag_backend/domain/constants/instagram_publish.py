@@ -1,4 +1,28 @@
-"""Stable error codes and Graph API literals for Instagram publish."""
+"""Stable error codes and Graph API literals for Instagram publish.
+
+- ``ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN``: the container reports PUBLISHED but
+  no recent carousel matches it. Non-transient: retrying media_publish would
+  double-post.
+- Hosts: Instagram Login user tokens (IGAA...) talk to graph.instagram.com; page
+  tokens can select graph.facebook.com via ``META_IG_GRAPH_BASE``.
+- A Story container is one image with media_type ``STORIES``.
+- ``FIELD_TIMESTAMP`` / ``FIELD_LIMIT`` / ``RECENT_MEDIA_LIMIT`` recover the media
+  id of an already-published container. Media posted up to
+  ``CONTAINER_CLOCK_SKEW_SECONDS`` before the recorded container time still
+  matches, since our clock and Meta's can differ by a few seconds.
+- Worst-case wall time: every Graph request has an overall deadline and is tried
+  at most ``META_MAX_ATTEMPTS`` times. A carousel publish requests the quota, an
+  expired container's status, the item containers, the parent, the status polls,
+  media_publish (or the media recovery) and the permalink; a Story requests its
+  container, the status polls and media_publish.
+- Without ``fields`` Graph returns only ``quota_usage`` (verified live on
+  graph.instagram.com/v23.0); ``config`` carries ``quota_total``.
+  ``DEFAULT_PUBLISHING_QUOTA_TOTAL`` is Meta's documented limit (100 API posts
+  per rolling 24 h), used only when ``quota_usage`` comes without
+  ``config.quota_total``.
+- ``TRANSIENT_META_ERROR_CODES`` are rate-limit codes that arrive as HTTP 400
+  rather than 429.
+"""
 
 from rag_backend.domain.constants.retry import (
     META_MAX_ATTEMPTS,
@@ -13,12 +37,8 @@ ERR_INSTAGRAM_CONTAINER_FAILED = "instagram_container_failed"
 ERR_INSTAGRAM_CONTAINER_TIMEOUT = "instagram_container_timeout"
 ERR_INSTAGRAM_API_NO_ID = "instagram_api_no_id"
 ERR_INSTAGRAM_QUOTA_UNREADABLE = "content_publishing_limit_unreadable"
-# The container reports PUBLISHED but no recent carousel could be matched to
-# it. Non-transient: retrying media_publish would double-post (QA r1 H2).
 ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN = "instagram_published_media_unknown"
 
-# Instagram Login (user tokens IGAA…) talks to graph.instagram.com.
-# Page tokens can select graph.facebook.com via META_IG_GRAPH_BASE.
 GRAPH_HOST_INSTAGRAM = "https://graph.instagram.com/v23.0"
 GRAPH_HOST_FACEBOOK = "https://graph.facebook.com/v23.0"
 
@@ -44,7 +64,6 @@ FIELD_ID = "id"
 FIELD_FIELDS = "fields"
 VALUE_TRUE = "true"
 MEDIA_TYPE_CAROUSEL = "CAROUSEL"
-# AE-0369: a Story container is one image with media_type STORIES.
 MEDIA_TYPE_STORIES = "STORIES"
 CONTAINER_STATUS_FINISHED = "FINISHED"
 CONTAINER_STATUS_IN_PROGRESS = "IN_PROGRESS"
@@ -52,20 +71,13 @@ CONTAINER_STATUS_ERROR = "ERROR"
 CONTAINER_STATUS_EXPIRED = "EXPIRED"
 CONTAINER_STATUS_PUBLISHED = "PUBLISHED"
 
-# Recovering the media id of a container that was already published (H2).
 FIELD_TIMESTAMP = "timestamp"
 FIELD_LIMIT = "limit"
 MEDIA_TYPE_CAROUSEL_ALBUM = "CAROUSEL_ALBUM"
 RECENT_MEDIA_LIMIT = 5
-# Media posted this long before our recorded container time still matches:
-# our clock and Meta's can differ by a few seconds (QA r2 R3).
 CONTAINER_CLOCK_SKEW_SECONDS = 60
 GRAPH_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
-# Worst-case wall time of one stepped publish (QA r2 R4a). Every Graph request
-# has an overall deadline, and each is tried at most META_MAX_ATTEMPTS times.
-# Requests: quota, an expired container's status, the item containers, the
-# parent, the status polls, media_publish (or the media recovery), permalink.
 GRAPH_REQUEST_DEADLINE_SECONDS = 30
 GRAPH_REQUESTS_PER_PUBLISH = (
     1 + 1 + MAX_INSTAGRAM_CAROUSEL_ITEMS + 1 + META_POLL_MAX_ATTEMPTS + 1 + 1
@@ -74,7 +86,6 @@ GRAPH_PUBLISH_WORST_CASE_SECONDS = (
     GRAPH_REQUESTS_PER_PUBLISH * META_MAX_ATTEMPTS * GRAPH_REQUEST_DEADLINE_SECONDS
     + META_POLL_MAX_ATTEMPTS * META_POLL_INTERVAL_SECONDS
 )
-# One Story: its container, the status polls, and media_publish.
 GRAPH_REQUESTS_PER_STORY = 1 + META_POLL_MAX_ATTEMPTS + 1
 GRAPH_STORY_WORST_CASE_SECONDS = (
     GRAPH_REQUESTS_PER_STORY * META_MAX_ATTEMPTS * GRAPH_REQUEST_DEADLINE_SECONDS
@@ -87,17 +98,12 @@ KEY_CONFIG = "config"
 KEY_QUOTA_TOTAL = "quota_total"
 KEY_ERROR = "error"
 KEY_CODE = "code"
-# Without ``fields`` Graph returns only ``quota_usage`` (AE-0368, verified live
-# on graph.instagram.com/v23.0). ``config`` carries ``quota_total``.
 PUBLISHING_LIMIT_FIELDS = ",".join((KEY_QUOTA_USAGE, KEY_CONFIG))
-# Meta's documented limit: 100 API-published posts per rolling 24 hours. Used
-# only when a readable ``quota_usage`` comes without ``config.quota_total``.
 DEFAULT_PUBLISHING_QUOTA_TOTAL = 100
 
 PUBLISH_RESULT_PUBLISHED = "published"
 PUBLISH_RESULT_FAILED = "failed"
 
-# Meta rate-limit codes that arrive as HTTP 400 rather than 429.
 TRANSIENT_META_ERROR_CODES = frozenset({"4", "17", "32", "613"})
 TRANSIENT_HTTP_STATUS = frozenset({429, 500, 502, 503, 504})
 

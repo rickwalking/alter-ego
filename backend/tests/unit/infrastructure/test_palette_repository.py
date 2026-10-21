@@ -1,7 +1,6 @@
-"""Repository tests for the custom-palette catalog (AE-0269).
+"""Repository tests for the custom-palette catalog.
 
 Feature: Custom palettes resolve and snapshot at generation
-(.agent/tasks/AE-0269-custom-palette-persistence-db-backed-resolver-snapshot.md)
 
 Exercises the persistence port against the test DB: round-trip, active listing
 excluding archived, soft-delete, and slug-immutable update.
@@ -56,10 +55,10 @@ class TestPaletteRepository:
     async def test_archive_soft_deletes_but_still_resolvable(
         self, db_session: AsyncSession
     ) -> None:
+        """An archived palette still resolves by id because existing carousels rely on it."""
         repo = PostgresPaletteRepository(db_session)
         created = await repo.add(_palette("Temp", "temp"))
         assert await repo.archive(created.id) is True
-        # Archived palette still resolves by id (existing carousels rely on it).
         fetched = await repo.get_by_id(created.id)
         assert fetched is not None
         assert fetched.archived is True
@@ -69,7 +68,6 @@ class TestPaletteRepository:
     ) -> None:
         repo = PostgresPaletteRepository(db_session)
         created = await repo.add(_palette("Keep", "keep"))
-        # A different, non-existent id.
         other = CustomPalette(
             name="x",
             slug="x",
@@ -80,10 +78,11 @@ class TestPaletteRepository:
         assert await repo.archive(other.id) is False
 
     async def test_update_changes_name_not_slug(self, db_session: AsyncSession) -> None:
+        """An edit to the slug must be ignored."""
         repo = PostgresPaletteRepository(db_session)
         created = await repo.add(_palette("Old", "old-slug"))
         created.name = "New"
-        created.slug = "attempted-new-slug"  # must be ignored (D8)
+        created.slug = "attempted-new-slug"
         updated = await repo.update(created)
         assert updated.name == "New"
         assert updated.slug == "old-slug"

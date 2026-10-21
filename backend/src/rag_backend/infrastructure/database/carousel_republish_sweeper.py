@@ -1,4 +1,4 @@
-"""Server-guaranteed republish sweeper for edited carousels (AE-0314).
+"""Server-guaranteed republish sweeper for edited carousels.
 
 Runs in the workflow-workers tick AFTER the drift reconciler (pinned ordering).
 A post-completion slide edit stamps ``needs_republish_since`` in the same
@@ -75,7 +75,10 @@ class CarouselRepublishSweeperRepository:
 
 
 async def _republish_row(db: AsyncSession, project_id: str) -> bool:
-    """Republish one marked project + clear the marker; True on success."""
+    """Republish one marked project + clear the marker; True on success.
+
+    A conflict means a client republish holds the lock; it is retried next tick.
+    """
     from rag_backend.application.services.carousel.carousel_republish import (
         republish_completed_carousel,
     )
@@ -84,7 +87,6 @@ async def _republish_row(db: AsyncSession, project_id: str) -> bool:
     try:
         result = await republish_completed_carousel(db, project_id)
     except CarouselConflictError:
-        # A client republish holds the lock; retry next tick.
         return False
     if not result.completed:
         return False

@@ -1,4 +1,4 @@
-"""Startup seed and the daily credential worker step (AE-0358)."""
+"""Startup seed and the daily credential worker step."""
 
 from __future__ import annotations
 

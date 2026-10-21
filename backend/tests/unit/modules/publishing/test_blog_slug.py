@@ -1,4 +1,4 @@
-"""Unit tests for server-side blog slug generation (AE-0411).
+"""Unit tests for server-side blog slug generation.
 
 Feature: blog_dashboard_ae0411.feature (create scenarios)
 """
@@ -45,12 +45,13 @@ class TestBuildSlug:
 class TestWithGeneratedSlug:
     # Scenario: Creating two posts without a slug succeeds
     def test_missing_slug_is_generated_from_title(self) -> None:
+        """The input payload is not mutated."""
         payload: dict[str, object] = {"title": "Untitled draft"}
         result = with_generated_slug(payload)
         slug = str(result["slug"])
         assert slug.startswith("untitled-draft-")
         assert _SUFFIX_RE.match(slug.removeprefix("untitled-draft-"))
-        assert "slug" not in payload  # input not mutated
+        assert "slug" not in payload
 
     # Scenario: A blank slug is generated like a missing one
     def test_blank_or_none_slug_is_generated(self) -> None:

@@ -59,14 +59,11 @@ class RecursiveDocumentProcessor:
 
     async def process(self, document: Document) -> list[DocumentChunk]:
         """Process document into chunks with embeddings."""
-        # Split document into chunks
         chunks = self._split_text(document.content)
 
-        # Generate embeddings for all chunks
         dense_embeddings = await self._embedding_service.embed_dense(chunks)
         sparse_embeddings = await self._embedding_service.embed_sparse(chunks)
 
-        # Create DocumentChunk objects
         document_chunks = []
         for i, (chunk_text, dense_emb, sparse_emb) in enumerate(
             zip(chunks, dense_embeddings, sparse_embeddings, strict=False)
@@ -95,8 +92,10 @@ class RecursiveDocumentProcessor:
 
         This is a simplified implementation. For production, consider using
         LangChain's RecursiveCharacterTextSplitter.
+
+        Separators are tried in order of preference; a split is taken only past 50%
+        of the chunk size, and each next chunk starts with the configured overlap.
         """
-        # Define separators in order of preference
         separators = ["\n\n", "\n", ". ", "! ", "? ", " ", ""]
 
         chunks = []
@@ -107,34 +106,32 @@ class RecursiveDocumentProcessor:
                 chunks.append(remaining.strip())
                 break
 
-            # Find the best separator within chunk_size
             chunk = remaining[: self._chunk_size]
             split_pos = self._chunk_size
 
             for separator in separators:
                 pos = chunk.rfind(separator)
-                if pos > self._chunk_size * 0.5:  # At least 50% of chunk size
+                if pos > self._chunk_size * 0.5:
                     split_pos = pos + len(separator)
                     break
 
-            # Add chunk and continue with remaining text
             chunk_text = remaining[:split_pos].strip()
             if chunk_text:
                 chunks.append(chunk_text)
 
-            # Move forward with overlap
             remaining = remaining[split_pos - self._chunk_overlap :]
 
         return chunks
 
     def estimate_chunks(self, content: str) -> int:
-        """Estimate number of chunks for content."""
+        """Estimate number of chunks for content.
+
+        The token count is floored by a rough chars / 4 estimate.
+        """
         token_count = self._embedding_service.count_tokens(content)
-        # Rough estimate: ~1 token per 0.75 characters
         char_count = len(content)
         estimated_tokens = max(token_count, char_count // 4)
 
-        # Calculate chunks with overlap
         effective_chunk_size = self._chunk_size - self._chunk_overlap
         if estimated_tokens <= self._chunk_size:
             return 1

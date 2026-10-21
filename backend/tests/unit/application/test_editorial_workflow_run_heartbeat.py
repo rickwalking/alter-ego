@@ -1,4 +1,4 @@
-"""The run heartbeat task never outlives the run that owns it (AE-0417).
+"""The run heartbeat task never outlives the run that owns it.
 
 CI "backend / Test & Coverage" hung ~3h at event-loop shutdown after every
 test passed: the run wrapper cancelled its heartbeat task without waiting, so

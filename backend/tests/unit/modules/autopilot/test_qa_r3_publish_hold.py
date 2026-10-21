@@ -1,4 +1,4 @@
-"""A run held by a dead worker's container is resolved (AE-0348 QA r3 Q2).
+"""A run held by a dead worker's container is resolved (QA r3 Q2).
 
 A stale claim is never taken over blindly while a fresh container has no
 post id. The job reads the container status once instead and acts on it.

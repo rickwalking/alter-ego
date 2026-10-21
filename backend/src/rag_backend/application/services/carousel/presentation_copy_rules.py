@@ -1,4 +1,4 @@
-"""Copy-hygiene validators for one locale payload (AE-0401).
+"""Copy-hygiene validators for one locale payload.
 
 Each rule is active only when the loaded policy declares a severity for its
 code (``pov_hook_v1`` and ``hero_lower_third_v4``), so older contracts keep
@@ -11,7 +11,7 @@ structured item (features, summary points, actions):
   (``**bold**`` in PT, balanced ``<strong>`` in EN) is never a leak.
 - ``emphasis_unbalanced``: odd ``**`` count, empty ``****``.
 - ``assistant_chatter``: "Here is", "Assistant:", "Claro! Aqui está o texto".
-- ``placeholder_text``: ``[insert…]``, ``{topic}``, TODO, lorem ipsum, stubs.
+- ``placeholder_text``: ``[insert…]``, ``{topic}``, to-do markers, lorem ipsum, stubs.
 - ``encoding_garbled``: mojibake, U+FFFD, control characters.
 - ``copy_truncated``: the slide body stops mid-sentence (body only).
 - ``body_too_short``: a content slide body under 8 words (body only).
@@ -19,6 +19,10 @@ structured item (features, summary points, actions):
 - ``repeated_text``: a sentence twice in one slide, or a doubled word.
 - ``structured_item_split``: an item title that ends on a connector word
   ("Comece com dois ou"), its rest pushed into the item body.
+
+The emphasis convention is PT ``**...**`` and EN ``<strong>...</strong>``; it is
+locale-aware, so it is checked separately from the rules run on every visible field
+(heading, body, item title and body).
 """
 
 from __future__ import annotations
@@ -86,7 +90,6 @@ _MESSAGES: dict[str, str] = {
         "Markdown heading/list/table, backticks or escapes)"
     ),
     VIOLATION_EMPHASIS_UNBALANCED: "Bold emphasis ** is unbalanced or empty",
-    # AE-0436: PT uses **…**, EN uses <strong>…</strong> (AE-0403/AE-0414).
     VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH: (
         "Emphasis uses the other locale's markup (PT: **…**, EN: <strong>…</strong>)"
     ),
@@ -108,7 +111,6 @@ _MESSAGES: dict[str, str] = {
 
 _FieldCheck = Callable[[str], str]
 
-# Rules checked on every visible field (heading, body, item title/body).
 _EVERY_FIELD: tuple[tuple[str, _FieldCheck], ...] = (
     (VIOLATION_STRUCTURED_PAYLOAD_IN_COPY, structured_payload_detail),
     (VIOLATION_MARKUP_LEAK, markup_leak_detail),
@@ -201,7 +203,7 @@ def _body_codes(
 def copy_hygiene_violations(
     command: ContentRuleCommand,
 ) -> list[SlideValidationViolation]:
-    """Copy-hygiene violations of one locale payload (AE-0401, v4/POV)."""
+    """Copy-hygiene violations of one locale payload (v4/POV)."""
     slide_type = slide_type_of(command.payload)
     active = frozenset(
         code for code in _MESSAGES if rule_active(command.policy, code, slide_type)
@@ -210,8 +212,6 @@ def copy_hygiene_violations(
         return []
     fields = visible_fields(command.payload)
     found = _field_codes(fields, active)
-    # AE-0436: the per-locale emphasis convention is locale-aware, so it is
-    # checked separately from the every-field rules.
     if VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH in active:
         portuguese = command.locale == LANGUAGE_PT
         found.extend(

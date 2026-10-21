@@ -1,4 +1,4 @@
-"""Create-time presentation-policy stamping tests (AE-0312).
+"""Create-time presentation-policy stamping tests.
 
 Gherkin: tests/features/carousel_pt_casing_severity.feature
 """
@@ -54,7 +54,7 @@ class _NoopSession:
 
 @pytest.mark.unit
 class TestCreateTimeStamping:
-    """New carousels are stamped v3 (AE-0366); legacy NULL rows keep v1."""
+    """New carousels are stamped v3; legacy NULL rows keep v1."""
 
     def test_create_time_constant_is_v3(self) -> None:
         assert CREATE_TIME_PRESENTATION_POLICY_VERSION == (
@@ -63,6 +63,9 @@ class TestCreateTimeStamping:
         assert DEFAULT_PRESENTATION_POLICY_VERSION == "hero_lower_third_v1"
 
     async def test_create_carousel_stamps_v3(self) -> None:
+        """A Radar IA create never touches the photo service and is stamped
+        hero_lower_third_v4.
+        """
         repo = _CaptureRepo()
         user = User(
             email="e@x.com",
@@ -79,12 +82,10 @@ class TestCreateTimeStamping:
             user,
             cast(CarouselRepository, repo),
             cast(AsyncSession, _NoopSession()),
-            # PR #106 review: a Radar IA create never touches the photo service.
             cast(CreatorAssetService, object()),
         )
 
         assert repo.captured is not None
-        # AE-0374: a new Radar IA carousel is stamped hero_lower_third_v4.
         assert repo.captured.presentation_policy_version == (
             CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION
         )

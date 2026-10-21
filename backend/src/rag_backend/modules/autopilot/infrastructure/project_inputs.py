@@ -2,7 +2,7 @@
 
 The persona comes from ``AUTOPILOT_PERSONA_ID``; when that is empty (or names
 no persona) the persona called "Pedro" is used. None is a recorded decision,
-not an error: Radar IA runs keep running unscored (AE-0364) and POV runs
+not an error: Radar IA runs keep running unscored and POV runs
 escalate with ``persona_not_scored`` at the content gate.
 """
 

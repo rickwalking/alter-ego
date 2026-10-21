@@ -1,6 +1,8 @@
-"""POST /api/autopilot/topics (AE-0353).
+"""POST /api/autopilot/topics.
 
 Gherkin: tests/features/autopilot_topic_intake.feature
+
+``_POV`` is a scout v3 "Ponto de Vista" topic with its draft thesis.
 """
 
 from __future__ import annotations
@@ -54,7 +56,6 @@ from tests.integration.autopilot_topic_support import (
 )
 
 _ = configured_key
-# AE-0377: a scout v3 "Ponto de Vista" topic with its draft thesis.
 _POV = {"mode": "pov", "thesis_draft": "Quem decide o que construir ainda é o dev."}
 
 
@@ -86,6 +87,9 @@ async def test_best_valid_topic_is_queued(configured_key: None, tmp_path: Path) 
 async def test_foreign_url_rejects_only_that_proposal(
     configured_key: None, tmp_path: Path
 ) -> None:
+    """The rejection carries the additive ``index`` (always) and ``field`` (the one
+    field that caused it).
+    """
     del configured_key
     async for client, engine in _client(tmp_path / "foreign.db", _Clock(_AS_OF)):
         await _serve(engine, (_URL_A,), _AS_OF)
@@ -100,7 +104,6 @@ async def test_foreign_url_rejects_only_that_proposal(
             },
         )
     body = response.json()
-    # AE-0406: additive ``index`` (always) and ``field`` (one field caused it).
     assert body["rejected"] == [
         {
             "index": 0,
@@ -118,6 +121,9 @@ async def test_foreign_url_rejects_only_that_proposal(
 async def test_daily_cap_persists_and_does_not_queue(
     configured_key: None, tmp_path: Path
 ) -> None:
+    """A cap rejection carries ``index`` but no ``field`` (it concerns the topic as a
+    whole).
+    """
     del configured_key
     async for client, engine in _client(tmp_path / "cap.db", _Clock(_AS_OF)):
         await _serve(engine, (_URL_A,), _AS_OF)
@@ -129,7 +135,6 @@ async def test_daily_cap_persists_and_does_not_queue(
         )
     body = response.json()
     assert body["queued"] == []
-    # AE-0406: ``index`` always; no ``field`` for a cap (the topic as a whole).
     assert body["rejected"] == [
         {"index": 0, "title": "Another", "reason": REASON_DAILY_CAP_REACHED}
     ]
@@ -320,6 +325,7 @@ async def test_get_signals_records_the_allowlist(
 async def test_higher_daily_cap_queues_both(
     configured_key: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Radar IA is capped at one a week, so the second topic is a POV topic."""
     del configured_key
     monkeypatch.setenv("AUTOPILOT_DAILY_CAP", "2")
     from rag_backend.infrastructure.config.settings import get_settings
@@ -330,7 +336,6 @@ async def test_higher_daily_cap_queues_both(
         response = await client.post(
             _PATH,
             headers=_headers(),
-            # AE-0377: Radar IA is capped at one a week, so "Two" is a POV topic.
             json={
                 "topics": [
                     _topic("One", _URL_A, 60),
@@ -348,6 +353,7 @@ async def test_higher_daily_cap_queues_both(
 async def test_run_before_sao_paulo_midnight_does_not_consume_the_cap(
     db_session: AsyncSession,
 ) -> None:
+    """The seeded run is this week's Radar IA run, so the new topic is POV."""
     moment = datetime(2026, 10, 13, 3, 30, tzinfo=UTC)
     before = datetime(2026, 10, 13, 2, 30, tzinfo=UTC)
     store = SqlAlchemyTopicIntakeStore(db_session)
@@ -356,7 +362,6 @@ async def test_run_before_sao_paulo_midnight_does_not_consume_the_cap(
     service = TopicIntakeService(
         TopicIntakeDependencies(store=store, clock=_Clock(moment), daily_cap=1)
     )
-    # AE-0377: the seeded run is this week's Radar IA run, so this is POV.
     pov = replace(
         _proposal("After midnight", _URL_A, 77),
         content_mode="pov",

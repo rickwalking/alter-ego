@@ -1,37 +1,42 @@
-"""Scheduled Instagram publish constants (AE-0370).
+"""Scheduled Instagram publish constants.
 
 Instagram has no native scheduling and its containers expire after 24 hours,
 so the schedule is our own queue: ``scheduled_at`` on the run, and the
 containers are created only when the run is due. Kept beside
 ``webhook_constants.py`` so neither file exceeds the 400-line limit.
+
+- Good posting times are local to the owner's audience; a due run published late past
+  the threshold says so in the notice.
+- ``AUTOPILOT_DEFAULT_PUBLISH`` decides what Approve does.
+- A callback kind is the token between ``ap:`` and the run id. ``ap:d:<yyyymmdd>:<run
+  id>`` is 50 bytes and ``ap:at:<unix seconds>:<run id>`` 53, both under Telegram's 64.
+- The pending-reply marker for “Outro horário” fits ``REWORK_PHASE_LENGTH``.
+- Owner-typed times are ``HH:MM`` or ``DD/MM HH:MM``.
+- The ``expired`` notice text is chosen by state reason; other reasons keep the 72 h
+  text.
 """
 
 from __future__ import annotations
 
 from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
 
-# Good posting times, local to the owner's audience.
 SCHEDULE_TIMEZONE = DAILY_CAP_TIMEZONE
 SCHEDULE_SLOTS: tuple[str, ...] = ("12:00", "18:00", "21:00")
 SCHEDULE_MIN_LEAD_MINUTES = 15
 SCHEDULE_MAX_AHEAD_DAYS = 30
-# A due run published this many minutes late says so in the notice.
 SCHEDULE_LATE_NOTICE_MINUTES = 10
 SCHEDULE_SCAN_LIMIT = 20
 SECONDS_PER_MINUTE = 60
 INDEX_RUNS_STATE_SCHEDULED_AT = "idx_autopilot_runs_state_scheduled_at"
 
-# ``AUTOPILOT_DEFAULT_PUBLISH``: what Approve does.
 PUBLISH_MODE_NOW = "now"
 PUBLISH_MODE_NEXT_SLOT = "next_slot"
 
-# Callback kinds. Each is the token between ``ap:`` and the run id.
 KIND_PUBLISH_NOW = "pubnow"
 KIND_SCHEDULE = "sched"
 KIND_OTHER_TIME = "other"
 KIND_UNSCHEDULE = "unsched"
 KIND_SLOT = "at"
-# AE-0404: the day step of the picker and its way back.
 KIND_DAY = "d"
 KIND_DAYS = "days"
 CALLBACK_PUBLISH_NOW_PREFIX = "ap:pubnow:"
@@ -39,10 +44,8 @@ CALLBACK_SCHEDULE_PREFIX = "ap:sched:"
 CALLBACK_OTHER_TIME_PREFIX = "ap:other:"
 CALLBACK_UNSCHEDULE_PREFIX = "ap:unsched:"
 CALLBACK_DAYS_PREFIX = "ap:days:"
-# ``ap:d:<yyyymmdd>:<run id>``: 50 bytes, under Telegram's 64.
 CALLBACK_DAY_FORMAT = "ap:d:{day}:"
 CALLBACK_DAY_DATE_FORMAT = "%Y%m%d"
-# ``ap:at:<unix seconds>:<run id>``: 53 bytes, under Telegram's 64.
 CALLBACK_SLOT_FORMAT = "ap:at:{epoch}:"
 CALLBACK_SCHEDULE_PATTERN = (
     r"^ap:(pubnow|sched|other|unsched|days):"
@@ -60,10 +63,8 @@ CALLBACK_DAY_PATTERN = (
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
 )
 
-# The pending-reply marker for "Outro horário" (fits REWORK_PHASE_LENGTH).
 SCHEDULE_PENDING_PHASE = "schedule_time"
 
-# Owner-typed times: ``HH:MM`` or ``DD/MM HH:MM``.
 TIME_PATTERN = r"^([0-9]{1,2}):([0-9]{2})$"
 DATE_TIME_PATTERN = r"^([0-9]{1,2})/([0-9]{1,2})\s+([0-9]{1,2}):([0-9]{2})$"
 TIME_SEPARATOR = ":"
@@ -116,9 +117,7 @@ TIME_ERROR_TEXT: dict[str, str] = {
     ERR_TIME_PAST: TEXT_TIME_PAST,
     ERR_TIME_TOO_FAR: TEXT_TIME_TOO_FAR,
 }
-# The ``expired`` notice text by state reason; others keep the 72 h text.
 EXPIRED_TEXT_BY_REASON: dict[str, str] = {
     REASON_SCHEDULE_WITHDRAWN: TEXT_SCHEDULE_WITHDRAWN,
 }
-# Outbox payload key on ``content.autopilot.publish_notice``.
 PAYLOAD_LATE_MINUTES = "late_minutes"

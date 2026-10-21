@@ -1,4 +1,4 @@
-"""Owner thesis buttons and the edited-thesis reply on the webhook (AE-0377).
+"""Owner thesis buttons and the edited-thesis reply on the webhook.
 
 Gherkin: tests/features/autopilot_pov_thesis.feature
 """

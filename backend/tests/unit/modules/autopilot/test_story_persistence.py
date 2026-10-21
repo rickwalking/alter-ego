@@ -1,4 +1,4 @@
-"""Story row, Story media source, and the public Story image route (AE-0369).
+"""Story row, Story media source, and the public Story image route.
 
 Gherkin: tests/features/autopilot_story_and_music.feature
 """

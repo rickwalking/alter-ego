@@ -1,4 +1,4 @@
-"""Fenced JSON slide drafts (AE-0400).
+"""Fenced JSON slide drafts.
 
 Gherkin: tests/features/fenced_draft_blob_ae0400.feature
 """

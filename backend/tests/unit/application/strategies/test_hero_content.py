@@ -17,6 +17,7 @@ class TestHeroContentStrategy:
         sample_project,
         sample_theme,
     ) -> None:
+        """Portuguese slides say "Deslize", not the English "Swipe"."""
         result = HeroContentStrategy().render(
             {"number": "2", "type": "summary", "heading": "Resumo", "body": "Body"},
             sample_project,
@@ -24,7 +25,6 @@ class TestHeroContentStrategy:
             options=_RenderOptions(total_slides=7, language="pt"),
         )
 
-        # AE-0372: PT slides say "Deslize", not the English "Swipe".
         assert "Deslize \u2192" in result
         assert "Swipe" not in result
 

@@ -1,4 +1,4 @@
-"""Shared Deep Agents harness — interrupt helpers (AE-0248).
+"""Shared Deep Agents harness — interrupt helpers.
 
 Relocated from ``CarouselWorkflowEngine`` so the **generic** interrupt-value
 extraction lives on the shared harness surface instead of being entangled (as a
@@ -8,7 +8,7 @@ unchanged from the prior ``_iter_interrupt_values`` classmethod.
 Only the carousel-agnostic primitive lives here. The review-payload merge that
 knows the carousel state shape (``CarouselWorkflowState``) stays in the engine:
 the harness must not import ``rag_backend.application`` (the ``agents → application``
-edge is a down-only ratchet — only the grandfathered AE-0082 baseline imports are
+edge is a down-only ratchet — only the grandfathered baseline imports are
 allowed, and the harness is not one of them).
 """
 

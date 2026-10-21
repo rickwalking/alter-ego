@@ -1,4 +1,4 @@
-"""Seeded-violation tests for the gates.sh tool preflight (AE-0239).
+"""Seeded-violation tests for the gates.sh tool preflight.
 
 The preflight (scripts/lib/require_tool.sh) tells "devDependency not installed"
 apart from a real violation: a missing jscpd/knip must SKIP (exit 77) with an
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0239 — a test for a bash preflight must invoke a subprocess (mirrors test_diff_base.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a bash preflight must invoke a subprocess (mirrors test_diff_base.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -32,7 +32,7 @@ _MESSAGE = "devDependency 'knip' not installed"
 def _run(
     script: str, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0239 — fixed bash path, test-controlled script
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed bash path, test-controlled script
         [BASH, "-c", script],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -64,13 +64,14 @@ def test_require_tool_passes_when_binary_present(tmp_path: Path) -> None:
     assert result.stderr == ""
 
 
-# Integration: the real dead-files gate reports SKIP (not a swallowed PASS) when
-# knip is hidden, and FAIL under GATES_REQUIRE_ALL=1 (CI must have the tool).
 def test_dead_files_gate_skips_when_knip_hidden(tmp_path: Path) -> None:
+    """The real dead-files gate reports SKIP (not a swallowed PASS) when knip is hidden,
+    and FAIL under GATES_REQUIRE_ALL=1.
+
+    GATES_REQUIRE_ALL is dropped for the local case because CI sets it to 1, which
+    upgrades SKIP to FAIL; the FAIL-under-CI behaviour is asserted separately.
+    """
     env = {**os.environ, "FRONTEND_BIN_DIR": str(tmp_path)}
-    # SKIP semantics only hold when GATES_REQUIRE_ALL is unset; CI sets it to 1
-    # (which upgrades SKIP -> FAIL), so drop it here to test the local behavior
-    # deterministically. The FAIL-under-CI behavior is asserted explicitly below.
     env.pop("GATES_REQUIRE_ALL", None)
     result = _run(f'bash "{GATES}" frontend:dead-files', env=env)
 

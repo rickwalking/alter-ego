@@ -1,4 +1,4 @@
-"""Command/query handlers for the editorial carousel workflow (AE-0110).
+"""Command/query handlers for the editorial carousel workflow.
 
 Private to the module — the public facade re-exports the handler class and its
 typed command/query objects; cross-module code never imports this path directly.
@@ -8,7 +8,7 @@ orchestrates the workflow engine (start/state/resume/stream) over the
 :class:`LegacyCarouselAcl` read/commit seam and returns plain data the route maps
 to the HTTP/SSE response.
 
-Behavior-preserving (AE-0110). Every handler reproduces the legacy route's data
+Behavior-preserving. Every handler reproduces the legacy route's data
 operations EXACTLY (same engine calls, same post-commit reload, same artifact
 fields, same SSE event order/framing). HTTP concerns — status codes, access
 checks (``carousel_access``), sanitization, the optimistic-lock 409/400 mapping,
@@ -24,7 +24,7 @@ so the LangGraph checkpoint identifiers (``thread_id == project_id``), the
 engine is injected per call via the :class:`WorkflowEngine` protocol so this
 application module imports no carousel ORM and no concrete Postgres repository —
 only the editorial ACL (whose infrastructure layer owns the single ORM seam) and
-the platform Unit of Work. Writes commit through the AE-0107 write owner via the
+the platform Unit of Work. Writes commit through the write owner via the
 ACL; these handlers never call ``db.commit()`` directly.
 """
 
@@ -157,7 +157,7 @@ class EditorialWorkflowHandlers:
 
         Byte-identical to the legacy POST ``workflow/start``: the engine runs the
         synthesis/outline/draft phases (with the session bound via the ACL so the
-        reviewer-assignment + phase sync stage through the AE-0107 owner), the WO
+        reviewer-assignment + phase sync stage through the owner), the WO
         writes are committed ONCE via the ACL (the platform UoW single committer),
         then the row is re-read through the ACL for the post-commit
         ``phase_progress`` / ``lock_version`` overlay. ``ValueError`` from the
@@ -184,7 +184,7 @@ class EditorialWorkflowHandlers:
         """Flip the workflow to in_progress, commit the WO write, return phase.
 
         Byte-identical to the legacy POST ``workflow/resume`` pre-background step:
-        the engine stages the phase-status sync (through the AE-0107 owner) and
+        the engine stages the phase-status sync (through the owner) and
         this handler commits it ONCE via the ACL before the route schedules the
         fire-and-forget background resume. The optimistic-lock CAS and all resume
         gates run in the route-support validators at the edge (unchanged).

@@ -1,8 +1,8 @@
-"""Handler mapping CarouselConflictError to an additive 409 body (AE-0316).
+"""Handler mapping CarouselConflictError to an additive 409 body.
 
 ``detail`` keeps the legacy machine-readable string (existing clients
 string-compare it); ``conflict`` carries the structured payload for new
-consumers (AE-0311/0313/0315).
+consumers.
 """
 
 from fastapi import FastAPI, Request, status

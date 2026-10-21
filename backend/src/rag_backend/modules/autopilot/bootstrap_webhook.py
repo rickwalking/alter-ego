@@ -64,7 +64,10 @@ class OwnerActionBuild:
 
 
 def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
-    """Compose the webhook use case from the request session."""
+    """Compose the webhook use case from the request session.
+
+    The cover service backs “Usar capa do Grok” on the thesis and review messages.
+    """
     repo = SqlAlchemyAutopilotRepository(build.session)
     driver = InProcessEditorialDriver(
         EditorialDriverConfig(
@@ -94,7 +97,6 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         ),
         topics=repo,
         schedule_signals=_schedule_signals(build),
-        # AE-0418: "Usar capa do Grok" on the thesis and review messages.
         covers=cover_offers(build.session),
         cover_choices=SqlCoverChoices(build.session),
     )
@@ -102,7 +104,7 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
 
 
 def _schedule_signals(build: OwnerActionBuild) -> SqlScheduleSignals:
-    """AE-0404: the picker's audience (Graph, cached daily) and post engagement."""
+    """The picker's audience (Graph, cached daily) and post engagement."""
     return SqlScheduleSignals(
         ScheduleSignalsConfig(
             session=build.session,

@@ -1,13 +1,15 @@
-"""Unit tests for the identity inbound-adapter handlers (AE-0099).
+"""Unit tests for the identity inbound-adapter handlers.
 
 Cover the auth + admin command/query handlers the thin ``/api/auth`` and
 ``/api/admin/users`` routes delegate to, exercised through the module facade with
-fakes. The fakes model the transaction boundary explicitly (mirrors the AE-0098
+fakes. The fakes model the transaction boundary explicitly (mirrors the identity
 service tests): the repository "flushes" into a staging buffer and only a UoW
 ``commit`` promotes staged rows, so the single-commit-owner contract (ADR-0009
 §9) is observable. JWT/bcrypt are delegated to fakes here; the real
 ``infrastructure.auth`` delegation is wired in ``bootstrap.py`` and proven
-byte-identical by the AE-0097 integration safety net.
+byte-identical by the integration safety net.
+
+_VALID_PASSWORD meets MIN_PASSWORD_LENGTH (12).
 """
 
 from __future__ import annotations
@@ -44,10 +46,7 @@ from rag_backend.modules.identity import (
 
 _HASH_PREFIX = "hash::"
 _TOKEN_PREFIX = "token::"
-_VALID_PASSWORD = "correct-horse-battery"  # >= MIN_PASSWORD_LENGTH (12)
-
-
-# --- Fakes -------------------------------------------------------------------
+_VALID_PASSWORD = "correct-horse-battery"
 
 
 class _SpyUnitOfWork:
@@ -151,9 +150,6 @@ class _FakeTokenIssuer:
         return {"sub": token.removeprefix(_TOKEN_PREFIX)}
 
 
-# --- Builders ----------------------------------------------------------------
-
-
 def _build_auth_handler() -> tuple[
     AuthCommandHandler, _FakeUserRepository, _SpyUnitOfWork
 ]:
@@ -201,9 +197,6 @@ def _seed_user(
     )
     repo.persisted[user.id] = user
     return user
-
-
-# --- AuthCommandHandler ------------------------------------------------------
 
 
 @pytest.mark.unit
@@ -255,6 +248,7 @@ class TestAuthCommandHandler:
         assert stored.hashed_password == _HASH_PREFIX + "brand-new-passphrase"
 
     async def test_change_password_wrong_current_raises_before_write(self) -> None:
+        """No write is attempted: nothing is committed and the hash is unchanged."""
         handler, repo, uow = _build_auth_handler()
         user = _seed_user(repo)
 
@@ -267,7 +261,6 @@ class TestAuthCommandHandler:
                 )
             )
 
-        # No write was attempted: nothing committed, hash unchanged.
         assert uow.commits == 0
         assert user.hashed_password == _HASH_PREFIX + _VALID_PASSWORD
 
@@ -282,9 +275,6 @@ class TestAuthCommandHandler:
                     new_password="brand-new-passphrase",
                 )
             )
-
-
-# --- AdminUserHandler --------------------------------------------------------
 
 
 @pytest.mark.unit
@@ -359,6 +349,7 @@ class TestAdminUserHandler:
         assert len(repo.persisted) == 1
 
     async def test_update_role_uses_aggregate_mutator(self) -> None:
+        """set_role bumps updated_at, the legacy path that avoids the 500 defect."""
         handler, repo, uow = _build_admin_handler()
         user = _seed_user(repo, role=UserRole.EDITOR)
         before = user.updated_at
@@ -367,7 +358,6 @@ class TestAdminUserHandler:
 
         assert view.role == UserRole.ADMIN.value
         assert uow.commits == 1
-        # set_role bumps updated_at (the legacy path that avoids the 500 defect).
         stored = await repo.get_by_id(user.id)
         assert stored is not None
         assert stored.updated_at > before
@@ -381,10 +371,11 @@ class TestAdminUserHandler:
         assert view.is_active is False
 
     async def test_update_missing_user_before_role_validation(self) -> None:
+        """A missing user with an invalid role must still raise UserNotFoundError (legacy
+        ordering: 404 before 422).
+        """
         handler, _, _ = _build_admin_handler()
 
-        # Missing user with an INVALID role must still raise UserNotFoundError
-        # (legacy ordering: 404 before 422).
         with pytest.raises(UserNotFoundError):
             await handler.update(UpdateUserInput(user_id=uuid4(), role="wizard"))
 

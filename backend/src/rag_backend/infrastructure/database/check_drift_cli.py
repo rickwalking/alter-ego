@@ -1,4 +1,4 @@
-"""CLI entrypoint for the schema-vs-models drift check (AE-0207).
+"""CLI entrypoint for the schema-vs-models drift check.
 
 Run against a live database to fail (exit 1) when a mapped ORM column is missing
 from the connected schema. Used by:
@@ -52,9 +52,11 @@ def to_sync_url(database_url: str) -> str:
 
 
 def main() -> int:
-    """Run the drift check against ``DATABASE_URL``; return the process exit code."""
-    # Import the models package for its side effect: every table registers on
-    # ``Base.metadata``. importlib (not a bare ``import``) avoids an unused-import.
+    """Run the drift check against ``DATABASE_URL``; return the process exit code.
+
+    The models package is imported via importlib for its side effect (every table
+    registers on ``Base.metadata``) without an unused import.
+    """
     importlib.import_module(_MODELS_PACKAGE)
 
     database_url = os.environ.get(_DATABASE_URL_ENV)

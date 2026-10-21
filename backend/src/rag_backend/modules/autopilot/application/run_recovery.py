@@ -12,6 +12,9 @@
   (which restarts its 72 hours); only then may it close (QA r3 Q3).
 * Containment: an engine error the driver did not classify ends the run
   with a reason instead of rolling back the whole worker tick forever.
+
+``_CONTAINED`` maps the state a run was in to where an unclassified engine
+error leaves it.
 """
 
 from __future__ import annotations
@@ -70,7 +73,6 @@ from rag_backend.modules.editorial.public import PHASE_STATUS_REJECTED
 logger = structlog.get_logger()
 
 _S = AutopilotRunState
-# Where an unclassified engine error leaves a run, by the state it was in.
 _CONTAINED: dict[AutopilotRunState, AutopilotRunState] = {
     _S.QUEUED: _S.FAILED,
     _S.GENERATING: _S.ESCALATED,
@@ -156,7 +158,7 @@ class RunRecovery:
     async def _expire_state(self, state: AutopilotRunState, reason: str) -> int:
         """Runs left in ``state`` past the 72-hour window become ``expired``.
 
-        AE-0377: an unanswered POV thesis expires like an unanswered review.
+        An unanswered POV thesis expires like an unanswered review.
         """
         query = RunListQuery(state=state, limit=EXPIRY_SCAN_LIMIT)
         cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)

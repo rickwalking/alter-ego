@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Read-only palette-contract exporter (AE-0266 Phase 3).
+"""Read-only palette-contract exporter.
 
 Projects the backend ``PALETTE_REGISTRY`` + ``IMAGE_STRATEGY_REGISTRY`` into a
 committed artifact at ``docs/contracts/palettes.json``. The frontend
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         PaletteContract,
     )
 
-# scripts/ -> backend/ -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "contracts" / "palettes.json"
 
@@ -42,7 +41,11 @@ def _serialize(contract: PaletteContract) -> str:
 
 
 def main() -> int:
-    """Write (or verify) the committed palette contract. 0 on success."""
+    """Write (or verify) the committed palette contract. 0 on success.
+
+    The palette contract builder is imported lazily so ``--help`` works without
+    importing the app package.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",
@@ -51,7 +54,6 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Imported lazily so `--help` works without importing the app package.
     from rag_backend.application.services.carousel.palette_contract import (
         build_palette_contract,
     )

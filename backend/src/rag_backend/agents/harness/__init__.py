@@ -1,9 +1,9 @@
-"""Shared Deep Agents harness (AE-0248).
+"""Shared Deep Agents harness.
 
 One composition surface for the carousel orchestrator and the chat Deep Agents.
 Grown incrementally; today it exposes the checkpointer provider, interrupt
 helpers, middleware/store/memory providers, a typed ``DeepAgentConfig``, and the
-``build_deep_agent`` builder. Chat agents get NO checkpointer (ADR-0013 / AE-0247).
+``build_deep_agent`` builder. Chat agents get NO checkpointer (ADR-0013).
 """
 
 from rag_backend.agents.harness.builder import build_deep_agent

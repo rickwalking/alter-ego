@@ -1,4 +1,4 @@
-"""Alembic revision for the GrokBot cover (AE-0418, ADR-0024).
+"""Alembic revision for the GrokBot cover (ADR-0024).
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario Outline: A topic with a fresh cover is accepted in every mode

@@ -1,4 +1,4 @@
-"""Pre-promotion artifact health validation (AE-0313).
+"""Pre-promotion artifact health validation.
 
 Feature: Republish a completed carousel's artifacts
   Scenario: Health check validates fresh outputs, not the old version root
@@ -84,6 +84,9 @@ def _make_slides(project_id: object, count: int) -> list[CarouselSlide]:
 
 
 def _project(tmp_path: Path, *, artifact_version: str | None) -> CarouselProject:
+    """A fresh render points the PDF at the plain project-root path, exactly what
+    CarouselRefinementService.re_render_slides writes.
+    """
     project = CarouselProject(
         topic="t",
         audience="a",
@@ -92,8 +95,6 @@ def _project(tmp_path: Path, *, artifact_version: str | None) -> CarouselProject
         generate_images=False,
     )
     project.artifact_version = artifact_version
-    # Fresh render points the PDF pointer at the PLAIN project-root path (this is
-    # exactly what CarouselRefinementService.re_render_slides writes).
     project.pdf_path = str(tmp_path / LANGUAGE_PT / "carousel.pdf")
     return project
 

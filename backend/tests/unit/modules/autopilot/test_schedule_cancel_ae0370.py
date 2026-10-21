@@ -1,4 +1,4 @@
-"""Cancel, publish now while scheduled, next_slot mode, and safety (AE-0370).
+"""Cancel, publish now while scheduled, next_slot mode, and safety.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 """
@@ -141,8 +141,8 @@ def test_when_label_of_the_scheduled_time() -> None:
     assert when_label(_local(15, 18)) == "Qui 15/10 18:00"
 
 
-# Merge with AE-0367: the fix-issues button and the schedule flows coexist.
 def test_fix_and_schedule_callbacks_fit_and_parse() -> None:
+    """The fix-issues button and the schedule flows coexist."""
     from rag_backend.modules.autopilot.domain.callback_parse import parse_callback
     from rag_backend.modules.autopilot.domain.review_issues import (
         review_keyboard_with_fix,

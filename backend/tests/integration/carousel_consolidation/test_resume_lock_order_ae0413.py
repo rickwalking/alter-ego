@@ -1,4 +1,4 @@
-"""AE-0413: a rejected structured feedback never bumps the lock version.
+"""A rejected structured feedback never bumps the lock version.
 
 Gherkin: tests/features/content_gate_backend_ae0413.feature
 """

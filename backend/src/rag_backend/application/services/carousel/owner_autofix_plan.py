@@ -1,15 +1,15 @@
-"""Plan the owner autofix over localized slide records (AE-0367).
+"""Plan the owner autofix over localized slide records.
 
 Pure: no DB, no LLM. Per slide and locale, in this order:
 
 1. fill a content slide's empty features from its outline key points, a
    summary slide's missing points and a closing slide's missing actions
-   (``structure_fill``, AE-0437; the EN side gets the PT items, which the
+   (``structure_fill``; the EN side gets the PT items, which the
    re-translate step then translates);
 2. balance ``<strong>`` tags and restore the carousel's proper nouns in every
-   visible text, then the AE-0401 copy-hygiene repair (JSON blobs, markup,
+   visible text, then the copy-hygiene repair (JSON blobs, markup,
    emphasis, encoding, doubled words) where the policy enables it;
-3. the AE-0366 ``repair_casing`` (first letter of every heading, body sentence
+3. the ``repair_casing`` (first letter of every heading, body sentence
    and item text, pt-BR accent aware; configured proper nouns).
 
 EN texts that are still Portuguese (or the PT copy pasted as-is) become
@@ -130,15 +130,12 @@ def _fill_context(context: AutofixContext) -> StructureFillContext:
 def _polish(
     payload: Mapping[str, object], locale: str, context: AutofixContext
 ) -> dict[str, object]:
-    """Balance tags, restore proper nouns, copy hygiene, then casing (AE-0366)."""
+    """Balance tags, restore proper nouns, copy hygiene, then casing."""
     nouns = context.vocabulary
     cleaned = map_texts(
         payload, lambda text: restore_proper_nouns(balance_strong(text), nouns)
     )
-    # AE-0401: JSON blobs, markup, emphasis, encoding, doubled words.
     cleaned = repair_copy_hygiene(cleaned, locale, context.policy)
-    # AE-0436: rewrite balanced emphasis into the locale's convention
-    # (PT **…**, EN <strong>…</strong>) when the policy declares the rule.
     if rule_active(
         context.policy,
         VIOLATION_EMPHASIS_MARKUP_LOCALE_MISMATCH,

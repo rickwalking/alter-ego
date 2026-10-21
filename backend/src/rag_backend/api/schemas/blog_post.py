@@ -1,4 +1,8 @@
-"""Pydantic schemas for Blog Post management."""
+"""Pydantic schemas for Blog Post management.
+
+BLOG_EXCERPT_MAX_LENGTH matches the VARCHAR(500) column, so an over-long excerpt is a
+422 the editor can show, not a database error.
+"""
 
 from datetime import datetime
 from uuid import UUID
@@ -7,8 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
 
-# ``blog_posts.excerpt`` is ``VARCHAR(500)``: validate here so an over-long
-# excerpt is a 422 the editor can show, not a database error (AE-0411).
 BLOG_EXCERPT_MAX_LENGTH = 500
 
 
@@ -47,7 +49,12 @@ class BlogPostUpdate(BaseModel):
 
 
 class BlogPostResponse(BaseModel):
-    """Schema for blog post response."""
+    """Schema for blog post response.
+
+    editor_comments holds the {text, author_id, status} objects a reject appends. The
+    bounded version history is served by GET /blog-posts/{id}/versions only, never
+    inlined in every post response.
+    """
 
     id: UUID
     project_id: UUID | None = None
@@ -60,9 +67,6 @@ class BlogPostResponse(BaseModel):
     featured_image_url: str | None = None
     author_id: str | None = None
     reviewer_id: str | None = None
-    # Reject appends ``{text, author_id, status}`` comments (objects). The
-    # bounded version history is served by ``GET /blog-posts/{id}/versions``
-    # only (AE-0424 review), never inlined in every post response.
     editor_comments: list[dict | str] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
     citations: list[dict] = Field(default_factory=list)
@@ -89,7 +93,12 @@ class BlogPostResponse(BaseModel):
 
 
 class BlogPostSummaryResponse(BaseModel):
-    """Lightweight blog post for list views (PERF-001)."""
+    """Lightweight blog post for list views (PERF-001).
+
+    is_public tells whether an anonymous visitor can read the post now: a
+    carousel-linked row is stored published by the dual-write but stays hidden until its
+    carousel is released, so status alone cannot tell that a post is live.
+    """
 
     id: UUID
     title: str
@@ -111,10 +120,6 @@ class BlogPostSummaryResponse(BaseModel):
     updated_at: datetime
     published_at: datetime | None = None
     lock_version: int = 1
-    # AE-0411: whether an anonymous visitor can read the post right now. A
-    # carousel-linked row is stored ``published`` by the dual-write but stays
-    # hidden until its carousel is released (``is_public``), so ``status`` alone
-    # cannot tell the dashboard that a post is live.
     is_public: bool = False
 
     model_config = ConfigDict(from_attributes=True)
@@ -130,11 +135,13 @@ class BlogPostListResponse(BaseModel):
 
 
 class BlogPostVersionResponse(BaseModel):
-    """Schema for blog post version response."""
+    """Schema for blog post version response.
+
+    title and excerpt are snapshotted by saves too; older entries have none.
+    """
 
     id: UUID
     version_number: int
-    # AE-0424: saves snapshot the title/excerpt too (older entries have none).
     title: str | None = None
     excerpt: str | None = None
     snapshot: dict
@@ -190,7 +197,7 @@ class ContentSourceCreate(BaseModel):
 
     project_id: UUID | None = None
     blog_post_id: UUID | None = None
-    source_type: str = "url"  # url, document, note, interview, data
+    source_type: str = "url"
     title: str = Field(..., min_length=1, max_length=500)
     content: str = Field(..., min_length=1)
     tags: list[str] = Field(default_factory=list)

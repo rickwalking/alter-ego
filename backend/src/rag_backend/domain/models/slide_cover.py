@@ -1,4 +1,4 @@
-"""The slide-1 cover a carousel project renders (AE-0418, ADR-0024).
+"""The slide-1 cover a carousel project renders (ADR-0024).
 
 Set only when the owner chose the GrokBot cover on Telegram; ``None`` keeps the
 default slide 1 (the owner's photo on POV, the generated hero on Radar IA).

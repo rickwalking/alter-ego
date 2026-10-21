@@ -18,7 +18,7 @@ class InstagramPublishTarget:
 
 @dataclass(frozen=True, kw_only=True)
 class StoryImageTarget:
-    """The Story image state and the facts the music nudge reads (AE-0369).
+    """The Story image state and the facts the music nudge reads.
 
     ``ready`` is False when slide 1 was never rendered or the Story could not
     be written; the publish job then records the Story as failed.

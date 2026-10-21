@@ -56,7 +56,7 @@ class ForceReplyPrompt:
 class OwnerText:
     """A plain message, used when the update was not a button.
 
-    ``keyboard`` adds inline buttons, e.g. after a typed publish time (AE-0370).
+    ``keyboard`` adds inline buttons, e.g. after a typed publish time.
     """
 
     chat_id: str

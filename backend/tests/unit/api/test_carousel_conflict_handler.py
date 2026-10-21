@@ -1,4 +1,4 @@
-"""Unit tests for the typed carousel conflict handler (AE-0316).
+"""Unit tests for the typed carousel conflict handler.
 
 Gherkin: tests/features/carousel_typed_conflicts.feature
 """

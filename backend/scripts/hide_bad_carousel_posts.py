@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hide published carousel-origin blog posts (AE-0422 AC6).
+"""Hide published carousel-origin blog posts.
 
 One-shot operator action: every published ``origin='carousel'`` post is a legacy
 artifact and is flipped to draft with a ``hidden_bad_post`` marker, while
@@ -7,7 +7,7 @@ artifact and is flipped to draft with a ``hidden_bad_post`` marker, while
 run reports nothing.
 
     uv run python scripts/hide_bad_carousel_posts.py --dry-run
-    uv run python scripts/hide_bad_carousel_posts.py --apply --reason "AE-0422 AC6"
+    uv run python scripts/hide_bad_carousel_posts.py --apply --reason "off-topic"
 
 The default is ``--dry-run``; pass ``--apply`` to write.
 """

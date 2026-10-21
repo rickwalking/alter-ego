@@ -43,7 +43,6 @@ def build_list_documents_tool(
         if not docs:
             return "No documents found in the knowledge base."
 
-        # Filter by scope if specified
         if scope_filter is not None:
             docs = [d for d in docs if d.scope.value == scope_filter]
 

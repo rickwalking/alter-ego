@@ -1,4 +1,4 @@
-"""The presentation policy a project is built against (AE-0374, ADR-0021).
+"""The presentation policy a project is built against (ADR-0021).
 
 Resolves the project's stamped contract and sizes it to the project's slide
 count: a ranged contract (``pov_hook_v1``, ``hero_lower_third_v4``) is expanded

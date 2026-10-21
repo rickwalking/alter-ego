@@ -1,4 +1,4 @@
-"""Model fix of the slides still failing at a content/design gate (AE-0401).
+"""Model fix of the slides still failing at a content/design gate.
 
 Runs after the deterministic gate repair, only for the autopilot:
 
@@ -100,7 +100,7 @@ _PENDING_KEYS = (PERSONA_SCORE_RESCORE_PENDING_KEY, PERSONA_SCORE_UNSCORED_TICKS
 
 
 def _score_entry(previous: object, result: SlideFixResult) -> dict[str, object]:
-    """The slide's new entry; AE-0433: an unjudged copy is marked for a re-score."""
+    """Build the slide's new entry; an unjudged copy is marked for a re-score."""
     detail = dict(previous) if isinstance(previous, Mapping) else {}
     if result.unscored_ticks > 0:
         return {
@@ -235,7 +235,6 @@ class SlideFixService:
     async def _write(self, project_id: str, updates: dict[str, object]) -> None:
         await sync_rows_to_localized(self._deps.db, project_id, updates)
         await self._deps.db.commit()
-        # ``load_gate_source`` found a checkpoint, so the store is wired.
         workflow = cast(WorkflowStateStore, self._deps.workflow)
         await workflow.update_workflow_state(project_id, updates)
 

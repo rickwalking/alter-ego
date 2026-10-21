@@ -1,4 +1,4 @@
-"""Unit tests for the AE-0288 reopen ops script's safety guard.
+"""Unit tests for the reopen ops script's safety guard.
 
 The guard must reopen ONLY threads that are terminated (no pending node) AND
 approved for publish — never an in-progress / paused / non-approved carousel.

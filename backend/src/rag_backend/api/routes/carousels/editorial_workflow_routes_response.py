@@ -85,17 +85,12 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_WORKFLOW_STATUS,
 )
 
-# Deprecation message for the legacy ``build_workflow_state_response`` name.
 _DEPRECATION_MESSAGE = (
     "build_workflow_state_response is deprecated; "
     "use build_editorial_workflow_state_response instead."
 )
 
-# Extractor signature: a pure function from sanitized state to a response value.
 StateExtractor = Callable[[dict[str, object]], object]
-
-
-# ── Field extractors ──────────────────────────────────────────────────────────
 
 
 def _string_field(key: str) -> Callable[[dict[str, object]], str]:
@@ -228,13 +223,13 @@ def _policy_version_field(state: dict[str, object]) -> str | None:
 
 
 def _design_recovery_hint_field(state: dict[str, object]) -> str | None:
-    """Extract the design recovery hint code (AE-0310), omitted when clear."""
+    """Extract the design recovery hint code, omitted when clear."""
     raw = state.get(STATE_FIELD_DESIGN_RECOVERY_HINT)
     return str(raw) if raw else None
 
 
 def _error_message_field(state: dict[str, object]) -> str | None:
-    """Extract a client-safe failure message (AE-0009).
+    """Extract a client-safe failure message.
 
     Additive, optional response field. Raw state stores the message under
     ``workflow_error``; an explicit ``error_message`` key is also honored as a
@@ -254,12 +249,10 @@ def _error_message_field(state: dict[str, object]) -> str | None:
 
 
 def _image_assets_field(state: dict[str, object]) -> list[str]:
-    """Container image paths as owner preview URLs (AE-0439, QA F-13)."""
+    """Container image paths as owner preview URLs."""
     project_id = str(state.get(STATE_FIELD_PROJECT_ID) or "")
     return image_asset_preview_urls(project_id, state.get(STATE_FIELD_IMAGE_ASSETS))
 
-
-# ── Field mapping ─────────────────────────────────────────────────────────────
 
 _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     (STATE_FIELD_PROJECT_ID, _string_field(STATE_FIELD_PROJECT_ID)),
@@ -299,17 +292,16 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
 ]
 
 
-# ── Public builder ────────────────────────────────────────────────────────────
-
-
 def build_editorial_workflow_state_response(
     state: dict[str, object],
     *,
     phase_progress: dict[str, object] | None = None,
     lock_version: int = 1,
 ) -> EditorialWorkflowStateResponse:
-    """Build a typed API response from a raw workflow state dictionary."""
-    # AE-0413: a GET is read-only (stored copy, report and policy version).
+    """Build a typed API response from a raw workflow state dictionary.
+
+    A GET is read-only: it uses the stored copy, report and policy version.
+    """
     sanitized = sanitize_workflow_state_artifacts(read_only_sanitize_command(state))
     kwargs: dict[str, object] = {name: get(sanitized) for name, get in _FIELD_MAPPING}
     kwargs[STATE_FIELD_PHASE_PROGRESS] = _resolve_phase_progress(
@@ -337,7 +329,7 @@ def build_workflow_state_response(
 ) -> EditorialWorkflowStateResponse:
     """Deprecated alias for :func:`build_editorial_workflow_state_response`.
 
-    Retained for one migration sprint (AE-0050 window) so existing callers and
+    Retained for one migration sprint so existing callers and
     tests keep working. Removed before the editorial HTTP adapter (Phase 4)
     lifts the response mapping unit.
     """
@@ -347,9 +339,6 @@ def build_workflow_state_response(
         phase_progress=phase_progress,
         lock_version=lock_version,
     )
-
-
-# ── Helper builders ───────────────────────────────────────────────────────────
 
 
 def _localized_slide_reviews(raw: object) -> list[LocalizedSlideReview]:
@@ -434,9 +423,6 @@ def _validation_violation(item: object) -> SlideValidationViolationResponse | No
         field=field if isinstance(field, str) else None,
         severity=severity if isinstance(severity, str) else SEVERITY_BLOCKER,
     )
-
-
-# ── Run metadata overlay (AE-0315) ───────────────────────────────────────────
 
 
 @dataclass(frozen=True)

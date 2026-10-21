@@ -1,4 +1,4 @@
-"""AE-0401: the autopilot model fix of failing slides, on the real engine.
+"""The autopilot model fix of failing slides, on the real engine.
 
 Real: the SQLite rows and lock version, ``EditorialWorkflowService`` with a
 LangGraph checkpoint, the editorial facade (gate repair + slide fix), the
@@ -211,12 +211,14 @@ class TestSlideAutofixFlow:
     async def test_deterministic_fix_needs_no_model(
         self, db_session: AsyncSession
     ) -> None:
-        """Scenario: Fixed deterministically, approved without a model call."""
+        """Scenario: Fixed deterministically, approved without a model call.
+
+        The rows render the repaired copy.
+        """
         flow = await _flow(db_session, GateSeed(breaks=(lowercase_heading_5,)), [CLEAN])
         await _tick(flow)
         assert _actions(flow) == [REVIEW_ACTION_APPROVE]
         assert flow.log.models == []
-        # Addendum 2: the rows render the repaired copy.
         assert (await row(flow.db, flow.project_id, 5)).heading == FIXED_HEADING_5
 
     async def test_fixed_on_attempt_1(self, db_session: AsyncSession) -> None:
@@ -256,7 +258,7 @@ class TestSlideAutofixFlow:
     ) -> None:
         """Scenario: Still failing after 3 attempts escalates with the slides listed.
 
-        AE-0407: 3 fast attempts then 2 on the reasoning model (here the same
+        3 fast attempts then 2 on the reasoning model (here the same
         fake), so 5 attempts are counted.
         """
         flow = await _flow(db_session, GateSeed(breaks=(emoji_body_3,)), [STILL_EMOJI])

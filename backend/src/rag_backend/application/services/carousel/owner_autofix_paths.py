@@ -1,4 +1,4 @@
-"""Read and write the visible texts of one locale payload by path (AE-0367).
+"""Read and write the visible texts of one locale payload by path.
 
 Paths match the presentation validator's ``field`` values: ``heading``,
 ``body``, ``tldr_strip`` and ``<list>[<n>].title`` / ``<list>[<n>].body`` for

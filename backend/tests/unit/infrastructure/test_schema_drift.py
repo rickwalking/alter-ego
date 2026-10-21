@@ -1,10 +1,12 @@
-"""Unit tests for the schema-vs-models drift detector (AE-0207).
+"""Unit tests for the schema-vs-models drift detector.
 
 Gherkin not applicable to the pure comparison core — this is the algorithmic
 sensor for a DevOps safety net (no behavioral user scenario). The DB-touching
 path is covered by the integration test against a real Postgres instance
 (``tests/integration/test_schema_drift_live.py``). These tests pin the exact
 failure class that hit prod: a mapped ORM column absent from the live schema.
+
+_NEW_COL mirrors the real blog_posts.origin column whose absence 500'd prod.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from rag_backend.infrastructure.database.schema_drift import (
 _TABLE = "widgets"
 _ID = "id"
 _NAME = "name"
-_NEW_COL = "origin"  # mirrors the real blog_posts.origin that 500'd prod
+_NEW_COL = "origin"
 
 
 def _metadata_with(columns: tuple[str, ...]) -> MetaData:
@@ -52,7 +54,7 @@ def test_matching_schema_has_no_drift() -> None:
 
 
 def test_mapped_column_missing_from_db_is_drift() -> None:
-    # The model gained ``origin`` (a new column); the live DB never got it.
+    """The model gained ``origin`` but the live DB never got it."""
     expected = {_TABLE: frozenset({_ID, _NAME, _NEW_COL})}
     actual = {_TABLE: frozenset({_ID, _NAME})}
 
@@ -77,8 +79,9 @@ def test_table_absent_reports_every_mapped_column() -> None:
 
 
 def test_extra_db_column_is_not_drift() -> None:
-    # A column the DB has but the ORM does not map is NOT drift — create_all/
-    # migrations only ever add; dropped-from-model columns are out of scope here.
+    """A column the DB has but the ORM does not map is not drift: create_all and migrations
+    only ever add, and dropped-from-model columns are out of scope.
+    """
     expected = {_TABLE: frozenset({_ID})}
     actual = {_TABLE: frozenset({_ID, "legacy_col"})}
 

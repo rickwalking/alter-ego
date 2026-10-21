@@ -1,4 +1,4 @@
-"""AE-0366: reviewer edits reach the persisted slide rows and the render.
+"""Reviewer edits reach the persisted slide rows and the render.
 
 Prod carousel 8e350d6e: the reviewer fixed slide 5 at the content gate, but
 ``carousel_slides`` kept the old lowercase copy, so the JPGs did too.
@@ -162,6 +162,9 @@ class TestPersistMappingRepairsCasing:
     async def test_content_persist_capitalizes_rows(
         self, db_session: AsyncSession
     ) -> None:
+        """Only the first letter is capitalized: "api" is not a configured noun, so it
+        is kept.
+        """
         project_id = await _project(db_session)
         await _persist_prod_rows(db_session, project_id)
 
@@ -173,7 +176,6 @@ class TestPersistMappingRepairsCasing:
         assert slide6.heading == "O que muda para devs no Brasil"
         features = (slide6.extras or {})["features"]
         assert isinstance(features, list)
-        # First letter only: "api" is not a configured noun, so it is kept.
         assert features[0]["title"] == "Teste a api"
 
 
@@ -186,6 +188,7 @@ class TestEditedCopyReachesRows:
     async def test_edit_rewrites_heading_body_features_and_en(
         self, db_session: AsyncSession, phase: str
     ) -> None:
+        """Images, prompts and long-form notes are untouched by a copy edit."""
         project_id = await _project(db_session)
         await _persist_prod_rows(db_session, project_id)
 
@@ -203,7 +206,6 @@ class TestEditedCopyReachesRows:
         assert isinstance(translation, dict)
         assert translation["heading"] == _EDITED_EN_HEADING
         assert translation["body"] == _EDITED_EN_BODY
-        # Images, prompts and long-form notes are untouched by a copy edit.
         assert slide5.image_path == _IMAGE_PATH
         assert extras["long_form_notes"] == "Notas longas do slide."
         assert extras["image_prompt"] == "Editorial illustration 5"
@@ -270,6 +272,7 @@ class TestDraftPersistUsesPresentationCopy:
     async def test_edited_presentation_wins_over_stale_fields(
         self, db_session: AsyncSession
     ) -> None:
+        """An empty presentation body resurrects no stale draft_text."""
         project_id = await _project(db_session)
         draft = copy.deepcopy(clean_drafts()[SLIDE5_INDEX - 1])
         edit = _slide5_edit()
@@ -297,7 +300,6 @@ class TestDraftPersistUsesPresentationCopy:
         translation = (row.extras or {})["translation_en"]
         assert isinstance(translation, dict)
         assert row.heading == _EDITED_HEADING
-        # Empty presentation body: no stale draft_text resurrected.
         assert row.body == ""
         assert translation["heading"] == _EDITED_EN_HEADING
         assert translation["body"] == _EDITED_EN_BODY

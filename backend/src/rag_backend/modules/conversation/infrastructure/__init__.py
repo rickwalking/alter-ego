@@ -5,7 +5,7 @@ Holds the concrete chat-agent factory adapter
 which satisfies the ``ChatAgentFactory`` port by delegating to the existing
 agent builders.
 
-**No conversation persistence adapters are relocated in Phase 3 (AE-0100).** The
+**No conversation persistence adapters are relocated in Phase 3.** The
 concrete repositories that implement the conversation ports already exist at
 their legacy locations and are imported by other contexts and the container:
 

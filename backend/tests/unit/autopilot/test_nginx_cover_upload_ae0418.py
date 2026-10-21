@@ -1,4 +1,4 @@
-"""Both nginx configs let a GrokBot cover upload reach the backend (AE-0418).
+"""Both nginx configs let a GrokBot cover upload reach the backend.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: nginx lets a 5 MB cover through to the backend

@@ -7,17 +7,17 @@ The service wires to the editorial **ports** (Protocols in
 ``rag_backend.modules.editorial.domain.ports``) via manual constructor injection
 (ADR-0009 §9). It depends ONLY on those contracts — never on the carousel ORM or
 a concrete Postgres repository — so the persistence/engine details stay behind
-the adapters built at the inbound edge (AE-0111).
+the adapters built at the inbound edge.
 
 It exposes:
 
-* ``get_project`` — the editorial aggregate read (scaffolding; AE-0108);
+* ``get_project`` — the editorial aggregate read (scaffolding);
 * ``synthesize_sources`` — source-material synthesis (``SourceMaterialPort``);
 * ``assign_reviewer`` — reviewer assignment (``ReviewerAssignmentPort``);
 * ``record_review_decision`` — a reviewer decision (``ReviewDecisionPort``);
 * ``bump_resume_lock_version`` — the resume ``lock_version`` CAS
   (``OptimisticLockingPort``);
-* ``get_approval_state`` / ``get_release_state`` — the AE-0111 contract split
+* ``get_approval_state`` / ``get_release_state`` — the contract split
   (approval ``!=`` public release), each a DISTINCT read.
 
 Behavior-preserving: every method forwards to an injected port, whose adapter
@@ -47,11 +47,11 @@ from rag_backend.modules.editorial.domain.release import (
 
 @dataclass(frozen=True)
 class EditorialPorts:
-    """Optional editorial ports the service forwards to (AE-0111).
+    """Optional editorial ports the service forwards to.
 
     Grouped into one typed bundle so the service keeps to a single grouped
     argument beyond the repository (backend/CLAUDE.md ≤3 args). Each port is
-    optional so the AE-0108 scaffolding (repository-only) keeps working; a method
+    optional so the scaffolding (repository-only) keeps working; a method
     whose port is absent raises a clear :class:`RuntimeError` rather than
     silently no-op'ing.
     """
@@ -159,7 +159,6 @@ class EditorialService:
         return port
 
 
-# Message template for a use case invoked without its required port wired.
 _ERR_NO_PORT = "editorial port not wired: {name}"
 
 

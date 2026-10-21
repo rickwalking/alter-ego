@@ -1,8 +1,8 @@
-"""Draft rows of the blog generation entry points (AE-0425, ADR-0025).
+"""Draft rows of the blog generation entry points (ADR-0025).
 
 * :func:`live_post_id_for_project` — the 409 guard of ``from-carousel``: ANY
   ``blog_posts`` row with the project id counts (draft, under review, approved,
-  scheduled, published or hidden); hidden bad posts are rebuilt by AE-0426.
+  scheduled, published or hidden); hidden bad posts are rebuilt separately.
 * :func:`create_generation_draft` — a ``draft`` row with the bootstrap
   ``blog.v2`` document (zero sections, legal only while in progress) and a
   fresh lease.
@@ -75,7 +75,10 @@ async def live_post_id_for_project(db: AsyncSession, project_id: str) -> str | N
 async def create_generation_draft(
     db: AsyncSession, spec: GenerationDraftSpec
 ) -> GenerationLease:
-    """Stage (flush) the draft row and return the run's lease."""
+    """Stage (flush) the draft row and return the run's lease.
+
+    A post written by the blog writer is labelled AI-generated.
+    """
     post = BlogPostModel.from_entity({
         "id": str(uuid.uuid4()),
         "project_id": spec.project_id,
@@ -86,7 +89,6 @@ async def create_generation_draft(
         "content": bootstrap_content(),
         "author_id": spec.author_id,
         "ai_generation_metadata": started({}, spec.start),
-        # QUAL-002: a post written by the blog writer is AI-generated.
         "ai_disclosure_label": AI_DISCLOSURE_GENERATED,
     })
     db.add(post)

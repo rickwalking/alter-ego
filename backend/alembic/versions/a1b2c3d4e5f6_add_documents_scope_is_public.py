@@ -4,7 +4,7 @@ Revision ID: a1b2c3d4e5f6
 Revises: 63eaefa67b8c
 Create Date: 2026-06-14 21:00:00.000000
 
-AE-0090: additive, data-preserving columns on `documents`. The `Document`
+additive, data-preserving columns on `documents`. The `Document`
 entity already carries `scope` (DocumentScope) and `is_public` (bool), but the
 squashed baseline never persisted them. Both columns are NOT NULL with
 server_defaults, so existing rows are backfilled (`scope='personal'`,
@@ -15,7 +15,6 @@ import sqlalchemy as sa
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f6"
 down_revision = "63eaefa67b8c"
 branch_labels = None

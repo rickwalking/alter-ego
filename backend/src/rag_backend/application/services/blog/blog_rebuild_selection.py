@@ -1,4 +1,4 @@
-"""Selection and report types of the AE-0426 hidden-post rebuild.
+"""Selection and report types of the hidden-post rebuild.
 
 The predicate is pure and its inputs are plain facts of a ``blog_posts`` row, so
 the dry run and the run share exactly one classification. Operator guard rails

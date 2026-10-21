@@ -1,4 +1,4 @@
-"""Generation-time palette resolver over the root + custom union (AE-0269).
+"""Generation-time palette resolver over the root + custom union.
 
 `resolve_theme` stays a PURE registry/snapshot reader on the render path. THIS
 service runs ONCE per generation (where a repository is available): it resolves
@@ -118,10 +118,13 @@ class PaletteResolverService:
         self._repo = repo
 
     async def resolve(self, project: CarouselProject) -> ResolvedPalette:
-        """Resolve ``project.theme`` to a concrete palette (never raises)."""
+        """Resolve ``project.theme`` to a concrete palette (never raises).
+
+        Any repository failure degrades to the registry; it never fails generation.
+        """
         try:
             return await self._resolve_union(project)
-        except Exception:  # degrade to registry, never fail generation (G2)
+        except Exception:
             _logger.warning(
                 "palette_resolve_fallback_registry_only",
                 theme=project.theme,

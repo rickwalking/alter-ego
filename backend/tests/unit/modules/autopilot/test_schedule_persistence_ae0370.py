@@ -1,4 +1,4 @@
-"""``scheduled_at`` persistence, the due query, and the reply keyboard (AE-0370).
+"""``scheduled_at`` persistence, the due query, and the reply keyboard.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 """

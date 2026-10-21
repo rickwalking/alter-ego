@@ -1,4 +1,4 @@
-"""The images gate expects one hero image per illustrated slide (AE-0365).
+"""The images gate expects one hero image per illustrated slide.
 
 Prod 2026-10-14, carousel 8e350d6e: the image phase stored 6 hero images
 (``images/slide_1.jpg`` .. ``slide_6.jpg``). Slide 7 is the CTA, rendered with
@@ -6,7 +6,7 @@ the owner avatar, so it never gets one. The policy compared the 6 images with
 ``slides_total`` (7), revised, regenerated the same 6, and escalated: every
 real run failed at the images gate.
 
-Gherkin: tests/features/autopilot_runner.feature (AE-0365 scenarios)
+Gherkin: tests/features/autopilot_runner.feature (hero image count scenarios)
 """
 
 from __future__ import annotations

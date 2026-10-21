@@ -1,4 +1,4 @@
-"""Unit tests for the publishing distribution port + channel adapter (AE-0129).
+"""Unit tests for the publishing distribution port + channel adapter.
 
 These tests prove the behavior-preserving extraction of channel delivery
 (captions / Instagram / LinkedIn) behind the publishing
@@ -15,8 +15,10 @@ port + the channel adapter:
 * ``bootstrap_module`` wires the distribution publisher into the service;
 * the service raises a clear error when the distribution port is unwired.
 
-Behavior-preserving extraction; the live-response diff is asserted by the AE-0125
-safety net (Gherkin not applicable — see ticket AE-0129).
+Behavior-preserving extraction; the live-response diff is asserted by the publishing
+safety net (Gherkin not applicable).
+
+Channel fixtures are deterministic; no live Meta/LLM key is ever used.
 """
 
 from __future__ import annotations
@@ -38,7 +40,6 @@ from rag_backend.modules.publishing import (
     bootstrap_module,
 )
 
-# Deterministic channel fixtures (no live Meta/LLM key is ever used).
 _CAPTION = "Deterministic caption"
 _IMAGE_URLS = ["https://example.test/1.jpg", "https://example.test/2.jpg"]
 _POST_ID = "IG_TEST_POST_ID"
@@ -73,14 +74,15 @@ class TestChannelDistributionAdapter:
 
     @pytest.mark.asyncio
     async def test_publish_instagram_forwards_exact_payload(self) -> None:
+        """The vendor adapter receives the exact caption and image URLs, and its result
+        maps one-to-one into a DistributionResult.
+        """
         stub = _StubSocialPublisher()
         adapter = ChannelDistributionPublisher(stub)
 
         result = await adapter.publish_instagram(_CAPTION, _IMAGE_URLS)
 
-        # The vendor adapter received the EXACT caption + image URLs (unchanged).
         assert stub.calls == [(_CAPTION, _IMAGE_URLS)]
-        # The vendor result is mapped one-to-one into a DistributionResult.
         assert result == DistributionResult(status="published", post_id=_POST_ID)
 
     @pytest.mark.asyncio

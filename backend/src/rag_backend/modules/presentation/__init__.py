@@ -1,11 +1,11 @@
-"""Presentation bounded context (Supporting) — AE-0117 Phase 5 skeleton.
+"""Presentation bounded context (Supporting) Phase 5 skeleton.
 
 The presentation context owns the *visual contract* over a carousel project: the
 versioned presentation policy (slide budgets, geometry, fonts), the per-slide
 presentation copy / validation shapes, and a read VIEW over the carousel row's
 presentation fields (design tokens, policy identity, activation
 ``artifact_version``). This package follows the module conventions
-(``docs/architecture/module-conventions.md``, AE-0081) and ADR-0009 (Domain
+(``docs/architecture/module-conventions.md``) and ADR-0009 (Domain
 Modular Monolith):
 
 * per-module internal layers — ``domain/``, ``application/``,
@@ -15,12 +15,12 @@ Modular Monolith):
 * manual constructor injection via ``bootstrap_module`` (ADR-0009 §9);
 * the Unit-of-Work boundary owned at the application layer.
 
-Phase 5 is **behavior-preserving** (AE-0117): the presentation policy types, the
+Phase 5 is **behavior-preserving**: the presentation policy types, the
 per-slide presentation/validation models, the carousel entities, and the
 ``CarouselRepository`` port are *re-exported* from their canonical locations (no
 physical move, object-identity shims). The new ``PresentationProject`` VIEW,
 ``DesignPolicy``, and ``SlideView`` model the presentation view. Routes/ACL/
-provider ports move behind this facade in AE-0118/0119/0120. Presentation does
+provider ports move behind this facade. Presentation does
 NOT own blog/distribution, publishing/``is_public``, persona, or workflow state
 (those are editorial / Phase 6).
 

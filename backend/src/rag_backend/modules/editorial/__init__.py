@@ -1,8 +1,8 @@
-"""Editorial bounded context (Core) — AE-0108 Phase 4 skeleton.
+"""Editorial bounded context (Core) Phase 4 skeleton.
 
 The editorial context owns the 7-phase carousel editorial workflow over a
 carousel project. This package follows the module conventions
-(``docs/architecture/module-conventions.md``, AE-0081) and ADR-0009 (Domain
+(``docs/architecture/module-conventions.md``) and ADR-0009 (Domain
 Modular Monolith):
 
 * per-module internal layers — ``domain/``, ``application/``,
@@ -12,13 +12,13 @@ Modular Monolith):
 * manual constructor injection via ``bootstrap_module`` (ADR-0009 §9);
 * the Unit-of-Work boundary owned at the application layer.
 
-Phase 4 is **behavior-preserving** (AE-0108): the carousel workflow status
+Phase 4 is **behavior-preserving**: the carousel workflow status
 language is *re-exported* from ``rag_backend.domain.constants.carousel_workflow``
 (no new strings, object-identity), the carousel entities and the
 ``CarouselRepository`` port are *re-exported* from their legacy locations (no
 physical move, object-identity shims), and no routes/ACL move. The new
 ``EditorialProject`` / ``EditorialWorkflow`` aggregates model the editorial
-view. Routes/ACL move behind this facade in AE-0109/0110.
+view. Routes/ACL move behind this facade later.
 
 Cross-module consumers SHALL import from the facade only, e.g.::
 

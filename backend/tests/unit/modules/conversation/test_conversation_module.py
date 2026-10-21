@@ -1,4 +1,4 @@
-"""Unit tests for the conversation module skeleton + ChatAgentFactory (AE-0100).
+"""Unit tests for the conversation module skeleton + ChatAgentFactory.
 
 Feature: Conversation module skeleton, facade, shims, and ChatAgentFactory
 See tests/features/conversation_module.feature
@@ -104,7 +104,7 @@ class TestFacadeSurface:
 
     def test_legacy_factory_satisfies_port(self) -> None:
         factory = LegacyChatAgentFactory(db=AsyncMock(), container=MagicMock())
-        port: ChatAgentFactory = factory  # structural typing check
+        port: ChatAgentFactory = factory
         assert hasattr(port, "build_for_conversation")
 
 

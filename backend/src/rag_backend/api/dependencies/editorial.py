@@ -1,9 +1,9 @@
-"""Request-scoped DI provider for the editorial module facade (AE-0110).
+"""Request-scoped DI provider for the editorial module facade.
 
 This is the HTTP-edge composition point for the editorial bounded context. It
 resolves the request-scoped collaborators — the carousel repository (the
-``CarouselRepository`` port), the AE-0107 :class:`CarouselProjectWriteOwner`
-single write owner, and the AE-0109 :class:`LegacyCarouselAcl` anti-corruption
+``CarouselRepository`` port), the :class:`CarouselProjectWriteOwner`
+single write owner, and the :class:`LegacyCarouselAcl` anti-corruption
 layer — binds them to the request ``AsyncSession``, wraps that same session in the
 platform Unit of Work (the single commit owner, ADR-0009 §9), and hands them to
 ``bootstrap_module`` to build the public :class:`EditorialModule` facade.
@@ -12,7 +12,7 @@ Container resolution happens HERE — at the edge, inside ``api/dependencies/`` 
 never inside the module's application code (which composes via ``bootstrap``).
 The thin workflow route adapters depend on :func:`get_editorial_workflow_handlers`
 (and resolve the workflow engine through the module-level
-``build_editorial_workflow_service`` seam in the route module so the AE-0106
+``build_editorial_workflow_service`` seam in the route module so the
 safety-net stub still overrides it); they never call ``get_container()`` and never
 import the carousel ORM. Mirrors ``api/dependencies/knowledge.py`` and
 ``api/dependencies/conversation.py`` — except the request session is resolved via
@@ -21,6 +21,9 @@ collaborators share the EXACT same FastAPI-cached ``AsyncSession`` the workflow
 routes already depend on (``Depends(get_db)``); a separate ``get_session`` would
 yield a second, uncommitted session and break the byte-identical optimistic-lock
 + commit semantics.
+
+_ERR_MODULE_WITHOUT_ACL is a programmer-error sentinel: the edge provider always wires
+the carousel ACL into the editorial module.
 """
 
 from __future__ import annotations
@@ -44,8 +47,6 @@ from rag_backend.platform.database import SqlAlchemyUnitOfWork
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-# Defensive guard message for an editorial module bootstrapped without the ACL;
-# the edge provider always wires it, so this is a programmer-error sentinel.
 _ERR_MODULE_WITHOUT_ACL = "editorial module bootstrapped without the carousel ACL"
 
 
@@ -54,8 +55,8 @@ def get_editorial_module(
 ) -> EditorialModule:
     """Build the request-scoped editorial facade for the current request.
 
-    The same ``AsyncSession`` backs the carousel repository, the AE-0107 write
-    owner, the AE-0109 ACL, and the Unit of Work, so the writers' flushes and the
+    The same ``AsyncSession`` backs the carousel repository, the write
+    owner, the ACL, and the Unit of Work, so the writers' flushes and the
     UoW's single commit share one transaction (ADR-0009 §9).
     """
     container = get_container()

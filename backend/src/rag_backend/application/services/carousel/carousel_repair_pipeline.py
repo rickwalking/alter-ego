@@ -1,11 +1,14 @@
 """Pure deterministic repair computation for a carousel's localized slides.
 
-Wraps the existing bounded repair helpers (AE-0309 scaffold recovery, body
-trim, canonical shape normalization; AE-0312 policy-gated casing) so the
+Wraps the existing bounded repair helpers (scaffold recovery, body
+trim, canonical shape normalization, policy-gated casing) so the
 repair endpoint and the drift reconciler share one side-effect-free
 computation: validate → repair → re-validate → per-slide diff + fresh report.
 
 No DB, no checkpoint, no locks — those live in the orchestrating service.
+
+_ViolationTarget is (slide_index, locale); locale is None for slide-level violations
+(parity, parse markers) not attributable to one locale payload.
 """
 
 from __future__ import annotations
@@ -22,8 +25,6 @@ from rag_backend.domain.constants.presentation_policy import (
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationReport
 
-# (slide_index, locale) — locale is None for slide-level violations (parity,
-# parse markers) that are not attributable to a single locale payload.
 _ViolationTarget = tuple[int | None, str | None]
 
 

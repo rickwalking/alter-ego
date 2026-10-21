@@ -1,6 +1,8 @@
-"""Unit tests for PT sentence-case validation and casing repair (AE-0312).
+"""Unit tests for PT sentence-case validation and casing repair.
 
 Gherkin: tests/features/carousel_pt_casing_severity.feature
+
+The INCIDENT_* constants are real prod payloads from incident 66014ba3 (2026-07-10).
 """
 
 from __future__ import annotations
@@ -35,7 +37,6 @@ from rag_backend.domain.constants.presentation_policy import (
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2,
 )
 
-# Real prod payloads from incident 66014ba3 (2026-07-10).
 INCIDENT_HEADING_1 = "o **espaço mental** privado descoberto no claude"
 INCIDENT_HEADING_1_FIXED = "O **espaço mental** privado descoberto no Claude"
 INCIDENT_HEADING_2 = "o que os pesquisadores **descobriram**"

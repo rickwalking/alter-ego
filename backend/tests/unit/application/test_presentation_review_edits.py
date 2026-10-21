@@ -177,7 +177,7 @@ class TestLocaleHeadingBody:
         assert _locale_heading_body(None) == ("", "")
 
     def test_explicit_none_values_do_not_become_literal_none(self) -> None:
-        # Guard clause: a None value must not stringify to "None".
+        """A None value must not stringify to "None"."""
         payload: dict[str, object] = {"heading": None, "body": None}
         assert _locale_heading_body(payload) == ("", "")
 
@@ -189,14 +189,13 @@ class TestLocaleHeadingBody:
 @pytest.mark.unit
 class TestApplyEditsToDrafts:
     def test_non_dict_drafts_are_skipped(self) -> None:
-        # Guard clause: only dict drafts are processed.
         drafts: list[dict[str, object]] = [{"slide_index": 1, "title": "Keep"}]
         result = _apply_edits_to_drafts(drafts, {})
         assert result == [{"slide_index": 1, "title": "Keep"}]
 
     def test_missing_localized_entry_copies_draft_unchanged(self) -> None:
-        # Guard clause: localized is None -> draft copied as-is.
+        """The draft is copied as-is, but as a defensive copy."""
         drafts: list[dict[str, object]] = [{"slide_index": 5, "title": "Untouched"}]
         result = _apply_edits_to_drafts(drafts, {})
         assert result[0]["title"] == "Untouched"
-        assert result[0] is not drafts[0]  # defensive copy
+        assert result[0] is not drafts[0]

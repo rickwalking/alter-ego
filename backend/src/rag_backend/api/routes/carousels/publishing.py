@@ -152,7 +152,10 @@ async def publish_to_instagram(
     publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> InstagramPublishResponse:
-    """Publish the carousel's slides to Instagram with the provided caption."""
+    """Publish the carousel's slides to Instagram with the provided caption.
+
+    Returns 409 when an autopilot run owns the carousel or a publish is running.
+    """
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
@@ -199,7 +202,6 @@ async def publish_to_instagram(
             )
         )
     except ManualPublishRefusedError as exc:
-        # QA r1 H1: an autopilot run owns this carousel, or a publish is running.
         raise HTTPException(status_code=409, detail=exc.code) from None
     return InstagramPublishResponse(
         status=outcome.status,

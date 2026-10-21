@@ -1,4 +1,4 @@
-"""Post the Story that announces a carousel, once (AE-0369).
+"""Post the Story that announces a carousel, once.
 
 Runs after the carousel's media id is stored, under the same publish claim.
 A stored ``published`` row short-circuits with no Graph call. The container
@@ -72,13 +72,15 @@ class InstagramStoryStep:
         self._deps = deps
 
     async def run(self, project_id: str) -> PostExtras:
-        """Post the Story, or report why not. Never raises."""
+        """Post the Story, or report why not. Never raises.
+
+        The carousel is already live, so a Story failure must not undo it.
+        """
         media: StoryMedia | None = None
         try:
             media = await self._deps.media.load(project_id)
             outcome = await self._story(project_id, media)
         except Exception as exc:
-            # The carousel is already live; the Story must not undo that.
             logger.warning(LOG_STORY_FAILED, error=type(exc).__name__)
             outcome = _Outcome(
                 status=STORY_OUTCOME_FAILED, error=REASON_STORY_UNEXPECTED

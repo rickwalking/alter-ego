@@ -1,4 +1,4 @@
-"""Bounded-concurrency gather for per-slide LLM work (AE-0391)."""
+"""Bounded-concurrency gather for per-slide LLM work."""
 
 from __future__ import annotations
 

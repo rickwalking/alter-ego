@@ -1,6 +1,6 @@
 """SQLAlchemy model for workflow audit log (WF-004 event sourcing).
 
-Also re-exports the AE-0130 outbox dispatch helpers (``build_event_records`` /
+Also re-exports the outbox dispatch helpers (``build_event_records`` /
 ``relay_after_commit`` / ``EventRecord``). The application
 ``WorkflowEventService`` imports them via this module path — already grandfathered
 in ``.importlinter`` (``application-no-infrastructure``) — so the transactional

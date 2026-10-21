@@ -137,7 +137,7 @@ class InstagramPublishTickAdapter:
     async def tick(self, db: AsyncSession) -> int:
         """Release due scheduled runs, then publish or resume at most one run.
 
-        AE-0370: the due runs become ``publishing`` first, so the publish job
+        The due runs become ``publishing`` first, so the publish job
         posts them on this same tick.
         """
         due = await scheduled_publish_sweep(db, self._config.public_base_url).tick()
@@ -196,7 +196,7 @@ def _story_step(
     publisher: SocialPublisher,
     public_base_url: str,
 ) -> InstagramStoryStep | None:
-    """The Story step (AE-0369), only for the real Graph publisher."""
+    """The Story step, only for the real Graph publisher."""
     gateway = story_gateway_for(publisher)
     if gateway is None:
         return None
@@ -243,19 +243,22 @@ async def remember_served_signal_urls(
 
 @dataclass(frozen=True, kw_only=True)
 class AutopilotTickConfig:
-    """Worker-tick wiring for the editorial runner. The session arrives per tick."""
+    """Worker-tick wiring for the editorial runner. The session arrives per tick.
+
+    ``persona_id`` is ``AUTOPILOT_PERSONA_ID`` (``""`` = the persona named "Pedro");
+    ``autofix_attempts``, ``autofix_escalation_attempts`` and
+    ``persona_unscored_max_ticks`` come from ``AUTOPILOT_AUTOFIX_ATTEMPTS``,
+    ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` and
+    ``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``.
+    """
 
     owner_user_id: str
     engine_factory: EngineFactory
     stale_after_seconds: int
     notifier_configured: bool = True
-    # PR #106 review: AUTOPILOT_PERSONA_ID ("" = the persona named "Pedro").
     persona_id: str = ""
-    # AE-0401: AUTOPILOT_AUTOFIX_ATTEMPTS, model attempts per failing slide.
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
-    # AE-0407: AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS, reasoning-model attempts.
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
-    # AE-0433: AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS.
     persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
 
 
@@ -327,7 +330,6 @@ def _runner_deps(
         autofix=autofixer,
         gate_repair=autofixer,
         slide_fix=autofixer,
-        # AE-0418: the owner's GrokBot cover choice and its slide-1 re-render.
         covers=cover_offers(session),
         cover_switch=EditorialCoverSwitcher(session),
     )

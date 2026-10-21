@@ -1,4 +1,4 @@
-"""SQLAlchemy ``InsightsStore`` (AE-0378, ADR-0021 D11).
+"""SQLAlchemy ``InsightsStore`` (ADR-0021 D11).
 
 Published posts come from the two places that store an Instagram media id:
 autopilot runs and the manual-publish ledger. The carousel topic is read

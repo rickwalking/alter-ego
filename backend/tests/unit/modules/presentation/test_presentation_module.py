@@ -1,4 +1,4 @@
-"""Unit tests for the presentation module skeleton + shims (AE-0117).
+"""Unit tests for the presentation module skeleton + shims.
 
 These tests prove the behavior-preserving scaffolding:
 
@@ -13,7 +13,7 @@ These tests prove the behavior-preserving scaffolding:
   typed, and constructible.
 
 Behavior-preserving scaffolding; verified by mypy/lint-imports + this safety net
-(see ticket AE-0117 — Gherkin not applicable).
+(Gherkin not applicable).
 """
 
 from unittest.mock import AsyncMock, MagicMock

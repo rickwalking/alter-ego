@@ -1,4 +1,4 @@
-"""Reconcile the checkpoint status with the carousel row (AE-0363).
+"""Reconcile the checkpoint status with the carousel row.
 
 The policy used to read only the checkpoint. A checkpoint at
 ``content/approved`` with no run in flight made it wait forever. This pure

@@ -1,8 +1,7 @@
-"""Seeded-violation tests for the blocking duplicate-ID gate (AE-0238).
+"""Seeded-violation tests for the blocking duplicate-ID gate.
 
-AE-0181 made duplicate AE-#### ids a non-blocking WARNING; two real collisions
-(AE-0145..0148 → AE-0224..0227, plus an AE-0228 near-miss) promoted it to a hard
-gate. These tests pin the exact 0→1 exit-code boundary the cold-critic flagged:
+Duplicate ticket ids used to be a non-blocking WARNING; two real collisions
+(plus a near-miss) promoted it to a hard gate. These tests pin the exact 0→1 exit-code boundary the cold-critic flagged:
 two same-id files with NO other validation errors must fail (exit 1), and a
 unique-id control must still pass (exit 0). Tests monkeypatch TASKS_DIR to
 `tmp_path` — they never touch the real `.agent/tasks/` tree.
@@ -27,32 +26,32 @@ def _write_ticket(tasks_dir: Path, filename: str, ticket_id: str) -> None:
 def test_duplicate_ids_fail_with_no_other_errors(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Precondition: the two files are otherwise valid (Intake has no section gate), so
+    only the duplicate id can flip the exit code; the remediation message is pinned too.
+    """
     _write_ticket(tmp_path, "AE-0500-one.md", "AE-0500")
     _write_ticket(tmp_path, "AE-0500-two.md", "AE-0500")
     monkeypatch.setattr(validate_all_tickets, "TASKS_DIR", tmp_path)
 
-    # Precondition: the two files are otherwise valid (Intake → no section gate),
-    # so the only thing that can flip the exit code is the duplicate id.
     assert all(
         not validate_all_tickets.validate_ticket_file(t) for t in load_tickets(tmp_path)
     )
 
     assert validate_all_tickets.main() == 1
-    # Pin the actionable remediation message (not just the exit code).
     out = capsys.readouterr().out
     assert "duplicate ticket IDs" in out
     assert "AE-0500 claimed by 2 files" in out
 
 
 def test_blocking_duplicate_ids_returns_exact_count(tmp_path: Path) -> None:
-    # F-1 (wave QA): pin the EXACT count, not just 0-vs-nonzero — kills a
-    # `len(dupes) * k` mutant that the exit-code-only assertion lets survive.
+    """Pins the EXACT count, not just zero vs non-zero, to kill a ``len(dupes) * k``
+    mutant: exactly one id is duplicated regardless of how many files share it.
+    """
     _write_ticket(tmp_path, "AE-0500-one.md", "AE-0500")
     _write_ticket(tmp_path, "AE-0500-two.md", "AE-0500")
     _write_ticket(tmp_path, "AE-0501-uniq.md", "AE-0501")
 
     tickets = load_tickets(tmp_path)
-    # Exactly ONE id (AE-0500) is duplicated, regardless of how many files share it.
     assert validate_all_tickets._blocking_duplicate_ids(tickets) == 1
 
 

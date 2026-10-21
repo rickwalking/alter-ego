@@ -1,4 +1,4 @@
-"""Golden-snapshot diff helper for Conversation endpoints (AE-0097).
+"""Golden-snapshot diff helper for Conversation endpoints.
 
 The enforceable byte-identical baseline for the Phase 3 Conversation extraction.
 Conversation responses carry the anonymous-visitor ``anon_token`` Set-Cookie
@@ -7,6 +7,9 @@ Conversation responses carry the anonymous-visitor ``anon_token`` Set-Cookie
 preserve. The normalization/diff logic is shared with the Identity helper
 (``tests/snapshots/identity/_snapshot``); only the snapshot directory differs,
 so committed snapshots live under ``tests/snapshots/conversation/``.
+
+The normalization primitives are re-exported so this module is the single import surface
+for conversation snapshot tests.
 """
 
 from __future__ import annotations
@@ -20,8 +23,6 @@ from tests.snapshots.identity._snapshot import JsonValue, build_snapshot
 if TYPE_CHECKING:
     from httpx import Response
 
-# Re-export the normalization primitives so this module is the single import
-# surface for conversation snapshot tests (mirrors the Knowledge helper).
 __all__ = [
     "assert_matches_snapshot",
     "build_snapshot",

@@ -1,8 +1,8 @@
-"""Public-read handler tests (AE-0428): strict read + uniform 404 mapping.
+"""Public-read handler tests: strict read + uniform 404 mapping.
 
 Covers ``get_public_blog_post`` at the handler level (no HTTP transport) so
-the removed read fail-safe is proven on the exact lines the AE-0428 diff
-changes: a published v2 row renders its public detail and a published non-v2
+the removed read fail-safe is proven on the exact lines its removal
+changed: a published v2 row renders its public detail and a published non-v2
 row fails closed with the uniform 404 (no existence leak, no legacy
 adaptation).
 

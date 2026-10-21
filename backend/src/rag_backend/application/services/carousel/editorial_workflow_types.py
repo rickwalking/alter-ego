@@ -19,11 +19,14 @@ from rag_backend.domain.models.persona import PersonaProfile
 
 @dataclass(frozen=True)
 class ChatModelRoles:
-    """AE-0391: the chat model of each carousel task role + drafting bound."""
+    """The chat model of each carousel task role + drafting bound.
+
+    draft_concurrency is how many slides are drafted (and persona-scored) at once in the
+    content phase.
+    """
 
     reasoning: BaseChatModel
     fast: BaseChatModel
-    # Slides drafted (and persona-scored) concurrently in the content phase.
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
     @classmethod
@@ -78,9 +81,11 @@ class PhaseFeedbackPersistParams:
     """Inputs for persisting reviewer phase feedback.
 
     ``count_revision=False`` stores the note without bumping the phase's
-    revision counter (AE-0310): edited-slides submissions and a plain design
+    revision counter: edited-slides submissions and a plain design
     revise while a blocking report exists are provable non-regenerations, so
     they must not consume the LLM revision budget.
+
+    source records who wrote the note (a human reviewer or the autopilot gate).
     """
 
     project_id: str
@@ -88,7 +93,6 @@ class PhaseFeedbackPersistParams:
     feedback: str | None
     target_phase: str | None = None
     count_revision: bool = True
-    # AE-0405: who wrote the note (human reviewer or the autopilot gate).
     source: str = FEEDBACK_SOURCE_HUMAN
 
 

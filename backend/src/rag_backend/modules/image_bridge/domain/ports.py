@@ -1,4 +1,4 @@
-"""Outbound ports of the image bridge module (AE-0393).
+"""Outbound ports of the image bridge module.
 
 Infrastructure implements these; the application services depend only on
 the Protocols, wired by ``bootstrap``.

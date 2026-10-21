@@ -1,4 +1,4 @@
-"""Deterministic sentence-case repair that still triggers regeneration (AE-0366).
+"""Deterministic sentence-case repair that still triggers regeneration.
 
 Prod carousel 8e350d6e: the bounded repair silently capitalized the stored
 localized copy, so the report said ``valid`` while proper nouns stayed
@@ -11,6 +11,10 @@ validation as BLOCKING violations of the matching sentence-case rule on every
 read path, so the content goes back for regeneration (fail-closed retry, then
 the review gate / autopilot revise) instead of passing on a cosmetic fix. A
 reviewer edit of a locale drops that locale's markers.
+
+The repair message states the problem and the fix only; it never claims the text was
+auto-capitalized, since only sentence starts are touched and proper nouns are never
+guessed.
 """
 
 from __future__ import annotations
@@ -40,9 +44,6 @@ CASING_REPAIRS_KEY = "casing_repairs"
 CASING_MARKER_LOCALE = "locale"
 CASING_MARKER_FIELD = "field"
 CASING_MARKER_CODE = "code"
-# AE-0413: the message used to say the text "was auto-capitalized" while the
-# reviewer still saw lowercase copy (only sentence starts are touched, proper
-# nouns are never guessed). It now states the problem and the fix only.
 CASING_REPAIR_MESSAGE = (
     "The model wrote this text in lowercase. Edit or regenerate this slide: "
     "start every sentence with a capital letter and capitalize proper nouns"

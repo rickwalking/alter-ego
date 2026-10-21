@@ -1,4 +1,4 @@
-"""Snapshot assembly from workflow state (AE-0354)."""
+"""Snapshot assembly from workflow state."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def test_persona_dict_without_overall_is_unscored_like_the_engine() -> None:
     """Scenario: The engine and the policy read a missing "overall" the same way.
 
     QA r1 B1: the snapshot must read like the engine, or the policy approves
-    into a refusal. AE-0407: both skip an entry without ``overall`` (a
+    into a refusal. Both skip an entry without ``overall`` (a
     failed judge call), so the lowest score is the scored one.
     """
     state = {
@@ -86,12 +86,16 @@ def test_missing_persona_scores_stay_none() -> None:
 
 
 def test_pending_rescores_are_listed_by_slide() -> None:
-    """AE-0439 (#154 B): the gate read sees the stale-score markers."""
+    """The gate read sees the stale-score markers."""
     state = {
         FIELD_CURRENT_PHASE: "content",
         FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING,
         FIELD_PERSONA_SCORES: {
-            "slide_3": {FIELD_OVERALL: 80, "rescore_pending": True, "unscored_ticks": 2},
+            "slide_3": {
+                FIELD_OVERALL: 80,
+                "rescore_pending": True,
+                "unscored_ticks": 2,
+            },
             "slide_5": {FIELD_OVERALL: 70},
         },
     }
@@ -135,7 +139,7 @@ def test_outline_length_and_revision_count_follow_the_phase() -> None:
 
 
 def test_forbidden_hits_are_phrases_and_gate_codes_are_quality() -> None:
-    """AE-0392: gate codes are content-quality violations, not forbidden phrases."""
+    """Gate codes are content-quality violations, not forbidden phrases."""
     state = {
         FIELD_CURRENT_PHASE: GATE_CONTENT,
         FIELD_FORBIDDEN_PHRASES: ["Synergy"],

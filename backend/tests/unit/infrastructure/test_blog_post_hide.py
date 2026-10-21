@@ -1,4 +1,4 @@
-"""Unit tests for BlogPostHideService (AE-0422 AC6).
+"""Unit tests for BlogPostHideService.
 
 Gherkin: tests/features/blog_no_carousel_slides_ae0422.feature
 
@@ -211,12 +211,13 @@ class TestBlogPostHideService:
 
 
 class TestHideLoggingUnderAppConfig:
-    # Regression (found rebasing AE-0423): a %-style log call raised
-    # "_proxy_to_logger() takes 2 to 3 positional arguments" once the app had
-    # configured structlog, so the hide failed depending on test order.
     async def test_hide_logs_under_the_app_structlog_config(
         self, db_session: AsyncSession
     ) -> None:
+        """Regression: a %-style log call raised "_proxy_to_logger() takes 2 to 3
+        positional arguments" once the app had configured structlog, so the hide failed
+        depending on test order.
+        """
         import structlog
 
         from rag_backend.infrastructure.logging import setup_logging

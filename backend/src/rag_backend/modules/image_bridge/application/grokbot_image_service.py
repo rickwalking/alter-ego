@@ -1,4 +1,4 @@
-"""``ImageGenerationService`` backed by the Grok Bot webhook (AE-0393).
+"""``ImageGenerationService`` backed by the Grok Bot webhook.
 
 One call: create a pending job, POST the webhook, poll Postgres until the
 callback lands (any worker may receive it), then write the image fitted to
@@ -176,7 +176,11 @@ class GrokBotImageService(ImageGenerationService):
             await self._deps.clock.sleep(self._config.poll_interval_seconds)
 
     async def _settle(self, job: ImageBridgeJob) -> bytes | None:
-        """The image when done; ``None`` to keep polling; raise on failure."""
+        """The image when done; ``None`` to keep polling; raise on failure.
+
+        When the callback won the race with the deadline, the result is read on
+        the next poll.
+        """
         if job.status is ImageBridgeJobStatus.SUCCEEDED:
             return await self._take(job.id)
         if job.status is ImageBridgeJobStatus.FAILED:
@@ -190,7 +194,6 @@ class GrokBotImageService(ImageGenerationService):
             return None
         if await self._deps.repository.expire(JobDeadline(job_id=job.id, at=now)):
             raise self._expired(job.id)
-        # The callback won the race with the deadline: read it next poll.
         return None
 
     async def _take(self, job_id: UUID) -> bytes:

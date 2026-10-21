@@ -1,4 +1,4 @@
-"""Domain constants + contracts for the canonical distribution home (AE-0204).
+"""Domain constants + contracts for the canonical distribution home.
 
 The Instagram caption + LinkedIn posts of a carousel-derived item have a single
 canonical home — the ``blog_posts.distribution`` JSONB column. This module owns the
@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from typing import Protocol
 
-# Canonical ``blog_posts.distribution`` JSON keys — the single source of these
-# field names for the infrastructure accessor, every reader, and the backfill.
 DISTRIBUTION_CAPTION_KEY = "caption"
 DISTRIBUTION_LINKEDIN_POST_PT_KEY = "linkedin_post_pt"
 DISTRIBUTION_LINKEDIN_POST_EN_KEY = "linkedin_post_en"

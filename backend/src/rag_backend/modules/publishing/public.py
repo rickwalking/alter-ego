@@ -8,12 +8,12 @@ module.
 The facade exposes:
 
 * ``PublishingService`` / ``PublishingPorts`` — the use-case entry point + its
-  optional-ports bundle (scaffolding; AE-0126);
+  optional-ports bundle (scaffolding);
 * ``BlogPost`` — the publishing blog-post aggregate VIEW over the ``blog_posts``
-  row (new, fully typed); the ``origin`` field is deferred to AE-0127;
+  row (new, fully typed); the ``origin`` field is added by a later migration;
 * ``Publication`` — the carousel→blog read projection VIEW (new, fully typed);
 * ``DistributionChannel`` / ``DistributionChannelKind`` — the distribution-target
-  contract (new value objects; adapters land in AE-0129);
+  contract (new value objects; adapters land later);
 * ``PublishingSchedule`` — the release-schedule value object (new, fully typed);
 * ``ReleaseState`` / ``ReleasePhase`` — the release-lifecycle projection derived
   from the canonical blog status (new; no new status strings);
@@ -22,9 +22,9 @@ The facade exposes:
 * ``BlogPostRepository`` / ``CarouselRepository`` — the blog + carousel
   persistence ports (re-exported, object-identity shims);
 * ``CarouselReleasePort`` / ``BlogVisibilityPort`` / ``BlogSchedulePort`` — the
-  release/visibility/schedule write ports (AE-0128);
-* ``CarouselReleaseCommand`` — the carousel public-release command DTO (AE-0128);
-* ``LegacyPublishingAcl`` — the sole carousel/blog ORM seam (AE-0128), wired at
+  release/visibility/schedule write ports;
+* ``CarouselReleaseCommand`` — the carousel public-release command DTO;
+* ``LegacyPublishingAcl`` — the sole carousel/blog ORM seam, wired at
   the inbound edge into the module's ``PublishingAdapters``;
 * ``PublishingAdapters`` / ``PublishingModule`` / ``bootstrap_module`` — the
   composition root (manual constructor injection).

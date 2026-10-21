@@ -58,6 +58,7 @@ class TestWritingStyleProfileScraping:
         assert samples[1].language == "en"
 
     async def test_cache_is_written_then_reused(self, tmp_path: Path) -> None:
+        """A second load on a fresh profile uses the cache instead of re-scraping."""
         responses = {
             "https://li/one": _html_with_og("the quick brown fox"),
         }
@@ -70,7 +71,6 @@ class TestWritingStyleProfileScraping:
         await profile.get_samples()
         assert (tmp_path / "scraped_snippets.json").exists()
 
-        # Second load on a fresh profile should use the cache, not re-scrape.
         tool2 = _make_research_tool({})
         profile2 = WritingStyleProfile(
             research_tool=tool2,

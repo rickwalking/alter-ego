@@ -59,7 +59,7 @@ class PovInputsAcl:
         return model.to_entity() if model is not None else None
 
     async def project_persona(self, project_id: str) -> PersonaProfile | None:
-        """AE-0397: the persona the project was created with, for its resumes."""
+        """The persona the project was created with, for its resumes."""
         from rag_backend.infrastructure.database.models.carousel import (
             CarouselProjectModel,
         )
@@ -86,7 +86,7 @@ class PovInputsAcl:
         return str(found) if found is not None else None
 
     async def hook_photo_id(self, owner_id: str) -> str | None:
-        """The owner's next slide-1 photo (AE-0395 rotation).
+        """The owner's next slide-1 photo, by rotation.
 
         A photo never used on a carousel comes first (newest first), then the
         used ones from the least recently used, so consecutive POV carousels

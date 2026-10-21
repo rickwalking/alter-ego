@@ -78,7 +78,7 @@ async def _authorize_then_release(
 ) -> str:
     """Check access, then end the read transaction before the LLM call.
 
-    AE-0432: the post loaded here must not be written back after the call — a
+    the post loaded here must not be written back after the call — a
     budget reservation or AI action committed meanwhile would be erased. The
     write re-reads the row with :func:`lock_blog_post` and merges onto it.
     """
@@ -89,7 +89,7 @@ async def _authorize_then_release(
 
 
 def blog_event_service() -> WorkflowEventService:
-    """The workflow event service of the blog editor routes (AE-0424)."""
+    """The workflow event service of the blog editor routes."""
     settings = get_settings()
     return WorkflowEventService(get_event_publisher(settings.redis_url or None))
 
@@ -112,7 +112,11 @@ async def ai_suggest(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> BlogPostAiSuggestResponse:
-    """Generate an AI suggestion for selected blog text."""
+    """Generate an AI suggestion for selected blog text.
+
+    The post is re-read under the row lock after the call, so the suggestions merge onto
+    what was committed meanwhile.
+    """
     user_id = await _authorize_then_release(db, post_id, current_user)
     service = _build_ai_service()
     try:
@@ -130,7 +134,6 @@ async def ai_suggest(
             detail=ERR_INVALID_REQUEST,
         ) from None
 
-    # Re-read under the row lock: merge onto what was committed during the call.
     post = await lock_blog_post(db, post_id)
     post.ai_suggestions = [
         *(post.ai_suggestions or []),

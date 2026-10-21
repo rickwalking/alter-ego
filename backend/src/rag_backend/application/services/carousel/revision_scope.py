@@ -1,4 +1,4 @@
-"""Keep a revision inside the slides it names (AE-0437, QA F-10).
+"""Keep a revision inside the slides it names (QA F-10).
 
 Prod carousel 7acaf967: revision 1 asked to change only slides 2 and 6, yet
 every slide was re-drafted and stored, so slides 1, 3 and 7 changed and slide
@@ -17,6 +17,9 @@ Now the scope is enforced in code:
 - ``keep_unscoped_slides``: after the review build, every slide outside the
   scope gets its stored localized copy back (written like an owner edit, so
   drafts, translations and both validation reports stay in step).
+
+Slide lists are read in forms like "slide 6", "Slides 2 e 6", "slides 2, 3 and 7",
+"slides 2-4" and "slide nº 5".
 """
 
 from __future__ import annotations
@@ -37,7 +40,6 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_VIOLATIONS,
 )
 
-# "slide 6", "Slides 2 e 6", "slides 2, 3 and 7", "slides 2-4", "slide nº 5".
 _SLIDE_LIST = re.compile(
     r"\bslides?\s*(?:n[º°o.]\s*)?#?\s*"
     r"(\d{1,2}(?:\s*(?:,|/|&|-|\u2013|\be\b|\band\b|\bou\b|\bor\b)\s*\d{1,2})*)",

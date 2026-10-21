@@ -1,4 +1,4 @@
-"""Bounded request-body reading for the callback route (AE-0393).
+"""Bounded request-body reading for the callback route.
 
 nginx caps the location at 16 MB; this enforces the same cap in the app so
 a direct or chunked request cannot make the worker buffer more.

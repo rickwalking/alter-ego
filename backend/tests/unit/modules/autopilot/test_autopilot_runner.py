@@ -1,4 +1,4 @@
-"""In-process autopilot runner against a fake editorial driver (AE-0354).
+"""In-process autopilot runner against a fake editorial driver.
 
 Gherkin: tests/features/autopilot_runner.feature
 """

@@ -1,10 +1,10 @@
-"""Shared Deep Agents harness — per-agent memory loading (AE-0248).
+"""Shared Deep Agents harness — per-agent memory loading.
 
 Resolves the per-agent ``AGENTS.md`` memory files passed to
 ``create_deep_agent(memory=...)``. Today this is a thin, generic resolver: it
 keeps only the paths that actually exist, so a missing memory file degrades to
 "no memory" instead of failing the build. Per-agent wiring of concrete memory
-paths lands in AE-0250; the harness just provides the resolver surface.
+paths happens per agent; the harness just provides the resolver surface.
 
 Kept generic — no carousel/chat domain coupling.
 """

@@ -1,4 +1,4 @@
-"""Quality issues and the "Fix issues" button on the review message (AE-0367)."""
+"""Quality issues and the "Fix issues" button on the review message."""
 
 from __future__ import annotations
 

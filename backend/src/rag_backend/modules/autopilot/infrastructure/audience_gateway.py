@@ -1,4 +1,4 @@
-"""Graph ``online_followers`` reader (AE-0404).
+"""Graph ``online_followers`` reader.
 
 ``GET /{ig-user-id}/insights?metric=online_followers&period=lifetime`` returns
 one entry per recent day, each ``{"value": {"0": n, ..., "23": n}}`` keyed by

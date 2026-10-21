@@ -1,4 +1,4 @@
-"""Phase trace attributes and the Langfuse span wiring (AE-0390).
+"""Phase trace attributes and the Langfuse span wiring.
 
 Gherkin: tests/features/workflow_tracing_and_heartbeat.feature
 """
@@ -146,10 +146,10 @@ class TestPhaseTrace:
     def test_flush_is_not_dropped_when_global_slots_are_exhausted(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # AE-0446: reproduces the mutation-baseline failure deterministically.
-        # Hung real exporters (left by another test) held every process-wide
-        # flush slot, so this test's flush was dropped. The collector now runs
-        # on its own slot pool.
+        """Reproduces a mutation-baseline failure deterministically: hung real exporters
+        left by another test held every process-wide flush slot, so this test's flush
+        was dropped. The collector now runs on its own slot pool.
+        """
         held = langfuse_client._FLUSH_SLOTS
         taken = 0
         while held.acquire(blocking=False):

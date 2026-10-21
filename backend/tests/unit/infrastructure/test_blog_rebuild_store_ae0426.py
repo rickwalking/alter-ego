@@ -1,4 +1,4 @@
-"""SQL adapter of the AE-0426 rebuild (candidates + the two fenced writes).
+"""SQL adapter of the hidden-post rebuild (candidates + the two fenced writes).
 
 Feature: backend/tests/features/blog_rebuild_hidden_ae0426.feature
 """

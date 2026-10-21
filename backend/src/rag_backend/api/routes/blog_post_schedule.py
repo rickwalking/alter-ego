@@ -1,8 +1,10 @@
-"""Scheduled publication of an approved blog post (SCHED-001, AE-0424).
+"""Scheduled publication of an approved blog post (SCHED-001).
 
 ``POST /schedule`` stamps a future ``scheduled_publish_at`` on an ``approved``
 post (the due-post sweep publishes it); ``DELETE /schedule`` cancels it and the
 post stays ``approved``. Both check an ``If-Match`` the editor sends.
+
+Path params are fields of the target dataclass (resolved with Depends()).
 """
 
 from dataclasses import dataclass
@@ -42,7 +44,6 @@ from rag_backend.modules.publishing import PublishingModule
 router = APIRouter(tags=["blog_post_workflow"])
 
 IfMatch = Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)]
-# Path params are fields of the target dataclass (``Depends()``).
 SCHEDULE_PATH = "/blog-posts/{post_id}/schedule"
 
 
@@ -83,10 +84,12 @@ def _future_schedule(requested: datetime) -> datetime:
 async def schedule_blog_post(
     request: Request, body: SchedulePublishRequest, target: Target
 ) -> BlogPostResponse:
-    """Schedule an approved post for future publication (SCHED-001, UI-024)."""
+    """Schedule an approved post for future publication (SCHED-001, UI-024).
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one.
+    """
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(target.db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)
@@ -108,10 +111,12 @@ async def schedule_blog_post(
 async def cancel_blog_post_schedule(
     request: Request, target: Target
 ) -> BlogPostResponse:
-    """Clear ``scheduled_publish_at``; the post stays ``approved`` (AE-0424)."""
+    """Clear ``scheduled_publish_at``; the post stays ``approved``.
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one.
+    """
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(target.db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)

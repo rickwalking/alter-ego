@@ -106,7 +106,7 @@ def resolve_artifact_serving_paths(
 ) -> ArtifactServingPaths | None:
     """Deprecated alias for :func:`resolve_and_reconcile_serving_paths`.
 
-    Kept callable during the AE-0050 migration window so external callers do
+    Kept callable during the migration window so external callers do
     not break. New code must use ``resolve_and_reconcile_serving_paths`` to make
     the ``reconcile_current_index`` side effect explicit.
     """

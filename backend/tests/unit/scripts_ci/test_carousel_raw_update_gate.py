@@ -1,8 +1,8 @@
-"""Rule-fires tests for the carousel raw-UPDATE lint gate (AE-0315, AE-0180).
+"""Rule-fires tests for the carousel raw-UPDATE lint gate.
 
 Feature: tests/features/carousel_run_progress_reaper.feature
 The gate bans NEW raw UPDATEs against carousel_projects/carousel_slides
-outside the allowlisted, epoch-guarded sites. Per the AE-0180 standard, the
+outside the allowlisted, epoch-guarded sites. Per the rule-fires standard, the
 seeded-violation tests prove the rule FIRES — a pass on the real tree alone
 proves nothing.
 """
@@ -80,8 +80,9 @@ class TestCarouselRawUpdateGate:
         assert scan_for_raw_updates(_SRC_ROOT) == []
 
     def test_allowlist_matches_survey_enumeration(self) -> None:
-        # The allowlist must stay in lockstep with the write-site survey §2
-        # (+ the AE-0320 phase-drift convergence CAS, mirroring the reaper flip).
+        """The allowlist must stay in lockstep with the write-site survey §2, plus the
+        phase-drift convergence CAS that mirrors the reaper flip.
+        """
         assert (
             frozenset({
                 "application/services/optimistic_lock_service.py",

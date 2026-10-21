@@ -1,4 +1,4 @@
-"""Rule-fires tests for scripts/ci/check_image_bridge_env_parity.py (AE-0393, AE-0180).
+"""Rule-fires tests for scripts/ci/check_image_bridge_env_parity.py.
 
 The checker fails the ``backend:autopilot-env`` gate when an image bridge
 setting is missing from a prod surface, when a secret is not a GitHub secret
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0393 — a CLI checker test must invoke a subprocess
+import subprocess  # noqa: S404  # integrity-ok: a CLI checker test must invoke a subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -107,7 +107,7 @@ def _write(tmp_path: Path, values: dict[str, dict[str, str]]) -> list[str]:
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0393 — fixed interpreter, test-controlled paths
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, test-controlled paths
         [PYTHON, str(CHECKER), *args],
         capture_output=True,
         text=True,

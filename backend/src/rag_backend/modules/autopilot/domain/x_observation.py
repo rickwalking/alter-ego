@@ -111,13 +111,15 @@ def plan_observations(
 def classify_post(
     post: ObservedPostInput, as_of: datetime
 ) -> AcceptedObservation | ObservationRejection:
-    """Accept one recent status post, or the reason that item was refused."""
+    """Accept one recent status post, or the reason that item was refused.
+
+    Line breaks become spaces before control characters are dropped, so a stored
+    post keeps word boundaries a quote excerpt can span.
+    """
     cleaned_url = strip_controls(post.url)
     target = parse_status_url(cleaned_url)
     if target is None:
         return _reject(cleaned_url, REASON_NOT_STATUS_URL)
-    # AE-0406: line breaks become spaces before control characters are
-    # dropped, so "a\nb" is stored as "a b" (a quote excerpt can span it).
     text = strip_controls(spaced(post.text))
     if text == "":
         return _reject(cleaned_url, REASON_EMPTY_TEXT)

@@ -1,4 +1,4 @@
-"""Unit tests for the palette catalog service (AE-0270).
+"""Unit tests for the palette catalog service.
 
 Feature: Custom palette CRUD API (tests/features/palette_crud_api.feature)
 Exercises slug generation, cross-catalog keyword de-duplication, partial edits,
@@ -93,7 +93,7 @@ class TestSlug:
         assert slug.startswith("palette-")
 
     def test_reserved_name_does_not_shadow_route(self) -> None:
-        # The id suffix guarantees the slug is never exactly a reserved route.
+        """The id suffix guarantees the slug is never exactly a reserved route."""
         slug = make_slug("new", uuid4())
         assert slug != "new"
         assert slug.startswith("palette-")

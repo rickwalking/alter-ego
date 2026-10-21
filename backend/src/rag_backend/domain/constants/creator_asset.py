@@ -1,4 +1,10 @@
-"""Constants for managed carousel creator branding assets."""
+"""Constants for managed carousel creator branding assets.
+
+The magic bytes confirm a declared image MIME type. Hook, CTA and POV are the
+photo-library roles. ``CREATOR_ASSET_ROLE_COVER`` marks a GrokBot slide-1 cover:
+stored like a library photo but never part of the owner's library (absent from
+``CREATOR_ASSET_ROLES`` and hidden from its list).
+"""
 
 CREATOR_ASSET_MAX_BYTES = 5 * 1024 * 1024
 CREATOR_ASSET_MAX_DIMENSION = 4096
@@ -8,7 +14,6 @@ CREATOR_ASSET_MIME_JPEG = "image/jpeg"
 CREATOR_ASSET_MIME_PNG = "image/png"
 CREATOR_ASSET_MIME_WEBP = "image/webp"
 
-# Image format magic bytes used to confirm declared MIME types.
 CREATOR_ASSET_JPEG_MAGIC = b"\xff\xd8\xff"
 CREATOR_ASSET_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 CREATOR_ASSET_RIFF_MAGIC = b"RIFF"
@@ -41,7 +46,6 @@ ERR_CREATOR_ASSET_FORBIDDEN = "creator_asset_forbidden"
 ERR_CREATOR_ASSET_URL_REJECTED = "creator_asset_url_rejected"
 ERR_CREATOR_ASSET_PATH_REJECTED = "creator_asset_path_rejected"
 
-# AE-0376: photo library roles (growth plan 16.3 D).
 CREATOR_ASSET_ROLE_HOOK = "hook"
 CREATOR_ASSET_ROLE_CTA = "cta"
 CREATOR_ASSET_ROLE_POV = "pov"
@@ -51,8 +55,6 @@ CREATOR_ASSET_ROLES: frozenset[str] = frozenset({
     CREATOR_ASSET_ROLE_POV,
 })
 CREATOR_ASSET_ROLE_PATTERN = "^(hook|cta|pov)$"
-# AE-0418: a GrokBot slide-1 cover. Stored like a library photo but never part
-# of the owner's library (not in CREATOR_ASSET_ROLES, hidden from its list).
 CREATOR_ASSET_ROLE_COVER = "cover"
 CREATOR_ASSET_POSE_TAG_MAX_CHARS = 40
 CREATOR_ASSET_MEDIA_TYPE_WEBP = "image/webp"

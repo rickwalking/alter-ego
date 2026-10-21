@@ -1,4 +1,4 @@
-"""Export preflight: every slide artwork the HTML references exists (AE-0434).
+"""Export preflight: every slide artwork the HTML references exists.
 
 Runs before Playwright opens the page. A missing ``images/slide_N.jpg`` makes
 ``img.decode()`` reject, which the decode step reports as the misleading

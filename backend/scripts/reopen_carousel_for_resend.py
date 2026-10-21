@@ -1,9 +1,9 @@
 """One-shot ops: reopen an already-approved (terminated) carousel so it can be
-sent back to an earlier phase via the normal /workflow/resume API (AE-0288).
+sent back to an earlier phase via the normal /workflow/resume API.
 
 WHY THIS EXISTS
 ---------------
-The AE-0288 ``approved_hold`` fix keeps carousels approved AFTER deploy parked at
+The ``approved_hold`` fix keeps carousels approved AFTER deploy parked at
 a resumable interrupt. Carousels that were approved BEFORE the fix shipped have a
 TERMINATED LangGraph thread (``snapshot.next == ()``) that the resume API cannot
 re-enter. This script does the single direct checkpointer operation that puts
@@ -20,7 +20,7 @@ re-opens the final-review gate and marks the project row as in-review (draft) so
 the carousel cannot be published while it is being re-reviewed. Idempotent: a
 thread already paused at ``final_review`` is reported and left unchanged.
 
-USAGE (run inside the backend container, AFTER the AE-0288 deploy)
+USAGE (run inside the backend container, AFTER the ``approved_hold`` fix deploy)
     docker compose exec backend uv run python \
         scripts/reopen_carousel_for_resend.py <project_id>
 """

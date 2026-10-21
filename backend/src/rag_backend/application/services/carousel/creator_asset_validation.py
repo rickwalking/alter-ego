@@ -165,6 +165,11 @@ def open_within_pixel_budget(content: bytes) -> PilImage:
 
 
 def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
+    """Decode the upload, apply its EXIF orientation and normalize the colour mode.
+
+    Transparency is kept so pre-cut PNG or WebP photos sit on the POV slide-1
+    background; opaque images become RGB.
+    """
     from PIL import Image, ImageOps
 
     try:
@@ -173,8 +178,6 @@ def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
             width, height = image.size
             _validate_dimensions(width, height)
             oriented = ImageOps.exif_transpose(image)
-            # AE-0376: keep transparency so pre-cut PNG/WebP photos ("lift
-            # subject") sit on the POV slide-1 background; opaque stays RGB.
             rgb = oriented.convert(_target_mode(oriented))
     except CreatorAssetValidationError:
         raise

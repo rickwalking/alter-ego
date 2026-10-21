@@ -1,4 +1,4 @@
-"""Render the carousel's Story image before Meta fetches it (AE-0369)."""
+"""Render the carousel's Story image before Meta fetches it."""
 
 from __future__ import annotations
 
@@ -36,12 +36,12 @@ async def prepare_story_image(
 
 
 def _render(paths: StoryPaths | None) -> bool:
+    """Pillow's ``UnidentifiedImageError`` is an ``OSError``; the Story is optional."""
     if paths is None:
         return False
     try:
         return render_story_image(paths)
     except (OSError, ValueError) as exc:
-        # Pillow's UnidentifiedImageError is an OSError. The Story is optional.
         logger.warning("story_image_render_failed", error=type(exc).__name__)
         return False
 

@@ -1,4 +1,4 @@
-"""AE-0430: EN keeps PT's structured shape; label scaffolding never reaches copy.
+"""EN keeps PT's structured shape; label scaffolding never reaches copy.
 
 Gherkin: tests/features/content_gate_repair_ae0430.feature (sections C and E).
 """
@@ -97,7 +97,10 @@ class TestTranslationKeepsShape:
         assert VIOLATION_TRANSLATION_SHAPE_MISMATCH not in codes
 
     async def test_pt_tldr_in_en_is_a_blocker_the_repair_fixes(self) -> None:
-        """Scenario: A PT TL;DR never ships as the EN one."""
+        """Scenario: A PT TL;DR never ships as the EN one.
+
+        The model skips the TL;DR in round 1; round 2 asks again and fixes it.
+        """
         llm = _llm({
             "slides_en": [
                 {
@@ -120,7 +123,6 @@ class TestTranslationKeepsShape:
         en = cast(dict[str, object], pasted[0]["presentation_en"])
         en["tldr_strip"] = _TLDR_PT
         assert ("tldr_strip", VIOLATION_TRANSLATION_NOT_ENGLISH) in _fields(pasted)
-        # The model skips the TL;DR in round 1; round 2 asks again and fixes it.
         repairer = _SkipFirstRound({"1:en:tldr_strip": _TLDR_EN})
 
         outcome = await run_gate_repair(

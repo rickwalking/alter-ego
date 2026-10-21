@@ -1,4 +1,4 @@
-"""Typed command/query objects for the conversation bounded context (AE-0101).
+"""Typed command/query objects for the conversation bounded context.
 
 Private to the module — the public facade re-exports the handler entry points;
 cross-module code never imports this path directly. These dataclasses carry the
@@ -9,7 +9,7 @@ no arbitrary dict bundles cross the boundary.
 The objects are framework-free (no FastAPI/SQLAlchemy/Pinecone, no concrete
 Postgres repository, no global container): they reference only the module's own
 domain types and plain scalars, so the application layer stays a port+facade
-consumer (AE-0101 AC).
+consumer.
 """
 
 from __future__ import annotations

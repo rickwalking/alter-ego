@@ -1,8 +1,11 @@
-"""AE-0436: one label-scaffolding detector for the drafter parser AND the gate,
+"""One label-scaffolding detector for the drafter parser AND the gate,
 plus the per-locale emphasis rule (F-03, F-04, F-09).
 
 Gherkin: tests/features/carousel_label_scaffolding_ae0436.feature
 The fixtures are the real prod strings from carousels 7acaf967 and 5344b6c6.
+
+The PT_BR fixtures are prod payloads from the 2026-10-19 QA run (carousels 7acaf967 and
+5344b6c6).
 """
 
 from __future__ import annotations
@@ -44,7 +47,6 @@ from rag_backend.domain.constants.carousel_presentation import (
 
 V4 = "hero_lower_third_v4"
 
-# Prod fixtures (QA 2026-10-19 run, carousels 7acaf967 and 5344b6c6).
 PT_BR_BODY = "**PT-BR**\nInovação não exige **bilhões**\nA pressão competitiva não é mais sobre escala, é sobre **eficiência**."
 CTA_CREATOR_BODY = (
     "Then save this carousel and send it to whoever is locking in the AI stack. "
@@ -87,7 +89,11 @@ def _blockers(payload: dict[str, object], locale: str) -> set[tuple[str | None, 
 
 @pytest.mark.unit
 class TestLabelScaffoldingDetector:
-    """Scenarios: locale markers and field labels are detected at their positions."""
+    """Scenarios: locale markers and field labels are detected at their positions.
+
+    Mid-sentence plain labels are real copy, and bold emphasis without a label colon is
+    plain copy.
+    """
 
     @pytest.mark.parametrize(
         ("text", "expected"),
@@ -138,12 +144,10 @@ class TestLabelScaffoldingDetector:
     @pytest.mark.parametrize(
         "text",
         [
-            # Mid-sentence plain labels are real copy (orchestrator review).
             "Mande o body: JSON com o prompt e o modelo.",
             "Leia o title: da issue antes.",
             "The response body: a JSON array.",
             "TL;DR: o custo caiu 3x.",
-            # Bold emphasis without a label colon is plain copy.
             "the **Summary** of the changes is short",
         ],
     )
@@ -177,7 +181,7 @@ class TestDrafterStrip:
         )
 
     def test_ae0430_strip_behavior_is_kept(self) -> None:
-        """The AE-0430 bold-marker strip keeps working (regression)."""
+        """The earlier bold-marker strip keeps working (regression)."""
         assert strip_scaffold_labels("**PT**\n**body:** Texto.\n**EN:**") == "Texto."
 
     def test_bold_pt_br_draft_builds_a_clean_pt_payload(self) -> None:
@@ -463,6 +467,7 @@ class TestFullDeckValidation:
     """Scenario: the prod leaks block the localized-slide validation."""
 
     def test_prod_leaks_block_and_repair_clears(self) -> None:
+        """The generation-time bounded repair clears both payloads."""
         slide: dict[str, object] = {
             "slide_index": 5,
             "slide_type": "content",
@@ -486,7 +491,6 @@ class TestFullDeckValidation:
         assert ("body", VIOLATION_DRAFTING_SCAFFOLD_PRESENT, "pt") in blocked
         assert ("body", VIOLATION_DRAFTING_SCAFFOLD_PRESENT, "en") in blocked
 
-        # The generation-time bounded repair clears both payloads.
         from rag_backend.application.services.carousel.presentation_review_repair import (
             repair_localized_slides_sync,
         )

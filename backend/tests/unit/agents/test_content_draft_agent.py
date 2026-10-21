@@ -20,9 +20,10 @@ class TestContentDraftAgent:
 
     @pytest.fixture
     def mock_llm(self) -> AsyncMock:
+        """draft_slide binds the model config, so .bind must return a runnable whose
+        ainvoke is the configured mock (not an auto-created async child).
+        """
         llm = AsyncMock()
-        # AE-0291: draft_slide binds the model config; .bind must return a runnable
-        # whose ainvoke is the configured mock (not an auto-created async child).
         llm.bind = MagicMock(return_value=llm)
         return llm
 
@@ -67,7 +68,7 @@ class TestContentDraftAgent:
     async def test_draft_slide_binds_v4_model_config(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0291: the v4 YAML model block reaches the LLM via .bind (not discarded)."""
+        """The v4 YAML model block reaches the LLM via .bind (not discarded)."""
         mock_llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
                 "draft_text": "c",
@@ -85,7 +86,7 @@ class TestContentDraftAgent:
     async def test_draft_slide_threads_sibling_and_previous_draft_once(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0291: sibling context + previous draft + a single imperative revision
+        """Sibling context + previous draft + a single imperative revision
         block reach the prompt; reviewer notes are NOT rendered twice."""
         mock_llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
@@ -113,7 +114,7 @@ class TestContentDraftAgent:
     async def test_changed_previous_draft_busts_cache(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0291: injecting the prior draft varies full_prompt so a regeneration
+        """Injecting the prior draft varies full_prompt so a regeneration
         does not return the cached (rejected) response."""
         mock_llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
@@ -131,8 +132,13 @@ class TestContentDraftAgent:
     async def test_draft_slide_passes_langfuse_config(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0291: the content LLM call carries the Langfuse runnable config — the
-        exact object returned by get_langfuse_runnable_config, not just non-None."""
+        """The content LLM call carries the Langfuse runnable config — the
+        exact object returned by get_langfuse_runnable_config, not just non-None.
+
+        The invocation lives in the shared retry helper, so the patch follows the call
+        there; the second positional argument of ainvoke(messages, config) is the
+        Langfuse config.
+        """
         mock_llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
                 "draft_text": "c",
@@ -142,21 +148,17 @@ class TestContentDraftAgent:
         )
         sentinel = {"callbacks": ["langfuse-marker"]}
 
-        # AE-0330 moved the invocation into the shared retry helper; the
-        # AE-0291 guarantee (the call carries the Langfuse config) is unchanged,
-        # so the patch follows the call to where it now lives.
         with patch(
             "rag_backend.agents.llm_json_retry.get_langfuse_runnable_config",
             return_value=sentinel,
         ):
             await agent.draft_slide(1, "Title", ["Point"])
 
-        # ainvoke(messages, config) — the second positional is the Langfuse config.
         assert mock_llm.ainvoke.await_args.args[1] == sentinel
 
 
 class TestContentDraftCachePoisoning:
-    """AE-0330: an unparseable response must never be cached.
+    """An unparseable response must never be cached.
 
     Live 2026-09-14: the content phase returned empty content, which was cached
     and made every retry fail instantly without calling the model at all.
@@ -196,14 +198,15 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == 2  # re-rolled, phase survived
+        assert mock_llm.ainvoke.await_count == 2
 
     async def test_two_empty_responses_raise_and_cache_nothing(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
+        """Each of the 5 attempts is a call plus its empty re-roll, so 10 empty answers
+        exhaust the model.
+        """
         # Scenario: the re-roll is bounded, and a failure caches nothing.
-        # AE-0395: each of the 5 attempts is a call plus its empty re-roll, so
-        # 10 empty answers exhaust the model.
         empty_calls = 2 * LLM_ATTEMPTS_PER_MODEL
         mock_llm.ainvoke.side_effect = [
             *(MagicMock(content="") for _ in range(empty_calls)),
@@ -215,7 +218,7 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == empty_calls + 1  # nothing poisoned
+        assert mock_llm.ainvoke.await_count == empty_calls + 1
 
     async def test_malformed_response_is_repaired(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
@@ -229,7 +232,7 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == 2  # repaired, phase survived
+        assert mock_llm.ainvoke.await_count == 2
 
     async def test_poisoned_cache_entry_is_evicted(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
@@ -243,4 +246,4 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == 2  # evicted, so the model ran again
+        assert mock_llm.ainvoke.await_count == 2

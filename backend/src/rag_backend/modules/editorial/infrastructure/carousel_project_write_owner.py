@@ -1,6 +1,6 @@
-"""Single write owner for the workflow-owned ``carousel_projects`` fields (AE-0107).
+"""Single write owner for the workflow-owned ``carousel_projects`` fields.
 
-Per the AE-0105 field-ownership map (§5.1) every *workflow-owned* (WO) column of
+Per the field-ownership map (§5.1) every *workflow-owned* (WO) column of
 the legacy ``carousel_projects`` row has exactly one write owner. This module is
 that owner — the legacy single-writer adapter: it is the **sole** place that
 directly mutates the WO ORM columns (``status``, ``error_message``,
@@ -9,20 +9,27 @@ directly mutates the WO ORM columns (``status``, ``error_message``,
 **sole** caller of the ``lock_version`` resume compare-and-swap.
 
 It is the write side of the legacy-carousel ACL — it lives in the editorial
-module's infrastructure layer (alongside the AE-0109 ``LegacyCarouselAcl``) and
+module's infrastructure layer (alongside the ``LegacyCarouselAcl``) and
 is exposed upward only through the editorial module's public facade. No editorial
-routes are added in this phase (AE-0110). All other workflow writers (the
+routes are added in this phase. All other workflow writers (the
 start/resume routes via the editorial workflow service, the editorial workflow
 service phase sync, the background resume runner) route their WO writes through
 this owner (via the facade), which commits through the platform Unit of Work
 (``SqlAlchemyUnitOfWork``) — the single committer (ADR-0009 §9).
 
 Behavior-preserving: the WO column values written here are byte-identical to the
-pre-AE-0107 scattered writers; only the *ownership* and the *commit boundary* are
+legacy scattered writers; only the *ownership* and the *commit boundary* are
 consolidated. The ``lock_version`` resume bump delegates unchanged to
 :meth:`OptimisticLockService.bump_carousel_version` (the byte-identical resume
 CAS), so its expected-version contract and its pairing with the
 artifact-activation CAS (which keeps writing its own bump) are untouched.
+
+The checkpoint sync copies workflow-state keys onto the legacy row. ``caption``,
+``linkedin_post_pt`` and ``linkedin_post_en`` are not synced: their canonical home is
+``blog_posts.distribution``, written by the carousel-blog dual-write, and syncing them
+would let a resumed ``AsyncPostgresSaver`` checkpoint resurrect embedded-column writes.
+Only ``blog_markdown`` stays synced; its canonical home is the carousel-origin
+``blog_posts`` row written by the same dual-write.
 """
 
 from __future__ import annotations
@@ -45,17 +52,6 @@ from rag_backend.domain.models import CarouselStatus
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
-# Workflow-state keys synced onto the legacy row from the LangGraph checkpoint.
-# Pairs of (ORM column attribute, workflow-state key).
-#
-# AE-0204 decouple: ``caption`` / ``linkedin_post_pt`` / ``linkedin_post_en`` were
-# REMOVED from this checkpoint sync. Those three distribution fields now have a
-# canonical home (``blog_posts.distribution``) written by the carousel-blog
-# dual-write chokepoint; the checkpoint sync must NOT keep the embedded carousel
-# columns current as a second source of truth, else a resumed ``AsyncPostgresSaver``
-# checkpoint would resurrect embedded-column writes for fields the canonical home
-# already owns. Only ``blog_markdown`` (AE-0163's domain — its canonical home is the
-# carousel-origin ``blog_posts`` row written by the same dual-write) remains synced.
 _DISTRIBUTION_SYNC_FIELDS: tuple[tuple[str, str], ...] = (
     ("blog_markdown", "blog_markdown"),
 )
@@ -132,7 +128,7 @@ class CarouselProjectWriteOwner:
         await self.commit()
 
     async def mark_needs_republish(self, project_id: str) -> None:
-        """Stamp the AE-0314 republish marker (flush only; caller commits).
+        """Stamp the republish marker (flush only; caller commits).
 
         Set in the SAME transaction as the post-completion slide write so a
         corrected carousel can never lose its owed rebuild.
@@ -144,7 +140,7 @@ class CarouselProjectWriteOwner:
         await self._session.flush()
 
     async def clear_needs_republish(self, project_id: str) -> None:
-        """Clear the AE-0314 republish marker and commit (single owner).
+        """Clear the republish marker and commit (single owner).
 
         Commit lives here (not in the infrastructure/database sweeper) so the
         ddd:adapter-commit boundary holds — adapters flush, owners commit.

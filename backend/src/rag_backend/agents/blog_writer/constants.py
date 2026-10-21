@@ -1,15 +1,17 @@
-"""Constants of the blog writer agent (AE-0425, ADR-0025)."""
+"""Constants of the blog writer agent (ADR-0025).
+
+Prompt version v2 tells the judge, rewrite and draft prompts which language to keep. The
+AGENT_* names are the JsonRetryPolicy.agent tags used in logs.
+"""
 
 from typing import Final
 
 PROMPT_DOMAIN: Final = "blog"
-# AE-0435: v2 judge/rewrite/draft are told the language to keep.
 PROMPT_VERSION: Final = "v2"
 PROMPT_DRAFT: Final = "draft"
 PROMPT_REWRITE: Final = "rewrite"
 PROMPT_JUDGE: Final = "judge"
 
-# How much raw material reaches one prompt (characters / items).
 MAX_RESEARCH_ITEMS: Final = 12
 MAX_RESEARCH_ITEM_CHARS: Final = 1_500
 MAX_NOTE_CHARS: Final = 2_000
@@ -19,7 +21,6 @@ MAX_PERSONA_SAMPLES: Final = 5
 MAX_PERSONA_SAMPLE_CHARS: Final = 1_500
 MAX_JUDGE_NOTES: Final = 8
 
-# Model JSON keys.
 KEY_TITLE: Final = "title"
 KEY_SECTIONS: Final = "sections"
 KEY_HEADING: Final = "heading"
@@ -30,7 +31,6 @@ KEY_NOTES: Final = "notes"
 LANGUAGE_NAMES: Final[dict[str, str]] = {"pt": "Brazilian Portuguese", "en": "English"}
 PERSONA_NONE: Final = "None"
 
-# Logs / agent names (JsonRetryPolicy.agent).
 AGENT_DRAFT: Final = "blog_writer_draft"
 AGENT_REWRITE: Final = "blog_writer_rewrite"
 AGENT_JUDGE: Final = "blog_writer_judge"

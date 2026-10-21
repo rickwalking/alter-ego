@@ -1,4 +1,8 @@
-"""Instruction context assembly for carousel editorial agents."""
+"""Instruction context assembly for carousel editorial agents.
+
+The imperative rework framing is rendered once, in the instruction context; the content
+prompt carries no second revision-notes block.
+"""
 
 from __future__ import annotations
 
@@ -45,8 +49,6 @@ SECTION_SIBLING = "## Other slides in this carousel"
 SECTION_PHASE_SKILL = "## Phase skill"
 SECTION_SHARED = "## Shared standards"
 
-# AE-0291: imperative rework framing. Rendered once, here in the instruction
-# context (the v4 content.yaml no longer carries a second revision-notes block).
 REVISION_IMPERATIVE_HEADER = (
     "REGENERATION: your previous draft for this slide was REJECTED. You MUST apply "
     "every reviewer note below and change the copy accordingly. Do not return the "
@@ -67,7 +69,14 @@ PHASE_TO_SUBAGENT: dict[str, str] = {
 
 @dataclass(frozen=True)
 class InstructionContextRequest:
-    """Inputs for bounded editorial instruction context assembly."""
+    """Inputs for bounded editorial instruction context assembly.
+
+    ``sibling_context`` (other slides' headings and key points) and the prior rejected
+    draft are injected here so tail truncation drops the shared boilerplate added later
+    before this cross-slide and rework context. ``slide_count`` is the project's deck
+    size, so a ranged contract (POV, Radar IA v4) is rendered with the slide map the
+    deck actually has.
+    """
 
     phase: str
     locale: str
@@ -76,13 +85,8 @@ class InstructionContextRequest:
     slide_number: int | None = None
     policy_version: str = DEFAULT_PRESENTATION_POLICY_VERSION
     prompt_version: str = CAROUSEL_PROMPT_VERSION_V3
-    # AE-0291: sibling outline (other slides' headings + key points) and the prior
-    # rejected draft body, injected here so tail-truncation drops shared boilerplate
-    # (added later) before this cross-slide / rework context.
     sibling_context: str = ""
     previous_draft: str = ""
-    # AE-0375: the project's deck size, so a ranged contract (POV, Radar IA v4)
-    # is rendered and targeted with the slide map the deck actually has.
     slide_count: int | None = None
 
 
@@ -159,7 +163,7 @@ def _phase_resources(phase: str) -> tuple[str, tuple[str, ...]]:
 
 
 def _revision_block(revision_notes: str, previous_draft: str) -> str:
-    """AE-0291: imperative rework framing + previous rejected draft (single site)."""
+    """Imperative rework framing + previous rejected draft (single site)."""
     notes = revision_notes.strip()
     prior = previous_draft.strip()
     if not notes and not prior:
@@ -173,7 +177,7 @@ def _revision_block(revision_notes: str, previous_draft: str) -> str:
 
 
 def _sibling_block(sibling_context: str) -> str:
-    """AE-0291: other slides' outline so each slide can differentiate its copy."""
+    """Other slides' outline so each slide can differentiate its copy."""
     context = sibling_context.strip()
     if not context:
         return _NONE_PLACEHOLDER

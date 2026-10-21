@@ -1,4 +1,4 @@
-"""Composition-root factory for the stale-run reaper (AE-0315).
+"""Composition-root factory for the stale-run reaper.
 
 Builds the infrastructure reaper with its Settings-derived thresholds and a
 checkpoint phase-status reader over the app's LangGraph checkpointer, so the

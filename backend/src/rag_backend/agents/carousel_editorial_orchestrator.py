@@ -40,8 +40,12 @@ class CarouselEditorialOrchestrator:
         checkpointer: object | None = None,
         image_registry: ImageProviderRegistry | None = None,
     ) -> None:
-        # AE-0391: research + outline need reasoning; drafting, persona scoring
-        # and distribution copy (translation, caption) run on the fast model.
+        """Wire the phase agents to their per-role models.
+
+        Research and outline run on the reasoning model; drafting, persona scoring and
+        distribution copy (translation, caption) run on the fast model. The field repair
+        of a blocked content gate also runs on the fast model and is traced in Langfuse.
+        """
         roles = ChatModelRoles.coerce(llm)
         self._llm = roles.fast
         self._artifact_runner = PhaseArtifactRunner(
@@ -51,8 +55,6 @@ class CarouselEditorialOrchestrator:
                 llm=roles.fast,
                 image_registry=image_registry,
                 draft_concurrency=roles.draft_concurrency,
-                # AE-0430: turns on the field repair of a blocked content gate
-                # (fast model), traced in Langfuse.
                 gate_repair_tracing=get_langfuse_runnable_config,
             )
         )
@@ -77,7 +79,7 @@ class CarouselEditorialOrchestrator:
         sources: list[dict[str, str]],
         params: ResearchEnrichmentParams,
     ) -> list[dict[str, str]]:
-        """AE-0317: deterministic scrape + topic-search enrichment pre-synthesis."""
+        """Deterministic scrape + topic-search enrichment pre-synthesis."""
         return await enrich_sources(sources, params)
 
     def _bind_resume_context(
@@ -122,7 +124,7 @@ class CarouselEditorialOrchestrator:
         db: AsyncSession | None = None,
         workflow_input: EditorialWorkflowStartInput | None = None,
     ) -> CarouselWorkflowState:
-        """AE-0363: re-run a parked pending node with the resume context bound."""
+        """Re-run a parked pending node with the resume context bound."""
         self._bind_resume_context(db=db, workflow_input=workflow_input)
         return await self._engine.continue_pending(project_id)
 

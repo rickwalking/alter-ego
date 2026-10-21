@@ -61,15 +61,17 @@ def build_topic_intake(
     session: Annotated[AsyncSession, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> TopicIntakeService:
-    """Wire the intake service for this request."""
+    """Wire the intake service for this request.
+
+    ``posts`` supplies the x-signals post texts that ``pov_news`` quotes cite;
+    ``covers`` resolves the GrokBot covers the topics name.
+    """
     store = SqlAlchemyTopicIntakeStore(session)
     deps = TopicIntakeDependencies(
         store=store,
         clock=clock_from(request),
         daily_cap=settings.autopilot_daily_cap,
-        # AE-0406: the x-signals post texts the ``pov_news`` quotes cite.
         posts=store,
-        # AE-0418: the GrokBot covers the topics name.
         covers=SqlCoverAssetStore(session),
     )
     return TopicIntakeService(deps)

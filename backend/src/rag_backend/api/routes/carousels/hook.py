@@ -1,4 +1,4 @@
-"""The owner's slide-1 hook pick at the outline gate (AE-0375, ADR-0021 D5).
+"""The owner's slide-1 hook pick at the outline gate (ADR-0021 D5).
 
 The outline phase stores five hook candidates on outline slide 1; the owner
 picks or edits one here. The content phase drafts slide 1 with this hook.

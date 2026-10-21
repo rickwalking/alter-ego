@@ -1,4 +1,4 @@
-"""AE-0367: "Fix issues" end to end on the real editorial engine.
+"""The "Fix issues" flow end to end on the real editorial engine.
 
 Real: the SQLite slide rows, ``EditorialWorkflowService`` with a LangGraph
 checkpoint, the editorial facade, the owner autofix service, the autopilot
@@ -400,7 +400,7 @@ async def _flow_for(
     recovery = _Recovery(runs=runs)
     service = OwnerActionService(
         replace(
-            flow.service._deps,  # the shared webhook wiring of _flow
+            flow.service._deps,
             runs=runs,
             recovery=recovery,
             autofix=autofixer,
@@ -490,6 +490,9 @@ class TestOwnerAutofixServiceEdges:
     async def test_missing_carousel_and_rows_only_inspection(
         self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Without the engine the inspection sees rows only: no outline key points and
+        no EN translation.
+        """
         flow = await _flow(db_session, monkeypatch)
         service = OwnerAutofixService(
             OwnerAutofixDeps(db=db_session, repo=PostgresCarouselRepository(db_session))
@@ -500,7 +503,6 @@ class TestOwnerAutofixServiceEdges:
             AutofixApplyCommand(project_id=missing, expected_version=1)
         )
         assert result.status == "nothing_to_fix"
-        # Without the engine: rows only, no outline key points, EN not translated.
         found = await service.inspect(flow.project_id)
         assert found.fixable
         applied = await service.apply(

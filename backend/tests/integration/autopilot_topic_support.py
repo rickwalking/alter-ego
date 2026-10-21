@@ -1,4 +1,4 @@
-"""Shared fixtures for autopilot topic-intake tests (AE-0353)."""
+"""Shared fixtures for autopilot topic-intake tests."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ _BRIEF_TEMPLATE = "A plain brief about {title}."
 
 
 def _brief_for(title: str, brief: str | None) -> str:
-    """AE-0361: the default brief names the title, so it stays on theme."""
+    """The default brief names the title, so it stays on theme."""
     if brief is not None:
         return brief
     return _BRIEF_TEMPLATE.format(title=title)

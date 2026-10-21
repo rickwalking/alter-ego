@@ -1,10 +1,10 @@
-"""Carousel delete detaches its published blog row (AE-0296 / AE-0422).
+"""Carousel delete detaches its published blog row.
 
 Scenario: Deleting a carousel project reverts its published blog row to draft
 (see features/blog_post_management_ae0296.feature and
 backend/tests/features/blog_no_carousel_slides_ae0422.feature).
 
-AE-0422: a carousel save no longer creates a blog row, so these tests insert the
+A carousel save no longer creates a blog row, so these tests insert the
 carousel-origin row explicitly before deleting the project.
 """
 

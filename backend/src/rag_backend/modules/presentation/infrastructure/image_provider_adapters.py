@@ -1,4 +1,4 @@
-"""Image-provider adapters for the presentation bounded context (AE-0119).
+"""Image-provider adapters for the presentation bounded context.
 
 These are the infrastructure backing for the presentation image-generation
 ports (``rag_backend.modules.presentation.domain.ports``):
@@ -11,7 +11,7 @@ ports (``rag_backend.modules.presentation.domain.ports``):
   resolves an ``(image_model, image_style)`` preset to a configured
   :class:`ImageProvider` (vendor service + style strategy).
 
-**Re-export, not relocation (AE-0117/AE-0119 constraint).** The concrete vendor
+**Re-export, not relocation.** The concrete vendor
 services continue to live at ``rag_backend.infrastructure.external.openai_image``
 / ``...gemini_image`` and the registry at
 ``rag_backend.application.services.image_provider_registry``. This module merely

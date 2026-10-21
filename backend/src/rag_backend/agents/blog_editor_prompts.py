@@ -1,4 +1,4 @@
-"""Versioned blog editor prompts (``agents/prompts/blog/v1/``, AE-0424).
+"""Versioned blog editor prompts (``agents/prompts/blog/v1/``).
 
 Renders the image and section-translation templates. The application services
 receive these functions from the API composition edge (they never import the

@@ -1,17 +1,17 @@
-"""Model fix of failing slides after the deterministic repair (AE-0401).
+"""Model fix of failing slides after the deterministic repair.
 
 Autopilot only, at the content and design gates. A gate that still fails on
 content quality (blocking presentation rules) or on a low voice score after
-the AE-0392 repair is not revised: each failing slide is rewritten by the
+the deterministic repair is not revised: each failing slide is rewritten by the
 fast model, at most ``AUTOPILOT_AUTOFIX_ATTEMPTS`` times, then by the
 reasoning model at most ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` times
-(AE-0407, attempts numbered on), the fixed slides are
+(attempts numbered on), the fixed slides are
 written through the editorial facade, and the gate is read again. A clean
 gate is approved; otherwise the run escalates to the owner with every slide
 the fix gave up on. The revise budget is never spent on these reasons; other
 reasons (research, outline, images, forbidden phrases) keep revise/escalate.
 
-AE-0433: a fixed slide the persona judge could not score keeps its old
+A fixed slide the persona judge could not score keeps its old
 (stale) voice score, so the gate read again can still fail on the voice
 floor with no slide failing. That is not "below threshold": the run waits
 (stays generating) for the re-score on the next tick and, once a slide
@@ -162,8 +162,8 @@ def _escalate(read: GateRead, outcome: SlideFixOutcome) -> GateRead:
 def _judge_pending(read: GateRead, outcome: SlideFixOutcome) -> bool:
     """Only the stale voice scores hold the gate: wait for the re-score.
 
-    AE-0433: the gate fails on the voice floor, no slide is still failing
-    and no rule is unfixable. AE-0439 (#154 B/C): the gate may already PASS
+    True when the gate fails on the voice floor, no slide is still failing
+    and no rule is unfixable. The gate may already PASS
     on a stale score (the read path ignores the pending marker) — the run
     still waits, and never approves on the stale score; and the wait fires
     only when the persona reason is the SOLE failure: a forbidden hit, a
@@ -183,7 +183,7 @@ def _judge_pending(read: GateRead, outcome: SlideFixOutcome) -> bool:
 
 
 def _unscored(read: GateRead, outcome: SlideFixOutcome) -> GateRead:
-    """Wait for the re-score, or escalate once the judge stayed down (AE-0433)."""
+    """Wait for the re-score, or escalate once the judge stayed down."""
     slides = list(outcome.unscored_slides)
     extra = {
         LOG_FIELD_UNSCORED_SLIDES: slides,
@@ -216,8 +216,8 @@ class SlideAutofixStep:
         Returns ``read`` unchanged when no model fix applies, the gate read
         again when it is now clean (or fails for another reason), a wait or
         a ``persona_judge_unavailable`` escalation when only unscored slides
-        hold it (AE-0433), else an escalation that lists the slides still
-        failing. AE-0439 (#154 B): pending re-scores are fixed even when the
+        hold it, else an escalation that lists the slides still
+        failing. Pending re-scores are fixed even when the
         gate PASSES on their stale scores, so a stale score is never
         approved and the markers clear once the judge scores again.
         """

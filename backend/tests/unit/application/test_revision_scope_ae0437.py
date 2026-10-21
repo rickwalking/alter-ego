@@ -1,4 +1,4 @@
-"""AE-0437: which slides a revision may change (pure helpers).
+"""Which slides a revision may change (pure helpers).
 
 Gherkin: tests/features/closing_actions_scoped_revisions_ae0437.feature
 (section D).
@@ -55,7 +55,7 @@ class TestNamedSlides:
             ("Apenas no slide 6, crie 3 ações", {6}),
             ("Corrija os slides 2 e 6. Não altere nenhum outro slide.", {2, 6}),
             ("slides 2-4 and slide 7", {2, 3, 4, 7}),
-            ("slides 4\u20132", {2, 3, 4}),  # en dash range
+            ("slides 4\u20132", {2, 3, 4}),
             ("slide 3 (pt body): body_empty. Slide renders only", {3}),
             ("Slide nº 5 e slides 1, 2 ou 3", {1, 2, 3, 5}),
             ("Deixe o tom mais leve", set()),

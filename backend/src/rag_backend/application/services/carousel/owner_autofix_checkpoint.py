@@ -1,8 +1,8 @@
-"""Mirror the owner autofix onto the workflow presentation copy (AE-0367).
+"""Mirror the owner autofix onto the workflow presentation copy.
 
 The repaired PT/EN payloads replace the checkpoint's ``localized_slides``
 payloads of the same slide, with a fresh validation report in the same patch.
-The owner's fix supersedes the AE-0366 casing-repair markers (as a reviewer
+The owner's fix supersedes the casing-repair markers (as a reviewer
 edit does), so they are dropped. A closing slide keeps its ``actions`` key:
 the rows store closing actions under ``features``.
 """

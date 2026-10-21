@@ -1,11 +1,11 @@
-"""Carousel public-release command for the publishing bounded context (AE-0128).
+"""Carousel public-release command for the publishing bounded context.
 
 Private to the module. The public facade re-exports the command + its result;
 cross-module code never imports this path directly.
 
 This command owns the carousel **public-release** write — making a carousel
 ``is_public`` — that ``crud.py:publish_carousel`` performed inline today. It is a
-behavior-preserving CONTRACT RELOCATION (the AE-0111 approval≠release split): the
+behavior-preserving CONTRACT RELOCATION (the approval≠release split): the
 command does EXACTLY what the legacy route did for the ``is_public`` write — the
 same ``is_public=True`` / ``current_phase=published`` mutation on the carousel
 entity (via the carousel repository) AND on the carousel ORM row, committed once.
@@ -17,7 +17,7 @@ The command depends only on contracts: the :class:`CarouselRepository` port and
 the :class:`CarouselReleasePort` (whose only adapter is the publishing ACL/owner
 in the infrastructure layer). It imports no ORM — the carousel ENTITY is passed
 through ``object`` and forwarded to the port, so this application layer stays
-ORM-free (AE-0128 layering constraint).
+ORM-free.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Owner Telegram actions (AE-0356). Approve-now taps use ``ap:pubnow`` (AE-0370).
+"""Owner Telegram actions. Approve-now taps use ``ap:pubnow``.
 
 Gherkin: tests/features/autopilot_owner_actions.feature
 """
@@ -374,6 +374,7 @@ async def test_unknown_callback_does_not_change_the_run() -> None:
 # Scenario: Rework never runs LLM regeneration inside the webhook (QA r1 H4)
 @pytest.mark.asyncio
 async def test_rework_images_revises_and_returns_to_the_owner() -> None:
+    """The webhook only queues the rework, so no editorial call happens yet."""
     world = _world()
     notices = _Notices()
     await _handle(world, _tap(1, _action("rework", world)))
@@ -383,7 +384,6 @@ async def test_rework_images_revises_and_returns_to_the_owner() -> None:
     assert world.pending.item.phase == GATE_IMAGES
     assert world.messenger.asks[-1].text == TEXT_FORCE_REPLY
     await _handle(world, _text(3, _FEEDBACK))
-    # The webhook only queued the rework: no editorial call yet.
     assert world.editorial.resumes == []
     assert world.runs.run.state is AutopilotRunState.REWORKING
     assert world.runs.run.rework_phase == GATE_IMAGES

@@ -1,4 +1,4 @@
-"""Carousel material source of the AE-0426 rebuild (project-less candidates).
+"""Carousel material source of the hidden-post rebuild (project-less candidates).
 
 A candidate with no project id (or a malformed one) is ``None`` and returns
 before any carousel read.

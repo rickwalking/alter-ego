@@ -6,13 +6,13 @@ lookup inside the module (ADR-0009 §9) — the inbound edge constructs the
 request-scoped collaborators (which enlist in the request's Unit of Work) and
 passes them in.
 
-**Behavior-preserving wiring (AE-0117).** The presentation adapters are NOT
+**Behavior-preserving wiring.** The presentation adapters are NOT
 relocated in this phase; the inbound caller builds the request-scoped
 ``CarouselRepository`` exactly as the legacy carousel routes do today and hands
 it (with the request's Unit of Work) to this bootstrap. The collaborators are
 accepted via the typed :class:`PresentationAdapters` bundle so the function keeps
 to a single grouped argument (backend/CLAUDE.md ≤3 args). Provider ports
-(policy/slide-validation) arrive in AE-0119; until then the service stays
+(policy/slide-validation) arrive later; until then the service stays
 repository-only.
 
 The ``PlatformServices`` protocol is a local placeholder (as in the reference
@@ -58,10 +58,10 @@ class PresentationAdapters:
     """Pre-constructed, request-scoped collaborators for the presentation module.
 
     Built at the inbound edge (the api adapter / legacy carousel route) from the
-    existing infrastructure so the module wires to them without relocation
-    (AE-0117). The ``unit_of_work`` wraps that same request's ``AsyncSession``
+    existing infrastructure so the module wires to them without relocation. The
+    ``unit_of_work`` wraps that same request's ``AsyncSession``
     and is the single transaction owner the application service commits through
-    (ADR-0009 §9). The provider ports are optional until AE-0119 supplies them.
+    (ADR-0009 §9). The provider ports are optional until they are supplied.
     """
 
     repository: CarouselRepository
@@ -77,11 +77,11 @@ class PresentationModule:
     """Public collaborators returned by :func:`bootstrap_module`.
 
     Bundles the presentation application service, the request-scoped Unit of Work,
-    and (AE-0120) the presentation persistence ACL + the request-scoped
+    and the presentation persistence ACL + the request-scoped
     :class:`PresentationHandlers` so the inbound edge can resolve presentation
     operations + the thin presentation route adapters through the module facade
     (no behavior change). The ACL/handlers are optional so the scaffolding wiring
-    (service-only) keeps working; the AE-0120 edge provider always supplies them.
+    (service-only) keeps working; the edge provider always supplies them.
     """
 
     service: PresentationService
@@ -102,7 +102,7 @@ def bootstrap_module(
     request-scoped repository (and any provider ports) via ``adapters``; this
     function injects them into the application service via the constructor.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     service = PresentationService(
         repository=adapters.repository,
         ports=PresentationPorts(
@@ -122,10 +122,10 @@ def bootstrap_module(
 def _build_handlers(
     adapters: PresentationAdapters,
 ) -> PresentationHandlers | None:
-    """Build the AE-0120 presentation handlers when the ACL + collaborators wired.
+    """Build the presentation handlers when the ACL + collaborators wired.
 
     Returns ``None`` for the scaffolding wiring (no ACL/collaborators) so the
-    service-only bootstrap keeps working; the AE-0120 edge provider always
+    service-only bootstrap keeps working; the edge provider always
     supplies both, yielding the request-scoped handlers the thin routes delegate
     to.
     """

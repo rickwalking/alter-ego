@@ -1,8 +1,8 @@
-"""Per-post image budget (AE-0424; ``BLOG_IMAGE_COST_CAP``, ADR-0025).
+"""Per-post image budget (``BLOG_IMAGE_COST_CAP``, ADR-0025).
 
 Every generated image (cover or section, first try or regenerate) counts
 against the post's budget in ``ai_generation_metadata``; generation is refused
-before any provider spend once the cap is reached. AE-0425's bulk generation
+before any provider spend once the cap is reached. Bulk generation
 counts through the same helpers.
 """
 

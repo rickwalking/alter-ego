@@ -1,4 +1,4 @@
-"""Unit tests for the conversation command/query handlers (AE-0101).
+"""Unit tests for the conversation command/query handlers.
 
 Feature: Conversation routes delegate to handlers behind the facade
 See tests/features/conversations.feature (byte-identical extraction scenarios).
@@ -107,7 +107,6 @@ class _StubAgent:
             yield event
 
 
-# --- Write use cases commit via the UoW (single committer) ---------------------
 class TestWriteHandlersCommitViaUnitOfWork:
     """Scenario: conversation writes persist via the platform UoW only."""
 
@@ -165,7 +164,6 @@ class TestWriteHandlersCommitViaUnitOfWork:
         service.get_conversation.assert_awaited_once_with(conv_id)
 
 
-# --- Read use cases delegate to the facade -------------------------------------
 class TestReadHandlersDelegate:
     """Scenario: read handlers map onto the reused service."""
 
@@ -220,7 +218,6 @@ class TestReadHandlersDelegate:
         service.get_conversation_history.assert_awaited_once_with(conv_id, limit=50)
 
 
-# --- Non-streaming chat orchestration ------------------------------------------
 class TestChatHandler:
     """Scenarios: chat routing, source formatting, and the message cap."""
 

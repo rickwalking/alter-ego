@@ -4,10 +4,10 @@ These boundary-safe shapes are what other modules and inbound adapters consume
 via the facade. They decouple consumers from the module's internal aggregate
 (``KnowledgeDocument`` / ``Document``).
 
-During the behavior-preserving phase (AE-0089) the HTTP routes still return the
+During the behavior-preserving phase the HTTP routes still return the
 legacy ``Document`` entity directly via their FastAPI ``response_model``; these
 views are the boundary contract the routes adopt when they move behind the
-facade (AE-0092/0093). The facade also returns the aggregate where a route
+facade. The facade also returns the aggregate where a route
 needs the legacy shape, so this phase introduces no response change.
 """
 

@@ -1,8 +1,8 @@
-"""Rule-fires tests for scripts/deploy/check-env-permissions.sh (AE-0301).
+"""Rule-fires tests for scripts/deploy/check-env-permissions.sh.
 
 The deploy writes production secret files; they were world-readable (644) on
 the droplet for ~2 months. The check must FAIL the deploy (non-zero exit) on a
-seeded violation — a green run on healthy files proves nothing (AE-0180).
+seeded violation — a green run on healthy files proves nothing.
 
     Feature: production secret files are never world-readable
       Scenario: a world-readable env file fails the deploy
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0301 — a test for a bash deploy assertion must invoke a subprocess (mirrors test_gate_capture.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a bash deploy assertion must invoke a subprocess (mirrors test_gate_capture.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -38,7 +38,7 @@ OK_MARKER = "ENV-PERMS OK:"
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0301 — fixed bash path, test-controlled temp files
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed bash path, test-controlled temp files
         [BASH, str(CHECK_SCRIPT), *args],
         capture_output=True,
         text=True,
@@ -88,7 +88,7 @@ def test_fires_on_missing_env_file(tmp_path: Path) -> None:
 def test_fires_on_wrong_owner_expectation(tmp_path: Path) -> None:
     env_file = _seed_env(tmp_path, MODE_SECRET)
 
-    result = subprocess.run(  # noqa: S603  # integrity-ok: AE-0301 — fixed bash path, test-controlled temp files
+    result = subprocess.run(  # noqa: S603  # integrity-ok: fixed bash path, test-controlled temp files
         [BASH, str(CHECK_SCRIPT), str(tmp_path), str(env_file)],
         capture_output=True,
         text=True,

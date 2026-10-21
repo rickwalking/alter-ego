@@ -1,4 +1,4 @@
-"""Transactional-outbox relay — the sole durable Redis publisher (AE-0130).
+"""Transactional-outbox relay — the sole durable Redis publisher.
 
 The relay reads unpublished ``event_outbox`` rows (``published_at IS NULL``),
 publishes each stored ``stream_event`` payload to the existing Redis stream, and
@@ -102,10 +102,12 @@ class OutboxRelay:
     async def _unpublished_rows(
         db: AsyncSession, batch_size: int
     ) -> list[EventOutboxModel]:
-        # FOR UPDATE SKIP LOCKED claims each unpublished row so concurrent relay
-        # passes (e.g. overlapping after-commit drains) never select the same row
-        # and double-publish before published_at commits. SQLAlchemy renders no
-        # locking clause on SQLite (tests), where it is a harmless no-op.
+        """Claim a batch of unpublished rows with ``FOR UPDATE SKIP LOCKED``.
+
+        Concurrent relay passes (e.g. overlapping after-commit drains) never select the
+        same row and double-publish before ``published_at`` commits. SQLAlchemy renders
+        no locking clause on SQLite (tests), where it is a harmless no-op.
+        """
         result = await db.execute(
             select(EventOutboxModel)
             .where(EventOutboxModel.published_at.is_(None))
@@ -116,12 +118,15 @@ class OutboxRelay:
         return list(result.scalars().all())
 
     async def _publish_row(self, row: EventOutboxModel) -> bool:
-        """Publish one row to Redis and mark it published; True on success."""
+        """Publish one row to Redis and mark it published; True on success.
+
+        A transport failure bumps ``attempts`` and the row is retried on the next pass.
+        """
         try:
             await self._publisher.publish(
                 STREAM_CONTENT_EVENTS, outbox_stream_event(row)
             )
-        except Exception as exc:  # transport failure: retry on the next pass
+        except Exception as exc:
             row.attempts = (row.attempts or 0) + 1
             logger.warning(
                 "outbox_relay_publish_failed",

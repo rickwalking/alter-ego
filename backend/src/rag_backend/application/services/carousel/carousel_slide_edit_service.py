@@ -1,8 +1,8 @@
-"""Completed-project slide-text edit service (AE-0314).
+"""Completed-project slide-text edit service.
 
 Applies deterministic reviewer text edits to a COMPLETED carousel WITHOUT
 regenerating images, landing the change under the shared per-project advisory
-lock (AE-0316, the serialization domain shared with AE-0311 repair + AE-0313
+lock (the serialization domain shared with repair and
 republish). The sequence mirrors the repair two-commit contract:
 
 1. Reject an active workflow run, then acquire the advisory lock **non-blocking**

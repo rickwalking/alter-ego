@@ -4,10 +4,13 @@ These boundary-safe shapes are what other modules and inbound adapters consume
 via the facade. They decouple consumers from the module's internal aggregate
 (``User``).
 
-During the behavior-preserving phase (AE-0098) the HTTP routes still return the
+During the behavior-preserving phase the HTTP routes still return the
 legacy response models directly; these views are the boundary contract the
-routes adopt when they move behind the facade (AE-0099). This phase introduces
+routes adopt when they move behind the facade. This phase introduces
 no response change.
+
+The bearer token type label mirrors the legacy ``TokenResponse.token_type`` default so
+the wire shape is unchanged.
 """
 
 from __future__ import annotations
@@ -16,8 +19,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-# OAuth2 bearer scheme label for issued access tokens (mirrors the legacy
-# ``TokenResponse.token_type`` default so the wire shape is unchanged).
 _BEARER_SCHEME = "bearer"
 
 

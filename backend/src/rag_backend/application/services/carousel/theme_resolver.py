@@ -3,6 +3,11 @@
 Reproduces the creative palette-selection behavior of the original
 carousel skill: brand-aware color detection, keyword-based category
 fallback, and diverse palette selection when auto-detecting themes.
+
+The rotation pool used when no brand or category keyword matches is limited to the
+original dark category themes, so AUTO never hands a light palette to a dark image
+strategy. Explicit-select palettes (new dark variants, light and editorial) are
+reachable only through an explicit ``project.theme``.
 """
 
 from __future__ import annotations
@@ -20,11 +25,6 @@ from rag_backend.domain.constants import (
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
-# Rotation pool used when no brand or category keyword matches. Limited to the
-# original dark category themes (``AUTO_ROTATION_THEME_KEYS``) so AUTO never
-# hands a LIGHT palette to a dark image strategy. Explicit-select palettes
-# (new dark variants + light/editorial) are reachable only via an explicit
-# ``project.theme``.
 CATEGORY_THEME_KEYS: tuple[str, ...] = AUTO_ROTATION_THEME_KEYS
 
 
@@ -44,7 +44,7 @@ def _hash_to_theme_key(text: str) -> str:
 def _score_keyword_list(lowered: str, keywords: Iterable[str]) -> int:
     """Count how many of *keywords* appear in the already-lowered text.
 
-    Shared by root brand/category scoring and the AE-0269 custom-palette
+    Shared by root brand/category scoring and the custom-palette
     keyword matcher so they all count matches identically.
     """
     return sum(1 for kw in keywords if kw in lowered)
@@ -119,7 +119,7 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
     The returned dict always has ``primary``, ``accent``, and
     ``background`` keys.
 
-    AE-0269 D9: if the project carries a ``theme_snapshot`` (frozen at
+    D9: if the project carries a ``theme_snapshot`` (frozen at
     generation), render reads the snapshot directly — so a later palette edit
     never changes an already-generated carousel, and AUTO stays frozen. This is
     still pure (no I/O); the snapshot was written by ``PaletteResolverService``.

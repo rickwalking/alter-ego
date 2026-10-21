@@ -1,4 +1,4 @@
-"""AE-0401: the editorial facade of the slide fix (model, persona, report).
+"""The editorial facade of the slide fix (model, persona, report).
 
 Gherkin: tests/features/autopilot_slide_autofix_ae0401.feature
 """
@@ -54,6 +54,7 @@ class TestRunSlideFix:
     async def test_default_model_is_the_fast_role_and_persona_rescores(
         self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """The reasoning model is built for the escalation attempts."""
         engine = build_engine(FakeChatModel())
         project_id = await seed_gate(
             engine, db_session, GateSeed(breaks=(emoji_body_3,))
@@ -84,7 +85,6 @@ class TestRunSlideFix:
                 engine=engine,
             )
         )
-        # AE-0407: the reasoning model is built for the escalation attempts.
         assert roles == ["fast", "reasoning"]
         assert report.status == AUTOFIX_STATUS_FIXED
         assert [(s.slide_index, s.fixed, s.attempts) for s in report.slides] == [

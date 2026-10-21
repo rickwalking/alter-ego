@@ -5,7 +5,9 @@ to the request-scoped :class:`KnowledgeService` facade (resolved via the
 ``get_knowledge_service`` DI provider at the edge — never the global DI container
 here), and maps the returned view back onto the HTTP response/status. Document
 writes commit through the facade's Unit of Work (the single commit owner); the
-routes never call ``db.commit()`` (AE-0091/0092).
+routes never call ``db.commit()``.
+
+Document is re-exported for callers that import the entity from here.
 """
 
 from typing import Annotated
@@ -380,5 +382,4 @@ def _to_metadata(metadata: dict[str, object]) -> dict[str, MetadataValue]:
     return result
 
 
-# Re-exported for backwards compatibility with callers importing the entity here.
 __all__ = ["Document", "router"]

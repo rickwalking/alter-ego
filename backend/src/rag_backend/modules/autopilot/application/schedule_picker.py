@@ -1,4 +1,4 @@
-"""The two-step day/time picker and its recommendations (AE-0404).
+"""The two-step day/time picker and its recommendations.
 
 Step 1 lists seven days (today when a slot is still open, else tomorrow) and
 stars the best ones; step 2 lists the day's four best times with the reason

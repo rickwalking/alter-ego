@@ -1,4 +1,4 @@
-"""SQLAlchemy adapter for the ``instagram_stories`` row (AE-0369).
+"""SQLAlchemy adapter for the ``instagram_stories`` row.
 
 The publish claim serializes callers for one carousel, so a read-then-write
 upsert is enough. The caller commits.

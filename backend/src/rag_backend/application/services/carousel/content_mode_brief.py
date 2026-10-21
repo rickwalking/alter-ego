@@ -1,4 +1,4 @@
-"""What the generators need to know about a project's content mode (AE-0375).
+"""What the generators need to know about a project's content mode.
 
 ADR-0021 D4: the mode is read from the project row at generation time, not
 threaded through the LangGraph state, so manual, autopilot and resumed runs
@@ -39,7 +39,10 @@ LOG_BRIEF_UNAVAILABLE = "content_mode_brief_unavailable"
 
 @dataclass(frozen=True, kw_only=True)
 class ContentModeBrief:
-    """A project's mode, its sized contract and the owner's POV inputs."""
+    """A project's mode, its sized contract and the owner's POV inputs.
+
+    quotes are the scout-verified quotes of a pov_news project.
+    """
 
     content_mode: str
     policy: CarouselPresentationPolicy
@@ -49,7 +52,6 @@ class ContentModeBrief:
     cta_goal: str | None = None
     hook_text: str = ""
     creator_handle: str = DEFAULT_CTA_HANDLE
-    # AE-0406: the scout-verified quotes of a ``pov_news`` project.
     quotes: tuple[NewsQuote, ...] = ()
 
     @property
@@ -59,7 +61,7 @@ class ContentModeBrief:
 
     @property
     def prompt_domain(self) -> str:
-        """AE-0406: the POV prompt family that voices this project."""
+        """The POV prompt family that voices this project."""
         return pov_prompt_domain(self.content_mode)
 
     @property

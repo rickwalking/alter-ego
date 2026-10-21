@@ -1,4 +1,4 @@
-"""Portability tests for the captured carousel checkpoint fixture (AE-0075).
+"""Portability tests for the captured carousel checkpoint fixture.
 
 Gherkin: tests/features/checkpoint_fixture_portability.feature
 """

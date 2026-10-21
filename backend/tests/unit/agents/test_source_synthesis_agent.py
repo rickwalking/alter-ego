@@ -53,7 +53,7 @@ class TestSourceSynthesisAgent:
 
 
 class TestSourceSynthesisHardening:
-    """AE-0318 scenarios (tests/features/source_synthesis_hardening.feature)."""
+    """Scenarios of tests/features/source_synthesis_hardening.feature."""
 
     @pytest.fixture(autouse=True)
     def clear_cache(self) -> None:
@@ -100,7 +100,7 @@ class TestSourceSynthesisHardening:
         result = await agent.extract_key_points("title", "content body", "document")
 
         assert result["key_points"] == ["Repaired point"]
-        assert mock_llm.ainvoke.await_count == 2  # second call served from cache
+        assert mock_llm.ainvoke.await_count == 2
 
     async def test_repair_failure_raises_and_does_not_poison_cache(
         self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
@@ -118,7 +118,7 @@ class TestSourceSynthesisHardening:
         result = await agent.extract_key_points("title", "content body", "document")
 
         assert result["key_points"] == ["Fresh point"]
-        assert mock_llm.ainvoke.await_count == 3  # retry hit the LLM, not a cache
+        assert mock_llm.ainvoke.await_count == 3
 
     async def test_poisoned_cache_entry_is_evicted(
         self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
@@ -146,7 +146,7 @@ class TestSourceSynthesisHardening:
 
 
 class TestSourceSynthesisRepairTransport:
-    """AE-0318 review r1 (M2): repair transport failure keeps the 400 contract."""
+    """Repair transport failure keeps the 400 contract."""
 
     @pytest.fixture(autouse=True)
     def clear_cache(self) -> None:
@@ -183,7 +183,7 @@ class TestSourceSynthesisRepairTransport:
 
 
 class TestSourceSynthesisObservability:
-    """AE-0318: the hardening's structlog events fire with the right fields."""
+    """The hardening's structlog events fire with the right fields."""
 
     @pytest.fixture(autouse=True)
     def clear_cache(self) -> None:
@@ -222,7 +222,6 @@ class TestSourceSynthesisObservability:
         ]
         assert len(first) == 1 and len(second) == 1
         assert first[0]["model_id"] == agent.model_id
-        # The logged payload is truncated to exactly 500 chars.
         assert first[0]["raw_response"] == "x" * 500
         assert second[0]["repair_response"] == "still-not-json"
 

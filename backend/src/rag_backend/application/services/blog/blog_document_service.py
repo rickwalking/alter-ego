@@ -1,12 +1,12 @@
-"""The single owner of the blog document shape (AE-0423, ADR-0025).
+"""The single owner of the blog document shape (ADR-0025).
 
 ``BlogDocumentService`` validates every write of ``blog_posts.content`` as
 ``blog.v2`` (strict: there is no v1 write path), keeps ``featured_image_url``
 equal to ``content.cover.url`` (the column is a projection of the cover), and
 guards publish. Reads go through :meth:`read_document`, which is strict too: a
 non-v2 row raises :class:`InvalidBlogDocumentError` (fails closed with the
-standard error/404) instead of adapting legacy markdown. The temporary AE-0423
-read fail-safe was removed in AE-0428 after the owner's prod verification:
+standard error/404) instead of adapting legacy markdown. The temporary
+read fail-safe was removed after the owner's prod verification:
 ``python -m rag_backend.scripts.blog_v1_to_v2 --verify`` reported zero non-v2
 rows (translations included) on 2026-10-19.
 """

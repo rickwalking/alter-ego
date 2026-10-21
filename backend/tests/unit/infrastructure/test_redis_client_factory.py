@@ -1,10 +1,12 @@
-"""Unit tests for the authenticated Redis client factory (AE-0302).
+"""Unit tests for the authenticated Redis client factory.
 
 Gherkin: tests/features/redis_auth.feature —
   "missing credential fails fast", "unset or unrecognized ENVIRONMENT fails
   closed", "explicit development environment tolerates an absent password",
   "conflicting credentials fail closed", "the backend authenticates
   successfully" (URL construction + no-param-loss).
+
+An unrecognized environment, such as a typo'd "prod", must fail closed.
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ _URL_BARE = "redis://redis:6379"
 _URL_WITH_CREDS = "redis://:embedded-pw@redis:6379"
 _URL_EMPTY_CREDS = "redis://:@redis:6379"
 _PASSWORD = "managed-pw"
-_ENVIRONMENT_UNRECOGNIZED = "prod"  # a typo'd value must fail closed
+_ENVIRONMENT_UNRECOGNIZED = "prod"
 
 
 def _settings(
@@ -46,9 +48,6 @@ def _settings(
         redis_url=redis_url,
         redis_password=SecretStr(password),
     )
-
-
-# --- credential resolution policy -------------------------------------------
 
 
 # Scenario: the backend authenticates successfully (URL construction)
@@ -142,9 +141,6 @@ def test_query_param_credential_counts_as_present() -> None:
     assert resolve_authed_redis_url(settings) == "redis://redis:6379?password=qp-pw"
 
 
-# --- no param loss (AE-0302: per-consumer connection semantics) ---------------
-
-
 def test_factory_forwards_consumer_connection_config() -> None:
     settings = _settings(environment=ENVIRONMENT_PRODUCTION, password=_PASSWORD)
     config = RedisConnectionConfig(
@@ -179,12 +175,10 @@ def test_factory_defaults_preserve_streams_semantics() -> None:
     assert kwargs["db"] == 0
 
 
-# --- the Streams publisher goes through the factory ---------------------------
-
-
 # Scenario: the backend authenticates successfully (publisher path)
 @pytest.mark.asyncio
 async def test_stream_publisher_builds_client_via_factory() -> None:
+    """decode_responses stays True to preserve the Streams consumer semantics."""
     publisher = RedisStreamEventPublisher()
     sentinel = object()
 
@@ -196,4 +190,4 @@ async def test_stream_publisher_builds_client_via_factory() -> None:
 
     assert client is sentinel
     config = create.call_args.args[1]
-    assert config.decode_responses is True  # Streams consumer semantics preserved
+    assert config.decode_responses is True

@@ -1,1 +1,1 @@
-"""Editorial carousel workflow golden snapshots and diff helper (AE-0106)."""
+"""Editorial carousel workflow golden snapshots and diff helper."""

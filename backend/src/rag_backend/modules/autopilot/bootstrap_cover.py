@@ -1,4 +1,4 @@
-"""Worker wiring for the GrokBot slide-1 cover (AE-0418, ADR-0024)."""
+"""Worker wiring for the GrokBot slide-1 cover (ADR-0024)."""
 
 from __future__ import annotations
 

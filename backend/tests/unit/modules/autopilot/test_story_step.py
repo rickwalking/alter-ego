@@ -1,4 +1,4 @@
-"""Story step after a carousel publish (AE-0369).
+"""Story step after a carousel publish.
 
 Gherkin: tests/features/autopilot_story_and_music.feature
 """
@@ -210,11 +210,11 @@ class TestPublishedCarouselPostsOneStory:
         assert extras.music_style == _SYNTHWAVE
 
     async def test_container_is_committed_before_media_publish(self) -> None:
+        """One commit is for the container and one for the result."""
         kit = _StoryKit()
         await kit.step().run(_PROJECT)
         assert kit.store.containers[0].container.container_id == "story-container-1"
         assert kit.store.containers[0].container.created_at == _NOW
-        # One commit for the container, one for the result.
         assert kit.checkpoint.commits == 2
 
 

@@ -1,4 +1,4 @@
-"""Unit tests for the AE-0308 image-provider combo repair script.
+"""Unit tests for the image-provider combo repair script.
 
 Gherkin: tests/features/carousel_image_provider_reroute_ae0308.feature
 (scenarios under "Legacy data repair").
@@ -35,12 +35,12 @@ _SELECT_ROW = "SELECT image_model, image_style FROM carousel_projects WHERE id =
 
 
 def _load_script() -> ModuleType:
+    """Registers the module before exec so dataclass field resolution can find it."""
     spec = importlib.util.spec_from_file_location(
         "repair_image_provider_combos", _SCRIPT_PATH
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    # Register before exec so dataclass field resolution can find the module.
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
@@ -141,7 +141,7 @@ class TestRepairImageProviderRows:
 
     @pytest.mark.asyncio
     async def test_reports_before_and_after_per_row(self, engine: AsyncEngine) -> None:
-        # AC: the script logs each row it changes (before → after).
+        """The script logs each row it changes (before -> after)."""
         await _seed(engine, [("p1", _LEGACY_PREVIEW_MODEL, "neon_comic")])
         (repair,) = await _run_repair(engine)
         assert repair.old_model == _LEGACY_PREVIEW_MODEL

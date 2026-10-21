@@ -1,4 +1,4 @@
-"""ORM row for ``autopilot_cover_assets`` (AE-0418, ADR-0024).
+"""ORM row for ``autopilot_cover_assets`` (ADR-0024).
 
 One row per GrokBot cover upload. ``id`` is the ``asset_id`` the scout gets;
 the image itself is a ``carousel_creator_assets`` row with role ``cover``.

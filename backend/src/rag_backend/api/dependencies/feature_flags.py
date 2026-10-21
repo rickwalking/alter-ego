@@ -1,7 +1,7 @@
 """FastAPI dependencies for deployment-availability gating (DEPLOY-003).
 
 Two flavors live here because both derive request-time availability from
-``Settings``: boolean feature flags (DEPLOY-003) and the AE-0308 image-provider
+``Settings``: boolean feature flags (DEPLOY-003) and the image-provider
 key guard (a preset is only available when its provider has an API key).
 """
 
@@ -45,11 +45,11 @@ def require_image_provider_configured(
     request: CarouselProjectCreate,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Reject creation when the requested image provider has no API key (AE-0308).
+    """Reject creation when the requested image provider has no API key.
 
     Fails fast with 422 BEFORE any workflow spend — the prod failure mode this
     guards against burned research/outline/content and a human design approval,
-    then died at the images phase. Mirrors the AE-0215 startup guard's
+    then died at the images phase. Mirrors the startup guard's
     environment policy: production-like deployments reject, dev/test tolerate a
     missing key so local runs and stubbed tests keep working.
     """

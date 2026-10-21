@@ -74,15 +74,19 @@ class PersonaProfileListResponse(BaseModel):
 
 
 class RubricCriterion(BaseModel):
-    """Schema for a rubric criterion."""
+    """Schema for a rubric criterion.
+
+    evaluation_method is "ai_auto", "human_required" or "hybrid"; scoring_scale is
+    "1-10", "pass_fail", "grade_a_f" or "0-100".
+    """
 
     id: str
     name: str
     description: str
     weight: Annotated[float, Field(ge=0.0, le=1.0)]
-    evaluation_method: str  # "ai_auto" | "human_required" | "hybrid"
+    evaluation_method: str
     min_threshold: Annotated[float, Field(ge=0.0, le=1.0)]
-    scoring_scale: str  # "1-10" | "pass_fail" | "grade_a_f" | "0-100"
+    scoring_scale: str
     prompt_template: str
 
 

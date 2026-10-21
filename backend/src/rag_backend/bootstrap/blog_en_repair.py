@@ -1,9 +1,12 @@
-"""Composition root of the one-shot EN repair (AE-0435).
+"""Composition root of the one-shot EN repair.
 
-The SQL store reads posts with plain ``SELECT``s and writes through AE-0424's
+The SQL store reads posts with plain ``SELECT``s and writes through the editor's
 slot-write path (:func:`apply_slot_edit`: row lock, latest document, version
 snapshot, lock-version bump), so the repair is versioned like an editor action.
 The translator is the editor's PT -> EN translation service.
+
+The repair write has no owner session, so it records its own version-history summary and
+actor.
 """
 
 from __future__ import annotations
@@ -27,7 +30,6 @@ from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.events.factory import get_event_publisher
 
-# Version-history summary and actor of the repair write (no owner session).
 VERSION_SUMMARY_EN_REPAIR = "Before EN repair (AE-0435)"
 EN_REPAIR_ACTOR = "system:ae-0435-en-repair"
 

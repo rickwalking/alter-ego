@@ -1,4 +1,4 @@
-"""Section voice rewrite and EN translation routes (AE-0424).
+"""Section voice rewrite and EN translation routes.
 
 - ``POST /blog-posts/{id}/sections/{section_id}/rewrite`` — ``PersonaAgent.enforce``
   on one section's ``body_md`` (the other sections stay byte-identical).
@@ -6,6 +6,8 @@
   from PT ("Generate EN translation"); 409 when it already exists.
 
 Both writes are ``If-Match`` guarded and stored through the versioned path.
+
+Path params are fields of the target dataclasses (resolved with Depends()).
 """
 
 from dataclasses import dataclass
@@ -76,7 +78,6 @@ class RewriteTarget:
     language: Language = BLOG_LANGUAGE_PT
 
 
-# Path params are fields of the target dataclasses (``Depends()``).
 REWRITE_PATH = "/blog-posts/{post_id}/sections/{section_id}/rewrite"
 TRANSLATION_PATH = "/blog-posts/{post_id}/translations/en"
 Rewrite = Annotated[RewriteTarget, Depends()]
@@ -181,7 +182,10 @@ async def rewrite_section(
 )
 @limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
 async def generate_en_translation(request: Request, target: Post) -> LockedBlogPostRow:
-    """Translate the PT document into ``translations.en`` (502 on failure)."""
+    """Translate the PT document into ``translations.en`` (502 on failure).
+
+    The session is rolled back first so no transaction is held during the LLM spend.
+    """
     post = await get_blog_post_for_user(target.db, target.post_id, target.current_user)
     require_current_version(post, target.if_match)
     document = load_document(post)
@@ -190,7 +194,7 @@ async def generate_en_translation(request: Request, target: Post) -> LockedBlogP
             status_code=status.HTTP_409_CONFLICT, detail=ERR_BLOG_TRANSLATION_EXISTS
         )
     user_id = str(target.current_user.id)
-    await target.db.rollback()  # no transaction held during the LLM spend
+    await target.db.rollback()
     try:
         english = await build_blog_translation_service().translate(
             str(target.post_id), document

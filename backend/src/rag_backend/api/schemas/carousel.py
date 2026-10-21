@@ -25,6 +25,12 @@ _ERR_UNSUPPORTED_IMAGE_COMBO = (
 
 
 class CarouselProjectCreate(ContentModeRequestFields):
+    """Request body that creates a carousel project.
+
+    theme is a root key, "auto" or a custom-palette UUID (36 chars), stored as a string
+    reference in a varchar(64) column.
+    """
+
     topic: str = Field(..., min_length=1, max_length=500)
     audience: str = Field(..., min_length=1, max_length=500)
     niche: str = Field(..., min_length=1, max_length=200)
@@ -33,9 +39,6 @@ class CarouselProjectCreate(ContentModeRequestFields):
     )
     language: str = Field(default="pt-BR", max_length=10)
     generate_images: bool = True
-    # root key | "auto" | custom-palette UUID (36 chars). Widened from 30 (AE-0271)
-    # so the dynamic catalog's custom-palette references are accepted (AE-0268 made
-    # CarouselProject.theme a string reference; the column is varchar(64)).
     theme: str = Field(default="auto", max_length=64)
     image_model: str = Field(default=IMAGE_MODEL_DEFAULT, max_length=30)
     image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
@@ -111,12 +114,19 @@ class ResearchSourceResponse(BaseModel):
 
 
 class CarouselProjectResponse(ContentModeResponseFields):
+    """Carousel project as returned by the API.
+
+    language lets the public gallery label a card without an extra design or slides
+    request. custom_visual_details echoes the request-side scene guidance so it survives
+    a reload. needs_republish_since is set while a post-completion edit still owes a PDF
+    rebuild; the publish page shows a "rebuild pending" state until the watchdog or the
+    client republishes and clears it.
+    """
+
     id: UUID
     topic: str
     audience: str
     niche: str
-    # AE-0444: additive so the public gallery can label a card's content
-    # language without an N+1 design/slides request.
     language: str
     title: str | None
     subtitle: str | None
@@ -125,8 +135,6 @@ class CarouselProjectResponse(ContentModeResponseFields):
     theme: str
     image_model: str = IMAGE_MODEL_DEFAULT
     image_style: str = IMAGE_STYLE_DEFAULT
-    # AE-0298: echo the request-side scene guidance so it survives a reload
-    # (strictly additive optional response field).
     custom_visual_details: str | None = None
     primary_color: str | None
     accent_color: str | None
@@ -150,9 +158,6 @@ class CarouselProjectResponse(ContentModeResponseFields):
     is_public: bool = False
     current_phase: str | None = None
     phase_status: str | None = None
-    # AE-0314: non-null while a post-completion edit still owes a PDF rebuild;
-    # the publish page shows a "rebuild pending" state until the watchdog (or the
-    # client) republishes and clears it.
     needs_republish_since: datetime | None = None
     slides: list[CarouselSlideResponse] = Field(default_factory=list)
     research_sources: list[ResearchSourceResponse] = Field(default_factory=list)
@@ -170,7 +175,7 @@ class CarouselProjectListResponse(BaseModel):
 
 
 class CarouselPublicSlide(BaseModel):
-    """One slide in the anonymous public viewer (AE-0444).
+    """One slide in the anonymous public viewer.
 
     Only the number, its heading (for alt text), and the public image URL. The
     owner-only ``image_path`` / preview URL never enters this projection.
@@ -182,7 +187,7 @@ class CarouselPublicSlide(BaseModel):
 
 
 class CarouselPublicResponse(BaseModel):
-    """Lean public projection of a published carousel (AE-0444)."""
+    """Lean public projection of a published carousel."""
 
     id: UUID
     title: str | None = None
@@ -198,7 +203,7 @@ class CarouselPublicResponse(BaseModel):
 
 
 class CarouselRepublishResponse(BaseModel):
-    """Result of an idempotent artifact republish (AE-0313)."""
+    """Result of an idempotent artifact republish."""
 
     project_id: str
     status: str

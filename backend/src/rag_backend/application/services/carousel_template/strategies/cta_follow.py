@@ -1,4 +1,7 @@
-"""CTA-follow strategy: one specific action by goal (AE-0376, POV last slide)."""
+"""CTA-follow strategy: one specific action by goal (POV last slide).
+
+The website mention is kept small: the goal is followers, not site visits.
+"""
 
 import html
 from collections.abc import Mapping
@@ -20,7 +23,6 @@ from rag_backend.domain.protocols.carousel import _RenderOptions
 
 CTA_FOLLOW_STRATEGY = "cta_follow"
 _DEFAULT_CREATOR_NAME = "Pedro Marins"
-# Kept small: the goal is followers, not site visits (growth plan 16.3 F).
 _CREATOR_WEBSITE = "marinssolutions.com"
 
 

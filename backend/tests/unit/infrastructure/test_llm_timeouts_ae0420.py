@@ -1,4 +1,4 @@
-"""AE-0420: per-call budgets cover the slow Go endpoint (llm_timeouts_ae0420.feature)."""
+"""Per-call budgets cover the slow Go endpoint (llm_timeouts_ae0420.feature)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Integration tests for the outbox after-commit relay path (AE-0130).
+"""Integration tests for the outbox after-commit relay path.
 
 Gherkin: tests/features/transactional_outbox.feature
 
@@ -82,13 +82,13 @@ async def test_commit_relays_exactly_once_via_after_commit(
     """emit + commit triggers the fresh-session relay; exactly one delivery."""
     async with committing_maker() as session:
         event_id = await _emit(session)
-        assert get_memory_events() == []  # nothing before commit
+        assert get_memory_events() == []
         await session.commit()
 
     await drain_pending_publishes()
 
     events = get_memory_events()
-    assert len(events) == 1  # the after-commit relay published exactly once
+    assert len(events) == 1
     stream, stream_event, _entry = events[0]
     assert stream == STREAM_CONTENT_EVENTS
     assert stream_event[EVENT_FIELD_EVENT_ID] == event_id
@@ -97,7 +97,7 @@ async def test_commit_relays_exactly_once_via_after_commit(
         published = await verify.execute(
             select(EventOutboxModel).where(EventOutboxModel.published_at.is_not(None))
         )
-        assert len(list(published.scalars().all())) == 1  # row marked published
+        assert len(list(published.scalars().all())) == 1
 
 
 # Scenario: a rolled-back emit followed by an unrelated commit publishes nothing.
@@ -108,12 +108,12 @@ async def test_rollback_then_commit_does_not_publish_stale_events(
     """after_rollback drops the queue, so a later commit relays no stale event."""
     async with committing_maker() as session:
         await _emit(session)
-        await session.rollback()  # discards the queued relay + the outbox row
-        await session.commit()  # an unrelated commit must not relay anything
+        await session.rollback()
+        await session.commit()
 
     await drain_pending_publishes()
 
-    assert get_memory_events() == []  # no stale delivery
+    assert get_memory_events() == []
     async with committing_maker() as verify:
         rows = await verify.execute(select(EventOutboxModel))
-        assert list(rows.scalars().all()) == []  # rolled back -> no durable row
+        assert list(rows.scalars().all()) == []

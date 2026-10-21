@@ -73,13 +73,15 @@ class _ImproveInput:
 
 @dataclass
 class _RewriteInput:
-    """Bundled input for BlogPostAIService.rewrite_section() (AE-0424)."""
+    """Bundled input for BlogPostAIService.rewrite_section().
+
+    persona_id is the requested persona, else the post's carousel persona (resolved by
+    the route); None falls back to the first (single-author) persona.
+    """
 
     db: AsyncSession
     body_md: str
     heading: str | None = None
-    # The requested persona, else the post's carousel persona (resolved by the
-    # route); ``None`` falls back to the first (single-author) persona.
     persona_id: str | None = None
     trace: BlogAiTraceContext | None = None
 
@@ -99,7 +101,7 @@ class LLMServiceProtocol(Protocol):
 class BlogPostAIService:
     """AI suggestions, improvements and section rewrites for blog posts.
 
-    Images go through ``BlogImageService`` (AE-0424); the legacy
+    Images go through ``BlogImageService``; the legacy
     ``generate_image`` path was removed with ``POST /generate-image``.
     """
 
@@ -110,7 +112,10 @@ class BlogPostAIService:
         self,
         input_data: _SuggestInput,
     ) -> dict[str, str]:
-        """Generate an AI suggestion for blog text."""
+        """Generate an AI suggestion for blog text.
+
+        Fenced or nested envelopes become plain text.
+        """
         if input_data.action not in VALID_AI_ACTIONS:
             raise ValueError(ERR_INVALID_AI_ACTION)
 
@@ -133,7 +138,6 @@ class BlogPostAIService:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
             )
-        # AE-0424 (F-10): fenced/nested envelopes become plain text.
         parsed = parse_suggestion(raw or "")
         return {
             "original_text": safe_text,
@@ -200,7 +204,7 @@ class BlogPostAIService:
         rendering relies on the markdown allow-list. A body longer than the LLM
         input limit is refused instead of being silently truncated.
 
-        AE-0438 (F-08): the model is told not to repeat the section heading and
+        The model is told not to repeat the section heading and
         a leading heading echo (bold, ``#`` or plain line equal to the heading)
         is stripped from the result, so the heading is never duplicated into
         the stored body.

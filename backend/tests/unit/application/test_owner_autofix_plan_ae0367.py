@@ -1,4 +1,4 @@
-"""AE-0367: the owner autofix plan, issue lines, checkpoint patch, translator.
+"""The owner autofix plan, issue lines, checkpoint patch, translator.
 
 Gherkin: tests/features/autopilot_owner_autofix.feature
 """

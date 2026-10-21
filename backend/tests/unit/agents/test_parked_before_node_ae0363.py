@@ -1,6 +1,6 @@
-"""Which checkpoints a re-drive may continue (AE-0363).
+"""Which checkpoints a re-drive may continue.
 
-Gherkin: tests/features/autopilot_runner.feature (AE-0363 scenarios)
+Gherkin: tests/features/autopilot_runner.feature
 """
 
 from __future__ import annotations

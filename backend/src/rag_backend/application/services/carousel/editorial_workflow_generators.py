@@ -1,4 +1,9 @@
-"""Phase artifact generation helpers for the editorial workflow service."""
+"""Phase artifact generation helpers for the editorial workflow service.
+
+DISTINCTNESS_REDRAFT_NOTE is fed to a re-draft when a body is a near-duplicate;
+PARSE_FAILURE_REDRAFT_NOTE is fed to the single bounded re-draft when a slide's copy
+could not be parsed into localized presentation payloads.
+"""
 
 from __future__ import annotations
 
@@ -52,14 +57,11 @@ _DRAFT_TEXT_KEY = "draft_text"
 _SLIDE_INDEX_KEY = "slide_index"
 _TITLE_KEY = "title"
 _KEY_POINTS_KEY = "key_points"
-# AE-0291: intensified note fed to a re-draft when a body is a near-duplicate.
 DISTINCTNESS_REDRAFT_NOTE = (
     "Your previous draft was too similar to another slide in this carousel. "
     "Rewrite it with different wording, examples, and concrete detail so it is "
     "clearly distinct from the other slides."
 )
-# AE-0309: note fed to the single bounded re-draft when a slide's copy could
-# not be parsed into localized presentation payloads.
 PARSE_FAILURE_REDRAFT_NOTE = (
     "Your previous draft could not be parsed into localized slide copy. "
     "Return the slide copy in the exact requested structure with plain visible "
@@ -70,33 +72,36 @@ PARSE_FAILURE_REDRAFT_NOTE = (
 
 @dataclass(frozen=True)
 class SlideDraftGenerationParams:
-    """Inputs for generating slide drafts from an outline."""
+    """Inputs for generating slide drafts from an outline.
+
+    previous_drafts are the prior drafts from the checkpoint, so a regeneration shows
+    the model its rejected copy to diff against (which also busts the cache). mode is
+    the project's content mode (role contract, POV thesis). concurrency is how many
+    slides are drafted at once. only_slides limits a scoped revision to these slide
+    indexes (None: all); every slide still sees the whole outline as context.
+    """
 
     outline: list[dict[str, object]]
     persona: PersonaProfile | None = None
     revision_notes: list[str] | None = None
     learned_examples: list[str] | None = None
-    # AE-0291: prior slide drafts (from checkpoint) so a regeneration can show the
-    # model its previously-rejected copy to diff against (also busts the cache).
     previous_drafts: list[dict[str, object]] | None = None
-    # AE-0375: the project's content mode (role contract, POV thesis).
     mode: ContentModeBrief | None = None
-    # AE-0391: slides drafted at once (the CONTENT_DRAFT_CONCURRENCY setting).
     concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
-    # AE-0437: a scoped revision drafts only these slide indexes (None: all);
-    # every slide still sees the whole outline as sibling context.
     only_slides: frozenset[int] | None = None
 
 
 @dataclass(frozen=True)
 class ContentRegenInputs:
-    """AE-0291: revision notes + prior drafts bundled for one content regeneration."""
+    """Revision notes + prior drafts bundled for one content regeneration.
+
+    mode is the project's content mode for this regeneration; scope is the slides a
+    scoped revision may change (None: the whole deck).
+    """
 
     revision_notes: list[str]
     previous_drafts: list[dict[str, object]] = field(default_factory=list)
-    # AE-0375: the project's content mode for this regeneration.
     mode: ContentModeBrief | None = None
-    # AE-0437: the slides a scoped revision may change (None: the whole deck).
     scope: frozenset[int] | None = None
 
 
@@ -124,7 +129,7 @@ async def generate_outline(
     workflow_input: EditorialWorkflowStartInput,
     brief: ContentModeBrief | None = None,
 ) -> list[dict[str, object]]:
-    """Generate the carousel outline for the project's content mode (AE-0375)."""
+    """Generate the carousel outline for the project's content mode."""
     outline = await generate_outline_for_mode(
         outline_agent, ModeOutlineRequest(workflow_input=workflow_input, brief=brief)
     )
@@ -142,7 +147,7 @@ def _learned_persona_context(params: SlideDraftGenerationParams) -> str:
 
 
 def _joined_revision_notes(notes: list[str] | None) -> str:
-    """AE-0291: reviewer notes as a single block (rendered imperatively downstream)."""
+    """Reviewer notes as a single block (rendered imperatively downstream)."""
     if not notes:
         return ""
     return "\n".join(note for note in notes if note.strip())
@@ -192,7 +197,7 @@ class _SlideDraftRunner:
     mode: ContentModeBrief | None = None
 
     def _policy_at(self, index: int) -> SlidePolicyContext | None:
-        """AE-0375: the slide's contract (and POV inputs) for role contracts."""
+        """The slide's contract (and POV inputs) for role contracts."""
         return slide_policy_context(self.mode, self.outline[index])
 
     async def draft_at(self, index: int) -> dict[str, object]:
@@ -213,7 +218,7 @@ class _SlideDraftRunner:
         return normalize_slide_draft({**slide, **draft})
 
     async def redraft_at(self, index: int, prior_body: str) -> dict[str, object]:
-        """AE-0291: one bounded re-draft of a near-duplicate slide.
+        """One bounded re-draft of a near-duplicate slide.
 
         Feeds the too-similar body back as the previous draft plus an intensified
         distinctness note (kept alongside any active reviewer notes).
@@ -267,7 +272,7 @@ async def _redraft_duplicates(
 
 
 def _positions(params: SlideDraftGenerationParams) -> list[int]:
-    """Outline positions to draft: every slide, or the scoped ones (AE-0437)."""
+    """Outline positions to draft: every slide, or the scoped ones."""
     only = params.only_slides
     return [
         position
@@ -282,7 +287,7 @@ async def generate_slide_drafts(
 ) -> list[dict[str, object]]:
     """Draft slide copy for each outline entry with cross-slide distinctness.
 
-    AE-0391: slides are drafted concurrently (bounded, results in outline
+    slides are drafted concurrently (bounded, results in outline
     order). Each draft only sees its siblings' OUTLINE context, never a
     sibling's fresh draft; near-duplicates are caught and re-drafted after.
     """
@@ -307,7 +312,7 @@ async def generate_slide_drafts(
 def _with_quote_cards(
     drafts: list[dict[str, object]], mode: ContentModeBrief | None
 ) -> list[dict[str, object]]:
-    """AE-0406: ``pov_news`` slides get their verified quote cards (by id)."""
+    """``pov_news`` slides get their verified quote cards (by id)."""
     if mode is None or not is_pov_news(mode.content_mode):
         return drafts
     return place_quote_cards(drafts, mode.quotes)
@@ -319,7 +324,7 @@ def build_slide_draft_retry(
 ) -> SlideDraftRetryFn:
     """Build the injectable single-slide re-draft for the fail-closed chain.
 
-    AE-0309: the returned callable re-drafts ONE slide (looked up by its
+    the returned callable re-drafts ONE slide (looked up by its
     ``slide_index``) with an explicit parse-failure note, returning the fresh
     normalized draft or ``None`` when the index is unknown.
     """
@@ -352,7 +357,7 @@ def build_slide_draft_retry(
 def _without_quote_card(
     draft: dict[str, object], mode: ContentModeBrief | None
 ) -> dict[str, object]:
-    """AE-0406: a re-drafted ``pov_news`` slide shows no quote card.
+    """A re-drafted ``pov_news`` slide shows no quote card.
 
     The 2-card cap is per deck and a single-slide retry cannot see the other
     slides, so its ``quote_id`` (and any model-written insight) is dropped.

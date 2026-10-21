@@ -1,4 +1,4 @@
-"""Stage budgets of the blog generation run + the EN gate in the run (AE-0435).
+"""Stage budgets of the blog generation run + the EN gate in the run.
 
 Feature: backend/tests/features/blog_generation_en_gate_timeout_ae0435.feature
 """
@@ -209,7 +209,9 @@ class TestStageBudgetsInTheRun:
     async def test_an_images_timeout_attaches_finished_images_and_is_partial(
         self, tmp_path: Path
     ) -> None:
-        # Cover + sections 1-2 finish; sections 3-4 hang (their heading is slow).
+        """The cover and sections 1-2 finish; sections 3-4 hang because their heading is
+        slow.
+        """
         drafts = list(sections(4))
         drafts[2] = drafts[2].__class__(heading=SLOW_MARKER, body_md=drafts[2].body_md)
         drafts[3] = drafts[3].__class__(heading=SLOW_MARKER, body_md=drafts[3].body_md)
@@ -264,6 +266,7 @@ class TestEnglishGateInTheRun:
     async def test_a_portuguese_en_that_stays_portuguese_is_never_stored(
         self, tmp_path: Path
     ) -> None:
+        """The images are still generated."""
         draft = DraftArticle("T", sections(4), "T", sections(4, "Seção"))
         store = FakeStore()
         run = _Run(
@@ -275,7 +278,7 @@ class TestEnglishGateInTheRun:
         assert outcome.status == GENERATION_STATUS_PARTIAL
         assert outcome.recoverable is True
         assert outcome.errors[0]["code"] == ERR_EN_WRONG_LANGUAGE
-        assert outcome.image_count == 5  # images still generated
+        assert outcome.image_count == 5
         assert len(run.translator.calls) == BLOG_EN_MAX_RETRANSLATIONS
         stored = parse_blog_content(store.contents[-1])
         assert stored.translations == {}

@@ -1,4 +1,4 @@
-"""Langfuse trace scope for one run-owned resume (AE-0390).
+"""Langfuse trace scope for one run-owned resume.
 
 The application-layer run wrapper reaches the tracing scope through the
 editorial facade, like the run fence, so no application -> infrastructure

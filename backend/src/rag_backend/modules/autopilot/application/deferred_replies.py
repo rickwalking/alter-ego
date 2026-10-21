@@ -2,8 +2,7 @@
 
 A handler exception rolls back the ``update_id`` claim and every run
 transition. Replies sent before that would tell the owner something the
-database does not record, so they are buffered and sent only after commit
-(AE-0348 QA r1, H4).
+database does not record, so they are buffered and sent only after commit.
 """
 
 from __future__ import annotations

@@ -37,7 +37,6 @@ logger = get_logger()
 
 _ERR_PROJECT_MISSING = "carousel project not found during finalize"
 _ERR_OUTPUT_DIR_MISSING = "carousel output_dir missing during finalize"
-# Defensive: a successful (no-errors) build path must yield an activation result.
 _ERR_BUILD_RESULT_MISSING = "artifact build returned no activation despite no errors"
 
 
@@ -67,7 +66,7 @@ async def _fail_finalize(
 ) -> None:
     """Persist a finalize failure UNLESS the project is already completed.
 
-    AE-0313: a re-finalize/republish on a ``completed`` project must never
+    a re-finalize/republish on a ``completed`` project must never
     ``mark_failed`` it — a false-negative health check or a transient build
     error would otherwise corrupt a healthy, already-served carousel. The
     project stays ``completed`` on its current artifact version and the error
@@ -164,11 +163,13 @@ async def _try_build_artifacts(
 ) -> tuple[
     tuple[str, ...], CarouselArtifactHealthReport | None, ArtifactActivation | None
 ]:
-    # AE-0121: the artifact build/activation is a PRESENTATION operation invoked
-    # through the presentation public facade (editorial → presentation). The
-    # adapter delegates UNCHANGED to CarouselArtifactBuildService.build_and_activate,
-    # so the compound artifact_version ↔ lock_version CAS, the source-lock-version
-    # read, and the slide load are byte-identical to the legacy direct call.
+    """Build and activate the carousel artifacts.
+
+    The build is a presentation operation invoked through the presentation facade; the
+    adapter delegates unchanged to CarouselArtifactBuildService.build_and_activate, so
+    the artifact_version and lock_version CAS, the source lock-version read and the
+    slide load match the direct call.
+    """
     adapter = CarouselArtifactBuildAdapter(db, repo)
     activation = await adapter.build_and_activate(target.project_id)
     if activation.ok:
@@ -190,7 +191,13 @@ async def export_and_complete_carousel(
     refinement: CarouselRefinementService,
     project_id: str,
 ) -> CarouselFinalizeResult:
-    """Re-render bilingual slides and set project status to completed."""
+    """Re-render bilingual slides and set project status to completed.
+
+    The terminal write persists the status fields atomically with the presentation
+    columns (design_tokens, pdf_path, artifact_version) in one repo.update_project
+    commit; moving status to CarouselProjectWriteOwner would split it into two commits,
+    so this write stays on the legacy persistence path.
+    """
     repo = PostgresCarouselRepository(session=db)
     project, result = await _guard_project_exists(repo, project_id)
     if result is not None:
@@ -223,14 +230,6 @@ async def export_and_complete_carousel(
         raise RuntimeError(_ERR_BUILD_RESULT_MISSING)
     updated.artifact_version = build_result.artifact_version
     update_project_pdf_paths(updated)
-    # AE-0107 boundary: the terminal-finalization write persists the WO fields
-    # (status/error_message) ATOMICALLY with the deferred Phase-5 presentation
-    # columns (design_tokens/pdf_path/artifact_version) in this single
-    # repo.update_project commit. Splitting status out to CarouselProjectWriteOwner
-    # would break that atomicity (two commits) — so this terminal write stays on the
-    # legacy W1 persistence path per the AE-0105 field map until Phase 5 extracts
-    # presentation. AE-0107 owns the workflow-PHASE writes (sync_phase/assign_reviewer/
-    # set_phase_status/resume-lock), not this atomic terminal artifact write.
     updated.update_status(CarouselStatus.COMPLETED)
     if updated.output_dir:
         updated.design_tokens = merge_design_tokens_with_disk(updated)

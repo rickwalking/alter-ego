@@ -1,6 +1,6 @@
 """Unit tests for the slide-type dispatch table (lightweight Strategy).
 
-Covers AE-0045 Feature: Dispatch Table for Slide Types. Each registered
+Covers Feature: Dispatch Table for Slide Types. Each registered
 builder is exercised independently and the unknown-slide-type fallback to
 the CTA builder is asserted (mutation-killing for the dict-dispatch default).
 """
@@ -72,13 +72,14 @@ class TestBuildLocalePresentationDispatch:
         Given an unknown slide_type "bogus"
         When build_locale_presentation is called
         Then the CTA builder is used (slide_type is normalized to cta).
+
+        CTA-only fields prove the CTA builder produced the payload.
         """
         result = build_locale_presentation(
             "bogus",
             {"title": "Follow me", "body": "Tap the link"},
         )
         assert result["slide_type"] == SLIDE_TYPE_CTA
-        # CTA-only fields prove the CTA builder produced the payload.
         assert "creator_name" in result
         assert "creator_handle" in result
         assert "creator_website" in result

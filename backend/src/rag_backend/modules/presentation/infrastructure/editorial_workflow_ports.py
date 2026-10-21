@@ -1,4 +1,4 @@
-"""Concrete adapters for the presentation editorial-port surface (AE-0121).
+"""Concrete adapters for the presentation editorial-port surface.
 
 These adapters are the infrastructure backing for the presentation forward ports
 (``rag_backend.modules.presentation.domain.ports``) the EDITORIAL workflow invokes
@@ -26,6 +26,11 @@ Behavior-preserving: no adapter renders, bumps a lock, or stamps a column itself
 beyond what the wrapped legacy path already did — each forwards to the existing
 implementation, so the rendered slides/PDFs, the activation CAS, the review
 re-validation, and the progress write/SSE are all untouched.
+
+Carousel is the single presentation format produced today; a second format adds a second
+producer, not an abstraction layer. The progress callback type is the editorial-supplied
+callable that persists ``phase_progress`` and publishes the SSE event for a reported
+snapshot.
 """
 
 from __future__ import annotations
@@ -48,8 +53,6 @@ from rag_backend.modules.presentation.domain.contracts import (
     ProgressSnapshot,
 )
 
-# The single presentation format produced today (carousel). A second format adds
-# a second producer, not an abstraction layer (AE-0121 non-goal).
 CAROUSEL_FORMAT_NAME = "carousel"
 
 _ERR_PROJECT_MISSING = "carousel project not found during artifact build"
@@ -107,10 +110,12 @@ class CarouselArtifactBuildAdapter:
         self._repository = repository
 
     async def build_and_activate(self, project_id: str) -> ArtifactActivation:
-        """Build + activate the project's artifact via the unchanged CAS path."""
-        # Lazy import: the artifact-build service transitively pulls the carousel
-        # workflow graph, which imports the presentation facade — importing it at
-        # module top would close an import cycle. Resolved at call time instead.
+        """Build + activate the project's artifact via the unchanged CAS path.
+
+        The artifact-build service is imported at call time: it pulls the
+        carousel workflow graph, which imports the presentation facade, so a
+        module-top import would close an import cycle.
+        """
         from rag_backend.application.services.carousel.artifact_build_service import (
             ArtifactBuildFailure,
             ArtifactBuildRequest,
@@ -210,8 +215,6 @@ class PresentationReviewAdapter:
         return edited_slides_block_approval(state, edited_slides)
 
 
-# Type of the editorial-supplied callback that performs the byte-identical
-# ``phase_progress`` persist + SSE publish for a reported snapshot.
 ProgressReporter = Callable[[ProgressSnapshot], Awaitable[None]]
 
 

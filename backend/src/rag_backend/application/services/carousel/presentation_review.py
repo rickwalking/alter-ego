@@ -1,8 +1,10 @@
 """Presentation validation and workflow review updates for content gates.
 
-The core build/validate pipeline lives in ``presentation_review_pipeline``
-(AE-0309); this module keeps the read-path resolvers and the approval
+The core build/validate pipeline lives in ``presentation_review_pipeline``; this module keeps the read-path resolvers and the approval
 blocking checks, and re-exports the pipeline API for existing callers.
+
+Resolvers form a chain of responsibility: they are tried in registration order, the
+first to return a non-None dict wins, and when none matches the review is empty.
 """
 
 from __future__ import annotations
@@ -38,10 +40,6 @@ def _state_policy_version(state: Mapping[str, object]) -> str | None:
     raw = state.get(WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY)
     return str(raw) if raw else None
 
-
-# Chain-of-Responsibility: resolvers are tried in registration order;
-# the first to return a non-None dict wins.  The terminal fallback
-# (no resolver matched) returns an empty review.
 
 _RESOLVERS: list[Callable[[Mapping[str, object]], dict[str, object] | None]] = []
 
@@ -164,12 +162,11 @@ def _blocking_from_drafts(
 def has_blocking_presentation_validation(state: Mapping[str, object]) -> bool:
     """Return True when presentation validation blocks content approval.
 
-    Validates the REPAIRED slides (AE-0286): the deterministic copy trim is
+    Validates the REPAIRED slides: the deterministic copy trim is
     applied before the check, so over-budget drafts a model produced do not keep
     blocking approval once they have been trimmed to fit. Prefers the localized
     slides, then raw drafts, and only falls back to a stored validation when there
-    is nothing to repair. Parse-failure markers on stored localized slides
-    (AE-0309) surface here as blocking ``slide_parse_failed`` violations.
+    is nothing to repair. Parse-failure markers on stored localized slides surface here as blocking ``slide_parse_failed`` violations.
     """
     policy_version = _state_policy_version(state)
     localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)

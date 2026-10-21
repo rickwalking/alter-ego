@@ -150,7 +150,6 @@ class TestAlterEgoChatStream:
         self, client, test_conversation, mock_agent, monkeypatch
     ):
         """Given no auth, when POST /chat/stream, then returns SSE token events."""
-        # Feature: Alter-Ego Public Chat Streaming
         # Scenario: Anonymous user streams chat without any auth
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
@@ -177,7 +176,6 @@ class TestAlterEgoChatStream:
         self, client, test_conversation, mock_agent, monkeypatch
     ):
         """Given empty content, when POST /chat/stream, then returns error SSE event."""
-        # Feature: Alter-Ego Public Chat Streaming
         # Scenario: User sends empty message
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
@@ -199,7 +197,6 @@ class TestAlterEgoChatStream:
         self, client, mock_agent, monkeypatch
     ):
         """Given invalid conversation id, when POST /chat/stream, then returns error SSE event."""
-        # Feature: Alter-Ego Public Chat Streaming
         # Scenario: Chat for non-existent conversation
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
@@ -225,7 +222,6 @@ class TestPublishChatStream:
     @pytest.mark.asyncio
     async def test_anonymous_user_denied(self, client, test_conversation):
         """Given no auth, when POST /publish-chat/stream, then returns 401."""
-        # Feature: Publish Page Carousel Agent Streaming
         # Scenario: Anonymous user attempts publish chat
         response = await client.post(
             f"/api/conversations/{test_conversation}/publish-chat/stream",
@@ -238,7 +234,6 @@ class TestPublishChatStream:
         self, client, mock_agent, monkeypatch, test_user
     ):
         """Given conversation without project_id, when POST /publish-chat/stream, then returns 400."""
-        # Feature: Publish Page Carousel Agent Streaming
         # Scenario: Publish chat for non-carousel conversation
         from rag_backend.api.routes import chat_stream as chat_stream_module
 

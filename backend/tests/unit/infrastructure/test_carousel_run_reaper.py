@@ -1,4 +1,4 @@
-"""Unit tests for the AE-0315 stale-run reaper.
+"""Unit tests for the stale-run reaper.
 
 Feature: tests/features/carousel_run_progress_reaper.feature
 Scenarios: dead run reaped + recovery, slow-healthy never reaped, overdue
@@ -82,6 +82,9 @@ async def _add_run_row(
     started_minutes_ago: int = 5,
     phase_status: str = PHASE_STATUS_IN_PROGRESS,
 ) -> CarouselProjectModel:
+    """Stamps the run columns directly, simulating a run that started before a restart; the
+    listener path is covered by test_carousel_run_guard.
+    """
     now = datetime.now(UTC)
     project = CarouselProjectModel(
         id=str(uuid.uuid4()),
@@ -95,8 +98,6 @@ async def _add_run_row(
     )
     db.add(project)
     await db.commit()
-    # Stamp run columns directly (simulating a run that started pre-restart;
-    # the listener path is covered by test_carousel_run_guard).
     project.run_started_at = now - timedelta(minutes=started_minutes_ago)
     if heartbeat_age_seconds is not None:
         project.run_heartbeat_at = now - timedelta(seconds=heartbeat_age_seconds)
@@ -122,6 +123,7 @@ class TestReaperRules:
     async def test_dead_run_reaped_after_n_stale_observations(
         self, test_engine
     ) -> None:
+        """The same UPDATE bumps lock_version and the run_epoch fencing token."""
         hub = AsyncMock()
         async with _factory(test_engine)() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
@@ -134,8 +136,8 @@ class TestReaperRules:
             assert project.phase_status == PHASE_STATUS_AWAITING_HUMAN
             assert project.run_started_at is None
             assert project.run_heartbeat_at is None
-            assert project.lock_version == 4  # bumped in the same UPDATE
-            assert project.run_epoch == 1  # fencing token bumped
+            assert project.lock_version == 4
+            assert project.run_epoch == 1
             event = hub.publish.await_args.args[1]
             assert event["event"] == SSE_EVENT_RUN_FINISHED
             assert event["reason"] == RUN_FINISHED_REASON_STALE
@@ -143,7 +145,9 @@ class TestReaperRules:
     async def test_reap_reconciles_parked_checkpoint_by_mirroring(
         self, test_engine
     ) -> None:
-        # Checkpoint parked (approved) -> the row mirrors it, not awaiting_human.
+        """A parked (approved) checkpoint makes the row mirror it rather than reset to
+        awaiting_human.
+        """
         async with _factory(test_engine)() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
             reaper = _reaper(checkpoint_status=PHASE_STATUS_APPROVED)
@@ -155,10 +159,11 @@ class TestReaperRules:
     async def test_mid_step_checkpoint_resets_to_awaiting_human(
         self, test_engine
     ) -> None:
-        # Mid-generation-shaped checkpoint (in_progress): the reaper NEVER
-        # touches checkpoint state — the row resets to awaiting_human so
-        # LangGraph re-executes the interrupted node on the next resume
-        # (pre-interrupt side effects are idempotent by project rule).
+        """The reaper never touches checkpoint state: on a mid-generation (in_progress)
+        checkpoint the row resets to awaiting_human so LangGraph re-executes the
+        interrupted node on the next resume (pre-interrupt side effects are idempotent
+        by project rule).
+        """
         async with _factory(test_engine)() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
             reaper = _reaper(checkpoint_status=PHASE_STATUS_IN_PROGRESS)
@@ -192,13 +197,14 @@ class TestReaperRules:
             assert overdue_calls[0].kwargs["elapsed_minutes"] >= 60
 
     async def test_null_heartbeat_is_alert_only_forever(self, test_engine) -> None:
-        # Migration-day safety: an in_progress row predating the columns has
-        # NULL heartbeat forever from the reaper's view — never reapable.
+        """Migration-day safety: an in_progress row predating the run columns has a NULL
+        heartbeat forever from the reaper's view, so it is never reapable.
+        """
         async with _factory(test_engine)() as db:
             project = await _add_run_row(
                 db, heartbeat_age_seconds=None, started_minutes_ago=300
             )
-            project.run_started_at = None  # fully pre-migration shape
+            project.run_started_at = None
             await db.commit()
             reaper = _reaper()
             assert await _tick_times(reaper, db, _OBSERVATIONS * 3) == 0
@@ -206,7 +212,7 @@ class TestReaperRules:
             assert project.phase_status == PHASE_STATUS_IN_PROGRESS
 
     async def test_non_in_progress_rows_never_reaped(self, test_engine) -> None:
-        # Leftover run_started_at on a non-in_progress row is ignored.
+        """Leftover run_started_at on a non-in_progress row is ignored."""
         async with _factory(test_engine)() as db:
             project = await _add_run_row(
                 db,
@@ -219,20 +225,20 @@ class TestReaperRules:
             assert project.phase_status == PHASE_STATUS_AWAITING_HUMAN
 
     async def test_fresh_heartbeat_resets_consecutive_count(self, test_engine) -> None:
-        # Heartbeat robustness: a recovered heartbeat resets the count, so a
-        # transient blip never accumulates into a reap.
+        """A recovered heartbeat resets the count, so a transient blip never accumulates
+        into a reap; a reap then needs N fresh consecutive observations again.
+        """
         async with _factory(test_engine)() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
             reaper = _reaper()
             assert await _tick_times(reaper, db, _OBSERVATIONS - 1) == 0
-            project.run_heartbeat_at = datetime.now(UTC)  # heartbeat recovers
+            project.run_heartbeat_at = datetime.now(UTC)
             await db.commit()
             assert await _tick_times(reaper, db, 1) == 0
             project.run_heartbeat_at = datetime.now(UTC) - timedelta(
                 seconds=_STALE_SECONDS + 60
             )
             await db.commit()
-            # Needs N fresh consecutive observations again.
             assert await _tick_times(reaper, db, _OBSERVATIONS - 1) == 0
             with patch(_HUB_PATH, return_value=AsyncMock()):
                 assert await _tick_times(reaper, db, 1) == 1
@@ -243,8 +249,9 @@ class TestReapSerialization:
     async def test_post_reap_resume_cas_with_old_version_fails(
         self, test_engine
     ) -> None:
-        # Reap-vs-repair serialization: an in-flight resume holding the
-        # pre-reap lock_version fails its CAS after the reap bump.
+        """Reap-vs-repair serialization: an in-flight resume holding the pre-reap
+        lock_version fails its CAS after the reap bump.
+        """
         async with _factory(test_engine)() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
             old_version = int(project.lock_version)
@@ -263,9 +270,9 @@ class TestReapSerialization:
     async def test_zombie_rejected_and_replacement_accepted_same_project(
         self, test_engine
     ) -> None:
-        # Fencing safety (the boolean-marker impossibility case): after a
-        # reap, the zombie's stale-epoch write fails while the replacement
-        # run's current-epoch write succeeds — no clearing step exists.
+        """Fencing safety: after a reap the zombie's stale-epoch (0) write fails while the
+        replacement run's current-epoch (1) write succeeds; no clearing step exists.
+        """
         factory = _factory(test_engine)
         async with factory() as db:
             project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 60)
@@ -275,7 +282,7 @@ class TestReapSerialization:
                 await _tick_times(reaper, db, _OBSERVATIONS)
         async with factory() as db:
             carousel_run_epoch_var.set(
-                CarouselRunContext(project_id=project_id, epoch=0)  # zombie
+                CarouselRunContext(project_id=project_id, epoch=0)
             )
             zombie = await db.get(CarouselProjectModel, project_id)
             assert zombie is not None
@@ -284,7 +291,7 @@ class TestReapSerialization:
                 await db.flush()
             await db.rollback()
             carousel_run_epoch_var.set(
-                CarouselRunContext(project_id=project_id, epoch=1)  # replacement
+                CarouselRunContext(project_id=project_id, epoch=1)
             )
             replacement = await db.get(CarouselProjectModel, project_id)
             assert replacement is not None
@@ -302,10 +309,14 @@ async def _fake_nested():
 
 @pytest.mark.asyncio
 class TestReapLockSafety:
-    """AE-0320 (tests/features/carousel_run_lock_safety.feature)."""
+    """Run-lock safety (tests/features/carousel_run_lock_safety.feature)."""
 
     async def test_blocked_flip_fails_fast_and_logs(self) -> None:
-        """Scenario: Blocked reaper flip fails fast and retries next tick."""
+        """Scenario: Blocked reaper flip fails fast and retries next tick.
+
+        The blocked flip is savepoint-scoped and must not roll back the whole
+        worker-tick transaction.
+        """
         from unittest.mock import MagicMock
 
         from sqlalchemy.exc import OperationalError
@@ -338,14 +349,15 @@ class TestReapLockSafety:
             reaped = await reaper._reap(db, row)
 
         assert reaped is False
-        # Savepoint-scoped: the blocked flip must NOT roll back the whole
-        # worker-tick transaction (external review r1 #1).
         db.rollback.assert_not_awaited()
         blocked = [log for log in logs if log["event"] == "carousel_run_reap_blocked"]
         assert len(blocked) == 1
 
     async def test_flip_applies_lock_timeout_on_postgres(self) -> None:
-        """Scenario: Heartbeat/flip writes are lock-timeout-bounded (flip half)."""
+        """Scenario: Heartbeat/flip writes are lock-timeout-bounded (flip half).
+
+        A rowcount of 0 is a CAS miss, which skips the finalize side effects.
+        """
         from unittest.mock import MagicMock
 
         reaper = CarouselRunReaperRepository(_config())
@@ -366,7 +378,7 @@ class TestReapLockSafety:
         db.get_bind = MagicMock(return_value=bind)
         db.begin_nested = MagicMock(side_effect=lambda: _fake_nested())
         flip_result = MagicMock()
-        flip_result.rowcount = 0  # CAS miss: skip finalize side effects
+        flip_result.rowcount = 0
         db.execute = AsyncMock(side_effect=[MagicMock(), flip_result])
 
         reaped = await reaper._reap(db, row)

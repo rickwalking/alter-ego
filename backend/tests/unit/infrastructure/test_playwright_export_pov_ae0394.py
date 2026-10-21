@@ -1,4 +1,4 @@
-"""POV export-canvas rules (AE-0394).
+"""POV export-canvas rules.
 
 Gherkin: tests/features/carousel_pov_layouts.feature
 ("POV slides scale for the export canvas", "Slide 1 shows the owner's photo full-bleed").

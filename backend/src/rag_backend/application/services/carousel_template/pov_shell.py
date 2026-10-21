@@ -1,4 +1,4 @@
-"""Shared markup for the "Ponto de Vista" layouts (AE-0376, ADR-0021).
+"""Shared markup for the "Ponto de Vista" layouts (ADR-0021).
 
 No generated artwork: a solid palette background with a subtle texture, the
 standard ``.slide-presentation`` / ``.slide-presentation-copy`` /

@@ -1,4 +1,4 @@
-"""Ports of the GrokBot slide-1 cover (AE-0418, ADR-0024).
+"""Ports of the GrokBot slide-1 cover (ADR-0024).
 
 The SQL store keeps the autopilot's cover rows; the image store is the
 editorial creator-asset seam (validation, WebP storage, staging); the
@@ -63,12 +63,15 @@ class CoverChoiceCommand:
 
 
 class CoverSwitchStatus(StrEnum):
-    """Outcome of one slide-1 switch on a finished carousel."""
+    """Outcome of one slide-1 switch on a finished carousel.
+
+    ``RENDER_FAILED``: stored, but the re-render failed, so it is never reported as
+    switched.
+    """
 
     SWITCHED = "switched"
     CONFLICT = "conflict"
     MISSING = "missing"
-    # Stored, but the re-render failed: never reported as switched.
     RENDER_FAILED = "render_failed"
 
 

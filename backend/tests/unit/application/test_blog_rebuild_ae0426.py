@@ -1,7 +1,7 @@
-"""Selection + orchestration of the AE-0426 hidden-post rebuild.
+"""Selection + orchestration of the hidden-post rebuild.
 
 Feature: backend/tests/features/blog_rebuild_hidden_ae0426.feature
-The service runs against fake ports here; the SQL store + the AE-0425 pipeline
+The service runs against fake ports here; the SQL store + the blog generation pipeline
 are exercised end to end in ``tests/integration/test_blog_rebuild_hidden``.
 """
 

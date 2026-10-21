@@ -67,7 +67,7 @@ def get_conversation_handlers(
     The CRUD/list/title/messages routes delegate to these handlers; the
     non-streaming chat route builds its own handlers bound to a route-local
     agent factory so the monkeypatch-friendly ``build_agent_for_conversation``
-    seam (the AE-0097 safety net) is preserved.
+    seam (the test safety net) is preserved.
     """
     return ConversationHandlers(
         service=module.service,
@@ -97,7 +97,7 @@ def get_conversation_stream_handler(
     Binds the request ``AsyncSession`` into the ``StreamChatRunner`` adapter (the
     legacy ``stream_chat_response`` wrapper) at the edge, so the conversation
     streaming application code never reaches a concrete Postgres repository or the
-    global container (AE-0102 AC). Mirrors ``get_conversation_handlers`` and
+    global container. Mirrors ``get_conversation_handlers`` and
     ``get_knowledge_service``: container/session resolution stays here in
     ``api/dependencies/``, never inside the module's application code.
     """
@@ -107,8 +107,8 @@ def get_conversation_stream_handler(
 def get_conversation_title_generator() -> LlmGenerate:
     """Resolve the LLM ``generate`` callable for conversation title generation.
 
-    Kept at the edge so the route never reaches the global container itself
-    (AE-0101 AC); mirrors how ``get_knowledge_service`` resolves collaborators
+    Kept at the edge so the route never reaches the global container itself;
+    mirrors how ``get_knowledge_service`` resolves collaborators
     via the container here in ``api/dependencies/``.
     """
     return get_container().llm_service().generate

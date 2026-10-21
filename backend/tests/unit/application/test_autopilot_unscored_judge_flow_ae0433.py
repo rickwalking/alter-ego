@@ -1,4 +1,4 @@
-"""AE-0433: an unscored persona judge never escalates a passing run (real engine).
+"""An unscored persona judge never escalates a passing run (real engine).
 
 Real: the SQLite rows and lock version, the LangGraph checkpoint, the
 editorial facade (slide fix + persona scorer + persisted scores), the

@@ -6,7 +6,7 @@ lookup inside the module (ADR-0009 §9) — the inbound edge constructs the
 request-scoped collaborators (which enlist in the request's Unit of Work) and
 passes them in.
 
-**Behavior-preserving wiring (AE-0089).** The knowledge adapters are NOT
+**Behavior-preserving wiring.** The knowledge adapters are NOT
 relocated in Phase 2; they remain at their legacy locations. The inbound caller
 builds them exactly as the legacy routes do today (the request-scoped
 ``DocumentRepository``, the ``DocumentProcessingPipeline`` injected with that
@@ -47,7 +47,7 @@ class KnowledgeAdapters:
     """Pre-constructed, request-scoped collaborators for the knowledge module.
 
     Built at the inbound edge (the api adapter / legacy route) from the existing
-    infrastructure so the module wires to them without relocation (AE-0089). The
+    infrastructure so the module wires to them without relocation. The
     ``unit_of_work`` wraps that same request's ``AsyncSession`` and is the single
     transaction owner the application service commits through (ADR-0009 §9).
     """
@@ -70,7 +70,7 @@ def bootstrap_module(
     legacy adapters via ``adapters``; this function injects them into the
     application service via the constructor.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     return KnowledgeService(
         repository=adapters.repository,
         pipeline=adapters.pipeline,

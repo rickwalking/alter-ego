@@ -1,7 +1,6 @@
-"""AE-0268: carousel theme is a string reference, not the CarouselTheme enum.
+"""Carousel theme is a string reference, not the CarouselTheme enum.
 
 Feature: Carousel theme stored as a string reference (no behaviour change)
-(.agent/tasks/AE-0268-carousel-theme-as-string-reference-prod-census-gate.md)
 
 The DB column was already ``String(30)`` (not a PG enum), so this is a
 domain-layer type change with no DDL: ``CarouselProject.theme`` is now a plain
@@ -41,19 +40,21 @@ class TestCarouselThemeStringReference:
             assert _project(key).theme == key
 
     def test_auto_string_takes_the_detection_path(self) -> None:
-        # "auto" must NOT short-circuit to the explicit-key branch.
+        """ "auto" must not short-circuit to the explicit-key branch."""
         resolved = resolve_theme(_project("auto"))
         assert set(resolved) == {"primary", "accent", "background"}
 
     def test_unknown_key_falls_back_to_first_category(self) -> None:
-        # An explicit but unknown key degrades to the first category palette
-        # (unchanged guard behaviour), never raising.
+        """An explicit but unknown key degrades to the first category palette, never
+        raising.
+        """
         resolved = resolve_theme(_project("not_a_real_theme"))
         assert set(resolved) == {"primary", "accent", "background"}
 
     def test_snapshot_short_circuits_resolution(self) -> None:
-        # AE-0269 D9: a project carrying a theme_snapshot renders from it,
-        # bypassing live resolution — so palette edits never change past work.
+        """A project carrying a theme_snapshot renders from it, bypassing live resolution,
+        so palette edits never change past work.
+        """
         project = CarouselProject(
             topic="t",
             audience="a",
@@ -77,7 +78,7 @@ class TestCarouselThemeStringReference:
 
 @pytest.mark.unit
 class TestValidateThemeReference:
-    """AE-0271: the create path accepts root key | "auto" | custom-palette UUID."""
+    """The create path accepts root key | "auto" | custom-palette UUID."""
 
     def test_accepts_root_key(self) -> None:
         assert validate_theme_reference("plasma_magenta") == "plasma_magenta"

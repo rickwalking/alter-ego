@@ -1,12 +1,12 @@
-"""Approve, publish now, or schedule from Telegram (AE-0370).
+"""Approve, publish now, or schedule from Telegram.
 
 Approve offers ``🚀 Publicar agora`` and ``🗓 Agendar`` (or, with
 ``AUTOPILOT_DEFAULT_PUBLISH=next_slot``, schedules the best recommended slot
 of the next seven days directly). A POV run is always auto-scheduled (PR #106
 review); without data its Tue/Thu 12:00 prior wins. ``🗓 Agendar`` and
-``🗓 Mudar dia/horário`` open the day/time picker (AE-0404); a slot picked on
+``🗓 Mudar dia/horário`` open the day/time picker; a slot picked on
 a scheduled run moves it (``scheduled -> scheduled`` with the new time).
-Publish now keeps the AE-0356 path: approve final review, release, and the
+Publish now keeps the approve path: approve final review, release, and the
 worker publishes. Scheduling approves final review but releases nothing: the
 run waits in ``scheduled`` and the worker's due tick releases and publishes
 it. Every step is a compare-and-set, so a double tap acts once.
@@ -111,14 +111,16 @@ _Handler = Callable[
 
 @dataclass(frozen=True, kw_only=True)
 class PublishChoiceDeps:
-    """Collaborators shared with the owner-action service for one request."""
+    """Collaborators shared with the owner-action service for one request.
+
+    ``signals`` gives the recommendations audience and post engagement.
+    """
 
     runs: AutopilotRunRepository
     pending: PendingReworkStore
     approval: FinalReviewApproval
     clock: Clock
     default_publish: str = PUBLISH_MODE_NOW
-    # AE-0404: audience and post engagement for the recommendations.
     signals: ScheduleSignalsSource | None = None
 
 
@@ -158,13 +160,16 @@ class PublishChoiceActions:
         await self._confirm(update, run, _Choice(at=choice.at))
 
     async def _approve(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
+        """Approve the review: confirm a slot or offer publish-now / schedule.
+
+        In ``next_slot`` mode, and for every POV run even in ``now`` mode, the best
+        recommended slot of the next seven days is scheduled.
+        """
         run = await self._in_state(parsed.run_id, _S.AWAITING_OWNER)
         if run is None:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
         if self._deps.default_publish == PUBLISH_MODE_NEXT_SLOT or is_pov_run(run):
-            # AE-0404: the best recommended slot of the next seven days. PR #106
-            # review: a POV run is auto-scheduled even when the mode is "now".
             best = await self._picker.best(run)
             choice = _Choice(at=best.at, reason=reason_text(best))
             await self._schedule(update, run, choice)
@@ -217,6 +222,7 @@ class PublishChoiceActions:
         await self._picker.show_days(update, run)
 
     async def _day(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
+        """Handle a day tap; a stale keyboard (the day has passed) gets fresh days."""
         run = await self._pickable(parsed.run_id)
         if run is None or parsed.day is None:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
@@ -224,11 +230,11 @@ class PublishChoiceActions:
         if await self._picker.show_times(update, run, parsed.day):
             await self._replies.answer(update, day_label(parsed.day))
             return
-        # A stale keyboard: the day has passed. Offer fresh days.
         await self._replies.answer(update, TEXT_DAY_OUT_OF_RANGE)
         await self._picker.show_days(update, run)
 
     async def _slot(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
+        """Handle a time tap; a stale or forged keyboard gets fresh days."""
         run = await self._pickable(parsed.run_id)
         if run is None:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
@@ -236,7 +242,6 @@ class PublishChoiceActions:
         at = from_epoch(parsed.epoch)
         error = check_choice(at, self._deps.clock.now())
         if error is not None:
-            # A stale or forged keyboard. Offer fresh days.
             await self._replies.answer(update, TIME_ERROR_TEXT[error])
             await self._picker.show_days(update, run)
             return

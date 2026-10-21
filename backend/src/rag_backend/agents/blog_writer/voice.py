@@ -1,4 +1,4 @@
-"""Persona voice scorer of the blog quality gate (AE-0425, ADR-0003).
+"""Persona voice scorer of the blog quality gate (ADR-0003).
 
 Implements the ``VoiceScorer`` port with ``PersonaAgent.evaluate_match`` on the
 fast model (persona scoring is a fast-role task, ADR-0014). Writing samples are

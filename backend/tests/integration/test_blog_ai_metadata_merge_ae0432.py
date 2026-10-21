@@ -1,4 +1,4 @@
-"""AI suggest/improve merge onto the latest metadata (AE-0432).
+"""AI suggest/improve merge onto the latest metadata.
 
 Feature: backend/tests/features/blog_ai_metadata_merge_ae0432.feature
 """

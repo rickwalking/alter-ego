@@ -1,4 +1,4 @@
-"""Unit tests for the blog.v2 document model and the fence-aware splitter (AE-0423).
+"""Unit tests for the blog.v2 document model and the fence-aware splitter.
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 """

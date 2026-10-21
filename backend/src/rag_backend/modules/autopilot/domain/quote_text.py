@@ -1,4 +1,4 @@
-"""Excerpt matching for scout quotes (AE-0406, spec §4). Pure, no I/O.
+"""Excerpt matching for scout quotes (spec §4). Pure, no I/O.
 
 Both the excerpt and the stored post text are normalised the same way, then
 compared as a case-sensitive substring:

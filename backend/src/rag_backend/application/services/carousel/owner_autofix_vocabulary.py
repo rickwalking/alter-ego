@@ -1,4 +1,4 @@
-"""Proper-noun vocabulary of one carousel for the owner autofix (AE-0367).
+"""Proper-noun vocabulary of one carousel for the owner autofix.
 
 Prod carousel 8e350d6e lowercased "Argon" in its copy while the outline kept
 it capitalized. The fix restores capitals from the carousel's own vocabulary:
@@ -6,7 +6,7 @@ a word written capitalized in the MIDDLE of a sentence (never its first word)
 in a sentence-case source (outline titles and key points, the PT/EN copy) is a
 proper noun, unless a trusted source (outline, research) also writes it
 lowercase mid-sentence. A multi-word name ("Claude Code", "Grok Bot") is
-learned whole, never its last word alone (AE-0401). Research titles are often
+learned whole, never its last word alone. Research titles are often
 Title Case, so from those
 only distinctive tokens are trusted ("OpenAI", "GPT-5"). The constants list and
 the policy's configured proper nouns are always included.
@@ -106,7 +106,7 @@ def _runs(sentence: str) -> list[tuple[int, list[str]]]:
 def _count_sentence_case(text: str, tally: _Tally, *, trusted: bool) -> None:
     """Count capitalized mid-sentence names; a multi-word name counts whole.
 
-    AE-0401: "Claude Code" used to teach "Code" alone, so "the code" in EN was
+    "Claude Code" used to teach "Code" alone, so "the code" in EN was
     reported as a lowercased proper noun. Only the full phrase is learned.
     """
     for sentence in _sentences(text):

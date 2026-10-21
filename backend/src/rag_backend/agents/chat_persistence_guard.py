@@ -1,15 +1,15 @@
-"""Chat-persistence guard — ADR-0013 Option A (AE-0247).
+"""Chat-persistence guard — ADR-0013 Option A.
 
 The two chat Deep Agents (`rag_agent`, `alter_ego_agent`) are already stateful:
 they persist every message to `message_repository` and rebuild history from
 Postgres each turn. Giving them a LangGraph `checkpointer` would create a SECOND
-durable write path keyed by `thread_id` — the exact AE-0163 dual-write data-loss
+durable write path keyed by `thread_id` — the exact dual-write data-loss
 class. ADR-0013 resolves this: `message_repository` is canonical and the chat
 agents get **no** checkpointer.
 
 This module makes that decision executable and self-guarding: the chat-agent
 build path calls :func:`assert_no_chat_checkpointer` so a checkpointer can never
-be silently wired onto a chat thread. The shared harness builder (AE-0248) will
+be silently wired onto a chat thread. The shared harness builder will
 route its chat-agent construction through the same guard, keeping the single-
 writer invariant enforceable as the composition surface grows.
 """

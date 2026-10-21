@@ -1,4 +1,4 @@
-"""GrokBot cover through the run: spec, rework, upload, sweep, Telegram (AE-0418).
+"""GrokBot cover through the run: spec, rework, upload, sweep, Telegram.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
 """
@@ -151,9 +151,6 @@ def _runner(
     return runner, notices
 
 
-# --- Default off / chosen at the thesis --------------------------------------------
-
-
 @pytest.mark.unit
 class TestSpecCover:
     # Scenario: The cover is off by default
@@ -176,9 +173,6 @@ class TestSpecCover:
         runner, _notices = _runner(runs, editorial, _Offers())
         await runner.tick()
         assert editorial.specs[0].cover == _COVER
-
-
-# --- Switch after content exists ----------------------------------------------------
 
 
 def _reworking() -> _Runs:
@@ -240,9 +234,6 @@ class TestCoverRework:
         await runner.tick()
         assert runs.run.state is _S.AWAITING_OWNER
         assert runs.run.rework_phase is None
-
-
-# --- Upload and sweep services ------------------------------------------------------
 
 
 @dataclass
@@ -400,9 +391,6 @@ class TestSweep:
         assert covers.commits == 0
 
 
-# --- Thesis prompt preview ------------------------------------------------------------
-
-
 _OFFER = CoverOffer(kind="ai_image", credit="", chosen=False, pov=True, photo_path="/c")
 
 
@@ -455,9 +443,6 @@ class TestThesisPreview:
         assert len(store.sent) == 1
         assert store.sent[0].keyboard is not None
         assert len(store.sent[0].keyboard.rows) == 1
-
-
-# --- Review facts and the Telegram adapter -------------------------------------------
 
 
 @dataclass

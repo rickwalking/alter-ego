@@ -86,10 +86,10 @@ def _source(item: Mapping[str, object]) -> ResearchSourceFact:
 
 
 def _persona_score(raw: object) -> float | None:
-    """The lowest persona score on 0-100, or None when unscored (AE-0364).
+    """The lowest persona score on 0-100, or None when unscored.
 
     None means "not scored" (no persona), which the policy skips like the
-    engine does. AE-0407: both read through ``lowest_overall``, so a stored
+    engine does. Both read through ``lowest_overall``, so a stored
     0-10 answer is scaled and a 0 / missing / unreadable entry (a failed
     judge call) is unscored on both sides instead of failing one of them.
     """
@@ -97,7 +97,7 @@ def _persona_score(raw: object) -> float | None:
 
 
 def _forbidden(state: Mapping[str, object]) -> tuple[str, ...]:
-    """Forbidden phrases only (AE-0392).
+    """Forbidden phrases only.
 
     The content gate's blocking presentation rules are ``quality_violations``:
     reporting them as forbidden phrases hid what actually failed.
@@ -116,7 +116,7 @@ def _quality(state: Mapping[str, object], phase: str) -> tuple[QualityViolation,
 
 
 def _quotes(parts: SnapshotParts, phase: str) -> tuple[QualityViolation, ...]:
-    """AE-0406: quote cards are content; they block only the content gate."""
+    """Quote cards are content; they block only the content gate."""
     if phase != GATE_CONTENT:
         return ()
     return parts.quote_violations

@@ -1,6 +1,8 @@
-"""Unit tests for NotificationService (NOTIF-001, NOTIF-002)."""
+"""Unit tests for NotificationService (NOTIF-001, NOTIF-002).
 
-# Gherkin: tests/features/phase3_workflow_collaboration.feature
+Gherkin: tests/features/phase3_workflow_collaboration.feature.
+"""
+
 # Scenario: Review request notification
 # Scenario: Deadline reminder deduplication
 

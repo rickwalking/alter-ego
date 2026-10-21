@@ -1,4 +1,4 @@
-"""Unit tests for WorkflowTimeoutRepository (AE-0210).
+"""Unit tests for WorkflowTimeoutRepository.
 
 Feature: tests/features/workflow_never_stuck.feature
 """

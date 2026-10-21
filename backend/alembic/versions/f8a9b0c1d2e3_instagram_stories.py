@@ -4,7 +4,7 @@ Revision ID: f8a9b0c1d2e3
 Revises: e7f8a9b0c1d2
 Create Date: 2026-10-14
 
-AE-0369: ADDITIVE. One new table, ``instagram_stories``: one row per carousel
+ADDITIVE. One new table, ``instagram_stories``: one row per carousel
 holds the Story that announces it (state, the container id and creation time
 stored before ``media_publish``, the Story media id, the last error). The
 primary key is the idempotency key, for both the autopilot run and the manual

@@ -1,9 +1,9 @@
-"""Custom palette entity (AE-0269).
+"""Custom palette entity.
 
 A user-created palette in the global catalog. The curated *root* palettes stay
 in the typed ``PALETTE_REGISTRY`` (read-only); custom palettes are mutable rows
 persisted by a ``PaletteRepository``. The colour triple and light/dark mode
-reuse the AE-0266 value objects so a custom palette speaks the same vocabulary
+reuse the palette-registry value objects so a custom palette speaks the same vocabulary
 as a root one. Image style is NOT stored — it is derived from ``mode`` at
 resolve time (a light palette can therefore never be paired with a dark image
 strategy, ADR-0019 D3).
@@ -21,7 +21,7 @@ from rag_backend.domain.constants.palette_types import Palette, PaletteMode
 
 @dataclass
 class CustomPalette:
-    """A user-created, globally-shared palette (AE-0269)."""
+    """A user-created, globally-shared palette."""
 
     name: str
     slug: str

@@ -1,4 +1,4 @@
-"""GrokBot cover upload validation (AE-0418, ADR-0024).
+"""GrokBot cover upload validation (ADR-0024).
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Upload: POST /api/autopilot/assets (image rules)

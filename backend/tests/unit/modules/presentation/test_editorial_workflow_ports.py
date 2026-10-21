@@ -1,4 +1,4 @@
-"""Tests for the presentation editorial-port surface (AE-0121).
+"""Tests for the presentation editorial-port surface.
 
 Phase-5 behavior-preserving extraction: artifact build/activation, format
 production (the carousel ``ContentFormatProducer``), the presentation review
@@ -19,8 +19,8 @@ live provider):
   owns the write);
 * the presentation review port forwards to the unchanged review functions.
 
-Behavior-preserving — Gherkin not applicable (see ticket AE-0121); verified by
-this suite + mypy / lint-imports / the AE-0116 safety net.
+Behavior-preserving — Gherkin not applicable; verified by
+this suite + mypy / lint-imports / the presentation safety net.
 """
 
 from __future__ import annotations
@@ -56,10 +56,6 @@ from rag_backend.modules.presentation.infrastructure.editorial_workflow_ports im
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-# ============================================================================
-# ProgressSnapshot — byte-identical phase_progress + the two distinct phases
-# ============================================================================
-
 
 class TestProgressSnapshot:
     """The snapshot reproduces the legacy ``phase_progress`` payload exactly."""
@@ -93,12 +89,14 @@ class TestProgressSnapshot:
         }
 
     def test_two_phase_values_are_distinct_and_preserved(self) -> None:
-        """``phase`` (dict) and ``sse_phase`` (SSE channel) differ, as legacy."""
+        """``phase`` (dict) and ``sse_phase`` (SSE channel) differ, as legacy.
+
+        The dict carries the generating_images phase; the SSE arg carries images.
+        """
         snapshot = self._snapshot()
         assert snapshot.phase == "generating_images"
         assert snapshot.sse_phase == "images"
         assert snapshot.phase != snapshot.sse_phase
-        # The dict carries the generating_images phase; the SSE arg carries images.
         assert snapshot.as_phase_progress()["phase"] == snapshot.phase
 
     def test_as_phase_progress_copies_slide_dicts(self) -> None:
@@ -109,11 +107,6 @@ class TestProgressSnapshot:
         assert isinstance(slides, list)
         slides[0]["status"] = "MUTATED"
         assert snapshot.slides[0]["status"] == "done"
-
-
-# ============================================================================
-# WorkflowProgressPort / WorkflowProgressCallback — the callback direction
-# ============================================================================
 
 
 class _RecordingReporter:
@@ -148,11 +141,6 @@ class TestWorkflowProgressCallback:
         )
         await callback.report_progress(snapshot)
         assert reporter.received == [snapshot]
-
-
-# ============================================================================
-# ContentFormatProducer — the carousel producer (single format, no framework)
-# ============================================================================
 
 
 def _make_project(
@@ -198,6 +186,7 @@ class TestCarouselFormatProducer:
 
     @pytest.mark.asyncio
     async def test_produce_re_renders_and_reports_pdf_pointers(self) -> None:
+        """Delegated unchanged: the same id (parsed) and strategy pass through."""
         project_id = str(uuid4())
         project = _make_project("/out/pt/carousel.pdf", "/out/en/carousel.pdf")
         refinement = _StubRefinement(project)
@@ -212,7 +201,6 @@ class TestCarouselFormatProducer:
             pdf_path="/out/pt/carousel.pdf",
             pdf_path_en="/out/en/carousel.pdf",
         )
-        # Delegated UNCHANGED: same id (parsed) + strategy passed through.
         assert refinement.calls == [(UUID(project_id), "grid")]
 
     @pytest.mark.asyncio
@@ -226,11 +214,6 @@ class TestCarouselFormatProducer:
         assert result.pdf_path == ""
         assert result.pdf_path_en == ""
         assert refinement.calls == [(UUID(project_id), None)]
-
-
-# ============================================================================
-# ArtifactBuildPort / CarouselArtifactBuildAdapter — result mapping only
-# ============================================================================
 
 
 class _NoProjectRepo:
@@ -256,8 +239,9 @@ class TestArtifactBuildAdapter:
 
     @pytest.mark.asyncio
     async def test_missing_project_returns_failure_without_touching_cas(self) -> None:
-        # The missing-project guard returns BEFORE the db is used, so a placeholder
-        # session is never touched — proving the adapter never reaches the CAS.
+        """The missing-project guard returns before the db is used, so the placeholder
+        session is never touched, proving the adapter never reaches the CAS.
+        """
         adapter = CarouselArtifactBuildAdapter(
             db=cast("AsyncSession", object()), repository=_NoProjectRepo()
         )
@@ -265,7 +249,7 @@ class TestArtifactBuildAdapter:
         assert isinstance(activation, ArtifactActivation)
         assert activation.ok is False
         assert activation.artifact_version == ""
-        assert activation.errors  # carries the missing-project reason
+        assert activation.errors
 
 
 class TestArtifactActivationValueObject:
@@ -283,11 +267,6 @@ class TestArtifactActivationValueObject:
         assert activation.errors == ("boom",)
 
 
-# ============================================================================
-# PresentationReviewPort — the review boundary the workflow nodes call
-# ============================================================================
-
-
 class TestPresentationReviewPort:
     """The review adapter + facade function forward to the unchanged service."""
 
@@ -295,18 +274,19 @@ class TestPresentationReviewPort:
         assert isinstance(PresentationReviewAdapter(), PresentationReviewPort)
 
     def test_apply_slide_edits_no_edits_returns_revalidation_updates(self) -> None:
-        # Empty state + no edits: the unchanged service returns the (empty) merged
-        # localized slides + a validation report dict — a stable, DB-free shape.
+        """With empty state and no edits the service returns the (empty) merged localized
+        slides and a validation report dict, a stable DB-free shape.
+        """
         state: Mapping[str, object] = {}
         updates = PresentationReviewAdapter().apply_slide_edits(state, [])
         assert isinstance(updates, dict)
         assert "presentation_validation" in updates or "localized_slides" in updates
 
     def test_facade_function_matches_adapter(self) -> None:
-        # Both paths delegate to the SAME unchanged service, so they return the
-        # same keys + the same (timestamp-independent) shape. The validation
-        # report carries a live ``validated_at`` (datetime.now), so compare the
-        # stable keys rather than the volatile timestamp.
+        """Both paths delegate to the same service; the validation report carries a live
+        ``validated_at``, so the test compares the stable keys rather than the volatile
+        timestamp.
+        """
         state: Mapping[str, object] = {}
         via_function = apply_localized_slide_edits_via_port(state, [])
         via_adapter = PresentationReviewAdapter().apply_slide_edits(state, [])

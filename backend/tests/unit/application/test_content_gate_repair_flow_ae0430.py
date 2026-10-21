@@ -1,4 +1,4 @@
-"""AE-0430: the content ensure's use of the gate repair, and the model adapter.
+"""The content ensure's use of the gate repair, and the model adapter.
 
 Gherkin: tests/features/content_gate_repair_ae0430.feature (sections A and B).
 """
@@ -83,7 +83,10 @@ def _prod_state() -> dict[str, object]:
 @pytest.mark.asyncio
 class TestRepairBlockedContentGate:
     async def test_blocked_gate_is_repaired_and_written_back(self) -> None:
-        """Scenario: The regression fixture from prod ends green (write-back)."""
+        """Scenario: The regression fixture from prod ends green (write-back).
+
+        Slides nobody repaired keep their draft fields.
+        """
         state = _prod_state()
 
         updates = await repair_blocked_content_gate(
@@ -94,7 +97,6 @@ class TestRepairBlockedContentGate:
         drafts = cast(list[dict[str, object]], updates["slide_drafts"])
         first = drafts[0]
         assert cast(dict[str, object], first["presentation_en"])["tldr_strip"]
-        # Slides nobody repaired keep their draft fields.
         assert "presentation_en" not in drafts[1]
 
     async def test_no_repairer_or_passing_gate_does_nothing(self) -> None:

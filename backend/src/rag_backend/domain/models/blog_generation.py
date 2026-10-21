@@ -1,4 +1,4 @@
-"""Value objects of the blog writer + image run (AE-0425, ADR-0025).
+"""Value objects of the blog writer + image run (ADR-0025).
 
 The writer turns a :class:`WriterBrief` (raw material + one narrative role per
 section + the persona) into a :class:`DraftArticle` (PT sections + the EN
@@ -83,11 +83,14 @@ class DraftArticle:
 
 @dataclass(frozen=True)
 class QualityFindings:
-    """Deterministic scan result: repeated sentences and banned stock phrases."""
+    """Deterministic scan result: repeated sentences and banned stock phrases.
+
+    ``english_sections`` holds the headings (or ``#<index>``) of PT sections that
+    read as English.
+    """
 
     repeated_sentences: tuple[str, ...] = ()
     banned_phrases: tuple[str, ...] = ()
-    # Headings (or "#<index>") of PT sections that read as English (F-05).
     english_sections: tuple[str, ...] = ()
 
     @property
@@ -175,15 +178,15 @@ class DocumentApply:
     ``images_generated`` marks an image write (AI disclosure); the images
     were already counted when their budget was RESERVED before the spend;
     ``discard`` cleans up (new image files) when the write fails.
+    With ``replaces_document``, a stored row that does not parse as ``blog.v2`` (a
+    non-migrated legacy row) is REPLACED by the new document instead of being
+    rejected, since it has no sections to merge onto.
     """
 
     edit: DocumentEdit
     images_generated: int = 0
     voice_score: float | None = None
     discard: Callable[[], None] | None = None
-    # The article write: a stored row that does not parse as ``blog.v2`` (a
-    # non-migrated legacy row) is REPLACED by the new document instead of
-    # being rejected (it has no sections to merge onto).
     replaces_document: bool = False
 
 

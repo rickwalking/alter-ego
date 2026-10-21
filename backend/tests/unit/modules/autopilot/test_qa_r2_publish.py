@@ -1,4 +1,4 @@
-"""Unknown published media is terminal and never retried (AE-0348 QA r2 R3).
+"""Unknown published media is terminal and never retried (QA r2 R3).
 
 Gherkin: tests/features/autopilot_instagram_publish.feature
   Scenario: A manual post before the container is not taken as the autopilot post

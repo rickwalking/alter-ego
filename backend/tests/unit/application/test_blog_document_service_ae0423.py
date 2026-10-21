@@ -1,4 +1,4 @@
-"""Unit tests for BlogDocumentService + the public projection (AE-0423).
+"""Unit tests for BlogDocumentService + the public projection.
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 """

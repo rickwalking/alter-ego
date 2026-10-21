@@ -97,33 +97,30 @@ async def _generate_caption(
 def _build_translation_payload(
     slide_drafts: list[dict[str, object]],
 ) -> list[dict[str, object]]:
-    """Build the list of slides to send for EN translation."""
+    """Build the list of slides to send for EN translation.
+
+    The slide index falls back to the 1-based position like every other resolver. Copy
+    is sent case- and markup-preserving: lowercased input came back as a fully lowercase
+    EN slide with mangled tags. The PT long-form notes ship verbatim (model output
+    already inside the pipeline; user inputs were sanitized at intake) so the EN blog
+    gets translated prose. The TL;DR and item texts travel too, so EN keeps PT's shape,
+    and PT emphasis travels as <strong> tags, the EN convention, so the keep-every-tag
+    instruction yields EN emphasis instead of echoed PT markers.
+    """
     payload: list[dict[str, object]] = []
     for slide in slide_drafts[:MAX_SLIDES]:
         if not isinstance(slide, dict):
             continue
-        # AE-0347: fall back to the 1-based position like every other resolver.
         index = int(slide.get(SLIDE_INDEX_KEY, len(payload) + 1))
-        # AE-0366: case- and markup-preserving. The lowercasing sanitizer sent
-        # "argon ... strongindirect prompt injections/strong" to the translator,
-        # which came back as a fully lowercase EN slide with mangled tags.
         item: dict[str, object] = {
             SLIDE_INDEX_KEY: index,
             OUTLINE_LEGACY_HEADING_KEY: sanitize_model_copy(_slide_heading(slide)),
             OUTLINE_LEGACY_BODY_KEY: sanitize_model_copy(_slide_body(slide)),
         }
-        # AE-0347: ship the PT long-form notes so the EN blog gets translated prose.
-        # Sent verbatim: the notes are model output already inside our pipeline
-        # (user inputs were sanitized at intake) and the lowercasing sanitizer
-        # would come back as a lowercased EN blog.
         notes = _slide_long_form_notes(slide)
         if notes:
             item[LONG_FORM_NOTES_KEY] = notes
-        # AE-0430: the TL;DR and item texts travel too, so EN keeps PT's shape.
         item.update(structured_source(slide))
-        # AE-0436: PT emphasis travels as <strong>…</strong>, the EN convention,
-        # so the "keep every <strong> tag" instruction produces EN emphasis
-        # instead of the PT ** the model used to echo (F-09).
         payload.append(
             map_texts(item, lambda text: normalize_emphasis(LANGUAGE_EN, text))
         )
@@ -160,7 +157,7 @@ def _with_pt_structure(
     translations: dict[int, dict[str, object]],
     slide_drafts: list[dict[str, object]],
 ) -> dict[int, dict[str, object]]:
-    """AE-0430: every translated slide carries its PT draft's structured extras."""
+    """Every translated slide carries its PT draft's structured extras."""
     for position, slide in enumerate(slide_drafts[:MAX_SLIDES]):
         if not isinstance(slide, dict):
             continue
@@ -175,10 +172,13 @@ async def _generate_en_translations(
     llm: BaseChatModel,
     slide_drafts: list[dict[str, object]],
 ) -> dict[int, dict[str, object]]:
+    """Translate the PT slides to EN with the versioned prompt.
+
+    The prompt is the versioned YAML one carrying the contract's quality rubric.
+    """
     payload = _build_translation_payload(slide_drafts)
     if not payload:
         return {}
-    # AE-0366: versioned YAML prompt carrying the contract's quality rubric.
     prompt = build_slide_translation_prompt(
         json.dumps(payload, ensure_ascii=False),
         render_quality_rubric(

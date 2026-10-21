@@ -1,8 +1,8 @@
-"""Editorial-side implementation of the presentation progress callback (AE-0121).
+"""Editorial-side implementation of the presentation progress callback.
 
 The presentation image node reports image-generation progress through the
 ``WorkflowProgressPort`` callback (defined in the presentation module). EDITORIAL
-owns the workflow-state ``phase_progress`` column (AE-0105 §2.3) and the SSE
+owns the workflow-state ``phase_progress`` column and the SSE
 progress channel, so the concrete callback lives here on the editorial side and
 performs the byte-identical persist + publish the legacy in-node write did.
 

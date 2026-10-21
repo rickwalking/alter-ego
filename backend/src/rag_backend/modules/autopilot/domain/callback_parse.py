@@ -49,8 +49,8 @@ _PHASE_BY_TOKEN: dict[str, str] = {
 class ParsedCallback:
     """One allowlisted button. ``phase`` is set only for a rework-phase tap.
 
-    ``epoch`` is set only for a slot tap: the slot's Unix seconds (AE-0370).
-    ``day`` is set only for a picker day tap (AE-0404).
+    ``epoch`` is set only for a slot tap: the slot's Unix seconds.
+    ``day`` is set only for a picker day tap.
     """
 
     kind: str
@@ -83,7 +83,7 @@ def parse_callback(data: str) -> ParsedCallback | None:
 
 
 def _picker_callback(data: str) -> ParsedCallback | None:
-    """A slot (``ap:at:``) or a day (``ap:d:``) button of the AE-0404 picker."""
+    """A slot (``ap:at:``) or a day (``ap:d:``) button of the picker."""
     slot = _SLOT.fullmatch(data)
     if slot is not None:
         return ParsedCallback(

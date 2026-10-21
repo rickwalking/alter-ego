@@ -1,4 +1,4 @@
-"""Ports for the scheduled publish (AE-0370, AE-0404). No frameworks."""
+"""Ports for the scheduled publish. No frameworks."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class ScheduledRunSource(Protocol):
 
 
 class ScheduleSignalsSource(Protocol):
-    """The audience and post-engagement signals of the slot recommender (AE-0404)."""
+    """The audience and post-engagement signals of the slot recommender."""
 
     async def load(self) -> ScheduleSignals:
         """Never raises for a Graph failure: it falls back to cached or no data."""
@@ -35,7 +35,7 @@ class ScheduleSignalsSource(Protocol):
 
 
 class AudienceGateway(Protocol):
-    """Reads the account's ``online_followers`` from the Graph API (AE-0404)."""
+    """Reads the account's ``online_followers`` from the Graph API."""
 
     async def online_followers(self) -> dict[int, int]:
         """Followers online per UTC hour (0-23). Raises when Graph cannot answer."""

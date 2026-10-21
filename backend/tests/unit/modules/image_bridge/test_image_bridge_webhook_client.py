@@ -1,4 +1,4 @@
-"""httpx webhook client, transport mocked (AE-0393, contract 2.1).
+"""httpx webhook client, transport mocked (contract 2.1).
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Grok Bot returns an image (the webhook receives prompt, size, token)

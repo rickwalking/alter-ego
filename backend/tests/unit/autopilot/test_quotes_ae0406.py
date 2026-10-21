@@ -1,4 +1,4 @@
-"""Scout quote rules of one ``pov_news`` topic (AE-0406, spec §4).
+"""Scout quote rules of one ``pov_news`` topic (spec §4).
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """
@@ -85,7 +85,6 @@ def test_word_limits_are_inclusive() -> None:
         ({"excerpt": "in just a day"}, "quote_not_in_post", "quotes[0].excerpt"),
         ({"excerpt": "a" * 281}, "quote_not_in_post", "quotes[0].excerpt"),
         ({"excerpt": ""}, "quote_invalid", "quotes[0].excerpt"),
-        # PR #124 review: a missing (blank) field is quote_invalid on that field.
         ({"url": ""}, "quote_invalid", "quotes[0].url"),
         ({"handle": ""}, "quote_invalid", "quotes[0].handle"),
         ({"lang_original": ""}, "quote_invalid", "quotes[0].lang_original"),
@@ -97,6 +96,7 @@ def test_word_limits_are_inclusive() -> None:
 def test_each_rule_names_its_reason_and_field(
     changes: dict[str, str], reason: str, field: str
 ) -> None:
+    """A missing (blank) field is quote_invalid on that field."""
     assert _problem(**changes) == QuoteProblem(reason=reason, field=field)
 
 
@@ -127,7 +127,6 @@ def test_the_second_quote_is_named_by_its_index() -> None:
     )
 
 
-# PR #124 review: the stored post and the cited URL differ only in handle case.
 def test_handle_case_does_not_matter_for_the_stored_post_or_the_sources() -> None:
     stored = "https://x.com/KanishkSJ01/status/1234567890"
     facts = QuoteFacts(sources=frozenset({stored}), post_texts={stored: POST_TEXT})
@@ -170,8 +169,8 @@ def test_quote_urls_keeps_only_status_urls() -> None:
     assert quote_urls(quotes) == (POST_URL,)
 
 
-# QA mutation review: boundaries of the spec §4 limits.
 def test_name_of_60_characters_and_pt_language_are_accepted() -> None:
+    """Covers the boundaries of the spec §4 limits."""
     assert _problem(name="x" * 60) is None
     assert _problem(lang_original="pt") is None
 
@@ -210,7 +209,6 @@ def test_clean_quote_cleans_every_field() -> None:
     assert (cleaned.text_pt, cleaned.text_en) == ("t", "e")
 
 
-# QA security review: control characters never reach the stored excerpt.
 def test_clean_quote_spaces_line_breaks_and_drops_controls_in_the_excerpt() -> None:
     cleaned = clean_quote(quote(excerpt=" In just a day\x00 I have\r\nrun "))
     assert cleaned.excerpt == "In just a day I have run"

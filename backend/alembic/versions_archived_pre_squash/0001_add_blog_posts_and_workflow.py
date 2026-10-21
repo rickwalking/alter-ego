@@ -12,7 +12,6 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-# revision identifiers
 revision = '0001_add_blog_posts_and_workflow'
 down_revision = None
 branch_labels = None
@@ -20,7 +19,6 @@ depends_on = None
 
 
 def upgrade():
-    # Create blog_posts table
     op.create_table(
         'blog_posts',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -55,7 +53,6 @@ def upgrade():
         sa.Column('scheduled_publish_at', sa.DateTime(timezone=True), nullable=True),
     )
 
-    # Create content_versions table
     op.create_table(
         'content_versions',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -68,7 +65,6 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
-    # Create editorial_comments table
     op.create_table(
         'editorial_comments',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -83,7 +79,6 @@ def upgrade():
         sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
     )
 
-    # Create persona_profiles table
     op.create_table(
         'persona_profiles',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -102,7 +97,6 @@ def upgrade():
         sa.Column('version', sa.Integer, default=1, nullable=False),
     )
 
-    # Create quality_rubrics table
     op.create_table(
         'quality_rubrics',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -116,7 +110,6 @@ def upgrade():
         sa.Column('version', sa.Integer, default=1, nullable=False),
     )
 
-    # Create content_sources table
     op.create_table(
         'content_sources',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -134,7 +127,6 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
     )
 
-    # Create rubric_evaluation_scores table
     op.create_table(
         'rubric_evaluation_scores',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
@@ -148,7 +140,6 @@ def upgrade():
         sa.Column('feedback', postgresql.JSON, default=list, nullable=False),
     )
 
-    # Add workflow extension columns to projects table
     op.add_column('projects', sa.Column('creative_brief', sa.Text, nullable=True))
     op.add_column('projects', sa.Column('persona_id', postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column('projects', sa.Column('rubric_id', postgresql.UUID(as_uuid=True), nullable=True))
@@ -156,7 +147,6 @@ def upgrade():
     op.add_column('projects', sa.Column('current_phase', sa.String(50), sa.Default('brief'), nullable=False))
     op.add_column('projects', sa.Column('phase_status', sa.String(50), sa.Default('pending'), nullable=False))
 
-    # Create indexes
     op.create_index('ix_blog_posts_status', 'blog_posts', ['status'])
     op.create_index('ix_blog_posts_slug', 'blog_posts', ['slug'])
     op.create_index('ix_blog_posts_author', 'blog_posts', ['author_id'])
@@ -178,7 +168,6 @@ def upgrade():
     op.create_index('ix_rubric_scores_content_type', 'rubric_evaluation_scores', ['content_type'])
     op.create_index('ix_projects_phase', 'projects', ['current_phase', 'phase_status'])
 
-    # Create foreign key constraints
     op.create_foreign_key(
         'fk_content_sources_project',
         'content_sources',
@@ -219,14 +208,12 @@ def upgrade():
 
 
 def downgrade():
-    # Drop foreign key constraints
     op.drop_constraint('fk_rubric_scores_rubric', 'rubric_evaluation_scores', type_='foreignkey')
     op.drop_constraint('fk_content_versions_content', 'content_versions', type_='foreignkey')
     op.drop_constraint('fk_editorial_comments_content', 'editorial_comments', type_='foreignkey')
     op.drop_constraint('fk_content_sources_blog_post', 'content_sources', type_='foreignkey')
     op.drop_constraint('fk_content_sources_project', 'content_sources', type_='foreignkey')
 
-    # Drop indexes
     op.drop_index('ix_projects_phase', table_name='projects')
     op.drop_index('ix_rubric_scores_content_type', table_name='rubric_evaluation_scores')
     op.drop_index('ix_rubric_scores_content_id', table_name='rubric_evaluation_scores')
@@ -248,7 +235,6 @@ def downgrade():
     op.drop_index('ix_blog_posts_slug', table_name='blog_posts')
     op.drop_index('ix_blog_posts_status', table_name='blog_posts')
 
-    # Drop columns from projects table
     op.drop_column('projects', 'phase_status')
     op.drop_column('projects', 'current_phase')
     op.drop_column('projects', 'instructions')
@@ -256,7 +242,6 @@ def downgrade():
     op.drop_column('projects', 'persona_id')
     op.drop_column('projects', 'creative_brief')
 
-    # Drop tables
     op.drop_table('rubric_evaluation_scores')
     op.drop_table('content_sources')
     op.drop_table('quality_rubrics')

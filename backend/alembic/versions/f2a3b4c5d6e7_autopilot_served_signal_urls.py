@@ -4,7 +4,7 @@ Revision ID: f2a3b4c5d6e7
 Revises: e1f2a3b4c5d6
 Create Date: 2026-10-13
 
-AE-0353: ADDITIVE. Topic intake allows a source URL only when that URL was
+ADDITIVE. Topic intake allows a source URL only when that URL was
 served in the signals bundle within the last 6 hours. The 30-minute bundle
 cache is shorter than that window, so the served set is stored. No existing
 table is altered, so the LangGraph checkpoint-drain gate does not apply.

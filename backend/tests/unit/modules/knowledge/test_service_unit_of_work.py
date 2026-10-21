@@ -1,6 +1,6 @@
 """Unit tests: knowledge writes commit once / roll back with no partial writes.
 
-These cover the AE-0091 acceptance criteria at the application-service layer:
+These cover the acceptance criteria at the application-service layer:
 the ``KnowledgeService`` write use cases run under the request-scoped Unit of
 Work, which is the single commit owner. On success the UoW commits exactly once;
 on failure it rolls back and no partial document/chunks remain persisted.
@@ -83,7 +83,9 @@ class _FakeRepository:
         self._staged: list[KnowledgeDocument] = []
 
     async def create(self, document: KnowledgeDocument) -> KnowledgeDocument:
-        # Flush only — staged, not yet persisted (mirrors session.flush()).
+        """Flushes only: the document is staged, not yet persisted (mirrors
+        session.flush()).
+        """
         self._staged.append(document)
         return document
 
@@ -188,7 +190,7 @@ class TestIngestTransaction:
 
         assert uow.rollbacks == 1
         assert uow.commits == 0
-        assert repo.persisted == []  # no partial writes
+        assert repo.persisted == []
 
 
 class TestDeleteTransaction:

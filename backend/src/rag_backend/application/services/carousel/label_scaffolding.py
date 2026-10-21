@@ -1,4 +1,4 @@
-"""One label-scaffolding detector shared by the drafter parser and the gate (AE-0436).
+"""One label-scaffolding detector shared by the drafter parser and the gate.
 
 Prod carousels ``7acaf967`` and ``5344b6c6`` shipped locale markers and field
 labels as visible copy: ``**PT-BR**`` at the start of a PT body, ``**CTA
@@ -29,14 +29,18 @@ PR #158), so every flagged text is deterministically repairable:
 
 Pure: no I/O, no policy, no locale.
 
+
+Locale markers are listed longest-first so the alternation prefers "PT-BR" over "PT".
+"TL;DR:" is a legitimate rhetorical lead-in in real slide copy ("TL;DR: o custo caiu
+3x."), so it only counts as a label in its bold scaffold form, never as a plain
+line-start label. A bold locale marker may be followed by empty-bold residue (``**PT**
+** **``), which the line patterns also match.
 """
 
 from __future__ import annotations
 
 import re
 
-# Locale section markers in every variant the model has been seen to write.
-# Longest-first so the alternation prefers "PT-BR" over "PT".
 LOCALE_MARKERS: tuple[str, ...] = (
     "PT-BR",
     "PT_BR",
@@ -46,7 +50,6 @@ LOCALE_MARKERS: tuple[str, ...] = (
     "EN",
 )
 
-# Drafting field labels the scaffold may carry (bold or plain, colon after).
 FIELD_LABELS: tuple[str, ...] = (
     "Long form notes",
     "Key points",
@@ -63,46 +66,32 @@ FIELD_LABELS: tuple[str, ...] = (
 
 _LOCALE_ALT = "|".join(re.escape(marker) for marker in LOCALE_MARKERS)
 _LABEL_ALT = "|".join(re.escape(label) for label in FIELD_LABELS)
-# "TL;DR:" is a legitimate rhetorical lead-in in real slide copy
-# ("TL;DR: o custo caiu 3x." — orchestrator review), so the PLAIN form only
-# counts in its bold scaffold variant, never as a plain line-start label.
 _PLAIN_LINE_LABEL_ALT = "|".join(
     re.escape(label) for label in FIELD_LABELS if label != "TL;DR"
 )
 
-# ``**Heading:**`` — a bold field label pair, anywhere in the text.
 _BOLD_LABEL_PATTERN = re.compile(rf"\*\*(?P<label>{_LABEL_ALT}):\*\*", re.IGNORECASE)
-# ``**CTA creator: radar IA.**`` — a bold label spanning the whole phrase.
 _BOLD_LABEL_PHRASE_PATTERN = re.compile(
     rf"\*\*(?P<label>{_LABEL_ALT})\s*:\s*(?P<value>[^*\n]*)\*\*",
     re.IGNORECASE,
 )
-# A bold label prefix left open: ``**Body:**`` or ``**Body:** rest``.
 _BOLD_LABEL_PREFIX_PATTERN = re.compile(
     rf"\*\*(?:{_LABEL_ALT})\s*:(?:\*\*)?", re.IGNORECASE
 )
-# A label or locale marker (bold or plain) at the start of a line, colon after.
-# The trio keeps the legacy drafting labels the old stripper removed. TL;DR is
-# excluded from the plain form (it is a legitimate rhetorical lead-in).
 _LINE_LABEL_PREFIX_PATTERN = re.compile(
     rf"^(?:\*\*)?\s*(?P<label>{_PLAIN_LINE_LABEL_ALT}|{_LOCALE_ALT}|SLIDE\s*\d+"
     r"|TITLE|BODY|KEY\s*POINTS)\s*:(?:\*\*)?\s*",
     re.IGNORECASE,
 )
-# A bold locale marker at the very start of a line (``**PT-BR** Inovação…``,
-# ``**PT** ** ** Na prática…`` — the empty-bold residue seen on 5344b6c6).
 _LINE_BOLD_LOCALE_PATTERN = re.compile(
     rf"^\s*\*\*(?P<marker>{_LOCALE_ALT}):?\*\*:?(?:\s*\*\*\s*\*\*)?\s*",
     re.IGNORECASE,
 )
-# A line that is nothing but a locale marker: ``PT``, ``PT:``, ``**PT**``,
-# ``**PT:**`` or ``**PT** ** **``.
 _PURE_MARKER_LINE_PATTERN = re.compile(
     rf"^(?:\*\*)?\s*(?P<marker>{_LOCALE_ALT})\s*:?\s*(?:\*\*)?"
     r"(?:\s*\*\*\s*\*\*)?\s*$",
     re.IGNORECASE,
 )
-# A ``## <anything>`` scaffold section header line.
 _SECTION_HEADER_LINE_PATTERN = re.compile(r"^\s*##\s+")
 
 
@@ -148,14 +137,17 @@ def has_scaffold_labels(text: str) -> bool:
 
 
 def _strip_line(line: str) -> str:
-    """One line with its scaffold markers and label prefixes removed ("" when gone)."""
+    """One line with its scaffold markers and label prefixes removed ("" when gone).
+
+    A line may chain two labels ("PT: Heading: ..."), so stripping repeats until the
+    line is stable.
+    """
     if _SECTION_HEADER_LINE_PATTERN.match(line):
         return ""
     stripped = line.strip()
     if _PURE_MARKER_LINE_PATTERN.match(stripped):
         return ""
     work = _LINE_BOLD_LOCALE_PATTERN.sub("", stripped, count=1).strip()
-    # "PT: Heading: ..." chains two labels on one line: strip until stable.
     while True:
         shortened = _LINE_LABEL_PREFIX_PATTERN.sub("", work)
         if shortened == work:

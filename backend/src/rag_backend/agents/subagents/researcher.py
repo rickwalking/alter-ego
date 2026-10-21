@@ -1,4 +1,4 @@
-"""The ``researcher`` subagent — URL navigation for carousel creation (AE-0249).
+"""The ``researcher`` subagent — URL navigation for carousel creation.
 
 A true, isolated-context DeepAgents subagent (ADR-0015) granted the web-research
 @tool adapters (``scrape_url`` / ``search_web``) plus ``search_documents``. It is

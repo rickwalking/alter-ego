@@ -1,4 +1,4 @@
-"""Ports of the blog writer + image run (AE-0425, ADR-0025).
+"""Ports of the blog writer + image run (ADR-0025).
 
 The application service orchestrates the run through these ports only: the
 writer agent (``agents/blog_writer``) implements :class:`BlogArticleWriter`,
@@ -44,8 +44,10 @@ class BlogArticleWriter(Protocol):
 
 
 class BlogDocumentTranslator(Protocol):
-    """PT -> EN translation of a language document (AE-0424's
-    ``BlogTranslationService``; AE-0435 reuses it to repair a wrong-language EN)."""
+    """PT -> EN translation of a language document.
+
+    The ``BlogTranslationService`` port, also reused to repair a wrong-language EN.
+    """
 
     async def translate(
         self, post_id: str, source: BlogLanguageDocument

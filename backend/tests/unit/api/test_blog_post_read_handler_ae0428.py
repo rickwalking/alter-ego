@@ -1,7 +1,7 @@
-"""Editor-read handler tests (AE-0428): strict read + standard 422 mapping.
+"""Editor-read handler tests: strict read + standard 422 mapping.
 
 Covers ``get_blog_post`` at the handler level (no HTTP transport) so the
-removed read fail-safe is proven on the exact lines the AE-0428 diff changes:
+removed read fail-safe is proven on the exact lines its removal changed:
 a valid v2 row returns its parsed content and a non-v2 row fails closed.
 
 Gherkin: tests/features/blog_sections_ae0423.feature

@@ -1,9 +1,15 @@
-"""Constants for the autopilot model fix of failing slides (AE-0401).
+"""Constants for the autopilot model fix of failing slides.
 
 Content-quality and voice-score failures at the content and design gates go
 through deterministic repair, then up to 3 fast-model attempts per failing
-slide and 2 more on the reasoning model (AE-0407), then straight to the
+slide and 2 more on the reasoning model, then straight to the
 owner: they never spend the revise budget.
+
+The model fix also handles a low voice score. ``PHASE_AUTOFIX`` and
+``AGENT_NAME_SLIDE_FIXER`` are the Langfuse metadata of the model-fix calls. A
+judge that gave no score is not "below threshold": the run waits for a re-score
+on the next tick, then escalates with its own reason. The Telegram escalation
+lists every slide the fix gave up on.
 """
 
 from __future__ import annotations
@@ -11,13 +17,11 @@ from __future__ import annotations
 from rag_backend.modules.autopilot.constants import REASON_PERSONA_SCORE
 from rag_backend.modules.autopilot.quality_constants import REASON_CONTENT_QUALITY
 
-# Reasons the model fix handles (owner decision 2026-10-16: low voice too).
 AUTOFIX_REASONS: frozenset[str] = frozenset({
     REASON_CONTENT_QUALITY,
     REASON_PERSONA_SCORE,
 })
 
-# Langfuse metadata of the model-fix calls.
 PHASE_AUTOFIX = "autofix"
 AGENT_NAME_SLIDE_FIXER = "slide_fixer"
 
@@ -32,8 +36,6 @@ LOG_FIELD_OUTCOME = "outcome"
 LOG_FIELD_MODEL_ROLE = "model_role"
 LOG_FIELD_FAILING_SLIDES = "failing_slides"
 
-# AE-0433: a judge that gave no score is not "below threshold". The run waits
-# for a re-score on the next tick, then escalates with its own reason.
 REASON_PERSONA_RESCORE_PENDING = "persona_rescore_pending"
 REASON_PERSONA_JUDGE_UNAVAILABLE = "persona_judge_unavailable"
 LOG_SLIDE_AUTOFIX_UNSCORED = "autopilot_slide_autofix_unscored"
@@ -49,7 +51,6 @@ TEXT_PERSONA_JUDGE_UNAVAILABLE = (
     "de modelos (LLM_MODEL_QUEUE_FAST) e reenvie o carrossel."
 )
 
-# The Telegram escalation lists every slide the fix gave up on.
 ESCALATION_HEADER = "Autofix could not fix these slides:"
 ESCALATION_SLIDE_LINE = (
     '- slide {slide}: {rules}. Current text: "{text}" ({attempts} fix attempts)'

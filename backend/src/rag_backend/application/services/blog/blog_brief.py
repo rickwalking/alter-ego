@@ -1,4 +1,4 @@
-"""Build the writer brief of a generation request (AE-0425, ADR-0025).
+"""Build the writer brief of a generation request (ADR-0025).
 
 From a carousel, the brief carries the frozen artifact as *raw material*: the
 research findings (summary + key points per source) and the outline from the

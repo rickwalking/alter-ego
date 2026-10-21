@@ -76,15 +76,19 @@ def _build_carousel_refinement_service(
 
 
 class Container(containers.DeclarativeContainer):
-    """Dependency injection container for the RAG backend."""
+    """Dependency injection container for the RAG backend.
 
-    # Configuration
+    The fast LLM service runs carousel distribution copy and refinement. The
+    carousel image service is the Grok Bot bridge (with OpenAI fallback) when
+    ``IMAGE_BRIDGE_ENABLED``, the plain OpenAI service otherwise. The alter-ego
+    agent is the public chat and gets NO carousel tools; ``rag_agent`` is the
+    deprecated legacy agent kept for backward compatibility.
+    """
+
     settings = providers.Singleton(get_settings)
 
-    # Database session - provided at runtime per-request
     db_session = providers.Resource(get_session)
 
-    # Repositories
     document_repository = providers.Factory(
         PostgresDocumentRepository,
         session=db_session,
@@ -105,7 +109,6 @@ class Container(containers.DeclarativeContainer):
         session=db_session,
     )
 
-    # External Services (Singletons - shared state)
     embedding_service = providers.Singleton(
         OpenAIEmbeddingService,
         settings=settings,
@@ -116,7 +119,6 @@ class Container(containers.DeclarativeContainer):
         settings=settings,
     )
 
-    # AE-0391: carousel distribution copy + refinement run on the fast model.
     fast_llm_service = providers.Singleton(
         AnthropicLLMService,
         settings=settings,
@@ -128,7 +130,6 @@ class Container(containers.DeclarativeContainer):
         settings=settings,
     )
 
-    # Infrastructure Layer
     document_processor = providers.Singleton(
         RecursiveDocumentProcessor,
         embedding_service=embedding_service,
@@ -143,7 +144,6 @@ class Container(containers.DeclarativeContainer):
         default_alpha=0.5,
     )
 
-    # Application Layer Services
     document_pipeline = providers.Factory(
         DocumentProcessingPipeline,
         document_repository=document_repository,
@@ -158,7 +158,6 @@ class Container(containers.DeclarativeContainer):
         max_context_tokens=4000,
     )
 
-    # Carousel Pipeline
     carousel_repository = providers.Factory(
         PostgresCarouselRepository,
         session=db_session,
@@ -176,8 +175,6 @@ class Container(containers.DeclarativeContainer):
         api_key=settings.provided().openai_api_key,
     )
 
-    # AE-0393: the Grok Bot bridge (with OpenAI fallback) when
-    # IMAGE_BRIDGE_ENABLED; the plain OpenAI service otherwise.
     carousel_openai_image_service = providers.Singleton(
         build_carousel_openai_service,
         settings=settings,
@@ -213,7 +210,6 @@ class Container(containers.DeclarativeContainer):
 
     export_service = providers.Singleton(PlaywrightExportService)
 
-    # Application Tools (wrappers around infrastructure services)
     image_generation_tool = providers.Singleton(
         ImageGenerationTool,
         image_service=image_service,
@@ -241,7 +237,6 @@ class Container(containers.DeclarativeContainer):
         carousel_refinement_config,
     )
 
-    # Alter-Ego Agent (public chat — NO carousel tools)
     alter_ego_agent = providers.Factory(
         AlterEgoAgent,
         settings=settings,
@@ -250,7 +245,6 @@ class Container(containers.DeclarativeContainer):
         document_repository=document_repository,
     )
 
-    # Legacy RAG Agent (deprecated — keep for backward compatibility)
     rag_agent = providers.Factory(
         RAGAgent,
         settings=settings,
@@ -262,7 +256,6 @@ class Container(containers.DeclarativeContainer):
     )
 
 
-# Global container instance
 container = Container()
 
 

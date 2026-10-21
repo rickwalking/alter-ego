@@ -1,6 +1,6 @@
-"""An autopilot approve runs the next phase for real (AE-0363).
+"""An autopilot approve runs the next phase for real.
 
-Feature: autopilot_runner.feature (AE-0363 scenarios)
+Feature: autopilot_runner.feature (resume scenarios)
 
 Prod 2026-10-14, carousel 8e350d6e: the runner approved the outline inside
 the worker tick. The checkpointer committed the approved gate, the content
@@ -185,9 +185,10 @@ async def world(
         finished.append(reason)
 
     async def _stage_beat(project_id: str, epoch: int) -> bool:
-        # SQLite has no lock_timeout: the inline stage beat would wait out the
-        # busy timeout behind the run's own flushed row. The interval loop
-        # below still writes the real heartbeat.
+        """SQLite has no lock_timeout: the inline stage beat would wait out the busy
+        timeout behind the run's own flushed row. The interval loop still writes the
+        real heartbeat.
+        """
         del project_id, epoch
         return True
 
@@ -299,7 +300,7 @@ async def _approve(world: _World) -> ResumeStatus:
 
 
 async def _park_like_prod(world: _World) -> None:
-    """Reproduce the pre-AE-0363 in-tick resume that died mid content phase."""
+    """Reproduce the old in-tick resume that died mid content phase."""
     world.llm.fail_content = True
     with pytest.raises(openai.APITimeoutError):
         await world.service.resume_workflow(
@@ -394,7 +395,10 @@ async def test_parked_workflow_waits_inside_the_grace_period(world: _World) -> N
 
 @pytest.mark.asyncio
 async def test_parked_workflow_is_redriven_to_its_own_gate(world: _World) -> None:
-    """Scenario: A parked workflow past the grace period is re-driven."""
+    """Scenario: A parked workflow past the grace period is re-driven.
+
+    The re-drive sends no review: the content gate still needs one.
+    """
     await _park_like_prod(world)
     await _age_row(world, PARKED_GRACE_SECONDS + 60)
     row = await _row(world)
@@ -421,7 +425,6 @@ async def test_parked_workflow_is_redriven_to_its_own_gate(world: _World) -> Non
     assert state.get("current_phase") == GATE_CONTENT
     assert state.get("phase_status") == PHASE_STATUS_AWAITING
     assert len(state.get("slide_drafts") or []) == _SLIDES
-    # The re-drive sends no review: the content gate still needs one.
     assert not state.get("content_approved")
     assert world.llm.seen_rows[-1] == (PHASE_STATUS_IN_PROGRESS, True, True)
     after = await _row(world)

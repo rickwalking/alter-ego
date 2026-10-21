@@ -1,4 +1,4 @@
-"""Deterministic web-research enrichment for the editorial workflow (AE-0317).
+"""Deterministic web-research enrichment for the editorial workflow.
 
 Runs BEFORE source synthesis so every workflow entry point (HTTP route, RAG chat
 tool, DeepAgents subagent) researches the same way: user-provided URL sources are
@@ -7,9 +7,13 @@ DuckDuckGo, with the hits appended as supplementary ``web_search`` sources.
 
 This is intentionally NOT an agentic loop — ADR-0007 keeps workflow phases
 deterministic. The same ``ResearchTool`` powers the chat-side ``researcher``
-subagent (AE-0249); here it is driven by plain bounded code: capped scrape count,
+subagent; here it is driven by plain bounded code: capped scrape count,
 bounded concurrency, SSRF guard, and graceful degradation on every failure path
 (a dead link or a search outage must never fail a workflow start).
+
+A source is navigable when it is explicitly source_type == "url" or its content is
+nothing but an http(s) URL (_BARE_URL_RE, anchored), the same superset rule the legacy
+route-edge scraping used.
 """
 
 from __future__ import annotations
@@ -45,9 +49,6 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-# Anchored bare-URL match: same superset rule the legacy RAG-edge scraping used —
-# a source is navigable when it is explicitly ``source_type == "url"`` OR its
-# content is nothing but an http(s) URL (notes that embed a raw link).
 _BARE_URL_RE = re.compile(r"^https?://\S+$")
 
 
@@ -115,7 +116,7 @@ async def _scrape_url_sources(
 
 
 def _is_block_page(text: str) -> bool:
-    """AE-0321: detect anti-bot/CDN block pages so they never become research."""
+    """Detect anti-bot/CDN block pages so they never become research."""
     head = text[:BLOCK_PAGE_SCAN_CHARS].lower()
     return any(marker in head for marker in BLOCK_PAGE_MARKERS)
 
@@ -145,7 +146,7 @@ async def _search_topic_sources(
 ) -> list[dict[str, str]]:
     """Search the topic and shape the top relevant hits as ``web_search`` sources.
 
-    AE-0413: bracketed tags are dropped from the query, and hits that are not
+    bracketed tags are dropped from the query, and hits that are not
     Portuguese/English or share no keyword with the query are discarded.
     """
     query = search_query_for(topic)

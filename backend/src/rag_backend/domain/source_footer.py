@@ -1,4 +1,4 @@
-"""The ``pov_news`` caption footer, built by code (AE-0406, spec §5). Pure.
+"""The ``pov_news`` caption footer, built by code (spec §5). Pure.
 
 ``Fontes: @kanishksj01, @alexcovo_eth, anthropic.com``: an X source shows as
 ``@handle``, any other source as its domain; duplicates are dropped

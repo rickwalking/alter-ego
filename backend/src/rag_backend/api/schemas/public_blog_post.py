@@ -1,8 +1,12 @@
-"""Lean public blog-post schemas (AE-0297, ADR-0013).
+"""Lean public blog-post schemas (ADR-0013).
 
 The public surface is an explicit **allow-list**: every serialized field is
 mapped by hand (never ``from_orm``/``model_validate`` over the full model), so
 a future column added to ``blog_posts`` can never leak publicly by default.
+
+PUBLIC_BLOG_POST_EXCLUDED_FIELDS are internal field names that must never appear
+anywhere in a public payload, recursively including nested JSON (guarded by a security
+regression test); they include the editor-only parts of the blog.v2 document.
 """
 
 from datetime import datetime
@@ -32,8 +36,6 @@ class PublicBlogListParams(BaseModel):
     offset: int = Field(0, ge=0)
 
 
-# Internal field names that must NEVER appear anywhere in a public payload
-# (recursively — including nested JSON). Guarded by a security regression test.
 PUBLIC_BLOG_POST_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "status",
     "author_id",
@@ -47,7 +49,6 @@ PUBLIC_BLOG_POST_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "sources",
     "citations",
     "view_count",
-    # Editor-only parts of the blog.v2 document (AE-0423, ADR-0025).
     "quality",
     "prompt",
     "model",

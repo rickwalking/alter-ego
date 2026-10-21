@@ -1,4 +1,4 @@
-"""Recording fake chat models for the AE-0391 routing / parallel-drafting tests.
+"""Recording fake chat models for the role routing / parallel-drafting tests.
 
 A real ``BaseChatModel`` (not a MagicMock) so ``RoutedChatModel`` exercises the
 genuine LangChain ``ainvoke`` path: callbacks, run tags and bound kwargs.

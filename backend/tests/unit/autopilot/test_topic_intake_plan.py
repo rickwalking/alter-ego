@@ -1,4 +1,4 @@
-"""Pure topic-intake decisions (AE-0353).
+"""Pure topic-intake decisions.
 
 Gherkin: tests/features/autopilot_topic_intake.feature
 """
@@ -42,7 +42,7 @@ _BRIEF_TEMPLATE = "A plain brief about {title}."
 
 
 def _brief_for(title: str, brief: str | None) -> str:
-    """AE-0361: the default brief names the title, so it stays on theme."""
+    """The default brief names the title, so it stays on theme."""
     if brief is not None:
         return brief
     return _BRIEF_TEMPLATE.format(title=title)
@@ -117,7 +117,7 @@ def test_jaccard_threshold_is_inclusive() -> None:
 
 
 def test_sao_paulo_midnight_starts_the_cap_day() -> None:
-    # 02:30 UTC is still 23:30 the previous day in Sao Paulo (UTC-3).
+    """02:30 UTC is still 23:30 the previous day in São Paulo (UTC-3)."""
     before = datetime(2026, 10, 13, 2, 30, tzinfo=UTC)
     after = datetime(2026, 10, 13, 3, 0, tzinfo=UTC)
     before_start, before_end = sao_paulo_day(before)
@@ -201,8 +201,8 @@ def test_recent_carousel_title_is_a_duplicate() -> None:
 
 
 def test_higher_cap_queues_both() -> None:
+    """Radar IA is capped at one a week, so the second is a POV topic."""
     # Scenario: A higher daily cap queues more than one run
-    # AE-0377: Radar IA is capped at one a week, so the second is a POV topic.
     first = prepare(_input("One", _URL_A, 60))
     second = prepare(
         replace(

@@ -1,4 +1,4 @@
-"""The owner's GrokBot cover choice, read and written in SQL (AE-0418).
+"""The owner's GrokBot cover choice, read and written in SQL.
 
 ``SqlCoverOffers`` builds the Telegram offer of a run (its topic's cover, the
 stored preview file, the owner's choice) and the project's ``slide_cover``
@@ -85,7 +85,7 @@ class SqlCoverOffers:
         return slide_cover_for(found[0])
 
     async def offered_cover(self, run: AutopilotRun) -> SlideCover | None:
-        """AE-0445: the run's cover as a slide cover, chosen or not.
+        """The run's cover as a slide cover, chosen or not.
 
         None when the topic has no cover or its stored file is gone.
         """
@@ -166,7 +166,7 @@ def cover_review_facts(
 
 
 class ProjectCoverOffer:
-    """AE-0445: the GrokBot cover offered to a carousel's autopilot run."""
+    """The GrokBot cover offered to a carousel's autopilot run."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._runs = SqlAlchemyAutopilotRepository(session)

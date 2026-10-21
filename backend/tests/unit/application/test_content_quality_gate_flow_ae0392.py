@@ -1,4 +1,4 @@
-"""AE-0392: repair-first content/design gate on the real editorial engine.
+"""Repair-first content/design gate on the real editorial engine.
 
 Real: the SQLite rows and lock version, ``EditorialWorkflowService`` with a
 LangGraph checkpoint, the editorial facade, the owner autofix service (gate

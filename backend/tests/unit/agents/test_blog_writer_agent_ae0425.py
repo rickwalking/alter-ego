@@ -1,4 +1,4 @@
-"""BlogWriterAgent: prompts, routing, parsing, injection safety (AE-0425).
+"""BlogWriterAgent: prompts, routing, parsing, injection safety.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -148,7 +148,6 @@ async def test_an_injected_writing_sample_does_not_reach_the_prompt() -> None:
     )
     assert "ignore all previous instructions" not in prompts[0].lower()
     assert "Meu texto." in prompts[0]
-    # The output still conforms to the section contract.
     assert len(article.sections) == 3
 
 
@@ -162,7 +161,7 @@ def test_draft_prompt_carries_roles_material_and_rules() -> None:
         )
     )
     assert variables["roles"] == ["lede", "context", "close"]
-    assert len(variables["research"]) == 12  # capped
+    assert len(variables["research"]) == 12
     assert variables["section_count"] == 3
     assert variables["outline"] == [{"title": "Ponto", "key_points": ["a", "b"]}]
     assert "no mundo de hoje" in variables["banned_pt"]
@@ -202,7 +201,7 @@ async def test_voice_scorer_errors_are_writer_failures() -> None:
 
 
 def test_the_judge_hears_about_english_sections() -> None:
-    # Review (low): PT sections that read as English reach the judgement.
+    """PT sections that read as English reach the judgement."""
     from rag_backend.agents.prompts.registry import render_prompt
 
     prompt = render_prompt(

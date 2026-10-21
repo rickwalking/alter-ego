@@ -1,9 +1,9 @@
-"""The Grok Bot routine packs stay aligned with the API (AE-0360, AE-0361).
+"""The Grok Bot routine packs stay aligned with the API.
 
 Gherkin: tests/features/autopilot_grok_bot_scout.feature
   Scenario: Example JSON matches the API schemas
 Gherkin: tests/features/autopilot_carousel_defaults.feature
-Gherkin: tests/features/autopilot_pov_thesis.feature (v3, AE-0377)
+Gherkin: tests/features/autopilot_pov_thesis.feature (v3)
 """
 
 from __future__ import annotations
@@ -95,9 +95,9 @@ def _plan_for(pack: Path) -> tuple[IntakePlan, str, str | None]:
 
 
 def test_v1_example_is_rejected_by_the_carousel_rules() -> None:
-    """v1 is superseded (AE-0361 F1): its example now fails ``brief_off_theme``.
+    """v1 is superseded: its example now fails ``brief_off_theme``.
 
-    The v1 brief never names a word from its title, so the AE-0361 rules reject
+    The v1 brief never names a word from its title, so the carousel rules reject
     it. This is expected; the owner must paste v2. v1 stays unedited for history.
     """
     plan, _style, _guidance = _plan_for(_PACK)
@@ -106,12 +106,14 @@ def test_v1_example_is_rejected_by_the_carousel_rules() -> None:
 
 
 def test_v2_example_passes_the_carousel_rules() -> None:
-    """The v2 example is accepted by intake and picks a supported style."""
+    """The v2 example is accepted by intake and picks a supported style.
+
+    The frozen v2 example names neo_anime explicitly; the flat editorial default only
+    applies when the scout omits a style.
+    """
     plan, image_style, image_guidance = _plan_for(_V2)
     assert plan.rejected == ()
     assert len(plan.new_candidates) == 1
-    # The frozen v2 example names neo_anime explicitly; the default moved to
-    # flat editorial in AE-0372 and only applies when the scout omits a style.
     assert image_style == IMAGE_STYLE_NEO_ANIME
     assert image_style != DEFAULT_IMAGE_STYLE
     assert image_style in SCOUT_IMAGE_STYLES

@@ -1,8 +1,8 @@
-"""Composition root of the AE-0426 hidden-post rebuild script.
+"""Composition root of the hidden-post rebuild script.
 
 Wires the application service (:class:`BlogRebuildService`) to its concrete
 collaborators: the SQL candidate/attempt store, the carousel material source
-(project + slides + persona + checkpoint state) and the AE-0425 generation
+(project + slides + persona + checkpoint state) and the generation
 service. The CLI script imports this builder instead of the container directly.
 """
 

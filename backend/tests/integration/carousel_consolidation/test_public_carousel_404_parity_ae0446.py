@@ -1,4 +1,4 @@
-"""Public carousel 404 parity (AE-0446, ADR-0013).
+"""Public carousel 404 parity (ADR-0013).
 
 Gherkin: tests/features/public_carousel_404_parity_ae0446.feature
 """
@@ -72,7 +72,7 @@ class TestPublicCarousel404Parity:
         _assert_same_404(unfinished, unknown)
 
     # Scenario: The public slide image route answers a private and an unknown
-    # carousel identically
+    #   carousel identically
     async def test_slide_image_private_matches_unknown(
         self, client: AsyncClient, tmp_path: Path
     ) -> None:

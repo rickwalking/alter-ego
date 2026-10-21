@@ -1,4 +1,4 @@
-"""Autopilot POV topics, the thesis gate and POV slots (AE-0377).
+"""Autopilot POV topics, the thesis gate and POV slots.
 
 Gherkin: tests/features/autopilot_pov_thesis.feature
 """
@@ -217,10 +217,10 @@ class TestThesisDomain:
 
     # Scenario: A confirmed POV run starts generating
     def test_pov_spec(self) -> None:
+        """POV point slides default to neo-anime art."""
         spec = project_spec(_run(pov_thesis=_THESIS), _topic(), "owner")
         assert spec.content_mode == "pov"
         assert spec.pov_thesis == _THESIS
-        # AE-0395: POV point slides default to neo-anime art.
         assert spec.image_style == "neo_anime"
 
     def test_news_spec(self) -> None:
@@ -336,7 +336,7 @@ class TestPovSlots:
         ids=["tue-early", "tue-too-late", "thu-at-noon", "saturday"],
     )
     def test_next_slot(self, now: datetime, slot: datetime) -> None:
-        # AE-0404: with no insights the recommender's POV prior keeps this slot.
+        """With no insights the recommender's POV prior keeps this slot."""
         query = RecommendQuery(now=now, pov=True, signals=ScheduleSignals())
         assert best_slot(query).at == slot
 

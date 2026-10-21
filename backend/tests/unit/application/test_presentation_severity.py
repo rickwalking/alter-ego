@@ -1,4 +1,4 @@
-"""Severity-aware blocking decision tests (AE-0312).
+"""Severity-aware blocking decision tests.
 
 Gherkin: tests/features/carousel_pt_casing_severity.feature
 """
@@ -40,7 +40,7 @@ from rag_backend.domain.models.carousel_presentation import (
 
 
 def _violation(code: str, severity: str) -> SlideValidationViolation:
-    # cast at the typed fixture boundary: severity is a validated Literal value.
+    """Casts at the typed fixture boundary: severity is a validated Literal value."""
     return SlideValidationViolation(
         code=code,
         message=f"seeded {code}",
@@ -133,7 +133,7 @@ class TestStoredReportAgreement:
         assert VIOLATION_HEADING_NOT_SENTENCE_CASE_PT in codes
 
     def test_blocker_stored_report_is_blocking(self) -> None:
-        # Emoji is a blocker rule; combine with a casing warning.
+        """Emoji is a blocker rule, combined here with a casing warning."""
         report = validate_localized_slides(
             [_v2_slide("heading no claude 🚀")],
             policy_version=PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2,
@@ -159,7 +159,7 @@ class TestLocaleSeverityIntegration:
         assert all(v.severity == SEVERITY_WARNING for v in report.violations)
 
     def test_casing_only_state_does_not_block_approval(self) -> None:
-        """Cross-ticket: AE-0309's blocking check treats casing-only as passable."""
+        """Cross-check: the fail-closed blocking check treats casing-only as passable."""
         state = {
             WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY: (
                 PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2

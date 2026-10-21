@@ -1,4 +1,4 @@
-"""Encrypted credential row, seed, and the publisher's token provider (AE-0358).
+"""Encrypted credential row, seed, and the publisher's token provider.
 
 Gherkin: tests/features/autopilot_ig_token.feature
 """

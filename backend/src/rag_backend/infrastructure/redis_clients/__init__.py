@@ -1,4 +1,4 @@
-"""Authenticated Redis client construction (AE-0302). Facade for the package."""
+"""Authenticated Redis client construction. Facade for the package."""
 
 from rag_backend.infrastructure.redis_clients.factory import (
     RedisConfigError,

@@ -4,12 +4,12 @@ Revision ID: d3e4f5a6b7c8
 Revises: c2d3e4f5a6b7
 Create Date: 2026-10-15
 
-AE-0393 (ADR-0022): ADDITIVE. One new table, ``image_bridge_jobs``: one row
+ADR-0022: ADDITIVE. One new table, ``image_bridge_jobs``: one row
 per Grok Bot image job. ``image_bytes`` holds the callback image until the
 waiter reads it once and nulls it. No existing table or column is altered or
 dropped. ``downgrade`` drops the table and its index.
 
-Idempotent like the AE-0371 revisions: prod has no ``alembic_version`` and the
+Idempotent like the earlier autopilot revisions: prod has no ``alembic_version`` and the
 backend creates missing tables at startup, so upgrade skips an existing table
 or index and downgrade skips missing ones.
 """

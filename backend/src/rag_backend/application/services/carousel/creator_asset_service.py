@@ -61,7 +61,7 @@ class CreatorAssetSelectCommand:
 
 @dataclass(frozen=True)
 class LibraryUploadCommand:
-    """AE-0376: a photo for the owner's library (no project binding)."""
+    """A photo for the owner's library (no project binding)."""
 
     user: User
     content: bytes
@@ -72,7 +72,7 @@ class LibraryUploadCommand:
 
 @dataclass(frozen=True)
 class HookPhotoCommand:
-    """AE-0376: bind a library photo as the project's slide-1 photo."""
+    """Bind a library photo as the project's slide-1 photo."""
 
     project: CarouselProject
     user: User
@@ -192,7 +192,7 @@ class CreatorAssetService:
             return False
 
     def stored_file(self, asset: CarouselCreatorAsset) -> Path | None:
-        """AE-0418: the asset's canonical WebP, or None when it is gone."""
+        """The asset's canonical WebP, or None when it is gone."""
         if not self.has_stored_file(asset):
             return None
         return self._canonical_storage_path(asset.content_sha256)
@@ -200,7 +200,7 @@ class CreatorAssetService:
     async def store_cover(
         self, owner_id: str, normalized: NormalizedCreatorAsset
     ) -> CarouselCreatorAsset:
-        """AE-0418: store a validated GrokBot cover with role ``cover``.
+        """Store a validated GrokBot cover with role ``cover``.
 
         Bytes the owner already has as a library photo reuse that row and keep
         its role (the owner's photo is never re-tagged).

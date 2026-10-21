@@ -1,4 +1,4 @@
-"""Autopilot bounded context (AE-0350).
+"""Autopilot bounded context.
 
 Cross-module consumers import from this package only::
 

@@ -1,4 +1,4 @@
-"""Keep the slide rows on the validated localized copy (AE-0401).
+"""Keep the slide rows on the validated localized copy.
 
 The renderer, the export and the Telegram issue list read the
 ``carousel_slides`` rows; the gates validate the checkpoint's

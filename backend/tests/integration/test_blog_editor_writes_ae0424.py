@@ -1,4 +1,4 @@
-"""API tests: section saves, versions on save and the approval reset (AE-0424).
+"""API tests: section saves, versions on save and the approval reset.
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
 Feature: frontend/tests/features/blog_editor_ae0424.feature (backend half)
@@ -106,14 +106,15 @@ class TestSectionSaves:
 class TestVersionsOnSave:
     # Scenario: Every PUT appends a version snapshot in the save transaction
     async def test_put_appends_one_snapshot(self, clients: EditorClients) -> None:
+        """The entry keeps the state BEFORE the save (the original draft), so the
+        AI-written first version is never lost.
+        """
         post = await create_post(clients.author, v2_content("Original"))
         assert await versions(clients.author, post["id"]) == []
         response = await put(
             clients.author, post, {"title": "Novo", "content": v2_content("Editado")}
         )
         assert response.status_code == 200, response.text
-        # The entry keeps the state BEFORE the save (the original draft), so
-        # the AI-written first version is never lost (AE-0424 review).
         history = await versions(clients.author, post["id"])
         assert len(history) == 1
         assert history[0]["version_number"] == 1
@@ -164,6 +165,9 @@ class TestVersionsOnSave:
     async def test_restore_matches_the_version_and_is_snapshotted(
         self, clients: EditorClients
     ) -> None:
+        """History holds [1] v0 (original title) and [2] v1 / "T1" (the state before
+        save 2).
+        """
         post = await create_post(clients.author, v2_content("v0"))
         first = (
             await put(
@@ -173,7 +177,6 @@ class TestVersionsOnSave:
         second = (
             await put(clients.author, first, {"content": v2_content("v2")})
         ).json()
-        # History: [1] v0 (original title), [2] v1 / "T1" (state before save 2).
         response = await clients.author.post(
             f"{BLOG_POSTS_URL}/{post['id']}/restore-version/2", headers=if_match(second)
         )

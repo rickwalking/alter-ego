@@ -1,10 +1,10 @@
-"""Rule-fires tests for scripts/ci/check_autopilot_env_parity.py (AE-0359, AE-0180).
+"""Rule-fires tests for scripts/ci/check_autopilot_env_parity.py.
 
 The checker fails CI when deploy.yml and docker-compose.prod.yml disagree on
 an autopilot variable, or when AUTOPILOT_ENABLED does not default to false.
 A clean-tree pass is not enough: these tests prove a seeded violation exits 1.
 
-AE-0153: CI/config ticket. No .feature file. The worker skip when the flag is
+CI/config ticket. No .feature file. The worker skip when the flag is
 false is already covered by test_run_tick_skips_autopilot_when_disabled.
 """
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0359 — a CLI checker test must invoke a subprocess
+import subprocess  # noqa: S404  # integrity-ok: a CLI checker test must invoke a subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -39,9 +39,7 @@ _TICKET_ENV_NAMES = (
     "AUTOPILOT_ENABLED",
     "AUTOPILOT_OWNER_USER_ID",
     "AUTOPILOT_DAILY_CAP",
-    # AE-0370
     "AUTOPILOT_DEFAULT_PUBLISH",
-    # AE-0371 (PR #106 review)
     "AUTOPILOT_PERSONA_ID",
     "LLM_MODEL_QUEUE_FAST",
     "LLM_MODEL_QUEUE_REASONING",
@@ -49,7 +47,6 @@ _TICKET_ENV_NAMES = (
     "OPENCODE_SERVER_PASSWORD",
     "TELEGRAM_ALERTS_BOT_TOKEN",
     "TELEGRAM_ALERTS_CHAT_ID",
-    # AE-0407
     "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS",
 )
 
@@ -68,7 +65,7 @@ CHECKER_MOD = _load_checker()
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0359 — fixed interpreter, test-controlled paths
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, test-controlled paths
         [PYTHON, str(CHECKER), *args],
         capture_output=True,
         text=True,
@@ -110,7 +107,7 @@ def _canonical_values() -> tuple[dict[str, str], dict[str, str]]:
 
 
 def test_required_names_match_the_ticket() -> None:
-    """AE-0359 lists these variables and no others."""
+    """The parity gate lists these variables and no others."""
     assert CHECKER_MOD.REQUIRED_ENV_NAMES == _TICKET_ENV_NAMES
 
 
@@ -156,7 +153,7 @@ def test_fires_when_one_side_omits_a_variable(tmp_path: Path, side: str) -> None
 
 @pytest.mark.parametrize("side", ["deploy", "compose"])
 def test_fires_when_default_publish_is_missing(tmp_path: Path, side: str) -> None:
-    """AE-0370: AUTOPILOT_DEFAULT_PUBLISH missing on either side fails the gate."""
+    """AUTOPILOT_DEFAULT_PUBLISH missing on either side fails the gate."""
     deploy_values, compose_values = _canonical_values()
     name = "AUTOPILOT_DEFAULT_PUBLISH"
     assert deploy_values[name] == "${{ secrets." + name + " || 'now' }}"
@@ -173,7 +170,7 @@ def test_fires_when_default_publish_is_missing(tmp_path: Path, side: str) -> Non
 
 @pytest.mark.parametrize("side", ["deploy", "compose"])
 def test_fires_when_persona_id_is_missing(tmp_path: Path, side: str) -> None:
-    """AE-0371: AUTOPILOT_PERSONA_ID (empty default) missing on a side fails."""
+    """AUTOPILOT_PERSONA_ID (empty default) missing on a side fails."""
     deploy_values, compose_values = _canonical_values()
     name = "AUTOPILOT_PERSONA_ID"
     assert deploy_values[name] == "${{ secrets." + name + " }}"
@@ -286,7 +283,7 @@ _ESCALATION = "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS"
 
 @pytest.mark.parametrize("side", ["deploy", "compose"])
 def test_fires_when_escalation_attempts_is_missing(tmp_path: Path, side: str) -> None:
-    """AE-0407: the escalation attempts missing on either side fails the gate."""
+    """The escalation attempts missing on either side fails the gate."""
     deploy_values, compose_values = _canonical_values()
     assert deploy_values[_ESCALATION] == "${{ vars." + _ESCALATION + " || '2' }}"
     assert compose_values[_ESCALATION] == "${" + _ESCALATION + ":-2}"
@@ -303,7 +300,7 @@ def test_fires_when_escalation_attempts_is_missing(tmp_path: Path, side: str) ->
 def test_fires_when_escalation_attempts_has_no_numeric_default(
     tmp_path: Path,
 ) -> None:
-    """AE-0407: an empty value would crash the integer setting at startup."""
+    """An empty value would crash the integer setting at startup."""
     deploy_values, compose_values = _canonical_values()
     deploy_values[_ESCALATION] = "${{ vars." + _ESCALATION + " }}"
     compose_values[_ESCALATION] = "${" + _ESCALATION + ":-}"
@@ -319,7 +316,7 @@ def test_fires_when_escalation_attempts_has_no_numeric_default(
 
 
 def test_escalation_attempts_accepts_a_secret_or_a_literal(tmp_path: Path) -> None:
-    """AE-0407: a secret with a numeric fallback and a literal 0 both pass."""
+    """A secret with a numeric fallback and a literal 0 both pass."""
     deploy_values, compose_values = _canonical_values()
     deploy_values[_ESCALATION] = "${{ secrets." + _ESCALATION + " || '0' }}"
     compose_values[_ESCALATION] = "0"

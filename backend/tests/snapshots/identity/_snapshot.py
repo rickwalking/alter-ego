@@ -1,7 +1,7 @@
-"""Golden-snapshot diff helper for Identity (auth + admin) endpoints (AE-0097).
+"""Golden-snapshot diff helper for Identity (auth + admin) endpoints.
 
 This is the enforceable byte-identical baseline for the Phase 3 Identity
-extraction. Later slices (AE-0099 / AE-0101 / AE-0102) move the auth/admin code
+extraction. Later slices move the auth/admin code
 behind facades; this helper lets those slices assert the live response is
 identical to the committed snapshot captured on the current, pre-refactor code.
 
@@ -20,6 +20,11 @@ refactor must preserve byte-for-byte. This helper therefore captures:
 Volatile values (the JWT cookie value, UUID ids, timestamps) are normalized to
 stable placeholders so the snapshot is deterministic, while still asserting the
 field/attribute is present and well-formed.
+
+Volatile fields are normalized regardless of nesting depth. Generated secrets (admin
+create/reset) change every run, so the contract is their presence as a non-empty string.
+Cookies in ``JWT_COOKIE_NAMES`` carry a fresh JWT each run; only the
+``SNAPSHOT_HEADER_NAMES`` headers are part of the deterministic contract.
 """
 
 from __future__ import annotations
@@ -34,13 +39,11 @@ from uuid import UUID
 if TYPE_CHECKING:
     from httpx import Response
 
-# --- Placeholders for normalized volatile values --------------------------------
 PLACEHOLDER_UUID: Final = "<uuid>"
 PLACEHOLDER_TIMESTAMP: Final = "<timestamp>"
 PLACEHOLDER_JWT: Final = "<jwt>"
 PLACEHOLDER_TEMP_PASSWORD: Final = "<temp-password>"
 
-# --- Volatile field names (normalized regardless of nesting depth) --------------
 VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({
     "id",
     "document_id",
@@ -50,24 +53,19 @@ VOLATILE_TIMESTAMP_FIELDS: Final[frozenset[str]] = frozenset({
     "created_at",
     "updated_at",
 })
-# Generated secrets (admin create/reset) change every run; the contract is the
-# field's presence and that it is a non-empty string, not its exact value.
 VOLATILE_SECRET_FIELDS: Final[frozenset[str]] = frozenset({
     "temp_password",
     "access_token",
 })
 
-# Cookie names whose value is a fresh JWT each run (normalized to PLACEHOLDER_JWT).
 JWT_COOKIE_NAMES: Final[frozenset[str]] = frozenset({"access_token", "anon_token"})
 
-# Only this response header is part of the deterministic contract under test.
 SNAPSHOT_HEADER_NAMES: Final[tuple[str, ...]] = ("x-agent-origin",)
 
 _SNAPSHOT_DIR: Final = Path(__file__).parent
 
 _ISO_TIMESTAMP_RE: Final = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 
-# Type alias for any JSON value (Python 3.11-compatible recursive alias).
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 

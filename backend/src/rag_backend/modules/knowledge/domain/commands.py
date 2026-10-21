@@ -8,7 +8,7 @@ the 3-argument limit.
 
 They carry intent only; they are not persistence rows. The application service
 maps them onto the existing ``Document`` aggregate and pipeline during the
-behavior-preserving phase (AE-0089).
+behavior-preserving phase.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from rag_backend.modules.knowledge.domain.models import (
     DocumentStatus,
 )
 
-# Boundary-safe metadata value type (mirrors the Document.metadata shape).
 MetadataValue = str | int | float | bool
 
 

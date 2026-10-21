@@ -2,8 +2,12 @@
 
 Composition root (ADR-0009 §9): this module assembles the FastAPI application
 and wires its middleware, routes, lifespan, container, and checkpointer. It was
-relocated from ``rag_backend.api.app`` in AE-0080 with zero behavior change;
+relocated from ``rag_backend.api.app`` with zero behavior change;
 ``rag_backend.api.app`` re-exports ``create_app`` for backward compatibility.
+
+The HTTP router stays off the package facade: model registration imports the facade, and
+the router imports the shared slowapi limiter under ``rag_backend.api``, so pulling it
+through the facade would make infrastructure depend on the API layer.
 """
 
 import asyncio
@@ -62,11 +66,6 @@ from rag_backend.bootstrap.autopilot_worker_factory import (
     autopilot_engine_factory,
     build_autopilot_worker_steps,
 )
-
-# The HTTP router stays off the package facade. Model registration imports
-# the facade, and the router imports the shared slowapi limiter under
-# ``rag_backend.api``. Pulling that through the facade would make
-# infrastructure depend on the API layer.
 from rag_backend.bootstrap.blog_generation import build_blog_generation_reaper
 from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
     build_drift_reconciler,
@@ -111,6 +110,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Handles startup and shutdown events:
     - Initialize database on startup
     - Close database connections on shutdown
+
+    Startup validations (durable checkpointer, default image-provider key) run before
+    wiring and DB setup so a misconfigured production deploy fails fast; dev and test
+    only warn. The carousel checkpointer is lifecycle-managed by an ``AsyncExitStack``
+    so its DB connection closes on shutdown; ``settings.carousel_checkpoint_backend``
+    selects sqlite (dev), postgres (prod), memory (ephemeral) or disabled (no resume).
+    On shutdown, in-flight blog runs mark their rows recoverable-failed.
     """
     settings = get_settings()
     setup_logging(debug=settings.debug)
@@ -132,10 +138,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("application_startup", version=settings.app_version)
 
-    # Composition-root startup hardening (AE-0213 durable checkpointer,
-    # AE-0215 default image-provider key). Fails fast in production-like
-    # environments; warns in dev/test. Run before wiring/DB so a
-    # misconfigured prod deploy surfaces immediately.
     run_startup_validations(settings)
 
     await init_db(
@@ -147,10 +149,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     container.wire(packages=["rag_backend.api"])
 
-    # Carousel LangGraph checkpointer — lifecycle-managed by an
-    # AsyncExitStack so the DB connection closes on shutdown. The
-    # backend is selected via `settings.carousel_checkpoint_backend`:
-    # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
         engine_factory = autopilot_engine_factory(app.state.carousel_checkpointer)
@@ -186,7 +184,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         worker_stop.set()
         await worker_task
-        # AE-0425: in-flight blog runs mark their rows recoverable-failed.
         await cancel_blog_generation_tasks()
 
     logger.info("application_shutdown")
@@ -268,7 +265,10 @@ def _setup_middleware(app: FastAPI, settings: Settings) -> None:
 
 
 def _register_routes(app: FastAPI) -> None:
-    """Register all route handlers on the app."""
+    """Register all route handlers on the app.
+
+    The blog generation entry points register before the blog CRUD routes.
+    """
     app.include_router(auth.router, prefix="/api")
     app.include_router(admin.router, prefix="/api")
     app.include_router(admin_migration.router, prefix="/api")
@@ -276,7 +276,6 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")
-    # AE-0425: the generation entry points register before the blog CRUD.
     app.include_router(blog_generate.router, prefix="/api")
     app.include_router(blog_post.router, prefix="/api")
     app.include_router(public_blog_post.router, prefix="/api")
@@ -319,7 +318,6 @@ def create_app() -> FastAPI:
 
     _setup_middleware(app, settings)
 
-    # Health check endpoint
     @app.get("/health", response_model=HealthResponse)
     async def health_check() -> HealthResponse:
         return HealthResponse(
@@ -328,7 +326,6 @@ def create_app() -> FastAPI:
             timestamp=utc_now(),
         )
 
-    # Detailed health check with dependency status
     @app.get("/health/ready", response_model=HealthCheckResponse)
     async def readiness_check() -> HealthCheckResponse:
         checks: dict[str, dict[str, str | int]] = {}
@@ -336,7 +333,6 @@ def create_app() -> FastAPI:
         _check_pinecone(checks, settings)
         await _check_openai(checks, settings)
 
-        # Determine overall status
         has_error = any(v.get("status") == "error" for v in checks.values())
         overall_status = "unhealthy" if has_error else "ready"
 

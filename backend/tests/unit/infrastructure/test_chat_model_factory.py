@@ -1,4 +1,4 @@
-"""Unit tests for the provider-agnostic chat-model factory (AE-0285, AE-0330).
+"""Unit tests for the provider-agnostic chat-model factory.
 
 Scenarios: see tests/features/llm_provider_toggle.feature
 """
@@ -65,9 +65,10 @@ def test_glm_provider_without_key_falls_back_to_anthropic() -> None:
 
 
 def test_shipped_default_model_is_glm_5_3() -> None:
-    # AE-0330: 5.2 returned empty content after spending 31999 of 32000 tokens
-    # reasoning, failing a live carousel phase. Pin the default so the move to
-    # 5.3 cannot be reverted silently.
+    """GLM 5.2 returned empty content after spending 31999 of 32000 tokens reasoning,
+    failing a live carousel phase; pinning the default keeps the move to 5.3 from being
+    reverted silently.
+    """
     assert (
         Settings(
             anthropic_api_key=SecretStr("a"),
@@ -79,8 +80,9 @@ def test_shipped_default_model_is_glm_5_3() -> None:
 
 
 def test_default_provider_is_glm_but_safe_without_a_key() -> None:
-    # The shipped default is "glm"; with no GLM key it must not break — it
-    # degrades to Anthropic so CI and an unconfigured prod keep working.
+    """With no GLM key the shipped "glm" default degrades to Anthropic, so CI and an
+    unconfigured prod keep working.
+    """
     settings = _settings()
     assert settings.llm_provider == "glm"
     assert isinstance(build_chat_model(settings), ChatAnthropic)
@@ -146,9 +148,10 @@ def _glm_settings(base_url: str) -> Settings:
 async def test_glm_request_carries_the_opencode_session_header(
     opencode_stub: tuple[str, _CapturedRequests],
 ) -> None:
+    """Without it OpenCode Go answers 400 MissingSessionID, which the workflow-start
+    route surfaced as 503 provider_unavailable in prod.
+    """
     # Scenario: GLM requests carry the OpenCode session header (AE-0330)
-    # Without it OpenCode Go answers 400 MissingSessionID, which the
-    # workflow-start route surfaced as 503 provider_unavailable in prod.
     base_url, captured = opencode_stub
     settings = _glm_settings(base_url)
 

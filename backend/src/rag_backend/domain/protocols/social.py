@@ -4,9 +4,9 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class PublishResult:
-    """Outcome of a publishing call."""
+    """Outcome of a publishing call; ``status`` is queued, published or failed."""
 
-    status: str  # "queued" | "published" | "failed"
+    status: str
     post_id: str | None = None
     error_message: str | None = None
 

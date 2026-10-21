@@ -1,4 +1,4 @@
-"""AE-0406: the autopilot content gate re-checks ``pov_news`` quote cards.
+"""The autopilot content gate re-checks ``pov_news`` quote cards.
 
 A quote card is placed by code from the verified quotes, so this never fires
 on a healthy run. It is the deterministic backstop of spec §4: a card whose

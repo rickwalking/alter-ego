@@ -1,4 +1,4 @@
-"""Unit tests for design-phase dead-end recovery (AE-0310).
+"""Unit tests for design-phase dead-end recovery.
 
 Feature: Design-step recovery from content-level violations
 (see features/carousel_design_phase_recovery.feature)
@@ -132,7 +132,10 @@ class TestDesignSendBackToContent:
     ) -> None:
         """Image assets are untouched by the send-back updates — preservation
         for unchanged outline headings rides the prompt-hash reuse, so the
-        node must not clear them."""
+        node must not clear them.
+
+        The post-review step must not force design_applied on a send-back either.
+        """
         mock_interrupt.return_value = {
             "action": REVIEW_ACTION_REVISE,
             STRUCTURED_FEEDBACK_KEY: {
@@ -143,7 +146,6 @@ class TestDesignSendBackToContent:
         result = design_phase(_prod_shaped_design_state())
 
         assert "image_assets" not in result
-        # post_review must not force design_applied on a send-back either.
         assert "design_applied" not in result
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")

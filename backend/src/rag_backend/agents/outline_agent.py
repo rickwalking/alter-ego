@@ -62,7 +62,7 @@ def _outline_instruction(
 
 
 class OutlineAgent(PovOutlineMixin):
-    """Generates human-editable carousel outlines (AE-0375: and POV outlines)."""
+    """Generates human-editable carousel outlines and POV outlines."""
 
     def __init__(self, llm: BaseChatModel, model_id: str = "outline-agent") -> None:
         self.llm = llm
@@ -93,8 +93,14 @@ class OutlineAgent(PovOutlineMixin):
     ) -> list[dict[str, object]]:
         """Generate a slide-by-slide outline.
 
-        AE-0375: ``sizing`` (role contracts) targets the project's contract and
+        ``sizing`` (role contracts) targets the project's contract and
         deck size; without it the outline keeps the default fixed contract.
+
+        A sized (role) outline is returned raw: the caller stamps the roles by position
+        and normalizes, so the legacy seven-slide trim never runs, and the prompt lists
+        the contract roles in order. An empty response is re-rolled, a malformed one
+        repaired, and only what parsed is cached, since an unparseable raw would poison
+        every retry for the cache TTL.
         """
         topic = sanitize_llm_input(topic)
         audience = sanitize_llm_input(audience)
@@ -109,14 +115,11 @@ class OutlineAgent(PovOutlineMixin):
             if sizing and sizing.policy_context
             else render_presentation_policy_context(policy)
         )
-        # AE-0375: a sized (role) outline is returned raw; the caller stamps the
-        # roles by position and normalizes, so the legacy 7-slide trim never runs.
         parse = parse_pov_outline if sizing else self._parse_outline
         prompt_text, _ = render_prompt(
             RADAR_PROMPT_DOMAIN,
             RADAR_PROMPT_OUTLINE,
             variables={
-                # AE-0376: the v7 outline lists the contract roles in order.
                 "roles": list(sizing.roles) if sizing else [],
                 "topic": topic,
                 "audience": audience,
@@ -136,10 +139,6 @@ class OutlineAgent(PovOutlineMixin):
         if cached is not None:
             return parse(cached)
 
-        # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
-        # returned empty content live on 2026-09-14 and the phase died. Re-roll
-        # an empty response, repair a malformed one, and cache only what parsed
-        # (an unparseable raw cached here poisons every retry for the TTL).
         outline, raw = await ainvoke_json(
             self.llm,
             full_prompt,

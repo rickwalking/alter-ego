@@ -74,11 +74,12 @@ class TestSlidesDataForLanguage:
         en_slides = slides_data_for_language([slide], "en")
         assert en_slides[0].heading == "PT"
 
-    # AE-0211 regression: a lowercase EN render-source (translation_en) heading
-    # and body must be sentence-cased before the renderer consumes them. The
-    # localized_slides repair path was bypassed in prod (project b5b61790), so
-    # the render source itself must guarantee sentence case.
     def test_en_render_source_lowercase_heading_is_sentence_cased(self) -> None:
+        """A lowercase EN render-source (translation_en) heading and body must be
+        sentence-cased before the renderer consumes them: the localized_slides repair
+        path was bypassed in prod, so the render source itself must guarantee sentence
+        case.
+        """
         slide = SlideData(
             1,
             "intro",
@@ -124,28 +125,25 @@ class TestSlidesDataForLanguage:
 def _agent_with_export_mock(
     tmp_path: Path,
 ) -> tuple[CarouselRefinementService, AsyncMock, MagicMock]:
+    """The export side effects are ordered PT standard, PT HD, EN standard, EN HD."""
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
     repo.get_slides_by_project = AsyncMock()
     export = AsyncMock()
     export.export_slides = AsyncMock(
         side_effect=[
-            # PT standard
             [
                 str(tmp_path / "pt" / "slide_1.jpg"),
                 str(tmp_path / "pt" / "slide_2.jpg"),
             ],
-            # PT HD
             [
                 str(tmp_path / "pt" / "hd" / "slide_1.jpg"),
                 str(tmp_path / "pt" / "hd" / "slide_2.jpg"),
             ],
-            # EN standard
             [
                 str(tmp_path / "en" / "slide_1.jpg"),
                 str(tmp_path / "en" / "slide_2.jpg"),
             ],
-            # EN HD
             [
                 str(tmp_path / "en" / "hd" / "slide_1.jpg"),
                 str(tmp_path / "en" / "hd" / "slide_2.jpg"),
@@ -214,7 +212,6 @@ class TestBilingualExport:
             )
         )
 
-        # Each language calls export_slides twice (standard + HD)
         assert export.export_slides.await_count == 4
         assert export.export_slides.call_args_list[1].kwargs["config"].hd is True
         assert export.export_slides.call_args_list[3].kwargs["config"].hd is True
@@ -244,12 +241,12 @@ class TestBilingualExport:
             )
         )
 
-        # PT-only: standard + HD = 2 calls
         assert export.export_slides.await_count == 2
         assert pdf_builder.build.call_count == 1
         assert project.pdf_path_en is None
 
     async def test_render_language_rewrites_image_paths(self, tmp_path: Path) -> None:
+        """The standard export uses ../images/ and the HD export ../../images/."""
         from rag_backend.application.services.carousel.nodes.export import (
             BilingualExportConfig,
             render_language,
@@ -277,14 +274,12 @@ class TestBilingualExport:
             ),
         )
         await render_language(config)
-        # Standard export uses ../images/
         standard_html = export.export_slides.await_args_list[0].kwargs["html_content"]
         assert "../images/slide_1.jpg" in standard_html
         assert 'src="images/slide_1' not in standard_html
         assert "url('../images/slide_1.jpg')" in standard_html
         assert "url('images/slide_1" not in standard_html
 
-        # HD export uses ../../images/
         hd_html = export.export_slides.await_args_list[1].kwargs["html_content"]
         assert "../../images/slide_1.jpg" in hd_html
         assert 'src="images/slide_1' not in hd_html

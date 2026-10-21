@@ -1,4 +1,4 @@
-"""Rule-fires regression test for the blog-v1 dead-code guard (AE-0428/AE-0180).
+"""Rule-fires regression test for the blog-v1 dead-code guard.
 
 Proves the checker FIRES on a seeded v1 symbol (non-zero exit, naming the file)
 and PASSES clean code — not merely that the real tree happens to pass. Also

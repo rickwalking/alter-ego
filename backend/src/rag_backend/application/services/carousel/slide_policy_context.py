@@ -1,4 +1,4 @@
-"""Per-slide contract context for the content drafter (AE-0375, ADR-0021)."""
+"""Per-slide contract context for the content drafter (ADR-0021)."""
 
 from __future__ import annotations
 

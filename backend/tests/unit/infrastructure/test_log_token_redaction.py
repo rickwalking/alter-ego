@@ -24,7 +24,11 @@ _GRAPH_URL = "https://graph.instagram.com/me?fields=id&access_token=IGQ.secret-v
 
 @pytest.fixture
 def stdout(monkeypatch: pytest.MonkeyPatch) -> Iterator[io.StringIO]:
-    """Configure logging onto a buffer, then restore the root logger."""
+    """Configure logging onto a buffer, then restore the root logger.
+
+    An earlier test may have run alembic's fileConfig, which disables every logger that
+    already existed (httpx included); production never does.
+    """
     root = logging.getLogger()
     saved_handlers = list(root.handlers)
     saved_level = root.level
@@ -32,8 +36,6 @@ def stdout(monkeypatch: pytest.MonkeyPatch) -> Iterator[io.StringIO]:
         root.removeHandler(handler)
     buffer = io.StringIO()
     monkeypatch.setattr("sys.stdout", buffer)
-    # An earlier test may have run alembic's fileConfig, which disables every
-    # logger that already existed (httpx included). Production never does.
     for name in ("httpx", "httpcore", "some.other"):
         monkeypatch.setattr(logging.getLogger(name), "disabled", False)
         monkeypatch.setattr(logging.getLogger(name), "propagate", True)

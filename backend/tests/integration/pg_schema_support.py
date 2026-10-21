@@ -1,4 +1,4 @@
-"""A throwaway Postgres schema for concurrency tests (AE-0348 QA r2).
+"""A throwaway Postgres schema for concurrency tests.
 
 The shared test database is also migrated by the Alembic gates, so these
 tests never create tables in ``public``. Each test gets its own schema,

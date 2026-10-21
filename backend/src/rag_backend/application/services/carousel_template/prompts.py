@@ -55,10 +55,10 @@ def build_content_prompt(project: CarouselProject, research_context: str) -> str
 def build_caption_prompt(
     project: CarouselProject, slide_headings: list[tuple[int, str]]
 ) -> str:
-    """AE-0372: caption v7 (hook first, 3-5 hashtags, one CTA by goal).
+    """Caption v7 (hook first, 3-5 hashtags, one CTA by goal).
 
-    AE-0375: a "Ponto de Vista" project renders ``carousel_pov/v1/caption``
-    with the slide-1 hook and the owner's thesis. AE-0406: a ``pov_news``
+    A "Ponto de Vista" project renders ``carousel_pov/v1/caption``
+    with the slide-1 hook and the owner's thesis. A ``pov_news``
     project renders ``carousel_pov_news/v1/caption`` (the source footer is
     appended by code afterwards, never by the model).
     """
@@ -100,9 +100,9 @@ def build_caption_prompt(
 
 
 def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str:
-    """AE-0366: PT -> EN slide translation prompt (carries the rubric).
+    """PT -> EN slide translation prompt (carries the rubric).
 
-    AE-0430: v8 also translates the TL;DR strip and the structured item texts.
+    Version 8 also translates the TL;DR strip and the structured item texts.
 
     Same lazy registry import as the three builders above: the
     carousel_template.prompts -> agents.prompts.registry pair is already in the
@@ -125,7 +125,7 @@ def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str
 
 
 def build_autofix_retranslate_prompt(items_json: str) -> str:
-    """AE-0367: re-translate the EN texts the owner autofix found untranslated.
+    """Re-translate the EN texts the owner autofix found untranslated.
 
     Same baselined lazy registry import as the builders above.
     """
@@ -148,7 +148,7 @@ def build_autofix_retranslate_prompt(items_json: str) -> str:
 
 
 def build_slide_fix_prompt(variables: dict[str, object]) -> str:
-    """AE-0401: rewrite one failing slide (autopilot model fix).
+    """Rewrite one failing slide (autopilot model fix).
 
     Same baselined lazy registry import as the builders above.
     """
@@ -171,7 +171,7 @@ def build_slide_fix_prompt(variables: dict[str, object]) -> str:
 
 
 def build_gate_field_repair_prompt(variables: dict[str, object]) -> str:
-    """AE-0430: rewrite only the fields the content gate blocked.
+    """Rewrite only the fields the content gate blocked.
 
     Same baselined lazy registry import as the builders above.
     """

@@ -1,4 +1,4 @@
-"""AE-0407: persona scores on one 0-100 scale, on every read path.
+"""Persona scores on one 0-100 scale, on every read path.
 
 Read paths: the shared helper, the slide-fix targets (``slide_scores`` /
 ``select_targets``), the autopilot snapshot (``persona_score``) and the
@@ -7,6 +7,8 @@ engine's content-approve check (``validate_content_approve_persona_score``).
 Gherkin: tests/features/autofix_escalation_ae0407.feature
 (Scenario Outline "A stored overall is read on the 0-100 scale",
 Scenario "An unscored slide is not a low voice score").
+
+_READS is the Examples table: (stored overall, what every read path reads).
 """
 
 from __future__ import annotations
@@ -42,7 +44,6 @@ from tests.unit.application.copy_hygiene_fixtures_ae0401 import POV, prod_deck
 pytestmark = pytest.mark.unit
 
 _SLIDES = 9
-# The Examples table: (stored overall, what every read path reads).
 _READS: list[tuple[object, float | None]] = [
     (8.7, 87.0),
     (75, 75.0),
@@ -106,7 +107,8 @@ def test_the_snapshot_reads_the_hundred_point_scale(
 def test_the_engine_check_reads_the_hundred_point_scale(
     stored: object, read: float | None
 ) -> None:
-    del read  # 87, 75 and unscored all clear the 70 floor
+    """87, 75 and unscored all clear the 70 floor."""
+    del read
     assert _engine_allows(_state({"slide_1": {"overall": stored}}))
 
 

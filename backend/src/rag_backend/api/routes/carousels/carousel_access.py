@@ -21,7 +21,7 @@ def assert_carousel_public(project: CarouselProject) -> None:
     """Allow only published carousels on public media routes.
 
     The 404 detail is the unknown-id one, so a private carousel cannot be told
-    apart from a missing one (ADR-0013, AE-0446).
+    apart from a missing one (ADR-0013).
     """
     if project.is_public:
         return

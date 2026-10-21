@@ -183,13 +183,16 @@ class TestCarouselWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_paused_final_review_send_back_routes_to_content(self) -> None:
-        """AE-0288: from a carousel paused at the final-review gate, a revise with
+        """From a carousel paused at the final-review gate, a revise with
         structured_feedback.target_phase=content routes the workflow back into the
         content phase (the reliable, supported send-back path).
 
         NB: this works because the graph is genuinely suspended at final_review's
         interrupt. Re-driving a *terminated* (already-approved) graph is NOT
         reliably supported by LangGraph and is intentionally not attempted here.
+
+        Approving research, outline, content, design and images pauses the graph
+        awaiting human review at the final_review gate.
         """
         from pathlib import Path
         from tempfile import TemporaryDirectory
@@ -215,8 +218,6 @@ class TestCarouselWorkflowEngine:
                     {"topic": "AI"},
                     research_findings=[{"source": "report", "key_points": ["risk"]}],
                 )
-                # Approve research, outline, content, design, images -> the graph
-                # pauses awaiting human review at the final_review gate.
                 for _ in range(5):
                     await engine.resume(
                         project_id,
@@ -243,7 +244,7 @@ class TestCarouselWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_approved_carousel_holds_and_send_back_regenerates(self) -> None:
-        """AE-0288: after final-review approval the graph parks at the internal
+        """After final-review approval the graph parks at the internal
         approved_hold node (NOT END), stays publishable, and a send-back from the
         hold re-enters content so it regenerates exactly once with the publish
         lock dropped in graph state.
@@ -251,6 +252,11 @@ class TestCarouselWorkflowEngine:
         get_state must hide the hold node: it reports current_phase=final_review /
         phase_status=approved (not approved_hold / awaiting_human), so the carousel
         stays publishable while held.
+
+        After approving every gate through final_review the graph parks at approved_hold
+        (it does NOT reach END). The send-back regenerates content exactly once, and the
+        publish lock is dropped in graph state for the whole revision window so the
+        resume sync writes draft to the DB.
         """
         from pathlib import Path
         from tempfile import TemporaryDirectory
@@ -298,8 +304,6 @@ class TestCarouselWorkflowEngine:
                     {"topic": "AI"},
                     research_findings=[{"source": "report", "key_points": ["risk"]}],
                 )
-                # Approve research, outline, content, design, images, final_review
-                # -> the graph parks at approved_hold (it does NOT reach END).
                 for _ in range(6):
                     await engine.resume(
                         project_id,
@@ -329,15 +333,12 @@ class TestCarouselWorkflowEngine:
                 )
                 after = await engine._app.aget_state(config)
                 assert after.next == (PHASE_CONTENT,)
-                # Content regenerated exactly once on the send-back.
                 assert runner.content_runs == runs_before + 1
 
                 reentered = await engine.get_state(project_id)
                 assert reentered is not None
                 assert reentered["current_phase"] == PHASE_CONTENT
                 assert reentered["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
-                # The publish lock must be dropped in graph state for the whole
-                # revision window (so the resume sync writes draft to the DB).
                 assert (
                     reentered["workflow_status"]
                     == CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
@@ -346,7 +347,7 @@ class TestCarouselWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_approve_resume_from_hold_finalizes_to_end(self) -> None:
-        """AE-0288: an explicit approve resume of a held carousel finalizes the
+        """An explicit approve resume of a held carousel finalizes the
         graph (END). Normal UX never does this (publishing is a separate
         endpoint), but the finalize path must be deterministic."""
         from pathlib import Path
@@ -415,7 +416,7 @@ class TestCarouselWorkflowEngine:
     async def test_update_state_without_as_node_infers_node_name(self) -> None:
         """Given a workflow paused with pending interrupt, when update_state is
         called without as_node, then the node name is inferred from the
-        checkpoint snapshot's ``next`` field (AE-0025 defense-in-depth)."""
+        checkpoint snapshot's ``next`` field (defense in depth)."""
         from pathlib import Path
         from tempfile import TemporaryDirectory
 
@@ -430,13 +431,11 @@ class TestCarouselWorkflowEngine:
                     project_id,
                     research_findings=[{"source": "report", "key_points": ["risk"]}],
                 )
-                # Verify we are paused at research gate
                 paused = await engine._app.aget_state({
                     "configurable": {"thread_id": project_id}
                 })
                 assert paused.next == (PHASE_RESEARCH,)
 
-                # Patch the internal aupdate_state to capture as_node
                 original_aupdate = engine._app.aupdate_state
 
                 async def capturing_aupdate(
@@ -451,13 +450,11 @@ class TestCarouselWorkflowEngine:
 
                 engine._app.aupdate_state = capturing_aupdate  # type: ignore[method-assign]
 
-                # Call update_state WITHOUT as_node — should infer 'research'
                 await engine.update_state(
                     project_id,
                     {"phase_feedback": {"research": ["looks good"]}},
                 )
 
-                # Verify the value was actually persisted
                 after = await engine._app.aget_state({
                     "configurable": {"thread_id": project_id}
                 })
@@ -485,7 +482,6 @@ class TestCarouselWorkflowEngine:
             tasks=(),
             next=("outline",),
         )
-        # Monkey-patch _app.aget_state to return our test snapshot
         original_get_state = engine._app.aget_state
 
         async def mock_aget_state(*args: object, **kwargs: object) -> object:
@@ -505,7 +501,13 @@ class TestCarouselWorkflowEngine:
     async def test_resume_recovers_from_corrupted_checkpoint(self) -> None:
         """Given a checkpoint with pending_next, no interrupts, and
         phase_status=in_progress, resume() SHALL use Command(resume=payload)
-        instead of ainvoke(None) — the corrupted-checkpoint recovery path."""
+        instead of ainvoke(None) — the corrupted-checkpoint recovery path.
+
+        The corrupted checkpoint is simulated by calling update_state WITHOUT as_node
+        and with phase_status=in_progress, which clears the interrupts (the old bug).
+        The resume must call ainvoke with Command(resume=...), not None, and the approve
+        consumes the interrupt.
+        """
         from pathlib import Path
         from tempfile import TemporaryDirectory
         from unittest.mock import patch
@@ -521,9 +523,6 @@ class TestCarouselWorkflowEngine:
                     project_id,
                     research_findings=[{"source": "report", "key_points": ["risk"]}],
                 )
-                # Simulate the corrupted checkpoint: call update_state WITHOUT
-                # as_node and with phase_status=in_progress — this clears
-                # interrupts (the old bug).
                 await engine._app.aupdate_state(
                     {"configurable": {"thread_id": project_id}},
                     {"phase_status": "in_progress"},
@@ -547,10 +546,8 @@ class TestCarouselWorkflowEngine:
                         {"action": "approve", "reviewer_id": "user-1"},
                     )
 
-                    # Verify ainvoke was called with Command(resume=...), not None
                     call_args = spy_ainvoke.await_args
                     assert call_args is not None
-                    # First positional arg is the input Command
                     command = call_args.args[0]
                     assert hasattr(command, "resume"), (
                         "Expected invoke with Command(resume=payload) "
@@ -561,7 +558,6 @@ class TestCarouselWorkflowEngine:
                         "reviewer_id": "user-1",
                     }
 
-                    # Verify workflow actually advanced (approve consumed interrupt)
                     final_snapshot = await engine._app.aget_state({
                         "configurable": {"thread_id": project_id}
                     })
@@ -571,7 +567,7 @@ class TestCarouselWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_reap_then_resume_re_executes_interrupted_node(self) -> None:
-        """AE-0315 clean re-resume: a mid-generation reap + resume produces a
+        """Clean re-resume: a mid-generation reap + resume produces a
         complete, validated artifact, not a half-built one.
 
         Feature: tests/features/carousel_run_progress_reaper.feature
@@ -580,6 +576,12 @@ class TestCarouselWorkflowEngine:
         DB row. LangGraph resumes from the last node-boundary checkpoint and
         re-executes the interrupted node from its start (safe because side
         effects before ``interrupt()`` are idempotent by project rule).
+
+        The checkpoint is shaped like a run killed mid-step (pending node, no live
+        interrupt, phase_status=in_progress). The reaper flips ONLY the carousel row
+        (awaiting_human plus lock/epoch bump), leaving the checkpoint untouched; the
+        next resume re-executes the node fully and advances to the next gate (no
+        half-built stall).
         """
         from pathlib import Path
         from tempfile import TemporaryDirectory
@@ -595,8 +597,6 @@ class TestCarouselWorkflowEngine:
                     project_id,
                     research_findings=[{"source": "report", "key_points": ["risk"]}],
                 )
-                # Shape the checkpoint like a run killed mid-step: pending
-                # node, no live interrupt, phase_status=in_progress.
                 await engine._app.aupdate_state(
                     {"configurable": {"thread_id": project_id}},
                     {"phase_status": "in_progress"},
@@ -607,9 +607,6 @@ class TestCarouselWorkflowEngine:
                 assert mid_step.next == (PHASE_RESEARCH,)
                 assert not mid_step.interrupts
 
-                # The reaper flips ONLY the carousel row (awaiting_human +
-                # lock/epoch bump) — the checkpoint above stays untouched.
-                # The user's next resume re-executes the interrupted node.
                 state = await engine.resume(
                     project_id,
                     {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
@@ -619,6 +616,4 @@ class TestCarouselWorkflowEngine:
                 final_snapshot = await engine._app.aget_state({
                     "configurable": {"thread_id": project_id}
                 })
-                # A complete node re-execution: the workflow advanced past the
-                # reaped node to the next gate (no half-built stall).
                 assert final_snapshot.next == (PHASE_OUTLINE,)

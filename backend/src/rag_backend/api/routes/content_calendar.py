@@ -1,6 +1,6 @@
 """Content calendar API (SCHED-002, UI-020).
 
-Thin HTTP adapter (AE-0131). The blog+carousel item merge reads through the
+Thin HTTP adapter. The blog+carousel item merge reads through the
 publishing facade's read projection (the sole carousel/blog ORM read seam behind
 the :class:`PublishingReadPort`). The route keeps the range validation + the
 admin/author scope at the edge and maps the projection items one-to-one onto the

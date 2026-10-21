@@ -1,4 +1,4 @@
-"""SQLAlchemy model for the global custom-palette catalog (AE-0269).
+"""SQLAlchemy model for the global custom-palette catalog.
 
 Maps the ``palettes`` table to/from the ``CustomPalette`` domain entity. Two
 DB-level constraints enforce uniqueness under concurrency (skeptical F3/G3):
@@ -25,7 +25,13 @@ _MODE_MAX = 8
 
 
 class PaletteModel(Base):
-    """ORM row for one custom palette."""
+    """ORM row for one custom palette.
+
+    Active palette names are unique; archived rows are excluded so a name can be
+    reused after archiving (the partial index is PostgreSQL-only and ignored by
+    other dialects in unit tests). Slugs are globally unique, archived included, so
+    they never collide or get silently reused.
+    """
 
     __tablename__ = "palettes"
 
@@ -49,17 +55,12 @@ class PaletteModel(Base):
     )
 
     __table_args__ = (
-        # Active palette names are unique; archived rows are excluded so a
-        # name can be reused after its palette is archived (partial index is a
-        # PostgreSQL feature — ignored by other dialects in unit tests).
         Index(
             "uq_palettes_name_active",
             "name",
             unique=True,
             postgresql_where=text("archived = false"),
         ),
-        # Slugs are globally unique (incl. archived) so they never collide or
-        # get silently reused (D8/F1).
         Index("uq_palettes_slug", "slug", unique=True),
     )
 

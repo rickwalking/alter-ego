@@ -1,6 +1,6 @@
-"""A content gate with no persona scores is approved like the engine (AE-0364).
+"""A content gate with no persona scores is approved like the engine.
 
-Feature: autopilot_runner.feature (AE-0364 scenarios)
+Feature: autopilot_runner.feature (unscored persona scenarios)
 
 Prod 2026-10-14, carousel 8e350d6e: the autopilot attaches no persona, so the
 content phase produced 7 drafts and ``persona_scores = {}``. The engine skips

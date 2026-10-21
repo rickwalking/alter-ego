@@ -1,4 +1,4 @@
-"""Contract test freezing backend SSE event-name constants (AE-0076).
+"""Contract test freezing backend SSE event-name constants.
 
 Feature: SSE event names are frozen during the migration
 See tests/features/sse_event_inventory.feature
@@ -7,6 +7,10 @@ Asserts that the three backend constant modules match the committed
 source-of-truth artifact ``docs/architecture/sse-event-inventory.json``
 exactly. On any drift the test fails with a message naming the changed
 constant, so a rename cannot land silently.
+
+Names matching the per-module rules are event-name constants and in scope for the
+freeze; anything else (payload-field names, interval/config constants, consumer-group
+names) is intentionally not frozen.
 """
 
 from __future__ import annotations
@@ -22,7 +26,6 @@ from rag_backend.application.services.carousel import (
 )
 from rag_backend.domain.constants import chat_stream, workflow_events
 
-# Repo root: backend/tests/unit/<this file> -> up 3 = backend/, up 4 = repo root.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "architecture" / "sse-event-inventory.json"
 
@@ -61,9 +64,6 @@ def _actual_values(
 _BACKEND_SECTION = _load_artifact()
 _MODULE_KEYS = [_EDITORIAL_KEY, _CHAT_KEY, _WORKFLOW_KEY]
 
-# Names matching these per-module rules are event-name constants and therefore
-# in scope for the freeze. Anything else in a module (payload-field names,
-# interval/config constants, consumer-group names) is intentionally NOT frozen.
 _STREAM_NAME = "STREAM_CONTENT_EVENTS"
 
 

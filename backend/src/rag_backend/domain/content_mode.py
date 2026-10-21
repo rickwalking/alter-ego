@@ -1,4 +1,4 @@
-"""Content-mode predicates shared by every layer (AE-0406, ADR-0023).
+"""Content-mode predicates shared by every layer (ADR-0023).
 
 ``pov`` and ``pov_news`` form the POV family: both take the thesis step, the
 slide-1 photo, the ``pov_hook_v1`` contract and the voice gate. Only the

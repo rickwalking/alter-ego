@@ -1,6 +1,6 @@
-"""Unit tests for the editorial workflow handlers (AE-0110).
+"""Unit tests for the editorial workflow handlers.
 
-These cover the AE-0110 acceptance criteria at the handler boundary — the
+These cover the acceptance criteria at the handler boundary — the
 use-case layer the thin workflow routes delegate to:
 
 * **Engine wrapping** — the handlers WRAP the injected workflow engine (they
@@ -21,7 +21,7 @@ use-case layer the thin workflow routes delegate to:
 External clients are never constructed; the tests use an in-memory SQLite session
 and a fake engine — no API keys required (CI-safe). Gherkin not applicable per
 the ticket (behavior-preserving extraction; the API+SSE contract is locked by the
-AE-0106 safety net).
+editorial safety net).
 """
 
 from __future__ import annotations
@@ -122,7 +122,7 @@ class _FakeEngine:
 
     Mirrors the methods the routes call on ``EditorialWorkflowService``. It
     records the ``db`` passed by the ACL (proving the handler binds the request
-    session) and can stage a workflow-owned write via the AE-0107 owner so the
+    session) and can stage a workflow-owned write via the write owner so the
     single-commit contract is observable.
     """
 
@@ -148,10 +148,10 @@ class _FakeEngine:
         workflow_input: EditorialWorkflowStartInput,
         db: object | None = None,
     ) -> CarouselWorkflowState:
+        """Stages a workflow-owned write (flush only) to prove the handler commits."""
         del workflow_input
         self.received_db = db
         self.start_calls += 1
-        # Stage a workflow-owned write (flush only) to prove the handler commits.
         if isinstance(db, AsyncSession):
             await CarouselProjectWriteOwner(db).assign_reviewer(
                 project_id, "reviewer-xyz"
@@ -193,15 +193,16 @@ class TestGetState:
 
     @pytest.mark.asyncio
     async def test_returns_state_with_row_overlay(self, session: AsyncSession) -> None:
+        """phase_progress and lock_version are read through the ACL (no ORM in the
+        handler), and the handler binds the request session to the engine.
+        """
         project_id = await _seed_project(session, lock_version=2)
         engine = _FakeEngine(project_id, has_state=True)
         view = await _handlers(session).get_state(engine, project_id)
         assert isinstance(view, WorkflowStateView)
         assert view.state["current_phase"] == PHASE_CONTENT
-        # phase_progress + lock_version read THROUGH the ACL (no ORM in handler).
         assert view.phase_progress == dict(_PHASE_PROGRESS)
         assert view.lock_version == 2
-        # The handler bound the request session to the engine (in_progress merge).
         assert engine.received_db is session
 
     @pytest.mark.asyncio
@@ -219,6 +220,9 @@ class TestStart:
     async def test_commits_staged_write_and_overlays_metadata(
         self, session: AsyncSession
     ) -> None:
+        """The engine staged assign_reviewer and the handler's single commit persisted it;
+        reading it back on a fresh session proves the commit, not just the flush.
+        """
         project_id = await _seed_project(session, lock_version=1)
         engine = _FakeEngine(project_id, has_state=False)
         view = await _handlers(session).start(
@@ -234,8 +238,6 @@ class TestStart:
         assert engine.received_db is session
         assert view.phase_progress == dict(_PHASE_PROGRESS)
         assert view.lock_version == 1
-        # The engine staged assign_reviewer; the handler's single commit persisted
-        # it. Read it back on a FRESH session to prove the commit (not just flush).
         factory = async_sessionmaker(session.bind, expire_on_commit=False)
         async with factory() as fresh:
             persisted = await fresh.get(CarouselProjectModel, project_id)

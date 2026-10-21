@@ -1,4 +1,4 @@
-"""Value objects for the carousel palette registry (AE-0266).
+"""Value objects for the carousel palette registry.
 
 Leaf module (stdlib only) so the registry in ``carousel_themes`` can import
 these without an import cycle through ``domain.constants`` /
@@ -25,11 +25,16 @@ class PaletteMode(StrEnum):
 
 
 class PaletteKind(StrEnum):
-    """How a palette is reached during theme resolution."""
+    """How a palette is reached during theme resolution.
 
-    CATEGORY = "category"  # matched by topic-category keywords, in AUTO pool
-    BRAND = "brand"  # matched by brand keywords (brand detection wins first)
-    VARIANT = "variant"  # explicit-select only (new dark variants + light)
+    ``CATEGORY`` is matched by topic-category keywords and sits in the AUTO pool;
+    ``BRAND`` is matched by brand keywords (brand detection wins first);
+    ``VARIANT`` is explicit-select only (the dark variants and light).
+    """
+
+    CATEGORY = "category"
+    BRAND = "brand"
+    VARIANT = "variant"
 
 
 @dataclass(frozen=True)
@@ -57,7 +62,7 @@ class PaletteDescriptor:
     parallel dict). ``label_en``/``label_pt`` are the single source for the
     frontend theme-dropdown labels: the palette contract
     (``docs/contracts/palettes.json``) carries them and a frontend drift gate
-    asserts the i18n locale files match (AE-0266 Phase 3). Brand rows are not
+    asserts the i18n locale files match. Brand rows are not
     user-selectable in the UI, so they leave the labels empty.
     """
 

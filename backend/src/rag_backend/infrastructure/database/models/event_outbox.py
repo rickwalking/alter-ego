@@ -1,4 +1,4 @@
-"""SQLAlchemy model for the transactional outbox (AE-0130).
+"""SQLAlchemy model for the transactional outbox.
 
 The outbox is the **single durable publish path** for workflow/release domain
 events. ``WorkflowEventService.emit`` writes one row here in the **same
@@ -24,7 +24,14 @@ from rag_backend.infrastructure.database.config import Base
 
 
 class EventOutboxModel(Base):
-    """Durable outbox row for one workflow/release domain event."""
+    """Durable outbox row for one workflow/release domain event.
+
+    ``event_timestamp`` is the exact ISO-8601 string the legacy after-commit
+    publisher put in the stream_event ``timestamp`` field
+    (``datetime.now(UTC).isoformat()``, with a ``+00:00`` offset). It is stored
+    verbatim at emit time so the relay republishes a byte-identical payload on any
+    DB dialect (SQLite strips tzinfo from DateTime round-trips).
+    """
 
     __tablename__ = "event_outbox"
 
@@ -36,11 +43,6 @@ class EventOutboxModel(Base):
     version = Column(Integer, nullable=False, default=1)
     payload = Column(JSON, nullable=False, default=dict)
     metadata_json = Column("metadata", JSON, nullable=False, default=dict)
-    # The exact ISO-8601 timestamp string the legacy after-commit publisher put in
-    # the stream_event ``timestamp`` field (``datetime.now(UTC).isoformat()``,
-    # tz-aware with a ``+00:00`` offset). Stored verbatim at emit time so the relay
-    # republishes a byte-identical payload regardless of DB dialect (SQLite strips
-    # tzinfo from DateTime round-trips; this string is immune to that).
     event_timestamp = Column(String(64), nullable=False)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

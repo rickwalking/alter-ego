@@ -1,9 +1,16 @@
-"""Carousel defaults for GrokBot topics (AE-0361).
+"""Carousel defaults for GrokBot topics.
 
 Pure rules: the image presets the scout may pick, the simple-words checks
 on audience, niche and brief, the fallback image guidance, and the review
 line the owner sees. The backend always uses the OpenAI image model and the
 ``auto`` palette theme, so neither is part of the scout contract.
+
+The POV preset needs the owner's photo, so the Radar IA scout never picks it; POV
+autopilot runs set it themselves. The scout presets are derived from
+``SUPPORTED_IMAGE_COMBOS`` so a new preset cannot drift, and the default style matches
+the API and the wizard (flat editorial). The autopilot rotates the palette per São Paulo
+day instead of ``auto``, which put nearly every AI topic on the same blue/amber theme;
+only dark built-in themes rotate, so neo-anime art and the POV scrim stay legible.
 """
 
 from __future__ import annotations
@@ -43,19 +50,14 @@ from rag_backend.modules.autopilot.carousel_constants import (
 from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
 from rag_backend.modules.autopilot.domain.topic_text import tokens
 
-# AE-0376: the POV preset needs the owner's photo, so the Radar IA scout never
-# picks it (POV autopilot runs set it themselves, AE-0377).
 POV_ONLY_IMAGE_STYLES: frozenset[str] = frozenset({IMAGE_STYLE_POV_EDITORIAL})
 
-# Image presets the scout may choose: every style the OpenAI image model
-# supports. Derived from ``SUPPORTED_IMAGE_COMBOS`` so a new preset cannot drift.
 SCOUT_IMAGE_STYLES: frozenset[str] = frozenset(
     style
     for model, style in SUPPORTED_IMAGE_COMBOS
     if model == IMAGE_MODEL_OPENAI and style not in POV_ONLY_IMAGE_STYLES
 )
 
-# AE-0372: the same default as the API and the wizard (flat editorial).
 DEFAULT_IMAGE_STYLE = IMAGE_STYLE_DEFAULT
 
 
@@ -156,9 +158,6 @@ def with_profile(profile: str, body: str) -> str:
     return f"{profile}{PROFILE_SEPARATOR}{body}"
 
 
-# AE-0395: the autopilot rotates the palette per São Paulo day instead of
-# ``auto`` (which put nearly every AI topic on the same blue/amber theme).
-# Dark built-in themes only, so neo-anime art and the POV scrim stay legible.
 AUTOPILOT_THEME_ROTATION: tuple[str, ...] = (
     "developer_skills",
     "plasma_magenta",

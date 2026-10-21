@@ -1,8 +1,5 @@
 """Pydantic schemas for API requests and responses."""
 
-# Common
-# Carousel
-# Blog Posts
 from rag_backend.api.schemas.blog_post import (
     BlogPostCreate,
     BlogPostListResponse,
@@ -39,8 +36,6 @@ from rag_backend.api.schemas.carousel import (
     InstagramPublishStatusResponse,
     ResearchSourceResponse,
 )
-
-# Chat
 from rag_backend.api.schemas.chat import (
     ChatMessageRequest,
     ChatRequest,
@@ -62,8 +57,6 @@ from rag_backend.api.schemas.common import (
     HealthCheckResponse,
     HealthResponse,
 )
-
-# Documents
 from rag_backend.api.schemas.documents import (
     DocumentBase,
     DocumentCreate,
@@ -73,8 +66,6 @@ from rag_backend.api.schemas.documents import (
     DocumentUpdate,
     DocumentUploadResponse,
 )
-
-# Persona & Rubric
 from rag_backend.api.schemas.persona_rubric import (
     PersonaProfileCreate,
     PersonaProfileListResponse,

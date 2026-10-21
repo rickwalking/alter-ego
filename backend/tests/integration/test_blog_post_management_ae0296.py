@@ -1,4 +1,4 @@
-"""Integration tests for blog post delete/unpublish guards (AE-0296).
+"""Integration tests for blog post delete/unpublish guards.
 
 Feature: blog_post_management_ae0296.feature
 """
@@ -46,7 +46,7 @@ async def client(tmp_path: Path):
     ``StaticPool`` (ONE shared connection), so the fire-and-forget outbox
     publish task and the deferred request-session teardown ROLLBACK ran in the
     same transaction as ``_set_post_fields`` and could discard its UPDATE
-    (flaky 204/400, AE-0390). A file DB gives each session its own connection.
+    (flaky 204/400). A file DB gives each session its own connection.
     """
     from sqlalchemy.ext.asyncio import create_async_engine
 

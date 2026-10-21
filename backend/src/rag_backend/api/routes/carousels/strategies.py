@@ -1,6 +1,6 @@
 """Carousel slide-layout strategy routes.
 
-Thin HTTP adapters (AE-0120). The list + apply endpoints delegate their data
+Thin HTTP adapters. The list + apply endpoints delegate their data
 operations to the presentation :class:`PresentationHandlers` (via the
 presentation facade): listing reads the strategy registry behind the handler, and
 applying validates the strategy + project status at the edge then runs the

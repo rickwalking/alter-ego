@@ -81,7 +81,7 @@ class TestPersistPhaseFeedback:
     async def test_persist_phase_feedback_keys_under_target_phase_on_send_back(
         self,
     ) -> None:
-        """AE-0288: a final-review send-back files the note under the target
+        """A final-review send-back files the note under the target
         phase (content), not the current phase (final_review), so the content
         node's revision notes actually see it.
         """

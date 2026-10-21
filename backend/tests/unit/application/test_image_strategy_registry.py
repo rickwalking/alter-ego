@@ -1,12 +1,12 @@
-"""Contract tests for the consolidated image-strategy registry (AE-0266 Ph2).
+"""Contract tests for the consolidated image-strategy registry.
 
 Gherkin: tests/features/image_generation_provider.feature
 
 ``IMAGE_STRATEGY_REGISTRY`` is the single source of truth for which strategy
-class renders each ``(image_model, image_style)`` combo. Before AE-0266 Phase 2
+class renders each ``(image_model, image_style)`` combo. Before the consolidation
 the prompt renderer and the provider registry each hand-maintained their own
 parallel map; they drifted and a light palette fell back to the dark "neon
-glow" default (AE-0264). These tests pin the SSOT so the drift class cannot
+glow" default. These tests pin the SSOT so the drift class cannot
 return: the registry keys must equal ``SUPPORTED_IMAGE_COMBOS``, and both
 consumers must resolve the exact strategy the registry declares.
 """
@@ -49,8 +49,9 @@ def _project(model: str, style: str) -> CarouselProject:
 @pytest.mark.unit
 class TestImageStrategyRegistryIsSingleSourceOfTruth:
     def test_registry_keys_equal_supported_combos(self) -> None:
-        # If a combo is added to one but not the other, this fails — the
-        # validation set and the strategy map can no longer silently diverge.
+        """A combo added to one but not the other fails here, so the validation set and
+        the strategy map cannot silently diverge.
+        """
         assert set(IMAGE_STRATEGY_REGISTRY) == SUPPORTED_IMAGE_COMBOS
 
     def test_provider_registry_uses_the_registry_strategy(self) -> None:
@@ -65,8 +66,9 @@ class TestImageStrategyRegistryIsSingleSourceOfTruth:
             assert type(resolved) is strategy_cls
 
     def test_both_consumers_agree_for_every_combo(self) -> None:
-        # The structural guarantee AE-0264 lacked: same combo -> same strategy
-        # class from both the renderer and the provider registry.
+        """Structural guarantee: the same combo maps to the same strategy class from
+        both the renderer and the provider registry.
+        """
         provider_registry = _registry()
         for model, style in SUPPORTED_IMAGE_COMBOS:
             via_renderer = type(_strategy_for_project(_project(model, style)))

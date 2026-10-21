@@ -1,4 +1,4 @@
-"""The persona as prompt *data* for the blog writer (AE-0425, ADR-0025).
+"""The persona as prompt *data* for the blog writer (ADR-0025).
 
 Writing samples, phrases and every free-text persona field are untrusted
 content: each passes through ``sanitize_llm_input`` (injection phrases and

@@ -1,6 +1,6 @@
-"""The autopilot approves the real image phase and reaches final_review (AE-0365).
+"""The autopilot approves the real image phase and reaches final_review.
 
-Feature: autopilot_runner.feature (AE-0365 scenarios)
+Feature: autopilot_runner.feature (hero image scenarios)
 
 Prod 2026-10-14, carousel 8e350d6e: the image phase stored 6 hero images (the
 CTA slide uses the owner avatar), the images gate expected ``slides_total``
@@ -10,6 +10,9 @@ This test uses the real ``EditorialWorkflowService``, LangGraph graph,
 checkpointer interrupts, run wrapper, the real image phase
 (``ensure_slides_from_outline`` + ``run_images``) and a file SQLite database.
 Only the LLM artifacts and the image vendor are faked.
+
+Autopilot projects use hero_lower_third_v4, where only the hook and impact slides get
+artwork (news, verdict and CTA carry none).
 """
 
 from __future__ import annotations
@@ -82,8 +85,6 @@ from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
 
 _OWNER = "autopilot-owner"
 _SLIDES = 7
-# AE-0374/AE-0376: autopilot projects use hero_lower_third_v4, where only the
-# hook and impact slides get artwork (news, verdict and CTA carry none).
 _ARTWORK_SLIDES = (1, 3, 4, 5)
 _HERO_IMAGES = len(_ARTWORK_SLIDES)
 _PASSING_SCORE = 90
@@ -193,14 +194,14 @@ async def world(
         del project_id, reason
 
     async def _stage_beat(project_id: str, epoch: int) -> bool:
-        # SQLite has no lock_timeout (see the AE-0363 integration test).
+        """SQLite has no lock_timeout, so the inline stage beat is a no-op here."""
         del project_id, epoch
         return True
 
     finalized: list[str] = []
 
     async def _finalize(db: AsyncSession, project_id: str) -> None:
-        # The slide render needs a headless browser; record the call instead.
+        """Record the call: the slide render needs a headless browser."""
         del db
         finalized.append(project_id)
 

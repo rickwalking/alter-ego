@@ -6,7 +6,7 @@ lookup inside the module (ADR-0009 §9) — the inbound edge constructs the
 request-scoped collaborators (which enlist in the request's Unit of Work) and
 passes them in.
 
-**Behavior-preserving wiring (AE-0108).** The editorial adapters are NOT
+**Behavior-preserving wiring.** The editorial adapters are NOT
 relocated in this phase; they remain at their legacy locations. The inbound
 caller builds them exactly as the legacy carousel routes do today (the
 request-scoped ``CarouselRepository``) and hands them to this bootstrap. The
@@ -54,8 +54,8 @@ class EditorialAdapters:
     """Pre-constructed, request-scoped collaborators for the editorial module.
 
     Built at the inbound edge (the api adapter / legacy carousel route) from the
-    existing infrastructure so the module wires to them without relocation
-    (AE-0108). The ``unit_of_work`` wraps that same request's ``AsyncSession``
+    existing infrastructure so the module wires to them without relocation. The
+    ``unit_of_work`` wraps that same request's ``AsyncSession``
     and is the single transaction owner the application service commits through
     (ADR-0009 §9).
     """
@@ -70,7 +70,7 @@ class EditorialModule:
     """Public collaborators returned by :func:`bootstrap_module`.
 
     Bundles the editorial application service, the request-scoped Unit of Work,
-    and the legacy carousel anti-corruption layer (AE-0109) so the inbound edge
+    and the legacy carousel anti-corruption layer so the inbound edge
     can resolve editorial operations, the single commit boundary, and the legacy
     persistence seam through the module facade (no behavior change; later phases
     move the carousel editorial workflow routes behind handlers that read/write
@@ -94,7 +94,7 @@ def bootstrap_module(
     legacy adapters via ``adapters``; this function injects the repository into
     the application service via the constructor.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     service = EditorialService(
         repository=adapters.repository,
         ports=_build_ports(adapters.legacy_carousel_acl),
@@ -107,15 +107,15 @@ def bootstrap_module(
 
 
 def _build_ports(acl: LegacyCarouselAcl | None) -> EditorialPorts:
-    """Build the ACL-backed editorial ports, when the ACL is available (AE-0111).
+    """Build the ACL-backed editorial ports, when the ACL is available.
 
     The reviewer-assignment, optimistic-locking, approval-read, and
-    public-release-read ports are all backed by the AE-0109 carousel ACL (→ the
-    AE-0107 single write owner). The engine-backed source-material and
+    public-release-read ports are all backed by the carousel ACL (→ the
+    single write owner). The engine-backed source-material and
     review-decision ports are constructed per request at the inbound edge (the
     engine is injected per call via the ``build_editorial_workflow_service``
-    seam), so they are not wired here. When no ACL is supplied (the AE-0108
-    scaffolding bootstrap) the service stays repository-only.
+    seam), so they are not wired here. When no ACL is supplied (the scaffolding
+    bootstrap) the service stays repository-only.
     """
     if acl is None:
         return EditorialPorts()

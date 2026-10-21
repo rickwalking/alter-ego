@@ -1,4 +1,4 @@
-"""Shared fakes for the image bridge tests (AE-0393).
+"""Shared fakes for the image bridge tests.
 
 Gherkin: tests/features/image_bridge.feature
 """

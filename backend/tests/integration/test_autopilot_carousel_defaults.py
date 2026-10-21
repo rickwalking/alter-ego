@@ -1,4 +1,4 @@
-"""GrokBot carousel defaults through the API and the editorial facade (AE-0361).
+"""GrokBot carousel defaults through the API and the editorial facade.
 
 Gherkin: tests/features/autopilot_carousel_defaults.feature
 """

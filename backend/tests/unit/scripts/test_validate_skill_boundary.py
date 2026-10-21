@@ -26,8 +26,9 @@ class TestValidateSkillBoundary:
         assert errors == []
 
     def test_name_folder_mismatch_is_flagged(self, tmp_path: Path) -> None:
-        # Seeded violation: a retained structural check still fires, proving the
-        # validator is not a no-op after the disable-model-invocation removal.
+        """Seeded violation: a retained structural check still fires, proving the validator
+        is not a no-op after the disable-model-invocation removal.
+        """
         folder = tmp_path / "developer-skill"
         folder.mkdir()
         skill_md = folder / "SKILL.md"

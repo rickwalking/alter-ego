@@ -1,4 +1,4 @@
-"""AE-0367: the owner autofix's pure text repairs.
+"""The owner autofix's pure text repairs.
 
 Gherkin: tests/features/autopilot_owner_autofix.feature
 (Happy path: the owner taps Fix issues; EN re-translation fails)
@@ -185,10 +185,12 @@ class TestVocabulary:
         assert "API" in vocabulary
 
     def test_constants_and_configured_nouns_are_always_included(self) -> None:
+        """The vocabulary is ordered longest first, so "OpenAI" is restored before a
+        shorter overlap.
+        """
         vocabulary = build_vocabulary(VocabularySources(configured=("Gemini",)))
         assert "Brasil" in vocabulary
         assert "Gemini" in vocabulary
-        # Longest first, so "OpenAI" is restored before a shorter overlap.
         assert vocabulary.index("JavaScript") < vocabulary.index("Python")
 
     def test_the_most_frequent_spelling_wins(self) -> None:

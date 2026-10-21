@@ -1,4 +1,4 @@
-"""Pure text detectors for the AE-0401 copy-hygiene rules.
+"""Pure text detectors for the copy-hygiene rules.
 
 Prod carousel 98a2e2f0 (2026-10-16) showed what a model can leave in visible
 slide copy: a ```` ```json ```` fenced bilingual object (slide 3), an HTML tag
@@ -10,6 +10,14 @@ balanced ``<strong>`` in EN), proper nouns, numbers and first-person
 Portuguese are never flagged.
 
 No I/O, no policy: ``presentation_copy_rules`` decides which rules are active.
+
+EMPHASIS_TAG_PATTERN matches <strong>, the EN emphasis format whose balance
+emphasis_markup_invalid checks; every other tag is a leak. The placeholder-marker match
+is case-sensitive because the lowercase word is Portuguese ("o dia todo").
+DOUBLED_WORD_ALLOWLIST holds grammatical doubles ("what it had had", "the fact that
+that"). An item title never ends on a _TITLE_CONNECTORS word (as in "Comece com dois
+ou"), and a finished sentence never ends on a _DANGLING_CONNECTORS word (as in "isso
+muda tudo e.").
 """
 
 from __future__ import annotations
@@ -40,8 +48,6 @@ LITERAL_ESCAPES: tuple[str, ...] = ("\\n", '\\"', "\\t")
 ELLIPSIS_MARKS: tuple[str, ...] = ("...", "…")
 
 HTML_TAG_PATTERN = re.compile(r"</?\s*[A-Za-z][A-Za-z0-9]*(?:\s[^<>]*)?/?>")
-# ``<strong>`` is the EN emphasis format (``emphasis_markup_invalid`` checks
-# its balance); every other tag is a leak.
 EMPHASIS_TAG_PATTERN = re.compile(r"<\s*/?\s*strong\s*>", flags=re.IGNORECASE)
 _EMPTY_STRONG_PATTERN = re.compile(r"<strong>\s*</strong>", flags=re.IGNORECASE)
 MARKDOWN_HEADING_PATTERN = re.compile(r"(?m)^[ \t]{0,3}#{1,6}[ \t]+")
@@ -74,7 +80,6 @@ _PLACEHOLDER_PATTERN = re.compile(
     r"|\blorem ipsum\b|\(\s*(?:\.\.\.|…)\s*\)",
     flags=re.IGNORECASE,
 )
-# Case-sensitive: "todo" is a Portuguese word ("o dia todo").
 _PLACEHOLDER_MARKER_PATTERN = re.compile(r"\b(?:TODO|TBD|FIXME|XXX)\b")
 _STUB_PATTERN = re.compile(r"^\W*(?:\.\.\.|…)\W*$")
 MOJIBAKE_PATTERN = re.compile(r"Ã[^\x00-\x7f]|Â[^\x00-\x7f]|â€|\ufffd")
@@ -84,10 +89,8 @@ _LETTER_WORD_PATTERN = re.compile(r"[^\W\d_]+")
 DOUBLED_WORD_PATTERN = re.compile(
     r"(?<![\w])([^\W\d_]+)(\s+)\1(?![\w])", flags=re.IGNORECASE
 )
-# Grammatical doubles ("what it had had", "the fact that that").
 DOUBLED_WORD_ALLOWLIST: frozenset[str] = frozenset({"had", "that"})
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+|\n+")
-# An item title never ends on these (prod: "Comece com dois ou").
 _TITLE_CONNECTORS: frozenset[str] = frozenset({
     "ou",
     "e",
@@ -101,7 +104,6 @@ _TITLE_CONNECTORS: frozenset[str] = frozenset({
 _TERMINAL_PUNCTUATION = ".!?"
 _TRAILING_CLOSERS = "\"'\u201d\u2019\u00bb)]*"
 _DANGLING_PUNCTUATION = ",:;-\u2013\u2014("
-# Words a finished sentence never ends on ("isso muda tudo e.").
 _DANGLING_CONNECTORS: frozenset[str] = frozenset({
     "e",
     "ou",
@@ -181,7 +183,7 @@ def emphasis_unbalanced_detail(text: str) -> str:
 
 
 def emphasis_locale_detail(text: str, *, portuguese: bool) -> str:
-    """Emphasis written with the OTHER locale's markup (AE-0436, AE-0403).
+    """Emphasis written with the OTHER locale's markup.
 
     The convention: PT copy marks emphasis ``**…**``, EN copy
     ``<strong>…</strong>``. PT copy carrying a ``<strong>`` tag, or EN copy
@@ -201,7 +203,7 @@ def assistant_chatter_detail(text: str) -> str:
 
 
 def placeholder_detail(text: str) -> str:
-    """A template placeholder, a TODO, lorem ipsum, or an ellipsis stub."""
+    """A template placeholder, a to-do marker, lorem ipsum, or an ellipsis stub."""
     match = _PLACEHOLDER_PATTERN.search(text) or _PLACEHOLDER_MARKER_PATTERN.search(
         text
     )
@@ -246,7 +248,7 @@ def truncation_detail(text: str) -> str:
 def wrong_language_detail(text: str, *, portuguese: bool) -> str:
     """Copy that reads as the other language (stopword markers).
 
-    AE-0413: EN copy is also flagged when the autofix would call it Portuguese
+    EN copy is also flagged when the autofix would call it Portuguese
     (``looks_portuguese``: one marker plus an accented letter in 3+ words).
     The validator used to need 4+ words and 2+ markers, so short Portuguese
     EN headings ("Agentes de código mudam o review") passed unflagged while

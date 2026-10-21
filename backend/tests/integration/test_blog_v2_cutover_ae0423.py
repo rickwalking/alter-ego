@@ -1,4 +1,4 @@
-"""Integration tests for the one-shot blog v1 -> v2 cutover command (AE-0423).
+"""Integration tests for the one-shot blog v1 -> v2 cutover command.
 
 Feature: backend/tests/features/blog_sections_ae0423.feature
 Runs the real runner and CLI against a file-backed SQLite DB (Postgres-only
@@ -135,8 +135,8 @@ class TestApply:
     async def test_empty_or_malformed_body_yields_one_empty_section(
         self, db, content: object
     ) -> None:
+        """``None`` is stored as JSON ``null`` because the column is NOT NULL."""
         _, maker = db
-        # ``None`` is stored as JSON ``null`` (the column is NOT NULL).
         post_id = await _insert(maker, content)
         await blog_v2_cutover.apply(maker)
         document = parse_blog_content((await _row(maker, post_id)).content)
@@ -295,7 +295,9 @@ class TestCli:
         assert "[rollback] scanned=1 changed=1" in out
 
     def test_main_runs_against_the_configured_database(self, cli_db) -> None:
-        # Sync test: ``main`` owns its own event loop via ``asyncio.run``.
+        """The test is sync because ``main`` owns its own event loop via
+        ``asyncio.run``.
+        """
         assert blog_v1_to_v2.main(["--verify"]) == 0
 
 

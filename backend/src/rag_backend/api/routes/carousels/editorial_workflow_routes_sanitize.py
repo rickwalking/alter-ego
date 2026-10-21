@@ -16,10 +16,12 @@ from rag_backend.domain.copy_sanitize import sanitize_edited_copy
 
 
 def _sanitize_payload_strings(value: object) -> object:
-    # AE-0289: edited slide copy is FINAL published content, so case is
-    # preserved (sanitize_llm_input lowercased until AE-0413, which corrupted
-    # headings and broke heading_not_sentence_case_en validation).
-    # AE-0403: sanitize_edited_copy also keeps the EN <strong> emphasis pair.
+    """Sanitize every string in an edited-slide payload, recursively.
+
+    Edited slide copy is final published content, so case is preserved (lowercasing
+    corrupted headings and broke sentence-case validation) and the EN <strong> emphasis
+    pair is kept.
+    """
     if isinstance(value, str):
         return sanitize_edited_copy(value)
     if isinstance(value, list):
@@ -34,20 +36,21 @@ def _sanitize_payload_strings(value: object) -> object:
 def sanitize_edited_slides(
     edited_slides: list[LocalizedSlideReview],
 ) -> list[dict[str, object]]:
-    """Case-preservingly sanitize edited localized slide payloads (AE-0289).
+    """Case-preservingly sanitize edited localized slide payloads.
 
-    Shared by the review-step resume path and the AE-0314 completed-project
+    Shared by the review-step resume path and the completed-project
     slide-edit endpoint so both wires apply identical display-preserving
     sanitization (PT ``**`` + EN ``<strong>`` emphasis and case survive; other markup
-    and injection patterns are stripped, AE-0403).
+    and injection patterns are stripped).
+
+    Slide types are lowercase identifiers; the sanitizer no longer lowercases, so they
+    are normalized explicitly.
     """
     sanitized: list[dict[str, object]] = []
     for slide in edited_slides:
         payload = slide.model_dump()
         sanitized.append({
             "slide_index": payload["slide_index"],
-            # Slide types are lowercase identifiers (AE-0413: the sanitizer
-            # no longer lowercases, so normalize explicitly).
             "slide_type": sanitize_llm_input(str(payload["slide_type"])).lower(),
             "presentation_pt": _sanitize_payload_strings(payload["presentation_pt"]),
             "presentation_en": _sanitize_payload_strings(payload["presentation_en"]),

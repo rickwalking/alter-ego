@@ -1,4 +1,8 @@
-"""Persona Agent for voice enforcement and style matching."""
+"""Persona Agent for voice enforcement and style matching.
+
+_ENFORCE_PROMPT_FALLBACK is a one-line fallback used when the prompt registry is
+unavailable; the live prompt is agents/prompts/persona/v1/enforce.yaml.
+"""
 
 from typing import cast
 
@@ -16,8 +20,6 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.persona_score import on_hundred_scale
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
-# 1-line fallback if the prompt registry is unavailable (AE-0243). The live
-# prompt is agents/prompts/persona/v1/enforce.yaml.
 _ENFORCE_PROMPT_FALLBACK = (
     "Rewrite content to match this persona's voice. Prompt registry "
     "unavailable — load agents/prompts/persona/v1/enforce.yaml"
@@ -62,11 +64,11 @@ class PersonaAgent:
     def _parse_evaluation_response(self, response: str) -> dict[str, object]:
         """Parse the evaluation response into a structured dictionary.
 
-        AE-0398: scores are on 0-100 (the voice gate's floor is 70). The prompt
+        scores are on 0-100 (the voice gate's floor is 70). The prompt
         does not name the scale and the model often answers on 0-10 (prod
         2026-10-16: overall 8.2-8.9 for on-voice copy), which failed every POV
         voice gate. A response whose five scores are all at most 10 is read as
-        a 0-10 answer and scaled to 0-100. AE-0407: ``overall`` is the gate's
+        a 0-10 answer and scaled to 0-100. ``overall`` is the gate's
         score, so an ``overall`` in (0, 10] is scaled on its own even when a
         sub-score is above 10 (prod: tone 78 with overall 7.8).
         """
@@ -81,11 +83,11 @@ class PersonaAgent:
         }
 
     def style_guide(self) -> str:
-        """The persona style guide (the AE-0401 slide fix puts it in its prompt)."""
+        """The persona style guide (the slide prompt embeds it)."""
         return self._build_style_guide()
 
     def _build_style_guide(self) -> str:
-        """Build the style guide via the prompt registry (AE-0243).
+        """Build the style guide via the prompt registry.
 
         Output is byte-for-byte identical to the legacy inline f-string (proven
         by the golden-parity test); only the template now lives in
@@ -135,9 +137,9 @@ _SCORE_FIELDS = (
 
 
 def _on_hundred_point_scale(scores: dict[str, float]) -> dict[str, float]:
-    """Scores on 0-100; an all-at-most-10 answer is a 0-10 answer (AE-0398).
+    """Scores on 0-100; an all-at-most-10 answer is a 0-10 answer.
 
-    The overall is scaled by itself (AE-0407), the sub-scores together.
+    The overall is scaled by itself, the sub-scores together.
     """
     values = scores.values()
     scaled = scores

@@ -36,7 +36,7 @@ class TestOutlineAgent:
     async def test_generate_outline_for_matches_the_positional_call(
         self, agent: OutlineAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0376: the request-object entry point is the legacy outline call."""
+        """The request-object entry point is the legacy outline call."""
         outline = [{"slide_index": 1, "title": "Hook", "key_points": ["Open strong"]}]
         mock_llm.ainvoke.return_value = MagicMock(content=json.dumps(outline))
 
@@ -50,7 +50,7 @@ class TestOutlineAgent:
 
 
 class TestOutlineCachePoisoning:
-    """AE-0330: an unparseable response must never be cached.
+    """An unparseable response must never be cached.
 
     Live 2026-09-14: GLM 5.2 spent 31999 of its 32000 tokens reasoning and
     returned empty content. That empty string was cached, so every retry failed
@@ -76,8 +76,10 @@ class TestOutlineCachePoisoning:
     async def test_empty_response_is_rerolled_instead_of_failing_the_phase(
         self, agent: OutlineAgent, mock_llm: AsyncMock
     ) -> None:
+        """This is the live 2026-09-14 failure: one empty response killed the whole
+        workflow.
+        """
         # Scenario: an empty response is re-rolled (AE-0330). This is the live
-        # 2026-09-14 failure: one empty response killed the whole workflow.
         mock_llm.ainvoke.side_effect = [
             MagicMock(content=""),
             MagicMock(content=json.dumps(self._outline())),
@@ -86,13 +88,13 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == 2  # re-rolled, phase survived
+        assert mock_llm.ainvoke.await_count == 2
 
     async def test_two_empty_responses_raise_and_cache_nothing(
         self, agent: OutlineAgent, mock_llm: AsyncMock
     ) -> None:
+        """There are 5 attempts, each a call plus its empty re-roll."""
         # Scenario: the re-roll is bounded, and a failure caches nothing.
-        # AE-0395: 5 attempts, each a call plus its empty re-roll.
         empty_calls = 2 * LLM_ATTEMPTS_PER_MODEL
         mock_llm.ainvoke.side_effect = [
             *(MagicMock(content="") for _ in range(empty_calls)),
@@ -104,7 +106,7 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == empty_calls + 1  # nothing poisoned
+        assert mock_llm.ainvoke.await_count == empty_calls + 1
 
     async def test_malformed_response_is_repaired(
         self, agent: OutlineAgent, mock_llm: AsyncMock
@@ -118,7 +120,7 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == 2  # repaired, phase survived
+        assert mock_llm.ainvoke.await_count == 2
 
     async def test_poisoned_cache_entry_is_evicted(
         self, agent: OutlineAgent, mock_llm: AsyncMock
@@ -132,4 +134,4 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == 2  # evicted, so the model ran again
+        assert mock_llm.ainvoke.await_count == 2

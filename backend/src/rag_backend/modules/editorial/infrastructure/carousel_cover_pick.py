@@ -1,9 +1,9 @@
-"""The publish-step slide-1 cover picker, wired over the session (AE-0445).
+"""The publish-step slide-1 cover picker, wired over the session.
 
 ``EditorialCoverLibrary`` reads the owner's slide-1 photos (role ``hook``,
 stored file present) and stages one where a project's slides render;
 ``cover_pick_service`` builds the picker over it, the given GrokBot offer
-source, and the AE-0418 cover switch (lock-version CAS + republish).
+source, and the cover switch (lock-version CAS + republish).
 
 The ORM, repositories and the carousel services are imported lazily (the
 editorial facade loads while the ORM registry is still initialising).

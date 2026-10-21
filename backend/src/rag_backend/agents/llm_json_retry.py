@@ -1,9 +1,9 @@
-"""Shared JSON-response retry policy for carousel agents (AE-0330).
+"""Shared JSON-response retry policy for carousel agents.
 
 Live 2026-09-14: GLM 5.2 returned empty content on the outline phase (its
 reasoning consumed 31999 of 32000 tokens) and again on the content phase. Both
 agents failed the whole workflow on that single bad response, while
-``source_synthesis_agent`` — hardened by AE-0318 — survived the same class of
+``source_synthesis_agent`` survived the same class of
 failure because it retries. This module carries that tolerance to every caller.
 
 Two distinct failures need two different remedies:
@@ -12,14 +12,14 @@ Two distinct failures need two different remedies:
   re-roll the original call. Evidence: the outline prompt that burned 31999
   reasoning tokens used 7548 on the very next attempt and parsed cleanly.
 * **Malformed but present** output can be fixed by the model itself, so hand it
-  back with ``JSON_REPAIR_PROMPT`` (the AE-0318 round-trip).
+  back with ``JSON_REPAIR_PROMPT`` (the repair round-trip).
 
 Each remedy costs at most one extra call, and only on the failure path.
 
-AE-0391: when both remedies are exhausted on a role-routed model, the whole
+when both remedies are exhausted on a role-routed model, the whole
 call is re-issued on its fallback model before giving up.
 
-AE-0395: each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (each one a fresh
+each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (each one a fresh
 call plus the re-roll and repair above) before the call moves to the fallback.
 Prod 2026-10-16: one prose caption from the fast model failed a whole content
 phase.
@@ -74,7 +74,7 @@ async def ainvoke_json(
     """Return the parsed response and the raw text that produced it.
 
     Raises ``ValueError(ERR_INVALID_JSON)`` only after both the re-roll and the
-    repair round-trip have been exhausted (on the primary and, AE-0391, on the
+    repair round-trip have been exhausted (on the primary and, on the
     fallback model when one exists), so callers keep their existing contract.
     """
     try:

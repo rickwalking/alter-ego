@@ -1,4 +1,4 @@
-"""The owner's photo library and the POV slide-1 photo (AE-0376, ADR-0021 D8).
+"""The owner's photo library and the POV slide-1 photo (ADR-0021 D8).
 
 Mounted before the CRUD router so ``/creator-assets`` is never read as a
 ``/{project_id}``. Reuses the creator-asset service factory and the owner

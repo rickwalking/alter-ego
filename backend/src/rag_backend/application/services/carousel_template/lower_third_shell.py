@@ -14,7 +14,6 @@ from rag_backend.application.services.carousel_template.slide_number import (
 )
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
-# AE-0434: the artwork region of a slide the contract does not illustrate.
 _NO_ARTWORK_HTML = (
     '  <div class="slide-artwork slide-artwork-none" aria-hidden="true"></div>'
 )
@@ -25,7 +24,7 @@ def render_slide_artwork(
 ) -> str:
     """Render the full-bleed artwork region for a slide.
 
-    AE-0418: ``src`` replaces the generated hero (a GrokBot ``ai_image`` cover).
+    ``src`` replaces the generated hero (a GrokBot ``ai_image`` cover).
     """
     safe_number = normalize_slide_number(slide_number)
     safe_alt = html.escape(_plain_text_for_attribute(alt), quote=True)
@@ -51,7 +50,7 @@ class LowerThirdConfig:
 
 
 def artwork_enabled(options: _RenderOptions | None) -> bool:
-    """Whether the slide being rendered gets generated artwork (AE-0434)."""
+    """Whether the slide being rendered gets generated artwork."""
     return (options or {}).get("artwork", True)
 
 
@@ -78,8 +77,9 @@ def render_lower_third_shell(
 
 
 def _artwork(safe_number: str, config: LowerThirdConfig) -> str:
-    # AE-0434: never reference ``images/slide_N.jpg`` for a slide the images
-    # phase does not plan; an explicit ``artwork_src`` (GrokBot cover) still wins.
+    """A slide the images phase does not plan never references ``images/slide_N.jpg``;
+    an explicit ``artwork_src`` (the GrokBot cover) still wins.
+    """
     if not config.show_artwork and config.artwork_src is None:
         return _NO_ARTWORK_HTML
     return render_slide_artwork(

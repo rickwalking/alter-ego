@@ -1,8 +1,8 @@
-"""The owner's "published" notice: post link, Story outcome, music nudge (AE-0369).
+"""The owner's "published" notice: post link, Story outcome, music nudge.
 
 Pure. The publish job writes the Story outcome and the music style on the
 outbox payload; this module reads them back and builds the Telegram text.
-An event without them (written before AE-0369, or by a publisher that cannot
+An event without them (written before Stories existed, or by a publisher that cannot
 post Stories) gets only the post line.
 """
 
@@ -44,7 +44,7 @@ def extras_payload(extras: PostExtras | None) -> dict[str, object]:
 
 
 def with_late(extras: PostExtras | None, late: int | None) -> PostExtras | None:
-    """Add the scheduled run's delay (AE-0370). Without a Story, only the delay."""
+    """Add the scheduled run's delay. Without a Story, only the delay."""
     if late is None:
         return extras
     if extras is None:

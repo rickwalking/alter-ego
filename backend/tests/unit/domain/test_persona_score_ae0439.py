@@ -1,4 +1,4 @@
-"""AE-0439: stored persona-score entries are normalized on 0-100 at the write
+"""Stored persona-score entries are normalized on 0-100 at the write
 boundary (QA F-12) and pending re-scores are visible to the gate read (#154 B).
 
 Gherkin: tests/features/blog_carousel_minors_ae0439.feature
@@ -23,17 +23,15 @@ from rag_backend.domain.persona_score import (
 class TestOnHundredScaleEntry:
     def test_a_raw_ten_point_answer_is_scaled_once(self) -> None:
         """Scenario: Stored persona scores are on 0-100 for a raw 0-10 answer."""
-        entry = on_hundred_scale_entry(
-            {
-                "tone_match": 9.0,
-                "sentence_structure_match": 8.8,
-                "opinion_strength": 7.8,
-                "originality": 8.5,
-                "human_authenticity": 8.4,
-                "overall": 8.5,
-                "suggestions": ["keep the contract"],
-            }
-        )
+        entry = on_hundred_scale_entry({
+            "tone_match": 9.0,
+            "sentence_structure_match": 8.8,
+            "opinion_strength": 7.8,
+            "originality": 8.5,
+            "human_authenticity": 8.4,
+            "overall": 8.5,
+            "suggestions": ["keep the contract"],
+        })
         assert entry["overall"] == pytest.approx(85.0)
         assert entry["tone_match"] == pytest.approx(90.0)
         assert entry["sentence_structure_match"] == pytest.approx(88.0)
@@ -55,9 +53,11 @@ class TestOnHundredScaleEntry:
 
     def test_pending_markers_survive_the_normalization(self) -> None:
         """The stored rescore marker of an unscored rewrite is never dropped."""
-        entry = on_hundred_scale_entry(
-            {"overall": 8.0, "rescore_pending": True, "unscored_ticks": 2}
-        )
+        entry = on_hundred_scale_entry({
+            "overall": 8.0,
+            "rescore_pending": True,
+            "unscored_ticks": 2,
+        })
         assert entry["overall"] == pytest.approx(80.0)
         assert entry["rescore_pending"] is True
         assert entry["unscored_ticks"] == 2
@@ -74,12 +74,12 @@ class TestPendingRescores:
         assert pending_rescores(scores) == {3: 2, 7: 1}
 
     def test_a_malformed_tick_reads_as_one(self) -> None:
-        assert pending_rescores(
-            {"slide_3": {"overall": 55.0, "rescore_pending": True}}
-        ) == {3: 1}
-        assert pending_rescores(
-            {"slide_3": {"overall": 55.0, "rescore_pending": True, "unscored_ticks": "x"}}
-        ) == {3: 1}
+        assert pending_rescores({
+            "slide_3": {"overall": 55.0, "rescore_pending": True}
+        }) == {3: 1}
+        assert pending_rescores({
+            "slide_3": {"overall": 55.0, "rescore_pending": True, "unscored_ticks": "x"}
+        }) == {3: 1}
 
     def test_non_pending_and_non_slide_entries_are_ignored(self) -> None:
         scores = {

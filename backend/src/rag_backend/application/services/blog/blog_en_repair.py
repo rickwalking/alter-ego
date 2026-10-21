@@ -1,4 +1,4 @@
-"""Find and repair stored posts whose ``translations.en`` reads as Portuguese (AE-0435).
+"""Find and repair stored posts whose ``translations.en`` reads as Portuguese.
 
 Before the EN language gate, generation could store Portuguese as English (prod
 posts ba37f6f9 and 99886e71). This one-shot operator service:

@@ -1,6 +1,6 @@
-"""Cover and section images of a blog post (AE-0424, ADR-0025).
+"""Cover and section images of a blog post (ADR-0025).
 
-One service generates every blog image (the editor routes here; AE-0425's bulk
+One service generates every blog image (the editor routes here; bulk
 generation reuses it). The provider writes the bytes straight into the
 blog-images store (``<output>/blog-images/<post_id>/<uuid>.jpg``); the image is
 only returned once the file is really there, and only the canonical URL (CDN,

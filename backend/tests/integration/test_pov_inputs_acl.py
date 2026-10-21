@@ -244,7 +244,7 @@ async def _bind_persona(project_id: str, persona_id: str | None) -> None:
 
 @pytest.mark.integration
 class TestProjectPersona:
-    """Gherkin: tests/features/resume_persona_ae0397.feature (AE-0397)."""
+    """Gherkin: tests/features/resume_persona_ae0397.feature."""
 
     # Scenario: The project's persona is loaded for the resume
     @pytest.mark.asyncio

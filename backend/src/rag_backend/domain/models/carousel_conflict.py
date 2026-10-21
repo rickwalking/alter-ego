@@ -1,4 +1,4 @@
-"""Typed carousel conflict domain model (AE-0316)."""
+"""Typed carousel conflict domain model."""
 
 from __future__ import annotations
 

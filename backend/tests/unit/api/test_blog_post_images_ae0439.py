@@ -1,4 +1,4 @@
-"""AE-0439 (QA F-14): blog-image 404s are never cached at the edge.
+"""Blog-image 404s are never cached at the edge.
 
 Handler-level (no HTTP transport), like ``test_blog_post_read_handler_ae0428``.
 
@@ -88,9 +88,7 @@ class TestBlogImageNotFoundCache:
 
     async def test_an_invalid_filename_404_is_no_store(self) -> None:
         with pytest.raises(HTTPException) as info:
-            await _handler()(
-                request=None, target=_target(filename="../../etc/passwd")
-            )
+            await _handler()(request=None, target=_target(filename="../../etc/passwd"))
         assert info.value.status_code == 404
         assert info.value.headers[CACHE_CONTROL_HEADER] == NO_STORE
 
@@ -113,8 +111,6 @@ class TestBlogImageNotFoundCache:
                 return_value=store,
             ),
         ):
-            response = await _handler()(
-                request=None, target=_target(user=user)
-            )
+            response = await _handler()(request=None, target=_target(user=user))
         assert isinstance(response, FileResponse)
         assert response.headers[CACHE_CONTROL_HEADER] == "private, no-store"

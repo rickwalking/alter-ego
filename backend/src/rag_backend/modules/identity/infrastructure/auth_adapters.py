@@ -5,7 +5,7 @@ These adapters satisfy the application-layer
 :class:`~rag_backend.modules.identity.application.ports.TokenIssuer` Protocols by
 forwarding to the existing ``rag_backend.infrastructure.auth`` functions
 (``hash_password``/``verify_password``/``create_access_token``/
-``decode_access_token``). No JWT or bcrypt logic is reimplemented here (AE-0098):
+``decode_access_token``). No JWT or bcrypt logic is reimplemented here:
 this is a thin, behavior-preserving boundary so the application layer stays free
 of direct ``infrastructure.auth`` imports while the HS256 payload, algorithm,
 expiry, and bcrypt parameters remain byte-identical.

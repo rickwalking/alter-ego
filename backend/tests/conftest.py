@@ -1,8 +1,13 @@
-"""Pytest configuration and fixtures."""
+"""Pytest configuration and fixtures.
+
+``SECRET_KEY`` is set before any import that loads Settings (e.g. the Container) during
+test collection. The research SSRF guard resolves hostnames before scraping; tests must
+never touch real DNS, so every test sees a public answer unless it passes its own
+resolver (see tests/unit/domain/test_url_safety.py).
+"""
 
 import os
 
-# Required before any import that loads Settings (e.g. Container) during test collection.
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-suite!!")
 os.environ.setdefault("ANON_SECRET_KEY", "test-anon-secret-for-pytest-suite!")
 
@@ -24,12 +29,11 @@ from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
 
-# Use SQLite in-memory for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register the Knowledge golden-snapshot capture flag (AE-0088).
+    """Register the Knowledge golden-snapshot capture flag.
 
     When ``--snapshot-update`` is passed, the Knowledge safety-net snapshot
     tests rewrite the committed golden snapshots from current behavior instead
@@ -152,9 +156,6 @@ def sample_documents() -> list[Document]:
     ]
 
 
-# QA r1 S-W1: the research SSRF guard resolves hostnames before scraping. Tests
-# must never touch real DNS, so every test sees a public answer unless it
-# passes its own resolver (see tests/unit/domain/test_url_safety.py).
 _TEST_PUBLIC_IP = "93.184.216.34"
 
 

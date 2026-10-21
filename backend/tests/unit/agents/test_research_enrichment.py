@@ -1,4 +1,4 @@
-"""Unit tests for deterministic web-research enrichment (AE-0317).
+"""Unit tests for deterministic web-research enrichment.
 
 Scenarios: tests/features/research_enrichment.feature
 """
@@ -254,7 +254,7 @@ class TestDisabled:
 
 
 class TestObservabilityEvents:
-    """AE-0317 review r1 (M5): the spec-listed structlog events must fire."""
+    """The spec-listed structlog events must fire."""
 
     async def test_blocked_url_logs_research_url_blocked(self) -> None:
         """Scenario: Unsafe URL is blocked, workflow proceeds (log half)."""
@@ -303,7 +303,7 @@ class TestObservabilityEvents:
 
 
 class TestCapSemantics:
-    """AE-0317 review r1 (m7): unsafe URLs must not consume scrape budget."""
+    """Unsafe URLs must not consume scrape budget."""
 
     async def test_unsafe_urls_do_not_consume_scrape_budget(self) -> None:
         tool = _StubResearchTool()
@@ -323,7 +323,7 @@ class TestCapSemantics:
 
 
 class TestConcurrencyBound:
-    """AE-0317 review r1 (m10): deterministic semaphore-width assertion."""
+    """Deterministic semaphore-width assertion."""
 
     async def test_semaphore_admits_exactly_the_configured_width(self) -> None:
         class _GatedTool(_StubResearchTool):
@@ -334,15 +334,16 @@ class TestConcurrencyBound:
                 self.gate = asyncio.Event()
 
             async def scrape_url(self, url: str) -> str:
+                """If the semaphore admitted fewer than MAX_CONCURRENT_SCRAPES tasks,
+                the gate wait times out, the scrape degrades gracefully and the test's
+                assertion fails.
+                """
                 self.active_scrapes += 1
                 self.max_active_scrapes = max(
                     self.max_active_scrapes, self.active_scrapes
                 )
                 if self.active_scrapes >= MAX_CONCURRENT_SCRAPES:
                     self.gate.set()
-                # If the semaphore admitted fewer than MAX_CONCURRENT_SCRAPES
-                # tasks, this wait times out, the scrape degrades gracefully,
-                # and the assertion below fails.
                 await asyncio.wait_for(self.gate.wait(), timeout=1)
                 self.scraped_urls.append(url)
                 self.active_scrapes -= 1
@@ -360,7 +361,7 @@ class TestConcurrencyBound:
 
 
 class TestBlockPageDetection:
-    """AE-0321 (tests/features/research_enrichment.feature, block-page scenario)."""
+    """Block-page scenario of tests/features/research_enrichment.feature."""
 
     async def test_block_page_is_discarded_and_logged(self) -> None:
         """Scenario: Anti-bot block page is not treated as research content."""
@@ -403,7 +404,7 @@ class TestBlockPageDetection:
 
 
 class TestSearchRelevanceAE0413:
-    """AE-0413: tags are not searched; only PT/EN, on-topic hits are kept.
+    """Tags are not searched; only PT/EN, on-topic hits are kept.
 
     Scenarios: tests/features/content_gate_backend_ae0413.feature
     """

@@ -52,22 +52,25 @@ class VisibleTextPolicy:
 
 @dataclass(frozen=True)
 class SlideTypePolicy:
-    """Per-slide presentation contract metadata."""
+    """Per-slide presentation contract metadata.
+
+    ``role`` is the narrative role (maps to ``slide_type``); ``optional`` says whether
+    the slide may be dropped when the deck is shorter than the contract's longest
+    sequence.
+    """
 
     slide_number: int
     slide_type: str
     image_required: bool
     copy_start_ratio: float | None
     avatar_required: bool = False
-    # AE-0374: narrative role (maps to ``slide_type``) and whether the slide may
-    # be dropped when the deck is shorter than the contract's longest sequence.
     role: str | None = None
     optional: bool = False
 
 
 @dataclass(frozen=True)
 class SlideCountRange:
-    """Deck size a contract accepts (AE-0374); fixed contracts are min = max."""
+    """Deck size a contract accepts; fixed contracts are min = max."""
 
     minimum: int
     maximum: int
@@ -89,7 +92,7 @@ class FontPolicy:
 
 @dataclass(frozen=True)
 class CasingRulePolicy:
-    """A PT casing rule with per-slide-type exemptions (AE-0312)."""
+    """A PT casing rule with per-slide-type exemptions."""
 
     code: str
     exempt_slide_types: frozenset[str] = frozenset()
@@ -103,7 +106,7 @@ class CasingRulePolicy:
 class QualityRubricItem:
     """One LLM quality-rubric item and the validator rules that enforce it.
 
-    AE-0366: the contract's ``quality_rubric`` is the single source of truth.
+    The contract's ``quality_rubric`` is the single source of truth.
     The prompt renders ``instruction``; the validator enforces ``rule_codes``.
     """
 
@@ -115,7 +118,13 @@ class QualityRubricItem:
 
 @dataclass(frozen=True)
 class CarouselPresentationPolicy:
-    """Immutable typed presentation policy loaded from canonical YAML."""
+    """Immutable typed presentation policy loaded from canonical YAML.
+
+    Severity and casing metadata parse as empty for v1 policies, so every violation
+    defaults to blocker and no casing rules fire. ``quality_rubric`` is the LLM quality
+    rubric (empty for v1). ``slide_count_range`` lists the accepted deck sizes; None
+    means exactly ``slide_count``.
+    """
 
     version: str
     slide_count: int
@@ -129,14 +138,10 @@ class CarouselPresentationPolicy:
     fonts: FontPolicy
     intentional_lowercase_allowlist: tuple[str, ...]
     checksum: str
-    # AE-0312 severity + casing metadata. v1 policies parse these as empty, so
-    # every violation defaults to blocker and no casing rules fire.
     rule_severities: dict[str, str] = field(default_factory=dict)
     casing_rules: tuple[CasingRulePolicy, ...] = ()
     proper_nouns: tuple[str, ...] = ()
-    # AE-0366: LLM quality rubric (empty for v1).
     quality_rubric: tuple[QualityRubricItem, ...] = ()
-    # AE-0374: accepted deck sizes; None means exactly ``slide_count``.
     slide_count_range: SlideCountRange | None = None
 
     @property
@@ -152,7 +157,7 @@ class CarouselPresentationPolicy:
 
     @property
     def has_roles(self) -> bool:
-        """True when every slide of the contract declares a role (AE-0374)."""
+        """True when every slide of the contract declares a role."""
         return bool(self.slides) and all(slide.role for slide in self.slides)
 
     @property

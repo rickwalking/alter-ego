@@ -212,7 +212,7 @@ class TestEditorialWorkflowValidation:
     async def test_start_falls_back_to_the_project_persona(
         self, client: AsyncClient
     ) -> None:
-        """Scenario: Workflow start uses the project's persona (AE-0373).
+        """Scenario: Workflow start uses the project's persona.
 
         Gherkin: tests/features/carousel_content_mode.feature. The project's
         persona id is loaded when the start request names none, so a stale id
@@ -309,7 +309,10 @@ class TestEditorialWorkflowReviseAndFailure:
     async def test_content_revise_persists_phase_feedback(
         self, client: AsyncClient
     ) -> None:
-        """Scenario: Stored feedback is passed to regeneration on revise."""
+        """Scenario: Stored feedback is passed to regeneration on revise.
+
+        The stored feedback keeps the owner's original letter case.
+        """
         editor = await create_user("feedback@example.com", UserRole.EDITOR)
         project_id = await create_carousel(editor, is_public=False)
         await seed_workflow_phase(
@@ -349,7 +352,7 @@ class TestEditorialWorkflowReviseAndFailure:
             if isinstance(notes, list)
             for note in notes
         ]
-        assert "Slide 2 tone is too formal" in stored_feedback  # AE-0413: case kept
+        assert "Slide 2 tone is too formal" in stored_feedback
         revision_counts = state_payload.get("revision_count", {})
         assert isinstance(revision_counts, dict)
         assert sum(revision_counts.values()) >= 1
@@ -404,13 +407,17 @@ class TestEditorialWorkflowReviseAndFailure:
     async def test_send_back_files_feedback_under_content_and_preserves_images(
         self, client: AsyncClient
     ) -> None:
-        """AE-0288: a final-review send-back to content files the reviewer note
+        """A final-review send-back to content files the reviewer note
         under ``content`` (not ``final_review``) so the content node's
         regeneration notes pick it up, and leaves the generated images untouched.
 
         (Graph re-entry from an approved/END checkpoint is covered by the engine
         unit test; the seed harness keeps the real interrupt at research, so
         this asserts the API-layer feedback keying + image preservation.)
+
+        The note is filed under content (the target), not final_review, and images
+        survive a content-only send-back, exposed as owner preview URLs, never as
+        container paths.
         """
         images = [f"/app/output/carousels/x/images/slide_{n}.jpg" for n in range(1, 7)]
         editor = await create_user("sendbackimg@example.com", UserRole.EDITOR)
@@ -450,15 +457,12 @@ class TestEditorialWorkflowReviseAndFailure:
 
         phase_feedback = payload.get("phase_feedback", {})
         assert isinstance(phase_feedback, dict)
-        # The note is filed under content (the target), not final_review.
         assert "Slides repeat; diversify per the research" in (
             phase_feedback.get(PHASE_CONTENT) or []
         )
         assert phase_feedback.get(PHASE_FINAL_REVIEW) in (None, [])
         revision_counts = payload.get("revision_count", {})
         assert int(revision_counts.get(PHASE_CONTENT, 0)) >= 1
-        # Images survive a content-only send-back (AE-0439: exposed as owner
-        # preview URLs, never as container paths).
         assert payload.get("image_assets") == [
             f"/api/carousels/{project_id}/preview/images/slide_{n}.jpg"
             for n in range(1, 7)

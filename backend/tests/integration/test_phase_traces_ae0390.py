@@ -1,4 +1,4 @@
-"""Every resumed phase LLM call runs in a named, tagged trace (AE-0390).
+"""Every resumed phase LLM call runs in a named, tagged trace.
 
 Gherkin: tests/features/workflow_tracing_and_heartbeat.feature
 
@@ -95,8 +95,9 @@ class _Llm:
         return dict(_ARTIFACTS.get(phase, {}))
 
     def trace_of(self, phase: str) -> RecordedTrace:
-        # A gate resume re-enters the node, so a phase can be seen twice;
-        # every call must be traced, and each in its own phase trace.
+        """A gate resume re-enters the node, so a phase can be seen twice; every call
+        must be traced, each in its own phase trace.
+        """
         traces = [trace for seen, trace in self.calls if seen == phase]
         assert traces, self.calls
         assert None not in traces, f"{phase} LLM call ran outside any trace"
@@ -120,6 +121,9 @@ class _World:
 async def world(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[_World]:
+    """SQLite has no lock_timeout, so the interval loop (not under test here) is patched
+    out.
+    """
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'ae0390.db'}")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -134,7 +138,6 @@ async def world(
 
     monkeypatch.setattr(PhaseArtifactRunner, "ensure_for_phase", _ensure)
     monkeypatch.setattr(resume_runner, "publish_run_finished", AsyncMock())
-    # SQLite has no lock_timeout; the interval loop is not under test here.
     monkeypatch.setattr(
         resume_runner, "write_run_heartbeat_once", AsyncMock(return_value=True)
     )

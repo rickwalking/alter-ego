@@ -1,4 +1,4 @@
-"""Outline generation by content mode (AE-0375, ADR-0021).
+"""Outline generation by content mode (ADR-0021).
 
 - No brief or a fixed contract (v1-v3): the legacy outline, unchanged.
 - Radar IA v4: the outline sized to the project's deck, roles stamped by
@@ -109,7 +109,7 @@ async def _hooks(
 ) -> list[str]:
     """Hook candidates; a failure keeps the outline (the owner can type one).
 
-    POV hooks argue the owner's thesis; Radar IA v4 hooks (AE-0376) come from
+    POV hooks argue the owner's thesis; Radar IA v4 hooks come from
     the brief and the sources only.
     """
     workflow_input = request.workflow_input

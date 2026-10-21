@@ -1,4 +1,4 @@
-"""Unit tests for the AE-0308 creation-time image-provider key guard.
+"""Unit tests for the creation-time image-provider key guard.
 
 Gherkin: tests/features/carousel_image_provider_reroute_ae0308.feature
 """
@@ -85,8 +85,9 @@ class TestRequireImageProviderConfigured:
         assert require_image_provider_configured(_create_body(), settings) is None
 
     def test_development_missing_key_is_tolerated(self) -> None:
-        # Mirrors the AE-0215 startup-guard policy: dev/test tolerate a
-        # missing key so local runs and stubbed tests keep working.
+        """Mirrors the startup-guard policy: dev and test tolerate a missing key so
+        local runs and stubbed tests keep working.
+        """
         settings = _settings(_ENV_DEVELOPMENT, openai_key="")
         assert require_image_provider_configured(_create_body(), settings) is None
 

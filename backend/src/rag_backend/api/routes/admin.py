@@ -9,7 +9,7 @@ of Work (the single commit owner, ADR-0009 §9); these routes never call
 ``db.commit()``.
 
 Status codes, response shapes, bcrypt, and the last-admin / self-delete guards
-are byte-identical to the pre-refactor routes (AE-0099): bcrypt still comes from
+are byte-identical to the pre-refactor routes: bcrypt still comes from
 the UNCHANGED ``infrastructure.auth`` via the identity adapters, and the legacy
 HTTP messages are formatted here from the handler's typed domain errors.
 """

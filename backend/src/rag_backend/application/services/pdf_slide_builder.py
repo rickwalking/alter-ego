@@ -37,6 +37,8 @@ class PdfSlideBuilder:
         Raises:
             ValueError: if slide_paths is empty.
             FileNotFoundError: if any slide file is missing.
+
+        Without a layout function each image becomes one page at its native size.
         """
         if not slide_paths:
             raise ValueError(_ERR_EMPTY_SLIDE_LIST)
@@ -50,7 +52,6 @@ class PdfSlideBuilder:
 
         output = Path(output_dir) / _PDF_FILENAME
         output.parent.mkdir(parents=True, exist_ok=True)
-        # layout_fun=None → one page per image at the image's native size.
         pdf_bytes = img2pdf.convert(existing)
         output.write_bytes(pdf_bytes)
         logger.info(

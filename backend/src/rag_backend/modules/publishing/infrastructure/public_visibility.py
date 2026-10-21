@@ -1,4 +1,4 @@
-"""Public-visibility predicate for anonymous blog reads (AE-0347).
+"""Public-visibility predicate for anonymous blog reads.
 
 The carousel dual-write stamps every ``origin='carousel'`` blog row as
 ``published`` the moment the workflow composes it, while the carousel itself only
@@ -37,7 +37,7 @@ async def public_blog_post_ids(
     session: AsyncSession,
     post_ids: list[str],
 ) -> frozenset[str]:
-    """Return the subset of ``post_ids`` that anonymous readers can see (AE-0411).
+    """Return the subset of ``post_ids`` that anonymous readers can see.
 
     Same rule as the public API (:func:`public_blog_visibility_clause`), so the
     dashboard can tell a live post from a carousel-linked row that is stored

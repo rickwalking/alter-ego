@@ -1,4 +1,4 @@
-"""Flagged container wiring and startup validation (AE-0393, AC1/AC2/AC8).
+"""Flagged container wiring and startup validation (AC1/AC2/AC8).
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Bridge disabled keeps the OpenAI path

@@ -1,4 +1,24 @@
-"""Constants for the 7-phase carousel editorial workflow."""
+"""Constants for the 7-phase carousel editorial workflow.
+
+``approved_hold`` is an internal graph-only node: after final-review approval the graph
+holds there at an interrupt instead of reaching END, so the approved carousel stays
+resumable for a send-back; it is never surfaced as ``current_phase`` (the phase stays
+``final_review``). The edited-slides error wire value names the phase allowlist
+(content, design, final_review); no client string-matches it. A workflow-start synthesis
+failure surfaces ``research_synthesis_failed`` instead of the opaque "Invalid request",
+and provider failures during a synchronous start are structured retryable errors, not a
+500. A re-drive re-runs a parked node and needs a checkpoint parked before a pending
+node with no open interrupt (a phase whose run died after its gate was approved). The
+graph recursion limit is explicit because langgraph's default of 10007 let a
+self-looping node run 14 minutes and write about 350k checkpoint rows; a legitimate run
+is at most 20 steps (p95 13), so 100 turns a loop into a fast failure. A reviewer parked
+at content, design or final_review can fix copy in place with edited slides (apply,
+re-validate, store the fresh report); a design revise may send the workflow back to
+content only. The design recovery hint is emitted with a still-blocking design
+re-interrupt, since direct edits or a send-back resolve violations and a plain revise
+does not; the frontend maps it to i18n copy. Content drafting concurrency is bounded
+because endpoint rate limits are unknown.
+"""
 
 PHASE_BRIEF = "brief"
 PHASE_RESEARCH = "research"
@@ -8,10 +28,6 @@ PHASE_DESIGN = "design"
 PHASE_IMAGES = "images"
 PHASE_FINAL_REVIEW = "final_review"
 PHASE_PUBLISHED = "published"
-# Internal graph-only node (AE-0288): after final-review approval the graph holds
-# here at an interrupt instead of reaching END, so the approved carousel stays
-# resumable for a send-back. NOT a user-facing phase — never surfaced as
-# ``current_phase`` (get_state keeps the phase as ``final_review`` while held).
 PHASE_APPROVED_HOLD = "approved_hold"
 
 PHASE_STATUS_PENDING = "pending"
@@ -64,20 +80,10 @@ ERR_PERSONA_SCORE_TOO_LOW = "persona_score_too_low"
 ERR_PRESENTATION_VALIDATION_BLOCKED = "presentation_validation_blocked"
 ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH = "workflow_not_approved_for_publish"
 ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY = "structured_feedback_final_review_only"
-# AE-0310: renamed from ERR_EDITED_SLIDES_CONTENT_ONLY when the allowlist widened
-# to {content, design, final_review}. The wire value is renamed too: no client
-# string-matches the old detail (the frontend surfaces `detail` verbatim and has
-# no logic keyed on it), so keeping the stale "content_phase_only" wording would
-# only mislead API consumers.
 ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED = "edited_localized_slides_phase_not_allowed"
 ERR_SEND_BACK_TARGET_NOT_ALLOWED = "send_back_target_phase_not_allowed"
 ERR_CAROUSEL_NOT_COMPLETED = "carousel_not_completed"
-# AE-0318: workflow/start synthesis failures surface this instead of the opaque
-# access-control "Invalid request" so operators can tell a parse failure from a
-# genuinely malformed request.
 ERR_RESEARCH_SYNTHESIS_FAILED = "research_synthesis_failed"
-# AE-0319: LLM-provider failures during synchronous workflow start surface as
-# structured retryable errors, not a generic 500.
 ERR_PROVIDER_RATE_LIMITED = "provider_rate_limited"
 ERR_PROVIDER_UNAVAILABLE = "provider_unavailable"
 ERR_WORKFLOW_PHASE_FAILED = "workflow_phase_failed"
@@ -85,10 +91,7 @@ ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
 ERR_RESUME_ALREADY_IN_PROGRESS = "resume_already_in_progress"
 ERR_BACKGROUND_RESUME_FAILED = "background_resume_failed"
 ERR_BACKGROUND_RESUME_STUCK = "background_resume_stuck"
-# AE-0363: a re-drive needs a checkpoint parked before a pending node with no
-# open interrupt (a phase whose run died after the gate was approved).
 ERR_NOTHING_TO_REDRIVE = "nothing_to_redrive"
-# AE-0363: the run action that re-runs a parked node instead of a review.
 RUN_ACTION_REDRIVE = "redrive"
 ERR_UNSUPPORTED_REVIEW_ACTION = "unsupported_review_action"
 
@@ -99,12 +102,6 @@ STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY = "edited_localized_slides"
 SEND_BACK_TARGET_PHASE_KEY = "send_back_target_phase"
 WORKFLOW_ERROR_KEY = "workflow_error"
 
-# AE-0330: explicit LangGraph recursion limit for the carousel graph. langgraph's
-# own default is 10007 (LANGGRAPH_DEFAULT_RECURSION_LIMIT), so a node that
-# routes back into itself ran for 14 minutes and wrote ~350k checkpoint rows
-# before dying. A legitimate run is short — max 20 steps, p95 13 across every
-# prod thread on 2026-09-14 — so 100 is a 5x ceiling that turns any future loop
-# into a seconds-long failure instead of a slow-motion outage.
 CAROUSEL_GRAPH_RECURSION_LIMIT = 100
 PERSONA_SCORE_OVERALL_KEY = "overall"
 SLIDE_DRAFT_TEXT_KEY = "draft_text"
@@ -127,22 +124,14 @@ FINAL_REVIEW_SEND_BACK_PHASES: frozenset[str] = frozenset({
     PHASE_IMAGES,
 })
 
-# AE-0310: phases whose review gate accepts ``edited_localized_slides``.
-# Widened from content-only so a reviewer parked at design/final_review with
-# content-level violations can fix copy in place (uniform semantics: apply
-# edits, re-validate, store the fresh report).
 EDITED_SLIDES_ALLOWED_PHASES: frozenset[str] = frozenset({
     PHASE_CONTENT,
     PHASE_DESIGN,
     PHASE_FINAL_REVIEW,
 })
 
-# AE-0310: phases a design revise may send the workflow back to.
 DESIGN_SEND_BACK_PHASES: frozenset[str] = frozenset({PHASE_CONTENT})
 
-# AE-0310: client-displayable hint code emitted with a still-blocking design
-# re-interrupt — direct edits or a send-back resolve violations; a plain revise
-# alone does not modify content. The frontend maps this code to i18n copy.
 DESIGN_VALIDATION_RECOVERY_HINT = "design_validation_blocked_edit_or_send_back"
 
 REVIEW_ACTIONS: tuple[str, ...] = (
@@ -157,6 +146,4 @@ RESUME_ROUTE_SUPPORTED_ACTIONS: frozenset[str] = frozenset({
     REVIEW_ACTION_REVISE,
 })
 
-# AE-0391: slides drafted concurrently in the content phase (default of the
-# CONTENT_DRAFT_CONCURRENCY setting). Bounded: endpoint rate limits are unknown.
 DEFAULT_CONTENT_DRAFT_CONCURRENCY = 4

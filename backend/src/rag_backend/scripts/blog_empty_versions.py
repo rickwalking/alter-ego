@@ -1,6 +1,6 @@
-"""One-shot repair of version histories holding empty snapshots (AE-0438, F-05).
+"""One-shot repair of version histories holding empty snapshots (F-05).
 
-Before AE-0438 the generation's first write snapshotted the empty bootstrap
+Previously the generation's first write snapshotted the empty bootstrap
 document, so ``version_history`` of a generated post starts with an entry whose
 ``snapshot`` has no content; restoring it 422s. New writes never append empty
 snapshots (``blog_version_history.append_version``); this command repairs the

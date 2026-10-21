@@ -1,4 +1,4 @@
-"""AE-0430: the content gate repairs only the failing fields, at most 2 rounds.
+"""The content gate repairs only the failing fields, at most 2 rounds.
 
 Gherkin: tests/features/content_gate_repair_ae0430.feature (section A + the
 residual shape mismatch of section C). The model is a fake; the validator and
@@ -66,7 +66,7 @@ class TestProdFixture:
     def test_fixture_reproduces_the_prod_report(self) -> None:
         """Background: the exported slides validate to the prod blockers.
 
-        AE-0436: the same exported state carries the label/emphasis leaks the
+        the same exported state carries the label/emphasis leaks the
         QA hand-noted (``**PT**`` on slide 1, ``**PT** ** **`` and
         ``PT:\\nHeading:`` on slide 4, EN ``**…**`` on slide 3). The stricter
         gate adds those 4 violations to the 12 stored ones.
@@ -75,13 +75,11 @@ class TestProdFixture:
         stored = cast(dict[str, object], load_fixture()["content_gate_validation"])
         stored_violations = cast(list[object], stored["violations"])
         assert report.blocking is True
-        stored_codes = [
-            cast(dict[str, object], v)["code"] for v in stored_violations
-        ]
+        stored_codes = [cast(dict[str, object], v)["code"] for v in stored_violations]
         codes = [violation.code for violation in report.violations]
-        assert sorted(stored_codes) == sorted(
-            [code for code in codes if code in set(stored_codes)]
-        )
+        assert sorted(stored_codes) == sorted([
+            code for code in codes if code in set(stored_codes)
+        ])
         new = {
             (violation.locale, violation.field, violation.code)
             for violation in report.violations
@@ -98,7 +96,11 @@ class TestProdFixture:
 @pytest.mark.asyncio
 class TestTargetedRepair:
     async def test_prod_fixture_asks_only_failing_fields_and_ends_green(self) -> None:
-        """Scenario: The regression fixture from prod ends green."""
+        """Scenario: The regression fixture from prod ends green.
+
+        Slide 4 is in the changed set because its PT and EN bodies carried the "**PT**
+        ** **" and "PT:" label leaks the stricter gate flags.
+        """
         repairer = FakeRepairer()
 
         outcome = await run_gate_repair(_command(repairer))
@@ -106,8 +108,6 @@ class TestTargetedRepair:
         assert repairer.calls == [PROD_FAILING_IDS]
         assert outcome.report.blocking is False
         assert outcome.report.violations == []
-        # AE-0436: slide 4 joins the changed set (its PT/EN bodies carried the
-        # "**PT** ** **" / "PT:\nHeading:" leaks the stricter gate now flags).
         assert outcome.changed_indices == frozenset({1, 3, 4, 6})
 
     async def test_over_limit_field_repaired_in_one_round(self) -> None:
@@ -130,7 +130,10 @@ class TestTargetedRepair:
         assert len(repairer.calls) == 1
 
     async def test_two_rounds_then_stop_with_violations_shown(self) -> None:
-        """Scenario: Two rounds then stop with the violations shown."""
+        """Scenario: Two rounds then stop with the violations shown.
+
+        The over-long answer is never truncated; it is kept whole for the owner.
+        """
         repairer = OverLimitRepairer()
 
         outcome = await run_gate_repair(_command(repairer))
@@ -139,7 +142,6 @@ class TestTargetedRepair:
         assert outcome.report.blocking is True
         codes = {violation.code for violation in outcome.report.violations}
         assert "body_too_long" in codes
-        # Never truncated: the over-long answer is kept whole for the owner.
         body = _items(_payload(outcome.slides, 6, "pt"), "actions")[0]["body"]
         assert str(body).endswith("E ainda mais um trecho longo aqui.")
 
@@ -214,12 +216,14 @@ class TestResidualShapeMismatch:
         assert VIOLATION_TRANSLATION_SHAPE_MISMATCH not in codes
 
     async def test_missing_en_items_are_filled_with_pt_shape(self) -> None:
-        """Scenario: EN lacking the PT item list gets the PT items to translate."""
+        """Scenario: EN lacking the PT item list gets the PT items to translate.
+
+        The copies must be translated to stay (see the scenario "A PT copy nobody
+        translated is taken out of EN again").
+        """
         slides = prod_slides()
         en = _payload(slides, 6, "en")
         en.pop("actions")
-        # AE-0437: the copies must be translated to stay (see the scenario
-        # "A PT copy nobody translated is taken out of EN again").
         answers = {
             f"6:en:actions[{n}].{key}": f"Action {n} {key} in English"
             for n in range(3)

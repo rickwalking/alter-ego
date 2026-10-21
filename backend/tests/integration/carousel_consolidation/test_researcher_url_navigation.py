@@ -1,6 +1,6 @@
 """Integration: researcher subagent browses a URL and synthesizes sources.
 
-Feature: researcher_subagent_url_navigation.feature (AE-0249)
+Feature: researcher_subagent_url_navigation.feature
 
 The researcher subagent wraps the REAL ``PlaywrightResearchTool`` (the concrete
 ``application`` service) via the @tool adapters, injected through the
@@ -153,7 +153,6 @@ async def test_researcher_browses_url_and_synthesizes_sources(
     sources = await search.ainvoke({"query": "rust safety"})
     assert "Source A" in sources
 
-    # Synthesis: the browsed page + web source are both available to the agent.
     synthesized = f"{page}\n\n{sources}"
     assert _PAGE_TEXT in synthesized
     assert "https://a" in synthesized

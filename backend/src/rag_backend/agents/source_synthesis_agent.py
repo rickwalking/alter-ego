@@ -35,7 +35,11 @@ class SourceSynthesisAgent:
         content: str,
         source_type: str = "document",
     ) -> dict[str, object]:
-        """Extract key points and summary from source content."""
+        """Extract key points and summary from source content.
+
+        Only a response that parsed is cached: a truncated or malformed raw would poison
+        every retry for the cache TTL.
+        """
         title = sanitize_llm_input(title)
         content = sanitize_llm_input(content)
         source_type = sanitize_llm_input(source_type)
@@ -53,21 +57,21 @@ class SourceSynthesisAgent:
         response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         raw = cast(str, response.content)
         parsed, good_raw = await self._parse_with_repair(raw)
-        # AE-0318: cache only a response that parsed — a truncated/malformed raw
-        # cached here poisons every retry for the TTL window.
         self._cache.set(prompt, self.model_id, good_raw)
         return parsed
 
     def _parse_cached(self, prompt: str) -> dict[str, object] | None:
-        """Return parsed findings from cache, evicting entries that fail to parse."""
+        """Return parsed findings from cache, evicting entries that fail to parse.
+
+        A poisoned entry (written by an older deploy) is evicted and falls through to a
+        fresh LLM call instead of replaying the failure.
+        """
         cached = self._cache.get(prompt, self.model_id)
         if cached is None:
             return None
         try:
             return self._parse_response(cached)
         except (ValueError, TypeError):
-            # Poisoned entry (e.g. written by a pre-AE-0318 deploy): evict and
-            # fall through to a fresh LLM call instead of replaying the failure.
             self._cache.delete(prompt, self.model_id)
             logger.warning(
                 "source_synthesis_poisoned_cache_evicted",

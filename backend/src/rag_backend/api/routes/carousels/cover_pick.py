@@ -1,12 +1,12 @@
-"""Publish-step slide-1 cover picker of a Ponto de Vista carousel (AE-0445).
+"""Publish-step slide-1 cover picker of a Ponto de Vista carousel.
 
 Thin HTTP adapter. The project owner (or an admin) lists the images slide 1
 may show (``GET /{id}/cover-options``: library photos, then the autopilot
 run's GrokBot cover offer) and picks one (``PUT /{id}/cover``) at the
 workflow lock version the page read. The pick is staged, stored under the
-lock-version CAS and re-rendered through the AE-0313 republish path; typed
+lock-version CAS and re-rendered through the republish path; typed
 409s (stale version, held lock, active run, build in progress) go through the
-app-wide carousel-conflict handler (AE-0316).
+app-wide carousel-conflict handler.
 """
 
 from __future__ import annotations
@@ -160,7 +160,11 @@ async def pick_cover(
     body: CoverPickRequest,
     ctx: Annotated[CoverPickContext, Depends(get_cover_pick_context)],
 ) -> CoverPickResponse:
-    """Stage, store under the lock-version CAS, then republish slides + PDFs."""
+    """Stage, store under the lock-version CAS, then republish slides + PDFs.
+
+    The fresh artifacts reflect every pending copy edit too, so the needs-republish
+    marker is cleared as a republish does.
+    """
     command = CoverPickCommand(
         project=ctx.project,
         asset_id=body.asset_id,
@@ -172,7 +176,6 @@ async def pick_cover(
         raise _refused(error) from error
     _raise_unless_switched(result)
     project_id = str(ctx.project.id)
-    # The fresh artifacts reflect every pending copy edit too (as republish).
     await CarouselProjectWriteOwner(ctx.db).clear_needs_republish(project_id)
     await ctx.db.commit()
     updated = await CarouselAutomationAcl(ctx.db).load_project(project_id)

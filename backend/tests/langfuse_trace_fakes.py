@@ -1,11 +1,11 @@
-"""A fake Langfuse client that records phase traces (AE-0390, AE-0442).
+"""A fake Langfuse client that records phase traces.
 
 ``install_trace_collector`` swaps the client ``phase_trace`` uses and the SDK's
 ``propagate_attributes`` for recorders. A fake LLM call reads
 ``collector.current()`` to learn which trace it ran in, the way a real
 LangChain callback generation attaches to the active OTel span.
 
-AE-0442: the fake also captures the trace/span input and output, the session id,
+The fake also captures the trace/span input and output, the session id,
 span updates and events, so tests can prove the Langfuse list is not empty.
 """
 
@@ -190,11 +190,12 @@ def wait_for_flushes(collector: TraceCollector, expected: int = 1) -> bool:
 
 
 def install_trace_collector(monkeypatch: pytest.MonkeyPatch) -> TraceCollector:
-    """Route ``phase_trace`` to a fresh collector for this test."""
+    """Route ``phase_trace`` to a fresh collector for this test.
+
+    The flush slots are process-wide: a hung exporter left by another test must not make
+    this test's flush be dropped, so each collector gets its own (same-size) slot pool.
+    """
     collector = TraceCollector()
-    # AE-0446: the flush slots are process-wide. A hung exporter left by
-    # another test must not make this test's flush be dropped, so each
-    # collector gets its own (same-size) slot pool.
     monkeypatch.setattr(
         langfuse_client,
         "_FLUSH_SLOTS",

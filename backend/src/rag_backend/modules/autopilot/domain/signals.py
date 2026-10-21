@@ -1,6 +1,6 @@
 """Typed trend signals returned to the scout.
 
-``Signal`` is the collector contract (AE-0352). ``source`` is one of the
+``Signal`` is the collector contract. ``source`` is one of the
 free backends in architecture §5. Ranking is out of scope.
 """
 

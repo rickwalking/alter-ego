@@ -20,10 +20,6 @@ class TestCarouselEditorialOrchestrator:
         llm = MagicMock()
         return CarouselEditorialOrchestrator(llm=llm)
 
-    # ------------------------------------------------------------------
-    # __init__
-    # ------------------------------------------------------------------
-
     @patch("rag_backend.agents.carousel_editorial_orchestrator.SourceSynthesisAgent")
     @patch("rag_backend.agents.carousel_editorial_orchestrator.CarouselWorkflowEngine")
     @patch("rag_backend.agents.carousel_editorial_orchestrator.PhaseArtifactRunner")
@@ -155,10 +151,6 @@ class TestCarouselEditorialOrchestrator:
         config = mock_runner_cls.call_args[0][0]
         assert config.image_registry is image_registry
 
-    # ------------------------------------------------------------------
-    # engine property
-    # ------------------------------------------------------------------
-
     def test_engine_property_returns_internal_engine(
         self, orchestrator: CarouselEditorialOrchestrator
     ) -> None:
@@ -166,10 +158,6 @@ class TestCarouselEditorialOrchestrator:
         result = orchestrator.engine
 
         assert result is orchestrator._engine
-
-    # ------------------------------------------------------------------
-    # _bind_resume_context
-    # ------------------------------------------------------------------
 
     def test_bind_resume_context_calls_with_context(
         self, orchestrator: CarouselEditorialOrchestrator
@@ -211,10 +199,6 @@ class TestCarouselEditorialOrchestrator:
         orchestrator._artifact_runner.with_context.assert_called_once_with(
             db=None, workflow_input=None
         )
-
-    # ------------------------------------------------------------------
-    # start
-    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
     async def test_start_calls_bind_resume_context(
@@ -277,10 +261,6 @@ class TestCarouselEditorialOrchestrator:
         orchestrator._engine.start.assert_awaited_once_with("project-1", None)
         assert result is expected_state
 
-    # ------------------------------------------------------------------
-    # resume
-    # ------------------------------------------------------------------
-
     @pytest.mark.asyncio
     async def test_resume_calls_bind_resume_context(
         self, orchestrator: CarouselEditorialOrchestrator
@@ -326,10 +306,6 @@ class TestCarouselEditorialOrchestrator:
         orchestrator._engine.resume.assert_awaited_once_with("project-1", None)
         assert result is expected_state
 
-    # ------------------------------------------------------------------
-    # get_state
-    # ------------------------------------------------------------------
-
     @pytest.mark.asyncio
     async def test_get_state_delegates_to_engine(
         self, orchestrator: CarouselEditorialOrchestrator
@@ -353,10 +329,6 @@ class TestCarouselEditorialOrchestrator:
         result = await orchestrator.get_state("project-1")
 
         assert result is None
-
-    # ------------------------------------------------------------------
-    # synthesize_research
-    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
     async def test_synthesize_research_delegates_to_agent(
@@ -402,10 +374,6 @@ class TestCarouselEditorialOrchestrator:
             result = await orchestrator.synthesize_research([])
 
         assert result == []
-
-    # ------------------------------------------------------------------
-    # update_state
-    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
     async def test_update_state_delegates_to_engine(

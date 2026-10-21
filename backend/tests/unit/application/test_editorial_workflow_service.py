@@ -56,7 +56,7 @@ class TestEditorialWorkflowServiceInit:
     ) -> None:
         """Given llm, when creating service, then orchestrator receives llm.
 
-        AE-0391: a single model is coerced into both task roles.
+        a single model is coerced into both task roles.
         """
         llm = MagicMock()
         EditorialWorkflowService(EditorialWorkflowConfig(llm=llm))
@@ -214,7 +214,7 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
     async def test_does_not_write_caption_to_embedded_column(
         self, service: EditorialWorkflowService
     ) -> None:
-        """AE-0204: the checkpoint sync no longer writes the embedded caption column.
+        """The checkpoint sync no longer writes the embedded caption column.
 
         Caption has a canonical home (``blog_posts.distribution``); the checkpoint
         sync is decoupled so a resumed checkpoint cannot resurrect an embedded-column
@@ -238,7 +238,7 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
     ) -> None:
         """Given blog_markdown in state, when syncing, then blog_markdown is updated.
 
-        ``blog_markdown`` remains synced (AE-0163's domain) — only the AE-0204
+        ``blog_markdown`` remains synced (the blog domain) — only the
         distribution fields were removed from the checkpoint sync.
         """
         db = AsyncMock()
@@ -256,7 +256,7 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
     async def test_does_not_write_linkedin_posts_to_embedded_columns(
         self, service: EditorialWorkflowService
     ) -> None:
-        """AE-0204: the checkpoint sync no longer writes the embedded LinkedIn columns.
+        """The checkpoint sync no longer writes the embedded LinkedIn columns.
 
         LinkedIn posts have a canonical home (``blog_posts.distribution``); the
         decoupled sync leaves the embedded columns UNCHANGED.
@@ -690,7 +690,6 @@ class TestMarkResumeInProgress:
     When mark_resume_in_progress is called the system SHALL NOT call
     update_state on the orchestator (which would patch the checkpoint and
     clear pending interrupts). Only the DB row and SSE publish are updated.
-    (see .agent/tasks/AE-0025-workflow-resume-interrupt-corruption.md)
     """
 
     @pytest.mark.asyncio
@@ -719,7 +718,7 @@ class TestMarkResumeInProgress:
 
 
 class TestGetWorkflowStateDBMerge:
-    """AE-0026: get_workflow_state merges DB phase_status when DB says
+    """The get_workflow_state call merges DB phase_status when DB says
     in_progress but checkpoint says awaiting_human."""
 
     @pytest.mark.asyncio
@@ -791,7 +790,7 @@ class TestGetWorkflowStateDBMerge:
 
 
 class TestEditorialWorkflowServiceLangfuseTraceMetadata:
-    """AE-0050: Langfuse trace metadata is preserved after the wave-3/4 refactors.
+    """Langfuse trace metadata is preserved after the wave-3/4 refactors.
 
     Scenario (see Gherkin "Langfuse Trace Preservation"): a refactored editorial
     workflow operation with a Langfuse callback must still propagate the required
@@ -823,8 +822,12 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
         service: EditorialWorkflowService,
     ) -> None:
         """Given a Langfuse callback, when start_workflow runs with project_id,
-        phase, user_id and content_type, then the trace and span carry them all."""
-        # propagate_attributes is a context manager; make the patch behave like one.
+        phase, user_id and content_type, then the trace and span carry them all.
+
+        propagate_attributes is a context manager, so the patch is made to behave like
+        one; its metadata carries project_id, phase and actor, and the research brief
+        reaches the trace input.
+        """
         mock_propagate.return_value.__enter__ = MagicMock(return_value=None)
         mock_propagate.return_value.__exit__ = MagicMock(return_value=False)
 
@@ -850,20 +853,18 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
             ),
         )
 
-        # propagate_attributes metadata: project_id + phase + actor.
         span_metadata = mock_propagate.call_args.kwargs["metadata"]
         assert span_metadata["project_id"] == project_id
         assert span_metadata["phase"] == PHASE_RESEARCH
         assert span_metadata["user_id"] == "pedro-user-id"
 
-        # AE-0442: the research brief reaches the trace input.
         trace_input = mock_propagate.call_args.kwargs["trace_input"]
         assert trace_input["topic"] == "AI"
         assert trace_input["source_count"] == 0
 
 
 class TestMarkResumeInProgressPublishLock:
-    """AE-0288: a send-back from an approved carousel drops the DB publish lock
+    """A send-back from an approved carousel drops the DB publish lock
     synchronously so a concurrent publish cannot ship stale content mid-regen.
     """
 
@@ -924,7 +925,7 @@ class TestMarkResumeInProgressPublishLock:
 
 
 class TestStartWorkflowResearchEnrichment:
-    """AE-0317 scenarios (tests/features/research_enrichment.feature)."""
+    """Scenarios of tests/features/research_enrichment.feature."""
 
     def test_init_threads_research_tool(self) -> None:
         """Scenario: URL source is navigated (wiring half)."""

@@ -7,7 +7,7 @@ module.
 
 The facade exposes:
 
-* ``PresentationService`` — the use-case entry point (scaffolding; AE-0117);
+* ``PresentationService`` — the use-case entry point (scaffolding);
 * ``PresentationProject`` / ``DesignPolicy`` / ``SlideView`` — the presentation
   VIEW aggregate and its value objects (new, fully typed);
 * the presentation policy types (``CarouselPresentationPolicy``,
@@ -26,14 +26,14 @@ The facade exposes:
 * ``PresentationPolicyPort`` / ``SlideValidationPort`` — the presentation
   provider ports (new Protocols);
 * ``ImageGenerationService`` / ``ImageStyleStrategy`` / ``ImageProvider`` /
-  ``ImageProviderPort`` — the image-generation ports + value object (AE-0119):
+  ``ImageProviderPort`` — the image-generation ports + value object:
   the per-vendor generation/style contracts (re-exported object-identity shims),
   the provider value object, and the registry contract; the concrete vendor
   adapters (``OpenAIImageService`` / ``GeminiImageService``) and the
   ``ImageProviderRegistry`` implement them. Vendor SDK imports stay in the
   adapter layer;
 * ``PresentationWriteOwner`` / ``PresentationPersistenceAcl`` /
-  ``PresentationProjectView`` — the AE-0118 presentation persistence seam: the
+  ``PresentationProjectView`` — the presentation persistence seam: the
   single writer of the presentation columns + slide rows (and the owner of the
   ``artifact_version`` ↔ ``lock_version`` compound CAS delegation), the
   read/write ACL over it, and its concurrency-token view. Editorial / global

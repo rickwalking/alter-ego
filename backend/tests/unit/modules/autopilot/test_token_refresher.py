@@ -1,4 +1,4 @@
-"""Daily Instagram refresh and the owner alert (AE-0358).
+"""Daily Instagram refresh and the owner alert.
 
 Gherkin: tests/features/autopilot_ig_token.feature
 """

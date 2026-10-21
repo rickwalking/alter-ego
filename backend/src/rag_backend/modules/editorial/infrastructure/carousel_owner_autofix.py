@@ -1,4 +1,4 @@
-"""The owner "Fix issues" seam the autopilot drives in-process (AE-0367).
+"""The owner "Fix issues" seam the autopilot drives in-process.
 
 ``inspect_owner_issues`` is read-only (the webhook and the review message use
 it); ``run_owner_autofix`` repairs, re-translates untranslated EN, persists and
@@ -55,7 +55,7 @@ class OwnerAutofixReport:
 
 @dataclass(frozen=True, kw_only=True)
 class GateRepairReport:
-    """Outcome of one gate repair (AE-0392). ``status`` is ``AUTOFIX_STATUS_*``."""
+    """Outcome of one gate repair. ``status`` is ``AUTOFIX_STATUS_*``."""
 
     status: str
     fixed_rules: tuple[str, ...] = ()
@@ -64,7 +64,7 @@ class GateRepairReport:
 
 
 class RepublishRenderer:
-    """Re-render through the AE-0313 republish path (hero images reused)."""
+    """Re-render through the republish path (hero images reused)."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -155,7 +155,7 @@ async def run_owner_autofix(request: OwnerAutofixRequest) -> OwnerAutofixReport:
 
 
 async def run_gate_repair(request: OwnerAutofixRequest) -> GateRepairReport:
-    """Repair the checkpoint copy at a content/design gate (AE-0392).
+    """Repair the checkpoint copy at a content/design gate.
 
     No re-render: nothing is rendered before finalize.
     """

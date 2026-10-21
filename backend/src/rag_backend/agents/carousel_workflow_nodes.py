@@ -1,4 +1,9 @@
-"""Carousel workflow phase nodes and human-review helpers."""
+"""Carousel workflow phase nodes and human-review helpers.
+
+_SEND_BACK_RESET_APPROVED_FIELDS maps a send-back target to the approval flag reset when
+a phase node honors the send-back, so the target phase re-gates instead of
+auto-approving off a stale flag.
+"""
 
 from __future__ import annotations
 
@@ -74,8 +79,6 @@ logger = structlog.get_logger()
 
 _CONFIG_ARTIFACT_RUNNER = "artifact_runner"
 
-# AE-0310: approval flags reset when a phase node honors a send-back so the
-# target phase re-gates instead of auto-approving off a stale flag.
 _SEND_BACK_RESET_APPROVED_FIELDS: dict[str, str] = {
     PHASE_CONTENT: "content_approved",
 }
@@ -83,7 +86,10 @@ _SEND_BACK_RESET_APPROVED_FIELDS: dict[str, str] = {
 
 @dataclass(frozen=True)
 class SyncArtifactPhaseConfig:
-    """Parameters for sync artifact phase nodes with human review gates."""
+    """Parameters for sync artifact phase nodes with human review gates.
+
+    send_back_phases are the phases this node's revise may send the workflow back to.
+    """
 
     phase: str
     interrupt_type: str
@@ -93,7 +99,6 @@ class SyncArtifactPhaseConfig:
     extra_payload: dict[str, object] | None = None
     payload_builder: object | None = None
     post_review: dict[str, object] | None = None
-    # AE-0310: phases this node's revise may send the workflow back to.
     send_back_phases: frozenset[str] = frozenset()
 
 
@@ -114,7 +119,7 @@ def _edited_slide_updates(
     state: CarouselWorkflowState | None,
     phase: str | None,
 ) -> dict[str, object]:
-    """Apply reviewer slide edits to workflow state updates (AE-0310).
+    """Apply reviewer slide edits to workflow state updates.
 
     Uniform semantics at every allowed phase (content, design, final_review):
     apply the edits to ``localized_slides``, re-run presentation validation,
@@ -138,18 +143,21 @@ def review_updates_from_response(
     state: CarouselWorkflowState | None = None,
     phase: str | None = None,
 ) -> dict[str, object]:
+    """Map a review response onto graph-state updates.
+
+    Any revise or reject drops the publish approval in the graph state; otherwise
+    get_state copies a stale approved_for_publish back to the DB on the resume sync and
+    reopens a stale-publish window for the whole revision. This also covers a revise
+    without a target from a held carousel, since a stale send-back target could still
+    route it to an earlier phase. The later final_review re-approval restores
+    approved_for_publish.
+    """
     action = review.get("action")
     edit_updates = _edited_slide_updates(review, state, phase)
     if action == REVIEW_ACTION_APPROVE:
         return {**edit_updates, "phase_status": PHASE_STATUS_APPROVED}
     if action not in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}:
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
-    # AE-0288: ANY revise/reject drops the publish approval in the GRAPH STATE.
-    # Otherwise get_state copies a stale approved_for_publish back to the DB on the
-    # resume sync, reopening a stale-publish window for the whole revision period.
-    # This must cover a revise WITHOUT a target from a held carousel too (a stale
-    # send_back_target_phase could still route it back to an earlier phase). The
-    # later final_review re-approval restores approved_for_publish.
     updates: dict[str, object] = {
         **edit_updates,
         "phase_status": PHASE_STATUS_AWAITING_HUMAN,
@@ -188,12 +196,15 @@ async def ensure_artifacts(
     config: RunnableConfig | None,
     phase: str,
 ) -> dict[str, object]:
+    """Build the phase artifacts unless the state already holds them.
+
+    Every phase LLM call runs inside the named, tagged phase trace.
+    """
     runner = artifact_runner_from_config(config)
     if runner is None:
         return {}
     merged = dict(state)
     merged["current_phase"] = phase
-    # AE-0390: every phase LLM call runs in the named, tagged phase trace.
     project_id = str(state.get("project_id", ""))
     trace_input = {
         TRACE_FIELD_PHASE: phase,
@@ -252,22 +263,23 @@ def _sync_phase_result(
     review_update: dict[str, object],
     artifact: SyncArtifactPhaseConfig,
 ) -> dict[str, object]:
-    """Merge the review response into the node result (AE-0310 send-back aware)."""
+    """Merge the review response into the node result (send-back aware).
+
+    On a send-back, current_phase stays the target from the review update (it is not
+    clobbered back to this node's phase) and the target's approval flag is reset so it
+    re-gates instead of skipping ahead on a stale approve. A consumed or stale target is
+    then cleared so it cannot re-route a later cycle.
+    """
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
     result: dict[str, object] = {**review_update, artifact.approved_field: approved}
     target = None if approved else _sync_phase_send_back_target(review_update, artifact)
     if target is not None:
-        # AE-0310 send-back: keep current_phase=<target> from the review update
-        # (do not clobber it back to this node's phase — same class as the
-        # AE-0290 final_review fix) and reset the target's approval flag so the
-        # target phase re-gates instead of skipping ahead on a stale approve.
         reset_field = _SEND_BACK_RESET_APPROVED_FIELDS.get(target)
         if reset_field is not None:
             result[reset_field] = False
         return result
     result["current_phase"] = artifact.phase
     if artifact.send_back_phases:
-        # Clear a consumed/stale target so it cannot re-route a later cycle.
         result[SEND_BACK_TARGET_PHASE_KEY] = ""
     if artifact.post_review:
         result.update(artifact.post_review)
@@ -315,7 +327,7 @@ def outline_phase(
 
 
 def _content_review_payload(merged: dict[str, object]) -> dict[str, object]:
-    """Content interrupt payload incl. the fail-closed gate report (AE-0309)."""
+    """Content interrupt payload incl. the fail-closed gate report."""
     return {
         "slide_drafts": merged.get("slide_drafts") or [],
         "persona_scores": merged.get("persona_scores") or {},
@@ -328,7 +340,10 @@ def _content_review_payload(merged: dict[str, object]) -> dict[str, object]:
 def _content_artifact_config(
     parked_updates: dict[str, object] | None = None,
 ) -> SyncArtifactPhaseConfig:
-    """Content gate config; ``parked_updates`` ride the interrupt (AE-0405)."""
+    """Content gate config; ``parked_updates`` ride the interrupt.
+
+    Once the node finishes, the next content entry runs its ensure again.
+    """
     return SyncArtifactPhaseConfig(
         phase=PHASE_CONTENT,
         interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
@@ -339,7 +354,6 @@ def _content_artifact_config(
         extra_payload=(
             {PAYLOAD_KEY_PARKED_ARTIFACTS: parked_updates} if parked_updates else None
         ),
-        # The node finished: the next content entry runs its ensure again.
         post_review={STATE_FIELD_CONTENT_ARTIFACTS_PARKED: False},
     )
 
@@ -353,7 +367,7 @@ def content_phase(
 
 
 def _design_review_payload(merged: dict[str, object]) -> dict[str, object]:
-    """Design interrupt payload incl. the fresh validation report (AE-0310).
+    """Design interrupt payload incl. the fresh validation report.
 
     While the report blocks, the payload carries the client-displayable
     recovery hint: direct edits or a content send-back resolve violations —
@@ -428,7 +442,7 @@ async def _content_ensure_or_reuse(
 ) -> dict[str, object]:
     """Run the content ensure, unless this is the replay of a parked review.
 
-    AE-0405: LangGraph re-runs the interrupted node on resume. The engine wrote
+    LangGraph re-runs the interrupted node on resume. The engine wrote
     the artifacts the reviewer saw to the checkpoint when the graph parked, so
     the replay reuses them: no second regeneration with the same notes, no
     LLM call, and the reviewed (or hand-edited) copy is what gets committed.
@@ -445,25 +459,24 @@ async def content_phase_async(
     state: CarouselWorkflowState,
     config: RunnableConfig,
 ) -> dict[str, object]:
+    """Run the content phase: build the drafts, then interrupt for review.
+
+    The decision uses this run's artifact result, not the phase_status the checkpoint
+    carried in. A failure returns without interrupting and the graph routes it to END;
+    current_phase is set to content because ensure_artifacts only stamps its own copy,
+    and an END state still saying outline would make needs_gate_reopen check
+    outline_approved and turn a retry into a silent no-op. A stale failure from a
+    previous run whose artifacts were since rebuilt is reset to in_progress: resume only
+    flips the DB row, never the checkpoint, so the old flag would re-trigger the early
+    return on every retry.
+    """
     merged = dict(state)
     artifact_updates = await _content_ensure_or_reuse(state, config)
     merged.update(artifact_updates)
-    # AE-0330: decide on THIS run's artifact result, not on whatever
-    # phase_status the checkpoint carried in. A failure here returns without
-    # interrupting and the graph routes it to END (_ROUTE_FAILED).
     if artifact_updates.get("phase_status") == PHASE_STATUS_FAILED:
-        # Name the phase that failed. ensure_artifacts only stamps
-        # current_phase on its own copy, so without this the END state still
-        # says "outline" and needs_gate_reopen checks outline_approved (True)
-        # — a retry then resumes a finished graph and silently does nothing.
         merged["current_phase"] = PHASE_CONTENT
         return merged
     if merged.get("phase_status") == PHASE_STATUS_FAILED:
-        # Stale failure from a previous run whose artifacts have now been
-        # rebuilt successfully. Resume only flips the DB row to in_progress,
-        # never the checkpoint, so without this the old flag re-triggered the
-        # early return above on every retry — the second half of the live
-        # 2026-09-14 loop, with all seven drafts already present.
         merged["phase_status"] = PHASE_STATUS_IN_PROGRESS
         merged[WORKFLOW_ERROR_KEY] = ""
     sync_result = _run_sync_artifact_phase(
@@ -495,7 +508,16 @@ async def images_phase_async(
 
 
 def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
-    """Final quality gate before publish."""
+    """Final quality gate before publish.
+
+    On a send-back the review update already carries current_phase=<target>; it must not
+    be clobbered back to final_review, or the committed checkpoint reports final_review
+    and the edited slides are rejected by the phase check. current_phase is pinned to
+    final_review only when there is no valid send-back target, and the membership guard
+    keeps a stale or corrupted target out of current_phase. On approval, a send-back
+    target consumed in a prior cycle is cleared so it cannot route a later resume from
+    the approved_hold node.
+    """
     review_update = await_human_review(
         state,
         PHASE_FINAL_REVIEW,
@@ -506,12 +528,6 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         },
     )
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
-    # AE-0290: on a send-back, review_update already carries current_phase=<target>
-    # (e.g. content). We must NOT clobber it back to final_review, or the committed
-    # checkpoint reports final_review and read_checkpoint_phase 422s the edited
-    # slides (edited_localized_slides_phase_not_allowed). Only pin current_phase to
-    # final_review when there is no valid send-back target. Membership guard hardens
-    # against a stale/corrupted-but-truthy target reaching current_phase.
     send_back_target = review_update.get(SEND_BACK_TARGET_PHASE_KEY)
     has_send_back = (
         isinstance(send_back_target, str)
@@ -528,18 +544,14 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         "status": "draft",
     }
     if not has_send_back:
-        # No send-back (approval or plain resume): keep the node pinned to
-        # final_review. Routing off SEND_BACK_TARGET_PHASE_KEY is unaffected.
         result["current_phase"] = PHASE_FINAL_REVIEW
     if approved:
-        # AE-0288: clear any send-back target consumed in a prior cycle so it
-        # can't route a later resume from the approved_hold node on a stale value.
         result[SEND_BACK_TARGET_PHASE_KEY] = ""
     return result
 
 
 def approved_hold_phase(state: CarouselWorkflowState) -> dict[str, object]:
-    """Hold an approved carousel at an interrupt so it stays resumable (AE-0288).
+    """Hold an approved carousel at an interrupt so it stays resumable.
 
     After final-review approval the graph parks here instead of reaching END,
     keeping ``quality_passed`` / ``workflow_status=approved_for_publish`` intact.

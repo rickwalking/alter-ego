@@ -4,7 +4,7 @@ Revision ID: d0e1f2a3b4c5
 Revises: c9d0e1f2a3b4
 Create Date: 2026-10-13
 
-AE-0350: ADDITIVE. Creates the four autopilot tables and drops nothing, so
+ADDITIVE. Creates the four autopilot tables and drops nothing, so
 the LangGraph checkpoint-drain gate does not apply (no existing table is
 altered). ``downgrade`` drops the new tables.
 

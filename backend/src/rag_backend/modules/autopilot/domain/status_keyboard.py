@@ -1,4 +1,4 @@
-"""Which keyboard a status notice carries (AE-0355, QA r2 R3).
+"""Which keyboard a status notice carries (QA r2 R3).
 
 Kept apart from ``messages.py`` so neither file exceeds the 400-line limit.
 """

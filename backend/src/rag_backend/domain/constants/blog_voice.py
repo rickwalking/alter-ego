@@ -1,15 +1,23 @@
-"""Voice / AI-cliché data for the blog quality gate (AE-0425, ADR-0025).
+"""Voice / AI-cliché data for the blog quality gate (ADR-0025).
 
 The banned stock phrases are *data*: the deterministic scan reports every one it
 finds in a generated section, and a finding sends the article to the single
 rewrite pass. Phrases are matched case-insensitively on word boundaries, so add
 them in lowercase. PT phrases gate the canonical document; EN phrases gate
 ``translations.en``.
+
+An article scoring below the voice threshold gets exactly one rewrite. Sentences shorter
+than the repeated-sentence minimum are not reported, since short connective lines ("Mas
+não é só isso.") recur legitimately in human text, and short long-form notes are not
+checked for verbatim copies. A PT section reads as English when it has at least
+``ENGLISH_MIN_HITS`` English function words that also outnumber its Portuguese ones
+``ENGLISH_DOMINANCE`` to 1. Each section gets a distinct narrative role in reading
+order: the first is always the lede, the last always the close, and the middle cycles
+through the argument roles.
 """
 
 from typing import Final
 
-# ADR-0003's voice bar: an article scoring below it gets exactly one rewrite.
 VOICE_SCORE_THRESHOLD: Final = 70.0
 MAX_REWRITE_PASSES: Final = 1
 
@@ -50,17 +58,10 @@ BANNED_PHRASES_EN: Final[tuple[str, ...]] = (
     "at the end of the day",
 )
 
-# A sentence shorter than this (characters, after normalization) is not
-# reported as repeated: short connective lines ("Mas não é só isso.") recur
-# legitimately in a human text.
 REPEATED_SENTENCE_MIN_CHARS: Final = 40
 
-# A long-form note shorter than this is not checked for a verbatim copy.
 VERBATIM_NOTE_MIN_CHARS: Final = 60
 
-# Cheap language check of a PT section (F-05 beyond verbatim copies): a
-# section with at least ENGLISH_MIN_HITS English function words that also
-# outnumber its Portuguese ones ENGLISH_DOMINANCE to 1 reads as English.
 ENGLISH_FUNCTION_WORDS: Final[frozenset[str]] = frozenset({
     "the",
     "and",
@@ -108,9 +109,6 @@ PORTUGUESE_FUNCTION_WORDS: Final[frozenset[str]] = frozenset({
 ENGLISH_MIN_HITS: Final = 8
 ENGLISH_DOMINANCE: Final = 2
 
-# Distinct narrative role of each section, in reading order. The writer gets one
-# role per section (``narrative_roles``): the first is always the lede and the
-# last always the close, the middle cycles through the argument roles.
 ROLE_LEDE: Final = "lede"
 ROLE_CLOSE: Final = "close"
 MIDDLE_ROLES: Final[tuple[str, ...]] = (

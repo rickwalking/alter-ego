@@ -1,4 +1,4 @@
-"""AE-0433: the judge retry on the next queue model and the stale-score re-score.
+"""The judge retry on the next queue model and the stale-score re-score.
 
 Fakes only (scripted judges, rewriters and scorers, ``FakeChat``); no
 network, no real model.
@@ -333,7 +333,7 @@ class TestUnscoredTicks:
         ]
 
     def test_a_pending_passing_slide_is_a_target_without_issues(self) -> None:
-        """AE-0439 (#154 B): a stale PASSING score still goes to the fix loop."""
+        """A stale PASSING score still goes to the fix loop."""
         deck = _deck()
         state = _entries(
             slide_4={"overall": 80, "rescore_pending": True, "unscored_ticks": 1}

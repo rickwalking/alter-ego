@@ -45,6 +45,10 @@ class TestExportAndCompleteCarousel:
         assert project.status == CarouselStatus.FAILED
 
     async def test_completes_after_render(self) -> None:
+        """The artifact build and activation go through the presentation
+        CarouselArtifactBuildAdapter, patched to return a successful ArtifactActivation;
+        the activation CAS itself is covered by the adapter's own tests.
+        """
         project = CarouselProject(
             topic="T",
             audience="A",
@@ -64,10 +68,6 @@ class TestExportAndCompleteCarousel:
         )
         refinement.re_render_slides = AsyncMock(return_value=rendered)
 
-        # AE-0121: the artifact build/activation is invoked through the presentation
-        # CarouselArtifactBuildAdapter (editorial → presentation). Patch that
-        # adapter to return a successful ArtifactActivation; the activation CAS
-        # itself is exercised by the adapter's own tests + the safety net.
         from rag_backend.modules.presentation import ArtifactActivation
 
         with (
@@ -119,7 +119,7 @@ class TestExportAndCompleteCarousel:
         assert project.status == CarouselStatus.FAILED
 
     async def test_completed_project_render_failure_is_preserved(self) -> None:
-        """AE-0313: a failed re-finalize/republish never mark_failed's completed."""
+        """A failed re-finalize/republish never mark_failed's completed."""
         project = CarouselProject(
             topic="T",
             audience="A",
@@ -147,7 +147,7 @@ class TestExportAndCompleteCarousel:
         assert result.errors
 
     async def test_completed_project_health_failure_is_preserved(self) -> None:
-        """AE-0313: a health-check failure on a completed project is returned,
+        """A health-check failure on a completed project is returned,
         not persisted — the prior artifact version keeps serving."""
         project = CarouselProject(
             topic="T",

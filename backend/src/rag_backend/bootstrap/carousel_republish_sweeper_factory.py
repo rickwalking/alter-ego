@@ -1,4 +1,4 @@
-"""Composition-root factory for the AE-0314 republish sweeper.
+"""Composition-root factory for the republish sweeper.
 
 Builds the server-guaranteed republish watchdog from Settings. The sweep min-age
 reuses the stale-run reaper's overdue window so a marked-but-abandoned edit is

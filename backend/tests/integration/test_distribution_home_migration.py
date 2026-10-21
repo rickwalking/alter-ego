@@ -1,4 +1,4 @@
-"""Migration tests for AE-0204 blog_posts.distribution column + backfill.
+"""Migration tests for the blog_posts.distribution column + backfill.
 
 Gherkin not applicable — this is a schema-migration safety net (DDL/data-movement),
 not a behavioral scenario.
@@ -14,6 +14,8 @@ database and prove the additive distribution home is:
   re-upgrade (column + backfill restored) without touching the embedded source
   columns;
 * idempotent — re-running the upgrade re-derives an identical payload.
+
+``_HEAD_BEFORE`` is the top-up backfill revision right before the distribution one.
 """
 
 from __future__ import annotations
@@ -25,8 +27,8 @@ from pathlib import Path
 
 import pytest
 
-_HEAD_BEFORE = "d4e5f6a7b8c9"  # AE-0163 top-up backfill (revision before ours)
-_DISTRIBUTION_REV = "e5f6a7b8c9d0"  # AE-0204
+_HEAD_BEFORE = "d4e5f6a7b8c9"
+_DISTRIBUTION_REV = "e5f6a7b8c9d0"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 _CAROUSEL_PROJECT_ID = "project-carousel-dist-1"
@@ -182,29 +184,30 @@ def seeded_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 
 # Scenario: upgrade adds the column + backfills only carousel-origin rows.
 def test_upgrade_backfills_carousel_distribution(seeded_db: str) -> None:
+    """The carousel-origin row is backfilled from the embedded carousel columns; the
+    standalone row is NOT and keeps the empty-object default.
+    """
     _run_migration("upgrade", _DISTRIBUTION_REV)
 
     assert "distribution" in _columns(seeded_db)
     distributions = _distribution_by_slug(seeded_db)
-    # The carousel-origin row is backfilled from the embedded carousel columns.
     carousel = distributions[_CAROUSEL_BLOG_SLUG]
     assert carousel == {
         "caption": _CAPTION,
         "linkedin_post_pt": _LINKEDIN_PT,
         "linkedin_post_en": _LINKEDIN_EN,
     }
-    # The standalone row is NOT backfilled — it keeps the empty-object default.
     assert distributions[_STANDALONE_SLUG] == {}
 
 
 # Scenario: downgrade drops the column without touching the embedded source data.
 def test_downgrade_drops_column_no_data_loss(seeded_db: str) -> None:
+    """The embedded source columns (the backfill source) stay untouched."""
     _run_migration("upgrade", _DISTRIBUTION_REV)
 
     _run_migration("downgrade", _HEAD_BEFORE)
 
     assert "distribution" not in _columns(seeded_db)
-    # The embedded source columns (the backfill source) are untouched.
     conn = sqlite3.connect(seeded_db)
     try:
         caption = conn.execute(

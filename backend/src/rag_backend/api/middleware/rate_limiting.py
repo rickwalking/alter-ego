@@ -7,7 +7,6 @@ from slowapi.util import get_remote_address
 
 from rag_backend.infrastructure.config.settings import Settings
 
-# Global rate limiter with default limits
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["120/minute"],
@@ -24,7 +23,6 @@ def setup_rate_limiting(app, _settings: Settings) -> None:
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
 
-    # Add rate limit exceeded handler
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 

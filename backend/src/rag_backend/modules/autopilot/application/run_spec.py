@@ -1,12 +1,12 @@
 """Build the carousel spec of a queued run (split from ``runner.py``).
 
-AE-0377: a POV run carries the owner-confirmed thesis and uses the POV
+A POV run carries the owner-confirmed thesis and uses the POV
 photo preset; ``needs_thesis`` keeps a POV run from starting before that.
 PR #106 review: the spec also carries the scout's POV format and slide count
 (defaults only when the scout left them out), the autopilot persona (so the
 content phase scores voice) and, for POV, the owner's slide-1 photo. A POV
 spec without that photo must not create a carousel.
-AE-0406: ``pov_news`` is a POV-family mode (same thesis step, photo and
+``pov_news`` is a POV-family mode (same thesis step, photo and
 contract); its spec also carries the topic's verified quotes. Its
 ``pov_format`` is ignored: the news structure uses the default layout.
 """
@@ -42,9 +42,11 @@ from rag_backend.modules.autopilot.pov_constants import (
 def project_spec(
     run: AutopilotRun, topic: TopicCandidate, owner_user_id: str
 ) -> ProjectSpec:
-    """The carousel the runner creates for ``run`` from its topic."""
+    """The carousel the runner creates for ``run`` from its topic.
+
+    A ``pov_news`` run drops a stored format: the news structure decides.
+    """
     pov = is_pov(topic)
-    # AE-0406: ``pov_news`` drops a stored format (the news structure decides).
     choice = pov_choice_for(
         topic.content_mode,
         PovChoice(pov_format=topic.pov_format, slide_count=topic.slide_count),
@@ -67,7 +69,7 @@ def project_spec(
 
 
 def pov_image_style(topic: TopicCandidate) -> str:
-    """AE-0395: the scout's explicit supported style, else neo-anime."""
+    """The scout's explicit supported style, else neo-anime."""
     style = topic.image_style
     if style != DEFAULT_IMAGE_STYLE and is_supported_style(style):
         return style
