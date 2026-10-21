@@ -38,3 +38,10 @@ export function offersRadarTemplates(
 ): boolean {
   return (project.content_mode ?? RADAR_CONTENT_MODE) === RADAR_CONTENT_MODE;
 }
+
+/** AE-0445: the slide-1 cover picker belongs to Ponto de Vista projects only. */
+export function offersCoverPicker(
+  project: Pick<CarouselProjectResponse, "content_mode">,
+): boolean {
+  return !offersRadarTemplates(project);
+}

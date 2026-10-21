@@ -3172,6 +3172,132 @@
         "title": "CoverAssetResponse",
         "type": "object"
       },
+      "CoverOptionResponse": {
+        "description": "One image slide 1 may show: a library photo or the GrokBot offer.",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "",
+            "description": "GrokBot cover kind (ai_image | screenshot)",
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "description": "library | offer",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "source"
+        ],
+        "title": "CoverOptionResponse",
+        "type": "object"
+      },
+      "CoverOptionsResponse": {
+        "description": "The current slide-1 image and the options, library photos first.",
+        "properties": {
+          "current_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Asset Id"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/CoverOptionResponse"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "current_asset_id",
+          "options"
+        ],
+        "title": "CoverOptionsResponse",
+        "type": "object"
+      },
+      "CoverPickRequest": {
+        "description": "The chosen asset and the workflow lock version the page read.",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_id",
+          "expected_version"
+        ],
+        "title": "CoverPickRequest",
+        "type": "object"
+      },
+      "CoverPickResponse": {
+        "description": "The switch was stored and the slides + PDFs re-rendered.",
+        "properties": {
+          "artifact_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Version"
+          },
+          "current_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Asset Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "status",
+          "current_asset_id"
+        ],
+        "title": "CoverPickResponse",
+        "type": "object"
+      },
       "CoverReference": {
         "additionalProperties": false,
         "description": "AE-0418: the GrokBot cover a topic names (``cover.asset_id``).\n\nUnknown keys are a 422 for the batch. Whether the asset exists, is fresh,\nunused and (screenshot) sourced is a per-topic domain rule, so a malformed\nid is a ``cover_asset_unknown`` rejection of that topic only.",
@@ -11971,6 +12097,126 @@
         "summary": "Generate Caption",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/cover": {
+      "put": {
+        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.",
+        "operationId": "pick_cover_api_carousels__project_id__cover_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverPickRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverPickResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: the lock version moved, another mutator holds the project lock, a workflow run or an artifact build is in progress."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change slide 1's image of a completed POV carousel and re-render",
+        "tags": [
+          "carousels",
+          "carousels-cover-pick"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/cover-options": {
+      "get": {
+        "description": "Library photos (file present), then the GrokBot offer; current marked.",
+        "operationId": "list_cover_options_api_carousels__project_id__cover_options_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverOptionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The images slide 1 of a POV carousel may show",
+        "tags": [
+          "carousels",
+          "carousels-cover-pick"
         ]
       }
     },

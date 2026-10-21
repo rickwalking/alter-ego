@@ -1,6 +1,8 @@
 """Switch a finished carousel's slide 1 to (or off) the GrokBot cover (AE-0418).
 
-The owner's Telegram tap is applied on the worker tick, like "Fix issues":
+The owner's Telegram tap is applied on the worker tick, like "Fix issues".
+AE-0445: the publish-step picker writes through the same path and may also
+bind another library photo as the slide-1 photo (``hook_photo``).
 
 1. stage the cover file where the slides render (before anything is written,
    so a render never meets a missing file);
@@ -57,12 +59,22 @@ class SlideCoverSwitchDeps:
 
 
 @dataclass(frozen=True, kw_only=True)
+class HookPhotoChoice:
+    """AE-0445: a library photo for slide 1, already staged where slides render."""
+
+    asset_id: UUID
+    staged_path: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class SlideCoverSwitchCommand:
-    """The project, the lock version read, and the cover (None = default)."""
+    """The project, the lock version read, the cover (None = default) and
+    the slide-1 library photo to bind (None = keep the bound one)."""
 
     project_id: str
     expected_version: int
     cover: SlideCover | None
+    hook_photo: HookPhotoChoice | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -101,6 +113,9 @@ class SlideCoverSwitchService:
         if project is None:
             return
         project.slide_cover = command.cover
+        if command.hook_photo is not None:
+            project.hook_asset_id = command.hook_photo.asset_id
+            project.hook_asset_staged_path = command.hook_photo.staged_path
         await self._deps.repo.update_project(project)
         await self._deps.db.commit()
 
@@ -108,6 +123,7 @@ class SlideCoverSwitchService:
 __all__ = [
     "CoverRenderer",
     "CoverStager",
+    "HookPhotoChoice",
     "SlideCoverSwitchCommand",
     "SlideCoverSwitchDeps",
     "SlideCoverSwitchResult",

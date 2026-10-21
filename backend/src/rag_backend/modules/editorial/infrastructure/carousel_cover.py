@@ -35,6 +35,7 @@ from rag_backend.modules.editorial.infrastructure.pov_inputs import (
 if TYPE_CHECKING:
     from rag_backend.application.services.carousel.slide_cover_switch import (
         SlideCoverSwitchResult,
+        SlideCoverSwitchService,
     )
 
 
@@ -194,10 +195,9 @@ class _ProjectStager:
         return await stage_slide_cover(self._session, project)
 
 
-async def switch_slide_cover(request: CoverSwitchRequest) -> SlideCoverSwitchResult:
-    """Stage, store and re-render one slide-1 cover change."""
+def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService:
+    """The cover switch of one session: project stager + republish renderer."""
     from rag_backend.application.services.carousel.slide_cover_switch import (
-        SlideCoverSwitchCommand,
         SlideCoverSwitchDeps,
         SlideCoverSwitchService,
     )
@@ -208,8 +208,7 @@ async def switch_slide_cover(request: CoverSwitchRequest) -> SlideCoverSwitchRes
         RepublishRenderer,
     )
 
-    session = request.session
-    service = SlideCoverSwitchService(
+    return SlideCoverSwitchService(
         SlideCoverSwitchDeps(
             db=session,
             repo=PostgresCarouselRepository(session=session),
@@ -217,6 +216,15 @@ async def switch_slide_cover(request: CoverSwitchRequest) -> SlideCoverSwitchRes
             renderer=RepublishRenderer(session),
         )
     )
+
+
+async def switch_slide_cover(request: CoverSwitchRequest) -> SlideCoverSwitchResult:
+    """Stage, store and re-render one slide-1 cover change."""
+    from rag_backend.application.services.carousel.slide_cover_switch import (
+        SlideCoverSwitchCommand,
+    )
+
+    service = slide_cover_switch_service(request.session)
     return await service.switch(
         SlideCoverSwitchCommand(
             project_id=request.project_id,
@@ -232,6 +240,7 @@ __all__ = [
     "StoredCoverImage",
     "cover_image_file",
     "delete_cover_images",
+    "slide_cover_switch_service",
     "stage_slide_cover",
     "store_cover_image",
     "switch_slide_cover",

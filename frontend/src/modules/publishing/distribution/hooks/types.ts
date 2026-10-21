@@ -19,3 +19,10 @@ export interface InstagramPublishPayload {
   projectId: string;
   caption: string;
 }
+
+/** AE-0445: one slide-1 cover pick at the workflow lock version read. */
+export interface CoverPickInput {
+  projectId: string;
+  assetId: string;
+  expectedVersion: number;
+}

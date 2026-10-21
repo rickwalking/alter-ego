@@ -17,6 +17,7 @@ import { useEditorialWorkflow } from "@/modules/editorial";
 import { AutoRepairButton } from "@/modules/editorial";
 import { resolveLocalizedSlides } from "@/modules/editorial";
 import {
+  CoverPickerSection,
   CreateBlogFromCarousel,
   PublishPanel,
   PublishFailedNotice,
@@ -30,6 +31,7 @@ import {
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import {
   isPublishReady,
+  offersCoverPicker,
   offersRadarTemplates,
 } from "@/app/dashboard/create/[id]/publish/publish-readiness";
 
@@ -307,6 +309,17 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                 slideNumbers={localizedSlides.map((slide) => slide.slide_index)}
               />
             </div>
+
+            {/* AE-0445: swap slide 1's photo of a Ponto de Vista carousel. */}
+            {workflowState && offersCoverPicker(project) && (
+              <div style={{ marginTop: "16px" }}>
+                <CoverPickerSection
+                  projectId={projectId}
+                  lockVersion={workflowState.lock_version ?? 1}
+                  onSwitched={handleRebuilt}
+                />
+              </div>
+            )}
 
             <div style={{ marginTop: "16px" }}>
               <RebuildPdfSection

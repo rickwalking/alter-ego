@@ -138,6 +138,7 @@ export {
 export { PublishFailedNotice } from "./distribution/components/publish-failed-notice";
 export { RegenerateStrategySection } from "./distribution/components/regenerate-strategy-section";
 export { RebuildPdfSection } from "./distribution/components/rebuild-pdf-section";
+export { CoverPickerSection } from "./distribution/components/cover-picker-section";
 export { SlideTextEditSection } from "./distribution/components/slide-text-edit-section";
 
 /* --- distribution: lib / types --- */
