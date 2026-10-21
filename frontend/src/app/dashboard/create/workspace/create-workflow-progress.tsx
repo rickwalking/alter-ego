@@ -3,8 +3,25 @@
 import { PHASE_PROGRESS_TAG_TO_EDITORIAL_PHASE } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASES, WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import type { CarouselPhaseProgress } from "@/schemas/carousel";
+import { z } from "zod";
+import { carouselPhaseProgressSchema } from "@/schemas/carousel";
 import { PhaseProgressDetail } from "./phase-progress-detail";
+
+/**
+ * ``phase_progress`` is untyped JSON: validate it instead of casting, so a
+ * payload without a ``label`` renders nothing rather than crashing (AE-0446).
+ * Live SSE progress may be untagged, hence the optional ``phase``.
+ */
+const liveProgressSchema = carouselPhaseProgressSchema.extend({
+  phase: z.string().optional(),
+});
+
+type LiveProgress = z.infer<typeof liveProgressSchema>;
+
+function parseProgress(raw: unknown): LiveProgress | null {
+  const parsed = liveProgressSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
 
 interface EditorialWorkflowProgressProps {
   state: EditorialWorkflowState | null;
@@ -19,7 +36,7 @@ interface EditorialWorkflowProgressProps {
  * workflow phase (a sub-step label) belongs to the running phase.
  */
 function isProgressOfPhase(
-  progress: CarouselPhaseProgress,
+  progress: LiveProgress,
   currentPhase: string | undefined,
 ): boolean {
   if (!progress.phase) {
@@ -49,10 +66,7 @@ export function CreateWorkflowProgress({
 }: EditorialWorkflowProgressProps): React.JSX.Element | null {
   const isActiveWork =
     loading || state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
-  const progress = state?.phase_progress as
-    | CarouselPhaseProgress
-    | null
-    | undefined;
+  const progress = parseProgress(state?.phase_progress);
   const label = progress?.label.trim();
 
   if (

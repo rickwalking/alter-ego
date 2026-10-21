@@ -109,6 +109,50 @@ export function carouselSubtitle(
   return null;
 }
 
+/** The localizable copy fields of a carousel project (list item or projection). */
+export interface CarouselCopyFields {
+  title: string | null;
+  title_en?: string | null;
+  subtitle: string | null;
+  subtitle_en?: string | null;
+  topic: string;
+}
+
+export interface LocalizedCarouselCopy {
+  language: typeof BLOG_LANGUAGES.ENGLISH | typeof BLOG_LANGUAGES.PORTUGUESE;
+  /** "" when neither language nor the topic has a real title. */
+  title: string;
+  subtitle: string | null;
+}
+
+/**
+ * AE-0446: a card shows its title and subtitle in ONE language. The locale's
+ * language wins when it has a real title; otherwise the card falls back to the
+ * other language as a whole, never an English title over a Portuguese subtitle.
+ */
+export function localizedCarouselCopy(
+  fields: CarouselCopyFields,
+  locale: SupportedLocale,
+): LocalizedCarouselCopy {
+  const englishTitle = resolveDisplayTitle([fields.title_en]);
+  const portugueseTitle = resolveDisplayTitle([fields.title]);
+  const useEnglish =
+    englishTitle !== "" &&
+    (locale === BLOG_LANGUAGES.ENGLISH || portugueseTitle === "");
+  if (useEnglish) {
+    return {
+      language: BLOG_LANGUAGES.ENGLISH,
+      title: englishTitle,
+      subtitle: carouselSubtitle([fields.subtitle_en]),
+    };
+  }
+  return {
+    language: BLOG_LANGUAGES.PORTUGUESE,
+    title: resolveDisplayTitle([fields.title, fields.topic]),
+    subtitle: carouselSubtitle([fields.subtitle]),
+  };
+}
+
 export function toPublicCarouselCard(
   project: CarouselProjectItem,
   locale: SupportedLocale,

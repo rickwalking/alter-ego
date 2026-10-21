@@ -133,11 +133,17 @@ async def _assert_blog_visible(
         raise HTTPException(status_code=404, detail=ERR_BLOG_NOT_GENERATED)
 
 
-async def _load_project_with_output(
+async def _load_public_project_with_output(
     handlers: PresentationHandlers,
     project_id: UUID,
 ) -> CarouselProject:
+    """Load a public carousel that has rendered output, else a 404.
+
+    The public check runs before the output check so a private, unrendered
+    carousel answers exactly like an unknown id (ADR-0013, AE-0446).
+    """
     project = await _load_project_or_404(handlers, project_id)
+    assert_carousel_public(project)
     if project.output_dir is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_GENERATED)
     return project
@@ -312,8 +318,7 @@ async def get_carousel_image(
     route uses, so a public page never 404s on an image the owner can see
     (AE-0412, QA B08).
     """
-    project = await _load_project_with_output(handlers, project_id)
-    assert_carousel_public(project)
+    project = await _load_public_project_with_output(handlers, project_id)
     images_dir = resolve_shared_images_dir(project)
     image_path = _resolve_image_file(images_dir, filename) if images_dir else None
     if image_path is None:
@@ -342,8 +347,7 @@ async def get_carousel_slide_image(
     handlers: PresentationHandlersDep,
 ) -> FileResponse:
     """Serve a per-language rendered slide JPG (from <output>/<lang>/)."""
-    project = await _load_project_with_output(handlers, project_id)
-    assert_carousel_public(project)
+    project = await _load_public_project_with_output(handlers, project_id)
     image_path = resolve_slide_image_path(project, lang, filename)
     if image_path is None:
         image_path = _resolve_image_file(
