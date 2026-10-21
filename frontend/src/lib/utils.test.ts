@@ -5,6 +5,7 @@ import {
   formatRelativeTime,
   truncate,
   generateId,
+  firstNonBlank,
   debounce,
   throttle,
 } from "./utils";
@@ -17,7 +18,7 @@ describe("Utils Module", () => {
       });
 
       it("Then it should handle conditional classes", () => {
-        expect(cn("foo", true && "bar", false && "baz")).toBe("foo bar");
+        expect(cn("foo", { bar: true, baz: false })).toBe("foo bar");
       });
 
       it("Then it should merge tailwind classes with proper precedence", () => {
@@ -39,6 +40,18 @@ describe("Utils Module", () => {
       it("Then it should handle objects for conditional classes", () => {
         expect(cn("foo", { bar: true, baz: false })).toBe("foo bar");
       });
+    });
+  });
+
+  describe("Given the firstNonBlank utility function", () => {
+    it("Then it should return the first non-blank candidate", () => {
+      expect(firstNonBlank([undefined, "  ", " hello ", "world"])).toBe(
+        "hello",
+      );
+    });
+
+    it("Then it should return an empty string when every candidate is blank", () => {
+      expect(firstNonBlank([null, undefined, "", "   "])).toBe("");
     });
   });
 

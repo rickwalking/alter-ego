@@ -13,19 +13,27 @@ function hasMatchMedia(): boolean {
   );
 }
 
+/**
+ * jsdom / partial test mocks can return undefined or omit the listener API, so
+ * the list is typed as partial instead of trusting the DOM lib's signature.
+ */
+function mediaQueryList(query: string): Partial<MediaQueryList> | undefined {
+  return window.matchMedia(query);
+}
+
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onChange: () => void): (() => void) => {
       if (!hasMatchMedia()) {
         return () => {};
       }
-      const mql = window.matchMedia(query);
-      // jsdom / partial mocks can return undefined or omit the listener API.
-      if (!mql || typeof mql.addEventListener !== "function") {
+      const mql = mediaQueryList(query);
+      if (!mql?.addEventListener || !mql.removeEventListener) {
         return () => {};
       }
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
+      const { addEventListener, removeEventListener } = mql;
+      addEventListener.call(mql, "change", onChange);
+      return () => removeEventListener.call(mql, "change", onChange);
     },
     [query],
   );
@@ -34,8 +42,7 @@ export function useMediaQuery(query: string): boolean {
     if (!hasMatchMedia()) {
       return false;
     }
-    const mql = window.matchMedia(query);
-    return mql ? mql.matches : false;
+    return mediaQueryList(query)?.matches ?? false;
   }, [query]);
 
   // SSR snapshot is always false (no viewport on the server).

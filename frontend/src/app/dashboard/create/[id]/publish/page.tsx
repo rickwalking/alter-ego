@@ -29,6 +29,7 @@ import {
   useRepublishCarousel,
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { firstNonBlank } from "@/lib/utils";
 import {
   isPublishReady,
   offersCoverPicker,
@@ -210,7 +211,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
-              {project.title || project.topic}
+              {firstNonBlank([project.title, project.topic])}
             </h1>
             <p style={{ fontSize: "13px", color: TEXT_DIM, marginTop: "6px" }}>
               {project.audience} · {project.niche}
@@ -358,7 +359,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                     workflowState.phase_status ===
                     WORKFLOW_PHASE_STATUS.IN_PROGRESS
                   }
-                  rebuildPending={Boolean(project?.needs_republish_since)}
+                  rebuildPending={Boolean(project.needs_republish_since)}
                   onEdited={() => {
                     void Promise.all([refreshState(), refetchProject()]);
                   }}

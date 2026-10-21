@@ -80,8 +80,8 @@ describe("resolveLocalizedSlides (AE-0414 B10)", () => {
 
     const [slide] = resolveLocalizedSlides(state);
 
-    expect(slide.presentation_pt.heading).toBe("Validated");
-    expect(slide.presentation_en.body).toBe("Body 2");
+    expect(slide!.presentation_pt.heading).toBe("Validated");
+    expect(slide!.presentation_en.body).toBe("Body 2");
   });
 
   // Scenario: A malformed localized slide falls back to its draft presentation
@@ -94,8 +94,8 @@ describe("resolveLocalizedSlides (AE-0414 B10)", () => {
 
     const slides = resolveLocalizedSlides(state);
 
-    expect(slides[0].presentation_pt.heading).toBe("Rascunho 1");
-    expect(slides[1].presentation_pt.heading).toBe("Ok");
+    expect(slides[0]!.presentation_pt.heading).toBe("Rascunho 1");
+    expect(slides[1]!.presentation_pt.heading).toBe("Ok");
   });
 
   it("still shows a malformed localized slide that has no draft", () => {
@@ -107,7 +107,7 @@ describe("resolveLocalizedSlides (AE-0414 B10)", () => {
     const slides = resolveLocalizedSlides(stateWith([malformed], []));
 
     expect(slides).toHaveLength(1);
-    expect(slides[0].slide_index).toBe(4);
+    expect(slides[0]!.slide_index).toBe(4);
   });
 
   it("adds slides that exist only as drafts, in slide order", () => {
@@ -119,9 +119,9 @@ describe("resolveLocalizedSlides (AE-0414 B10)", () => {
     const slides = resolveLocalizedSlides(state);
 
     expect(slides.map((slide) => slide.slide_index)).toEqual([1, 2, 3]);
-    expect(slides[0].presentation_pt.heading).toBe("Draft 1");
-    expect(slides[1].presentation_en.heading).toBe("Draft 2");
-    expect(slides[2].presentation_pt.heading).toBe("Three");
+    expect(slides[0]!.presentation_pt.heading).toBe("Draft 1");
+    expect(slides[1]!.presentation_en.heading).toBe("Draft 2");
+    expect(slides[2]!.presentation_pt.heading).toBe("Three");
   });
 
   it("numbers drafts without a slide_index by position and reads legacy copy", () => {
@@ -133,14 +133,14 @@ describe("resolveLocalizedSlides (AE-0414 B10)", () => {
     const slides = resolveLocalizedSlides(state);
 
     expect(slides.map((slide) => slide.slide_index)).toEqual([1, 2]);
-    expect(slides[0].slide_type).toBe("intro");
-    expect(slides[0].presentation_en).toEqual({
+    expect(slides[0]!.slide_type).toBe("intro");
+    expect(slides[0]!.presentation_en).toEqual({
       slide_type: "intro",
       heading: "Hook",
       body: "Sub",
     });
-    expect(slides[1].slide_type).toBe("content");
-    expect(slides[1].presentation_pt.body).toBe("Only text");
+    expect(slides[1]!.slide_type).toBe("content");
+    expect(slides[1]!.presentation_pt.body).toBe("Only text");
   });
 });
 
@@ -164,10 +164,10 @@ describe("manual-fix payload (AE-0414 B04/B11)", () => {
     const changed = changedLocalizedSlides(baseline, edited);
 
     expect(changed).toHaveLength(1);
-    expect(changed[0].slide_index).toBe(1);
-    expect(changed[0].presentation_pt.body).toBe(LONG_BODY);
-    expect(String(changed[0].presentation_pt.body)).toHaveLength(300);
-    expect(changed[0].presentation_en.heading).toBe("One");
+    expect(changed[0]!.slide_index).toBe(1);
+    expect(changed[0]!.presentation_pt.body).toBe(LONG_BODY);
+    expect(String(changed[0]!.presentation_pt.body)).toHaveLength(300);
+    expect(changed[0]!.presentation_en.heading).toBe("One");
   });
 
   it("returns nothing when nothing changed", () => {
@@ -194,16 +194,18 @@ describe("manual-fix payload (AE-0414 B04/B11)", () => {
     });
 
     expect(slidesHaveCopyChanges([slide], edited)).toBe(true);
-    expect(changedLocalizedSlides([slide], edited)[0].presentation_en).toEqual({
-      heading: "Summary",
-      summary_points: [{ title: "A", body: "new" }],
-    });
+    expect(changedLocalizedSlides([slide], edited)[0]!.presentation_en).toEqual(
+      {
+        heading: "Summary",
+        summary_points: [{ title: "A", body: "new" }],
+      },
+    );
   });
 
   it("detects reordered or resized slide lists as changes", () => {
     const baseline = [localized(1, "A"), localized(2, "B")];
-    expect(slidesHaveCopyChanges(baseline, [baseline[0]])).toBe(true);
-    expect(slidesHaveCopyChanges(baseline, [baseline[1], baseline[0]])).toBe(
+    expect(slidesHaveCopyChanges(baseline, [baseline[0]!])).toBe(true);
+    expect(slidesHaveCopyChanges(baseline, [baseline[1]!, baseline[0]!])).toBe(
       true,
     );
     expect(slidesHaveCopyChanges(baseline, [...baseline])).toBe(false);
@@ -229,8 +231,8 @@ describe("applySlideExtraEdit (AE-0414 B11)", () => {
       extraKey: "creator_name",
       value: "Pedro Marins",
     });
-    expect(edited.presentation_pt.creator_name).toBe("Pedro Marins");
-    expect(edited.presentation_en.creator_name).toBe("Pedro");
+    expect(edited!.presentation_pt.creator_name).toBe("Pedro Marins");
+    expect(edited!.presentation_en.creator_name).toBe("Pedro");
   });
 
   it("edits one text field of an object extra, keeping the rest", () => {
@@ -241,7 +243,7 @@ describe("applySlideExtraEdit (AE-0414 B11)", () => {
       field: "quote",
       value: "New quote",
     });
-    expect(edited.presentation_pt.insight).toEqual({
+    expect(edited!.presentation_pt.insight).toEqual({
       icon_name: "quote",
       quote: "New quote",
       attribution: "A",
@@ -258,6 +260,6 @@ describe("applySlideExtraEdit (AE-0414 B11)", () => {
       value: "x",
     });
     expect(untouched).toBe(other);
-    expect(edited.presentation_pt.stats).toEqual([1]);
+    expect(edited!.presentation_pt.stats).toEqual([1]);
   });
 });

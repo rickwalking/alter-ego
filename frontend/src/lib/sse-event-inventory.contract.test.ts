@@ -67,7 +67,7 @@ describe("SSE event-name inventory contract", () => {
   //   Given a frontend event-name constant whose value differs
   //   Then the test fails and names the mismatched constant
   it("EDITORIAL_WORKFLOW_SSE_EVENTS matches the frozen inventory", () => {
-    const expected = inventory.frontend[EDITORIAL_KEY].constants;
+    const expected = inventory.frontend[EDITORIAL_KEY]!.constants;
     const mismatches = diffConstants(
       "EDITORIAL_WORKFLOW_SSE_EVENTS",
       EDITORIAL_WORKFLOW_SSE_EVENTS,
@@ -82,7 +82,7 @@ describe("SSE event-name inventory contract", () => {
   // Scenario: Frontend constants match the inventory (chat SSE_EVENT_TYPE map)
   // Scenario: Drifted frontend constant is caught in CI
   it("SSE_EVENT_TYPE matches the frozen inventory", () => {
-    const expected = inventory.frontend[CHAT_KEY].constants;
+    const expected = inventory.frontend[CHAT_KEY]!.constants;
     const mismatches = diffConstants(
       "SSE_EVENT_TYPE",
       SSE_EVENT_TYPE,

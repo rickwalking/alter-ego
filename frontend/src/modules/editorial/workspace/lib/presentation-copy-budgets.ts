@@ -97,7 +97,7 @@ const EXTRA_BUDGET_KEY: Readonly<Record<string, string>> = {
 
 function budgetTable(policyVersion?: string | null): BudgetTable | null {
   if (!policyVersion) {
-    return POLICY_BUDGETS[DEFAULT_POLICY_VERSION];
+    return POLICY_BUDGETS[DEFAULT_POLICY_VERSION] ?? null;
   }
   return POLICY_BUDGETS[policyVersion] ?? null;
 }

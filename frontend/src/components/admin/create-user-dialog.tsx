@@ -45,8 +45,10 @@ export function CreateUserDialog({
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || t("createError"));
+        const data = (await response.json().catch(() => ({}))) as {
+          detail?: string;
+        };
+        throw new Error(data.detail ?? t("createError"));
       }
 
       const data = (await response.json()) as { temp_password?: string };

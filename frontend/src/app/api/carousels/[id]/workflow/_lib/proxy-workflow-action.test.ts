@@ -49,7 +49,7 @@ describe("proxyWorkflowAction", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(`${BACKEND_BASE}/api/carousels/c1/workflow/start`);
     expect(init?.method).toBe("POST");
     expect((init?.headers as Record<string, string>)["Content-Type"]).toBe(
@@ -74,7 +74,7 @@ describe("proxyWorkflowAction", () => {
       WORKFLOW_ACTIONS.RESUME,
     );
 
-    expect(fetchMock.mock.calls[0][0]).toBe(
+    expect(fetchMock.mock.calls[0]![0]).toBe(
       `${BACKEND_BASE}/api/carousels/c9/workflow/resume`,
     );
     expect(response.status).toBe(502);

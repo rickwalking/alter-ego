@@ -197,16 +197,16 @@ describe("BlogPostEditPage (AE-0424)", () => {
     fireEvent.change(screen.getByLabelText("Excerpt"), {
       target: { value: "Resumo" },
     });
-    fireEvent.change(screen.getAllByLabelText("Heading")[0], {
+    fireEvent.change(screen.getAllByLabelText("Heading")[0]!, {
       target: { value: "H" },
     });
     const draft = { title: "x", excerpt: "", document: v2Document() };
     const results = updateDraft.mock.calls.map(([edit]) =>
       (edit as (d: typeof draft) => typeof draft)(draft),
     );
-    expect(results[0].title).toBe("Novo");
-    expect(results[1].excerpt).toBe("Resumo");
-    expect(results[2].document.sections[0].heading).toBe("H");
+    expect(results[0]!.title).toBe("Novo");
+    expect(results[1]!.excerpt).toBe("Resumo");
+    expect(results[2]!.document.sections[0]!.heading).toBe("H");
   });
 
   it("applies an AI suggestion to the selected section text", () => {

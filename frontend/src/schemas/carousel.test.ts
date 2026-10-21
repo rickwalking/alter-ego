@@ -297,7 +297,7 @@ describe("Carousel Project List Response Schema", () => {
   it("parses items as array of projects", () => {
     const result = carouselProjectListResponseSchema.parse(VALID_LIST);
     expect(result.items).toHaveLength(1);
-    expect(result.items[0].id).toBe("abc-123");
+    expect(result.items[0]!.id).toBe("abc-123");
   });
 
   // Scenario: total, limit, and offset are numbers

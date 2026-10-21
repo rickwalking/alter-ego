@@ -64,7 +64,7 @@ describe("sessionAfterSlot", () => {
       sections: serverDoc.sections,
     }));
     expect(next.draft?.title).toBe("Digitando");
-    expect(next.draft?.document.sections[0].body_md).toBe("Servidor");
+    expect(next.draft?.document.sections[0]!.body_md).toBe("Servidor");
     expect(sessionAfterSlot(null, server, (d) => d).draft?.title).toBe(
       "GPT 5.6 saiu",
     );

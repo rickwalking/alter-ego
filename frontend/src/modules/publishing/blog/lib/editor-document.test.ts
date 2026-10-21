@@ -43,7 +43,7 @@ describe("section edits (AE-0424)", () => {
   it("appends a section with a fresh sec_<uuid4> id", () => {
     const doc = addSection(v2Document(), "pt");
     expect(doc.sections).toHaveLength(4);
-    expect(doc.sections[3].id).toMatch(/^sec_[0-9a-f-]{36}$/);
+    expect(doc.sections[3]!.id).toMatch(/^sec_[0-9a-f-]{36}$/);
     expect(newSectionId()).not.toBe(newSectionId());
   });
 
@@ -57,7 +57,7 @@ describe("section edits (AE-0424)", () => {
   it("moves a section with its own image and id", () => {
     const doc = moveSection(v2Document(), "pt", { id: SEC_1, delta: 1 });
     expect(doc.sections.map((s) => s.id)).toEqual([SEC_2, SEC_1, SEC_3]);
-    expect(doc.sections[1].image?.url).toBe("https://cdn.example/1.jpg");
+    expect(doc.sections[1]!.image?.url).toBe("https://cdn.example/1.jpg");
   });
 
   it("ignores a move past either end or of an unknown id", () => {
@@ -82,7 +82,7 @@ describe("language subtrees (AE-0424)", () => {
       id: EN_1,
       patch: { body_md: "Edited" },
     });
-    expect(doc.translations.en.sections[0].body_md).toBe("Edited");
+    expect(doc.translations.en!.sections[0]!.body_md).toBe("Edited");
     expect(JSON.stringify({ ...doc, translations: {} })).toBe(
       JSON.stringify({ ...original, translations: {} }),
     );
@@ -127,8 +127,8 @@ describe("server merges (AE-0424)", () => {
       language: "pt",
       sectionId: SEC_3,
     });
-    expect(merged.sections[2].image?.url).toBe("/api/blog-images/p/n.jpg");
-    expect(merged.sections[0].body_md).toBe("Digitando");
+    expect(merged.sections[2]!.image?.url).toBe("/api/blog-images/p/n.jpg");
+    expect(merged.sections[0]!.body_md).toBe("Digitando");
   });
 
   it("takes the server cover", () => {
@@ -168,7 +168,7 @@ describe("server merges (AE-0424)", () => {
 
   it("takes the server EN translation and leaves PT alone", () => {
     const merged = withServerTranslation(v2Document(), v2Document(true));
-    expect(merged.translations.en.sections[0].id).toBe(EN_1);
+    expect(merged.translations.en!.sections[0]!.id).toBe(EN_1);
     expect(withServerTranslation(v2Document(), v2Document())).toEqual(
       v2Document(),
     );
@@ -184,9 +184,9 @@ describe("normalizeForSave / applySuggestion", () => {
     const normalized = normalizeForSave(
       updateSection(doc, "pt", { id: SEC_1, patch: { heading: "" } }),
     );
-    expect(normalized.sections[0].heading).toBeNull();
-    expect(normalized.translations.en.sections[0].heading).toBeNull();
-    expect(normalized.sections[1].heading).toBe("Dois");
+    expect(normalized.sections[0]!.heading).toBeNull();
+    expect(normalized.translations.en!.sections[0]!.heading).toBeNull();
+    expect(normalized.sections[1]!.heading).toBe("Dois");
   });
 
   it("replaces the selected text of the selected section", () => {
@@ -195,7 +195,7 @@ describe("normalizeForSave / applySuggestion", () => {
       selection: { sectionId: SEC_2, text: "dois" },
       text: "2",
     });
-    expect(doc.sections[1].body_md).toBe("Corpo 2");
+    expect(doc.sections[1]!.body_md).toBe("Corpo 2");
   });
 
   it("does nothing without a selection or when the text is gone", () => {

@@ -29,6 +29,13 @@ type ViewMode = "list" | "create" | "upload";
  * loads and the route-level `error.tsx` boundary handles fetch errors. No
  * `isLoading` branch lives here.
  */
+/** Document metadata is free-form JSON: keep only string tags. */
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
 function DocumentListSection({
   onCreateNew,
   onUploadNew,
@@ -40,7 +47,7 @@ function DocumentListSection({
     const meta = doc.metadata as Record<string, unknown> | undefined;
     return {
       ...doc,
-      tags: (meta?.tags as string[]) ?? [],
+      tags: stringList(meta?.tags),
       createdAt: doc.created_at,
       updatedAt: doc.updated_at,
     };

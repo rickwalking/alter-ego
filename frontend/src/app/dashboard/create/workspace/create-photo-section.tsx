@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { API_ENDPOINTS } from "@/constants/api";
 import { BG_CARD, NEON_AMBER, NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
+import { firstNonBlank } from "@/lib/utils";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
 export interface PhotoOption {
@@ -57,7 +58,7 @@ export function CreatePhotoSection({
               type="button"
               role="radio"
               aria-checked={photo.id === selectedId}
-              aria-label={photo.pose_tag || t("photoLabel")}
+              aria-label={firstNonBlank([photo.pose_tag, t("photoLabel")])}
               onClick={() => onSelect(photo.id)}
               style={{
                 width: "72px",
@@ -75,7 +76,7 @@ export function CreatePhotoSection({
             >
               <Image
                 src={API_ENDPOINTS.CREATOR_ASSET_IMAGE(photo.id)}
-                alt={photo.pose_tag || t("photoLabel")}
+                alt={firstNonBlank([photo.pose_tag, t("photoLabel")])}
                 width={72}
                 height={90}
                 className="h-full w-full object-contain"

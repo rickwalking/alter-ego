@@ -62,7 +62,7 @@ describe("GET /auth/logout", () => {
 
     expectCookieCleared(response);
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toMatch(/\/api\/auth\/logout$/);
     expect(init?.method).toBe("POST");
     expect(locationOf(response).toString()).toBe(

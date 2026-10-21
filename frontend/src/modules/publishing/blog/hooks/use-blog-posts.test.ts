@@ -53,7 +53,7 @@ describe("useBlogPosts delete (AE-0296)", () => {
       await result.current.delete("p-1", 3);
     });
 
-    const [url, init] = mockFetch.mock.calls[1];
+    const [url, init] = mockFetch.mock.calls[1]!;
     expect(String(url)).toContain("/blog-posts/p-1");
     expect(init?.method).toBe("DELETE");
     expect((init?.headers as Record<string, string>)["If-Match"]).toBe("3");
@@ -113,12 +113,12 @@ describe("useBlogPosts unpublish (AE-0296)", () => {
       await result.current.unpublish("p-1", 3);
     });
 
-    const [url, init] = mockFetch.mock.calls[1];
+    const [url, init] = mockFetch.mock.calls[1]!;
     expect(String(url)).toContain("/blog-posts/p-1/unpublish");
     expect(init?.method).toBe("POST");
     expect((init?.headers as Record<string, string>)["If-Match"]).toBe("3");
-    expect(result.current.posts[0].status).toBe("draft");
-    expect(result.current.posts[0].lock_version).toBe(4);
+    expect(result.current.posts[0]!.status).toBe("draft");
+    expect(result.current.posts[0]!.lock_version).toBe(4);
   });
 
   it("refetches and throws version_conflict on a stale unpublish", async () => {

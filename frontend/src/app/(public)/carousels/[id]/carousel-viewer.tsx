@@ -75,7 +75,7 @@ export function CarouselViewer({
     onNext: next,
   });
 
-  if (total === 0) {
+  if (current === undefined) {
     return null;
   }
 

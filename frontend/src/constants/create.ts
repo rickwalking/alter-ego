@@ -208,7 +208,7 @@ export interface PovTemplate {
   readonly strategy: string;
 }
 
-export const POV_TEMPLATES: readonly PovTemplate[] = [
+export const POV_TEMPLATES: readonly [PovTemplate, ...PovTemplate[]] = [
   { icon: "🔥", format: "opiniao", strategy: "insight_quote" },
   { icon: "🛠️", format: "como_eu_faco", strategy: "numbered_list" },
   { icon: "⚠️", format: "erros_e_mitos", strategy: "hero_content" },

@@ -38,7 +38,7 @@ describe("BlogPostStatusBadge", () => {
     };
     for (const status of BLOG_POST_STATUSES) {
       const { unmount } = render(<BlogPostStatusBadge status={status} />);
-      expect(screen.getByText(labels[status])).toBeInTheDocument();
+      expect(screen.getByText(labels[status]!)).toBeInTheDocument();
       unmount();
     }
   });

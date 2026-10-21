@@ -52,7 +52,7 @@ function resolveRunningAction(
   ) {
     return null;
   }
-  return lastResume?.action ?? null;
+  return lastResume.action;
 }
 
 export function useEditorialWorkflow(

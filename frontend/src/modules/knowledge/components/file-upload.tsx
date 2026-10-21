@@ -35,10 +35,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        setSelectedFile(files[0]);
-        if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        setSelectedFile(file);
+        if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
     },
     [title],
@@ -46,10 +46,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (files && files.length > 0) {
-        setSelectedFile(files[0]);
-        if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
+      const file = e.target.files?.[0];
+      if (file) {
+        setSelectedFile(file);
+        if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
     },
     [title],
@@ -233,7 +233,7 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           role="alert"
         >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {upload.error?.message || t("error.generic")}
+          {upload.error.message || t("error.generic")}
         </div>
       )}
 

@@ -20,7 +20,7 @@ describe("apiUpload", () => {
     const result = await apiUpload("/api/upload", schema, form);
 
     expect(result).toEqual({ id: "a1" });
-    const [url, init] = mockFetch.mock.calls[0];
+    const [url, init] = mockFetch.mock.calls[0]!;
     expect(url).toBe("/api/upload");
     expect(init.method).toBe("POST");
     expect(init.body).toBe(form);

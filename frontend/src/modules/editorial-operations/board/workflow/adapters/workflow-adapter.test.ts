@@ -26,9 +26,9 @@ describe("workflow-adapter", () => {
 
   it("mapWorkflowColumnDataToKanban maps dashboard columns", () => {
     const result = mapWorkflowColumnDataToKanban([column]);
-    expect(result[0].status).toBe("Research");
-    expect(result[0].cards[0].phaseStatus).toBe("pending");
-    expect(result[0].cards[0].id).toBe("research-0");
+    expect(result[0]!.status).toBe("Research");
+    expect(result[0]!.cards[0]!.phaseStatus).toBe("pending");
+    expect(result[0]!.cards[0]!.id).toBe("research-0");
   });
 
   it("mapWorkflowToKanbanColumns maps API-shaped columns", () => {
@@ -47,7 +47,7 @@ describe("workflow-adapter", () => {
         ],
       },
     ]);
-    expect(result[0].cards[0].id).toBe("uuid-1");
+    expect(result[0]!.cards[0]!.id).toBe("uuid-1");
   });
 
   it("mapApiKanbanColumn prefers workflow_status over phase_status", () => {
@@ -65,7 +65,7 @@ describe("workflow-adapter", () => {
         },
       ],
     });
-    expect(result.cards[0].phaseStatus).toBe("approved_for_publish");
+    expect(result.cards[0]!.phaseStatus).toBe("approved_for_publish");
   });
 
   it("mapApiKanbanColumn falls back to phase_status when workflow_status absent", () => {
@@ -82,6 +82,6 @@ describe("workflow-adapter", () => {
         },
       ],
     });
-    expect(result.cards[0].phaseStatus).toBe("in_progress");
+    expect(result.cards[0]!.phaseStatus).toBe("in_progress");
   });
 });

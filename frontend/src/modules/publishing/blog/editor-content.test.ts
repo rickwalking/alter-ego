@@ -109,12 +109,12 @@ describe("buildBlogPostUpdate", () => {
   it("sends the merged document with PT byte-identical on an EN edit", () => {
     const original = draft();
     const edited = updateSection(original.document, "en", {
-      id: original.document.translations.en.sections[0].id,
+      id: original.document.translations.en!.sections[0]!.id,
       patch: { body_md: "Edited EN" },
     });
     const payload = buildBlogPostUpdate(original, draft({ document: edited }));
     const content = payload?.content as typeof edited;
-    expect(content.translations.en.sections[0].body_md).toBe("Edited EN");
+    expect(content.translations.en!.sections[0]!.body_md).toBe("Edited EN");
     expect(JSON.stringify(content.sections)).toBe(
       JSON.stringify(original.document.sections),
     );

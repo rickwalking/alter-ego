@@ -1,4 +1,5 @@
 import type { NeonPersonaCardProps, PersonaProfile } from "@/modules/persona";
+import { firstNonBlank } from "@/lib/utils";
 
 /** Max expertise areas surfaced as skills on a persona card. */
 const MAX_PERSONA_SKILLS = 6;
@@ -26,10 +27,11 @@ export function mapPersonaToCardProps(
 export function mapPersonaProfileToCardProps(
   profile: PersonaProfile,
 ): NeonPersonaCardProps {
-  const description =
-    profile.description?.trim() ||
-    profile.opinion_expression?.trim() ||
-    "No description provided.";
+  const description = firstNonBlank([
+    profile.description,
+    profile.opinion_expression,
+    "No description provided.",
+  ]);
 
   return {
     name: profile.name,

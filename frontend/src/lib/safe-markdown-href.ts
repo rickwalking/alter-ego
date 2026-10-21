@@ -9,7 +9,7 @@ export const MARKDOWN_LINK_ALLOWED_SCHEMES = [
  * Returns true when href is safe to render as a clickable link (blocks javascript:, data:, etc.).
  */
 export function isSafeMarkdownHref(href: string | undefined): boolean {
-  if (href === undefined || href === null) {
+  if (href === undefined) {
     return false;
   }
   const trimmed = href.trim();

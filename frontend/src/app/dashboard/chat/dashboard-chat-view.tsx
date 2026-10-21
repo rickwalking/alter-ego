@@ -39,10 +39,7 @@ export function DashboardChatView(): React.ReactElement {
 
   const effectiveConvId = useMemo(
     () =>
-      isComposingNew
-        ? null
-        : (activeConv ??
-          (conversations.length > 0 ? conversations[0].id : null)),
+      isComposingNew ? null : (activeConv ?? conversations[0]?.id ?? null),
     [activeConv, conversations, isComposingNew],
   );
 

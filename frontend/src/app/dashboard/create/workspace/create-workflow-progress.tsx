@@ -53,7 +53,7 @@ export function CreateWorkflowProgress({
     | CarouselPhaseProgress
     | null
     | undefined;
-  const label = progress?.label?.trim();
+  const label = progress?.label.trim();
 
   if (
     !isActiveWork ||

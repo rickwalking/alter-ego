@@ -52,8 +52,10 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || t("loginError"));
+        const data = (await response.json().catch(() => ({}))) as {
+          detail?: string;
+        };
+        throw new Error(data.detail ?? t("loginError"));
       }
 
       const params = new URLSearchParams(window.location.search);

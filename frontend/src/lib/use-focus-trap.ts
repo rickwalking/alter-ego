@@ -41,11 +41,11 @@ export function useFocusTrap(
         return;
       }
       const items = focusable();
-      if (items.length === 0) {
-        return;
-      }
       const first = items[0];
       const last = items[items.length - 1];
+      if (first === undefined || last === undefined) {
+        return;
+      }
       const activeEl = document.activeElement;
       if (event.shiftKey && activeEl === first) {
         event.preventDefault();

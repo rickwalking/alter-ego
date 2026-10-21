@@ -141,7 +141,8 @@ describe("DesignPhaseReview recovery (AE-0310)", () => {
     );
 
     expect(recovery.onSubmitEditedSlides).toHaveBeenCalledTimes(1);
-    const submitted = vi.mocked(recovery.onSubmitEditedSlides).mock.calls[0][0];
+    const submitted = vi.mocked(recovery.onSubmitEditedSlides).mock
+      .calls[0]![0];
     const slideFour = submitted.find((slide) => slide.slide_index === 4);
     expect(slideFour?.presentation_pt.body).toBe("Corpo corrigido");
   });

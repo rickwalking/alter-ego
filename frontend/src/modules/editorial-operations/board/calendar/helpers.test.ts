@@ -56,7 +56,7 @@ describe("buildMonthGrid", () => {
   it("produces full weeks starting on the configured week-start day", () => {
     const grid = buildMonthGrid(new Date(2026, 1, 1));
     expect(grid.length % 7).toBe(0);
-    expect(getDay(new Date(`${grid[0].iso}T00:00:00`))).toBe(
+    expect(getDay(new Date(`${grid[0]!.iso}T00:00:00`))).toBe(
       CALENDAR_WEEK_STARTS_ON,
     );
   });
@@ -88,7 +88,7 @@ describe("calendarGridRange", () => {
     const grid = buildMonthGrid(new Date(2026, 6, 1));
     const { start, end } = calendarGridRange(new Date(2026, 6, 1));
     expect(getDay(start)).toBe(CALENDAR_WEEK_STARTS_ON);
-    expect(start.getDate()).toBe(grid[0].day);
+    expect(start.getDate()).toBe(grid[0]!.day);
     expect(end.getDate()).toBe(grid.at(-1)?.day);
   });
 });
@@ -101,7 +101,7 @@ describe("buildCalendarDaysFromApi", () => {
     ]);
     const cell = grid.find((c) => c.iso === "2026-07-10");
     expect(cell?.events).toHaveLength(1);
-    expect(cell?.events[0].title).toBe("Launch");
+    expect(cell?.events[0]!.title).toBe("Launch");
   });
 
   it("does not bleed an event from another month onto the same day-of-month", () => {

@@ -123,6 +123,9 @@ export function moveSection(
     }
     const sections = [...current.sections];
     const [moved] = sections.splice(from, 1);
+    if (moved === undefined) {
+      return current;
+    }
     sections.splice(to, 0, moved);
     return { ...current, sections };
   });

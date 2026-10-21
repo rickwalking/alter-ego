@@ -19,16 +19,16 @@ export function useCarouselSwipe({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>): void => {
-    if (event.touches.length === 0) return;
     const touch = event.touches[0];
+    if (touch === undefined) return;
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>): void => {
     const start = touchStartRef.current;
     touchStartRef.current = null;
-    if (!start || event.changedTouches.length === 0) return;
     const touch = event.changedTouches[0];
+    if (!start || touch === undefined) return;
 
     const deltaX = touch.clientX - start.x;
     const deltaY = touch.clientY - start.y;

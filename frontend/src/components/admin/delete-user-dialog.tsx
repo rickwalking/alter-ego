@@ -38,8 +38,10 @@ export function DeleteUserDialog({
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || t("deleteError"));
+        const data = (await response.json().catch(() => ({}))) as {
+          detail?: string;
+        };
+        throw new Error(data.detail ?? t("deleteError"));
       }
 
       onSuccess();

@@ -115,13 +115,13 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
           const data = event.data;
 
           if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            appendToken((data.content as string) ?? "");
+            appendToken(typeof data.content === "string" ? data.content : "");
             return;
           }
 
           if (event.event === SSE_EVENT_TYPE.SOURCES) {
             // Backend sends sources in data.content (e.g. {"type":"sources","content":[]})
-            const sources = (data.sources || data.content) as
+            const sources = (data.sources ?? data.content) as
               | Message["sources"]
               | undefined;
             setOptimisticMessages((prev) => {
@@ -143,7 +143,8 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
           }
 
           if (event.event === SSE_EVENT_TYPE.ERROR) {
-            const errorContent = (data.content as string) ?? "Unknown error";
+            const errorContent =
+              typeof data.content === "string" ? data.content : "Unknown error";
             setError(errorContent);
             setIsStreaming(false);
             resetStreamingRefs();

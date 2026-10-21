@@ -103,7 +103,7 @@ it("edits structured extras (summary points) when a handler is given", () => {
     'textarea[aria-label="structuredItemLabel"]',
   );
   expect(items.length).toBeGreaterThan(0);
-  fireEvent.change(items[0], { target: { value: "ponto novo" } });
+  fireEvent.change(items[0]!, { target: { value: "ponto novo" } });
   expect(onStructuredItemChange).toHaveBeenCalledWith(
     expect.objectContaining({
       slideIndex: 1,

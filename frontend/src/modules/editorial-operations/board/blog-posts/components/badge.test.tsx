@@ -11,7 +11,7 @@ describe("BlogPostBadge", () => {
     render(<BlogPostBadge color="cyan">Featured</BlogPostBadge>);
     const badge = screen.getByText("Featured");
     expect(badge).toHaveStyle({
-      backgroundColor: BLOG_POST_BADGE_COLORS.cyan.bg,
+      backgroundColor: BLOG_POST_BADGE_COLORS.cyan!.bg,
     });
   });
 

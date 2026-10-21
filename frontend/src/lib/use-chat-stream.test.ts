@@ -22,7 +22,7 @@ describe("useChatStream", () => {
       role: "user",
       content: "hello",
     });
-    expect(result.current.optimisticMessages[0].id.startsWith("user-")).toBe(
+    expect(result.current.optimisticMessages[0]!.id.startsWith("user-")).toBe(
       true,
     );
     expect(signal?.aborted).toBe(false);
@@ -43,9 +43,9 @@ describe("useChatStream", () => {
 
     const messages = result.current.optimisticMessages;
     const assistant = messages[messages.length - 1];
-    expect(assistant.role).toBe("assistant");
-    expect(assistant.content).toBe("Hello");
-    expect(assistant.id.startsWith("stream-")).toBe(true);
+    expect(assistant!.role).toBe("assistant");
+    expect(assistant!.content).toBe("Hello");
+    expect(assistant!.id.startsWith("stream-")).toBe(true);
   });
 
   it("startUserTurn aborts the previous in-flight stream", () => {

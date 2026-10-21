@@ -7,17 +7,17 @@ import sonarjs from "eslint-plugin-sonarjs";
 // AE-0166 — severity policy. `error` rules GATE the build (the `lint` gate runs
 // `eslint --quiet`, which fails on errors only). `warn` rules are advisory: a
 // tracked backlog, SURFACED on changed files by `lint:changed` (which drops
-// `--quiet`) as a paydown nudge, but NOT gating — promoting them to a global
-// error would require mass refactoring of pre-existing violations (counts
-// measured 2026-06-17):
-//   no-unnecessary-condition (69), prefer-nullish-coalescing (50),
-//   and the size/complexity rules below. They are paid down opportunistically,
-//   never blanket-ignored, and the severities only ever ratchet UP (warn→error),
-//   never down.
+// `--quiet`) as a paydown nudge, but NOT gating. The remaining `warn`s are the
+// size/complexity rules below. They are paid down opportunistically, never
+// blanket-ignored, and the severities only ever ratchet UP (warn→error), never
+// down.
 //
 // Promoted to error (count driven to 0 in production `src`):
 //   no-non-null-assertion (AE-0199), no-floating-promises +
-//   no-misused-promises (AE-0200), max-params (AE-0201).
+//   no-misused-promises (AE-0200), max-params (AE-0201),
+//   no-unnecessary-condition (69 at AE-0166 -> 0) and
+//   prefer-nullish-coalescing (50 -> 0) (AE-0446; rule-fires test:
+//   src/scripts/eslint-strict-type-rules.test.ts).
 //
 // no-img-element (AE-0202): 8 -> 0. All prod `<img>` migrated to next/image,
 //   including image-gen-modal.tsx (generated preview uses `fill` in a fixed
@@ -34,10 +34,10 @@ const typeCheckedRules = {
   // promoted to error (behavior-preserving fixes only).
   "@typescript-eslint/no-floating-promises": "error",
   "@typescript-eslint/no-misused-promises": "error",
-  "@typescript-eslint/prefer-nullish-coalescing": "warn",
+  "@typescript-eslint/prefer-nullish-coalescing": "error",
   // Zero pre-existing violations after AE-0166 cleanup -> promoted to error.
   "@typescript-eslint/prefer-optional-chain": "error",
-  "@typescript-eslint/no-unnecessary-condition": "warn",
+  "@typescript-eslint/no-unnecessary-condition": "error",
 };
 
 export default defineConfig([
