@@ -149,3 +149,26 @@ describe("CreateWorkflowProgress stale phase progress (AE-0440)", () => {
     expect(screen.getByText("Generating images")).toBeInTheDocument();
   });
 });
+
+// AE-0446 (#169 review): phase_progress is untyped JSON from the API/SSE.
+describe("CreateWorkflowProgress malformed phase progress (AE-0446)", () => {
+  it("renders nothing, instead of crashing, when the label is missing", () => {
+    const { container } = render(
+      <CreateWorkflowProgress
+        state={state({ phase_progress: { phase: "exporting", current: 1 } })}
+        loading={false}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders nothing when the label is not a string", () => {
+    const { container } = render(
+      <CreateWorkflowProgress
+        state={state({ phase_progress: { label: 42 } })}
+        loading={false}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
