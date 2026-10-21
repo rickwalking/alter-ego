@@ -8,6 +8,52 @@ import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
 const PUBLIC_HEADER_BRAND = "Pedro Marins";
 
+const PUBLIC_HEADER_LINK_STYLE = {
+  color: TEXT_MUTED,
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 500,
+  transition: "color 0.2s",
+} as const;
+
+const PUBLIC_HEADER_NAV_ITEMS = [
+  { href: PUBLIC_ROUTE_PATHS.CHAT, labelKey: "nav.chat" },
+  { href: PUBLIC_ROUTE_PATHS.BLOG, labelKey: "nav.blog" },
+  { href: PUBLIC_ROUTE_PATHS.CAROUSELS, labelKey: "nav.carousels" },
+] as const;
+
+type Translate = (key: string) => string;
+
+interface PublicHeaderNavProps {
+  t: Translate;
+  locale: string;
+}
+
+export function PublicHeaderNav({
+  t,
+  locale,
+}: PublicHeaderNavProps): React.ReactElement {
+  return (
+    <nav className="flex min-w-0 items-center gap-4 sm:gap-7">
+      {PUBLIC_HEADER_NAV_ITEMS.map((item) => (
+        <Link key={item.href} href={item.href} style={PUBLIC_HEADER_LINK_STYLE}>
+          {t(item.labelKey)}
+        </Link>
+      ))}
+      <div
+        className="hidden sm:block"
+        aria-hidden="true"
+        style={{
+          width: "1px",
+          height: "20px",
+          background: "rgba(0,212,255,0.15)",
+        }}
+      />
+      <LanguageSwitcher currentLocale={locale} variant="neon" />
+    </nav>
+  );
+}
+
 export async function PublicHeader(): Promise<React.ReactElement> {
   const tc = await getTranslations("common");
   const locale = await getRequestLocale();
@@ -61,54 +107,7 @@ export async function PublicHeader(): Promise<React.ReactElement> {
           </span>
           <span className="hidden sm:inline">{PUBLIC_HEADER_BRAND}</span>
         </Link>
-        <nav className="flex min-w-0 items-center gap-4 sm:gap-7">
-          <Link
-            href={PUBLIC_ROUTE_PATHS.CHAT}
-            style={{
-              color: TEXT_MUTED,
-              textDecoration: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              transition: "color 0.2s",
-            }}
-          >
-            {tc("nav.chat")}
-          </Link>
-          <Link
-            href={PUBLIC_ROUTE_PATHS.BLOG}
-            style={{
-              color: TEXT_MUTED,
-              textDecoration: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              transition: "color 0.2s",
-            }}
-          >
-            {tc("nav.blog")}
-          </Link>
-          <Link
-            href={PUBLIC_ROUTE_PATHS.LOGIN}
-            style={{
-              color: NEON_CYAN,
-              textDecoration: "none",
-              fontSize: "14px",
-              fontWeight: 500,
-              transition: "color 0.2s",
-            }}
-          >
-            {tc("login")}
-          </Link>
-          <div
-            className="hidden sm:block"
-            aria-hidden="true"
-            style={{
-              width: "1px",
-              height: "20px",
-              background: "rgba(0,212,255,0.15)",
-            }}
-          />
-          <LanguageSwitcher currentLocale={locale} variant="neon" />
-        </nav>
+        <PublicHeaderNav t={tc} locale={locale} />
       </div>
     </header>
   );

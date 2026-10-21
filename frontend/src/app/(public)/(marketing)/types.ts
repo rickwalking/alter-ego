@@ -12,6 +12,7 @@ export interface MarketingHeroProps {
 
 export interface MarketingStatsProps {
   t: Translator;
+  carouselTotal: number;
 }
 
 export interface MarketingFeaturesProps {

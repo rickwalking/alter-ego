@@ -12,25 +12,26 @@ const STAT_LABEL_STYLE = {
   fontWeight: 500,
 } as const;
 
-export function MarketingStats({ t }: MarketingStatsProps): React.ReactElement {
+export function MarketingStats({
+  t,
+  carouselTotal,
+}: MarketingStatsProps): React.ReactElement {
   return (
     <ScrollReveal>
       <div
         className="mx-auto px-6"
         style={{ maxWidth: "1200px", position: "relative", zIndex: 1 }}
       >
-        <div className="grid grid-cols-3 gap-6 py-10 px-12 border-t border-b border-[rgba(0,212,255,0.08)] bg-[rgba(0,212,255,0.02)] max-[900px]:grid-cols-1 max-[900px]:py-8 max-[900px]:px-6">
+        <div className="grid grid-cols-2 gap-6 py-10 px-12 border-t border-b border-[rgba(0,212,255,0.08)] bg-[rgba(0,212,255,0.02)] max-[900px]:grid-cols-1 max-[900px]:py-8 max-[900px]:px-6">
           <div style={{ textAlign: "center" }}>
             <div className={STAT_VALUE_CLASS}>8+</div>
             <div style={STAT_LABEL_STYLE}>{t("stats.years")}</div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div className={STAT_VALUE_CLASS}>50+</div>
+            <div className={STAT_VALUE_CLASS} data-testid="stats-carousels">
+              {carouselTotal}
+            </div>
             <div style={STAT_LABEL_STYLE}>{t("stats.carousels")}</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div className={STAT_VALUE_CLASS}>∞</div>
-            <div style={STAT_LABEL_STYLE}>{t("stats.topics")}</div>
           </div>
         </div>
       </div>
