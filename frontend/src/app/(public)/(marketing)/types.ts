@@ -1,9 +1,7 @@
 import type { getTranslations } from "next-intl/server";
-import type { CarouselProjectListResponse } from "@/schemas/carousel";
+import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
 
 export type Translator = Awaited<ReturnType<typeof getTranslations>>;
-
-export type CarouselListItem = CarouselProjectListResponse["items"][number];
 
 export interface MarketingHeroProps {
   t: Translator;
@@ -22,7 +20,7 @@ export interface MarketingFeaturesProps {
 export interface MarketingLatestPostsProps {
   t: Translator;
   tb: Translator;
-  data: CarouselProjectListResponse;
+  cards: NeonBlogPostCardProps[];
   locale: string;
 }
 
@@ -31,7 +29,7 @@ export interface MarketingAboutProps {
 }
 
 export interface MarketingPostProps {
-  post: CarouselListItem;
+  card: NeonBlogPostCardProps;
   locale: string;
 }
 
