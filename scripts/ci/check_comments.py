@@ -9,14 +9,14 @@ live in docstrings. A ``#`` comment is allowed only when a tool or gate reads it
   ``mypy:``, ``fmt:``, ``isort:``, ``ruff:``, ``nosec``, and the
   ``integrity-ok:`` escape hatch read by ``scripts/ci/check-integrity.sh``);
 * a Gherkin reference read by ``scripts/check_gherkin_refs.py``
-  (``# Scenario: <title>``), plus comment-only continuation lines that directly
-  follow it when a long title wraps;
+  (``# Scenario: <title>``), plus indented continuation lines (``#   rest``)
+  that directly follow it when a long title wraps;
 * a licence header (``SPDX-License-Identifier`` / ``Copyright``).
 
 Ticket ids, decision ids and to-do markers (``_TICKET`` and ``_MARKER``)
 are rejected in every remaining comment and in every docstring. A Gherkin
-reference is exempt from the ticket-id check because it must repeat the
-scenario title verbatim.
+reference (in a comment or on a docstring line) is exempt from the ticket-id
+check because it must repeat the scenario title verbatim.
 
 Usage:
     python scripts/ci/check_comments.py            # every backend .py
@@ -42,6 +42,8 @@ _DIRECTIVE = re.compile(
     r"|isort:|ruff:|nosec\b|integrity-ok:)"
 )
 _SCENARIO = re.compile(r"^#\s*Scenario(?: Outline)?:\s*\S")
+_SCENARIO_TEXT = re.compile(r"^\s*Scenario(?: Outline)?:\s*\S")
+_CONTINUATION = re.compile(r"^#\s{2,}\S")
 _LICENCE = re.compile(r"^#\s*(SPDX-License-Identifier:|Copyright\b)")
 _CODING = re.compile(r"^#.*coding[:=]")
 _TICKET = re.compile(r"\b(?:AE-\d{2,5}|D-\d+)\b")
@@ -102,7 +104,8 @@ def comment_violations(path: str, source: str) -> list[Violation]:
         if standalone and _SCENARIO.match(token.string):
             scenario_line = line
             continue
-        if standalone and line == scenario_line + 1:
+        continues = line == scenario_line + 1 and _CONTINUATION.match(token.string)
+        if standalone and continues:
             scenario_line = line
             continue
         if _is_tool_comment(token):
@@ -135,7 +138,9 @@ def docstring_violations(path: str, source: str) -> list[Violation]:
     """Docstrings in ``source`` that carry a ticket id or a to-do marker."""
     violations: list[Violation] = []
     for node in _docstring_nodes(ast.parse(source)):
-        text = str(node.value)
+        text = "\n".join(
+            row for row in str(node.value).splitlines() if not _SCENARIO_TEXT.match(row)
+        )
         reason = _noise_reason(text)
         if reason is None:
             continue

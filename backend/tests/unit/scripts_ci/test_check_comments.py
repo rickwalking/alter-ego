@@ -58,8 +58,18 @@ def test_scenario_reference_may_repeat_a_ticket_id() -> None:
     assert gate.check_source("x.py", source) == []
 
 
+def test_docstring_scenario_line_may_repeat_a_ticket_id() -> None:
+    source = 'def t() -> None:\n    """Scenario: Score is unscored (AE-0407)."""\n'
+    assert gate.check_source("x.py", source) == []
+
+
 def test_continuation_needs_a_scenario_line_directly_above() -> None:
     source = "# Scenario: Title\n\n#   not a continuation\n"
+    assert _reasons(source) == [gate._REASON_COMMENT]
+
+
+def test_unindented_line_after_a_scenario_is_not_a_continuation() -> None:
+    source = "# Scenario: Title\n# a note riding on the reference\n"
     assert _reasons(source) == [gate._REASON_COMMENT]
 
 

@@ -10,8 +10,8 @@
  *     #__PURE__, triple-slash references, the integrity-ok: escape hatch read
  *     by scripts/ci/check-integrity.sh);
  *   - a Gherkin reference read by scripts/check_gherkin_refs.py
- *     (`// Scenario: <title>`), plus comment-only continuation lines directly
- *     below it when a long title wraps;
+ *     (`// Scenario: <title>`), plus indented continuation lines
+ *     (`//   rest`) directly below it when a long title wraps;
  *   - a licence header (@license, SPDX-License-Identifier, Copyright).
  * Ticket ids, decision ids and to-do markers (see TICKET_RE and MARKER_RE) are
  * rejected in every remaining comment, JSDoc included. A Gherkin reference is
@@ -34,6 +34,7 @@ const GENERATED = new Set(["next-env.d.ts"]);
 const DIRECTIVE_RE =
   /^\s*(eslint-disable|eslint-enable|eslint\s|globals?\s|exported\s|@ts-expect-error|@ts-ignore|@ts-nocheck|@ts-check|prettier-ignore|[vc]8 ignore|istanbul ignore|Stryker (disable|restore)|webpack[A-Z]|@vite-ignore|[#@]__PURE__|@jsx|integrity-ok:|\/\s*<reference)/;
 const SCENARIO_RE = /^\s*Scenario(?: Outline)?:\s*\S/;
+const CONTINUATION_RE = /^\s{2,}\S/;
 const LICENCE_RE = /@license|SPDX-License-Identifier:|Copyright\b/;
 const TICKET_RE = /\b(?:AE-\d{2,5}|D-\d+)\b/;
 const MARKER_RE = /\b(?:TODO|FIXME|XXX|HACK)\b/;
@@ -108,7 +109,9 @@ export function checkSource(filePath, code) {
       scenarioLine = comment.loc.end.line;
       continue;
     }
-    if (alone && comment.type === "Line" && line === scenarioLine + 1) {
+    const continues =
+      line === scenarioLine + 1 && CONTINUATION_RE.test(comment.value);
+    if (alone && comment.type === "Line" && continues) {
       scenarioLine = line;
       continue;
     }
