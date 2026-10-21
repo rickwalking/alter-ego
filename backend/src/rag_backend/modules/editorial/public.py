@@ -136,6 +136,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     store_cover_image,
     switch_slide_cover,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
+    cover_pick_service,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
     GateRepairReport,
     OwnerAutofixReport,
@@ -292,6 +295,7 @@ __all__ = [
     "carousel_project_lock_key",
     "content_approve_blocker",
     "cover_image_file",
+    "cover_pick_service",
     "delete_cover_images",
     "inspect_owner_issues",
     "is_carousel_project_lock_held",

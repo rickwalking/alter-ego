@@ -35,6 +35,7 @@ from rag_backend.modules.autopilot.public import (
     manual_instagram_publish,
     notifier_is_configured,
     prepare_instagram_credentials,
+    project_cover_offer,
     register_persistence_models,
 )
 
@@ -68,5 +69,6 @@ __all__ = [
     "manual_instagram_publish",
     "notifier_is_configured",
     "prepare_instagram_credentials",
+    "project_cover_offer",
     "register_persistence_models",
 ]

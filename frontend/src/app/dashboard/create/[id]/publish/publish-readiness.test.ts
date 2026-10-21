@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import { isPublishReady, offersRadarTemplates } from "./publish-readiness";
+import {
+  isPublishReady,
+  offersCoverPicker,
+  offersRadarTemplates,
+} from "./publish-readiness";
 
 function workflow(
   overrides: Partial<EditorialWorkflowState>,
@@ -73,5 +77,16 @@ describe("offersRadarTemplates", () => {
     expect(offersRadarTemplates({})).toBe(true);
     expect(offersRadarTemplates({ content_mode: "pov" })).toBe(false);
     expect(offersRadarTemplates({ content_mode: "pov_news" })).toBe(false);
+  });
+});
+
+describe("offersCoverPicker", () => {
+  // Scenario: The picker is shown for Ponto de Vista carousels only
+  // (frontend/tests/features/publish-cover-picker-ae0445.feature)
+  it("offers the slide-1 cover picker only to Ponto de Vista projects", () => {
+    expect(offersCoverPicker({ content_mode: "pov" })).toBe(true);
+    expect(offersCoverPicker({ content_mode: "pov_news" })).toBe(true);
+    expect(offersCoverPicker({ content_mode: "news_analysis" })).toBe(false);
+    expect(offersCoverPicker({})).toBe(false);
   });
 });

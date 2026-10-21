@@ -5,6 +5,10 @@ package ``__init__``). Import Linter rejects imports of the private
 subpackages.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from rag_backend.modules.autopilot.api.views import (
     AutopilotRunView,
     InstagramStatusView,
@@ -47,6 +51,13 @@ from rag_backend.modules.autopilot.domain.models import (
 )
 from rag_backend.modules.autopilot.domain.publish import ManualPublishOutcome
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from rag_backend.modules.autopilot.infrastructure.cover_offers import (
+        ProjectCoverOffer,
+    )
+
 __all__ = [
     "AutopilotBootstrapDeps",
     "AutopilotRunState",
@@ -77,8 +88,18 @@ __all__ = [
     "manual_instagram_publish",
     "notifier_is_configured",
     "prepare_instagram_credentials",
+    "project_cover_offer",
     "register_persistence_models",
 ]
+
+
+def project_cover_offer(session: AsyncSession) -> ProjectCoverOffer:
+    """AE-0445: the GrokBot cover offered to a carousel's run (``offer(id)``)."""
+    from rag_backend.modules.autopilot.infrastructure.cover_offers import (
+        ProjectCoverOffer,
+    )
+
+    return ProjectCoverOffer(session)
 
 
 def register_persistence_models() -> tuple[str, ...]:

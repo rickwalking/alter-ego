@@ -999,6 +999,20 @@
       "success": "PDF rebuilt with the latest slide text.",
       "failed": "Could not rebuild the PDF."
     },
+    "coverPicker": {
+      "title": "Cover (slide 1)",
+      "description": "Swap slide 1's photo for another one from your library. The slides and PDFs are rendered again with the chosen photo; the other slides do not change.",
+      "photoLabel": "Library photo {number}",
+      "offerLabel": "Cover suggested by GrokBot",
+      "offerShort": "GrokBot",
+      "current": "Current",
+      "switching": "Changing the cover and rendering the slides again…",
+      "success": "Cover changed. Slides and PDF updated.",
+      "conflict": "The carousel changed since you opened this page. Reload the page and try again.",
+      "failed": "Could not change the cover.",
+      "loadFailed": "Could not load the photos.",
+      "empty": "No photos in your library. Upload photos in the \"Slide 1 photo\" step when creating a carousel."
+    },
     "slideEditor": {
       "title": "Edit slide text",
       "noImageRegen": "Fix typos or casing in the slide text. Editing text never regenerates the images.",
