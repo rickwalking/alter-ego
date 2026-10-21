@@ -127,10 +127,20 @@ export function resolveWorkflowEventPayload(
   };
 }
 
+/**
+ * The fields `isFullWorkflowState` actually verifies. `project_id` and
+ * `current_phase` may still be absent (the phase can arrive as `phase`).
+ */
+type FullWorkflowPayload = WorkflowEventPayload &
+  Pick<
+    EditorialWorkflowState,
+    "phase_status" | "research_findings" | "outline" | "slide_drafts"
+  >;
+
 function isFullWorkflowState(
   payload: WorkflowEventPayload,
   projectId: string,
-): payload is WorkflowEventPayload & EditorialWorkflowState {
+): payload is FullWorkflowPayload {
   const resolvedPhase = payload.current_phase ?? payload.phase;
   return (
     (payload.project_id === projectId || !payload.project_id) &&
@@ -276,12 +286,12 @@ export function isResumeTransportFailure(status: number): boolean {
 export function hasPhaseArtifacts(state: EditorialWorkflowState): boolean {
   switch (state.current_phase) {
     case EDITORIAL_PHASES.RESEARCH:
-      return (state.research_findings?.length ?? 0) > 0;
+      return state.research_findings.length > 0;
     case EDITORIAL_PHASES.OUTLINE:
-      return (state.outline?.length ?? 0) > 0;
+      return state.outline.length > 0;
     case EDITORIAL_PHASES.CONTENT: {
-      const draftCount = state.slide_drafts?.length ?? 0;
-      const outlineCount = state.outline?.length ?? 0;
+      const draftCount = state.slide_drafts.length;
+      const outlineCount = state.outline.length;
       return (
         draftCount > 0 && (outlineCount === 0 || draftCount >= outlineCount)
       );

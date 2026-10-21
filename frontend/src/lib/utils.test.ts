@@ -18,11 +18,7 @@ describe("Utils Module", () => {
       });
 
       it("Then it should handle conditional classes", () => {
-        const includeBar = true;
-        const includeBaz = false;
-        expect(cn("foo", includeBar && "bar", includeBaz && "baz")).toBe(
-          "foo bar",
-        );
+        expect(cn("foo", { bar: true, baz: false })).toBe("foo bar");
       });
 
       it("Then it should merge tailwind classes with proper precedence", () => {

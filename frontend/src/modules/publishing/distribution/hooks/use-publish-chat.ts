@@ -141,7 +141,7 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
           }
 
           if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            appendToken((data.content as string) ?? "");
+            appendToken(typeof data.content === "string" ? data.content : "");
             return;
           }
 

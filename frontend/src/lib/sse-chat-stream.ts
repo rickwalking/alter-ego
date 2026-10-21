@@ -60,7 +60,7 @@ export function appendStreamToken({
       streamingMsgId,
     };
   }
-  const id = streamingMsgId || `${newIdPrefix}${Date.now()}`;
+  const id = streamingMsgId ?? `${newIdPrefix}${Date.now()}`;
   const newMsg: Message = {
     id,
     role: ASSISTANT_ROLE,

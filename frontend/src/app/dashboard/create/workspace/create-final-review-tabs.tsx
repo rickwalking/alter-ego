@@ -69,8 +69,7 @@ export function CreateFinalReviewTabs({
     void loadBlogPreview();
   }, [activeTab, loadBlogPreview]);
 
-  const displayedBlogMarkdown =
-    previewMarkdown !== null ? previewMarkdown : blogMarkdown;
+  const displayedBlogMarkdown = previewMarkdown ?? blogMarkdown;
 
   const tabs: Array<{ id: FinalReviewTab; label: string }> = [
     { id: FINAL_REVIEW_TABS.CAROUSEL, label: t("tabs.carousel") },

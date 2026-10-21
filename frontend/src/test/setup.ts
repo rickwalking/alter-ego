@@ -50,9 +50,9 @@ afterEach(() => {
 });
 
 // Mock matchMedia
-global.matchMedia =
-  global.matchMedia ||
-  vi.fn().mockImplementation((query: string) => ({
+// jsdom has no matchMedia; keep a real one if the environment provides it.
+if (!("matchMedia" in globalThis)) {
+  global.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -62,6 +62,7 @@ global.matchMedia =
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
+}
 
 // Mock IntersectionObserver
 class MockIntersectionObserver {

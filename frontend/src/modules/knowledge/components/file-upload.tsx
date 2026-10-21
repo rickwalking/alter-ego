@@ -233,7 +233,7 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           role="alert"
         >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {upload.error?.message || t("error.generic")}
+          {upload.error.message || t("error.generic")}
         </div>
       )}
 

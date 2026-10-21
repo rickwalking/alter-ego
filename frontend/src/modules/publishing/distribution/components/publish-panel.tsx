@@ -232,7 +232,7 @@ export function PublishPanel({
                     void onPublishInstagram(editor.caption);
                   }}
                   disabled={
-                    isPublishingInstagram ||
+                    isPublishingInstagram === true ||
                     editor.caption.length === 0 ||
                     editor.caption.length > IG_MAX_CHARS ||
                     hashtagsOver

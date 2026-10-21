@@ -27,16 +27,15 @@ export function outlineThesisEarly(
   slide: Record<string, unknown> | undefined,
 ): boolean {
   const checks = asRecord(slide?.outline_checks);
-  return checks?.thesis_early !== false;
+  return checks.thesis_early !== false;
 }
 
 export function draftText(slide: Record<string, unknown>): string {
-  const presentationPt = asRecord(slide.presentation_pt);
-  if (presentationPt) {
-    const preview = resolvePresentationPreviewText(presentationPt);
-    if (preview.trim()) {
-      return preview;
-    }
+  const preview = resolvePresentationPreviewText(
+    asRecord(slide.presentation_pt),
+  );
+  if (preview.trim()) {
+    return preview;
   }
   return asString(slide.draft_text) || asString(slide.body) || "";
 }

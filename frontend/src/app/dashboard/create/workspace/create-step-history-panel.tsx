@@ -41,7 +41,7 @@ export function CreateStepHistoryPanel({
   const phase = CREATE_STEP_TO_EDITORIAL_PHASE[viewStepId];
 
   if (viewStepId === CREATE_STEP_IDS.RESEARCH) {
-    const findings = state.research_findings ?? [];
+    const findings = state.research_findings;
     return (
       <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
         <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
@@ -59,7 +59,7 @@ export function CreateStepHistoryPanel({
   }
 
   if (viewStepId === CREATE_STEP_IDS.OUTLINE) {
-    const outline = state.outline ?? [];
+    const outline = state.outline;
     return (
       <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
         <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
@@ -93,7 +93,7 @@ export function CreateStepHistoryPanel({
       );
     }
 
-    const drafts = state.slide_drafts ?? [];
+    const drafts = state.slide_drafts;
     return (
       <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
         <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>

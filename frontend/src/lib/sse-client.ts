@@ -320,13 +320,12 @@ export async function streamSseEvents({
     const decoder = new TextDecoder();
     const parserState = createParserState();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-
-      const chunk = decoder.decode(value, { stream: true });
+    for (
+      let result = await reader.read();
+      !result.done;
+      result = await reader.read()
+    ) {
+      const chunk = decoder.decode(result.value, { stream: true });
       const events = processChunk(chunk, parserState);
 
       for (const event of events) {

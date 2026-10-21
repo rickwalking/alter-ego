@@ -94,7 +94,7 @@ export default function PalettesPage(): React.ReactElement {
             <NeonSpinner size="lg" />
           </div>
         )}
-        {error && !isLoading && (
+        {error && (
           <p className="text-center py-8" style={{ color: NEON_RED }}>
             {t("error.load")}
           </p>

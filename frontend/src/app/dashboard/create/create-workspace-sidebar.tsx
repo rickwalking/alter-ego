@@ -94,7 +94,7 @@ export function CreateWorkspaceSidebar({
               {t("workspace.activePhase")}
             </span>
             <WorkflowStatusBadge
-              status={workflowState.phase_status ?? null}
+              status={workflowState.phase_status}
               label={phaseLabel(workflowState.current_phase)}
             />
           </div>

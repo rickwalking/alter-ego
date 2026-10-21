@@ -97,7 +97,7 @@ function renderSseHook(
     ({ projectId, state, transportMode }) =>
       useEditorialWorkflowSse({
         projectId,
-        sseEnabled: Boolean(state?.current_phase),
+        sseEnabled: Boolean(state.current_phase),
         state,
         transportMode,
         setState,
@@ -451,9 +451,7 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     const callsAfterReady = refreshState.mock.calls.length;
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(
-        EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[1] ?? 10_000,
-      );
+      await vi.advanceTimersByTimeAsync(EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[1]);
     });
 
     expect(refreshState.mock.calls.length).toBe(callsAfterReady);

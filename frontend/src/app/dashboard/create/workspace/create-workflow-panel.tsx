@@ -107,19 +107,18 @@ export function CreateWorkflowPanel({
   // AE-0315: live in-progress banner on EVERY step while a run executes.
   const runInProgress =
     state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
-  const runProgressBanner =
-    runInProgress && state ? (
-      <CreateRunProgressBanner
-        currentPhase={state.current_phase}
-        runStartedAt={state.run_started_at}
-        runStage={state.run_stage}
-        runningAction={runningAction}
-        onCheckAgain={() => {
-          void refreshState();
-        }}
-        checkAgainDisabled={loading}
-      />
-    ) : null;
+  const runProgressBanner = runInProgress ? (
+    <CreateRunProgressBanner
+      currentPhase={state.current_phase}
+      runStartedAt={state.run_started_at}
+      runStage={state.run_stage}
+      runningAction={runningAction}
+      onCheckAgain={() => {
+        void refreshState();
+      }}
+      checkAgainDisabled={loading}
+    />
+  ) : null;
   // AE-0440: the stream gave up; say so on every step instead of going stale.
   const liveUpdatesNotice =
     transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED ? (
@@ -214,9 +213,7 @@ export function CreateWorkflowPanel({
 
   const viewPhase = CREATE_STEP_TO_EDITORIAL_PHASE[viewStepId];
   const isHistoricalStep =
-    state !== null &&
-    state !== undefined &&
-    isHistoricalCreateStep(viewStepId, workflowStepId);
+    state !== null && isHistoricalCreateStep(viewStepId, workflowStepId);
   const isLiveStep =
     viewPhase !== undefined &&
     state?.current_phase !== undefined &&
@@ -265,7 +262,7 @@ export function CreateWorkflowPanel({
     viewStepId === CREATE_STEP_IDS.IMAGES &&
     (state?.slide_image_prompts?.length ?? 0) > 0;
 
-  if (isHistoricalStep && state) {
+  if (isHistoricalStep) {
     return (
       <div
         className="space-y-4"
