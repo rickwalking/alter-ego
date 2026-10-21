@@ -2,7 +2,7 @@
 
 Gherkin: tests/features/transactional_outbox.feature
 
-Covers the four AE-0130 behaviors:
+Covers the four outbox relay behaviors:
 * the outbox row is committed atomically with the state change (rollback => none);
 * the relay publishes unpublished rows and marks them published;
 * the relay is idempotent / at-least-once (re-run does not double-effect);

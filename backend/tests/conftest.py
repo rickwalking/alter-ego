@@ -78,7 +78,7 @@ def no_outbox_relay(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     ``WorkflowEventService`` drains the outbox through the global
     ``db_config.c_engine`` after commit. In tests on ``test_engine`` that global
     is whatever an earlier test installed (often an engine already disposed),
-    so the relay would open a connection nothing ever closes (AE-0446).
+    so the relay would open a connection nothing ever closes.
     """
     from rag_backend.application.services import workflow_event_service
 
@@ -93,6 +93,9 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
     Uses a connection-level transaction pattern: all commits within the test
     are part of a single transaction that is rolled back at test end.
+
+    The outer transaction is rolled back only while active: a test that calls
+    ``session.rollback()`` already ended it.
     """
     async_session = sessionmaker(
         test_engine,
@@ -106,7 +109,6 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         yield session
     finally:
         await session.close()
-        # A test that calls session.rollback() already ended this transaction.
         if transaction.is_active:
             await transaction.rollback()
         await connection.close()

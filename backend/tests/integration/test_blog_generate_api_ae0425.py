@@ -346,6 +346,9 @@ class _GatedWriter(FakeWriter):
 async def test_retry_while_in_progress_is_refused(
     client: AsyncClient, harness: _Harness
 ) -> None:
+    """The test lets the run finish before teardown: cancelling it mid-query orphans a
+    connection.
+    """
     writer = _GatedWriter(draft_article=article(7))
     harness.writer = writer
     response = await client.post(GENERATE, json={"topic": "Tema lento"})
@@ -354,7 +357,6 @@ async def test_retry_while_in_progress_is_refused(
     assert retry.status_code == 409
     assert retry.json()["detail"] == "blog_generation_in_progress"
     writer.gate.set()
-    # Let the run finish: teardown cancelling it mid-query orphans a connection.
     await _settled(client, post_id)
 
 

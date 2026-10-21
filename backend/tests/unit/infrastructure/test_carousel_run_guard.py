@@ -4,6 +4,9 @@ Feature: tests/features/carousel_run_progress_reaper.feature
 Covers: atomic stamp/clear on phase_status value changes (incl. the three
 write-owner bypass sites), no-op-hydrate safety, and the layer-(a) flush
 fence semantics (contextvar-gated; user writes never falsely rejected).
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
 """
 
 from __future__ import annotations
@@ -45,7 +48,6 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
 )
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 _NON_IN_PROGRESS_STATUSES = [

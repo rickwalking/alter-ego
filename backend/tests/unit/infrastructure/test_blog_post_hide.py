@@ -4,6 +4,9 @@ Gherkin: tests/features/blog_no_carousel_slides_ae0422.feature
 
 * Scenario: Every published carousel-origin post is hidden, regardless of body length
 * Scenario: A published standalone post is not hidden
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
 """
 
 from __future__ import annotations
@@ -35,7 +38,6 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
 )
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 _NOW = datetime(2026, 10, 18, 12, 0, 0, tzinfo=UTC)

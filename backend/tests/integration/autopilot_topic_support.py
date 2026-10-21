@@ -132,6 +132,9 @@ async def _client(
     clock: _Clock,
     reader: _Bundle | None = None,
 ) -> AsyncIterator[tuple[AsyncClient, AsyncEngine]]:
+    """The engine is disposed before the global is cleared, because ``close_db()``
+    disposes ``c_engine``.
+    """
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
     from rag_backend.api.middleware.rate_limiting import limiter
@@ -152,7 +155,6 @@ async def _client(
             yield client, engine
     finally:
         limiter.reset()
-        # Dispose before clearing the global: close_db() disposes c_engine.
         await close_db()
         db_config.c_engine = None
 

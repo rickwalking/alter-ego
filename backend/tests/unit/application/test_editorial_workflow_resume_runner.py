@@ -205,7 +205,10 @@ class TestScheduleBackgroundResume:
     """Scenario: schedule_background_resume fires and tracks background task."""
 
     def test_creates_task_with_correct_name_and_coroutine(self) -> None:
-        """Given service and params, creates asyncio task with correct name and adds to set."""
+        """Given service and params, creates asyncio task with correct name and adds to set.
+
+        ``create_task`` is patched, so the coroutine never runs and is closed by hand.
+        """
         params = _make_params()
         service = MagicMock()
 
@@ -224,7 +227,7 @@ class TestScheduleBackgroundResume:
             mock_create_task.assert_called_once()
             args, kwargs = mock_create_task.call_args
             assert asyncio.iscoroutine(args[0])
-            args[0].close()  # create_task is patched: the coroutine never runs
+            args[0].close()
             assert kwargs == {"name": f"workflow-resume-{params.project_id}"}
             assert mock_task in mock_bg_tasks
             mock_task.add_done_callback.assert_called_once_with(mock_bg_tasks.discard)

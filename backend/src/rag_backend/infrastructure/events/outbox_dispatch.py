@@ -103,12 +103,14 @@ async def relay_after_commit(publisher: EventPublisherProtocol) -> None:
     (at-least-once).
 
     A transport or session failure must not propagate to the caller.
+
+    Opening the session sits inside the ``try``: "no engine configured" is a relay
+    failure like any other.
     """
     from rag_backend.infrastructure.database.config import get_session_maker
 
     relay = OutboxRelay(publisher)
     try:
-        # Inside the try: "no engine configured" is a relay failure like any other.
         async with get_session_maker()() as session:
             while True:
                 result = await relay.run_once(session)

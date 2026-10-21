@@ -1,6 +1,6 @@
-"""AE-0446: pytest runs with ``filterwarnings = error`` (``pytest.ini``).
+"""Pytest runs with ``filterwarnings = error`` (``pytest.ini``).
 
-Seeded-violation test for the gate (AE-0180): a warning emitted inside a test
+Seeded-violation test for the gate: a warning emitted inside a test
 must raise, not just print a summary line. If the ``error`` filter is dropped
 from ``pytest.ini``, ``warnings.warn`` returns normally and this test fails.
 """
