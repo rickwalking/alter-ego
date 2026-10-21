@@ -7,6 +7,7 @@ Type: Bug
 Area: Backend
 Owner: Worker (AE-0442)
 Branch: feat/ae-0442-langfuse-trace-io
+PR: #167 https://github.com/rickwalking/alter-ego/pull/167
 Kanban Card: TBD
 Created: 2026-10-20
 Updated: 2026-10-20
@@ -143,7 +144,7 @@ confirmed in code + ClickHouse: no trace/span I/O, no generation run_name,
 unended `create_workflow_trace` spans/events, nested span metadata clobbering.
 Gherkin written first; tests then code.
 
-Implemented in `bd334f3b`..`5bd59c53`:
+Implemented in `bd334f3b`..`5bd59c53`; PR #167 opened with base `main`.
 
 - `phase_trace` now takes `trace_input`, writes sanitized input/output to both
   the root span and the trace, defaults success output to
