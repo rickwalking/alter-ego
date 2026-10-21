@@ -171,20 +171,46 @@ design-token image fields. Backend endpoint + frontend pages implemented.
 
 ## Files Touched
 
-Pending (filled by the PR).
+- Backend: `api/routes/carousels/public_view.py`, `carousel_access.py`,
+  `crud.py`, `router.py`, `api/schemas/carousel.py`,
+  `domain/protocols/repositories.py`,
+  `infrastructure/database/carousel_repository.py`.
+- Frontend: `app/(public)/carousels/**`, `lib/public-carousels.ts`,
+  `lib/server-fetch.ts`, `schemas/carousel.ts`, `constants/*`,
+  `modules/identity/guards.ts`, i18n locales.
+- Tests/artifacts: backend public-view unit + integration + feature, frontend
+  feature + Vitest suites, OpenAPI, route snapshot, URL inventory.
 
 ## Test Evidence
 
-Pending (gate capture pasted in the PR body).
+- Backend targeted (memory directive: no full suite locally):
+  - `pytest tests/unit/api/test_public_carousel_view_ae0444.py -q` → 11 passed
+  - `pytest tests/integration/carousel_consolidation/test_public_carousel_view_ae0444.py -q` → 7 passed
+  - `pytest tests/unit/api/test_carousel_response_echo.py -q` → 2 passed
+  - `pytest tests/integration/test_carousel_api.py -q` → 21 passed
+  - `pytest tests/integration/test_publishing_safety_net.py -q` → 34 passed
+- Backend static: mypy 999 files, ruff format/check, interrogate 93.1%,
+  vulture, imports/arch-ratchet/blanket-ignore/strict-diff/schema-drift green;
+  bandit advisory high 1 pre-existing.
+- Frontend: `npm run typecheck` green; full Vitest 210 files / 1723 tests
+  green after the middleware guard fix; targeted follow-ups 15 + 7 green;
+  `npm run lint` green with advisory jscpd clones only; `npm run build` green
+  (`/carousels`, `/carousels/[id]`); `url:check` 29 routes; schema drift clean.
+- Playwright (mock API): gallery desktop/mobile, pagination page 2, viewer
+  next/prev, dots, PT/EN switch, neighbors, 404 page; no console errors.
 
 ## QA Report
 
-Pending.
+Pending `/qa-agent`.
 
 ## Blockers
 
-None.
+None. Full backend suite intentionally not run locally per orchestrator
+memory-critical directive; CI runs it.
 
 ## Final Summary
 
-Pending.
+Public `/carousels` gallery and `/carousels/[id]` viewer ship with a lean
+anonymous projection API, server pagination newest-first, PT/EN toggle, full
+keyboard/touch navigation, SEO metadata, and uniform 404 for non-public or
+unfinished carousels. Middleware now treats both routes as public.
