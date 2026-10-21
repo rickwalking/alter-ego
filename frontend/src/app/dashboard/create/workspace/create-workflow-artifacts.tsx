@@ -12,6 +12,26 @@ function countItems(items: Record<string, unknown>[] | undefined): number {
   return items?.length ?? 0;
 }
 
+interface ArtifactCounts {
+  outlineCount: number;
+  draftCount: number;
+  promptCount: number;
+  imageCount: number;
+}
+
+function artifactCounts(state: EditorialWorkflowState): ArtifactCounts {
+  return {
+    outlineCount: countItems(state.outline),
+    draftCount: countItems(state.slide_drafts),
+    promptCount: state.slide_image_prompts?.length ?? 0,
+    imageCount: state.image_assets?.length ?? 0,
+  };
+}
+
+function hasAnyArtifact(counts: ArtifactCounts): boolean {
+  return Object.values(counts).some((count) => count > 0);
+}
+
 export function CreateWorkflowArtifacts({
   state,
 }: CreateWorkflowArtifactsProps): React.JSX.Element | null {
@@ -21,19 +41,11 @@ export function CreateWorkflowArtifacts({
     return null;
   }
 
-  const outlineCount = countItems(state.outline);
-  const draftCount = countItems(state.slide_drafts);
-  const promptCount = state.slide_image_prompts?.length ?? 0;
-  const imageCount = state.image_assets?.length ?? 0;
-
-  if (
-    outlineCount === 0 &&
-    draftCount === 0 &&
-    promptCount === 0 &&
-    imageCount === 0
-  ) {
+  const counts = artifactCounts(state);
+  if (!hasAnyArtifact(counts)) {
     return null;
   }
+  const { outlineCount, draftCount, promptCount, imageCount } = counts;
 
   return (
     <div
