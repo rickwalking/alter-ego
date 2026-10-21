@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download, Loader } from "lucide-react";
-import JSZip from "jszip";
+import { downloadSlidesZip } from "../lib/download-slides-zip";
 import type { HorizontalCarouselViewerProps } from "./types";
 
 /**
@@ -64,44 +64,7 @@ export function HorizontalCarouselViewer({
   const downloadAll = async () => {
     setIsDownloading(true);
     try {
-      const zip = new JSZip();
-      const folder = zip.folder(alt.replace(/\s+/g, "_") || "slides");
-      if (!folder) return;
-
-      const FETCH_TIMEOUT_MS = 30000;
-
-      const fetches = slideUrls.map(async (url, i) => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(
-          () => controller.abort(),
-          FETCH_TIMEOUT_MS,
-        );
-        try {
-          const response = await fetch(url, {
-            credentials: "include",
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-          const blob = await response.blob();
-          folder.file(`slide_${i + 1}.jpg`, blob);
-        } catch {
-          // Ignore individual fetch failures
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      });
-
-      await Promise.all(fetches);
-
-      const content = await zip.generateAsync({ type: "blob" });
-      const downloadUrl = window.URL.createObjectURL(content);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = `${alt.replace(/\s+/g, "_") || "slides"}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(downloadUrl);
+      await downloadSlidesZip(slideUrls, alt);
     } finally {
       setIsDownloading(false);
     }
