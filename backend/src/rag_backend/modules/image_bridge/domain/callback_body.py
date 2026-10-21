@@ -1,4 +1,4 @@
-"""Pure parsing of the Grok Bot callback body (AE-0393, contract section 2.2).
+"""Pure parsing of the Grok Bot callback body (contract section 2.2).
 
 Success is the OpenAI ``ImagesResponse`` shape; only ``data[0].b64_json`` is
 read (no ``url``: the bridge never fetches anything). Failure is the OpenAI

@@ -33,12 +33,11 @@ class TestSanitizeImagePrompt:
 
     # Scenario: partial word matches are NOT replaced
     def test_does_not_replace_partial_words(self):
+        """The sanitizer is conservative and replaces "cursor" even as a UI concept;
+        that is acceptable because the image prompt describes a scene, not UI details.
+        """
         prompt = "a cursor blinking on the screen"
         result = sanitize_image_prompt(prompt)
-        # "cursor" here is the UI concept, not the brand — but our
-        # sanitizer is conservative and WILL replace it. That is
-        # acceptable because the image prompt is about a scene, not
-        # UI details. We assert the replacement happened.
         assert "AI coding tool" in result
 
     # Scenario: prompts without triggers are unchanged
@@ -67,7 +66,5 @@ class TestSanitizeImagePrompt:
     def test_longest_match_priority(self):
         prompt = "Elon Musk standing next to a rocket"
         result = sanitize_image_prompt(prompt)
-        # Should be "a tech CEO" not "a tech CEO standing..."
-        # which is correct, but let's verify "elon musk" is gone
         assert "Elon Musk" not in result
         assert result.count("a tech CEO") == 1

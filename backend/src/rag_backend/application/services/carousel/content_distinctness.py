@@ -1,14 +1,16 @@
-"""Cross-slide body distinctness metrics for the editorial content phase (AE-0291).
+"""Cross-slide body distinctness metrics for the editorial content phase.
 
 Dependency-free token-Jaccard similarity used to detect near-duplicate slide
 bodies so the generator can bounded-re-draft the offending slide once.
+
+A body is too similar to another when their token Jaccard is at or above
+DISTINCTNESS_SIMILARITY_THRESHOLD.
 """
 
 from __future__ import annotations
 
 import re
 
-# A body is "too similar" to another when their token-Jaccard is at or above this.
 DISTINCTNESS_SIMILARITY_THRESHOLD = 0.6
 _MIN_TOKEN_LEN = 3
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")

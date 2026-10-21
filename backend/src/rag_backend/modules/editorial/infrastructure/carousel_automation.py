@@ -1,9 +1,12 @@
-"""In-process carousel automation seam for other modules (AE-0348 QA r1).
+"""In-process carousel automation seam for other modules (QA r1).
 
 The autopilot module drives the editorial workflow without HTTP. Everything
 it needs from the legacy carousel service, repository, and ORM lives here so
 it imports only the editorial facade. This is infrastructure: the editorial
 application/domain layers stay free of the carousel ORM.
+
+The carousel service, repository and ORM are imported lazily because the editorial
+facade is loaded while the ORM registry is still initialising.
 """
 
 from __future__ import annotations
@@ -44,24 +47,22 @@ if TYPE_CHECKING:
         CarouselProjectModel,
     )
 
-# The concrete workflow engine. Callers type their engine factory with it.
-# The service, the repository and the ORM are imported lazily: the editorial
-# facade is loaded while the ORM registry is still initialising.
 EditorialWorkflowEngine: TypeAlias = "EditorialWorkflowService"
-# The engine resume input ``build_resume_input`` returns (QA r2 R6).
 AutomationResumeInput: TypeAlias = ResumeWorkflowInput
 
 
 @dataclass(frozen=True, kw_only=True)
 class AutomationStart:
-    """Inputs for an unattended workflow start (no reviewer is assigned)."""
+    """Inputs for an unattended workflow start (no reviewer is assigned).
+
+    ``persona_id`` is the persona that voices and scores the carousel.
+    """
 
     topic: str
     audience: str
     brief: str
     sources: tuple[Mapping[str, str], ...]
     user_id: str
-    # PR #106 review: the persona that voices and scores the carousel.
     persona_id: str | None = None
 
 
@@ -79,22 +80,27 @@ class AutomationResume:
 
 @dataclass(frozen=True, kw_only=True)
 class RunHeartbeat:
-    """Phase status and the last run heartbeat of one carousel."""
+    """Phase status and the last run heartbeat of one carousel.
+
+    ``updated_at`` is when the row last changed, used to time a parked workflow.
+    """
 
     phase_status: str
     heartbeat_at: datetime | None
-    # AE-0363: when the row last changed, to time a parked workflow.
     updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class CarouselReviewRow:
-    """Fields a review message quotes. ``output_dir`` holds the slide files."""
+    """Fields a review message quotes. ``output_dir`` holds the slide files.
+
+    The review line quotes ``audience``, ``niche`` and ``image_style``: who the
+    carousel is for and its preset.
+    """
 
     topic: str
     caption: str
     output_dir: str | None
-    # AE-0361: the review line quotes who the carousel is for and its preset.
     audience: str = ""
     niche: str = ""
     image_style: str = ""
@@ -166,11 +172,11 @@ def slides_in_config(slides_config: str) -> int:
 
 
 def expected_slide_total(project: CarouselProject) -> int:
-    """Slides the editorial pipeline builds for ``project`` (AE-0362).
+    """Slides the editorial pipeline builds for ``project``.
 
     The outline agent sizes the carousel from the presentation contract's
     ``slide_count``, not from ``slides_config``, so the contract is the
-    authority. AE-0374: a ranged contract (POV, Radar IA v4) is sized to the
+    authority. A ranged contract (POV, Radar IA v4) is sized to the
     project's own slide count. The config is only a fallback when the contract
     is unreadable.
     """
@@ -187,12 +193,12 @@ def expected_slide_total(project: CarouselProject) -> int:
 def hero_image_total(
     slides: Sequence[CarouselSlide], project: CarouselProject | None = None
 ) -> int:
-    """Hero images the image phase generates for ``slides`` (AE-0365).
+    """Hero images the image phase generates for ``slides``.
 
     The image phase only illustrates the slide types in ``IMAGE_SLIDE_TYPES``
     that carry an image prompt (``filter_image_slides``). The CTA slide uses
     the owner avatar instead, so a 7-slide carousel has 6 hero images.
-    AE-0376: a role contract counts only its ``image_required`` slides (POV:
+    A role contract counts only its ``image_required`` slides (POV:
     the point slides), the same rule the image phase applies.
     """
     from rag_backend.application.services.carousel.image_artwork import (
@@ -227,7 +233,7 @@ class CarouselAutomationAcl:
     async def create_project(self, project: CarouselProject) -> str:
         """Insert the project, stage its slide-1 photo, and return its id.
 
-        AE-0418: a chosen GrokBot cover is staged too; a cover whose file is
+        A chosen GrokBot cover is staged too; a cover whose file is
         gone is dropped (slide 1 falls back to the default) rather than left
         to fail the render.
         """
@@ -246,7 +252,7 @@ class CarouselAutomationAcl:
         return build_start_input(start, persona)
 
     async def is_pov(self, project_id: str) -> bool:
-        """True for a POV-family carousel (voice must be scored, AE-0406)."""
+        """True for a POV-family carousel (voice must be scored)."""
         project = await self.load_project(project_id)
         return project is not None and is_pov_family(project.content_mode)
 
@@ -262,7 +268,7 @@ class CarouselAutomationAcl:
         return expected_slide_total(project)
 
     async def hero_image_total(self, project_id: str) -> int:
-        """Hero images the image phase builds for the persisted slides (AE-0365).
+        """Hero images the image phase builds for the persisted slides.
 
         Zero when the project or its slides do not exist (the gate then revises).
         """

@@ -1,4 +1,8 @@
-"""Phase subagent registry for carousel editorial orchestration (CP-005)."""
+"""Phase subagent registry for carousel editorial orchestration (CP-005).
+
+Phase specs use the standard DeepAgents subagent fields (name, tools, prompt, model);
+the skill references travel in ``prompt``.
+"""
 
 from __future__ import annotations
 
@@ -13,9 +17,6 @@ SUBAGENT_CAPTION_WRITER = "caption_writer"
 
 SKILL_ROOT = carousel_pipeline_root()
 
-# DeepAgents subagent spec field names (the standard tools/prompt/model surface).
-# AE-0249 aligns these phase specs to the DeepAgents fields; the half-wired
-# ``skills``-only key is replaced by a ``prompt`` carrying the skill references.
 SPEC_FIELD_NAME = "name"
 SPEC_FIELD_DESCRIPTION = "description"
 SPEC_FIELD_PROMPT = "prompt"
@@ -84,7 +85,7 @@ PHASE_SUBAGENT_REGISTRY: tuple[PhaseSubagentSpec, ...] = (
 def build_phase_subagent_specs() -> list[dict[str, object]]:
     """Return DeepAgents-aligned subagent specs (tools/prompt fields).
 
-    AE-0249: emits the standard DeepAgents ``name``/``description``/``prompt``/
+    Emits the standard DeepAgents ``name``/``description``/``prompt``/
     ``tools`` fields. ``tools`` is empty here because these deterministic phases
     run as raw LangGraph nodes (ADR-007), not tool-wielding subagents.
     """

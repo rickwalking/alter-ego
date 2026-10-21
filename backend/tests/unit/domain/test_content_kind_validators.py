@@ -1,10 +1,10 @@
-"""Isolated unit tests for the content_kind dispatch validators (AE-0046).
+"""Isolated unit tests for the content_kind dispatch validators.
 
 These tests exercise the dispatch-based validator functions and the
 ``_VALIDATORS`` table directly, independently of the ``ContentSlideCopy``
 Pydantic model, so each validator is verified in isolation.
 
-Gherkin reference (see ticket AE-0046 "Dispatch-Based Validation"):
+Gherkin reference ("Dispatch-Based Validation"):
   - features validator catches missing features
   - features validator catches forbidden stats
   - insight validator succeeds
@@ -58,7 +58,6 @@ class TestFeaturesValidator:
 
     def test_accepts_valid_features(self) -> None:
         ctx: ContentKindValidationContext = {"features": [_feature(), _feature("eye")]}
-        # Should not raise.
         _validate_features_content(ctx)
 
     def test_accepts_features_at_max_bound(self) -> None:
@@ -70,7 +69,6 @@ class TestFeaturesValidator:
                 _feature("book-open"),
             ]
         }
-        # Should not raise.
         _validate_features_content(ctx)
 
     def test_rejects_missing_features(self) -> None:
@@ -118,7 +116,6 @@ class TestStatsValidator:
         ctx: ContentKindValidationContext = {
             "stats": [_stat(), _stat("eye"), _stat("brain")]
         }
-        # Should not raise.
         _validate_stats_content(ctx)
 
     def test_rejects_missing_stats(self) -> None:
@@ -150,7 +147,6 @@ class TestInsightValidator:
 
     def test_accepts_valid_insight(self) -> None:
         # Scenario: insight validator succeeds.
-        # Should not raise.
         _validate_insight_content({"insight": _insight()})
 
     def test_rejects_missing_insight(self) -> None:

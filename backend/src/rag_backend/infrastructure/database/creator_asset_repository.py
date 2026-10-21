@@ -60,9 +60,9 @@ class PostgresCreatorAssetRepository:
     async def list_for_owner(
         self, query: CreatorAssetLibraryQuery
     ) -> list[CarouselCreatorAsset]:
-        """AE-0376: the owner's photo library, newest first, optionally by role.
+        """The owner's photo library, newest first, optionally by role.
 
-        AE-0418: GrokBot covers (role ``cover``) are not library photos; they
+        GrokBot covers (role ``cover``) are not library photos; they
         are listed only when asked for by that role.
         """
         role = CarouselCreatorAssetModel.role
@@ -80,7 +80,7 @@ class PostgresCreatorAssetRepository:
         return [model.to_entity() for model in result.scalars().all()]
 
     async def set_tags(self, tags: CreatorAssetTags) -> CarouselCreatorAsset | None:
-        """AE-0376: set an asset's library role and pose tag."""
+        """Set an asset's library role and pose tag."""
         model = await self._session.get(CarouselCreatorAssetModel, str(tags.asset_id))
         if model is None:
             return None

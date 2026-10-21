@@ -10,7 +10,9 @@ import type {
   MarketingLatestPostsProps,
 } from "@/app/(public)/(marketing)/types";
 
-function LatestPostsHeader({ t }: LatestPostsHeaderProps): React.ReactElement {
+function LatestPostsHeader({
+  t,
+}: Readonly<LatestPostsHeaderProps>): React.ReactElement {
   return (
     <div style={{ marginBottom: "60px" }}>
       <MarketingSectionEyebrow label={t("posts.feedLabel")} />
@@ -45,7 +47,7 @@ export function MarketingLatestPosts({
   tb,
   data,
   locale,
-}: MarketingLatestPostsProps): React.ReactElement {
+}: Readonly<MarketingLatestPostsProps>): React.ReactElement {
   const featured = data.items[0];
   return (
     <ScrollReveal delay={100}>

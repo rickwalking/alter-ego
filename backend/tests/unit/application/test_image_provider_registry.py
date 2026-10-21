@@ -36,8 +36,9 @@ def _registry() -> ImageProviderRegistry:
 
 @pytest.mark.unit
 def test_comic_neon_pairs_openai_service_with_comic_strategy() -> None:
-    # AE-0308: the re-keyed combo must hit the OpenAI *service*, not just the
-    # renamed strategy — this is the exact wiring that failed in prod.
+    """The re-keyed combo must hit the OpenAI service, not just the renamed strategy;
+    this is the exact wiring that failed in prod.
+    """
     openai = AsyncMock()
     registry = ImageProviderRegistry(gemini_service=AsyncMock(), openai_service=openai)
     provider = registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
@@ -75,7 +76,7 @@ class TestImageProviderRegistry:
         assert isinstance(provider.strategy, OpenAIFlatEditorialStrategy)
 
     def test_unsupported_combo_raises_value_error(self) -> None:
-        # (gemini, cinematic) is deliberately not in SUPPORTED_IMAGE_COMBOS.
+        """(gemini, cinematic) is deliberately not in SUPPORTED_IMAGE_COMBOS."""
         with pytest.raises(ValueError, match="not supported"):
             _registry().resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_CINEMATIC)
 

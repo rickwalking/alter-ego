@@ -7,15 +7,11 @@ import {
 } from "../constants";
 import { BlogPostStatusBadge } from "./status-badge";
 
-// Scenarios: see tests/features/blog-posts-listing-status-badge.feature
-// ("Status badge shows a distinct label and color per status",
-//  "Unknown backend status renders a neutral badge instead of crashing")
-
 describe("BLOG_POST_STATUS_COLORS", () => {
   it("covers exactly the BlogPostStatus vocabulary", () => {
-    expect(Object.keys(BLOG_POST_STATUS_COLORS).sort()).toEqual(
-      [...BLOG_POST_STATUSES].sort(),
-    );
+    expect(
+      Object.keys(BLOG_POST_STATUS_COLORS).sort((a, b) => a.localeCompare(b)),
+    ).toEqual([...BLOG_POST_STATUSES].sort((a, b) => a.localeCompare(b)));
   });
 
   it("defines a non-empty bg and text for every status", () => {

@@ -1,4 +1,4 @@
-"""Assemble the ``blog.v2`` document of a generated post (AE-0425, ADR-0025).
+"""Assemble the ``blog.v2`` document of a generated post (ADR-0025).
 
 PT is canonical (``sections``); EN lives in ``translations.en`` with the **same
 section ids**, so a section's image and its translation stay attached through
@@ -41,7 +41,7 @@ class ImageTitles:
 class GeneratedLanguages:
     """Both gated languages plus the titles used for cover subjects/alt.
 
-    ``en`` is ``None`` when the EN gate could not obtain English (AE-0435):
+    ``en`` is ``None`` when the EN gate could not obtain English:
     the document is then stored without ``translations.en``.
     """
 

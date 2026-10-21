@@ -20,7 +20,7 @@ describe("PublicChatView", () => {
     vi.clearAllMocks();
   });
 
-  // Gherkin: Public chat does not list conversation history
+  // Scenario: Public chat does not list conversation history
   it("does not render conversation history sidebar", () => {
     render(<PublicChatView />);
     expect(

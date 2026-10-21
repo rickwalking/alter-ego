@@ -1,6 +1,6 @@
 """Domain entities and value objects for the conversation bounded context.
 
-Phase 3 is a **behavior-preserving** extraction (ADR-0009; AE-0100). The
+Phase 3 is a **behavior-preserving** extraction (ADR-0009). The
 conversation aggregate (``Conversation``), its ``Message`` entity, and the
 ``MessageRole`` value object continue to live at their legacy location
 ``rag_backend.domain.models.conversation`` so the existing callers (chat routes,

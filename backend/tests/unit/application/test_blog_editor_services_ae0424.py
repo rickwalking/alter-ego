@@ -1,4 +1,4 @@
-"""Unit tests of the pure blog editor helpers (AE-0424, ADR-0025).
+"""Unit tests of the pure blog editor helpers (ADR-0025).
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
 Strict ai-suggest parsing, version snapshots, the approval reset on edit and
@@ -91,8 +91,8 @@ class TestParseSuggestion:
         assert parsed.text == "Inner"
         assert parsed.explanation == "outer"
 
-    # AE-0424 review: prose before the fenced JSON must not leak the blob.
     def test_prose_before_a_fence_is_unwrapped(self) -> None:
+        """Prose before the fenced JSON must not leak the blob."""
         raw = f'Here is my suggestion:\n{FENCE}json\n{{"suggested_text": "Sharper"}}\n{FENCE}'
         assert parse_suggestion(raw).text == "Sharper"
 
@@ -185,13 +185,13 @@ class TestAppendVersion:
         assert append_version(history, self._snapshot()) == history
 
     def test_history_is_capped_keeping_the_original(self) -> None:
+        """Each snapshot is a non-empty document because empty snapshots are skipped."""
         history: list[dict[str, object]] = []
         for index in range(BLOG_VERSION_HISTORY_MAX + 5):
             snapshot = VersionSnapshot(
                 post_id="p1",
                 title=f"T{index}",
                 excerpt=None,
-                # A non-empty document (AE-0438: empty snapshots are skipped).
                 content=v2_content(f"Corpo {index}"),
                 author_id=None,
                 change_summary="Before save",

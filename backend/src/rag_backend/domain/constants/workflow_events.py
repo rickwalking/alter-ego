@@ -1,4 +1,8 @@
-"""Constants for workflow event-driven architecture (ADR-004)."""
+"""Constants for workflow event-driven architecture (ADR-004).
+
+``SESSION_INFO_PENDING_EVENTS`` is the session-info key holding events queued for
+post-commit publish.
+"""
 
 STREAM_CONTENT_EVENTS = "content.events"
 CONSUMER_GROUP_WORKFLOW = "workflow_engine"
@@ -36,7 +40,6 @@ EVENT_FIELD_VERSION = "version"
 EVENT_FIELD_PAYLOAD = "payload"
 EVENT_FIELD_METADATA = "metadata"
 
-# Session-info key holding events queued for post-commit publish (AE-0074)
 SESSION_INFO_PENDING_EVENTS = "pending_workflow_events"
 
 __all__ = [

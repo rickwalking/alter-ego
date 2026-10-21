@@ -1,4 +1,4 @@
-"""Find / repair blog posts whose ``translations.en`` reads as Portuguese (AE-0435).
+"""Find / repair blog posts whose ``translations.en`` reads as Portuguese.
 
 One-off operator action. The default (no flag or ``--dry-run``) is a
 read-only scan that lists every ``blog.v2`` post whose EN sections read as
@@ -84,9 +84,11 @@ async def run_mode(
 
 
 async def _main(args: argparse.Namespace) -> int:
+    """Uses its own engine without ``create_all``: the repair never creates or alters
+    tables.
+    """
     from rag_backend.bootstrap.blog_en_repair import build_en_repair_service
 
-    # Own engine, no ``create_all``: the repair never creates or alters tables.
     engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
     try:
         maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

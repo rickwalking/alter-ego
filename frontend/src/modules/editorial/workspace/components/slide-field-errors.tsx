@@ -17,11 +17,11 @@ import type {
 const INVALID_FIELD_CLASS = "border-destructive";
 const ERROR_ID_SUFFIX = "-error";
 
-/** AE-0403: the message(s) under one flagged field, wired via aria-describedby. */
+/** The message(s) under one flagged field, wired via aria-describedby. */
 export function FieldErrorMessage({
   id,
   violations,
-}: FieldErrorMessageProps): React.ReactElement | null {
+}: Readonly<FieldErrorMessageProps>): React.ReactElement | null {
   const message = useFieldErrorMessage();
   if (!violations || violations.length === 0) {
     return null;
@@ -33,13 +33,13 @@ export function FieldErrorMessage({
   );
 }
 
-/** AE-0403: a textarea flagged by its violations; the message sits under it. */
+/** A textarea flagged by its violations; the message sits under it. */
 export function FlaggableTextarea({
   id,
   violations,
   className,
   ...props
-}: FlaggableTextareaProps): React.ReactElement {
+}: Readonly<FlaggableTextareaProps>): React.ReactElement {
   const invalid = (violations?.length ?? 0) > 0;
   const errorId = `${id}${ERROR_ID_SUFFIX}`;
   return (
@@ -56,11 +56,11 @@ export function FlaggableTextarea({
   );
 }
 
-/** AE-0403: "Slide 9 · EN corpo: …" lines at the bottom of a slide form. */
+/** "Slide 9 · EN corpo: …" lines at the bottom of a slide form. */
 export function SlideViolationSummary({
   slideIndex,
   violations,
-}: SlideViolationSummaryProps): React.ReactElement | null {
+}: Readonly<SlideViolationSummaryProps>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review.fieldErrors");
   const message = useFieldErrorMessage();
   const fieldLabel = useViolationFieldLabel();
@@ -85,12 +85,12 @@ export function SlideViolationSummary({
   );
 }
 
-/** AE-0403: the global blocking line plus one link per still-flagged slide. */
+/** The global blocking line plus one link per still-flagged slide. */
 export function BlockingSlidesNotice({
   message,
   slideIndexes,
   onSelectSlide,
-}: BlockingSlidesNoticeProps): React.ReactElement {
+}: Readonly<BlockingSlidesNoticeProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.fieldErrors");
   return (
     <div className="space-y-1 text-destructive text-xs" role="alert">

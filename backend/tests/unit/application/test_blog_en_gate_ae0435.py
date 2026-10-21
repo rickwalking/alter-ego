@@ -1,6 +1,8 @@
-"""The deterministic EN language gate and its root-cause fixes (AE-0435).
+"""The deterministic EN language gate and its root-cause fixes.
 
 Feature: backend/tests/features/blog_generation_en_gate_timeout_ae0435.feature
+
+PROD_EN_LEDE is the first EN section as stored in prod (still Portuguese).
 """
 
 from __future__ import annotations
@@ -64,7 +66,6 @@ from tests.blog_generation_fakes import (
 from tests.blog_v2_support import v2_content
 
 POST_ID = "33333333-3333-4333-8333-333333333333"
-# Prod 2026-10-20, post ba37f6f9: the first EN section as stored (Portuguese).
 PROD_EN_LEDE = (
     "Todo mundo abre a conversa com o GPT. Eu abro com a fatura. A nova disputa em "
     "modelos de raciocínio é pensar melhor sem multiplicar o **custo por tarefa**."
@@ -111,13 +112,14 @@ class TestEnglishLanguageGate:
 
     # Scenario: Portuguese EN sections are retranslated from the gated PT article
     async def test_portuguese_is_retranslated_from_the_gated_pt(self) -> None:
+        """The retranslation is scored."""
         translator = FakeTranslator()
         check = _check(sections(4, "Seção"), passes=1)
         result = await english_gate(_gate(), translator).ensure(check)
         assert result is not None
         assert portuguese_sections(result.sections) == ()
         assert result.rewrite_passes == 1
-        assert result.voice.overall == 82.0  # the retranslation is scored
+        assert result.voice.overall == 82.0
         assert len(translator.calls) == 1
         assert as_draft_sections(translator.calls[0]) == check.pt.sections
 

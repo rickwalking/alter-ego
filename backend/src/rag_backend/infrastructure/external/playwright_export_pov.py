@@ -1,10 +1,13 @@
-"""Export-canvas overrides for the "Ponto de Vista" layouts (AE-0394).
+"""Export-canvas overrides for the "Ponto de Vista" layouts.
 
 The base POV CSS (``slide_styles_pov.py``) is sized for the ~420px app
 preview. The exporter renders on a 1080x1350 (or 2160x2700) canvas and scales
 the standard slide classes through its own injection; the POV classes were
 never part of it, so POV slides exported with preview-sized type. These rules
 are the POV counterpart, one set per export scale.
+
+``_BASE_PX`` holds pixel values for the 1080x1350 canvas; the HD canvas doubles
+every one. The ``quote`` entries size the ``pov_news`` quote card.
 """
 
 from __future__ import annotations
@@ -110,7 +113,6 @@ _POV_EXPORT_RULES = """
   }}
 """
 
-# Pixel values for the 1080x1350 canvas; the HD canvas doubles every one.
 _BASE_PX: dict[str, int] = {
     "pad_top": 88,
     "pad_x": 80,
@@ -135,7 +137,6 @@ _BASE_PX: dict[str, int] = {
     "cta": 44,
     "cta_gap": 28,
     "cta_site": 20,
-    # AE-0406: the pov_news quote card.
     "quote": 38,
     "quote_pad": 32,
     "quote_gap": 36,

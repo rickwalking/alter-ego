@@ -95,7 +95,6 @@ class TestManifestNullSafety:
         )
 
     def test_numeric_strings_are_coerced(self) -> None:
-        # field_validator coerces JSON numbers serialized as strings.
         raw = _base_payload()
         raw["source_lock_version"] = "7"
         raw["expected_slide_numbers"] = ["1", "2"]

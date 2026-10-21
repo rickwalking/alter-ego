@@ -17,7 +17,7 @@ The facade exposes:
   and the re-exported aggregate (``User``/``UserRole``);
 * the **role-check FastAPI dependencies** (``require_authenticated_user`` etc.),
   re-exported through the facade but still backed by ``api/middleware/auth.py`` at
-  root (AE-0098 — not relocated);
+  root (not relocated);
 * ``IdentityAdapters`` / ``IdentityServices`` / ``bootstrap_module`` — the
   composition root (manual constructor injection).
 

@@ -53,8 +53,8 @@ class TestStrategyListEndpoint:
             assert "display_name" in strategy
 
     async def test_list_returns_thirteen_strategies(self, client: AsyncClient):
-        """The eight base layouts, the four POV layouts (AE-0376) and the
-        GrokBot screenshot cover card (AE-0418)."""
+        """The eight base layouts, the four POV layouts and the
+        GrokBot screenshot cover card."""
         response = await client.get("/api/carousels/strategies")
         names = {s["name"] for s in response.json()["strategies"]}
         assert len(names) == 13

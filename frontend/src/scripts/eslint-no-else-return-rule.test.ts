@@ -1,8 +1,8 @@
 /**
- * AE-0226 rule-fires regression test (dogfoods AE-0180): an `else` block after a
+ * Rule-fires regression test: an `else` block after a
  * returning `if` in production `src` must be an ESLint ERROR (`no-else-return`),
- * not a warning. The early-return / guard-clause rule was enabled as `error`
- * (AE-0147); this test proves it actually fires so it cannot silently regress to
+ * not a warning. The early-return / guard-clause rule was enabled as `error`;
+ * this test proves it actually fires so it cannot silently regress to
  * a warning or get disabled.
  *
  * A probe module is written under a real `src/modules/**` path so it is matched
@@ -14,6 +14,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..", "..");
+const ESLINT_BIN = join(
+  FRONTEND_ROOT,
+  "node_modules",
+  "eslint",
+  "bin",
+  "eslint.js",
+);
 const PROBE_DIR = join(
   FRONTEND_ROOT,
   "src",
@@ -36,11 +43,15 @@ interface EslintResult {
 
 function lintProbe(): { exitCode: number; results: EslintResult[] } {
   try {
-    const out = execFileSync("npx", ["eslint", "--format", "json", PROBE_REL], {
-      cwd: FRONTEND_ROOT,
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    const out = execFileSync(
+      process.execPath,
+      [ESLINT_BIN, "--format", "json", PROBE_REL],
+      {
+        cwd: FRONTEND_ROOT,
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
     return { exitCode: 0, results: JSON.parse(out) as EslintResult[] };
   } catch (err) {
     const e = err as { status?: number; stdout?: string };

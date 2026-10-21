@@ -19,7 +19,7 @@ const LABELLED_EXTRAS: ReadonlySet<string> = new Set([
   "creator_website",
 ]);
 
-/** AE-0414: "Nome do criador" instead of "Campo estruturado: creator_name". */
+/** "Nome do criador" instead of "Campo estruturado: creator_name". */
 export function useStructuredExtraLabel(): (extraKey: string) => string {
   const t = useTranslations("editorialWorkflow.review");
   return (extraKey: string): string =>
@@ -32,13 +32,14 @@ function formatStructuredValue(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
-function ReadOnlyExtraValue({ value }: { value: unknown }): React.ReactElement {
+function ReadOnlyExtraValue({
+  value,
+}: Readonly<{ value: unknown }>): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   if (isPresentationStructuredItemList(value)) {
     return <PresentationStructuredItems items={value} />;
   }
   if (typeof value === "string") {
-    // AE-0414: an empty value says so instead of showing a bare label.
     return (
       <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
         {value.trim() ? value : tCopy("emptyValue")}
@@ -52,14 +53,14 @@ function ReadOnlyExtraValue({ value }: { value: unknown }): React.ReactElement {
   );
 }
 
-/** AE-0407: a ``pov_news`` insight renders as a quote card, never raw JSON. */
+/** A ``pov_news`` insight renders as a quote card, never raw JSON. */
 export function ReadOnlyExtra({
   extraKey,
   value,
-}: {
+}: Readonly<{
   extraKey: string;
   value: unknown;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const extraLabel = useStructuredExtraLabel();
   const quote =
@@ -83,10 +84,10 @@ export function ReadOnlyExtra({
 export function IconRow({
   presentation,
   localeLabel,
-}: {
+}: Readonly<{
   presentation: Record<string, unknown>;
   localeLabel: string;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const iconNames = listPresentationIconNames(presentation);
   if (iconNames.length === 0) {
     return null;

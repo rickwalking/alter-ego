@@ -1,4 +1,4 @@
-"""AE-0405: content revision notes steer one regeneration; edits never regenerate.
+"""Content revision notes steer one regeneration; edits never regenerate.
 
 Gherkin: tests/features/content_feedback_lifecycle_ae0405.feature
 
@@ -231,10 +231,13 @@ class TestAutopilotAndFailures:
     async def test_final_review_send_back_regenerates_once_and_regates(
         self, model: DraftingModel
     ) -> None:
-        """Scenario: A send-back note regenerates once; the content gate re-opens."""
+        """Scenario: A send-back note regenerates once; the content gate re-opens.
+
+        A stale content_approved=True must not route past the content gate.
+        """
         engine = build_engine(model)
         await park_at_content(engine)
-        for _ in range(3):  # content, design, images -> parked at final review
+        for _ in range(3):
             await review(engine, Review(action=REVIEW_ACTION_APPROVE))
 
         await review(
@@ -249,7 +252,6 @@ class TestAutopilotAndFailures:
 
         state = await state_of(engine)
         assert model.calls == [[], [THESIS]]
-        # A stale content_approved=True must not route past the content gate.
         assert state["current_phase"] == PHASE_CONTENT
 
     async def test_failed_regeneration_keeps_the_note_active(

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Palette-drift check (AE-0266 Phase 3, retargeted by AE-0271).
+ * Palette-drift check.
  *
  * The backend palette registry is the single source of truth. The generator
  * `backend/scripts/export_palettes.py` projects it to the committed contract
  * `docs/contracts/palettes.json`.
  *
  * History: this gate originally also diffed the create-form theme keys, label
- * keys, light-theme set, and i18n labels against the contract. AE-0271 made the
- * theme dropdown render the live `GET /api/palettes` catalog (roots + custom),
+ * keys, light-theme set, and i18n labels against the contract. Then the theme
+ * dropdown was made to render the live `GET /api/palettes` catalog (roots + custom),
  * so those FE constants no longer exist — the API IS the source for them and a
  * static gate can't (and shouldn't) check a runtime list. The gate therefore
  * NARROWS to the one surface that is still hardcoded in the frontend and must

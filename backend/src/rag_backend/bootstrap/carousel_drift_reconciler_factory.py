@@ -1,4 +1,4 @@
-"""Composition-root factory for the AE-0311 drift reconciler.
+"""Composition-root factory for the drift reconciler.
 
 Adapts the shared LangGraph checkpointer into a read/write gateway (the engine
 ``update_state`` wrapper is preserved) so the reconciler converges the

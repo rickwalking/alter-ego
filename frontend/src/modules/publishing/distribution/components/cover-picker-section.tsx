@@ -60,7 +60,7 @@ function PickStatus({
   switched,
   switchingText,
   successText,
-}: PickStatusProps): React.ReactElement | null {
+}: Readonly<PickStatusProps>): React.ReactElement | null {
   if (pending) {
     return <span role="status">{switchingText}</span>;
   }
@@ -75,7 +75,7 @@ function PickStatus({
 }
 
 /**
- * AE-0445: "Capa (slide 1)" on the publish step of a Ponto de Vista carousel.
+ * "Capa (slide 1)" on the publish step of a Ponto de Vista carousel.
  * Lists the owner's library photos (and the GrokBot offer), marks the current
  * one, and swaps slide 1 on a pick: the server re-renders slides + PDFs, then
  * `onSwitched` refreshes the previews with the new artifact version.
@@ -83,7 +83,7 @@ function PickStatus({
 export function CoverPickerSection({
   projectId,
   onSwitched,
-}: CoverPickerSectionProps): React.ReactElement {
+}: Readonly<CoverPickerSectionProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const options = useCoverOptions(projectId);
   const currentAssetId = options.data?.current_asset_id ?? null;

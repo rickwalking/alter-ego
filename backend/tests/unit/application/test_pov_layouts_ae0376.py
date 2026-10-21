@@ -1,4 +1,4 @@
-"""POV layouts, artwork selection, export paths and Radar IA v7 (AE-0376).
+"""POV layouts, artwork selection, export paths and Radar IA v7.
 
 Gherkin: tests/features/carousel_pov_layouts.feature
 """
@@ -228,6 +228,7 @@ class TestRoleLayouts:
         assert {"hook_face", "statement", "save_checklist", "cta_follow"} <= names
 
     def test_rendered_pov_deck(self) -> None:
+        """Point slides keep the format layout (numbered_list falls back to hero art)."""
         slides = [
             {"number": str(i), "type": t, "heading": f"Slide {i}", "body": "Corpo"}
             for i, t in enumerate(
@@ -258,7 +259,6 @@ class TestRoleLayouts:
         assert "images/slide_2.jpg" not in html
         # Scenario: The twist slide renders without artwork (AE-0394)
         assert "images/slide_7.jpg" not in html
-        # point slides keep the format layout (numbered_list -> hero fallback art)
         assert "images/slide_4.jpg" in html
         assert ".pov-solid" in html
 

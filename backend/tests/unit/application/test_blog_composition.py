@@ -20,6 +20,7 @@ class TestBlogComposition:
     """Gherkin: long_form_notes are available for blog generation."""
 
     def test_builds_sections_from_long_form_notes(self) -> None:
+        """The English research intro never opens the PT body."""
         composition = BlogCompositionInput(
             slides=(
                 {
@@ -42,7 +43,6 @@ class TestBlogComposition:
         )
         markdown = build_blog_markdown_from_long_form_notes(composition)
         assert "# My Topic" in markdown
-        # AE-0416: the English research intro never opens the PT body.
         assert "Research synthesis intro." not in markdown
         assert "## Intro" in markdown
         assert "Expanded hook with context." in markdown

@@ -38,11 +38,11 @@ function EditorHeader({
   editor,
   saveBlocked,
   onLeave,
-}: {
+}: Readonly<{
   editor: EditorProp;
   saveBlocked: boolean;
   onLeave: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   return (
     <div className="mb-6 flex items-center justify-between gap-4">
@@ -69,10 +69,10 @@ function EditorHeader({
 function EditorNotices({
   editor,
   migrationPending,
-}: {
+}: Readonly<{
   editor: EditorProp;
   migrationPending: boolean;
-}): React.ReactElement {
+}>): React.ReactElement {
   const { post, error } = editor;
   return (
     <>
@@ -86,12 +86,15 @@ function EditorNotices({
 }
 
 /**
- * The loaded blog editor (AE-0424): title/excerpt, the `blog.v2` section
+ * The loaded blog editor: title/excerpt, the `blog.v2` section
  * editor and the review/voice/version/AI sidebar, with the unsaved guard.
+ *
+ * The writer/image run owns the document until it finishes, so the editor is
+ * read-only while it generates.
  */
 export function BlogPostEditorView({
   editor,
-}: BlogPostEditorViewProps): React.ReactElement {
+}: Readonly<BlogPostEditorViewProps>): React.ReactElement {
   const router = useRouter();
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const post = editor.post;
@@ -106,7 +109,6 @@ export function BlogPostEditorView({
   const { draft, validation, error } = editor;
   const migrationPending =
     !draft || error?.kind === BLOG_EDITOR_ERROR_KINDS.MIGRATION_PENDING;
-  // AE-0425: the writer/image run owns the document until it finishes.
   const generating = isGenerationInProgress(post ?? null);
   const leave = (): void => {
     if (confirmLeave()) {

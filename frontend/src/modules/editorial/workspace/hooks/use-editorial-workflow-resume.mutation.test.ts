@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { createRef } from "react";
+import { createRef, type SetStateAction } from "react";
 import { HTTP_STATUS } from "@/constants/api";
 import { EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workflow";
@@ -68,7 +68,7 @@ function createHookOptions(overrides?: {
       }
     },
   );
-  const setPhaseEvents = vi.fn((value) => {
+  const setPhaseEvents = vi.fn((value: SetStateAction<string[]>) => {
     if (typeof value === "function") {
       return value([]);
     }
@@ -78,7 +78,7 @@ function createHookOptions(overrides?: {
   const setError = vi.fn();
   const enterPollingFallback = vi.fn();
   const stopPollingFallback = vi.fn();
-  const refreshState = vi.fn(async () => workflowStateRef.current);
+  const refreshState = vi.fn(() => Promise.resolve(workflowStateRef.current));
 
   return {
     workflowStateRef,
@@ -124,7 +124,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => readyState,
+      json: () => Promise.resolve(readyState),
     } as Response);
 
     const { hookParams, workflowStateRef } = createHookOptions();
@@ -140,16 +140,16 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
   });
 
   it("defaults expected_version to 1 when lock version is missing", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body)) as {
+    mockAuthenticatedFetch.mockImplementation((_url, init) => {
+      const body = JSON.parse(init?.body as string) as {
         expected_version: number;
       };
       expect(body.expected_version).toBe(1);
-      return {
+      return Promise.resolve({
         ok: true,
         status: HTTP_STATUS.OK,
-        json: async () => readyState,
-      } as Response;
+        json: () => Promise.resolve(readyState),
+      } as Response);
     });
 
     const { hookParams, refreshState } = createHookOptions({
@@ -164,16 +164,16 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
   });
 
   it("includes only targetPhase in structured feedback when editedText is absent", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body)) as {
+    mockAuthenticatedFetch.mockImplementation((_url, init) => {
+      const body = JSON.parse(init?.body as string) as {
         structured_feedback?: { target_phase?: string; edited_text?: string };
       };
       expect(body.structured_feedback).toEqual({ target_phase: "content" });
-      return {
+      return Promise.resolve({
         ok: true,
         status: HTTP_STATUS.OK,
-        json: async () => readyState,
-      } as Response;
+        json: () => Promise.resolve(readyState),
+      } as Response);
     });
 
     const { hookParams } = createHookOptions();
@@ -190,7 +190,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => inProgressState,
+      json: () => Promise.resolve(inProgressState),
     } as Response);
 
     const waitSpy = vi
@@ -213,13 +213,14 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
-      json: async () => ({
-        accepted: true,
-        project_id: "project-1",
-        current_phase: "research",
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-        lock_version: 4,
-      }),
+      json: () =>
+        Promise.resolve({
+          accepted: true,
+          project_id: "project-1",
+          current_phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          lock_version: 4,
+        }),
     } as Response);
 
     const waitSpy = vi
@@ -245,22 +246,24 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     waitSpy.mockRestore();
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
+  /**
+   * Given the research gate is awaiting review
+   * When the backend answers 202 "in_progress"
+   * Then the state flips to in_progress and the hook waits for the next gate
+   */
   // Scenario: Requesting a revision shows the running state at once
-  //   Given the research gate is awaiting review
-  //   When the backend answers 202 "in_progress"
-  //   Then the state flips to in_progress and the hook waits for the next gate
   it("flips the acted-on ready gate to in_progress on 202 and waits for the next gate", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
-      json: async () => ({
-        accepted: true,
-        project_id: "project-1",
-        current_phase: "research",
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-        lock_version: 2,
-      }),
+      json: () =>
+        Promise.resolve({
+          accepted: true,
+          project_id: "project-1",
+          current_phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          lock_version: 2,
+        }),
     } as Response);
 
     const { hookParams, workflowStateRef } = createHookOptions({
@@ -275,9 +278,9 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     };
     const waitSpy = vi
       .spyOn(editorialWorkflowUtils, "waitUntilWorkflowReadyWithTransport")
-      .mockImplementation(async (getState) => {
+      .mockImplementation((getState) => {
         statusesSeenByWait.push(getState()?.phase_status ?? "");
-        return nextGate;
+        return Promise.resolve(nextGate);
       });
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
 
@@ -301,19 +304,20 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     const { hookParams, workflowStateRef } = createHookOptions({
       workflowState: readyState,
     });
-    mockAuthenticatedFetch.mockImplementation(async () => {
+    mockAuthenticatedFetch.mockImplementation(() => {
       workflowStateRef.current = newerGate;
-      return {
+      return Promise.resolve({
         ok: true,
         status: HTTP_STATUS.ACCEPTED,
-        json: async () => ({
-          accepted: true,
-          project_id: "project-1",
-          current_phase: "research",
-          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-          lock_version: 2,
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            accepted: true,
+            project_id: "project-1",
+            current_phase: "research",
+            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+            lock_version: 2,
+          }),
+      } as Response);
     });
     const waitSpy = vi.spyOn(
       editorialWorkflowUtils,
@@ -337,11 +341,12 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...readyState,
-        current_phase: "outline",
-        outline: [{ title: "Intro" }],
-      }),
+      json: () =>
+        Promise.resolve({
+          ...readyState,
+          current_phase: "outline",
+          outline: [{ title: "Intro" }],
+        }),
     } as Response);
 
     const { hookParams, setPhaseEvents } = createHookOptions();
@@ -358,7 +363,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => inProgressState,
+      json: () => Promise.resolve(inProgressState),
     } as Response);
 
     const waitSpy = vi
@@ -386,7 +391,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.CONFLICT,
-      json: async () => ({ detail: "version_conflict" }),
+      json: () => Promise.resolve({ detail: "version_conflict" }),
     } as Response);
 
     const { hookParams, refreshState } = createHookOptions();
@@ -395,9 +400,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     await act(async () => {
       try {
         await result.current.resume("approve");
-      } catch {
-        // expected
-      }
+      } catch {}
     });
 
     expect(refreshState).toHaveBeenCalled();

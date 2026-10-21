@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { viewerSlidePaths, viewerSlideTitle } from "./viewer-slides";
 
-// Scenarios: see tests/features/qa-followups-ae0416.feature (slide viewer)
+/** Gherkin: tests/features/qa-followups-ae0416.feature. */
 
 function project(
   overrides: Partial<CarouselProjectResponse>,
@@ -37,7 +37,6 @@ describe("viewerSlidePaths (AE-0416)", () => {
     expect(viewerSlidePaths({ project: source, language: "pt" })).toEqual([
       "pt_1.jpg",
     ]);
-    // No EN render: the EN tab reuses the PT list (served with lang=en).
     expect(viewerSlidePaths({ project: source, language: "en" })).toEqual([
       "pt_1.jpg",
     ]);

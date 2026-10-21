@@ -96,6 +96,9 @@ function createParserState(): SseParserState {
  * Parse a single SSE line and accumulate it into the parser state.
  * Returns a parsed SseEvent if a blank-line delimiter completes an event,
  * or ``null`` otherwise.
+ *
+ * Comment lines (starting with `:`, keep-alive pings) and unknown lines are
+ * ignored.
  */
 function parseSseLine(line: string, state: SseParserState): SseEvent | null {
   if (line.startsWith(SSE_FIELD_ID)) {
@@ -110,15 +113,12 @@ function parseSseLine(line: string, state: SseParserState): SseEvent | null {
     state.currentData += line.slice(SSE_FIELD_DATA.length);
     return null;
   }
-  // Comment lines (starting with :) are ignored (keep-alive pings)
   if (line.startsWith(":")) {
     return null;
   }
-  // Empty line = end of SSE event — dispatch it
   if (line === "" || line === "\r") {
     return flushEvent(state);
   }
-  // Unknown line — ignore
   return null;
 }
 
@@ -150,20 +150,21 @@ function eventTypeOf(
 /**
  * Flush the accumulated event from the parser state.
  * Resets accumulators and returns the parsed SseEvent (or ``null`` if empty).
+ *
+ * The backend embeds the event type in data.type rather than the SSE event:
+ * field, so that is the fallback.
  */
 function flushEvent(state: SseParserState): SseEvent | null {
   if (!state.currentData && !state.currentEvent) {
     return null;
   }
   const data = parseEventData(state.currentData);
-  // Backend embeds event type in data.type rather than using SSE event: field
   const event: SseEvent = {
     id: state.currentId,
     event: eventTypeOf(state.currentEvent, data),
     data,
   };
 
-  // Reset accumulators
   state.currentId = undefined;
   state.currentEvent = undefined;
   state.currentData = "";
@@ -176,6 +177,8 @@ function flushEvent(state: SseParserState): SseEvent | null {
  *
  * Handles ``\n\n`` delimiters that may span across chunk boundaries by
  * maintaining an internal buffer. Returns an array of parsed events.
+ *
+ * Incomplete trailing data stays in the buffer until more arrives.
  */
 function processChunk(chunk: string, state: SseParserState): SseEvent[] {
   state.buffer += chunk;
@@ -184,10 +187,9 @@ function processChunk(chunk: string, state: SseParserState): SseEvent[] {
   let searchStart = 0;
 
   while (searchStart < state.buffer.length) {
-    // Find the next blank-line delimiter (\n\n or \n\r\n)
     const delimIndex = findBlankLine(state.buffer, searchStart);
     if (delimIndex === -1) {
-      break; // No complete event yet — wait for more data
+      break;
     }
     const event = consumeEventBlock(
       state.buffer.slice(searchStart, delimIndex),
@@ -196,11 +198,9 @@ function processChunk(chunk: string, state: SseParserState): SseEvent[] {
     if (event !== null) {
       events.push(event);
     }
-    // Advance past the blank line
     searchStart = delimIndex + findDelimiterLength(state.buffer, delimIndex);
   }
 
-  // Keep remaining (incomplete) data in the buffer
   state.buffer = state.buffer.slice(searchStart);
 
   return events;
@@ -244,19 +244,21 @@ function findBlankLine(buffer: string, start: number): number {
 /**
  * Determine the length of the delimiter at the given position.
  * The position should be the first ``\n`` of the delimiter.
+ *
+ * Returns 2 for `\n\n` (also the default) and 3 for `\n\r\n`.
  */
 function findDelimiterLength(buffer: string, pos: number): number {
   if (pos + 1 < buffer.length && buffer[pos + 1] === "\n") {
-    return 2; // \n\n
+    return 2;
   }
   if (
     pos + 2 < buffer.length &&
     buffer[pos + 1] === "\r" &&
     buffer[pos + 2] === "\n"
   ) {
-    return SSE_DELIMITER_LENGTH_CRLF; // \n\r\n
+    return SSE_DELIMITER_LENGTH_CRLF;
   }
-  return 2; // default
+  return 2;
 }
 
 /**
@@ -264,7 +266,6 @@ function findDelimiterLength(buffer: string, pos: number): number {
  * Handles the case where the last event has no trailing blank line.
  */
 function flushBuffer(state: SseParserState): SseEvent | null {
-  // Process any complete events remaining in the buffer
   const remaining = state.buffer.trim();
   if (!remaining) {
     return null;
@@ -322,7 +323,11 @@ async function openSseStream({
   return response.body.getReader();
 }
 
-/** Decode the stream and emit each event as it completes, then the tail. */
+/**
+ * Decode the stream and emit each event as it completes, then the tail.
+ *
+ * Data left after the stream closes is flushed as a final event.
+ */
 async function pumpSseEvents(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onEvent: (event: SseEvent) => void,
@@ -339,7 +344,6 @@ async function pumpSseEvents(
       onEvent(event);
     }
   }
-  // Process any remaining data after the stream closes
   const finalEvent = flushBuffer(parserState);
   if (finalEvent !== null) {
     onEvent(finalEvent);

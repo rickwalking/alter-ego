@@ -1,7 +1,7 @@
 /**
- * AE-0277: responsive-dashboard regression gate.
+ * Responsive-dashboard regression gate.
  *
- * The AE-0272 epic migrated layout-critical inline `style={{}}` on the dashboard
+ * A dashboard epic migrated layout-critical inline `style={{}}` on the dashboard
  * surface to Tailwind responsive utilities. This checker stops a future edit from
  * silently re-freezing those layouts. It scans an explicit allow-list (the files
  * the epic touched) for layout-freezing inline-style patterns and exits non-zero
@@ -26,7 +26,7 @@ import { isAbsolute, join } from "node:path";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..");
 
-/** Files the AE-0272 epic made responsive (AE-0273/0274/0275/0276). */
+/** Files the responsive-dashboard epic made responsive. */
 export const ALLOW_LIST = [
   "src/app/dashboard/layout.tsx",
   "src/components/organisms/neon-sidebar.tsx",
@@ -63,7 +63,7 @@ function styleBlocks(source) {
   const marker = "style={{";
   let index = source.indexOf(marker);
   while (index !== -1) {
-    let depth = 2; // we start just after the two opening braces
+    let depth = 2;
     let i = index + marker.length;
     const start = i;
     while (i < source.length && depth > 0) {
@@ -145,6 +145,10 @@ function scannedFiles() {
   return ALLOW_LIST;
 }
 
+/**
+ * A listed responsive file that no longer exists means the allow-list drifted
+ * (file moved or renamed) and coverage was silently lost, so it fails.
+ */
 function main() {
   const files = scannedFiles();
   const usingAllowList = !process.env.RESPONSIVE_DASHBOARD_FILES;
@@ -160,8 +164,6 @@ function main() {
     allViolations.push(...findViolations(readFileSync(abs, "utf8"), rel));
   }
 
-  // Allow-list sync guard: a listed responsive file that no longer exists means
-  // the allow-list drifted (file moved/renamed) and coverage was silently lost.
   if (usingAllowList && missing.length > 0) {
     process.stderr.write(
       `\nresponsive-dashboard allow-list out of sync — ${missing.length} listed ` +
@@ -193,7 +195,6 @@ function main() {
   );
 }
 
-// Run as CLI when invoked directly (not when imported by the test).
 if (
   process.argv[1] &&
   process.argv[1].endsWith("check-responsive-dashboard.mjs")

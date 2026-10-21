@@ -1,4 +1,4 @@
-"""Set ``is_public`` through the publishing facade (AE-0356)."""
+"""Set ``is_public`` through the publishing facade."""
 
 from __future__ import annotations
 

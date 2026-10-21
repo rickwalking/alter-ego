@@ -1,4 +1,9 @@
-"""Redis Streams event publisher (WF-001, ADR-004)."""
+"""Redis Streams event publisher (WF-001, ADR-004).
+
+The stream client uses decoded responses and the default pool/timeouts (XADD is
+non-blocking). It is built via the sanctioned factory so it is authenticated;
+do not construct ``redis.Redis`` directly.
+"""
 
 from __future__ import annotations
 
@@ -14,9 +19,6 @@ from rag_backend.infrastructure.redis_clients import (
 
 logger = get_logger()
 
-# Streams semantics: decoded responses; default pool/timeouts (XADD is
-# non-blocking). AE-0302: built via the sanctioned factory so the client is
-# authenticated; do not construct redis.Redis directly.
 _STREAM_CLIENT_CONFIG = RedisConnectionConfig(decode_responses=True)
 
 

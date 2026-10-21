@@ -183,6 +183,36 @@ clones, backend 26 clones. Fixes: pending (PR 4).
 | npm audit (all) | 11 moderate, dev-only (`@vitest/mocker` via storybook) | Accepted: dev-only, fix is a breaking `--force` upgrade. |
 | gitleaks | 2 | Both false positives (prose in a report, a numeric test fixture). |
 
+## Quality wave (mutation, strict ESLint, comment policy)
+
+One PR (branch `rickwalking/ae-0446-l4-quality-wave`), split by commit:
+
+- Mutation: tests for the surviving and timed-out mutmut mutants of the last
+  CI run on main; Stryker `mutate` paths re-pointed from `src/features` to the
+  moved `src/modules` files and the neon/adapter survivors killed. Scores come
+  from the PR-head CI jobs only (never run locally).
+- ESLint: typescript-eslint `strictTypeChecked` + `stylisticTypeChecked` and
+  sonarjs `recommended` at error, `no-warning-comments`, all findings fixed;
+  rule-fires test `src/scripts/eslint-strict-presets.test.ts`.
+- Comment policy (Pedro's decision: keep only doc comments): gates
+  `scripts/ci/check_comments.py` (`gates.sh backend:comments`) and
+  `frontend/scripts/check-comments.mjs` (`npm run lint:comments`), ruff `FIX`
+  + `TD`; cleanup of every backend and frontend source and test file. Moved
+  content: `.agent/reports/AE-0446-l4-moved-comments.md`.
+
+AE-0153 classification (no `.feature`):
+
+- (a) No public or user-visible behaviour change: comment removal is proven
+  AST-identical per file; the ESLint fixes are type-level or
+  behaviour-identical rewrites; mutation work only adds tests.
+- (b) Seeded-violation tests: `backend/tests/unit/scripts_ci/test_check_comments.py`,
+  `frontend/src/scripts/check-comments.test.ts`,
+  `frontend/src/scripts/eslint-strict-presets.test.ts`.
+- (c) Affected gates: `backend:comments` (new), `backend:lint` (FIX/TD),
+  `frontend:lint` (presets, `lint:comments`), `frontend:mutation` (paths),
+  `backend:mutation` (more kills), `gherkin-refs` (baseline shrinks).
+- (d) QA sign-off on the classification: external QA report for this wave.
+
 ## QA Checklist
 
 - [ ] Security reviewed

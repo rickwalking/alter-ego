@@ -1,8 +1,16 @@
-"""Autopilot "Ponto de Vista" constants (AE-0377, ADR-0021 D10).
+"""Autopilot "Ponto de Vista" constants (ADR-0021 D10).
 
 A POV topic never starts generation from an unconfirmed thesis: the run waits
 in ``awaiting_thesis`` until the owner confirms, edits or discards the scout's
 draft on Telegram. Radar IA (``news_analysis``) runs are capped per week.
+
+- Scout v4 adds ``pov_news``: news through the owner's point of view.
+- POV point slides default to neo-anime artwork; a scout topic that names another
+  supported style keeps it. Slide 1 is always the owner's photo.
+- Callback data is ``ap:<kind>:<run uuid>`` (52 bytes, under Telegram's 64).
+- The pending-reply marker for “Editar” fits ``REWORK_PHASE_LENGTH``.
+- A POV carousel needs the persona and the slide-1 photo.
+- With ``AUTOPILOT_PERSONA_ID`` empty, the persona is resolved by name.
 """
 
 from __future__ import annotations
@@ -23,7 +31,6 @@ from rag_backend.modules.autopilot.cover_constants import (
     TEXT_COVER_RENDER_FAILED,
 )
 
-# AE-0406: scout v4 adds ``pov_news`` (news through the owner's point of view).
 SCOUT_MODES: frozenset[str] = frozenset({
     CONTENT_MODE_NEWS_ANALYSIS,
     CONTENT_MODE_POV,
@@ -31,25 +38,19 @@ SCOUT_MODES: frozenset[str] = frozenset({
 })
 SCOUT_MODE_PATTERN = "^(news_analysis|pov|pov_news)$"
 THESIS_DRAFT_MAX_CHARS = POV_THESIS_MAX_CHARS
-# AE-0395: POV point slides default to neo-anime artwork; a scout topic that
-# names another supported style keeps it (slide 1 is always the owner's photo).
 POV_IMAGE_STYLE = IMAGE_STYLE_NEO_ANIME
 CONTENT_MODE_COLUMN_LENGTH = 20
 
-# Intake rejections.
 REASON_THESIS_MISSING = "thesis_missing"
 REASON_WEEKLY_NEWS_CAP = "weekly_news_cap_reached"
-# Growth plan 16.4 #10: Radar IA at most one post a week.
 MAX_NEWS_RUNS_PER_WEEK = 1
 DAYS_PER_WEEK = 7
 
-# Run transition reasons.
 REASON_THESIS_REQUESTED = "thesis_requested"
 REASON_THESIS_CONFIRMED = "owner_thesis_confirmed"
 REASON_THESIS_DISCARDED = "owner_thesis_discarded"
 REASON_THESIS_EXPIRED = "thesis_expired"
 
-# Callback data: ``ap:<kind>:<run uuid>`` (52 bytes, under Telegram's 64).
 KIND_THESIS_CONFIRM = "thok"
 KIND_THESIS_EDIT = "thed"
 KIND_THESIS_DISCARD = "thno"
@@ -61,13 +62,11 @@ CALLBACK_THESIS_PATTERN = (
     r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
 )
-# The pending-reply marker for "Editar" (fits REWORK_PHASE_LENGTH).
 THESIS_PENDING_PHASE = "pov_thesis"
 
 BUTTON_THESIS_CONFIRM = "✅ Confirmar"
 BUTTON_THESIS_EDIT = "✏️ Editar"
 BUTTON_THESIS_DISCARD = "❌ Descartar"
-# AE-0406: the mode name the thesis prompt shows ("Ponto de Vista: Notícia").
 MODE_LABEL_POV = "Ponto de Vista"
 MODE_LABEL_POV_NEWS = "Ponto de Vista: Notícia"
 TEXT_THESIS_PROMPT = (
@@ -88,7 +87,6 @@ ANSWER_THESIS_EDIT = "Responda com a sua tese"
 
 LOG_THESIS = "autopilot.thesis"
 
-# PR #106 review: a POV carousel needs the persona and the slide-1 photo.
 REASON_PERSONA_NOT_SCORED = "persona_not_scored"
 REASON_HOOK_PHOTO_MISSING = "hook_photo_missing"
 TEXT_PERSONA_NOT_SCORED = (
@@ -99,16 +97,12 @@ TEXT_HOOK_PHOTO_MISSING = (
     '📸 POV sem foto do slide 1: envie uma foto com o papel "hook" na sua '
     "biblioteca de fotos do dashboard. Nada foi gerado."
 )
-# Telegram text for these reasons (escalated / failed notices).
 POV_TEXT_BY_REASON: dict[str, str] = {
     REASON_PERSONA_NOT_SCORED: TEXT_PERSONA_NOT_SCORED,
     REASON_HOOK_PHOTO_MISSING: TEXT_HOOK_PHOTO_MISSING,
-    # AE-0418: a GrokBot cover switch whose re-render failed (any mode).
     REASON_COVER_RENDER_FAILED: TEXT_COVER_RENDER_FAILED,
-    # AE-0433: the persona judge stayed unavailable (any mode).
     REASON_PERSONA_JUDGE_UNAVAILABLE: TEXT_PERSONA_JUDGE_UNAVAILABLE,
 }
-# ``AUTOPILOT_PERSONA_ID`` empty: the persona resolved by this name instead.
 AUTOPILOT_PERSONA_NAME = "Pedro"
 LOG_PERSONA_UNRESOLVED = "autopilot.persona_unresolved"
 

@@ -6,7 +6,7 @@ import type { PresentationStructuredItemsProps } from "./types";
 export function PresentationStructuredItems({
   items,
   className,
-}: PresentationStructuredItemsProps): React.ReactElement | null {
+}: Readonly<PresentationStructuredItemsProps>): React.ReactElement | null {
   if (items.length === 0) {
     return null;
   }

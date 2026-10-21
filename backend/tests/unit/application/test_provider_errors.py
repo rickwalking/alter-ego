@@ -1,4 +1,4 @@
-"""Unit tests for LLM-provider error classification (AE-0319).
+"""Unit tests for LLM-provider error classification.
 
 Scenarios: tests/features/workflow_start_provider_errors.feature
 """

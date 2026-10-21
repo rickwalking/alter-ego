@@ -1,6 +1,6 @@
 """Domain entities and value objects for the identity bounded context.
 
-AE-0098 is a **behavior-preserving** extraction (ADR-0009). The identity
+This is a **behavior-preserving** extraction (ADR-0009). The identity
 aggregate (``User``) and its role value object (``UserRole``) continue to live
 at their legacy location ``rag_backend.domain.models.user`` so the existing
 callers (the container, routes, dependencies, JWT helpers) keep importing the

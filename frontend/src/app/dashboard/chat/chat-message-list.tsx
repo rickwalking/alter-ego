@@ -31,7 +31,9 @@ const AVATAR_BASE_STYLE: React.CSSProperties = {
 };
 
 /** The assistant's ◆ or the owner's initials. */
-function ChatAvatar({ assistant }: { assistant: boolean }): React.ReactElement {
+function ChatAvatar({
+  assistant,
+}: Readonly<{ assistant: boolean }>): React.ReactElement {
   if (assistant) {
     return (
       <div
@@ -63,9 +65,9 @@ function ChatAvatar({ assistant }: { assistant: boolean }): React.ReactElement {
 /** One message: avatar, bubble and time, mirrored for the owner. */
 function ChatMessageRow({
   msg,
-}: {
+}: Readonly<{
   msg: DashboardChatMessage;
-}): React.ReactElement {
+}>): React.ReactElement {
   const assistant = msg.role === "assistant";
   const user = msg.role === "user";
   return (
@@ -152,7 +154,7 @@ function TypingIndicator(): React.ReactElement {
 export function ChatMessageList({
   messages,
   isStreaming = false,
-}: ChatMessageListProps): React.ReactElement {
+}: Readonly<ChatMessageListProps>): React.ReactElement {
   return (
     <div
       style={{

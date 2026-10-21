@@ -1,4 +1,4 @@
-"""The Story image URL and the music facts, from the publishing facade (AE-0369)."""
+"""The Story image URL and the music facts, from the publishing facade."""
 
 from __future__ import annotations
 

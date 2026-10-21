@@ -1,10 +1,13 @@
-"""The autopilot expects the pipeline's real slide count (AE-0362).
+"""The autopilot expects the pipeline's real slide count.
 
 Prod escalation: the first real run hit ``outline_slide_count_mismatch``
 because the autopilot created a 6-slide project while the editorial pipeline
 always builds the presentation contract's 7 slides.
 
 Gherkin: tests/features/autopilot_runner.feature
+
+The CTA slide uses the owner avatar, so 6 of the 7 slides get a hero image; _HERO_WIDTH
+is the gpt-image default size (infrastructure/external/openai_image.py).
 """
 
 from __future__ import annotations
@@ -60,9 +63,7 @@ _PROJECT_ID = str(uuid4())
 _STALE_SIX_SLIDE_CONFIG = "1 intro, 3 content, 1 closing, 1 cta"
 _STALE_SIX_SLIDES = 6
 _PIPELINE_SLIDES = 7
-# AE-0365: the CTA slide uses the owner avatar, so 6 of the 7 get a hero image.
 _HERO_IMAGES = _PIPELINE_SLIDES - 1
-# gpt-image default size (infrastructure/external/openai_image.py).
 _HERO_WIDTH = 1536
 _HERO_HEIGHT = 1024
 
@@ -168,11 +169,13 @@ def test_seven_slides_config_parses_to_seven() -> None:
 async def test_autopilot_project_uses_the_pipeline_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Scenario: The autopilot creates the project with the pipeline's 7 slides."""
+    """Scenario: The autopilot creates the project with the pipeline's 7 slides.
+
+    New Radar IA carousels are stamped hero_lower_third_v4 (7 slides by default, 8 with
+    the optional twist).
+    """
     project = await _created_project(monkeypatch)
     assert project.slides_config == CAROUSEL_DEFAULT_SLIDES_CONFIG
-    # AE-0374: new Radar IA carousels are stamped hero_lower_third_v4 (7 slides
-    # by default, 8 with the optional twist).
     assert project.presentation_policy_version == (
         CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION
     )
@@ -236,7 +239,7 @@ async def test_gates_pass_on_a_real_seven_slide_run(
     reason: str,
 ) -> None:
     """Scenarios: The outline gate accepts the pipeline's 7 slides and the images
-    gate its 6 hero images (AE-0365); a real count mismatch is still revised.
+    gate its 6 hero images; a real count mismatch is still revised.
     """
     total = await _slide_total(monkeypatch, await _created_project(monkeypatch))
     decision = decide(_gate(phase, total, count))

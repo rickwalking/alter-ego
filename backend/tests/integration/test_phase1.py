@@ -132,12 +132,10 @@ class TestPersonaEndpoints:
     @pytest.mark.asyncio
     async def test_get_persona(self, client: AsyncClient):
         """Test getting a specific persona profile."""
-        # First create a persona
         create_payload = {"name": "Get Test", "description": "For get test"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
 
-        # Then get it
         response = await client.get(f"/api/personas/{created['id']}")
         assert response.status_code == 200
         data = response.json()
@@ -146,12 +144,10 @@ class TestPersonaEndpoints:
     @pytest.mark.asyncio
     async def test_update_persona(self, client: AsyncClient):
         """Test updating a persona profile."""
-        # First create a persona
         create_payload = {"name": "Update Test", "description": "Before update"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
 
-        # Then update it
         update_payload = {"name": "Updated Name", "description": "After update"}
         response = await client.put(
             f"/api/personas/{created['id']}", json=update_payload
@@ -164,12 +160,10 @@ class TestPersonaEndpoints:
     @pytest.mark.asyncio
     async def test_delete_persona(self, client: AsyncClient):
         """Test deleting a persona profile."""
-        # First create a persona
         create_payload = {"name": "Delete Test"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
 
-        # Then delete it
         response = await client.delete(f"/api/personas/{created['id']}")
         assert response.status_code == 204
 
@@ -245,12 +239,10 @@ class TestBlogPostEndpoints:
     @pytest.mark.asyncio
     async def test_get_blog_post(self, client: AsyncClient):
         """Test getting a specific blog post."""
-        # First create a blog post
         create_payload = {"title": "Get Test", "slug": "get-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
 
-        # Then get it
         response = await client.get(f"/api/blog-posts/{created['id']}")
         assert response.status_code == 200
         data = response.json()
@@ -259,12 +251,10 @@ class TestBlogPostEndpoints:
     @pytest.mark.asyncio
     async def test_update_blog_post(self, client: AsyncClient):
         """Test updating a blog post."""
-        # First create a blog post
         create_payload = {"title": "Update Test", "slug": "update-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
 
-        # Then update it with optimistic locking
         update_payload = {"title": "Updated Title"}
         response = await client.put(
             f"/api/blog-posts/{created['id']}",
@@ -345,12 +335,10 @@ class TestBlogPostEndpoints:
     @pytest.mark.asyncio
     async def test_delete_blog_post(self, client: AsyncClient):
         """Test deleting a blog post."""
-        # First create a blog post
         create_payload = {"title": "Delete Test", "slug": "delete-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
 
-        # Then delete it (If-Match required since AE-0296)
         response = await client.delete(
             f"/api/blog-posts/{created['id']}", headers={"If-Match": "1"}
         )
@@ -361,8 +349,6 @@ class TestBlogPostEndpoints:
         """Test the full blog post workflow."""
         reviewer = await _create_user("reviewer@example.com", UserRole.EDITOR)
 
-        # Create a blog post owned by admin
-        # AE-0423: publish needs a blog.v2 document with a non-empty section.
         create_payload = {
             "title": "Workflow Test",
             "slug": "workflow-test",
@@ -371,7 +357,6 @@ class TestBlogPostEndpoints:
         create_response = await client.post("/api/blog-posts", json=create_payload)
         post = create_response.json()
 
-        # Submit for review with explicit reviewer (not the author)
         review_response = await client.post(
             f"/api/blog-posts/{post['id']}/submit-review?reviewer_id={reviewer.id}",
         )
@@ -379,13 +364,11 @@ class TestBlogPostEndpoints:
         reviewed = review_response.json()
         assert reviewed["status"] == "under_review"
 
-        # Approve as admin (assigned reviewer or admin)
         approve_response = await client.post(f"/api/blog-posts/{post['id']}/approve")
         assert approve_response.status_code == 200
         approved = approve_response.json()
         assert approved["status"] == "approved"
 
-        # Publish
         publish_response = await client.post(f"/api/blog-posts/{post['id']}/publish")
         assert publish_response.status_code == 200
         published = publish_response.json()

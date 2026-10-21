@@ -7,7 +7,9 @@ export interface SectionNumberProps {
   num: number;
 }
 
-export function SectionNumber({ num }: SectionNumberProps): React.ReactElement {
+export function SectionNumber({
+  num,
+}: Readonly<SectionNumberProps>): React.ReactElement {
   return (
     <span
       style={{

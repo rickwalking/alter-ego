@@ -1,4 +1,4 @@
-"""Record a Grok Bot callback on its job (AE-0393, contract section 2.2).
+"""Record a Grok Bot callback on its job (contract section 2.2).
 
 The route authenticates first (``authorize``), then hands the raw body to
 ``record``. Transitions are conditional on the job still being pending, so
@@ -86,7 +86,11 @@ class ImageBridgeCallbackService:
         return job
 
     async def record(self, job: ImageBridgeJob, body: bytes) -> CallbackOutcome:
-        """Validate the body and store the image or the error on the job."""
+        """Validate the body and store the image or the error on the job.
+
+        ``MalformedCallbackError``, JSON and UTF-8 errors are all
+        ``ValueError``.
+        """
         now = self._deps.clock.now()
         if job.status is not ImageBridgeJobStatus.PENDING:
             return CallbackOutcome.NOT_PENDING
@@ -96,7 +100,6 @@ class ImageBridgeCallbackService:
         try:
             parsed = parse_callback(json.loads(body))
         except (ValueError, RecursionError) as exc:
-            # MalformedCallbackError, JSON and UTF-8 errors are all ValueError.
             failure = JobFailure(job.id, ERROR_CODE_MALFORMED, str(exc), now)
             return await self._fail(failure, CallbackOutcome.INVALID)
         if isinstance(parsed, CallbackError):

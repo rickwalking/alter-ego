@@ -1,4 +1,4 @@
-"""Shared repository contract tests for the DocumentRepository port (AE-0094).
+"""Shared repository contract tests for the DocumentRepository port.
 
 One parametrized contract suite runs the SAME assertions against BOTH:
 
@@ -8,14 +8,17 @@ One parametrized contract suite runs the SAME assertions against BOTH:
 
 Because both adapters are exercised by identical scenarios, any divergence in
 observable behavior surfaces as a test failure — pinning the port's contract so
-adapter swaps stay safe (Phase 2 module pilot, AE-0094).
+adapter swaps stay safe (Phase 2 module pilot).
 
 The Postgres adapter runs against the SQLite in-memory database used across the
 backend test suite (per ``backend/CLAUDE.md`` — "Use SQLite in-memory for
 database tests"), so it is always available in CI; no skip is required.
 
-Scenarios reference the AE-0090 full-field document persistence behavior for the
-scope/is_public round-trip and the AE-0088 Knowledge safety-net behaviors.
+Scenarios reference the full-field document persistence behavior for the
+scope/is_public round-trip and the Knowledge safety-net behaviors.
+
+The ``_PORT_CHECK`` assignments let mypy --strict prove the fake satisfies the shipped
+DocumentRepository port and the extended contract, including the owner-scoped queries.
 """
 
 from typing import Protocol, TypedDict
@@ -30,8 +33,6 @@ from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
 
-# --- Constants (no magic strings) -------------------------------------------
-
 _FAKE = "fake"
 _POSTGRES = "postgres"
 _ERR_NOT_FOUND_FRAGMENT = "not found"
@@ -40,13 +41,12 @@ _DEFAULT_LIMIT = 100
 _DEFAULT_OFFSET = 0
 
 
-# --- Owner-scoped query shape ------------------------------------------------
-# Mirrors the ``_OwnerQuery`` TypedDict bundled by ``PostgresDocumentRepository``
-# and the ``/api/documents`` route, so the fake accepts identical inputs.
-
-
 class OwnerQuery(TypedDict, total=False):
-    """Bundled query parameters for owner-scoped document listing."""
+    """Bundled query parameters for owner-scoped document listing.
+
+    Mirrors the ``_OwnerQuery`` TypedDict bundled by ``PostgresDocumentRepository`` and
+    the ``/api/documents`` route, so the fake accepts identical inputs.
+    """
 
     owner_id: UUID
     status: DocumentStatus | None
@@ -54,25 +54,21 @@ class OwnerQuery(TypedDict, total=False):
     offset: int
 
 
-# --- Extended contract port --------------------------------------------------
-# The shipped ``DocumentRepository`` Protocol is slim (CRUD + count). The live
-# adapter contract consumed by ``/api/documents`` also includes owner-scoped
-# queries; this Protocol captures the full set so the parametrized fixture and
-# the owner-scoped tests are type-checked against it. Both the fake and
-# ``PostgresDocumentRepository`` satisfy it structurally.
-
-
 class DocumentRepositoryContract(DocumentRepository, Protocol):
-    """Full adapter contract: the shipped port plus owner-scoped queries."""
+    """Full adapter contract: the shipped port plus owner-scoped queries.
+
+    The shipped ``DocumentRepository`` Protocol is slim (CRUD + count), while the live
+    adapter contract consumed by ``/api/documents`` also includes owner-scoped queries.
+    This Protocol captures the full set so the parametrized fixture and the owner-scoped
+    tests are type-checked against it; the fake and ``PostgresDocumentRepository`` both
+    satisfy it structurally.
+    """
 
     async def get_all_for_owner(self, query: OwnerQuery) -> list[Document]: ...
 
     async def count_for_owner(
         self, owner_id: UUID, status: DocumentStatus | None = None
     ) -> int: ...
-
-
-# --- Fake in-memory adapter --------------------------------------------------
 
 
 class FakeDocumentRepository:
@@ -184,29 +180,20 @@ class FakeDocumentRepository:
         )
 
 
-# Static Protocol conformance: the fake satisfies the shipped DocumentRepository
-# port for the core CRUD/count operations the domain declares, and the extended
-# contract (incl. owner-scoped queries). mypy --strict checks these assignments,
-# satisfying AC5 ("fake implements the port, type-checked").
 _PORT_CHECK: DocumentRepository = FakeDocumentRepository()
 _CONTRACT_CHECK: DocumentRepositoryContract = FakeDocumentRepository()
 
-
-# --- Owner-id helpers --------------------------------------------------------
-# DocumentModel.owner_id is a FK to users.id; the Postgres adapter never
-# enforces it on flush (no commit), and the contract assertions never persist a
-# matching user, so owner_id is exercised purely as an opaque scoping key shared
-# by both adapters.
 
 _OWNER_A = UUID("00000000-0000-0000-0000-00000000000a")
 _OWNER_B = UUID("00000000-0000-0000-0000-00000000000b")
 
 
 def _owned_document(owner_id: UUID, title: str) -> Document:
+    """DocumentModel.owner_id is a FK to users.id, but the Postgres adapter never enforces
+    it on flush (no commit) and the assertions never persist a matching user, so
+    owner_id is only an opaque scoping key shared by both adapters.
+    """
     return Document(content=f"content::{title}", title=title, owner_id=owner_id)
-
-
-# --- Parametrization fixtures ------------------------------------------------
 
 
 def _build_postgres_repo(db_session: AsyncSession) -> PostgresDocumentRepository:
@@ -222,17 +209,16 @@ def _build_postgres_repo(db_session: AsyncSession) -> PostgresDocumentRepository
 
 @pytest.fixture(params=[_FAKE, _POSTGRES])
 def repo(request: pytest.FixtureRequest) -> DocumentRepositoryContract:
-    """Return each adapter in turn so every contract test runs against both."""
+    """Return each adapter in turn so every contract test runs against both.
+
+    The SQLite in-memory db_session is always available, so the Postgres-port adapter
+    always runs with no skip path.
+    """
     if request.param == _FAKE:
         return FakeDocumentRepository()
 
-    # SQLite in-memory db_session is always available (backend/CLAUDE.md), so the
-    # Postgres-port adapter always runs — no skip path.
     db_session = request.getfixturevalue("db_session")
     return _build_postgres_repo(db_session)
-
-
-# --- Contract suite ----------------------------------------------------------
 
 
 @pytest.mark.unit
@@ -428,12 +414,12 @@ class TestDocumentRepositoryOwnerContract:
 
 @pytest.mark.unit
 class TestDocumentRepositoryScopeContract:
-    """scope/is_public round-trip pinned identically (AE-0090 fields)."""
+    """scope/is_public round-trip pinned identically."""
 
     async def test_scope_and_is_public_create_round_trip(
         self, repo: DocumentRepositoryContract
     ) -> None:
-        """Scenario: scope/is_public round-trip on create (AE-0090).
+        """Scenario: scope/is_public round-trip on create.
 
         Given a document with scope INTERNAL and is_public False, when saved
         and reloaded, then scope is INTERNAL and is_public is False.
@@ -471,15 +457,17 @@ class TestDocumentRepositoryScopeContract:
     async def test_scope_and_is_public_update_round_trip(
         self, repo: DocumentRepositoryContract
     ) -> None:
-        """Scenario: scope/is_public changes persist via update (AE-0090)."""
+        """Scenario: scope/is_public changes persist via update.
+
+        mark_completed refreshes updated_at so the adapter writes an explicit timestamp,
+        mirroring real usage and avoiding a server onupdate re-fetch.
+        """
         created = await repo.create(Document(content="c", title="t"))
         assert created.scope == DocumentScope.PERSONAL
         assert created.is_public is False
 
         created.scope = DocumentScope.PUBLIC
         created.is_public = True
-        # mark_completed refreshes updated_at so the adapter writes an explicit
-        # timestamp (mirrors real usage and avoids a server onupdate re-fetch).
         created.mark_completed(chunk_count=2)
         await repo.update(created)
 

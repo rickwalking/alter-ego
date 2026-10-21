@@ -1,4 +1,4 @@
-"""Telegram publish-now and scheduling flows (AE-0370).
+"""Telegram publish-now and scheduling flows.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 """

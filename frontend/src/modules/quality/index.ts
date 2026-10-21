@@ -1,5 +1,5 @@
 /**
- * `quality` — bounded-context public contract (AE-0139).
+ * `quality` — bounded-context public contract.
  *
  * Owns the quality-rubric surface — rubric types and the rubric-management hook
  * — migrated from the legacy `features/rubrics` folder. `quality` is a SEPARATE
@@ -13,7 +13,6 @@
  * `docs/architecture/domain-glossary.md` for the persona ⟶ quality boundary.
  */
 
-/* --- types --- */
 export type {
   RubricCriterion,
   QualityRubric,
@@ -23,9 +22,7 @@ export type {
   RubricEvaluationResponse,
 } from "./types";
 
-/* --- hooks --- */
 export { useRubrics } from "./hooks/use-rubrics";
 
-/* --- components --- */
 export { NeonRubricCard } from "./components/neon-rubric-card";
 export type { NeonRubricCardProps } from "./components/types";

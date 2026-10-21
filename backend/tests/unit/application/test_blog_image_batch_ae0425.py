@@ -1,4 +1,4 @@
-"""Bulk cover + section images on the editor's image service (AE-0425).
+"""Bulk cover + section images on the editor's image service.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -37,12 +37,12 @@ TRACE = GenerationTrace(project_id="proj", user_id="user", post_id=POST_ID)
 
 @pytest.fixture(autouse=True)
 def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The editor's single-image service traces with its own helper."""
     monkeypatch.setattr(
         blog_image_batch,
         "blog_phase_trace",
         lambda _s, **_kwargs: nullcontext(MagicMock()),
     )
-    # The editor's single-image service (AE-0424) traces with its own helper.
     from rag_backend.application.services.blog import blog_image_service as _single
 
     monkeypatch.setattr(
@@ -70,13 +70,13 @@ def _request(
 
 
 async def test_cover_and_one_image_per_section_are_persisted(tmp_path: Path) -> None:
+    """The editor's store yields only canonical same-origin URLs."""
     # Scenario: A cover and one image slot per section are created
     generator = FakeImageGenerator()
     result = await image_batch(tmp_path, generator).generate(_request(4))
     assert set(result.images) == {IMAGE_SLOT_COVER, "sec_1", "sec_2", "sec_3", "sec_4"}
     assert result.errors == ()
     for image in result.images.values():
-        # The editor's store (AE-0424): canonical same-origin URL only.
         assert image.url.startswith(f"/api/blog-images/{POST_ID}/")
         assert (tmp_path / POST_ID / image.url.rsplit("/", 1)[1]).is_file()
         assert image.alt.strip()

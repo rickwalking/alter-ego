@@ -1,4 +1,4 @@
-"""The GrokBot cover seam over SQL and the creator-asset storage (AE-0418).
+"""The GrokBot cover seam over SQL and the creator-asset storage.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: "Usar capa do Grok" at the thesis switches slide 1 to the cover
@@ -189,14 +189,15 @@ async def test_store_claim_expire_and_sweep(
 async def test_owner_photo_with_the_same_bytes_is_never_deleted(
     db_session: AsyncSession, asset_dirs: Path
 ) -> None:
+    """Uploading the same bytes again reuses the existing row (no second row, role
+    kept), and an owner photo is not a cover, so the sweep keeps it.
+    """
     await _seed_owner(db_session)
     assets = PostgresCreatorAssetRepository(db_session)
     creator_id = await _image(db_session)
     asset = await assets.get_by_id(creator_id)
     assert asset is not None and asset.role == "cover"
-    # Same bytes again: the existing row is reused (no second row, role kept).
     assert await _image(db_session) == creator_id
-    # An owner photo is not a cover: the sweep keeps it.
     from rag_backend.domain.models.carousel_creator_asset import CreatorAssetTags
 
     await assets.set_tags(CreatorAssetTags(asset_id=creator_id, role="hook"))
@@ -261,6 +262,7 @@ async def test_offer_choice_and_chosen_cover(
 async def test_no_offer_without_a_usable_cover(
     db_session: AsyncSession, asset_dirs: Path
 ) -> None:
+    """Once the stored file is gone there is nothing to preview or stage: no offer."""
     await _seed_owner(db_session)
     repo = SqlAlchemyAutopilotRepository(db_session)
     plain = _topic(None)
@@ -275,7 +277,6 @@ async def test_no_offer_without_a_usable_cover(
         assert await offers.chosen_cover(chosen) is None
     missing_topic = _run(_topic(None), AutopilotRunState.AWAITING_OWNER)
     assert await offers.offer(missing_topic) is None
-    # The stored file is gone: no offer (nothing to preview or stage).
     cover = await _cover(db_session)
     with_file = _topic(cover.asset_id)
     await repo.add_topic(with_file)

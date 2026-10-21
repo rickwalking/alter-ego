@@ -1,4 +1,4 @@
-"""Anonymous public carousel projection (AE-0444).
+"""Anonymous public carousel projection.
 
 The public viewer needs slide images + headings for every available language,
 but the owner-only ``/slides`` response exposes internal ``image_path`` values

@@ -10,18 +10,18 @@ The publishing ports are:
   project's public-visibility signal (for the carousel→blog projection) through
   this contract.
 * ``CarouselReleasePort`` — the public-release (``is_public``) write contract for
-  a carousel project (AE-0128). The carousel publish flow drives the
+  a carousel project. The carousel publish flow drives the
   ``is_public=True`` release through this port; its only adapter is the
   publishing ACL/owner, which is the sole publishing code touching the carousel
   ORM for this write.
 * ``BlogVisibilityPort`` — the publish/unpublish status-write contract for a
-  standalone blog post (AE-0128). The standalone blog publish/unpublish routes
+  standalone blog post. The standalone blog publish/unpublish routes
   drive their visibility-status writes through this port (adapter: the ACL/owner).
-* ``BlogSchedulePort`` — the scheduling write contract for a standalone blog post
-  (AE-0128). The standalone blog schedule route + the scheduled-publish worker
+* ``BlogSchedulePort`` — the scheduling write contract for a standalone blog post. The
+  standalone blog schedule route + the scheduled-publish worker
   drive their schedule writes through this port (adapter: the ACL/owner).
-* ``DistributionPublisher`` — the channel-delivery + distribution-read contract
-  (AE-0129). The ``publish-instagram`` route distributes the carousel slides to
+* ``DistributionPublisher`` — the channel-delivery + distribution-read contract. The
+  ``publish-instagram`` route distributes the carousel slides to
   Instagram and the ``generate-caption`` route reads the persisted caption through
   this port; its adapter (the channel publisher in infrastructure) wraps the Meta
   Instagram vendor adapter + the persisted caption copy, so the vendor/LLM SDK
@@ -31,9 +31,9 @@ Per backend/CLAUDE.md, interfaces are :class:`typing.Protocol`, never ABCs, and
 they are fully typed (no ``Any``). These Protocols let the publishing
 APPLICATION/domain layers depend only on contracts — never on the blog/carousel
 ORM directly; the concrete persistence adapters live in the publishing
-infrastructure ACL/owner behind this facade (AE-0128).
+infrastructure ACL/owner behind this facade.
 
-**Re-export, not relocation (AE-0126 constraint).** ``CarouselRepository`` is the
+**Re-export, not relocation.** ``CarouselRepository`` is the
 shared Protocol defined in ``rag_backend.domain.protocols.repositories`` (imported
 by the carousel routes, the workflow engine, services, and the container).
 ``BlogPostRepository`` is the concrete data-access class defined in
@@ -45,7 +45,7 @@ domain layer also exposes them as its own ports. This mirrors
 ``modules.editorial.domain.ports`` / ``modules.presentation.domain.ports`` exactly
 (object-identity shims).
 
-**No ORM in domain (AE-0128 constraint).** The three new write Protocols
+**No ORM in domain.** The three new write Protocols
 (``CarouselReleasePort`` / ``BlogVisibilityPort`` / ``BlogSchedulePort``) speak
 only in primitive/value types (ids, the optional scheduled instant). The carousel
 project ENTITY is passed through ``object`` (the application layer holds the
@@ -83,7 +83,7 @@ from rag_backend.modules.publishing.domain.projections import (
 
 
 class DistributionPublisher(Protocol):
-    """Channel-delivery + distribution-read contract for a release (AE-0129).
+    """Channel-delivery + distribution-read contract for a release.
 
     The single seam through which the publishing context distributes a release to
     its outbound channels and reads its persisted per-channel copy. It speaks only
@@ -97,7 +97,7 @@ class DistributionPublisher(Protocol):
     Behavior-preserving: ``publish_instagram`` forwards the EXACT caption +
     image-url payload to the vendor publisher and maps its result one-to-one;
     ``caption_for`` projects the already-persisted caption (no LLM call), identical
-    to the pre-AE-0129 route read.
+    to the legacy route read.
     """
 
     async def publish_instagram(
@@ -123,7 +123,7 @@ class DistributionPublisher(Protocol):
 
 
 class PublishingReadPort(Protocol):
-    """Read-model projection contract for the public/editor READ surfaces (AE-0131).
+    """Read-model projection contract for the public/editor READ surfaces.
 
     The single seam through which the publishing context serves the public carousel
     ``/blog`` (+lang), the content-calendar, the workflow-board, and the
@@ -132,8 +132,8 @@ class PublishingReadPort(Protocol):
     concrete adapter (the read-side ACL in ``infrastructure``) is the ONLY
     publishing code that touches the carousel/blog ORM for these reads.
 
-    Behavior-preserving + additive (AE-0131): the carousel-blog projection reads
-    the ``blog_posts`` ``origin='carousel'`` rows (AE-0127 backfill) when present,
+    Behavior-preserving + additive: the carousel-blog projection reads
+    the ``blog_posts`` ``origin='carousel'`` rows (backfill) when present,
     falling back per-field to the embedded carousel columns so the response is
     byte-identical; the calendar/board/analytics projections aggregate exactly the
     same rows the legacy route/services read.
@@ -163,7 +163,7 @@ class PublishingReadPort(Protocol):
         """Whether the carousel's ``origin='carousel'`` blog row is published.
 
         Public (anonymous) callers of the legacy carousel-blog read may only see
-        a post whose ``blog_posts`` row is ``published`` (AE-0422); authenticated
+        a post whose ``blog_posts`` row is ``published``; authenticated
         preview keeps reading regardless. ``False`` when no row exists.
         """
         ...
@@ -182,7 +182,7 @@ class PublishingReadPort(Protocol):
 
 
 class BlogPostCrudPort(Protocol):
-    """Blog-post CRUD persistence-row contract for the thin blog routes (AE-0131).
+    """Blog-post CRUD persistence-row contract for the thin blog routes.
 
     The seam through which the blog-post CRUD routes obtain their persistence rows
     so the routes themselves import no blog ORM/repository. The concrete adapter
@@ -209,7 +209,7 @@ class BlogPostCrudPort(Protocol):
         ...
 
     async def public_post_ids(self, post_ids: list[str]) -> frozenset[str]:
-        """Subset of ``post_ids`` that pass the public-visibility rule (AE-0411)."""
+        """Subset of ``post_ids`` that pass the public-visibility rule."""
         ...
 
 

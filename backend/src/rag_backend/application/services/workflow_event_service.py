@@ -1,9 +1,9 @@
 """Workflow event publishing via the transactional outbox (WF-001, WF-004).
 
 ``emit`` writes the audit row **and** the outbox row in the SAME transaction as
-the state change (transactional-outbox pattern, AE-0130), then queues the event
+the state change (transactional-outbox pattern), then queues the event
 for the post-commit relay. A rollback discards both rows and the queue, keeping
-the stream consistent with PostgreSQL (AE-0074).
+the stream consistent with PostgreSQL.
 
 The outbox is the **single durable publish path**: ``emit`` never publishes to
 Redis directly. After the owning transaction commits, the ``after_commit``

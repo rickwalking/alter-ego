@@ -47,11 +47,11 @@ function buildWorkflow(
     error: null,
     transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
     reconnectLiveUpdates: vi.fn(),
-    start: vi.fn(async () => state),
-    resume: vi.fn(async () => state),
-    refreshState: vi.fn(async () => state),
-    approve: vi.fn(async () => state),
-    revise: vi.fn(async () => state),
+    start: vi.fn(() => Promise.resolve(state)),
+    resume: vi.fn(() => Promise.resolve(state)),
+    refreshState: vi.fn(() => Promise.resolve(state)),
+    approve: vi.fn(() => Promise.resolve(state)),
+    revise: vi.fn(() => Promise.resolve(state)),
     awaitingHumanReview:
       state.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
     hasActiveWorkflow: true,
@@ -111,7 +111,7 @@ function gateState(
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415) — tests/features/create-flow-ui-ae0415.feature
+/** Scenarios: tests/features/create-flow-ui-ae0415.feature. */
 describe("CreateWorkflowPanel live gates (AE-0415)", () => {
   // Scenario: The live research gate shows the findings and their sources
   it("lists the research findings with their sources on the live research gate", () => {
@@ -217,7 +217,7 @@ describe("CreateWorkflowPanel persona gate (AE-0415, B01)", () => {
   });
 });
 
-// Feature: tests/features/workflow-stream-recovery-ae0440.feature
+/** Scenarios: tests/features/workflow-stream-recovery-ae0440.feature. */
 describe("CreateWorkflowPanel live updates (AE-0440)", () => {
   function renderWithTransport(
     workflow: ReturnType<typeof useEditorialWorkflow>,

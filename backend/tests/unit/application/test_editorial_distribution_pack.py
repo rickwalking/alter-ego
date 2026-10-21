@@ -89,7 +89,12 @@ class TestBuildBlogMarkdownEn:
 
 @pytest.mark.asyncio
 async def test_build_editorial_distribution_updates_persists_fields() -> None:
-    """Distribution pack writes caption, blog, and slides_config to the project."""
+    """Distribution pack writes caption, blog, and slides_config to the project.
+
+    The live distribution helpers still build both language documents onto the preserved
+    blog_markdown and blog_translations columns, and the persisted deck size is the real
+    slide count, not a fixed "7_slides".
+    """
     project_id = uuid4()
     project = CarouselProject(
         id=project_id,
@@ -147,14 +152,10 @@ async def test_build_editorial_distribution_updates_persists_fields() -> None:
 
     assert updates["caption"] == "Caption #tag"
     assert "Hook" in str(updates["blog_markdown"])
-    # AC4 (AE-0428): the live distribution helpers still build BOTH language
-    # documents onto the preserved `blog_markdown` / `blog_translations` columns.
     assert project.blog_markdown is not None
     assert "Hook" in project.blog_markdown
     assert set(project.blog_translations or {}) == {"pt", "en"}
     assert "Hook" in project.blog_translations["pt"]
     assert "Hook" in project.blog_translations["en"]
-    # AE-0374: the persisted deck size is the real count (one outline slide),
-    # no longer a fixed "7_slides".
     assert project.slides_config == CAROUSEL_SLIDES_CONFIG_FORMAT.format(count=1)
     mock_repo.update_project.assert_called()

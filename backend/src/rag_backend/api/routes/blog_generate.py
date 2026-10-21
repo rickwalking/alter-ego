@@ -1,4 +1,4 @@
-"""Blog generation entry points (AE-0425, ADR-0025).
+"""Blog generation entry points (ADR-0025).
 
 * ``POST /blog-posts/from-carousel`` — one continuous article in the owner's
   voice from a carousel's research/outline/notes; 404 for an unknown project,
@@ -233,13 +233,15 @@ async def retry_blog_generation(
     post_id: UUID,
     load: GenerationLoad,
 ) -> BlogGenerationAccepted:
-    """202: a new lease/attempt on the same row (409 unless the run failed)."""
+    """202: a new lease/attempt on the same row (409 unless the run failed).
+
+    An article that exists is never regenerated: only its empty image slots are.
+    """
     db, current_user = load.db, load.user
     post = await get_blog_post_for_user(db, post_id, current_user)
     _assert_retryable(post.ai_generation_metadata)
     generation = generation_of(post.ai_generation_metadata)
     attempt = _attempt_of(generation) + 1
-    # An article that exists is never regenerated: only its empty image slots.
     prepared = (
         prepare_images_only(post)
         if has_article(post.content)

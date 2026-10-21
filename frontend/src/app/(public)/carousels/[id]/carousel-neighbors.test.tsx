@@ -2,8 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CarouselNeighbors } from "./carousel-neighbors";
 
-// Feature: Public carousel viewer (AE-0444)
-
 describe("CarouselNeighbors (AE-0444)", () => {
   it("links previous, next and the gallery", () => {
     render(

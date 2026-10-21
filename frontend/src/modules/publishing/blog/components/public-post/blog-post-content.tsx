@@ -12,7 +12,7 @@ import type {
 } from "./types";
 
 /**
- * Public renderer of a `blog.v2` document (AE-0423, ADR-0025): each section's
+ * Public renderer of a `blog.v2` document (ADR-0025): each section's
  * own heading, body and image with its stored alt. The title H1 belongs to the
  * page header, so no section renders an H1 (a stray `#` in a body becomes an
  * H2), and markdown images are not rendered: images come only from the
@@ -22,7 +22,7 @@ import type {
 
 const SECTION_IMAGE_SIZES = "(max-width: 768px) 100vw, 768px";
 
-function SectionBody({ markdown, design }: SectionBodyProps) {
+function SectionBody({ markdown, design }: Readonly<SectionBodyProps>) {
   return (
     <ReactMarkdown
       allowedElements={SECTION_ALLOWED_ELEMENTS}
@@ -33,7 +33,7 @@ function SectionBody({ markdown, design }: SectionBodyProps) {
   );
 }
 
-function SectionHeading({ heading, design }: SectionHeadingProps) {
+function SectionHeading({ heading, design }: Readonly<SectionHeadingProps>) {
   if (!heading) return null;
   return (
     <h2
@@ -48,7 +48,7 @@ function SectionHeading({ heading, design }: SectionHeadingProps) {
   );
 }
 
-function Section({ heading, bodyMd, image, design }: SectionProps) {
+function Section({ heading, bodyMd, image, design }: Readonly<SectionProps>) {
   return (
     <section className="space-y-6">
       <SectionHeading heading={heading} design={design} />
@@ -66,7 +66,10 @@ function Section({ heading, bodyMd, image, design }: SectionProps) {
   );
 }
 
-export function BlogPostContent({ sections, design }: BlogPostContentProps) {
+export function BlogPostContent({
+  sections,
+  design,
+}: Readonly<BlogPostContentProps>) {
   return (
     <div className="space-y-6">
       {sections.map((section) => (

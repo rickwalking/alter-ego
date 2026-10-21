@@ -1,4 +1,4 @@
-"""Langfuse traces record input, output and useful names (AE-0442).
+"""Langfuse traces record input, output and useful names.
 
 Gherkin: tests/features/langfuse_trace_io_ae0442.feature
 """

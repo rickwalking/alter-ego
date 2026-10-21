@@ -1,4 +1,4 @@
-"""Delete-policy completeness over BlogPostOrigin (AE-0296).
+"""Delete-policy completeness over BlogPostOrigin.
 
 Scenario: Every blog post origin has an explicit delete policy
 (see features/blog_post_management_ae0296.feature).

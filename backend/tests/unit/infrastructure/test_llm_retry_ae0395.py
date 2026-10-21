@@ -1,4 +1,4 @@
-"""Same-model retries before the fallback, and non-GLM fallbacks (AE-0395).
+"""Same-model retries before the fallback, and non-GLM fallbacks.
 
 Gherkin: tests/features/llm_retry_ae0395.feature
 """

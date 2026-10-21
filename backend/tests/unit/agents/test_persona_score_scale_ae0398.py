@@ -1,4 +1,4 @@
-"""Voice scores are on 0-100 (AE-0398).
+"""Voice scores are on 0-100.
 
 Gherkin: tests/features/persona_score_scale_ae0398.feature
 """

@@ -1,11 +1,11 @@
-"""Carousel artifact republish route (AE-0313).
+"""Carousel artifact republish route.
 
 Thin HTTP adapter: authenticate (owner or assigned reviewer), gate on
 ``completed`` status + a non-active workflow run, then run the full finalize
 pipeline under the shared per-project build lock. A failed republish never
 corrupts the completed project — it stays on its prior artifact version and the
 error is returned to the caller (the finalize pipeline preserves completed
-projects; AE-0313).
+projects).
 """
 
 from __future__ import annotations
@@ -92,7 +92,14 @@ async def republish_carousel(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> CarouselRepublishResponse:
-    """Re-render from persisted slides and activate a fresh artifact version."""
+    """Re-render from persisted slides and activate a fresh artifact version.
+
+    A successful republish (client-triggered or watchdog-swept) clears the rebuild
+    marker so the publish page leaves the "PDF rebuild pending" state. The finalize
+    pipeline persists and refreshes the same session-identity project row, so its
+    artifact_version and PDF pointers are already current and no ORM re-fetch (an
+    api-to-infrastructure edge) is needed.
+    """
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     if project.status != CarouselStatus.COMPLETED:
         raise HTTPException(
@@ -105,16 +112,9 @@ async def republish_carousel(
     if not result.completed:
         raise_republish_failure(result.errors)
 
-    # AE-0314: a successful republish (client-triggered or watchdog-swept)
-    # clears the server-guaranteed rebuild marker so the publish page leaves the
-    # "PDF rebuild pending" state — the fresh PDF now reflects the edited copy.
     await CarouselProjectWriteOwner(db).clear_needs_republish(str(project_id))
     await db.commit()
 
-    # The finalize pipeline persists + refreshes the SAME session-identity
-    # project row (repo.update_project), so its artifact_version / PDF pointers
-    # are already current — no ORM re-fetch (which would add a forbidden
-    # api -> infrastructure edge) is needed.
     return CarouselRepublishResponse(
         project_id=str(project_id),
         status=REPUBLISH_STATUS_REPUBLISHED,

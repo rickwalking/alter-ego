@@ -1,9 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Scenarios: see tests/features/blog_generate_ae0425.feature
-// ("Create a blog from a carousel", "A carousel that already has a blog row is blocked",
-//  "A private carousel warns that the post cannot be public")
+/** Gherkin: tests/features/blog_generate_ae0425.feature. */
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({

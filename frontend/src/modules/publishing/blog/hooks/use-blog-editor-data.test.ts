@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "../editor.test-utils";
 import { useBlogEditorData } from "./use-blog-editor-data";
 
+/**
+ * (tests/features/blog_editor_ae0424.feature)
+ */
 // Scenario: Saving appends a version snapshot visible in the sidebar
-// (tests/features/blog_editor_ae0424.feature)
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -25,7 +27,7 @@ beforeEach(() => {
   mockFetch.mockReset();
   mockFetch.mockImplementation((url) =>
     Promise.resolve(
-      String(url).endsWith("/versions")
+      url.endsWith("/versions")
         ? jsonResponse([{ version_number: 1, snapshot: {} }])
         : jsonResponse({
             items: [
@@ -51,9 +53,7 @@ describe("useBlogEditorData", () => {
     rerender({ lock: 3 });
     await waitFor(() =>
       expect(
-        mockFetch.mock.calls.filter(([url]) =>
-          String(url).endsWith("/versions"),
-        ),
+        mockFetch.mock.calls.filter(([url]) => url.endsWith("/versions")),
       ).toHaveLength(2),
     );
     act(() => result.current.setPersonaId("b"));

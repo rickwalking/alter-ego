@@ -6,7 +6,7 @@ configuration, logging, telemetry, and the ``PlatformServices`` passed to each
 module's ``bootstrap_module()``), per ADR-0009 (Domain Modular Monolith).
 
 This package is currently an empty root. No business or domain logic belongs
-here — only shared technical infrastructure. No code is moved here in AE-0080
+here — only shared technical infrastructure. No code is moved here yet
 (scaffolding only).
 
 See ``docs/decisions/0009-adopt-domain-modular-monolith.md`` §9.

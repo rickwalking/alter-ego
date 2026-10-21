@@ -135,6 +135,9 @@ class CarouselRefinementMixin:
         Rewrites the slide's `image_prompt` via LLM using *instruction*,
         generates a new image via the project's configured provider, and
         re-exports the slide JPGs + PDF so the user sees the update.
+
+        The new prompt is persisted on both the column and in ``extras``, and the HTML
+        and PDF are re-exported so the new image is baked in.
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
@@ -161,14 +164,12 @@ class CarouselRefinementMixin:
         if not new_prompt:
             raise ValueError(_ERR_EMPTY_IMAGE_PROMPT)
 
-        # Persist the new prompt on both the column and in extras for safety
         slide.image_prompt = new_prompt
         extras: dict[str, object] = dict(slide.extras or {})
         extras["image_prompt"] = new_prompt
         slide.extras = extras
         await self._repo.update_slide(slide)
 
-        # Update the in-memory SlideData so image generation uses the new prompt
         slide_data = slide_data.__class__(
             slide_number=slide_data.slide_number,
             slide_type=slide_data.slide_type,
@@ -183,7 +184,6 @@ class CarouselRefinementMixin:
             tldr_strip=slide_data.tldr_strip,
         )
 
-        # Regenerate the image file
         output_dir = Path(project.output_dir)
         await run_image_one(
             ImageGenerationConfig(
@@ -194,7 +194,6 @@ class CarouselRefinementMixin:
             )
         )
 
-        # Re-export HTML + PDF so the new image is baked in
         await self.re_render_slides(project_id)
         return project
 
@@ -209,6 +208,9 @@ class CarouselRefinementMixin:
         CSS overrides, writes them to the project's output directory as
         `design_overrides.css`, and re-exports the slide JPGs + PDF.
         Does NOT regenerate source images.
+
+        The LLM sees the CSS block of the current HTML; markdown fences it wraps around
+        the CSS are stripped.
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
@@ -220,11 +222,9 @@ class CarouselRefinementMixin:
         if not slides:
             raise ValueError(_ERR_NO_SLIDES.format(project_id))
 
-        # Build current HTML so the LLM can see the existing CSS classes
         slides_data = [unpack_extras(s) for s in slides]
         current_html = self._phase4_design(project, slides_data)
 
-        # Extract the CSS block from the HTML for the LLM
         css_start = current_html.find("<style>")
         css_end = current_html.find("</style>")
         current_css = (
@@ -242,7 +242,6 @@ class CarouselRefinementMixin:
         if not override_css:
             raise ValueError(_ERR_EMPTY_CSS)
 
-        # Strip markdown fences if the LLM wrapped the CSS
         if override_css.startswith("```css"):
             override_css = override_css[6:]
         if override_css.startswith("```"):
@@ -259,6 +258,5 @@ class CarouselRefinementMixin:
             logger.exception("Failed to write design overrides")
             raise ValueError(_ERR_WRITE_OVERRIDES.format(overrides_path, exc)) from exc
 
-        # Re-export with the new overrides baked in
         await self.re_render_slides(project_id)
         return project

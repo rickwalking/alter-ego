@@ -1,4 +1,4 @@
-"""AE-0439: the content-generation scoring stores 0-100 entries (QA F-12) and
+"""The content-generation scoring stores 0-100 entries (QA F-12) and
 retries a timed-out judge on the queue's next model (#154 A).
 
 Fakes only; no network.
@@ -84,9 +84,9 @@ class TestContentScoring:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Scenario: Stored persona scores are on 0-100 for a raw 0-10 answer."""
-        primary = _RawJudge(
-            [{"tone_match": 9.0, "overall": 8.5, "suggestions": ["keep the contract"]}]
-        )
+        primary = _RawJudge([
+            {"tone_match": 9.0, "overall": 8.5, "suggestions": ["keep the contract"]}
+        ])
         _judge_factory(monkeypatch, primary)
         scores = await _runner(_FallbackChat())._score_slides(
             [{"draft_text": TEXT}], PERSONA

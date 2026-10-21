@@ -183,8 +183,9 @@ class PostgresMessageRepository:
         This is a simplified implementation that returns the most recent messages
         up to a reasonable count. A more sophisticated implementation would
         calculate actual token counts.
+
+        It assumes ~100 tokens per message and returns them in chronological order.
         """
-        # Estimate ~100 tokens per message on average
         estimated_messages = max_tokens // 100
 
         result = await self._session.execute(
@@ -194,6 +195,5 @@ class PostgresMessageRepository:
             .limit(estimated_messages)
         )
         messages = list(result.scalars().all())
-        # Reverse to maintain chronological order
         messages.reverse()
         return [msg.to_entity() for msg in messages]

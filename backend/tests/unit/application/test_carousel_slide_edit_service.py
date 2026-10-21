@@ -1,4 +1,4 @@
-"""Unit tests for the completed-project slide-edit service (AE-0314).
+"""Unit tests for the completed-project slide-edit service.
 
 Gherkin: tests/features/carousel_text_edit_no_regen.feature
 
@@ -7,6 +7,9 @@ serialization is exercised with an injected-lock double; the CAS, projection
 commit, marker, and audit run against a real in-memory session. The checkpoint
 convergence (source-of-truth option (a)) is exercised through a
 ``patch_parked_checkpoint`` double.
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
 """
 
 from __future__ import annotations
@@ -57,7 +60,6 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
     WorkflowAuditLogModel,
 )
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 _V1 = "hero_lower_third_v1"
@@ -200,6 +202,7 @@ class TestSlideEditService:
     async def test_edit_persists_copy_marks_republish_and_keeps_image(
         self, test_engine: AsyncEngine
     ) -> None:
+        """Image assets are never touched by a text edit."""
         # Scenario: fix casing on a completed carousel; images unchanged.
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db)
@@ -214,7 +217,6 @@ class TestSlideEditService:
             assert result.updated_slides == (1,)
             slide = await _slide(db, pid)
             assert slide.heading == _CLEAN_HEADING
-            # Image assets are never touched by a text edit (AC).
             assert slide.image_path == _IMAGE
             assert slide.image_prompt == "a neon skyline"
             await db.refresh(project)
@@ -223,7 +225,9 @@ class TestSlideEditService:
     async def test_checkpoint_written_with_fresh_report_option_a(
         self, test_engine: AsyncEngine
     ) -> None:
-        # AC #5: post-edit validation reflects the edited copy (no stale report).
+        """Post-edit validation reflects the edited copy (no stale report): the edited
+        copy and the fresh report go to the checkpoint.
+        """
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db, body=_SCAFFOLD_BODY)
             workflow = _FakeWorkflow(parked=True)
@@ -231,7 +235,6 @@ class TestSlideEditService:
                 _command(project, [_edit_payload()])
             )
             assert result.report["blocking"] is False
-            # Option (a): the edited copy + fresh report went to the checkpoint.
             assert workflow.writes
             written = workflow.writes[0]
             assert "localized_slides" in written
@@ -240,7 +243,7 @@ class TestSlideEditService:
     async def test_legacy_end_thread_skips_checkpoint(
         self, test_engine: AsyncEngine
     ) -> None:
-        # Fallback: a non-parked (legacy END) thread persists projection only.
+        """A non-parked (legacy END) thread persists the projection only."""
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db)
             workflow = _FakeWorkflow(parked=False)
@@ -251,7 +254,6 @@ class TestSlideEditService:
             assert result.checkpoint_updated is False
 
     async def test_summary_extras_are_edited(self, test_engine: AsyncEngine) -> None:
-        # AC: editing a summary slide edits its structured extras.
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db)
             pid = str(project.id)
@@ -288,7 +290,10 @@ class TestSlideEditService:
     async def test_lock_held_raises_mutation_in_progress(
         self, test_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Injected-lock double: a concurrent repair/republish holds the lock.
+        """An injected lock double simulates a concurrent repair or republish holding
+        the lock.
+        """
+
         @contextlib.asynccontextmanager
         async def _held_lock(*_a: object, **_k: object) -> AsyncIterator[None]:
             raise CarouselConflictError(

@@ -23,7 +23,7 @@ RESEARCH_FINDING_SUMMARY_KEY = "summary"
 def research_summary_from_findings(findings: object) -> str:
     """Join the per-source ``summary`` of research findings into intro prose.
 
-    AE-0347: the workflow stores research as ``research_findings`` (one dict per
+    the workflow stores research as ``research_findings`` (one dict per
     source with ``key_points`` + ``summary``); nothing ever wrote the
     ``research_summary`` scalar the blog composer expected, so the intro was
     always empty. Duplicate/blank summaries are dropped, order is preserved.
@@ -50,7 +50,7 @@ def research_summary_from_findings(findings: object) -> str:
 class BlogCompositionInput:
     """Inputs for building blog markdown without constrained slide bodies.
 
-    AE-0416: ``research_summary`` is English (the source-synthesis prompt is
+    ``research_summary`` is English (the source-synthesis prompt is
     English and names no target language), so only the EN body uses it.
     """
 
@@ -119,7 +119,7 @@ def build_blog_markdown_from_long_form_notes(
 ) -> str:
     """Build the PT blog markdown from outline headings and long-form notes.
 
-    AE-0416: the English research summary is not added here. The PT body used
+    the English research summary is not added here. The PT body used
     to open with it, so the Portuguese post started with an English paragraph.
     """
     sections: list[str] = [f"# {composition.title}", ""]

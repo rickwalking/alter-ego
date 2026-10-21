@@ -1,4 +1,4 @@
-"""Logs and Telegram alerts for LLM breaker changes (AE-0399).
+"""Logs and Telegram alerts for LLM breaker changes.
 
 Every breaker transition is logged. When ``TELEGRAM_ALERTS_BOT_TOKEN`` and
 ``TELEGRAM_ALERTS_CHAT_ID`` are set, a send-only bot also messages the owner:

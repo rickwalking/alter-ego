@@ -9,7 +9,7 @@ import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
 
 /**
- * AE-0311: run the bounded deterministic repair pipeline (scaffold strip,
+ * Run the bounded deterministic repair pipeline (scaffold strip,
  * heading-echo removal, body trim, canonical shape normalization, policy-gated
  * casing) over a carousel's localized slides. Idempotent — a second call on
  * already-clean content is a no-op.

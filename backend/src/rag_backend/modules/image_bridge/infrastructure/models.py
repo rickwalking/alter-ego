@@ -1,4 +1,4 @@
-"""SQLAlchemy model of ``image_bridge_jobs`` (AE-0393).
+"""SQLAlchemy model of ``image_bridge_jobs``.
 
 Mirrors the Alembic revision ``image_bridge_jobs``. ``image_bytes`` holds
 the callback image only between the callback and the waiter's single read;
@@ -31,7 +31,10 @@ class ImageBridgeOrmBase(DeclarativeBase):
 
 
 class ImageBridgeJobModel(ImageBridgeOrmBase):
-    """ORM row for one bridge job."""
+    """ORM row for one bridge job.
+
+    ``image_bytes`` is deferred: the 2 s poll reads the status, never the bytes.
+    """
 
     __tablename__ = TABLE_IMAGE_BRIDGE_JOBS
     __table_args__ = (Index(INDEX_JOBS_STATUS_EXPIRES_AT, "status", "expires_at"),)
@@ -42,7 +45,6 @@ class ImageBridgeJobModel(ImageBridgeOrmBase):
     token_sha256: Mapped[str] = mapped_column(
         String(TOKEN_SHA256_LENGTH), nullable=False
     )
-    # Deferred: the 2 s poll reads the status, never the bytes.
     image_bytes: Mapped[bytes | None] = mapped_column(
         LargeBinary, nullable=True, deferred=True
     )

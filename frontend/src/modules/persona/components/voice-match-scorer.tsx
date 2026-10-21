@@ -17,7 +17,7 @@ import type { VoiceMatchScorerProps } from "./types";
 
 export function VoiceMatchScorer({
   personaId,
-}: VoiceMatchScorerProps): React.JSX.Element {
+}: Readonly<VoiceMatchScorerProps>): React.JSX.Element {
   const t = useTranslations("blogEditorial");
   const [text, setText] = useState("");
   const [result, setResult] = useState<VoiceScoreResult | null>(null);

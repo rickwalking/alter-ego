@@ -2,11 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
 import { resolvePublicBlogView } from "./public-blog";
 
-// Feature: Public blog renders the v2 document (AE-0423)
-// frontend/tests/features/blog_sections_ae0423.feature
-// (also public-blog-detail.feature, public-blog-polish-ae0412.feature,
-//  blog_no_carousel_slides_ae0422.feature)
-
 vi.mock("@/lib/server-fetch", () => ({
   fetchPublicBlogPost: vi.fn(),
   fetchCarouselDesign: vi.fn(),

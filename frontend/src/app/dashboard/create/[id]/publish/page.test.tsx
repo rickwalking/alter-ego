@@ -1,8 +1,8 @@
 /**
- * The carousel publish page (AE-0446: behavior pinned before the page was
- * split into a hook and sections). Covers loading (AE-0415 B25), not-found,
+ * The carousel publish page, behaviour pinned before the page was split into
+ * a hook and sections. Covers loading, not-found,
  * the readiness / failed / awaiting-approval notices, publishing to the site
- * and to Instagram, and the rebuild / republish cache-bust (AE-0313).
+ * and to Instagram, and the rebuild / republish cache-bust.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,11 +12,11 @@ import type { EditorialWorkflowState } from "@/modules/publishing";
 import DashboardCreatePublishPage from "./page";
 
 const m = vi.hoisted(() => ({
-  project: vi.fn(),
-  refetchProject: vi.fn(async () => undefined),
-  refreshState: vi.fn(async () => null),
+  project: vi.fn<() => unknown>(),
+  refetchProject: vi.fn(() => Promise.resolve(undefined)),
+  refreshState: vi.fn(() => Promise.resolve(null)),
   workflowState: null as EditorialWorkflowState | null,
-  fetch: vi.fn(),
+  fetch: vi.fn<(...args: unknown[]) => unknown>(),
   publishInstagram: vi.fn(),
   republish: vi.fn(),
   ready: true,
@@ -255,7 +255,7 @@ describe("DashboardCreatePublishPage", () => {
     m.workflowState = approved();
     m.fetch.mockResolvedValue({
       ok: false,
-      json: async () => ({ detail: "Not approved yet" }),
+      json: () => Promise.resolve({ detail: "Not approved yet" }),
     });
     await renderLoaded();
     fireEvent.click(screen.getByText("publishToSite"));
@@ -268,9 +268,7 @@ describe("DashboardCreatePublishPage", () => {
     m.workflowState = approved();
     m.fetch.mockResolvedValue({
       ok: false,
-      json: async () => {
-        throw new Error("not json");
-      },
+      json: () => Promise.reject(new Error("not json")),
     });
     await renderLoaded();
     fireEvent.click(screen.getByText("publishToSite"));

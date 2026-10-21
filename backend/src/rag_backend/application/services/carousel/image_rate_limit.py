@@ -1,4 +1,4 @@
-"""Rate-limit-aware retry for provider image generation (AE-0208).
+"""Rate-limit-aware retry for provider image generation.
 
 The OpenAI org image cap is 5/min; a multi-slide carousel that fires every
 slide at once 429s. Two complementary controls live here:

@@ -12,7 +12,10 @@ import { useLocale } from "next-intl";
 import { formatDate } from "@/lib/utils";
 import { type DocumentCardProps } from "./types";
 
-export function DocumentCard({ document, onDelete }: DocumentCardProps) {
+export function DocumentCard({
+  document,
+  onDelete,
+}: Readonly<DocumentCardProps>) {
   const locale = useLocale();
   const meta = document.metadata as Record<string, unknown> | undefined;
   const tags = (meta?.tags as string[] | undefined) ?? [];

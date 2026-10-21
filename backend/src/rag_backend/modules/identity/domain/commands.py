@@ -2,7 +2,7 @@
 
 These are the boundary-safe inputs the identity application services accept.
 Each maps onto the same operations the legacy auth/user routes and dependencies
-perform today, so the extraction is behavior-preserving (AE-0098). Grouping
+perform today, so the extraction is behavior-preserving. Grouping
 inputs into typed dataclasses keeps the service methods at ≤3 arguments
 (backend/CLAUDE.md) without arbitrary dict bundles.
 """

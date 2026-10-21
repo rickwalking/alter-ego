@@ -1,8 +1,13 @@
-"""Pytest configuration and fixtures."""
+"""Pytest configuration and fixtures.
+
+``SECRET_KEY`` is set before any import that loads Settings (e.g. the Container) during
+test collection. The research SSRF guard resolves hostnames before scraping; tests must
+never touch real DNS, so every test sees a public answer unless it passes its own
+resolver (see tests/unit/domain/test_url_safety.py).
+"""
 
 import os
 
-# Required before any import that loads Settings (e.g. Container) during test collection.
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-suite!!")
 os.environ.setdefault("ANON_SECRET_KEY", "test-anon-secret-for-pytest-suite!")
 
@@ -24,12 +29,11 @@ from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
 
-# Use SQLite in-memory for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register the Knowledge golden-snapshot capture flag (AE-0088).
+    """Register the Knowledge golden-snapshot capture flag.
 
     When ``--snapshot-update`` is passed, the Knowledge safety-net snapshot
     tests rewrite the committed golden snapshots from current behavior instead
@@ -74,7 +78,7 @@ def no_outbox_relay(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     ``WorkflowEventService`` drains the outbox through the global
     ``db_config.c_engine`` after commit. In tests on ``test_engine`` that global
     is whatever an earlier test installed (often an engine already disposed),
-    so the relay would open a connection nothing ever closes (AE-0446).
+    so the relay would open a connection nothing ever closes.
     """
     from rag_backend.application.services import workflow_event_service
 
@@ -89,6 +93,9 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
     Uses a connection-level transaction pattern: all commits within the test
     are part of a single transaction that is rolled back at test end.
+
+    The outer transaction is rolled back only while active: a test that calls
+    ``session.rollback()`` already ended it.
     """
     async_session = sessionmaker(
         test_engine,
@@ -102,7 +109,6 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         yield session
     finally:
         await session.close()
-        # A test that calls session.rollback() already ended this transaction.
         if transaction.is_active:
             await transaction.rollback()
         await connection.close()
@@ -152,9 +158,6 @@ def sample_documents() -> list[Document]:
     ]
 
 
-# QA r1 S-W1: the research SSRF guard resolves hostnames before scraping. Tests
-# must never touch real DNS, so every test sees a public answer unless it
-# passes its own resolver (see tests/unit/domain/test_url_safety.py).
 _TEST_PUBLIC_IP = "93.184.216.34"
 
 

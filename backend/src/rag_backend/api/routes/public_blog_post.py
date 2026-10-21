@@ -1,4 +1,4 @@
-"""Public, unauthenticated blog-post read API (AE-0297, ADR-0013).
+"""Public, unauthenticated blog-post read API (ADR-0013).
 
 Serves ONLY ``published`` posts through the lean allow-list schema. This
 router is **role-blind by construction**: no auth dependency of any kind is
@@ -57,7 +57,7 @@ async def list_public_blog_posts(
 ) -> PublicBlogPostListResponse:
     """Published-only listing; any client status filter is ignored.
 
-    AE-0347: carousel-origin rows are also gated on the parent carousel being
+    carousel-origin rows are also gated on the parent carousel being
     public (the dual-write stamps them ``published`` before the site release).
     """
     published = public_blog_visibility_clause()
@@ -98,7 +98,11 @@ async def get_public_blog_post(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PublicBlogPostResponse:
-    """Uniform 404 for missing AND non-published posts (no existence leak)."""
+    """Uniform 404 for missing AND non-published posts (no existence leak).
+
+    A published row with a non-v2 document is not renderable: it gets the uniform 404,
+    never a 500 and never a legacy adaptation.
+    """
     row = (
         await db.execute(
             select(BlogPostModel)
@@ -114,8 +118,6 @@ async def get_public_blog_post(
     try:
         return to_public_detail(row)
     except InvalidBlogDocumentError as exc:
-        # A published row with a non-v2 document is not renderable: uniform 404
-        # (ADR-0013), never a 500 and never a legacy adaptation (AE-0428).
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_PUBLIC_BLOG_POST_NOT_FOUND,

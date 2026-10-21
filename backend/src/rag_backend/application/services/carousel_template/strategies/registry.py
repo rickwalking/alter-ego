@@ -150,7 +150,7 @@ def bootstrap_strategies() -> SlideLayoutRegistry:
 
 
 def _register_pov_strategies(registry: SlideLayoutRegistry) -> None:
-    """AE-0376: the "Ponto de Vista" layouts, after the defaults (fallback order)."""
+    """The "Ponto de Vista" layouts, after the defaults (fallback order)."""
     from rag_backend.application.services.carousel_template.strategies import (
         cover_card,
         cta_follow,
@@ -163,7 +163,6 @@ def _register_pov_strategies(registry: SlideLayoutRegistry) -> None:
     registry.register(statement.StatementStrategy())
     registry.register(save_checklist.SaveChecklistStrategy())
     registry.register(cta_follow.CtaFollowStrategy())
-    # AE-0418: slide 1 as a framed GrokBot screenshot (picked by name only).
     registry.register(cover_card.CoverCardStrategy())
 
 

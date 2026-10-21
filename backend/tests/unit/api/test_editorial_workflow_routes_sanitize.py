@@ -1,4 +1,4 @@
-"""Unit tests for editorial workflow route sanitization (AE-0289).
+"""Unit tests for editorial workflow route sanitization.
 
 Edited localized slides are FINAL published copy: sanitization must strip
 injection-prone chars but PRESERVE case, so proper-cased headings survive and
@@ -54,7 +54,7 @@ class TestSanitizeEditedSlidesPreservesCase:
 
 @pytest.mark.unit
 class TestSanitizeEditedSlidesMarkdownAndXss:
-    """AE-0314: markdown emphasis + case survive the wire; markup is inert."""
+    """Markdown emphasis + case survive the wire; markup is inert."""
 
     def _sanitize_one(self, heading: str, body: str) -> dict[str, dict[str, str]]:
         from rag_backend.api.routes.carousels.editorial_workflow_routes_sanitize import (
@@ -77,12 +77,12 @@ class TestSanitizeEditedSlidesMarkdownAndXss:
         assert "**ênfase**" in slide["presentation_pt"]["body"]
 
     def test_stored_xss_payload_is_neutralized(self) -> None:
+        """Angle brackets and parens are stripped, so no tag or scheme survives."""
         slide = self._sanitize_one(
             "<img src=x onerror=alert(1)>Keep", "[x](javascript:alert(1))"
         )
         heading = slide["presentation_pt"]["heading"]
         body = slide["presentation_pt"]["body"]
-        # Angle brackets + parens are stripped, so no tag/scheme survives.
         assert "<" not in heading and ">" not in heading
         assert "Keep" in heading
         assert "(" not in body and ")" not in body

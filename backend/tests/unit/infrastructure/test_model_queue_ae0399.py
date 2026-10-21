@@ -1,4 +1,4 @@
-"""Model queue, circuit breaker, OpenCode sidecar and alerts (AE-0399).
+"""Model queue, circuit breaker, OpenCode sidecar and alerts.
 
 Gherkin: tests/features/llm_model_queue_ae0399.feature
 """

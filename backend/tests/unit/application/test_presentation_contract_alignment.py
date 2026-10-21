@@ -1,4 +1,8 @@
-"""Cross-layer drift tests for carousel presentation contract."""
+"""Cross-layer drift tests for carousel presentation contract.
+
+Runtime skills are co-located inside the backend package, so they resolve through the
+canonical package-relative resolver instead of a repo-root walk.
+"""
 
 from __future__ import annotations
 
@@ -16,8 +20,6 @@ from rag_backend.domain.constants.runtime_skills import (
     get_runtime_skills_filesystem_root,
 )
 
-# AE-0246: runtime skills are co-located inside the backend package; resolve them
-# through the canonical package-relative resolver instead of a repo-root walk.
 _PIPELINE_ROOT = get_runtime_skills_filesystem_root() / "carousel-pipeline"
 CONTRACT_YAML = _PIPELINE_ROOT / "contracts" / "hero_lower_third_v1.yaml"
 CONTENT_CONTRACTS = _PIPELINE_ROOT / "_shared" / "content-contracts.md"

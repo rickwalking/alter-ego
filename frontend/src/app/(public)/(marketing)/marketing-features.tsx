@@ -60,10 +60,10 @@ function buildSecondaryFeatures(
 function SecondaryFeatureCard({
   feat,
   testId,
-}: {
+}: Readonly<{
   feat: SecondaryFeature;
   testId?: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <Link
       href={feat.href}
@@ -117,7 +117,9 @@ function SecondaryFeatureCard({
   );
 }
 
-function FeaturesHeader({ t }: MarketingFeaturesProps): React.ReactElement {
+function FeaturesHeader({
+  t,
+}: Readonly<MarketingFeaturesProps>): React.ReactElement {
   return (
     <div style={{ marginBottom: "60px" }}>
       <MarketingSectionEyebrow label={t("capabilities.label")} />
@@ -141,7 +143,7 @@ function FeaturesHeader({ t }: MarketingFeaturesProps): React.ReactElement {
 
 export function MarketingFeatures({
   t,
-}: MarketingFeaturesProps): React.ReactElement {
+}: Readonly<MarketingFeaturesProps>): React.ReactElement {
   const secondaryFeatures = buildSecondaryFeatures(t);
 
   return (

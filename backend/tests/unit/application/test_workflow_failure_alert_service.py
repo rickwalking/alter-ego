@@ -186,7 +186,7 @@ class TestWorkflowFailureAlertService:
     async def test_in_progress_excluded_from_stuck_alerts(
         self, session: AsyncSession
     ) -> None:
-        """AE-0026: Projects with phase_status in_progress are excluded from stuck detection."""
+        """Projects with phase_status in_progress are excluded from stuck detection."""
         recent = datetime.now(UTC) - timedelta(minutes=5)
         project = CarouselProjectModel(
             id=str(uuid.uuid4()),
@@ -208,7 +208,7 @@ class TestWorkflowFailureAlertService:
     async def test_stale_in_progress_alerts_after_ttl(
         self, session: AsyncSession
     ) -> None:
-        """AE-0026: Stale in_progress projects older than 30 min trigger stuck alert."""
+        """Stale in_progress projects older than 30 min trigger stuck alert."""
         stale = datetime.now(UTC) - timedelta(hours=1)
         project = CarouselProjectModel(
             id=str(uuid.uuid4()),

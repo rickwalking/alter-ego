@@ -1,5 +1,5 @@
 /**
- * AE-0273 — useScrollLock. Feature: responsive-dashboard-shell.feature
+ * useScrollLock. Feature: responsive-dashboard-shell.feature
  * Scenario: Opening the drawer traps focus and locks body scroll.
  */
 import { afterEach, describe, expect, it } from "vitest";

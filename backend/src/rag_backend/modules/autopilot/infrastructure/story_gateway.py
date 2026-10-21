@@ -1,4 +1,4 @@
-"""Story Graph steps backed by ``MetaInstagramPublisher`` (AE-0369).
+"""Story Graph steps backed by ``MetaInstagramPublisher``.
 
 Same host, token, and error translation as the carousel's stepped gateway.
 Only the real Graph publisher can post a Story; any other publisher gets no

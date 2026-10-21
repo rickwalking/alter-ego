@@ -1,4 +1,4 @@
-"""AE-0405: the feedback-note lifecycle (pure state functions + persistence).
+"""The feedback-note lifecycle (pure state functions + persistence).
 
 Gherkin: tests/features/content_feedback_lifecycle_ae0405.feature
 """
@@ -271,6 +271,7 @@ def _snapshot(
 @pytest.mark.unit
 class TestParkedContentUpdates:
     def test_parked_content_artifacts_are_saved_with_marker(self) -> None:
+        """The parked checkpoint names the content gate."""
         artifacts = {"slide_drafts": [{"slide_index": 1}]}
         snapshot = _snapshot(
             {"content_approved": True},
@@ -285,7 +286,6 @@ class TestParkedContentUpdates:
             **artifacts,
             STATE_FIELD_CONTENT_ARTIFACTS_PARKED: True,
             "content_approved": False,
-            # AE-0413: the parked checkpoint names the content gate.
             "current_phase": "content",
         }
 

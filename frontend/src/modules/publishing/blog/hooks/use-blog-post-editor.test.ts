@@ -12,9 +12,7 @@ import { updateSection } from "../lib/editor-document";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 import type { BlogEditorError } from "./types";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (section editing,
-// versions, concurrent save conflict, migration banner) and
-// tests/features/blog-dashboard-ae0411.feature (Editor load/save)
+/** Gherkin: tests/features/blog_editor_ae0424.feature, tests/features/blog-dashboard-ae0411.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -38,7 +36,7 @@ async function renderLoaded(post = blogPost()) {
 
 function lastBody(): Record<string, unknown> {
   const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
-  return JSON.parse(String(init?.body)) as Record<string, unknown>;
+  return JSON.parse(init?.body as string) as Record<string, unknown>;
 }
 
 beforeEach(() => {
@@ -169,7 +167,7 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
   it("keeps keystrokes typed while the save is in flight", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Enviado" })));
-    let resolve: (value: Response) => void = () => undefined;
+    let resolve: (value: Response) => void = (_value) => undefined;
     mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (resolve = r)));
     let saving: Promise<boolean> = Promise.resolve(false);
     act(() => {
@@ -187,12 +185,14 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
     expect(result.current.dirty).toBe(true);
   });
 
+  /**
+   * our own slot write landing during the PUT is retried on top instead.
+   */
   // Scenario: A concurrent save conflict is surfaced — but a 409 caused by
-  // our own slot write landing during the PUT is retried on top instead.
   it("retries a save that lost the race to our own slot write", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));
-    let reject: (value: Response) => void = () => undefined;
+    let reject: (value: Response) => void = (_value) => undefined;
     mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (reject = r)));
     let saving: Promise<boolean> = Promise.resolve(false);
     act(() => {

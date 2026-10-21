@@ -1,4 +1,4 @@
-"""AE-0347: carousel blog body composition inputs (see carousel_blog_body_ae0347.feature)."""
+"""Carousel blog body composition inputs (see carousel_blog_body_ae0347.feature)."""
 
 from __future__ import annotations
 
@@ -94,6 +94,7 @@ class TestContentAgentV5:
         get_ai_response_cache().clear()
 
     async def test_agent_renders_v5_and_keeps_notes(self) -> None:
+        """The agent renders v6, which keeps the v5 notes contract."""
         llm = AsyncMock()
         llm.bind = MagicMock(return_value=llm)
         payload = {
@@ -110,7 +111,6 @@ class TestContentAgentV5:
         ) as spy:
             result = await agent.draft_slide(1, "Title", ["Point"])
         assert result[LONG_FORM_NOTES_KEY] == "Para one.\n\nPara two."
-        # AE-0366: the agent now renders v6, which keeps the v5 notes contract.
         assert result["prompt_version"] == CAROUSEL_PROMPT_VERSION_V6
         assert spy.call_args.kwargs["version"] == CAROUSEL_PROMPT_VERSION_V6
 
@@ -251,6 +251,7 @@ class TestBlogTitles:
     """Scenarios: Blog titles derive from the intro slide / never overwritten."""
 
     async def test_titles_derive_from_intro_slide(self) -> None:
+        """The English research intro only opens the EN body."""
         project = _project()
         updates = await _run_pack(
             project,
@@ -265,7 +266,6 @@ class TestBlogTitles:
         )
         assert project.title == "Gancho em PT"
         assert project.title_en == "Hook in EN"
-        # AE-0416: the English research intro only opens the EN body.
         assert str(updates["blog_markdown"]).startswith("# Gancho em PT\n\n## ")
         assert project.blog_translations is not None
         assert project.blog_translations["en"].startswith("# Hook in EN\n\nIntro")
@@ -388,6 +388,7 @@ class TestContentAgentNotesHardening:
         assert log.warning.call_args.kwargs["slide_index"] == 2
 
     async def test_cached_noteless_reply_warns_once(self) -> None:
+        """The second draft is a cache hit, so the reply is parsed twice."""
         llm = AsyncMock()
         llm.bind = MagicMock(return_value=llm)
         payload = {"draft_text": "Slide", "confidence_score": 0.5, "sources_used": []}
@@ -395,5 +396,5 @@ class TestContentAgentNotesHardening:
         agent = ContentDraftAgent(llm=llm)
         await agent.draft_slide(3, "Cached", ["q"])
         with patch("rag_backend.agents.content_draft_agent.logger") as log:
-            await agent.draft_slide(3, "Cached", ["q"])  # cache hit → parsed twice
+            await agent.draft_slide(3, "Cached", ["q"])
         log.warning.assert_called_once()

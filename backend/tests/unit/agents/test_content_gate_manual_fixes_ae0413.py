@@ -1,9 +1,9 @@
-"""AE-0413: manual fixes on the content gate (REPORT B02 + B03).
+"""Manual fixes on the content gate (REPORT B02 + B03).
 
 Gherkin: tests/features/content_gate_backend_ae0413.feature
 
-Real engine + real artifact runner on an in-memory checkpointer (the AE-0405
-harness); the drafting model is a spy. The exact QA sequence: research ->
+Real engine + real artifact runner on an in-memory checkpointer (the content
+feedback harness); the drafting model is a spy. The exact QA sequence: research ->
 outline -> content, then "Submit manual fixes" on the FIRST content gate.
 """
 
@@ -190,7 +190,7 @@ class TestManualFixesOnFirstGate:
     ) -> None:
         """Scenario: Manual fixes on the first content gate keep the edited copy (B03).
 
-        Before AE-0413 the revise re-entered the content node and its ensure
+        Previously the revise re-entered the content node and its ensure
         rebuilt every localized slide from the PT drafts (EN fell back to PT,
         structured items dropped) and re-drafted blocking slides.
         """
@@ -274,7 +274,7 @@ class TestManualFixesOnFirstGate:
 
 @pytest.mark.unit
 class TestManualFixesParkUpdates:
-    """The manual-fixes decision on one finished content review (AE-0413)."""
+    """The manual-fixes decision on one finished content review."""
 
     _EDITS: ClassVar[dict[str, object]] = {
         "phase_status": "awaiting_human",

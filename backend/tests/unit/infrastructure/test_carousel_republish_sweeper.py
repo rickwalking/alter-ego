@@ -1,4 +1,4 @@
-"""Unit tests for the server-guaranteed republish sweeper (AE-0314).
+"""Unit tests for the server-guaranteed republish sweeper.
 
 Gherkin: tests/features/carousel_text_edit_no_regen.feature
 
@@ -124,6 +124,8 @@ class TestRepublishSweeper:
     async def test_build_conflict_is_swallowed_and_marker_kept(
         self, test_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A concurrent client republish holds the lock, so the sweeper retries next tick."""
+
         async def _fake_republish(_db: AsyncSession, _pid: str) -> object:
             raise CarouselConflictError(
                 CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
@@ -136,5 +138,4 @@ class TestRepublishSweeper:
             pid = await _add_project(db, marker_age_seconds=600)
             count = await _sweeper().sweep(db)
             assert count == 0
-            # A concurrent client republish holds the lock; retry next tick.
             assert await _marker(db, pid) is not None

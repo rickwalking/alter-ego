@@ -1,4 +1,10 @@
-"""Carousel workflow graph wiring and routing."""
+"""Carousel workflow graph wiring and routing.
+
+A phase whose artifacts failed leaves the graph (_ROUTE_FAILED routes to END) instead of
+re-entering itself: content_phase_async returns early on a failed phase_status without
+interrupting, so routing it back into the same node loops with no LLM call until the
+LangGraph recursion limit.
+"""
 
 from __future__ import annotations
 
@@ -37,11 +43,6 @@ from rag_backend.domain.constants.carousel_workflow import (
 _ROUTE_APPROVED = "approved"
 _ROUTE_RETRY = "retry"
 _ROUTE_DONE = "done"
-# AE-0330: a phase whose artifacts failed must leave the graph, not re-enter
-# itself. content_phase_async returns early on phase_status=failed WITHOUT
-# interrupting, so the old {approved, retry} map sent it straight back into the
-# same node: an instant loop with no LLM call that only stopped at langgraph's
-# 10007-step recursion limit (14 minutes, ~350k checkpoint rows, live 2026-09-14).
 _ROUTE_FAILED = "failed"
 
 _PHASE_APPROVAL_FIELDS: dict[str, str] = {
@@ -67,7 +68,12 @@ def route_after_gate(state: CarouselWorkflowState, approved_field: str) -> str:
 
 
 def needs_gate_reopen(snapshot: object) -> bool:
-    """Detect workflows stuck at END while still awaiting human review."""
+    """Detect workflows stuck at END while still awaiting human review.
+
+    A failed phase routes to END, so a retry must be able to re-enter it exactly like a
+    review gate stuck at END; otherwise Command(resume) on a finished graph is a silent
+    no-op.
+    """
     next_nodes = getattr(snapshot, "next", ()) or ()
     if next_nodes:
         return False
@@ -75,9 +81,6 @@ def needs_gate_reopen(snapshot: object) -> bool:
     if not isinstance(values, dict):
         return False
     phase_status = str(values.get("phase_status", ""))
-    # AE-0330: a phase that failed now routes to END (see _ROUTE_FAILED). A
-    # retry must be able to re-enter it, exactly like a review gate stuck at
-    # END — otherwise Command(resume) on a finished graph is a silent no-op.
     if phase_status not in {PHASE_STATUS_AWAITING_HUMAN, PHASE_STATUS_FAILED}:
         return False
     phase = str(values.get("current_phase", ""))
@@ -88,7 +91,7 @@ def needs_gate_reopen(snapshot: object) -> bool:
 
 
 def route_after_design(state: CarouselWorkflowState) -> str:
-    """Route the design gate (AE-0310).
+    """Route the design gate.
 
     A design revise carrying ``target_phase=content`` re-enters the content
     node to regenerate the flagged copy; the design node clears the target on
@@ -121,7 +124,7 @@ def route_after_final_review(state: CarouselWorkflowState) -> str:
 
 
 def route_after_hold(state: CarouselWorkflowState) -> str:
-    """Route a resumed approved-hold node (AE-0288).
+    """Route a resumed approved-hold node.
 
     A send-back resume (revise + ``target_phase``) sets ``phase_status`` to
     ``awaiting_human`` plus a valid ``send_back_target_phase`` → return to that

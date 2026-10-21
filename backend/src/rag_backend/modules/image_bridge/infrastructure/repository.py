@@ -1,4 +1,4 @@
-"""SQLAlchemy ``ImageBridgeJobRepository`` (AE-0393).
+"""SQLAlchemy ``ImageBridgeJobRepository``.
 
 Each call opens its own short session and commits, so the long-running
 waiter never holds a transaction while it polls. Transitions are single
@@ -40,7 +40,9 @@ class SqlImageBridgeJobRepository:
     """Postgres (SQLite in unit tests) job store."""
 
     def __init__(self, session_maker: SessionMakerProvider) -> None:
-        # A provider, not a maker: the engine exists only after ``init_db``.
+        """``session_maker`` is a provider, not a maker: the engine exists only
+        after ``init_db``.
+        """
         self._session_maker = session_maker
 
     async def create(self, job: ImageBridgeJob) -> None:
@@ -163,5 +165,5 @@ def _job_from(row: ImageBridgeJobModel) -> ImageBridgeJob:
 
 
 def _aware(moment: datetime) -> datetime:
-    # SQLite drops the offset; Postgres timestamptz keeps it.
+    """SQLite drops the offset; Postgres timestamptz keeps it."""
     return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)

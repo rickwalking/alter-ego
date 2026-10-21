@@ -6,12 +6,12 @@ import { BLOG_POSTS_I18N_NAMESPACE } from "@/modules/editorial-operations";
 import { TEXT_DIM } from "@/constants/neon";
 import type { BlogPostsPagerProps } from "@/app/dashboard/blog-posts/types";
 
-/** Previous / next pages of the dashboard blog list (AE-0416). */
+/** Previous / next pages of the dashboard blog list. */
 export function BlogPostsPager({
   page,
   pageCount,
   onPageChange,
-}: BlogPostsPagerProps): React.ReactElement | null {
+}: Readonly<BlogPostsPagerProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   if (pageCount <= 1) {
     return null;

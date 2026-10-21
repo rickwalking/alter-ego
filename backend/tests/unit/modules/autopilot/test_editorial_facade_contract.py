@@ -1,4 +1,4 @@
-"""Rule-fires test for the autopilot facade-only contract (AE-0180 / QA r1 H5).
+"""Rule-fires test for the autopilot facade-only contract (QA r1 H5).
 
 A clean tree is not evidence the contract works. This plants a legacy
 carousel-service import inside a temporary copy of the autopilot module and asserts

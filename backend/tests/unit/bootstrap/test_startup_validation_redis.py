@@ -1,7 +1,7 @@
-"""Startup guard tests for Redis credentials (AE-0302).
+"""Startup guard tests for Redis credentials.
 
-Separate file from test_startup_validation.py so the AE-0302 guard tests do
-not entangle with the AE-0213/AE-0215 fixtures.
+Separate file from test_startup_validation.py so the Redis guard tests do
+not entangle with the checkpointer and image-provider fixtures.
 
     Gherkin: tests/features/redis_auth.feature —
       "missing credential fails fast", "unset or unrecognized ENVIRONMENT
@@ -57,17 +57,17 @@ def test_unrecognized_environment_fails_startup_without_credential() -> None:
 def test_production_redis_with_credential_passes() -> None:
     settings = _settings(environment=ENVIRONMENT_PRODUCTION, password=_PASSWORD)
 
-    validate_redis_credentials(settings)  # does not raise
+    validate_redis_credentials(settings)
 
 
 # Scenario: explicit development environment tolerates an absent password
 def test_development_without_credential_passes() -> None:
     settings = _settings(environment=ENVIRONMENT_DEVELOPMENT)
 
-    validate_redis_credentials(settings)  # does not raise
+    validate_redis_credentials(settings)
 
 
 def test_no_redis_url_means_nothing_to_validate() -> None:
     settings = _settings(environment=ENVIRONMENT_PRODUCTION, redis_url="")
 
-    validate_redis_credentials(settings)  # memory publisher — does not raise
+    validate_redis_credentials(settings)

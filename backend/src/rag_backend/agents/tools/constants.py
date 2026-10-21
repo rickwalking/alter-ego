@@ -1,4 +1,15 @@
-"""Constants for the agents-package research tool adapters (AE-0249)."""
+"""Constants for the agents-package research tool adapters.
+
+SCRAPE_FAILURE_PREFIX marks the graceful-degradation message returned when a URL cannot
+be reached, so the researcher continues without the page instead of failing the whole
+run.
+
+SCRAPE_BLOCKED_PREFIX marks the SSRF boundary guard: the researcher is LLM-driven, so
+the scrape_url argument is untrusted. Only http(s) is allowed, and host-internal targets
+(loopback, private, link-local including the cloud metadata endpoint) are refused before
+the Playwright service is invoked. The scheme and host lists live in the domain so the
+application scraper shares them.
+"""
 
 from __future__ import annotations
 
@@ -8,31 +19,19 @@ from rag_backend.domain.constants.url_safety import (
 )
 from rag_backend.domain.models import ResearchSourceType
 
-# Tool names exposed to the researcher subagent.
 TOOL_SCRAPE_URL = "scrape_url"
 TOOL_SEARCH_WEB = "search_web"
 
-# Graceful-degradation message returned when a URL cannot be reached, so the
-# researcher continues without the page instead of failing the whole run
-# (ADR-0249 "scrape failure degrades gracefully" scenario).
 SCRAPE_FAILURE_PREFIX = "scrape failed for"
 
-# SSRF boundary guard (AE-0249 QA F-1): the researcher subagent is LLM-driven, so
-# the scrape_url argument is untrusted. Only http(s) is allowed, and host-internal
-# targets (loopback/private/link-local incl. the cloud metadata endpoint) are
-# refused before the Playwright service is invoked.
 SCRAPE_BLOCKED_PREFIX = "scrape blocked for"
-# The scheme and host lists live in the domain so the application scraper
-# shares them (QA r1 S-W1).
 
-# search_web result formatting.
 EMPTY_SEARCH_RESULT = "No web results found."
 SEARCH_RESULT_TEMPLATE = "[{index}] {title} ({url})\n{snippet}"
 SOURCE_KEY_URL = "url"
 SOURCE_KEY_TITLE = "title"
 SOURCE_KEY_SNIPPET = "snippet"
 
-# Default source types the researcher searches across when none are supplied.
 DEFAULT_SEARCH_SOURCE_TYPES: tuple[ResearchSourceType, ...] = (
     ResearchSourceType.BLOG,
     ResearchSourceType.NEWS,

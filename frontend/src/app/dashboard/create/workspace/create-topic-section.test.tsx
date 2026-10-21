@@ -3,8 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { INITIAL_CREATE_FORM_STATE } from "@/app/dashboard/create/types";
 import { CreateTopicSection } from "./create-topic-section";
 
-// Scenarios: see tests/features/create-image-guidance.feature
-
+/** Scenarios: tests/features/create-image-guidance.feature. */
 describe("CreateTopicSection image guidance (AE-0298)", () => {
   it("renders the optional multiline image-guidance input capped at 500 chars", () => {
     render(

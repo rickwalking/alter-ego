@@ -277,11 +277,11 @@ def propagate_attributes(
     *,
     trace_input: object | None = None,
 ) -> Generator[PhaseTrace, None, None]:
-    """Run the enclosed LLM calls in the named, tagged phase trace (AE-0390).
+    """Run the enclosed LLM calls in the named, tagged phase trace.
 
     Missing ``project_id``/``user_id``/``agent_name``/``content_type`` come
     from the enclosing :func:`workflow_trace_scope`. A nested call reuses the
-    outer phase span (AE-0442) instead of clobbering its trace metadata.
+    outer phase span instead of clobbering its trace metadata.
     """
     _ = callbacks
     with phase_trace(metadata, trace_input=trace_input) as trace:
@@ -417,7 +417,7 @@ def record_human_review(
 ) -> None:
     """Record a human review event inside its own named, tagged trace.
 
-    AE-0442: the old version created an event on a span that was never ended,
+    The old version created an event on a span that was never ended,
     so the parent never reached Langfuse and every review became an orphan,
     unnamed trace with no I/O.
     """

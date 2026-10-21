@@ -1,6 +1,6 @@
 """Owner/admin routes for managed carousel creator branding assets.
 
-Thin HTTP adapters (AE-0120). Each endpoint access-checks the request at the edge
+Thin HTTP adapters. Each endpoint access-checks the request at the edge
 (``assert_domain_owner_or_admin``), reads/validates the upload, then delegates the
 upload/select use case to the presentation :class:`PresentationHandlers` (via the
 presentation facade), and maps the result to the response. The routes no longer
@@ -65,7 +65,7 @@ def get_creator_asset_service(
     """Build the request-scoped creator-asset service (legacy edge construction).
 
     Kept here so the grandfathered ``creator_assets -> creator_asset_repository``
-    import pair stays under this module; the AE-0120 presentation edge provider
+    import pair stays under this module; the presentation edge provider
     reuses this factory (imported lazily there to avoid an import cycle) so the
     creator-asset upload/select path is wired byte-identically behind the
     presentation handlers.

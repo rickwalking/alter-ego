@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { secureRandomUnit } from "@/lib/utils";
 
 export function ParticleBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,14 +17,14 @@ export function ParticleBackground() {
       const p = document.createElement("div");
       p.style.cssText =
         "position:absolute;border-radius:50%;background:#00d4ff;pointer-events:none;";
-      p.style.left = `${Math.random() * 100}%`;
+      p.style.left = `${secureRandomUnit() * 100}%`;
       p.style.top = "100%";
-      const size = 1 + Math.random() * 2;
+      const size = 1 + secureRandomUnit() * 2;
       p.style.width = `${size}px`;
       p.style.height = `${size}px`;
-      p.style.animation = `particle-float-landing ${6 + Math.random() * 6}s linear infinite`;
-      p.style.animationDelay = `${Math.random() * 8}s`;
-      p.style.opacity = String(0.3 + Math.random() * 0.4);
+      p.style.animation = `particle-float-landing ${6 + secureRandomUnit() * 6}s linear infinite`;
+      p.style.animationDelay = `${secureRandomUnit() * 8}s`;
+      p.style.opacity = String(0.3 + secureRandomUnit() * 0.4);
       container.appendChild(p);
       particles.push(p);
     }

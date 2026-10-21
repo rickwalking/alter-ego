@@ -1,4 +1,4 @@
-"""The project's persona for a background resume (AE-0397).
+"""The project's persona for a background resume.
 
 The resume runner passed ``persona=None`` on every resume, so a content phase
 reached through a resume (every autopilot gate approval, and every HTTP

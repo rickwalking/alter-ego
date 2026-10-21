@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AE-0415 (B24/B27): human phase names instead of raw phase ids, and the phase
+ * Human phase names instead of raw phase ids, and the phase
  * an approval starts. Phase names live under `create.phases`.
  */
 

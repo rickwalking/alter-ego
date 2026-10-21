@@ -16,7 +16,7 @@ export interface BlogPostsFiltersProps {
   totalCount: number;
 }
 
-/** Management callbacks threaded from the page into every card (AE-0296). */
+/** Management callbacks threaded from the page into every card. */
 export interface BlogPostActionHandlers {
   onDelete: (post: DashboardBlogPost) => void;
   onHide: (post: DashboardBlogPost) => void;
@@ -59,7 +59,7 @@ export interface DeleteConfirmModalProps {
   onCancel: () => void;
 }
 
-/** Field state for the editor form (AE-0411): labels, limits and errors. */
+/** Field state for the editor form: labels, limits and errors. */
 export interface BlogPostEditFieldsProps {
   title: string;
   onTitleChange: (value: string) => void;
@@ -87,7 +87,7 @@ export interface FieldErrorProps {
   message: string | null;
 }
 
-/** One dashboard list page: 0-based page plus the server-side filters (AE-0416). */
+/** One dashboard list page: 0-based page plus the server-side filters. */
 export interface BlogPostListQuery {
   page: number;
   status: string;

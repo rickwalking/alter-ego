@@ -7,6 +7,9 @@ posted after the container was created is taken as the one it produced
 (QA r2 R3). A manual post from before the container is never matched, and
 two albums after it are ambiguous: nothing is guessed, and the caller fails
 the publish without retrying.
+
+``_CLIENT_MESSAGES`` are the error codes the one-shot publish returns as-is; any
+other becomes the generic code.
 """
 
 from __future__ import annotations
@@ -46,7 +49,6 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-# Error codes the one-shot publish returns as-is; any other becomes generic.
 _CLIENT_MESSAGES = frozenset({
     ERR_INSTAGRAM_CONTAINER_FAILED,
     ERR_INSTAGRAM_CONTAINER_TIMEOUT,
@@ -68,7 +70,7 @@ def quota_remaining(payload: dict[str, object]) -> int:
     """``quota_total - quota_usage``. Unreadable bodies raise a transient error.
 
     A readable ``quota_usage`` without ``config.quota_total`` falls back to
-    Meta's documented limit instead of failing every tick (AE-0368).
+    Meta's documented limit instead of failing every tick.
     """
     data = payload.get(KEY_DATA)
     if not isinstance(data, list) or not data:

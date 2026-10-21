@@ -4,7 +4,7 @@ Revision ID: c8d9e0f1a2b3
 Revises: f2a3b4c5d6e7
 Create Date: 2026-10-14
 
-AE-0360: ADDITIVE. Grok Bot posts observed X status URLs. Valid items are
+ADDITIVE. Grok Bot posts observed X status URLs. Valid items are
 stored as ``x_browser`` signals and their canonical URLs join the topic
 allowlist. No existing table is altered, so the LangGraph checkpoint-drain
 gate does not apply. ``downgrade`` drops the new table.

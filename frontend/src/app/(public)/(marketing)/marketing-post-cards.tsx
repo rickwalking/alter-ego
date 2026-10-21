@@ -39,9 +39,9 @@ function categoryLabel(post: MarketingPostProps["post"]): string {
 
 function FeaturedPostImage({
   imageUrl,
-}: {
+}: Readonly<{
   imageUrl: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <div
       style={{
@@ -78,7 +78,7 @@ function FeaturedPostImage({
 export function FeaturedPostCard({
   post,
   locale,
-}: MarketingPostProps): React.ReactElement {
+}: Readonly<MarketingPostProps>): React.ReactElement {
   return (
     <Link
       href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}
@@ -150,7 +150,7 @@ export function FeaturedPostCard({
 export function SecondaryPostLink({
   post,
   locale,
-}: MarketingPostProps): React.ReactElement {
+}: Readonly<MarketingPostProps>): React.ReactElement {
   return (
     <Link
       href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}

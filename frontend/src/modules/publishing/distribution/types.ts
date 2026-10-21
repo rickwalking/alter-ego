@@ -8,7 +8,7 @@ export interface RegenerateStrategySectionProps {
 
 export type ViewerLanguage = "pt" | "en";
 
-/** Inputs for the publish viewer's slide list (AE-0416). */
+/** Inputs for the publish viewer's slide list. */
 export interface ViewerSlideSource {
   project: CarouselProjectResponse;
   language: ViewerLanguage;
@@ -16,7 +16,7 @@ export interface ViewerSlideSource {
   slideNumbers?: readonly number[];
 }
 
-/** One layout template card of the regenerate section (AE-0446). */
+/** One layout template card of the regenerate section. */
 export interface StrategyTemplateCardProps {
   template: (typeof CREATE_TEMPLATES)[number];
   active: boolean;

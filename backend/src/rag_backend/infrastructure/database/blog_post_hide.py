@@ -1,14 +1,14 @@
-"""Bulk hide for published carousel-origin blog posts (AE-0422, AC6).
+"""Bulk hide for published carousel-origin blog posts.
 
 Under ADR-0025 carousel-origin posts are always drafts, created on demand. The
 legacy pipeline, however, published one post per carousel save, so production
 holds many published ``origin='carousel'`` rows whose body is a mutated slide
-dump. AE-0427 owns creating the real replacement posts; this service is the
+dump. Creating the real replacement posts is a separate job; this service is the
 one-shot operator action that removes the bad ones from the public surface.
 
 Selection is deliberately **not** based on body length or heuristics: *every*
 published carousel-origin post is a legacy artifact and is hidden, regardless of
-how healthy it looks (AE-0422 AC6). The transition mirrors the workflow
+how healthy it looks. The transition mirrors the workflow
 ``unpublish`` field write (status → draft, publish stamps cleared) and adds the
 ``ai_generation_metadata.hidden_bad_post`` marker so the write is auditable and
 idempotent — a second run selects nothing.
@@ -16,7 +16,7 @@ idempotent — a second run selects nothing.
 Layer note: this lives in ``infrastructure/database`` (next to
 ``workflow_timeout_repository``) because it writes ``BlogPostModel`` directly and
 reuses :class:`WorkflowEventService`; that keeps the operator path free of a new
-``application -> infrastructure`` edge (the generated AE-0082 baseline is
+``application -> infrastructure`` edge (the generated import baseline is
 unchanged).
 """
 
@@ -112,6 +112,9 @@ class BlogPostHideService:
         The caller owns the commit (mirrors the workflow routes): the field
         writes, the marker, and the status events are staged here and flushed.
         Re-running is a no-op because selection only matches ``published`` rows.
+
+        Logging uses structlog key/values: %-style args raise once the app has
+        configured structlog.
         """
         run = run or HideRun()
         at = run.now or datetime.now(UTC)
@@ -143,8 +146,6 @@ class BlogPostHideService:
             hidden_ids.append(str(row.id))
         await db.flush()
         if hidden_ids:
-            # structlog key/value (not %-style args, which raise once the app
-            # has configured structlog; found as an order-dependent test failure).
             logger.info("blog_posts_hidden", count=len(hidden_ids), reason=run.reason)
         return HideReport(ids=hidden_ids, reason=run.reason)
 

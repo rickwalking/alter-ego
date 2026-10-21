@@ -1,4 +1,4 @@
-"""SQL store of GrokBot covers (AE-0418, ADR-0024).
+"""SQL store of GrokBot covers (ADR-0024).
 
 Covers are read with their creator asset's artifact-relative path (where the
 image is staged for rendering). ``claim_cover`` is a compare-and-set on the

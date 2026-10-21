@@ -10,7 +10,7 @@ persisted one.
 
 The row has no ``actions`` column: ``_structured_from_presentation`` stores a
 closing slide's actions under ``features``. Reading a closing row back maps
-them to ``actions`` again (AE-0437: the autofix wrote the row's ``features``
+them to ``actions`` again (the autofix wrote the row's ``features``
 into the checkpoint, so prod carousel 5344b6c6 slide 6 kept its closing items
 under the wrong key).
 """

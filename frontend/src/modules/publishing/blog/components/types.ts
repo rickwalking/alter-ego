@@ -1,8 +1,8 @@
 /**
  * Blog component prop types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
- * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
+ * Per the component-type-location convention
+ * (`frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
 
@@ -17,7 +17,7 @@ export interface AiSuggestionPanelProps {
 
 export interface BlogPostVersion {
   version_number: number;
-  /** Absent on entries written before AE-0424 (restore-only history). */
+  /** Absent on entries written before the section editor (restore-only history). */
   title?: string | null;
   excerpt?: string | null;
   snapshot?: Record<string, unknown>;

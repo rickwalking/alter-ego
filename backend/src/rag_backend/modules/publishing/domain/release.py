@@ -2,19 +2,22 @@
 
 Publishing distinguishes a content item's *release lifecycle* — where it sits on
 the path from draft to publicly released — from the upstream editorial *approval*
-(``approved_for_publish``, owned by the editorial context, AE-0111) and from raw
-visibility flags. AE-0111 already split approval ``!=`` release on the editorial
+(``approved_for_publish``, owned by the editorial context) and from raw
+visibility flags. The editorial context already splits approval ``!=`` release on its
 side; this module owns the *publishing* read of that release lifecycle.
 
 :class:`ReleaseState` is derived **directly** from the canonical blog workflow
 status language (:class:`~rag_backend.domain.constants.blog_post.BlogPostStatus`)
-— it introduces no new domain strings (AE-0126 constraint). It maps each blog
+— it introduces no new domain strings. It maps each blog
 status to a coarse release phase the publishing/distribution paths key off,
 without changing who-can-see-what or who writes the status.
 
-Behavior-preserving + additive (AE-0126): this is a read projection only. The
+Behavior-preserving + additive: this is a read projection only. The
 auto-publish behavior cutover is DEFERRED (documented follow-up); the existing
 publish routes stay the sole writer of the status.
+
+The status-to-phase mapping is keyed by the canonical :class:`BlogPostStatus` members
+(object identity), so no new status strings are introduced.
 """
 
 from __future__ import annotations
@@ -41,9 +44,6 @@ class ReleasePhase(StrEnum):
     RETIRED = "retired"
 
 
-# Mapping from the canonical blog status to the coarse release phase. The keys
-# are the canonical :class:`BlogPostStatus` members (object-identity), so no new
-# status strings are introduced; the values are this module's coarse phases.
 _STATUS_TO_PHASE: dict[BlogPostStatus, ReleasePhase] = {
     BlogPostStatus.DRAFT: ReleasePhase.UNPUBLISHED,
     BlogPostStatus.UNDER_REVIEW: ReleasePhase.IN_REVIEW,
@@ -59,7 +59,7 @@ class ReleaseState:
 
     Built from the item's canonical blog ``status``. ``is_released`` is the
     single source of truth for "this content has been publicly released"; it is
-    independent of the upstream editorial approval state (AE-0111). The state is
+    independent of the upstream editorial approval state. The state is
     a read projection and never mutates the underlying status.
     """
 

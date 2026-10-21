@@ -1,4 +1,4 @@
-"""Cover and section image routes of the blog editor (AE-0424, ADR-0025).
+"""Cover and section image routes of the blog editor (ADR-0025).
 
 ``/cover/image`` and ``/sections/{section_id}/image`` support generate /
 regenerate (POST, optional edited ``prompt``), alt + caption edits (PATCH) and
@@ -13,6 +13,8 @@ keeps only files referenced by the content or a version snapshot.
 ``GET /blog-images/{post_id}/{file}`` serves the store: published posts to
 anyone (revalidated cache), other posts only to their author or an admin
 (``private, no-store``), else the uniform 404 (ADR-0013).
+
+Path params are fields of the target dataclasses (resolved with Depends()).
 """
 
 import re
@@ -88,7 +90,6 @@ from rag_backend.domain.models.blog_document import BlogDocument, BlogImage
 
 router = APIRouter(tags=["blog_post_images"])
 
-# Path params are fields of the target dataclasses (``Depends()``).
 COVER_PATH = "/blog-posts/{post_id}/cover/image"
 SECTION_PATH = "/blog-posts/{post_id}/sections/{section_id}/image"
 IMAGE_FILE_PATH = "/blog-images/{post_id}/{filename}"
@@ -163,11 +164,13 @@ def _change(edit: _SlotEdit, document_edit: DocumentEdit) -> SlotEdit:
 
 
 async def _generated_image(edit: _SlotEdit, prompt: str | None) -> BlogImage:
-    """Preflight (document, slot), reserve the budget, then the provider spend."""
+    """Preflight (document, slot), reserve the budget, then the provider spend.
+
+    The budget is reserved under the row lock and committed, so no transaction is held
+    during the slow spend; the write re-reads the row FOR UPDATE afterwards.
+    """
     document = load_document(edit.post)
     request = edit_or_404(lambda: _request(edit, document, prompt))
-    # Reserve under the row lock and commit: no transaction is held during
-    # the slow spend; the write re-reads the row ``FOR UPDATE`` afterwards.
     await reserve_image_budget(
         edit.db, BudgetReservation(post_id=edit.post_id, cap=blog_image_cost_cap())
     )
@@ -311,7 +314,7 @@ class ImageFileTarget:
 
 
 def _not_found() -> HTTPException:
-    """Uniform 404 (ADR-0013), never cached (AE-0439, QA F-14).
+    """Uniform 404 (ADR-0013), never cached.
 
     The edge caches uncached 404s (Cloudflare's default browser TTL is
     14400 s); pinning ``no-store`` keeps a draft 404 from lingering after

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * AE-0166 — a `.tsx` component that calls client-only React hooks MUST declare
+ * A `.tsx` component that calls client-only React hooks MUST declare
  * `"use client"`. Catches the missing-directive class that previously only
- * `next build` flagged (AE-0155) — now caught statically by `npm run lint`.
+ * `next build` flagged — now caught statically by `npm run lint`.
  *
  * Scope: component files (`.tsx`) under src/, excluding tests/stories. Custom
  * hook modules (`.ts`) are intentionally NOT checked — the client boundary is
@@ -15,15 +15,18 @@ import { join } from "node:path";
 
 const ROOT = process.env.USE_CLIENT_ROOT || "src";
 
-// Hooks that REQUIRE a Client Component (state/effect/refs/context/etc.).
+/** Hooks that require a Client Component (state, effects, refs, context, etc.). */
 const HOOK_RE =
   /\b(useState|useEffect|useLayoutEffect|useReducer|useRef|useContext|useImperativeHandle|useTransition|useDeferredValue|useSyncExternalStore)\s*\(/;
 const DIRECTIVE_RE = /^\s*["']use client["']/;
 
-// Strip block + line comments so a hook name mentioned only in a comment is not
-// a false positive, and a `"use client"` directive preceded by a leading
-// license/JSDoc block (legal per Next.js) is still recognized. String-literal
-// `//` (e.g. in URLs) is left alone via the leading-boundary group.
+/**
+ * Strips block and line comments so a hook name mentioned only in a comment is
+ * not a false positive, and a `"use client"` directive preceded by a leading
+ * license/JSDoc block (legal per Next.js) is still recognized: the directive must
+ * be the first statement, and after stripping it is the first non-blank content.
+ * String-literal `//` (e.g. in URLs) is left alone via the leading-boundary group.
+ */
 function stripComments(src) {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -49,9 +52,6 @@ const violations = [];
 for (const file of files) {
   const code = stripComments(readFileSync(file, "utf8"));
   if (!HOOK_RE.test(code)) continue;
-  // The directive must be the first statement, but comments/blank lines may
-  // precede it — stripComments() turned those into whitespace, so the directive
-  // is now the first non-blank content if present.
   if (!DIRECTIVE_RE.test(code.replace(/^\s+/, ""))) violations.push(file);
 }
 

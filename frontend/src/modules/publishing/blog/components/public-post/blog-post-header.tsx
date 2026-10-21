@@ -6,7 +6,7 @@ export function BlogPostHeader({
   badge,
   swipeHint,
   design,
-}: BlogPostHeaderProps) {
+}: Readonly<BlogPostHeaderProps>) {
   const { colors, typography } = design;
 
   return (

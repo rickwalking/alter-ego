@@ -2,7 +2,7 @@
 
 Keyed by the owner chat id. A rework phase is only visible on a run still
 ``awaiting_owner``, so a later approve or reject cannot be undone by a stale
-text message. AE-0396: an edited POV thesis ("Editar") is pending on a run
+text message. An edited POV thesis ("Editar") is pending on a run
 ``awaiting_thesis``; ``take`` used to scan only ``awaiting_owner`` runs, so the
 owner's typed thesis was dropped silently.
 """
@@ -24,7 +24,6 @@ from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.pov_constants import THESIS_PENDING_PHASE
 from rag_backend.modules.autopilot.webhook_constants import REWORK_SCAN_LIMIT
 
-# The run state each kind of pending reply belongs to.
 _THESIS_STATE = AutopilotRunState.AWAITING_THESIS
 _REWORK_STATE = AutopilotRunState.AWAITING_OWNER
 _SCANNED_STATES = (_REWORK_STATE, _THESIS_STATE)

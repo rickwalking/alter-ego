@@ -16,7 +16,7 @@ from rag_backend.application.services.carousel.editorial_workflow_generators imp
 async def test_generate_slide_drafts_passes_revision_notes_not_persona_context() -> (
     None
 ):
-    """AE-0291 dedup: reviewer notes flow via revision_notes (rendered imperatively
+    """Reviewer notes flow via revision_notes (rendered imperatively
     in the instruction context), NOT duplicated into persona_context."""
     content_agent = MagicMock()
     content_agent.draft_slide = AsyncMock(return_value={"draft_text": "Draft"})
@@ -44,7 +44,7 @@ def _outline() -> list[dict[str, object]]:
 
 @pytest.mark.asyncio
 async def test_sibling_context_excludes_self_and_includes_others() -> None:
-    """AE-0291: each slide sees the OTHER slides' outline, never its own."""
+    """Each slide sees the OTHER slides' outline, never its own."""
     content_agent = MagicMock()
     content_agent.draft_slide = AsyncMock(
         side_effect=[
@@ -66,7 +66,7 @@ async def test_sibling_context_excludes_self_and_includes_others() -> None:
 
 @pytest.mark.asyncio
 async def test_previous_draft_mapped_by_slide_index() -> None:
-    """AE-0291: the prior rejected body is fed back for the matching slide index."""
+    """The prior rejected body is fed back for the matching slide index."""
     content_agent = MagicMock()
     content_agent.draft_slide = AsyncMock(
         side_effect=[
@@ -94,14 +94,18 @@ async def test_previous_draft_mapped_by_slide_index() -> None:
 
 @pytest.mark.asyncio
 async def test_bounded_redraft_runs_once_for_duplicate_and_keeps_distinct() -> None:
-    """AE-0291: a near-duplicate slide is re-drafted exactly once; the more distinct
-    result is kept (redraft count is bounded, no unbounded loop)."""
+    """A near-duplicate slide is re-drafted exactly once; the more distinct
+    result is kept (redraft count is bounded, no unbounded loop).
+
+    Slide 2 nearly duplicates slide 1, so the three initial drafts get exactly one
+    bounded re-draft.
+    """
     content_agent = MagicMock()
     duplicate = "vulnerability discovery is a national security risk for nations"
     content_agent.draft_slide = AsyncMock(
         side_effect=[
             {"draft_text": duplicate},
-            {"draft_text": duplicate + " today"},  # slide 2 ~ duplicate of slide 1
+            {"draft_text": duplicate + " today"},
             {"draft_text": "open weight parity reshapes the landscape entirely"},
             {"draft_text": "totally different rewritten copy about latency budgets"},
         ]
@@ -111,7 +115,6 @@ async def test_bounded_redraft_runs_once_for_duplicate_and_keeps_distinct() -> N
         content_agent, SlideDraftGenerationParams(outline=_outline())
     )
 
-    # 3 initial + exactly 1 bounded re-draft for the flagged duplicate.
     assert content_agent.draft_slide.await_count == 4
     assert drafts[1]["draft_text"] == (
         "totally different rewritten copy about latency budgets"

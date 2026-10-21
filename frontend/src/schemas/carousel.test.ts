@@ -81,9 +81,9 @@ function omitKey<T extends Record<string, unknown>, K extends keyof T>(
   object: T,
   key: K,
 ): Omit<T, K> {
-  const copy = { ...object };
-  delete copy[key];
-  return copy;
+  return Object.fromEntries(
+    Object.entries(object).filter(([entryKey]) => entryKey !== key),
+  ) as Omit<T, K>;
 }
 
 describe("Carousel Design Colors Schema", () => {
@@ -349,8 +349,10 @@ describe("Carousel Slide Response Schema", () => {
     expect(result.success).toBe(false);
   });
 });
+/**
+ * (backend/tests/features/image_generation_provider.feature)
+ */
 // Scenario: Pluggable image provider combo validation
-// (see backend tests/features/image_generation_provider.feature)
 describe("Carousel Create Request Schema — image_model/image_style", () => {
   const BASE = {
     topic: "T",

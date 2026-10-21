@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Sync workflow copy to DB, regenerate on-topic images, and re-render a carousel."""
+"""Sync workflow copy to DB, regenerate on-topic images, and re-render a carousel.
+
+Image prompts keep to on-topic AI security operations scenes: no rockets,
+vehicles or celebrity silhouettes.
+"""
 
 from __future__ import annotations
 
@@ -15,25 +19,24 @@ from rag_backend.application.services.carousel.editorial_distribution_pack impor
     SlideDraftsContext,
     apply_slide_drafts_to_database,
 )
-from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     generate_carousel_images,
 )
-from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
-from rag_backend.domain.constants import ENCODING_UTF8, LANGUAGE_PT
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_drafts,
 )
+from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.presentation_review import (
     deserialize_translations_en,
-    serialize_translations_en,
 )
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.application.services.carousel.types import unpack_extras
+from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.domain.constants import ENCODING_UTF8, LANGUAGE_PT
 from rag_backend.domain.models.carousel import CarouselStatus
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container
@@ -44,6 +47,8 @@ from rag_backend.infrastructure.database.config import close_db, get_session, in
 from rag_backend.infrastructure.logging import setup_logging
 
 PROJECT_TITLE_PT = "Claude Fable 5 e Mythos 5"
+
+
 def _optimize_generated_images(images_dir: Path) -> None:
     """Shrink hero images so Playwright preflight can decode all slides in time."""
     from PIL import Image
@@ -85,7 +90,6 @@ CAPTION_PT = (
     "#Claude #Anthropic #Cibersegurança #IA #Fable5 #Mythos5 #Glassglowing"
 )
 
-# On-topic scenes: AI security ops only — no rockets, vehicles, or celebrity silhouettes.
 IMAGE_PROMPTS: dict[int, str] = {
     1: (
         "Futuristic cybersecurity operations center with two glowing holographic AI "
@@ -120,20 +124,24 @@ IMAGE_PROMPTS: dict[int, str] = {
 }
 
 
-async def _load_workflow_drafts(project_id: str) -> tuple[list[dict[str, object]], dict[int, dict[str, object]]]:
+async def _load_workflow_drafts(
+    project_id: str,
+) -> tuple[list[dict[str, object]], dict[int, dict[str, object]]]:
     settings = get_settings()
     async with AsyncSqliteSaver.from_conn_string(
         settings.carousel_checkpoint_sqlite_path
     ) as checkpointer:
-        state = await CarouselWorkflowEngine(checkpointer=checkpointer).get_state(project_id)
+        state = await CarouselWorkflowEngine(checkpointer=checkpointer).get_state(
+            project_id
+        )
     if state is None:
         raise RuntimeError(f"No workflow state for project {project_id}")
     raw_drafts = state.get("slide_drafts")
     if not isinstance(raw_drafts, list):
         raise RuntimeError("Workflow slide_drafts missing")
-    drafts = normalize_slide_drafts(
-        [slide for slide in raw_drafts if isinstance(slide, dict)]
-    )
+    drafts = normalize_slide_drafts([
+        slide for slide in raw_drafts if isinstance(slide, dict)
+    ])
     for draft in drafts:
         index = int(draft.get("slide_index") or 0)
         prompt = IMAGE_PROMPTS.get(index)
@@ -200,7 +208,9 @@ async def _run(project_id: UUID) -> int:
         ]
         project = await repo.get_project_by_id(project_id)
         if project is None:
-            raise RuntimeError(f"Project not found after image generation: {project_id}")
+            raise RuntimeError(
+                f"Project not found after image generation: {project_id}"
+            )
         _optimize_generated_images(images_dir)
         html_path = _write_preview_html(
             project,
@@ -225,7 +235,9 @@ async def _run(project_id: UUID) -> int:
 
         avatar_source = Path("/app/frontend/public/about-pedro.jpg")
         if not avatar_source.is_file():
-            avatar_source = Path(__file__).resolve().parents[2] / "frontend/public/about-pedro.jpg"
+            avatar_source = (
+                Path(__file__).resolve().parents[2] / "frontend/public/about-pedro.jpg"
+            )
         avatar_target = output_dir / "images" / "about-pedro.jpg"
         if avatar_source.is_file() and not avatar_target.is_file():
             avatar_target.write_bytes(avatar_source.read_bytes())

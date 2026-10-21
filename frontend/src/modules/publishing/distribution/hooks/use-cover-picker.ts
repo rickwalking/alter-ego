@@ -12,7 +12,7 @@ import { carouselKeys } from "@/modules/carousel-presentation";
 import type { CoverPickInput } from "./types";
 
 /**
- * AE-0445: the slide-1 cover picker of a Ponto de Vista carousel on the
+ * The slide-1 cover picker of a Ponto de Vista carousel on the
  * publish step. The options are the owner's library photos and, when the
  * autopilot run has one, the GrokBot cover offer; a pick re-renders the
  * slides + PDFs server-side and returns the fresh artifact version.
@@ -29,8 +29,10 @@ const coverOptionsSchema = z.object({
   options: z.array(coverOptionSchema),
 });
 
-// AE-0447: the CAS version is read right before the PUT, never from page state
-// (the workflow SSE merge dropped `lock_version`, and a successful switch bumps it).
+/**
+ * The CAS version is read right before the PUT, never from page state (the
+ * workflow SSE merge dropped `lock_version`, and a successful switch bumps it).
+ */
 const workflowVersionSchema = z.object({ lock_version: z.number() });
 
 const coverPickResponseSchema = z.object({
@@ -49,7 +51,7 @@ export const coverOptionKeys = {
 
 export function useCoverOptions(
   projectId: string,
-): UseQueryResult<CoverOptions, Error> {
+): UseQueryResult<CoverOptions> {
   return useQuery({
     queryKey: coverOptionKeys.detail(projectId),
     queryFn: () =>

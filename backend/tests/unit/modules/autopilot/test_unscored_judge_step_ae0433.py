@@ -1,4 +1,4 @@
-"""AE-0433: the autopilot step waits on an unscored judge, then escalates its own reason.
+"""The autopilot step waits on an unscored judge, then escalates its own reason.
 
 Pure: a scripted fixer and gate reader. The runner/engine flow lives in
 ``tests/unit/application/test_autopilot_unscored_judge_flow_ae0433.py``.
@@ -105,7 +105,7 @@ class TestUnscoredStep:
         assert result.decision.reason == REASON_CONTENT_QUALITY
 
     async def test_a_passing_gate_with_pending_rescores_waits(self) -> None:
-        """AE-0439 (#154 B) Scenario: a stale PASSING score never approves."""
+        """Scenario: a stale PASSING score never approves."""
         fixer = _Fixer(PENDING)
         step, editorial = _step(fixer, _snapshot(pending_rescores=(3,)))
         result = await step.apply(
@@ -122,7 +122,7 @@ class TestUnscoredStep:
         assert result.decision.reason == REASON_PERSONA_RESCORE_PENDING
 
     async def test_a_rescored_pending_slide_approves(self) -> None:
-        """AE-0439 (#154 B): once the judge scores the slide, the run proceeds."""
+        """Once the judge scores the slide, the run proceeds."""
         fixer = _Fixer(SlideFixOutcome(status=AutofixStatus.FIXED))
         step, _ = _step(fixer, _snapshot())
         result = await step.apply(
@@ -139,19 +139,17 @@ class TestUnscoredStep:
     async def test_a_forbidden_hit_alongside_the_voice_floor_does_not_wait(
         self,
     ) -> None:
-        """AE-0439 (#154 C): the wait fires only for a sole voice-floor failure."""
+        """The wait fires only for a sole voice-floor failure."""
         fixer = _Fixer(PENDING)
         step, _ = _step(fixer, _snapshot(forbidden_hits=("ban",)))
-        result = await step.apply(
-            _read(REASON_PERSONA_SCORE, forbidden_hits=("ban",))
-        )
+        result = await step.apply(_read(REASON_PERSONA_SCORE, forbidden_hits=("ban",)))
         assert result is not None
         assert result.decision.action is not GateAction.WAIT
 
     async def test_a_quality_rule_alongside_the_voice_floor_does_not_wait(
         self,
     ) -> None:
-        """AE-0439 (#154 C): a blocking quality rule still escalates."""
+        """A blocking quality rule still escalates."""
         fixer = _Fixer(PENDING)
         step, _ = _step(
             fixer, _snapshot(quality_violations=(QualityViolation(rule="x"),))

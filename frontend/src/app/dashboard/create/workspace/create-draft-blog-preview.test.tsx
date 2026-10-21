@@ -14,7 +14,7 @@ function respond(status: number, body: unknown = {}): void {
   mockFetch.mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
-    json: async () => body,
+    json: () => Promise.resolve(body),
   } as Response);
 }
 
@@ -22,7 +22,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-// Feature: Create-flow UI fixes (AE-0415)
 describe("CreateDraftBlogPreview", () => {
   // Scenario: The brief preview of a fresh project is an empty state
   it("shows the empty state, not an error, when nothing was generated (404)", async () => {

@@ -1,4 +1,4 @@
-"""Per-model circuit breaker and failure classification (AE-0399).
+"""Per-model circuit breaker and failure classification.
 
 A model's breaker is CLOSED (calls pass), OPEN (the model is skipped until
 its cooldown ends) or HALF_OPEN (exactly one probe call may pass; everyone

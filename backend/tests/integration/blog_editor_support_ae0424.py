@@ -1,6 +1,6 @@
-"""Shared helpers of the AE-0424 blog editor API tests.
+"""Shared helpers of the blog editor API tests.
 
-Each test gets its own SQLite file (AE-0390 isolation) and clients for an
+Each test gets its own SQLite file (isolation) and clients for an
 admin, an editor author and a distinct editor reviewer.
 """
 
@@ -42,7 +42,11 @@ def _client(app: FastAPI, headers: dict[str, str]) -> AsyncClient:
 
 @asynccontextmanager
 async def editor_clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
-    """Author + reviewer clients on a per-test SQLite database."""
+    """Author + reviewer clients on a per-test SQLite database.
+
+    The in-memory limiter is process-wide: it is reset so these request-heavy tests
+    neither trip nor exhaust the budget of the next test file.
+    """
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
@@ -50,8 +54,6 @@ async def editor_clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
     from rag_backend.api.middleware.rate_limiting import limiter
     from rag_backend.infrastructure.database.config import Base, close_db
 
-    # The in-memory limiter is process-wide: reset it so these request-heavy
-    # tests neither trip nor exhaust the budget of the next test file.
     limiter.reset()
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'ae0424.db'}")
     async with engine.begin() as conn:

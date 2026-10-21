@@ -1,4 +1,4 @@
-"""X-signals service persistence decisions (AE-0360)."""
+"""X-signals service persistence decisions."""
 
 from __future__ import annotations
 

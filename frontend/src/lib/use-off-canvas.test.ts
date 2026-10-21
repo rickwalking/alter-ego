@@ -1,5 +1,5 @@
 /**
- * AE-0273 — useOffCanvas. Feature: responsive-dashboard-shell.feature
+ * useOffCanvas. Feature: responsive-dashboard-shell.feature
  * Scenarios: Escape closes the drawer; Navigating closes the drawer.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";

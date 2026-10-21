@@ -54,9 +54,8 @@ class PersonaProfile:
             self.updated_at = utc_now()
 
     def add_writing_sample(self, sample: str) -> None:
-        """Add a writing sample for voice analysis."""
+        """Add a writing sample for voice analysis, keeping only the latest 50."""
         self.writing_samples.append(sample)
-        # Keep only the best 50 samples
         if len(self.writing_samples) > 50:
             self.writing_samples = self.writing_samples[-50:]
         self.updated_at = utc_now()

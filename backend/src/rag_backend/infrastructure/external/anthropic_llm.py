@@ -1,6 +1,6 @@
 """Chat LLM service implementation using LangChain.
 
-Provider-agnostic despite the legacy ``AnthropicLLMService`` name (AE-0285): the
+Provider-agnostic despite the legacy ``AnthropicLLMService`` name: the
 underlying chat model is selected by ``settings.llm_provider`` via
 ``build_chat_model`` (Anthropic Claude or GLM 5.2 over the OpenCode Go endpoint).
 """
@@ -20,7 +20,6 @@ from rag_backend.infrastructure.external.chat_model_factory import (
     build_role_models,
 )
 
-# Role → LangChain message constructor dispatch.
 _ROLE_TO_MESSAGE: dict[str, Callable[[str], BaseMessage]] = {
     ROLE_SYSTEM: lambda content: SystemMessage(content=content),
     ROLE_ASSISTANT: lambda content: AIMessage(content=content),
@@ -34,9 +33,12 @@ class AnthropicLLMService:
     """LLMService implementation; the provider is chosen by ``llm_provider``."""
 
     def __init__(self, settings: Settings, role: str | None = None) -> None:
+        """Build the chat model; a ``role`` (reasoning/fast) routes calls to its model.
+
+        With a role the calls get that role's model plus the fallback; ``None`` keeps
+        the single chat model.
+        """
         self._settings = settings
-        # AE-0391: a role (reasoning / fast) routes this service's calls to that
-        # role's model with the GLM fallback; None keeps the single chat model.
         self._llm = build_chat_model(settings, role)
         self._role_models: ChatModelRoles | None = None
 
@@ -47,7 +49,7 @@ class AnthropicLLMService:
 
     @property
     def role_models(self) -> ChatModelRoles:
-        """AE-0391: the carousel pipeline's reasoning + fast models (built once)."""
+        """The carousel pipeline's reasoning + fast models (built once)."""
         if self._role_models is None:
             self._role_models = build_role_models(self._settings)
         return self._role_models

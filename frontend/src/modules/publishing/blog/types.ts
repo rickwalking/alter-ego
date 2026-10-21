@@ -4,7 +4,7 @@
 
 import type { BlogEditorErrorKind } from "@/constants/blog-editor";
 
-/** A failed editor request (AE-0424): the typed kind + the API detail code. */
+/** A failed editor request: the typed kind + the API detail code. */
 export interface BlogEditorError {
   kind: BlogEditorErrorKind;
   detail: string | null;
@@ -13,7 +13,7 @@ export interface BlogEditorError {
 export interface BlogPost {
   id: string;
   project_id?: string | null;
-  /** Provenance (AE-0296): "standalone" | "carousel"; absent on old payloads. */
+  /** Provenance: "standalone" | "carousel"; absent on old payloads. */
   origin?: string | null;
   title: string;
   slug: string;
@@ -23,8 +23,8 @@ export interface BlogPost {
   featured_image_url?: string | null;
   author_id?: string | null;
   reviewer_id?: string | null;
-  /** Reject reasons are `{text, author_id, status}` objects (AE-0424). */
-  editor_comments: Array<string | Record<string, unknown>>;
+  /** Reject reasons are `{text, author_id, status}` objects. */
+  editor_comments: (string | Record<string, unknown>)[];
   sources: string[];
   citations: Record<string, unknown>[];
   ai_suggestions: Record<string, unknown>[];
@@ -45,7 +45,7 @@ export interface BlogPost {
   scheduled_publish_at?: string | null;
   lock_version: number;
   /**
-   * List-only (AE-0411): whether anonymous readers can see the post now. A
+   * List-only: whether anonymous readers can see the post now. A
    * carousel post is stored `published` but stays hidden until its carousel
    * is released. Absent on detail payloads.
    */

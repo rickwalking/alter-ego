@@ -1,6 +1,11 @@
 """Unit tests for image style strategies.
 
 Gherkin: tests/features/image_generation_provider.feature
+
+_PRE_AE0308_COMIC_NEON_PROMPT is the exact prompt GeminiComicNeonStrategy produced
+before the style moved to OpenAI; the characterization test asserts the new strategy
+emits this text plus only the inserted brand/likeness block, so the visual identity
+provably survives the provider move.
 """
 
 import pytest
@@ -26,10 +31,6 @@ _LIGHT_PALETTE = {
 }
 
 
-# The exact prompt GeminiComicNeonStrategy produced before AE-0308 moved the
-# style to OpenAI. The AE-0308 characterization test below asserts the new
-# strategy emits THIS text plus only the inserted brand/likeness block, so the
-# visual identity provably survives the provider move.
 _PRE_AE0308_COMIC_NEON_PROMPT = (
     "Comic/manga style illustration, cyberpunk/sci-fi tech aesthetic, "
     "bold outlines, detailed crosshatching shading, dynamic composition. "
@@ -53,7 +54,7 @@ _AE0308_BRAND_BLOCK = (
 
 @pytest.mark.unit
 class TestOpenAIComicNeonStrategy:
-    """Scenario: Caller picks OpenAI comic-neon preset (AE-0308 re-route)."""
+    """Scenario: Caller picks OpenAI comic-neon preset (re-routed from Gemini)."""
 
     def test_includes_comic_manga_marker(self) -> None:
         result = OpenAIComicNeonStrategy().wrap("scene", _PALETTE)
@@ -73,15 +74,13 @@ class TestOpenAIComicNeonStrategy:
         assert result.index(scene) > result.index("Comic/manga")
 
     def test_forbids_brand_names_and_likenesses(self) -> None:
-        # Scenario: the final prompt forbids real-world brand names and
-        # celebrity likenesses (parity with every other OpenAI preset).
+        # Scenario: the final prompt forbids real-world brand names and celebrity likenesses (parity with every other OpenAI preset).
         lowered = OpenAIComicNeonStrategy().wrap("scene", _PALETTE).lower()
         assert "no real-world brand names" in lowered
         assert "no celebrity or ceo likenesses" in lowered
 
     def test_prompt_is_pre_ae0308_text_plus_brand_block_only(self) -> None:
-        # Scenario: the prompt is otherwise byte-identical to the
-        # pre-AE-0308 Gemini-era prompt (characterization pin).
+        # Scenario: the prompt is otherwise byte-identical to the Gemini-era prompt (characterization pin).
         result = OpenAIComicNeonStrategy().wrap(
             "a hooded figure at a neon terminal", _PALETTE
         )
@@ -148,8 +147,9 @@ class TestOpenAIFlatEditorialStrategy:
         assert "Flat editorial vector illustration" in result
 
     def test_uses_light_background_phrasing_not_neon(self) -> None:
-        # The light strategy must not contradict a light palette with the
-        # dark "neon glow" phrasing reserved for the dark strategies.
+        """The light strategy must not contradict a light palette with the dark "neon
+        glow" phrasing reserved for the dark strategies.
+        """
         result = OpenAIFlatEditorialStrategy().wrap("scene", _LIGHT_PALETTE)
         assert "Light background" in result
         assert "neon glow" not in result.lower()
@@ -189,13 +189,12 @@ class TestSceneInvariant:
         ],
     )
     def test_scene_verbatim_and_trailing(self, strategy) -> None:
+        """The scene text is the last meaningful content in the prompt."""
         scene = "a hooded figure at a neon terminal"
         result = strategy.wrap(scene, _PALETTE)
         assert scene in result
-        # Scene text is the last meaningful content in the prompt.
         assert result.rstrip().endswith(scene)
 
     def test_handles_missing_palette_keys_gracefully(self) -> None:
-        # Defensive: partial theme should not blow up.
         result = OpenAIComicNeonStrategy().wrap("scene", {})
         assert "scene" in result

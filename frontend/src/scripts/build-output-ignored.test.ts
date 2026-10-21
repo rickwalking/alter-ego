@@ -1,5 +1,5 @@
 /**
- * AE-0171: the build-output gitignore pre-flight. Documented build/coverage
+ * The build-output gitignore pre-flight. Documented build/coverage
  * outputs must be gitignored; the check FAILS on a seeded non-ignored output.
  */
 import { execFileSync } from "node:child_process";
@@ -21,7 +21,7 @@ function runCheck(env: Record<string, string> = {}): {
   output: string;
 } {
   try {
-    const output = execFileSync("bash", [SCRIPT], {
+    const output = execFileSync(SCRIPT, [], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...env },

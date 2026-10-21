@@ -98,7 +98,7 @@ class SqlAlchemyTopicIntakeStore:
         return int(result.scalar_one())
 
     async def news_runs_created_between(self, window: DayWindow) -> int:
-        """AE-0377: Radar IA runs (topic mode NULL or news) in the window."""
+        """Radar IA runs (topic mode NULL or news) in the window."""
         result = await self._session.execute(
             select(func.count())
             .select_from(AutopilotRunModel)
@@ -118,7 +118,7 @@ class SqlAlchemyTopicIntakeStore:
         return int(result.scalar_one())
 
     async def x_post_texts(self, query: XPostLookup) -> dict[str, str]:
-        """AE-0406: the post text stored through x-signals for each known URL.
+        """The post text stored through x-signals for each known URL.
 
         PR #124 review: matched case-insensitively (an X handle's case may
         differ between the stored post and the quote); keys are the stored URLs.
@@ -144,7 +144,7 @@ class SqlAlchemyTopicIntakeStore:
         return True
 
     async def remove_candidate(self, candidate_id: UUID) -> None:
-        """AE-0418: delete a candidate this batch inserted (its cover was lost)."""
+        """Delete a candidate this batch inserted (its cover was lost)."""
         await self._session.execute(
             delete(TopicCandidateModel).where(TopicCandidateModel.id == candidate_id)
         )

@@ -3,7 +3,7 @@
 Private to the module — the public facade re-exports it under
 ``ConversationService``; cross-module code never imports this path directly.
 
-**Reuse, not rewrite (AE-0100 constraint).** The conversation use cases already
+**Reuse, not rewrite.** The conversation use cases already
 live in ``rag_backend.application.services.conversation_service`` and are wired
 into the chat routes and the streaming service today. Phase 3 is
 behavior-preserving (ADR-0009): this module **re-exports** that existing service

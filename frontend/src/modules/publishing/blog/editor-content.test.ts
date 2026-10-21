@@ -17,8 +17,7 @@ import {
 } from "./editor-content";
 import { setCover, updateSection } from "./lib/editor-document";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature,
-// tests/features/blog-dashboard-ae0411.feature (Editor validation)
+/** Gherkin: tests/features/blog_editor_ae0424.feature, tests/features/blog-dashboard-ae0411.feature. */
 
 function draft(overrides: Partial<BlogEditorDraft> = {}): BlogEditorDraft {
   return {

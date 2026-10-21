@@ -1,5 +1,5 @@
 /**
- * AE-0273/0276: useMediaQuery — gates drawer scroll-lock/focus-trap to below a
+ * useMediaQuery — gates drawer scroll-lock/focus-trap to below a
  * breakpoint. Must be SSR/jsdom-safe (no throw when matchMedia is absent/partial).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -24,15 +24,13 @@ describe("useMediaQuery", () => {
       matches: true,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    }) as unknown as typeof window.matchMedia;
+    });
     const { result } = renderHook(() => useMediaQuery("(max-width: 767px)"));
     expect(result.current).toBe(true);
   });
 
   it("does not throw when matchMedia returns undefined", () => {
-    window.matchMedia = vi
-      .fn()
-      .mockReturnValue(undefined) as unknown as typeof window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue(undefined);
     expect(() =>
       renderHook(() => useMediaQuery("(max-width: 767px)")),
     ).not.toThrow();

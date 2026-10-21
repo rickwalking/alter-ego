@@ -1,8 +1,11 @@
-"""Layout per slide role for "Ponto de Vista" decks (AE-0376, ADR-0021 D8).
+"""Layout per slide role for "Ponto de Vista" decks (ADR-0021 D8).
 
 Roles are positional in the project's sized contract, so the renderer reads
 them from ``project_policy`` (never from persisted slide rows). Radar IA and
 every legacy deck keep today's lookup (preferred strategy + structured fields).
+
+``point`` slides keep the format's layout (``slide_layout_strategy``), and the twist has
+no artwork in the contract.
 """
 
 from __future__ import annotations
@@ -37,12 +40,10 @@ from rag_backend.domain.constants.presentation_roles import (
 from rag_backend.domain.content_mode import is_pov_family, is_pov_news
 from rag_backend.domain.models import CarouselProject
 
-# ``point`` slides keep the format's layout (``slide_layout_strategy``).
 POV_ROLE_STRATEGIES: dict[str, str] = {
     ROLE_HOOK: hook_face.HOOK_FACE_STRATEGY,
     ROLE_REHOOK: statement.STATEMENT_STRATEGY,
     ROLE_POV: statement.STATEMENT_STRATEGY,
-    # AE-0394: the twist has no artwork in the contract (image_required: false).
     ROLE_TWIST: statement.STATEMENT_STRATEGY,
     ROLE_SAVE: save_checklist.SAVE_CHECKLIST_STRATEGY,
     ROLE_CTA: cta_follow.CTA_FOLLOW_STRATEGY,
@@ -68,7 +69,7 @@ def pov_slide_strategies(project: CarouselProject, total_slides: int) -> dict[in
 def deck_artwork_slides(
     project: CarouselProject, total_slides: int
 ) -> frozenset[int] | None:
-    """AE-0434: slides of a ``total_slides`` deck the images phase illustrates.
+    """Slides of a ``total_slides`` deck the images phase illustrates.
 
     The same set the images node plans (``artwork_slide_numbers``), sized to the
     rendered deck, so the template never points at artwork that was never made.
@@ -80,7 +81,7 @@ def deck_artwork_slides(
 def quote_card_strategy(
     project: CarouselProject, slide: Mapping[str, object]
 ) -> str | None:
-    """AE-0406: a ``pov_news`` slide with a verified quote card -> ``insight_quote``.
+    """A ``pov_news`` slide with a verified quote card -> ``insight_quote``.
 
     Takes precedence over the role layout (the twist is a statement slide
     otherwise), so the card is never silently dropped by the renderer.

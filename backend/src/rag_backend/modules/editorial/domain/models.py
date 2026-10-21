@@ -6,7 +6,7 @@ carousel project. This module defines its two new aggregates/value objects —
 ``Any``), and **re-exports** the existing carousel entities + status value
 objects so existing callers keep resolving to the IDENTICAL objects.
 
-**Re-export, not relocation (AE-0108 constraint).** ``CarouselProject``,
+**Re-export, not relocation.** ``CarouselProject``,
 ``CarouselSlide``, ``ResearchSource``, ``CarouselStatus`` etc. continue to live
 at their legacy location ``rag_backend.domain.models`` (imported by ~50+ callers:
 agents, routes, container, the workflow engine). This module re-exports them

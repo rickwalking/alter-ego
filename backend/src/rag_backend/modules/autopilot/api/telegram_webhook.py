@@ -44,7 +44,10 @@ async def post_telegram_webhook(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
-    """Accept one Telegram update when the secret header matches."""
+    """Accept one Telegram update when the secret header matches.
+
+    Telegram side effects run only after the claim and transitions are durable.
+    """
     settings = get_settings()
     provided = request.headers.get(HEADER_WEBHOOK_AUTH, "")
     expected = settings.telegram_webhook_secret.get_secret_value()
@@ -63,7 +66,6 @@ async def post_telegram_webhook(
             service.discard()
         logger.exception(LOG_WEBHOOK_FAILED)
         return Response(status_code=status.HTTP_200_OK)
-    # Telegram side effects only after the claim and transitions are durable.
     if service is not None:
         await service.deliver()
     return Response(status_code=status.HTTP_200_OK)

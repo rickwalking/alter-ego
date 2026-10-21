@@ -1,4 +1,4 @@
-"""Unit tests for the deterministic length/heading copy repair (AE-0286).
+"""Unit tests for the deterministic length/heading copy repair.
 
 Scenarios: see tests/features/glm_content_budget_trim.feature
 """
@@ -43,18 +43,20 @@ def policy():
 
 class TestTrimBodyToBudget:
     def test_keeps_whole_sentences_under_budget(self) -> None:
+        """A whole-sentence trim ends on terminal punctuation (no mid-word cut)."""
         trimmed = _trim_body_to_budget(_THREE_SENTENCES, 220)
         assert len(trimmed) <= 220
-        # A whole-sentence trim ends on terminal punctuation (no mid-word cut).
         assert trimmed.endswith((".", "!", "?"))
         assert "  " not in trimmed
 
     def test_never_exceeds_budget_even_for_one_giant_sentence(self) -> None:
-        giant = "palavra " * 80  # one 600+ char run with no sentence break
+        """The input is one 600+ char run with no sentence break; the cut lands on a
+        word boundary, leaving no partial trailing word before the ellipsis.
+        """
+        giant = "palavra " * 80
         trimmed = _trim_body_to_budget(giant.strip(), 90)
         assert len(trimmed) <= 90
         assert trimmed.endswith("…")
-        # word-boundary cut: no partial trailing word before the ellipsis
         assert not trimmed[:-1].endswith("palavr")
 
     def test_short_body_is_returned_unchanged(self) -> None:
@@ -68,7 +70,6 @@ class TestTrimBodyToBudget:
         )
         trimmed = _trim_body_to_budget(body, 70)
         assert len(trimmed) <= 70
-        # no dangling open tag
         assert trimmed.count("<strong>") == trimmed.count("</strong>")
 
 
@@ -93,6 +94,7 @@ class TestDeterministicRepairClearsValidator:
     """The strongest test: repaired payload passes the real validator."""
 
     def test_over_budget_and_heading_repeat_are_both_cleared(self, policy) -> None:
+        """The repaired body is still meaningful (non-empty, real words)."""
         # Scenario: GLM over-writes content; the trim must clear validation.
         heading = "O que e git worktree na pratica"
         payload = {
@@ -118,12 +120,10 @@ class TestDeterministicRepairClearsValidator:
         after_codes = {v.code for v in after}
         assert VIOLATION_BODY_TOO_LONG not in after_codes
         assert VIOLATION_HEADING_REPEATED_IN_BODY not in after_codes
-        # And the repaired body is still meaningful (non-empty, real words).
         assert isinstance(repaired["body"], str)
         assert len(repaired["body"].split()) >= 4
 
     def test_returns_payload_unchanged_without_length_violations(self, policy) -> None:
-        # No body/heading violation in the set -> body untouched.
         payload = {"slide_type": "content", "heading": "H", "body": "Curto."}
         repaired = repair_body_length_and_heading(payload, (), policy)
         assert repaired["body"] == "Curto."

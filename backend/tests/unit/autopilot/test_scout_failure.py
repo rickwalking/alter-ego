@@ -1,4 +1,4 @@
-"""Scout-failed delivery decisions (AE-0360).
+"""Scout-failed delivery decisions.
 
 Gherkin: tests/features/autopilot_grok_bot_scout.feature
 """

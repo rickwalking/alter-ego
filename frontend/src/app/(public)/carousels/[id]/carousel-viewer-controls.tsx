@@ -3,12 +3,12 @@ import type { CarouselPublicSlide } from "@/schemas/carousel";
 
 const INACTIVE_DOT_COLOR = "rgba(255,255,255,0.2)";
 
-/** Directional chevron for the viewer controls (AE-0444). */
+/** Directional chevron for the viewer controls. */
 export function CarouselChevron({
   direction,
-}: {
+}: Readonly<{
   direction: "left" | "right";
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -38,13 +38,13 @@ interface CarouselSlideDotsProps {
   labelFor: (slideNumber: number) => string;
 }
 
-/** Slide dots with the active indicator (AE-0444). */
+/** Slide dots with the active indicator. */
 export function CarouselSlideDots({
   slides,
   activeIndex,
   onSelect,
   labelFor,
-}: CarouselSlideDotsProps): React.ReactElement {
+}: Readonly<CarouselSlideDotsProps>): React.ReactElement {
   return (
     <div className="mt-4 flex flex-wrap justify-center gap-1">
       {slides.map((slide, slideIndex) => {

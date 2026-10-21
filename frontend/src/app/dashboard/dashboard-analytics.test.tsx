@@ -6,7 +6,6 @@ import {
   DashboardAnalyticsStats,
 } from "./dashboard-analytics";
 
-// Gherkin: backend/tests/features/instagram_insights.feature (AE-0378)
 function analytics(
   overrides: Partial<EditorialAnalyticsState> = {},
 ): EditorialAnalyticsState {

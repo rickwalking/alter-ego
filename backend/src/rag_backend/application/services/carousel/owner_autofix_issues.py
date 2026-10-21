@@ -1,7 +1,7 @@
-"""Human issue lines for the owner's Telegram review (AE-0367).
+"""Human issue lines for the owner's Telegram review.
 
 "Slide 5: heading starts lowercase", "Slide 4: no body or features",
-"Slide 6 EN: not translated". Built from the AE-0366 validator's blocking
+"Slide 6 EN: not translated". Built from the validator's blocking
 violations over the persisted slides, the untranslated EN texts and the
 lowercased proper nouns the autofix plan found. Deduplicated, ordered by slide
 (PT before EN) and capped at ``AUTOFIX_MAX_ISSUE_LINES`` lines.

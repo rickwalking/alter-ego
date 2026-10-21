@@ -24,7 +24,7 @@ function isRunInProgress(error: unknown): boolean {
 }
 
 /**
- * AE-0414 (B09): what the repair fixed AND what it could not fix. The open
+ * What the repair fixed AND what it could not fix. The open
  * blockers come from the fresh report; the per-slide ``remaining_codes`` are
  * the fallback when the report carries none.
  */
@@ -42,11 +42,12 @@ function repairOutcome(response: RepairCarouselResponse): RepairOutcome {
   };
 }
 
+/** Runs the deterministic repair; a no-op wrote nothing, so the state is not re-read. */
 export function AutoRepairButton({
   projectId,
   onRepaired,
   onRepublishNeeded,
-}: AutoRepairButtonProps): React.ReactElement {
+}: Readonly<AutoRepairButtonProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   const repair = useRepairCarousel();
   const [summary, setSummary] = useState<RepairOutcome | null>(null);
@@ -55,7 +56,6 @@ export function AutoRepairButton({
   const finish = useCallback(
     (response: RepairCarouselResponse): void => {
       setSummary(repairOutcome(response));
-      // A no-op wrote nothing: refreshing would only re-read the same state.
       if (response.status === REPAIR_STATUS_NOOP) {
         return;
       }
@@ -108,9 +108,9 @@ export function AutoRepairButton({
 
 function RepairSummary({
   outcome,
-}: {
+}: Readonly<{
   outcome: RepairOutcome;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   return (
     <div className="space-y-1">
@@ -131,9 +131,9 @@ function RepairSummary({
 
 function FixedList({
   diffs,
-}: {
+}: Readonly<{
   diffs: RepairSlideDiff[];
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   return (
     <ul

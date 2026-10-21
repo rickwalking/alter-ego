@@ -14,7 +14,7 @@ interface HeaderProps {
   locale?: string;
 }
 
-export function Header({ locale }: HeaderProps) {
+export function Header({ locale }: Readonly<HeaderProps>) {
   const t = useTranslations("common");
   const currentLocale = locale ?? DEFAULT_LOCALE;
   const { user, isAdmin, isEditor, logout, isLoading } = useAuth();

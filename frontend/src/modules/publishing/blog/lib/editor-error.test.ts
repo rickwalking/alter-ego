@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { editorErrorKey } from "./editor-error";
 
-// Scenarios: tests/features/blog_editor_errors_ae0438.feature
-// (code-specific copy for known backend details, kind-level fallback)
+/** Gherkin: tests/features/blog_editor_errors_ae0438.feature. */
 
 describe("editorErrorKey", () => {
   it("maps a known detail code to its code-specific message key", () => {
@@ -14,7 +13,6 @@ describe("editorErrorKey", () => {
     ).toBe("errors.code.not_publishable");
   });
 
-  // AE-0441: no blog path answers self_review_not_allowed any more.
   it("has no blog-specific copy for the removed self-review guard", () => {
     expect(
       editorErrorKey({

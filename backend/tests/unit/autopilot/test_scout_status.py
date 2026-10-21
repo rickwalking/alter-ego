@@ -1,4 +1,4 @@
-"""Closing Telegram client for scout-failed (AE-0360)."""
+"""Closing Telegram client for scout-failed."""
 
 from __future__ import annotations
 

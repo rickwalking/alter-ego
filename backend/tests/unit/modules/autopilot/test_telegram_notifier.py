@@ -1,4 +1,4 @@
-"""respx tests for the Telegram Bot API adapter (AE-0355).
+"""respx tests for the Telegram Bot API adapter.
 
 Gherkin: tests/features/autopilot_telegram_notify.feature
 """

@@ -1,3 +1,8 @@
+/**
+ * Scenarios: tests/features/blog_editor_ae0424.feature (editor wiring, unsaved
+ * guard, conflict, migration banner, localized copy) and
+ * tests/features/blog-dashboard-ae0411.feature (Editor).
+ */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseBlogPostEditorResult } from "@/modules/publishing";
@@ -6,10 +11,6 @@ import {
   SEC_1,
   v2Document,
 } from "@/modules/publishing/blog/editor.test-utils";
-
-// Scenarios: tests/features/blog_editor_ae0424.feature (editor wiring,
-// unsaved guard, conflict, migration banner, localized copy) and
-// tests/features/blog-dashboard-ae0411.feature (Editor)
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -44,7 +45,6 @@ vi.mock("@/modules/publishing", async (importOriginal) => ({
     error: null,
   }),
   useUnsavedChangesGuard: () => ({ confirmLeave }),
-  // AE-0425: the generation banner has its own tests (blog-generation-status).
   BlogGenerationStatus: (props: { unsavedChanges?: boolean }) => {
     capturedUnsaved = props.unsavedChanges ?? null;
     return null;
@@ -239,7 +239,6 @@ describe("BlogPostEditPage (AE-0424)", () => {
     expect(screen.getByText("Blog post not found.")).toBeInTheDocument();
   });
 
-  // AE-0424 review: workflow controls wait for a running slot action.
   it("disables the review controls while a slot action runs", () => {
     slotsPending.mockReturnValue(true);
     editorState.mockReturnValue(
@@ -256,7 +255,6 @@ describe("BlogPostEditPage (AE-0424)", () => {
     expect(container.querySelector(".h-64")).not.toBeNull();
   });
 
-  // AE-0425 review fix 2: the run owns the document while it generates.
   it("is read-only while the generation is in progress", () => {
     const generating = {
       ...blogPost(),
@@ -282,7 +280,6 @@ describe("BlogPostEditPage (AE-0424)", () => {
     ).not.toBeDisabled();
   });
 
-  // AE-0425 follow-up: the banner's Retry knows about unsaved edits.
   it("tells the generation banner when the draft has unsaved edits", () => {
     editorState.mockReturnValue(state({ dirty: true }));
     const { rerender } = render(<BlogPostEditPage />);

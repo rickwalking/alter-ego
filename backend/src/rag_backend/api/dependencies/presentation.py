@@ -1,11 +1,11 @@
-"""Request-scoped DI provider for the presentation module facade (AE-0120).
+"""Request-scoped DI provider for the presentation module facade.
 
 This is the HTTP-edge composition point for the presentation bounded context. It
 resolves the request-scoped collaborators — the carousel repository (the
 ``CarouselRepository`` port), the carousel refinement service, the slide-layout
 strategy registry, and the creator-asset service (reused from the existing
 carousel route dependencies so their container-override seams are preserved) —
-plus the AE-0118 :class:`PresentationWriteOwner` single write owner and the
+plus the :class:`PresentationWriteOwner` single write owner and the
 :class:`PresentationPersistenceAcl` read/write seam, binds them to the request
 ``AsyncSession``, wraps that same session in the platform Unit of Work (the single
 commit owner, ADR-0009 §9), and hands them to ``bootstrap_module`` to build the
@@ -24,6 +24,9 @@ repository and the other collaborators already use (FastAPI caches
 ``Depends(get_session)`` per request), so the writers' flushes and the UoW's
 single commit share one transaction — preserving the byte-identical
 optimistic-lock + commit semantics the legacy presentation routes had.
+
+_ERR_MODULE_WITHOUT_HANDLERS is a programmer-error sentinel: the edge provider always
+wires the ACL and collaborators into the presentation module.
 """
 
 from __future__ import annotations
@@ -61,9 +64,6 @@ from rag_backend.modules.presentation import (
 )
 from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
-# Defensive guard message for a presentation module bootstrapped without the
-# handlers; the edge provider always wires the ACL + collaborators, so this is a
-# programmer-error sentinel.
 _ERR_MODULE_WITHOUT_HANDLERS = "presentation module bootstrapped without handlers"
 
 
@@ -140,7 +140,7 @@ def get_presentation_service(
 ) -> PresentationModule:
     """Build the request-scoped presentation facade for the current request.
 
-    The same ``AsyncSession`` backs the carousel repository, the AE-0118 write
+    The same ``AsyncSession`` backs the carousel repository, the write
     owner, the ACL, the creator-asset/refinement collaborators, and the Unit of
     Work, so the writers' flushes and the UoW's single commit share one
     transaction (ADR-0009 §9).
@@ -171,7 +171,7 @@ def get_presentation_handlers(
     The thin presentation route adapters (media / preview / strategies / admin /
     creator-asset and the crud project-GET design-token merge) delegate their
     data operations to these handlers. The handlers read/commit through the
-    AE-0118 ACL (the single ORM seam) bootstrapped on the module facade; access
+    ACL (the single ORM seam) bootstrapped on the module facade; access
     checks + HTTP/FileResponse mapping stay at the route edge.
     """
     handlers = module.handlers

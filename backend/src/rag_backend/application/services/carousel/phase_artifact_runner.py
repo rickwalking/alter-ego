@@ -110,20 +110,22 @@ from .outline_normalize import normalize_editorial_outline
 
 @dataclass
 class PhaseArtifactRunnerConfig:
+    """``slide_draft_retry`` is the single-slide re-draft used by the fail-closed
+    content chain (a ContentDraftAgent-backed retry when None). ``draft_concurrency``
+    bounds how many slides are drafted and persona-scored at once. ``gate_repairer``
+    rewrites only the fields a blocked content gate names; when unset,
+    ``gate_repair_tracing`` turns on the fast-model repairer built from ``llm``, and
+    with neither it is off.
+    """
+
     outline_agent: OutlineAgent
     content_agent: ContentDraftAgent
     llm: BaseChatModel
     image_registry: ImageProviderRegistry | None = None
     db: AsyncSession | None = None
     workflow_input: EditorialWorkflowStartInput | None = None
-    # AE-0309: injectable single-slide re-draft used by the fail-closed content
-    # chain. Defaults to a ContentDraftAgent-backed retry when None.
     slide_draft_retry: SlideDraftRetryFn | None = None
-    # AE-0391: slides drafted / persona-scored concurrently (bounded).
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
-    # AE-0430: rewrites only the fields a blocked content gate names. When
-    # unset, ``gate_repair_tracing`` (the orchestrator's Langfuse config) turns
-    # on the fast-model repairer built from ``llm``; with neither, it is off.
     gate_repairer: GateFieldRepairer | None = None
     gate_repair_tracing: Callable[[], RunnableConfig] | None = None
 
@@ -141,7 +143,7 @@ def _review_translations(
     state: CarouselWorkflowState,
     updates: dict[str, object],
 ) -> object:
-    """EN translations for the content review build (AE-0413).
+    """EN translations for the content review build.
 
     Fresh translations win. When the drafts were NOT regenerated the stored
     translations still match them: dropping them made the builder fall back
@@ -154,7 +156,7 @@ def _review_translations(
 
 
 def _llm_gate_repairer(config: PhaseArtifactRunnerConfig) -> GateFieldRepairer | None:
-    """AE-0430: the fast-model field repairer, on when tracing is configured."""
+    """The fast-model field repairer, on when tracing is configured."""
     if config.gate_repair_tracing is None:
         return None
     return LlmGateFieldRepairer(
@@ -166,9 +168,9 @@ def _settle_used_notes(
     state: CarouselWorkflowState,
     updates: dict[str, object],
 ) -> dict[str, object]:
-    """AE-0405: the notes a regeneration used move to the history.
+    """The notes a regeneration used move to the history.
 
-    AE-0430: as "unchanged" when the visible slide copy did not change.
+    A note is recorded as "unchanged" when the visible slide copy did not change.
     """
     status = (
         FEEDBACK_STATUS_APPLIED
@@ -274,27 +276,29 @@ class PhaseArtifactRunner:
         await publish_workflow_artifacts_from_updates(project_id, phase, updates)
 
     async def _regen_inputs(self, state: CarouselWorkflowState) -> ContentRegenInputs:
-        """Reviewer notes, the prior drafts and the content mode for a regeneration."""
+        """Reviewer notes, the prior drafts and the content mode for a regeneration.
+
+        A revision also gets the gate's blocking violations, and the owner's notes name
+        the slides it may change.
+        """
         prior_drafts = [
             draft
             for draft in (state.get("slide_drafts") or [])
             if isinstance(draft, dict)
         ]
         notes = self._content_revision_notes(state)
-        # AE-0430: a revision also gets the gate's blocking violations.
         violations = gate_violation_note(state) if notes else None
         return ContentRegenInputs(
             revision_notes=[*notes, violations] if violations else notes,
             previous_drafts=prior_drafts,
             mode=await self._mode_brief(state),
-            # AE-0437: the owner's notes name the slides a revision may change.
             scope=revision_scope(state, notes) if notes else None,
         )
 
     async def _mode_brief(
         self, state: CarouselWorkflowState
     ) -> ContentModeBrief | None:
-        """AE-0375: the project's content mode, read from its row (ADR-0021 D4)."""
+        """The project's content mode, read from its row (ADR-0021 D4)."""
         return await load_content_mode_brief(self._db, str(state.get("project_id", "")))
 
     async def ensure_for_phase(self, state: CarouselWorkflowState) -> dict[str, object]:
@@ -319,7 +323,6 @@ class PhaseArtifactRunner:
         elif phase == PHASE_IMAGES:
             updates.update(await self._ensure_image_artifacts(state))
         if phase in {PHASE_CONTENT, PHASE_DESIGN}:
-            # AE-0401: render what the gate validated (rows = localized copy).
             await sync_rows_to_localized(
                 self._db, str(state.get("project_id", "")), {**state, **updates}
             )
@@ -427,7 +430,6 @@ class PhaseArtifactRunner:
                     or state.get("slide_drafts")
                     or [],
                 },
-                # AE-0413: the project's budgets, not the v1 defaults.
                 policy_version=_state_policy_version(state)
                 or DEFAULT_PRESENTATION_POLICY_VERSION,
                 rebuild_validation=False,
@@ -463,7 +465,7 @@ class PhaseArtifactRunner:
         updates: dict[str, object],
         resolved: EditorialWorkflowStartInput,
     ) -> None:
-        """AE-0430: targeted field repair of a blocked content gate (in place)."""
+        """Targeted field repair of a blocked content gate (in place)."""
         style_guide = (
             PersonaAgent(resolved.persona, self._llm).style_guide()
             if resolved.persona
@@ -489,7 +491,7 @@ class PhaseArtifactRunner:
     ) -> SlideDraftRetryFn | None:
         """Injected retry double when configured, else the agent-backed retry.
 
-        AE-0413: the re-draft of a blocking slide carries the reviewer notes of
+        The re-draft of a blocking slide carries the reviewer notes of
         this regeneration too, so a retried slide does not ignore the feedback.
         """
         if self._slide_draft_retry is not None:
@@ -513,7 +515,7 @@ class PhaseArtifactRunner:
     async def _build_presentation_review_updates(
         context: ContentReviewContext,
     ) -> dict[str, object]:
-        """Build content review updates through the fail-closed chain (AE-0309)."""
+        """Build content review updates through the fail-closed chain."""
         from rag_backend.application.services.carousel.presentation_review import (
             deserialize_translations_en,
         )
@@ -646,7 +648,7 @@ class PhaseArtifactRunner:
         state: CarouselWorkflowState,
         pending: dict[str, object],
     ) -> dict[str, object]:
-        """Apply design tokens AND re-validate localized slides (AE-0310).
+        """Apply design tokens AND re-validate localized slides.
 
         Validation runs on EVERY execution — the 38affb3e dead-end happened
         because the design ensure re-applied tokens unconditionally but never
@@ -684,7 +686,7 @@ class PhaseArtifactRunner:
     def _design_validation_updates(
         state: CarouselWorkflowState,
     ) -> dict[str, object]:
-        """Fresh presentation validation for the design ensure (AE-0310).
+        """Fresh presentation validation for the design ensure.
 
         Stores a new report (``validated_at`` advances) plus the recovery hint
         while the report still blocks; the hint is cleared once it passes.
@@ -747,6 +749,12 @@ class PhaseArtifactRunner:
         slide_drafts: list[object],
         persona: PersonaProfile,
     ) -> dict[str, object]:
+        """Slides are scored concurrently (bounded) and keyed back in slide order. Each
+        is retried once on the queue's next model (the fallback judge), so one slow
+        model cannot leave the run unscored; a slide the judge never scored is left
+        out. Scores are stored on 0-100 at write time: a raw 0-10 judge answer must
+        never reach the checkpoint.
+        """
         persona_agent = PersonaAgent(persona=persona, llm=self._llm)
         fallback = _fallback_judge(persona, self._llm)
         texts = {
@@ -754,10 +762,6 @@ class PhaseArtifactRunner:
             for index, slide in enumerate(slide_drafts)
             if isinstance(slide, dict) and str(slide.get("draft_text", ""))
         }
-        # AE-0391: scored concurrently (bounded), keyed back in slide order.
-        # AE-0407: retried once; a slide the judge never scored is left out.
-        # AE-0433: the retry runs on the queue's next model (the fallback
-        # judge), so one slow first model cannot leave the run unscored.
         scores = await gather_bounded(
             [
                 partial(judge_voice, persona_agent, text, fallback)
@@ -765,8 +769,6 @@ class PhaseArtifactRunner:
             ],
             self._draft_concurrency,
         )
-        # AE-0439 (QA F-12): store on 0-100 at write time — a raw 0-10 judge
-        # answer must never reach the checkpoint (prod stored overall 8.5).
         return {
             f"slide_{index + 1}": on_hundred_scale_entry(score)
             for index, score in zip(texts, scores, strict=True)
@@ -779,7 +781,7 @@ __all__ = ["PhaseArtifactRunner"]
 
 @runtime_checkable
 class _FallbackModel(Protocol):
-    """A chat model that hands a call to the next model of the queue (AE-0439).
+    """A chat model that hands a call to the next model of the queue.
 
     Mirrors ``HasFallback`` without an application→infrastructure import.
     """
@@ -790,7 +792,7 @@ class _FallbackModel(Protocol):
 
 
 def _fallback_judge(persona: PersonaProfile, llm: BaseChatModel) -> PersonaAgent | None:
-    """The persona judge on ``llm``'s fallback model (AE-0439, #154 A).
+    """The persona judge on ``llm``'s fallback model.
 
     The content-generation scoring retries a timed-out judge on the next
     model of the role's queue, exactly like the editorial slide fix

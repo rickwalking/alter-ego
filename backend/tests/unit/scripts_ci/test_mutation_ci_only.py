@@ -1,4 +1,4 @@
-"""Seeded-violation tests for the CI-only mutation guard (AE-0448).
+"""Seeded-violation tests for the CI-only mutation guard.
 
 Pedro's call: local mutmut / Stryker runs run the dev machine out of memory, so
 mutation runs in CI only. Outside GitHub Actions every local entry point must
@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0448 — a test for a bash gate guard must invoke a subprocess (mirrors test_require_tool.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a bash gate guard must invoke a subprocess (mirrors test_require_tool.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -59,16 +59,17 @@ def _stub_path(tmp_path: Path) -> Path:
 
 
 def _env(tmp_path: Path, **overrides: str) -> dict[str, str]:
+    """The backend tests themselves run in GitHub Actions, so the CI markers are dropped
+    and each scenario sets exactly the environment it describes.
+    """
     env = {**os.environ, "PATH": f"{_stub_path(tmp_path)}:{os.environ['PATH']}"}
-    # The backend tests themselves run in GitHub Actions; drop the CI markers so
-    # each scenario sets exactly the environment it describes.
     for key in ("GITHUB_ACTIONS", "ALLOW_LOCAL_MUTATION", "GATES_REQUIRE_ALL"):
         env.pop(key, None)
     return {**env, **overrides}
 
 
 def _run(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0448 — fixed bash path, test-controlled script
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed bash path, test-controlled script
         [BASH, *args],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -121,8 +122,7 @@ def test_score_gate_called_directly_exits_skip(tmp_path: Path) -> None:
     assert _invoked(tmp_path) == ""
 
 
-# Scenario: the standalone guard (what `npm run test:mutate` calls) exits 77
-# locally and 0 in CI, and the npm script runs it before Stryker.
+# Scenario: the standalone guard (what `npm run test:mutate` calls) exits 77 locally and 0 in CI, and the npm script runs it before Stryker.
 def test_standalone_guard_and_npm_script_wiring(tmp_path: Path) -> None:
     local = _run([str(GUARD)], _env(tmp_path))
     ci = _run([str(GUARD)], _env(tmp_path, GITHUB_ACTIONS="true"))

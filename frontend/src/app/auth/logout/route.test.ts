@@ -1,5 +1,5 @@
 /**
- * AE-0429: the session-expired logout handler lives at `/auth/logout`, outside
+ * The session-expired logout handler lives at `/auth/logout`, outside
  * `/api` (nginx proxies `/api/*` to FastAPI, so a Next route there never runs).
  * Covers the Gherkin scenarios in
  * `tests/features/session-expired-redirect-ae0429.feature`.
@@ -35,8 +35,8 @@ function loginUrlWithRedirect(redirect: string): string {
 }
 
 function mockBackendLogout(
-  implementation: () => Promise<Response> = async () =>
-    new Response(null, { status: 204 }),
+  implementation: () => Promise<Response> = () =>
+    Promise.resolve(new Response(null, { status: 204 })),
 ): MockInstance<typeof fetch> {
   return vi.spyOn(globalThis, "fetch").mockImplementation(implementation);
 }
@@ -63,7 +63,7 @@ describe("GET /auth/logout", () => {
     expectCookieCleared(response);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toMatch(/\/api\/auth\/logout$/);
+    expect(url).toMatch(/\/api\/auth\/logout$/);
     expect(init?.method).toBe("POST");
     expect(locationOf(response).toString()).toBe(
       loginUrlWithRedirect(LOGIN_REDIRECT),
@@ -104,8 +104,8 @@ describe("GET /auth/logout", () => {
   });
 
   it("still clears the cookie and redirects when the backend logout fails", async () => {
-    mockBackendLogout(async () => {
-      throw new Error("backend down");
+    mockBackendLogout(() => {
+      return Promise.reject(new Error("backend down"));
     });
 
     const response = await GET(makeRequest("/auth/logout"));
@@ -116,13 +116,14 @@ describe("GET /auth/logout", () => {
     expect(location.searchParams.get("error")).toBe(SESSION_EXPIRED_ERROR);
   });
 
-  // Feature: An expired session logs out through a front-end route (AE-0429)
+  /**
+   * Given a request to "/auth/logout?redirect=..." whose URL host is the
+   * standalone server bind address "0.0.0.0:3000" with forwarded headers
+   * When the logout handler runs
+   * Then the Location uses the public host over https and never contains
+   * "0.0.0.0" or "localhost"
+   */
   // Scenario: The login Location never exposes the internal server host (AE-0431)
-  //   Given a request to "/auth/logout?redirect=..." whose URL host is the
-  //     standalone server bind address "0.0.0.0:3000" with forwarded headers
-  //   When the logout handler runs
-  //   Then the Location uses the public host over https and never contains
-  //     "0.0.0.0" or "localhost"
   it("uses the forwarded host and protocol instead of the bind address", async () => {
     mockBackendLogout();
     const request = new NextRequest(

@@ -132,23 +132,21 @@ export const carouselSlideResponseSchema = z.object({
  * Only these (model, style) tuples are wired in the backend registry.
  * Anything else is rejected by the API with 422 before the pipeline runs.
  */
-export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
-  [
-    ["openai", "comic_neon"],
-    ["openai", "cinematic"],
-    ["openai", "hyperreal"],
-    ["openai", "neo_anime"],
-    ["openai", "flat_editorial"],
-    ["openai", "pov_editorial"],
-  ];
+export const SUPPORTED_IMAGE_COMBOS: readonly (readonly [string, string])[] = [
+  ["openai", "comic_neon"],
+  ["openai", "cinematic"],
+  ["openai", "hyperreal"],
+  ["openai", "neo_anime"],
+  ["openai", "flat_editorial"],
+  ["openai", "pov_editorial"],
+];
 
 export const carouselCreateRequestSchema = z
   .object({
     topic: z.string().min(1).max(500),
     audience: z.string().min(1).max(500),
     niche: z.string().min(1).max(200),
-    // root key | "auto" | custom-palette UUID (36 chars). Matches the backend
-    // varchar(64) widened in AE-0268 so custom-palette references validate.
+    /** Root key, "auto" or a custom-palette UUID; matches the backend varchar(64) so custom-palette references validate. */
     theme: z.string().max(64).default("auto"),
     image_model: z.enum(["gemini", "openai"]).default("openai"),
     image_style: z
@@ -160,11 +158,10 @@ export const carouselCreateRequestSchema = z
         "flat_editorial",
         "pov_editorial",
       ])
-      // AE-0372: flat editorial is the default everywhere.
       .default("flat_editorial"),
     strategy: z.string().max(50).optional(),
     custom_visual_details: z.string().max(500).nullable().optional(),
-    // AE-0373 (ADR-0021): content mode and the "Ponto de Vista" inputs.
+    /** Content mode and the "Ponto de Vista" inputs (ADR-0021). */
     content_mode: z.enum(["news_analysis", "pov", "pov_news"]).optional(),
     pov_thesis: z.string().trim().min(1).max(280).optional(),
     pov_personal_proof: z.string().max(500).nullable().optional(),
@@ -174,7 +171,7 @@ export const carouselCreateRequestSchema = z
     slide_count: z.number().int().min(7).max(10).optional(),
     cta_goal: z.enum(["follow", "send", "comment"]).optional(),
     persona_id: z.string().uuid().nullable().optional(),
-    // PR #106 review: required by the API when content_mode is "pov" or "pov_news".
+    /** Required by the API when content_mode is "pov" or "pov_news". */
     hook_asset_id: z.string().uuid().optional(),
   })
   .refine(
@@ -205,7 +202,7 @@ export const carouselPhaseProgressSchema = z.object({
 });
 
 /**
- * AE-0403: one slide-edit violation addressed to its form field
+ * One slide-edit violation addressed to its form field
  * (``CarouselSlideEditResponse.field_violations``).
  */
 export const slideFieldViolationSchema = z.object({

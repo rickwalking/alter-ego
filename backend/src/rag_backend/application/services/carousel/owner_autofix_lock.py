@@ -1,8 +1,8 @@
 """The write guard every autofix uses: project lock, then lock-version CAS.
 
-Extracted from ``OwnerAutofixService`` (AE-0367/AE-0392) so the AE-0401 slide
+Extracted from ``OwnerAutofixService`` so the slide
 fix writes through the very same guard. Under the shared per-project
-advisory lock (AE-0316, non-blocking) the caller's ``lock_version`` is bumped
+advisory lock (non-blocking) the caller's ``lock_version`` is bumped
 by compare-and-set; a held lock or a moved version raises
 ``AutofixConflictError`` and nothing is written, so a crashed or concurrent
 tick can never apply the same fix twice.

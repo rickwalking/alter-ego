@@ -1,4 +1,4 @@
-"""Telegram notifier cursor re-scans a safety window (AE-0348 QA r2 R5).
+"""Telegram notifier cursor re-scans a safety window.
 
 The outbox ``created_at`` is the transaction start time, so a long
 transaction can commit an event that sorts before the cursor. The event
@@ -40,6 +40,7 @@ def _at(minutes: float) -> datetime:
 async def test_event_committed_behind_the_cursor_is_read_again(
     db_session: AsyncSession,
 ) -> None:
+    """Models a long transaction that started at minute 3 and commits only now."""
     run_id = uuid4()
     source = SqlAutopilotEventSource(db_session)
     db_session.add(_outbox(run_id, _at(5)))
@@ -47,7 +48,6 @@ async def test_event_committed_behind_the_cursor_is_read_again(
     [settled] = [e for e in await source.recent() if e.run_id == run_id]
     await source.advance(settled)
 
-    # A long transaction that started at minute 3 commits only now.
     late = _outbox(run_id, _at(3))
     db_session.add(late)
     await db_session.flush()

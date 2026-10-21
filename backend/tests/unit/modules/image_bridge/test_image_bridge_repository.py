@@ -1,4 +1,4 @@
-"""SQL job repository over in-memory SQLite (AE-0393).
+"""SQL job repository over in-memory SQLite.
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: The waiter works across processes

@@ -1,7 +1,6 @@
-"""Fence-aware v1 markdown <-> ``blog.v2`` conversion (AE-0423, ADR-0025).
+"""Fence-aware v1 markdown <-> ``blog.v2`` conversion (ADR-0025).
 
-Pure functions used by the one-shot cutover command (the temporary AE-0423
-read fail-safe that also used them was removed in AE-0428):
+Pure functions used by the one-shot cutover command:
 
 - a section starts at a ``## `` line **outside** fenced code blocks;
 - a leading ``# <title>`` line of the lede is stripped (the title is a column);
@@ -65,6 +64,11 @@ class _FenceState:
     marker: str = ""
 
     def update(self, line: str) -> None:
+        """Track a fence line, opening or closing the current fence.
+
+        Per CommonMark, a closing fence repeats the opening char, is at least as long,
+        and carries no info string (```` ```python ```` inside a fence is code).
+        """
         match = _FENCE_RE.match(line)
         if match is None:
             return
@@ -72,8 +76,6 @@ class _FenceState:
         if not self.marker:
             self.marker = fence
             return
-        # CommonMark: a closing fence repeats the opening char, is at least as
-        # long, and carries no info string (```python inside a fence is code).
         closes = fence[0] == self.marker[0] and len(fence) >= len(self.marker)
         if closes and not rest.strip():
             self.marker = ""

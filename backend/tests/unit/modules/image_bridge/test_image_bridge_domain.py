@@ -1,4 +1,4 @@
-"""Pure domain rules of the image bridge (AE-0393).
+"""Pure domain rules of the image bridge.
 
 Gherkin: tests/features/image_bridge.feature
 """

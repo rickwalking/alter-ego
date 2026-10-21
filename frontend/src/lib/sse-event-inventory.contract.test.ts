@@ -1,5 +1,5 @@
 /**
- * Contract test freezing frontend SSE event-name constants (AE-0076).
+ * Contract test freezing frontend SSE event-name constants.
  *
  * Feature: SSE event names are frozen during the migration
  * See tests/features/sse-event-inventory.feature
@@ -27,7 +27,6 @@ interface SseEventInventory {
 }
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
-// frontend/src/lib/<this file> -> up 3 = frontend/, up 4 = repo root.
 const ARTIFACT_PATH = resolve(
   CURRENT_DIR,
   "../../../docs/architecture/sse-event-inventory.json",
@@ -59,13 +58,17 @@ function diffConstants(
 describe("SSE event-name inventory contract", () => {
   const inventory = loadInventory();
 
+  /**
+   * Given the frontend EDITORIAL_WORKFLOW_SSE_EVENTS constants map
+   * When the frontend contract test compares its values to the inventory
+   * Then every frontend constant value exists in the inventory
+   */
   // Scenario: Frontend constants match the inventory
-  //   Given the frontend EDITORIAL_WORKFLOW_SSE_EVENTS constants map
-  //   When the frontend contract test compares its values to the inventory
-  //   Then every frontend constant value exists in the inventory
+  /**
+   * Given a frontend event-name constant whose value differs
+   * Then the test fails and names the mismatched constant
+   */
   // Scenario: Drifted frontend constant is caught in CI
-  //   Given a frontend event-name constant whose value differs
-  //   Then the test fails and names the mismatched constant
   it("EDITORIAL_WORKFLOW_SSE_EVENTS matches the frozen inventory", () => {
     const expected = inventory.frontend[EDITORIAL_KEY]!.constants;
     const mismatches = diffConstants(

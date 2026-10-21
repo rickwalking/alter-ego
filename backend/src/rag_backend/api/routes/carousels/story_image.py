@@ -1,4 +1,4 @@
-"""Public Story image route (AE-0369).
+"""Public Story image route.
 
 Meta's fetcher GETs this JPEG when the autopilot posts the Story that
 announces a carousel. Same gate as ``slide-images``: served only while the

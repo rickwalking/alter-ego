@@ -1,4 +1,4 @@
-"""Run one unattended phase the way the HTTP resume does (AE-0363).
+"""Run one unattended phase the way the HTTP resume does.
 
 The autopilot tick used to call the engine resume on its own session. The
 lock bump stayed uncommitted for the whole LLM run, the row never showed

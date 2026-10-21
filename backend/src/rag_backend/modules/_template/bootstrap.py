@@ -39,6 +39,6 @@ def bootstrap_module(platform: PlatformServices) -> TemplateService:
     from it. A real module constructs its infrastructure adapters from
     ``platform`` and injects them into its application services here.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     repository = InMemoryTemplateRepository()
     return TemplateService(repository=repository)

@@ -3,7 +3,11 @@
 Every route on this router requires the service API key. Decorate each
 route with the shared slowapi limit (``RATE_LIMIT_AUTOPILOT`` /
 ``RATE_LIMIT_SCOPE_AUTOPILOT``) so they share one 10/minute budget per IP.
-AE-0418: the cover upload (``assets.py``) has its own 30/minute limit.
+the cover upload (``assets.py``) has its own 30/minute limit.
+
+A topic-intake rejection carries ``field`` only when one field caused it
+(``response_model_exclude_none``). ``POST /assets`` (the GrokBot cover upload)
+is included under the same guard.
 """
 
 from __future__ import annotations
@@ -95,7 +99,6 @@ async def get_autopilot_signals(
 @router.post(
     PATH_TOPICS,
     response_model=TopicIntakeResponse,
-    # AE-0406: a rejection's ``field`` is present only when one field caused it.
     response_model_exclude_none=True,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": DETAIL_API_KEY_INVALID},
@@ -165,7 +168,6 @@ async def post_autopilot_scout_failed(
     raise HTTPException(status_code=_failure_status(detail), detail=detail)
 
 
-# AE-0418: ``POST /assets`` (GrokBot cover upload) under the same guard.
 router.include_router(cover_assets_router)
 
 

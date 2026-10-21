@@ -1,4 +1,4 @@
-"""Unit tests for the publishing release/visibility/schedule ports (AE-0128).
+"""Unit tests for the publishing release/visibility/schedule ports.
 
 These tests prove the behavior-preserving extraction of the carousel public
 release + the standalone blog visibility/scheduling writes behind publishing
@@ -13,8 +13,8 @@ ports + the publishing ACL/owner:
 * the ACL-backed port adapters delegate to the ACL;
 * the service raises a clear error when a write use case has no wired port.
 
-Behavior-preserving extraction; the live-response diff is asserted by the AE-0125
-safety net (Gherkin not applicable — see ticket AE-0128).
+Behavior-preserving extraction; the live-response diff is asserted by the publishing
+safety net (Gherkin not applicable).
 """
 
 from __future__ import annotations
@@ -136,6 +136,9 @@ class TestLegacyPublishingAcl:
 
     @pytest.mark.asyncio
     async def test_release_public_writes_entity_orm_and_commits(self) -> None:
+        """The entity write mirrors the legacy crud sequence, then the ORM row is written
+        with a single commit.
+        """
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
         updated = CarouselProject(topic="AI", audience="devs", niche="tech")
         repo = AsyncMock(spec=CarouselRepository)
@@ -147,11 +150,9 @@ class TestLegacyPublishingAcl:
 
         result = await acl.release_public(project, str(project.id))
 
-        # Entity write mirrors the legacy crud sequence.
         assert project.is_public is True
         assert project.current_phase == PHASE_PUBLISHED
         repo.update_project.assert_awaited_once_with(project)
-        # ORM row write + single commit.
         assert model.is_public is True
         assert model.current_phase == PHASE_PUBLISHED
         session.commit.assert_awaited_once()

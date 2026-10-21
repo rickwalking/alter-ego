@@ -12,7 +12,7 @@ export function defaultPersonaId(personas: readonly PersonaOption[]): string {
 }
 
 /**
- * AE-0373 (growth plan 16.3 G): preselect the "Pedro" persona once the list
+ * Preselects the "Pedro" persona once the list
  * loads. Runs once, so a deliberate "no persona" choice is never overwritten.
  */
 export function useDefaultPersona(

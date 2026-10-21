@@ -1,6 +1,8 @@
-"""AE-0366: root-cause regressions, the quality rubric, and the approval gate.
+"""Root-cause regressions, the quality rubric, and the approval gate.
 
 Gherkin: tests/features/carousel_content_quality_ae0366.feature
+
+_SEEDS holds one seeded violation per validator rule code the rubric names.
 """
 
 from __future__ import annotations
@@ -97,7 +99,6 @@ def _slide(
 _PT_OK = {"heading": "Um título correto", "body": "Um corpo correto."}
 _LONG = "Palavra " * 40
 
-# One seeded violation per validator rule code the rubric names.
 _SEEDS: dict[str, dict[str, object]] = {
     "heading_not_sentence_case_pt": _slide("content", {**_PT_OK, "heading": "um t"}),
     "heading_not_sentence_case_en": _slide(
@@ -154,7 +155,7 @@ class TestQualityRubricSourceOfTruth:
         ]
 
     def test_loader_rejects_rubric_code_without_severity(self) -> None:
-        """Rule-fires (AE-0180): a rubric item naming an unknown rule fails."""
+        """Rule-fires: a rubric item naming an unknown rule fails."""
         raw = [
             {
                 "rubric_id": "x",
@@ -203,6 +204,7 @@ class TestDrafterKeepsCase:
         get_ai_response_cache().clear()
 
     async def test_prompt_keeps_title_case_and_carries_the_rubric(self) -> None:
+        """These inputs used to reach the model lowercased ("a versão ... o argon ...")."""
         llm = AsyncMock()
         llm.bind = MagicMock(return_value=llm)
         llm.ainvoke.return_value = MagicMock(
@@ -218,7 +220,6 @@ class TestDrafterKeepsCase:
         )
 
         prompt = str(llm.ainvoke.call_args.args[0])
-        # Root cause: these used to reach GLM as "a versão ... o argon ...".
         assert _OUTLINE_TITLE in prompt
         assert "O Argon chega ao Brasil (beta)" in prompt
         assert "O que muda para devs no Brasil" in prompt
@@ -250,6 +251,9 @@ class TestTranslatorKeepsCaseAndTags:
 
     @pytest.mark.asyncio
     async def test_translation_prompt_carries_rubric(self) -> None:
+        """An answer without the TL;DR leaves EN without one; the gate then blocks on
+        the shape and its repair translates the PT one.
+        """
         llm = AsyncMock()
         llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
@@ -263,8 +267,6 @@ class TestTranslatorKeepsCaseAndTags:
         assert "Gemini 4 Argon chegou" in prompt
         assert RUBRIC_HEADER in prompt
         assert "<strong>" in prompt
-        # AE-0430: an answer without the TL;DR leaves EN without one (the gate
-        # then blocks on the shape and its repair translates the PT one).
         assert result == {1: {"heading": "H", "body": "B"}}
 
 
@@ -322,6 +324,7 @@ class TestContentApprovalGate:
         validate_content_approve_presentation(_content_state(updates))
 
     async def test_reviewer_fix_clears_the_markers_and_unblocks(self) -> None:
+        """The draft title follows the edited presentation_pt heading."""
         updates = await build_fail_closed_review_updates(
             FailClosedReviewCommand(
                 project_id="8e350d6e", slide_drafts=prod_drafts(), policy_version=_V3
@@ -345,7 +348,6 @@ class TestContentApprovalGate:
         drafts = edited["slide_drafts"]
         assert isinstance(drafts, list)
         slide5 = drafts[SLIDE5_INDEX - 1]
-        # The draft title follows the edited presentation_pt heading.
         assert slide5["title"] == slide5["presentation_pt"]["heading"]
         assert slide5["title"] != LOWERCASE_HEADING_5
         validate_content_approve_presentation({**state, **edited})

@@ -1,7 +1,7 @@
-"""Tests for create_ticket allocation + board mutation (AE-0237, AE-0238).
+"""Tests for create_ticket allocation + board mutation.
 
-The board is a gitignored, regenerable view of `.agent/tasks/` (AE-0223). These
-tests pin the AE-0237 contract: `add_to_board` must regenerate the board when it
+The board is a gitignored, regenerable view of `.agent/tasks/`. These
+tests pin the contract: `add_to_board` must regenerate the board when it
 is absent (never raise FileNotFoundError) and write atomically. They monkeypatch
 BOARD_PATH/TASKS_DIR to `tmp_path` so they never touch the real `.agent/` tree.
 """
@@ -9,7 +9,7 @@ BOARD_PATH/TASKS_DIR to `tmp_path` so they never touch the real `.agent/` tree.
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0238 — test drives git in a throwaway repo (mirrors test_diff_base.py)
+import subprocess  # noqa: S404  # integrity-ok: test drives git in a throwaway repo (mirrors test_diff_base.py)
 from pathlib import Path
 
 import pytest
@@ -27,7 +27,7 @@ def _seed_ticket(tasks_dir: Path, ticket_id: str, status: str = "Intake") -> Non
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0238 — fixed git path, test-controlled args, throwaway repo
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed git path, test-controlled args, throwaway repo
         [_GIT, "-C", str(repo), *args],
         check=True,
         capture_output=True,
@@ -42,35 +42,34 @@ def test_next_ticket_id_returns_max_plus_one(tmp_path: Path) -> None:
 
 
 def test_next_ticket_id_empty_dir_starts_at_one(tmp_path: Path) -> None:
-    # Not a git repo => git-ref scan degrades to local-only (here: empty => AE-0001).
+    """Outside a git repo the git-ref scan degrades to a local-only scan."""
     assert create_ticket.next_ticket_id(tmp_path) == "AE-0001"
 
 
-# AE-0238 Gherkin: an id that exists only on an unmerged branch must not be reused.
 def test_next_ticket_id_sees_ids_on_other_branches(tmp_path: Path) -> None:
+    """An id that exists only on an unmerged branch must not be reused. The base branch
+    carries the first ticket so .agent/tasks exists on every branch (as in the real
+    repo); a working-tree-only allocation would return the second id, while the git-ref
+    scan sees the feature-branch id and allocates the one after it.
+    """
     repo = tmp_path / "repo"
     tasks_dir = repo / ".agent" / "tasks"
     tasks_dir.mkdir(parents=True)
     _git(repo, "init", "-q")
     _git(repo, "config", "user.email", "t@example.com")
     _git(repo, "config", "user.name", "Test")
-    # Base carries AE-0001 so .agent/tasks exists on every branch (as in the real
-    # repo); the working tree alone would only ever allocate AE-0002.
     _seed_ticket(tasks_dir, "AE-0001")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "base ticket")
-    base_branch = _git(repo, "branch", "--show-current").strip()  # main or master
+    base_branch = _git(repo, "branch", "--show-current").strip()
 
-    # AE-0600 lives only on a feature branch, never on the base checkout.
     _git(repo, "checkout", "-q", "-b", "feature")
     _seed_ticket(tasks_dir, "AE-0600")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "add AE-0600")
-    _git(repo, "checkout", "-q", base_branch)  # base lacks AE-0600 in the tree
+    _git(repo, "checkout", "-q", base_branch)
 
-    assert not (tasks_dir / "AE-0600-example.md").exists()  # absent locally
-    # Working-tree-only allocation would return AE-0002; the git-ref scan sees
-    # AE-0600 on the feature ref → next is AE-0601.
+    assert not (tasks_dir / "AE-0600-example.md").exists()
     assert create_ticket.next_ticket_id(tasks_dir) == "AE-0601"
 
 
@@ -89,11 +88,12 @@ def test_add_to_board_with_board_present(
     assert "- AE-0099" in board.read_text(encoding="utf-8")
 
 
-# Seeded-regression proof (AE-0237): the absent-board path must NOT raise
-# FileNotFoundError — it reproduces the FC-1 crash on the pre-fix code.
 def test_add_to_board_regenerates_when_board_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Seeded-regression proof: the absent-board path must NOT raise FileNotFoundError,
+    as the pre-fix code did. The regenerated board carries the full column scaffold.
+    """
     tasks_dir = tmp_path / "tasks"
     tasks_dir.mkdir()
     _seed_ticket(tasks_dir, "AE-0042")
@@ -105,7 +105,6 @@ def test_add_to_board_regenerates_when_board_absent(
 
     content = board.read_text(encoding="utf-8")
     assert "- AE-0042" in content
-    # Regenerated from the ticket files => carries the full column scaffold.
     for column in BOARD_COLUMNS:
         assert f"## {column}" in content
 

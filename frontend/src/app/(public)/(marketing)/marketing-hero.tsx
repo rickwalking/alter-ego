@@ -6,7 +6,7 @@ import type { MarketingHeroProps } from "@/app/(public)/(marketing)/types";
 export function MarketingHero({
   t,
   tc,
-}: MarketingHeroProps): React.ReactElement {
+}: Readonly<MarketingHeroProps>): React.ReactElement {
   return (
     <section className="relative z-[1] min-h-[85vh] flex items-center py-[60px] max-[600px]:min-h-0 max-[600px]:py-10">
       <div className="max-w-[1200px] w-full mx-auto px-6 grid grid-cols-2 gap-[60px] items-center max-[900px]:grid-cols-1 max-[900px]:gap-10">

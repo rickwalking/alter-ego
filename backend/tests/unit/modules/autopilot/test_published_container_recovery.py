@@ -139,7 +139,10 @@ async def test_crash_after_media_publish_marks_the_run_published() -> None:
 
 @pytest.mark.unit
 async def test_unmatched_published_container_fails_without_reposting() -> None:
-    """Scenario: Published container whose media cannot be matched fails without reposting."""
+    """Scenario: Published container whose media cannot be matched fails without reposting.
+
+    Retry would create a new container and could post twice, so no retry is offered.
+    """
     graph = _Graph([_album("old-post", timedelta(hours=30))])
     job, repo, notifier = _job_with_stored_container(graph)
 
@@ -150,7 +153,6 @@ async def test_unmatched_published_container_fails_without_reposting() -> None:
     assert stored.state is AutopilotRunState.PUBLISH_FAILED
     assert stored.state_reason == ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN
     assert stored.ig_post_id is None
-    # QA r2 R3: Retry would create a new container and could post twice.
     assert [notice.offer_retry for notice in notifier.notices] == [False]
 
 

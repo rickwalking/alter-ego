@@ -1,7 +1,7 @@
 """Golden-snapshot diff helper for the Knowledge (documents + search) endpoints.
 
 This is the enforceable byte-identical baseline for the Phase 2 Knowledge
-extraction (AE-0088). Later slices (AE-0092 / AE-0093) relocate the
+extraction. Later slices relocate the
 ``/api/documents`` and ``/api/search`` code; this helper lets those slices
 assert the live response (status code + JSON body) is identical to the
 committed snapshot captured on the current, pre-refactor code.
@@ -12,6 +12,9 @@ normalized deterministically so the snapshot is stable across runs. A field is
 not; normalization replaces such values with a stable placeholder while still
 asserting the field is present and well-formed (a UUID stays a UUID, a
 timestamp stays an ISO-8601 string).
+
+Volatile fields are normalized regardless of nesting depth. Retriever float scores are
+non-deterministic, so the contract is the field's presence and numeric type.
 """
 
 from __future__ import annotations
@@ -25,12 +28,10 @@ from uuid import UUID
 if TYPE_CHECKING:
     from httpx import Response
 
-# --- Placeholders for normalized volatile values --------------------------------
 PLACEHOLDER_UUID: Final = "<uuid>"
 PLACEHOLDER_TIMESTAMP: Final = "<timestamp>"
 PLACEHOLDER_NUMBER: Final = "<number>"
 
-# --- Volatile field names (normalized regardless of nesting depth) --------------
 VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({
     "id",
     "document_id",
@@ -40,17 +41,12 @@ VOLATILE_TIMESTAMP_FIELDS: Final[frozenset[str]] = frozenset({
     "created_at",
     "updated_at",
 })
-# Float scores from the retriever are non-deterministic; the contract is the
-# field's presence and numeric type, not the exact value.
 VOLATILE_NUMBER_FIELDS: Final[frozenset[str]] = frozenset({"score"})
 
 _SNAPSHOT_DIR: Final = Path(__file__).parent
 
-_ISO_TIMESTAMP_RE: Final = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"  # date + time
-)
+_ISO_TIMESTAMP_RE: Final = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 
-# Type alias for any JSON value (Python 3.11-compatible recursive alias).
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 

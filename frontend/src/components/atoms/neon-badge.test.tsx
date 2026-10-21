@@ -12,7 +12,6 @@ const VARIANTS: NeonBadgeVariant[] = [
   "red",
 ];
 
-// Feature: NeonBadge Component
 describe("NeonBadge Component", () => {
   describe("When a cyan variant badge is rendered", () => {
     // Scenario: Cyan badge renders label text

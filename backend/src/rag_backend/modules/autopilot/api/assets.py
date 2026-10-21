@@ -1,10 +1,13 @@
-"""``POST /api/autopilot/assets``: GrokBot uploads a slide-1 cover (AE-0418).
+"""``POST /api/autopilot/assets``: GrokBot uploads a slide-1 cover.
 
 Same API key as every autopilot route, with its own rate limit (30/minute,
 not the shared 10/minute budget of the other routes). One multipart
 ``file`` part (PNG or JPEG, at most 5 MB) plus ``kind`` and, for a
 screenshot, ``source_url``. Refusals are 4xx with ``{"detail": "<code>"}``
 (contract: ``docs/architecture/grokbot-cover-asset.md``).
+
+The router is included by ``api/router.py``, so it inherits the prefix, tag and
+API-key guard.
 """
 
 from __future__ import annotations
@@ -47,7 +50,6 @@ from rag_backend.modules.autopilot.infrastructure.cover_store import SqlCoverAss
 
 _HTTP_CREATED = 201
 
-# Included by ``api/router.py``: it inherits the prefix, tag and API-key guard.
 router = APIRouter()
 
 

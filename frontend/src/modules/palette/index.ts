@@ -1,5 +1,5 @@
 /**
- * `palette` — bounded-context public contract (AE-0271).
+ * `palette` — bounded-context public contract.
  *
  * Owns the custom-palette catalog surface consumed by `app/`: the TanStack
  * Query hooks over `GET/POST/PATCH/DELETE /api/palettes`. This barrel is the

@@ -1,4 +1,4 @@
-"""The worker's due tick for scheduled runs (AE-0370).
+"""The worker's due tick for scheduled runs.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 """
@@ -59,8 +59,11 @@ _DUE = _NOW + timedelta(hours=3)
 
 @dataclass
 class _Scheduled:
+    """``raced`` set to True means another caller moves every listed run before the sweep's
+    CAS.
+    """
+
     repo: _Repo
-    # True: another caller moves every listed run before the sweep's CAS.
     raced: bool = False
 
     async def due(self, query: DueScheduleQuery) -> list[AutopilotRun]:

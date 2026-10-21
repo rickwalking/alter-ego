@@ -17,9 +17,10 @@ interface PreviewBlogResponse {
   markdown?: string;
 }
 
+/** Nothing generated yet (404) is an empty state, not an error. */
 export function CreateDraftBlogPreview({
   projectId,
-}: WorkspaceDraftBlogPreviewProps): React.JSX.Element {
+}: Readonly<WorkspaceDraftBlogPreviewProps>): React.JSX.Element {
   const t = useTranslations("create.workspace");
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,6 @@ export function CreateDraftBlogPreview({
       const response = await authenticatedFetch(
         API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG(projectId, DEFAULT_BLOG_LANGUAGE),
       );
-      // AE-0415 (B30): nothing generated yet is an empty state, not an error.
       if (response.status === HTTP_STATUS.NOT_FOUND) {
         setMarkdown("");
         return;

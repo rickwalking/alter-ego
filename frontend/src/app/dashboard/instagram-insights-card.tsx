@@ -16,7 +16,7 @@ import {
 } from "./instagram-insights-helpers";
 
 /**
- * AE-0378: the dashboard's Instagram KPIs — totals over the recent published
+ * The dashboard's Instagram KPIs — totals over the recent published
  * posts, follows per post and shares per 100 views, then the latest posts.
  * A metric Graph did not return shows "n/d".
  */
@@ -52,9 +52,9 @@ export function InstagramInsightsCard(): React.ReactElement {
 
 function InsightsBody({
   data,
-}: {
+}: Readonly<{
   data: InstagramInsights;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("dashboard.instagram");
   const locale = useLocale();
   const nd = t("notAvailable");

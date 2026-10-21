@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AE-0315: live "revision in progress" banner for the create flow.
+ * Live "revision in progress" banner for the create flow.
  *
  * Rendered on EVERY step while `phase_status === in_progress`: shows the
  * running phase, the coarse stage, when the run started, and a live elapsed
@@ -38,7 +38,7 @@ export interface CreateRunProgressBannerProps {
   runStartedAt?: string | null;
   runStage?: string | null;
   /**
-   * AE-0415 (B27): the review action that started the run ("approve" runs the
+   * The review action that started the run ("approve" runs the
    * NEXT phase, "revise" re-runs the current one); null after a reload.
    */
   runningAction?: string | null;
@@ -60,7 +60,7 @@ interface BannerCopy {
   phase: string;
 }
 
-/** AE-0415 (B27): name the phase that is really running. */
+/** Name the phase that is really running. */
 function bannerCopy(
   currentPhase: string,
   runningAction: string | null | undefined,
@@ -136,7 +136,7 @@ export function CreateRunProgressBanner({
   runningAction,
   onCheckAgain,
   checkAgainDisabled = false,
-}: CreateRunProgressBannerProps): React.JSX.Element {
+}: Readonly<CreateRunProgressBannerProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.runProgress");
   const phaseLabel = usePhaseLabel();
   const copy = bannerCopy(currentPhase, runningAction);

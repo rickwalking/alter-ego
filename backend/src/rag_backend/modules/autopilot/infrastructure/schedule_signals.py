@@ -1,4 +1,4 @@
-"""SQLAlchemy ``ScheduleSignalsSource`` (AE-0404).
+"""SQLAlchemy ``ScheduleSignalsSource``.
 
 - **audience**: the account's ``online_followers``, cached in
   ``instagram_audience_hours`` and read from Graph at most once a day. A Graph
@@ -101,7 +101,10 @@ class SqlScheduleSignals:
         return checked is None or self._config.clock.now() - checked >= ttl
 
     async def _save(self, fetch: _Fetch) -> None:
-        """Record the attempt (and the hours on success) in a savepoint."""
+        """Record the attempt (and the hours on success) in a savepoint.
+
+        When a concurrent request saved first, its hours serve this one later.
+        """
         now = self._config.clock.now()
         session = self._config.session
         try:
@@ -113,7 +116,6 @@ class SqlScheduleSignals:
                     row.fetched_at = now
                 session.add(row)
         except SQLAlchemyError as exc:
-            # A concurrent request saved first: its hours serve this one later.
             logger.warning(LOG_AUDIENCE_SAVE_FAILED, error=type(exc).__name__)
 
     async def _posts(self) -> list[PostEngagement]:

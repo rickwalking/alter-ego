@@ -1,4 +1,4 @@
-"""Repair before revise at the content and design gates (AE-0392).
+"""Repair before revise at the content and design gates.
 
 A gate that fails only on blocking presentation rules (sentence case, empty
 body, EN equal to PT, item counts, tag balance) is first repaired with the
@@ -8,9 +8,9 @@ with feedback that names each failing slide.
 
 A revise regenerates the whole phase: the engine has no per-slide regenerate
 behind a review decision (structured feedback is final-review only). The
-content phase still re-drafts each blocking slide once on its own (AE-0309).
+content phase still re-drafts each blocking slide once on its own.
 
-AE-0401: with a model fixer wired (the autopilot worker), content-quality and
+With a model fixer wired (the autopilot worker), content-quality and
 voice-score failures are not revised: ``SlideAutofixStep`` rewrites each
 failing slide (3 attempts) and escalates what is left.
 """
@@ -59,11 +59,13 @@ _FAILED_ACTIONS: frozenset[GateAction] = frozenset({
 
 @dataclass(frozen=True, kw_only=True)
 class GateRepairDependencies:
-    """The driver to read the gate again, the repairer and the model fixer."""
+    """The driver to read the gate again, the repairer and the model fixer.
+
+    ``fixer`` is the model fix for the slides the repair could not fix.
+    """
 
     editorial: EditorialDriver
     repairer: GateRepairer | None = None
-    # AE-0401: model fix of the slides the repair could not fix.
     fixer: SlideFixer | None = None
 
 
@@ -87,7 +89,7 @@ class GateRepairStep:
     async def apply(self, read: GateRead) -> GateRead | None:
         """The gate to act on; None when a write lost the lock (next tick).
 
-        The deterministic repair first, then (AE-0401) the model fix of what
+        The deterministic repair first, then the model fix of what
         is still failing; each step returns its input unchanged when it does
         not apply.
         """

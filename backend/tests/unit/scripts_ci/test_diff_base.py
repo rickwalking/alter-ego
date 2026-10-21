@@ -1,4 +1,4 @@
-"""Tests for the shared diff-base resolver (scripts/lib/diff_base.sh, AE-0177).
+"""Tests for the shared diff-base resolver (scripts/lib/diff_base.sh).
 
 The resolver implements a 3-tier fallback so a missing merge base never silently
 degrades a diff-scoped gate to a no-op:
@@ -11,24 +11,25 @@ degrades a diff-scoped gate to a no-op:
 Each scenario builds a throwaway git repo so the resolver runs against a real
 git history, then asserts on stdout (the resolved range), stderr (the warning),
 and the exit code (0 = resolved, 1 = advisory).
+
+Interpreters resolve to absolute paths so the tests never rely on a partial executable
+name (S607); all arguments are fixed and test-controlled (S603).
 """
 
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0177 — a test for a bash gate resolver must invoke a subprocess (mirrors test_checkpoint_fixture_portability.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a bash gate resolver must invoke a subprocess (mirrors test_checkpoint_fixture_portability.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RESOLVER = REPO_ROOT / "scripts" / "lib" / "diff_base.sh"
-# Resolve interpreters to absolute paths so the test never relies on a partial
-# executable name (S607); all arguments below are fixed/test-controlled (S603).
 GIT = shutil.which("git") or "git"
 BASH = shutil.which("bash") or "bash"
 
 
 def _git_out(repo: Path, *args: str) -> str:
-    result = subprocess.run(  # noqa: S603  # integrity-ok: AE-0177 — fixed `git` path, test-controlled args in a throwaway repo
+    result = subprocess.run(  # noqa: S603  # integrity-ok: fixed `git` path, test-controlled args in a throwaway repo
         [GIT, *args],
         cwd=repo,
         check=True,
@@ -52,7 +53,7 @@ def _init_repo(repo: Path) -> None:
 def _resolve(repo: Path, base_ref: str) -> subprocess.CompletedProcess[str]:
     """Source the resolver and call resolve_diff_base in `repo`."""
     script = f'source "{RESOLVER}"; resolve_diff_base "{base_ref}"'
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0177 — fixed `bash` path, test-controlled script in a throwaway repo
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed `bash` path, test-controlled script in a throwaway repo
         [BASH, "-c", script],
         cwd=repo,
         capture_output=True,
@@ -65,7 +66,7 @@ def test_resolves_merge_base_form_when_base_is_ancestor(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
-    _git(repo, "branch", "base")  # base == an ancestor of HEAD
+    _git(repo, "branch", "base")
     (repo / "a.txt").write_text("x", encoding="utf-8")
     _git(repo, "add", "a.txt")
     _git(repo, "commit", "-q", "-m", "feat")
@@ -78,21 +79,21 @@ def test_resolves_merge_base_form_when_base_is_ancestor(tmp_path: Path) -> None:
 
 # Scenario: stacked branch, no merge base -> two-ref fallback (with warning)
 def test_falls_back_to_two_ref_when_no_merge_base(tmp_path: Path) -> None:
+    """An orphan branch gives disjoint history: no merge base with HEAD, yet the ref still
+    resolves (the stacked/diverged-base shape). The base is the original main-line ref,
+    master or main depending on the git version/config. The fallback must be visible,
+    never silent.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
-    # Orphan branch => disjoint history => no merge base with HEAD, but the ref
-    # is still resolvable (this is the stacked/diverged-base shape).
     _git(repo, "checkout", "-q", "--orphan", "disjoint")
     (repo / "b.txt").write_text("y", encoding="utf-8")
     _git(repo, "add", "b.txt")
     _git(repo, "commit", "-q", "-m", "disjoint-root")
-    _git(repo, "checkout", "-q", "-b", "feature")  # HEAD on feature off disjoint
+    _git(repo, "checkout", "-q", "-b", "feature")
 
-    # Use the original main-line ref (master/main) as base: resolvable but no
-    # merge base with the orphan-rooted HEAD.
     base = "master"
-    # git's default branch may be 'main' or 'master' depending on version/config.
     branches = _git_out(repo, "branch", "--format=%(refname:short)").split()
     if "master" not in branches and "main" in branches:
         base = "main"
@@ -101,24 +102,23 @@ def test_falls_back_to_two_ref_when_no_merge_base(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == f"{base} HEAD"
-    # The fallback must be VISIBLE, never silent.
     assert "no merge base" in result.stderr
     assert "two-ref" in result.stderr
 
 
 # Scenario: base ref unresolvable -> advisory with a VISIBLE warning (never silent)
 def test_degrades_to_advisory_with_visible_warning(tmp_path: Path) -> None:
+    """Advisory mode exits non-zero so callers degrade (not a silent pass), prints nothing
+    on stdout and emits a loud WARNING that this is not a pass.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     _init_repo(repo)
 
     result = _resolve(repo, "origin/does-not-exist")
 
-    # Advisory: non-zero exit so callers degrade (NOT a silent pass)...
     assert result.returncode == 1
-    # ...with nothing on stdout (no range to use)...
     assert result.stdout.strip() == ""
-    # ...and a loud, explicit warning that this is NOT a pass.
     assert "WARNING" in result.stderr
     assert "ADVISORY" in result.stderr
     assert "NOT a pass" in result.stderr

@@ -1,4 +1,4 @@
-"""Read-model projection results for the publishing bounded context (AE-0131).
+"""Read-model projection results for the publishing bounded context.
 
 The publishing context serves the public/editor READ surfaces — the public
 carousel ``/blog`` (+lang), the content-calendar, the workflow-board, and the
@@ -6,18 +6,18 @@ editorial-analytics dashboard — from typed **projection results** instead of
 exposing the carousel/blog aggregates (or the ORM) across the boundary. These
 value objects are the boundary-safe shapes the publishing facade returns; the
 thin HTTP route adapters map them one-to-one onto the existing response schemas,
-byte-identical to the pre-AE-0131 reads.
+byte-identical to the legacy reads.
 
 They are fully-typed (no ``Any``), immutable, and free of any ORM type — the only
 code that touches the carousel/blog ORM for these reads is the read-side ACL in
 ``infrastructure`` (the sole read owner) behind the
 :class:`~rag_backend.modules.publishing.domain.ports.PublishingReadPort`.
 
-Behavior-preserving + additive (AE-0131): the carousel-blog projection reads the
-``blog_posts`` ``origin='carousel'`` projection rows backfilled by AE-0127 when
+Behavior-preserving + additive: the carousel-blog projection reads the
+``blog_posts`` ``origin='carousel'`` projection rows backfilled when
 present, FALLING BACK per-field to the embedded carousel columns where the
 backfill does not cover a field — so the response is unchanged. No embedded
-column is dropped (deferred follow-up, AE-0133).
+column is dropped (deferred follow-up).
 """
 
 from __future__ import annotations

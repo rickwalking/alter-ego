@@ -1,4 +1,4 @@
-"""Anti-corruption layer: legacy carousel/blog persistence ↔ publishing READS (AE-0131).
+"""Anti-corruption layer: legacy carousel/blog persistence ↔ publishing READS.
 
 This module is the **single** read-side seam between the publishing bounded
 context and the legacy carousel + blog persistence. It is the **only** file under
@@ -6,14 +6,14 @@ context and the legacy carousel + blog persistence. It is the **only** file unde
 public/editor READ surfaces (the carousel ``/blog`` (+lang) projection, the
 content-calendar, the workflow-board, the editorial-analytics, and the blog-post
 CRUD persistence rows); the publishing application and domain layers stay free of
-it (the layering is enforced by check-integrity + the AE-0132 import contract).
+it (the layering is enforced by check-integrity + the import contract).
 
-Everything it returns is byte-identical to the pre-AE-0131 scattered
+Everything it returns is byte-identical to the legacy scattered
 route/service reads — only the *ownership* of the read is consolidated here. It
 backs two publishing domain ports:
 
 * :class:`PublishingReadPort` — the carousel-blog projection (sourcing the body +
-  404 signal SOLELY from the AE-0127/AE-0163 ``origin='carousel'`` ``blog_posts``
+  404 signal SOLELY from the ``origin='carousel'`` ``blog_posts``
   row; the embedded carousel columns are no longer read), the content-calendar, the
   workflow-board, and the editorial-analytics projections — replicating the legacy
   ``media.py`` blog
@@ -24,13 +24,13 @@ backs two publishing domain ports:
   blog ORM/repository; the routes keep the access checks + audit/event/lock
   orchestration + the single commit (unchanged).
 
-Behavior-preserving (AE-0131 / AE-0163): no read here changes a field, a filter,
+Behavior-preserving: no read here changes a field, a filter,
 an ordering, a default, or a 404 condition relative to the legacy paths. The
 carousel-blog projection sources the body + the 404 signal from the canonical
-``origin='carousel'`` ``blog_posts`` row (AE-0127 backfill + AE-0163 dual-write,
+``origin='carousel'`` ``blog_posts`` row (backfill + dual-write,
 which together guarantee the row is present iff the legacy embedded column was
 non-null) so the response is byte-identical while the embedded column becomes
-WRITE-dead for the deferred AE-0162 drop.
+WRITE-dead for its deferred drop.
 """
 
 from __future__ import annotations
@@ -95,8 +95,6 @@ from rag_backend.modules.publishing.infrastructure.read_projection_helpers impor
     resolve_blog_body,
 )
 
-# Workflow-board phase columns — the single-source-of-truth ordering shared with
-# the legacy route alias (byte-identical column order ending in PHASE_PUBLISHED).
 _KANBAN_PHASES = BOARD_PHASES
 
 _LANG_EN = "en"
@@ -108,13 +106,12 @@ class PublishingReadAcl:
     Binds the request-scoped session (the single carousel/blog ORM read seam).
     Every method returns a boundary-safe projection value object (never the ORM)
     that the thin HTTP route adapters map one-to-one onto the existing response
-    schemas, byte-identical to the pre-AE-0131 reads.
+    schemas, byte-identical to the legacy reads.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    # --- PublishingReadPort: carousel-blog projection (default pt-BR) ----------
     async def project_carousel_blog(
         self,
         project: CarouselProject,
@@ -122,21 +119,21 @@ class PublishingReadAcl:
         """Project the public carousel blog (default pt-BR), or ``None`` if absent.
 
         Sources the body + the 404 signal SOLELY from the canonical
-        ``origin='carousel'`` ``blog_posts`` row (AE-0163) — the embedded
+        ``origin='carousel'`` ``blog_posts`` row — the embedded
         ``carousel_projects.blog_markdown`` column is no longer read. Returns
         ``None`` (the legacy 404) when the row is absent or carries no body.
 
         The row is guaranteed present whenever the legacy embedded column was
-        non-null: AE-0127 backfilled every pre-existing public/completed carousel
-        and AE-0163 makes the carousel repository dual-write the row on every blog
+        non-null: the backfill covered every pre-existing public/completed carousel
+        and the carousel repository dual-writes the row on every blog
         write (and only for non-null ``blog_markdown``). So the row's presence
         equals the legacy ``blog_markdown is None`` 404 signal, and the body equals
         the embedded body — the response is byte-identical to the legacy
-        ``media.py:get_carousel_blog`` (AE-0125 safety net).
+        ``media.py:get_carousel_blog`` (the snapshot safety net).
 
         Title/subtitle resolution is unchanged: the row's ``title`` (``title or
         topic``) with the ``project.title``/``project.topic`` fallback, and the
-        row's ``excerpt`` (NULL in the AE-0127/AE-0163 shape) with the
+        row's ``excerpt`` (NULL in the shape) with the
         ``project.subtitle`` fallback — byte-identical to the legacy resolution.
         """
         row = await self._carousel_blog_row(str(project.id))
@@ -153,7 +150,6 @@ class PublishingReadAcl:
             subtitle=subtitle,
         )
 
-    # --- PublishingReadPort: localized carousel-blog projection ----------------
     async def project_carousel_blog_i18n(
         self,
         project: CarouselProject,
@@ -180,9 +176,8 @@ class PublishingReadAcl:
             available_languages=project.get_available_languages(),
         )
 
-    # --- PublishingReadPort: public-visibility gate (AE-0422) ------------------
     async def is_carousel_blog_published(self, project_id: UUID) -> bool:
-        """Whether the carousel's ``origin='carousel'`` row is published (AE-0422).
+        """Whether the carousel's ``origin='carousel'`` row is published.
 
         Public (anonymous) callers of the legacy carousel-blog read must 404
         unless the row is ``published``; authenticated preview bypasses this gate
@@ -193,7 +188,6 @@ class PublishingReadAcl:
             return False
         return row.status == BlogPostStatus.PUBLISHED.value
 
-    # --- PublishingReadPort: content-calendar projection ----------------------
     async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
         """Project the content-calendar entries (legacy ``ContentCalendarService``)."""
         items = await ContentCalendarService.get_calendar(
@@ -208,16 +202,17 @@ class PublishingReadAcl:
             items=[_to_calendar_item(item) for item in items],
         )
 
-    # --- PublishingReadPort: workflow-board projection ------------------------
     async def project_board(self, query: BoardQuery) -> BoardProjection:
-        """Project the workflow-board phase columns (legacy board route)."""
+        """Project the workflow-board phase columns (legacy board route).
+
+        A rejected project sits in the Rejected column.
+        """
         projects = await self._board_projects(query.author_id)
         cards_by_column: dict[str, list[BoardCard]] = {
             column: [] for column in BOARD_COLUMNS
         }
         for project in projects:
             _, card = _to_board_card(project)
-            # AE-0416: a rejected project sits in the Rejected column.
             rejected = card.phase_status == PHASE_STATUS_REJECTED
             column = BOARD_COLUMN_REJECTED if rejected else card.current_phase
             cards_by_column.setdefault(column, []).append(card)
@@ -227,7 +222,6 @@ class PublishingReadAcl:
         ]
         return BoardProjection(columns=columns)
 
-    # --- PublishingReadPort: editorial-analytics projection -------------------
     async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
         """Project the editorial-analytics summary + weekly velocity.
 
@@ -245,7 +239,6 @@ class PublishingReadAcl:
             velocity_by_week=[_to_velocity_week(week) for week in velocity],
         )
 
-    # --- BlogPostCrudPort: blog-post persistence rows -------------------------
     @staticmethod
     def new_post(payload: dict[str, object]) -> BlogPostModel:
         """Build an unsaved blog row from the create payload (legacy from_entity)."""
@@ -272,12 +265,11 @@ class PublishingReadAcl:
         )
 
     async def public_post_ids(self, post_ids: list[str]) -> frozenset[str]:
-        """Subset of ``post_ids`` passing the public-visibility rule (AE-0411)."""
+        """Subset of ``post_ids`` passing the public-visibility rule."""
         return await public_blog_post_ids(self._session, post_ids)
 
-    # --- internal read helpers ------------------------------------------------
     async def _carousel_blog_row(self, project_id: str) -> BlogPostModel | None:
-        """Return the AE-0127 ``origin='carousel'`` backfill row, or ``None``."""
+        """Return the ``origin='carousel'`` backfill row, or ``None``."""
         query = select(BlogPostModel).where(
             BlogPostModel.project_id == project_id,
             BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,

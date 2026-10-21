@@ -1,10 +1,15 @@
-"""Quote cards and the source footer of ``pov_news`` decks (AE-0406, ADR-0023)."""
+"""Quote cards and the source footer of ``pov_news`` decks (ADR-0023).
+
+A quote card goes on a point or twist slide, at most ``MAX_QUOTE_CARDS`` per
+deck, and is rendered from the slide's ``insight`` dict by the ``insight_quote``
+strategy. The deterministic check requires a placed quote to be exactly one of
+the supplied quotes. The caption footer reads ``Fontes: @handle, domain.com``.
+"""
 
 from __future__ import annotations
 
 from rag_backend.domain.constants.presentation_roles import ROLE_POINT, ROLE_TWIST
 
-# The JSON keys of a stored quote (``topic_candidates.quotes``, ``pov_quotes``).
 QUOTE_KEY_ID = "id"
 QUOTE_KEY_URL = "url"
 QUOTE_KEY_HANDLE = "handle"
@@ -14,11 +19,9 @@ QUOTE_KEY_LANG = "lang_original"
 QUOTE_KEY_TEXT_PT = "text_pt"
 QUOTE_KEY_TEXT_EN = "text_en"
 
-# A quote card goes on a point or twist slide; at most two per deck (spec §4).
 QUOTE_CARD_ROLES: frozenset[str] = frozenset({ROLE_POINT, ROLE_TWIST})
 MAX_QUOTE_CARDS = 2
 
-# The slide's ``insight`` dict (rendered by the ``insight_quote`` strategy).
 INSIGHT_KEY = "insight"
 CARD_KEY_QUOTE = "quote"
 CARD_KEY_ATTRIBUTION = "attribution"
@@ -28,7 +31,6 @@ CARD_KEY_QUOTE_ID = "quote_id"
 HANDLE_PREFIX = "@"
 ATTRIBUTION_HANDLE_TEMPLATE = "@{handle} · X"
 
-# Deterministic check: a placed quote is exactly one of the supplied quotes.
 RULE_QUOTE_NOT_VERBATIM = "quote_not_verbatim"
 RULE_TOO_MANY_QUOTE_CARDS = "too_many_quote_cards"
 MSG_QUOTE_NOT_VERBATIM = (
@@ -37,7 +39,6 @@ MSG_QUOTE_NOT_VERBATIM = (
 )
 MSG_TOO_MANY_QUOTE_CARDS = "A pov_news deck shows at most 2 quote cards."
 
-# The slide keys the placement and the check read.
 SLIDE_ROLE_KEY = "role"
 SLIDE_INDEX_KEY = "slide_index"
 LOCALE_PT = "pt"
@@ -45,7 +46,6 @@ LOCALE_EN = "en"
 PRESENTATION_PT_KEY = "presentation_pt"
 PRESENTATION_EN_KEY = "presentation_en"
 
-# Caption footer: ``Fontes: @handle, domain.com`` (spec §5).
 SOURCE_FOOTER_PREFIX = "Fontes: "
 SOURCE_FOOTER_SEPARATOR = ", "
 CAPTION_FOOTER_JOIN = "\n\n"

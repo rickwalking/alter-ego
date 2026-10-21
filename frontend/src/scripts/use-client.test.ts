@@ -1,5 +1,5 @@
 /**
- * AE-0166: the use-client static check — a .tsx component calling client-only
+ * The use-client static check — a .tsx component calling client-only
  * React hooks must declare "use client". Passes on the real tree; ERRORS on a
  * seeded violation.
  */
@@ -14,7 +14,7 @@ const SCRIPT = join(FRONTEND_ROOT, "scripts", "check-use-client.mjs");
 
 function run(root?: string): { status: number; output: string } {
   try {
-    const output = execFileSync("node", [SCRIPT], {
+    const output = execFileSync(process.execPath, [SCRIPT], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...(root ? { USE_CLIENT_ROOT: root } : {}) },
@@ -88,7 +88,6 @@ describe("use-client static check (AE-0166)", () => {
       join(dir, "hooks", "use-thing.ts"),
       `import { useState } from "react";\nexport function useThing(){ return useState(0); }\n`,
     );
-    // .ts files are out of scope (only .tsx components are checked).
     const { status } = run(dir);
     expect(status).toBe(0);
   });

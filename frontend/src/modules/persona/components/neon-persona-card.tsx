@@ -19,7 +19,7 @@ export function NeonPersonaCard({
   description,
   skills,
   avatarUrl,
-}: NeonPersonaCardProps): React.ReactElement {
+}: Readonly<NeonPersonaCardProps>): React.ReactElement {
   return (
     <NeonCard hover padding="md">
       <div className="flex items-start gap-4 mb-3">

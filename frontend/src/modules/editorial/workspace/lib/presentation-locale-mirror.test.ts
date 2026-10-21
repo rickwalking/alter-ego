@@ -1,4 +1,4 @@
-// AE-0430 — Gherkin: frontend/tests/features/content-review-en-structure-ae0430.feature
+/** Gherkin: frontend/tests/features/content-review-en-structure-ae0430.feature */
 import { describe, expect, it } from "vitest";
 import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
 import {

@@ -21,7 +21,7 @@ const LOCALE_LABEL_KEYS: Readonly<Record<string, string>> = {
 };
 
 /**
- * AE-0403: a violation's human pt/en message. Known codes are translated (the
+ * A violation's human pt/en message. Known codes are translated (the
  * length codes with the backend ``max N`` limit); any other code, or a length
  * code whose limit is missing, falls back to the backend message.
  */
@@ -47,7 +47,7 @@ export function useFieldErrorMessage(): (
   );
 }
 
-/** AE-0403: "EN corpo" / "PT item 2 · título" for a per-slide summary line. */
+/** "EN corpo" / "PT item 2 · título" for a per-slide summary line. */
 export function useViolationFieldLabel(): (
   violation: SlideValidationViolation,
 ) => string {

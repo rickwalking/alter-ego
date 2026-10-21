@@ -1,4 +1,4 @@
-"""Chat model served by the OpenCode sidecar (``opencode serve``) (AE-0399).
+"""Chat model served by the OpenCode sidecar (``opencode serve``).
 
 OpenCode's free models only answer requests made from within OpenCode, and
 OpenCode is a coding agent with shell and file tools. The sidecar runs it in
@@ -80,7 +80,8 @@ class OpenCodeSidecarChatModel(BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: object,
     ) -> ChatResult:
-        del stop, run_manager, kwargs  # sampling knobs are the sidecar's own
+        """Ask the sidecar; sampling knobs are the sidecar's own, so they are ignored."""
+        del stop, run_manager, kwargs
         async with self._semaphore():
             text = await self._ask(_body(self.model_name, messages))
         message = AIMessage(content=text)

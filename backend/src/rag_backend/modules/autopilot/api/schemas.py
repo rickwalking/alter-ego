@@ -62,7 +62,7 @@ _QuoteText = Annotated[str, Field(max_length=QUOTE_FIELD_SCHEMA_MAX_CHARS)]
 
 
 class QuoteProposal(BaseModel):
-    """AE-0406 (spec §4): one verified quote of a post sent through x-signals.
+    """One verified quote of a post sent through x-signals.
 
     Unknown keys are a 422 for the batch. Every other rule is a domain rule
     that rejects only this topic, with its reason code and ``field``,
@@ -83,7 +83,7 @@ class QuoteProposal(BaseModel):
 
 
 class CoverReference(BaseModel):
-    """AE-0418: the GrokBot cover a topic names (``cover.asset_id``).
+    """The GrokBot cover a topic names (``cover.asset_id``).
 
     Unknown keys are a 422 for the batch. Whether the asset exists, is fresh,
     unused and (screenshot) sourced is a per-topic domain rule, so a malformed
@@ -98,7 +98,18 @@ class CoverReference(BaseModel):
 
 
 class TopicProposal(BaseModel):
-    """One scout proposal. Unknown keys are a 422 for the whole batch."""
+    """One scout proposal. Unknown keys are a 422 for the whole batch.
+
+    - ``image_style`` is a plain short string; the domain rejects an unsupported
+      preset for that topic only (``image_style_unsupported``), not the batch.
+    - ``mode`` defaults to Radar IA; POV carries the draft thesis the owner confirms
+      on Telegram (the domain rejects a POV without one).
+    - ``pov_format`` / ``slide_count`` omitted use the autopilot default (opiniao,
+      9); they are ignored on Radar IA topics.
+    - ``quotes``: up to 3 verified quotes on a ``pov_news`` topic; a 4th is a
+      ``quote_invalid`` rejection of that topic (the schema cap is abuse only).
+    - ``cover`` is an optional GrokBot cover for slide 1 (every mode).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -112,8 +123,6 @@ class TopicProposal(BaseModel):
         min_length=SOURCE_URL_MIN, max_length=SOURCE_URL_MAX
     )
     score: int = Field(ge=SCORE_MIN, le=SCORE_MAX)
-    # AE-0361: a plain short string here; the domain rejects an unsupported
-    # preset for that topic only (``image_style_unsupported``), not the batch.
     image_style: str = Field(
         default=DEFAULT_IMAGE_STYLE,
         min_length=TEXT_MIN_CHARS,
@@ -124,8 +133,6 @@ class TopicProposal(BaseModel):
         min_length=TEXT_MIN_CHARS,
         max_length=IMAGE_GUIDANCE_MAX_CHARS,
     )
-    # AE-0377 (scout v3): Radar IA when omitted; POV carries the draft thesis
-    # the owner confirms on Telegram (the domain rejects a POV without one).
     mode: str = Field(default=CONTENT_MODE_NEWS_ANALYSIS, pattern=SCOUT_MODE_PATTERN)
     thesis_draft: str | None = Field(
         default=None,
@@ -133,18 +140,13 @@ class TopicProposal(BaseModel):
         max_length=THESIS_DRAFT_MAX_CHARS,
     )
 
-    # PR #106 review (scout v3): the POV format and slide count per topic.
-    # Omitted = the autopilot default (opiniao, 9); ignored on Radar IA topics.
     pov_format: str | None = None
     slide_count: int | None = Field(
         default=None, ge=POV_SLIDE_COUNT_MIN, le=POV_SLIDE_COUNT_MAX
     )
-    # AE-0406: up to 3 verified quotes on a ``pov_news`` topic (a 4th is a
-    # ``quote_invalid`` rejection of that topic; the cap here is abuse only).
     quotes: list[QuoteProposal] = Field(
         default_factory=list, max_length=QUOTES_SCHEMA_MAX
     )
-    # AE-0418: an optional GrokBot cover for slide 1 (every mode).
     cover: CoverReference | None = None
 
     @field_validator("pov_format")
@@ -176,7 +178,7 @@ class TopicBatch(BaseModel):
 class RejectedTopic(BaseModel):
     """A proposal the intake did not queue, with a stable reason code.
 
-    AE-0406: ``index`` (position in the request) is always present; ``field``
+    ``index`` (position in the request) is always present; ``field``
     only when one field caused the rejection (the route drops it otherwise).
     """
 
@@ -243,7 +245,7 @@ class XSignalsResponse(BaseModel):
 
 
 class CoverAssetResponse(BaseModel):
-    """AE-0418: the 201 body of ``POST /assets``."""
+    """The 201 body of ``POST /assets``."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -274,9 +276,6 @@ def _require_http_url(value: str) -> str:
     if is_http_url(cleaned):
         return cleaned
     raise ValueError(SOURCE_URL_INVALID)
-
-
-# --- AE-0378: GET /api/instagram/insights (null metric = "n/d") ---
 
 
 class InstagramPostInsightsItem(BaseModel):

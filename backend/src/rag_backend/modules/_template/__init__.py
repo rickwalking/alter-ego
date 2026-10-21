@@ -1,4 +1,4 @@
-"""Reference template for a bounded-context module (AE-0081).
+"""Reference template for a bounded-context module.
 
 This package is the canonical skeleton every Phase 2+ bounded context copies
 from. It demonstrates the module conventions documented in

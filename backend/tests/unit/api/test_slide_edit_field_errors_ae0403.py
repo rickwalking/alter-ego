@@ -1,4 +1,4 @@
-"""AE-0403: the edit sanitizer keeps emphasis; refused saves name their fields.
+"""The edit sanitizer keeps emphasis; refused saves name their fields.
 
 Feature: Per-field validation errors and manual fixes on the slide review forms
   (see tests/features/review_form_field_errors_ae0403.feature)

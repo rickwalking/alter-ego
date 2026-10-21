@@ -20,7 +20,7 @@ export interface RouteErrorViewProps {
 }
 
 /**
- * Shared Next.js route error boundary view (AE-0154). The dashboard `error.tsx`
+ * Shared Next.js route error boundary view. The dashboard `error.tsx`
  * boundaries differ only by translation namespace, log label, and whether the
  * raw error message is shown — so they delegate to this component.
  */
@@ -30,7 +30,7 @@ export function RouteErrorView({
   namespace,
   logLabel,
   showErrorMessage = false,
-}: RouteErrorViewProps): React.ReactElement {
+}: Readonly<RouteErrorViewProps>): React.ReactElement {
   const t = useTranslations(namespace);
   const tc = useTranslations("common");
 

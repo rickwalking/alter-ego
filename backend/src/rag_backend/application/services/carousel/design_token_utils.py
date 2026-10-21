@@ -148,7 +148,7 @@ def _to_public_image_url(url: object) -> object:
 
 
 def image_asset_preview_urls(project_id: str, assets: object) -> list[str]:
-    """``image_assets`` as owner preview URLs (AE-0439, QA F-13).
+    """``image_assets`` as owner preview URLs.
 
     A container path (``/app/output/carousels/<id>/images/slide_1.jpg``) is
     an internal detail: the state response and the review SSE payload expose
@@ -170,7 +170,7 @@ def image_asset_preview_urls(project_id: str, assets: object) -> list[str]:
 
 
 def _apply_public_image_urls(tokens: dict[str, object]) -> dict[str, object]:
-    """AE-0412 (QA B08): a public carousel never exposes preview image URLs.
+    """A public carousel never exposes preview image URLs.
 
     Draft-time merges persist owner-only ``/preview/images/`` URLs into the
     stored tokens; once the carousel is public those stored values would win

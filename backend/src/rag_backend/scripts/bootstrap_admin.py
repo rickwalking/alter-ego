@@ -67,7 +67,6 @@ async def bootstrap_admin(email: str, full_name: str) -> None:
         async with session_maker() as session:
             repo = PostgresUserRepository(session)
 
-            # Check if any users exist
             count = await repo.count()
             if count > 0:
                 print(

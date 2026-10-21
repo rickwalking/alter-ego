@@ -1,5 +1,5 @@
 /**
- * Shared fixtures of the AE-0424 section editor tests.
+ * Shared fixtures of the section editor tests.
  */
 
 import type { BlogDocument, BlogImage } from "@/schemas/blog-document";

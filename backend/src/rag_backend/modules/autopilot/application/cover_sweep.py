@@ -1,4 +1,4 @@
-"""Delete GrokBot covers nobody used within 6 hours (AE-0418, ADR-0024).
+"""Delete GrokBot covers nobody used within 6 hours (ADR-0024).
 
 Runs on the Telegram notify tick (every worker cycle). Each pass deletes at
 most ``COVER_SWEEP_LIMIT`` covers, oldest first: the cover rows, then their

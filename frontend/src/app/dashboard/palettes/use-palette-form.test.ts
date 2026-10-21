@@ -2,8 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { usePaletteForm } from "./use-palette-form";
 
-// Gherkin: tests/features/palette_crud_api.feature (client-side validation +
-// keyword guards mirror the backend before submit — AE-0271).
 describe("usePaletteForm", () => {
   it("is invalid until a name and valid hex colours are present", () => {
     const { result } = renderHook(() => usePaletteForm());

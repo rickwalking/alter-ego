@@ -17,10 +17,10 @@ import {
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
-export type PublishResult = {
+export interface PublishResult {
   status: "idle" | "success" | "error";
   message?: string;
-};
+}
 
 type CarouselProjectQuery = ReturnType<typeof useCarouselProject>;
 type EditorialWorkflow = ReturnType<typeof useEditorialWorkflow>;
@@ -35,10 +35,10 @@ export interface PublishPageData {
   workflowLoaded: boolean;
   /** Refetch the workflow state and the project together. */
   refreshAll: () => Promise<unknown>;
-  /** AE-0313: the rebuilt artifact version that cache-busts served URLs. */
+  /** The rebuilt artifact version that cache-busts served URLs. */
   rebuiltVersion: string | null;
   handleRebuilt: (artifactVersion: string | null) => void;
-  /** AE-0311/AE-0313: republish after a repair, then cache-bust. */
+  /** Republish after a repair, then cache-bust. */
   republishAfterRepair: () => void;
   /** Approved for publish: the site and Instagram publishes are offered. */
   canPublishToSite: boolean;
@@ -72,12 +72,14 @@ function useRefetchForNewCaption(
   }, [workflowCaption, projectCaption, refetchProject]);
 }
 
+/**
+ * The workflow state is not fetched on mount: the page refreshes it itself and
+ * waits for it before deciding whether the artifacts exist.
+ */
 export function usePublishPageData(): PublishPageData {
   const projectId = useParams<{ id: string }>().id;
   const projectQuery = useCarouselProject(projectId);
   const { refetch: refetchProject } = projectQuery;
-  // The page refreshes the state itself (below) and waits for it before
-  // deciding whether the artifacts exist (AE-0415, B25).
   const { refreshState, state: workflowState } = useEditorialWorkflow(
     projectId,
     { initialFetch: false },
@@ -139,9 +141,7 @@ async function sitePublishError(
     if (typeof body.detail === "string" && body.detail.length > 0) {
       return body.detail;
     }
-  } catch {
-    // keep generic message
-  }
+  } catch {}
   return fallback;
 }
 

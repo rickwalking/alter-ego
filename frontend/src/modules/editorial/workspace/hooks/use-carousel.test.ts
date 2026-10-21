@@ -128,7 +128,9 @@ describe("useCreateCarousel", () => {
 
   it("returns error state on API failure", async () => {
     mockApiCall.mockRejectedValueOnce(new Error("API Error"));
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(),
     });
@@ -255,7 +257,9 @@ describe("useDeleteCarousel", () => {
 
   it("surfaces API errors", async () => {
     mockApiCall.mockRejectedValueOnce(new Error("not found"));
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const { result } = renderHook(() => useDeleteCarousel(), {
       wrapper: createWrapper(),
     });

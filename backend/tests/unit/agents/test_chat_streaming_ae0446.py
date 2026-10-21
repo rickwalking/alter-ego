@@ -1,4 +1,4 @@
-"""Shared chat-stream event mapping (AE-0446: one copy for both chat agents)."""
+"""Shared chat-stream event mapping (one copy for both chat agents)."""
 
 from types import SimpleNamespace
 

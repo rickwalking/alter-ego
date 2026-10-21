@@ -10,7 +10,7 @@ import type { ScheduleControlProps } from "./types";
 const SCHEDULE_INPUT_ID = "blog-schedule-at";
 
 /**
- * Schedule an approved post (AE-0424): a local date/time sent as UTC ISO; the
+ * Schedule an approved post: a local date/time sent as UTC ISO; the
  * API rejects a time inside the minimum lead time (shown as an error).
  * "Cancel schedule" clears it and the post stays approved.
  */
@@ -19,7 +19,7 @@ export function ScheduleControl({
   disabled,
   onSchedule,
   onCancelSchedule,
-}: ScheduleControlProps): React.ReactElement {
+}: Readonly<ScheduleControlProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [when, setWhen] = useState("");
   if (scheduledPublishAt) {

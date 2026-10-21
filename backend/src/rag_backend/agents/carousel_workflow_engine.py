@@ -42,7 +42,6 @@ _REVIEW_INTERRUPT_KEYS = (
     "design_applied",
     "persona_scores",
     "rubric_scores",
-    # AE-0309: fail-closed content-gate report carried on the content interrupt.
     STATE_FIELD_CONTENT_GATE_VALIDATION,
 )
 
@@ -69,12 +68,15 @@ class CarouselWorkflowEngine:
         self._artifact_runner = artifact_runner
 
     def _run_config(self, project_id: str) -> dict[str, object]:
+        """Build the LangGraph run config for one project thread.
+
+        The recursion limit bounds any self-routing loop to seconds.
+        """
         configurable: dict[str, object] = {"thread_id": project_id}
         if self._artifact_runner is not None:
             configurable[_CONFIG_ARTIFACT_RUNNER] = self._artifact_runner
         return {
             "configurable": configurable,
-            # AE-0330: bound any future self-routing loop to seconds.
             "recursion_limit": CAROUSEL_GRAPH_RECURSION_LIMIT,
         }
 
@@ -111,9 +113,11 @@ class CarouselWorkflowEngine:
         brief: dict[str, object] | None = None,
         **state_overrides: object,
     ) -> CarouselWorkflowState:
-        """Start a new workflow run."""
-        # AE-0315 layer (b): fence node-return application/checkpoint commits
-        # against a reaped (stale-epoch) run before invoking the graph.
+        """Start a new workflow run.
+
+        Checkpoint commits are fenced against a reaped (stale-epoch) run before the
+        graph is invoked.
+        """
         await ensure_checkpoint_commit_allowed(project_id)
         initial = get_initial_carousel_state(project_id, brief)
         initial.update(state_overrides)
@@ -125,18 +129,20 @@ class CarouselWorkflowEngine:
         project_id: str,
         human_input: dict[str, object] | None = None,
     ) -> CarouselWorkflowState:
-        """Resume a paused workflow after human review."""
-        # AE-0315 layer (b): a zombie run must not re-enter the graph and
-        # commit checkpoints after its epoch was fenced by the reaper.
+        """Resume a paused workflow after human review.
+
+        A zombie run whose epoch was fenced by the reaper must not re-enter the graph
+        and commit checkpoints.
+
+        Corrupted-checkpoint recovery: when aupdate_state() ran without as_node, the
+        pending interrupts may be cleared while the checkpoint still shows pending next
+        nodes and an in_progress phase_status. Command(resume=payload) is then used
+        instead of ainvoke(None) to deliver the human input directly.
+        """
         await ensure_checkpoint_commit_allowed(project_id)
         config = self._run_config(project_id)
         payload = human_input or {}
         snapshot = await self._app.aget_state(config)
-        # Corrupted-checkpoint recovery: when aupdate_state() was called
-        # without as_node the pending interrupts may have been cleared while
-        # the checkpoint still shows pending_next and in_progress phase_status.
-        # Use Command(resume=payload) instead of ainvoke(None) to deliver the
-        # human input directly.
         if snapshot is not None:
             pending_next = getattr(snapshot, "next", ()) or ()
             pending_interrupts = getattr(snapshot, "interrupts", ()) or ()
@@ -170,7 +176,7 @@ class CarouselWorkflowEngine:
         return await self._park_content_artifacts(project_id, result)
 
     async def continue_pending(self, project_id: str) -> CarouselWorkflowState:
-        """Run the parked pending node again, with NO resume value (AE-0363).
+        """Run the parked pending node again, with NO resume value.
 
         A run that died after its gate was approved leaves the checkpoint
         before the next node with no open interrupt. ``Command(resume=...)``
@@ -192,14 +198,15 @@ class CarouselWorkflowEngine:
         project_id: str,
         result: object,
     ) -> CarouselWorkflowState:
-        """Save the parked content review's artifacts, then re-park (AE-0405).
+        """Save the parked content review's artifacts, then re-park.
 
         The checkpoint write drops the pending interrupt, so ``ainvoke(None)``
         replays the content node: it sees the parked marker, reuses the saved
         artifacts (no LLM call) and opens the review interrupt again.
+
+        Without a checkpointer nothing parks and nothing replays (in-memory runs).
         """
         if self._app.checkpointer is None:
-            # No checkpoint: nothing parks, nothing replays (in-memory runs).
             return cast(CarouselWorkflowState, result)
         config = self._run_config(project_id)
         updates = parked_content_updates(await self._app.aget_state(config))
@@ -211,7 +218,7 @@ class CarouselWorkflowEngine:
         return cast(CarouselWorkflowState, reparked)
 
     async def is_parked(self, project_id: str) -> bool:
-        """True when :meth:`continue_pending` has a node to re-run (AE-0363)."""
+        """True when :meth:`continue_pending` has a node to re-run."""
         snapshot = await self._app.aget_state(self._run_config(project_id))
         return is_parked_before_node(snapshot)
 
@@ -226,8 +233,9 @@ class CarouselWorkflowEngine:
         When ``as_node`` is not provided and a pending interrupt exists, the
         first node name from the checkpoint ``snapshot.next`` is used as the
         default, preserving the pending interrupt context.
+
+        Direct checkpoint patches are fenced against stale-epoch runs too.
         """
-        # AE-0315 layer (b): direct checkpoint patches are fenced too.
         await ensure_checkpoint_commit_allowed(project_id)
         config = self._run_config(project_id)
         if as_node is None:
@@ -243,7 +251,7 @@ class CarouselWorkflowEngine:
         project_id: str,
         values: dict[str, object],
     ) -> bool:
-        """Patch a parked/held checkpoint WITHOUT advancing the node (AE-0314).
+        """Patch a parked/held checkpoint WITHOUT advancing the node.
 
         The completed-project slide edit converges the checkpoint (source-of-
         truth option (a)) on an approved-hold thread. Writes with
@@ -264,7 +272,13 @@ class CarouselWorkflowEngine:
         return True
 
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:
-        """Load persisted workflow state from checkpointer (WF-002)."""
+        """Load persisted workflow state from checkpointer (WF-002).
+
+        While parked at the internal approved_hold node the graph has a pending
+        interrupt, but the carousel is approved and publishable: it must not surface as
+        current_phase="approved_hold" or phase_status="awaiting_human". The stored
+        final_review / approved values written by the final_review node are kept.
+        """
         config = self._run_config(project_id)
         snapshot = await self._app.aget_state(config)
         if snapshot is None or snapshot.values is None:
@@ -286,10 +300,6 @@ class CarouselWorkflowEngine:
             if pending_tasks
             else ""
         )
-        # AE-0288: while parked at the internal approved_hold node the graph has a
-        # pending interrupt, but the carousel is approved/publishable — it must NOT
-        # surface as current_phase="approved_hold" or phase_status="awaiting_human".
-        # Keep the stored final_review/approved values the final_review node wrote.
         held_at_approval = next_phase == PHASE_APPROVED_HOLD
         if next_phase and not held_at_approval:
             state["current_phase"] = next_phase
@@ -302,7 +312,7 @@ class CarouselWorkflowEngine:
 def is_parked_before_node(snapshot: object) -> bool:
     """True when a node is pending and no interrupt waits for a human.
 
-    The approved-hold park (AE-0288) is a held carousel, never a dead run.
+    The approved-hold park is a held carousel, never a dead run.
     """
     if snapshot is None:
         return False

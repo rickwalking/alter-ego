@@ -1,4 +1,4 @@
-"""Command/query handlers for the conversation bounded context (AE-0101).
+"""Command/query handlers for the conversation bounded context.
 
 Private to the module — the public facade re-exports the handler class;
 cross-module code never imports this path directly. The handlers are the
@@ -6,7 +6,7 @@ use-case entry points the thin ``/api/conversations`` route adapter delegates to
 each maps a typed command/query (``application.commands``) onto the conversation
 ``ConversationService`` facade and, for chat, the ``ChatAgentFactory`` port.
 
-Behavior-preserving (AE-0101): every handler reproduces the legacy route's data
+Behavior-preserving: every handler reproduces the legacy route's data
 operations exactly (same service calls, same agent-origin routing, same message
 cap). HTTP concerns — status codes, access checks (``resource_access`` /
 ``carousel_access``), cookies, and the ``X-Agent-Origin`` header — stay in the
@@ -14,8 +14,13 @@ route adapter, mirroring how ``documents.py`` keeps access checks at the edge.
 
 The application layer imports only ports, the facade service, other application
 services, and domain types — never a concrete Postgres repository or the global
-container (AE-0101 AC). Writes are committed by the route through the platform
+container. Writes are committed by the route through the platform
 Unit of Work (the single committer); these handlers never call ``commit()``.
+
+The agent-origin header values and non-stream chat event types mirror the legacy
+``conversations.py`` route constants byte-for-byte. The title generator type matches
+``LLMService.generate`` and the ``ConversationService.generate_title`` parameter
+contract.
 """
 
 from __future__ import annotations
@@ -49,8 +54,6 @@ from rag_backend.modules.conversation.application.commands import (
 from rag_backend.modules.conversation.domain.models import Conversation, Message
 from rag_backend.platform.database import UnitOfWork
 
-# Agent-origin header values + non-stream chat event types (mirrors the legacy
-# ``conversations.py`` route constants byte-for-byte).
 AGENT_ORIGIN_ALTER_EGO = "alter-ego"
 AGENT_ORIGIN_RAG = "rag-agent"
 MAX_MESSAGES_PER_CONVERSATION = 20
@@ -63,8 +66,6 @@ _SOURCE_DOCUMENT_TITLE_KEY = "document_title"
 _SOURCE_CONTENT_KEY = "content"
 _SOURCE_SCORE_KEY = "score"
 
-# Async callable that generates text from the LLM (matches ``LLMService.generate``
-# and the ``ConversationService.generate_title`` parameter contract).
 LlmGenerate = Callable[[list[dict[str, str]]], Awaitable[str]]
 
 

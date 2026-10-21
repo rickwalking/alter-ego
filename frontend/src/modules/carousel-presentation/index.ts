@@ -1,5 +1,5 @@
 /**
- * `carousel-presentation` — bounded-context public contract (AE-0139).
+ * `carousel-presentation` — bounded-context public contract.
  *
  * Owns the carousel project / blog / design / slides query options
  * (preview / review / refinement read surface) migrated from the legacy

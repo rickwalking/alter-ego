@@ -1,4 +1,4 @@
-"""AE-0392: content_quality reason, measured detail, and repair-before-revise.
+"""The content_quality reason, measured detail, and repair-before-revise.
 
 Domain and runner against fakes; the real engine is exercised in
 tests/unit/application/test_content_quality_gate_flow_ae0392.py.
@@ -290,9 +290,10 @@ class _QualityEditorial(_Editorial):
 
 @dataclass
 class _Repairer:
+    """A fixed repair clears this gate's violations, like the real repair does."""
+
     status: AutofixStatus
     calls: list[GateRepairCommand] = field(default_factory=list)
-    # A FIXED repair clears this gate's violations, like the real repair does.
     gate: _QualityEditorial | None = None
 
     async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:

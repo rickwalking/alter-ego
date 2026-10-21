@@ -1,6 +1,6 @@
 """Slide-1 photo errors shared by the hook-face and cover layouts.
 
-PR #106 review: a POV slide 1 never renders without its photo. AE-0418: a
+PR #106 review: a POV slide 1 never renders without its photo. A
 chosen GrokBot cover whose staged file is gone fails the same way
 (``slide_cover_unreadable``) instead of rendering an empty slide 1.
 """

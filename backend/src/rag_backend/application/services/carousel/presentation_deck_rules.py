@@ -1,4 +1,4 @@
-"""Deck-level presentation rules for contracts with roles (AE-0374, AE-0375).
+"""Deck-level presentation rules for contracts with roles.
 
 Per-slide validation cannot see the deck. These rules run once per deck and
 only for role contracts (``pov_hook_v1``, ``hero_lower_third_v4``), so the

@@ -13,12 +13,12 @@ interface CarouselLanguageSwitchProps {
   options: CarouselLanguageOption[];
 }
 
-/** PT/EN content links on a public carousel viewer (AE-0444). */
+/** PT/EN content links on a public carousel viewer. */
 export function CarouselLanguageSwitch({
   activeLanguage,
   label,
   options,
-}: CarouselLanguageSwitchProps): React.ReactElement {
+}: Readonly<CarouselLanguageSwitchProps>): React.ReactElement {
   return (
     <nav
       aria-label={label}

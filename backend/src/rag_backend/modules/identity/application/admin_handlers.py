@@ -4,7 +4,7 @@ The public facade re-exports :class:`AdminUserHandler` and its command/view
 types; cross-module code and the inbound HTTP adapters never import this path
 directly.
 
-This is a **behavior-preserving** orchestration layer (AE-0099) over the user
+This is a **behavior-preserving** orchestration layer over the user
 repository and bcrypt password port. Each handler maps a typed admin command
 onto the exact persistence calls the legacy ``/api/admin/users`` routes make
 today, so the wire behavior (status codes, response shapes, last-admin / self
@@ -21,6 +21,9 @@ contract (and avoiding the unrelated change-password update path).
 Domain decisions (conflict / invalid role / last-admin / self-delete) raise
 typed errors; the inbound adapter maps each to the legacy HTTP status + message
 so no HTTP framework leaks into the module.
+
+The listing cap mirrors the legacy admin route's ``get_all(limit=1000)``, so the page
+size and the snapshotted ordering and total are unchanged.
 """
 
 from __future__ import annotations
@@ -46,8 +49,6 @@ from rag_backend.modules.identity.domain.models import User, UserRole
 from rag_backend.modules.identity.domain.ports import UserRepository
 from rag_backend.platform.database import UnitOfWork
 
-# Listing cap that mirrors the legacy admin route's ``get_all(limit=1000)`` so
-# the page size (and therefore the snapshotted ordering/total) is unchanged.
 _ADMIN_LIST_LIMIT = 1000
 
 

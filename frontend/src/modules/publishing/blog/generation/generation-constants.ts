@@ -1,5 +1,5 @@
 /**
- * Blog generation run constants (AE-0425, ADR-0025).
+ * Blog generation run constants (ADR-0025).
  *
  * Mirrors `ai_generation_metadata.generation` written by the backend
  * (`domain/constants/blog_generation.py`): the run status, the warnings and

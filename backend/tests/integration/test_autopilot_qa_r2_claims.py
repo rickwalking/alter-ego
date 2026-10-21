@@ -1,4 +1,4 @@
-"""Publish claims never take over a possibly-published container (AE-0348 QA r2 R4).
+"""Publish claims never take over a possibly-published container.
 
 Gherkin: tests/features/autopilot_instagram_publish.feature
   Scenario: A stale publish claim is not taken over while Graph may still run

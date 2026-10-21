@@ -5,7 +5,7 @@ export const AUTO_THEME_VALUE = "auto";
 
 const LOCALE_PT = "pt";
 
-/** A theme dropdown entry built from the dynamic catalog (AE-0271). */
+/** A theme dropdown entry built from the dynamic catalog. */
 export interface ThemeOption {
   /** root key | "auto" | custom-palette UUID — the value stored on the project. */
   readonly value: string;

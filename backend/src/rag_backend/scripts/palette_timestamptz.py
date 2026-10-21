@@ -1,4 +1,4 @@
-"""One-shot: make the palette timestamps timezone-aware (AE-0446, Pedro's decision).
+"""One-shot: make the palette timestamps timezone-aware (Pedro's decision).
 
 Usage (in the freshly built backend image, Postgres up, app stack down):
     python -m rag_backend.scripts.palette_timestamptz --apply --verify
@@ -51,7 +51,9 @@ async def run_modes(engine: AsyncEngine, args: argparse.Namespace) -> int:
 
 
 async def _main(args: argparse.Namespace) -> int:
-    # Own engine, no ``create_all``: only the two palette columns are altered.
+    """Uses its own engine and no ``create_all``: only the two palette columns are
+    altered.
+    """
     engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
     try:
         return await run_modes(engine, args)

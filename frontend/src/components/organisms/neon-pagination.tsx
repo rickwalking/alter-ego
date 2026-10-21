@@ -14,7 +14,7 @@ export function NeonPagination({
   page,
   pageSize = 10,
   onPageChange,
-}: NeonPaginationProps): React.ReactElement {
+}: Readonly<NeonPaginationProps>): React.ReactElement {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const canPrev = page > 1;
   const canNext = page < totalPages;

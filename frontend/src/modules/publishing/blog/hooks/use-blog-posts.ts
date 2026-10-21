@@ -74,7 +74,11 @@ function replacePost(
   setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
 }
 
-/** Delete, refreshing the list (then throwing) when the lock was stale. */
+/**
+ * Delete, refreshing the list (then throwing) when the lock was stale.
+ *
+ * A stale lock version refreshes the listing so a retry uses fresh data.
+ */
 async function deleteAndSync(
   { setPosts, fetchPosts }: BlogPostList,
   id: string,
@@ -85,7 +89,6 @@ async function deleteAndSync(
     throw new BlogPostMutationError(BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED);
   }
   if (outcome === "versionConflict") {
-    // Stale lock version: refresh the listing so a retry uses fresh data.
     await fetchPosts();
     throw new BlogPostMutationError(BLOG_POST_ERR_VERSION_CONFLICT);
   }

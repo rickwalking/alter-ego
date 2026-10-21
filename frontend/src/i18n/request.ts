@@ -1,3 +1,4 @@
+import type { AbstractIntlMessages } from "next-intl";
 import { getRequestConfig } from "next-intl/server";
 import { getRequestLocale } from "./request-locale";
 
@@ -6,6 +7,10 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`./locales/${locale}.json`)).default,
+    messages: (
+      (await import(`./locales/${locale}.json`)) as {
+        default: AbstractIntlMessages;
+      }
+    ).default,
   };
 });

@@ -1,4 +1,4 @@
-"""Topic intake with ``pov_news`` topics and quotes (AE-0406, spec §3-§6).
+"""Topic intake with ``pov_news`` topics and quotes (spec §3-§6).
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """
@@ -208,11 +208,11 @@ def test_a_duplicate_title_carries_the_index_without_field() -> None:
     ]
 
 
-# QA mutation review: every text field is named in its rejection.
 @pytest.mark.parametrize(
     "name", ["title", "angle", "why_viral", "audience", "niche", "brief"]
 )
 def test_blank_and_linked_fields_are_named(name: str) -> None:
+    """Every text field is named in its rejection."""
     blank = _plan(replace(_radar(), **{name: "\x00"}))
     assert (blank.rejected[0].reason, blank.rejected[0].field) == ("empty_text", name)
     linked = _plan(replace(_radar(), **{name: "veja www.x.com"}))

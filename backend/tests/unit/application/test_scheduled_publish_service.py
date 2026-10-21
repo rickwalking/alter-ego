@@ -1,6 +1,11 @@
-"""Unit tests for ScheduledPublishService (SCHED-001)."""
+"""Unit tests for ScheduledPublishService (SCHED-001).
 
-# Gherkin: tests/features/phase3_workflow_collaboration.feature
+Gherkin: tests/features/phase3_workflow_collaboration.feature.
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
+"""
+
 # Scenario: Scheduled post publishes at due time
 
 from __future__ import annotations
@@ -23,7 +28,6 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
 )
 from tests.blog_v2_support import v2_content
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 
@@ -72,7 +76,7 @@ async def test_process_due_posts_is_idempotent(test_engine) -> None:
 
 @pytest.mark.asyncio
 async def test_unpublishable_post_is_never_published_by_the_sweep(test_engine) -> None:
-    """AE-0424 review: the sweep runs the publish guard (empty document)."""
+    """The sweep runs the publish guard (empty document)."""
     session_factory = async_sessionmaker(
         test_engine, class_=AsyncSession, expire_on_commit=False
     )

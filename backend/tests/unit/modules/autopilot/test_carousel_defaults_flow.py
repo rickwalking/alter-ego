@@ -1,4 +1,4 @@
-"""Carousel defaults flow from the topic to the project and the review (AE-0361).
+"""Carousel defaults flow from the topic to the project and the review.
 
 Gherkin: tests/features/autopilot_carousel_defaults.feature
 """
@@ -63,7 +63,7 @@ async def _spec_for(**topic_changes: str | None) -> ProjectSpec:
 
 @pytest.mark.asyncio
 async def test_runner_spec_defaults_to_flat_editorial_template_guidance() -> None:
-    """Scenario: Default flat_editorial style and template guidance (AE-0372)."""
+    """Scenario: Default flat_editorial style and template guidance."""
     spec = await _spec_for()
     assert spec.image_style == "flat_editorial"
     assert spec.image_guidance == (

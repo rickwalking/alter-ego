@@ -7,8 +7,7 @@ single source of truth. This module projects them into a typed, serializable
 ``docs/contracts/palettes.json``. The frontend ``check-palette-drift.mjs`` gate
 diffs the create-form constants + i18n labels against that artifact, so the
 dropdown, the zod preset enum, and the locale labels can no longer silently
-desync from the backend (AE-0266 Phase 3 — the FE-missed-a-theme class of the
-AE-0264 bugs).
+desync from the backend (the class of bugs where the frontend missed a theme).
 """
 
 from __future__ import annotations

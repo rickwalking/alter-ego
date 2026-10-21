@@ -1,5 +1,5 @@
 /**
- * AE-0440: workflow stream recovery (auth probe, backoff, disconnected state).
+ * Workflow stream recovery (auth probe, backoff, disconnected state).
  *
  * Feature: tests/features/workflow-stream-recovery-ae0440.feature
  * The stream is a mocked EventSource; the auth probe is the real api-client
@@ -18,7 +18,7 @@ import type { EditorialWorkflowState } from "@/modules/editorial";
 import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
 
 class MockEventSource {
-  static instances: MockEventSource[] = [];
+  static readonly instances: MockEventSource[] = [];
 
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: (() => void) | null = null;
@@ -28,7 +28,7 @@ class MockEventSource {
     MockEventSource.instances.push(this);
   }
 
-  addEventListener(): void {}
+  addEventListener = vi.fn();
 
   close = vi.fn();
 
@@ -62,18 +62,18 @@ const probedState: EditorialWorkflowState = {
 
 type ProbeReply = { status: number; body?: unknown } | "network-error";
 
-let probeReplies: ProbeReply[] = [];
+const probeReplies: ProbeReply[] = [];
 let lastProbeReply: ProbeReply = { status: 200, body: probedState };
-const fetchMock = vi.fn(async (): Promise<Response> => {
+const fetchMock = vi.fn((): Promise<Response> => {
   const reply = probeReplies.shift() ?? lastProbeReply;
   if (reply === "network-error") {
-    throw new TypeError("Failed to fetch");
+    return Promise.reject(new TypeError("Failed to fetch"));
   }
-  return {
+  return Promise.resolve({
     ok: reply.status >= 200 && reply.status < 300,
     status: reply.status,
-    json: async () => reply.body ?? {},
-  } as Response;
+    json: () => Promise.resolve(reply.body ?? {}),
+  } as Response);
 });
 
 function mockLocation(): { href: string } {
@@ -97,7 +97,7 @@ function renderStream(state: EditorialWorkflowState = runningState) {
   const setState = vi.fn();
   const setPhaseEvents = vi.fn();
   const setTransportMode = vi.fn();
-  const refreshState = vi.fn(async () => state);
+  const refreshState = vi.fn(() => Promise.resolve(state));
   const hook = renderHook(() =>
     useEditorialWorkflowSse({
       projectId: "project-1",
@@ -137,8 +137,9 @@ function latestStream(): MockEventSource {
 }
 
 async function failLatestStream(): Promise<void> {
-  await act(async () => {
+  await act(() => {
     latestStream().fail();
+    return Promise.resolve();
   });
   await flushProbe();
 }
@@ -171,8 +172,8 @@ function disconnectedCalls(setTransportMode: ReturnType<typeof vi.fn>): number {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  MockEventSource.instances = [];
-  probeReplies = [];
+  MockEventSource.instances.length = 0;
+  probeReplies.length = 0;
   lastProbeReply = { status: 200, body: probedState };
   fetchMock.mockClear();
   vi.stubGlobal("fetch", fetchMock);
@@ -209,8 +210,9 @@ describe("AE-0440 workflow stream recovery", () => {
     expect(MockEventSource.instances).toHaveLength(2);
 
     refreshState.mockClear();
-    await act(async () => {
+    await act(() => {
       latestStream().open();
+      return Promise.resolve();
     });
     expect(refreshState).toHaveBeenCalledTimes(1);
   });
@@ -218,8 +220,9 @@ describe("AE-0440 workflow stream recovery", () => {
   it("does not refetch when the first stream opens", async () => {
     const { refreshState } = renderStream();
 
-    await act(async () => {
+    await act(() => {
       latestStream().open();
+      return Promise.resolve();
     });
 
     expect(refreshState).not.toHaveBeenCalled();
@@ -250,8 +253,9 @@ describe("AE-0440 workflow stream recovery", () => {
     await advance(reconnectDelay(0));
     await failLatestStream();
     await advance(reconnectDelay(1));
-    await act(async () => {
+    await act(() => {
       latestStream().open();
+      return Promise.resolve();
     });
 
     await failLatestStream();
@@ -342,8 +346,9 @@ describe("AE-0440 workflow stream recovery", () => {
     await failLatestStream();
     const streamsWhenDisconnected = MockEventSource.instances.length;
 
-    await act(async () => {
+    await act(() => {
       result.current.reconnectLiveUpdates();
+      return Promise.resolve();
     });
     expect(MockEventSource.instances).toHaveLength(streamsWhenDisconnected + 1);
 
@@ -363,15 +368,17 @@ describe("AE-0440 workflow stream recovery", () => {
     fetchMock.mockClear();
 
     setVisibility("hidden");
-    await act(async () => {
+    await act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+      return Promise.resolve();
     });
     await flushProbe();
     expect(fetchMock).not.toHaveBeenCalled();
 
     setVisibility("visible");
-    await act(async () => {
+    await act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+      return Promise.resolve();
     });
     await flushProbe();
 
@@ -387,8 +394,9 @@ describe("AE-0440 workflow stream recovery", () => {
     mockLocation();
     lastProbeReply = { status: 401 };
 
-    await act(async () => {
+    await act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+      return Promise.resolve();
     });
     await flushProbe();
 
@@ -398,12 +406,14 @@ describe("AE-0440 workflow stream recovery", () => {
   // Scenario: Returning to the tab with a live stream only refetches the state
   it("only refetches the state when the tab becomes visible with a live stream", async () => {
     const { refreshState } = renderStream();
-    await act(async () => {
+    await act(() => {
       latestStream().open();
+      return Promise.resolve();
     });
 
-    await act(async () => {
+    await act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+      return Promise.resolve();
     });
 
     expect(refreshState).toHaveBeenCalledTimes(1);
@@ -427,7 +437,7 @@ describe("AE-0440 workflow stream recovery", () => {
   });
 
   it("drops a probe answered after unmount", async () => {
-    let answerProbe: (response: Response) => void = () => {};
+    let answerProbe: (response: Response) => void = (_response) => undefined;
     fetchMock.mockImplementationOnce(
       () =>
         new Promise<Response>((resolve) => {
@@ -436,14 +446,15 @@ describe("AE-0440 workflow stream recovery", () => {
     );
     const { setState, unmount } = renderStream();
 
-    await act(async () => {
+    await act(() => {
       latestStream().fail();
+      return Promise.resolve();
     });
     unmount();
     answerProbe({
       ok: true,
       status: 200,
-      json: async () => probedState,
+      json: () => Promise.resolve(probedState),
     } as Response);
     await flushProbe();
     await advance(10 * 60_000);
@@ -456,8 +467,9 @@ describe("AE-0440 workflow stream recovery", () => {
     const { unmount, refreshState } = renderStream();
     unmount();
 
-    await act(async () => {
+    await act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
+      return Promise.resolve();
     });
 
     expect(refreshState).not.toHaveBeenCalled();

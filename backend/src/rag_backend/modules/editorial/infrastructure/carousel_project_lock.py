@@ -1,19 +1,19 @@
-"""Per-project carousel serialization lock (AE-0316).
+"""Per-project carousel serialization lock.
 
 Session-scoped Postgres advisory lock (``pg_advisory_lock`` /
 ``pg_advisory_unlock``) held on a dedicated connection so it spans multiple
-sequential transactions — required by AE-0311's two-commit repair contract
+sequential transactions — required by the two-commit repair contract
 (a transaction-scoped lock would release at the first commit).
 
 Serialization-domain contract
 -----------------------------
-The lock serializes the **artifact-affecting mutators**: AE-0311 repair,
-AE-0313 republish, and AE-0314's completed-project slide update. The
-background resume runner and AE-0315's reaper deliberately do NOT acquire
+The lock serializes the **artifact-affecting mutators**: repair,
+republish, and the completed-project slide update. The
+background resume runner and the reaper deliberately do NOT acquire
 it — resume-vs-mutator safety comes from the resume-start guard
 (``is_carousel_project_lock_held`` → typed ``mutation_in_progress`` 409)
 plus the ``lock_version`` CAS, and reap-vs-mutator safety from the reaper's
-``lock_version``/``run_epoch`` bump (AE-0315).
+``lock_version``/``run_epoch`` bump.
 
 The lock key is a stable signed 64-bit digest of the project UUID. Unlock is
 guaranteed by the context manager ``finally`` on the same connection; a

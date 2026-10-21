@@ -13,8 +13,9 @@ from rag_backend.domain.constants.runtime_skills import (
 
 
 def test_default_root_is_package_relative(monkeypatch: pytest.MonkeyPatch) -> None:
-    # AE-0246: with no override, runtime skills resolve INSIDE the backend package
-    # (so they ship with the source and resolve identically in the built image).
+    """With no override, runtime skills resolve inside the backend package, so they ship
+    with the source and resolve identically in the built image.
+    """
     monkeypatch.delenv("ALTER_EGO_RUNTIME_SKILLS_ROOT", raising=False)
     root = get_runtime_skills_filesystem_root()
     assert root.parts[-2:] == ("agents", "skills")
@@ -31,7 +32,7 @@ def test_absolute_env_override_wins(
 def test_relative_env_override_falls_back_to_package(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # A relative override is ignored (the old repo-root scheme is gone).
+    """A relative override is ignored."""
     monkeypatch.setenv("ALTER_EGO_RUNTIME_SKILLS_ROOT", "skills/runtime")
     assert get_runtime_skills_filesystem_root().parts[-2:] == ("agents", "skills")
 

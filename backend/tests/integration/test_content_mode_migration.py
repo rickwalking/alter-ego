@@ -1,4 +1,4 @@
-"""Alembic revision for the carousel content mode (AE-0373).
+"""Alembic revision for the carousel content mode.
 
 Gherkin: tests/features/carousel_content_mode.feature (persistence background).
 Upgrade adds the nullable POV columns and the creator-asset role/pose; downgrade
@@ -23,8 +23,7 @@ from tests.integration.test_autopilot_migration import (
 _REVISION = "b0c1d2e3f4a5"
 _PARENT = "a9b0c1d2e3f4"
 _POV_THESIS = "b1c2d3e4f5a6"
-# AE-0404: the audience-hours revision is the single head now.
-_HEAD = "d5e6f7a8b9c0"  # AE-0418: the GrokBot cover revision is the head
+_HEAD = "d5e6f7a8b9c0"
 _PROJECT_COLUMNS = {
     "content_mode",
     "pov_thesis",
@@ -51,7 +50,7 @@ def _stamped_db(tmp_path: Path) -> Path:
 
 
 def test_revision_chains_on_the_story_revision() -> None:
-    """The content-mode revision follows AE-0370's; AE-0393's is the single head."""
+    """The content-mode revision follows the publish-time one; one head remains."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     revision = script.get_revision(_REVISION)

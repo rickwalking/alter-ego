@@ -1,4 +1,4 @@
-"""The GrokBot slide-1 cover seam the autopilot drives in-process (AE-0418).
+"""The GrokBot slide-1 cover seam the autopilot drives in-process.
 
 - ``store_cover_image``: validate a cover upload and store it as a creator
   asset with role ``cover`` (raises ``CoverAssetError`` with the contract code);

@@ -5,9 +5,6 @@ import {
 } from "@/modules/editorial-operations/board/chat/adapters/chat-adapter";
 import type { Conversation, Message } from "@/schemas/chat";
 
-// Feature: Dashboard dates follow the active locale (AE-0417)
-// tests/features/dashboard-locale-dates-ae0417.feature
-
 const NOW = new Date(2026, 9, 17, 17, 5);
 const THREE_HOURS_AGO = new Date(2026, 9, 17, 14, 5);
 

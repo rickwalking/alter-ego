@@ -1,4 +1,4 @@
-"""Durable content-review artifacts (AE-0405).
+"""Durable content-review artifacts.
 
 The content node runs its ensure (which may regenerate every slide with the
 LLM) BEFORE its review interrupt, and LangGraph replays the whole node on
@@ -50,7 +50,7 @@ def parked_content_updates(snapshot: object) -> dict[str, object] | None:
     carries no artifacts (legacy interrupt, or a replay that reused them) or
     they are already saved. ``content_approved`` is reset: the review is still
     pending, and a stale True (final-review send-back) would route the write
-    past the content gate. ``current_phase`` is pinned to content (AE-0413):
+    past the content gate. ``current_phase`` is pinned to content:
     the interrupted node never committed it, so the checkpoint still said
     ``outline`` on the first content gate.
     """
@@ -77,7 +77,7 @@ def _is_manual_fixes_revise(
     review_update: Mapping[str, object],
     state: Mapping[str, object],
 ) -> bool:
-    """True for a revise that only carried reviewer slide edits (AE-0413).
+    """True for a revise that only carried reviewer slide edits.
 
     The review update already applied and re-validated the edits
     (``localized_slides`` is only in it when edits were applied). With no
@@ -93,7 +93,7 @@ def _is_manual_fixes_revise(
 
 
 def _has_active_content_note(state: Mapping[str, object]) -> bool:
-    """A content note no regeneration has used yet (AE-0405 ``phase_feedback``)."""
+    """A content note no regeneration has used yet (in ``phase_feedback``)."""
     notes = state.get(STATE_FIELD_PHASE_FEEDBACK)
     if not isinstance(notes, Mapping):
         return False
@@ -107,7 +107,7 @@ def manual_fixes_park_updates(
     review_update: Mapping[str, object],
     state: Mapping[str, object],
 ) -> dict[str, object]:
-    """Keep hand-fixed copy as the parked artifacts of the next entry (AE-0413).
+    """Keep hand-fixed copy as the parked artifacts of the next entry.
 
     "Submit manual fixes" (a revise carrying only ``edited_localized_slides``)
     re-entered the content node, whose ensure rebuilt every localized slide

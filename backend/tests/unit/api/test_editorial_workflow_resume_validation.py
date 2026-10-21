@@ -1,4 +1,4 @@
-"""Unit tests for AE-0310 resume validation: uncapped edits + charged phase.
+"""Unit tests for resume validation: uncapped edits + charged phase.
 
 Feature: Design-step recovery from content-level violations
 (see features/carousel_design_phase_recovery.feature)
@@ -59,9 +59,10 @@ def _request(
 
 
 def _gate_ctx() -> _ResumeGateContext:
+    """db=None skips the escalation-notification side effect (the runtime guard checks
+    ctx.db is not None); the cast bridges the stricter type hint.
+    """
     return _ResumeGateContext(
-        # None skips the escalation-notification side effect (runtime guard
-        # checks `ctx.db is not None`); cast bridges the stricter hint.
         db=cast(AsyncSession, None),
         project_id="38affb3e",
         project_title="Prod carousel",
@@ -124,4 +125,4 @@ class TestResumeGatesCapAccounting:
             request,
             cast(CarouselWorkflowState, workflow_state),
             ctx=_gate_ctx(),
-        )  # no raise
+        )

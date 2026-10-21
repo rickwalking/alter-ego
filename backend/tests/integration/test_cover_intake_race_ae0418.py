@@ -1,4 +1,4 @@
-"""PR #136 review fixes over the API: the claim race and the upload limit (AE-0418).
+"""PR #136 review fixes over the API: the claim race and the upload limit.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: A cover another batch claimed after the read rejects the topic
@@ -59,12 +59,12 @@ def _stale_read(monkeypatch: pytest.MonkeyPatch, *, sweep: bool) -> None:
     async def _read(
         self: SqlCoverAssetStore, ids: tuple[UUID, ...]
     ) -> dict[UUID, CoverAsset]:
+        """Models the sweep deleting the row between the facts read and the claim."""
         found = await _ORIGINAL_READ(self, ids)
         reads.append(len(ids))
         if len(reads) > 1:
             return found
         if sweep:
-            # The sweep deleted the row between the facts read and the claim.
             await self._session.execute(
                 delete(AutopilotCoverAssetModel).where(
                     AutopilotCoverAssetModel.id.in_(ids)
@@ -80,6 +80,7 @@ def _stale_read(monkeypatch: pytest.MonkeyPatch, *, sweep: bool) -> None:
 async def test_lost_claim_rejects_the_topic_as_used(
     api: _Api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The rejected topic is not stored: only the first topic and "Robots plan" are."""
     client, engine, _clock = api
     asset_id = await _ai_cover(client)
     first = await _post(
@@ -99,7 +100,6 @@ async def test_lost_claim_rejects_the_topic_as_used(
     assert [(r["index"], r["reason"], r["field"]) for r in lost] == [
         (0, "cover_asset_used", "cover.asset_id")
     ]
-    # The rejected topic is not stored: the first topic and "Robots plan" only.
     assert await _topics(engine) == 2
 
 
@@ -122,6 +122,7 @@ async def test_swept_cover_rejects_the_topic_as_unknown(
 # Scenario: Cover uploads have their own rate limit
 @pytest.mark.asyncio
 async def test_uploads_do_not_spend_the_shared_budget(api: _Api) -> None:
+    """The other routes keep their whole 10/minute budget."""
     client, _engine, _clock = api
     statuses = [
         (await _upload(client, b"", {"kind": "ai_image"}))["status"]
@@ -130,7 +131,6 @@ async def test_uploads_do_not_spend_the_shared_budget(api: _Api) -> None:
     assert 429 not in statuses
     blocked = await _upload(client, b"", {"kind": "ai_image"})
     assert blocked["status"] == 429
-    # The other routes keep their whole 10/minute budget.
     topics = [
         (await _post(client, [_topic(f"Topic {n}", _URL_A, 50)]))["status"]
         for n in range(_SHARED_BUDGET)

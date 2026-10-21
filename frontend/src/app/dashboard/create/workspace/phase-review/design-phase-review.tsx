@@ -11,18 +11,20 @@ import {
 
 export interface DesignPhaseReviewProps {
   state: EditorialWorkflowState;
-  /** AE-0310: recovery actions rendered while blocking violations exist. */
+  /** Recovery actions rendered while blocking violations exist. */
   recovery?: DesignRecoveryActions;
 }
 
+/**
+ * Design gate review. The backend ``design_recovery_hint`` and a blocking
+ * report both signal the dead-end state; either one surfaces the recovery panel.
+ */
 export function DesignPhaseReview({
   state,
   recovery,
-}: DesignPhaseReviewProps): React.ReactElement {
+}: Readonly<DesignPhaseReviewProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
-  // AE-0310: the backend hint (design_recovery_hint) and the blocking report
-  // both signal the dead-end state; either one surfaces the recovery panel.
   const blocked =
     hasBlockingPresentationViolations(state) ||
     Boolean(state.design_recovery_hint);

@@ -1,4 +1,4 @@
-"""Unit tests for the request-scoped Unit of Work primitive (AE-0091).
+"""Unit tests for the request-scoped Unit of Work primitive.
 
 Covers the platform ``SqlAlchemyUnitOfWork``: it is the single commit owner,
 delegates commit/rollback to the wrapped ``AsyncSession``, and as an async
@@ -32,7 +32,7 @@ class TestSqlAlchemyUnitOfWork:
         assert isinstance(uow, UnitOfWork)
 
     def test_exposes_wrapped_session(self) -> None:
-        # The repository wiring reads the same request-scoped session.
+        """The repository wiring reads the same request-scoped session."""
         session = _fake_session()
         uow = SqlAlchemyUnitOfWork(session)
         assert uow.session is session

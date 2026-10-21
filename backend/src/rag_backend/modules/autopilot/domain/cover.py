@@ -1,4 +1,4 @@
-"""GrokBot slide-1 covers: upload form rules, topic rules, credit (AE-0418).
+"""GrokBot slide-1 covers: upload form rules, topic rules, credit.
 
 Pure. The caller supplies the stored covers and the clock. A topic's cover is
 checked last among the per-topic rules and rejects only that topic, with
@@ -40,7 +40,11 @@ from rag_backend.modules.autopilot.domain.x_status import (
 
 @dataclass(frozen=True, kw_only=True)
 class CoverAsset:
-    """One uploaded cover: its creator asset, kind, source and first user."""
+    """One uploaded cover: its creator asset, kind, source and first user.
+
+    ``staged_path`` is the creator asset's artifact-relative path, where it is
+    staged.
+    """
 
     asset_id: UUID
     creator_asset_id: UUID
@@ -50,7 +54,6 @@ class CoverAsset:
     height: int
     created_at: datetime
     topic_candidate_id: UUID | None = None
-    # The creator asset's artifact-relative path (where it is staged).
     staged_path: str = ""
 
     @property

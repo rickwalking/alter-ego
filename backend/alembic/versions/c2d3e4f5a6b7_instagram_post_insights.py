@@ -4,13 +4,13 @@ Revision ID: c2d3e4f5a6b7
 Revises: b1c2d3e4f5a6
 Create Date: 2026-10-15
 
-AE-0378 (ADR-0021 D11): ADDITIVE. One new table, ``instagram_post_insights``:
+ADR-0021: ADDITIVE. One new table, ``instagram_post_insights``:
 one row per Instagram media id holding the latest Graph insights snapshot.
 Every metric column is nullable (NULL = the Graph API did not return it, shown
 as "n/d"). No existing table or column is altered or dropped. ``downgrade``
 drops the table.
 
-Idempotent (AE-0371 review): prod has no ``alembic_version`` table and the SQL
+Idempotent: prod has no ``alembic_version`` table and the SQL
 was applied by hand, so the table is created only when missing and dropped only
 when present.
 """

@@ -19,7 +19,7 @@ export function AiSuggestionPanel({
   selectedText,
   onApplySuggestion,
   personaId,
-}: AiSuggestionPanelProps): React.JSX.Element {
+}: Readonly<AiSuggestionPanelProps>): React.JSX.Element {
   const t = useTranslations("blogEditorial");
   const { suggest, improve, scoreVoice, loading, error } = useBlogAi(postId);
   const [suggestions, setSuggestions] = useState<BlogAiSuggestResult[]>([]);

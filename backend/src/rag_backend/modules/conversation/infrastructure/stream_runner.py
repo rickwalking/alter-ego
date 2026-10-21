@@ -1,4 +1,4 @@
-"""Concrete SSE stream-runner adapter for the conversation module (AE-0102).
+"""Concrete SSE stream-runner adapter for the conversation module.
 
 Private to the module — the facade re-exports the constructor under
 ``LegacyStreamChatRunner``; cross-module code never imports this path directly.
@@ -7,8 +7,8 @@ This adapter satisfies the ``StreamChatRunner`` port (defined in
 ``modules.conversation.application.streaming``) by **delegating** to the existing
 ``stream_chat_response`` service in
 ``rag_backend.application.services.chat_stream_service`` — it does NOT reimplement
-the SSE wire. That delegation keeps every behavior byte-identical (AE-0102
-Non-Goal: no SSE payload/name change):
+the SSE wire. That delegation keeps every behavior byte-identical (no SSE
+payload/name change):
 
 * the SSE event types/order (token/sources/complete/error/tool_result), the
   ``id:``/``data:`` framing, the keep-alive ping cadence, and the
@@ -57,11 +57,11 @@ class LegacyStreamChatRunner:
         command: StreamChatCommand,
         agent_builder: ChatAgentBuilder,
     ) -> AsyncIterator[str]:
-        # The agent builders return the conversation's ``AlterEgoAgent | RAGAgent``;
-        # both satisfy the streaming service's ``_ChatAgent`` protocol structurally
-        # (the legacy stream path passed them in directly). The cast records that
-        # equivalence at this isolated infrastructure boundary so the strict-typed
-        # module application layer stays free of the legacy protocol's shape quirk.
+        """The agent builders return ``AlterEgoAgent | RAGAgent``; both satisfy the
+        streaming service's ``_ChatAgent`` protocol structurally. The cast
+        records that at this infrastructure boundary so the strict-typed
+        application layer stays free of the legacy protocol's shape.
+        """
         builder = cast("Callable[[], _ChatAgent]", agent_builder.build)
         config = _StreamConfig(
             conversation_id=command.conversation_id,

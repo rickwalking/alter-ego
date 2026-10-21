@@ -19,22 +19,22 @@ const SESSION_EXPIRED_ERROR = "session_expired";
  * Apply the forwarded public host to the login URL. Parsed defensively: the
  * `Host` header is client-controllable, and a malformed value must never turn
  * the logout redirect into a 500.
+ *
+ * On a malformed value the origin derived from the request URL is kept.
  */
 function applyForwardedHost(loginUrl: URL, forwardedHost: string): void {
   try {
     const parsedHost = new URL(`http://${forwardedHost}`);
     loginUrl.hostname = parsedHost.hostname;
     loginUrl.port = parsedHost.port;
-  } catch {
-    // Malformed Host header: keep the origin derived from the request URL.
-  }
+  } catch {}
 }
 
 /**
  * Build the login URL from the proxy headers, not from `request.url`'s host.
  * Under the Next standalone server `request.url` carries the bind address
- * (`0.0.0.0:3000`), so the redirect would point at an unreachable host
- * (AE-0431). nginx forwards `Host $host` and `X-Forwarded-Proto $real_scheme`
+ * (`0.0.0.0:3000`), so the redirect would point at an unreachable host.
+ * nginx forwards `Host $host` and `X-Forwarded-Proto $real_scheme`
  * for the frontend location (`nginx/nginx.conf.ssl`).
  */
 function buildLoginUrl(request: NextRequest): URL {
@@ -62,6 +62,9 @@ function buildLoginUrl(request: NextRequest): URL {
 /**
  * Clear session cookie and send the user to login.
  * Used when API returns 401 so stale HttpOnly cookies are removed.
+ *
+ * The backend logout is best-effort; the cookie is cleared on the Next
+ * response regardless.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const redirectParam = request.nextUrl.searchParams.get(
@@ -81,9 +84,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       method: "POST",
       headers: { Cookie: request.headers.get("cookie") ?? "" },
     });
-  } catch {
-    // Backend logout is best-effort; cookie is cleared on the Next response.
-  }
+  } catch {}
 
   const response = NextResponse.redirect(loginUrl);
   clearAccessTokenCookie(response);

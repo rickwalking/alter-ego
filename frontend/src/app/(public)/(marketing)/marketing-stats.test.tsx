@@ -19,7 +19,6 @@ function translator(key: string): string {
 
 const t = translator as unknown as Translator;
 
-// Feature: Landing page truth, links and public header (AE-0443)
 // Scenario: Published-carousel stat comes from the public carousel total
 describe("MarketingStats", () => {
   it("renders the derived public carousel total, not a hardcoded guess", () => {

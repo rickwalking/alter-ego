@@ -1,4 +1,4 @@
-"""Public facade of the image bridge bounded context (AE-0393).
+"""Public facade of the image bridge bounded context.
 
 Cross-module code imports only these symbols (also re-exported from the
 package ``__init__``). The HTTP router stays off the facade, as in

@@ -1,7 +1,11 @@
-"""Telegram webhook constants (AE-0356).
+"""Telegram webhook constants.
 
 Kept beside ``constants.py`` and ``notify_constants.py`` so none of them
 exceeds the 400-line limit. The webhook secret is never written to a log.
+
+Retry is refused when the post may already be live. “Fix issues” is queued on the run
+row like a rework: the phase slot carries a marker (it fits ``REWORK_PHASE_LENGTH``) and
+the worker tick applies it.
 """
 
 HEADER_WEBHOOK_AUTH = "X-Telegram-Bot-Api-Secret-Token"
@@ -21,7 +25,6 @@ KIND_REWORK = "rework"
 KIND_REJECT = "reject"
 KIND_RETRY = "retry"
 KIND_PHASE = "phase"
-# AE-0367: the owner's "Fix issues" button.
 KIND_FIX = "fix"
 
 PHASE_SLUG_TEXT = "text"
@@ -39,7 +42,6 @@ TEXT_ALREADY = "already handled"
 TEXT_APPROVED = "Approved. Publishing."
 TEXT_REJECTED = "Rejected. The carousel stays private."
 TEXT_RETRY = "Retrying publish."
-# QA r2 R3: Retry is refused when the post may already be live.
 ANSWER_MAY_BE_LIVE = "Not retried: the post may already be live"
 TEXT_MAY_BE_LIVE = (
     "Not retried: Instagram reports this carousel as published. "
@@ -58,8 +60,6 @@ REASON_OWNER_REWORK = "owner_rework"
 REASON_OWNER_RETRY = "owner_retry"
 REASON_APPROVE_FAILED = "owner_approve_failed"
 
-# AE-0367: "Fix issues" is queued on the run row like a rework. The phase slot
-# carries this marker (fits REWORK_PHASE_LENGTH); the worker tick applies it.
 REASON_OWNER_AUTOFIX = "owner_autofix"
 AUTOFIX_REWORK_PHASE = "owner_autofix"
 ANSWER_NOTHING_TO_FIX = "Nothing to fix"

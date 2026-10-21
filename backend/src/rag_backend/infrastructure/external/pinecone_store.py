@@ -17,11 +17,13 @@ class PineconeVectorStore:
     """Pinecone implementation of VectorStore protocol with hybrid search support."""
 
     def __init__(self, settings: Settings) -> None:
+        """Store the settings; the Pinecone client is built lazily on first index access.
+
+        Merely resolving this provider (DI wiring, tests that stub the store) never
+        requires a live ``PINECONE_API_KEY``; the client is created the first time a
+        vector op runs.
+        """
         self._settings = settings
-        # The Pinecone client is built lazily on first real index access so that
-        # merely resolving this provider (DI wiring, tests that stub the store)
-        # never requires a live PINECONE_API_KEY. Production behavior is
-        # unchanged: the client is created the first time a vector op runs.
         self._client: Pinecone | None = None
         self._index_name = settings.pinecone_index_name
         self._index = None
@@ -71,6 +73,9 @@ class PineconeVectorStore:
             chunks: Document chunks to upsert
             document_id: Parent document ID
             namespace: Pinecone namespace. If None, uses str(document_id).
+
+        Sparse values are added when present (hybrid search); vectors are upserted in
+        batches of 100.
         """
         index = await self._get_index()
         ns = namespace if namespace is not None else str(document_id)
@@ -95,7 +100,6 @@ class PineconeVectorStore:
                 },
             }
 
-            # Add sparse values if available (for hybrid search)
             if chunk.sparse_embedding:
                 vector_data["sparse_values"] = {
                     "indices": chunk.sparse_embedding.get("indices", []),
@@ -104,7 +108,6 @@ class PineconeVectorStore:
 
             vectors.append(vector_data)
 
-        # Upsert in batches of 100
         batch_size = 100
         for i in range(0, len(vectors), batch_size):
             batch = vectors[i : i + batch_size]
@@ -146,10 +149,11 @@ class PineconeVectorStore:
 
         Returns:
             List of SearchResult objects
+
+        The sparse vector is sent only when ``alpha < 1``.
         """
         index = await self._get_index()
 
-        # Build query parameters
         query_params: dict[str, object] = {
             "vector": params.dense_embedding,
             "top_k": params.top_k,
@@ -160,7 +164,6 @@ class PineconeVectorStore:
         if params.namespace is not None:
             query_params["namespace"] = params.namespace
 
-        # Add sparse vector for hybrid search if alpha < 1
         if params.alpha < 1.0 and params.sparse_embedding:
             query_params["sparse_vector"] = {
                 "indices": params.sparse_embedding.get("indices", []),

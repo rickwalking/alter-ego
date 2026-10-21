@@ -1,4 +1,4 @@
-"""Protocol for stuck-workflow auto-reject (AE-0210).
+"""Protocol for stuck-workflow auto-reject.
 
 CLAUDE.md: "Auto-reject after timeout; never leave workflows stuck." The worker
 depends on this domain contract; the concrete query/transition lives in

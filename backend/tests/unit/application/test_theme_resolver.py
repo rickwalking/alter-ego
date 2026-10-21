@@ -32,7 +32,6 @@ class TestScoreBrands:
         text = "Claude 3 Opus from Anthropic beats GPT-4"
         scores = _score_brands(text)
         assert "anthropic" in scores
-        # "claude", "opus", "anthropic" = 3 matches
         assert scores["anthropic"] == 3
 
     def test_scores_google_keywords(self):
@@ -40,7 +39,6 @@ class TestScoreBrands:
         text = "Google Gemma 4 and Gemini 1.5 Pro"
         scores = _score_brands(text)
         assert "google" in scores
-        # "google", "gemma", "gemini" = 3 matches
         assert scores["google"] == 3
 
     def test_empty_text_returns_empty(self):
@@ -55,7 +53,6 @@ class TestScoreBrands:
         """Should match regardless of case."""
         text = "CLAUDE CODE from ANTHROPIC"
         scores = _score_brands(text)
-        # "claude", "claude code", "anthropic" = 3 matches
         assert scores["anthropic"] == 3
 
 
@@ -68,7 +65,6 @@ class TestScoreCategories:
         text = "New zero-day vulnerability exploit in TLS encryption"
         scores = _score_categories(text)
         assert "cybersecurity" in scores
-        # "zero-day", "vulnerability", "exploit", "tls", "encryption" = 5
         assert scores["cybersecurity"] == 5
 
     def test_scores_ai_competition_keywords(self):
@@ -104,11 +100,12 @@ class TestDetectBrand:
         assert _detect_brand("completely generic topic") is None
 
     def test_highest_score_wins(self):
-        """Should return the brand with the most keyword matches."""
+        """Should return the brand with the most keyword matches.
+
+        Anthropic (claude, anthropic) and OpenAI (chatgpt, openai) tie at 2 matches;
+        max() returns the first encountered.
+        """
         text = "Claude from Anthropic beats ChatGPT from OpenAI"
-        # Anthropic: claude, anthropic = 2
-        # OpenAI: chatgpt, openai = 2
-        # Tie — max() returns the first encountered, which is fine
         result = _detect_brand(text)
         assert result in ("anthropic", "openai")
 
@@ -175,16 +172,17 @@ class TestResolveTheme:
         assert theme == CAROUSEL_THEMES["cybersecurity"]
 
     def test_explicit_theme_fallback_on_invalid(self):
-        """Should fallback to default when theme value is unknown."""
+        """Should fallback to default when theme value is unknown.
+
+        An invalid enum state is impossible with StrEnum, so this verifies the normal
+        AUTO path instead.
+        """
         project = CarouselProject(
             topic="Test",
             audience="Everyone",
             niche="Tech",
             theme=CarouselTheme.AUTO,
         )
-        # Manually override to an invalid enum state is impossible with StrEnum,
-        # so we test the fallback path via an explicit unknown by patching.
-        # Instead, we verify the normal AUTO path works.
         project.theme = CarouselTheme.AI_COMPETITION
         theme = resolve_theme(project)
         assert theme == CAROUSEL_THEMES["ai_competition"]
@@ -223,7 +221,11 @@ class TestResolveTheme:
         assert theme == CAROUSEL_THEMES["cybersecurity"]
 
     def test_auto_uses_title_and_subtitle(self):
-        """AUTO theme should analyze title and subtitle, not just topic."""
+        """AUTO theme should analyze title and subtitle, not just topic.
+
+        "claude", "anthropic" and "leak" are all present, but brand detection scores
+        higher for anthropic.
+        """
         project = CarouselProject(
             topic="Generic update",
             audience="Everyone",
@@ -235,8 +237,6 @@ class TestResolveTheme:
             subtitle="Anthropic's source code exposed",
         )
         theme = resolve_theme(project)
-        # Both "claude" and "anthropic" and "leak" are present,
-        # but brand detection scores higher for "anthropic"
         assert theme == BRAND_PALETTES["anthropic"]
 
     def test_auto_fallback_is_diverse(self):
@@ -258,7 +258,6 @@ class TestResolveTheme:
         )
         theme_b = resolve_theme(project_b)
         assert theme_b in CAROUSEL_THEMES.values()
-        # Different topics should typically yield different themes
         assert theme_a != theme_b
 
     def test_auto_fallback_is_deterministic(self):
@@ -282,7 +281,6 @@ class TestResolveTheme:
             theme=CarouselTheme.AUTO,
         )
         theme = resolve_theme(project)
-        # "meta" and "llama" and "llama-3" = 3 matches for meta brand
         assert theme == BRAND_PALETTES["meta"]
 
     def test_auto_detects_microsoft(self):
@@ -305,7 +303,6 @@ class TestResolveTheme:
             theme=CarouselTheme.AUTO,
         )
         theme = resolve_theme(project)
-        # "chatgpt" and "openai" = 2 matches for openai brand
         assert theme == BRAND_PALETTES["openai"]
 
     def test_auto_detects_openai_from_gpt(self):

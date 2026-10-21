@@ -1,4 +1,4 @@
-"""Cover-card strategy: slide 1 as a framed GrokBot screenshot (AE-0418).
+"""Cover-card strategy: slide 1 as a framed GrokBot screenshot.
 
 The owner chose a ``screenshot`` cover (a post, product shot or logo) on
 Telegram. It renders on the deck's solid background: the title on top, the
@@ -82,9 +82,9 @@ class CoverCardStrategy:
         *,
         options: _RenderOptions | None = None,
     ) -> str:
+        """Picked by name without a screenshot cover, it renders the default slide 1."""
         cover = project.slide_cover
         if cover is None or not cover.is_screenshot:
-            # Picked by name without a screenshot cover: the default slide 1.
             return IntroHeroStrategy().render(slide, project, _theme, options=options)
         opts = options or {}
         language = str(opts.get("language", LANGUAGE_PT))

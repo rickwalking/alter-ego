@@ -1,4 +1,4 @@
-"""Tracked in-process scheduling of blog generation runs (AE-0425, ADR-0025).
+"""Tracked in-process scheduling of blog generation runs (ADR-0025).
 
 The 202 routes persist the draft and hand the run to :func:`schedule_blog_generation`:
 ``asyncio.create_task`` + the module-level ``_background_tasks`` set + a task

@@ -1,4 +1,4 @@
-"""Protocols for the carousel stale-run reaper (AE-0315).
+"""Protocols for the carousel stale-run reaper.
 
 The workflow-workers tick depends on these domain contracts; the concrete
 heartbeat query, checkpoint reconciliation, and fenced flip live in
@@ -27,7 +27,7 @@ class CarouselStaleRunReaper(Protocol):
     async def tick(self, db: AsyncSession) -> int:
         """Run one watchdog observation pass; return the number of reaps.
 
-        Rules (pinned by AE-0315): only ``phase_status == in_progress`` rows
+        Rules (pinned): only ``phase_status == in_progress`` rows
         are ever considered; a NULL heartbeat is alert-only forever; a reap
         requires N consecutive stale observations; wall-clock age only
         alerts. The flip is ONE atomic UPDATE bumping ``lock_version`` and
@@ -38,7 +38,7 @@ class CarouselStaleRunReaper(Protocol):
 
 
 class CarouselCheckpointStateGateway(Protocol):
-    """Read/write a carousel's LangGraph checkpoint state (AE-0311 reconciler).
+    """Read/write a carousel's LangGraph checkpoint state (drift reconciler).
 
     Adapts ``CarouselWorkflowEngine`` so the drift reconciler stays free of an
     application/infrastructure → agents import; the engine's ``update_state``
@@ -59,13 +59,13 @@ class CarouselDriftReconciler(Protocol):
 
     async def reconcile(self, db: AsyncSession) -> int:
         """Converge in-flight rows whose repaired projection outran a stale
-        blocking checkpoint report; return the number converged (AE-0311).
+        blocking checkpoint report; return the number converged.
         """
         ...
 
 
 class CarouselRepublishSweeper(Protocol):
-    """Server-guaranteed republish of marked completed carousels (AE-0314).
+    """Server-guaranteed republish of marked completed carousels.
 
     A post-completion slide edit stamps ``needs_republish_since`` transactionally
     and the client triggers the republish for fast feedback. This watchdog is the

@@ -1,4 +1,4 @@
-"""Unit tests for the typed carousel conflict domain model (AE-0316).
+"""Unit tests for the typed carousel conflict domain model.
 
 Gherkin: tests/features/carousel_typed_conflicts.feature
 """

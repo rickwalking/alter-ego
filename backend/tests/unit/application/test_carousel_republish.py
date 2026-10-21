@@ -1,11 +1,11 @@
-"""Unit tests for the idempotent carousel republish service (AE-0313).
+"""Unit tests for the idempotent carousel republish service.
 
 Feature: Republish a completed carousel's artifacts
   Scenario: Republish with unchanged content is a safe no-op
   Scenario: Concurrent republishes serialize on the build lock
   (see tests/features/carousel_republish.feature)
 
-The advisory lock no-ops on SQLite (AE-0316), so the serialization semantics are
+The advisory lock no-ops on SQLite, so the serialization semantics are
 exercised here with an injected fake lock; the true-concurrency Postgres path is
 covered by tests/integration/test_carousel_project_lock_pg.py.
 """
@@ -55,7 +55,7 @@ def _session_with_engine(engine: AsyncEngine) -> AsyncSession:
 
 class _SingleHolderLock:
     """Fake advisory lock that admits one holder; a second non-blocking
-    acquire raises the AE-0316 ``mutation_in_progress`` conflict."""
+    acquire raises the ``mutation_in_progress`` conflict."""
 
     def __init__(self) -> None:
         self.held = False
@@ -150,6 +150,7 @@ class TestRepublishCompletedCarousel:
         finalize.assert_awaited_once_with(db, PROJECT_ID)
 
     async def test_concurrent_republishes_serialize_on_the_lock(self) -> None:
+        """Exactly one holder is ever inside the critical section."""
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")
         db = _session_with_engine(engine)
         lock = _SingleHolderLock()
@@ -164,7 +165,7 @@ class TestRepublishCompletedCarousel:
             patch(_FINALIZE_TARGET, AsyncMock(side_effect=_hold)),
         ):
             first = asyncio.create_task(republish_completed_carousel(db, PROJECT_ID))
-            await asyncio.sleep(0)  # let the first task acquire the lock
+            await asyncio.sleep(0)
             second = asyncio.create_task(republish_completed_carousel(db, PROJECT_ID))
             conflict: CarouselConflictError | None = None
             try:
@@ -174,7 +175,6 @@ class TestRepublishCompletedCarousel:
             release.set()
             await first
 
-        # Exactly one holder was ever inside the critical section.
         assert lock.max_concurrent == 1
         assert conflict is not None
         assert conflict.conflict.code == CONFLICT_CODE_BUILD_IN_PROGRESS

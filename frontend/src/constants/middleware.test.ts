@@ -10,7 +10,6 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 
 describe("middleware route helpers", () => {
   describe("isPublicRoute", () => {
-    // Feature: Public carousel gallery (AE-0444)
     // Scenario: Anonymous visitors are not redirected to login
     it("Then home, blog, carousels, and public chat are public", () => {
       expect(isPublicRoute(PUBLIC_ROUTE_PATHS.HOME)).toBe(true);

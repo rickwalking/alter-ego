@@ -1,4 +1,4 @@
-"""Schema-vs-models drift detection (AE-0207).
+"""Schema-vs-models drift detection.
 
 Production was bootstrapped via SQLAlchemy ``create_all`` and never ran Alembic.
 ``create_all`` creates *missing tables* but NEVER ``ALTER``s an existing one, so a
@@ -24,7 +24,6 @@ from dataclasses import dataclass, field
 
 from sqlalchemy import Engine, MetaData, text
 
-# information_schema query: the public-schema columns the live DB actually has.
 _INFORMATION_SCHEMA_QUERY = text(
     """
     SELECT table_name, column_name
@@ -33,7 +32,6 @@ _INFORMATION_SCHEMA_QUERY = text(
     """
 )
 
-# Message fragments (no magic strings).
 _MSG_NO_DRIFT = "OK: live schema matches all mapped ORM columns."
 _MSG_MISSING_TABLE = "table absent from live DB"
 _MSG_COLUMN_ABSENT = "column absent"

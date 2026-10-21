@@ -1,9 +1,12 @@
-"""The slide-fix prompt and the model answer it expects (AE-0401).
+"""The slide-fix prompt and the model answer it expects.
 
 The prompt itself lives in ``agents/prompts/carousel/v1/slide_fix.yaml``. The
 answer is strict JSON ``{pt:{heading,body}, en:{heading,body}}``, read
 fence-aware with ``parse_object_text``; item lists the model returns are
 merged by position only when they keep the item count.
+
+Summary and closing slides have no body budget in the contract, so a default body limit
+applies.
 """
 
 from __future__ import annotations
@@ -62,7 +65,6 @@ _BODY = "body"
 _TITLE = "title"
 _COPY_KEYS = (_HEADING, _BODY)
 _ITEM_KEYS = (_TITLE, _BODY)
-# Summary and closing slides have no body budget in the contract.
 _DEFAULT_BODY_MAX = 200
 _LOCALES: tuple[tuple[str, str], ...] = (
     (LANGUAGE_PT, PRESENTATION_PT_KEY),

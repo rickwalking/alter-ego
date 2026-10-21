@@ -1,4 +1,4 @@
-"""The POV thesis step of an autopilot run (AE-0377, ADR-0021 D10). No I/O.
+"""The POV thesis step of an autopilot run (ADR-0021 D10). No I/O.
 
 A POV topic carries the scout's DRAFT thesis. The run waits in
 ``awaiting_thesis`` until the owner confirms it, replaces it with their own
@@ -50,7 +50,7 @@ class ThesisCallback:
 
 
 def is_pov(topic: TopicCandidate) -> bool:
-    """True for a POV-family topic (``pov`` and, AE-0406, ``pov_news``)."""
+    """True for a POV-family topic (``pov`` and ``pov_news``)."""
     return is_pov_family(topic.content_mode)
 
 
@@ -78,7 +78,7 @@ def parse_thesis_callback(data: str) -> ThesisCallback | None:
 def thesis_keyboard(run_id: UUID, cover: CoverOffer | None = None) -> InlineKeyboard:
     """Confirm, Edit and Discard for one run (each callback <=64 bytes).
 
-    AE-0418: a topic with a GrokBot cover adds the slide-1 toggle row.
+    A topic with a GrokBot cover adds the slide-1 toggle row.
     """
     row = (
         InlineButton(

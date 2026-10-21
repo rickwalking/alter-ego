@@ -3,9 +3,9 @@
 These guards run during application startup (``lifespan``) and assert that a
 production-like deployment is configured durably and completely:
 
-* AE-0213 — the LangGraph carousel checkpointer uses a durable backend
+* The LangGraph carousel checkpointer uses a durable backend
   (not the in-memory saver) so workflow state survives restarts.
-* AE-0215 — the *default* carousel image provider has a usable API key, so a
+* The *default* carousel image provider has a usable API key, so a
   default-preset carousel does not fail late at image-generation time.
 
 The checks live here (and not in ``application``/``api``) deliberately: they are
@@ -28,9 +28,7 @@ from rag_backend.modules.image_bridge import report_image_bridge_config
 
 logger = get_logger()
 
-# --- AE-0213: durable checkpointer -----------------------------------------
 
-# Non-durable carousel checkpoint backends: state does not survive a restart.
 NON_DURABLE_CHECKPOINT_BACKENDS: frozenset[str] = frozenset({"memory", "disabled"})
 
 EVENT_CHECKPOINT_NON_DURABLE = "startup_checkpoint_backend_non_durable"
@@ -43,7 +41,6 @@ _ERR_CHECKPOINT_NON_DURABLE = (
     "production-like environment ({environment!r}). " + HINT_CHECKPOINT_DURABLE
 )
 
-# --- AE-0215: default image-provider key ------------------------------------
 
 EVENT_IMAGE_PROVIDER_KEY_MISSING = "startup_default_image_provider_key_missing"
 HINT_IMAGE_PROVIDER_KEY = (
@@ -82,7 +79,7 @@ def _provider_key_present(settings: Settings, provider: str) -> bool:
     """Return whether the API key for ``provider`` is configured (non-empty).
 
     Delegates to ``Settings.image_provider_api_key`` — the single provider→key
-    mapping shared with the AE-0308 request-time creation guard. An unmapped
+    mapping shared with the request-time creation guard. An unmapped
     provider raises rather than silently passing the guard.
     """
     key = settings.image_provider_api_key(provider)
@@ -94,7 +91,7 @@ def _provider_key_present(settings: Settings, provider: str) -> bool:
 
 
 def validate_checkpointer_durability(settings: Settings) -> bool:
-    """AE-0213: guard against a non-durable checkpointer in production.
+    """Guard against a non-durable checkpointer in production.
 
     Returns ``True`` when the backend is durable (or the environment tolerates a
     non-durable one). Raises :class:`StartupValidationError` for a non-durable
@@ -122,7 +119,7 @@ def validate_checkpointer_durability(settings: Settings) -> bool:
 
 
 def validate_default_image_provider_key(settings: Settings) -> bool:
-    """AE-0215: guard that the default image provider's key is usable.
+    """Guard that the default image provider's key is usable.
 
     Returns ``True`` when the default provider's key is present (or the
     environment tolerates its absence). Raises :class:`StartupValidationError`
@@ -150,7 +147,7 @@ def validate_default_image_provider_key(settings: Settings) -> bool:
 
 
 def validate_redis_credentials(settings: Settings) -> None:
-    """AE-0302: fail fast when Redis is configured without a credential.
+    """Fail fast when Redis is configured without a credential.
 
     Delegates the policy to the sanctioned client factory
     (``redis_clients.resolve_authed_redis_url``): missing/empty credentials in a
@@ -173,10 +170,11 @@ def run_startup_validations(settings: Settings) -> StartupValidationResult:
     Raises :class:`StartupValidationError` on the first fatal misconfiguration in
     a production-like environment. In dev/test, downgrades to warnings and
     reports which guards flagged a problem.
+
+    An enabled image bridge without its URLs logs one error and keeps OpenAI; it never
+    fails startup, because production auto-deploys on merge.
     """
     validate_redis_credentials(settings)
-    # AE-0393: an enabled bridge without its URLs logs one ERROR and keeps
-    # OpenAI; it never fails startup (prod auto-deploys on merge).
     report_image_bridge_config(settings)
     return StartupValidationResult(
         checkpoint_durable=validate_checkpointer_durability(settings),

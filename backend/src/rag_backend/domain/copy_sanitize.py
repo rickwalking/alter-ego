@@ -1,4 +1,4 @@
-"""Case- and markup-preserving sanitizer for pipeline-generated copy (AE-0366).
+"""Case- and markup-preserving sanitizer for pipeline-generated copy.
 
 Outline titles/key points and drafted slide copy are model output that is fed
 back into the content drafter and the EN translator. The lowercasing
@@ -7,6 +7,10 @@ back into the content drafter and the EN translator. The lowercasing
 models faithfully echoed the damage into the slides. This keeps the
 injection-pattern defense and the length cap but preserves case, inline markup
 and parentheses.
+
+The only markup a reviewer edit may carry is the EN ``<strong>`` tag pair.
+Tag-like spans are ``<script>``, ``</div>``, ``<!-- -->``; a bare ``a < b`` is
+not one.
 """
 
 from __future__ import annotations
@@ -19,9 +23,7 @@ from rag_backend.domain.constants.input_sanitizer import (
     MAX_LLM_INPUT_LENGTH,
 )
 
-# AE-0403: the only markup a reviewer edit may carry is the EN emphasis tag pair.
 _EMPHASIS_TAG_SPLIT = re.compile(r"(</?strong>)", flags=re.IGNORECASE)
-# Tag-like spans (``<script>``, ``</div>``, ``<!-- -->``); a bare ``a < b`` is not one.
 _MARKUP_TAG = re.compile(r"<[a-zA-Z/!][^<>]*>")
 
 
@@ -42,7 +44,7 @@ def _neutralize_markup(segment: str) -> str:
 
 
 def sanitize_edited_copy(value: str) -> str:
-    """Sanitize reviewer-edited FINAL slide copy (AE-0289, AE-0403).
+    """Sanitize reviewer-edited FINAL slide copy.
 
     Keeps case, PT ``**`` emphasis and the EN ``<strong>``/``</strong>`` pair
     (normalized to lowercase), while every other tag, stray ``< > ( )`` and the

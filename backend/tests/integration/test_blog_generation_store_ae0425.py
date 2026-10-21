@@ -1,7 +1,11 @@
-"""Lease-fenced store + restart reaper on a real database (AE-0425).
+"""Lease-fenced store + restart reaper on a real database.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 SQLite here (the JSON-path predicate is portable); CI also runs it on Postgres.
+
+asyncpg binds connections to a loop, so the tests run on the fixtures' loop. SQLite
+always runs; Postgres too when the gate provides one (CI), in a throwaway schema, so the
+JSON-path lease predicate is proven on both dialects.
 """
 
 from __future__ import annotations
@@ -63,13 +67,10 @@ from tests.blog_v2_support import v2_content
 Sessions = async_sessionmaker[AsyncSession]
 AUTHOR_ID = "00000000-0000-4000-8000-0000000a0425"
 
-# asyncpg binds connections to a loop: run the tests on the fixtures' loop.
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 _PG_URL = os.environ.get("DATABASE_URL", "")
-# SQLite always; Postgres too when the gate provides one (CI), in a throwaway
-# schema, so the JSON-path lease predicate is proven on both dialects.
 _BACKENDS = ["sqlite"] + (["postgres"] if _PG_URL.startswith("postgresql") else [])
 
 
@@ -164,10 +165,11 @@ def _replace_with(body: str) -> DocumentApply:
 
 
 async def test_content_writes_go_through_the_slot_path(sessions: Sessions) -> None:
-    # The article write: lease checked on the locked row, voice score
-    # mirrored, lock_version bumped. AE-0438 (F-05): the pre-write state is
-    # the empty bootstrap, which is never snapshotted — the first version
-    # entry appears with the NEXT write and holds the stored article.
+    """The article write checks the lease on the locked row, mirrors the voice score and
+    bumps lock_version. The pre-write state is the empty bootstrap, which is never
+    snapshotted: the first version entry appears with the NEXT write and holds the
+    stored article.
+    """
     lease = await _draft(sessions)
     store = _slot_store(sessions)
     await store.heartbeat(lease)
@@ -211,15 +213,17 @@ async def test_a_stale_task_cannot_clobber_a_newer_lease(sessions: Sessions) -> 
         await store.apply_document(old, stale)
     with pytest.raises(LeaseLostError):
         await store.heartbeat(old)
-    assert discarded == [True]  # the stale task's new files are deleted
+    assert discarded == [True]
     row = await _row(sessions, old.post_id)
     assert row.content["sections"][0]["body_md"] == "Lease B"
     assert generation_of(row.ai_generation_metadata)["attempt"] == 2
 
 
 async def test_images_apply_onto_an_owner_save_and_count(sessions: Sessions) -> None:
-    # Review fix 2: an owner save during the image step is the base of the
-    # image write (never a conflict); images count against the post's cap.
+    """An owner save during the image step is the base of the image write (never a
+    conflict). The write itself counts nothing: images are reserved against the post's
+    cap before the spend.
+    """
     lease = await _draft(sessions)
     store = _slot_store(sessions)
     await store.apply_document(lease, _replace_with("Gerado"))
@@ -242,17 +246,16 @@ async def test_images_apply_onto_an_owner_save_and_count(sessions: Sessions) -> 
     assert row.content["sections"][0]["body_md"] == "Editado pelo dono"
     assert row.content["sections"][0]["image"]["alt"] == "Alt"
     assert row.lock_version == 4
-    # The write itself counts nothing: images are reserved before the spend.
     assert "blog_image_generations" not in row.ai_generation_metadata
     assert await store.read_content(lease) == row.content
 
 
 async def test_images_are_reserved_up_to_the_cap(sessions: Sessions) -> None:
-    # AE-0424 review round 2: reserved under the row lock BEFORE the spend.
+    """Images are reserved under the row lock BEFORE the spend, up to the cap of 3."""
     lease = await _draft(sessions)
     store = _slot_store(sessions)
     assert await store.reserve_images(lease, 2) == 2
-    assert await store.reserve_images(lease, 5) == 1  # cap 3
+    assert await store.reserve_images(lease, 5) == 1
     assert await store.reserve_images(lease, 1) == 0
     row = await _row(sessions, lease.post_id)
     assert row.ai_generation_metadata["blog_image_generations"] == 3
@@ -272,10 +275,10 @@ async def test_an_invalid_write_is_a_document_error(sessions: Sessions) -> None:
 
 
 async def test_the_article_replaces_an_unparseable_row(sessions: Sessions) -> None:
-    # Review B: a legacy (non-v2) row cannot be slot-edited; the article
-    # write replaces it through the versioned write. AE-0438 (F-05): the
-    # legacy pre-write content is not a restorable document either, so no
-    # version entry is appended for it.
+    """A legacy (non-v2) row cannot be slot-edited; the article write replaces it
+    through the versioned write. The legacy pre-write content is not a restorable
+    document either, so no version entry is appended for it.
+    """
     lease = await _draft(sessions)
     async with sessions() as db:
         await db.execute(update(BlogPostModel).values(content={"markdown": "# old"}))
@@ -349,7 +352,6 @@ async def test_reaper_fails_stale_runs_and_keeps_partial_content(
         ]
         == "in_progress"
     )
-    # The killed run's zombie task can no longer write.
     with pytest.raises(LeaseLostError):
         await SqlBlogGenerationStore(sessions).heartbeat(stale)
     async with sessions() as db:

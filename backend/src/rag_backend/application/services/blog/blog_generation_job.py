@@ -1,4 +1,4 @@
-"""The job, collaborators and timings of one blog generation run (AE-0425)."""
+"""The job, collaborators and timings of one blog generation run."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from rag_backend.domain.protocols.blog_generation import (
 
 @dataclass(frozen=True)
 class GenerationTimings:
-    """Stage budgets and heartbeat cadence (seconds, AE-0435).
+    """Stage budgets and heartbeat cadence (seconds).
 
     ``text_timeout_seconds`` bounds the writer + both gates + the EN repair;
     the images stage gets ``image_wave_seconds`` per wave of concurrent images.

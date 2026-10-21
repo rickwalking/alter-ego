@@ -1,5 +1,5 @@
 /**
- * AE-0407: the ``pov_news`` quote card stored under a slide locale's
+ * The ``pov_news`` quote card stored under a slide locale's
  * ``insight`` key (backend ``domain/news_quote_cards.py`` ``quote_card``).
  */
 

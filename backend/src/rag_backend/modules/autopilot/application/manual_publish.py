@@ -9,7 +9,7 @@
   after the claim, so a container stored in between is resumed (QA r3 Q4).
 * Both paths claim first, so the worker tick and a second request cannot
   call Graph for the same carousel at the same time.
-* AE-0369: a post published here also gets its Story, under the same claim
+* A post published here also gets its Story, under the same claim
   and the same one-row-per-carousel idempotency as the worker tick.
 """
 
@@ -104,13 +104,16 @@ class ManualInstagramPublish:
         return await self._job.publish_claimed(fresh, manual.media)
 
     async def _without_run(self, manual: _Manual) -> ManualPublishOutcome:
+        """Publish under the claim, re-reading the ledger once the claim is held.
+
+        Another attempt may have written the ledger since the first read.
+        """
         project_id = manual.command.project_id
         record = await self._deps.claims.manual_record(project_id)
         if record is not None and record.ig_post_id:
             return outcome_of(PUBLISH_RESULT_PUBLISHED, record.ig_post_id, None)
         if not await self._deps.claims.claim_manual(self._claim(project_id)):
             raise ManualPublishRefusedError(ERR_PUBLISH_IN_PROGRESS)
-        # Another attempt may have written the ledger since the first read.
         record = await self._deps.claims.manual_record(project_id)
         if record is not None and record.ig_post_id:
             await self._deps.claims.finish_manual(record)
@@ -128,7 +131,11 @@ class ManualInstagramPublish:
     async def _stepped(
         self, manual: _Manual, stored: StoredContainer | None
     ) -> ManualPublishOutcome:
-        """Container first, committed, then ``media_publish`` (QA r2 R4b)."""
+        """Container first, committed, then ``media_publish`` (QA r2 R4b).
+
+        The Story runs before the ledger records the post, so a crash resumes both; it
+        never fails the publish.
+        """
         project_id = manual.command.project_id
         now = self._deps.clock.now()
         container = stored
@@ -146,8 +153,6 @@ class ManualInstagramPublish:
                 _failed(project_id, str(exc), container)
             )
             raise
-        # The Story runs before the ledger records the post, so a crash
-        # resumes both (AE-0369). It never fails the publish.
         await post_extras(self._deps.story, project_id)
         await self._deps.claims.finish_manual(
             _published(project_id, post_id, container)

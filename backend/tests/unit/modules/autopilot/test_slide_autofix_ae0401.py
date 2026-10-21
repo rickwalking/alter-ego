@@ -1,4 +1,4 @@
-"""AE-0401: the autopilot model-fix step and its escalation copy (pure).
+"""The autopilot model-fix step and its escalation copy (pure).
 
 Gherkin: tests/features/autopilot_slide_autofix_ae0401.feature
 """

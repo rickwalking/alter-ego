@@ -1,5 +1,5 @@
 /**
- * AE-0446: one list + create/update/delete hook for a REST collection
+ * One list + create/update/delete hook for a REST collection
  * (personas and rubrics carried two copies of it). Error messages keep the
  * per-resource wording ("Failed to create persona").
  */

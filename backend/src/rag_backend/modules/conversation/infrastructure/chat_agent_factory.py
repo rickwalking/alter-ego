@@ -1,4 +1,4 @@
-"""Concrete chat-agent factory adapter for the conversation module (AE-0100).
+"""Concrete chat-agent factory adapter for the conversation module.
 
 Private to the module — the facade re-exports the constructor under
 ``LegacyChatAgentFactory``; cross-module code never imports this path directly.
@@ -7,13 +7,13 @@ This adapter satisfies the ``ChatAgentFactory`` port (defined in
 ``modules.conversation.application.agent_factory_port``) by **delegating** to the
 existing ``build_agent_for_conversation`` in
 ``rag_backend.api.dependencies.agents`` — it does NOT reimplement the builders.
-That delegation keeps every behavior identical (AE-0100 Non-Goal: no agent
+That delegation keeps every behavior identical (no agent
 behavior change):
 
 * routing on ``metadata.project_id`` -> ``AlterEgoAgent`` vs ``RAGAgent``
   (with the ``user_id is None`` fallback to AlterEgo) is the legacy
   ``build_agent_for_conversation`` logic, unchanged;
-* the AE-0093 knowledge-facade wiring (``_build_knowledge_search`` -> the
+* the knowledge-facade wiring (``_build_knowledge_search`` -> the
   ``KnowledgeService`` facade) is the legacy ``build_alter_ego_agent`` /
   ``build_rag_agent`` wiring, unchanged.
 
@@ -56,8 +56,8 @@ class LegacyChatAgentFactory:
         """The request-scoped DI container bound into this factory.
 
         Exposed so the inbound chat adapter can reuse the same container when it
-        routes agent construction through its monkeypatch-friendly builder seam
-        (AE-0101), keeping the routing + knowledge-facade wiring identical.
+        routes agent construction through its monkeypatch-friendly builder seam, keeping
+        the routing + knowledge-facade wiring identical.
         """
         return self._container
 

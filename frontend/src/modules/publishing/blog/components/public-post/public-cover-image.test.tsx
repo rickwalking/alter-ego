@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { PublicCoverImage } from "./public-cover-image";
 
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
 // Scenario: A missing image does not render a broken image
 describe("PublicCoverImage", () => {
   it("renders the image inside its frame with the overlay", () => {

@@ -1,4 +1,4 @@
-"""Rule-fires regression test for the anti-hardcoded-prompt checker (AE-0244/AE-0180).
+"""Rule-fires regression test for the anti-hardcoded-prompt checker.
 
 Proves the checker FIRES on a seeded inline prompt (non-zero exit) and PASSES a
 control that contains only a guarded `*_FALLBACK` constant + a docstring — not

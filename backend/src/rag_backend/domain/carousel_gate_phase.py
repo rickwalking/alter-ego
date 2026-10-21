@@ -1,4 +1,4 @@
-"""The review gate a carousel workflow checkpoint is parked at (AE-0413).
+"""The review gate a carousel workflow checkpoint is parked at.
 
 Pure over a LangGraph state snapshot (duck-typed: ``values`` and ``next``), so
 both the engine (agents) and the structured-feedback guard (application) use
@@ -23,14 +23,14 @@ def _has_open_interrupt(snapshot: object) -> bool:
 
 
 def checkpoint_gate_phase(snapshot: object) -> str:
-    """The phase of the review gate the checkpoint is parked at (AE-0413).
+    """The phase of the review gate the checkpoint is parked at.
 
     An interrupted node's return value is never committed, so on the FIRST
     gate of a phase the stored ``current_phase`` still names the node before
     it (``outline`` at the first content gate). The pending node is the gate
     the reviewer sees, the same rule ``CarouselWorkflowEngine.get_state``
     applies. Only an OPEN review interrupt makes the pending node a gate: the
-    approved-hold park (AE-0288), a finished graph and a run parked before a
+    approved-hold park, a finished graph and a run parked before a
     node with no interrupt yet keep the stored value.
     """
     values = getattr(snapshot, "values", None)

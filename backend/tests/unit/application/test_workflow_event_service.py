@@ -1,4 +1,4 @@
-"""Unit tests for WorkflowEventService via the transactional outbox (AE-0130).
+"""Unit tests for WorkflowEventService via the transactional outbox.
 
 Gherkin: tests/features/workflow_event_ordering.feature,
          tests/features/transactional_outbox.feature
@@ -97,11 +97,14 @@ async def _outbox_rows(db: AsyncSession) -> list[EventOutboxModel]:
 
 @pytest.mark.asyncio
 async def test_emit_does_not_publish_before_relay(db_session: AsyncSession) -> None:
-    """Scenario: Event published only via the relay, not by emit itself."""
+    """Scenario: Event published only via the relay, not by emit itself.
+
+    emit never publishes directly.
+    """
     service = WorkflowEventService(MemoryEventPublisher())
     event_id = await _emit_phase_change(service, db_session)
 
-    assert get_memory_events() == []  # emit never publishes directly
+    assert get_memory_events() == []
 
     await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
 
@@ -142,7 +145,11 @@ async def test_rollback_discards_audit_and_outbox(db_session: AsyncSession) -> N
 
 @pytest.mark.asyncio
 async def test_failed_relay_keeps_audit_and_outbox(db_session: AsyncSession) -> None:
-    """Scenario: Publish failure does not destroy the durable rows (replayable)."""
+    """Scenario: Publish failure does not destroy the durable rows (replayable).
+
+    The outbox row survives a failed publish still unpublished, so it is replayable, and
+    the audit row survives too.
+    """
     service = WorkflowEventService(MemoryEventPublisher())
     event_id = await _emit_phase_change(service, db_session)
 
@@ -158,11 +165,11 @@ async def test_failed_relay_keeps_audit_and_outbox(db_session: AsyncSession) -> 
     assert failures[0]["event_id"] == event_id
 
     rows = await _outbox_rows(db_session)
-    assert len(rows) == 1  # outbox row survives a failed publish -> replayable
+    assert len(rows) == 1
     unpublished = await db_session.execute(
         select(EventOutboxModel).where(EventOutboxModel.published_at.is_(None))
     )
-    assert len(list(unpublished.scalars().all())) == 1  # still unpublished
+    assert len(list(unpublished.scalars().all())) == 1
     entries = await service.list_for_aggregate(
         db_session,
         _AggregateQuery(
@@ -170,20 +177,23 @@ async def test_failed_relay_keeps_audit_and_outbox(db_session: AsyncSession) -> 
             aggregate_id="project-1",
         ),
     )
-    assert len(entries) == 1  # audit row survives a failed publish
+    assert len(entries) == 1
 
 
 @pytest.mark.asyncio
 async def test_relay_rerun_does_not_republish(db_session: AsyncSession) -> None:
-    """Scenario: No duplicate delivery when the relay runs again."""
+    """Scenario: No duplicate delivery when the relay runs again.
+
+    Marked rows are not re-selected by a later relay pass.
+    """
     service = WorkflowEventService(MemoryEventPublisher())
     await _emit_phase_change(service, db_session)
     relay = OutboxRelay(MemoryEventPublisher())
 
     await relay.run_once(db_session)
-    await relay.run_once(db_session)  # a later, no-op relay pass
+    await relay.run_once(db_session)
 
-    assert len(get_memory_events()) == 1  # marked rows are not re-selected
+    assert len(get_memory_events()) == 1
 
 
 @pytest.mark.asyncio

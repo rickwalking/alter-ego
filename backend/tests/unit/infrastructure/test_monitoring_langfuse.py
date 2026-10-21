@@ -40,7 +40,7 @@ class TestLangfuseInit:
     ) -> None:
         """Given valid keys, when initializing, then Langfuse instance is returned.
 
-        AE-0446: init also initialises the root ``monitoring_langfuse`` client.
+        Init also initialises the root ``monitoring_langfuse`` client.
         Unmocked, that built a REAL Langfuse client + OTLP exporter aimed at
         ``http://localhost``, set ``LANGFUSE_*`` in ``os.environ`` and left both
         module globals set for every later test (hung span exports then filled

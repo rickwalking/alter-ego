@@ -5,11 +5,11 @@ interface CarouselPlaceholderIconProps {
   className?: string;
 }
 
-/** Decorative carousel glyph shared by cards and the empty state (AE-0444). */
+/** Decorative carousel glyph shared by cards and the empty state. */
 export function CarouselPlaceholderIcon({
   size,
   className,
-}: CarouselPlaceholderIconProps): React.ReactElement {
+}: Readonly<CarouselPlaceholderIconProps>): React.ReactElement {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

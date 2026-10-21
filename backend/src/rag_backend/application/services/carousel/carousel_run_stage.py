@@ -1,4 +1,4 @@
-"""In-process registry of the coarse run stage per project (AE-0315).
+"""In-process registry of the coarse run stage per project.
 
 The coarse stage (``generating`` → ``validating`` → ``persisting``) is
 deliberately NOT persisted (only ``run_started_at``/``run_heartbeat_at``/

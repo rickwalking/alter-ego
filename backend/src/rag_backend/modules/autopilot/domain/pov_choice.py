@@ -32,7 +32,7 @@ NO_POV_CHOICE = PovChoice()
 def pov_choice_for(content_mode: str | None, choice: PovChoice) -> PovChoice:
     """The choice a topic stores: empty for a Radar IA topic.
 
-    AE-0406: ``pov_news`` keeps the slide count and ignores the format.
+    ``pov_news`` keeps the slide count and ignores the format.
     """
     if not is_pov_family(content_mode):
         return NO_POV_CHOICE

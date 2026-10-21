@@ -1,4 +1,4 @@
-"""The GrokBot cover offered to a carousel's autopilot run, by project (AE-0445).
+"""The GrokBot cover offered to a carousel's autopilot run, by project.
 
 Gherkin: tests/features/carousel_cover_pick_ae0445.feature
   Scenario: The GrokBot cover offer of the autopilot run is an option too
@@ -121,9 +121,7 @@ async def test_offer_by_project_unchosen_and_gone(
     assert found is not None
     assert (found.asset_id, found.kind) == (cover.creator_asset_id, "ai_image")
     assert found.staged_path.startswith("assets/creators/")
-    # No run made this carousel: no offer.
     assert await offers.offer(str(uuid4())) is None
-    # The stored file is gone: nothing to stage, no offer.
     path = await EditorialCoverImages(db_session).image_file(cover.creator_asset_id)
     assert path is not None
     Path(path).unlink()

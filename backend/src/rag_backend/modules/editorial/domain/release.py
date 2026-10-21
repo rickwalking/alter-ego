@@ -1,6 +1,6 @@
 """Approval vs. public-release domain states for the editorial context.
 
-This module formalizes the AE-0111 **contract split**: *approving* workflow
+This module formalizes the **contract split**: *approving* workflow
 content and *making it public* are two DISTINCT concepts, expressed here as two
 separate value objects, never conflated into one flag.
 

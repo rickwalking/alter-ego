@@ -1,4 +1,4 @@
-"""The palette timestamptz one-shot outside Postgres, and its CLI (AE-0446).
+"""The palette timestamptz one-shot outside Postgres, and its CLI.
 
 Feature: backend/tests/features/palette_timestamptz_ae0446.feature
 """

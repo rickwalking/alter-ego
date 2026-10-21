@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * "Create blog post from this carousel" entry point (AE-0425, ADR-0025).
+ * "Create blog post from this carousel" entry point (ADR-0025).
  *
  * Always creates a draft and opens its editor. A carousel that already has a
  * post gets no duplicate: an "already exists" message links to that post. A
@@ -22,7 +22,7 @@ const NOTE_CLASS = "m-0 text-[13px]";
 export function CreateBlogFromCarousel({
   projectId,
   isPublic,
-}: CreateBlogFromCarouselProps): React.ReactElement {
+}: Readonly<CreateBlogFromCarouselProps>): React.ReactElement {
   const t = useTranslations("publish.blogFromCarousel");
   const { pending, failed, existingPostId, create } =
     useCreateBlogFromCarousel(projectId);

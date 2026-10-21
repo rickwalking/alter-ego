@@ -4,7 +4,7 @@ Revision ID: b0c1d2e3f4a5
 Revises: a9b0c1d2e3f4
 Create Date: 2026-10-15
 
-AE-0373 (ADR-0021): ADDITIVE. ``carousel_projects`` gains the content mode
+ADR-0021: ADDITIVE. ``carousel_projects`` gains the content mode
 (NULL = Radar IA, ``news_analysis``) and the "Ponto de Vista" inputs: thesis,
 personal proof, format, slide count, CTA goal, the chosen hook and the slide-1
 photo (FK to ``carousel_creator_assets``, SET NULL on delete).
@@ -14,7 +14,7 @@ LangGraph checkpoint-drain rule does not apply. ``downgrade`` drops what
 ``upgrade`` added. SQLite cannot add a constraint to an existing table, so the
 foreign key is created only on other dialects (tests run on SQLite).
 
-Idempotent (AE-0371 review): prod has no ``alembic_version`` table and the SQL
+Idempotent: prod has no ``alembic_version`` table and the SQL
 was applied by hand, so every column and the foreign key is added only when
 missing and dropped only when present. A later ``alembic upgrade`` on prod is a
 no-op for this revision.

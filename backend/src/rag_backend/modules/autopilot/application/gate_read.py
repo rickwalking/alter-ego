@@ -1,7 +1,7 @@
 """One run's gate as the tick read it, and what the runner sends from it.
 
-Split out of ``gate_repair`` / ``runner`` for AE-0401 (the model-fix step
-reads it too).
+Split out of ``gate_repair`` / ``runner`` because the model-fix step reads it
+too.
 """
 
 from __future__ import annotations

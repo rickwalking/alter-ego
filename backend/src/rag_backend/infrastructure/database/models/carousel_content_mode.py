@@ -1,4 +1,4 @@
-"""Content-mode columns of ``carousel_projects`` (AE-0373, ADR-0021).
+"""Content-mode columns of ``carousel_projects`` (ADR-0021).
 
 A mixin plus the entity mapping, kept out of ``carousel.py`` (already over the
 400-line limit). Every column is nullable: NULL ``content_mode`` is Radar IA.
@@ -55,7 +55,12 @@ class ContentModeFields(TypedDict):
 
 
 class CarouselContentModeColumns:
-    """Columns mixed into ``CarouselProjectModel``."""
+    """Columns mixed into ``CarouselProjectModel``.
+
+    ``pov_quotes`` / ``pov_sources`` are a ``pov_news`` project's quotes and topic
+    sources (NULL = none); ``slide_cover`` is the owner-chosen GrokBot cover (NULL =
+    the default slide 1).
+    """
 
     content_mode: Mapped[str | None] = mapped_column(
         String(CONTENT_MODE_MAX_CHARS), nullable=True
@@ -81,10 +86,8 @@ class CarouselContentModeColumns:
         ForeignKey(_ASSET_FK, name=FK_HOOK_ASSET, ondelete=_FK_SET_NULL),
         nullable=True,
     )
-    # AE-0406 (ADR-0023): ``pov_news`` quotes and the topic sources (NULL = none).
     pov_quotes: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, nullable=True)
     pov_sources: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    # AE-0418 (ADR-0024): the owner-chosen GrokBot cover (NULL = default slide 1).
     slide_cover: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
 
     def content_mode_fields(self) -> ContentModeFields:

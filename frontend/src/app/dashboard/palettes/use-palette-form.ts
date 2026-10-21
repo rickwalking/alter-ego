@@ -18,7 +18,7 @@ const NEW_PALETTE_DEFAULT = {
   primary: "#22d3ee",
   accent: "#a855f7",
   background: "#0a0e17",
-  mode: PALETTE_MODES[1] satisfies PaletteMode, // dark
+  mode: PALETTE_MODES[1] satisfies PaletteMode,
   keywords: [] as string[],
 };
 
@@ -50,10 +50,13 @@ function initialState(palette?: CustomPalette): PaletteFormState {
   };
 }
 
+/**
+ * Mirrors the backend guards: name length cap and no angle brackets (XSS),
+ * plus hex colours.
+ */
 function validate(state: PaletteFormState): PaletteFormErrors {
   const errors: PaletteFormErrors = {};
   const name = state.name.trim();
-  // Mirror the backend guards (AE-0270): length cap + reject angle brackets (XSS).
   if (
     name.length < NAME_MIN ||
     name.length > NAME_MAX ||

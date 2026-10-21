@@ -1,4 +1,4 @@
-"""Alembic revision for the ``pov_news`` quote columns (AE-0406).
+"""Alembic revision for the ``pov_news`` quote columns.
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
   Scenario: The carousel is a POV deck with the news voice (the project stores
@@ -33,7 +33,6 @@ _PROJECT_COLUMNS = {"pov_quotes", "pov_sources"}
 def test_revision_is_the_single_head_on_top_of_the_audience_hours() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    # AE-0418: the GrokBot cover revision now sits on top of this one.
     assert list(script.get_heads()) == [ALEMBIC_HEAD]
     assert script.get_revision(_COVER_HEAD).down_revision == _REVISION
     revision = script.get_revision(_REVISION)
@@ -84,7 +83,7 @@ def test_upgrade_adds_and_downgrade_drops_the_columns(
 def test_rerun_over_existing_or_missing_columns_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Idempotent like AE-0371's: prod applies the SQL by hand."""
+    """Idempotent like the POV migrations: prod applies the SQL by hand."""
     db_path = _stamped_db(tmp_path)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 

@@ -18,7 +18,7 @@ export function NeonModal({
   title,
   children,
   footer,
-}: NeonModalProps): React.ReactElement | null {
+}: Readonly<NeonModalProps>): React.ReactElement | null {
   useEffect(() => {
     if (!open) {
       return;

@@ -1,4 +1,4 @@
-"""Accept one GrokBot cover upload (AE-0418, ADR-0024).
+"""Accept one GrokBot cover upload (ADR-0024).
 
 The form is checked first (``kind``, a screenshot's ``source_url``), then the
 image store validates and stores the bytes as a creator asset with role

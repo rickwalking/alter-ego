@@ -9,7 +9,7 @@ interface ScoreCellProps {
 export function ScoreCell({
   label,
   level,
-}: ScoreCellProps): React.ReactElement {
+}: Readonly<ScoreCellProps>): React.ReactElement {
   const { bg, color } = getScoreClass(level);
   return (
     <span

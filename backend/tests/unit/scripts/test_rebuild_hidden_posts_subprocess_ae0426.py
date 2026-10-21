@@ -1,8 +1,8 @@
-"""The AE-0426 script as a real standalone process (prod-container shape).
+"""The hidden-post rebuild script as a real standalone process (prod-container shape).
 
 Feature: backend/tests/features/blog_rebuild_hidden_ae0426.feature
 
-AE-0422's hide script crashed in prod as a standalone process: a circular
+The earlier hide script crashed in prod as a standalone process: a circular
 import before the app modules loaded, then a ``%``-style structlog call. These
 tests run ``python -m rag_backend.scripts.rebuild_hidden_posts`` in a subprocess
 to prove ``--help`` needs no settings and a dry run works against the DB.
@@ -11,7 +11,7 @@ to prove ``--help`` needs no settings and a dry run works against the DB.
 from __future__ import annotations
 
 import os
-import subprocess  # noqa: S404  # integrity-ok: AE-0426 — a standalone-process test must spawn the real module
+import subprocess  # noqa: S404  # integrity-ok: a standalone-process test must spawn the real module
 import sys
 from pathlib import Path
 
@@ -46,7 +46,7 @@ def _env(tmp_path: Path) -> dict[str, str]:
 
 
 def _run(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0426 — fixed interpreter, fixed module, test args
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, fixed module, test args
         [sys.executable, "-m", MODULE, *args],
         cwd=BACKEND,
         env=env,

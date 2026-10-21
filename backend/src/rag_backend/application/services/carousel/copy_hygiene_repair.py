@@ -1,4 +1,4 @@
-"""Deterministic repair for the AE-0401 copy-hygiene rules.
+"""Deterministic repair for the copy-hygiene rules.
 
 Only what is safe to fix without a model, and only when the policy declares
 the rule (so older contracts are untouched):
@@ -17,6 +17,9 @@ the rule (so older contracts are untouched):
 
 Lists, chatter, placeholders, truncation and the wrong language are left to
 the model fix. Idempotent; no I/O.
+
+_COLON_WORD_PATTERN matches a capitalized word right after "word: " (not at a line
+start).
 """
 
 from __future__ import annotations
@@ -71,7 +74,6 @@ _LOCALE_PREFIX = "presentation_"
 _B_TAG_PATTERN = re.compile(r"<\s*(/?)\s*b\s*>", flags=re.IGNORECASE)
 _BREAK_TAG_PATTERN = re.compile(r"<\s*br\s*/?\s*>", flags=re.IGNORECASE)
 _SPACES_PATTERN = re.compile(r"[ \t]{2,}")
-# A capitalized word right after "word: " (not at a line start).
 _COLON_WORD_PATTERN = re.compile(
     r"(\w[*]{0,2}:[ \t]+(?:\*\*|<strong>)?)([A-Z][\w'\u2019]*)"
 )
@@ -182,7 +184,7 @@ def _blob_item(item: object, current: object) -> dict[str, object] | None:
 def _blob_items(
     source: Mapping[str, object], payload: Mapping[str, object]
 ) -> dict[str, object]:
-    """Whole items (title AND body) of the blob's lists, never re-split (AE-0401).
+    """Whole items (title AND body) of the blob's lists, never re-split.
 
     Prod slide 8: a fenced blob carried ``summary_points``; rebuilding them
     from a split string cut "Comece com dois ou três agentes" in two.

@@ -1,4 +1,4 @@
-"""Deterministic carousel repair route (AE-0311).
+"""Deterministic carousel repair route.
 
 Thin HTTP adapter: authenticate (owner or assigned reviewer), snapshot the row,
 then run the bounded deterministic repair pipeline under the shared per-project
@@ -6,7 +6,7 @@ advisory lock via ``CarouselRepairService``. The service owns the two-commit
 contract; typed 409 conflicts (``resume_already_in_progress`` while a run is
 active, ``mutation_in_progress`` while another mutator holds the lock,
 ``version_conflict`` when a concurrent resume wins the CAS) propagate to the
-app-wide carousel-conflict handler (AE-0316).
+app-wide carousel-conflict handler.
 
 Read-gap contract: between the projection commit and the checkpoint write the
 workflow-state fast path still serves the old stored report, so the response

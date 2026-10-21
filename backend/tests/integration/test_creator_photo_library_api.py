@@ -1,4 +1,4 @@
-"""The owner's photo library and the POV slide-1 photo (AE-0376).
+"""The owner's photo library and the POV slide-1 photo.
 
 Gherkin: tests/features/carousel_pov_layouts.feature (Photo library)
 """

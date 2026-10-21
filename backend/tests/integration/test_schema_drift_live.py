@@ -1,4 +1,4 @@
-"""Live-DB integration tests for the schema-drift detector (AE-0207).
+"""Live-DB integration tests for the schema-drift detector.
 
 Gherkin not applicable — this is the DevOps schema-vs-models safety net, exercised
 against a REAL Postgres instance (the drift detector reads ``information_schema``,
@@ -9,6 +9,8 @@ check, and a matching schema PASSES.
 Requires a Postgres ``DATABASE_URL`` (the CI ``postgres`` service / a local
 override). SKIPs when absent — mirrors the Postgres-dependent gates in
 ``scripts/ci/gates.sh`` so a developer without a DB is not blocked.
+
+``_NEW_COL`` models the real prod failure class: a model column the DB never got.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from rag_backend.infrastructure.database.schema_drift import check_schema_drift
 _TABLE = "ae0207_drift_probe"
 _ID = "id"
 _NAME = "name"
-_NEW_COL = "origin"  # the real prod failure class: a model column DB never got
+_NEW_COL = "origin"
 
 _async_url = os.environ.get("DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -61,14 +63,12 @@ def test_matching_live_schema_passes(pg_engine) -> None:
     assert report.has_drift is False
 
 
-# Scenario: model gains a column the live DB never got (no migration / not applied)
-#           -> drift detected (the exact prod failure: caption_en/origin/distribution).
+# Scenario: model gains a column the live DB never got (no migration / not applied) -> drift detected (the exact prod failure: caption_en/origin/distribution).
 def test_mapped_column_missing_from_live_db_fails(pg_engine) -> None:
-    # Simulate the live DB lacking a freshly added model column by dropping it.
+    """Drop the column to simulate a live DB lacking a freshly added model column."""
     with pg_engine.begin() as connection:
         connection.execute(text(f"ALTER TABLE {_TABLE} DROP COLUMN {_NAME}"))
 
-    # The ORM now maps an extra column the live schema does not have.
     report = check_schema_drift(pg_engine, _probe_metadata((_ID, _NAME, _NEW_COL)))
 
     assert report.has_drift is True

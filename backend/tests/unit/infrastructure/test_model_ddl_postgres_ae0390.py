@@ -1,4 +1,4 @@
-"""Every ORM table compiles to DDL that Postgres can parse (AE-0390).
+"""Every ORM table compiles to DDL that Postgres can parse.
 
 ``server_default=func.false()`` rendered ``DEFAULT false()`` (a call to a
 non-existent function), so ``create_all`` on Postgres 16 failed with

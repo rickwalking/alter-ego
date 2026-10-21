@@ -1,19 +1,20 @@
-"""Constants for the autopilot model fix of failing slides (AE-0401).
+"""Constants for the autopilot model fix of failing slides.
 
 After the deterministic gate repair, each slide that still fails a blocking
 copy rule (or scores under the voice floor) is rewritten by the fast model,
 at most ``AUTOFIX_MODEL_ATTEMPTS`` times, then by the reasoning model at most
-``AUTOFIX_ESCALATION_ATTEMPTS`` times (AE-0407), then the run escalates.
+``AUTOFIX_ESCALATION_ATTEMPTS`` times (0 turns that off), then the run escalates.
+
+A fixed slide the judge could not score keeps its old ``overall`` and is marked
+for a re-score on the next tick, with the unscored count; after
+``PERSONA_UNSCORED_MAX_TICKS`` unscored ticks the run escalates
+``persona_judge_unavailable``.
 """
 
 from __future__ import annotations
 
-# Owner decision 2026-10-16: three model attempts per slide, then escalate.
 AUTOFIX_MODEL_ATTEMPTS = 3
-# AE-0407 (owner, 2026-10-17): then up to two attempts on the stronger
-# reasoning model before the run escalates (0 turns the escalation off).
 AUTOFIX_ESCALATION_ATTEMPTS = 2
-# The model role of an attempt (the LLM routing role names).
 MODEL_ROLE_FAST = "fast"
 MODEL_ROLE_REASONING = "reasoning"
 SLIDE_FIX_TIMEOUT_SECONDS = 120.0
@@ -22,7 +23,6 @@ SLIDE_FIX_PROMPT_DOMAIN = "carousel"
 SLIDE_FIX_PROMPT_NAME = "slide_fix"
 SLIDE_FIX_PROMPT_VERSION = "v1"
 
-# Prompt variables.
 VAR_SLIDE_INDEX = "slide_index"
 VAR_SLIDE_TYPE = "slide_type"
 VAR_ROLE = "role"
@@ -34,25 +34,18 @@ VAR_BODY_MAX = "body_max_characters"
 VAR_VOICE_FLOOR = "voice_floor"
 VAR_QUALITY_RUBRIC = "quality_rubric"
 
-# Persona-score keys the content phase writes ("slide_3").
 PERSONA_SCORE_SLIDE_KEY = "slide_{index}"
 
-# AE-0433: a fixed slide the judge could not score keeps its old ``overall``
-# and is marked for a re-score on the next tick, with the unscored count.
 PERSONA_SCORE_RESCORE_PENDING_KEY = "rescore_pending"
 PERSONA_SCORE_UNSCORED_TICKS_KEY = "unscored_ticks"
-# AE-0433: after this many unscored ticks the run escalates
-# "persona_judge_unavailable" (AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS).
 PERSONA_UNSCORED_MAX_TICKS = 3
 
-# Issue codes that are not presentation rules.
 ISSUE_VOICE_SCORE_LOW = "voice_score_low"
 ISSUE_VOICE_SCORE_MESSAGE = "Voice match score {score:.0f} is under {floor:.0f}"
 ISSUE_MODEL_ERROR = "model_error"
 ISSUE_MODEL_UNPARSEABLE = "model_output_unparseable"
 ISSUE_LINE = "- {code} ({locale} {field}): {message}"
 
-# Outcome of one model attempt.
 ATTEMPT_FIXED = "fixed"
 ATTEMPT_STILL_FAILING = "still_failing"
 ATTEMPT_MODEL_ERROR = "model_error"

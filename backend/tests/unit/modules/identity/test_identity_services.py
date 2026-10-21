@@ -1,14 +1,16 @@
-"""Unit tests for the identity application services (AE-0098).
+"""Unit tests for the identity application services.
 
 Cover the three extracted services through the module facade with fakes:
 ``UserService`` (CRUD + role assign, committed once through the injected Unit of
 Work), ``AuthenticationService`` (login success + the legacy bad-credentials /
 inactive-account failures + token issue/validate), and ``PasswordService``
 (hash/verify + minimum-length policy). The fakes model the transaction boundary
-explicitly (mirrors the AE-0091 knowledge UoW tests): the repository "flushes"
+explicitly (mirrors the knowledge UoW tests): the repository "flushes"
 into a staging buffer, and only a UoW ``commit`` promotes staged rows. JWT/bcrypt
 are delegated to fakes here; the real ``infrastructure.auth`` delegation is wired
 in ``bootstrap.py`` and proven type-clean by mypy.
+
+_VALID_PASSWORD meets MIN_PASSWORD_LENGTH (12).
 """
 
 from __future__ import annotations
@@ -42,11 +44,8 @@ from rag_backend.modules.identity import (
 
 _HASH_PREFIX = "hash::"
 _TOKEN_PREFIX = "token::"
-_VALID_PASSWORD = "correct-horse-battery"  # >= MIN_PASSWORD_LENGTH (12)
+_VALID_PASSWORD = "correct-horse-battery"
 _SHORT_PASSWORD = "short"
-
-
-# --- Fakes -------------------------------------------------------------------
 
 
 class _SpyUnitOfWork:
@@ -150,9 +149,6 @@ class _FakeTokenIssuer:
         return {"sub": token.removeprefix(_TOKEN_PREFIX)}
 
 
-# --- Builders ----------------------------------------------------------------
-
-
 def _build_user_service() -> tuple[UserService, _FakeUserRepository, _SpyUnitOfWork]:
     repo = _FakeUserRepository()
     uow = _SpyUnitOfWork(repo)
@@ -192,9 +188,6 @@ def _seed_user(
     return user
 
 
-# --- PasswordService ---------------------------------------------------------
-
-
 @pytest.mark.unit
 class TestPasswordService:
     def test_hash_then_verify_round_trip(self) -> None:
@@ -214,9 +207,6 @@ class TestPasswordService:
     def test_policy_helpers(self) -> None:
         assert PasswordService.meets_policy(_VALID_PASSWORD) is True
         assert PasswordService.meets_policy(_SHORT_PASSWORD) is False
-
-
-# --- UserService -------------------------------------------------------------
 
 
 @pytest.mark.unit
@@ -281,7 +271,7 @@ class TestUserService:
         )
 
         assert view.full_name == "Renamed"
-        assert view.email == user.email  # unchanged
+        assert view.email == user.email
         assert uow.commits == 1
 
     async def test_update_missing_raises(self) -> None:
@@ -336,9 +326,6 @@ class TestUserService:
 
         assert await service.delete(DeleteUserCommand(user_id=user.id)) is True
         assert await service.delete(DeleteUserCommand(user_id=uuid4())) is False
-
-
-# --- AuthenticationService ---------------------------------------------------
 
 
 @pytest.mark.unit

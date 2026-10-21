@@ -1,7 +1,7 @@
 /**
- * AE-0273: disclosure state for an off-canvas surface (drawer). Closes on
+ * Disclosure state for an off-canvas surface (drawer). Closes on
  * Escape and on route change (so navigating from inside the drawer dismisses
- * it). Reusable by the dashboard sidebar (AE-0273) and chat drawer (AE-0276) —
+ * it). Reusable by the dashboard sidebar and chat drawer —
  * one source of truth, no jscpd duplication.
  */
 import { useCallback, useEffect, useState } from "react";
@@ -32,6 +32,11 @@ function useCloseOnEscape(open: boolean, close: () => void): void {
   }, [open, close]);
 }
 
+/**
+ * Closes when the route changes (e.g. tapping a nav link inside the drawer),
+ * adjusting state during render on the changed value: the recommended pattern
+ * over a setState-in-effect, which cascades renders.
+ */
 export function useOffCanvas(): OffCanvasState {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -40,9 +45,6 @@ export function useOffCanvas(): OffCanvasState {
   const close = useCallback((): void => setOpen(false), []);
   const toggle = useCallback((): void => setOpen((value) => !value), []);
 
-  // Close when the route changes (e.g. tapping a nav link inside the drawer).
-  // Adjusting state during render on a changed value is the recommended pattern
-  // over a setState-in-effect (avoids cascading renders).
   if (pathname !== lastPathname) {
     setLastPathname(pathname);
     setOpen(false);

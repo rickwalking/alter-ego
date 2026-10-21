@@ -1,4 +1,4 @@
-"""Apply the deterministic casing repair to persisted slide copy (AE-0366).
+"""Apply the deterministic casing repair to persisted slide copy.
 
 The validator approves the REPAIRED copy (first letters capitalized, configured
 proper nouns canonicalized), so the ``carousel_slides`` rows the renderer reads

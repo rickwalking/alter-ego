@@ -80,6 +80,9 @@ uv run ruff format src/          # Formatting
   ```
 - **Max 20 lines per function** — Extract complex logic into focused functions
 
+### Comments
+- **Docstrings only** — no explanatory `#` comments, ticket/decision ids or TODO markers in source or tests. Put real information in the symbol's docstring. Allowed: tool directives (`noqa`, `type: ignore`, `pragma`, `integrity-ok:`) and `# Scenario: <title>` Gherkin references. Gate: `scripts/ci/check_comments.py` (`gates.sh backend:comments`).
+
 ### File Organization
 - **Max 400 lines per file** — Split large files into focused modules
 - **Protocols in `domain/protocols.py`** — One file per category (e.g., `protocols/repository.py`, `protocols/services.py`)

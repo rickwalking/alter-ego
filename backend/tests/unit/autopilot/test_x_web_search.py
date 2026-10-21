@@ -1,4 +1,4 @@
-"""X web-search collector (AE-0352).
+"""X web-search collector.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: X search keeps only recent status posts

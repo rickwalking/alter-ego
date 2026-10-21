@@ -1,4 +1,4 @@
-"""The schedule picker's signals over SQLite, and the Graph audience reader (AE-0404).
+"""The schedule picker's signals over SQLite, and the Graph audience reader.
 
 Gherkin: tests/features/telegram_schedule_picker_ae0404.feature
 (Scenarios: With online_followers the peak hours rank first; Post performance
@@ -208,6 +208,7 @@ class TestAudienceCache:
 
 
 async def _seed_posts(session: AsyncSession) -> None:
+    """The scheduled instant is Wednesday 15:00 in São Paulo."""
     topic_id = uuid4()
     session.add(
         TopicCandidateModel(
@@ -225,7 +226,7 @@ async def _seed_posts(session: AsyncSession) -> None:
         )
     )
     await session.flush()
-    scheduled = datetime(2026, 10, 14, 18, 0, tzinfo=UTC)  # Wed 15:00 São Paulo
+    scheduled = datetime(2026, 10, 14, 18, 0, tzinfo=UTC)
     for media, at in (("1001", scheduled), ("1002", None), ("1003", None)):
         session.add(
             AutopilotRunModel(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import type { Message } from "@/schemas/chat";
 
@@ -17,7 +17,7 @@ export interface ChatStream {
   setOptimisticMessages: Dispatch<SetStateAction<Message[]>>;
   isStreaming: boolean;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
-  abortRef: MutableRefObject<AbortController | null>;
+  abortRef: RefObject<AbortController | null>;
   /** Append the optimistic user message and begin a stream; returns its signal. */
   startUserTurn: (content: string) => AbortSignal;
   /** Fold a streamed token into the optimistic message list. */
@@ -27,7 +27,7 @@ export interface ChatStream {
 }
 
 /**
- * Shared SSE chat streaming state (AE-0150). Owns the optimistic message list,
+ * Shared SSE chat streaming state. Owns the optimistic message list,
  * the streaming flag, the abort controller, and the per-stream accumulation
  * refs, and exposes the two operations both chat hooks perform identically:
  * starting a user turn and folding in streamed tokens. Hook-specific behavior
@@ -35,15 +35,15 @@ export interface ChatStream {
  * stays in each consumer hook.
  */
 interface StreamTokens {
-  contentRef: MutableRefObject<string>;
-  msgIdRef: MutableRefObject<string | null>;
+  contentRef: RefObject<string>;
+  msgIdRef: RefObject<string | null>;
   appendToken: (token: string) => void;
   resetStreamingRefs: () => void;
 }
 
 interface TokenFoldRefs {
-  contentRef: MutableRefObject<string>;
-  msgIdRef: MutableRefObject<string | null>;
+  contentRef: RefObject<string>;
+  msgIdRef: RefObject<string | null>;
   streamIdPrefix: string;
 }
 
@@ -90,9 +90,7 @@ function useStreamTokens(
 }
 
 /** Abort any in-flight stream when the consumer unmounts. */
-function useAbortOnUnmount(
-  abortRef: MutableRefObject<AbortController | null>,
-): void {
+function useAbortOnUnmount(abortRef: RefObject<AbortController | null>): void {
   useEffect(
     () => () => {
       abortRef.current?.abort();
@@ -104,7 +102,7 @@ function useAbortOnUnmount(
 interface UserTurnDeps {
   userIdPrefix: string;
   tokens: StreamTokens;
-  abortRef: MutableRefObject<AbortController | null>;
+  abortRef: RefObject<AbortController | null>;
 }
 
 /** Append the optimistic user message and begin a stream; returns its signal. */

@@ -1,4 +1,4 @@
-"""Carousel scaled-down rollback drill helpers (AE-0113 / ADR-0009 §2, §7).
+"""Carousel scaled-down rollback drill helpers (ADR-0009 §2, §7).
 
 This module provides the *automatable* pieces of the scaled-down rollback drill
 mandated by ADR-0009 for the carousel workflow data:
@@ -40,7 +40,6 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
     WorkflowAuditLogModel,
 )
 
-# Aggregate type used for carousel projects in the workflow audit log.
 AGGREGATE_TYPE_CAROUSEL = "project"
 
 

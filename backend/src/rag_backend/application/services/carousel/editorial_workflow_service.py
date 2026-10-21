@@ -87,16 +87,18 @@ def flush_workflow_traces() -> None:
 
 @dataclass
 class EditorialWorkflowConfig:
-    """Configuration bundle for EditorialWorkflowService."""
+    """Configuration bundle for EditorialWorkflowService.
 
-    # AE-0391: per-role models (reasoning / fast); a single model serves both.
+    llm takes per-role models (reasoning, fast) or a single model serving both.
+    research_tool enables deterministic web-research enrichment at workflow start; None
+    (CI, tests, kill switch) passes sources through unchanged.
+    """
+
     llm: BaseChatModel | ChatModelRoles
     checkpointer: object | None = None
     event_service: WorkflowEventService | None = None
     notification_service: NotificationService | None = None
     image_registry: ImageProviderRegistry | None = None
-    # AE-0317: enables deterministic web-research enrichment at workflow start;
-    # None (CI, tests, kill switch) means sources pass through unchanged.
     research_tool: ResearchTool | None = None
 
 
@@ -124,7 +126,11 @@ class EditorialWorkflowService:
         workflow_input: EditorialWorkflowStartInput,
         db: AsyncSession | None = None,
     ) -> CarouselWorkflowState:
-        """Run research synthesis then pause at the first human review gate."""
+        """Run research synthesis then pause at the first human review gate.
+
+        The project's stamped policy version is seeded so a v2 project fires its casing
+        rules live at the content-review gate.
+        """
         existing = await self._orchestrator.get_state(project_id)
         if existing is not None and str(existing.get("current_phase", "")).strip():
             return existing
@@ -161,8 +167,6 @@ class EditorialWorkflowService:
         overrides: dict[str, object] = {"research_findings": research_findings}
         policy_version = await self._resolve_presentation_policy_version(db, project_id)
         if policy_version:
-            # AE-0311 deliverable 3: seed the project's stamped policy version so
-            # a v2 project fires casing rules live at the content-review gate.
             overrides["presentation_policy_version"] = policy_version
         state = await self._orchestrator.start(
             project_id,
@@ -229,12 +233,12 @@ class EditorialWorkflowService:
 
     @property
     def events(self) -> WorkflowEventService | None:
-        """The workflow event service (audit + outbox), shared with AE-0311."""
+        """The workflow event service (audit + outbox), shared with repair."""
         return self._events
 
     @property
     def chat_model(self) -> BaseChatModel:
-        """The workflow's fast chat model (AE-0367 owner autofix EN re-translate)."""
+        """The workflow's fast chat model (owner autofix EN re-translate)."""
         return self._llm
 
     async def update_workflow_state(
@@ -242,7 +246,7 @@ class EditorialWorkflowService:
         project_id: str,
         values: dict[str, object],
     ) -> None:
-        """Patch checkpoint state through the engine wrapper (AE-0311 repair).
+        """Patch checkpoint state through the engine wrapper (used by repair).
 
         Routes to ``CarouselWorkflowEngine.update_state`` (``as_node`` inferred
         from the pending interrupt) so the repair's checkpoint write shares the
@@ -256,7 +260,7 @@ class EditorialWorkflowService:
         project_id: str,
         values: dict[str, object],
     ) -> bool:
-        """Patch a parked/held checkpoint without advancing the node (AE-0314).
+        """Patch a parked/held checkpoint without advancing the node.
 
         The completed-project slide edit converges the checkpoint (source-of-
         truth option (a)) on the approved-hold thread via ``as_node=None`` so the
@@ -274,8 +278,8 @@ class EditorialWorkflowService:
     ) -> None:
         """Keep carousel project row in sync with workflow state for the Kanban board.
 
-        Routes the workflow-owned phase columns through the single write owner
-        (AE-0107); the owner only ``flush``\\es, so the commit stays with the
+        Routes the workflow-owned phase columns through the single write
+        owner; the owner only ``flush``\\es, so the commit stays with the
         caller (the route's UoW commit or the background runner).
         """
         if db is None:
@@ -288,7 +292,7 @@ class EditorialWorkflowService:
         project_id: str,
         state: CarouselWorkflowState,
     ) -> None:
-        """Sync the phase columns and commit at once (AE-0390).
+        """Sync the phase columns and commit at once.
 
         The flushed UPDATE holds the ``carousel_projects`` row lock until
         commit. The run used to commit only at the very end, so finalize/export,
@@ -303,7 +307,14 @@ class EditorialWorkflowService:
         self,
         params: ResumeWorkflowInput,
     ) -> CarouselWorkflowState:
-        """Resume workflow after human review."""
+        """Resume workflow after human review.
+
+        A revision on the image phase must change the rendered scene, or the per-prompt
+        reuse hash returns the same image, so the feedback is persisted as custom visual
+        direction before the graph re-runs the image node. Reviewer edits reach the
+        rendered slide rows before the graph moves on, since design, images, finalize
+        and republish read those rows.
+        """
         prior = await self._orchestrator.get_state(params.project_id)
         if params.action == REVIEW_ACTION_REVISE and prior is not None:
             await validate_revision_cap(
@@ -362,10 +373,6 @@ class EditorialWorkflowService:
                     db=params.db,
                 ),
             )
-            # AE-0261: a revision on the image phase must change the rendered
-            # scene, otherwise the per-prompt reuse hash matches and the same
-            # image is returned. Persist the feedback as custom visual direction
-            # BEFORE the graph re-runs the image node (which reloads the project).
             if (
                 params.db is not None
                 and params.feedback
@@ -374,8 +381,6 @@ class EditorialWorkflowService:
                 await self._append_image_visual_feedback(
                     params.db, params.project_id, params.feedback
                 )
-        # AE-0366: reviewer edits reach the rendered slide rows before the graph
-        # moves on (design/images/finalize/republish read those rows).
         await persist_edited_slide_copy(
             EditedSlidePersistCommand(
                 db=params.db,
@@ -431,7 +436,7 @@ class EditorialWorkflowService:
         return state
 
     async def is_parked_before_node(self, project_id: str) -> bool:
-        """True when a re-drive has a pending node to re-run (AE-0363)."""
+        """True when a re-drive has a pending node to re-run."""
         return await self._orchestrator.engine.is_parked(project_id)
 
     async def redrive_pending_phase(
@@ -440,11 +445,11 @@ class EditorialWorkflowService:
         db: AsyncSession | None,
         persona: PersonaProfile | None = None,
     ) -> CarouselWorkflowState:
-        """Re-run a parked pending node; never sends a review decision (AE-0363).
+        """Re-run a parked pending node; never sends a review decision.
 
         For a run that died after its gate was approved: the next phase runs
         again and parks at its own gate, which still needs a review.
-        AE-0421: the re-run gets the project's persona, like a resume (AE-0397);
+        the re-run gets the project's persona, like a resume;
         without it the content node drafted without the voice and never scored
         it (``persona_not_scored``).
         """
@@ -505,7 +510,16 @@ class EditorialWorkflowService:
         project_id: str,
         db: AsyncSession | None,
     ) -> str:
-        """Set workflow to in_progress and broadcast SSE before background resume."""
+        """Set workflow to in_progress and broadcast SSE before background resume.
+
+        Resuming an already-approved carousel (a final-review send-back) drops the DB
+        publish lock synchronously, before the 202 returns, so a concurrent publish
+        cannot ship stale content while the workflow re-runs; the final_review re-gate
+        restores approved_for_publish once the revision is re-approved. The
+        before_update listener stamps run_started_at in the flush that flips
+        phase_status, and it is surfaced on run.started so the client shows the banner
+        within seconds.
+        """
         prior = await self.get_workflow_state(project_id)
         current_phase = str(prior.get("current_phase", "")) if prior else ""
         in_progress_state: CarouselWorkflowState = {
@@ -514,11 +528,6 @@ class EditorialWorkflowService:
             "current_phase": current_phase,
             "phase_status": PHASE_STATUS_IN_PROGRESS,
         }
-        # AE-0288: resuming an already-approved carousel (a final-review
-        # send-back) must drop the DB publish lock synchronously — before the
-        # 202 returns — so a concurrent publish cannot ship stale content while
-        # the workflow re-runs in the background. The later final_review re-gate
-        # restores approved_for_publish once the revision is re-approved.
         if (
             str((prior or {}).get("workflow_status", ""))
             == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
@@ -536,9 +545,6 @@ class EditorialWorkflowService:
             current_phase,
             PHASE_STATUS_IN_PROGRESS,
         )
-        # AE-0315: the before_update listener stamped run_started_at inside the
-        # same flush that flipped phase_status; surface it on run.started so
-        # the client shows the banner within seconds of the 202.
         await self._publish_run_started(db, project_id, current_phase)
         return current_phase
 

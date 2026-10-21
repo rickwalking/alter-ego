@@ -1,4 +1,4 @@
-"""AE-0407: a failed persona judge call is retried once and never a verdict.
+"""A failed persona judge call is retried once and never a verdict.
 
 Fakes only (scripted judges, ``FakeChat``); no network, no real model.
 

@@ -1,4 +1,4 @@
-"""The template only references artwork the images phase planned (AE-0434).
+"""The template only references artwork the images phase planned.
 
 Gherkin: tests/features/carousel_export_artwork_ae0434.feature
 """

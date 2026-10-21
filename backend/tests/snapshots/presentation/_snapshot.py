@@ -1,9 +1,8 @@
-"""Golden-snapshot diff helper for the presentation carousel surface (AE-0116).
+"""Golden-snapshot diff helper for the presentation carousel surface.
 
 The enforceable byte-identical baseline for Phase 5 (presentation). Phase 5
 moves the presentation routes/services/persistence (design / blog / blog-i18n /
-slides / strategies / creator-asset) behind a facade + ACL; later slices
-(AE-0118 / AE-0120 / AE-0121) diff the live response against the committed
+slides / strategies / creator-asset) behind a facade + ACL; later slices diff the live response against the committed
 snapshot captured on the current, pre-refactor code (diff == 0).
 
 The normalization is shared with the Identity / editorial helpers
@@ -30,6 +29,14 @@ This module is the single import surface for presentation snapshot tests
 (mirrors the editorial helper). The committed snapshots live under
 ``tests/snapshots/presentation/``. Run with ``--snapshot-update`` (flag
 registered in tests/conftest.py) to regenerate from current behavior.
+
+Presentation responses carry volatile ``project_id`` / ``owner_id`` UUIDs the
+auth-scoped Identity normalizer does not target. Creator-asset fields derived from a
+WebP re-encode are libwebp/Pillow-version sensitive, so they collapse to a placeholder
+(present and well-formed, not the exact digest). The design/blog responses also embed
+the project UUID INSIDE URL paths, which the field-name normalizer never reaches; any
+embedded UUID substring collapses to the placeholder so the URL SHAPE is asserted
+byte-for-byte.
 """
 
 from __future__ import annotations
@@ -64,16 +71,11 @@ __all__ = [
 
 _SNAPSHOT_DIR: Final = Path(__file__).parent
 
-# Presentation responses carry a volatile ``project_id`` / ``owner_id`` UUID that
-# the shared Identity normalizer does not target (its field set is auth-scoped).
 _EXTRA_VOLATILE_UUID_FIELDS: Final[frozenset[str]] = frozenset({
     "project_id",
     "owner_id",
 })
 
-# Creator-asset fields derived from a WebP RE-ENCODE (libwebp/Pillow-version
-# sensitive). The contract is that they are present + well-formed, not the exact
-# (non-portable) digest value, so they collapse to a placeholder.
 PLACEHOLDER_DIGEST: Final = "<sha256>"
 PLACEHOLDER_DERIVED_PATH: Final = "<derived-path>"
 _VOLATILE_DIGEST_FIELDS: Final[frozenset[str]] = frozenset({"content_sha256"})
@@ -82,11 +84,6 @@ _VOLATILE_DERIVED_PATH_FIELDS: Final[frozenset[str]] = frozenset({
     "staged_relative_path",
 })
 
-# The design/blog responses embed the volatile ``project_id`` UUID INSIDE URL
-# path strings (``/api/carousels/<uuid>/slide-images/...``). Those values are
-# not keyed by ``project_id`` so the field-name normalizer never reaches them;
-# collapse any embedded UUID substring to the placeholder so the artifact-URL
-# baseline asserts the URL SHAPE byte-for-byte without pinning the per-run UUID.
 _EMBEDDED_UUID_RE: Final = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"

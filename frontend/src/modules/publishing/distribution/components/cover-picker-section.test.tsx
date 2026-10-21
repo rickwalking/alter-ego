@@ -6,8 +6,11 @@ import { createElement, type ReactNode } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { CoverPickerSection } from "./cover-picker-section";
 
-// Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature
-// (backend contract: backend/tests/features/carousel_cover_pick_ae0445.feature)
+/**
+ * Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature and
+ * frontend/tests/features/workflow-lock-version-ae0447.feature (backend
+ * contract: backend/tests/features/carousel_cover_pick_ae0445.feature).
+ */
 
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => {
@@ -25,7 +28,9 @@ vi.mock("next-intl", () => ({
       empty: "Nenhuma foto na biblioteca.",
     };
     return (key: string, values?: Record<string, number>) =>
-      key === "photoLabel" ? `Foto ${values?.number}` : (entries[key] ?? key);
+      key === "photoLabel"
+        ? `Foto ${String(values?.number)}`
+        : (entries[key] ?? key);
   }),
 }));
 
@@ -48,9 +53,7 @@ const OPTIONS = {
   ],
 };
 
-type Answer = unknown | Error | Promise<unknown>;
-
-function routeApi(options: Answer, pick?: Answer, lockVersion = 7): void {
+function routeApi(options: unknown, pick?: unknown, lockVersion = 7): void {
   mockApiCall.mockImplementation((url: string) => {
     if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT)) {
       return Promise.resolve({ lock_version: lockVersion });
@@ -109,7 +112,7 @@ describe("CoverPickerSection", () => {
   // Scenario: Choosing another photo switches the cover and refreshes the previews
   // Scenario: The picker is keyboard accessible
   it("switches with the lock version, shows progress, then refreshes", async () => {
-    let finish: (value: unknown) => void = () => undefined;
+    let finish: (value: unknown) => void = (_value) => undefined;
     const pending = new Promise((resolve) => {
       finish = resolve;
     });
@@ -165,7 +168,7 @@ describe("CoverPickerSection", () => {
   });
 
   // Scenario: A version conflict shows a reload hint
-  // AE-0447 Scenario: The pick sends the server's current version, not page state
+  // Scenario: The pick sends the server's current version, not page state
   it("reads the current lock version right before the switch", async () => {
     routeApi(
       OPTIONS,

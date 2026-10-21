@@ -1,10 +1,10 @@
 """Authenticated preview routes for draft carousel content.
 
-Thin HTTP adapters (AE-0120). Each endpoint reads the project + the assigned
+Thin HTTP adapters. Each endpoint reads the project + the assigned
 reviewer id through the presentation :class:`PresentationHandlers` (via the
 presentation facade), applies the preview access check at the edge
 (``assert_carousel_project_access``), and builds the response / FileResponse. The
-design-token merge is reached through the handler (the AE-0115 §6 presentation
+design-token merge is reached through the handler (the presentation
 read); the routes no longer construct the carousel repository or import the
 carousel ORM.
 """
@@ -238,12 +238,14 @@ async def preview_carousel_image(
     handlers: PresentationHandlersDep,
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = BLOG_LANGUAGE_PT,
 ) -> FileResponse:
-    """Preview draft slide or hero images for authenticated project owners."""
+    """Preview draft slide or hero images for authenticated project owners.
+
+    The image is looked up in the HD directory first, then standard, then hero images.
+    """
     ctx = PreviewAccessContext(project_id=project_id, user=user, handlers=handlers)
     project = await _load_accessible_project_with_output(ctx)
 
     lang_dir = Path(project.output_dir or "") / lang
-    # Try HD first, then standard, then hero images
     hd_dir = lang_dir / HD_SUBDIR_NAME
     image_path = _resolve_image_file(hd_dir, filename)
     if image_path is None:

@@ -39,7 +39,7 @@ export default function LoginPage() {
     }
   }, [t]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -83,7 +83,6 @@ export default function LoginPage() {
       <NeonGridBackground />
       <NeonScanlineOverlay />
 
-      {/* Header */}
       <header
         className="relative z-10"
         style={{
@@ -138,7 +137,6 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* Login Form */}
       <main className="flex-1 flex items-center justify-center relative z-10 px-4">
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
@@ -254,7 +252,6 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer
         className="relative z-10"
         style={{

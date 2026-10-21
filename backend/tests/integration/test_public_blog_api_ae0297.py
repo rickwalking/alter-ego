@@ -1,4 +1,4 @@
-"""Integration tests for the public blog-post read API (AE-0297, ADR-0013).
+"""Integration tests for the public blog-post read API (ADR-0013).
 
 Feature: public_blog_api_ae0297.feature
 """
@@ -102,7 +102,7 @@ def _auth_headers(user: User) -> dict[str, str]:
 
 
 async def _insert_carousel(*, is_public: bool) -> str:
-    """Insert a minimal carousel project row (AE-0347 public-gate fixtures)."""
+    """Insert a minimal carousel project row (public-gate fixtures)."""
     from rag_backend.infrastructure.database.config import get_session_maker
     from rag_backend.infrastructure.database.models.carousel import (
         CarouselProjectModel,
@@ -233,7 +233,6 @@ class TestPublicDetail:
         assert response.status_code == 200
         body = response.json()
         assert body["id"] == post_id
-        # AE-0423: content is the public projection of the blog.v2 document.
         assert body["content"] == {
             "schema": "blog.v2",
             "cover": None,
@@ -264,7 +263,7 @@ class TestPublicDetail:
     async def test_carousel_origin_gated_on_carousel_is_public(
         self, client: AsyncClient, is_public: bool
     ) -> None:
-        """AE-0347: the dual-write stamps carousel blogs 'published' before the
+        """The dual-write stamps carousel blogs 'published' before the
         site release, so anonymous reads must also require is_public."""
         project_id = await _insert_carousel(is_public=is_public)
         post_id = await _insert_post(

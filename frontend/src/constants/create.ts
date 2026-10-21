@@ -11,7 +11,7 @@ export const IMAGE_STYLES = {
   HYPERREAL: "hyperreal",
   NEO_ANIME: "neo_anime",
   FLAT_EDITORIAL: "flat_editorial",
-  // AE-0376: "Foto + Editorial" for Ponto de Vista decks.
+  /** "Foto + Editorial" for Ponto de Vista decks. */
   POV_EDITORIAL: "pov_editorial",
 } as const;
 
@@ -25,7 +25,7 @@ const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
 
 export const IMAGE_PRESETS = [
   {
-    // AE-0308: comic neon re-routed to OpenAI — prod has no Gemini key.
+    /** Comic neon runs on OpenAI: prod has no Gemini key. */
     value: "openai__comic_neon",
     model: IMAGE_MODELS.OPENAI,
     style: IMAGE_STYLES.COMIC_NEON,
@@ -56,7 +56,7 @@ export const IMAGE_PRESETS = [
     labelKey: "imagePresets.openai_flat_editorial",
   },
   {
-    // AE-0376: slide 1 = your photo, only point slides get an illustration.
+    /** Slide 1 is the owner's photo; only point slides get an illustration. */
     value: "openai__pov_editorial",
     model: IMAGE_MODELS.OPENAI,
     style: IMAGE_STYLES.POV_EDITORIAL,
@@ -65,7 +65,7 @@ export const IMAGE_PRESETS = [
 ] as const;
 
 /**
- * AE-0372: flat editorial is the default in the wizard, the backend and the
+ * Flat editorial is the default in the wizard, the backend and the
  * autopilot, so not every post looks like the same neon AI art. It is also the
  * preset recommended for light themes.
  */
@@ -74,10 +74,10 @@ export const DEFAULT_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
 /** The preset a light theme switches to (flat editorial reads best on light). */
 export const LIGHT_THEME_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
 
-/** AE-0376: the preset a Ponto de Vista deck switches to. */
+/** The preset a Ponto de Vista deck switches to. */
 export const POV_EDITORIAL_PRESET = "openai__pov_editorial";
 
-/** AE-0376: creator photo library roles. */
+/** Creator photo library roles. */
 export const CREATOR_PHOTO_ROLES = {
   HOOK: "hook",
   CTA: "cta",
@@ -94,12 +94,6 @@ export const SLIDE_GENERATION_STATUS = {
 
 export type SlideGenerationStatus =
   (typeof SLIDE_GENERATION_STATUS)[keyof typeof SLIDE_GENERATION_STATUS];
-
-// Theme keys, labels, and the light-theme set are no longer hardcoded here
-// (AE-0271). The create-page theme dropdown renders the live union of root +
-// custom palettes from `GET /api/palettes`, and each palette's light/dark mode
-// drives the flat-editorial nudge. The only FE-only theme value is the `"auto"`
-// sentinel — see `AUTO_THEME_VALUE` in `app/dashboard/create/theme-options.ts`.
 
 /** Pipeline phase display order. */
 export const PIPELINE_PHASES = [
@@ -166,11 +160,11 @@ export const CREATE_TEMPLATES: readonly CreateTemplate[] = [
   },
 ] as const;
 
-/** AE-0373 (ADR-0021): carousel content modes. NULL on the backend = Radar IA. */
+/** Carousel content modes. NULL on the backend = Radar IA. */
 export const CONTENT_MODES = {
   NEWS_ANALYSIS: "news_analysis",
   POV: "pov",
-  /** AE-0406 (ADR-0023): news analysis through the owner's point of view. */
+  /** News analysis through the owner's point of view. */
   POV_NEWS: "pov_news",
 } as const;
 
@@ -181,7 +175,7 @@ export const POV_THESIS_MAX_LENGTH = 280;
 export const POV_PROOF_MAX_LENGTH = 500;
 export const POV_SLIDE_COUNTS = [8, 9, 10] as const;
 export const POV_SLIDE_COUNT_DEFAULT = 9;
-/** AE-0375: slide-1 hook limits (growth plan 16.3 C). */
+/** Slide-1 hook limits (growth plan 16.3 C). */
 export const HOOK_MAX_LENGTH = 60;
 export const HOOK_MAX_WORDS = 10;
 

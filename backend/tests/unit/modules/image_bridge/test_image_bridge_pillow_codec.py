@@ -1,4 +1,4 @@
-"""Pillow validation and normalization (AE-0393, design 2.2 and 3.3).
+"""Pillow validation and normalization (design 2.2 and 3.3).
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Grok Bot returns an image (written at the requested size)
@@ -58,9 +58,11 @@ def test_truncated_image_is_rejected_on_load() -> None:
 
 
 def test_header_claiming_a_huge_image_is_rejected_before_decoding() -> None:
-    """A tiny file whose header claims 20000x20000 never gets decoded."""
+    """A tiny file whose header claims 20000x20000 never gets decoded.
+
+    The IHDR width/height live at bytes 16..24 of a PNG.
+    """
     data = bytearray(png_bytes((600, 600)))
-    # IHDR width/height live at bytes 16..24 of a PNG.
     data[16:24] = (20000).to_bytes(4, "big") + (20000).to_bytes(4, "big")
     with pytest.raises(InvalidCallbackImageError):
         codec.validate(bytes(data))

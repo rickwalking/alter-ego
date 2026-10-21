@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Read-side data of the blog editor (AE-0424): the version sidebar (re-read
+ * Read-side data of the blog editor: the version sidebar (re-read
  * whenever a save bumps `lock_version`, so a new snapshot shows up at once)
  * and the voice personas for "Rewrite this section in my voice".
  */

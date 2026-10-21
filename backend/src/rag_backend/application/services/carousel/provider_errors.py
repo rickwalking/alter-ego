@@ -1,4 +1,4 @@
-"""LLM-provider error classification for synchronous workflow routes (AE-0319).
+"""LLM-provider error classification for synchronous workflow routes.
 
 Observed live 2026-07-17: the OpenCode Go GLM endpoint returned 429
 ``GoUsageLimitError`` during ``POST workflow/start`` and the route surfaced a

@@ -1,4 +1,4 @@
-"""Service API key check for /api/autopilot/* (AE-0351).
+"""Service API key check for /api/autopilot/*.
 
 The dependency does not resolve a user. A missing setting disables the
 feature (503). A missing or wrong key is 401. The plaintext key is never

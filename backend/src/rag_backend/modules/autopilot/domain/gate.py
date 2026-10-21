@@ -19,14 +19,16 @@ from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE
 
 
 class GateAction(StrEnum):
-    """What the runner should do with the current gate."""
+    """What the runner should do with the current gate.
+
+    ``REDRIVE`` re-runs a parked pending node without sending a review decision.
+    """
 
     APPROVE = "approve"
     REVISE = "revise"
     ESCALATE = "escalate"
     STOP = "stop"
     WAIT = "wait"
-    # AE-0363: re-run a parked pending node (no review decision is sent).
     REDRIVE = "redrive"
 
 
@@ -38,26 +40,30 @@ class StartStatus(StrEnum):
 
 
 class ResumeStatus(StrEnum):
-    """Outcome of one approve or revise."""
+    """Outcome of one approve or revise.
+
+    ``IN_PROGRESS``: a run is already in flight. ``NOT_PARKED``: a re-drive found no
+    parked node. Neither changes anything.
+    """
 
     APPLIED = "applied"
     VERSION_CONFLICT = "version_conflict"
     REVISION_CAP = "revision_cap"
     PROVIDER_OUTAGE = "provider_outage"
-    # AE-0363: a run is already in flight; nothing was changed.
     IN_PROGRESS = "in_progress"
-    # AE-0363: a re-drive found no parked node; nothing was changed.
     NOT_PARKED = "not_parked"
 
 
 @dataclass(frozen=True, kw_only=True)
 class PolicyDecision:
-    """The policy result for one snapshot."""
+    """The policy result for one snapshot.
+
+    ``detail`` is what an escalation tells the owner beyond the reason (the slides
+    the model fix gave up on). It is empty for every policy decision.
+    """
 
     action: GateAction
     reason: str
-    # AE-0401: what an escalation tells the owner beyond the reason (the
-    # slides the model fix gave up on). Empty for every policy decision.
     detail: str = ""
 
 
@@ -82,7 +88,7 @@ class ImageFact:
 
 @dataclass(frozen=True, kw_only=True)
 class QualityViolation:
-    """One blocking presentation rule on one slide (AE-0392).
+    """One blocking presentation rule on one slide.
 
     ``slide_index`` is None for a carousel-wide rule. ``text`` is the
     offending copy when the field is a plain text field, else empty.
@@ -98,31 +104,41 @@ class QualityViolation:
 
 @dataclass(frozen=True, kw_only=True)
 class SnapshotParts:
-    """Inputs for one snapshot. One object keeps the assembler at one argument."""
+    """Inputs for one snapshot. One object keeps the assembler at one argument.
+
+    ``engine_blocker`` is the engine's own content-approve verdict (an error code),
+    empty when it would accept, so the policy can revise instead of approving into a
+    refusal. ``parked`` means no run is in flight and the checkpoint neither waits
+    for a review nor failed; it is ``parked_overdue`` once the grace period passed.
+    ``hero_images_total`` counts the hero images the image phase builds (the CTA
+    slide has none). A ``pov`` carousel must be voice-scored at the content gate.
+    ``quote_violations`` are ``pov_news`` quote cards that are not verbatim.
+    """
 
     state: Mapping[str, object]
     images: tuple[ImageFact, ...]
     slides_total: int
     lock_version: int
     stale: bool
-    # The engine's own content-approve verdict (error code), empty when it
-    # would accept. Lets the policy revise instead of approving into a refusal.
     engine_blocker: str = ""
-    # AE-0363: no run in flight and the checkpoint neither waits for a review
-    # nor failed; overdue once the grace period passed.
     parked: bool = False
     parked_overdue: bool = False
-    # AE-0365: hero images the image phase builds (the CTA slide has none).
     hero_images_total: int = 0
-    # PR #106 review: a POV carousel must be voice-scored at the content gate.
     pov: bool = False
-    # AE-0406: ``pov_news`` quote cards that are not verbatim (content gate).
     quote_violations: tuple[QualityViolation, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
 class GateSnapshot:
-    """Deterministic facts for one gate. No workflow engine types."""
+    """Deterministic facts for one gate. No workflow engine types.
+
+    The images gate expects ``hero_images_total`` hero images, not ``slides_total``.
+    ``quality_violations`` are the blocking presentation rules of the content and
+    design gates, kept apart from ``forbidden_hits`` so each is reported under its
+    own reason. ``pending_rescores`` lists slides whose stored voice score is stale
+    (``rescore_pending``): the gate must not approve on a stale passing score, so
+    the step re-scores these before approving.
+    """
 
     phase: str
     phase_status: str
@@ -139,21 +155,25 @@ class GateSnapshot:
     engine_blocker: str = ""
     parked: bool = False
     parked_overdue: bool = False
-    # AE-0365: the images gate expects this many hero images, not slides_total.
     hero_images_total: int = 0
-    # AE-0392: blocking presentation rules (content and design gates), kept
-    # apart from ``forbidden_hits`` so each is reported under its own reason.
     quality_violations: tuple[QualityViolation, ...] = ()
-    # AE-0433: slides whose stored voice score is stale (``rescore_pending``)
-    # and awaits a re-score. AE-0439: the gate read must not approve on a
-    # stale PASSING score, so the step re-scores these before approving.
     pending_rescores: tuple[int, ...] = ()
     pov: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
 class ProjectSpec:
-    """Fields the runner copies from the topic candidate onto a carousel."""
+    """Fields the runner copies from the topic candidate onto a carousel.
+
+    The driver always sets the OpenAI image model and the auto palette;
+    ``image_style`` and ``image_guidance`` come from the topic. ``content_mode`` is
+    Radar IA or POV, and a POV run carries the owner-confirmed ``pov_thesis``.
+    ``pov_format`` and ``slide_count`` are the scout's (defaults applied),
+    ``persona_id`` voices and scores the carousel, and ``hook_asset_id`` is the
+    slide-1 photo. ``quotes`` are the scout-verified quotes of a ``pov_news`` topic;
+    ``cover`` is the GrokBot cover the owner chose for slide 1 (None keeps the
+    default).
+    """
 
     topic: str
     audience: str
@@ -161,22 +181,15 @@ class ProjectSpec:
     brief: str
     sources: tuple[str, ...]
     owner_user_id: str
-    # AE-0361: the carousel always uses the OpenAI image model and the auto
-    # palette; the driver sets those. These two come from the topic.
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str = ""
-    # AE-0377: Radar IA or POV; POV carries the owner-confirmed thesis.
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     pov_thesis: str | None = None
-    # PR #106 review: the scout's POV format and slide count (defaults applied),
-    # the persona that voices and scores the carousel, and the slide-1 photo.
     pov_format: str | None = None
     slide_count: int | None = None
     persona_id: str | None = None
     hook_asset_id: str | None = None
-    # AE-0406: the scout-verified quotes of a ``pov_news`` topic.
     quotes: tuple[NewsQuote, ...] = ()
-    # AE-0418: the GrokBot cover the owner chose for slide 1 (None = default).
     cover: SlideCover | None = None
 
 
@@ -203,7 +216,7 @@ class ResumeCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class RedriveCommand:
-    """Re-run the parked pending node at the current lock version (AE-0363)."""
+    """Re-run the parked pending node at the current lock version."""
 
     project_id: str
     expected_version: int

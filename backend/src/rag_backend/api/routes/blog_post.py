@@ -79,7 +79,7 @@ def get_publishing_module_for_blog(
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PublishingModule:
-    """Build the request-scoped publishing facade for the blog-CRUD edge (AE-0131).
+    """Build the request-scoped publishing facade for the blog-CRUD edge.
 
     Binds the read/blog-CRUD ports to the SAME ``get_db`` session the blog routes
     already use (so the staged row, the audit/lock writes, and the single commit
@@ -107,7 +107,7 @@ def _audit_service() -> EditorialAuditService:
 
 
 async def _stage_new_post(db: AsyncSession, post: object) -> None:
-    """Flush the new row; a unique-slug clash becomes a clear 409 (AE-0411)."""
+    """Flush the new row; a unique-slug clash becomes a clear 409."""
     db.add(post)
     try:
         await db.flush()
@@ -153,7 +153,7 @@ async def create_blog_post(
 
 
 def _summary(post: object, public_ids: frozenset[str]) -> BlogPostSummaryResponse:
-    """Serialize a list row plus whether it is publicly readable now (AE-0411)."""
+    """Serialize a list row plus whether it is publicly readable now."""
     summary = BlogPostSummaryResponse.model_validate(post)
     return summary.model_copy(update={"is_public": str(summary.id) in public_ids})
 
@@ -231,7 +231,10 @@ async def update_blog_post(
     publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
-    """Update a blog post with optimistic locking (WF-005)."""
+    """Update a blog post with optimistic locking (WF-005).
+
+    The versioned write, version snapshot and approval reset happen in one transaction.
+    """
     existing = await get_blog_post_for_user(db, post_id, current_user)
     require_if_match(if_match)
 
@@ -239,7 +242,6 @@ async def update_blog_post(
     guard_blog_post_update_fields(update_data, is_admin=_user_is_admin(current_user))
     prepare_update_values(update_data, existing.ai_generation_metadata)
 
-    # AE-0424: versioned write + version snapshot + approval reset in one txn.
     await write_post_content(
         db,
         ContentWrite(
@@ -272,7 +274,7 @@ async def update_blog_post(
 
 
 def _guard_hard_delete(post: object) -> None:
-    """Block hard delete of rows that back a live public projection (AE-0296).
+    """Block hard delete of rows that back a live public projection.
 
     A ``carousel``-origin row still linked to its project is the source of the
     public ``GET /carousels/{id}/blog`` read (ADR-0011); deleting it would 404
@@ -303,7 +305,7 @@ async def delete_blog_post(
     current_user: EditorUser,
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> None:
-    """Delete a blog post (optimistic-locked, origin-guarded; AE-0296)."""
+    """Delete a blog post (optimistic-locked, origin-guarded)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
     if if_match is None:
         raise HTTPException(

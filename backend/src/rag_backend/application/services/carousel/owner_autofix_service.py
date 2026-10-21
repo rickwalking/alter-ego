@@ -1,4 +1,4 @@
-"""Owner "Fix issues": inspect a carousel, then repair and re-render it (AE-0367).
+"""Owner "Fix issues": inspect a carousel, then repair and re-render it.
 
 ``inspect`` is read-only and cheap (no LLM): the issue lines for the Telegram
 review and whether anything is fixable. ``apply`` runs on the autopilot worker
@@ -6,7 +6,7 @@ tick, never in the webhook:
 
 1. plan the deterministic repairs over the persisted rows (+ outline/research);
 2. re-translate the untranslated EN texts in one bounded call (kept on failure);
-3. under the shared per-project lock (AE-0316), take the ``lock_version`` CAS
+3. under the shared per-project lock, take the ``lock_version`` CAS
    (always, so the owner gets a fresh review revision; a lost CAS or a held
    lock writes nothing and leaves the caller's session alone), project the repaired
    copy onto the rows (images, prompts and notes untouched), commit, and patch
@@ -192,10 +192,10 @@ class OwnerAutofixService:
         return await self._finish(command, slides, translation)
 
     async def repair_gate(self, command: AutofixApplyCommand) -> GateRepairResult:
-        """Repair the checkpoint copy at a content or design gate (AE-0392).
+        """Repair the checkpoint copy at a content or design gate.
 
         Nothing is written (no CAS) when the plan changes nothing, so the
-        caller's revise keeps its lock version. AE-0401: the repaired copy is
+        caller's revise keeps its lock version. The repaired copy is
         projected onto the rows in the same commit.
         """
         source = await load_gate_source(self._gate_request(command.project_id))
@@ -224,10 +224,11 @@ class OwnerAutofixService:
         )
 
     async def _patch_gate(self, command: AutofixApplyCommand, patch: GatePatch) -> None:
-        # AE-0401: the rows follow the repaired copy (same commit as the CAS).
+        """The slide rows follow the repaired copy in the same commit as the
+        compare-and-set.
+        """
         await sync_rows_to_localized(self._deps.db, command.project_id, patch.updates)
         await self._deps.db.commit()
-        # ``load_gate_source`` found a checkpoint, so the store is wired.
         workflow = cast(WorkflowStateStore, self._deps.workflow)
         await workflow.update_workflow_state(command.project_id, patch.updates)
 

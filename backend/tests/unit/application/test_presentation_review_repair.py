@@ -94,14 +94,16 @@ class TestAttemptLocaleRepair:
 
     @pytest.mark.asyncio
     async def test_repair_fails_when_violations_remain(self) -> None:
-        """Given a payload that cannot be fully repaired, when repair runs, then None is returned."""
+        """Given a payload that cannot be fully repaired, when repair runs, then None is returned.
+
+        An over-long heading is not auto-repairable (the deterministic repair only trims
+        the body), so a violation remains after repair.
+        """
         from rag_backend.application.services.carousel.presentation_policy import (
             load_presentation_policy,
         )
 
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-        # An over-long HEADING is not auto-repairable (the deterministic repair
-        # only trims the body), so a violation remains after repair.
         payload = {
             "slide_type": "intro",
             "heading": "H" * 200,
@@ -289,7 +291,6 @@ class TestRepairLocalizedSlidesSync:
             }
         ]
 
-        # Ensure no event loop is running
         try:
             loop = asyncio.get_running_loop()
             pytest.skip("Test requires no running event loop")

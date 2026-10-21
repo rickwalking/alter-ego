@@ -1,5 +1,5 @@
 /**
- * AE-0152: frontend dead-export gate ratchet logic.
+ * Frontend dead-export gate ratchet logic.
  * Proves the identity-keyed baseline enforcement, including the skeptical-review
  * BLOCKER: a replace-same-count change (remove one grandfathered orphan, add a
  * new one) must FAIL because identity — not count — is the key.
@@ -77,9 +77,8 @@ describe("classifyDeadCode", () => {
     expect(advisory).toHaveLength(0);
   });
 
+  /** The grandfathered orphan in old.ts is gone and a NEW orphan appears in a changed file: the count is unchanged (1 -> 1) but the gate must still block. */
   it("FAILS a replace-same-count change (identity, not count)", () => {
-    // The grandfathered orphan in old.ts is gone; a NEW orphan appears in a
-    // changed file. Count is unchanged (1 -> 1) but the gate must still block.
     const { blocking, resolved } = classifyDeadCode({
       findings: [finding("src/changed.ts", "DIFFERENT_ORPHAN")],
       allowed: new Set(["export|src/old.ts|GRANDFATHERED"]),
@@ -113,9 +112,11 @@ describe("classifyDeadCode", () => {
   });
 });
 
-// AE-0446: the grandfathered baseline reached 0, so the CI gate runs the
-// classifier in full-tree mode. Pin the flip so it cannot silently revert to
-// changed-file-only blocking.
+/**
+ * The grandfathered baseline reached 0, so the CI gate runs the classifier in
+ * full-tree mode. Pin the flip so it cannot silently revert to changed-file-only
+ * blocking.
+ */
 describe("dead-code gate runs full-tree blocking in CI (AE-0446)", () => {
   it("sets DEAD_CODE_FULL_TREE_BLOCKING=1 in the frontend dead-code gate", () => {
     const gates = readFileSync(

@@ -1,4 +1,4 @@
-"""Image bridge bounded context (AE-0393, ADR-0022).
+"""Image bridge bounded context (ADR-0022).
 
 Generates carousel images through the owner's Grok Bot (async webhook +
 OpenAI-compatible callback), with OpenAI as the fallback. Cross-module

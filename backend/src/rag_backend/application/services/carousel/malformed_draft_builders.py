@@ -23,7 +23,6 @@ from rag_backend.domain.constants.carousel_presentation import (
 SUMMARY_ICONS = ("brain", "target", "shield-check")
 ACTION_ICONS = ("target", "flask-conical", "brain", "shield-check")
 
-# Field name constants
 _ICON_NAME_FIELD = "icon_name"
 _TITLE_FIELD = "title"
 _BODY_FIELD = "body"
@@ -42,13 +41,11 @@ _ACTIONS_FIELD = "actions"
 _PRESENTATION_PT_FIELD = PRESENTATION_PT_KEY
 _PRESENTATION_EN_FIELD = PRESENTATION_EN_KEY
 
-# Slide index constants for polish logic
 _SLIDE_INDEX_TLDR_FIX = 1
 _SLIDE_INDEX_FABLE_BODY = 3
 _SLIDE_INDEX_MYTHOS_BODY = 4
 _SLIDE_INDEX_COMPARISON_BODY = 5
 
-# CTA creator field constants
 _CREATOR_NAME_FIELD = "creator_name"
 _CTA_CREATOR_NAME_FIELD = "cta_creator_name"
 _CREATOR_HANDLE_FIELD = "creator_handle"
@@ -56,7 +53,6 @@ _CTA_HANDLE_FIELD = "cta_handle"
 _CREATOR_WEBSITE_FIELD = "creator_website"
 _CTA_WEBSITE_FIELD = "cta_website"
 
-# Language locale keys in parsed blobs
 _LANG_PT_KEY = "pt"
 _LANG_EN_KEY = "en"
 

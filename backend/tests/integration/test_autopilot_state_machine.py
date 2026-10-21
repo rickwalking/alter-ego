@@ -1,4 +1,4 @@
-"""Persistence behavior for the autopilot state machine (AE-0350).
+"""Persistence behavior for the autopilot state machine.
 
 Gherkin: tests/features/autopilot_state_machine.feature
 """

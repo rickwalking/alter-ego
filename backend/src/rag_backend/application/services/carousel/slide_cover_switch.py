@@ -1,14 +1,14 @@
-"""Switch a finished carousel's slide 1 to (or off) the GrokBot cover (AE-0418).
+"""Switch a finished carousel's slide 1 to (or off) the GrokBot cover.
 
 The owner's Telegram tap is applied on the worker tick, like "Fix issues".
-AE-0445: the publish-step picker writes through the same path and may also
+The publish-step picker writes through the same path and may also
 bind another library photo as the slide-1 photo (``hook_photo``).
 
 1. stage the cover file where the slides render (before anything is written,
    so a render never meets a missing file);
 2. under the per-project lock, take the lock-version CAS and store
    ``slide_cover`` (a new lock version = a fresh review revision);
-3. re-render through the AE-0313 republish path (hero images reused).
+3. re-render through the republish path (hero images reused).
 
 A held lock or a moved version is a conflict: nothing is written and the
 caller retries on the next tick.
@@ -60,7 +60,7 @@ class SlideCoverSwitchDeps:
 
 @dataclass(frozen=True, kw_only=True)
 class HookPhotoChoice:
-    """AE-0445: a library photo for slide 1, already staged where slides render."""
+    """A library photo for slide 1, already staged where slides render."""
 
     asset_id: UUID
     staged_path: str

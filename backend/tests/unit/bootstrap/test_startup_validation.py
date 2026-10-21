@@ -1,11 +1,13 @@
 """Unit tests for composition-root startup hardening.
 
 Covers tests/features/startup_hardening.feature:
-* AE-0213 — durable LangGraph checkpointer guard.
-* AE-0215 — default image-provider key guard.
+* the durable LangGraph checkpointer guard.
+* the default image-provider key guard.
 
 The guards read only ``Settings`` and either raise (production-like) or warn
 (dev/test). Tests build prod-like and dev-like settings objects directly.
+
+The OpenAI test key covers the default image provider (IMAGE_MODEL_DEFAULT=openai).
 """
 
 from __future__ import annotations
@@ -28,9 +30,7 @@ from rag_backend.infrastructure.config.settings import Settings
 _CHECKPOINT_BACKEND_MEMORY = "memory"
 _CHECKPOINT_BACKEND_DISABLED = "disabled"
 _CHECKPOINT_BACKEND_POSTGRES = "postgres"
-_DEFAULT_PROVIDER_KEY = (
-    "openai-test-key"  # default provider (IMAGE_MODEL_DEFAULT=openai)
-)
+_DEFAULT_PROVIDER_KEY = "openai-test-key"
 
 
 def _settings(
@@ -49,9 +49,6 @@ def _settings(
         carousel_checkpoint_backend=checkpoint_backend,
         openai_api_key=SecretStr(default_provider_key),
     )
-
-
-# --- AE-0213: durable checkpointer ------------------------------------------
 
 
 # Scenario: Production rejects a non-durable (memory) checkpointer
@@ -102,9 +99,6 @@ def test_staging_is_production_like_for_checkpointer() -> None:
         validate_checkpointer_durability(settings)
 
 
-# --- AE-0215: default image-provider key ------------------------------------
-
-
 # Scenario: Production rejects a missing default image-provider key
 def test_prod_missing_default_image_key_raises() -> None:
     settings = _settings(environment=ENVIRONMENT_PRODUCTION, default_provider_key="")
@@ -124,9 +118,6 @@ def test_prod_present_default_image_key_passes() -> None:
 def test_dev_missing_default_image_key_warns_not_raises() -> None:
     settings = _settings(environment=ENVIRONMENT_DEVELOPMENT, default_provider_key="")
     assert validate_default_image_provider_key(settings) is False
-
-
-# --- combined entry point ---------------------------------------------------
 
 
 def test_run_startup_validations_prod_all_good() -> None:

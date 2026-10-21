@@ -1,4 +1,4 @@
-"""Carousel-default rules for GrokBot topics (AE-0361).
+"""Carousel-default rules for GrokBot topics.
 
 Gherkin: tests/features/autopilot_carousel_defaults.feature
 """
@@ -94,16 +94,16 @@ def _facts() -> IntakeFacts:
 
 
 def test_scout_styles_match_the_openai_combos_exactly() -> None:
-    """Parity (AE-0361 F4): the scout's presets are derived, never hardcoded.
+    """Parity: the scout's presets are derived, never hardcoded.
 
     Every OpenAI combo in ``SUPPORTED_IMAGE_COMBOS`` is a scout style and
     nothing else is, so a new editorial preset cannot drift from intake.
+
+    The POV preset needs the owner's photo, so the Radar IA scout never picks it.
     """
     openai_styles = {
         style for model, style in SUPPORTED_IMAGE_COMBOS if model == IMAGE_MODEL_OPENAI
     }
-    # AE-0376: the POV preset needs the owner's photo; the Radar IA scout
-    # never picks it.
     assert openai_styles - {"pov_editorial"} == SCOUT_IMAGE_STYLES
     assert "pov_editorial" in openai_styles
     assert SCOUT_IMAGE_STYLES <= VALID_IMAGE_STYLES
@@ -234,7 +234,7 @@ def test_plan_rejects_only_the_proposal_that_breaks_a_rule() -> None:
 
 
 def test_plan_rejects_only_the_topic_with_an_unsupported_style() -> None:
-    """Scenario: An unsupported style rejects only that topic (AE-0361 F2)."""
+    """Scenario: An unsupported style rejects only that topic."""
     bad = prepare(_input("Agents", image_style="watercolor"))
     good = prepare(_input("Robots", image_style="cinematic"))
     plan = plan_intake((bad, good), _facts())

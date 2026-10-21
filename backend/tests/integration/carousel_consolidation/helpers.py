@@ -202,9 +202,9 @@ async def seed_carousel_blog_row(
     status: BlogPostStatus = BlogPostStatus.PUBLISHED,
     markdown: str = "# Public\n\nVisible",
 ) -> str:
-    """Insert the canonical ``origin='carousel'`` blog row for a project (AE-0422).
+    """Insert the canonical ``origin='carousel'`` blog row for a project.
 
-    Since AE-0422 a carousel save no longer creates/auto-publishes a blog row, and
+    A carousel save no longer creates/auto-publishes a blog row, and
     the legacy carousel-blog read is public for anonymous callers only when this
     row is ``published``. Tests that exercise the public read seed the row
     explicitly instead of relying on the removed auto-create.
@@ -244,7 +244,6 @@ async def create_minimal_carousel_artifacts(
     )
     from rag_backend.infrastructure.database.config import get_session_maker
 
-    # Create output directory structure with valid dummy files
     out_path = Path(output_dir)
     for lang in ("pt", "en"):
         lang_dir = out_path / lang
@@ -273,7 +272,6 @@ async def create_minimal_carousel_artifacts(
             (out_path / lang / "hd" / f"slide_{i}.jpg").write_bytes(hd_bytes)
         (images_dir / f"slide_{i}.jpg").write_bytes(standard_bytes)
 
-    # Create minimal valid PDFs
     from pypdf import PdfWriter
 
     for lang in ("pt", "en"):
@@ -283,7 +281,6 @@ async def create_minimal_carousel_artifacts(
             writer.add_blank_page(612, 792)
         writer.write(str(pdf_path))
 
-    # Create slides in DB
     session_maker = get_session_maker()
     async with session_maker() as session:
         repo = PostgresCarouselRepository(session)

@@ -1,4 +1,4 @@
-"""Recommended publish slots (AE-0404). Pure, no I/O.
+"""Recommended publish slots. Pure, no I/O.
 
 A candidate slot is a São Paulo day at a whole hour of ``CANDIDATE_HOURS``.
 Its score blends the audience (followers online at that UTC hour), the

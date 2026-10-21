@@ -1,4 +1,4 @@
-"""Composition root of the image bridge module (AE-0393).
+"""Composition root of the image bridge module.
 
 ``build_carousel_openai_service`` is what the container hands to the image
 provider registry as its OpenAI service: the plain OpenAI service when the

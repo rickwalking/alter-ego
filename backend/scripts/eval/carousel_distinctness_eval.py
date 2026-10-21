@@ -1,10 +1,11 @@
-"""Offline cross-slide distinctness eval for carousel content (AE-0291).
+"""Offline cross-slide distinctness eval for carousel content.
 
 NOT a CI gate. Run manually against a real GLM 5.2 carousel run to check that the
 content phase produces distinct slide bodies. It reads a JSON file of slide drafts
 (``[{"slide_index": 1, "draft_text": "..."}, ...]``) — e.g. the ``slide_drafts``
 persisted for a project — and reports pairwise body similarity plus the slides the
-distinctness metric would flag for re-draft.
+distinctness metric would flag for re-draft. It reuses the exact metric the
+generator uses so the eval and the runtime agree.
 
 Usage (from the backend/ directory):
     uv run python scripts/eval/carousel_distinctness_eval.py drafts.json
@@ -16,7 +17,6 @@ import json
 import sys
 from pathlib import Path
 
-# Reuse the exact metric the generator uses so the eval and the runtime agree.
 from rag_backend.application.services.carousel.content_distinctness import (
     DISTINCTNESS_SIMILARITY_THRESHOLD,
     body_similarity,

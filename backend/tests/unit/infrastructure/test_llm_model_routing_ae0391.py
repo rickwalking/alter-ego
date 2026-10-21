@@ -1,4 +1,4 @@
-"""AE-0391: per-role model routing and the automatic GLM fallback.
+"""Per-role model routing and the automatic GLM fallback.
 
 Scenarios: see tests/features/llm_model_routing_ae0391.feature
 """
@@ -55,8 +55,9 @@ def _settings(**overrides: object) -> Settings:
 
 
 def _routed(primary: FakeChat, fallback: FakeChat | None) -> RoutedChatModel:
-    # One attempt per model: these tests pin the fallback semantics; the
-    # AE-0395 retries are covered in test_llm_retry_ae0395.py.
+    """Uses one attempt per model: these tests pin the fallback semantics, and the retries
+    are covered in test_llm_retry_ae0395.py.
+    """
     return RoutedChatModel(
         primary=primary,
         fallback=fallback,
@@ -64,9 +65,6 @@ def _routed(primary: FakeChat, fallback: FakeChat | None) -> RoutedChatModel:
         timeout_seconds=5.0,
         attempts=1,
     )
-
-
-# --- Routing -----------------------------------------------------------------
 
 
 def test_reasoning_role_routes_to_reasoning_model_with_its_fallback() -> None:
@@ -106,7 +104,9 @@ def test_role_model_ids_come_from_settings() -> None:
 
 
 def test_role_models_carry_the_opencode_session_header() -> None:
-    # AE-0330 still holds for the DeepSeek models on the same endpoint.
+    """The OpenCode session header still applies to the DeepSeek models on the same
+    endpoint.
+    """
     model = build_chat_model(_settings(), LLM_ROLE_FAST)
 
     assert isinstance(model, RoutedChatModel)
@@ -124,7 +124,7 @@ def test_unknown_role_uses_glm_model_and_reasoning_budget() -> None:
 
 
 def test_no_role_keeps_the_single_glm_chat_model() -> None:
-    # Chat / RAG agents are untouched by AE-0391.
+    """Chat / RAG agents are untouched by the role routing."""
     model = build_chat_model(_settings())
 
     assert isinstance(model, ChatOpenAI)
@@ -186,9 +186,6 @@ def test_chat_model_roles_coerce() -> None:
 
 def test_model_id_of_unknown_model() -> None:
     assert model_id_of(FakeChat(model_name="")) == "unknown"
-
-
-# --- Fallback ----------------------------------------------------------------
 
 
 async def test_primary_success_does_not_call_fallback_and_tags_the_run() -> None:

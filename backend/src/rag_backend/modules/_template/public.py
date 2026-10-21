@@ -14,7 +14,7 @@ The facade exposes:
 Consumers SHALL NOT import internals such as
 ``rag_backend.modules._template.application.service`` or
 ``rag_backend.modules._template.domain.models``. The Import Linter contract
-(AE-0082) enforces this; see ``docs/architecture/module-conventions.md``.
+enforces this; see ``docs/architecture/module-conventions.md``.
 """
 
 from rag_backend.modules._template.api.views import TemplateView

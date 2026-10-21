@@ -1,5 +1,5 @@
 /**
- * Blog generation requests (AE-0425, ADR-0025).
+ * Blog generation requests (ADR-0025).
  *
  * All three routes answer 202 with the draft id; the caller navigates to the
  * editor, which polls the post while `generation.status` is in progress.
@@ -14,24 +14,27 @@ import { ERR_BLOG_POST_EXISTS_FOR_PROJECT } from "./generation-constants";
 const ERR_GENERATION_FAILED = "Failed to start blog generation";
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
-export type GenerationAccepted = {
+export interface GenerationAccepted {
   kind: "accepted";
   id: string;
   attempt: number;
   warnings: string[];
-};
+}
 
-export type GenerationExists = {
+export interface GenerationExists {
   kind: "exists";
   id: string;
-};
+}
 
-type AcceptedBody = {
+interface AcceptedBody {
   id: string;
   generation: { attempt: number; warnings?: string[] };
-};
+}
 
-type ConflictBody = { code?: string; post_id?: string };
+interface ConflictBody {
+  code?: string;
+  post_id?: string;
+}
 
 /** The request failed; `status` is the HTTP status. */
 export class BlogGenerationRequestError extends Error {

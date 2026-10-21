@@ -4,7 +4,7 @@ Revision ID: d1e2f3a4b5c6
 Revises: c8d9e0f1a2b3
 Create Date: 2026-10-14
 
-AE-0348 QA r1: ADDITIVE. ``autopilot_runs`` gains a start-attempt counter
+ADDITIVE. ``autopilot_runs`` gains a start-attempt counter
 (the existing ``attempts`` column stays the publish-attempt counter), the
 owner's queued rework intent, the lock version recorded at escalation, and
 ``publish_claimed_at``, the compare-and-set claim that keeps the worker and

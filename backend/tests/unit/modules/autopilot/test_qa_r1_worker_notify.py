@@ -66,8 +66,6 @@ from tests.unit.modules.autopilot.test_owner_notifications import (
     _service,
 )
 
-# --- Worker isolation -------------------------------------------------------
-
 
 class _Step:
     def __init__(self, log: list[str], name: str, error: bool = False) -> None:
@@ -90,6 +88,7 @@ class _Reaper:
 # Scenario: An autopilot failure does not roll back the other worker steps
 @pytest.mark.asyncio
 async def test_failing_autopilot_step_rolls_back_alone() -> None:
+    """Core, instagram and telegram each commit; the autopilot step gets the one rollback."""
     log: list[str] = []
     session = _FakeSession()
     collaborators = workflow_workers._TickCollaborators(
@@ -112,12 +111,8 @@ async def test_failing_autopilot_step_rolls_back_alone() -> None:
     assert counters["reaped"] == 3
     assert counters["autopilot_runs"] == 0
     assert counters["telegram_notices"] == 1
-    # Core commit, instagram commit, telegram commit; one rollback for autopilot.
     assert session.commits == 3
     assert session.rollbacks == 1
-
-
-# --- Deferred webhook replies -----------------------------------------------
 
 
 @dataclass
@@ -162,9 +157,6 @@ async def test_discarded_replies_are_dropped() -> None:
     assert deferred.discard() == 1
     assert await deferred.deliver() == 0
     assert sink.calls == []
-
-
-# --- Notifier: expired, reopened, cursor -----------------------------------
 
 
 @dataclass
@@ -229,6 +221,9 @@ async def test_plain_return_to_owner_sends_no_status() -> None:
 # Scenario: Undelivered notices are processed oldest first and never skipped
 @pytest.mark.asyncio
 async def test_cursor_stops_at_the_first_unsettled_notice() -> None:
+    """The ignored event is settled; the failed send is retried later, so the cursor must
+    not pass it even though the next event was also tried.
+    """
     runs = _Runs(run=_run(AutopilotRunState.ESCALATED))
     events = _Events(
         items=[
@@ -243,8 +238,6 @@ async def test_cursor_stops_at_the_first_unsettled_notice() -> None:
 
     await service.tick()
 
-    # The ignored event is settled; the failed send is retried later, so the
-    # cursor must not pass it even though the next event was also tried.
     assert events.advanced == ["evt-ignored"]
 
 

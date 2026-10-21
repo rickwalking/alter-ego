@@ -1,4 +1,4 @@
-"""Blog quality gate: voice score, scan and the single rewrite (AE-0425).
+"""Blog quality gate: voice score, scan and the single rewrite.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -25,13 +25,13 @@ def _gate(writer: FakeWriter, scorer: FakeScorer) -> BlogQualityGate:
 
 
 async def test_score_under_70_is_rewritten_exactly_once() -> None:
+    """The second score is stored even when it is still under the bar."""
     # Scenario: A body scoring under 70 is rewritten exactly once
     writer, scorer = FakeWriter(), FakeScorer(scores=[62.0, 64.0])
     gated = await _gate(writer, scorer).run(GateCommand("pt", sections(4), brief(4)))
     assert len(writer.rewrites) == 1
     assert len(writer.judgements) == 1
     assert gated.rewrite_passes == 1
-    # The second score is stored even when it is still under the bar.
     assert gated.voice.overall == 64.0
     assert writer.rewrites[0].notes == writer.notes
 

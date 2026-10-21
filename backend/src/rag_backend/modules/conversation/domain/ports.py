@@ -5,7 +5,7 @@ The conversation ports are:
 * ``ConversationRepository`` — conversation persistence;
 * ``MessageRepository`` — message persistence.
 
-**Re-export, not relocation (AE-0100 constraint).** These Protocols are defined
+**Re-export, not relocation.** These Protocols are defined
 in the SHARED protocol file ``rag_backend.domain.protocols.repositories`` which
 is imported by ~50+ non-conversation callers (the chat routes, the streaming
 service, ``ConversationService``, the container, agent helpers). Physically

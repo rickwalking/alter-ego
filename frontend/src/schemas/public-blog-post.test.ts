@@ -5,7 +5,7 @@ import {
   publicBlogPostResponseSchema,
 } from "./public-blog-post";
 
-// Scenarios: see tests/features/public-blog-detail.feature
+/** Gherkin: tests/features/public-blog-detail.feature. */
 
 const VALID_SUMMARY = {
   id: "e7e871c7-9f5f-4b70-b226-a2d2adeb06fa",
@@ -22,7 +22,6 @@ const VALID_SUMMARY = {
   project_id: null,
 };
 
-// Editorial/AI internals that must never surface on any public feed.
 const BLOG_INTERNAL_KEYS = [
   "author_id",
   "reviewer_id",
@@ -67,8 +66,6 @@ describe("public blog post schemas (AE-0297)", () => {
   });
 
   it("fallback carousel feed schema models none of the blog internals", () => {
-    // The fail-open listing fallback renders the carousel feed through its own
-    // schema; assert that schema cannot carry blog editorial internals.
     const itemShape = carouselProjectListResponseSchema.shape.items.element;
     const keys = Object.keys(itemShape.shape);
     for (const internal of BLOG_INTERNAL_KEYS) {

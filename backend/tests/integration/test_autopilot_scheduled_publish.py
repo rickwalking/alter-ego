@@ -1,10 +1,10 @@
-"""Schedule from Telegram, then the due tick publishes (AE-0370), on the real engine.
+"""Schedule from Telegram, then the due tick publishes, on the real engine.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 (Scenario: Schedule, then the due tick, on the real engine)
 
 Real: ``EditorialWorkflowService`` with its LangGraph checkpointer, the run
-wrapper and the image phase (the AE-0365 harness), the editorial driver, the
+wrapper and the image phase (the hero image harness), the editorial driver, the
 autopilot repository on a file SQLite database, the pending store, the
 carousel release and publish source, the due sweep and the publish job. Fake:
 the LLM artifacts, the image vendor, the slide render, Graph, the Story step,
@@ -138,7 +138,7 @@ async def world(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[_World]:
-    """The AE-0365 harness, driven to final review."""
+    """The hero image harness, driven to final review."""
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'ae0370.db'}")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -191,6 +191,9 @@ async def world(
 
 
 async def _awaiting_run(world: _World) -> AutopilotRun:
+    """The carousel is marked completed by hand because in prod the (faked) slide render
+    does it.
+    """
     repo = SqlAlchemyAutopilotRepository(world.session)
     topic = TopicCandidate(
         candidate_id=uuid4(),
@@ -219,7 +222,6 @@ async def _awaiting_run(world: _World) -> AutopilotRun:
         ig_permalink=None,
     )
     await repo.add(run)
-    # The slide render (faked here) marks the carousel completed in prod.
     await world.session.execute(
         update(CarouselProjectModel)
         .where(CarouselProjectModel.id == world.project_id)

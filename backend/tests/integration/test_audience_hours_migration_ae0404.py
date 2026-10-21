@@ -1,10 +1,13 @@
-"""Alembic revision for ``instagram_audience_hours`` (AE-0404).
+"""Alembic revision for ``instagram_audience_hours``.
 
 Gherkin: tests/features/telegram_schedule_picker_ae0404.feature
   Scenario: An insights fetch error falls back silently (the daily cache table)
 
 Upgrade/downgrade run on a SQLite file stamped at the previous head; CI's
 migration gate runs the full chain on Postgres.
+
+The pov_news quotes revision is the head directly on top of this one, and the GrokBot
+cover revision now sits on top of the quotes one.
 """
 
 from __future__ import annotations
@@ -24,7 +27,6 @@ from tests.integration.test_autopilot_migration import (
 
 _REVISION = "a0e4f0a4b4c4"
 _PARENT = "d3e4f5a6b7c8"
-# AE-0406: the pov_news quotes revision is the single head on top of this one.
 _HEAD = "c4d5e6f7a8b9"
 _COVER_HEAD = "d5e6f7a8b9c0"
 _TABLE = "instagram_audience_hours"
@@ -49,10 +51,9 @@ def _stamp(db_path: Path, revision: str) -> None:
 
 
 def test_revision_is_the_single_head_on_top_of_the_bridge() -> None:
-    """Chained on the AE-0393 image bridge revision; one head (AE-0406's)."""
+    """Chained on the image bridge revision; the pov_news quotes one is the head."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    # AE-0418: the cover revision now sits on top of the quotes one.
     assert list(script.get_heads()) == [ALEMBIC_HEAD]
     assert script.get_revision(_COVER_HEAD).down_revision == _HEAD
     assert script.get_revision(_HEAD).down_revision == _REVISION
@@ -78,7 +79,10 @@ def test_upgrade_creates_and_downgrade_drops_the_table(
 def test_rerun_over_an_existing_or_missing_table_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Idempotent like AE-0371's: the backend may create the table at startup."""
+    """Idempotent like the POV migrations.
+
+    The backend may create the table at startup.
+    """
     db_path = _stamped_db(tmp_path)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 

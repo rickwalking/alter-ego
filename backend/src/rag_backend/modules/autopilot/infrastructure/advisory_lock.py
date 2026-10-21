@@ -1,4 +1,4 @@
-"""Transaction-scoped Postgres advisory locks (AE-0348 QA r1/r2).
+"""Transaction-scoped Postgres advisory locks (QA r1/r2).
 
 Topic intake and the scout-failed cap both read a count, then write. Two
 concurrent requests would otherwise both pass the check before either

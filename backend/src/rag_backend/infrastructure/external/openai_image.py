@@ -9,6 +9,9 @@ Error translation happens here so the agent doesn't need to know vendor
 error shapes — missing API key and 403 organization-verification errors
 are converted into `RuntimeError`s with actionable messages that end up
 in the project's `error_message` field and the Gherkin contract.
+
+``_DEFAULT_SIZE`` is the widest 2:3-ish size OpenAI offers; it fits the 3.5:1
+hero-img CSS frame of the carousel template better than the square variants.
 """
 
 from __future__ import annotations
@@ -23,8 +26,6 @@ from openai import APIError, APIStatusError, OpenAI
 from rag_backend.domain.protocols import ImageGenerationService
 
 _DEFAULT_MODEL = "gpt-image-2"
-# Widest 2:3-ish size OpenAI offers; matches the 3.5:1 hero-img CSS
-# frame in the carousel template better than the square variants.
 _DEFAULT_SIZE = "1536x1024"
 
 _MSG_MISSING_KEY = (
@@ -61,9 +62,11 @@ class OpenAIImageService(ImageGenerationService):
         model: str = _DEFAULT_MODEL,
         size: str = _DEFAULT_SIZE,
     ) -> None:
-        # Client is built lazily so a user who never touches an OpenAI
-        # preset doesn't need OPENAI_API_KEY set — the failure surfaces
-        # only when an OpenAI-backed image is actually requested.
+        """Store the settings; the client is built lazily.
+
+        A user who never touches an OpenAI preset needs no ``OPENAI_API_KEY``; the
+        failure surfaces only when an OpenAI-backed image is actually requested.
+        """
         self._api_key = (
             api_key.get_secret_value()
             if hasattr(api_key, "get_secret_value")
@@ -89,10 +92,13 @@ class OpenAIImageService(ImageGenerationService):
         return await asyncio.to_thread(self._generate_sync, prompt, output_path)
 
     def _generate_sync(self, prompt: str, output_path: str) -> str:
+        """Generate one image synchronously and write it to ``output_path``.
+
+        The SDK types ``size`` as a strict Literal; settings validate it, but mypy
+        cannot narrow a runtime string to the literal.
+        """
         client = self._get_client()
         try:
-            # SDK types `size` as a strict Literal; we validate it via
-            # settings but mypy can't narrow a runtime string to a literal.
             resp = client.images.generate(  # type: ignore[call-overload]
                 model=self._model,
                 prompt=prompt,

@@ -1,7 +1,7 @@
 """Normalize editorial outlines to the carousel contract.
 
 Legacy outlines (no roles) keep the canonical seven-slide positional types.
-AE-0374: an outline whose every slide carries a known ``role`` (stamped by
+An outline whose every slide carries a known ``role`` (stamped by
 position from a ranged contract, ``stamp_outline_roles``) keeps its roles and
 gets each role's slide type, up to ``MAX_SLIDES``.
 """
@@ -108,7 +108,7 @@ def _slide_type_for(
 
 
 def _first_slide_extras(item: dict[str, object]) -> dict[str, object]:
-    """AE-0375: slide 1 keeps its hook candidates and outline checks."""
+    """Slide 1 keeps its hook candidates and outline checks."""
     extras: dict[str, object] = {}
     candidates = item.get(OUTLINE_FIELD_HOOK_CANDIDATES)
     if isinstance(candidates, list):

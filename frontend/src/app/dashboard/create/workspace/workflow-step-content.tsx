@@ -17,7 +17,7 @@ export interface WorkflowStepContentProps {
   project: CarouselProjectResponse;
   projectId: string;
   activeStepId: CreateStepId;
-  sources: Array<{ title: string; content: string; source_type?: string }>;
+  sources: { title: string; content: string; source_type?: string }[];
   workflowStarted: boolean;
   editorialWorkflow: ReturnType<typeof useEditorialWorkflow>;
   publishedProject: CarouselProjectResponse | null;
@@ -33,7 +33,7 @@ export function WorkflowStepContent({
   editorialWorkflow,
   publishedProject,
   onPublished,
-}: WorkflowStepContentProps): React.ReactElement {
+}: Readonly<WorkflowStepContentProps>): React.ReactElement {
   const t = useTranslations("create");
   const phaseLabel = usePhaseLabel();
   const workflowStepId = resolveStepFromWorkflowPhase(

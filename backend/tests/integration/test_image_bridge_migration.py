@@ -1,4 +1,4 @@
-"""Alembic revision for ``image_bridge_jobs`` (AE-0393).
+"""Alembic revision for ``image_bridge_jobs``.
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: The waiter works across processes (the table that carries the bytes)
@@ -63,7 +63,7 @@ def _indexes(db_path: Path) -> set[str]:
 
 
 def test_revision_is_chained_on_top_of_insights() -> None:
-    """Chained on the AE-0378 insights revision; AE-0406's is the head now."""
+    """Chained on the insights revision; the pov_news quotes one is the head."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     assert list(script.get_heads()) == [ALEMBIC_HEAD]

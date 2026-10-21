@@ -16,11 +16,11 @@ from rag_backend.domain.constants.retry import (
 )
 
 _RETRYABLE_HTTP_CODES: frozenset[int] = frozenset({
-    429,  # Too Many Requests
-    500,  # Internal Server Error
-    502,  # Bad Gateway
-    503,  # Service Unavailable
-    504,  # Gateway Timeout
+    429,
+    500,
+    502,
+    503,
+    504,
 })
 
 

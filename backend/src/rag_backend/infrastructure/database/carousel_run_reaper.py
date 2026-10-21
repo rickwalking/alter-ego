@@ -1,6 +1,6 @@
-"""Liveness-keyed stale-run reaper for carousel workflows (AE-0315).
+"""Liveness-keyed stale-run reaper for carousel workflows.
 
-Runs FIRST inside the workflow-workers tick (pinned ordering: the AE-0311
+Runs FIRST inside the workflow-workers tick (pinned ordering: the
 drift reconciler runs after it, only for rows this reaper did not touch this
 tick). Rules — pinned by six cold-critic rounds, do not relax:
 
@@ -83,9 +83,9 @@ class CarouselRunReaperRepository:
         config: CarouselRunReaperConfig,
         checkpoint_reader: CarouselCheckpointPhaseStatusReader | None = None,
     ) -> None:
+        """Hold the collaborators and the worker-scoped consecutive-stale memory."""
         self._config = config
         self._checkpoint_reader = checkpoint_reader
-        # Worker-scoped consecutive-stale-observation memory (see module doc).
         self._stale_counts: dict[str, int] = {}
 
     async def tick(self, db: AsyncSession) -> int:
@@ -158,18 +158,18 @@ class CarouselRunReaperRepository:
         return PHASE_STATUS_AWAITING_HUMAN
 
     async def _reap(self, db: AsyncSession, row: CarouselProjectModel) -> bool:
-        """Fence + flip in ONE atomic UPDATE, then cancel/publish."""
+        """Fence + flip in ONE atomic UPDATE, then cancel/publish.
+
+        The CAS on phase_status + run_epoch makes the flip race-safe without the
+        advisory lock; the lock_version bump fails any in-flight repair/resume CAS
+        holding the old version. The flip is lock-timeout bounded AND savepoint-scoped:
+        a run whose own transaction still holds the row lock must not wedge the worker
+        tick, and a blocked flip rolls back ONLY itself, never earlier flips pending in
+        the same tick transaction.
+        """
         project_id = str(row.id)
         seen_epoch = int(row.run_epoch or 0)
         reconciled = await self._reconciled_phase_status(project_id)
-        # Enumerated raw-SQL site (write-site survey §2 #20): the CAS on
-        # phase_status + run_epoch makes the flip race-safe without the
-        # advisory lock; the lock_version bump fails any in-flight
-        # repair/resume CAS holding the old version. AE-0320: the flip is
-        # lock-timeout-bounded AND savepoint-scoped — a run whose own
-        # transaction still holds the row lock must not wedge the worker tick,
-        # and a blocked flip must roll back ONLY itself (never earlier flips
-        # pending in the same tick transaction; external review r1 #1).
         try:
             async with db.begin_nested():
                 await apply_run_write_lock_timeout(db)

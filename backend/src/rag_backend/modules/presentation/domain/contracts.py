@@ -1,7 +1,7 @@
 """Command / result value objects for the presentation editorial-port surface.
 
 These typed objects are the data carried across the **editorial → presentation**
-boundary (AE-0121). They are deliberately small, frozen, and free of the
+boundary. They are deliberately small, frozen, and free of the
 carousel ORM: the editorial workflow constructs a command, hands it to a
 presentation port through the public facade, and receives a result back. The
 ports themselves are defined in :mod:`rag_backend.modules.presentation.domain.ports`;
@@ -17,17 +17,16 @@ PRESENTATION-SPECIFIC boundary: :class:`ProduceFormat` is its single command and
 :class:`ProducedArtifact` its single result. There is intentionally NO generic
 multi-format framework — carousel is the only producer today; a second format
 adds a second producer, not an abstraction layer.
+
+The image node reports a progress snapshot through the callback port; editorial owns the
+``phase_progress`` workflow-state write and the SSE emission. The snapshot mirrors,
+field for field, the dict the legacy image node persisted, so the editorial-side write
+stays byte-identical.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-
-# --- Progress callback (presentation -> editorial) -----------------------------
-# The image node reports a progress SNAPSHOT through the callback port; editorial
-# owns the workflow-state write (``phase_progress``) + the SSE emission. The
-# snapshot mirrors, field-for-field, the dict the legacy image node persisted so
-# the editorial-side write stays byte-identical.
 
 
 @dataclass(frozen=True)
@@ -64,9 +63,6 @@ class ProgressSnapshot:
         }
 
 
-# --- ContentFormatProducer command / result -----------------------------------
-
-
 @dataclass(frozen=True)
 class ProduceFormat:
     """Command to produce a renderable presentation artifact for a project.
@@ -93,9 +89,6 @@ class ProducedArtifact:
     format_name: str
     pdf_path: str = ""
     pdf_path_en: str = ""
-
-
-# --- Artifact build / activation result ----------------------------------------
 
 
 @dataclass(frozen=True)

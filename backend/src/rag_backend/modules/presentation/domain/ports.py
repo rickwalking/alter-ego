@@ -23,9 +23,9 @@ Per backend/CLAUDE.md, interfaces are :class:`typing.Protocol`, never ABCs, and
 they are fully typed (no ``Any``). These Protocols let the presentation
 APPLICATION/domain layers depend only on contracts — never on the carousel ORM
 or a concrete Postgres repository; the concrete adapters (provider ports,
-persistence) arrive in later phases (AE-0118/0119) behind this facade.
+persistence) arrive in later phases behind this facade.
 
-**Re-export, not relocation (AE-0117 constraint) for ``CarouselRepository``.**
+**Re-export, not relocation for ``CarouselRepository``.**
 That Protocol is defined in the SHARED protocol file
 ``rag_backend.domain.protocols.repositories`` which is imported by the carousel
 routes, the workflow engine, services, and the container. Physically moving the
@@ -66,7 +66,7 @@ class PresentationPolicyPort(Protocol):
 
     Wraps the canonical policy-loading step so the application layer requests the
     active :class:`CarouselPresentationPolicy` through a contract instead of
-    reaching into the policy loader directly. The concrete adapter (AE-0119)
+    reaching into the policy loader directly. The concrete adapter
     delegates to the unchanged policy source so the loaded policy stays
     byte-identical.
     """
@@ -115,9 +115,9 @@ class ImageProviderPort(Protocol):
 class WorkflowProgressPort(Protocol):
     """Report an image-generation progress snapshot BACK to editorial (callback).
 
-    This is the presentation → editorial **callback port** (AE-0121). The image
+    This is the presentation → editorial **callback port**. The image
     node generates images (a presentation concern) but ``phase_progress`` is a
-    WORKFLOW-owned column (AE-0105 §2.3) — presentation must NOT write it. Instead
+    WORKFLOW-owned column — presentation must NOT write it. Instead
     the node hands a :class:`ProgressSnapshot` to this port; the EDITORIAL side
     implements it and performs the byte-identical ``phase_progress`` persist + SSE
     emission. The Protocol is defined HERE (in presentation) so the presentation
@@ -134,7 +134,7 @@ class WorkflowProgressPort(Protocol):
 class ContentFormatProducer(Protocol):
     """Produce a renderable presentation artifact for a project (extension point).
 
-    The presentation-specific format boundary (AE-0121): a producer declares the
+    The presentation-specific format boundary: a producer declares the
     ``format_name`` it owns and produces a :class:`ProducedArtifact` from a
     :class:`ProduceFormat` command. This is intentionally NOT a generic
     multi-format framework — carousel is the only producer today; a second format
@@ -160,7 +160,7 @@ class ArtifactBuildPort(Protocol):
     Fronts the finalize → artifact-build call. The concrete adapter delegates
     UNCHANGED to ``CarouselArtifactBuildService.build_and_activate``, preserving
     the compound ``artifact_version`` ↔ ``lock_version`` compare-and-swap, the
-    PDF-path stamping, and the design-token merge exactly (AE-0115 §3). It
+    PDF-path stamping, and the design-token merge exactly. It
     reports the outcome as an :class:`ArtifactActivation`.
     """
 

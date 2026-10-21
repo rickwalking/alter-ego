@@ -3,17 +3,31 @@
 Per backend/CLAUDE.md, each context owns its own constants file. State
 *values* live on ``AutopilotRunState`` (the single spelling of each state).
 Everything else that would otherwise be a magic string lives here.
+
+- The FK column to ``carousel_projects.id`` must match its VARCHAR(36) type.
+- Outbox events belong to the ``content.autopilot.*`` family (ADR-0004).
+- The plaintext service API key is never stored or logged.
+- Publish retry waits apply after attempts 1 and 2; the third failure is terminal.
+- X is read via web search: the backend never requests x.com.
+- The Hacker News ``points>100`` filter matches the architecture table.
+- Anthropic publishes no RSS (rss.xml and news/rss.xml were HTTP 404 on 2026-10-13), so
+  its news sitemap is the machine-readable substitute and only ``/news/`` URLs are kept.
+  ai.meta.com/blog RSS was also 404; Meta's engineering ML feed is the live official
+  substitute.
+- A Bluesky ``link`` is often a path, so the collector prefixes ``BSKY_ORIGIN`` when the
+  value is relative.
+- The GitHub token is optional; an empty token sends no Authorization header.
+- The scout posts 1-3 topic proposals; code decides which become queued runs.
+- Runner phase ids match the editorial workflow.
 """
 
 MODULE_NAME = "autopilot"
 
-# Persistence (docs/architecture/grokbot-autopilot.md §4 + AE-0350).
 TABLE_AUTOPILOT_RUNS = "autopilot_runs"
 TABLE_TOPIC_CANDIDATES = "topic_candidates"
 TABLE_INTEGRATION_CREDENTIALS = "integration_credentials"
 TABLE_TELEGRAM_UPDATES = "telegram_updates"
 
-# ``carousel_projects.id`` is VARCHAR(36). The FK column must match that type.
 CAROUSEL_PROJECTS_TABLE = "carousel_projects"
 CAROUSEL_PROJECT_FK = f"{CAROUSEL_PROJECTS_TABLE}.id"
 TOPIC_CANDIDATE_FK = f"{TABLE_TOPIC_CANDIDATES}.id"
@@ -34,21 +48,17 @@ STATUS_LENGTH = 64
 SIGNAL_HASH_LENGTH = 128
 IG_IDENTIFIER_LENGTH = 128
 
-# Transactional outbox (ADR-0004). The family is ``content.autopilot.*``;
-# this ticket emits the state-changed member named by the acceptance criteria.
 EVENT_TYPE_STATE_CHANGED = "content.autopilot.state_changed"
 AGGREGATE_TYPE_AUTOPILOT_RUN = "autopilot_run"
 EVENT_VERSION = 1
 PAYLOAD_PREVIOUS_STATE = "previous_state"
 PAYLOAD_STATE = "state"
 PAYLOAD_REASON = "reason"
-# AE-0401: escalation copy beyond the reason (slides the model fix gave up on).
 PAYLOAD_DETAIL = "detail"
 METADATA_MODULE = "module"
 
 INVALID_TRANSITION_MESSAGE = "invalid_autopilot_transition"
 
-# Service API key (AE-0351). The plaintext key is never stored or logged.
 HEADER_API_KEY = "X-Api-Key"
 ROUTER_PREFIX = "/autopilot"
 PATH_SIGNALS = "/signals"
@@ -61,11 +71,9 @@ LOG_API_KEY_DISABLED = "autopilot_api_key_disabled"
 REASON_KEY_MISSING = "missing"
 REASON_KEY_MISMATCH = "mismatch"
 
-# Instagram publish job (AE-0357).
 PUBLISH_MAX_ATTEMPTS = 3
 PUBLISH_SCAN_LIMIT = 20
 CONTAINER_REUSE_HOURS = 24
-# Wait after attempt 1, then after attempt 2. The third failure is terminal.
 PUBLISH_BACKOFF_SECONDS = (60, 300)
 REASON_CAROUSEL_MISSING = "carousel_missing"
 REASON_CAROUSEL_NOT_PUBLIC = "carousel_not_public"
@@ -87,7 +95,6 @@ NOTICE_PUBLISHED = "published"
 NOTICE_PUBLISH_FAILED = "publish_failed"
 LOG_PUBLISH_JOB = "autopilot_instagram_publish"
 
-# Signal bundle (AE-0352, architecture §5 and §5.1).
 SOURCE_X_SEARCH = "x_search"
 SOURCE_HN = "hn"
 SOURCE_HF_PAPERS = "hf_papers"
@@ -109,7 +116,6 @@ HTTP_SUCCESS_MIN = 200
 HTTP_SUCCESS_MAX = 300
 NO_RESULTS_MARK = "No results found"
 
-# X via web search. The backend never requests x.com (architecture §5.1).
 X_RESOLVER_NONE = "none"
 X_RESOLVER_MIRROR = "mirror"
 X_SEARCH_TIMELIMIT = "d"
@@ -129,7 +135,6 @@ X_SEARCH_QUERIES = (
     "site:x.com Claude OR GPT OR Gemini OR Grok",
 )
 
-# Hacker News Algolia. ``points>100`` matches the architecture table.
 HN_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
 HN_TAG_STORY = "story"
 HN_MIN_POINTS = 100
@@ -142,14 +147,9 @@ HN_PARAM_NUMERIC_FILTERS = "numericFilters"
 HN_FILTER_POINTS = "points"
 HN_FILTER_CREATED = "created_at_i"
 
-# Hugging Face daily papers.
 HF_DAILY_PAPERS_URL = "https://huggingface.co/api/daily_papers"
 HF_PAPER_URL_PREFIX = "https://huggingface.co/papers/"
 
-# RSS / Atom. Anthropic publishes no RSS (rss.xml and news/rss.xml were
-# HTTP 404 on 2026-10-13); the news sitemap is the machine-readable
-# substitute and only ``/news/`` URLs are kept. ai.meta.com/blog RSS was
-# also 404; Meta's engineering ML feed is the live official substitute.
 FEED_URL_OPENAI = "https://openai.com/news/rss.xml"
 FEED_URL_ANTHROPIC = "https://www.anthropic.com/sitemap.xml"
 FEED_URL_GOOGLE_AI = "https://blog.google/innovation-and-ai/technology/ai/rss/"
@@ -158,15 +158,11 @@ FEED_URL_VERGE_AI = "https://www.theverge.com/rss/ai-artificial-intelligence/ind
 ANTHROPIC_NEWS_PATH = "/news/"
 RSS_MAX_AGE_DAYS = 14
 
-# Bluesky public AppView. ``link`` is often a path, so the collector
-# prefixes ``BSKY_ORIGIN`` when the value is relative.
 BSKY_TRENDS_URL = "https://public.api.bsky.app/xrpc/app.bsky.unspecced.getTrends"
 BSKY_ORIGIN = "https://bsky.app"
 BSKY_TREND_LIMIT = "10"
 BSKY_PARAM_LIMIT = "limit"
 
-# GitHub Search API. The token is optional; an empty token sends no
-# Authorization header.
 GITHUB_SEARCH_URL = "https://api.github.com/search/repositories"
 GITHUB_LOOKBACK_DAYS = 7
 GITHUB_TOPIC_QUERY = "topic:llm"
@@ -183,10 +179,7 @@ HEADER_USER_AGENT = "User-Agent"
 HTTP_USER_AGENT = "alter-ego-autopilot"
 AUTH_BEARER_PREFIX = "Bearer "
 
-# Topic intake (AE-0353). The scout posts 1-3 proposals. Code decides
-# which of them become queued runs.
 PATH_TOPICS = "/topics"
-# Grok Bot browser observations (AE-0360). Stored beside the allowlist.
 PATH_X_SIGNALS = "/x-signals"
 PATH_SCOUT_FAILED = "/scout-failed"
 SOURCE_X_BROWSER = "x_browser"
@@ -224,7 +217,6 @@ TOPIC_BATCH_MIN = 1
 TOPIC_BATCH_MAX = 3
 SOURCE_URL_MIN = 1
 SOURCE_URL_MAX = 8
-# Longest accepted URL in a topic source or an X observation (QA r1).
 URL_MAX_CHARS = 300
 SCORE_MIN = 0
 SCORE_MAX = 100
@@ -254,7 +246,6 @@ WORD_PATTERN = r"[^\W_]+"
 SOURCE_URL_INVALID = "source_must_be_http_url"
 RUN_ATTEMPTS_INITIAL = 0
 
-# Autopilot runner (AE-0354). Phase ids match the editorial workflow.
 GATE_RESEARCH = "research"
 GATE_OUTLINE = "outline"
 GATE_CONTENT = "content"

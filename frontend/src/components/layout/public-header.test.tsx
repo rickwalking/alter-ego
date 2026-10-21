@@ -33,7 +33,6 @@ function t(key: string): string {
   return MESSAGES[key] ?? key;
 }
 
-// Feature: Landing page truth, links and public header (AE-0443)
 describe("PublicHeaderNav", () => {
   // Scenario: The public header links to Carousels next to Blog
   it("puts the Carousels link after Blog and points it at /carousels", () => {

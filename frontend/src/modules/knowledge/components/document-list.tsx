@@ -13,7 +13,7 @@ export function DocumentList({
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
-}: DocumentListProps) {
+}: Readonly<DocumentListProps>) {
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
 

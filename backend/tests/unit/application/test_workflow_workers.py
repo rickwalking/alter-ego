@@ -1,4 +1,4 @@
-"""Unit tests for the workflow worker loop (AE-0212).
+"""Unit tests for the workflow worker loop.
 
 Feature: tests/features/workflow_never_stuck.feature
 Scenario: Worker tick failure renders a traceback
@@ -35,7 +35,7 @@ def _noop_factory(_event_service: WorkflowEventService) -> StuckWorkflowAutoReje
 
 
 def _settings(**overrides: bool | int) -> Settings:
-    # Disable downstream DB-touching steps so the test isolates the error path.
+    """Downstream DB-touching steps are disabled so the test isolates the error path."""
     values: dict[str, bool | int] = {
         "workflow_worker_interval_seconds": 0,
         "workflow_alerts_enabled": False,
@@ -50,8 +50,10 @@ def _settings(**overrides: bool | int) -> Settings:
 async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
     """A failing tick logs an event whose rendered output contains a traceback.
 
-    Without the AE-0212 call-site ``exc_info=True`` the rendered event omits the
+    Without the call-site ``exc_info=True`` the rendered event omits the
     exception entirely; this asserts the traceback is present.
+
+    format_exc_info renders the traceback under the "exception" key.
     """
     monkeypatch.setattr(db_config, "c_engine", test_engine)
     buffer = io.StringIO()
@@ -70,7 +72,7 @@ async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
     stop_event = asyncio.Event()
 
     async def _boom(self: object) -> int:
-        stop_event.set()  # exit the loop after this (failing) tick
+        stop_event.set()
         raise RuntimeError(_BOOM)
 
     monkeypatch.setattr(
@@ -92,7 +94,6 @@ async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
 
     output = buffer.getvalue()
     assert _WORKER_ERROR_EVENT in output
-    # format_exc_info renders the traceback under the "exception" key.
     assert "exception" in output
     assert "Traceback" in output
     assert _BOOM in output
@@ -152,7 +153,7 @@ class _NoopAlerts:
 
 @pytest.mark.asyncio
 async def test_run_tick_sweeps_republish_after_drift_reconciler() -> None:
-    """AE-0314 pinned ordering: reaper -> drift reconciler -> republish sweep."""
+    """Pinned ordering: reaper -> drift reconciler -> republish sweep."""
     from typing import cast
 
     log: list[str] = []
@@ -183,7 +184,7 @@ class _RecordingPublish:
 
 @pytest.mark.asyncio
 async def test_run_tick_publishes_instagram_after_the_other_workers() -> None:
-    """AE-0357: the Instagram job is the last collaborator on the tick."""
+    """The Instagram job is the last collaborator on the tick."""
     from typing import cast
 
     log: list[str] = []
@@ -215,7 +216,7 @@ class _RecordingRunner:
 
 @pytest.mark.asyncio
 async def test_run_tick_runs_autopilot_after_instagram_when_enabled() -> None:
-    """AE-0354: an enabled runner is the step after Instagram."""
+    """An enabled runner is the step after Instagram."""
     from typing import cast
 
     log: list[str] = []
@@ -277,7 +278,7 @@ class _RecordingTelegram:
 
 @pytest.mark.asyncio
 async def test_run_tick_notifies_after_autopilot() -> None:
-    """AE-0355: Telegram runs after the runner so a ready event is visible."""
+    """Telegram runs after the runner so a ready event is visible."""
     from typing import cast
 
     log: list[str] = []
@@ -346,7 +347,7 @@ class _RecordingBlogReaper:
 
 @pytest.mark.asyncio
 async def test_run_tick_reaps_interrupted_blog_generations() -> None:
-    """AE-0425: the blog generation reaper runs on the core tick.
+    """The blog generation reaper runs on the core tick.
 
     Feature: tests/features/blog_generate_ae0425.feature
     Scenario: A restart mid-generation is reaped to failed/recoverable

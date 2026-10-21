@@ -1,8 +1,8 @@
 /**
  * Shared configuration for the frontend component-type-location ratchet
- * (AE-0144 — the "13x class" PR #21 review follow-up).
+ * (the "13x class").
  *
- * Mirrors the feature/module-boundary ratchet (AE-0083/AE-0136): existing
+ * Mirrors the feature/module-boundary ratchet: existing
  * convention violations are grandfathered via a committed baseline; NEW ones
  * fail the build, and the baseline count is DOWN-ONLY.
  *
@@ -81,11 +81,9 @@ export function isGovernedFile(relPosixPath) {
     return false;
   }
   const fileName = relPosixPath.slice(relPosixPath.lastIndexOf("/") + 1);
-  // The convention's destination is never flagged.
   if (fileName === "types.ts" || fileName.startsWith("types-")) {
     return false;
   }
-  // Components: any *.tsx. Hooks: use-*.ts (not other plain *.ts module files).
   if (fileName.endsWith(".tsx")) {
     return true;
   }

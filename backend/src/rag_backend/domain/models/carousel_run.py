@@ -1,4 +1,4 @@
-"""Run-epoch fencing primitives for carousel runs (AE-0315).
+"""Run-epoch fencing primitives for carousel runs.
 
 The monotonic ``run_epoch`` column on ``carousel_projects`` is the fencing
 token that serializes a reaped (zombie) run against its replacement: every

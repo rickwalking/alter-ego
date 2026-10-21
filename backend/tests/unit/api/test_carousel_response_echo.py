@@ -1,4 +1,4 @@
-"""AE-0298: CarouselProjectResponse echoes custom_visual_details.
+"""CarouselProjectResponse echoes custom_visual_details.
 
 Scenario: the request-side image guidance round-trips through the project
 response so the value survives a reload (see

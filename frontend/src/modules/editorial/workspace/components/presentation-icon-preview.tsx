@@ -14,7 +14,7 @@ function toLucideComponentName(iconName: string): string {
 export function PresentationIconPreview({
   iconName,
   className,
-}: PresentationIconPreviewProps): React.ReactElement {
+}: Readonly<PresentationIconPreviewProps>): React.ReactElement {
   const componentName = toLucideComponentName(iconName);
   const Icon = LucideIcons[componentName as keyof typeof LucideIcons] as
     | LucideIcons.LucideIcon

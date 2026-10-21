@@ -1,4 +1,4 @@
-"""add carousel run-progress + fencing columns (AE-0315)
+"""add carousel run-progress + fencing columns
 
 Adds the three run-visibility columns to ``carousel_projects``:
 

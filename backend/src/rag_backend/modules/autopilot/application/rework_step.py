@@ -1,10 +1,10 @@
-"""Apply an owner rework the webhook queued (AE-0348 QA round 1, H4).
+"""Apply an owner rework the webhook queued.
 
 The webhook only records phase and feedback and answers Telegram at once.
 The runner calls ``apply`` on the worker tick, where the LLM regeneration
 has no ~100 s Cloudflare cap.
 
-AE-0367: a "Fix issues" tap is queued the same way (phase marker
+A "Fix issues" tap is queued the same way (phase marker
 ``AUTOFIX_REWORK_PHASE``). The tick runs the deterministic repair and
 re-render, then hands the run to the normal final-review stop, which moves it
 back to ``awaiting_owner`` and stages the fresh review (new lock version).
@@ -57,14 +57,17 @@ from rag_backend.modules.editorial.public import REVIEW_ACTION_REVISE
 
 @dataclass(frozen=True, kw_only=True)
 class ReworkDependencies:
-    """Ports the rework step shares with the runner."""
+    """Ports the rework step shares with the runner.
+
+    ``covers`` / ``cover_switch`` are the owner's GrokBot cover choice and the
+    slide-1 re-render.
+    """
 
     runs: AutopilotRunRepository
     editorial: EditorialDriver
     recovery: RunRecoveryStore
     escalations: RunRecovery
     autofix: ContentAutofixer | None = None
-    # AE-0418: the owner's GrokBot cover choice and the slide-1 re-render.
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
 
@@ -81,6 +84,8 @@ class ReworkStep:
         A queued rework whose workflow already left final review was applied
         by an earlier tick that failed before it cleared the intent; it is
         dropped and the caller drives the run as usual.
+
+        "Fix issues" and "Usar capa do Grok" are special reworks, not a revise.
         """
         if run.rework_phase is None:
             return None
@@ -92,7 +97,6 @@ class ReworkStep:
         if not _at_final_review(snapshot):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
-        # AE-0367 "Fix issues" and AE-0418 "Usar capa do Grok" are no revise.
         special = {
             AUTOFIX_REWORK_PHASE: self._autofix,
             COVER_REWORK_PHASE: self._cover,
@@ -130,7 +134,7 @@ class ReworkStep:
         snapshot: GateSnapshot,
         project_id: str,
     ) -> int | None:
-        """AE-0418: switch slide 1; None hands the run to the final-review stop.
+        """Switch slide 1; None hands the run to the final-review stop.
 
         A conflict keeps the intent for the next tick; a cover whose file is
         gone sends the run back to the owner's review unchanged; a failed

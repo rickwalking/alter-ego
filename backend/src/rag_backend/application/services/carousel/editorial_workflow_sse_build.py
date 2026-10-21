@@ -75,7 +75,12 @@ def build_progress_event(
 
 
 def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]:
-    """Build a review gate snapshot for SSE consumers."""
+    """Build a review gate snapshot for SSE consumers.
+
+    Image assets are sent as preview URLs, never container paths. The design recovery
+    hint rides the snapshot ("" when clear) so SSE consumers see it without an extra
+    state fetch.
+    """
     from rag_backend.application.services.carousel.design_token_utils import (
         image_asset_preview_urls,
     )
@@ -91,7 +96,6 @@ def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]
         "research_findings": list(state.get("research_findings") or []),
         "outline": list(state.get("outline") or []),
         "slide_drafts": list(state.get("slide_drafts") or []),
-        # AE-0439 (QA F-13): preview URLs, never container paths.
         "image_assets": image_asset_preview_urls(project_id, state.get("image_assets")),
         "design_applied": bool(state.get("design_applied")),
         "persona_scores": (
@@ -108,8 +112,6 @@ def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]
         "blog_markdown": (
             str(state.get("blog_markdown")) if state.get("blog_markdown") else None
         ),
-        # AE-0310: design recovery hint rides the review gate snapshot so SSE
-        # consumers see it without an extra state fetch ("" when clear).
         STATE_FIELD_DESIGN_RECOVERY_HINT: str(
             state.get(STATE_FIELD_DESIGN_RECOVERY_HINT) or ""
         ),

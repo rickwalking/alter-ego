@@ -1,4 +1,4 @@
-"""Pick the CTA slide sentence for a goal and locale (AE-0372)."""
+"""Pick the CTA slide sentence for a goal and locale."""
 
 from __future__ import annotations
 

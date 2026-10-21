@@ -1,4 +1,4 @@
-"""Domain report -> ``GET /api/instagram/insights`` response (AE-0378)."""
+"""Domain report -> ``GET /api/instagram/insights`` response."""
 
 from __future__ import annotations
 

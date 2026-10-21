@@ -1,8 +1,9 @@
+/**
+ * Scenarios: tests/features/blog_generate_ae0425.feature ("Start a standalone
+ * blog from a topic", "Generation copy is localized").
+ */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// Scenarios: see tests/features/blog_generate_ae0425.feature
-// ("Start a standalone blog from a topic", "Generation copy is localized")
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({

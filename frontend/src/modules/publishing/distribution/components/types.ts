@@ -2,8 +2,8 @@ import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
 /**
  * Distribution component prop/state types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
- * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
+ * Per the component-type-location convention
+ * (`frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
 
@@ -43,15 +43,17 @@ export interface PublishPanelProps {
   onPublishInstagram?: (caption: string) => Promise<void>;
   isPublishingInstagram?: boolean;
   publishResult?: { status: "idle" | "success" | "error"; message?: string };
-  // AE-0313: extra cache-buster (the freshly built artifact version) appended
-  // to PDF/slide URLs after a "Rebuild PDF" so the browser fetches the new
-  // artifact rather than a cached prior version.
+  /**
+   * Extra cache-buster (the freshly built artifact version) appended to
+   * PDF/slide URLs after a "Rebuild PDF" so the browser fetches the new
+   * artifact rather than a cached prior version.
+   */
   cacheBustToken?: string;
-  /** AE-0416: 1-based numbers of the real slides; the viewer counts these. */
+  /** 1-based numbers of the real slides; the viewer counts these. */
   slideNumbers?: readonly number[];
 }
 
-/** AE-0445: one slide-1 cover option (library photo or GrokBot offer). */
+/** One slide-1 cover option (library photo or GrokBot offer). */
 export interface CoverOptionView {
   asset_id: string;
   source: "library" | "offer";
@@ -74,7 +76,7 @@ export interface CoverThumbProps {
 }
 
 /**
- * AE-0445: publish-page "Capa (slide 1)" for a Ponto de Vista carousel. A pick
+ * Publish-page "Capa (slide 1)" for a Ponto de Vista carousel. A pick
  * re-renders slides + PDFs server-side at the current workflow lock version;
  * ``onSwitched`` receives the fresh artifact version (cache-bust + refetch).
  */
@@ -89,7 +91,7 @@ export interface RebuildPdfSectionProps {
 }
 
 /**
- * AE-0314: publish-page text editor for a completed carousel. Reuses the shared
+ * Publish-page text editor for a completed carousel. Reuses the shared
  * ``SlideCopyEditor``; on save it PATCHes the slides then chains the republish so
  * the served PDF reflects the edit (images never regenerate).
  */
@@ -124,7 +126,7 @@ export interface CoverPick {
   handleChoose: (assetId: string) => void;
 }
 
-/** Save/cancel buttons of the publish-page slide text editor (AE-0446). */
+/** Save/cancel buttons of the publish-page slide text editor. */
 export interface SlideEditActionsProps {
   refused: boolean;
   canSave: boolean;
@@ -133,13 +135,13 @@ export interface SlideEditActionsProps {
   onCancel: () => void;
 }
 
-/** Rebuild/success line of the publish-page slide text editor (AE-0446). */
+/** Rebuild/success line of the publish-page slide text editor. */
 export interface SlideEditStatusProps {
   pending: boolean;
   done: boolean;
 }
 
-/** PT / EN tab strip of the publish panel (AE-0446). */
+/** PT / EN tab strip of the publish panel. */
 export interface LanguageTabsProps {
   language: ViewerLanguage;
   onChange: (language: ViewerLanguage) => void;
@@ -147,7 +149,7 @@ export interface LanguageTabsProps {
   className: string;
 }
 
-/** Instagram tab of the publish panel (AE-0446). */
+/** Instagram tab of the publish panel. */
 export interface InstagramTabProps extends Pick<
   PublishPanelProps,
   "onPublishInstagram" | "isPublishingInstagram" | "publishResult"
@@ -157,7 +159,7 @@ export interface InstagramTabProps extends Pick<
   language: ViewerLanguage;
 }
 
-/** LinkedIn tab of the publish panel (AE-0446). */
+/** LinkedIn tab of the publish panel. */
 export interface LinkedInTabProps {
   text: string;
   onTextChange: (text: string) => void;

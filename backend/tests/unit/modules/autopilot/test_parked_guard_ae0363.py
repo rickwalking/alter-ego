@@ -1,6 +1,6 @@
-"""Parked-workflow guard: reconcile, policy, and runner re-drive (AE-0363).
+"""Parked-workflow guard: reconcile, policy, and runner re-drive.
 
-Gherkin: tests/features/autopilot_runner.feature (AE-0363 scenarios)
+Gherkin: tests/features/autopilot_runner.feature (parked-workflow scenarios)
 """
 
 from __future__ import annotations

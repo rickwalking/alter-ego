@@ -1,4 +1,4 @@
-"""Slide-1 cover switch service with fakes (AE-0418, ADR-0024).
+"""Slide-1 cover switch service with fakes (ADR-0024).
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Scenario: The Radar IA review offers the cover and swaps slide 1

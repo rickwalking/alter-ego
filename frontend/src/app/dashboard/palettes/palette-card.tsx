@@ -37,7 +37,7 @@ export function PaletteCard({
   onEdit,
   onArchive,
   isArchiving = false,
-}: PaletteCardProps): React.ReactElement {
+}: Readonly<PaletteCardProps>): React.ReactElement {
   const t = useTranslations("palettes");
   const [confirmingArchive, setConfirmingArchive] = useState(false);
 

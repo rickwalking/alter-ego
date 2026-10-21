@@ -24,7 +24,7 @@ const EXCERPT_ROWS = 2;
 function FieldError({
   id,
   message,
-}: FieldErrorProps): React.ReactElement | null {
+}: Readonly<FieldErrorProps>): React.ReactElement | null {
   if (!message) {
     return null;
   }
@@ -41,9 +41,9 @@ function FieldError({
 }
 
 /**
- * Title / excerpt fields of the blog editor (AE-0411, B19): labelled,
+ * Title / excerpt fields of the blog editor: labelled,
  * `required` + `maxLength` matching the backend limits, with inline errors.
- * The body is edited per section by the `blog.v2` section editor (AE-0424).
+ * The body is edited per section by the `blog.v2` section editor.
  */
 export function BlogPostEditFields({
   title,
@@ -51,7 +51,7 @@ export function BlogPostEditFields({
   excerpt,
   onExcerptChange,
   validation,
-}: BlogPostEditFieldsProps): React.ReactElement {
+}: Readonly<BlogPostEditFieldsProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const titleError = validation.title
     ? t(`validation.${validation.title}`, { max: BLOG_TITLE_MAX_LENGTH })

@@ -1,6 +1,6 @@
-"""Load a candidate row's carousel inputs for the AE-0426 rebuild.
+"""Load a candidate row's carousel inputs for the hidden-post rebuild.
 
-Composes the carousel brief material (AE-0425) from the persisted project and
+Composes the carousel brief material from the persisted project and
 slides, the persona, and the workflow checkpoint's research/outline. Reads only:
 a missing project (or project id) is ``None`` so the service reports a skip.
 """

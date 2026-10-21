@@ -24,7 +24,7 @@ import { SectionCard } from "./section-card";
 import type { BlogSectionEditorProps } from "./types";
 
 /**
- * The `blog.v2` section editor (AE-0424): PT/EN content buttons, the cover
+ * The `blog.v2` section editor: PT/EN content buttons, the cover
  * slot and one card per section of the active language (add / delete /
  * reorder). Only the active language subtree is edited.
  */
@@ -39,7 +39,7 @@ export function BlogSectionEditor({
   onRewrite,
   onGenerateTranslation,
   onSelectText,
-}: BlogSectionEditorProps): React.ReactElement {
+}: Readonly<BlogSectionEditorProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const current = activeDocument(document, language);
   const hasEnglish = Boolean(document.translations[BLOG_CONTENT_EN]);

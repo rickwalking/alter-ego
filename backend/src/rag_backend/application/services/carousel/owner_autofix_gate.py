@@ -1,7 +1,7 @@
-"""Turn a repaired checkpoint copy into one gate patch (AE-0392).
+"""Turn a repaired checkpoint copy into one gate patch.
 
 The autopilot repairs a content or design gate before it revises it: the
-AE-0367 plan runs over the checkpoint's ``localized_slides`` and the changed
+plan runs over the checkpoint's ``localized_slides`` and the changed
 slides go through the reviewer-edit path. That path re-validates and keeps
 ``slide_drafts``, ``translations_en`` and the content-gate report in step with
 the repaired copy, so the next gate read sees the same verdict the engine

@@ -1,4 +1,4 @@
-"""Publish-step slide-1 cover picker over HTTP (AE-0445).
+"""Publish-step slide-1 cover picker over HTTP.
 
 Gherkin: tests/features/carousel_cover_pick_ae0445.feature
   Scenario: The options are the owner's library photos, the current one marked
@@ -224,8 +224,8 @@ class TestCoverPick:
         offers: _Offers,
         renders: list[str],
     ) -> None:
+        """Any stored photo of the owner will do as the offer's creator asset."""
         first = await upload_photo(client, _RED)
-        # The offer's creator asset: any stored photo of the owner will do.
         grok_photo = await upload_photo(client, _BLUE)
         project_id = await _finished(client, first["id"])
         offers.cover = SlideCover(

@@ -29,9 +29,9 @@ const PANEL_FRAME_STYLE = {
 
 export function WorkflowPanelFrame({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   return (
     <div className="space-y-4" style={PANEL_FRAME_STYLE}>
       {children}
@@ -40,14 +40,14 @@ export function WorkflowPanelFrame({
 }
 
 /**
- * AE-0315: the live in-progress banner on EVERY step while a run executes;
- * AE-0440: when the stream gave up, say so instead of going stale.
+ * The live in-progress banner on EVERY step while a run executes;
+ * when the stream gave up, say so instead of going stale.
  */
 export function WorkflowRunNotices({
   workflow,
-}: {
+}: Readonly<{
   workflow: CreateWorkflowApi;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const { state, loading, refreshState } = workflow;
   return (
     <>
@@ -78,11 +78,11 @@ export function HistoricalStepView({
   workflow,
   viewStepId,
   state,
-}: {
+}: Readonly<{
   workflow: CreateWorkflowApi;
   viewStepId: CreateStepId;
   state: EditorialWorkflowState;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const tCreate = useTranslations("create.stepHistory");
   const phaseLabel = usePhaseLabel();
   const viewPhase = CREATE_STEP_TO_EDITORIAL_PHASE[viewStepId];
@@ -102,9 +102,9 @@ export function HistoricalStepView({
 /** Title, the polling-fallback badge and the current phase status. */
 export function WorkflowPanelHeader({
   workflow,
-}: {
+}: Readonly<{
   workflow: CreateWorkflowApi;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const phaseLabel = usePhaseLabel();
   const { state } = workflow;
@@ -133,10 +133,10 @@ export function WorkflowPanelHeader({
 export function PhaseEventBadges({
   phaseEvents,
   currentPhase,
-}: {
+}: Readonly<{
   phaseEvents: string[];
   currentPhase: string | undefined;
-}): React.JSX.Element | null {
+}>): React.JSX.Element | null {
   const phaseLabel = usePhaseLabel();
   if (phaseEvents.length === 0) {
     return null;
@@ -157,9 +157,9 @@ export function PhaseEventBadges({
 
 export function WorkflowErrorAlert({
   error,
-}: {
+}: Readonly<{
   error: string | null;
-}): React.JSX.Element | null {
+}>): React.JSX.Element | null {
   if (!error) {
     return null;
   }

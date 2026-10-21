@@ -12,21 +12,25 @@ publishing ACL/owner in the infrastructure layer).
 
 It exposes:
 
-* ``get_publication`` — the carousel→blog read projection (scaffolding; AE-0131
-  delivers the full projection). Reads a carousel project via the injected
+* ``get_publication`` — the carousel→blog read projection (scaffolding; the full
+  projection comes later). Reads a carousel project via the injected
   ``CarouselRepository`` and wraps it as a :class:`Publication` view.
-* ``release_carousel`` — the carousel public-release write use case (AE-0128).
+* ``release_carousel`` — the carousel public-release write use case.
   Forwards to the :class:`CarouselReleaseHandler` over the
   :class:`CarouselReleasePort`; byte-identical to the legacy ``is_public`` write.
-* ``publish_blog`` / ``unpublish_blog`` — the standalone blog visibility writes
-  (AE-0128) over the :class:`BlogVisibilityPort` (flush only; the route commits).
+* ``publish_blog`` / ``unpublish_blog`` — the standalone blog visibility writes over the
+  :class:`BlogVisibilityPort` (flush only; the route commits).
 * ``schedule_blog`` / ``process_due_blog_posts`` — the standalone blog scheduling
-  writes (AE-0128) over the :class:`BlogSchedulePort`.
+  writes over the :class:`BlogSchedulePort`.
 
 Behavior-preserving: each method forwards to an injected port/adapter; no
-publish/visibility/schedule behavior is changed (AE-0128 is a contract relocation,
+publish/visibility/schedule behavior is changed (this is a contract relocation,
 not an auto-publish cutover). A use case whose port is absent raises a clear
 :class:`RuntimeError` rather than silently no-op'ing.
+
+A use case invoked without its required port raises a programmer-error sentinel: the
+inbound edge always wires the ports, so it signals a wiring bug, never a path a request
+can reach in production.
 """
 
 from __future__ import annotations
@@ -68,9 +72,6 @@ from rag_backend.modules.publishing.domain.projections import (
     CarouselBlogProjection,
 )
 
-# Programmer-error sentinels for a use case invoked without its required port; the
-# inbound edge always wires the ports, so these signal a wiring bug, never a path
-# a request can reach in production.
 _ERR_NO_RELEASE_PORT = "publishing service invoked without the carousel release port"
 _ERR_NO_VISIBILITY_PORT = "publishing service invoked without the blog visibility port"
 _ERR_NO_SCHEDULE_PORT = "publishing service invoked without the blog schedule port"
@@ -87,9 +88,9 @@ class PublishingPorts:
 
     Grouped into one typed bundle so the service keeps to a single grouped
     argument beyond the carousel repository (backend/CLAUDE.md ≤3 args). Each
-    port is optional so the AE-0126 scaffolding keeps working; a use case whose
+    port is optional so the scaffolding keeps working; a use case whose
     port is absent raises a clear :class:`RuntimeError` rather than silently
-    no-op'ing. The AE-0128 release/visibility/schedule ports are wired at the
+    no-op'ing. The release/visibility/schedule ports are wired at the
     inbound edge from the publishing ACL/owner.
     """
 
@@ -216,8 +217,8 @@ class PublishingService:
     def new_blog_post(self, payload: dict[str, object]) -> BlogPostModel:
         """Build an unsaved blog row from the create payload (no session write).
 
-        A missing/blank slug is generated from the title + a short random suffix
-        (AE-0411): ``slug`` is unique, so persisting ``""`` 409'd every later create.
+        A missing/blank slug is generated from the title + a short random suffix:
+        ``slug`` is unique, so persisting ``""`` 409'd every later create.
         """
         return self._require_crud_port().new_post(with_generated_slug(payload))
 
@@ -233,7 +234,7 @@ class PublishingService:
         return await self._require_crud_port().list_summaries(query)
 
     async def public_blog_post_ids(self, post_ids: list[str]) -> frozenset[str]:
-        """Subset of ``post_ids`` an anonymous visitor can read right now (AE-0411)."""
+        """Subset of ``post_ids`` an anonymous visitor can read right now."""
         return await self._require_crud_port().public_post_ids(post_ids)
 
     def _require_read_port(self) -> PublishingReadPort:

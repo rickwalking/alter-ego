@@ -40,7 +40,7 @@ function DocumentListSection({
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
-}: DocumentListSectionProps) {
+}: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
   const adaptedDocuments: Document[] = documents.map((doc) => {
@@ -103,6 +103,45 @@ export function KnowledgeBaseInterface() {
     [deleteDocument],
   );
 
+  const renderView = (): React.ReactElement => {
+    if (viewMode === "list") {
+      return (
+        <Suspense fallback={<DocumentListSkeleton />}>
+          <DocumentListSection
+            onCreateNew={handleCreateNew}
+            onUploadNew={handleUploadNew}
+            onDeleteDocument={handleDelete}
+          />
+        </Suspense>
+      );
+    }
+    if (viewMode === "create") {
+      return (
+        <NeonCard>
+          <NeonCardHeader>
+            <NeonCardTitle>{t("form.createTitle")}</NeonCardTitle>
+          </NeonCardHeader>
+          <NeonCardContent>
+            <DocumentForm onSubmit={handleSubmit} onCancel={handleCancel} />
+          </NeonCardContent>
+        </NeonCard>
+      );
+    }
+    return (
+      <NeonCard>
+        <NeonCardHeader>
+          <NeonCardTitle>{t("upload.title")}</NeonCardTitle>
+        </NeonCardHeader>
+        <NeonCardContent>
+          <FileUpload
+            onUploadComplete={handleUploadComplete}
+            onCancel={handleCancel}
+          />
+        </NeonCardContent>
+      </NeonCard>
+    );
+  };
+
   return (
     <Container className="py-8">
       <div className="mb-8">
@@ -112,36 +151,7 @@ export function KnowledgeBaseInterface() {
         </p>
       </div>
 
-      {viewMode === "list" ? (
-        <Suspense fallback={<DocumentListSkeleton />}>
-          <DocumentListSection
-            onCreateNew={handleCreateNew}
-            onUploadNew={handleUploadNew}
-            onDeleteDocument={handleDelete}
-          />
-        </Suspense>
-      ) : viewMode === "create" ? (
-        <NeonCard>
-          <NeonCardHeader>
-            <NeonCardTitle>{t("form.createTitle")}</NeonCardTitle>
-          </NeonCardHeader>
-          <NeonCardContent>
-            <DocumentForm onSubmit={handleSubmit} onCancel={handleCancel} />
-          </NeonCardContent>
-        </NeonCard>
-      ) : (
-        <NeonCard>
-          <NeonCardHeader>
-            <NeonCardTitle>{t("upload.title")}</NeonCardTitle>
-          </NeonCardHeader>
-          <NeonCardContent>
-            <FileUpload
-              onUploadComplete={handleUploadComplete}
-              onCancel={handleCancel}
-            />
-          </NeonCardContent>
-        </NeonCard>
-      )}
+      {renderView()}
     </Container>
   );
 }

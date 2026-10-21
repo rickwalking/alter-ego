@@ -15,14 +15,14 @@ export interface LabeledSelectProps {
   marginBottom?: string;
 }
 
-/** Labelled `<select>` for the create-carousel sections (AE-0373). */
+/** Labelled `<select>` for the create-carousel sections. */
 export function LabeledSelect({
   label,
   value,
   options,
   onChange,
   marginBottom,
-}: LabeledSelectProps): React.ReactElement {
+}: Readonly<LabeledSelectProps>): React.ReactElement {
   return (
     <div style={marginBottom ? { marginBottom } : undefined}>
       <label

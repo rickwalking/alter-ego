@@ -1,4 +1,11 @@
-"""Prompt ids of the "Ponto de Vista" family (AE-0375, ADR-0021)."""
+"""Prompt ids of the "Ponto de Vista" family (ADR-0021).
+
+``POV_NEWS_PROMPT_DOMAIN`` is the news-analysis voice of the family (ADR-0023):
+same prompt names and version as ``carousel_pov``, only the domain differs. The
+``RADAR_*`` ids are the Radar IA v7 prompts used by ``hero_lower_third_v4``
+projects. ``PERSONA_POV_*`` name the persona block of the POV outline; a project
+with no persona gets the explicit empty ``NO_PERSONA_CONTEXT``.
+"""
 
 from __future__ import annotations
 
@@ -8,25 +15,19 @@ POV_PROMPT_OUTLINE = "outline"
 POV_PROMPT_HOOK = "hook"
 POV_PROMPT_CONTENT = "content"
 POV_PROMPT_CAPTION = "caption"
-# AE-0406 (ADR-0023): the news-analysis voice of the POV family. Same prompt
-# names and version as ``carousel_pov``; only the domain differs.
 POV_NEWS_PROMPT_DOMAIN = "carousel_pov_news"
 HOOK_CANDIDATE_COUNT = 5
-# AE-0376: the Radar IA v7 prompts (hero_lower_third_v4 projects).
 RADAR_PROMPT_DOMAIN = "carousel"
 RADAR_PROMPT_VERSION = "v7"
 RADAR_PROMPT_OUTLINE = "outline"
 RADAR_PROMPT_HOOK = "hook"
 RADAR_PROMPT_CONTENT = "content"
-# Outline slide-1 keys: the hook candidates and the outline checks.
 OUTLINE_FIELD_HOOK_CANDIDATES = "hook_candidates"
 OUTLINE_FIELD_OUTLINE_CHECKS = "outline_checks"
 OUTLINE_CHECK_THESIS_EARLY = "thesis_early"
-# PR #106 review: the persona block of the POV outline (persona_pov/v1).
 PERSONA_POV_PROMPT_DOMAIN = "persona_pov"
 PERSONA_POV_PROMPT_CONTEXT = "context"
 PERSONA_POV_PROMPT_VERSION = "v1"
-# A project with no persona: the outline gets this explicit empty context.
 NO_PERSONA_CONTEXT = ""
 NO_PHRASES = "nenhuma"
 

@@ -1,4 +1,4 @@
-"""Types of the autopilot model fix of failing slides (AE-0401).
+"""Types of the autopilot model fix of failing slides.
 
 The editorial facade injects the model (``SlideRewriter``) and the persona
 voice scorer (``VoiceScorer``), so the application layer imports neither the
@@ -33,7 +33,7 @@ class VoiceScorer(Protocol):
     """The persona's voice-match score (0-100) of one slide's PT copy."""
 
     async def score(self, text: str) -> float | None:
-        """None when the judge gave no score (AE-0407); may raise."""
+        """None when the judge gave no score; may raise."""
         ...
 
 
@@ -42,7 +42,7 @@ class SlideFixSettings:
     """How hard to try: attempts per slide, parallel slides, the voice floor.
 
     ``escalation_attempts`` more attempts run on ``escalation_rewriter``
-    (the reasoning model) after ``attempts`` failed ones (AE-0407).
+    (the reasoning model) after ``attempts`` failed ones.
     """
 
     attempts: int = AUTOFIX_MODEL_ATTEMPTS
@@ -75,7 +75,7 @@ class SlideIssue:
 class SlideTarget:
     """A slide to fix: its record, what fails, its voice score and role.
 
-    AE-0433: ``unscored_ticks`` > 0 means the stored score is stale (the
+    ``unscored_ticks`` > 0 means the stored score is stale (the
     judge gave no score for the current copy on that many ticks): the copy
     is re-scored before any rewrite.
     """
@@ -114,7 +114,7 @@ class FixAttempt:
 class SlideFixResult:
     """Where one slide ended: fixed or not, its copy, score and attempts.
 
-    AE-0433: a fixed slide whose copy the judge could not score keeps its
+    A fixed slide whose copy the judge could not score keeps its
     old ``score`` and counts ``unscored_ticks`` (> 0) for a re-score.
     """
 

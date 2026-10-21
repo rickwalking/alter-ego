@@ -1,4 +1,4 @@
-"""Unit tests for the resume-start artifact-mutation guard (AE-0316).
+"""Unit tests for the resume-start artifact-mutation guard.
 
 Gherkin: tests/features/carousel_typed_conflicts.feature
   Scenario: Resume is refused while an artifact mutator holds the lock

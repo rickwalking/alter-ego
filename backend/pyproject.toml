@@ -262,6 +262,8 @@ select = [
     "FBT",     # boolean trap — no boolean positional args
     "A",       # builtins shadow — don't shadow `id`, `type`, `list`, etc.
     "ERA",     # eradicate — commented-out code
+    "FIX",     # flake8-fixme — no TODO/FIXME/XXX/HACK left in code
+    "TD",      # flake8-todos — same markers, the comment-policy gate removes the rest
     "ARG",     # unused arguments
     "FAST",    # FastAPI-specific — Annotated deps, unused path params
     # Complexity (Tier 2)

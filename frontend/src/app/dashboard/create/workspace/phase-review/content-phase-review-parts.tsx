@@ -28,12 +28,12 @@ export function ContentReviewHeader({
   imagePrompts,
   contentGateBlocked,
   approvalBlocked,
-}: {
+}: Readonly<{
   policyVersion: string | null | undefined;
   imagePrompts: EditorialWorkflowState["slide_image_prompts"];
   contentGateBlocked: boolean;
   approvalBlocked: boolean;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const promptCount = imagePrompts?.length ?? 0;
   return (
@@ -76,12 +76,12 @@ export function ContentSlideRow({
   policyVersion,
   errors,
   handlers,
-}: {
+}: Readonly<{
   slide: LocalizedSlideReview;
   policyVersion: string | null | undefined;
   errors: SlideFieldErrorState;
   handlers: ReturnType<typeof contentEditHandlers> | null;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const localeProps = {
     slide,

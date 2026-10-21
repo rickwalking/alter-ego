@@ -76,7 +76,13 @@ async def restore_blog_post_version(
     current_user: EditorUser,
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
-    """Restore a blog post to a previous version (If-Match, snapshotted)."""
+    """Restore a blog post to a previous version (If-Match, snapshotted).
+
+    An empty snapshot (an old generation bootstrap) cannot be restored, since it would
+    fail the section check; it gets a named error for the editor. A restore is a content
+    write: strict blog.v2, cover projection synced, If-Match guarded and snapshotted
+    like a save.
+    """
     post = await get_blog_post_for_user(db, post_id, current_user)
     require_if_match(if_match)
 
@@ -93,16 +99,12 @@ async def restore_blog_post_version(
             detail=ERR_BLOG_VERSION_NOT_FOUND.format(version_number=version_number),
         )
 
-    # AE-0438 (F-05): a pre-fix empty snapshot (the generation bootstrap) cannot
-    # be restored — it would 422 on the section check. Name it for the editor.
     if is_empty_document(version_data.get("snapshot")):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_BLOG_VERSION_EMPTY,
         )
 
-    # A restore is a content write: strict blog.v2, cover projection synced,
-    # If-Match guarded and snapshotted like a save (AE-0424).
     restored = validated_write(
         version_data.get("snapshot", {}), post.ai_generation_metadata
     )

@@ -1,5 +1,5 @@
 /**
- * Error-copy mapping of the blog editor (AE-0438, F-11).
+ * Error-copy mapping of the blog editor.
  *
  * A failed editor action carries a typed kind plus the backend `detail` code.
  * The copy key picks the code-specific message when the backend code is known

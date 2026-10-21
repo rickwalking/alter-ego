@@ -1,9 +1,9 @@
 /**
- * Single-post blog read used by the editor (AE-0411).
+ * Single-post blog read used by the editor.
  *
  * The editor loads the post through the detail endpoint (the list endpoint
  * returns summaries without `content`, and only the first page). Writes live
- * in `blog-editor-requests.ts` (AE-0424).
+ * in `blog-editor-requests.ts`.
  */
 
 import { authenticatedFetch } from "@/lib/authenticated-fetch";

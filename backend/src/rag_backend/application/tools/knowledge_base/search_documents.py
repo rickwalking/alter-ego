@@ -3,7 +3,7 @@
 The bound tool resolves hybrid search through the knowledge module's public
 facade (:class:`KnowledgeSearchPort`) rather than reaching past the module to a
 raw retriever, so agent retrieval goes through the same search path as
-``/api/search`` (AE-0093). Result formatting is unchanged.
+``/api/search``. Result formatting is unchanged.
 """
 
 from langchain_core.tools import BaseTool, tool

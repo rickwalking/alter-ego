@@ -20,13 +20,13 @@ export interface CreatePovSectionProps {
 }
 
 /**
- * AE-0373: the "Ponto de Vista" inputs. The thesis is the owner's actual
+ * The "Ponto de Vista" inputs. The thesis is the owner's actual
  * opinion: the model may sharpen it but never invent it.
  */
 export function CreatePovSection({
   form,
   onChange,
-}: CreatePovSectionProps): React.ReactElement {
+}: Readonly<CreatePovSectionProps>): React.ReactElement {
   const t = useTranslations("create.pov");
   const thesisMissing = form.povThesis.trim().length === 0;
   return (

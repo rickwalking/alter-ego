@@ -109,6 +109,10 @@ async def client_and_container():
 
 
 async def _seed_completed_project(client: AsyncClient) -> str:
+    """The project is marked COMPLETED directly in the repo because the full pipeline
+    needs real LLM and image SDKs; minimal artifacts are created so the artifact health
+    checks pass.
+    """
     resp = await client.post(
         "/api/carousels",
         json={"topic": "T", "audience": "A", "niche": "N"},
@@ -116,8 +120,6 @@ async def _seed_completed_project(client: AsyncClient) -> str:
     assert resp.status_code == 201
     project_id = resp.json()["id"]
 
-    # Mark as COMPLETED directly in the repo — the full pipeline needs
-    # real LLM + image SDKs we don't want to exercise here.
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.infrastructure.database.carousel_repository import (
         PostgresCarouselRepository,
@@ -143,7 +145,6 @@ async def _seed_completed_project(client: AsyncClient) -> str:
             model.workflow_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
             await session.commit()
 
-    # Create minimal artifacts so artifact health checks pass
     from tests.integration.carousel_consolidation.helpers import (
         create_minimal_carousel_artifacts,
     )
@@ -160,10 +161,12 @@ class TestInstagramPublishRoute:
     async def test_503_when_public_base_url_missing(
         self, client_and_container, monkeypatch
     ):
+        """The publisher is overridden with one that would succeed, isolating the URL
+        check.
+        """
         client, container = client_and_container
         project_id = await _seed_completed_project(client)
 
-        # Override publisher to one that would succeed so we isolate the URL check.
         fake = AsyncMock()
         fake.publish_instagram = AsyncMock(
             return_value=PublishResult(status="published", post_id="ignored"),
@@ -263,7 +266,6 @@ class TestInstagramPublishRoute:
         assert body["status"] == "published"
         assert body["ig_post_id"] == "IG_17895_post"
 
-        # Publisher received URLs prefixed by the public base.
         call_args = fake.publish_instagram.call_args
         urls = call_args[0][1]
         assert all(url.startswith("https://public.test/") for url in urls)

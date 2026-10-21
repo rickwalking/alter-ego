@@ -45,7 +45,11 @@ function truncateDescription(text: string): string {
   return `${text.slice(0, META_DESCRIPTION_MAX_CHARS - 1).trimEnd()}…`;
 }
 
-/** AE-0412 (B22): per-post title/description instead of the generic site title. */
+/**
+ * Per-post title/description instead of the generic site title.
+ *
+ * The OG image is the post's own cover only, never a carousel slide.
+ */
 export async function generateMetadata({
   params,
   searchParams,
@@ -61,7 +65,6 @@ export async function generateMetadata({
   const description = view.subtitle
     ? truncateDescription(view.subtitle)
     : undefined;
-  // OG image: the post's own cover only (never a carousel slide, AE-0423).
   const image = view.cover?.url;
   return {
     title,
@@ -78,7 +81,7 @@ export async function generateMetadata({
 export default async function PublicBlogPostPage({
   params,
   searchParams,
-}: BlogPostPageProps) {
+}: Readonly<BlogPostPageProps>) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
   const currentLang = await resolveLang(langParam);

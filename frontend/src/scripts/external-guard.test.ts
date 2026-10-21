@@ -1,5 +1,5 @@
 /**
- * AE-0170: external QA/kaizen runs are isolated in a throwaway git worktree, and
+ * External QA/kaizen runs are isolated in a throwaway git worktree, and
  * a rogue HEAD-detach / branch-move of the primary repo is detected + restored.
  * Delegates to the self-contained bash check (uses temp repos; never touches the
  * working repo).
@@ -21,7 +21,7 @@ describe("external_agent worktree isolation + HEAD-detach guard (AE-0170)", () =
     let output = "";
     let status = 0;
     try {
-      output = execFileSync("bash", [CHECK], {
+      output = execFileSync(CHECK, [], {
         cwd: REPO_ROOT,
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],

@@ -1,4 +1,4 @@
-"""Publish-step slide-1 cover picker with fakes (AE-0445).
+"""Publish-step slide-1 cover picker with fakes.
 
 Gherkin: tests/features/carousel_cover_pick_ae0445.feature
   Scenario: The options are the owner's library photos, the current one marked

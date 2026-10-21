@@ -1,7 +1,7 @@
 /**
- * AE-0446: the editorial workflow SSE stream, as plain functions — which
+ * The editorial workflow SSE stream, as plain functions — which
  * events it listens to, how an event updates the workflow state, and the
- * AE-0415 (B15) ready-confirmation rule. Split out of
+ * ready-confirmation rule. Split out of
  * ``useEditorialWorkflowSse`` unchanged.
  */
 import { API_ENDPOINTS } from "@/constants/api";
@@ -21,7 +21,7 @@ import type {
   WorkflowStreamRefs,
 } from "../hooks/types";
 
-/** Every named event the stream sends (AE-0315 adds the run lifecycle). */
+/** Every named event the stream sends (including the run lifecycle). */
 const STREAM_EVENT_NAMES = [
   EDITORIAL_WORKFLOW_SSE_EVENTS.PHASE_CHANGED,
   EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
@@ -50,7 +50,7 @@ export type StreamEventContext = Pick<
   Pick<WorkflowStreamRefs, "workflowStateRef" | "phaseStatusRef">;
 
 /**
- * AE-0415 (B15): the stream's connect-time snapshot reads the raw checkpoint,
+ * The stream's connect-time snapshot reads the raw checkpoint,
  * which still says awaiting_human while a resumed run executes (the DB row says
  * in_progress) on the SAME phase. A running -> ready flip on the same phase is
  * therefore confirmed against GET workflow/state (the DB-merged source of
@@ -129,7 +129,12 @@ export interface StreamConnectionHandlers {
   onError: (source: EventSource) => void;
 }
 
-/** Open the workflow stream and route every event to ``onEvent``. */
+/**
+ * Open the workflow stream and route every event to ``onEvent``.
+ *
+ * EventSource hides the status of a failed stream, so the reconnect hook probes
+ * auth before (and instead of) reconnecting.
+ */
 export function openWorkflowStream(
   projectId: string,
   { onEvent, onOpen, onError }: StreamConnectionHandlers,
@@ -149,13 +154,11 @@ export function openWorkflowStream(
   }
   source.onmessage = handleMessage;
   source.onopen = onOpen;
-  // AE-0440: EventSource hides the status of a failed stream; the reconnect
-  // hook probes auth before (and instead of) reconnecting.
   source.onerror = () => onError(source);
   return source;
 }
 
-/** What (re)opening the workflow stream needs (AE-0446). */
+/** What (re)opening the workflow stream needs. */
 export interface StartStreamDeps {
   eventContext: StreamEventContext;
   stopPollingFallback: () => void;

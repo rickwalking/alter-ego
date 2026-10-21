@@ -1,12 +1,12 @@
 /**
- * AE-0446: route guard behavior, pinned before the middleware was split into
+ * Route guard behavior, pinned before the middleware was split into
  * small functions (it had no tests).
  * Gherkin: tests/features/auth-middleware-ae0446.feature
  */
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const verifyAccessToken = vi.fn();
+const verifyAccessToken = vi.fn<(token: string) => Promise<unknown>>();
 
 vi.mock("@/modules/identity", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/identity")>()),
@@ -73,9 +73,11 @@ describe("middleware route guard (AE-0446)", () => {
     expect(location(response)).toBe(`${ORIGIN}/dashboard/chat`);
   });
 
-  // Pinned as-is (AE-0446 finding): "/chat" is a public route, matched before
-  // the session check, so the "signed-in public chat -> dashboard chat" branch
-  // is unreachable on main too. Behavior unchanged here; owner decision.
+  /**
+   * Pinned as-is: "/chat" is a public route, matched before the session check,
+   * so the "signed-in public chat -> dashboard chat" branch is unreachable.
+   * Behaviour unchanged by owner decision.
+   */
   it("keeps the public chat public even with a session", async () => {
     verifyAccessToken.mockResolvedValue({ role: "viewer" });
     expect(location(await middleware(request("/chat", "ok")))).toBeNull();

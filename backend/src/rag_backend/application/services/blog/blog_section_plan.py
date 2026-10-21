@@ -1,9 +1,9 @@
-"""How many sections a generated post has, and the role of each (AE-0425).
+"""How many sections a generated post has, and the role of each.
 
 Owner revision of ADR-0025: the section count is the carousel's slide count,
 never a blog-only maximum. :func:`resolve_section_count` applies the order
-``project.slide_count`` → the real deck size (the slide rows, CTA included;
-AE-0439) → ``slide_count_from_config(slides_config)`` → the content-mode
+``project.slide_count`` → the real deck size (the slide rows, CTA included)
+→ ``slide_count_from_config(slides_config)`` → the content-mode
 default (standalone posts have no project and use that default).
 :func:`normalize_section_count` makes a writer that missed the count either fit
 exactly N sections (merge extras / split long sections on paragraph breaks)
@@ -39,7 +39,7 @@ class SectionCountSource:
     """The carousel fields the count is derived from (all optional).
 
     ``deck_slide_count`` is the REAL deck size (the persisted slide rows,
-    CTA included). AE-0439 (QA F-07): a Radar IA create stored no
+    CTA included). A Radar IA create stored no
     ``slide_count`` and the legacy ``slides_config`` (6) predates the v4
     contract, so the real deck size must come first.
     """
@@ -61,7 +61,7 @@ def default_section_count(content_mode: str | None) -> int:
 def resolve_section_count(source: SectionCountSource) -> int:
     """``slide_count`` → real deck size → ``slides_config`` → mode default.
 
-    AE-0439: the order is the stored count first, then the real deck size
+    the order is the stored count first, then the real deck size
     (the slide rows, CTA included), then the legacy config, then the
     content-mode default (standalone posts have no project and use that
     default). The CTA slide counts as a section (ADR-0025 §Count).

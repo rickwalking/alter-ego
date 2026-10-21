@@ -1,4 +1,4 @@
-"""The dashboard's Instagram insights (AE-0378, ADR-0021 D11).
+"""The dashboard's Instagram insights (ADR-0021 D11).
 
 Each published post is served from its stored snapshot. A snapshot older than
 six hours (or none) is read again from the Graph API, at most

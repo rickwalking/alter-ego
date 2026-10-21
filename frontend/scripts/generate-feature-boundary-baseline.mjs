@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate the COMMITTED cross-feature import baseline (AE-0083).
+ * Generate the COMMITTED cross-feature import baseline.
  *
  * Reproducible command:
  *   npm run boundaries:baseline

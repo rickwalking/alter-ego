@@ -3,8 +3,8 @@
 The public facade re-exports this under ``PasswordService``; cross-module code
 never imports this path directly.
 
-This is a **behavior-preserving** facade over the existing bcrypt helpers
-(AE-0098): hashing and verification delegate to the injected
+This is a **behavior-preserving** facade over the existing bcrypt helpers: hashing and
+verification delegate to the injected
 :class:`~rag_backend.modules.identity.application.ports.PasswordHasher`, which
 wraps the UNCHANGED ``infrastructure.auth`` functions. The service adds the
 explicit minimum-length policy that the legacy API enforced at the schema edge

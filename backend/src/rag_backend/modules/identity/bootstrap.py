@@ -7,7 +7,7 @@ request-scoped collaborators (the ``UserRepository`` enlisted in the request's
 Unit of Work and the ``Settings`` carrying the JWT secret/expiry) and passes
 them in.
 
-**Behavior-preserving wiring (AE-0098).** JWT/bcrypt are NOT reimplemented or
+**Behavior-preserving wiring.** JWT/bcrypt are NOT reimplemented or
 relocated: the bootstrap builds the thin ``infrastructure/auth_adapters``
 (``BcryptPasswordHasher`` / ``JwtTokenIssuer``) over the UNCHANGED
 ``infrastructure.auth`` functions and injects them into the services. The
@@ -63,7 +63,7 @@ class IdentityAdapters:
     """Pre-constructed, request-scoped collaborators for the identity module.
 
     Built at the inbound edge (the api adapter / legacy route) from the existing
-    infrastructure so the module wires to them without relocation (AE-0098). The
+    infrastructure so the module wires to them without relocation. The
     ``unit_of_work`` wraps that same request's ``AsyncSession`` and is the single
     transaction owner the user service commits through (ADR-0009 §9); ``settings``
     carries the unchanged JWT secret/expiry used to issue and validate tokens.
@@ -78,7 +78,7 @@ class IdentityAdapters:
 class IdentityServices:
     """The identity module's public application services (the wired result).
 
-    ``auth`` and ``admin`` are the AE-0099 inbound-adapter handlers the
+    ``auth`` and ``admin`` are the inbound-adapter handlers the
     ``/api/auth`` and ``/api/admin/users`` routes delegate to; the lower-level
     ``users``/``authentication``/``passwords`` services remain exposed for direct
     cross-module use and underpin the handlers.
@@ -104,7 +104,7 @@ def bootstrap_module(
     bcrypt/JWT adapters over the unchanged ``infrastructure.auth`` and injects
     everything into the services via their constructors.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     passwords = PasswordService(hasher=BcryptPasswordHasher())
     tokens = JwtTokenIssuer(adapters.settings)
     users = UserService(

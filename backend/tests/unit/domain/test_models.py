@@ -116,7 +116,6 @@ class TestConversation:
         conversation = Conversation()
         old_updated_at = conversation.updated_at
 
-        # Small delay to ensure timestamp changes
         import time
 
         time.sleep(0.001)

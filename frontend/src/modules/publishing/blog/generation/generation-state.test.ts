@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readGenerationState } from "./generation-state";
 
-// Scenarios: see tests/features/blog_generate_ae0425.feature
-// ("Generation progress is polled and shown", "A failed generation shows a retry affordance")
+/** Gherkin: tests/features/blog_generate_ae0425.feature. */
 
 describe("readGenerationState (AE-0425)", () => {
   it("reads a full run state", () => {

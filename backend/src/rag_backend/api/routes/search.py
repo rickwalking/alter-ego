@@ -6,7 +6,7 @@ delegate to the request-scoped :class:`KnowledgeService` facade (resolved via th
 DI container itself), and map the returned ``SearchResultView`` list back onto
 the HTTP response. Hybrid-search semantics (RRF, namespaces, ``alpha``/``top_k``) live
 behind the facade and are unchanged; the response stays byte-identical to the
-pre-refactor route (AE-0093).
+pre-refactor route.
 """
 
 from typing import Annotated

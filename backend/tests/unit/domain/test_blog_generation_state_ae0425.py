@@ -1,4 +1,4 @@
-"""Pure transitions of ``ai_generation_metadata.generation`` (AE-0425).
+"""Pure transitions of ``ai_generation_metadata.generation``.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """

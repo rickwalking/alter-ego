@@ -1,7 +1,7 @@
 """Worker wiring for owner Telegram notices (split from ``bootstrap``).
 
 One tick delivers due reviews, statuses and reminders, asks for each POV
-run's thesis (AE-0377) and, AE-0418, sweeps the GrokBot covers nobody used
+run's thesis and sweeps the GrokBot covers nobody used
 within 6 hours. Reviews and thesis prompts carry the run's cover offer.
 """
 
@@ -29,12 +29,14 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True)
 class TelegramTickConfig:
-    """Worker-tick wiring for owner Telegram notices."""
+    """Worker-tick wiring for owner Telegram notices.
+
+    The autofixer lets the review list quality issues and offer “Fix issues”.
+    """
 
     token: str
     chat_id: str
     web_base_url: str
-    # AE-0367: lets the review list quality issues and offer "Fix issues".
     engine_factory: EngineFactory | None = None
 
 
@@ -45,7 +47,11 @@ class TelegramNotifyTickAdapter:
         self._config = config
 
     async def tick(self, db: AsyncSession) -> int:
-        """Send due reviews, statuses, reminders and thesis prompts; sweep covers."""
+        """Send due reviews, statuses, reminders and thesis prompts; sweep covers.
+
+        Also asks the owner once to confirm each POV run's thesis, and deletes
+        the covers nobody used within 6 hours.
+        """
         from rag_backend.modules.autopilot.application.notifications import (
             OwnerNotificationService,
         )
@@ -53,9 +59,7 @@ class TelegramNotifyTickAdapter:
 
         deps = _notification_deps(db, self._config)
         sent = await OwnerNotificationService(deps).tick()
-        # AE-0377: ask the owner to confirm each POV run's thesis (once).
         sent += await thesis_prompts(db, deps).tick()
-        # AE-0418: delete the covers nobody used within 6 hours.
         return sent + await cover_sweep(db).tick()
 
 

@@ -2,6 +2,14 @@
 
 The table is the spec. Persistence enforces it with a compare-and-set;
 this module only answers whether the requested pair is legal.
+
+Beyond the architecture table, ``(queued, failed)`` covers three provider failures on
+start, and ``(publishing, awaiting_owner)`` covers the editorial approve refusing the
+owner's Approve, so the review stays open instead of a dead ``publish_failed``. A POV
+run waits in ``awaiting_thesis`` for the owner's thesis before generating. ``scheduled``
+holds the owner's publish time: cancel reopens the review, a carousel no longer approved
+at the due time expires the run, and the owner may move a scheduled run to another day
+or time.
 """
 
 from __future__ import annotations
@@ -14,10 +22,6 @@ from rag_backend.modules.autopilot.domain.models import (
 
 _S = AutopilotRunState
 
-# (expected, new) pairs from docs/architecture/grokbot-autopilot.md §4.
-# AE-0354 adds (queued, failed): three provider failures on start.
-# QA r1 adds (publishing, awaiting_owner): the editorial approve refused the
-# owner's Approve, so the review stays open instead of a dead publish_failed.
 ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
     frozenset({
         (_S.QUEUED, _S.GENERATING),
@@ -37,18 +41,14 @@ ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
         (_S.PUBLISHING, _S.PUBLISH_FAILED),
         (_S.PUBLISHING, _S.AWAITING_OWNER),
         (_S.PUBLISH_FAILED, _S.PUBLISHING),
-        # AE-0377: a POV run waits for the owner's thesis before generating.
         (_S.QUEUED, _S.AWAITING_THESIS),
         (_S.AWAITING_THESIS, _S.QUEUED),
         (_S.AWAITING_THESIS, _S.REJECTED),
         (_S.AWAITING_THESIS, _S.EXPIRED),
-        # AE-0370: the owner's publish time. Cancel reopens the review; a
-        # carousel no longer approved at the due time expires the run.
         (_S.AWAITING_OWNER, _S.SCHEDULED),
         (_S.SCHEDULED, _S.PUBLISHING),
         (_S.SCHEDULED, _S.AWAITING_OWNER),
         (_S.SCHEDULED, _S.EXPIRED),
-        # AE-0404: the owner moves a scheduled run to another day or time.
         (_S.SCHEDULED, _S.SCHEDULED),
     })
 )

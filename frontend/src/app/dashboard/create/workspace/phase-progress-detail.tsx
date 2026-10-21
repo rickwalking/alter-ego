@@ -28,7 +28,7 @@ export function PhaseProgressDetail({
   current,
   total,
   slides,
-}: PhaseProgressDetailProps) {
+}: Readonly<PhaseProgressDetailProps>) {
   const hasProgressBar =
     typeof current === "number" && typeof total === "number" && total > 0;
   const percentComplete = hasProgressBar

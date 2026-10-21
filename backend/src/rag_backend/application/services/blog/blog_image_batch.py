@@ -1,16 +1,16 @@
-"""Cover + one image per section for a generated post (AE-0425, ADR-0025).
+"""Cover + one image per section for a generated post (ADR-0025).
 
-Built on the editor's :class:`BlogImageService` (AE-0424): one image template,
+Built on the editor's :class:`BlogImageService`: one image template,
 one blog-images store, one serving route. This module adds what bulk
 generation needs on top of it:
 
 * bounded concurrency (``BLOG_IMAGE_CONCURRENCY``), cover first;
-* the per-post image cap (AE-0424's ``BLOG_IMAGE_COST_CAP`` counter): the
+* the per-post image cap (the ``BLOG_IMAGE_COST_CAP`` counter): the
   caller passes how many images the post may still generate, and only that
   many slots are attempted;
 * best-effort slots: a failed or capped slot stays ``null`` with an error that
   names it; nothing here ever fails the draft;
-* a budget sized by the slot count (AE-0435): ``wave_seconds`` per wave of
+* a budget sized by the slot count: ``wave_seconds`` per wave of
   ``concurrency`` images. When it runs out, the images that finished are kept
   and every unfinished slot gets ``image_timeout`` (the retry fills it).
 """
@@ -62,7 +62,7 @@ logger = structlog.get_logger(__name__)
 
 @dataclass(frozen=True)
 class BlogImageBatchDeps:
-    """The single-image service + store (AE-0424) and the batch concurrency."""
+    """The single-image service + store and the batch concurrency."""
 
     images: BlogImageService
     store: BlogImageStore

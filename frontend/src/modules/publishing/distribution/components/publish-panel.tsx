@@ -23,9 +23,11 @@ import type {
 type LanguageTab = ViewerLanguage;
 type ActiveTab = "instagram" | "linkedin";
 
-// AE-0313: combine the project's updated_at with the freshly built artifact
-// version (when a "Rebuild PDF" just ran) so served PDF/slide URLs are
-// cache-busted on version change.
+/**
+ * Combines the project's updated_at with the freshly built artifact version
+ * (when a Rebuild PDF just ran) so served PDF/slide URLs are cache-busted on
+ * version change.
+ */
 function cacheBustVersion(
   project: CarouselProjectResponse,
   cacheBustToken: string | undefined,
@@ -78,7 +80,7 @@ export function PublishPanel({
   publishResult,
   cacheBustToken,
   slideNumbers,
-}: PublishPanelProps) {
+}: Readonly<PublishPanelProps>) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
   const [language, setLanguage] = useState<LanguageTab>("pt");

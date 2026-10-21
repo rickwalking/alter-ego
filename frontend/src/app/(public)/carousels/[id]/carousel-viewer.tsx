@@ -25,7 +25,7 @@ interface CarouselViewerProps {
 export function CarouselViewer({
   title,
   slides,
-}: CarouselViewerProps): React.ReactElement | null {
+}: Readonly<CarouselViewerProps>): React.ReactElement | null {
   const t = useTranslations("carousels");
   const [index, setIndex] = useState(0);
   const total = slides.length;

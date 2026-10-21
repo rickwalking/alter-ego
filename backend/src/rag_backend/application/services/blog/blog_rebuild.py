@@ -1,9 +1,9 @@
-"""Rebuild AE-0422's hidden carousel-origin posts as v2 drafts (AE-0426).
+"""Rebuild the hidden carousel-origin posts as v2 drafts.
 
-The AE-0422 hide wrote ``ai_generation_metadata.hidden_bad_post`` and flipped the
+The hide operation wrote ``ai_generation_metadata.hidden_bad_post`` and flipped the
 row to ``draft``; this one-off operation selects by that **durable marker** (a
 status selector would immediately go empty), rebuilds the row's content through
-the AE-0425 writer pipeline and leaves it a ``draft`` for owner review.
+the blog writer pipeline and leaves it a ``draft`` for owner review.
 
 The service is pure orchestration over two ports:
 
@@ -96,7 +96,7 @@ class RebuildStore(Protocol):
     """The rows of the rebuild and its two fenced writes."""
 
     async def candidates(self) -> list[RebuildCandidate]:
-        """Every row carrying the AE-0422 marker (rebuilt or not)."""
+        """Every row carrying the hidden-post marker (rebuilt or not)."""
         ...
 
     async def start_attempt(self, spec: AttemptSpec) -> GenerationLease | None:
@@ -117,7 +117,7 @@ class CarouselMaterialSource(Protocol):
 
 
 class GenerationRunner(Protocol):
-    """The AE-0425 run (``BlogGenerationService`` satisfies it)."""
+    """The blog generation run (``BlogGenerationService`` satisfies it)."""
 
     async def run(self, job: GenerationJob) -> GenerationOutcome | None:
         """Run one job to its recorded outcome."""

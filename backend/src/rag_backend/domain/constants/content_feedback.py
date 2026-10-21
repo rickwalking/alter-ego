@@ -1,48 +1,44 @@
-"""Constants for the reviewer feedback-note lifecycle (AE-0405).
+"""Constants for the reviewer feedback-note lifecycle.
 
 A revision note is active until the regeneration that uses it runs; it then
 moves to a per-phase history kept for the audit and the persona feedback loop.
+
+``phase_feedback`` keeps the active note texts (API shape unchanged) and
+``phase_feedback_notes`` carries their metadata. ``content_artifacts_parked`` is true
+while the graph is parked at the content review with that review's artifacts in the
+checkpoint, so the node replay on resume reuses them instead of re-running the content
+ensure and its LLM calls; the content interrupt payload carries those artifact updates
+for the engine to write once the graph parks. History statuses: applied (used by a
+regeneration), dropped (an autopilot note whose gate passed without it), migrated (a
+legacy untagged note older than the last regeneration) and unchanged (used, but the
+visible copy did not change). A manual-fixes revise keeps the edited copy without a
+content ensure.
 """
 
-# Workflow state fields. ``phase_feedback`` (STATE_FIELD_PHASE_FEEDBACK) keeps
-# the ACTIVE note texts (API shape unchanged); these two carry the metadata.
 STATE_FIELD_FEEDBACK_NOTES = "phase_feedback_notes"
 STATE_FIELD_FEEDBACK_HISTORY = "phase_feedback_history"
-# True while the graph is parked at the content review and the artifacts that
-# review shows were written to the checkpoint: the node replay on resume reuses
-# them instead of running the content ensure (and its LLM calls) again.
 STATE_FIELD_CONTENT_ARTIFACTS_PARKED = "content_artifacts_parked"
-# Content interrupt payload key carrying that pass's artifact updates, which
-# the engine writes to the checkpoint once the graph parks.
 PAYLOAD_KEY_PARKED_ARTIFACTS = "parked_artifact_updates"
 
-# Structured-feedback key naming who wrote the note (autopilot vs human).
 STRUCTURED_FEEDBACK_SOURCE_KEY = "feedback_source"
 FEEDBACK_SOURCE_HUMAN = "human"
 FEEDBACK_SOURCE_AUTOPILOT = "autopilot"
 
-# Note entry fields.
 FEEDBACK_ENTRY_NOTE = "note"
 FEEDBACK_ENTRY_SOURCE = "source"
 FEEDBACK_ENTRY_ADDED_AT = "added_at"
 FEEDBACK_ENTRY_STATUS = "status"
 FEEDBACK_ENTRY_SETTLED_AT = "settled_at"
 
-# History statuses: used by a regeneration, dropped (autopilot note whose gate
-# passed without it), migrated (legacy untagged note that predates the last
-# regeneration).
 FEEDBACK_STATUS_APPLIED = "applied"
 FEEDBACK_STATUS_DROPPED = "dropped"
 FEEDBACK_STATUS_MIGRATED = "migrated"
-# AE-0430: the regeneration used the note but the visible copy did not change.
 FEEDBACK_STATUS_UNCHANGED = "unchanged"
 
-# structlog events.
 LOG_FEEDBACK_APPLIED = "content_feedback_applied"
 LOG_FEEDBACK_SETTLED = "content_feedback_settled"
 LOG_CONTENT_REPLAY_REUSED = "content_artifacts_replay_reused"
 LOG_CONTENT_ARTIFACTS_PARKED = "content_artifacts_parked"
-# AE-0413: a manual-fixes revise keeps the edited copy (no content ensure).
 LOG_CONTENT_MANUAL_FIXES_KEPT = "content_manual_fixes_kept"
 
 __all__ = [

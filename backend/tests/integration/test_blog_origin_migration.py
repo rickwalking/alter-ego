@@ -1,4 +1,4 @@
-"""Migration tests for AE-0127 blog_post origin backfill (upgrade + downgrade).
+"""Migration tests for the blog_post origin backfill (upgrade + downgrade).
 
 Gherkin not applicable — this is a schema-migration safety net (DDL/data-movement),
 not a behavioral scenario.
@@ -11,6 +11,8 @@ database and prove the additive backfill is reversible WITHOUT DATA LOSS:
 * downgrade deletes ONLY the inserted ``carousel-{id}`` rows and preserves the
   pre-existing project-linked rows (a naive ``DELETE WHERE origin='carousel'``
   would destroy them — the regression this test guards).
+
+``_EXISTING_SLUG`` is deliberately NOT a carousel-* slug.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 _EXISTING_BLOG_ID = "existing-blog-1"
 _EXISTING_PROJECT_ID = "project-existing-1"
-_EXISTING_SLUG = "my-handwritten-post"  # NOT a carousel-* slug
+_EXISTING_SLUG = "my-handwritten-post"
 _CAROUSEL_PROJECT_ID = "project-carousel-1"
 
 
@@ -145,25 +147,23 @@ def test_upgrade_relabels_existing_and_inserts_carousel(seeded_db: str) -> None:
     _run_migration("upgrade", _ORIGIN_REV)
 
     origins = _origins_by_slug(seeded_db)
-    # Pre-existing project-linked row is re-labelled (step 2), not duplicated.
     assert origins[_EXISTING_SLUG] == "carousel"
-    # The eligible carousel project produced one backfill-inserted row (step 3).
     inserted_slug = f"carousel-{_CAROUSEL_PROJECT_ID}"
     assert origins[inserted_slug] == "carousel"
 
 
 # Scenario: downgrade removes ONLY inserted rows and preserves pre-existing data.
 def test_downgrade_preserves_preexisting_rows(seeded_db: str) -> None:
+    """The pre-existing handwritten post survives (no data loss), the backfill-inserted
+    carousel-* row is removed and the origin column is dropped.
+    """
     _run_migration("upgrade", _ORIGIN_REV)
 
     _run_migration("downgrade", _PRE_REV)
 
     slugs = _slugs(seeded_db)
-    # The pre-existing handwritten post SURVIVES the downgrade (no data loss).
     assert _EXISTING_SLUG in slugs
-    # The backfill-inserted carousel-* row is removed.
     assert f"carousel-{_CAROUSEL_PROJECT_ID}" not in slugs
-    # The origin column is dropped (schema restored).
     conn = sqlite3.connect(seeded_db)
     try:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(blog_posts)")}
@@ -184,6 +184,6 @@ def test_upgrade_is_idempotent(seeded_db: str) -> None:
         count = conn.execute(
             "SELECT COUNT(*) FROM blog_posts WHERE slug = ?", (inserted_slug,)
         ).fetchone()[0]
-        assert count == 1  # exactly one, not duplicated across upgrade cycles
+        assert count == 1
     finally:
         conn.close()

@@ -1,4 +1,4 @@
-"""Unit tests for the carousel republish route handler (AE-0313).
+"""Unit tests for the carousel republish route handler.
 
 Feature: Republish a completed carousel's artifacts
   Scenario: Failed republish never corrupts a completed project
@@ -65,9 +65,9 @@ def _project_model(
 
 
 def _db(refreshed: MagicMock | None) -> AsyncSession:
+    """The success path clears the needs_republish marker and commits."""
     db = MagicMock()
     db.get = AsyncMock(return_value=refreshed)
-    # AE-0314: the success path clears the needs_republish marker + commits.
     db.commit = AsyncMock()
     db.flush = AsyncMock()
     return cast(AsyncSession, db)
@@ -100,8 +100,9 @@ class TestRepublishRoute:
         assert exc_info.value.conflict.code == CONFLICT_CODE_RUN_IN_PROGRESS
 
     async def test_successful_republish_returns_new_version(self) -> None:
-        # The finalize pipeline refreshes the same session-identity project row;
-        # the route reads the new version straight off it (no ORM re-fetch).
+        """The finalize pipeline refreshes the same session-identity project row; the
+        route reads the new version straight off it (no ORM re-fetch).
+        """
         model = _project_model(status=CarouselStatus.COMPLETED.value)
         model.artifact_version = "sha256-" + "f" * 64
         with (

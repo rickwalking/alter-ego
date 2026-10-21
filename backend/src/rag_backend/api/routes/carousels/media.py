@@ -1,10 +1,10 @@
 """Carousel media + serving routes (pdf / blog / design / images / slides).
 
-Thin HTTP adapters (AE-0120). Each endpoint reads the project/slides through the
+Thin HTTP adapters. Each endpoint reads the project/slides through the
 presentation :class:`PresentationHandlers` (via the presentation facade), applies
 the access check at the edge (``assert_domain_owner_or_admin`` /
 ``assert_carousel_public``), and builds the FileResponse / response schema. The
-design-token merge is reached through the handler (the AE-0115 §6 presentation
+design-token merge is reached through the handler (the presentation
 read) instead of importing the merge utility directly; the routes no longer
 construct the carousel repository.
 """
@@ -92,7 +92,7 @@ def get_publishing_module_for_blog_read(
     """Build the request-scoped publishing facade for the carousel-blog read edge.
 
     Binds the read projection port to the request session (the sole carousel/blog
-    ORM read seam → the AE-0127 ``origin='carousel'`` backfill lookup with the
+    ORM read seam → the ``origin='carousel'`` backfill lookup with the
     embedded-column fallback). The carousel repository is resolved via the
     grandfathered ``get_carousel_repo`` edge so this route adds no new
     ``api -> infrastructure`` import.
@@ -121,7 +121,7 @@ async def _assert_blog_visible(
 ) -> None:
     """404 the legacy carousel-blog read for anonymous callers on unpublished posts.
 
-    AE-0422: the public ``/blog`` + ``/blog/{lang}`` reads rendered any carousel
+    the public ``/blog`` + ``/blog/{lang}`` reads rendered any carousel
     whose blog was generated, ignoring ``blog_posts.status`` — a hidden post stayed
     reachable at ``/blog/<carousel project id>``. Anonymous callers must now see it
     only when the canonical ``origin='carousel'`` row is ``published`` (uniform 404,
@@ -140,7 +140,7 @@ async def _load_public_project_with_output(
     """Load a public carousel that has rendered output, else a 404.
 
     The public check runs before the output check so a private, unrendered
-    carousel answers exactly like an unknown id (ADR-0013, AE-0446).
+    carousel answers exactly like an unknown id (ADR-0013).
     """
     project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
@@ -315,8 +315,7 @@ async def get_carousel_image(
 
     Resolves the raw image (``<output>/images/``) first, then the rendered slide
     of ``lang`` (standard, then HD) — the same fallback the owner-only preview
-    route uses, so a public page never 404s on an image the owner can see
-    (AE-0412, QA B08).
+    route uses, so a public page never 404s on an image the owner can see.
     """
     project = await _load_public_project_with_output(handlers, project_id)
     images_dir = resolve_shared_images_dir(project)

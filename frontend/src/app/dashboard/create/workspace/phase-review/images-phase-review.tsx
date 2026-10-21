@@ -9,7 +9,7 @@ export interface ImagesPhaseReviewProps {
 
 export function ImagesPhaseReview({
   state,
-}: ImagesPhaseReviewProps): React.ReactElement | null {
+}: Readonly<ImagesPhaseReviewProps>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
 
   if ((state.image_assets?.length ?? 0) === 0) {

@@ -31,7 +31,7 @@ import type {
 export type { EditorialReviseOptions };
 
 /**
- * AE-0414 (B02): an edits-only revise (content manual fixes, design recovery)
+ * An edits-only revise (content manual fixes, design recovery)
  * carries the reviewer's slide edits and no feedback. Its callers fire and
  * forget it, so a rejection would surface as an uncaught page error; the
  * failure is already shown through the hook's translated ``error``.
@@ -157,7 +157,7 @@ function useStartWorkflow(
 
 type ResumeFn = ReturnType<typeof useEditorialWorkflowResume>["resume"];
 
-/** Approve / revise, remembering which action started the run (AE-0415 B27). */
+/** Approve / revise, remembering which action started the run. */
 function reviewActions(
   resume: ResumeFn,
   state: EditorialWorkflowState | null,
@@ -220,7 +220,7 @@ function useWorkflowCore(projectId: string): WorkflowCore {
 }
 
 /**
- * AE-0415 (B30): a project that never started its workflow has no state
+ * A project that never started its workflow has no state
  * (GET answers 404); callers that know this skip the request.
  */
 function useInitialRefresh(
@@ -235,6 +235,10 @@ function useInitialRefresh(
   }, [initialFetch, refreshState]);
 }
 
+/**
+ * Records which review action started the current run, and on which phase, so
+ * the running banner names the phase that is really running.
+ */
 export function useEditorialWorkflow(
   projectId: string,
   options?: UseEditorialWorkflowOptions,
@@ -242,8 +246,6 @@ export function useEditorialWorkflow(
   const t = useTranslations("editorialWorkflow.errors");
   const core = useWorkflowCore(projectId);
   const { state, refreshState } = core;
-  // AE-0415 (B27): which review action started the current run, and on which
-  // phase, so the running banner can name the phase that is really running.
   const [lastResume, setLastResume] = useState<RecordedResume | null>(null);
   const sse = useEditorialWorkflowSse({
     ...core,

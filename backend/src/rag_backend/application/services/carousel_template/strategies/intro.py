@@ -74,7 +74,6 @@ class IntroHeroStrategy:
                 overlay_classes="slide-overlay slide-1-bg-gradient",
                 footer_html=footer_html,
                 include_counter=False,
-                # AE-0418: the owner's chosen GrokBot ``ai_image`` cover.
                 artwork_src=ai_cover_src(project),
                 show_artwork=artwork_enabled(options),
             )

@@ -88,14 +88,16 @@ class _NoStoredPosts:
 
 @dataclass(frozen=True, kw_only=True)
 class TopicIntakeDependencies:
-    """Collaborators for one intake call. One object keeps the constructor small."""
+    """Collaborators for one intake call. One object keeps the constructor small.
+
+    ``posts`` reads the stored x-signals post texts that ``pov_news`` quotes cite;
+    ``covers`` resolves the GrokBot covers the topics name (``cover.asset_id``).
+    """
 
     store: TopicIntakeStore
     clock: Clock
     daily_cap: int
-    # AE-0406: the stored x-signals post texts that ``pov_news`` quotes cite.
     posts: XPostTextReader = field(default_factory=_NoStoredPosts)
-    # AE-0418: the GrokBot covers the topics name (``cover.asset_id``).
     covers: CoverIntakeStore = field(default_factory=_NoCovers)
 
 
@@ -160,7 +162,7 @@ class TopicIntakeService:
     async def _covers(
         self, prepared: tuple[PreparedProposal, ...], now: datetime
     ) -> CoverFacts:
-        """AE-0418: the stored covers the batch names (no read without)."""
+        """The stored covers the batch names (no read without)."""
         ids = tuple(
             dict.fromkeys(i.cover_uuid for i in prepared if i.cover_uuid is not None)
         )
@@ -177,7 +179,7 @@ class TopicIntakeService:
     async def _post_texts(
         self, prepared: tuple[PreparedProposal, ...]
     ) -> dict[str, str]:
-        """AE-0406: the stored posts the batch's quotes cite (no read without)."""
+        """The stored posts the batch's quotes cite (no read without)."""
         urls = tuple(
             dict.fromkeys(url for item in prepared for url in quote_urls(item.quotes))
         )
@@ -188,8 +190,10 @@ class TopicIntakeService:
     async def _stored(self, plan: IntakePlan) -> IntakePlan:
         """Insert new candidates. A hash a concurrent batch won is a duplicate.
 
-        AE-0418: a cover another batch claimed (or the sweep deleted) after the
+        A cover another batch claimed (or the sweep deleted) after the
         facts were read rejects that topic, and its row is removed again.
+
+        A lost row is reported as a duplicate (or a lost cover), not also as capped.
         """
         kept: list[NewCandidate] = []
         lost: list[tuple[NewCandidate, TopicRejection]] = []
@@ -202,7 +206,6 @@ class TopicIntakeService:
         if not lost:
             return plan
         lost_ids = {item.candidate_id for item, _ in lost}
-        # A lost row is a duplicate (or lost its cover), not also "capped".
         lost_titles = {item.proposal.title for item, _ in lost}
         capped = tuple(r for r in plan.rejected if r.title not in lost_titles)
         return IntakePlan(
@@ -227,7 +230,7 @@ class TopicIntakeService:
         )
 
     async def _claim_cover(self, item: NewCandidate) -> str | None:
-        """AE-0418: the stored topic is the cover's one use; None when it is."""
+        """The stored topic is the cover's one use; None when it is."""
         asset_id = item.proposal.cover_uuid
         if asset_id is None:
             return None

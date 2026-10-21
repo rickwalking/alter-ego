@@ -1,4 +1,9 @@
-"""Quality Agent for rubric evaluation and scoring."""
+"""Quality Agent for rubric evaluation and scoring.
+
+The *_PROMPT_FALLBACK strings are one-line fallbacks used when the prompt registry is
+unavailable; the live prompts are
+agents/prompts/quality/v1/{evaluate,improve_suggestions}.yaml.
+"""
 
 from typing import Protocol, cast
 
@@ -14,8 +19,6 @@ from rag_backend.domain.models.rubric import (
 )
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
-# 1-line fallbacks if the prompt registry is unavailable (AE-0243). Live prompts:
-# agents/prompts/quality/v1/{evaluate,improve_suggestions}.yaml.
 _EVALUATE_PROMPT_FALLBACK = (
     "Evaluate this content against the rubric and return JSON. Prompt registry "
     "unavailable — load agents/prompts/quality/v1/evaluate.yaml"
@@ -62,7 +65,7 @@ class QualityAgent:
         return self._parse_evaluation_response(cast(str, response.content))
 
     def _build_evaluation_prompt(self, content: str, sources_str: str) -> str:
-        """Build the evaluation prompt via the registry (AE-0243, byte-parity)."""
+        """Build the evaluation prompt via the registry (byte-parity)."""
         criteria_str = "\n".join(
             f"{c['name']}: {c['description']}" for c in self.rubric.criteria
         )

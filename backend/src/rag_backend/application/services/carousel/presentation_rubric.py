@@ -1,6 +1,6 @@
 """LLM quality rubric: parse it from the contract and render it into prompts.
 
-AE-0366: the presentation contract's ``quality_rubric`` section is the single
+The presentation contract's ``quality_rubric`` section is the single
 source of truth for the checklist the content drafter and the EN translator
 must satisfy. Every rubric item names the validator rule codes that enforce it;
 the loader refuses a rubric item whose rule code has no declared severity, so a

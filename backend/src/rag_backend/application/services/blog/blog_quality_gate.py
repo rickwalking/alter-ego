@@ -1,4 +1,4 @@
-"""The blocking quality gate of a generated article (AE-0425, ADR-0025).
+"""The blocking quality gate of a generated article (ADR-0025).
 
 Per language (PT canonical, then ``translations.en``):
 
@@ -9,7 +9,7 @@ Per language (PT canonical, then ``translations.en``):
    the writer performs **exactly one** rewrite pass, then the article is
    re-normalized, re-stripped and re-scored. The second score is stored as is:
    there is never a second rewrite.
-4. EN only (AE-0435): a rewrite that switched the article to Portuguese is
+4. EN only: a rewrite that switched the article to Portuguese is
    discarded and the English sections from before it are kept (the PT persona
    scorer's Portuguese suggestions used to pull the EN rewrite into Portuguese).
 """
@@ -139,8 +139,9 @@ class BlogQualityGate:
         return normalize_section_count(rewritten, command.brief.section_count)
 
     async def assess(self, command: GateCommand) -> GatedLanguage:
-        """Score + scan ``command.sections`` without any rewrite (AE-0435: a
-        retranslated EN is stored with its own quality)."""
+        """Score + scan ``command.sections`` without any rewrite.
+
+        A retranslated EN is stored with its own quality."""
         assessed = await self._assess(command, command.sections)
         return GatedLanguage(assessed.sections, assessed.voice, assessed.findings, 0)
 

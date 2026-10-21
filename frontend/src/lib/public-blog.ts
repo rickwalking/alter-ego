@@ -15,7 +15,7 @@ import type { CarouselDesignResponse } from "@/schemas/carousel";
 import type { PublicBlogPostResponse } from "@/schemas/public-blog-post";
 
 /**
- * Public blog detail resolution (AE-0297, ADR-0013, AE-0423/ADR-0025).
+ * Public blog detail resolution (ADR-0013, ADR-0025).
  *
  * `/blog/{id}` renders ONLY the post's own `blog.v2` document from the public
  * blog-post API: its cover and per-section images with their stored alt. The
@@ -25,7 +25,7 @@ import type { PublicBlogPostResponse } from "@/schemas/public-blog-post";
  * without a published v2 row is a 404. The content language (`?lang=`) picks
  * `content.translations[lang]` and falls back to the PT document.
  *
- * AE-0412: the view is sanitized for anonymous visitors — image URLs use the
+ * the view is sanitized for anonymous visitors — image URLs use the
  * public routes, the title carries no markup and is never a placeholder, and
  * inline emphasis HTML in a section body becomes markdown emphasis.
  */
@@ -55,6 +55,7 @@ function themeOnlyDesign(
   };
 }
 
+/** Theme tokens of a post; a published post never 404s for missing tokens (default public theme). */
 async function resolveTheme(
   post: PublicBlogPostResponse,
   lang: string,
@@ -63,7 +64,6 @@ async function resolveTheme(
     return FALLBACK_DESIGN_TOKENS;
   }
   const design = await fetchCarouselDesign(post.project_id, lang);
-  // A published post never 404s for missing tokens: default public theme.
   return design ? themeOnlyDesign(design) : FALLBACK_DESIGN_TOKENS;
 }
 

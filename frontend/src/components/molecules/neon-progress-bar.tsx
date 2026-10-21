@@ -14,7 +14,7 @@ export function NeonProgressBar({
   value,
   max = 100,
   label,
-}: NeonProgressBarComponentProps): React.ReactElement {
+}: Readonly<NeonProgressBarComponentProps>): React.ReactElement {
   const percent = Math.min(100, Math.max(0, (value / max) * 100));
 
   return (

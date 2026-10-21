@@ -1,4 +1,4 @@
-"""Escalated runs: fair wake scan and closing abandoned runs (AE-0348 QA r2 R1).
+"""Escalated runs: fair wake scan and closing abandoned runs (QA r2 R1).
 
 Gherkin: tests/features/autopilot_runner.feature
   Scenario: A fixed escalation wakes even behind five abandoned ones

@@ -57,7 +57,6 @@ _VIEWPORT_HEIGHT = 1800
 _CROP_TARGET_WIDTH = CAROUSEL_WIDTH
 _CROP_TARGET_HEIGHT = CAROUSEL_HEIGHT
 
-# Base CSS injection for Strategy A (1080x1350)
 _CSS_INJECTION_BASE = """
 const style = document.createElement('style');
 style.id = 'playwright-export-overrides';
@@ -123,7 +122,6 @@ style.textContent = `
 document.head.appendChild(style);
 """
 
-# HD CSS injection for Strategy B (2160x2700)
 _CSS_INJECTION_HD = """
 const style = document.createElement('style');
 style.id = 'playwright-export-overrides-hd';
@@ -246,7 +244,7 @@ def _crop_border_artifact(path: str, target_width: int, target_height: int) -> N
 
 
 def export_policy(cfg: ExportConfig) -> CarouselPresentationPolicy:
-    """The policy the preflight checks (AE-0374).
+    """The policy the preflight checks.
 
     A role contract (POV, Radar IA v4) is sized to the project's deck; every
     fixed contract keeps the v1 slide map the preflight always used.
@@ -286,6 +284,11 @@ class PlaywrightExportService(CarouselExportService):
 
         Returns:
             List of paths to exported slide images.
+
+        Missing artwork files fail fast, naming the slide, before Playwright decodes
+        images. POV layouts are scaled for the export canvas too. Each
+        ``.ig-slide-inner`` is screenshotted (legacy ``.slide`` as fallback) and its 1px
+        border artifact cropped.
         """
         cfg = config or ExportConfig()
         output_path = Path(output_dir)
@@ -293,7 +296,6 @@ class PlaywrightExportService(CarouselExportService):
 
         html_file = output_path / "carousel.html"
         html_file.write_text(html_content, encoding=ENCODING_UTF8)
-        # AE-0434: fail fast, naming the slide, before Playwright decodes images.
         ensure_artwork_files(html_content, output_path, hd=cfg.hd)
 
         exported_paths: list[str] = []
@@ -315,9 +317,7 @@ class PlaywrightExportService(CarouselExportService):
             file_url = f"file://{html_file.absolute()}"
             await page.goto(file_url)
 
-            # Inject default + optional CSS overrides
             await page.evaluate(injection)
-            # AE-0394: POV layouts scale for the export canvas too.
             await page.evaluate(pov_export_injection(hd=cfg.hd))
             if cfg.css_overrides:
                 import json
@@ -332,10 +332,8 @@ class PlaywrightExportService(CarouselExportService):
 
             await run_export_preflight(page, export_policy(cfg), hd=cfg.hd)
 
-            # Screenshot each .ig-slide-inner element
             slide_inners = await page.locator(".ig-slide-inner").all()
             if not slide_inners:
-                # Fallback to legacy .slide selector
                 slide_inners = await page.locator(".slide").all()
 
             for i, slide in enumerate(slide_inners, 1):
@@ -347,7 +345,6 @@ class PlaywrightExportService(CarouselExportService):
                     quality=cfg.quality,
                     scale="css",
                 )
-                # Crop 1px border artifact
                 _crop_border_artifact(
                     slide_path,
                     target_width,

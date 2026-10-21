@@ -167,7 +167,7 @@ def sanitize_slide_drafts(
 ) -> list[dict[str, object]]:
     """Sanitize visible copy in slide drafts and fit text to presentation budgets.
 
-    AE-0413: ``clamp_to_budgets=False`` (read paths) cleans the copy but never
+    ``clamp_to_budgets=False`` (read paths) cleans the copy but never
     cuts it: the state GET clamped every draft to the v1 budgets, so the UI
     showed (and sent back) text cut mid-sentence.
     """
@@ -209,13 +209,15 @@ def _artifacts_changed(before: object, after: object) -> bool:
 
 @dataclass(frozen=True)
 class SanitizeWorkflowStateCommand:
-    """Inputs for sanitizing workflow outline and slide draft artifacts."""
+    """Inputs for sanitizing workflow outline and slide draft artifacts.
+
+    Read paths set ``clamp_to_budgets`` to False to keep the stored copy whole.
+    """
 
     state: Mapping[str, object]
     locale: str = LANGUAGE_PT
     policy_version: str = DEFAULT_PRESENTATION_POLICY_VERSION
     rebuild_validation: bool = True
-    # AE-0413: read paths keep the stored copy whole (no budget clamp).
     clamp_to_budgets: bool = True
 
 
@@ -255,7 +257,7 @@ def sanitize_workflow_state_artifacts(
 def read_only_sanitize_command(
     state: Mapping[str, object],
 ) -> SanitizeWorkflowStateCommand:
-    """The sanitize command of a READ path (the workflow state GET, AE-0413).
+    """The sanitize command of a READ path (the workflow state GET).
 
     The GET used the defaults: every read re-clamped the drafts to the v1
     budgets, rebuilt ``localized_slides`` and the validation report from those

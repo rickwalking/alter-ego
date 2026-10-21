@@ -64,7 +64,7 @@ export function CreateSidebar({
   onSubmit,
   isPending,
   error,
-}: CreateSidebarProps): React.ReactElement {
+}: Readonly<CreateSidebarProps>): React.ReactElement {
   const t = useTranslations("create");
   const templateName = useTemplateName(form);
   const preset = IMAGE_PRESETS.find((p) => p.value === form.imagePreset);

@@ -1,11 +1,12 @@
+/**
+ * Dashboard dates follow the active locale.
+ * Scenarios: tests/features/dashboard-locale-dates-ae0417.feature.
+ */
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DashboardBlogPost } from "@/modules/editorial-operations";
 import { RegularBlogPosts } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import type { BlogPostActionHandlers } from "@/app/dashboard/blog-posts/types";
-
-// Feature: Dashboard dates follow the active locale (AE-0417)
-// tests/features/dashboard-locale-dates-ae0417.feature
 
 const intl = vi.hoisted(() => ({ locale: "pt" }));
 

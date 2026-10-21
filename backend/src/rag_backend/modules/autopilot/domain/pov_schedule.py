@@ -1,9 +1,9 @@
-"""POV calendar rules (AE-0377, ADR-0021 D10). Pure, no I/O.
+"""POV calendar rules (ADR-0021 D10). Pure, no I/O.
 
 - ``sao_paulo_week``: the Monday-to-Monday São Paulo week, for the Radar IA
   weekly cap (growth plan 16.4 #10).
 - ``POV_SLOT_WEEKDAYS`` / ``POV_SLOT_TIME``: the plan's Tuesday and Thursday
-  12:00 São Paulo slot. Since AE-0404 it is the POV prior of the slot
+  12:00 São Paulo slot. It is the POV prior of the slot
   recommender (``domain/recommend.py``), which picks the auto ``next_slot``.
 """
 
@@ -17,7 +17,6 @@ from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
 from rag_backend.modules.autopilot.domain.models import AutopilotRun
 from rag_backend.modules.autopilot.pov_constants import DAYS_PER_WEEK
 
-# Growth plan section 8: Tuesday and Thursday, about 12:00 BRT.
 POV_SLOT_WEEKDAYS: frozenset[int] = frozenset({1, 3})
 POV_SLOT_TIME = time(hour=12, minute=0)
 

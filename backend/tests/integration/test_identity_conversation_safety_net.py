@@ -1,8 +1,8 @@
-"""Identity + Conversation byte-identical safety-net tests (AE-0097).
+"""Identity + Conversation byte-identical safety-net tests.
 
 Behavioral + golden-snapshot safety net for the Phase 3 Identity/Conversation
 extraction. Every behavior test asserts the /api auth, admin, or conversation
-contract that the relocation (AE-0099 / AE-0101 / AE-0102) must preserve. The
+contract that the relocation must preserve. The
 golden snapshots capture the deterministic baseline INCLUDING Set-Cookie
 attributes (access_token / anon_token: httponly/secure/samesite/max-age), the
 ``X-Agent-Origin`` header, and the HS256 JWT shape. The SSE stream tests use a
@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     from httpx import Response
     from sqlalchemy.ext.asyncio import AsyncEngine
 
-# --- Constants -----------------------------------------------------------------
 NONEXISTENT_UUID = "00000000-0000-0000-0000-000000000000"
 SNAPSHOT_UPDATE_OPTION = "--snapshot-update"
 ANON_SECRET = "test-anon-secret-for-integration-tests"
@@ -64,17 +63,17 @@ def snapshot_update(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption(SNAPSHOT_UPDATE_OPTION))
 
 
-# --- Engine / app factory ------------------------------------------------------
 async def _make_engine(db_path: str) -> AsyncEngine:
+    """A file-backed SQLite DB (not ``:memory:``) is used so overlapping sessions (the
+    auth dependency's session and the nested ``get_session`` used by change-password /
+    reset-password) all see the same data, which a per-connection ``:memory:`` DB cannot
+    do.
+    """
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.infrastructure.database.config import Base
 
-    # A file-backed SQLite DB (not ``:memory:``) so multiple, possibly
-    # overlapping sessions — the auth dependency's session and the route's own
-    # nested ``get_session`` used by change-password / reset-password — all see
-    # the same data. A per-connection ``:memory:`` DB cannot do this.
     engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -131,7 +130,13 @@ class IdEnv:
 async def id_env(
     tmp_path: object, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncGenerator[IdEnv, None]:
-    """Shared file-backed DB + app with an admin + editor and client helpers."""
+    """Shared file-backed DB + app with an admin + editor and client helpers.
+
+    DEBUG is pinned to false so the cookie ``secure`` attribute is deterministic: an
+    ambient local ``DEBUG=true`` would drop the flag and make the committed snapshot
+    environment-dependent. The settings cache is cleared so the app picks up the pinned
+    value.
+    """
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
@@ -141,13 +146,6 @@ async def id_env(
 
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
-    # Pin DEBUG so the cookie `secure` attribute is deterministic across
-    # environments. ``settings.debug`` defaults to False (the production / CI
-    # value), but an ambient local ``DEBUG=true`` would otherwise drop the
-    # ``secure`` flag and make the committed snapshot environment-dependent.
-    # We assert the production behavior (anon_token Secure=true). monkeypatch
-    # auto-reverts the env at test end; clear the settings cache so the app
-    # picks up the pinned value.
     monkeypatch.setenv("DEBUG", "false")
     get_settings.cache_clear()
 
@@ -170,7 +168,6 @@ async def id_env(
         await engine.dispose()
 
 
-# --- Deterministic mock chat agent ---------------------------------------------
 class _FixedTokenAgent:
     """Deterministic chat agent yielding a fixed token/sources/complete sequence.
 
@@ -214,7 +211,6 @@ def _patch_agents(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# --- SSE parsing helpers -------------------------------------------------------
 def _parse_sse(text: str) -> list[tuple[int | None, dict[str, object]]]:
     """Parse raw SSE text into ``(id, data)`` pairs, ignoring keep-alive pings.
 
@@ -241,9 +237,6 @@ def _event_types(events: list[tuple[int | None, dict[str, object]]]) -> list[str
     return [str(data.get("type")) for _id, data in events]
 
 
-# ==============================================================================
-# Auth behavior scenarios (tests/features/auth.feature)
-# ==============================================================================
 class TestAuthBehavior:
     """login / logout / me / change-password contract."""
 
@@ -307,8 +300,8 @@ class TestAuthBehavior:
     async def test_change_password_current_behavior(self, id_env: IdEnv) -> None:
         """Scenario: Change own password — captures CURRENT behavior.
 
-        DISCOVERED DEFECT (AE-0097 finding, reported, NOT fixed here — TESTS-ONLY
-        ticket, no src change): ``change_password`` reloads the user, sets
+        DISCOVERED DEFECT (reported, NOT fixed here: a tests-only change, no src
+        change): ``change_password`` reloads the user, sets
         ``hashed_password`` (which does NOT bump ``updated_at``), then calls
         ``PostgresUserRepository.update``. The ``users.updated_at`` column has
         ``onupdate=func.now()``; because the entity's ``updated_at`` is unchanged
@@ -347,9 +340,6 @@ class TestAuthBehavior:
         assert resp.status_code == 401
 
 
-# ==============================================================================
-# Admin user-management scenarios (tests/features/admin.feature)
-# ==============================================================================
 class TestAdminBehavior:
     """Admin user CRUD + role assignment contract."""
 
@@ -446,7 +436,7 @@ class TestAdminBehavior:
     async def test_reset_password_current_behavior(self, id_env: IdEnv) -> None:
         """Scenario: Admin resets a user's password — captures CURRENT behavior.
 
-        DISCOVERED DEFECT (AE-0097 finding, reported, NOT fixed here): identical
+        DISCOVERED DEFECT (reported, NOT fixed here): identical
         root cause to ``change_password`` — ``reset_password`` sets
         ``hashed_password`` without bumping ``updated_at``, so ``repo.update``'s
         post-flush ``to_entity()`` lazy-loads the server ``onupdate`` column
@@ -470,9 +460,6 @@ class TestAdminBehavior:
         assert resp.status_code == 404
 
 
-# ==============================================================================
-# Conversation CRUD + non-stream chat (tests/features/conversations.feature)
-# ==============================================================================
 class TestConversationBehavior:
     """Conversation CRUD + non-stream chat contract."""
 
@@ -581,9 +568,6 @@ class TestConversationBehavior:
         assert resp.status_code == 422
 
 
-# ==============================================================================
-# SSE stream scenarios (tests/features/alter_ego_chat_sse.feature)
-# ==============================================================================
 class TestChatStreamSse:
     """Deterministic SSE event-type ordering, framing, and resume."""
 
@@ -619,7 +603,10 @@ class TestChatStreamSse:
     async def test_id_and_data_framing(
         self, id_env: IdEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: every SSE event uses ``id:`` + ``data:`` framing."""
+        """Scenario: every SSE event uses ``id:`` + ``data:`` framing.
+
+        Ids are monotonically increasing and contiguous, starting at 1.
+        """
         _patch_agents(monkeypatch)
         async with id_env.anon_client() as client:
             conv_id = await self._create_conv(client)
@@ -631,7 +618,6 @@ class TestChatStreamSse:
         assert events
         ids = [event_id for event_id, _data in events]
         assert all(isinstance(i, int) for i in ids)
-        # Monotonically increasing, contiguous ids starting at 1.
         assert ids == list(range(1, len(ids) + 1))
 
     @pytest.mark.asyncio
@@ -682,9 +668,6 @@ class TestChatStreamSse:
         assert "not found" in str(events[0][1].get("content", "")).lower()
 
 
-# ==============================================================================
-# Golden snapshots — deterministic byte-identical baselines (AE-0099/0101/0102)
-# ==============================================================================
 class TestIdentitySnapshots:
     """Auth + admin golden snapshots (body + cookies + JWT shape)."""
 

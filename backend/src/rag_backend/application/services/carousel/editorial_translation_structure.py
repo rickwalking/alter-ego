@@ -1,4 +1,4 @@
-"""The structured fields the EN translation carries (AE-0430).
+"""The structured fields the EN translation carries.
 
 The localized builder copies a draft's top-level structured extras
 (``tldr_strip``, item lists, ``content_kind`` ...) into the PT payload, and the

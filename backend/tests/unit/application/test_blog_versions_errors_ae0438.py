@@ -1,4 +1,4 @@
-"""Unit tests for the AE-0438 blog editor fixes (F-05, F-08).
+"""Unit tests for the blog editor fixes (F-05, F-08).
 
 Feature: backend/tests/features/blog_versions_errors_ae0438.feature
 """

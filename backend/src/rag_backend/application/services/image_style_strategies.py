@@ -5,6 +5,12 @@ scene description into a provider- and style-specific prompt. Strategies
 never rewrite the scene text — they prepend directives and let the
 user-owned scene appear verbatim at the end. This keeps the contract
 documented in `tests/features/image_generation_provider.feature`.
+
+``IMAGE_STRATEGY_REGISTRY`` maps every supported ``(image_model, image_style)`` combo to
+exactly one strategy class. Both the prompt renderer and the provider registry consume
+it, so a light palette can no longer fall back to the dark neon default because two maps
+disagreed. Its keys must equal ``SUPPORTED_IMAGE_COMBOS`` (guarded by a contract test);
+POV point slides use the flat-editorial illustration.
 """
 
 from collections.abc import Mapping
@@ -54,7 +60,7 @@ def _editorial_palette_fragment(theme: Mapping[str, str]) -> str:
 
 
 class OpenAIComicNeonStrategy(ImageStyleStrategy):
-    """Comic/manga cyberpunk preset, served by gpt-image-2 (AE-0308).
+    """Comic/manga cyberpunk preset, served by gpt-image-2.
 
     Formerly ``GeminiComicNeonStrategy`` — prod intentionally has no Gemini
     key, so the style moved providers. The prompt text is byte-identical to
@@ -174,19 +180,11 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
         )
 
 
-# Single source of truth: every supported ``(image_model, image_style)`` combo
-# maps to exactly one strategy class. Both the prompt renderer
-# (``image_prompt_package``) and the provider registry
-# (``image_provider_registry``) consume THIS map, so they can no longer drift —
-# the AE-0264 bug where a light palette fell back to the dark "neon glow"
-# default because the two maps disagreed is now structurally impossible. The
-# keys must equal ``SUPPORTED_IMAGE_COMBOS`` (guarded by a contract test).
 IMAGE_STRATEGY_REGISTRY: dict[tuple[str, str], type[ImageStyleStrategy]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON): OpenAIComicNeonStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): OpenAIFlatEditorialStrategy,
-    # AE-0376: POV point slides get the same light flat-editorial illustration.
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_POV_EDITORIAL): OpenAIFlatEditorialStrategy,
 }

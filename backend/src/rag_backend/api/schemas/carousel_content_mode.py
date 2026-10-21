@@ -1,10 +1,10 @@
-"""Content-mode request/response fields for carousel projects (AE-0373, ADR-0021).
+"""Content-mode request/response fields for carousel projects (ADR-0021).
 
 Kept apart from ``carousel.py`` so the create schema stays readable. The rules:
 ``pov`` needs a thesis (the model may sharpen it, never invent it), the slide-1
 photo (``hook_asset_id``, PR #106 review), a known format and 8-10 slides;
 ``news_analysis`` (Radar IA, the default) rejects the POV-only fields and
-allows 7 or 8 slides. AE-0406: ``pov_news`` follows the ``pov`` rules; its
+allows 7 or 8 slides. ``pov_news`` follows the ``pov`` rules; its
 ``pov_format`` is ignored (stored as the default, which only picks a layout).
 """
 
@@ -68,7 +68,10 @@ def _blank_to_none(value: str | None) -> str | None:
 
 
 class ContentModeRequestFields(BaseModel):
-    """Optional create fields; ``resolved_*`` give the stored values."""
+    """Optional create fields; ``resolved_*`` give the stored values.
+
+    hook_asset_id, the slide-1 photo (role hook), is required for POV.
+    """
 
     content_mode: str | None = Field(None, max_length=CONTENT_MODE_MAX_CHARS)
     pov_thesis: str | None = Field(None, max_length=POV_THESIS_MAX_CHARS)
@@ -79,7 +82,6 @@ class ContentModeRequestFields(BaseModel):
     slide_count: int | None = None
     cta_goal: str | None = Field(None, max_length=CTA_GOAL_MAX_CHARS)
     persona_id: UUID | None = None
-    # PR #106 review: the slide-1 photo (role hook) is required for POV.
     hook_asset_id: UUID | None = None
 
     @field_validator("pov_thesis", "pov_personal_proof", "pov_format")
@@ -119,7 +121,7 @@ class ContentModeRequestFields(BaseModel):
     def resolved_pov_format(self) -> str | None:
         """POV format (default ``opiniao``); None for Radar IA.
 
-        AE-0406: ``pov_news`` ignores the format and stores the default.
+        ``pov_news`` ignores the format and stores the default.
         """
         if not is_pov_family(self.resolved_mode):
             return None
@@ -130,7 +132,7 @@ class ContentModeRequestFields(BaseModel):
     def resolved_slide_count(self) -> int | None:
         """POV defaults to 9 slides; Radar IA to 7 (the v4 contract default).
 
-        AE-0439 (QA F-07): Radar IA kept ``None`` unless asked for, so the
+        Radar IA kept ``None`` unless asked for, so the
         wizard (which sends no count for news) stored ``NULL`` and the blog
         fell back to the legacy ``slides_config`` (6) instead of the deck
         size. The count includes the CTA slide (ADR-0025 §Count).
@@ -191,7 +193,7 @@ class ContentModeResponseFields(BaseModel):
 
 
 class HookSelectRequest(BaseModel):
-    """The owner's slide-1 hook (AE-0375): <=60 characters and <=10 words."""
+    """The owner's slide-1 hook: <=60 characters and <=10 words."""
 
     hook_text: str = Field(..., min_length=1, max_length=HOOK_TEXT_MAX_CHARS)
 

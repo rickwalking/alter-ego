@@ -8,7 +8,7 @@ const LANG_QUERY_PATTERN = /[?&]lang=(pt|en)(?:&|$)/;
 /**
  * Map owner-only preview URLs to the public carousel image route.
  *
- * AE-0412 (B08): the public `/images/{file}` route resolves the shared raw
+ * The public `/images/{file}` route resolves the shared raw
  * image first, then the rendered slide of `?lang=` (same order as the preview
  * route), so the language is kept instead of being dropped.
  */
@@ -21,7 +21,7 @@ export function toPublicCarouselImageUrl(url: string): string {
     PREVIEW_IMAGES_SEGMENT,
     PUBLIC_IMAGES_SEGMENT,
   );
-  const lang = `?${query}`.match(LANG_QUERY_PATTERN)?.[1];
+  const lang = LANG_QUERY_PATTERN.exec(`?${query}`)?.[1];
   return lang ? `${publicPath}?lang=${lang}` : publicPath;
 }
 
@@ -32,7 +32,7 @@ export function appendCacheBuster(url: string, version: string): string {
 }
 
 function slideFilenameFromPath(path: string): string | null {
-  const match = path.match(SLIDE_FILENAME_PATTERN);
+  const match = SLIDE_FILENAME_PATTERN.exec(path);
   if (!match) {
     return null;
   }

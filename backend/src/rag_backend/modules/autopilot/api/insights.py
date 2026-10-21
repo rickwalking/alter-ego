@@ -1,4 +1,4 @@
-"""``GET /api/instagram/insights``: the dashboard's Instagram KPIs (AE-0378).
+"""``GET /api/instagram/insights``: the dashboard's Instagram KPIs.
 
 Editor or admin only. Each published post is served from its stored snapshot
 and read again from Graph when the snapshot is older than six hours (see

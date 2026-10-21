@@ -1,4 +1,4 @@
-"""A ``pov_news`` run: thesis step, spec, project fields and gate (AE-0406).
+"""A ``pov_news`` run: thesis step, spec, project fields and gate.
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """
@@ -119,10 +119,11 @@ class TestThesisStep:
 class TestSpec:
     # Scenario: The carousel is a POV deck with the news voice
     def test_spec_carries_the_pov_inputs_and_quotes(self) -> None:
+        """The stored topic format is ignored."""
         spec = project_spec(_run(), _topic(), _OWNER)
         assert spec.content_mode == "pov_news"
         assert spec.pov_thesis == THESIS
-        assert spec.pov_format == "opiniao"  # stored topic format is ignored
+        assert spec.pov_format == "opiniao"
         assert spec.slide_count == 10
         assert spec.quotes == (_Q1,)
         assert spec.image_style == "neo_anime"
@@ -272,7 +273,6 @@ class TestApi:
             ]
         }
 
-    # PR #124 review: a missing quote field rejects one topic, not the batch.
     def test_a_missing_quote_field_is_not_a_schema_error(self) -> None:
         body = self._body()
         topics = body["topics"]

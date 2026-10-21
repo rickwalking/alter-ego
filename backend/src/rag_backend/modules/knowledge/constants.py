@@ -5,5 +5,4 @@ magic strings appear in code. These constants identify the module for
 tracing/observability and centralize the messages the application layer emits.
 """
 
-# Module identity (used for tracing/observability metadata).
 MODULE_NAME = "knowledge"

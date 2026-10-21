@@ -113,11 +113,11 @@ def _build_caption_html(
 ) -> str:
     """Build caption HTML if caption is present.
 
-    AE-0204: ``project.caption`` is sourced from the canonical
+    ``project.caption`` is sourced from the canonical
     ``blog_posts.distribution`` home — the carousel repository overlays it onto the
     entity on load, so this render reads the canonical caption (not the embedded
     ``carousel_projects.caption`` column). ``project.caption_en`` is intentionally
-    left on the embedded column (write-dead; AE-0206 owns its migration).
+    left on the embedded column (write-dead; its migration is tracked separately).
     """
     from rag_backend.domain.constants import LANGUAGE_EN
 
@@ -186,6 +186,9 @@ def build_carousel_html(
     When ``strategy_registry`` is provided, uses it to dispatch slide
     rendering to the appropriate SlideLayoutStrategy. Falls back to the
     legacy ``_render_*_slide`` functions when no registry is given.
+
+    POV decks pick a layout per role, and a role contract (Radar IA v4) illustrates only
+    some slides.
     """
     lang = language or project.language
     total_slides = len(slides)
@@ -193,9 +196,7 @@ def build_carousel_html(
     caption_html = _build_caption_html(project, language=lang)
 
     slides_html = ""
-    # AE-0376: POV decks pick a layout per role (hook_face, statement, ...).
     role_layouts = pov_slide_strategies(project, total_slides)
-    # AE-0434: a role contract (Radar IA v4) illustrates only some slides.
     artwork = deck_artwork_slides(project, total_slides)
     for slide in slides:
         slide_type = slide["type"]

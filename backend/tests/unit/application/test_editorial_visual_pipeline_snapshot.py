@@ -1,7 +1,6 @@
-"""Integration test for theme-snapshot-at-generation (AE-0269 inc4b, D9).
+"""Integration test for theme-snapshot-at-generation.
 
 Feature: Custom palettes resolve and snapshot at generation
-(.agent/tasks/AE-0269-custom-palette-persistence-db-backed-resolver-snapshot.md)
 
 Exercises ``_ensure_theme_snapshot`` (the hook the image phase calls) against the
 test DB: a custom-palette project freezes its colours, the write persists, and a
@@ -31,6 +30,7 @@ class TestThemeSnapshotAtGeneration:
     async def test_custom_palette_is_frozen_and_persisted(
         self, db_session: AsyncSession
     ) -> None:
+        """A fresh load sees the frozen snapshot."""
         palette = await PostgresPaletteRepository(db_session).add(
             CustomPalette(
                 name="Aurora",
@@ -50,13 +50,13 @@ class TestThemeSnapshotAtGeneration:
         assert created.theme_snapshot is not None
         assert created.theme_snapshot["primary"] == "#ff0000"
         assert created.theme_snapshot["mode"] == "light"
-        # Persisted: a fresh load sees the frozen snapshot.
         reloaded = await repo.get_project_by_id(created.id)
         assert reloaded is not None
         assert reloaded.theme_snapshot is not None
         assert reloaded.theme_snapshot["primary"] == "#ff0000"
 
     async def test_snapshot_is_idempotent(self, db_session: AsyncSession) -> None:
+        """A second run must not re-resolve or overwrite the frozen snapshot."""
         repo = PostgresCarouselRepository(db_session)
         created = await repo.create_project(
             CarouselProject(topic="t", audience="a", niche="n", theme="plasma_magenta")
@@ -64,6 +64,5 @@ class TestThemeSnapshotAtGeneration:
         await _ensure_theme_snapshot(db_session, repo, created)
         first = created.theme_snapshot
         assert first is not None
-        # Second run must not re-resolve or overwrite the frozen snapshot.
         await _ensure_theme_snapshot(db_session, repo, created)
         assert created.theme_snapshot == first

@@ -15,7 +15,7 @@ export function PaletteKeywordsField({
   keywords,
   onAdd,
   onRemove,
-}: PaletteKeywordsFieldProps): React.ReactElement {
+}: Readonly<PaletteKeywordsFieldProps>): React.ReactElement {
   const t = useTranslations("palettes");
   const [draft, setDraft] = useState("");
 

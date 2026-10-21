@@ -1,4 +1,4 @@
-"""AE-0407: a correct model rewrite clears casing markers; @handles keep case.
+"""A correct model rewrite clears casing markers; @handles keep case.
 
 Gherkin: tests/features/autofix_escalation_ae0407.feature (items 4 and 5).
 """
@@ -120,10 +120,10 @@ class TestMarkerClear:
         assert cleared["casing_repairs"] == [_marker("en", HEADING_CODE_EN)]
 
     def test_an_answer_that_did_not_land_keeps_the_marker(self) -> None:
+        """A list of another size is not merged, so the old text stays."""
         record = _slide_8(_marker("pt", HEADING_CODE_PT, "summary_points[0].title"))[
             SLIDE - 1
         ]
-        # A list of another size is not merged, so the old text stays.
         answer = _answer(pt={"summary_points": [{"title": "Arquivos certos"}]})
         cleared = clear_rewritten_casing_markers(record, MarkerClear(answer, POLICY))
         assert cleared["casing_repairs"] == record["casing_repairs"]

@@ -97,6 +97,7 @@ class TestPlaywrightExportService:
         assert screenshot_call.kwargs.get("scale") == "css"
 
     async def test_exports_with_css_overrides(self, tmp_path: Path) -> None:
+        """Three evaluate calls: the default injection, the POV injection and the override."""
         service = PlaywrightExportService()
         mock_playwright, _, mock_page, _ = self._make_mock_browser_page()
 
@@ -117,7 +118,6 @@ class TestPlaywrightExportService:
             )
 
         evaluate_calls = mock_page.evaluate.await_args_list
-        # default injection + POV injection (AE-0394) + override
         assert len(evaluate_calls) == 3
         # Scenario: The exporter applies the POV rules (AE-0394)
         assert "playwright-export-pov" in evaluate_calls[1].args[0]
@@ -186,10 +186,10 @@ class TestPlaywrightExportService:
         assert ".closing-avatar { width: 168px !important;" in injection
 
     async def test_fallback_to_legacy_slide_selector(self, tmp_path: Path) -> None:
+        """The first locator returns nothing and the second returns the element."""
         service = PlaywrightExportService()
         mock_element = MagicMock()
         mock_element.screenshot = AsyncMock()
-        # First call returns empty, second call returns element
         mock_locator1 = MockLocator([])
         mock_locator2 = MockLocator([mock_element])
         call_count = 0

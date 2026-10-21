@@ -20,7 +20,21 @@ from rag_backend.infrastructure.database.config import Base
 
 
 class BlogPostModel(Base):
-    """SQLAlchemy model for BlogPost entity."""
+    """SQLAlchemy model for BlogPost entity.
+
+    - ``origin`` is the provenance: ``standalone`` (hand-authored) or ``carousel``
+      (derived).
+    - ``title``, ``status``, ``content`` and the visibility/schedule timestamps use
+      SQLAlchemy 2.0 ``Mapped[...]`` so the instance attributes type precisely for
+      the carousel-blog dual-write and the publishing ports' byte-identical writes
+      (no mypy override). ``status`` is written by the publishing visibility port.
+    - ``distribution`` is the canonical home for the Instagram caption + LinkedIn
+      posts of an ``origin='carousel'`` post, mirroring the ``content`` JSONB pattern
+      (ADR-0006). Shape: ``{"caption": str|None, "linkedin_post_pt": str|None,
+      "linkedin_post_en": str|None}``. It is filled by the backfill and the
+      carousel-blog dual-write mirror; the embedded ``carousel_projects`` columns
+      are retained but have ZERO application readers for these three fields.
+    """
 
     __tablename__ = "blog_posts"
 
@@ -30,67 +44,47 @@ class BlogPostModel(Base):
         ForeignKey("carousel_projects.id", ondelete="SET NULL"),
         nullable=True,
     )
-    # Provenance (AE-0127): 'standalone' (hand-authored) vs 'carousel' (derived).
     origin = Column(
         String(20),
         default=BlogPostOrigin.STANDALONE.value,
         server_default=BlogPostOrigin.STANDALONE.value,
         nullable=False,
     )
-    # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
-    # for the AE-0163 carousel-blog dual-write (no mypy override).
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
-    # Workflow status — written by the publishing visibility port (AE-0128);
-    # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
-    # for the byte-identical status writes (no mypy override).
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
 
-    # Content — SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as a
-    # JSON object for the AE-0163 carousel-blog dual-write (no mypy override).
     content: Mapped[dict[str, object]] = mapped_column(
         JSON, default=dict, nullable=False
     )
-    # Distribution copy (AE-0204) — the canonical home for the Instagram caption +
-    # LinkedIn posts of an ``origin='carousel'`` post. Mirrors the ``content`` JSONB
-    # pattern (ADR-0006). Shape: ``{"caption": str|None, "linkedin_post_pt": str|None,
-    # "linkedin_post_en": str|None}``. Populated by the AE-0204 backfill + the
-    # carousel-blog dual-write mirror; the embedded ``carousel_projects`` columns are
-    # retained (drop is AE-0205) but have ZERO application readers for these 3 fields.
     distribution: Mapped[dict[str, object]] = mapped_column(
         JSON, default=dict, nullable=False
     )
     excerpt = Column(String(500), nullable=True)
     featured_image_url = Column(String(500), nullable=True)
 
-    # Editorial
     author_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     reviewer_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     editor_comments = Column(JSON, default=list, nullable=False)
     version_history = Column(JSON, default=list, nullable=False)
 
-    # Sources
     sources = Column(JSON, default=list, nullable=False)
     citations = Column(JSON, default=list, nullable=False)
 
-    # AI Assistance
     ai_suggestions = Column(JSON, default=list, nullable=False)
     ai_generation_metadata = Column(JSON, default=dict, nullable=False)
     ai_disclosure_label = Column(String(50), default="none", nullable=True)
 
-    # SEO
     meta_title = Column(String(255), nullable=True)
     meta_description = Column(String(500), nullable=True)
     keywords = Column(JSON, default=list, nullable=False)
     canonical_url = Column(String(500), nullable=True)
 
-    # Engagement
     view_count = Column(Integer, default=0, nullable=False)
     like_count = Column(Integer, default=0, nullable=False)
     comment_count = Column(Integer, default=0, nullable=False)
     share_count = Column(Integer, default=0, nullable=False)
 
-    # Timestamps
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -100,9 +94,6 @@ class BlogPostModel(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    # Visibility/schedule timestamps written by the publishing visibility +
-    # schedule ports (AE-0128); SQLAlchemy 2.0 ``Mapped[...]`` so the instance
-    # attributes type as ``datetime | None`` for the byte-identical writes.
     submitted_for_review_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

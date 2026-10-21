@@ -1,5 +1,5 @@
 /**
- * AE-0154: shared StatusPill atom (extracted from the persona + rubric badges).
+ * shared StatusPill atom (extracted from the persona + rubric badges).
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

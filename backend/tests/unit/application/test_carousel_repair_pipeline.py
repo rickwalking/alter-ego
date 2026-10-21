@@ -1,6 +1,10 @@
-"""Unit tests for the deterministic carousel repair pipeline (AE-0311).
+"""Unit tests for the deterministic carousel repair pipeline.
 
 Gherkin: tests/features/carousel_deterministic_repair.feature
+
+_RAW_SCAFFOLD_BODY reproduces a prod incident: the raw drafting scaffold was stored
+verbatim as presentation_pt.body (long copy plus "## PT" / "**Body:**" section labels);
+the deterministic pipeline must strip and trim it to clean copy.
 """
 
 from __future__ import annotations
@@ -14,9 +18,6 @@ from rag_backend.domain.constants.presentation_policy import (
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1,
 )
 
-# The prod incident (project 38affb3e, slide 4): the raw drafting scaffold was
-# stored verbatim as presentation_pt.body — long copy plus ``## PT`` / ``**Body:**``
-# section labels. The deterministic pipeline must strip + trim it to clean copy.
 _RAW_SCAFFOLD_BODY = (
     "## PT\n**Heading:** O disparo silencioso\n**Body:** A verdade incomoda: "
     "equipes tratam a regeneracao de conteudo como uma operacao segura, mas cada "
@@ -115,8 +116,9 @@ class TestUnrepairableHonesty:
 
     @pytest.mark.asyncio
     async def test_missing_canonical_keys_stays_blocking(self) -> None:
-        # A locale payload missing the canonical keys cannot be deterministically
-        # rebuilt — it must remain blocking and be reported.
+        """A locale payload missing the canonical keys cannot be rebuilt
+        deterministically, so it must remain blocking and be reported.
+        """
         broken = [
             {
                 "slide_index": 3,

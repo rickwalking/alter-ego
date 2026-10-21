@@ -1,4 +1,4 @@
-"""Pure transitions of ``ai_generation_metadata.generation`` (AE-0425, ADR-0025).
+"""Pure transitions of ``ai_generation_metadata.generation`` (ADR-0025).
 
 The run state of a generated post: ``{status, kind, started_at, heartbeat_at,
 finished_at, lease_id, attempt, errors, recoverable, request, warnings,
@@ -43,7 +43,11 @@ from rag_backend.domain.models.blog_generation import GenerationOutcome
 
 @dataclass(frozen=True)
 class GenerationStart:
-    """A new attempt: who/what started it and its fresh lease."""
+    """A new attempt: who/what started it and its fresh lease.
+
+    ``mode`` is ``""`` for the full run (writer + gate + images) or ``images_only``
+    for a retry that only fills the empty image slots of an existing article.
+    """
 
     kind: str
     lease_id: str
@@ -51,8 +55,6 @@ class GenerationStart:
     request: dict[str, object]
     warnings: tuple[str, ...] = ()
     image_slots: int = 0
-    # "" = the full run (writer + gate + images); ``images_only`` = a retry
-    # that only fills the empty image slots of an existing article.
     mode: str = ""
 
 

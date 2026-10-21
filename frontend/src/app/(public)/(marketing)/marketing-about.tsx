@@ -7,7 +7,7 @@ import {
 import { MarketingSectionEyebrow } from "@/app/(public)/(marketing)/marketing-section-eyebrow";
 import type { MarketingAboutProps } from "@/app/(public)/(marketing)/types";
 
-function AboutHeader({ t }: MarketingAboutProps): React.ReactElement {
+function AboutHeader({ t }: Readonly<MarketingAboutProps>): React.ReactElement {
   return (
     <div style={{ marginBottom: "40px" }}>
       <MarketingSectionEyebrow label={t("about.label")} />
@@ -27,7 +27,9 @@ function AboutHeader({ t }: MarketingAboutProps): React.ReactElement {
   );
 }
 
-export function MarketingAbout({ t }: MarketingAboutProps): React.ReactElement {
+export function MarketingAbout({
+  t,
+}: Readonly<MarketingAboutProps>): React.ReactElement {
   return (
     <ScrollReveal delay={100}>
       <section className="relative z-[1] py-20 max-[600px]:py-0 max-[600px]:pb-[60px]">

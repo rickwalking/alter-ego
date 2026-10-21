@@ -1,4 +1,4 @@
-"""Composition root of the blog writer run (AE-0425, ADR-0025).
+"""Composition root of the blog writer run (ADR-0025).
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 Scenario: Drafting uses the fast model and judgement uses the reasoning model
@@ -74,6 +74,10 @@ class _Container:
 def test_service_is_wired_with_the_role_models_and_gpt_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Stage budgets come from settings, the EN repair reuses the editor's translation and
+    the same gate, and the image batch wraps the editor's image service (the one image
+    path) under the blog image cost cap.
+    """
     container = _Container()
     monkeypatch.setattr(blog_generation, "get_container", lambda: container)
     monkeypatch.setattr(blog_generation, "get_session_maker", lambda: object())
@@ -87,20 +91,17 @@ def test_service_is_wired_with_the_role_models_and_gpt_image(
     deps = service._deps
     assert deps.writer._models.fast is container.roles.fast
     assert deps.writer._models.reasoning is container.roles.reasoning
-    # AE-0435 stage budgets come from settings.
     settings = get_settings()
     assert (
         deps.timings.text_timeout_seconds
         == settings.blog_generation_text_timeout_seconds
     )
     assert deps.timings.image_wave_seconds == settings.blog_image_wave_timeout_seconds
-    # AE-0435: the EN repair reuses the editor's translation and the same gate.
     assert isinstance(deps.english._deps.translator, BlogTranslationService)
     assert deps.english._deps.gate is deps.gate
-    # The one image path (AE-0424): the batch wraps the editor's service.
     assert deps.images._deps.images is editor_image_service
     assert deps.images._deps.concurrency == get_settings().blog_image_concurrency
-    assert deps.store._cap == get_settings().blog_image_cost_cap  # AE-0424's cap
+    assert deps.store._cap == get_settings().blog_image_cost_cap
     assert deps.images._deps.store is store
     assert deps.store._user_id == "user-1"
 
@@ -114,10 +115,10 @@ def test_reaper_and_paths() -> None:
 
 
 def test_settings_defaults() -> None:
+    """The text stage gets 30 min; images get 6 min per wave of concurrent images."""
     settings = get_settings()
     assert settings.blog_image_concurrency == 2
     assert settings.blog_image_cost_cap == 30
-    # AE-0435: text stage 30 min; images 6 min per wave of concurrent images.
     assert settings.blog_generation_text_timeout_seconds == 1800
     assert settings.blog_image_wave_timeout_seconds == 360
     assert settings.blog_generation_stale_seconds == 180
@@ -134,7 +135,7 @@ async def db(tmp_path: Path) -> AsyncIterator[AsyncSession]:
 
 
 async def test_persona_resolution_order(db: AsyncSession) -> None:
-    # Background: the project persona "Pedro" is available
+    """Background: the project persona "Pedro" is available."""
     pedro = PersonaProfileModel.from_entity(PersonaProfile(name="Pedro"))
     other = PersonaProfileModel.from_entity(PersonaProfile(name="Outra"))
     db.add_all([pedro, other])

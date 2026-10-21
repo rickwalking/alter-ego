@@ -1,11 +1,14 @@
-"""JPEG SOF dimension parser (AE-0354)."""
+"""JPEG SOF dimension parser.
+
+_JPEG carries a SOF0 segment: length 11, precision 8, height 1350 (0x0546), width 1080
+(0x0438).
+"""
 
 from __future__ import annotations
 
 from rag_backend.domain.constants.carousel import CAROUSEL_HEIGHT, CAROUSEL_WIDTH
 from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
 
-# SOF0: length 11, precision 8, height 1350 (0x0546), width 1080 (0x0438).
 _JPEG = bytes([
     0xFF,
     0xD8,

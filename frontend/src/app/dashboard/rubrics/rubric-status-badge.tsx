@@ -8,7 +8,7 @@ interface RubricStatusBadgeProps {
 
 export function RubricStatusBadge({
   status,
-}: RubricStatusBadgeProps): React.ReactElement {
+}: Readonly<RubricStatusBadgeProps>): React.ReactElement {
   const isActive = status === "active";
   const color = isActive ? RUBRIC_COLORS.teal : RUBRIC_COLORS.amber;
 

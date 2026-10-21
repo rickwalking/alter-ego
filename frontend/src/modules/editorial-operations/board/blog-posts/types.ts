@@ -7,17 +7,17 @@ export interface DashboardBlogPost {
   date: string;
   views: number;
   comments: number;
-  /** Provenance (AE-0296): carousel-origin posts cannot be hard-deleted. */
+  /** Provenance: carousel-origin posts cannot be hard-deleted. */
   origin: BlogPostOrigin;
-  /** Optimistic-lock version forwarded as If-Match on mutations (AE-0296). */
+  /** Optimistic-lock version forwarded as If-Match on mutations. */
   lockVersion: number;
   /**
    * Workflow status, narrowed from the API value; `null` marks an unknown
-   * (drifted) backend status and renders as a neutral badge (AE-0295).
+   * (drifted) backend status and renders as a neutral badge.
    */
   status: BlogPostStatus | null;
   /**
-   * Readable by anonymous visitors right now (AE-0411). A carousel post is
+   * Readable by anonymous visitors right now. A carousel post is
    * stored `published` but stays hidden until its carousel is released, so
    * `status === "published"` alone does not mean the post is live.
    */
@@ -29,7 +29,7 @@ export interface BlogPostBadgeVisual {
   text: string;
 }
 
-/** A resolved status badge: its i18n `status.*` key and colors (AE-0411). */
+/** A resolved status badge: its i18n `status.*` key and colors. */
 export interface BlogPostBadgeLook {
   key: string;
   visual: BlogPostBadgeVisual;

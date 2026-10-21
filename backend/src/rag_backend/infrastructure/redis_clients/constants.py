@@ -1,4 +1,4 @@
-"""Constants for the authenticated Redis client factory (AE-0302)."""
+"""Constants for the authenticated Redis client factory."""
 
 from __future__ import annotations
 

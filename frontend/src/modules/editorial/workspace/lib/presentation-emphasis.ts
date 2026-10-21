@@ -1,5 +1,5 @@
 /**
- * AE-0414 (B29): the per-locale emphasis convention of slide copy (AE-0403):
+ * The per-locale emphasis convention of slide copy:
  * PT copy marks emphasis with ``**texto**``, EN copy with
  * ``<strong>text</strong>``. The content review shows the convention as a hint
  * and flags (and can convert) copy written with the other locale's markup.

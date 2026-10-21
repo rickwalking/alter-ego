@@ -1,7 +1,7 @@
-"""AE-0401 copy-hygiene validators and their deterministic repair.
+"""Copy-hygiene validators and their deterministic repair.
 
 Gherkin: tests/features/slide_copy_validators_ae0401.feature
-Each rule has a rule-fires test (AE-0180) on a seeded violation; the clean
+Each rule has a rule-fires test on a seeded violation; the clean
 prod deck proves the rules stay tolerant of legitimate copy.
 """
 
@@ -322,7 +322,7 @@ _FIRES: list[tuple[str, str, str, str]] = [
 
 @pytest.mark.unit
 class TestRulesFire:
-    """Scenario Outline: Each rule fires on its seeded violation (AE-0180)."""
+    """Scenario Outline: Each rule fires on its seeded violation."""
 
     @pytest.mark.parametrize(("code", "locale", "field", "text"), _FIRES)
     def test_rule_fires(self, code: str, locale: str, field: str, text: str) -> None:

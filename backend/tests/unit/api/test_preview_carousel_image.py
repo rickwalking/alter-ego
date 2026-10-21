@@ -53,6 +53,10 @@ class TestPreviewCarouselImageFallback:
         patched_resolve: list[Path | None] | None = None,
         mock_resolve_image_file: bool = True,
     ) -> object:
+        """The thin route reads the project and assigned-reviewer id through the
+        presentation handlers; the serving fallback (HD, then standard, then hero in
+        _resolve_image_file) and the access check stay at the route edge.
+        """
         project = CarouselProject(
             topic="T",
             audience="A",
@@ -67,9 +71,6 @@ class TestPreviewCarouselImageFallback:
             hashed_password="hash",
         )
         request = _mock_request()
-        # The AE-0120 thin route reads the project + assigned-reviewer id through
-        # the presentation handlers; the serving fallback (HD → standard → hero on
-        # ``_resolve_image_file``) and access check stay at the route edge.
         handlers = MagicMock()
         handlers.get_project = AsyncMock(return_value=project)
         handlers.get_assigned_reviewer_id = AsyncMock(return_value=None)
@@ -156,9 +157,10 @@ class TestPreviewCarouselImageFallback:
 
     # Scenario: Rejects path-traversal filename patterns
     async def test_rejects_path_traversal_filename(self, tmp_path: Path) -> None:
-        # When calling the handler directly FastPath validation is bypassed,
-        # but _resolve_image_file internally sanitizes the filename and
-        # raises HTTPException(404) before any file access occurs.
+        """Calling the handler directly bypasses FastAPI path validation, but
+        _resolve_image_file sanitizes the filename and raises HTTPException(404) before
+        any file access.
+        """
         with pytest.raises(HTTPException) as exc_info:
             _, _ = await self._call_endpoint(
                 tmp_path,

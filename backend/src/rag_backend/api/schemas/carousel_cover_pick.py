@@ -1,4 +1,4 @@
-"""Schemas for the publish-step slide-1 cover picker (AE-0445)."""
+"""Schemas for the publish-step slide-1 cover picker."""
 
 from __future__ import annotations
 

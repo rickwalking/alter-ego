@@ -6,21 +6,23 @@ palette needs dark ink and a light scrim, a dark palette needs white ink and a
 dark scrim. This module computes the mode from the background colour (WCAG
 relative luminance) and returns the ``:root`` CSS variable values the slide CSS
 consumes. Dark palettes get the exact legacy values (byte-identical output).
+
+Backgrounds at or above a relative luminance of 0.5 are light (dark palettes sit near
+0.0-0.02, light ones near 0.9+). Dark mode keeps the historical hardcoded values so dark
+output is identical; light-mode ink opacities are tuned so body copy clears WCAG AA
+(4.5:1) over a near-white background.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 
-# Backgrounds at/above this relative luminance are treated as light. Dark
-# palettes sit near 0.0-0.02; light/editorial palettes near 0.9+.
 LIGHT_BACKGROUND_LUMINANCE_THRESHOLD = 0.5
 
 _THEME_BACKGROUND_KEY = "background"
 _SRGB_LINEAR_THRESHOLD = 0.03928
 _HEX_RGB_LENGTH = 6
 
-# Dark mode = the historical hardcoded values (keeps dark output identical).
 _DARK_SURFACE_VARS: dict[str, str] = {
     "text": "#ffffff",
     "text_60": "rgba(255,255,255,0.63)",
@@ -37,8 +39,6 @@ _DARK_SURFACE_VARS: dict[str, str] = {
     "body_text": "rgba(255,255,255,0.85)",
 }
 
-# Light mode = dark ink + light scrim. Ink opacities are tuned so body copy
-# clears WCAG AA (>= 4.5:1) over a near-white editorial background.
 _LIGHT_SURFACE_VARS: dict[str, str] = {
     "text": "#16181d",
     "text_60": "rgba(22,24,29,0.82)",

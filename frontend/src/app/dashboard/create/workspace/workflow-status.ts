@@ -22,9 +22,9 @@ const STATUS_COMPLETED = WORKFLOW_STATUS_COMPLETED;
 const STATUS_DRAFT = "draft";
 
 /**
- * The complete status vocabulary this map may receive (AE-0299). Typed as a
+ * The complete status vocabulary this map may receive. Typed as a
  * closed union so a new status is a compile error here — the same
- * cross-domain-drift failure class AE-0295 fixed for blog statuses.
+ * cross-domain-drift failure class already fixed for blog statuses.
  */
 type KnownWorkflowStatus =
   | (typeof WORKFLOW_PHASE_STATUS)[keyof typeof WORKFLOW_PHASE_STATUS]
@@ -84,7 +84,7 @@ const UNKNOWN_STATUS_VISUAL: WorkflowStatusVisual = {
   labelKey: null,
 };
 
-/** Known status vocabulary — exported for the drift-guard unit test (AE-0299). */
+/** Known status vocabulary — exported for the drift-guard unit test. */
 export const KNOWN_WORKFLOW_STATUSES: readonly string[] =
   Object.keys(STATUS_VISUALS);
 
@@ -93,7 +93,7 @@ const ERR_UNKNOWN_WORKFLOW_STATUS = "Unknown workflow status";
 /**
  * Map a workflow/phase status string to its semantic badge treatment.
  *
- * An unrecognized status THROWS outside production (AE-0299) so drift from a
+ * An unrecognized status THROWS outside production so drift from a
  * loose-typed path (e.g. a deserialized API string) is observable instead of
  * silently rendering the neutral cyan; the cyan fallback remains only as a
  * last-resort production guard.

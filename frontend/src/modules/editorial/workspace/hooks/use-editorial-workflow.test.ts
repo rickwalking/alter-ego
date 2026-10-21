@@ -23,8 +23,10 @@ class MockEventSource {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
-  static instances: MockEventSource[] = [];
-  static lastInit: EventSourceInit | undefined;
+  static readonly instances: MockEventSource[] = [];
+  static get lastInit(): EventSourceInit | undefined {
+    return MockEventSource.instances.at(-1)?.init;
+  }
 
   readyState = MockEventSource.CONNECTING;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
@@ -32,14 +34,13 @@ class MockEventSource {
   onopen: (() => void) | null = null;
   private listeners = new Map<
     string,
-    Array<(event: MessageEvent<string>) => void>
+    ((event: MessageEvent<string>) => void)[]
   >();
 
   constructor(
     public url: string,
-    init?: EventSourceInit,
+    public init?: EventSourceInit,
   ) {
-    MockEventSource.lastInit = init;
     MockEventSource.instances.push(this);
   }
 
@@ -99,7 +100,7 @@ const baseState: EditorialWorkflowState = {
 function mockWorkflowStateResponse(state: EditorialWorkflowState): void {
   mockAuthenticatedFetch.mockResolvedValue({
     ok: true,
-    json: async () => state,
+    json: () => Promise.resolve(state),
   } as Response);
 }
 
@@ -114,8 +115,7 @@ async function advanceResumeWaitTimers(): Promise<void> {
 }
 
 beforeEach(() => {
-  MockEventSource.instances = [];
-  MockEventSource.lastInit = undefined;
+  MockEventSource.instances.length = 0;
   mockAuthenticatedFetch.mockReset();
   mockWorkflowStateResponse(baseState);
   // @ts-expect-error — swap in the mock for the duration of each test.
@@ -129,12 +129,13 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflow", () => {
-  // Feature: Unified workflow progress in create workspace
+  /**
+   * Then the browser should not start a 3 second polling interval for workflow state
+   */
   // Scenario: SSE delivers phase_change without polling during approve
-  //   Then the browser should not start a 3 second polling interval for workflow state
   it("does not poll on a fixed interval while loading", async () => {
     let statePolls = 0;
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
@@ -154,40 +155,42 @@ describe("useEditorialWorkflow", () => {
             },
           },
         );
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({
-            accepted: true,
-            project_id: "project-1",
-            current_phase: "research",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-            lock_version: 2,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              accepted: true,
+              project_id: "project-1",
+              current_phase: "research",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+              lock_version: 2,
+            }),
+        } as Response);
       }
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
         statePolls += 1;
         if (statePolls >= 2) {
-          return {
+          return Promise.resolve({
             ok: true,
-            json: async () => ({
-              ...baseState,
-              current_phase: "outline",
-              phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-              outline: [{ title: "Intro" }],
-            }),
-          } as Response;
+            json: () =>
+              Promise.resolve({
+                ...baseState,
+                current_phase: "outline",
+                phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+                outline: [{ title: "Intro" }],
+              }),
+          } as Response);
         }
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => baseState,
-        } as Response;
+          json: () => Promise.resolve(baseState),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -214,10 +217,11 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.state?.current_phase).toBe("outline");
   });
 
-  // Feature: Unified workflow progress in create workspace
+  /**
+   * Then the client should poll workflow state as fallback
+   * And polling should use increasing backoff intervals
+   */
   // Scenario: Polling fallback activates only when SSE disconnects
-  //   Then the client should poll workflow state as fallback
-  //   And polling should use increasing backoff intervals
   it("polls workflow state with backoff when SSE fails", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -228,8 +232,9 @@ describe("useEditorialWorkflow", () => {
     vi.useFakeTimers();
     const initialCalls = countStateFetches();
 
-    await act(async () => {
+    await act(() => {
       MockEventSource.instances[0]?.fail();
+      return Promise.resolve();
     });
 
     expect(result.current.transportMode).toBe(
@@ -251,10 +256,11 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBeGreaterThan(callsAfterFirstPoll);
   });
 
-  // Feature: Unified workflow progress in create workspace
+  /**
+   * Then interval polling should stop
+   * And the transport mode should return to SSE primary
+   */
   // Scenario: Polling fallback stops when SSE reconnects
-  //   Then interval polling should stop
-  //   And the transport mode should return to SSE primary
   it("stops polling fallback when SSE reconnects", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -264,8 +270,9 @@ describe("useEditorialWorkflow", () => {
 
     vi.useFakeTimers();
 
-    await act(async () => {
+    await act(() => {
       MockEventSource.instances[0]?.fail();
+      return Promise.resolve();
     });
 
     await act(async () => {
@@ -277,16 +284,16 @@ describe("useEditorialWorkflow", () => {
     });
 
     const reconnected = MockEventSource.instances.at(-1);
-    await act(async () => {
+    await act(() => {
       reconnected?.open();
+      return Promise.resolve();
     });
 
     expect(result.current.transportMode).toBe(
       EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
     );
 
-    // AE-0440: the reopened stream refetches the state once; after that no
-    // poll runs while SSE is primary.
+    /** The reopened stream refetches the state once; no poll runs while SSE is primary. */
     const callsAfterReconnect = countStateFetches();
 
     await act(async () => {
@@ -296,7 +303,6 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBe(callsAfterReconnect);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: No progress polling loop at awaiting_human gate
   it("does not poll fallback while awaiting human review", async () => {
     mockWorkflowStateResponse({
@@ -312,8 +318,9 @@ describe("useEditorialWorkflow", () => {
 
     vi.useFakeTimers();
 
-    await act(async () => {
+    await act(() => {
       MockEventSource.instances[0]?.fail();
+      return Promise.resolve();
     });
 
     expect(result.current.transportMode).toBe(
@@ -329,7 +336,6 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBe(callsBeforeWait);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: Mount hydrates workflow state once then opens SSE
   it("hydrates workflow state once on mount and opens one SSE connection", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -347,7 +353,6 @@ describe("useEditorialWorkflow", () => {
     );
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE progress merges nested phase_progress into client state
   it("merges progress events into phase_progress state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -380,8 +385,7 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // AE-0415 (B15): a same-phase running -> ready flip is confirmed against
-  // GET workflow/state before it is applied.
+  /** A same-phase running -> ready flip is confirmed against GET workflow/state first. */
   it("merges review_required gate payload into workflow state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -418,11 +422,12 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
+  /**
+   * Given GET workflow/state reports phase_status "in_progress"
+   * And the SSE snapshot replays the checkpoint as "awaiting_human"
+   * Then the running state is kept
+   */
   // Scenario: A reload during a running phase keeps the running state
-  //   Given GET workflow/state reports phase_status "in_progress"
-  //   And the SSE snapshot replays the checkpoint as "awaiting_human"
-  //   Then the running state is kept
   it("keeps the running state when the SSE snapshot replays a stale gate", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -458,7 +463,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.awaitingHumanReview).toBe(false);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE delivers phase_change without polling during approve
   it("merges phase changes from SSE events", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -487,37 +491,39 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("sends revise action with feedback on revision requests", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        const body = JSON.parse(String(init.body)) as {
+        const body = JSON.parse(init.body as string) as {
           action: string;
           feedback?: string;
         };
         expect(body.action).toBe(EDITORIAL_REVIEW_ACTIONS.REVISE);
         expect(body.feedback).toBe("Prioritize the breach example first");
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({
-            accepted: true,
-            project_id: "project-1",
-            current_phase: "research",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-            lock_version: 2,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              accepted: true,
+              project_id: "project-1",
+              current_phase: "research",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+              lock_version: 2,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => ({
-          ...baseState,
-          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-          research_findings: [{ title: "Finding" }],
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            ...baseState,
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            research_findings: [{ title: "Finding" }],
+          }),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -558,37 +564,39 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("sends structured_feedback.target_phase on final review revise", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        const body = JSON.parse(String(init.body)) as {
+        const body = JSON.parse(init.body as string) as {
           structured_feedback?: { target_phase?: string };
         };
         expect(body.structured_feedback?.target_phase).toBe("content");
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({
-            accepted: true,
-            project_id: "project-1",
-            current_phase: "final_review",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-            lock_version: 2,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              accepted: true,
+              project_id: "project-1",
+              current_phase: "final_review",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+              lock_version: 2,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => ({
-          ...baseState,
-          current_phase: "content",
-          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-          outline: [{ title: "Intro" }],
-          slide_drafts: [{ draft_text: "Body" }],
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            ...baseState,
+            current_phase: "content",
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            outline: [{ title: "Intro" }],
+            slide_drafts: [{ draft_text: "Body" }],
+          }),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -631,54 +639,57 @@ describe("useEditorialWorkflow", () => {
   it("recovers from resume transport failures by polling workflow state", async () => {
     let resumeCalls = 0;
     let statePolls = 0;
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
         resumeCalls += 1;
-        return {
+        return Promise.resolve({
           ok: false,
           status: 500,
-          json: async () => ({ detail: "gateway timeout" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "gateway timeout" }),
+        } as Response);
       }
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
         statePolls += 1;
         if (statePolls >= 3) {
-          return {
+          return Promise.resolve({
             ok: true,
-            json: async () => ({
-              ...baseState,
-              current_phase: "outline",
-              phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-              outline: [{ title: "Intro" }],
-            }),
-          } as Response;
+            json: () =>
+              Promise.resolve({
+                ...baseState,
+                current_phase: "outline",
+                phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+                outline: [{ title: "Intro" }],
+              }),
+          } as Response);
         }
         if (statePolls >= 2) {
-          return {
+          return Promise.resolve({
             ok: true,
-            json: async () => ({
-              ...baseState,
-              current_phase: "outline",
-              phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-              outline: [],
-            }),
-          } as Response;
+            json: () =>
+              Promise.resolve({
+                ...baseState,
+                current_phase: "outline",
+                phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+                outline: [],
+              }),
+          } as Response);
         }
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => ({
-            ...baseState,
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -704,53 +715,55 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.error).toBeNull();
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Polling recovery waits for artifacts not only gate status
   it("continues recovery polling until slide drafts exist", async () => {
     let statePolls = 0;
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          json: async () => ({ detail: "gateway timeout" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "gateway timeout" }),
+        } as Response);
       }
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
         statePolls += 1;
         if (statePolls >= 3) {
-          return {
+          return Promise.resolve({
             ok: true,
-            json: async () => ({
+            json: () =>
+              Promise.resolve({
+                ...baseState,
+                current_phase: "content",
+                phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+                outline: [{ title: "Intro" }],
+                slide_drafts: [{ draft_text: "Body" }],
+              }),
+          } as Response);
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               ...baseState,
               current_phase: "content",
               phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
               outline: [{ title: "Intro" }],
-              slide_drafts: [{ draft_text: "Body" }],
+              slide_drafts: [],
             }),
-          } as Response;
-        }
-        return {
-          ok: true,
-          json: async () => ({
-            ...baseState,
-            current_phase: "content",
-            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-            outline: [{ title: "Intro" }],
-            slide_drafts: [],
-          }),
-        } as Response;
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => ({
-          ...baseState,
-          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            ...baseState,
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          }),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -774,10 +787,9 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.error).toBeNull();
   });
 
-  // Feature: Async resume client behavior
   // Scenario: Approve clears loading via SSE not resume HTTP response
   it("accepts async 202 resume and waits for review_required SSE event", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
@@ -797,22 +809,23 @@ describe("useEditorialWorkflow", () => {
             },
           },
         );
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({
-            accepted: true,
-            project_id: "project-1",
-            current_phase: "research",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-            lock_version: 2,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              accepted: true,
+              project_id: "project-1",
+              current_phase: "research",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+              lock_version: 2,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -835,7 +848,6 @@ describe("useEditorialWorkflow", () => {
     );
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Artifact SSE hydrates review panel during resume recovery
   it("merges artifact SSE payloads into workflow state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -862,30 +874,30 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Loading state persists until expected artifacts exist for the next gate
   it("keeps loading until outline artifacts exist after async approve", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({
-            accepted: true,
-            project_id: "project-1",
-            current_phase: "research",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-            lock_version: 2,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              accepted: true,
+              project_id: "project-1",
+              current_phase: "research",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+              lock_version: 2,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -929,21 +941,21 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("surfaces resume conflict errors without polling recovery", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.CONFLICT,
-          json: async () => ({ detail: "version_conflict" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "version_conflict" }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -958,8 +970,6 @@ describe("useEditorialWorkflow", () => {
       await expect(result.current.approve()).rejects.toThrow();
     });
     await waitFor(() => {
-      // AE-0315: the version-conflict 409 now maps to distinct client copy
-      // (editorialWorkflow.errors.versionConflict) instead of the raw code.
       expect(result.current.error).toBe(
         "This carousel changed in another session. Refresh the page and try again.",
       );
@@ -968,21 +978,21 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("rejects malformed async resume acceptance payloads", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.ACCEPTED,
-          json: async () => ({ accepted: false }),
-        } as Response;
+          json: () => Promise.resolve({ accepted: false }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1001,38 +1011,40 @@ describe("useEditorialWorkflow", () => {
 
   it("falls back to polling when resume fetch throws a network error", async () => {
     let statePolls = 0;
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        throw new TypeError("Failed to fetch");
+        return Promise.reject(new TypeError("Failed to fetch"));
       }
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
         statePolls += 1;
         if (statePolls >= 2) {
-          return {
+          return Promise.resolve({
             ok: true,
-            json: async () => ({
-              ...baseState,
-              current_phase: "outline",
-              phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-              outline: [{ title: "Intro" }],
-            }),
-          } as Response;
+            json: () =>
+              Promise.resolve({
+                ...baseState,
+                current_phase: "outline",
+                phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+                outline: [{ title: "Intro" }],
+              }),
+          } as Response);
         }
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => ({
-            ...baseState,
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1058,24 +1070,25 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("starts workflow via POST and stores returned state", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => ({
-            ...baseState,
-            current_phase: "research",
-            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              current_phase: "research",
+              phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1099,18 +1112,18 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("returns null from refreshState when workflow is missing", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.NOT_FOUND,
-          json: async () => ({ detail: "not found" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "not found" }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1120,24 +1133,24 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Regression (c858abd): the workflow/state call must NOT be wrapped in
-  // resolveClientApiUrl. The endpoint path already starts with /api, and in
-  // production nginx routes /api/* straight to the backend; prefixing it with
-  // NEXT_PUBLIC_API_URL produced /api/api/... and a 404. So even when
-  // NEXT_PUBLIC_API_URL is set, refresh must use the bare endpoint path.
+  /**
+   * Regression: the state call is not wrapped in resolveClientApiUrl. The path
+   * already starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...`` and a 404.
+   */
   it("refreshes workflow state via the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => baseState,
-        } as Response;
+          json: () => Promise.resolve(baseState),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     renderHook(() => useEditorialWorkflow("project-1"));
@@ -1154,21 +1167,21 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("surfaces start failures from the API", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: 400,
-          json: async () => ({ detail: "invalid brief" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "invalid brief" }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1199,18 +1212,18 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("returns null when refresh receives a non-ok response", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: 500,
-          json: async () => ({ detail: "server error" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "server error" }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1221,14 +1234,14 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("returns null when refresh throws a network error", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        throw new TypeError("Failed to fetch");
+        return Promise.reject(new TypeError("Failed to fetch"));
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1241,10 +1254,11 @@ describe("useEditorialWorkflow", () => {
   it("does not append phase events when refreshed state lacks current_phase", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({
-        ...baseState,
-        current_phase: "",
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          current_phase: "",
+        }),
     } as Response);
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1274,7 +1288,7 @@ describe("useEditorialWorkflow", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.NOT_FOUND,
-      json: async () => ({ detail: "not found" }),
+      json: () => Promise.resolve({ detail: "not found" }),
     } as Response);
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1286,17 +1300,18 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("uses unknown start error messaging for non-Error throws", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        throw "boom";
+        const nonErrorReason: unknown = "boom";
+        return Promise.reject(nonErrorReason);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1348,19 +1363,19 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("refreshState returns null for non-ok responses without parsing JSON", async () => {
-    const json = vi.fn(async () => ({ detail: "server error" }));
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    const json = vi.fn(() => Promise.resolve({ detail: "server error" }));
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
           json,
-        } as unknown as Response;
+        } as unknown as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1379,14 +1394,14 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("refreshState returns null when the state request throws", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        throw new TypeError("Failed to fetch");
+        return Promise.reject(new TypeError("Failed to fetch"));
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1403,10 +1418,11 @@ describe("useEditorialWorkflow", () => {
   it("refreshState appends the current phase to phase events", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({
-        ...baseState,
-        current_phase: "outline",
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          current_phase: "outline",
+        }),
     } as Response);
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1417,10 +1433,11 @@ describe("useEditorialWorkflow", () => {
 
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({
-        ...baseState,
-        current_phase: "content",
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          current_phase: "content",
+        }),
     } as Response);
 
     await act(async () => {
@@ -1445,7 +1462,7 @@ describe("useEditorialWorkflow", () => {
       }
       return {
         ok: true,
-        json: async () => baseState,
+        json: () => Promise.resolve(baseState),
       } as Response;
     });
 
@@ -1473,7 +1490,7 @@ describe("useEditorialWorkflow", () => {
     await act(async () => {
       resolveStart?.({
         ok: true,
-        json: async () => baseState,
+        json: () => Promise.resolve(baseState),
       } as Response);
       await startPromise;
     });
@@ -1482,27 +1499,27 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("includes persona and source fields in the start payload", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        expect(JSON.parse(String(init.body))).toEqual({
+        expect(JSON.parse(init.body as string)).toEqual({
           topic: "Security",
           audience: "Developers",
           brief: "Brief",
           sources: [{ title: "Source", content: "Body", source_type: "url" }],
           persona_id: "persona-1",
         });
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => baseState,
-        } as Response;
+          json: () => Promise.resolve(baseState),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1523,21 +1540,21 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("uses the startFailed fallback when the API omits error detail", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          json: async () => ({}),
-        } as Response;
+          json: () => Promise.resolve({}),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1563,26 +1580,28 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("does not append phase events when start returns an empty current phase", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => ({
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              current_phase: "",
+            }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
             ...baseState,
             current_phase: "",
           }),
-        } as Response;
-      }
-      return {
-        ok: true,
-        json: async () => ({
-          ...baseState,
-          current_phase: "",
-        }),
-      } as Response;
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1604,7 +1623,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.phaseEvents).toEqual([]);
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: A fresh project does not request the workflow state
   it("skips the mount fetch when initialFetch is false", async () => {
     renderHook(() =>
@@ -1616,18 +1634,21 @@ describe("useEditorialWorkflow", () => {
 
   // Scenario: The banner names the phase that is running
   it("reports which review action started the running phase", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        return {
+        return Promise.resolve({
           ok: false,
           status: HTTP_STATUS.CONFLICT,
-          json: async () => ({ detail: "resume_already_in_progress" }),
-        } as Response;
+          json: () => Promise.resolve({ detail: "resume_already_in_progress" }),
+        } as Response);
       }
-      return { ok: true, json: async () => baseState } as Response;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
     await waitFor(() => {
@@ -1646,12 +1667,12 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("revise wrapper forwards feedback and options to the resume endpoint", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
         init?.method === "POST"
       ) {
-        const body = JSON.parse(String(init.body)) as {
+        const body = JSON.parse(init.body as string) as {
           action: string;
           feedback?: string;
           structured_feedback?: { target_phase?: string; edited_text?: string };
@@ -1662,20 +1683,21 @@ describe("useEditorialWorkflow", () => {
           target_phase: "content",
           edited_text: "Updated body",
         });
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.OK,
-          json: async () => ({
-            ...baseState,
-            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-            research_findings: [{ title: "Finding" }],
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+              research_findings: [{ title: "Finding" }],
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -1693,27 +1715,28 @@ describe("useEditorialWorkflow", () => {
   });
 
   it("refetches workflow state when the project id changes", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (url) => {
+    mockAuthenticatedFetch.mockImplementation((url) => {
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => baseState,
-        } as Response;
+          json: () => Promise.resolve(baseState),
+        } as Response);
       }
       if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-2")) {
-        return {
+        return Promise.resolve({
           ok: true,
-          json: async () => ({
-            ...baseState,
-            project_id: "project-2",
-            current_phase: "outline",
-          }),
-        } as Response;
+          json: () =>
+            Promise.resolve({
+              ...baseState,
+              project_id: "project-2",
+              current_phase: "outline",
+            }),
+        } as Response);
       }
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => baseState,
-      } as Response;
+        json: () => Promise.resolve(baseState),
+      } as Response);
     });
 
     const { result, rerender } = renderHook(

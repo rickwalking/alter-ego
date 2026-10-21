@@ -1,10 +1,10 @@
-"""Per-post image budget reservation (AE-0424 review round 2; reused by AE-0425).
+"""Per-post image budget reservation (also used by bulk generation).
 
 The budget is **reserved before** the provider call, under the row lock, and
 committed at once: the request locks the post (``SELECT ... FOR UPDATE``),
 refuses with 429 at ``BLOG_IMAGE_COST_CAP``, counts one image in
 ``ai_generation_metadata.blog_image_generations`` and commits. Parallel
-requests (or a parallel AE-0425 batch) therefore queue on the lock and the one
+requests (or a parallel bulk-generation batch) therefore queue on the lock and the one
 that finds the cap reached is refused; none can pass at ``cap - 1`` together.
 
 The reservation is deliberately **kept** when the spend or the later write
@@ -14,6 +14,12 @@ billed the call, and the cap is a spend ceiling, not a count of stored images.
 A per-post, per-event-loop ``asyncio.Lock`` serializes reservations inside one
 process as well, so the guarantee also holds on engines without row locks
 (SQLite in tests).
+
+_RESERVATION_LOCKS holds one lock per post and event loop: an asyncio.Lock is bound to
+the loop it first waited on, and tests and workers may run several loops. Locks are per
+post so one post's reservation never waits on another's. The row lock (FOR UPDATE) is
+the cross-process guarantee; this lock covers engines without row locks inside one
+process.
 """
 
 from __future__ import annotations
@@ -33,11 +39,6 @@ from rag_backend.application.services.blog.blog_image_budget import (
 )
 from rag_backend.domain.constants.blog_editor import ERR_BLOG_IMAGE_BUDGET_EXHAUSTED
 
-# One lock per post and event loop (an ``asyncio.Lock`` is bound to the loop it
-# first waited on; tests and workers may run several loops). Per post so one
-# post's reservation never waits on another's (AE-0432). The row lock
-# (``FOR UPDATE``) is the cross-process guarantee; this one covers engines
-# without row locks inside one process.
 _RESERVATION_LOCKS: WeakKeyDictionary[
     asyncio.AbstractEventLoop, dict[str, asyncio.Lock]
 ] = WeakKeyDictionary()

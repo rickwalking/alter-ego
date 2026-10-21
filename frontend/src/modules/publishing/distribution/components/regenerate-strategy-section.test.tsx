@@ -238,7 +238,7 @@ it("calls regenerate mutation with selected strategy", async () => {
 
   expect(mockMutate).toHaveBeenCalledWith(
     { projectId: "proj-1", strategy: "stat_card_grid" },
-    expect.objectContaining({ onSuccess: expect.any(Function) }),
+    expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
   );
 });
 

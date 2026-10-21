@@ -1,4 +1,4 @@
-"""``GET /api/instagram/insights`` over SQLite (AE-0378).
+"""``GET /api/instagram/insights`` over SQLite.
 
 Gherkin: tests/features/instagram_insights.feature
 """
@@ -147,6 +147,7 @@ class TestInsightsRoute:
     # Scenario: Missing metric
     @pytest.mark.asyncio
     async def test_fresh_rows_and_missing_metric(self, env: _Env) -> None:
+        """The snapshots are stored, so a second read does not call Graph."""
         await _seed_posts()
         graph = _Graph(
             metrics={
@@ -173,7 +174,6 @@ class TestInsightsRoute:
         assert body["shares_per_100_views"] == 1.0
         assert body["configured"] is True
 
-        # The snapshots were stored: a second read does not call Graph.
         again = (await env.client.get(_PATH)).json()
         assert len(graph.calls) == 2
         assert again["items"][0]["views"] == 1000

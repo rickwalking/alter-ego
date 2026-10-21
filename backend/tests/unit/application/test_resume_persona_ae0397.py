@@ -1,4 +1,4 @@
-"""The project's persona for a background resume (AE-0397).
+"""The project's persona for a background resume.
 
 Gherkin: tests/features/resume_persona_ae0397.feature
 """

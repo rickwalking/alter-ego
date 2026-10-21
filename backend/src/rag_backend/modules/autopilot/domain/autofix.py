@@ -1,4 +1,4 @@
-"""The owner "Fix issues" port (AE-0367). Pure data and a protocol.
+"""The owner "Fix issues" port. Pure data and a protocol.
 
 ``inspect`` is cheap and read-only (the webhook and the review message call
 it); ``autofix`` repairs, re-translates untranslated EN and re-renders, so
@@ -13,11 +13,13 @@ from typing import Protocol
 
 
 class AutofixStatus(StrEnum):
-    """Outcome of one autofix."""
+    """Outcome of one autofix.
+
+    ``CONFLICT``: another writer held the project lock or moved the lock version.
+    """
 
     FIXED = "fixed"
     NOTHING_TO_FIX = "nothing_to_fix"
-    # Another writer held the project lock or moved the lock version.
     CONFLICT = "conflict"
 
 
@@ -69,7 +71,7 @@ class GateRepairCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class GateRepairOutcome:
-    """What the gate repair fixed and which blocking rules are left (AE-0392)."""
+    """What the gate repair fixed and which blocking rules are left."""
 
     status: AutofixStatus
     fixed_rules: tuple[str, ...] = ()
@@ -77,7 +79,7 @@ class GateRepairOutcome:
 
 
 class GateRepairer(Protocol):
-    """Deterministic repair of a content/design gate before a revise (AE-0392)."""
+    """Deterministic repair of a content/design gate before a revise."""
 
     async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
         """Repair the checkpoint copy and re-validate. No re-render."""
@@ -95,14 +97,16 @@ class SlideFixCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class SlideFixAttemptRecord:
-    """One model attempt on one slide (AE-0401), for the per-attempt log."""
+    """One model attempt on one slide, for the per-attempt log.
+
+    ``model_role`` is the model role of the attempt (``fast`` or ``reasoning``).
+    """
 
     slide_index: int
     attempt: int
     rules_before: tuple[str, ...]
     rules_after: tuple[str, ...]
     outcome: str
-    # AE-0407: the model role of the attempt ("fast" or "reasoning").
     model_role: str = ""
 
 
@@ -118,9 +122,9 @@ class FailingSlide:
 
 @dataclass(frozen=True, kw_only=True)
 class SlideFixOutcome:
-    """What the model fix wrote and which slides are still failing (AE-0401).
+    """What the model fix wrote and which slides are still failing.
 
-    AE-0433: ``unscored_slides`` passed every rule but the judge gave no
+    ``unscored_slides`` passed every rule but the judge gave no
     score (a re-score is pending); ``judge_unavailable`` is set once one of
     them stayed unscored for the configured number of ticks.
     """
@@ -134,7 +138,7 @@ class SlideFixOutcome:
 
 
 class SlideFixer(Protocol):
-    """Model fix of the slides still failing after the repair (AE-0401)."""
+    """Model fix of the slides still failing after the repair."""
 
     async def fix_slides(self, command: SlideFixCommand) -> SlideFixOutcome:
         """Rewrite each failing slide (N attempts), persist the fixed ones."""

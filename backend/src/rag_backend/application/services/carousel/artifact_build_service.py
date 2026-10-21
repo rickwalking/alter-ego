@@ -73,7 +73,12 @@ class CarouselArtifactBuildService:
         db: AsyncSession,
         request: ArtifactBuildRequest,
     ) -> ArtifactBuildResult | ArtifactBuildFailure:
-        """Stage legacy outputs, write manifest, promote, and activate."""
+        """Stage legacy outputs, write manifest, promote, and activate.
+
+        The on-disk index is written only after the activation CAS commit succeeds: a
+        CAS-losing concurrent build raises first, so current.json never names a version
+        that failed to activate in the DB.
+        """
         if not request.project.output_dir:
             return ArtifactBuildFailure(
                 artifact_version="",
@@ -136,10 +141,6 @@ class CarouselArtifactBuildService:
                 ),
             )
             await db.commit()
-            # AE-0313 r4: write the on-disk index ONLY after the activation CAS
-            # commit succeeds — a CAS-losing concurrent build raises above and
-            # never reaches here, so current.json can never name a version that
-            # failed to activate in the DB.
             write_current_index(project_root, artifact_version)
             request.project.artifact_version = artifact_version
             logger.info(
@@ -179,6 +180,12 @@ class CarouselArtifactBuildService:
     async def _activate_existing(
         command: ActivateExistingCommand,
     ) -> ArtifactBuildResult | ArtifactBuildFailure:
+        """Re-activate an existing artifact version idempotently.
+
+        The on-disk index is refreshed too; otherwise current.json lags the DB until a
+        read-path reconciler runs, and a republish then download serves the prior
+        version's PDF.
+        """
         operation_id = compute_operation_id(
             str(command["request"].project.id),
             command["request"].source_lock_version,
@@ -194,10 +201,6 @@ class CarouselArtifactBuildService:
                 ),
             )
             await command["db"].commit()
-            # AE-0313 r3: the idempotent re-activation path must refresh the
-            # on-disk index too — without this, current.json lagged the DB until
-            # a lazy read-path reconciler ran, so a republish→download with no
-            # intervening state read served the prior version's PDF.
             write_current_index(command["project_root"], command["artifact_version"])
             command["request"].project.artifact_version = command["artifact_version"]
             return ArtifactBuildResult(

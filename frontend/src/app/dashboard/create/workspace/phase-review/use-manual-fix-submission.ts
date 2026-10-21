@@ -11,7 +11,7 @@ import { CONTENT_REVIEW_ID_PREFIX } from "./content-phase-locale-fields";
 import type { ContentManualFixesActions } from "./content-phase-manual-fixes";
 
 /**
- * AE-0403: submit the changed slides as manual fixes; once that run comes
+ * Submit the changed slides as manual fixes; once that run comes
  * back (no longer in progress), jump to the first field still invalid (a DOM
  * focus, not data fetching). Returns the submit callback.
  */

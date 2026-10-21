@@ -1,9 +1,10 @@
 """Authorization-parity contract tests for the presentation WRITE entry points
-(AE-0118, extending AE-0113 / ADR-0009 §5).
+(extending ADR-0009 §5).
 
-AE-0113 covered the carousel editorial-WORKFLOW write paths. This module extends
+The carousel write-path authz contract covered the editorial-WORKFLOW write
+paths. This module extends
 the same deny-by-default, owner/admin policy contract to the PRESENTATION write
-entry points the AE-0118 presentation single-writer/ACL now backs:
+entry points the presentation single-writer/ACL now backs:
 
   1. design-token refresh  -> POST /api/admin/carousels/refresh-design-tokens
   2. render-slides          -> POST /api/admin/carousels/render-slides
@@ -22,14 +23,14 @@ class, and these tests assert the SAME allow/deny OUTCOME holds for it:
   * **authenticated path** (strategy apply): unauthorized -> DENIED; an
     authenticated actor passes the authorization boundary (the route enforces
     authentication, then resolves the project — behavior-preserving, NOT changed
-    by AE-0118).
+    by the single-writer).
 
 These are AUTHORIZATION-OUTCOME assertions: an ALLOWED actor is asserted to pass
 the auth boundary (status is NOT 401/403); a DENIED actor is asserted to be
 rejected at it (401 or 403). No external client (LLM, image gen, Pinecone) is
 ever invoked — the database is in-memory SQLite, matching tests/integration.
 
-Gherkin (see ticket AE-0118 AC: authorization parity on presentation write paths):
+Gherkin (authorization parity on presentation write paths):
 
   Feature: Presentation write-path authorization parity
     Scenario Outline: same authorization across presentation write entry points
@@ -59,12 +60,10 @@ from rag_backend.domain.models import (
 TEST_SECRET = "test-secret-for-presentation-authz-contract!!"
 ANON_SECRET = "test-anon-secret-for-presentation-authz"
 
-# Auth outcomes the contract asserts.
 OUTCOME_ALLOW = "allow"
 OUTCOME_DENY = "deny"
 _DENY_STATUSES = (401, 403)
 
-# Presentation write entry points + their access class.
 PATH_REFRESH_DESIGN = "/api/admin/carousels/refresh-design-tokens"
 PATH_RENDER_SLIDES = "/api/admin/carousels/render-slides"
 
@@ -194,7 +193,6 @@ def _png_bytes() -> bytes:
     return buffer.getvalue()
 
 
-# === Admin-only write paths (refresh-design-tokens, render-slides) =============
 class TestAdminOnlyPresentationWrites:
     """Scenario: admin-only presentation writes deny-by-default for non-admins."""
 
@@ -219,7 +217,7 @@ class TestAdminOnlyPresentationWrites:
     async def test_authorizes_admin(self, harness: _Harness, path: str) -> None:
         """Admin clears the authorization boundary (status is NOT 401/403).
 
-        The admin presentation refresh routes the write through the AE-0118
+        The admin presentation refresh routes the write through the
         presentation single-writer/ACL; a non-401/403 status proves the admin
         passed the authorization gate (the body succeeds against the seeded
         project — no external client is invoked).
@@ -228,7 +226,6 @@ class TestAdminOnlyPresentationWrites:
         assert resp.status_code not in _DENY_STATUSES
 
 
-# === Owner-or-admin write path (creator-asset upload) =========================
 class TestCreatorAssetWriteAuthorization:
     """Scenario: creator-asset upload enforces owner-or-admin."""
 
@@ -269,7 +266,6 @@ class TestCreatorAssetWriteAuthorization:
         assert resp.status_code not in _DENY_STATUSES
 
 
-# === Authenticated write path (strategy apply) ================================
 class TestStrategyApplyAuthorization:
     """Scenario: strategy apply requires authentication (behavior-preserving)."""
 
@@ -290,7 +286,8 @@ class TestStrategyApplyAuthorization:
 
         The strategy route enforces authentication (router-level), then resolves
         the project; a non-401 status proves the authentication boundary was
-        passed. AE-0118 does NOT change this access class (behavior-preserving).
+        passed. The single-writer does NOT change this access class
+        (behavior-preserving).
         """
         resp = await harness.client.put(
             self._url(harness),

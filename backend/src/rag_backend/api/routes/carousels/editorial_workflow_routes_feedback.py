@@ -1,6 +1,6 @@
-"""Reviewer-note history for the workflow state response (AE-0413).
+"""Reviewer-note history for the workflow state response.
 
-AE-0405 moves a content note out of ``phase_feedback`` once the regeneration
+moves a content note out of ``phase_feedback`` once the regeneration
 used it, so ``phase_feedback.content`` reads ``[]`` after every content
 revision even though the note was applied. The consumed notes live in
 ``phase_feedback_history``; this extractor exposes them on the API.

@@ -1,11 +1,11 @@
-"""The blog generation run: writer → quality gate → images (AE-0425, ADR-0025).
+"""The blog generation run: writer → quality gate → images (ADR-0025).
 
 One run = one lease on one draft row. A full run:
 
 1. drafts ONE continuous article (PT + EN) from the brief (``blog_generation``),
 2. normalizes it to exactly N sections (N = the carousel slide count),
 3. gates each language (voice score + deterministic scan + one rewrite at most)
-   and checks that the EN is English (AE-0435: a Portuguese EN is retranslated,
+   and checks that the EN is English (a Portuguese EN is retranslated,
    bounded; if it stays Portuguese the article is stored without EN),
 4. stores the scored, image-less document (lease-fenced; refuses to overwrite
    an owner save),
@@ -16,7 +16,7 @@ One run = one lease on one draft row. A full run:
    and finishes ``complete`` or ``partial``.
 
 An images-only job (a retry of a post whose article exists) skips 1-4. Each
-stage has its own budget (AE-0435): 1-3 ``BLOG_GENERATION_TEXT_TIMEOUT_SECONDS``
+stage has its own budget: 1-3 ``BLOG_GENERATION_TEXT_TIMEOUT_SECONDS``
 (timeout → ``failed``), 5 ``BLOG_IMAGE_WAVE_TIMEOUT_SECONDS`` per image wave
 (timeout → the finished images are kept and the run ends ``partial``, so the
 retry is images-only). The run heartbeats while it works; a heartbeat failure
@@ -24,6 +24,9 @@ is logged and never ends the run. A writer/count/document failure finishes
 ``failed`` without storing anything as if valid; cancellation finishes
 ``failed`` + recoverable and re-raises. A lost lease stops the run silently.
 The post always stays a draft.
+
+_FAILURE_CODES lists the failures that end a run as failed and recoverable (the owner
+retries); a TimeoutError means the text-stage budget ran out and nothing was stored.
 """
 
 from __future__ import annotations
@@ -114,13 +117,11 @@ from rag_backend.domain.models.blog_generation import (
 
 logger = structlog.get_logger(__name__)
 
-# Failures that end the run as ``failed`` + recoverable (the owner retries).
 _FAILURE_CODES: dict[type[Exception], str] = {
     WriterFailedError: ERR_GENERATION_LLM_FAILED,
     SectionCountMismatchError: ERR_SECTION_COUNT_MISMATCH,
     InvalidBlogDocumentError: ERR_INVALID_GENERATED_DOCUMENT,
     GenerationConflictError: ERR_GENERATION_CONFLICT,
-    # The text-stage budget ran out (AE-0435); nothing was stored.
     TimeoutError: ERR_GENERATION_TIMEOUT,
 }
 
@@ -168,16 +169,24 @@ class BlogGenerationService:
         return outcome
 
     async def _with_heartbeat(self, job: GenerationJob) -> GenerationOutcome:
+        """Run the pipeline while a heartbeat keeps the lease fresh.
+
+        wait never re-raises the beat's own outcome, so nothing from the heartbeat can
+        replace the run's result.
+        """
         beat = asyncio.create_task(self._heartbeat(job.lease))
         try:
             return await self._guarded(job)
         finally:
             beat.cancel()
-            # ``wait`` never re-raises the beat's own outcome, so nothing from
-            # the heartbeat can replace the run's result.
             await asyncio.wait([beat])
 
     async def _heartbeat(self, lease: GenerationLease) -> None:
+        """Beat the lease until cancelled.
+
+        A DB blip must not kill the run: it is logged and the beat continues. A
+        persistently failing heartbeat ends in the reaper (stale).
+        """
         while True:
             await asyncio.sleep(self._deps.timings.heartbeat_seconds)
             try:
@@ -185,8 +194,6 @@ class BlogGenerationService:
             except LeaseLostError:
                 return
             except Exception:
-                # A DB blip must not kill the run: log and keep beating. A
-                # persistently failing heartbeat ends in the reaper (stale).
                 logger.warning(
                     LOG_HEARTBEAT_FAILED, post_id=lease.post_id, exc_info=True
                 )
@@ -205,6 +212,11 @@ class BlogGenerationService:
             return _failure(ERR_GENERATION_FAILED, type(exc).__name__)
 
     async def _pipeline(self, job: GenerationJob) -> GenerationOutcome:
+        """Write the article, then generate and store its images.
+
+        The image budget is reserved under the row lock before any provider spend and
+        kept even when a slot later fails, since it may be billed.
+        """
         if job.brief is None:
             document, titles = await self._current(job)
             languages = None
@@ -214,8 +226,6 @@ class BlogGenerationService:
             await self._store(job, document, languages)
             titles = ImageTitles(languages.title, languages.en_title)
         subjects = missing_image_subjects(document, titles.title)
-        # AE-0424 contract: the budget is reserved under the row lock BEFORE
-        # any provider spend (kept even when a slot later fails: it may be billed).
         granted = await self._deps.store.reserve_images(job.lease, len(subjects))
         result = await self._deps.images.generate(
             ImageBatchRequest(
@@ -330,6 +340,7 @@ def _place_article(latest: BlogDocument, article: BlogDocument) -> BlogDocument:
 def _outcome(
     job: GenerationJob, languages: GeneratedLanguages | None, result: ImageBatchResult
 ) -> GenerationOutcome:
+    """Build the run outcome; a standalone post takes the writer's title."""
     errors = (*_language_errors(languages), *result.errors)
     status = GENERATION_STATUS_PARTIAL if errors else GENERATION_STATUS_COMPLETE
     logger.info(
@@ -348,7 +359,6 @@ def _outcome(
         errors=errors,
         recoverable=bool(errors),
         image_count=len(result.images),
-        # A standalone post takes the writer's title (with the final status).
         title=languages.title if job.retitle and languages else None,
     )
 

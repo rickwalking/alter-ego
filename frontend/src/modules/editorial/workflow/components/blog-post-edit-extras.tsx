@@ -19,7 +19,7 @@ export function BlogPostEditExtras({
   bodyText,
   previousBodyText,
   onScheduled,
-}: BlogPostEditExtrasProps) {
+}: Readonly<BlogPostEditExtrasProps>) {
   const t = useTranslations("workflow");
   const { activeLock, isLockedByOther } = useCollaborativeEdit(
     postId,

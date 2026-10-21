@@ -1,4 +1,4 @@
-"""Scheduling rules, callbacks, keyboards, and copy (AE-0370).
+"""Scheduling rules, callbacks, keyboards, and copy.
 
 Gherkin: tests/features/autopilot_scheduled_publish.feature
 """
@@ -78,7 +78,7 @@ def local_label(at: datetime) -> str:
 
 
 def _first(now: datetime) -> datetime:
-    """AE-0404: the auto slot of a Radar run without insights."""
+    """The auto slot of a Radar run without insights."""
     return best_slot(RecommendQuery(now=now, pov=False, signals=ScheduleSignals())).at
 
 
@@ -105,7 +105,8 @@ def test_slots_roll_over_after_the_last_slot() -> None:
 
 # Scenario: Slots are computed in America/Sao_Paulo, whatever the server zone
 def test_slots_use_sao_paulo_not_utc() -> None:
-    now = datetime(2026, 10, 15, 14, 0, tzinfo=UTC)  # 11:00 in Sao Paulo
+    """14:00 UTC is 11:00 in São Paulo."""
+    now = datetime(2026, 10, 15, 14, 0, tzinfo=UTC)
     first = _first(now)
     assert local_label(first) == "15/10 12:00"
     assert first == datetime(2026, 10, 15, 15, 0, tzinfo=UTC)

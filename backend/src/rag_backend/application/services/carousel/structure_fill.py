@@ -1,12 +1,12 @@
-"""Fill a slide's missing structured items deterministically (AE-0367, AE-0437).
+"""Fill a slide's missing structured items deterministically.
 
-Pure: no DB, no LLM. Shared by the owner autofix (AE-0367) and the content
-gate repair (AE-0430), so both fix the same structural gaps the same way:
+Pure: no DB, no LLM. Shared by the owner autofix and the content
+gate repair, so both fix the same structural gaps the same way:
 
 - a content slide without a body gets 3-4 features from its outline key points;
 - a summary slide without 3 complete points gets them from its key points, or
   else from the titles and first key points of the content slides;
-- a closing slide without 3 complete actions (AE-0437, prod carousel 7acaf967:
+- a closing slide without 3 complete actions (prod carousel 7acaf967:
   ``closing_actions_missing`` survived generation, repair and one revision)
   first gets its own complete ``features`` moved under ``actions`` (the key a
   revision or a manual edit swapped, carousel 5344b6c6), else 3 actions from
@@ -135,7 +135,7 @@ def needs_summary(payload: Mapping[str, object], slide_type: str) -> bool:
 
 
 def needs_actions(payload: Mapping[str, object], slide_type: str) -> bool:
-    """A closing slide with fewer than 3 complete actions (AE-0437)."""
+    """A closing slide with fewer than 3 complete actions."""
     if slide_type != SLIDE_TYPE_CLOSING:
         return False
     return complete_items(payload, _ACTIONS) < MIN_CLOSING_ACTIONS
@@ -180,7 +180,7 @@ def move_closing_features(payload: dict[str, object], slide_type: str) -> bool:
     """Move a closing slide's complete features under ``actions``, in place.
 
     Only when the actions are incomplete and the features alone satisfy the
-    closing rule: the texts are right, only the key is wrong (AE-0437).
+    closing rule: the texts are right, only the key is wrong.
     """
     if not needs_actions(payload, slide_type):
         return False

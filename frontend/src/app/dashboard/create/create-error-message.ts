@@ -2,7 +2,7 @@ import { HTTP_STATUS } from "@/constants/api";
 import { ApiError } from "@/lib/api-client";
 
 /**
- * AE-0415 (B18): turn a failed `POST /api/carousels` into one readable line
+ * Turn a failed `POST /api/carousels` into one readable line
  * instead of "HTTP error! status: 422". FastAPI validation errors name the
  * field (`loc`) and the rule (`type`, `ctx`); each field is reported once.
  */
@@ -36,7 +36,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
 ]);
 
 function fieldOf(issue: ValidationIssue): string {
-  const loc = Array.isArray(issue.loc) ? issue.loc : [];
+  const loc: readonly unknown[] = Array.isArray(issue.loc) ? issue.loc : [];
   const last = loc[loc.length - 1];
   return typeof last === "string" ? last : "";
 }

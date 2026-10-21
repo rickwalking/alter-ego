@@ -4,11 +4,11 @@ Private to the module — the public facade re-exports it under
 ``KnowledgeService``; cross-module code never imports this path directly.
 
 This is a **behavior-preserving** facade over the existing knowledge
-collaborators (AE-0089): the document repository, the document-processing
+collaborators: the document repository, the document-processing
 pipeline, and the hybrid retriever. It introduces no new behavior — each method
 maps a typed command/query onto the same calls the legacy routes make today,
 so ``/api/documents`` and ``/api/search`` stay byte-identical when they move
-behind the facade (AE-0092/0093).
+behind the facade.
 
 Dependencies are injected through the constructor (manual constructor
 injection, ADR-0009 §9). The request-scoped Unit of Work is owned at the
@@ -58,7 +58,7 @@ class DocumentPipelinePort(Protocol):
     """Pipeline operations the knowledge use cases delegate to.
 
     Matches the existing ``DocumentProcessingPipeline`` shape so the module
-    wires to the legacy adapter without behavior change (AE-0089).
+    wires to the legacy adapter without behavior change.
     """
 
     async def process_document(
@@ -79,7 +79,7 @@ class RetrieverPort(Protocol):
 
     Matches the existing ``HybridRetrieverWithRRF.retrieve`` shape (distinct
     from the shared ``Retriever.search`` port) so the module wires to the
-    legacy adapter without behavior change (AE-0089).
+    legacy adapter without behavior change.
     """
 
     async def retrieve(self, request: RetrievalQuery) -> list[SearchResult]: ...
@@ -146,7 +146,7 @@ class KnowledgeService:
 
         Named ``list_documents`` (not ``list``) to avoid shadowing the builtin
         ``list`` used in return annotations elsewhere on this class; it is the
-        facade's "list" operation (AE-0089 AC).
+        facade's "list" operation.
         """
         documents = await self._repository.get_all(
             status=query.status, limit=query.limit, offset=query.offset

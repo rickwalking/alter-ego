@@ -1,5 +1,5 @@
 /**
- * AE-0154: shared RouteErrorView (extracted from the dashboard error.tsx boundaries).
+ * shared RouteErrorView (extracted from the dashboard error.tsx boundaries).
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,7 +13,7 @@ vi.mock("next-intl", () => ({
 
 describe("RouteErrorView", () => {
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -25,7 +25,7 @@ describe("RouteErrorView", () => {
     render(
       <RouteErrorView
         error={baseError}
-        reset={() => {}}
+        reset={() => undefined}
         namespace="chat"
         logLabel="Chat error:"
       />,
@@ -40,7 +40,7 @@ describe("RouteErrorView", () => {
     render(
       <RouteErrorView
         error={baseError}
-        reset={() => {}}
+        reset={() => undefined}
         namespace="knowledge"
         logLabel="Knowledge base error:"
       />,
@@ -52,7 +52,7 @@ describe("RouteErrorView", () => {
     const { rerender } = render(
       <RouteErrorView
         error={baseError}
-        reset={() => {}}
+        reset={() => undefined}
         namespace="knowledge"
         logLabel="x"
       />,
@@ -62,7 +62,7 @@ describe("RouteErrorView", () => {
     rerender(
       <RouteErrorView
         error={baseError}
-        reset={() => {}}
+        reset={() => undefined}
         namespace="chat"
         logLabel="x"
         showErrorMessage

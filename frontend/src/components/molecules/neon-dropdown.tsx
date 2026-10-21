@@ -34,7 +34,7 @@ export interface NeonDropdownProps {
 
 export function NeonDropdown({
   children,
-}: NeonDropdownProps): React.ReactElement {
+}: Readonly<NeonDropdownProps>): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   return (
@@ -50,7 +50,7 @@ export interface NeonDropdownTriggerProps {
 
 export function NeonDropdownTrigger({
   children,
-}: NeonDropdownTriggerProps): React.ReactElement {
+}: Readonly<NeonDropdownTriggerProps>): React.ReactElement {
   const { open, setOpen } = useNeonDropdown();
 
   return (
@@ -72,7 +72,7 @@ export interface NeonDropdownContentProps {
 export function NeonDropdownContent({
   children,
   align = "end",
-}: NeonDropdownContentProps): React.ReactElement | null {
+}: Readonly<NeonDropdownContentProps>): React.ReactElement | null {
   const { open, setOpen } = useNeonDropdown();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -113,7 +113,7 @@ export interface NeonDropdownItemProps {
 export function NeonDropdownItem({
   children,
   onClick,
-}: NeonDropdownItemProps): React.ReactElement {
+}: Readonly<NeonDropdownItemProps>): React.ReactElement {
   const { setOpen } = useNeonDropdown();
 
   return (

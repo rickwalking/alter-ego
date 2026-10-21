@@ -1,4 +1,4 @@
-"""Read the escalation detail off a state-changed event (AE-0401)."""
+"""Read the escalation detail off a state-changed event."""
 
 from __future__ import annotations
 

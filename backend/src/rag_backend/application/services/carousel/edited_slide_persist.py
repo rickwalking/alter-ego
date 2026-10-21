@@ -1,4 +1,4 @@
-"""Persist reviewer-edited slide copy onto the rendered slide rows (AE-0366).
+"""Persist reviewer-edited slide copy onto the rendered slide rows.
 
 Prod carousel 8e350d6e: the reviewer fixed slide copy at the content gate via
 ``edited_localized_slides``, but the ``carousel_slides`` rows (what the renderer,

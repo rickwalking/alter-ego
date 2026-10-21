@@ -14,6 +14,15 @@ const SIDEBAR_ID = "dashboard-sidebar";
 const ICON_HAMBURGER = "M3 6h18M3 12h18M3 18h18";
 const ICON_CLOSE = "M18 6 6 18M6 6l12 12";
 
+/**
+ * Dashboard shell. The mobile menu trigger lives here so the shared NeonTopBar
+ * stays presentational; it and the backdrop are hidden from lg up. The sidebar
+ * is a root-level sibling of the backdrop, not inside the z-1 content stacking
+ * context, so its z-40 sits above the z-30 backdrop. The content column needs
+ * ``min-w-0``: a flex item defaults to ``min-width: auto`` and would grow to its
+ * widest child, making inner ``overflow-x-auto`` regions widen the page instead
+ * of scrolling.
+ */
 export default function DashboardLayout({
   children,
 }: Readonly<{
@@ -26,8 +35,6 @@ export default function DashboardLayout({
       <NeonGridBackground />
       <NeonScanlineOverlay />
 
-      {/* Mobile menu trigger — layout-level so the shared NeonTopBar stays
-          presentational. Hidden once the persistent rail appears at lg. */}
       <button
         type="button"
         onClick={toggle}
@@ -44,7 +51,6 @@ export default function DashboardLayout({
         <NeonIcon path={open ? ICON_CLOSE : ICON_HAMBURGER} />
       </button>
 
-      {/* Backdrop — only below lg while the drawer is open. */}
       {open && (
         <button
           type="button"
@@ -55,10 +61,6 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Sidebar is a root-level sibling of the backdrop (NOT inside the z-1
-          content context) so its z-40 actually sits ABOVE the z-30 backdrop —
-          nesting it under a z-1 stacking context made the backdrop cover the
-          drawer and its menu items. */}
       <NeonSidebar
         sections={DASHBOARD_SIDEBAR_SECTIONS}
         showUserFooter
@@ -76,10 +78,6 @@ export default function DashboardLayout({
         }}
       >
         <div className="flex min-h-screen">
-          {/* min-w-0 is essential: as a flex item it defaults to min-width:auto
-              and would grow to its widest child's min-content, making inner
-              `overflow-x-auto` regions (progress steps, kanban, calendar) expand
-              the page instead of scrolling. min-w-0 lets it shrink to the viewport. */}
           <div className="flex min-w-0 flex-1 flex-col min-h-screen lg:ml-[240px]">
             <main className="flex-1 flex flex-col">{children}</main>
           </div>

@@ -14,7 +14,7 @@ class MockEventSource {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
-  static instances: MockEventSource[] = [];
+  static readonly instances: MockEventSource[] = [];
 
   readyState = MockEventSource.CONNECTING;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
@@ -22,7 +22,7 @@ class MockEventSource {
   onopen: (() => void) | null = null;
   private listeners = new Map<
     string,
-    Array<(event: MessageEvent<string>) => void>
+    ((event: MessageEvent<string>) => void)[]
   >();
 
   constructor(public url: string) {
@@ -81,7 +81,7 @@ function renderSseHook(
   const setPhaseEvents = vi.fn();
   const setTransportMode = vi.fn();
   const setError = vi.fn();
-  const refreshState = vi.fn(async () => baseState);
+  const refreshState = vi.fn(() => Promise.resolve(baseState));
 
   const hook = renderHook(
     ({ state, transportMode }) =>
@@ -116,7 +116,7 @@ function renderSseHook(
 }
 
 beforeEach(() => {
-  MockEventSource.instances = [];
+  MockEventSource.instances.length = 0;
   vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
   // @ts-expect-error — swap in the mock for the duration of each test.
   globalThis.EventSource = MockEventSource;
@@ -129,10 +129,11 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowSse", () => {
-  // Regression (c858abd): the SSE stream opens against the bare /api endpoint
-  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
-  // with /api and nginx routes /api/* to the backend; prefixing produced
-  // /api/api/... and broke live progress streaming.
+  /**
+   * Regression: the stream opens on the bare endpoint path. The path already
+   * starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...``.
+   */
   it("opens SSE on the bare /api endpoint path with credentials", async () => {
     renderSseHook();
 
@@ -193,9 +194,10 @@ describe("useEditorialWorkflowSse", () => {
     );
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
+  /**
+   * Then the stale snapshot is confirmed against workflow/state before it is applied
+   */
   // Scenario: A reload during a running phase keeps the running state
-  //   Then the stale snapshot is confirmed against workflow/state before it is applied
   it("confirms a same-phase running -> ready flip via refreshState instead of applying it", async () => {
     const { setState, refreshState } = renderSseHook();
 
@@ -383,7 +385,10 @@ describe("useEditorialWorkflowSse", () => {
 
     expect(setState).toHaveBeenCalledWith(
       expect.objectContaining({
-        phase_progress: expect.objectContaining({ current: 2, total: 5 }),
+        phase_progress: expect.objectContaining({
+          current: 2,
+          total: 5,
+        }) as unknown,
       }),
     );
   });

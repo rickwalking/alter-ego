@@ -1,5 +1,5 @@
 /**
- * Gherkin: tests/features/duplication-gate.feature (AE-0150 shared SSE plumbing)
+ * Gherkin: tests/features/duplication-gate.feature (shared SSE plumbing)
  * Covers the shared SSE streaming primitives extracted from useSseChat and
  * usePublishChat so the two hooks no longer duplicate them.
  */

@@ -1,4 +1,4 @@
-"""POST /api/autopilot/assets and the topic ``cover`` field (AE-0418).
+"""POST /api/autopilot/assets and the topic ``cover`` field.
 
 Gherkin: tests/features/autopilot_grok_cover_ae0418.feature
   Upload: POST /api/autopilot/assets; Topic intake: the optional cover field.
@@ -111,14 +111,12 @@ async def _upload(
     return {"status": response.status_code, **response.json()}
 
 
-# --- Upload ---------------------------------------------------------------------
-
-
 # Scenario: An ai_image of 1080x1350 is accepted
 @pytest.mark.asyncio
 async def test_ai_image_is_stored_as_a_cover_role_asset(
     api: tuple[AsyncClient, AsyncEngine, _Clock],
 ) -> None:
+    """The AI image is never part of the owner's photo library."""
     client, engine, _clock = api
     body = await _upload(client, _image((1080, 1350)), {"kind": "ai_image"})
     assert body["status"] == 201
@@ -133,7 +131,6 @@ async def test_ai_image_is_stored_as_a_cover_role_asset(
         assert asset is not None
         assert asset.role == "cover"
         assert asset.owner_id == _OWNER
-        # AE-0418: never part of the owner's photo library.
         library = await PostgresCreatorAssetRepository(session).list_for_owner(
             CreatorAssetLibraryQuery(owner_id=_OWNER)
         )
@@ -244,9 +241,6 @@ async def test_upload_without_an_owner_user_is_unavailable(
     assert (body["status"], body["detail"]) == (503, "autopilot_owner_unconfigured")
 
 
-# --- Topic intake ----------------------------------------------------------------
-
-
 def _with_cover(topic: dict[str, object], asset_id: object) -> dict[str, object]:
     return {**topic, "cover": {"asset_id": str(asset_id)}}
 
@@ -355,6 +349,9 @@ async def test_used_cover_is_rejected_and_one_batch_uses_it_once(
 async def test_screenshot_source_must_be_a_topic_source(
     api: tuple[AsyncClient, AsyncEngine, _Clock],
 ) -> None:
+    """A rejected topic leaves the asset free: once fixed and sent again, it is
+    accepted.
+    """
     client, _engine, _clock = api
     form = {"kind": "screenshot", "source_url": _X_POST}
     asset_id = str((await _upload(client, _image((800, 600)), form))["asset_id"])
@@ -364,7 +361,6 @@ async def test_screenshot_source_must_be_a_topic_source(
     assert [(r["reason"], r["field"]) for r in wrong["rejected"]] == [
         ("cover_source_invalid", "cover.asset_id")
     ]
-    # A rejected topic leaves the asset free: fixed and sent again, it is accepted.
     right = await _post(
         client, [_with_cover(_topic("Agents ship", _X_POST, 80), asset_id)]
     )

@@ -1,7 +1,7 @@
-"""Port for custom-palette persistence (AE-0269).
+"""Port for custom-palette persistence.
 
 The domain defines this Protocol; the infrastructure layer implements it against
-PostgreSQL. The resolver (read paths) and the AE-0270 CRUD API (write paths)
+PostgreSQL. The resolver (read paths) and the CRUD API (write paths)
 depend on this port, never on the concrete adapter.
 """
 

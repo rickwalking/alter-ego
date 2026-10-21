@@ -9,9 +9,6 @@ import {
   toSupportedLocale,
 } from "@/lib/locale-format";
 
-// Feature: Dashboard dates follow the active locale (AE-0417)
-// tests/features/dashboard-locale-dates-ae0417.feature
-
 const LOCAL_AFTERNOON = new Date(2026, 9, 17, 14, 5);
 const MINUTE_MS = 60_000;
 const NOW_MS = LOCAL_AFTERNOON.getTime();

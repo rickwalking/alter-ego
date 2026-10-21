@@ -1,8 +1,8 @@
-"""Identity bounded context (Generic) — AE-0098 Phase 3 skeleton.
+"""Identity bounded context (Generic) Phase 3 skeleton.
 
 The identity context owns user accounts, authentication (login + JWT
 issue/validate), and the password policy. This package follows the module
-conventions (``docs/architecture/module-conventions.md``, AE-0081) and ADR-0009
+conventions (``docs/architecture/module-conventions.md``) and ADR-0009
 (Domain Modular Monolith):
 
 * per-module internal layers — ``domain/``, ``application/``,
@@ -12,12 +12,12 @@ conventions (``docs/architecture/module-conventions.md``, AE-0081) and ADR-0009
 * manual constructor injection via ``bootstrap_module`` (ADR-0009 §9);
 * the Unit-of-Work boundary owned at the application layer.
 
-Phase 3 is **behavior-preserving** (AE-0098): the ``UserRepository`` port and
+Phase 3 is **behavior-preserving**: the ``UserRepository`` port and
 the ``User``/``UserRole`` aggregate are *re-exported* from their legacy
 locations (no physical move), JWT/bcrypt stay in ``infrastructure.auth``
 (delegated, never reimplemented), and the role-check dependencies stay backed by
 ``api/middleware/auth.py`` (re-exported through this facade). Routes move behind
-this facade in AE-0099.
+this facade later.
 
 Cross-module consumers SHALL import from the facade only, e.g.::
 

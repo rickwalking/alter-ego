@@ -1,4 +1,9 @@
-"""PostgreSQL repository implementations using SQLAlchemy."""
+"""PostgreSQL repository implementations using SQLAlchemy.
+
+``_OwnerQuery`` is a backward-compatible alias: the owner-listing query lives on
+the ``DocumentRepository`` protocol so the domain layer can type it without
+importing infrastructure.
+"""
 
 from uuid import UUID
 
@@ -11,9 +16,6 @@ from rag_backend.infrastructure.database.models import DocumentModel
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
 
-# Backward-compatible alias: the owner-listing query now lives on the
-# ``DocumentRepository`` protocol so the domain layer can type it without
-# importing infrastructure. Re-exported here under the legacy name.
 _OwnerQuery = OwnerDocumentQuery
 
 

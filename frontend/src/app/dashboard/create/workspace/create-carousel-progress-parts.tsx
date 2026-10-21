@@ -28,7 +28,9 @@ export function CompleteCard() {
   );
 }
 
-export function ErrorCard({ errorMessage }: { errorMessage?: string | null }) {
+export function ErrorCard({
+  errorMessage,
+}: Readonly<{ errorMessage?: string | null }>) {
   const t = useTranslations("create");
   return (
     <NeonAlert variant="destructive">
@@ -47,7 +49,9 @@ export function ErrorCard({ errorMessage }: { errorMessage?: string | null }) {
   );
 }
 
-export function StalledWarning({ stalledSeconds }: { stalledSeconds: number }) {
+export function StalledWarning({
+  stalledSeconds,
+}: Readonly<{ stalledSeconds: number }>) {
   const t = useTranslations("create");
   return (
     <div
@@ -90,7 +94,7 @@ export function useStalledSeconds(
 }
 
 export function secondsSince(updatedAt: string): number {
-  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(updatedAt)
+  const normalized = /[zZ]|(?:[+-]\d{2}:?\d{2}$)/.test(updatedAt)
     ? updatedAt
     : `${updatedAt}Z`;
   const referenceMs = new Date(normalized).getTime();

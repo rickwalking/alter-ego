@@ -1,9 +1,14 @@
-"""Constants for the content-quality gate reason and its repair (AE-0392).
+"""Constants for the content-quality gate reason and its repair.
 
 A blocking presentation rule (sentence case, empty body, EN equal to PT, item
 counts, tag balance...) is a ``content_quality`` failure, not a forbidden
 phrase. The runner repairs it deterministically before it revises, and the
 revise feedback names each failing slide.
+
+The “Measured” text lists at most a fixed number of ``rule@slide`` pairs, and so does
+the per-slide violation list in the feedback. A carousel-wide rule (the slide count, for
+example) is reported on a fixed slide. The gates the presentation validator blocks are
+repaired before a revise.
 """
 
 from __future__ import annotations
@@ -12,19 +17,15 @@ from rag_backend.modules.autopilot.constants import GATE_CONTENT, GATE_DESIGN
 
 REASON_CONTENT_QUALITY = "content_quality"
 
-# "Measured" lists at most this many ``rule@slide`` pairs; so does the
-# per-slide violation list in the feedback.
 MAX_MEASURED_VIOLATIONS = 10
 MEASURED_PAIR = "{rule}@{slide}"
 MEASURED_SEPARATOR = ", "
 MEASURED_RATIO = "{got}/{expected}"
-# The slide of a carousel-wide rule (slide count, for example).
 SLIDE_UNKNOWN = "carousel"
 VIOLATION_LINE = "slide {slide} ({locale} {field}): {rule}. {message}"
 VIOLATION_TEXT_SUFFIX = ' Current text: "{text}".'
 VIOLATION_TEXT_MAX_CHARS = 200
 
-# Gates the same presentation validator blocks: repaired before a revise.
 QUALITY_GATES: frozenset[str] = frozenset({GATE_CONTENT, GATE_DESIGN})
 
 FIELD_MESSAGE = "message"

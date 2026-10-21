@@ -1,12 +1,12 @@
 /**
  * Conversation hook types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), hook contract shapes
  * live here rather than inline in the `use-*.ts` files.
  */
 
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 import type { ChatStream } from "@/lib/use-chat-stream";
 import type { Message } from "@/schemas/chat";
 
@@ -31,17 +31,17 @@ export interface UseSseChatReturn {
 /** The shared optimistic-message stream state (``useChatStream``). */
 export type ChatStreamState = ChatStream;
 
-/** What sending one SSE chat turn needs (AE-0446). */
+/** What sending one SSE chat turn needs. */
 export interface SendChatDeps {
   stream: ChatStreamState;
   conversationId: string | null;
   isStreaming: boolean;
   setError: (error: string | null) => void;
-  finalizedRef: MutableRefObject<boolean>;
+  finalizedRef: RefObject<boolean>;
   finalizeStream: (convId: string) => void;
 }
 
-/** The stable callbacks one streamed chat turn drives (AE-0446). */
+/** The stable callbacks one streamed chat turn drives. */
 export type ChatTurnCallbacks = Pick<
   ChatStreamState,
   | "appendToken"

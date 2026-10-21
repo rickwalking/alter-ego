@@ -1,4 +1,4 @@
-"""Notice ledger persistence and on-disk slide lookup (AE-0355).
+"""Notice ledger persistence and on-disk slide lookup.
 
 Gherkin: tests/features/autopilot_telegram_notify.feature
 """
@@ -154,6 +154,7 @@ async def test_review_facts_read_pt_slides_from_disk(
 async def test_recent_events_skip_bad_ids_and_non_object_payloads(
     db_session: AsyncSession,
 ) -> None:
+    """Events come oldest first, so a busy outbox never hides an older notice."""
     run_id = uuid4()
     db_session.add_all([
         _outbox(str(run_id), {"revision": 4}, datetime(2026, 10, 13, 11, 0)),
@@ -164,7 +165,6 @@ async def test_recent_events_skip_bad_ids_and_non_object_payloads(
     events = await SqlAutopilotEventSource(db_session).recent()
     mine = [event for event in events if event.run_id == run_id]
     assert len(mine) == 2
-    # QA r1: oldest first, so a busy outbox never hides an older notice.
     assert mine[0].payload == {}
     assert mine[1].payload == {"revision": 4}
     assert mine[0].created_at.tzinfo is not None

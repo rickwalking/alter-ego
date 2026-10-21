@@ -1,4 +1,9 @@
-"""Database persistence for editorial distribution."""
+"""Database persistence for editorial distribution.
+
+_COPY_EXTRAS_KEYS are the extras keys carrying visible copy (replaced, or dropped when
+the edited copy no longer has them); image_prompt, long_form_notes and any other extras
+are left untouched by a copy projection.
+"""
 
 from __future__ import annotations
 
@@ -186,26 +191,25 @@ async def _create_slide_from_outline_item(
 async def _create_new_slides(
     state: _SlideDraftsState,
 ) -> None:
-    """Create new slides from draft data and outline."""
+    """Create new slides from draft data and outline.
+
+    slides_config records the real deck size, which the design phase reads.
+    """
     created = 0
     for index, item in enumerate(state.outline[:MAX_SLIDES]):
         if not isinstance(item, dict):
             continue
         await _create_slide_from_outline_item(state, index, item)
         created += 1
-    # AE-0374: the real deck size (was always "7_slides"), read by design.py.
     state.project.slides_config = CAROUSEL_SLIDES_CONFIG_FORMAT.format(count=created)
     await state.repo.update_project(state.project)
 
 
 def _project_policy(project: CarouselProject) -> CarouselPresentationPolicy:
-    """AE-0374: the stamped contract sized to the project's deck."""
+    """The stamped contract sized to the project's deck."""
     return project_policy(project)
 
 
-# Extras keys that carry visible copy (replaced, or dropped when the edited copy
-# no longer has them); image_prompt / long_form_notes and any other extras are
-# left untouched by a copy projection.
 _COPY_EXTRAS_KEYS: tuple[str, ...] = (
     "features",
     "stats",
@@ -242,7 +246,7 @@ def _symmetric_translation(
     fresh: dict[str, object],
     extras: dict[str, object],
 ) -> dict[str, object]:
-    """EN copy extras shaped like the PT ones (AE-0401).
+    """EN copy extras shaped like the PT ones.
 
     The PT side never stores an empty list (``pack_extras``), so an empty EN
     list, or a stale EN list the fresh copy no longer has, is dropped too:
@@ -269,7 +273,7 @@ class LocalizedCopyProjection:
 async def project_localized_copy_to_database(
     projection: LocalizedCopyProjection,
 ) -> tuple[int, ...]:
-    """Write edited presentation copy onto existing slide rows (AE-0366).
+    """Write edited presentation copy onto existing slide rows.
 
     Only the visible copy changes: heading, body, the structured items and
     ``translation_en`` heading/body/items. The image path, image prompt,

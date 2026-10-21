@@ -65,10 +65,10 @@ function resolvePipelinePhaseLabel(
 function ProgressHeader({
   phaseLabel,
   stalledSeconds,
-}: {
+}: Readonly<{
   phaseLabel: string;
   stalledSeconds: number;
-}) {
+}>) {
   const t = useTranslations("create");
   return (
     <div className="flex items-start justify-between gap-3 border-b border-neon-card-border pb-3">
@@ -95,12 +95,12 @@ function ActiveProgress({
   isComplete,
   stalledSeconds,
   phaseProgress,
-}: {
+}: Readonly<{
   currentPhase: string;
   isComplete: boolean;
   stalledSeconds: number;
   phaseProgress?: PhaseProgress | null;
-}) {
+}>) {
   const t = useTranslations("create");
   const currentIndex = PHASE_ORDER.indexOf(
     currentPhase && PHASE_ORDER.includes(currentPhase) ? currentPhase : "",
@@ -146,7 +146,7 @@ export function CarouselProgress({
   updatedAt,
   errorMessage,
   phaseProgress,
-}: CarouselProgressProps) {
+}: Readonly<CarouselProgressProps>) {
   const stalledSeconds = useStalledSeconds(updatedAt, isComplete || hasError);
 
   if (isComplete) return <CompleteCard />;

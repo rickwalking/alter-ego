@@ -1,8 +1,8 @@
-"""Prod-shaped carousel at final review for the AE-0367 autofix flow tests.
+"""Prod-shaped carousel at final review for the owner autofix flow tests.
 
-``seed_carousel`` persists the valid AE-0366 7-slide carousel through the real
+``seed_carousel`` persists the valid 7-slide carousel through the real
 content persist path; ``break_carousel`` then writes the owner-reported
-defects straight onto the rows (the rows of carousels drafted before AE-0366):
+defects straight onto the rows (as on carousels drafted before the quality fixes):
 slide 3 mangled ``strong ... /strong``, slide 4 title-only, slide 5 lowercase
 heading with "argon" lowercased, slide 6 EN still Portuguese.
 """
@@ -184,7 +184,10 @@ def _outline() -> list[dict[str, object]]:
 async def seed_checkpoint(
     engine: EditorialWorkflowService, db: AsyncSession, project_id: str
 ) -> None:
-    """Final-review checkpoint: outline, research, presentation copy + markers."""
+    """Final-review checkpoint: outline, research, presentation copy + markers.
+
+    Seeding reaches into the inner graph engine; this is for fresh test threads only.
+    """
     localized = localized_from_slides(await rows(db, project_id))
     localized[4][CASING_REPAIRS_KEY] = [
         {"locale": "pt", "field": "heading", "code": "heading_not_sentence_case_pt"}
@@ -203,7 +206,7 @@ async def seed_checkpoint(
         ],
         "localized_slides": localized,
     }
-    graph = engine._orchestrator._engine  # test seeding of a fresh thread only
+    graph = engine._orchestrator._engine
     await graph.update_state(project_id, state, as_node=PHASE_FINAL_REVIEW)
 
 

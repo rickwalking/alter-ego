@@ -1,4 +1,4 @@
-"""Inputs of the "Ponto de Vista" prompts (AE-0375, ADR-0021).
+"""Inputs of the "Ponto de Vista" prompts (ADR-0021).
 
 Plain data in the domain layer so both the agents and the application
 generators can use them without an agents <-> application import: the caller
@@ -16,20 +16,26 @@ from rag_backend.domain.models.persona import PersonaProfile
 
 @dataclass(frozen=True, kw_only=True)
 class PovThesis:
-    """The owner's thesis and proof; the model may sharpen, never invent."""
+    """The owner's thesis and proof; the model may sharpen, never invent.
+
+    ``prompt_domain`` is the prompt family (``carousel_pov`` or
+    ``carousel_pov_news``); for ``pov_news``, ``quotes`` are the verified quotes the
+    content may place by id.
+    """
 
     thesis: str
     personal_proof: str = ""
     pov_format: str = ""
-    # AE-0406: the prompt family (``carousel_pov`` or ``carousel_pov_news``)
-    # and, for ``pov_news``, the verified quotes the content may place by id.
     prompt_domain: str = POV_PROMPT_DOMAIN
     quotes: tuple[NewsQuote, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
 class PovOutlineRequest:
-    """One POV outline: the brief, the owner's thesis and the contract roles."""
+    """One POV outline: the brief, the owner's thesis and the contract roles.
+
+    ``persona`` is the project's persona that voices the outline (None = none).
+    """
 
     topic: str
     audience: str
@@ -38,7 +44,6 @@ class PovOutlineRequest:
     pov: PovThesis
     roles: tuple[str, ...]
     policy_context: str = ""
-    # PR #106 review: the project's persona voices the outline (None = none).
     persona: PersonaProfile | None = None
 
 
@@ -53,7 +58,7 @@ class PovHookRequest:
 
 @dataclass(frozen=True, kw_only=True)
 class RadarHookRequest:
-    """AE-0376: five Radar IA slide-1 hooks from the brief and the sources."""
+    """Five Radar IA slide-1 hooks from the brief and the sources."""
 
     topic: str
     audience: str
@@ -78,15 +83,15 @@ class SlidePolicyContext:
 
     ``pov`` is set for "Ponto de Vista" projects; Radar IA v4 drafts pass only
     the policy version and deck size so the instruction uses the right map.
+    ``policy_context`` is the sized contract rendered for the prompt (the caller
+    sizes it). For the Radar IA v7 prompts, ``roles`` is the contract's roles in
+    order (outline) and ``role`` this slide's role with the chosen hook (content).
     """
 
     policy_version: str
     slide_count: int
     pov: PovSlideContext | None = None
-    # The sized contract rendered for the prompt (the caller sizes it).
     policy_context: str = ""
-    # AE-0376: the contract's roles in order (outline) or this slide's role and
-    # the chosen hook (content), for the Radar IA v7 prompts.
     roles: tuple[str, ...] = ()
     role: str = ""
     hook_text: str = ""

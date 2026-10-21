@@ -30,7 +30,7 @@ interface CreateWorkflowPanelProps {
   topic: string;
   audience: string;
   brief: string;
-  sources?: Array<{ title: string; content: string; source_type?: string }>;
+  sources?: { title: string; content: string; source_type?: string }[];
   autoStart?: boolean;
   onPublished?: () => void;
   workflow: CreateWorkflowApi;
@@ -49,7 +49,7 @@ export function CreateWorkflowPanel({
   workflow,
   viewStepId,
   workflowStepId,
-}: CreateWorkflowPanelProps): React.JSX.Element {
+}: Readonly<CreateWorkflowPanelProps>): React.JSX.Element {
   const { state, phaseEvents, loading, error, revise, refreshState } = workflow;
   useWorkflowLifecycle(
     workflow,

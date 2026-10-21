@@ -3,8 +3,8 @@
 The public facade re-exports this under ``UserService``; cross-module code never
 imports this path directly.
 
-This is a **behavior-preserving** facade over the existing user repository
-(AE-0098): each method maps a typed command/query onto the same persistence
+This is a **behavior-preserving** facade over the existing user repository: each method
+maps a typed command/query onto the same persistence
 calls the legacy admin/auth routes make today. Write use cases run under the
 injected request-scoped Unit of Work, which is the **single commit owner**
 (ADR-0009 §9): the repository only flushes, and this service commits once via

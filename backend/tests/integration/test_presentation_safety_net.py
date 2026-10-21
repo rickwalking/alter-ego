@@ -1,9 +1,9 @@
-"""Presentation byte-identical safety-net tests (AE-0116).
+"""Presentation byte-identical safety-net tests.
 
 Behavioral + golden-snapshot safety net for the Phase 5 carousel PRESENTATION
 extraction. Phase 5 moves the presentation routes/services/persistence (design /
 blog / blog-i18n / slides / strategies / creator-asset) behind a facade + ACL;
-the later slices (AE-0118 / AE-0120 / AE-0121) diff the live response against the
+the later slices diff the live response against the
 committed baseline this module captures on the current, pre-refactor code.
 
 What is asserted:
@@ -26,12 +26,18 @@ key in this env): all artifact bytes are fixed fixtures, and the creator-asset
 upload feeds a fixed in-memory PNG through the real WebP normalizer. DEBUG is
 pinned (monkeypatch.setenv + settings cache clear) so every env-sensitive
 setting is deterministic local vs CI — this exact local(DEBUG=true)/CI(DEBUG=
-false) split broke the Phase-3 safety net (AE-0097 lesson).
+false) split broke the Phase-3 safety net.
 
 Feature file: tests/features/carousel_presentation_safety_net.feature
 
 Run with ``--snapshot-update`` (flag registered in tests/conftest.py) to
 regenerate the committed golden snapshots from current, pre-refactor behavior.
+
+Env values are pinned so derived strings (public slide-image URLs in the design tokens)
+are byte-identical locally and in CI. The artifact bytes are FIXED and served verbatim
+by FileResponse (not re-encoded), so their sha256 is a reproducible digest contract. The
+design tokens persisted on the project make the GET /design response (DB tokens merged
+with the disk slide layout) deterministic.
 """
 
 from __future__ import annotations
@@ -67,18 +73,13 @@ if TYPE_CHECKING:
 
     from rag_backend.domain.models.carousel import DesignTokens
 
-# --- Constants -----------------------------------------------------------------
 SNAPSHOT_UPDATE_OPTION = "--snapshot-update"
 ANON_SECRET = "test-anon-secret-for-integration-tests"
 OWNER_EMAIL = "pres-owner@integration.example.com"
 OTHER_EMAIL = "pres-other@integration.example.com"
 
-# Stable env values pinned for the presentation surface so derived strings
-# (public slide-image URLs in the design tokens) are byte-identical local vs CI.
 PUBLIC_BASE_URL = "https://fixture.example.com"
 
-# Deterministic FIXED artifact bytes (NOT re-encoded) — FileResponse serves them
-# verbatim, so a sha256 of these exact bytes is a reproducible digest contract.
 PDF_BYTES_PT: Final = b"%PDF-1.4 fixture pt carousel bytes\n%%EOF\n"
 PDF_BYTES_EN: Final = b"%PDF-1.4 fixture en carousel bytes\n%%EOF\n"
 HERO_IMAGE_BYTES: Final = b"\xff\xd8\xff\xe0fixture-hero-jpeg-bytes\xff\xd9"
@@ -89,8 +90,6 @@ SLIDE_COUNT: Final = 3
 EXPECTED_MEDIA_TYPE_PDF = "application/pdf"
 EXPECTED_MEDIA_TYPE_JPEG = "image/jpeg"
 
-# Deterministic design tokens persisted on the project so the GET /design
-# response (which merges DB tokens with the disk slide layout) is deterministic.
 FIXTURE_DESIGN_TOKENS: Final[dict[str, object]] = {
     "colors": {
         "primary": "#3b82f6",
@@ -125,7 +124,6 @@ def snapshot_update(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption(SNAPSHOT_UPDATE_OPTION))
 
 
-# --- Engine / app factory ------------------------------------------------------
 async def _make_engine(db_path: str) -> AsyncEngine:
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -185,7 +183,7 @@ class PresEnv:
         )
 
     def anonymous_client(self) -> AsyncClient:
-        """A cookie-less client (the public visitor's request, AE-0422)."""
+        """A cookie-less client (the public visitor's request)."""
         return AsyncClient(
             transport=ASGITransport(app=self._app),
             base_url="http://test",
@@ -197,7 +195,12 @@ class PresEnv:
         is_public: bool,
         blog_status: BlogPostStatus = BlogPostStatus.PUBLISHED,
     ) -> str:
-        """Persist a completed, rendered carousel owned by ``self.owner``."""
+        """Persist a completed, rendered carousel owned by ``self.owner``.
+
+        A carousel save no longer creates or auto-publishes a blog row, so the canonical
+        ``origin='carousel'`` row is seeded explicitly to keep exercising the row read
+        path.
+        """
         from rag_backend.infrastructure.database.carousel_repository import (
             PostgresCarouselRepository,
         )
@@ -233,9 +236,6 @@ class PresEnv:
                     image_prompt=f"Prompt {i}",
                 )
                 await repo.create_slide(slide)
-            # AE-0422: a carousel save no longer creates/auto-publishes a blog row,
-            # so seed the canonical ``origin='carousel'`` row explicitly to keep
-            # exercising the row read path.
             from rag_backend.infrastructure.database.models import BlogPostModel
 
             session.add(
@@ -263,7 +263,11 @@ class PresEnv:
 async def pres_env(
     tmp_path: object, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncGenerator[PresEnv, None]:
-    """File-backed DB + app with an owner + other editor and a staged project."""
+    """File-backed DB + app with an owner + other editor and a staged project.
+
+    DEBUG and the env-sensitive settings are pinned so the baseline is deterministic
+    locally and in CI.
+    """
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
     from rag_backend.infrastructure.config.settings import get_settings
@@ -272,8 +276,6 @@ async def pres_env(
     assert isinstance(tmp_path, Path)
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
-    # Pin DEBUG + env-sensitive settings so the baseline is deterministic local
-    # vs CI (AE-0097 lesson). monkeypatch.setenv auto-reverts at test end.
     monkeypatch.setenv("DEBUG", "false")
     monkeypatch.setenv("CAROUSEL_PUBLIC_BASE_URL", PUBLIC_BASE_URL)
     monkeypatch.setenv("CAROUSEL_CREATOR_ASSETS_DIR", str(tmp_path / "creator_assets"))
@@ -312,9 +314,6 @@ def _make_png_bytes() -> bytes:
     return buffer.getvalue()
 
 
-# ==============================================================================
-# JSON response behavior + golden snapshots
-# ==============================================================================
 class TestDesignResponse:
     """GET /design (tests/features/carousel_presentation_safety_net.feature)."""
 
@@ -341,7 +340,7 @@ class TestDesignResponse:
     async def test_design_images_have_no_blog_image_map(
         self, pres_env: PresEnv
     ) -> None:
-        """Scenario: the design payload has no blog image map (AE-0428)."""
+        """Scenario: the design payload has no blog image map."""
         project_id = await pres_env.seed_project(is_public=True)
         async with pres_env.client_for(pres_env.owner) as client:
             resp = await client.get(f"/api/carousels/{project_id}/design")
@@ -376,7 +375,7 @@ class TestBlogResponse:
     async def test_hidden_blog_404_for_anonymous(self, pres_env: PresEnv) -> None:
         """Scenario: an anonymous visitor cannot read a hidden carousel post.
 
-        AE-0422: the legacy ``/blog/<carousel project id>`` URL stayed reachable
+        The legacy ``/blog/<carousel project id>`` URL stayed reachable
         after the post was hidden; anonymous callers must now get a uniform 404,
         for both the default and the localized read.
         """
@@ -480,9 +479,6 @@ class TestCreatorAssetUpload:
         assert body["content_sha256"]
 
 
-# ==============================================================================
-# FileResponse endpoints — content-type + headers + stable byte digest
-# ==============================================================================
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -564,9 +560,6 @@ class TestDownloadArtifactPaths:
         assert expected <= files
 
 
-# ==============================================================================
-# Golden snapshots — deterministic byte-identical baselines (AE-0118/0120/0121)
-# ==============================================================================
 class TestPresentationSnapshots:
     """Design/blog/slides/strategies/creator-asset golden snapshots."""
 
@@ -640,9 +633,6 @@ class TestPresentationSnapshots:
         await self._check("creator_asset_upload", resp, update=snapshot_update)
 
 
-# ==============================================================================
-# Falsifiability guard — the snapshot/digest checks are not no-ops
-# ==============================================================================
 class TestSafetyNetIsFalsifiable:
     """Prove the byte-identical assertions reject a mutated payload."""
 
@@ -662,9 +652,7 @@ class TestSafetyNetIsFalsifiable:
         project_id = await pres_env.seed_project(is_public=True)
         async with pres_env.client_for(pres_env.owner) as client:
             resp = await client.get(f"/api/carousels/{project_id}/blog")
-        # Live response matches the committed baseline.
         assert presentation_snapshot.diff_snapshot("blog", resp) == []
-        # A mutated copy of the SAME response must be rejected by the same check.
         snapshot = presentation_snapshot.build_snapshot(resp)
         mutated = presentation_snapshot.load_snapshot("blog")
         assert mutated == snapshot

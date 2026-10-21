@@ -1,6 +1,6 @@
 /**
- * Read the generation run state out of a post's `ai_generation_metadata`
- * (AE-0425). The metadata is a free-form JSON object, so every field is
+ * Read the generation run state out of a post's `ai_generation_metadata`.
+ * The metadata is a free-form JSON object, so every field is
  * narrowed here and anything unexpected reads as "no run".
  */
 
@@ -10,22 +10,22 @@ import {
   type GenerationStatus,
 } from "./generation-constants";
 
-export type GenerationError = {
+export interface GenerationError {
   code: string;
   slot?: string;
   reason?: string;
-};
+}
 
-export type GenerationState = {
+export interface GenerationState {
   status: GenerationStatus;
   attempt: number;
   warnings: string[];
   errors: GenerationError[];
   recoverable: boolean;
-  /** Cover + one per section (N + 1); 0 on rows written before AE-0425. */
+  /** Cover + one per section (N + 1); 0 on rows written before generation runs recorded it. */
   imageSlots: number;
   imageCount: number;
-};
+}
 
 const KNOWN_STATUSES = new Set<string>(Object.values(GENERATION_STATUS));
 

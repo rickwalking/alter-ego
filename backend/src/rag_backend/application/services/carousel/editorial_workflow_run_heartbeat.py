@@ -1,4 +1,4 @@
-"""Interval heartbeat task for a run-owned workflow resume (AE-0315, AE-0417).
+"""Interval heartbeat task for a run-owned workflow resume.
 
 The run wrapper starts the loop when it owns a run fence and stops it on every
 exit path. Stopping waits for the task to finish: a loop caught inside a
@@ -38,7 +38,7 @@ def start_heartbeat(fence: CarouselRunContext | None) -> asyncio.Task[None] | No
 async def stop_heartbeat(heartbeat: asyncio.Task[None] | None) -> None:
     """Cancel the heartbeat loop and wait until it has really finished.
 
-    AE-0417: ``cancel()`` alone only requests the stop. A loop caught inside a
+    ``cancel()`` alone only requests the stop. A loop caught inside a
     write outlived the run, wrote after the run's connections were gone, and
     hung event-loop shutdown waiting on that write (CI "Test & Coverage" ran
     ~3h). ``asyncio.wait`` never raises the heartbeat's own CancelledError,

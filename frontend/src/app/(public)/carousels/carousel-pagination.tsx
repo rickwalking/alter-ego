@@ -17,14 +17,14 @@ interface CarouselPaginationProps {
   labels: CarouselPaginationLabels;
 }
 
-/** Previous/next gallery pagination (AE-0444). */
+/** Previous/next gallery pagination. */
 export function CarouselPagination({
   page,
   totalPages,
   previousHref,
   nextHref,
   labels,
-}: CarouselPaginationProps): React.ReactElement | null {
+}: Readonly<CarouselPaginationProps>): React.ReactElement | null {
   if (totalPages <= 1) return null;
 
   return (

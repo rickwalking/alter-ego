@@ -1,6 +1,6 @@
 """Three-entry-point authorization contract tests for carousel write paths.
 
-AE-0113 / ADR-0009 Phase-4 exit-gate evidence (§"Phase 2.5 exit-gate
+ADR-0009 Phase-4 exit-gate evidence (§"Phase 2.5 exit-gate
 parameterization", lines 108-117; §5 "Resource authorization ownership").
 
 These contract tests assert that the carousel editorial-workflow WRITE paths
@@ -25,7 +25,7 @@ authorization OUTCOME (allow vs deny) at each entry point. External clients
 around, the authorization boundary, so no API keys are required. The database
 is in-memory SQLite, matching the rest of ``tests/integration``.
 
-Gherkin (see ticket AE-0113):
+Gherkin:
 
   Feature: Carousel write-path authorization parity
     Scenario Outline: same authorization across entry points
@@ -64,8 +64,6 @@ from rag_backend.domain.constants.access_control import (
 from rag_backend.domain.constants.workflow_validation import ERR_NOT_ASSIGNED_REVIEWER
 from rag_backend.domain.models import CarouselProject, CarouselTheme, User, UserRole
 
-# --- actor classes (the three rows the contract must agree on) -----------------
-
 ACTOR_UNAUTHORIZED = "unauthorized"
 ACTOR_NON_OWNER = "non_owner"
 ACTOR_OWNER = "owner"
@@ -80,8 +78,6 @@ OUTCOME_DENY = "deny"
 def _expected_outcome(actor: str) -> str:
     return OUTCOME_ALLOW if actor in ALLOWED_ACTORS else OUTCOME_DENY
 
-
-# --- in-memory app / db harness (mirrors tests/integration/conftest.py) --------
 
 TEST_SECRET = "test-secret-for-authz-contract-tests!!"
 
@@ -209,9 +205,6 @@ def _actor_user(harness: _Harness, actor: str) -> User:
     }[actor]
 
 
-# === Entry point 1: HTTP route =================================================
-
-
 class TestHttpEntryPointAuthorization:
     """Scenario: carousel workflow WRITE via the HTTP route enforces the policy."""
 
@@ -222,7 +215,11 @@ class TestHttpEntryPointAuthorization:
         harness: _Harness,
         actor: str,
     ) -> None:
-        """Deny-by-default: no-auth and non-owner are both rejected on start."""
+        """Deny-by-default: no-auth and non-owner are both rejected on start.
+
+        Unauthorized gets 401 and an authenticated non-owner 403; neither reaches
+        workflow execution (no external clients touched).
+        """
         headers = (
             {}
             if actor == ACTOR_UNAUTHORIZED
@@ -238,8 +235,6 @@ class TestHttpEntryPointAuthorization:
             },
             headers=headers,
         )
-        # Unauthorized -> 401; authenticated non-owner -> 403. Both are DENIED
-        # and neither reaches workflow execution (no external clients touched).
         assert response.status_code in (401, 403)
         if actor == ACTOR_NON_OWNER:
             assert response.json()["detail"] == ERR_ACCESS_DENIED_NOT_OWNER
@@ -257,12 +252,13 @@ class TestHttpEntryPointAuthorization:
         The route resolves the project via ``get_carousel_project_for_user``
         (the shared owner-or-admin policy) BEFORE any workflow side effect, so
         a non-403/401 status proves the authorization boundary was passed.
+
+        Asserts the shared policy primitive the route depends on directly, so the
+        authorization decision is verified without invoking the LLM pipeline behind the
+        route.
         """
         from rag_backend.infrastructure.database.config import get_session_maker
 
-        # Assert the shared policy primitive the route depends on, directly,
-        # so we verify the *authorization decision* without invoking the LLM
-        # pipeline behind the route.
         session_maker = get_session_maker()
         async with session_maker() as session:
             from uuid import UUID
@@ -278,9 +274,6 @@ class TestHttpEntryPointAuthorization:
             )
             assert str(project.id) == harness.project_id
         assert _expected_outcome(actor) == OUTCOME_ALLOW
-
-
-# === Entry point 2: agent-tool =================================================
 
 
 class TestAgentToolEntryPointAuthorization:
@@ -343,7 +336,6 @@ class TestAgentToolEntryPointAuthorization:
         session_maker = get_session_maker()
         async with session_maker() as session:
             repo = PostgresCarouselRepository(session)
-            # No exception == authorized. (Returns None.)
             await _assert_carousel_project_access(
                 harness.project_id,
                 repo,
@@ -354,9 +346,6 @@ class TestAgentToolEntryPointAuthorization:
                     verify_access=verify_carousel_workflow_start_access,
                 ),
             )
-
-
-# === Entry point 3: background worker (command-acceptance gate) ================
 
 
 class TestWorkerEntryPointAuthorization:
@@ -378,7 +367,10 @@ class TestWorkerEntryPointAuthorization:
         harness: _Harness,
         actor: str,
     ) -> None:
-        """Owner and admin clear the resume command-acceptance gate."""
+        """Owner and admin clear the resume command-acceptance gate.
+
+        With no assigned reviewer on the project the reviewer gate is a no-op.
+        """
         from uuid import UUID
 
         from rag_backend.infrastructure.database.config import get_session_maker
@@ -393,7 +385,6 @@ class TestWorkerEntryPointAuthorization:
             project = await get_carousel_project_for_workflow_user(
                 session, UUID(harness.project_id), user_model
             )
-            # No assigned reviewer on the project -> reviewer gate is a no-op.
             ensure_resume_reviewer_access(project, user_model)
         assert _expected_outcome(actor) == OUTCOME_ALLOW
 
@@ -443,7 +434,7 @@ class TestWorkerEntryPointAuthorization:
         async with session_maker() as session:
             project = await session.get(CarouselProjectModel, harness.project_id)
             assert project is not None
-            project.assigned_reviewer_id = str(uuid4())  # someone else
+            project.assigned_reviewer_id = str(uuid4())
             await session.commit()
 
         async with session_maker() as session:
@@ -457,13 +448,10 @@ class TestWorkerEntryPointAuthorization:
         assert exc_info.value.detail == ERR_NOT_ASSIGNED_REVIEWER
 
 
-# === Cross-entry-point parity (the contract itself) ============================
-
-
 class TestThreeEntryPointParity:
     """Scenario: the SAME authorization outcome holds across all entry points.
 
-    This is the load-bearing contract assertion for AE-0113: for each actor
+    This is the load-bearing contract assertion: for each actor
     class, the HTTP route, the agent tool, and the worker command-acceptance
     gate must agree on allow vs deny. The per-entry-point classes above prove
     each gate individually; this test cross-checks they are consistent.
@@ -499,10 +487,10 @@ class TestThreeEntryPointParity:
         assert http_outcome == expected
         assert tool_outcome == expected
         assert worker_outcome == expected
-        # The contract: every entry point agreed on the SAME outcome.
         assert http_outcome == tool_outcome == worker_outcome
 
     async def _http_gate_outcome(self, harness: _Harness, actor: str) -> str:
+        """With no JWT subject, EditorUser raises 401, which counts as a denial."""
         from uuid import UUID
 
         from fastapi import HTTPException
@@ -511,7 +499,7 @@ class TestThreeEntryPointParity:
         from rag_backend.infrastructure.database.models import UserModel
 
         if actor == ACTOR_UNAUTHORIZED:
-            return OUTCOME_DENY  # no JWT subject -> EditorUser raises 401
+            return OUTCOME_DENY
         session_maker = get_session_maker()
         async with session_maker() as session:
             user_model = await session.get(
@@ -556,6 +544,7 @@ class TestThreeEntryPointParity:
         return OUTCOME_ALLOW
 
     async def _worker_gate_outcome(self, harness: _Harness, actor: str) -> str:
+        """The resume route requires EditorUser, so a missing actor is a 401 denial."""
         from uuid import UUID
 
         from fastapi import HTTPException
@@ -564,7 +553,7 @@ class TestThreeEntryPointParity:
         from rag_backend.infrastructure.database.models import UserModel
 
         if actor == ACTOR_UNAUTHORIZED:
-            return OUTCOME_DENY  # resume route requires EditorUser -> 401
+            return OUTCOME_DENY
         session_maker = get_session_maker()
         async with session_maker() as session:
             user_model = await session.get(

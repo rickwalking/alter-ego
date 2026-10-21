@@ -65,11 +65,12 @@ async def run_phase5_migration(
         default=False, description="Preview changes without committing"
     ),
 ) -> Phase5MigrationResponse:
-    """Migrate legacy carousel projects to editorial workflow schema."""
+    """Migrate legacy carousel projects to editorial workflow schema.
+
+    The carousel repository owns the canonical-home read, so its bound reader is passed
+    as the DistributionReader and the route adds no api-to-infrastructure import.
+    """
     service = Phase5MigrationService()
-    # AE-0204: the carousel repository owns the canonical-home read; pass its
-    # bound reader as the DistributionReader so this route adds no new
-    # api->infrastructure import (the repo is resolved via the carousels edge).
     report = await service.run(db, repo.read_distribution, dry_run=dry_run)
     logger.info(
         "phase5_migration_completed",

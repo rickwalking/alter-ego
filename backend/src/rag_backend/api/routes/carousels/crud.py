@@ -88,8 +88,6 @@ def get_publishing_module_for_carousel(
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    # AE-0308: reject a preset whose provider key is unconfigured BEFORE any
-    # workflow spend (422 in production-like environments).
     dependencies=[Depends(require_image_provider_configured)],
     responses={
         401: {"description": ERR_NOT_AUTHENTICATED},
@@ -103,12 +101,17 @@ async def create_carousel(
     session: Annotated[AsyncSession, Depends(get_session)],
     assets: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
 ) -> CarouselProjectResponse:
-    """Create a new carousel project."""
-    # PR #106 review: a POV project's slide-1 photo is checked before insert.
+    """Create a new carousel project.
+
+    A preset whose image provider key is unconfigured is rejected before any workflow
+    spend (422 in production-like environments). A POV project's slide-1 photo is
+    checked before insert. theme is a string reference (root key, "auto" or a
+    custom-palette UUID) already validated by the schema; a custom palette is resolved
+    and snapshotted at generation. New carousels are stamped with their mode's
+    presentation policy version (legacy NULL-version rows stay v1), and the wizard's
+    template and persona are stored.
+    """
     await check_hook_photo(assets, user, request)
-    # `theme` is a string reference (root key | "auto" | custom-palette UUID),
-    # already validated by the CarouselProjectCreate schema (AE-0268/0271). The
-    # custom palette is resolved + snapshotted at generation (AE-0269 D9).
     theme = request.theme
     project = CarouselProject(
         topic=request.topic,
@@ -121,10 +124,7 @@ async def create_carousel(
         image_style=request.image_style,
         theme=theme,
         custom_visual_details=request.custom_visual_details,
-        # AE-0374: new carousels are stamped by mode (POV: pov_hook_v1, Radar
-        # IA: hero_lower_third_v4); DEFAULT stays v1 for legacy NULL-version rows.
         presentation_policy_version=create_time_policy_version(request.resolved_mode),
-        # AE-0373: the wizard's template (dropped before) and the persona.
         slide_layout_strategy=request.strategy,
         persona_id=await _persona_id(session, request.persona_id),
         **content_mode_fields(request),
@@ -140,7 +140,7 @@ async def create_carousel(
 
 
 async def _persona_id(session: AsyncSession, persona_id: UUID | None) -> str | None:
-    """The persona id as stored; an unknown persona is a 404 (AE-0373)."""
+    """The persona id as stored; an unknown persona is a 404."""
     if persona_id is None:
         return None
     persona = await load_persona(session, str(persona_id))

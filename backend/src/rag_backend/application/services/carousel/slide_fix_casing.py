@@ -1,6 +1,6 @@
-"""A model rewrite clears the casing markers it supersedes (AE-0407).
+"""A model rewrite clears the casing markers it supersedes.
 
-AE-0366 marks every field the sentence-case repair had to capitalize, and the
+The sentence-case repair marks every field it had to capitalize, and the
 marker blocks the gate until the copy is regenerated or edited. An owner edit
 drops a locale's markers; the model fix deep-copied them, so prod slide 8 of
 be190a0c (markers only) could never be fixed. A field's marker is now dropped

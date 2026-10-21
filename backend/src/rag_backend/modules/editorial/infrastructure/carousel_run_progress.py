@@ -1,16 +1,19 @@
-"""Run-progress persistence helpers for the background resume task (AE-0315).
+"""Run-progress persistence helpers for the background resume task.
 
 The background resume runner (application layer) captures its run-ownership
 token here at task start and heartbeats ``run_heartbeat_at`` while alive. The
 heartbeat is a raw Core UPDATE that is **self-fencing**: its WHERE clause pins
 the captured ``run_epoch`` and ``phase_status = in_progress``, so a zombie's
-beat after a reap matches zero rows (enumerated raw-SQL site in the AE-0315
-write-site survey; allowlisted by the raw-UPDATE lint gate).
+beat after a reap matches zero rows (enumerated raw-SQL site in the write-site survey;
+allowlisted by the raw-UPDATE lint gate).
 
-Lives in the editorial module's infrastructure layer (alongside the AE-0107
-write owner) so the application layer keeps importing run persistence through
+Lives in the editorial module's infrastructure layer (alongside the write owner) so the
+application layer keeps importing run persistence through
 ``modules.editorial.public`` — no new application→infrastructure edge for the
 architecture ratchet.
+
+The in-task heartbeat retries so a single transient DB blip does not look like death;
+the reaper additionally requires several consecutive stale observations.
 """
 
 from __future__ import annotations
@@ -36,9 +39,6 @@ from rag_backend.infrastructure.database.pg_lock_timeout import (
 
 logger = structlog.get_logger()
 
-# In-task heartbeat retry policy: a single transient DB blip must not look
-# like death (pinned cold-critic r5); the reaper additionally requires N
-# consecutive stale observations.
 _HEARTBEAT_WRITE_ATTEMPTS = 3
 _HEARTBEAT_RETRY_DELAY_SECONDS = 1.0
 
@@ -62,7 +62,7 @@ async def read_project_owner_id(
     project_id: str,
     session: AsyncSession | None = None,
 ) -> str:
-    """The carousel owner's user id, ``""`` when unset (AE-0390 trace user).
+    """The carousel owner's user id, ``""`` when unset (the trace user).
 
     Reads on ``session`` when given (a plain SELECT, no row lock), otherwise
     on a short session of its own.
@@ -85,7 +85,7 @@ async def _owner_on(session: AsyncSession, project_id: str) -> str:
 async def write_run_heartbeat(project_id: str, epoch: int) -> bool:
     """Stamp ``run_heartbeat_at`` now; False when the fence no longer matches.
 
-    AE-0320: the write carries a transaction-scoped ``lock_timeout`` so a beat
+    The write carries a transaction-scoped ``lock_timeout`` so a beat
     issued while the resume runner's own session holds the row lock fails fast
     instead of self-deadlocking the run (prod incident 2026-07-18).
     """
@@ -125,7 +125,7 @@ async def write_run_heartbeat_with_retry(project_id: str, epoch: int) -> bool:
 async def write_run_heartbeat_once(project_id: str, epoch: int) -> bool:
     """Single-attempt heartbeat that never raises (stage-boundary beats).
 
-    AE-0320: the resume runner awaits stage-boundary beats INLINE while its
+    The resume runner awaits stage-boundary beats INLINE while its
     main session may hold flushed-but-uncommitted row writes — those beats
     must be strictly bounded (one attempt, lock-timeout-capped) and soft-fail;
     liveness is owned by the interval heartbeat loop, not by stage beats.

@@ -1,4 +1,4 @@
-"""``FallbackImageService`` (AE-0393, AC5).
+"""``FallbackImageService`` (AC5).
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Grok Bot refuses / Grok Bot never answers / Webhook is down

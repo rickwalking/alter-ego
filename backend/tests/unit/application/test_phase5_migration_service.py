@@ -52,7 +52,7 @@ async def session() -> AsyncSession:
 
 
 def _reader(db: AsyncSession):
-    """Bind the canonical-home reader to the test session (AE-0204 DI)."""
+    """Bind the canonical-home reader to the test session."""
 
     async def _read(project_id: str) -> dict[str, str | None] | None:
         return await read_distribution(db, project_id)
@@ -65,7 +65,7 @@ async def _seed_distribution(
 ) -> None:
     """Seed the carousel-origin blog row + its distribution (the canonical home).
 
-    AE-0204: the persona writing samples are now sourced from the canonical home,
+    the persona writing samples are now sourced from the canonical home,
     so tests seed it explicitly instead of relying on the embedded caption column.
     """
     db.add(
@@ -154,12 +154,12 @@ class TestPhase5MigrationService:
     async def test_creates_default_persona_from_outputs(
         self, session: AsyncSession
     ) -> None:
+        """The caption sample is sourced from the canonical distribution home."""
         completed = _project(
             status=CAROUSEL_STATUS_COMPLETED,
             blog_markdown="Deep dive into agent orchestration patterns.",
         )
         session.add(completed)
-        # AE-0204: the caption sample is sourced from the canonical home.
         await _seed_distribution(
             session, completed, caption="Hook readers with a bold opening."
         )
@@ -175,7 +175,6 @@ class TestPhase5MigrationService:
         assert persona is not None
         assert persona.name == DEFAULT_PERSONA_NAME
         assert len(persona.writing_samples) >= 1
-        # The caption sample came from the canonical home (AE-0204).
         assert "Hook readers with a bold opening." in persona.writing_samples
 
     # Scenario: MIG-003

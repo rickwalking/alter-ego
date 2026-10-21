@@ -4,10 +4,10 @@ import { useTranslations } from "next-intl";
 import { QUOTE_SOURCE_PLATFORM } from "@/modules/editorial/workspace/lib/presentation-insight-quote";
 import type { PresentationInsightQuoteCardProps } from "./types";
 
-/** AE-0407: read-only ``pov_news`` quote card (quote, name, ``@handle · X``). */
+/** Read-only ``pov_news`` quote card (quote, name, ``@handle · X``). */
 export function PresentationInsightQuoteCard({
   insight,
-}: PresentationInsightQuoteCardProps): React.ReactElement {
+}: Readonly<PresentationInsightQuoteCardProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   return (
     <figure

@@ -1,8 +1,12 @@
-"""Per-slide roles on top of the five slide types (AE-0374, ADR-0021).
+"""Per-slide roles on top of the five slide types (ADR-0021).
 
 A contract may give each slide a ``role``. The role picks the prompt guidance
 and the layout; the ``slide_type`` it maps to keeps every validator, casing
-rule and translator working unchanged.
+rule and translator working unchanged. ``ROLE_NEWS`` and the following roles
+belong to Radar IA (``hero_lower_third_v4``).
+
+The deck-level POV rubric rules fire only when the contract declares their
+severity (``pov_hook_v1``), so Radar IA v4 is unchanged.
 """
 
 from __future__ import annotations
@@ -22,7 +26,6 @@ ROLE_POINT = "point"
 ROLE_TWIST = "twist"
 ROLE_SAVE = "save"
 ROLE_CTA = "cta"
-# Radar IA (hero_lower_third_v4).
 ROLE_NEWS = "news"
 ROLE_IMPACT = "impact"
 ROLE_VERDICT = "verdict"
@@ -41,8 +44,6 @@ ROLE_SLIDE_TYPES: dict[str, frozenset[str]] = {
 }
 KNOWN_ROLES: frozenset[str] = frozenset(ROLE_SLIDE_TYPES)
 
-# AE-0375: deck-level POV rubric rule codes. A rule fires only when the
-# contract declares its severity (``pov_hook_v1``), so Radar IA v4 is unchanged.
 VIOLATION_HOOK_WORD_LIMIT = "hook_word_limit"
 VIOLATION_FIRST_PERSON_MISSING = "first_person_missing"
 

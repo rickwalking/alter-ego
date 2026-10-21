@@ -1,4 +1,4 @@
-"""Reply helpers shared by the owner webhook handlers (AE-0370).
+"""Reply helpers shared by the owner webhook handlers.
 
 Every reply goes through the deferred messenger, so nothing reaches Telegram
 before the webhook's unit of work commits.

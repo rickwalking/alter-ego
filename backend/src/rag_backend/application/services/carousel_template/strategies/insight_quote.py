@@ -1,6 +1,6 @@
 """Insight quote strategy — accent-bordered quote card with attribution.
 
-AE-0406: a ``pov_news`` card (a quoted account with ``name`` and ``handle``)
+A ``pov_news`` card (a quoted account with ``name`` and ``handle``)
 renders on the POV statement shell with the attribution row of
 ``news_quote``; every other card keeps today's lower-third layout.
 """
@@ -90,7 +90,7 @@ class InsightQuoteStrategy:
 def _render_news_quote(
     slide: Mapping[str, object], project: CarouselProject, total_slides: int
 ) -> str:
-    """AE-0406: heading, body and the verified quote card on the POV shell."""
+    """Heading, body and the verified quote card on the POV shell."""
     insight = slide.get("insight")
     card = news_quote.news_quote_card_html(insight) if isinstance(insight, dict) else ""
     heading = _render_inline(str(slide.get("heading") or ""))

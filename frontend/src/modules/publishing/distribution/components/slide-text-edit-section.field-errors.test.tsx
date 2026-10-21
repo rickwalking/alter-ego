@@ -5,8 +5,7 @@ import { SlideTextEditSection } from "./slide-text-edit-section";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type { EditCarouselSlidesResponse } from "@/modules/publishing/distribution/hooks/use-edit-carousel-slides";
 
-// AE-0403 — Gherkin: frontend/tests/features/review-form-field-errors.feature
-// (uses the real en messages from the global next-intl mock).
+/** Gherkin: frontend/tests/features/review-form-field-errors.feature (uses the real en messages from the global next-intl mock). */
 
 vi.mock(
   "@/modules/publishing/distribution/hooks/use-edit-carousel-slides",

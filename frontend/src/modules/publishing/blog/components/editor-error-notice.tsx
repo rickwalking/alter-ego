@@ -10,7 +10,7 @@ import { editorErrorKey } from "../lib/editor-error";
 import type { EditorErrorNoticeProps } from "./types";
 
 /**
- * One editor error as a visible, translated alert (AE-0438, F-11).
+ * One editor error as a visible, translated alert.
  *
  * Shared by every editor action surface — the top banner, the review bar, the
  * version sidebar and the per-slot controls — so a failed 422 / 400 / 409 / 5xx
@@ -19,7 +19,7 @@ import type { EditorErrorNoticeProps } from "./types";
  */
 export function EditorErrorNotice({
   error,
-}: EditorErrorNoticeProps): React.ReactElement | null {
+}: Readonly<EditorErrorNoticeProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   if (!error) {
     return null;

@@ -1,4 +1,4 @@
-"""Deterministic gate policy (AE-0354).
+"""Deterministic gate policy.
 
 Gherkin: tests/features/autopilot_runner.feature
 """
@@ -118,7 +118,10 @@ def test_outline_requires_slide_count_match_within_instagram_max() -> None:
 
 
 def test_content_floor_is_the_persona_constant() -> None:
-    """Scenario: Low persona score is revised then escalated."""
+    """Scenario: Low persona score is revised then escalated.
+
+    No persona scores means not scored, so the engine skips the floor.
+    """
     at_floor = decide(
         _snapshot(phase=GATE_CONTENT, persona_score=VOICE_MATCH_MIN_SCORE)
     )
@@ -126,7 +129,6 @@ def test_content_floor_is_the_persona_constant() -> None:
     below = decide(_snapshot(phase=GATE_CONTENT, persona_score=_BELOW))
     assert below.action is GateAction.REVISE
     assert below.reason == REASON_PERSONA_SCORE
-    # AE-0364: no persona scores means "not scored"; the engine skips the floor.
     missing = decide(_snapshot(phase=GATE_CONTENT, persona_score=None))
     assert missing.action is GateAction.APPROVE
 

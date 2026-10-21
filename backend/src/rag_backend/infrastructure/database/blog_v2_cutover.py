@@ -1,4 +1,4 @@
-"""One-shot ``blog_posts.content`` v1 -> ``blog.v2`` cutover (AE-0423, ADR-0025).
+"""One-shot ``blog_posts.content`` v1 -> ``blog.v2`` cutover (ADR-0025).
 
 Data-only (no DDL, no Alembic state): every row is rewritten in place with the
 pure, fence-aware conversion in ``domain.models.blog_document_split``. Driven
@@ -16,6 +16,9 @@ by ``python -m rag_backend.scripts.blog_v1_to_v2`` as an explicit deploy step
 - ``rollback`` — re-joins sections to ``{"markdown", "translations"}`` (content
   and snapshots) and restores a stashed ``featured_image_url``; run it from the
   new image BEFORE reverting the app code.
+
+``CUTOVER_ADVISORY_LOCK_KEY`` is stable so two concurrent runs serialize on the
+same Postgres advisory lock.
 """
 
 from __future__ import annotations
@@ -45,7 +48,6 @@ from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 logger = structlog.get_logger(__name__)
 
 CUTOVER_BATCH_SIZE = 100
-# Stable key so two concurrent runs serialize on the same Postgres advisory lock.
 CUTOVER_ADVISORY_LOCK_KEY = 4_230_423
 POSTGRES_DIALECT = "postgresql"
 PT_LANGUAGE = "pt"
@@ -174,10 +176,10 @@ async def _load_batch(session: AsyncSession, ids: list[str]) -> list[_Row]:
 async def _write_row(
     session: AsyncSession, post_id: str, values: dict[str, object]
 ) -> None:
+    """Write one row's cutover values; keep ``updated_at`` (a cutover is no edit)."""
     await session.execute(
         update(BlogPostModel)
         .where(BlogPostModel.id == post_id)
-        # A data cutover is not an edit: keep ``updated_at`` as it was.
         .values(**values, updated_at=BlogPostModel.updated_at)
     )
 

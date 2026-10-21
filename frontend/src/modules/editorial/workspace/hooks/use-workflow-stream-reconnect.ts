@@ -1,5 +1,5 @@
 /**
- * AE-0440: recovery of the editorial workflow stream after an error.
+ * Recovery of the editorial workflow stream after an error.
  *
  * The old onerror reconnected after the first backoff delay forever and could
  * not tell an expired session from a dropped connection (prod, 2026-10-20: a
@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 import {
   EDITORIAL_WORKFLOW_POLL_BACKOFF_MS,
   EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS,
@@ -35,7 +35,12 @@ function reconnectDelay(attempt: number): number {
   return backoff[Math.min(attempt, backoff.length - 1)] ?? backoff[0];
 }
 
-/** Apply the probe verdict; true when the stream may be reopened. */
+/**
+ * Apply the probe verdict; true when the stream may be reopened.
+ *
+ * Any other outcome (AUTH_FAILED, after api-client redirected to the
+ * session-expired login, or GONE) marks the stream disconnected.
+ */
 function applyProbeResult(
   result: WorkflowStreamProbeResult,
   {
@@ -55,7 +60,6 @@ function applyProbeResult(
   if (result.outcome === WORKFLOW_STREAM_PROBE_OUTCOME.TRANSIENT) {
     return true;
   }
-  // AUTH_FAILED (api-client redirected to the session-expired login) or GONE.
   markDisconnected();
   return false;
 }
@@ -133,7 +137,7 @@ function useProbeThen(
     UseWorkflowStreamReconnectParams,
     "projectId" | "applyProbedState" | "markDisconnected"
   >,
-  generationRef: MutableRefObject<number>,
+  generationRef: RefObject<number>,
 ): (onReopenable: () => void) => void {
   return useCallback(
     (onReopenable: () => void): void => {
@@ -151,6 +155,11 @@ function useProbeThen(
   );
 }
 
+/**
+ * `failedRef` is true between a stream error and the next open, which is then a
+ * reconnect; `generationRef` is bumped on cancel so a probe answered after
+ * unmount or a project change is dropped.
+ */
 export function useWorkflowStreamReconnect(
   params: UseWorkflowStreamReconnectParams,
 ): WorkflowStreamReconnectApi {
@@ -160,9 +169,7 @@ export function useWorkflowStreamReconnect(
     connectRef,
     markDisconnected,
   );
-  // True between a stream error and the next open: that open is a reconnect.
   const failedRef = useRef(false);
-  // Bumped on cancel so a probe answered after unmount / project change is dropped.
   const generationRef = useRef(0);
 
   const cancelReconnect = useCallback((): void => {

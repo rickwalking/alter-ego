@@ -26,13 +26,14 @@ const HOME_PT = pt.home as TranslationNode;
 const COMMON_NAV_EN = en.common.nav as TranslationNode;
 const COMMON_NAV_PT = pt.common.nav as TranslationNode;
 
-// Feature: Landing page truth, links and public header (AE-0443)
 // Scenario: Landing copy is complete and in sync in both locales
 describe("landing copy", () => {
   it("has the same landing keys in pt and en", () => {
-    expect(leafKeys(HOME_PT).sort()).toEqual(leafKeys(HOME_EN).sort());
-    expect(leafKeys(COMMON_NAV_PT).sort()).toEqual(
-      leafKeys(COMMON_NAV_EN).sort(),
+    expect(leafKeys(HOME_PT).sort((a, b) => a.localeCompare(b))).toEqual(
+      leafKeys(HOME_EN).sort((a, b) => a.localeCompare(b)),
+    );
+    expect(leafKeys(COMMON_NAV_PT).sort((a, b) => a.localeCompare(b))).toEqual(
+      leafKeys(COMMON_NAV_EN).sort((a, b) => a.localeCompare(b)),
     );
   });
 

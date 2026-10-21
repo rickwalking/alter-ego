@@ -22,7 +22,7 @@ interface UserTableProps {
   onRefresh: () => void;
 }
 
-export function UserTable({ users, onRefresh }: UserTableProps) {
+export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
   const t = useTranslations("admin");
   const locale = useLocale();
   const [editUser, setEditUser] = useState<UserItem | null>(null);

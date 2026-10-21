@@ -1,4 +1,4 @@
-"""Ports and commands for run recovery (AE-0348 QA round 1).
+"""Ports and commands for run recovery (QA round 1).
 
 Rework queued by the webhook, the lock version recorded on escalation, and
 the rollback the runner needs before it records an engine failure.

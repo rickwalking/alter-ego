@@ -1,4 +1,4 @@
-"""Worker wiring for the POV thesis prompts (AE-0377, split from bootstrap)."""
+"""Worker wiring for the POV thesis prompts (split from bootstrap)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,10 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
 def thesis_prompts(
     db: AsyncSession, deps: NotificationDependencies
 ) -> ThesisPromptService:
-    """The prompt service on the notify tick session and Telegram client."""
+    """The prompt service on the notify tick session and Telegram client.
+
+    The prompt previews the topic's GrokBot cover with its toggle.
+    """
     repo = SqlAlchemyAutopilotRepository(db)
     return ThesisPromptService(
         ThesisPromptDependencies(
@@ -30,7 +33,6 @@ def thesis_prompts(
             notifier=deps.notifier,
             chat_id=deps.chat_id,
             configured=deps.configured,
-            # AE-0418: preview the topic's GrokBot cover with its toggle.
             covers=cover_offers(db),
         )
     )

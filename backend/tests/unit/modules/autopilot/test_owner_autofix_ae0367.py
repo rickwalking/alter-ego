@@ -1,4 +1,4 @@
-"""AE-0367: the Telegram "Fix issues" button on the autopilot side.
+"""The Telegram "Fix issues" button on the autopilot side.
 
 Webhook (owner allowlist, update dedupe, CAS, nothing-to-fix), the review
 message (issue lines + 4th button) and the worker step that runs the queued
@@ -158,9 +158,9 @@ def test_fix_callback_parses() -> None:
 
 # Scenario: The review message lists the issues and offers the fix
 def test_review_keyboard_gets_a_fourth_button_when_fixable() -> None:
+    """ "🗓 Agendar" sits on its own second row."""
     run_id = UUID("22222222-2222-4222-8222-222222222222")
     fixable = review_keyboard_with_fix(run_id, fixable=True)
-    # AE-0404: "🗓 Agendar" sits on its own second row.
     assert len(fixable.rows) == 2
     labels = [button.text for button in fixable.rows[0]]
     assert len(labels) == 4

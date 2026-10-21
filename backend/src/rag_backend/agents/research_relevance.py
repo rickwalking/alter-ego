@@ -1,4 +1,4 @@
-"""Language and topic filter for web-research hits (AE-0413).
+"""Language and topic filter for web-research hits.
 
 QA run 2026-10-16: the topic "[QA 2026-10-16] Agentes de código em times
 pequenos" was searched as-is, the search keyed on "QA", and three Russian

@@ -38,10 +38,10 @@ function clip(text: string): string {
 }
 
 /**
- * Version history of a post (AE-0424, F-13): every save appends a snapshot,
+ * Version history of a post: every save appends a snapshot,
  * listed here newest first; restoring calls the restore route (a new snapshot records it)
  * and loads the restored content into the editor. A failed restore shows its
- * error inline (AE-0438, F-11).
+ * error inline.
  */
 export function VersionHistorySidebar({
   versions,
@@ -49,7 +49,7 @@ export function VersionHistorySidebar({
   currentText,
   disabled,
   onRestore,
-}: VersionHistorySidebarProps): React.JSX.Element {
+}: Readonly<VersionHistorySidebarProps>): React.JSX.Element {
   const t = useTranslations("dashboard.blogPosts.versions");
   const [selected, setSelected] = useState<BlogPostVersion | null>(null);
   const [restoreError, setRestoreError] = useState<BlogEditorError | null>(

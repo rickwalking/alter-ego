@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { CarouselCard } from "./carousel-card";
 import type { PublicCarouselCard } from "@/lib/public-carousels";
 
-// Feature: Public carousel gallery (AE-0444)
-// frontend/tests/features/public_carousels_page_ae0444.feature
-
 const CARD: PublicCarouselCard = {
   id: "proj-1",
   title: "IA sem hype",

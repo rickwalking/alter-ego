@@ -119,7 +119,17 @@ _Handler = Callable[
 
 @dataclass(frozen=True, kw_only=True)
 class OwnerActionDeps:
-    """Collaborators for one webhook request. The session is already bound."""
+    """Collaborators for one webhook request. The session is already bound.
+
+    - ``carousels`` skips a second approve after a cancelled schedule.
+    - ``default_publish``: ``now`` offers publish-now or a schedule; ``next_slot``
+      schedules directly.
+    - Without ``autofix`` every "Fix issues" tap answers "Nothing to fix".
+    - ``topics`` holds the POV draft thesis on the topic candidate.
+    - ``schedule_signals`` gives the schedule picker audience and post engagement.
+    - ``covers`` / ``cover_choices`` are the GrokBot cover offer and the owner's
+      slide-1 choice.
+    """
 
     runs: AutopilotRunRepository
     updates: UpdateClaimStore
@@ -130,17 +140,11 @@ class OwnerActionDeps:
     recovery: RunRecoveryStore
     clock: Clock
     owner_chat_id: str
-    # AE-0370: skips a second approve after a cancelled schedule.
     carousels: CarouselPublishSource | None = None
-    # AE-0370: ``now`` offers publish-now or schedule; ``next_slot`` schedules.
     default_publish: str = PUBLISH_MODE_NOW
-    # AE-0367: without it every "Fix issues" tap answers "Nothing to fix".
     autofix: ContentAutofixer | None = None
-    # AE-0377: the POV draft thesis lives on the topic candidate.
     topics: TopicCandidateRepository | None = None
-    # AE-0404: audience and post engagement for the schedule picker.
     schedule_signals: ScheduleSignalsSource | None = None
-    # AE-0418: the GrokBot cover offer and the owner's slide-1 choice.
     covers: CoverOffers | None = None
     cover_choices: CoverChoiceStore | None = None
 
@@ -237,7 +241,7 @@ class OwnerActionService(ThesisOwnerActions, CoverOwnerActions):
         await self._finish(update, ANSWER_RETRY, TEXT_RETRY)
 
     async def _fix(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
-        """Queue the deterministic repair; the worker tick runs it (AE-0367)."""
+        """Queue the deterministic repair; the worker tick runs it."""
         run = await self._awaiting(parsed.run_id)
         if run is None:
             await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)

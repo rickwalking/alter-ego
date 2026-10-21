@@ -1,5 +1,5 @@
 """Anti-corruption layer: legacy ``carousel_projects`` presentation persistence
-↔ the presentation context (AE-0118).
+↔ the presentation context.
 
 This module is the **single** seam between the presentation bounded context and
 the legacy carousel persistence for the presentation surface. Together with
@@ -26,11 +26,15 @@ persistence of its own and never calls ``session.add`` / ``flush`` / ``commit``
 on the carousel row, so the owner stays the sole writer and the single committer
 for those fields.
 
-**Behavior-preserving (AE-0118).** No routes are moved (AE-0120), no schema
+**Behavior-preserving.** No routes are moved, no schema
 changes, and no second persistence translator. The ``artifact_version`` ↔
 ``lock_version`` compound CAS and the shared-lock coordination with the editorial
-AE-0107 owner are preserved exactly — the ACL never rewrites an id and never
+write owner are preserved exactly — the ACL never rewrites an id and never
 bumps the lock outside the owner's byte-identical CAS delegations.
+
+A row whose ``lock_version`` is unset gets the same default token as the legacy reads
+(``int(model.lock_version or 1)``), so the token the ACL surfaces matches what the
+activation and resume CAS expect.
 """
 
 from __future__ import annotations
@@ -56,9 +60,6 @@ if TYPE_CHECKING:
         _ActivateBuildParams,
     )
 
-# Default optimistic-lock token for a row whose ``lock_version`` is unset, kept
-# identical to the legacy reads (``int(model.lock_version or 1)``) so the token
-# the ACL surfaces matches what the activation / resume CAS expect.
 _DEFAULT_LOCK_VERSION = 1
 
 
@@ -101,7 +102,6 @@ class PresentationPersistenceAcl:
         self._session = session
         self._write_owner = write_owner
 
-    # --- Read side: legacy row -> presentation view ---------------------------
     @staticmethod
     def to_presentation(model: CarouselProjectModel) -> PresentationProjectView:
         """Map a legacy ``CarouselProjectModel`` to the presentation VIEW.
@@ -142,7 +142,6 @@ class PresentationPersistenceAcl:
             return None
         return model.assigned_reviewer_id
 
-    # --- Write side: presentation intents -> single write owner ---------------
     async def refresh_design_tokens(
         self,
         project: CarouselProject,

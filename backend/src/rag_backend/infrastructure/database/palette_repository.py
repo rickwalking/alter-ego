@@ -1,4 +1,4 @@
-"""PostgreSQL repository for the global custom-palette catalog (AE-0269)."""
+"""PostgreSQL repository for the global custom-palette catalog."""
 
 from __future__ import annotations
 
@@ -32,8 +32,11 @@ class PostgresPaletteRepository(PaletteRepository):
         return [row.to_domain() for row in result.scalars().all()]
 
     async def add(self, palette: CustomPalette) -> CustomPalette:
-        # Flush (not commit) so uniqueness conflicts surface as IntegrityError
-        # here while the caller keeps ownership of the transaction boundary.
+        """Stage a new palette, flushing (not committing) it.
+
+        Uniqueness conflicts surface here as ``IntegrityError`` while the caller keeps
+        ownership of the transaction boundary.
+        """
         model = PaletteModel.from_domain(palette)
         self._session.add(model)
         await self._session.flush()
@@ -41,11 +44,11 @@ class PostgresPaletteRepository(PaletteRepository):
         return model.to_domain()
 
     async def update(self, palette: CustomPalette) -> CustomPalette:
+        """Copy the mutable fields onto the stored row; the slug is immutable."""
         result = await self._session.execute(
             select(PaletteModel).where(PaletteModel.id == palette.id)
         )
         row = result.scalar_one()
-        # Slug is immutable (D8) — intentionally not copied from the entity.
         row.name = palette.name
         row.primary = palette.palette.primary
         row.accent = palette.palette.accent

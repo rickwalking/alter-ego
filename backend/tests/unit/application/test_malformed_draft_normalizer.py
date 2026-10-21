@@ -9,7 +9,7 @@ from rag_backend.application.services.carousel.malformed_draft_normalizer import
 
 
 def test_parse_bilingual_draft_blob_from_string() -> None:
-    # Feature: Versioned carousel presentation contract
+    """Feature: Versioned carousel presentation contract."""
     # Scenario: Malformed draft_text is normalized into presentation payloads
     raw = (
         "{'pt': {'heading': 'Hook PT', 'subtitle': 'Body PT'}, "
@@ -64,7 +64,7 @@ def test_normalize_slide_draft_keeps_valid_presentations() -> None:
 
 
 def test_normalize_flat_locale_suffixed_intro_maps_subtitle_to_body() -> None:
-    # Feature: GLM flat draft blob normalization
+    """Feature: GLM flat draft blob normalization."""
     # Scenario: Locale-suffixed intro blob maps subtitle_pt into the body
     raw = (
         "{'slide_number': 1, 'slide_type': 'intro', "
@@ -82,7 +82,7 @@ def test_normalize_flat_locale_suffixed_intro_maps_subtitle_to_body() -> None:
 
 
 def test_normalize_flat_clean_single_locale_blob_maps_body() -> None:
-    # Feature: GLM flat draft blob normalization
+    """Feature: GLM flat draft blob normalization."""
     # Scenario: Clean single-locale blob maps body into the presentation
     raw = (
         "{'heading': 'Acesso bloqueado', "
@@ -98,7 +98,7 @@ def test_normalize_flat_clean_single_locale_blob_maps_body() -> None:
 
 
 def test_normalize_flat_summary_points_localize_per_locale() -> None:
-    # Feature: GLM flat draft blob normalization
+    """Feature: GLM flat draft blob normalization."""
     # Scenario: Summary points with title_pt items localize per locale
     raw = (
         "{'slide_type': 'summary', 'heading_pt': 'O que saber', "
@@ -115,7 +115,7 @@ def test_normalize_flat_summary_points_localize_per_locale() -> None:
 
 
 def test_normalize_leaves_non_dict_draft_text_untouched() -> None:
-    # Feature: GLM flat draft blob normalization
+    """Feature: GLM flat draft blob normalization."""
     # Scenario: Non-dict draft_text is left untouched
     slide = {
         "slide_index": 1,
@@ -126,7 +126,7 @@ def test_normalize_leaves_non_dict_draft_text_untouched() -> None:
 
 
 def test_parse_flat_blob_without_locale_keys_returns_nested_shape() -> None:
-    # Feature: GLM flat draft blob normalization
+    """Feature: GLM flat draft blob normalization."""
     # Scenario: Locale-suffixed intro blob maps subtitle_pt into the body
     parsed = parse_bilingual_draft_blob(
         "{'heading_pt': 'PT', 'subtitle_pt': 'Corpo', 'subtitle_en': 'Body'}"

@@ -1,7 +1,7 @@
 """Scout proposals before and after preparation (split from ``intake.py``).
 
 ``prepare`` strips control characters, canonicalizes sources and computes the
-signal hash. AE-0418 adds the optional GrokBot cover the topic names.
+signal hash. It also carries the optional GrokBot cover the topic names.
 """
 
 from __future__ import annotations
@@ -25,7 +25,12 @@ from rag_backend.modules.autopilot.domain.x_status import canonical_url
 
 @dataclass(frozen=True, kw_only=True)
 class ProposalInput:
-    """One schema-valid proposal before control-character stripping."""
+    """One schema-valid proposal before control-character stripping.
+
+    No ``content_mode`` means Radar IA; POV needs the draft thesis. ``index`` is the
+    topic's index in the request; ``quotes`` are the ``pov_news`` quotes and
+    ``cover_asset_id`` the GrokBot cover the topic names (``cover.asset_id``).
+    """
 
     title: str
     angle: str
@@ -37,14 +42,11 @@ class ProposalInput:
     score: int
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str | None = None
-    # AE-0377: scout v3. No mode = Radar IA; POV needs the draft thesis.
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     thesis_draft: str | None = None
     pov_choice: PovChoice = NO_POV_CHOICE
-    # AE-0406: the position in the request and the ``pov_news`` quotes.
     index: int = 0
     quotes: tuple[NewsQuote, ...] = ()
-    # AE-0418: the GrokBot cover the topic names (``cover.asset_id``).
     cover_asset_id: str | None = None
 
 
@@ -73,7 +75,7 @@ class PreparedProposal:
 
     @property
     def cover_uuid(self) -> UUID | None:
-        """AE-0418: the named cover as a UUID (None when absent or malformed)."""
+        """The named cover as a UUID (None when absent or malformed)."""
         if self.cover_asset_id is None:
             return None
         return parse_asset_id(self.cover_asset_id)

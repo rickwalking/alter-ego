@@ -15,6 +15,7 @@ class TestCtaCenteredStrategy:
         sample_project,
         sample_theme,
     ) -> None:
+        """The follow variant replaces the generic CTA line."""
         sample_project.creator_name = "Pedro Marins"
         sample_project.creator_handle = "pedromarins.ai"
         sample_project.creator_avatar_url = "images/about-pedro.jpg"
@@ -29,7 +30,6 @@ class TestCtaCenteredStrategy:
         assert "Pedro Marins" in result
         assert "@pedromarins.ai" in result
         assert "marinssolutions.com" in result
-        # AE-0372: the follow variant replaces the generic CTA line.
         assert "Siga @pedromarins.ai: eu traduzo IA" in result
         assert "images/about-pedro.jpg" in result
         assert "images/slide_7.jpg" not in result

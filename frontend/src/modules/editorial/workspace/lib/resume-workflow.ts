@@ -1,5 +1,5 @@
 /**
- * AE-0446: the steps of an editorial resume (approve / revise / send back),
+ * The steps of an editorial resume (approve / revise / send back),
  * split out of ``useEditorialWorkflowResume`` unchanged: same payload, same
  * response handling order, same state updates.
  */
@@ -55,7 +55,7 @@ export interface ResumeRequest {
   options?: EditorialReviseOptions;
 }
 
-// AE-0310/AE-0315: each machine-readable 409 cause gets distinct copy.
+/** Each machine-readable 409 cause gets distinct copy. */
 const CONFLICT_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   [EDITORIAL_WORKFLOW_CONFLICT_CODES.REVISION_CAP_EXCEEDED]:
     "revisionCapExceeded",
@@ -63,7 +63,11 @@ const CONFLICT_MESSAGE_KEYS: Readonly<Record<string, string>> = {
   [EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS]: "runInProgress",
 };
 
-/** Translate a known machine code; anything else is shown as sent. */
+/**
+ * Translate a known machine code; anything else is shown as sent.
+ *
+ * A known 4xx code is translated, never shown raw.
+ */
 export function resumeErrorMessage(
   message: string,
   translateError: (key: string) => string,
@@ -72,7 +76,6 @@ export function resumeErrorMessage(
   if (conflictKey) {
     return translateError(conflictKey);
   }
-  // AE-0414 (B02): a known 4xx code is translated, never shown raw.
   if (EDITORIAL_RESUME_ERROR_CODES.has(message)) {
     return translateError(`resumeCodes.${message}`);
   }
@@ -80,7 +83,7 @@ export function resumeErrorMessage(
 }
 
 /**
- * AE-0415: a ready gate on another phase than the one the owner acted on is a
+ * A ready gate on another phase than the one the owner acted on is a
  * newer result (the stream delivered it before the 202) and must be kept.
  */
 function isNewerReadyGate(
@@ -219,7 +222,26 @@ async function pollForReady(ctx: ResumeContext): Promise<FinishResume> {
 }
 
 /**
- * AE-0415 (B26): the backend marked the run in_progress before the 202, so the
+ * Fold an accepted resume into the state; a newer ready gate keeps its phase
+ * status.
+ */
+function withAcceptedResume(
+  prev: EditorialWorkflowState,
+  actedOnPhase: string | undefined,
+  accepted: EditorialWorkflowResumeAcceptedResponse,
+): EditorialWorkflowState {
+  if (isNewerReadyGate(prev, actedOnPhase)) {
+    return { ...prev, lock_version: accepted.lock_version };
+  }
+  return {
+    ...prev,
+    lock_version: accepted.lock_version,
+    phase_status: accepted.phase_status as WorkflowPhaseStatus,
+  };
+}
+
+/**
+ * The backend marked the run in_progress before the 202, so the
  * gate the owner just acted on is no longer ready — adopt the accepted status
  * (running banner, actions hidden) and wait for the NEXT ready state.
  */
@@ -234,15 +256,7 @@ async function handleAccepted(
     throw new Error(deps.translateError("resumeFailed"));
   }
   deps.setState((prev) => {
-    const next = prev
-      ? isNewerReadyGate(prev, actedOnPhase)
-        ? { ...prev, lock_version: accepted.lock_version }
-        : {
-            ...prev,
-            lock_version: accepted.lock_version,
-            phase_status: accepted.phase_status as WorkflowPhaseStatus,
-          }
-      : prev;
+    const next = prev ? withAcceptedResume(prev, actedOnPhase, accepted) : prev;
     deps.workflowStateRef.current = next;
     return next;
   });
@@ -253,7 +267,12 @@ async function handleAccepted(
   return finishWith(ctx, await waitForReadyState(ctx));
 }
 
-/** 4xx: a run-in-progress 409 shows the banner; anything else throws its copy. */
+/**
+ * 4xx: a run-in-progress 409 shows the banner; anything else throws its copy.
+ *
+ * The run-in-progress refresh pulls run_started_at/run_stage so the banner
+ * reconstructs from state.
+ */
 async function handleClientError(
   { deps }: ResumeContext,
   response: Response,
@@ -266,8 +285,6 @@ async function handleClientError(
     response.status === HTTP_STATUS.CONFLICT &&
     detail === EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS
   ) {
-    // AE-0315: refresh pulls run_started_at/run_stage so the banner
-    // reconstructs from state.
     const refreshed = await deps.refreshState();
     if (refreshed) {
       deps.setState(refreshed);

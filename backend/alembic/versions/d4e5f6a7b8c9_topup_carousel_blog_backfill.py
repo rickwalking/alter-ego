@@ -1,39 +1,39 @@
-"""top-up carousel-blog backfill for completeness (AE-0163)
+"""top-up carousel-blog backfill for completeness
 
 Revision ID: d4e5f6a7b8c9
 Revises: c3d4e5f6a7b8
 Create Date: 2026-06-16 09:00:00.000000
 
-AE-0163: ADDITIVE, behavior-preserving, data-only (no schema change).
+ADDITIVE, behavior-preserving, data-only (no schema change).
 
 The carousel-blog READ path (``project_carousel_blog`` / ``resolve_blog_body`` +
-the 404 gate) is converted in AE-0163 to source the body + the 404 signal SOLELY
+the 404 gate) is converted to source the body + the 404 signal SOLELY
 from the ``origin='carousel'`` ``blog_posts`` row, dropping the embedded
 ``carousel_projects.blog_markdown`` read fallback. For that to stay byte-identical,
 **every** carousel that has a non-null ``blog_markdown`` must have a matching
 ``origin='carousel'`` row — otherwise a live read could flip a legacy 200 into a
-404 (the de-risking precondition for the deferred AE-0162 column drop).
+404 (the de-risking precondition for the deferred blog column drop).
 
-AE-0127 (``b2c3d4e5f6a7``) backfilled rows only for carousels that were
+Revision ``b2c3d4e5f6a7`` backfilled rows only for carousels that were
 ``status='completed'`` OR ``is_public`` at migration time. A carousel whose
 ``blog_markdown`` was set but which was neither completed nor public at that moment
-— and that has had no blog write since (the AE-0163 repository dual-write covers
+— and that has had no blog write since (the repository dual-write covers
 every subsequent write) — would lack a row. This migration closes that residual
 gap: it inserts an ``origin='carousel'`` row for **any** carousel with a non-null
 ``blog_markdown`` that still has no carousel-origin row, regardless of
-status/visibility, in the EXACT AE-0127 row shape (``carousel-{id}`` slug, ``title
-= title or topic or "Carousel {id}"``, ``excerpt`` NULL, ``status='published'``,
-``content = {"markdown": ..., "translations": ...}``).
+status/visibility, in the EXACT ``b2c3d4e5f6a7`` row shape (``carousel-{id}``
+slug, ``title = title or topic or "Carousel {id}"``, ``excerpt`` NULL,
+``status='published'``, ``content = {"markdown": ..., "translations": ...}``).
 
 **Idempotent** — guarded by a per-project ``WHERE NOT EXISTS`` check, so re-running
-inserts no duplicate and rows already created by AE-0127 (or by the AE-0163
-dual-write) are left untouched.
+inserts no duplicate and rows already created by ``b2c3d4e5f6a7`` (or by the
+repository dual-write) are left untouched.
 
 ``downgrade`` is intentionally a **no-op**: the inserted rows are purely-additive
 data (they introduce no schema change and break nothing if retained), and they are
-indistinguishable by slug from the AE-0127-inserted rows, so the AE-0127 downgrade
-— which deletes every ``carousel-%`` slug row before dropping the ``origin`` column
-— already removes them on a full downgrade chain. A no-op downgrade therefore
+indistinguishable by slug from the ``b2c3d4e5f6a7`` rows, so that revision's
+downgrade — which deletes every ``carousel-%`` slug row before dropping the
+``origin`` column — already removes them on a full downgrade chain. A no-op downgrade therefore
 restores the pre-migration state without data loss.
 
 Cross-dialect: the backfill runs through SQLAlchemy Core against lightweight table
@@ -53,19 +53,15 @@ import sqlalchemy as sa
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "d4e5f6a7b8c9"
 down_revision = "c3d4e5f6a7b8"
 branch_labels = None
 depends_on = None
 
-# --- Constants -----------------------------------------------------------------
 _ORIGIN_CAROUSEL = "carousel"
 _BLOG_POST_DEFAULT_STATUS = "published"
 _BLOG_SLUG_PREFIX = "carousel-"
 
-# Lightweight table projections (no ORM) for the cross-dialect backfill — same
-# shape as the AE-0127 migration so the inserted rows are byte-identical.
 _carousel_projects = sa.table(
     "carousel_projects",
     sa.column("id", sa.String),
@@ -169,10 +165,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """No-op: the additive top-up rows are removed by the AE-0127 downgrade.
+    """No-op: the additive top-up rows are removed by the ``b2c3d4e5f6a7`` downgrade.
 
-    See the module docstring — the inserted rows share the AE-0127 ``carousel-%``
-    slug scheme and are deleted by that earlier migration's downgrade on a full
-    chain, so this downgrade intentionally does nothing (no schema change to undo,
-    no data loss).
+    See the module docstring — the inserted rows share the ``b2c3d4e5f6a7``
+    ``carousel-%`` slug scheme and are deleted by that earlier migration's
+    downgrade on a full chain, so this downgrade intentionally does nothing (no
+    schema change to undo, no data loss).
     """

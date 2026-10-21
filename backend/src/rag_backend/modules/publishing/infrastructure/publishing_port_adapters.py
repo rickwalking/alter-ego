@@ -1,17 +1,17 @@
-"""Concrete adapters for the publishing outbound ports (AE-0128).
+"""Concrete adapters for the publishing outbound ports.
 
 These adapters are the infrastructure backing for the publishing domain ports
 (``rag_backend.modules.publishing.domain.ports``). They keep the publishing
 APPLICATION/domain layers free of the carousel/blog ORM and the concrete
 persistence: every write port the application depends on is satisfied here by
-**delegating** to the AE-0128 :class:`LegacyPublishingAcl` (the sole carousel/blog
+**delegating** to the :class:`LegacyPublishingAcl` (the sole carousel/blog
 ORM seam), which in turn performs the byte-identical legacy write + commit
 boundary.
 
 Behavior-preserving: no adapter mutates an ORM row or commits itself — each
 forwards to the ACL's byte-identical path, so the ``is_public`` release write, the
 blog publish/unpublish status writes, and the scheduling writes are untouched.
-Mirrors the editorial ``editorial_port_adapters`` module (AE-0111).
+Mirrors the editorial ``editorial_port_adapters`` module.
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ class AclBlogScheduleAdapter:
 
 
 class AclPublishingReadAdapter:
-    """:class:`PublishingReadPort` backed by the publishing read ACL (AE-0131).
+    """:class:`PublishingReadPort` backed by the publishing read ACL.
 
     Forwards the carousel-blog (+lang), content-calendar, workflow-board, and
     editorial-analytics projections to the read ACL — the sole carousel/blog ORM
@@ -138,7 +138,7 @@ class AclPublishingReadAdapter:
 
 
 class AclBlogPostCrudAdapter:
-    """:class:`BlogPostCrudPort` backed by the publishing read ACL (AE-0131).
+    """:class:`BlogPostCrudPort` backed by the publishing read ACL.
 
     Forwards the blog-post CRUD persistence-row reads/builds to the read ACL (the
     sole blog ORM seam) so the thin blog routes import no blog ORM/repository; the

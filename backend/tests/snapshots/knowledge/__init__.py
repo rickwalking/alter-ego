@@ -1,1 +1,1 @@
-"""Knowledge (documents + search) golden snapshots and diff helper (AE-0088)."""
+"""Knowledge (documents + search) golden snapshots and diff helper."""

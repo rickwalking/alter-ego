@@ -20,7 +20,7 @@ export function PaletteSwatch({
   background,
   label,
   height = 72,
-}: PaletteSwatchProps): React.ReactElement {
+}: Readonly<PaletteSwatchProps>): React.ReactElement {
   const colours: Record<(typeof SWATCH_PARTS)[number], string> = {
     primary,
     accent,

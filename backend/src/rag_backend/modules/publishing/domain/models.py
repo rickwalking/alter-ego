@@ -9,7 +9,7 @@ fully-typed value objects — :class:`BlogPost`, :class:`Publication`,
 existing blog/carousel types so existing callers keep resolving to the IDENTICAL
 objects.
 
-**Re-export, not relocation (AE-0126 constraint).** The blog workflow status
+**Re-export, not relocation.** The blog workflow status
 enum stays at ``rag_backend.domain.constants.blog_post.BlogPostStatus``; the blog
 ORM row stays at ``rag_backend.infrastructure.database.models.blog_post``; the
 carousel project entity stays at ``rag_backend.domain.models.carousel``. This
@@ -25,9 +25,9 @@ attributes type as ``Column[T]`` under mypy; :meth:`BlogPost.from_model` reads
 them through explicit :func:`typing.cast` (no ``Any``) — the only seam that
 touches the ORM column shapes.
 
-**AE-0127.** The additive ``origin`` field (:class:`BlogPostOrigin` —
+The additive ``origin`` field (:class:`BlogPostOrigin` —
 carousel-derived vs. native blog) is now part of this view, read from the
-canonical ``blog_posts.origin`` column added by the additive AE-0127 migration.
+canonical ``blog_posts.origin`` column added by the additive migration.
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ class Publication:
     publishing-relevant signals — the project identity, its public-visibility
     flag, and its display title. It does NOT own the carousel aggregate, its
     editorial workflow, or its presentation contract; the full carousel→blog
-    projection lands in AE-0131.
+    projection lands later.
     """
 
     project: CarouselProject
@@ -150,7 +150,7 @@ class Publication:
     def caption(self) -> str | None:
         """The persisted social caption of the underlying carousel, when set.
 
-        AE-0204: the wrapped :class:`CarouselProject` is loaded through the carousel
+        The wrapped :class:`CarouselProject` is loaded through the carousel
         repository, which overlays ``caption`` from the canonical
         ``blog_posts.distribution`` home — so this read sources the caption from the
         canonical home, not the embedded ``carousel_projects.caption`` column.
@@ -160,7 +160,7 @@ class Publication:
 
 @dataclass(frozen=True)
 class DistributionResult:
-    """Outcome of a channel-delivery call (AE-0129).
+    """Outcome of a channel-delivery call.
 
     The publishing context's own value object for the result of distributing a
     release to an outbound channel (e.g. the Instagram carousel publish). It
@@ -180,8 +180,8 @@ class DistributionChannelKind(StrEnum):
 
     Names the distribution surfaces the publishing context targets. This is the
     publishing module's own value language (not a re-export); the distribution
-    extraction + the per-channel adapters land in AE-0129. No channel
-    side-effects are wired in AE-0126.
+    extraction + the per-channel adapters land later. No channel
+    side-effects are wired yet.
     """
 
     BLOG = "blog"
@@ -195,8 +195,8 @@ class DistributionChannel:
     """A configured outbound channel a release targets.
 
     A fully-typed value object pairing a :class:`DistributionChannelKind` with an
-    ``enabled`` flag. AE-0126 defines the contract only; the concrete per-channel
-    distribution adapters + the additive outbox are wired in AE-0129/0130.
+    ``enabled`` flag. This defines the contract only; the concrete per-channel
+    distribution adapters + the additive outbox are wired separately.
     """
 
     kind: DistributionChannelKind
@@ -209,7 +209,7 @@ class PublishingSchedule:
 
     A fully-typed value object capturing the optional scheduled publish instant
     and whether the release is held for manual approval before going out. It is a
-    read-side contract in AE-0126 (no scheduler is wired); the auto-publish
+    read-side contract (no scheduler is wired); the auto-publish
     behavior cutover is DEFERRED to a later phase.
     """
 

@@ -1,6 +1,6 @@
 """Infrastructure layer for the knowledge bounded context (private).
 
-**No adapters are physically relocated in Phase 2 (AE-0089).** The concrete
+**No adapters are physically relocated in Phase 2.** The concrete
 adapters that implement the knowledge ports already exist at their legacy
 locations and are imported by other contexts and the container:
 

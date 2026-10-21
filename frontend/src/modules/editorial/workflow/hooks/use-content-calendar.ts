@@ -35,13 +35,17 @@ function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+/**
+ * The in-flight request is tracked so a slower stale response (e.g. after fast
+ * month navigation) never overwrites the latest window's result; cleanup aborts
+ * and clears it so a superseded request's `finally` cannot write state after
+ * unmount.
+ */
 export function useContentCalendar(start?: string, end?: string) {
   const t = useTranslations("workflow.errors");
   const [calendar, setCalendar] = useState<ContentCalendar | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Tracks the in-flight request so a slower stale response (e.g. after fast
-  // month navigation) can never overwrite the latest window's result.
   const controllerRef = useRef<AbortController | null>(null);
 
   const fetchCalendar = useCallback(async () => {
@@ -69,8 +73,6 @@ export function useContentCalendar(start?: string, end?: string) {
   useEffect(() => {
     void fetchCalendar();
     return () => {
-      // Abort and clear so a settled-but-superseded request's `finally` can't
-      // write state after unmount (its isCurrent() check then returns false).
       controllerRef.current?.abort();
       controllerRef.current = null;
     };

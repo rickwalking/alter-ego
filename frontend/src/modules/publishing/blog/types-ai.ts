@@ -1,5 +1,5 @@
 /**
- * Re-export shim (AE-0138): the editorial workflow / AI-assist types moved to
+ * Re-export shim: the editorial workflow / AI-assist types moved to
  * `@/modules/editorial` (their canonical bounded-context home — they model the
  * editorial workspace's workflow state and slide reviews). Publishing keeps
  * exposing them through its own public contract for blog/AI consumers, so this

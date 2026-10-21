@@ -28,7 +28,6 @@ vi.mock("@/modules/identity", () => ({
 }));
 
 describe("NeonSidebar", () => {
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: The dashboard offers a language switcher
   it("shows the EN | PT language switcher with the current locale pressed", () => {
     render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
@@ -71,7 +70,6 @@ describe("NeonSidebar", () => {
     expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument();
   });
 
-  // Feature: responsive-dashboard-shell.feature — drawer on mobile / rail on desktop.
   it("is translated off-canvas when closed and wired for the rail at lg", () => {
     const { container } = render(
       <NeonSidebar

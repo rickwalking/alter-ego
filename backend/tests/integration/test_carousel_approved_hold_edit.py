@@ -1,10 +1,10 @@
-"""AE-0314 feasibility proof: editing a parked approved-hold thread.
+"""Feasibility proof: editing a parked approved-hold thread.
 
 The post-completion slide-edit endpoint writes the edited copy + a fresh
 validation report to the checkpoint via the engine ``update_state`` wrapper
 (source-of-truth option (a), pinned in the ticket Decision Log). Approved
 carousels do NOT reach END — the graph parks at the internal
-``approved_hold`` interrupt precisely so they stay resumable (AE-0288).
+``approved_hold`` interrupt precisely so they stay resumable.
 
 This proof MUST pass before any feature code: it drives a real workflow to the
 approved-hold park via an ``AsyncSqliteSaver`` checkpointer, calls the engine's
@@ -59,9 +59,13 @@ async def _drive_to_approved_hold(
 
 @pytest.mark.asyncio
 async def test_update_state_on_approved_hold_lands_and_preserves_interrupt() -> None:
-    """AE-0314 #1: aupdate_state on a parked approved-hold thread is safe.
+    """``aupdate_state`` on a parked approved-hold thread is safe.
 
     Scenario: Fix a typo on a completed carousel (checkpoint convergence path).
+
+    Mirrors the production call: patch_parked_checkpoint writes with as_node=None so the
+    park is preserved. Asserts the write lands, the pending interrupt stays parked at
+    the hold, and get_state keeps the carousel publishable (the hold stays hidden).
     """
     with TemporaryDirectory() as tmp_dir:
         db_path = Path(tmp_dir) / "workflow.sqlite"
@@ -76,8 +80,6 @@ async def test_update_state_on_approved_hold_lands_and_preserves_interrupt() -> 
             parked = await engine._app.aget_state(config)
             assert parked.next == (PHASE_APPROVED_HOLD,)
 
-            # Production call: patch_parked_checkpoint writes with as_node=None so
-            # the park is preserved.
             fresh_report: dict[str, object] = {"blocking": False, "violations": []}
             values: dict[str, object] = {
                 WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: [
@@ -88,7 +90,6 @@ async def test_update_state_on_approved_hold_lands_and_preserves_interrupt() -> 
             patched = await engine.patch_parked_checkpoint(project_id, values)
             assert patched is True
 
-            # (i) the write lands.
             after = await engine._app.aget_state(config)
             slides = after.values[WORKFLOW_STATE_LOCALIZED_SLIDES_KEY]
             assert slides[0]["presentation_pt"]["heading"] == _EDITED_HEADING
@@ -96,10 +97,8 @@ async def test_update_state_on_approved_hold_lands_and_preserves_interrupt() -> 
                 after.values[WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY] == fresh_report
             )
 
-            # (ii) the pending interrupt is preserved — still parked at the hold.
             assert after.next == (PHASE_APPROVED_HOLD,)
 
-            # get_state keeps the carousel publishable (the hold stays hidden).
             held = await engine.get_state(project_id)
             assert held is not None
             assert held["current_phase"] == PHASE_FINAL_REVIEW
@@ -108,12 +107,14 @@ async def test_update_state_on_approved_hold_lands_and_preserves_interrupt() -> 
 
 @pytest.mark.asyncio
 async def test_inferred_as_node_footgun_advances_hold_to_end() -> None:
-    """AE-0314 #1: the naive inferred-as_node path is the footgun being avoided.
+    """The naive inferred-as_node path is the footgun being avoided.
 
     Explicitly assert AGAINST the footgun: ``update_state`` (as_node inferred as
     ``approved_hold``) treats the hold node as complete and advances it to END
     (``next == ()``), losing the park. This is why the edit path uses
     ``patch_parked_checkpoint`` (as_node=None) instead.
+
+    With an inferred as_node the hold is advanced to END and the park is lost.
     """
     with TemporaryDirectory() as tmp_dir:
         db_path = Path(tmp_dir) / "workflow.sqlite"
@@ -130,5 +131,4 @@ async def test_inferred_as_node_footgun_advances_hold_to_end() -> None:
                 project_id,
                 {WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: []},
             )
-            # The footgun: the hold was advanced to END, park lost.
             assert (await engine._app.aget_state(config)).next == ()

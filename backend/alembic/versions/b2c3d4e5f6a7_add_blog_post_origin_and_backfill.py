@@ -4,15 +4,16 @@ Revision ID: b2c3d4e5f6a7
 Revises: a1b2c3d4e5f6
 Create Date: 2026-06-15 09:00:00.000000
 
-AE-0127: ADDITIVE, behavior-preserving, reversible.
+ADDITIVE, behavior-preserving, reversible.
 
 This migration is **purely additive** — it adds one column to ``blog_posts`` and
 inserts new ``origin='carousel'`` rows backfilled from the carousel embedded blog
 columns. It does **NOT** drop the embedded ``carousel_projects`` blog/distribution
 columns (``blog_markdown`` / ``blog_translations`` / ``caption*`` /
-``linkedin_post_*``) — that destructive drop is DEFERRED to AE-0133. Because no
-destructive schema change occurs, the LangGraph **checkpoint-drain gate does NOT
-block** this migration (the drain rule applies only to destructive migrations).
+``linkedin_post_*``) — that destructive drop is DEFERRED to a later
+migration. Because no destructive schema change occurs, the LangGraph
+**checkpoint-drain gate does NOT block** this migration (the drain rule applies
+only to destructive migrations).
 
 Steps (upgrade):
 
@@ -60,20 +61,17 @@ import sqlalchemy as sa
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "b2c3d4e5f6a7"
 down_revision = "a1b2c3d4e5f6"
 branch_labels = None
 depends_on = None
 
-# --- Constants -----------------------------------------------------------------
 _ORIGIN_STANDALONE = "standalone"
 _ORIGIN_CAROUSEL = "carousel"
 _CAROUSEL_STATUS_COMPLETED = "completed"
 _BLOG_POST_DEFAULT_STATUS = "published"
 _BLOG_SLUG_PREFIX = "carousel-"
 
-# Lightweight table projections (no ORM) for the cross-dialect backfill.
 _carousel_projects = sa.table(
     "carousel_projects",
     sa.column("id", sa.String),

@@ -13,13 +13,13 @@ class OpenAIEmbeddingService:
     """OpenAI implementation of EmbeddingService protocol."""
 
     def __init__(self, settings: Settings) -> None:
+        """Build the dense embedder (3072 dims, text-embedding-3-large) and a tokenizer."""
         self._settings = settings
         self._embeddings = OpenAIEmbeddings(
             api_key=settings.openai_api_key.get_secret_value(),
             model=settings.openai_embedding_model,
-            dimensions=3072,  # text-embedding-3-large
+            dimensions=3072,
         )
-        # Tokenizer for counting tokens
         self._tokenizer = tiktoken.encoding_for_model("gpt-4")
 
     async def embed_dense(self, texts: list[str]) -> list[list[float]]:
@@ -33,27 +33,27 @@ class OpenAIEmbeddingService:
         For production, you would use Pinecone's BM25 encoder or
         a proper sparse embedding model. This is a simplified version
         that creates term frequency vectors.
+
+        Tokens are lowercased and stripped of punctuation, short tokens are skipped, and
+        the top 256 terms are kept (the Pinecone sparse vector limit). Indices are ints,
+        values floats; empty vectors are skipped to avoid Pinecone's "unexpected data in
+        sparse_values".
         """
         sparse_embeddings = []
 
         for text in texts:
-            # Tokenize and create term frequency
             tokens = text.lower().split()
             term_freq = {}
 
             for token in tokens:
-                # Simple token cleaning
                 token = token.strip(".,!?;:()[]{}\"'")
-                if token and len(token) > MIN_TOKEN_LENGTH:  # Skip short tokens
+                if token and len(token) > MIN_TOKEN_LENGTH:
                     term_freq[token] = term_freq.get(token, 0) + 1
 
-            # Get top terms (limited to reasonable number for Pinecone)
             top_terms = sorted(term_freq.items(), key=lambda x: x[1], reverse=True)[
                 :256
-            ]  # Pinecone sparse vector limit
+            ]
 
-            # Pinecone sparse vector format: indices as ints, values as floats.
-            # Skip empty vectors to avoid "unexpected data in sparse_values".
             if top_terms:
                 sparse_embeddings.append({
                     "indices": list(range(len(top_terms))),

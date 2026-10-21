@@ -1,4 +1,4 @@
-"""The "add music" suggestion for a published carousel (AE-0369). Pure.
+"""The "add music" suggestion for a published carousel. Pure.
 
 The Graph API cannot add music to a feed post, so the owner gets a style to
 pick in the app. Niche words win over the image style; anything else gets

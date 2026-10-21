@@ -6,7 +6,7 @@ import { createElement, type ReactNode } from "react";
 import { SlideTextEditSection } from "./slide-text-edit-section";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
-// AE-0314 — Gherkin: backend/tests/features/carousel_text_edit_no_regen.feature
+/** Gherkin: backend/tests/features/carousel_text_edit_no_regen.feature */
 
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => (key: string) => key),
@@ -113,7 +113,7 @@ it("saves the edit then chains the republish", async () => {
   await userEvent.click(screen.getByText("save"));
   expect(republishMutate).toHaveBeenCalledWith(
     { projectId: "proj-1" },
-    expect.objectContaining({ onSuccess: expect.any(Function) }),
+    expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
   );
 });
 

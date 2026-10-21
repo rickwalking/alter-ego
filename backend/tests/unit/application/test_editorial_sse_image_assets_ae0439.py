@@ -1,4 +1,4 @@
-"""AE-0439 (QA F-13): the SSE review gate payload maps image_assets container
+"""The SSE review gate payload maps image_assets container
 paths to owner preview URLs.
 
 Gherkin: tests/features/blog_carousel_minors_ae0439.feature
@@ -33,12 +33,10 @@ def _state(image_assets: object) -> CarouselWorkflowState:
 class TestReviewGateImageAssets:
     def test_container_paths_become_preview_urls(self) -> None:
         payload = build_review_gate_payload(
-            _state(
-                [
-                    f"/app/output/carousels/{PROJECT_ID}/images/slide_1.jpg",
-                    f"/app/output/carousels/{PROJECT_ID}/images/slide_3.jpg",
-                ]
-            )
+            _state([
+                f"/app/output/carousels/{PROJECT_ID}/images/slide_1.jpg",
+                f"/app/output/carousels/{PROJECT_ID}/images/slide_3.jpg",
+            ])
         )
         assert payload["image_assets"] == [
             f"/api/carousels/{PROJECT_ID}/preview/images/slide_1.jpg",
@@ -47,12 +45,10 @@ class TestReviewGateImageAssets:
 
     def test_existing_urls_pass_through(self) -> None:
         payload = build_review_gate_payload(
-            _state(
-                [
-                    "https://example.com/cover.jpg",
-                    f"/api/carousels/{PROJECT_ID}/preview/images/slide_1.jpg",
-                ]
-            )
+            _state([
+                "https://example.com/cover.jpg",
+                f"/api/carousels/{PROJECT_ID}/preview/images/slide_1.jpg",
+            ])
         )
         assert payload["image_assets"] == [
             "https://example.com/cover.jpg",

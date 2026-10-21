@@ -155,7 +155,6 @@ class ConversationService:
 
         first_message = messages[0].content
 
-        # Generate title using LLM
         prompt = (
             "Generate a concise, descriptive title (max 5 words) "
             f"for a conversation that starts with this message:\n\n"
@@ -170,7 +169,6 @@ class ConversationService:
             if len(title) > MAX_TITLE_TOKENS:
                 title = title[: MAX_TITLE_TOKENS - 3] + "..."
 
-            # Update conversation
             conversation = await self._conversation_repository.get_by_id(
                 conversation_id
             )
@@ -178,7 +176,6 @@ class ConversationService:
                 conversation.update_title(title)
                 await self._conversation_repository.update(conversation)
         except Exception:
-            # Fallback to truncated message
             fallback = first_message[:MAX_FALLBACK_TITLE_LENGTH]
             if len(first_message) > MAX_FALLBACK_TITLE_LENGTH:
                 fallback += "..."

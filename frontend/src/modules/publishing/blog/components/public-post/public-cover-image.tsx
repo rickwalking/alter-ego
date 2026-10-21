@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { PublicCoverImageProps } from "./types";
 
 /**
- * AE-0412 (B08): a public cover image that removes itself — frame included —
+ * A public cover image that removes itself — frame included —
  * when the image fails to load, so visitors never see a broken image.
  */
 export function PublicCoverImage({
@@ -15,7 +15,7 @@ export function PublicCoverImage({
   frameClassName,
   frameStyle,
   overlay,
-}: PublicCoverImageProps): React.ReactElement | null {
+}: Readonly<PublicCoverImageProps>): React.ReactElement | null {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return null;

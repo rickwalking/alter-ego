@@ -1,8 +1,8 @@
-"""Deterministic carousel repair service — the two-commit contract (AE-0311).
+"""Deterministic carousel repair service — the two-commit contract.
 
 Runs the bounded deterministic repair pipeline over a carousel's localized
-slides and lands the fix under the shared per-project advisory lock (AE-0316,
-serialization domain shared with AE-0313 republish + AE-0314 slide edit):
+slides and lands the fix under the shared per-project advisory lock (the
+serialization domain shared with republish and slide edit):
 
 1. Acquire the session-scoped advisory lock **non-blocking** at entry — a held
    lock raises the typed ``mutation_in_progress`` conflict. Held across the

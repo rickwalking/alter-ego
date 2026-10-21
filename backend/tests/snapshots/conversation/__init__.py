@@ -1,1 +1,1 @@
-"""Conversation golden snapshots and diff helper (AE-0097)."""
+"""Conversation golden snapshots and diff helper."""

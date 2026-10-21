@@ -1,15 +1,15 @@
-"""Carousel editorial workflow byte-identical safety-net tests (AE-0106).
+"""Carousel editorial workflow byte-identical safety-net tests.
 
 Behavioral + golden-snapshot safety net for the Phase 4 carousel WORKFLOW
 extraction. Every behavior test asserts the /api workflow contract that the
-relocation (AE-0107 / AE-0110 / AE-0111 — workflow start/state/resume + the
+relocation (workflow start/state/resume + the
 ``carousel_projects`` writers behind editorial handlers + an ACL) must preserve.
 
 The golden snapshots capture the deterministic baseline of GET ``workflow/state``,
 POST ``workflow/start`` and POST ``workflow/resume`` INCLUDING the artifact URL
 fields the state response exposes (``image_assets`` owner preview URLs,
 ``blog_markdown``, ``design_applied``). Volatile fields (the workflow
-``project_id`` UUID — also inside ``image_assets`` URLs since AE-0439 — and
+``project_id`` UUID, also inside ``image_assets`` URLs, and
 timestamps) are normalized via the diff helper.
 
 The SSE stream test uses a DETERMINISTIC stub workflow service (fixed event
@@ -19,7 +19,8 @@ contract (this stream does NOT implement resume, so ids always start at 1). It
 is FALSIFIABLE: a reordered or renamed event changes the asserted list. It never
 byte-diffs live LLM/phase content.
 
-The seam mirrors AE-0097 (which patched ``chat_stream.build_alter_ego_agent``):
+The seam mirrors the identity safety net (which patched
+``chat_stream.build_alter_ego_agent``):
 the route module ``editorial_workflow`` imports ``build_editorial_workflow_service``
 at module level and calls it for every endpoint, so we monkeypatch THAT
 module-level name with a deterministic stub. No production code is modified.
@@ -28,6 +29,9 @@ Feature file: tests/features/carousel_editorial_workflow_safety_net.feature
 
 Run with ``--snapshot-update`` (flag registered in tests/conftest.py) to
 regenerate the committed golden snapshots from current, pre-refactor behavior.
+
+Artifact paths are deterministic and STABLE (no embedded volatile UUID) so the state
+snapshot captures the artifact URL fields byte-for-byte.
 """
 
 from __future__ import annotations
@@ -76,23 +80,18 @@ if TYPE_CHECKING:
     from httpx import Response
     from sqlalchemy.ext.asyncio import AsyncEngine
 
-# --- Constants -----------------------------------------------------------------
 SNAPSHOT_UPDATE_OPTION = "--snapshot-update"
 ANON_SECRET = "test-anon-secret-for-integration-tests"
 EDITOR_EMAIL = "wf-editor@integration.example.com"
 OTHER_EDITOR_EMAIL = "wf-other@integration.example.com"
 
-# Deterministic, STABLE artifact paths (no embedded volatile UUID) so the state
-# snapshot captures the artifact URL fields byte-for-byte (AC: artifact URLs).
 ARTIFACT_IMAGE_1 = "/media/carousel/fixture/slide-1.png"
 ARTIFACT_IMAGE_2 = "/media/carousel/fixture/slide-2.png"
 ARTIFACT_BLOG_MARKDOWN = "# Fixture blog\n\nDeterministic blog body for the snapshot."
 ARTIFACT_CAPTION = "Fixture caption for the snapshot."
 
-# Deterministic SSE phase-progress payload for the stream fixture.
 FIXTURE_PHASE_PROGRESS: Final[dict[str, object]] = {"percent": 42, "step": "drafting"}
 
-# SSE event types that the workflow stream may emit (allowlist for assertions).
 WORKFLOW_SSE_EVENT_TYPES: Final[tuple[str, ...]] = (
     SSE_EVENT_PHASE_CHANGE,
     SSE_EVENT_PROGRESS,
@@ -107,7 +106,6 @@ def snapshot_update(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption(SNAPSHOT_UPDATE_OPTION))
 
 
-# --- Engine / app factory ------------------------------------------------------
 async def _make_engine(db_path: str) -> AsyncEngine:
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -125,21 +123,20 @@ def _fixture_state(project_id: str) -> CarouselWorkflowState:
     """Deterministic mid-workflow state INCLUDING artifact URL fields.
 
     The state response surfaces artifact URLs via ``image_assets`` (owner
-    preview URLs since AE-0439), ``blog_markdown`` (blog artifact) and
+    preview URLs), ``blog_markdown`` (blog artifact) and
     ``design_applied`` (design). Paths are stable (no volatile UUID) so they
     snapshot byte-identically.
+
+    ``slide_drafts`` / ``outline`` are intentionally omitted: the state-response builder
+    re-derives ``presentation_validation`` / ``localized_slides`` from drafts using a
+    LIVE ``validated_at`` timestamp, which would defeat the byte-identical baseline.
+    With no drafts nothing volatile is derived and the approve gate is non-blocking.
     """
     state: CarouselWorkflowState = {
         "project_id": project_id,
         "current_phase": PHASE_CONTENT,
         "phase_status": PHASE_STATUS_AWAITING_HUMAN,
         "research_findings": [{"finding": "fixture finding"}],
-        # NOTE: ``slide_drafts`` / ``outline`` are intentionally omitted. The
-        # state-response builder re-derives ``presentation_validation`` /
-        # ``localized_slides`` from drafts using a LIVE ``validated_at`` timestamp
-        # (``datetime.now``), which is non-deterministic and would defeat the
-        # byte-identical baseline. With no drafts, nothing volatile is derived
-        # (presentation_validation -> None) and the approve gate is non-blocking.
         "image_assets": [ARTIFACT_IMAGE_1, ARTIFACT_IMAGE_2],
         "design_applied": True,
         "phase_progress": dict(FIXTURE_PHASE_PROGRESS),
@@ -294,7 +291,12 @@ class WfEnv:
 async def wf_env(
     tmp_path: object, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncGenerator[WfEnv, None]:
-    """Shared file-backed DB + app with two editors and client helpers."""
+    """Shared file-backed DB + app with two editors and client helpers.
+
+    DEBUG is pinned so every env-sensitive setting (cookie ``secure`` etc.) is
+    deterministic locally and in CI, where a DEBUG=true / DEBUG=false split once broke
+    this safety net.
+    """
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
@@ -304,10 +306,6 @@ async def wf_env(
 
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
-    # Pin DEBUG so every env-sensitive setting (cookie ``secure`` etc.) is
-    # deterministic local vs CI. This exact local(DEBUG=true)/CI(DEBUG=false)
-    # split broke the Phase-3 safety net; pin it via monkeypatch.setenv +
-    # settings cache clear (monkeypatch auto-reverts the env at test end).
     monkeypatch.setenv("DEBUG", "false")
     get_settings.cache_clear()
 
@@ -334,7 +332,7 @@ def _patch_service(
 ) -> _StubWorkflowService:
     """Replace the route's service builder with a deterministic stub.
 
-    Mirrors AE-0097's ``build_alter_ego_agent`` patch: the route module imports
+    Mirrors the ``build_alter_ego_agent`` patch: the route module imports
     ``build_editorial_workflow_service`` at module level and calls it per
     request, so patching that name injects the stub at the app edge.
     """
@@ -356,7 +354,6 @@ def _patch_no_background_resume(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-# --- SSE parsing helpers -------------------------------------------------------
 def _parse_sse(text: str) -> list[tuple[int | None, str, dict[str, object]]]:
     """Parse raw SSE text into ``(id, event, data)`` triples.
 
@@ -387,9 +384,6 @@ def _event_types(events: list[tuple[int | None, str, dict[str, object]]]) -> lis
     return [event_type for _id, event_type, _data in events]
 
 
-# ==============================================================================
-# GET /workflow/state behavior + snapshot
-# ==============================================================================
 class TestWorkflowStateBehavior:
     """GET workflow/state contract (tests/features/...safety_net.feature)."""
 
@@ -397,7 +391,11 @@ class TestWorkflowStateBehavior:
     async def test_state_returns_200_for_owner(
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: Workflow state response is unchanged for a mid-workflow project."""
+        """Scenario: Workflow state response is unchanged for a mid-workflow project.
+
+        Artifact URL fields are surfaced; image_assets are owner preview URLs, never
+        container paths.
+        """
         project_id = await wf_env.seed_project(wf_env.editor)
         _patch_service(monkeypatch, project_id, has_state=True)
         async with wf_env.client_for(wf_env.editor) as client:
@@ -405,9 +403,6 @@ class TestWorkflowStateBehavior:
         assert resp.status_code == 200
         body = resp.json()
         assert body["current_phase"] == PHASE_CONTENT
-        # Artifact URL fields are surfaced (AC: include artifact URLs).
-        # AE-0439 (QA F-13): image_assets are owner preview URLs, never
-        # container paths.
         assert body["image_assets"] == [
             f"/api/carousels/{project_id}/preview/images/slide-1.png",
             f"/api/carousels/{project_id}/preview/images/slide-2.png",
@@ -438,9 +433,6 @@ class TestWorkflowStateBehavior:
         assert resp.status_code == 403
 
 
-# ==============================================================================
-# POST /workflow/start behavior
-# ==============================================================================
 class TestWorkflowStartBehavior:
     """POST workflow/start contract."""
 
@@ -489,7 +481,7 @@ class TestWorkflowStartBehavior:
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Scenario: Repair failure fails closed with an observable error
-        (tests/features/source_synthesis_hardening.feature, AE-0318)."""
+        (tests/features/source_synthesis_hardening.feature)."""
         import structlog
 
         from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
@@ -531,7 +523,7 @@ class TestWorkflowStartBehavior:
     async def test_start_non_synthesis_value_error_keeps_generic_detail(
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: Repair failure fails closed (scoping half, AE-0318 r1 M1):
+        """Scenario: Repair failure fails closed (scoping half):
         a non-synthesis ValueError must NOT be labeled research_synthesis_failed."""
         import structlog
 
@@ -570,7 +562,7 @@ class TestWorkflowStartBehavior:
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Scenario: Provider rate limit maps to 429
-        (tests/features/workflow_start_provider_errors.feature, AE-0319)."""
+        (tests/features/workflow_start_provider_errors.feature)."""
         import httpx
         import openai
         import structlog
@@ -623,7 +615,7 @@ class TestWorkflowStartBehavior:
     async def test_start_provider_outage_maps_to_503(
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: Provider outage maps to 503 (AE-0319)."""
+        """Scenario: Provider outage maps to 503."""
         import httpx
         import openai
 
@@ -666,9 +658,6 @@ class TestWorkflowStartBehavior:
         assert errors and errors[0]["project_id"] == project_id
 
 
-# ==============================================================================
-# POST /workflow/resume behavior + interrupt->resume gates + optimistic lock
-# ==============================================================================
 class TestWorkflowResumeBehavior:
     """POST workflow/resume contract: gates + optimistic lock."""
 
@@ -742,7 +731,13 @@ class TestWorkflowResumeBehavior:
     async def test_concurrent_resume_optimistic_lock(
         self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: Concurrent resume — only the first bump wins."""
+        """Scenario: Concurrent resume — only the first bump wins.
+
+        The second request reuses the now-stale expected_version 1 while the DB row is
+        at lock_version 2. It is rejected either before the version check (resume
+        already in progress) or at it; both are deterministic 409s, so only the conflict
+        status is asserted.
+        """
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
         _patch_no_background_resume(monkeypatch)
@@ -751,22 +746,14 @@ class TestWorkflowResumeBehavior:
                 f"/api/carousels/{project_id}/workflow/resume",
                 json={"action": "approve", "expected_version": 1},
             )
-            # The second request reuses the now-stale expected_version 1; the DB
-            # row is at lock_version 2, so the optimistic-lock bump conflicts.
             second = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
                 json={"action": "approve", "expected_version": 1},
             )
         assert first.status_code == 202
-        # The first resume left the project in_progress; the second is rejected
-        # before the version check (resume-already-in-progress) OR at the
-        # version check — both deterministic 409s. Assert the conflict status.
         assert second.status_code == 409
 
 
-# ==============================================================================
-# GET /workflow/stream — deterministic SSE event-type ordering + framing
-# ==============================================================================
 class TestWorkflowStreamSse:
     """Deterministic SSE event-type ordering, framing, keep-alive, Last-Event-ID."""
 
@@ -810,7 +797,6 @@ class TestWorkflowStreamSse:
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.get(f"/api/carousels/{project_id}/workflow/stream")
         baseline = _event_types(_parse_sse(resp.text))
-        # Sanity: the live baseline is the asserted contract order.
         assert baseline == [
             SSE_EVENT_PHASE_CHANGE,
             SSE_EVENT_PROGRESS,
@@ -819,7 +805,6 @@ class TestWorkflowStreamSse:
         ]
         reordered = [baseline[1], baseline[0], *baseline[2:]]
         renamed = [f"{baseline[0]}_renamed", *baseline[1:]]
-        # The SAME equality the real test uses rejects both mutations.
         assert reordered != baseline
         assert renamed != baseline
 
@@ -831,19 +816,19 @@ class TestWorkflowStreamSse:
 
         The fixture interleaves a keep-alive between progress and artifact; the
         parsed (non-keepalive) ids must still be contiguous from 1.
+
+        The keep-alive comment is present in the raw stream but dropped by the parser.
         """
         project_id = await wf_env.seed_project(wf_env.editor)
         _patch_service(monkeypatch, project_id, has_state=True)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.get(f"/api/carousels/{project_id}/workflow/stream")
-        # Keep-alive comment is present in the raw stream but dropped by parser.
         assert ": keepalive" in resp.text
         events = _parse_sse(resp.text)
         assert events
         ids = [event_id for event_id, _t, _d in events]
         assert all(isinstance(i, int) for i in ids)
         assert ids == list(range(1, len(ids) + 1))
-        # Every parsed event carried an ``event:`` line and JSON ``data:``.
         for _id, event_type, data in events:
             assert event_type
             assert isinstance(data, dict)
@@ -872,9 +857,6 @@ class TestWorkflowStreamSse:
         assert ids == list(range(1, len(ids) + 1))
 
 
-# ==============================================================================
-# Golden snapshots — deterministic byte-identical baselines (AE-0107/0110/0111)
-# ==============================================================================
 class TestWorkflowSnapshots:
     """Workflow state/start/resume golden snapshots (body + status)."""
 

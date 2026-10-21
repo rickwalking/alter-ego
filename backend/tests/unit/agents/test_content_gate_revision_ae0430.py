@@ -1,8 +1,8 @@
-"""AE-0430: a content revision carries the gate's violations and is repaired after.
+"""A content revision carries the gate's violations and is repaired after.
 
 Gherkin: tests/features/content_gate_repair_ae0430.feature (section B).
 
-Real engine + real artifact runner (the AE-0405 harness); the drafting model
+Real engine + real artifact runner (the content feedback harness); the drafting model
 and the field repairer are fakes. The drafts carry one over-long feature body,
 so the content gate blocks.
 """

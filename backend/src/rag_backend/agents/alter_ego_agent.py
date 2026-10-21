@@ -79,6 +79,14 @@ class AlterEgoAgent:
         document_repository: DocumentRepository,
         knowledge_search: KnowledgeSearchPort | None = None,
     ) -> None:
+        """Build the chat agent on the shared deep-agent harness.
+
+        Chat agents persist through message_repository only, never a LangGraph
+        checkpointer: a second durable write path would dual-write. The harness builder
+        routes this chat config through that guard, and the summarization middleware
+        caps context-window growth without touching message_repository persistence. No
+        subagents are registered: chat never delegates to the carousel pipeline.
+        """
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
@@ -91,11 +99,6 @@ class AlterEgoAgent:
 
         self._llm = build_chat_model(settings)
 
-        # ADR-0013 / AE-0247: chat agents persist via message_repository only —
-        # never a LangGraph checkpointer (a second durable write path = the
-        # AE-0163 dual-write trap). The harness builder routes this chat config
-        # through the guard. SummarizationMiddleware caps context-window growth
-        # without touching message_repository persistence (AE-0248).
         self._agent = build_deep_agent(
             DeepAgentConfig(
                 model=self._llm,
@@ -103,7 +106,7 @@ class AlterEgoAgent:
                 system_prompt=self._load_system_prompt(),
                 agent_kind=AGENT_KIND_CHAT,
                 tools=self._build_tools(),
-                subagents=(),  # NONE — no delegation to carousel pipeline
+                subagents=(),
                 middleware=(build_summarization_middleware(self._llm),),
             )
         )

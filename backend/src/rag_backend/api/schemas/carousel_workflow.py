@@ -69,15 +69,17 @@ class EditorialWorkflowResumeAcceptedResponse(BaseModel):
 
 
 class SlideValidationViolationResponse(BaseModel):
-    """One deterministic presentation validation violation."""
+    """One deterministic presentation validation violation.
+
+    severity is "blocker" or "warning" and defaults to blocker, so a legacy report
+    without the field keeps its blocking treatment client-side.
+    """
 
     code: str
     message: str
     slide_index: int | None = None
     locale: str | None = None
     field: str | None = None
-    # AE-0312: severity tier ("blocker" | "warning"); defaults to blocker so a
-    # legacy report without the field keeps its blocking treatment client-side.
     severity: str = SEVERITY_BLOCKER
 
 
@@ -107,7 +109,7 @@ class SlideImagePrompt(BaseModel):
 
 
 class PhaseFeedbackHistoryEntryResponse(BaseModel):
-    """A consumed reviewer note (AE-0405 lifecycle, exposed by AE-0413).
+    """A consumed reviewer note, moved out of the active feedback once used.
 
     ``status`` is ``applied`` (a regeneration used it), ``dropped`` (a stale
     autopilot note) or ``migrated`` (a legacy note).
@@ -121,7 +123,17 @@ class PhaseFeedbackHistoryEntryResponse(BaseModel):
 
 
 class EditorialWorkflowStateResponse(BaseModel):
-    """Current workflow state returned to clients."""
+    """Current workflow state returned to clients.
+
+    phase_feedback holds the active notes only; a content note leaves it once the
+    regeneration used it and is then listed in phase_feedback_history.
+    content_gate_validation is the fail-closed content-gate report, present only when
+    the validate, repair and retry chain still ended blocking. design_recovery_hint is a
+    client-displayable code set while the design step holds a blocking report (direct
+    edits or a content send-back resolve it; a plain revise does not). The run_*
+    metadata is populated only while phase_status is in_progress, so the create flow
+    rebuilds the in-progress banner on reload without having seen the run.started event.
+    """
 
     project_id: str
     current_phase: str
@@ -142,8 +154,6 @@ class EditorialWorkflowStateResponse(BaseModel):
     linkedin_post_en: str | None = None
     rubric_scores: dict[str, object] = Field(default_factory=dict)
     phase_feedback: dict[str, list[str]] = Field(default_factory=dict)
-    # AE-0413: ``phase_feedback`` holds the ACTIVE notes only; a content note
-    # leaves it once the regeneration used it. The consumed notes are here.
     phase_feedback_history: dict[str, list[PhaseFeedbackHistoryEntryResponse]] = Field(
         default_factory=dict
     )
@@ -153,16 +163,8 @@ class EditorialWorkflowStateResponse(BaseModel):
     presentation_policy_version: str | None = None
     localized_slides: list[LocalizedSlideReview] = Field(default_factory=list)
     presentation_validation: SlideValidationReportResponse | None = None
-    # AE-0309: fail-closed content-gate report; present only when the content
-    # build's validate -> repair -> retry chain still ended blocking.
     content_gate_validation: SlideValidationReportResponse | None = None
-    # AE-0310: client-displayable recovery-hint code set while the design step
-    # holds a blocking validation report (direct edits or a content send-back
-    # resolve violations; a plain revise does not modify content).
     design_recovery_hint: str | None = None
-    # AE-0315: run metadata, populated ONLY while phase_status == in_progress
-    # so the create flow reconstructs the in-progress banner on reload without
-    # depending on having witnessed the run.started SSE event.
     run_started_at: datetime | None = None
     run_stage: str | None = None
 

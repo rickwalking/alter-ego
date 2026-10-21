@@ -1,4 +1,4 @@
-"""Application service for custom-palette CRUD (AE-0270).
+"""Application service for custom-palette CRUD.
 
 Orchestrates create/update/archive over the ``PaletteRepository`` **port** only —
 no infrastructure import, so the application→infrastructure ratchet is untouched
@@ -31,7 +31,7 @@ from rag_backend.domain.models.palette import CustomPalette
 from rag_backend.domain.protocols.palette import PaletteRepository
 
 _SLUG_FALLBACK = "palette"
-_SLUG_BASE_MAX = SLUG_MAX_LEN - SLUG_ID_SUFFIX_LEN - 1  # room for "-<suffix>"
+_SLUG_BASE_MAX = SLUG_MAX_LEN - SLUG_ID_SUFFIX_LEN - 1
 
 
 class PaletteNotFoundError(Exception):
@@ -146,13 +146,13 @@ class PaletteCatalogService:
     async def _dedupe_keywords(
         self, keywords: tuple[str, ...], exclude_id: UUID | None
     ) -> tuple[str, ...]:
-        # Best-effort, read-then-write: two simultaneous creates can both observe a
-        # keyword as unclaimed and persist it (there is no DB uniqueness on
-        # keywords). Accepted (D2 small trusted team): keywords are a soft AUTO
-        # signal, the resolver takes the highest score, and D9 freezes the
-        # resolved palette at generation — so a transient duplicate cannot recolor
-        # existing carousels. Hardening to a DB constraint is deferred until the
-        # catalog/user base widens.
+        """Best-effort read-then-write: two simultaneous creates can both see a keyword
+        as unclaimed and persist it, since there is no DB uniqueness on keywords.
+        This is accepted for a small trusted team: keywords are a soft AUTO signal,
+        the resolver takes the highest score, and the resolved palette is frozen at
+        generation, so a transient duplicate cannot recolor existing carousels. A DB
+        constraint can be added once the catalog and user base widen.
+        """
         if not keywords:
             return keywords
         actives = await self._repo.list_active()

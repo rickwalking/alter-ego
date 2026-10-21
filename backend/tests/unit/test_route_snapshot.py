@@ -1,6 +1,6 @@
 """Deterministic route-equality guard for the composition-root relocation.
 
-Feature: Composition-root scaffolding (AE-0080)
+Feature: Composition-root scaffolding
   Scenario: App routes are unchanged after relocating the app factory
     Given the relocated composition root in rag_backend.bootstrap.app_factory
     When the FastAPI app is built
@@ -11,6 +11,10 @@ This is the AC "no route change" guard: the app factory moved from
 behavior change, and this test fails loudly if any route is added, removed, or
 its methods change. To intentionally change routes, regenerate the snapshot
 with ``REGEN_ROUTE_SNAPSHOT=1 uv run pytest tests/unit/test_route_snapshot.py``.
+
+_FRAMEWORK_ROUTE_PATHS are the docs and OpenAPI routes FastAPI auto-mounts and settings
+toggle (present locally, absent in the CI/test profile). They are framework-owned, so
+the snapshot guard excludes them from both sides to stay environment-independent.
 """
 
 from __future__ import annotations
@@ -27,11 +31,6 @@ SNAPSHOT_PATH = (
     Path(__file__).resolve().parents[1] / "snapshots" / "openapi_routes.json"
 )
 
-# FastAPI auto-mounts these framework routes (interactive docs + OpenAPI
-# schema) and toggles them via settings, so they are present in some
-# environments (local) and absent in others (CI/test profile disables docs).
-# They are framework-owned, not APPLICATION routes, so the snapshot guard
-# must exclude them from BOTH sides to stay environment-independent.
 _FRAMEWORK_ROUTE_PATHS = frozenset({
     "/docs",
     "/docs/oauth2-redirect",

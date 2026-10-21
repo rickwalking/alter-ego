@@ -1,4 +1,4 @@
-"""Strict parsing of the ``ai-suggest`` model answer (AE-0424, F-10).
+"""Strict parsing of the ``ai-suggest`` model answer.
 
 The model is asked for ``{"suggested_text", "explanation"}`` but answers in
 three shapes: the clean JSON, the same JSON inside a ```json fence, or a JSON
@@ -55,7 +55,7 @@ def _candidates(raw: str) -> list[str]:
     """The whole answer, every fenced block, then the outermost ``{...}``.
 
     Models often write a line of prose before the fenced JSON; the envelope is
-    still found so the raw blob never reaches the user (AE-0424 review).
+    still found so the raw blob never reaches the user.
     """
     found = [strip_code_fence(raw)]
     found.extend(match.group(1).strip() for match in _FENCED_BLOCK.finditer(raw))

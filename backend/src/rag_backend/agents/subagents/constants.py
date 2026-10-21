@@ -1,4 +1,8 @@
-"""Constants for the researcher subagent definition (AE-0249)."""
+"""Constants for the researcher subagent definition.
+
+The researcher reads skill context as markdown only (skills and tools are kept
+separate).
+"""
 
 from __future__ import annotations
 
@@ -8,11 +12,9 @@ RESEARCHER_SUBAGENT_DESCRIPTION = (
     "carousel content. Runs in an isolated context with web research tools."
 )
 
-# Skill context the researcher READS (markdown only — ADR-0016 skill/tool split).
 RESEARCH_PHASE_SKILL_SUBPATH = "phases/research"
 SHARED_CRITICAL_RULES_SUBPATH = "_shared/critical-rules.md"
 
-# DeepAgents subagent spec field names (the standard tools/prompt/model surface).
 SPEC_FIELD_NAME = "name"
 SPEC_FIELD_DESCRIPTION = "description"
 SPEC_FIELD_PROMPT = "prompt"

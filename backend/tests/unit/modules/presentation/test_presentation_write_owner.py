@@ -1,7 +1,6 @@
-"""Contract + concurrency tests for the presentation persistence owner / ACL
-(AE-0118).
+"""Contract + concurrency tests for the presentation persistence owner / ACL.
 
-These cover the AE-0118 acceptance criteria at the adapter boundary:
+These cover the acceptance criteria at the adapter boundary:
 
 * **Read-side mapping** — a legacy ``CarouselProjectModel`` translates into the
   presentation VIEW (``PresentationProject`` wrapped in
@@ -22,7 +21,7 @@ These cover the AE-0118 acceptance criteria at the adapter boundary:
   (``ERR_ARTIFACT_BUILD_CONFLICT`` / ``ERR_VERSION_CONFLICT``), and
   ``lock_version`` advances by exactly one per success (no lost update).
 
-Behavior-preserving adapter; verified here + by the AE-0116 safety net. External
+Behavior-preserving adapter; verified here + by the presentation safety net. External
 clients are never constructed; the tests use an in-memory SQLite session — no API
 keys required.
 
@@ -149,7 +148,6 @@ def _acl(session: AsyncSession) -> PresentationPersistenceAcl:
     return PresentationPersistenceAcl(session, PresentationWriteOwner(session))
 
 
-# === Read-side mapping =========================================================
 class TestReadSideMapping:
     """Scenario: a legacy row maps to the presentation VIEW."""
 
@@ -182,7 +180,6 @@ class TestReadSideMapping:
         assert view is None
 
 
-# === Write delegation ==========================================================
 class TestWriteDelegation:
     """Scenario: presentation writes go THROUGH the single write owner."""
 
@@ -190,13 +187,13 @@ class TestWriteDelegation:
     async def test_refresh_design_tokens_persists_via_owner(
         self, session: AsyncSession
     ) -> None:
+        """The owner only flushes; the commit is the caller's job."""
         project_id = await _seed_project(session)
         acl = _acl(session)
         view = await acl.load_presentation(project_id)
         assert view is not None
 
         await acl.refresh_design_tokens(view.project, _DESIGN_TOKENS)
-        # Not yet committed: the owner only flushed. Commit is the owner's job.
         await acl.commit()
 
         model = await session.get(CarouselProjectModel, project_id)
@@ -239,7 +236,6 @@ class TestWriteDelegation:
             await acl.update_project(ghost)
 
 
-# === Slide-write contract ======================================================
 class TestSlideWriteContract:
     """Scenario: slide rows are created and updated through the owner."""
 
@@ -295,7 +291,6 @@ class TestSlideWriteContract:
             await acl.update_slide(ghost)
 
 
-# === Activation CAS (artifact_version <-> lock_version) =========================
 class TestActivationCasPreserved:
     """Scenario: the activation CAS preserves the compound pairing exactly."""
 
@@ -303,6 +298,7 @@ class TestActivationCasPreserved:
     async def test_activation_bumps_both_columns_by_one(
         self, session: AsyncSession
     ) -> None:
+        """Both artifact_version and lock_version move as one."""
         project_id = await _seed_project(session, lock_version=1, artifact_version=None)
         await _seed_ready_build(
             session, project_id, _ARTIFACT_V1, source_lock_version=1
@@ -322,7 +318,6 @@ class TestActivationCasPreserved:
         assert new_lock == 2
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
-        # The compound pairing: BOTH artifact_version and lock_version moved as one.
         assert model.artifact_version == _ARTIFACT_V1
         assert model.lock_version == 2
 
@@ -330,10 +325,12 @@ class TestActivationCasPreserved:
     async def test_stale_source_lock_version_is_rejected(
         self, session: AsyncSession
     ) -> None:
+        """The activation expects source_lock_version=2 but the row is at 4; the row stays
+        unchanged, with no silent overwrite.
+        """
         project_id = await _seed_project(session, lock_version=4, artifact_version=None)
         acl = _acl(session)
 
-        # The activation expects source_lock_version=2 but the row is at 4.
         with pytest.raises(ValueError) as exc:
             await acl.activate_artifact(
                 _ActivateBuildParams(
@@ -345,14 +342,12 @@ class TestActivationCasPreserved:
             )
         assert str(exc.value) == ERR_ARTIFACT_BUILD_CONFLICT
 
-        # No silent overwrite: the row is unchanged.
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
         assert model.lock_version == 4
         assert model.artifact_version is None
 
 
-# === Shared-owner no-clobber concurrency =======================================
 class TestSharedLockNoClobber:
     """Scenario Outline: activation + resume bumps cannot interleave-clobber.
 
@@ -368,6 +363,10 @@ class TestSharedLockNoClobber:
     async def test_activation_then_resume_serializes(
         self, session: AsyncSession
     ) -> None:
+        """Activation wins first (lock_version 1 -> 2, paired with artifact_version); the
+        editorial resume bump holding the stale version 1 loses, so the lock advances by
+        exactly one.
+        """
         project_id = await _seed_project(session, lock_version=1, artifact_version=None)
         await _seed_ready_build(
             session, project_id, _ARTIFACT_V1, source_lock_version=1
@@ -375,7 +374,6 @@ class TestSharedLockNoClobber:
         presentation = PresentationWriteOwner(session)
         editorial = CarouselProjectWriteOwner(session)
 
-        # Activation wins first: lock_version 1 -> 2 (paired with artifact_version).
         new_lock = await presentation.activate_artifact(
             _ActivateBuildParams(
                 project_id=uuid.UUID(project_id),
@@ -386,7 +384,6 @@ class TestSharedLockNoClobber:
         )
         assert new_lock == 2
 
-        # The editorial resume bump holds the now-stale source version 1 -> loses.
         with pytest.raises(ValueError) as exc:
             await editorial.bump_resume_lock_version(project_id, expected_version=1)
         assert str(exc.value) == ERR_VERSION_CONFLICT
@@ -394,7 +391,6 @@ class TestSharedLockNoClobber:
         await presentation.commit()
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
-        # Exactly one success: lock advanced by exactly one; artifact stayed paired.
         assert model.lock_version == 2
         assert model.artifact_version == _ARTIFACT_V1
 
@@ -402,18 +398,19 @@ class TestSharedLockNoClobber:
     async def test_resume_then_activation_serializes(
         self, session: AsyncSession
     ) -> None:
+        """Resume wins first (lock_version 1 -> 2); the activation holding the stale
+        version 1 loses because its compound guard no longer matches, so
+        artifact_version stays unset.
+        """
         project_id = await _seed_project(session, lock_version=1, artifact_version=None)
         presentation = PresentationWriteOwner(session)
         editorial = CarouselProjectWriteOwner(session)
 
-        # Resume wins first: lock_version 1 -> 2 (no artifact change).
         new_version = await editorial.bump_resume_lock_version(
             project_id, expected_version=1
         )
         assert new_version == 2
 
-        # The activation holds the now-stale source version 1 -> loses; its
-        # compound guard (lock_version == 1) no longer matches.
         with pytest.raises(ValueError) as exc:
             await presentation.activate_artifact(
                 _ActivateBuildParams(
@@ -428,8 +425,6 @@ class TestSharedLockNoClobber:
         await editorial.commit()
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
-        # Exactly one success: lock advanced by exactly one; activation lost so
-        # artifact_version stayed unset (no silent overwrite of the shared token).
         assert model.lock_version == 2
         assert model.artifact_version is None
 
@@ -437,7 +432,11 @@ class TestSharedLockNoClobber:
     async def test_both_succeed_when_each_reads_fresh_version(
         self, session: AsyncSession
     ) -> None:
-        """Sequential bumps with refreshed expected versions each advance by one."""
+        """Sequential bumps with refreshed expected versions each advance by one.
+
+        The activation then uses the fresh source version (2) and succeeds, moving the
+        lock to 3.
+        """
         project_id = await _seed_project(session, lock_version=1, artifact_version=None)
         await _seed_ready_build(
             session, project_id, _ARTIFACT_V1, source_lock_version=2
@@ -450,7 +449,6 @@ class TestSharedLockNoClobber:
         )
         assert after_resume == 2
 
-        # The activation now uses the FRESH source (2) -> succeeds, lock -> 3.
         after_activation = await presentation.activate_artifact(
             _ActivateBuildParams(
                 project_id=uuid.UUID(project_id),

@@ -1,4 +1,4 @@
-"""PT slide paths stay on disk (AE-0355)."""
+"""PT slide paths stay on disk."""
 
 from __future__ import annotations
 

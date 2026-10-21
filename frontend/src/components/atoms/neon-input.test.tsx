@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { TEXT } from "@/constants/neon";
 
-// Feature: NeonInput Component
 describe("NeonInput Component", () => {
   describe("When rendered with a placeholder", () => {
     it("Then the input should be visible and accessible", () => {

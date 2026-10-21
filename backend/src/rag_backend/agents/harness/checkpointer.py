@@ -1,9 +1,9 @@
-"""Shared Deep Agents harness — checkpointer provider (AE-0248).
+"""Shared Deep Agents harness — checkpointer provider.
 
 Relocated from `bootstrap/app_factory.py` so both the carousel orchestrator and
 (future) Deep Agent builders consume one composition surface. The carousel keeps
 its single-writer checkpoint (keyed `thread_id=project_id`); the chat Deep Agents
-get **no** checkpointer per ADR-0013 / AE-0247 (`message_repository` is canonical).
+get **no** checkpointer per ADR-0013 (`message_repository` is canonical).
 This is a behavior-preserving move — the body is byte-for-byte the prior
 `_build_checkpointer`.
 """
@@ -36,6 +36,7 @@ class CheckpointerProvider(Protocol):
 async def _build_postgres_saver(
     settings: Settings, stack: AsyncExitStack
 ) -> BaseCheckpointSaver | None:
+    """Build the Postgres checkpoint saver and run its idempotent table DDL."""
     if not settings.carousel_checkpoint_postgres_url:
         logger.warning(
             "carousel_checkpoint_postgres_missing_url",
@@ -45,7 +46,7 @@ async def _build_postgres_saver(
     saver_pg = await stack.enter_async_context(
         AsyncPostgresSaver.from_conn_string(settings.carousel_checkpoint_postgres_url)
     )
-    await saver_pg.setup()  # idempotent DDL for checkpoint tables
+    await saver_pg.setup()
     return saver_pg
 
 

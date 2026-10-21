@@ -1,5 +1,5 @@
 /**
- * AE-0403: address slide validation violations to the form field that caused
+ * Address slide validation violations to the form field that caused
  * them, so both review forms (publish-page slide editor, content-phase review)
  * can highlight the field, list a per-slide summary and clear an error as soon
  * as its field is edited.
@@ -14,9 +14,9 @@ export type SlideFieldErrors = ReadonlyMap<string, SlideValidationViolation[]>;
 
 const KEY_SEPARATOR = ":";
 const DOM_ID_UNSAFE = /[[\].]+/g;
-const DOM_ID_TRAILING = /-+$/;
+const DOM_ID_DASH = "-";
 const LIMIT_PATTERN = /max (\d+)/i;
-// Mirrors backend STRUCTURED_ITEM_FIELD_PATTERN (``summary_points[0].body``).
+/** Mirrors the backend ``STRUCTURED_ITEM_FIELD_PATTERN`` (``summary_points[0].body``). */
 const STRUCTURED_ITEM_FIELD = /^([a-z_]+)\[(\d+)\]\.([a-z_]+)$/;
 
 /** ``summary_points[0].body`` for an item, ``heading``/``body`` otherwise. */
@@ -145,7 +145,15 @@ export function violationLimit(
 /** ``{idPrefix}-{slide}-{locale}-{path}`` with the item path made id-safe. */
 export function fieldDomId(idPrefix: string, key: string): string {
   const id = `${idPrefix}-${key.split(KEY_SEPARATOR).join("-")}`;
-  return id.replace(DOM_ID_UNSAFE, "-").replace(DOM_ID_TRAILING, "");
+  return withoutTrailingDashes(id.replace(DOM_ID_UNSAFE, DOM_ID_DASH));
+}
+
+function withoutTrailingDashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === DOM_ID_DASH) {
+    end -= 1;
+  }
+  return value.slice(0, end);
 }
 
 /** The first field of ``slideIndex`` (or of the lowest flagged slide). */

@@ -1,4 +1,4 @@
-"""The verified quotes a ``pov_news`` prompt may cite (AE-0406, ADR-0023).
+"""The verified quotes a ``pov_news`` prompt may cite (ADR-0023).
 
 Rows for the Jinja templates: the id the model may return as ``quote_id``,
 who said it, and the PT text it may show. The text is case-preserving

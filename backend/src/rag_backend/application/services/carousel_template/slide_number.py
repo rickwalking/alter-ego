@@ -14,7 +14,7 @@ def normalize_slide_number(slide_number: str | int) -> str:
 
 
 def format_slide_counter(slide_number: str | int, total_slides: int) -> str:
-    """``03 / 07``, ``10 / 10``: both sides zero-padded to two digits (AE-0372).
+    """``03 / 07``, ``10 / 10``: both sides zero-padded to two digits.
 
     The old templates glued a literal ``0`` in front of the number, so slide 10
     would have read ``010 / 10``.

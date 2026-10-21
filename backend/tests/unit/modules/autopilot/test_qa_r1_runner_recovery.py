@@ -1,4 +1,4 @@
-"""Runner recovery and policy/engine alignment (AE-0348 QA round 1, B1/H3).
+"""Runner recovery and policy/engine alignment (QA round 1, B1/H3).
 
 Gherkin: tests/features/autopilot_runner.feature
 """

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Read-only OpenAPI artifact exporter (AE-0141).
+"""Read-only OpenAPI artifact exporter.
 
 Builds the FastAPI application via the canonical ``create_app()`` composition
 root and writes its ``app.openapi()`` document to a committed artifact at
@@ -32,7 +32,6 @@ import sys
 from pathlib import Path
 from typing import cast
 
-# scripts/ -> backend/ -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "architecture" / "openapi.json"
 
@@ -94,9 +93,7 @@ def main() -> int:
         cast(dict[str, object], json.loads(serialized)).get("components", {}),
     )
     schemas = cast(dict[str, object], components.get("schemas", {}))
-    sys.stdout.write(
-        f"Wrote {_ARTIFACT_PATH} ({len(schemas)} component schemas).\n"
-    )
+    sys.stdout.write(f"Wrote {_ARTIFACT_PATH} ({len(schemas)} component schemas).\n")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""Deterministic half of the blog quality gate (AE-0425, ADR-0025).
+"""Deterministic half of the blog quality gate (ADR-0025).
 
 No model is involved here, so every finding is reproducible:
 
@@ -6,7 +6,7 @@ No model is involved here, so every finding is reproducible:
   sentences copied verbatim from a source note, and banned stock phrases
   (the list is data, ``domain/constants/blog_voice.py``).
 * :func:`portuguese_sections` — the EN sections that read as Portuguese
-  (AE-0435; the carousel's AE-0413/AE-0430 ``wrong_language`` detector), so a
+  (the carousel's ``wrong_language`` detector), so a
   Portuguese text is never stored as ``translations.en``.
 * :func:`strip_source_leaks` — drops any PT sentence that is a verbatim copy of
   the (English) research findings, so a research intro can never leak into the

@@ -4,14 +4,14 @@ Revision ID: d5e6f7a8b9c0
 Revises: c4d5e6f7a8b9
 Create Date: 2026-10-17
 
-AE-0418 (ADR-0024): ADDITIVE. New table ``autopilot_cover_assets`` (one row per
+ADR-0024: ADDITIVE. New table ``autopilot_cover_assets`` (one row per
 GrokBot cover upload; the image is a ``carousel_creator_assets`` row with role
 ``cover``). Three nullable columns: ``topic_candidates.cover_asset_id`` (the
 cover a topic names), ``autopilot_runs.cover_chosen`` (the owner's slide-1
 choice) and ``carousel_projects.slide_cover`` (the cover a project renders).
 No existing column is altered or dropped. ``downgrade`` removes all four.
 
-Idempotent like the AE-0371 / AE-0406 revisions: prod has no
+Idempotent like the earlier autopilot revisions: prod has no
 ``alembic_version`` table and applies the SQL by hand, so the table and each
 column are created only when missing and dropped only when present.
 """

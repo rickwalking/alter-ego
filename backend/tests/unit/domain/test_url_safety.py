@@ -1,6 +1,9 @@
 """SSRF guard rules with mocked DNS (QA r1 S-W1).
 
 Feature: tests/features/url_safety_ssrf.feature
+
+_REAL_RESOLVE is captured at import, before the conftest autouse stub replaces it per
+test.
 """
 
 from __future__ import annotations
@@ -23,7 +26,6 @@ from rag_backend.domain.url_safety import (
 
 _PUBLIC = "93.184.216.34"
 _URL = "https://news.example.com/story"
-# Captured at import, before the conftest autouse stub replaces it per test.
 _REAL_RESOLVE = url_safety.system_resolve
 
 

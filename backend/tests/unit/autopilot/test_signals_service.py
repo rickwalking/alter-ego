@@ -1,4 +1,4 @@
-"""Signals service: isolation, dedupe, cap, and cache (AE-0352).
+"""Signals service: isolation, dedupe, cap, and cache.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: Bundle combines all free sources

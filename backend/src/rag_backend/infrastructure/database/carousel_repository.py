@@ -43,7 +43,7 @@ async def _detach_carousel_blog_posts(
     session: AsyncSession,
     project_id: str,
 ) -> None:
-    """Flip the project's carousel-origin blog rows out of ``published`` (AE-0296).
+    """Flip the project's carousel-origin blog rows out of ``published``.
 
     Called right before the project row is deleted. The FK is ``ON DELETE SET
     NULL``, so without this flip a published carousel-origin post would survive
@@ -87,7 +87,10 @@ class PostgresCarouselRepository(CarouselRepository):
         return model.to_entity()
 
     async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None:
-        """Get a carousel project by its ID with slides and sources."""
+        """Get a carousel project by its ID with slides and sources.
+
+        The POV slide-1 photo (``hook_asset_id``) is staged at the same relative path.
+        """
         stmt = select(CarouselProjectModel).where(
             CarouselProjectModel.id == str(project_id)
         )
@@ -104,7 +107,6 @@ class PostgresCarouselRepository(CarouselRepository):
             if asset_model is not None:
                 entity.creator_asset_staged_path = asset_model.relative_path
         if model.hook_asset_id:
-            # AE-0376: the POV slide-1 photo, staged at the same relative path.
             hook_model = await self._session.get(
                 CarouselCreatorAssetModel, str(model.hook_asset_id)
             )
@@ -114,7 +116,7 @@ class PostgresCarouselRepository(CarouselRepository):
         return entity
 
     async def read_distribution(self, project_id: str) -> dict[str, str | None] | None:
-        """Read the canonical distribution payload for a project (AE-0204).
+        """Read the canonical distribution payload for a project.
 
         The single read seam over ``blog_posts.distribution``; exposed on the
         repository so outer layers (e.g. the phase-5 migration via the admin edge)
@@ -124,7 +126,7 @@ class PostgresCarouselRepository(CarouselRepository):
         return await read_distribution(self._session, project_id)
 
     async def _overlay_distribution(self, entity: CarouselProject) -> None:
-        """Source the distribution copy from the canonical home (AE-0204).
+        """Source the distribution copy from the canonical home.
 
         Overlays ``caption`` / ``linkedin_post_pt`` / ``linkedin_post_en`` on a
         freshly-loaded carousel entity from the canonical
@@ -186,7 +188,7 @@ class PostgresCarouselRepository(CarouselRepository):
         """Delete a carousel project and its slides.
 
         Any published carousel-origin blog row is flipped back to draft in the
-        same transaction (AE-0296) so the FK's ``ON DELETE SET NULL`` cannot
+        same transaction so the FK's ``ON DELETE SET NULL`` cannot
         leave an orphaned row that is still publicly visible.
         """
         stmt = select(CarouselProjectModel).where(

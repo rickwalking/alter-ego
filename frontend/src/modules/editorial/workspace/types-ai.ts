@@ -51,7 +51,7 @@ export interface ContentSource {
   is_primary: boolean;
 }
 
-/** AE-0312: severity tier for a validation violation. */
+/** Severity tier for a validation violation. */
 export type ViolationSeverity = "blocker" | "warning";
 
 export interface SlideValidationViolation {
@@ -60,9 +60,9 @@ export interface SlideValidationViolation {
   slide_index?: number | null;
   locale?: string | null;
   field?: string | null;
-  // AE-0312: absent defaults to a blocking treatment client-side.
+  /** Absent defaults to a blocking treatment client-side. */
   severity?: ViolationSeverity | null;
-  // AE-0403: structured-item address (slide-edit ``field_violations`` only).
+  /** Structured-item address (slide-edit ``field_violations`` only). */
   item_list?: string | null;
   item_index?: number | null;
   item_field?: string | null;
@@ -96,10 +96,7 @@ export interface SlideImagePrompt {
   theme_colors?: Record<string, string> | null;
 }
 
-// AE-0009: derive the status union from the WORKFLOW_PHASE_STATUS const so the
-// literals stay in sync with the source of truth. Follow-up (AE-0071): migrate
-// to the glossary's status families (phase_status vs build_status vs
-// review_status vs publication_status) once that lands.
+/** Derived from ``WORKFLOW_PHASE_STATUS`` so the literals stay in sync with the source of truth. */
 export type WorkflowPhaseStatus =
   (typeof WORKFLOW_PHASE_STATUS)[keyof typeof WORKFLOW_PHASE_STATUS];
 
@@ -128,19 +125,19 @@ export interface EditorialWorkflowState {
   localized_slides?: LocalizedSlideReview[];
   presentation_validation?: SlideValidationReport | null;
   /**
-   * AE-0309: fail-closed content-gate report mirrored from the content
+   * Fail-closed content-gate report mirrored from the content
    * interrupt payload; present only when the content build's
    * validate -> repair -> retry chain still ended blocking.
    */
   content_gate_validation?: SlideValidationReport | null;
   /**
-   * AE-0310: recovery-hint code set while the design step holds a blocking
+   * Recovery-hint code set while the design step holds a blocking
    * validation report — direct edits or a content send-back resolve the
    * violations; a plain revise alone does not modify content.
    */
   design_recovery_hint?: string | null;
   /**
-   * AE-0315: run metadata present ONLY while phase_status === in_progress —
+   * Run metadata present ONLY while phase_status === in_progress —
    * ISO start timestamp + coarse stage; the create-flow banner reconstructs
    * from these on reload (no dependency on the run.started SSE event).
    */

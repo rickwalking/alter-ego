@@ -1,4 +1,4 @@
-"""``CoverImageStore`` and ``CoverSwitcher`` over the editorial facade (AE-0418).
+"""``CoverImageStore`` and ``CoverSwitcher`` over the editorial facade.
 
 The image rules, the WebP storage and the republish re-render belong to the
 carousel side; the autopilot reaches them only through

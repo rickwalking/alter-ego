@@ -1,7 +1,3 @@
-// Gherkin: backend/tests/features/carousel_deterministic_repair.feature
-// Scenarios: user repairs from the UI, run-in-progress banner path (not toast),
-// completed carousel chains repair -> republish (via the onRepublishNeeded prop
-// the publish page supplies).
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +6,7 @@ import { AutoRepairButton } from "./auto-repair-button";
 import { useRepairCarousel } from "../hooks/use-repair-carousel";
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) =>
+  useTranslations: () => (key: string, values?: Record<string, number>) =>
     values?.count === undefined ? key : `${key}:${String(values.count)}`,
 }));
 
@@ -18,10 +14,10 @@ vi.mock("../hooks/use-repair-carousel", () => ({
   useRepairCarousel: vi.fn(),
 }));
 
-type MutateOpts = {
+interface MutateOpts {
   onSuccess?: (data: unknown) => void;
   onError?: (error: unknown) => void;
-};
+}
 
 const repairResponse = (overrides: Record<string, unknown> = {}) => ({
   project_id: "p1",
@@ -72,7 +68,7 @@ describe("AutoRepairButton", () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { projectId: "p1" },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
+      expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
     );
     expect(onRepaired).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("repair-summary")).toBeInTheDocument();
@@ -111,7 +107,6 @@ describe("AutoRepairButton", () => {
     expect(onRepaired).not.toHaveBeenCalled();
   });
 
-  // AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
   // Scenario: Auto-fix that cannot fix anything says so
   it("says how many blockers it could not fix on a no-op", async () => {
     const blocker = {
@@ -152,7 +147,6 @@ describe("AutoRepairButton", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("remaining:38");
     expect(screen.queryByText("noChanges")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repair-summary")).not.toBeInTheDocument();
-    // A no-op wrote nothing, so the state is not re-read.
     expect(onRepaired).not.toHaveBeenCalled();
   });
 

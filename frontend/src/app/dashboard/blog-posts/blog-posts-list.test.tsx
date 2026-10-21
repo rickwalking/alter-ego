@@ -1,11 +1,12 @@
+/**
+ * Scenarios: tests/features/blog-dashboard-ae0411.feature (List).
+ */
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { DashboardBlogPost } from "@/modules/editorial-operations";
 import { BlogPostsList } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import { BlogPostsFilters } from "@/app/dashboard/blog-posts/blog-posts-filters";
 import type { BlogPostActionHandlers } from "@/app/dashboard/blog-posts/types";
-
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature (List)
 
 const NOOP_ACTIONS: BlogPostActionHandlers = {
   onDelete: () => undefined,

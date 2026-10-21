@@ -1,4 +1,4 @@
-"""Unit test for image-phase revision feedback persistence (AE-0261).
+"""Unit test for image-phase revision feedback persistence.
 
 Gherkin: tests/features/image_generation_provider.feature
 (Scenario: image revision feedback updates the prompt).
@@ -35,7 +35,7 @@ class _FakeDB:
 @pytest.mark.unit
 class TestAppendImageVisualFeedback:
     def _service(self) -> EditorialWorkflowService:
-        # The helper uses no instance state; bypass the heavy DI constructor.
+        """The helper uses no instance state, so the heavy DI constructor is bypassed."""
         return object.__new__(EditorialWorkflowService)
 
     async def test_first_feedback_sets_details(self) -> None:

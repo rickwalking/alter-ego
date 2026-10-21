@@ -1,4 +1,4 @@
-"""Owner notice dispatch, dedupe, and the 24 hour reminder (AE-0355).
+"""Owner notice dispatch, dedupe, and the 24 hour reminder.
 
 Gherkin: tests/features/autopilot_telegram_notify.feature
 """

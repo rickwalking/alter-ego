@@ -1,4 +1,9 @@
-"""Background workers for scheduled publishing and deadline reminders."""
+"""Background workers for scheduled publishing and deadline reminders.
+
+``AutoRejectorFactory`` builds the auto-rejector from the worker's own event service so
+the transactional outbox shares one publish path; the concrete builder is injected from
+the composition root, keeping infrastructure out of the worker layer.
+"""
 
 from __future__ import annotations
 
@@ -31,15 +36,11 @@ from rag_backend.infrastructure.events.factory import get_event_publisher
 
 logger = structlog.get_logger()
 
-# Builds the auto-rejector from the worker's own event service so the
-# transactional outbox shares one publish path (AE-0210). The concrete builder
-# is injected from the composition root, keeping infrastructure out of the
-# worker/application layer.
 AutoRejectorFactory = Callable[[WorkflowEventService], StuckWorkflowAutoRejector]
 
 
 class InstagramPublishTick(Protocol):
-    """One Instagram publish attempt per worker tick (AE-0357)."""
+    """One Instagram publish attempt per worker tick."""
 
     async def tick(self, db: AsyncSession) -> int:
         """Publish or resume one due run. Returns 1 when a run was touched."""
@@ -47,7 +48,7 @@ class InstagramPublishTick(Protocol):
 
 
 class AutopilotRunnerTick(Protocol):
-    """One in-process autopilot step per worker tick (AE-0354)."""
+    """One in-process autopilot step per worker tick."""
 
     async def tick(self, db: AsyncSession) -> int:
         """Advance at most one run. Returns 1 when a run was touched."""
@@ -55,7 +56,7 @@ class AutopilotRunnerTick(Protocol):
 
 
 class TelegramNotifyTick(Protocol):
-    """Deliver pending owner notices on the worker tick (AE-0355)."""
+    """Deliver pending owner notices on the worker tick."""
 
     async def tick(self, db: AsyncSession) -> int:
         """Send due Telegram notices. Returns how many were delivered."""
@@ -74,7 +75,7 @@ _LOG_STEP_FAILED = "autopilot_worker_step_failed"
 
 
 class CredentialRefreshTick(Protocol):
-    """Daily Instagram token refresh (AE-0358)."""
+    """Daily Instagram token refresh."""
 
     async def tick(self, db: AsyncSession) -> int:
         """Refresh when due. Returns 1 when a new token was stored."""
@@ -83,11 +84,14 @@ class CredentialRefreshTick(Protocol):
 
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
-    """Composition-root-injected collaborators for the worker tick (AE-0315).
+    """Composition-root-injected collaborators for the worker tick.
 
     Bundled so the worker keeps a 3-argument signature while gaining the
     stale-run reaper; both concrete implementations live in infrastructure
     and are built by the composition root (``bootstrap/app_factory``).
+
+    ``blog_generation_reaper`` fails blog generation runs killed by a restart (stale
+    heartbeat).
     """
 
     auto_rejector_factory: AutoRejectorFactory
@@ -98,7 +102,6 @@ class WorkflowWorkerServices:
     autopilot_runner: AutopilotRunnerTick | None = None
     telegram_notify: TelegramNotifyTick | None = None
     credential_refresh: CredentialRefreshTick | None = None
-    # AE-0425: fails blog generation runs killed by a restart (stale heartbeat).
     blog_generation_reaper: BlogGenerationReaper | None = None
 
 
@@ -126,12 +129,12 @@ async def _run_tick(
 ) -> dict[str, int]:
     """One DB-session tick body.
 
-    AE-0315 pinned ordering: the stale-run reaper runs FIRST; the AE-0311
-    drift reconciler (when it lands) must run AFTER it, only over rows the
+    Pinned ordering: the stale-run reaper runs FIRST; the
+    drift reconciler must run AFTER it, only over rows the
     reaper did not touch this tick, stamping the row's CURRENT epoch so the
     epoch fence never rejects its convergence writes.
 
-    AE-0348 QA r1: the core steps commit before the autopilot steps run, and
+    QA r1: the core steps commit before the autopilot steps run, and
     each autopilot step commits or rolls back on its own, so an autopilot
     failure never rolls back the reaper, the auto-reject, or a notice.
     """
@@ -146,22 +149,22 @@ async def _core_steps(
     db: AsyncSession,
     services: _TickCollaborators,
 ) -> dict[str, int]:
+    """Order matters. The drift reconciler runs after the stale-run reaper: its writes
+    stamp the row's current ``run_epoch``, so the fence accepts them and a
+    just-reaped row (epoch bumped) is converged on a later tick. The republish
+    sweeper runs after the reconciler, so a marked-but-abandoned post-completion edit
+    is rebuilt into a fresh PDF even if the client never triggered the republish.
+    Interrupted blog runs are reaped alongside the carousel runs.
+    """
     reaped = 0
     if services.stale_run_reaper is not None:
         reaped = await services.stale_run_reaper.tick(db)
-    # AE-0311: the drift reconciler runs AFTER the reaper — its convergence
-    # writes stamp the row's CURRENT run_epoch, so the fence accepts them and a
-    # just-reaped row (epoch bumped) is converged idempotently on a later tick.
     converged = 0
     if services.drift_reconciler is not None:
         converged = await services.drift_reconciler.reconcile(db)
-    # AE-0314: the republish sweeper runs AFTER the drift reconciler — it
-    # guarantees a marked-but-abandoned post-completion edit is rebuilt into a
-    # fresh PDF even if the client never triggered the republish.
     republished = 0
     if services.republish_sweeper is not None:
         republished = await services.republish_sweeper.sweep(db)
-    # AE-0425: alongside the carousel stale-run reaper, interrupted blog runs.
     blog_reaped = 0
     if services.blog_generation_reaper is not None:
         blog_reaped = await services.blog_generation_reaper.tick(db)
@@ -220,7 +223,11 @@ async def run_workflow_workers(
     stop_event: asyncio.Event,
     services: WorkflowWorkerServices,
 ) -> None:
-    """Run periodic scheduled publish, reminder, reaper, and auto-reject workers."""
+    """Run periodic scheduled publish, reminder, reaper, and auto-reject workers.
+
+    ``exc_info`` is bound explicitly so ``format_exc_info`` renders the traceback; a
+    bare ``BoundLogger.exception()`` emitted no exception field in production.
+    """
     session_factory = get_session_maker()
     publisher = get_event_publisher(settings.redis_url or None)
     event_service = WorkflowEventService(publisher)
@@ -257,9 +264,6 @@ async def run_workflow_workers(
                     **counters,
                 )
         except Exception:
-            # AE-0212: bind exc_info explicitly so format_exc_info renders the
-            # traceback. The bare BoundLogger.exception() call emitted no
-            # exception field in production.
             logger.exception("workflow_workers_error", exc_info=True)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)

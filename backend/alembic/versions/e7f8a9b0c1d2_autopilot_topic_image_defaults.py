@@ -4,7 +4,7 @@ Revision ID: e7f8a9b0c1d2
 Revises: d1e2f3a4b5c6
 Create Date: 2026-10-14
 
-AE-0361: ADDITIVE. ``topic_candidates`` gains the scout's image preset
+ADDITIVE. ``topic_candidates`` gains the scout's image preset
 (``image_style``, NOT NULL, server default ``neo_anime`` so existing rows get
 the default) and its optional visual direction (``image_guidance``). No
 existing column is altered or dropped, so the LangGraph checkpoint-drain rule

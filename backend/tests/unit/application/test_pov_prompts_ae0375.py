@@ -1,4 +1,4 @@
-""" "Ponto de Vista" prompts, outline by mode and POV rubric (AE-0375).
+""" "Ponto de Vista" prompts, outline by mode and POV rubric.
 
 Gherkin: tests/features/carousel_pov_prompts.feature
 """
@@ -274,6 +274,7 @@ class TestOutlineByMode:
     # Scenario: Radar IA v4 outline is sized and stamped
     @pytest.mark.asyncio
     async def test_v4_outline(self) -> None:
+        """Radar IA v4 hooks come from the sources (the v7 hook prompt)."""
         agent = _FakeAgent()
         brief = _brief(
             content_mode="news_analysis",
@@ -290,7 +291,6 @@ class TestOutlineByMode:
         assert "hero_lower_third_v4" in sizing.policy_context
         assert [s["role"] for s in outline][5] == "twist"
         assert len(outline) == 8
-        # AE-0376: Radar IA v4 hooks come from the sources (v7 hook prompt).
         assert agent.calls[1][0] == "radar_hook"
         assert outline[0]["title"] == "Todo mundo falou disso"
         assert outline[0]["hook_candidates"] == ["Todo mundo falou disso"]

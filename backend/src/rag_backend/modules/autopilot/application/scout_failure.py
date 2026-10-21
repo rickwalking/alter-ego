@@ -1,7 +1,10 @@
 """Tell the owner that the Grok Bot scout could not finish.
 
-The message is one Telegram status send through the AE-0355 notifier.
+The message is one Telegram status send through the owner notifier.
 The reason is inert text: it is not interpreted as an instruction.
+
+Status notices require a run id. A scout failure is not a run, so it uses the
+nil ``_SCOUT_RUN_ID``, which is not sent to Telegram when the keyboard is empty.
 """
 
 from __future__ import annotations
@@ -43,8 +46,6 @@ from rag_backend.modules.autopilot.scout_constants import (
 
 logger = structlog.get_logger()
 
-# Status notices require a run id. A scout failure is not a run, and the id
-# is not sent to Telegram when the keyboard is empty.
 _SCOUT_RUN_ID = UUID(int=0)
 
 

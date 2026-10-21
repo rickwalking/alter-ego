@@ -1,4 +1,4 @@
-"""AE-0407: the editorial facade builds the reasoning model only when needed.
+"""The editorial facade builds the reasoning model only when needed.
 
 Gherkin: tests/features/autofix_escalation_ae0407.feature
 (Scenario "Escalation attempts 0 escalates after 3 attempts").

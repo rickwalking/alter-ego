@@ -1,4 +1,4 @@
-"""Pillow ``ImageCodec`` (AE-0393, design sections 2.2 and 3.3).
+"""Pillow ``ImageCodec`` (design sections 2.2 and 3.3).
 
 ``validate`` accepts PNG, JPEG or WEBP with each side 512-4096 px, checked
 from the header before any pixel is decoded (no decompression bombs).
@@ -62,8 +62,9 @@ class PillowImageCodec:
 
 
 def _open(image: bytes) -> Image.Image:
-    # ``Image.open`` reads only the header; the side check in ``validate``
-    # runs before any pixel is decoded, so it doubles as the pixel cap.
+    """``Image.open`` reads only the header, and the side check in ``validate`` runs
+    before any pixel is decoded, so it doubles as the pixel cap.
+    """
     try:
         return Image.open(io.BytesIO(image))
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError) as exc:

@@ -109,7 +109,11 @@ _ACTIVE: tuple[AutopilotRunState, ...] = (
 
 @dataclass(frozen=True, kw_only=True)
 class RunnerDependencies:
-    """Ports for one session. The worker builds a new bundle each tick."""
+    """Ports for one session. The worker builds a new bundle each tick.
+
+    ``autofix`` runs the owner's queued "Fix issues"; ``gate_repair`` repairs a gate
+    before any revise, then ``slide_fix`` model-fixes what still fails (no revise).
+    """
 
     runs: AutopilotRunRepository
     topics: TopicCandidateRepository
@@ -117,17 +121,12 @@ class RunnerDependencies:
     notices: OwnerReadyNotifier
     recovery: RunRecoveryStore
     owner_user_id: str
-    # PR #106 review: the persona and the POV slide-1 photo.
     inputs: ProjectInputs
     notifier_configured: bool = True
     clock: Clock = field(default_factory=SystemClock)
-    # AE-0367: the owner's queued "Fix issues" repair.
     autofix: ContentAutofixer | None = None
-    # AE-0392: repair a content/design gate before revising it.
     gate_repair: GateRepairer | None = None
-    # AE-0401: then model-fix the slides still failing (no revise after it).
     slide_fix: SlideFixer | None = None
-    # AE-0418: the owner's GrokBot cover choice and the slide-1 re-render.
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
 
@@ -185,12 +184,12 @@ class AutopilotRunner:
         return await self._tick_active(run)
 
     async def _tick_queued(self, run: AutopilotRun) -> int:
+        """Start a queued run; a POV run awaits its thesis; no topic/photo fails."""
         if not self._deps.owner_user_id.strip():
             await self._move(run, AutopilotRunState.FAILED, REASON_OWNER_UNCONFIGURED)
             return 1
         topic = await self._deps.topics.get_topic(run.topic_candidate_id)
         if topic is not None and needs_thesis(run, topic):
-            # AE-0377: a POV run waits for the owner's thesis before generating.
             await self._move(
                 run, AutopilotRunState.AWAITING_THESIS, REASON_THESIS_REQUESTED
             )
@@ -198,7 +197,6 @@ class AutopilotRunner:
         spec = await self._spec(run, topic)
         refusal = spec_refusal(spec)
         if spec is None or refusal is not None:
-            # A missing topic, or a POV run with no slide-1 photo: no carousel.
             failed = refusal or REASON_TOPIC_MISSING
             await self._move(run, AutopilotRunState.FAILED, failed)
             return 1
@@ -272,7 +270,7 @@ class AutopilotRunner:
         return 1
 
     async def _escalate_at(self, step: _Step, reason: str) -> None:
-        # AE-0401: ``detail`` lists the slides the model fix gave up on.
+        """Escalate at ``step``; ``detail`` lists the slides the model fix dropped."""
         command = escalation_command(step, reason)
         if await self._deps.runs.transition(command):
             await self._recovery.mark(step.run, step.snapshot.lock_version)
@@ -304,7 +302,7 @@ class AutopilotRunner:
         return 1
 
     async def _redrive(self, step: _Step) -> int:
-        """Re-run a parked phase once; escalate when nothing is parked (AE-0363).
+        """Re-run a parked phase once; escalate when nothing is parked.
 
         A re-drive that fails marks the carousel ``failed``, and the next
         tick escalates it, so a parked workflow is never retried silently.
@@ -331,13 +329,13 @@ class AutopilotRunner:
     async def _spec(
         self, run: AutopilotRun, topic: TopicCandidate | None
     ) -> ProjectSpec | None:
+        """Build the run's spec; slide 1 is the GrokBot cover only when chosen."""
         if topic is None:
             return None
         spec = project_spec(run, topic, self._deps.owner_user_id)
         spec = await with_inputs(spec, self._deps.inputs)
         if self._deps.covers is None:
             return spec
-        # AE-0418: slide 1 is the GrokBot cover only when the owner chose it.
         return replace(spec, cover=await self._deps.covers.chosen_cover(run))
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:

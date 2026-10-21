@@ -1,10 +1,10 @@
-"""Unit tests for editorial workflow response field extractors (AE-0044).
+"""Unit tests for editorial workflow response field extractors.
 
 Covers the Field Descriptor Mapping pattern in
 ``editorial_workflow_routes_response``: each pure extractor, the
 ``_FIELD_MAPPING`` constant, the public builder, and the deprecated alias.
 
-Gherkin scenarios (see ticket AE-0044 "Field Descriptor Mapping"):
+Gherkin scenarios ("Field Descriptor Mapping"):
   - build_workflow_state_response with full state
   - build_workflow_state_response with empty state
   - deprecated wrapper
@@ -53,9 +53,6 @@ from rag_backend.domain.constants.workflow_state_fields import (
 _KEY = "field"
 
 
-# ── _string_field ───────────────────────────────────────────────────────────
-
-
 class TestStringField:
     """Scenario: empty state -> string fields default to ''."""
 
@@ -70,9 +67,6 @@ class TestStringField:
 
     def test_non_string_coerced(self) -> None:
         assert _string_field(_KEY)({_KEY: 42}) == "42"
-
-
-# ── _list_field ─────────────────────────────────────────────────────────────
 
 
 class TestListField:
@@ -92,9 +86,6 @@ class TestListField:
         result = _list_field(_KEY)({_KEY: source})
         assert result == [1, 2, 3]
         assert result is not source
-
-
-# ── _int_field ──────────────────────────────────────────────────────────────
 
 
 class TestIntField:
@@ -122,9 +113,6 @@ class TestIntField:
         assert _int_field(_KEY)({_KEY: 1.5}) == 0
 
 
-# ── _bool_field ─────────────────────────────────────────────────────────────
-
-
 class TestBoolField:
     def test_missing_key_is_false(self) -> None:
         assert _bool_field(_KEY)({}) is False
@@ -134,9 +122,6 @@ class TestBoolField:
 
     def test_falsey_value(self) -> None:
         assert _bool_field(_KEY)({_KEY: 0}) is False
-
-
-# ── _dict_field ─────────────────────────────────────────────────────────────
 
 
 class TestDictField:
@@ -151,9 +136,6 @@ class TestDictField:
         result = _dict_field(_KEY)({_KEY: source})
         assert result == {"a": 1}
         assert result is not source
-
-
-# ── _string_list_map_field ──────────────────────────────────────────────────
 
 
 class TestStringListMapField:
@@ -171,9 +153,6 @@ class TestStringListMapField:
         }
 
 
-# ── _int_map_field ──────────────────────────────────────────────────────────
-
-
 class TestIntMapField:
     def test_missing_key_returns_empty(self) -> None:
         assert _int_map_field(_KEY)({}) == {}
@@ -184,9 +163,6 @@ class TestIntMapField:
     def test_int_and_digit_strings_kept(self) -> None:
         raw = {"a": 2, "b": "3", "c": "x", "d": 1.0}
         assert _int_map_field(_KEY)({_KEY: raw}) == {"a": 2, "b": 3}
-
-
-# ── _localized_reviews_field ────────────────────────────────────────────────
 
 
 class TestLocalizedReviewsField:
@@ -223,9 +199,6 @@ class TestLocalizedReviewsField:
         assert result[0].presentation_en == {}
 
 
-# ── _validation_field ───────────────────────────────────────────────────────
-
-
 class TestValidationField:
     def test_missing_key_returns_none(self) -> None:
         assert _validation_field(_KEY)({}) is None
@@ -234,7 +207,8 @@ class TestValidationField:
         assert _validation_field(_KEY)({_KEY: []}) is None
 
     def test_incomplete_report_returns_none(self) -> None:
-        raw = {"validation_status": "ok", "blocking": True}  # missing validated_at
+        """The report lacks validated_at."""
+        raw = {"validation_status": "ok", "blocking": True}
         assert _validation_field(_KEY)({_KEY: raw}) is None
 
     def test_non_bool_blocking_returns_none(self) -> None:
@@ -242,6 +216,7 @@ class TestValidationField:
         assert _validation_field(_KEY)({_KEY: raw}) is None
 
     def test_valid_report_with_violations(self) -> None:
+        """A violation without a message is skipped."""
         raw = {
             "validation_status": "invalid",
             "validated_at": "2026-01-01",
@@ -255,7 +230,7 @@ class TestValidationField:
                     "field": "heading",
                 },
                 "ignored",
-                {"code": "c2"},  # missing message -> skipped
+                {"code": "c2"},
             ],
         }
         report = _validation_field(_KEY)({_KEY: raw})
@@ -293,9 +268,6 @@ class TestValidationField:
         assert violation.field is None
 
 
-# ── _status_field / _policy_version_field ────────────────────────────────────
-
-
 class TestStatusAndPolicyFields:
     def test_status_defaults_to_draft(self) -> None:
         assert _status_field({}) == STATE_DEFAULT_STATUS
@@ -310,11 +282,8 @@ class TestStatusAndPolicyFields:
         assert _policy_version_field({"presentation_policy_version": 2}) == "2"
 
 
-# ── _error_message_field (AE-0009) ───────────────────────────────────────────
-
-
 class TestErrorMessageField:
-    """AE-0009 backend: error_message included when present, omitted when absent.
+    """The error_message is included when present, omitted when absent.
 
     Feature: Workflow Error Feedback & Retry
     Scenario: Error message persists across page refresh
@@ -324,7 +293,7 @@ class TestErrorMessageField:
       Then the error card is still displayed
       And the error message matches the stored error_message
 
-    QA F-1 (AE-0009): error_message MUST be the SAME client-safe string the SSE
+    QA F-1: error_message MUST be the SAME client-safe string the SSE
     path emits. Raw persisted ``workflow_error`` values that are not on the
     ``CLIENT_SAFE_SSE_ERROR_MESSAGES`` allowlist must collapse to the generic
     phase-failed message (no raw internal error / traceback / secret leakage).
@@ -337,15 +306,16 @@ class TestErrorMessageField:
         assert _error_message_field({"workflow_error": ""}) is None
 
     def test_allowlisted_error_passes_through(self) -> None:
-        # ERR_INVALID_JSON is on the SSE client-safe allowlist.
+        """ERR_INVALID_JSON is on the SSE client-safe allowlist."""
         assert (
             _error_message_field({"workflow_error": ERR_INVALID_JSON})
             == ERR_INVALID_JSON
         )
 
     def test_non_allowlisted_raw_error_mapped_to_safe_message(self) -> None:
-        # F-1: a raw internal error (with secrets/traceback) must NOT leak;
-        # it collapses to the generic client-safe phase-failed message.
+        """A raw internal error (with secrets or a traceback) must not leak; it
+        collapses to the generic client-safe phase-failed message.
+        """
         raw_internal = (
             "Traceback: psycopg2.OperationalError password=hunter2 at db.py:42"
         )
@@ -354,13 +324,13 @@ class TestErrorMessageField:
         assert "hunter2" not in (result or "")
 
     def test_error_message_fallback_key_mapped_to_safe_message(self) -> None:
-        # Fallback key honored for presence, but still sanitized.
+        """The fallback key counts for presence but is still sanitized."""
         assert _error_message_field({"error_message": "boom"}) == (
             ERR_WORKFLOW_PHASE_FAILED
         )
 
     def test_workflow_error_preferred_over_error_message(self) -> None:
-        # Allowlisted primary passes through over a (different) fallback.
+        """An allowlisted primary passes through over a different fallback."""
         state = {
             "workflow_error": ERR_PERSONA_SCORE_TOO_LOW,
             "error_message": ERR_INVALID_JSON,
@@ -368,13 +338,12 @@ class TestErrorMessageField:
         assert _error_message_field(state) == ERR_PERSONA_SCORE_TOO_LOW
 
     def test_non_string_mapped_to_safe_message(self) -> None:
-        # Non-string raw error is present but not allowlisted -> safe message.
+        """A non-string raw error is present but not allowlisted, so it maps to the safe
+        message.
+        """
         assert _error_message_field({"workflow_error": 500}) == (
             ERR_WORKFLOW_PHASE_FAILED
         )
-
-
-# ── _FIELD_MAPPING ──────────────────────────────────────────────────────────
 
 
 class TestFieldMapping:
@@ -391,9 +360,6 @@ class TestFieldMapping:
     def test_field_names_are_unique(self) -> None:
         names = [name for name, _ in _FIELD_MAPPING]
         assert len(names) == len(set(names))
-
-
-# ── build_editorial_workflow_state_response ─────────────────────────────────
 
 
 class TestBuilder:
@@ -445,12 +411,12 @@ class TestBuilder:
         assert response.phase_progress is None
 
     def test_error_message_omitted_when_absent(self) -> None:
-        # AE-0009: error_message is None on healthy (non-failed) states.
+        """error_message is None on healthy (non-failed) states."""
         response = build_editorial_workflow_state_response({})
         assert response.error_message is None
 
     def test_error_message_surfaced_from_workflow_error(self) -> None:
-        # AE-0009 Scenario: Error message persists across page refresh.
+        # Scenario: Error message persists across page refresh.
         state = {
             STATE_FIELD_PROJECT_ID: "p",
             "phase_status": "failed",
@@ -460,7 +426,7 @@ class TestBuilder:
         assert response.error_message == "Invalid JSON response from LLM"
 
     def test_image_assets_become_preview_urls(self) -> None:
-        # AE-0439 (QA F-13) Scenario: image_assets map to owner preview URLs.
+        # Scenario: image_assets map to owner preview URLs.
         state = {
             STATE_FIELD_PROJECT_ID: "7acaf967-0124-44db-8636-0589906b3c33",
             STATE_FIELD_IMAGE_ASSETS: [
@@ -479,13 +445,10 @@ class TestBuilder:
         ]
 
     def test_image_assets_are_empty_when_absent(self) -> None:
-        response = build_editorial_workflow_state_response(
-            {STATE_FIELD_PROJECT_ID: "p"}
-        )
+        response = build_editorial_workflow_state_response({
+            STATE_FIELD_PROJECT_ID: "p"
+        })
         assert response.image_assets == []
-
-
-# ── deprecated wrapper ──────────────────────────────────────────────────────
 
 
 class TestDeprecatedWrapper:

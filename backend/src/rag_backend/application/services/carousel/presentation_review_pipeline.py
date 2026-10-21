@@ -1,6 +1,6 @@
 """Core build/validate pipeline for localized presentation review updates.
 
-Split out of ``presentation_review`` (AE-0309) so the write path can compose
+Split out of ``presentation_review`` so the write path can compose
 the granular steps — build with typed parse failures, deterministic scaffold
 recovery, bounded repair, validation with parse-failure injection — while the
 resolvers/blocking checks stay in ``presentation_review``.
@@ -82,13 +82,15 @@ def _validate_single_slide(
     slide: dict[str, object],
     policy: CarouselPresentationPolicy,
 ) -> list[SlideValidationViolation]:
-    """Validate PT and EN locales of one slide, including bilingual parity."""
+    """Validate PT and EN locales of one slide, including bilingual parity.
+
+    Fields the sentence-case repair had to fix stay blocking.
+    """
     slide_index_value = slide.get(SLIDE_INDEX_KEY)
     slide_index = slide_index_value if isinstance(slide_index_value, int) else None
     presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
     presentation_en = as_dict(slide.get(PRESENTATION_EN_KEY))
     violations: list[SlideValidationViolation] = list(marker_violations(slide))
-    # AE-0366: fields the sentence-case repair had to fix stay blocking.
     violations.extend(casing_marker_violations(slide, policy))
     if presentation_pt is not None:
         violations.extend(
@@ -137,19 +139,20 @@ def validate_localized_slides(
 ) -> SlideValidationReport:
     """Validate PT/EN presentation payloads and return a blocking report.
 
-    Parse-failure markers stored on the slides (AE-0309) are folded in as
+    Parse-failure markers stored on the slides are folded in as
     blocking ``slide_parse_failed`` violations so every read path stays
     fail-closed.
+
+    The deck size is checked against the contract range (role contracts only). Blocking
+    is derived from severities inside ``build_validation_report``, so the stored report
+    agrees with the approval-gate decision.
     """
     active_version = policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
     policy = load_presentation_policy(active_version)
     violations: list[SlideValidationViolation] = []
     for slide in localized_slides:
         violations.extend(_validate_single_slide(slide, policy))
-    # AE-0374: deck size against the contract range (role contracts only).
     violations.extend(deck_violations(localized_slides, policy))
-    # AE-0312: blocking is severity-derived inside build_validation_report so the
-    # stored report agrees with the approval-gate decision (no hardcoded literal).
     return build_validation_report(violations)
 
 
@@ -230,7 +233,7 @@ def _build_and_recover(
 ]:
     """Build localized slides, recover parse failures, repair sentence case.
 
-    AE-0366: the sentence-case repair runs BEFORE validation and marks every
+    The sentence-case repair runs BEFORE validation and marks every
     field it fixed, so the report stays blocking until the slide is regenerated.
     """
     built, failures = build_localized_slides_with_failures(
@@ -269,7 +272,7 @@ async def build_presentation_review_result_async(
     translations_en: Mapping[int, dict[str, object]] | None = None,
     policy_version: str | None = None,
 ) -> PresentationReviewBuildResult:
-    """Async build that also reports typed parse failures (AE-0309)."""
+    """Async build that also reports typed parse failures."""
     if not slide_drafts:
         return PresentationReviewBuildResult(_empty_review_updates(policy_version))
     resolved_policy = policy_version or resolve_policy_version(slide_drafts)

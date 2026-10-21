@@ -11,10 +11,9 @@ from pathlib import Path
 import asyncpg
 
 SEED_FILE = "/opt/alter-ego/seed/carousel_seed_final.json"
-OWNER_ID = "25c56d3c-a9b9-41df-ad1c-9084ea5a97e7"  # Admin user ID
+OWNER_ID = "25c56d3c-a9b9-41df-ad1c-9084ea5a97e7"
 OUTPUT_BASE = "/app/output/carousels"
 
-# Map old carousel IDs to new stable IDs if needed (keep same for consistency)
 ID_MAP = {}
 
 
@@ -30,10 +29,7 @@ async def seed_database():
     conn = await asyncpg.connect(database_url)
 
     try:
-        # 1. Ensure admin user exists
-        user_exists = await conn.fetchval(
-            "SELECT 1 FROM users WHERE id = $1", OWNER_ID
-        )
+        user_exists = await conn.fetchval("SELECT 1 FROM users WHERE id = $1", OWNER_ID)
         if not user_exists:
             print(f"Creating admin user {OWNER_ID}...")
             await conn.execute(
@@ -51,8 +47,7 @@ async def seed_database():
                 now(),
             )
 
-        # 2. Load seed data
-        with open(SEED_FILE, encoding="utf-8") as f:
+        with Path(SEED_FILE).open(encoding="utf-8") as f:
             projects = json.load(f)
 
         print(f"Seeding {len(projects)} carousel projects...")
@@ -61,7 +56,6 @@ async def seed_database():
             proj_id = proj["id"]
             output_dir = f"{OUTPUT_BASE}/{proj_id}"
 
-            # Check if project already exists
             existing = await conn.fetchval(
                 "SELECT 1 FROM carousel_projects WHERE id = $1", proj_id
             )
@@ -69,17 +63,14 @@ async def seed_database():
                 print(f"  Skipping existing project: {proj['title'][:50]}...")
                 continue
 
-            # Determine language
             lang = proj.get("language", "pt")
 
-            # Build blog translations
             blog_translations = {}
             if lang == "pt":
                 blog_translations = {"pt": proj["blog_markdown"], "en": None}
             else:
                 blog_translations = {"en": proj["blog_markdown"], "pt": None}
 
-            # Insert project
             await conn.execute(
                 """
                 INSERT INTO carousel_projects (
@@ -100,44 +91,41 @@ async def seed_database():
                 """,
                 proj_id,
                 OWNER_ID,
-                True,  # is_public
+                True,
                 proj["topic"],
-                "Software developers, AI enthusiasts, tech investors",  # audience
-                "Tech",  # niche
+                "Software developers, AI enthusiasts, tech investors",
+                "Tech",
                 proj["title"],
                 proj.get("subtitle", ""),
-                f"{proj['slide_count']}_slides",  # slides_config
-                "4:5",  # aspect_ratio
+                f"{proj['slide_count']}_slides",
+                "4:5",
                 lang,
-                1,  # generate_images
-                "gemini-2.5-flash-preview-05-20",  # image_model
-                "neon_comic",  # image_style
-                "auto",  # theme
-                "#0ac5a8",  # primary_color
-                "#8b5cf6",  # accent_color
-                "#080c12",  # background_color
+                1,
+                "gemini-2.5-flash-preview-05-20",
+                "neon_comic",
+                "auto",
+                "#0ac5a8",
+                "#8b5cf6",
+                "#080c12",
                 proj["blog_markdown"],
                 json.dumps(blog_translations),
                 proj.get("caption", "")[:2000],
-                "",  # linkedin_post_pt
-                "",  # linkedin_post_en
+                "",
+                "",
                 json.dumps({}),
-                "completed",  # status
-                None,  # error_message
+                "completed",
+                None,
                 output_dir,
-                None,  # pdf_path
-                None,  # pdf_path_en
+                None,
+                None,
                 json.dumps({"completed": True, "current_phase": "completed"}),
                 now(),
             )
 
-            # Insert slides
             for slide in proj.get("slides", []):
                 slide_id = str(uuid.uuid4())
                 slide_num = slide["slide_number"]
 
-                # Determine image path
-                # Try pt/en/images subdirs first, then root
                 image_path = None
                 for sub in [lang, "images", ""]:
                     check_dir = Path(output_dir) / sub if sub else Path(output_dir)
@@ -159,12 +147,12 @@ async def seed_database():
                     slide_id,
                     proj_id,
                     slide_num,
-                    "content",  # slide_type
+                    "content",
                     slide.get("heading", ""),
                     slide.get("body", ""),
-                    "",  # html_content
+                    "",
                     image_path,
-                    "",  # image_prompt
+                    "",
                     json.dumps({}),
                     json.dumps({}),
                     now(),
@@ -172,7 +160,6 @@ async def seed_database():
 
             print(f"  Inserted: {proj['title'][:50]}... ({proj['slide_count']} slides)")
 
-        # 3. Verify
         project_count = await conn.fetchval("SELECT COUNT(*) FROM carousel_projects")
         slide_count = await conn.fetchval("SELECT COUNT(*) FROM carousel_slides")
         print(f"\nDone! Total projects: {project_count}, Total slides: {slide_count}")

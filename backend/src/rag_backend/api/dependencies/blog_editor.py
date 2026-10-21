@@ -1,4 +1,4 @@
-"""Composition edge of the blog section editor routes (AE-0424, ADR-0025).
+"""Composition edge of the blog section editor routes (ADR-0025).
 
 - Service builders: the blog-images store, the image service (gpt-image-2 +
   the versioned image template) and the PT -> EN translation service. They
@@ -71,7 +71,7 @@ class StoredImagesRow(Protocol):
 
 
 def _cutover_stash(metadata: object) -> object:
-    """The AE-0423 ``--rollback`` stash of the pre-cutover featured image."""
+    """The cutover ``--rollback`` stash of the pre-cutover featured image."""
     if not isinstance(metadata, dict):
         return None
     stash = metadata.get(CUTOVER_METADATA_KEY)
@@ -83,8 +83,8 @@ def prune_unreferenced_images(post: StoredImagesRow) -> int:
 
     Run after every committed content write (slot routes, PUT, restore): a
     regenerated / removed image stays while a version snapshot can restore it,
-    and goes once nothing references it (AE-0424 review). The featured-image
-    column and the AE-0423 cutover rollback stash count as references, and
+    and goes once nothing references it. The featured-image
+    column and the cutover rollback stash count as references, and
     files inside the store's grace window are never deleted (an image waiting
     on the row lock would otherwise be removed before its URL is stored).
     """

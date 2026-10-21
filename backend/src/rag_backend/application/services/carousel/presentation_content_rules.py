@@ -1,4 +1,4 @@
-"""Objective quality-rubric validators for slide structure and markup (AE-0366).
+"""Objective quality-rubric validators for slide structure and markup.
 
 Each rule mirrors one objective item of the contract's ``quality_rubric`` and is
 active only when the loaded policy declares a severity for its code (v2+), so a
@@ -13,7 +13,10 @@ v1 project keeps its legacy semantics:
   ``<strong>``, unbalanced/nested ``<strong>`` tags, or the bare ``strong ...
   /strong`` residue a tag-stripping sanitizer leaves behind.
 - ``translation_not_english``: the EN heading/body is the PT copy pasted as-is,
-  or is still Portuguese (AE-0413).
+  or is still Portuguese.
+
+The TL;DR strip is rendered, so its language is checked too. A sanitizer that stripped
+"<" and ">" leaves residue like "strongword/strong".
 """
 
 from __future__ import annotations
@@ -53,7 +56,6 @@ from rag_backend.domain.models.carousel_presentation import (
 
 _FIELD_HEADING = "heading"
 _FIELD_BODY = "body"
-# AE-0430: the TL;DR strip is rendered, so its language is checked too.
 _FIELD_TLDR = "tldr_strip"
 _KEY_FEATURES = "features"
 _KEY_ACTIONS = "actions"
@@ -64,7 +66,6 @@ _ITEM_LIST_FIELDS = (_KEY_FEATURES, _KEY_SUMMARY_POINTS, _KEY_ACTIONS)
 _SLIDE_TYPE_KEYS = ("slide_type", "type")
 _ALLOWED_TAG = "strong"
 _TAG_PATTERN = re.compile(r"<\s*(/?)\s*([A-Za-z][A-Za-z0-9]*)[^>]*>")
-# Residue of a sanitizer that stripped "<" and ">": "strongword/strong".
 _MANGLED_TAG_PATTERN = re.compile(r"(?<!<)/strong\b", flags=re.IGNORECASE)
 _WHITESPACE_PATTERN = re.compile(r"\s+")
 
@@ -215,7 +216,7 @@ def visible_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
 def language_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
     """The visible fields plus the TL;DR strip: every text whose language counts.
 
-    AE-0430: a PT TL;DR shipped as the EN one passed the gate because only
+    A PT TL;DR shipped as the EN one passed the gate because only
     heading, body and items were language-checked.
     """
     tldr = text_of(payload, _FIELD_TLDR)
@@ -278,10 +279,13 @@ def translation_violations(
 
 
 def _untranslated(command: TranslationCheckCommand, field: str) -> bool:
-    """EN copy pasted from PT, or EN copy that is still Portuguese (AE-0413).
+    """EN copy pasted from PT, or EN copy that is still Portuguese.
 
     The second half is the autofix's ``looks_portuguese`` rule, so a policy
     without the ``wrong_language`` rule (v3) still flags Portuguese EN copy.
+
+    When the wrong-language rule is active it reports Portuguese-looking EN, so this
+    check does not report it again.
     """
     raw_english = text_of(command.en_payload, field)
     english = _normalized(raw_english)
@@ -289,7 +293,7 @@ def _untranslated(command: TranslationCheckCommand, field: str) -> bool:
     if len(english) >= MIN_UNTRANSLATED_COMPARE_CHARS and english == portuguese:
         return True
     if VIOLATION_WRONG_LANGUAGE in command.policy.rule_severities:
-        return False  # wrong_language reports it (no duplicate violation)
+        return False
     return looks_portuguese(raw_english)
 
 

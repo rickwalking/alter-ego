@@ -62,7 +62,7 @@ def topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
 
 
 def _quote_column(candidate: TopicCandidate) -> list[dict[str, str]] | None:
-    """AE-0406: the quotes as JSON rows; NULL when the topic has none."""
+    """The quotes as JSON rows; NULL when the topic has none."""
     if not candidate.quotes:
         return None
     return quote_rows(candidate.quotes)

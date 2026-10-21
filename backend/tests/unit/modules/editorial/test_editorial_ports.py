@@ -1,10 +1,10 @@
 """Unit tests for the editorial ports + adapters and the approval/release split.
 
-These cover the AE-0111 acceptance criteria at the port/adapter boundary:
+These cover the acceptance criteria at the port/adapter boundary:
 
 * **Source / assignments / review / locking behind ports** — each of the four
   editorial ports is satisfied by an adapter that DELEGATES to the existing
-  infrastructure (the workflow engine or the AE-0109 ACL → AE-0107 owner); the
+  infrastructure (the workflow engine or the legacy carousel ACL → write owner); the
   editorial application service depends only on the port Protocols.
 * **Approval != public release (contract split)** — approval (``workflow_status
   -> approved_for_publish``) and public release (``is_public``) are DISTINCT
@@ -18,7 +18,7 @@ These cover the AE-0111 acceptance criteria at the port/adapter boundary:
 External clients are never constructed; the ACL-backed tests use an in-memory
 SQLite session and the engine-backed tests use fakes — no API keys required
 (CI-safe). Gherkin not applicable per the ticket (behavior-preserving
-extraction; the API+SSE contract is locked by the AE-0106 safety net).
+extraction; the API+SSE contract is locked by the editorial safety net).
 """
 
 from __future__ import annotations
@@ -330,6 +330,7 @@ class TestEditorialServicePortWiring:
     async def test_service_forwards_each_use_case_to_its_port(
         self, session: AsyncSession
     ) -> None:
+        """The assignment is forwarded through the ACL to the owner and persisted."""
         project_id = await _seed_project(
             session,
             lock_version=1,
@@ -368,7 +369,6 @@ class TestEditorialServicePortWiring:
         release = await service.get_release_state(project_id)
         assert approval is not None and approval.is_approved is True
         assert release is not None and release.is_public is True
-        # The assignment was forwarded to the ACL → owner (persisted).
         model = await session.get(CarouselProjectModel, project_id)
         assert model is not None
         assert model.assigned_reviewer_id == _REVIEWER_ID
@@ -393,12 +393,13 @@ class TestEditorialServicePortWiring:
 
 
 class TestBootstrapWiresAclPorts:
-    """bootstrap wires the ACL-backed ports when an ACL is supplied (AE-0111)."""
+    """bootstrap wires the ACL-backed ports when an ACL is supplied."""
 
     @pytest.mark.asyncio
     async def test_bootstrap_with_acl_wires_acl_backed_ports(
         self, session: AsyncSession
     ) -> None:
+        """The ACL-backed approval/release reads resolve through the wired ports."""
         from unittest.mock import MagicMock
 
         from rag_backend.modules.editorial.bootstrap import (
@@ -417,7 +418,6 @@ class TestBootstrapWiresAclPorts:
             legacy_carousel_acl=_acl(session),
         )
         module = bootstrap_module(platform=MagicMock(), adapters=adapters)
-        # The ACL-backed approval/release reads resolve through the wired ports.
         approval = await module.service.get_approval_state(project_id)
         release = await module.service.get_release_state(project_id)
         assert approval is not None and approval.is_approved is True

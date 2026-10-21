@@ -1,4 +1,4 @@
-"""Build a role's model queue from settings (AE-0399).
+"""Build a role's model queue from settings.
 
 ``LLM_MODEL_QUEUE_<ROLE>`` lists ``<transport>:<model>`` entries in order:
 ``go:<id>`` is a model on the OpenCode Go API (built by the caller's factory),

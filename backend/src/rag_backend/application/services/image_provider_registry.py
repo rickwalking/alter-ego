@@ -60,9 +60,9 @@ class ImageProviderRegistry:
         gemini_service: ImageGenerationService,
         openai_service: ImageGenerationService,
     ) -> None:
-        # Build one provider per registry combo, pairing each strategy with the
-        # service for its model. ``IMAGE_STRATEGY_REGISTRY`` is the single source
-        # of truth shared with the prompt renderer, so the two can never drift.
+        """One provider is built per registry combo from ``IMAGE_STRATEGY_REGISTRY``,
+        the source shared with the prompt renderer, so the two can never drift.
+        """
         services_by_model: dict[str, ImageGenerationService] = {
             IMAGE_MODEL_GEMINI: gemini_service,
             IMAGE_MODEL_OPENAI: openai_service,

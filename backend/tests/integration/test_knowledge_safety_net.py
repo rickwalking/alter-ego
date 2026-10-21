@@ -1,8 +1,8 @@
-"""Knowledge safety-net integration tests (AE-0088).
+"""Knowledge safety-net integration tests.
 
 Behavioral safety net for the Phase 2 Knowledge extraction. Every test here
 asserts the /api/documents or /api/search request/response CONTRACT (status
-code + JSON shape) that the relocation (AE-0092 / AE-0093) must preserve
+code + JSON shape) that the relocation must preserve
 byte-for-byte. Each test references the Gherkin scenario it backs.
 
 Feature files:
@@ -51,7 +51,6 @@ if TYPE_CHECKING:
 
     from rag_backend.infrastructure.container import Container
 
-# --- Constants -----------------------------------------------------------------
 NONEXISTENT_UUID = "00000000-0000-0000-0000-000000000000"
 SNAPSHOT_UPDATE_OPTION = "--snapshot-update"
 
@@ -66,7 +65,6 @@ def snapshot_update(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption(SNAPSHOT_UPDATE_OPTION))
 
 
-# --- Client factory ------------------------------------------------------------
 async def _make_engine() -> AsyncEngine:
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -202,9 +200,6 @@ def _ranked_results() -> list[SearchResult]:
     ]
 
 
-# ==============================================================================
-# Document endpoint scenarios (tests/features/documents.feature)
-# ==============================================================================
 class TestDocumentScopeContract:
     """Scope fields on the /api/documents create contract."""
 
@@ -404,9 +399,6 @@ class TestDocumentOwnershipPermissions:
         assert resp.status_code == 422
 
 
-# ==============================================================================
-# Search endpoint scenarios (tests/features/search.feature)
-# ==============================================================================
 class TestSearchContract:
     """Successful search response shape + bounds + auth."""
 
@@ -500,9 +492,6 @@ class TestSearchContract:
         assert resp.status_code == 401
 
 
-# ==============================================================================
-# Golden snapshots — the enforceable byte-identical baseline (AE-0092/0093)
-# ==============================================================================
 class TestKnowledgeGoldenSnapshots:
     """Capture/diff committed golden snapshots for every documents+search route.
 

@@ -46,11 +46,11 @@ function buildWorkflow(
     error: null,
     transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
     reconnectLiveUpdates: vi.fn(),
-    start: vi.fn(async () => baseState),
-    resume: vi.fn(async () => baseState),
-    refreshState: vi.fn(async () => baseState),
-    approve: vi.fn(async () => baseState),
-    revise: vi.fn(async () => baseState),
+    start: vi.fn(() => Promise.resolve(baseState)),
+    resume: vi.fn(() => Promise.resolve(baseState)),
+    refreshState: vi.fn(() => Promise.resolve(baseState)),
+    approve: vi.fn(() => Promise.resolve(baseState)),
+    revise: vi.fn(() => Promise.resolve(baseState)),
     awaitingHumanReview: true,
     hasActiveWorkflow: false,
     runningAction: null,
@@ -136,7 +136,6 @@ describe("useContentEdits", () => {
       "Edited title",
     );
 
-    // A stale read of the older version must not bring the edits back.
     rerender({ state: { ...baseState, lock_version: 3 } });
     expect(result.current.contentHasEdits).toBe(false);
   });
@@ -164,7 +163,7 @@ describe("useContentEdits", () => {
 
 describe("useWorkflowFeedback", () => {
   it("requires feedback before revising", () => {
-    const revise = vi.fn(async () => baseState);
+    const revise = vi.fn(() => Promise.resolve(baseState));
     const { result } = renderHook(() => useWorkflowFeedback(baseState, revise));
     act(() => result.current.handleRevise());
     expect(result.current.feedbackError).toBe("feedback.required");
@@ -172,14 +171,17 @@ describe("useWorkflowFeedback", () => {
   });
 
   it("sends feedback back to the chosen phase at final review", async () => {
-    const revise = vi.fn(async () => baseState);
+    const revise = vi.fn(() => Promise.resolve(baseState));
     const state = {
       ...baseState,
       current_phase: EDITORIAL_PHASES.FINAL_REVIEW,
     };
     const { result } = renderHook(() => useWorkflowFeedback(state, revise));
     act(() => result.current.setFeedback("  tighten slide 2  "));
-    await act(async () => result.current.handleRevise());
+    await act(() => {
+      result.current.handleRevise();
+      return Promise.resolve();
+    });
     expect(revise).toHaveBeenCalledWith("tighten slide 2", {
       targetPhase: EDITORIAL_PHASES.CONTENT,
     });
@@ -188,10 +190,13 @@ describe("useWorkflowFeedback", () => {
   });
 
   it("revises without a target phase outside final review", async () => {
-    const revise = vi.fn(async () => baseState);
+    const revise = vi.fn(() => Promise.resolve(baseState));
     const { result } = renderHook(() => useWorkflowFeedback(baseState, revise));
     act(() => result.current.setFeedback("shorter"));
-    await act(async () => result.current.handleRevise());
+    await act(() => {
+      result.current.handleRevise();
+      return Promise.resolve();
+    });
     expect(revise).toHaveBeenCalledWith("shorter", undefined);
   });
 });

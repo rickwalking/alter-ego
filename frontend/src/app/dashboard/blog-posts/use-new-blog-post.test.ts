@@ -1,13 +1,13 @@
+/**
+ * Scenarios: tests/features/blog-dashboard-ae0411.feature ("Creating a post
+ * that fails shows an error", "Dashboard copy is localized").
+ */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BLOG_POST_ERR_SLUG_CONFLICT,
   BlogPostMutationError,
 } from "@/modules/publishing";
-import type { BlogPost } from "@/modules/publishing";
-
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature
-// ("Creating a post that fails shows an error", "Dashboard copy is localized")
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -22,7 +22,7 @@ beforeEach(() => {
 
 describe("useNewBlogPost (AE-0411)", () => {
   it("creates a localized untitled draft with a body and opens the editor", async () => {
-    const create = vi.fn().mockResolvedValue({ id: "new-1" } as BlogPost);
+    const create = vi.fn().mockResolvedValue({ id: "new-1" });
     const { result } = renderHook(() => useNewBlogPost(create));
     await act(async () => {
       await result.current.handleNewPost();

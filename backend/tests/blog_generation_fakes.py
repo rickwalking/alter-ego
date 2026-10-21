@@ -1,4 +1,4 @@
-"""Fakes for the AE-0425 blog writer / quality gate / image tests.
+"""Fakes for the blog writer / quality gate / image tests.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 The fakes implement the domain ports (``BlogArticleWriter``, ``VoiceScorer``,
@@ -60,7 +60,7 @@ def sections(count: int, prefix: str = "Seção") -> tuple[DraftSection, ...]:
 
 
 def english_sections(count: int) -> tuple[DraftSection, ...]:
-    """``count`` distinct ENGLISH sections (AE-0435: the EN gate checks the
+    """``count`` distinct ENGLISH sections (the EN gate checks the
     language); the first is the lede (no heading)."""
     return tuple(
         DraftSection(
@@ -168,7 +168,7 @@ class FakeTranslator:
 def english_gate(
     gate: BlogQualityGate, translator: FakeTranslator | None = None
 ) -> EnglishLanguageGate:
-    """The AE-0435 EN language gate over ``gate`` and a fake translator."""
+    """The EN language gate over ``gate`` and a fake translator."""
     return EnglishLanguageGate(
         EnglishGateDeps(translator=translator or FakeTranslator(), gate=gate)
     )
@@ -201,7 +201,7 @@ def image_prompt(scene: str) -> str:
 def image_batch(
     root: Path, generator: ImageGenerationService, concurrency: int = 2
 ) -> BlogImageBatchService:
-    """The batch service over the editor's (AE-0424) single-image service."""
+    """The batch service over the editor's single-image service."""
     store = BlogImageStore(root=root, cdn=AssetCdnService())
     service = BlogImageService(generator, store, image_prompt)
     return BlogImageBatchService(
@@ -211,11 +211,14 @@ def image_batch(
 
 @dataclass
 class FakeImageGenerator:
-    """Writes JPEG bytes to ``output_path``; fails when the prompt has the marker."""
+    """Writes JPEG bytes to ``output_path``; fails when the prompt has the marker.
+
+    Set ``honor_marker`` to False to model a provider that recovered, so the fail marker
+    no longer fails (used by retry tests).
+    """
 
     prompts: list[str] = field(default_factory=list)
     write_file: bool = True
-    # False = the provider recovered: the marker no longer fails (retry tests).
     honor_marker: bool = True
 
     async def generate_image(self, prompt: str, output_path: str) -> str:
@@ -237,6 +240,8 @@ class FakeStore:
     makes that many heartbeats raise ``ConnectionError`` (a DB blip);
     ``owner_edit`` mutates the content right before a write (an owner save
     during the run); ``fail_writes`` makes content writes fail (discard runs).
+
+    ``generated`` counts the reserved images (the per-post image cap counter).
     """
 
     content: dict[str, object] = field(default_factory=dict)
@@ -245,7 +250,7 @@ class FakeStore:
     outcomes: list[GenerationOutcome] = field(default_factory=list)
     heartbeats: int = 0
     heartbeat_errors: int = 0
-    generated: int = 0  # reserved images (AE-0424 counter)
+    generated: int = 0
     cap: int = 30
     lost: bool = False
     fail_writes: bool = False

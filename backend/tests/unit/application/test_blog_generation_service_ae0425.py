@@ -1,4 +1,4 @@
-"""The blog generation run end to end with fakes (AE-0425).
+"""The blog generation run end to end with fakes.
 
 Feature: backend/tests/features/blog_generate_ae0425.feature
 """
@@ -77,7 +77,10 @@ POST_ID = "22222222-2222-4222-8222-222222222222"
 @pytest.fixture(autouse=True)
 def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolate from any Langfuse client an earlier test configured (its flush
-    to an unreachable host would eat the run's timeout)."""
+    to an unreachable host would eat the run's timeout).
+
+    The editor's single-image service traces with its own helper.
+    """
     from contextlib import nullcontext
 
     from rag_backend.application.services.blog import (
@@ -91,7 +94,6 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
             "blog_phase_trace",
             lambda _scope, **_kwargs: nullcontext(MagicMock()),
         )
-    # The editor's single-image service (AE-0424) traces with its own helper.
     from rag_backend.application.services.blog import blog_image_service as _single
 
     monkeypatch.setattr(_single, "blog_ai_propagate", lambda *_a: nullcontext())
@@ -141,6 +143,9 @@ def _final(store: FakeStore) -> dict[str, object]:
 async def test_a_complete_run_stores_a_scored_document_with_images(
     tmp_path: Path,
 ) -> None:
+    """All five images are reserved on the per-post cap before the spend; the EN
+    translation keeps the same ids with its own quality and alt text.
+    """
     # Scenario: A cover and one image slot per section are created
     store = FakeStore()
     outcome = await _service(tmp_path, FakeWriter(), store).run(_job(4))
@@ -155,9 +160,8 @@ async def test_a_complete_run_stores_a_scored_document_with_images(
     # Scenario: The voice score is mirrored for the listing badge
     assert document.quality is not None
     assert document.quality.voice_score == 82.0
-    assert store.applied[0].voice_score == 82.0  # the article write
-    assert store.generated == 5  # reserved on the per-post cap before the spend
-    # EN translation: same ids, own quality, own alt text.
+    assert store.applied[0].voice_score == 82.0
+    assert store.generated == 5
     english = document.translations["en"]
     assert [s.id for s in english.sections] == [s.id for s in document.sections]
     assert english.quality is not None
@@ -278,7 +282,8 @@ async def test_an_article_the_owner_already_wrote_is_never_overwritten(
 
 
 async def test_a_failed_image_write_discards_the_new_files(tmp_path: Path) -> None:
-    # Review: a failed write leaves no orphan files (AE-0424 discard).
+    """A failed write leaves no orphan files."""
+
     class FailingAttach(FakeStore):
         async def apply_document(
             self, lease: GenerationLease, change: DocumentApply
@@ -357,7 +362,8 @@ def test_blog_phase_trace_carries_the_required_metadata(
 async def test_a_heartbeat_db_blip_never_replaces_the_run_result(
     tmp_path: Path,
 ) -> None:
-    # Review fix 1: a failing heartbeat is logged and the run still finishes.
+    """A failing heartbeat is logged, the loop keeps beating and the run still finishes."""
+
     class SlowWriter(FakeWriter):
         async def draft(self, brief: WriterBrief) -> DraftArticle:
             await asyncio.sleep(0.3)
@@ -368,7 +374,7 @@ async def test_a_heartbeat_db_blip_never_replaces_the_run_result(
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_COMPLETE
     assert store.outcomes == [outcome]
-    assert store.heartbeats >= 1  # kept beating after the blips
+    assert store.heartbeats >= 1
 
 
 def _owner_edits(content: dict[str, object]) -> dict[str, object]:
@@ -388,26 +394,27 @@ def _owner_edits(content: dict[str, object]) -> dict[str, object]:
 
 
 async def test_owner_edits_during_the_image_step_survive(tmp_path: Path) -> None:
-    # Review fix 2: images attach by section id onto the CURRENT content.
+    """Images attach by section id onto the current content, and a deleted section stays
+    deleted. Images whose slot vanished (deleted section, owner image) are removed from
+    the store, so only the cover and the two surviving empty sections remain on disk.
+    """
     store = FakeStore(owner_edit=_owner_edits)
     outcome = await _service(tmp_path, FakeWriter(), store).run(_job(4))
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_COMPLETE
     document = parse_blog_content(store.content)
-    assert len(document.sections) == 3  # the deleted section stays deleted
+    assert len(document.sections) == 3
     assert document.sections[1].body_md == "Texto do dono."
     assert document.sections[1].image is not None
     assert document.sections[2].image is not None
     assert document.sections[2].image.url == "https://cdn.example/owner.jpg"
-    # Review C: the images whose slot vanished (deleted section, owner image)
-    # are deleted from the store; only the placed ones remain on disk.
     placed = [document.cover, *(s.image for s in document.sections)]
     generated = [
         i.url.rsplit("/", 1)[1] for i in placed if i and i.source == "generated"
     ]
     on_disk = sorted(path.name for path in (tmp_path / POST_ID).iterdir())
-    assert len(generated) == 3  # cover + the 2 surviving empty sections
-    assert on_disk == sorted(generated)  # the other 2 files were deleted
+    assert len(generated) == 3
+    assert on_disk == sorted(generated)
     assert document.cover is not None
 
 
@@ -436,16 +443,18 @@ async def _partial_store(tmp_path: Path) -> FakeStore:
 
 
 async def test_an_images_only_retry_fills_only_the_empty_slots(tmp_path: Path) -> None:
-    # Review fix 3: a retry never regenerates an existing article.
+    """A retry never regenerates an existing article (no writer call); the cap counts
+    the first run's five reservations (one failed) plus the one retry.
+    """
     store = await _partial_store(tmp_path)
     before = parse_blog_content(store.content)
     writer = FakeWriter()
     outcome = await _service(tmp_path, writer, store).run(_images_only_job())
-    assert writer.drafts == []  # no writer call
+    assert writer.drafts == []
     assert outcome is not None
     assert outcome.status == GENERATION_STATUS_COMPLETE
     assert outcome.image_count == 1
-    assert store.generated == 5 + 1  # first run's 5 reserved (one failed) + 1
+    assert store.generated == 5 + 1
     after = parse_blog_content(store.content)
     assert [s.body_md for s in after.sections] == [s.body_md for s in before.sections]
     assert after.sections[0].image == before.sections[0].image
@@ -455,9 +464,11 @@ async def test_an_images_only_retry_fills_only_the_empty_slots(tmp_path: Path) -
 async def test_images_generated_earlier_count_against_the_cap(
     tmp_path: Path,
 ) -> None:
-    # Review fix 3: AE-0424's per-post cap counts every attempt + the editor.
+    """The per-post cap counts every attempt plus the editor's images; all five slots
+    are reserved before the spend.
+    """
     store = await _partial_store(tmp_path)
-    assert store.generated == 5  # all 5 slots were reserved before the spend
+    assert store.generated == 5
     store.cap = 5
     outcome = await _service(tmp_path, FakeWriter(), store).run(_images_only_job())
     assert outcome is not None

@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Generation status banner of the blog editor (AE-0425, ADR-0025).
+ * Generation status banner of the blog editor (ADR-0025).
  *
  * In progress: the editor polls and shows how many image slots (cover + one
  * per section) are being generated. Partial: some slots stayed empty (the
- * per-slot image controls live in the section editor, AE-0424). Failed: the
+ * per-slot image controls live in the section editor) and its retry only
+ * fills the empty image slots, never the text. Failed: the
  * draft was kept and the owner retries on the same row; a restart-interrupted
  * run says so. A post from a private carousel warns that it will 404 publicly
  * once published (ADR-0013) and links to the carousel's visibility control.
@@ -66,7 +67,7 @@ function RetryControl({
 function FailedNotice({
   state,
   ...retry
-}: BlogGenerationNoticeProps): React.ReactElement {
+}: Readonly<BlogGenerationNoticeProps>): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   const interrupted = state.errors.some(
     (error) => error.code === ERR_GENERATION_INTERRUPTED,
@@ -82,7 +83,7 @@ function FailedNotice({
 }
 
 function RunNotice(
-  props: BlogGenerationNoticeProps,
+  props: Readonly<BlogGenerationNoticeProps>,
 ): React.ReactElement | null {
   const t = useTranslations(NAMESPACE);
   const { state } = props;
@@ -97,7 +98,6 @@ function RunNotice(
     );
   }
   if (state.status === GENERATION_STATUS.PARTIAL) {
-    // A partial run's retry only fills the empty image slots (never the text).
     return (
       <div role="status" className={BANNER_CLASS} style={{ color: NEON_AMBER }}>
         <p className="mb-2">
@@ -121,7 +121,7 @@ function RunNotice(
 
 function CarouselPrivateWarning({
   projectId,
-}: CarouselPrivateWarningProps): React.ReactElement {
+}: Readonly<CarouselPrivateWarningProps>): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   return (
     <p
@@ -146,7 +146,7 @@ function CarouselPrivateWarning({
 export function BlogGenerationStatus({
   postId,
   unsavedChanges = false,
-}: BlogGenerationStatusProps): React.ReactElement | null {
+}: Readonly<BlogGenerationStatusProps>): React.ReactElement | null {
   const { state, projectId, retrying, retryFailed, retry } =
     useBlogGeneration(postId);
   if (!state) {

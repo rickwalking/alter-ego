@@ -1,4 +1,4 @@
-"""Build missing structured items from the outline (AE-0367).
+"""Build missing structured items from the outline.
 
 Prod carousel 8e350d6e slide 4 rendered only its title: no body and no
 features. Its outline still had the key points the model was asked to cover.
@@ -81,13 +81,13 @@ def _split_on_separator(point: str) -> tuple[str, str] | None:
 
 
 def _split_on_words(point: str, title_limit: int) -> tuple[str, str] | None:
+    """A title never ends on a connector word ("Comece com dois ou")."""
     words = point.split()
     title_words: list[str] = []
     for word in words[: max(len(words) // 2, 1)]:
         if len(" ".join([*title_words, word])) > title_limit:
             break
         title_words.append(word)
-    # AE-0401: never end a title on a connector ("Comece com dois ou").
     while title_words and ends_on_connector(title_words[-1]):
         title_words.pop()
     rest = words[len(title_words) :]
@@ -97,7 +97,7 @@ def _split_on_words(point: str, title_limit: int) -> tuple[str, str] | None:
 
 
 def _split_on_comma(point: str, title_limit: int) -> tuple[str, str] | None:
-    """AE-0401: "Comece com dois ou três agentes, não dez." splits at the comma."""
+    """Split a point at its comma ("Comece com dois ou três agentes, não dez.")."""
     title, found, body = point.partition(_COMMA)
     if not found or not body.strip() or len(title) > title_limit:
         return None

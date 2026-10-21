@@ -8,7 +8,7 @@ The five knowledge ports are:
 * ``Retriever`` — hybrid retrieval;
 * ``DocumentProcessor`` — chunking/processing.
 
-**Re-export, not relocation (AE-0089 constraint).** These Protocols are
+**Re-export, not relocation.** These Protocols are
 defined in the SHARED protocol files under ``rag_backend.domain.protocols.*``
 which are imported by ~50+ non-knowledge callers (agents, carousel,
 conversation, the container). Physically moving the definitions would break

@@ -1,4 +1,4 @@
-"""API tests: image slots, section rewrite, EN translation, strict suggest (AE-0424).
+"""API tests: image slots, section rewrite, EN translation, strict suggest.
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
 Feature: frontend/tests/features/blog_editor_ae0424.feature (backend half)
@@ -80,13 +80,15 @@ PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"png-body"
 
 
 class _Provider:
-    """Writes PNG bytes (what gpt-image-2 returns); ``during`` runs mid-spend."""
+    """Writes PNG bytes (what gpt-image-2 returns); ``during`` runs mid-spend.
+
+    ``after_write`` runs after the bytes are on disk (the image waits for the row lock).
+    """
 
     def __init__(self, fail: bool = False) -> None:
         self.fail = fail
         self.calls = 0
         self.during: Callable[[], Awaitable[None]] | None = None
-        # Runs after the bytes are on disk (the image waits for the row lock).
         self.after_write: Callable[[], Awaitable[None]] | None = None
 
     async def generate_image(self, prompt: str, output_path: str) -> str:
@@ -330,11 +332,12 @@ class TestBlogImageServing:
         missing = "00000000-0000-4000-8000-000000000000.jpg"
         assert (await clients.author.get(f"{base}/{missing}")).status_code == 404
 
-    # ADR-0013: a non-published post's images 404 for everyone but its
-    # author/admin; published images are public with a revalidated cache.
     async def test_draft_images_are_author_only_until_published(
         self, clients: EditorClients, provider: _Provider
     ) -> None:
+        """A non-published post's images 404 for everyone but its author/admin;
+        published images are public with a revalidated cache.
+        """
         post = await create_post(clients.author, three_sections())
         generated = await clients.author.post(
             _section_image_url(post["id"]), json={}, headers=if_match(post)
@@ -358,13 +361,14 @@ class TestBlogImageServing:
 
 
 class TestSlotWriteContract:
-    """The paid result survives concurrent writes (shared AE-0424/AE-0425 contract)."""
+    """The paid result survives concurrent writes (editor/generation contract)."""
 
-    # A Save (or another slot) commits while the provider runs: the slot is
-    # applied onto the LATEST document, no 409, both changes kept.
     async def test_save_during_generation_keeps_both(
         self, clients: EditorClients, provider: _Provider
     ) -> None:
+        """A Save (or another slot) commits while the provider runs: the slot is applied
+        onto the LATEST document, no 409, both changes kept.
+        """
         post = await create_post(clients.author, three_sections())
         saved = dict(post["content"])
         saved["sections"] = [dict(x) for x in post["content"]["sections"]]
@@ -385,10 +389,10 @@ class TestSlotWriteContract:
         assert body["content"]["sections"][1]["body_md"] == "Salvo durante a geração"
         assert body["lock_version"] == post["lock_version"] + 2
 
-    # The section was deleted during the spend: 404 and the new file is gone.
     async def test_section_deleted_during_generation_leaves_no_orphan(
         self, clients: EditorClients, provider: _Provider, tmp_path: Path
     ) -> None:
+        """The section is deleted during the spend: 404 and the new file is gone."""
         post = await create_post(clients.author, three_sections())
         without_first = dict(post["content"])
         without_first["sections"] = post["content"]["sections"][1:]
@@ -428,11 +432,13 @@ class TestSlotWriteContract:
         assert second.json()["detail"] == ERR_BLOG_IMAGE_BUDGET_EXHAUSTED
         assert provider.calls == 1
 
-    # Regenerate keeps the old file while a version snapshot references it;
-    # once nothing references it, the next write deletes it.
     async def test_unreferenced_files_are_pruned(
         self, clients: EditorClients, provider: _Provider, tmp_path: Path
     ) -> None:
+        """Regenerate keeps the old file while a version snapshot references it; once
+        nothing references it, the next write deletes it. The second image lives on in
+        the pre-remove version snapshot (restorable).
+        """
         post = await create_post(clients.author, three_sections())
         url = _section_image_url(post["id"])
         first = (await clients.author.post(url, json={}, headers=if_match(post))).json()
@@ -445,20 +451,19 @@ class TestSlotWriteContract:
             _age(path)
         await set_fields(post["id"], version_history=[])
         await clients.author.delete(url, headers=if_match(second))
-        # The first image is referenced by nothing now -> deleted; the second
-        # lives on in the pre-remove version snapshot (restorable).
         kept = second["content"]["sections"][0]["image"]["url"].rsplit("/", 1)[-1]
         assert [p.name for p in folder.iterdir()] == [kept]
 
 
 class TestPruneRaces:
-    """AE-0424 review round 2: pruning never breaks an in-flight image."""
+    """Pruning never breaks an in-flight image."""
 
-    # A Save lands after the image file is written but before its slot write:
-    # the Save's prune must not delete the pending file.
     async def test_save_between_generate_and_write_keeps_the_image(
         self, clients: EditorClients, provider: _Provider
     ) -> None:
+        """A Save lands after the image file is written but before its slot write: the
+        Save's prune must not delete the pending file.
+        """
         post = await create_post(clients.author, three_sections())
         edited = dict(post["content"])
         edited["sections"] = [dict(x) for x in post["content"]["sections"]]
@@ -480,11 +485,12 @@ class TestPruneRaces:
         )
         assert served.status_code == 200
 
-    # The AE-0423 cutover rollback stash and the featured_image_url column are
-    # references too (even when old), so --rollback never restores a dead URL.
     async def test_cutover_stash_and_featured_image_are_kept(
         self, clients: EditorClients, provider: _Provider, tmp_path: Path
     ) -> None:
+        """The cutover rollback stash and the featured_image_url column are references
+        too (even when old), so --rollback never restores a dead URL.
+        """
         post = await create_post(clients.author, three_sections())
         folder = tmp_path / "store" / post["id"]
         folder.mkdir(parents=True)
@@ -533,10 +539,10 @@ class TestImageBudgetReservation:
         assert codes == [200, 429]
         assert provider.calls == 1
 
-    # The reservation is kept when the write fails after the spend.
     async def test_failed_write_keeps_the_reservation(
         self, clients: EditorClients, provider: _Provider
     ) -> None:
+        """The reservation is kept when the write fails after the spend."""
         post = await create_post(clients.author, three_sections())
         without_first = dict(post["content"])
         without_first["sections"] = post["content"]["sections"][1:]

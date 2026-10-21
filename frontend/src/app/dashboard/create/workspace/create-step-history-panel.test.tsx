@@ -7,10 +7,10 @@ import type { EditorialWorkflowState } from "@/modules/publishing";
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {
     if (key === "outlineTitle") {
-      return `${values?.count} outline slides`;
+      return `${String(values?.count)} outline slides`;
     }
     if (key === "contentTitle") {
-      return `${values?.count} drafts`;
+      return `${String(values?.count)} drafts`;
     }
     if (key === "publishCaptionLabel") {
       return "Instagram caption";
@@ -113,7 +113,6 @@ describe("CreateStepHistoryPanel", () => {
         state={state}
       />,
     );
-    // The content review labels each slide (the mock echoes the key).
     expect(screen.getByText("slideLabel")).toBeInTheDocument();
     expect(screen.queryByText("1 drafts")).not.toBeInTheDocument();
   });

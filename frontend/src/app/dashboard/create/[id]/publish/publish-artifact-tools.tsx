@@ -18,20 +18,27 @@ import {
 import type { LoadedProject, PublishPageData } from "./use-publish-page";
 import { panelStyle } from "./publish-page-sections";
 
-/** Cover, rebuild/repair, slide text edits, blog draft and radar templates. */
+/**
+ * Cover, rebuild/repair, slide text edits, blog draft and radar templates.
+ *
+ * Offers the slide-1 photo swap of a Ponto de Vista carousel, the one-click
+ * deterministic repair and the post-completion slide text fix (which does not
+ * regenerate images); repair and text fix chain the republish of a completed
+ * carousel so the served PDF reflects them. The blog post is written from this
+ * carousel, as a draft.
+ */
 export function PublishArtifactTools({
   data,
   project,
   localizedSlides,
-}: {
+}: Readonly<{
   data: PublishPageData;
   project: LoadedProject;
   localizedSlides: LocalizedSlideReview[];
-}): React.ReactElement {
+}>): React.ReactElement {
   const { projectId, workflowState, handleRebuilt, refreshAll } = data;
   return (
     <>
-      {/* AE-0445: swap slide 1's photo of a Ponto de Vista carousel. */}
       {workflowState && offersCoverPicker(project) && (
         <div style={{ marginTop: "16px" }}>
           <CoverPickerSection
@@ -43,8 +50,6 @@ export function PublishArtifactTools({
 
       <div style={{ marginTop: "16px" }}>
         <RebuildPdfSection projectId={projectId} onRebuilt={handleRebuilt} />
-        {/* AE-0311: one-click deterministic repair; a completed carousel
-          chains AE-0313's republish so the served PDF reflects the fix. */}
         <div style={{ marginTop: "12px" }}>
           <AutoRepairButton
             projectId={projectId}
@@ -58,8 +63,6 @@ export function PublishArtifactTools({
 
       {workflowState && (
         <div style={{ marginTop: "16px" }}>
-          {/* AE-0314: fix slide text after completion without regenerating
-            images; chains the republish so the served PDF reflects the edit. */}
           <SlideTextEditSection
             projectId={projectId}
             slides={localizedSlides}
@@ -75,7 +78,6 @@ export function PublishArtifactTools({
         </div>
       )}
 
-      {/* AE-0425: the blog post is written from this carousel, as a draft. */}
       <div style={{ ...panelStyle, marginTop: "16px" }}>
         <CreateBlogFromCarousel
           projectId={projectId}

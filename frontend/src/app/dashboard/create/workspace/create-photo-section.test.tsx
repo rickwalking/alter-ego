@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@/test/utils";
 import { CreatePhotoSection } from "./create-photo-section";
 
-// Gherkin: backend/tests/features/carousel_pov_layouts.feature (AE-0376)
+/** Gherkin: backend/tests/features/carousel_pov_layouts.feature. */
 const PHOTOS = [
   { id: "a1", pose_tag: "Apontando" },
   { id: "b2", pose_tag: null },
@@ -42,7 +42,6 @@ describe("CreatePhotoSection", () => {
     expect(image?.getAttribute("src")).toContain(
       "/api/carousels/creator-assets/a1/image",
     );
-    // AE-0415 (B31): the thumbnail image has a text alternative.
     expect(image?.getAttribute("alt")).toBe("Apontando");
   });
 

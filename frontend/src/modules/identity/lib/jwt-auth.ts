@@ -70,12 +70,12 @@ export async function verifyAccessToken(
       return null;
     }
     return {
-      sub: String(payload.sub ?? ""),
-      email: String(payload.email ?? ""),
+      sub: payload.sub ?? "",
+      email: typeof payload.email === "string" ? payload.email : "",
       role,
-      type: String(payload.type),
-      exp: Number(payload.exp ?? 0),
-      iat: Number(payload.iat ?? 0),
+      type: payload.type,
+      exp: payload.exp ?? 0,
+      iat: payload.iat ?? 0,
     };
   } catch {
     return null;

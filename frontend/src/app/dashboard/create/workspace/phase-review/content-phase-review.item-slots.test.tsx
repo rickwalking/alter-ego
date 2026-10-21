@@ -1,4 +1,3 @@
-// AE-0437 — Gherkin: frontend/tests/features/content-review-item-slots-ae0437.feature
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -80,10 +79,10 @@ function stateWith(
 function Harness({
   state,
   manualFixes,
-}: {
+}: Readonly<{
   state: EditorialWorkflowState;
   manualFixes?: ContentManualFixesActions;
-}): React.ReactElement {
+}>): React.ReactElement {
   const [slides, setSlides] = useState<LocalizedSlideReview[] | undefined>();
   return (
     <ContentPhaseReview

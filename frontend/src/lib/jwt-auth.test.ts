@@ -7,7 +7,7 @@ function buildToken(payload: Record<string, unknown>): string {
   const body = btoa(JSON.stringify(payload))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
-    .replace(/=+$/u, "");
+    .replaceAll("=", "");
   return `${header}.${body}.signature`;
 }
 

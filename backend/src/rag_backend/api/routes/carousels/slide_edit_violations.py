@@ -1,4 +1,4 @@
-"""Map a slide validation report onto per-field form violations (AE-0403)."""
+"""Map a slide validation report onto per-field form violations."""
 
 from __future__ import annotations
 

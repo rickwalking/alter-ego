@@ -1,23 +1,24 @@
-"""add blog_posts.distribution JSONB + backfill caption/linkedin (AE-0204)
+"""add blog_posts.distribution JSONB + backfill caption/linkedin
 
 Revision ID: e5f6a7b8c9d0
 Revises: d4e5f6a7b8c9
 Create Date: 2026-06-17 09:00:00.000000
 
-AE-0204: ADDITIVE, behavior-preserving, reversible.
+ADDITIVE, behavior-preserving, reversible.
 
 Gives the Instagram **caption** and the **LinkedIn posts** (``linkedin_post_pt`` /
 ``linkedin_post_en``) a single canonical home — a new ``blog_posts.distribution``
 JSONB column (mirroring the ``blog_posts.content`` JSONB pattern, ADR-0006) — so the
-embedded ``carousel_projects`` distribution columns can later be dropped (AE-0205)
+embedded ``carousel_projects`` distribution columns can later be dropped
 without data loss or a broken IG/LinkedIn publish.
 
 This migration is **purely additive** — it adds one column to ``blog_posts`` and
 backfills it from the embedded carousel columns. It does **NOT** drop the embedded
 ``carousel_projects`` columns (``caption`` / ``linkedin_post_pt`` /
-``linkedin_post_en``) — that destructive drop is DEFERRED to AE-0205. Because no
-destructive schema change occurs, the LangGraph checkpoint-drain gate does NOT
-block this migration (the drain rule applies only to destructive migrations).
+``linkedin_post_en``) — that destructive drop is DEFERRED to a later
+migration. Because no destructive schema change occurs, the LangGraph
+checkpoint-drain gate does NOT block this migration (the drain rule applies
+only to destructive migrations).
 
 Steps (upgrade):
 
@@ -49,20 +50,17 @@ import sqlalchemy as sa
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision = "e5f6a7b8c9d0"
 down_revision = "d4e5f6a7b8c9"
 branch_labels = None
 depends_on = None
 
-# --- Constants -----------------------------------------------------------------
 _ORIGIN_CAROUSEL = "carousel"
 _DISTRIBUTION_DEFAULT = "{}"
 _CAPTION_KEY = "caption"
 _LINKEDIN_PT_KEY = "linkedin_post_pt"
 _LINKEDIN_EN_KEY = "linkedin_post_en"
 
-# Lightweight table projections (no ORM) for the cross-dialect backfill.
 _carousel_projects = sa.table(
     "carousel_projects",
     sa.column("id", sa.String),

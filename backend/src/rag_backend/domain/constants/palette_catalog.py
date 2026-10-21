@@ -1,37 +1,39 @@
-"""Validation rules + limits for the custom-palette CRUD catalog (AE-0270).
+"""Validation rules + limits for the custom-palette CRUD catalog.
 
 Pure constants (stdlib only) shared by the API schemas, the application catalog
 service, and their tests. The colour fields are interpolated into the LLM image
 prompt, so the hex pattern is a **strict** ``#rrggbb`` allow-list (prompt-injection
-guard, skeptical G5); keywords feed AUTO detection, so they are capped, sanitised,
-de-duplicated, and rejected when they collide with a root brand keyword (G5).
+guard); keywords feed AUTO detection, so they are capped, sanitised,
+de-duplicated, never rendered into a prompt, and rejected when they collide with
+a root brand keyword.
+
+``NAME_MAX_LEN`` matches ``PaletteModel.name`` (``String(80)``). A slug gets
+``SLUG_ID_SUFFIX_LEN`` hex chars of the UUID appended for global uniqueness, and
+every char outside ``[a-z0-9]`` collapses to a hyphen. ``NAME_FORBIDDEN_CHARS``
+are the obvious XSS vector; ``RESERVED_SLUGS`` would shadow a sub-route under the
+catalog prefix. The error detail strings are a stable contract for the 4xx
+bodies and tests.
 """
 
 from __future__ import annotations
 
 import re
 
-# --- Colour (strict #rrggbb; the only shape allowed into the image prompt) ---
 HEX_COLOUR_PATTERN: str = r"^#[0-9a-fA-F]{6}$"
 HEX_COLOUR_RE: re.Pattern[str] = re.compile(HEX_COLOUR_PATTERN)
 
-# --- Name / slug ---
 NAME_MIN_LEN: int = 1
-NAME_MAX_LEN: int = 80  # matches PaletteModel.name String(80)
+NAME_MAX_LEN: int = 80
 SLUG_MAX_LEN: int = 80
-SLUG_ID_SUFFIX_LEN: int = 8  # hex chars of the UUID appended for global uniqueness
-SLUG_CHAR_PATTERN: str = r"[^a-z0-9]+"  # everything else collapses to a hyphen
+SLUG_ID_SUFFIX_LEN: int = 8
+SLUG_CHAR_PATTERN: str = r"[^a-z0-9]+"
 SLUG_CHAR_RE: re.Pattern[str] = re.compile(SLUG_CHAR_PATTERN)
-# Characters that have no place in a display name and are the obvious XSS vector.
 NAME_FORBIDDEN_CHARS: tuple[str, ...] = ("<", ">")
-# Slugs that would shadow a sub-route under the catalog prefix.
 RESERVED_SLUGS: frozenset[str] = frozenset({"new", "edit", "create", "catalog"})
 
-# --- Keywords (AUTO-detection pool; sanitised, never rendered into a prompt) ---
 KEYWORD_MAX_COUNT: int = 10
 KEYWORD_MAX_LEN: int = 30
 
-# --- Error detail strings (stable contract for the 4xx bodies + tests) ---
 ERR_INVALID_HEX: str = "colour must be a strict #rrggbb hex value"
 ERR_NAME_FORBIDDEN_CHAR: str = "name must not contain angle brackets"
 ERR_NAME_EMPTY: str = "name must not be blank"

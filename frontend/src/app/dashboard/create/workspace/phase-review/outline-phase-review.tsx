@@ -12,14 +12,14 @@ import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface OutlinePhaseReviewProps {
   state: EditorialWorkflowState;
-  /** AE-0375: the project whose slide-1 hook the owner picks. */
+  /** The project whose slide-1 hook the owner picks. */
   projectId?: string;
 }
 
 export function OutlinePhaseReview({
   state,
   projectId,
-}: OutlinePhaseReviewProps): React.ReactElement {
+}: Readonly<OutlinePhaseReviewProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
 

@@ -8,10 +8,10 @@ import {
   type CarouselProjectResponse,
 } from "@/schemas/carousel";
 
-type CarouselListFilters = {
+interface CarouselListFilters {
   status?: string;
   limit?: number;
-};
+}
 
 export const carouselKeys = {
   list: (filters?: CarouselListFilters) =>
@@ -24,7 +24,8 @@ function buildCarouselListUrl(filters: CarouselListFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.limit) params.set("limit", String(filters.limit));
-  return `${API_ENDPOINTS.CAROUSELS}${params.size ? `?${params}` : ""}`;
+  const query = params.size ? `?${params.toString()}` : "";
+  return `${API_ENDPOINTS.CAROUSELS}${query}`;
 }
 
 export function carouselListOptions(filters: CarouselListFilters = {}) {

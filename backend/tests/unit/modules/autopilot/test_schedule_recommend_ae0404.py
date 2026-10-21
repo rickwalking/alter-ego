@@ -1,6 +1,8 @@
-"""Recommended publish slots, pure rules (AE-0404).
+"""Recommended publish slots, pure rules.
 
 Gherkin: tests/features/telegram_schedule_picker_ae0404.feature
+
+_NOW is Friday 2026-10-16 10:00 in São Paulo, the time of the owner's report.
 """
 
 from __future__ import annotations
@@ -26,7 +28,6 @@ from rag_backend.modules.autopilot.domain.recommend import (
 )
 
 _SP = ZoneInfo("America/Sao_Paulo")
-# Friday 2026-10-16 10:00 São Paulo (the owner's report).
 _NOW = datetime(2026, 10, 16, 10, 0, tzinfo=_SP).astimezone(UTC)
 
 
@@ -45,10 +46,13 @@ def _hours(slots: tuple[ScoredSlot, ...]) -> list[int]:
 
 
 def _peak_at_20() -> ScheduleSignals:
-    """Followers online peak at 20:00 São Paulo (23:00 UTC)."""
+    """Followers online peak at 20:00 São Paulo (23:00 UTC).
+
+    Hour 22 UTC is 19:00 in São Paulo.
+    """
     audience = dict.fromkeys(range(24), 100)
     audience[23] = 900
-    audience[22] = 500  # 19:00 São Paulo
+    audience[22] = 500
     return ScheduleSignals(audience=audience)
 
 

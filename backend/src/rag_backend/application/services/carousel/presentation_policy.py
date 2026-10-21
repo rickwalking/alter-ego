@@ -1,4 +1,9 @@
-"""Load canonical carousel presentation policy from packaged runtime contracts."""
+"""Load canonical carousel presentation policy from packaged runtime contracts.
+
+Budget field names are rendered into prompts with human labels: the raw schema names
+used to leak into visible copy (the model echoed ``cta_creator_name`` as "**CTA creator:
+radar IA.**").
+"""
 
 from __future__ import annotations
 
@@ -63,13 +68,10 @@ POLICY_CONTEXT_SECTION_RULES = "Visible text rules"
 POLICY_CONTEXT_SECTION_BUDGETS = "Copy budgets"
 POLICY_CONTEXT_SECTION_GEOMETRY = "Geometry ratios"
 POLICY_CONTEXT_SECTION_ICONS = "Lucide icon allowlist"
-# AE-0436: the raw schema field names used to leak into visible copy — the
-# model echoed ``cta_creator_name`` as "**CTA creator: radar IA.**" (F-04).
 POLICY_CONTEXT_BUDGET_SCHEMA_NOTE = (
     "schema field names, never visible copy: do not write these names, or any "
     "locale marker or field label, into the slide text"
 )
-# AE-0436: human labels for the budget field names rendered into prompts.
 POLICY_CONTEXT_BUDGET_LABELS: dict[str, str] = {
     "intro_heading": "intro heading",
     "intro_subtitle": "intro subtitle",
@@ -91,7 +93,7 @@ POLICY_CONTEXT_BUDGET_LABELS: dict[str, str] = {
 def load_presentation_policy(version: str) -> CarouselPresentationPolicy:
     """Load and validate a versioned presentation policy contract.
 
-    AE-0312 rollback safety: an unsupported version falls back to the default
+    Rollback safety: an unsupported version falls back to the default
     (v1) with a warning log and never raises, so a code rollback after the
     in-flight upgrade migration cannot freeze v2-stamped rows.
     """
@@ -306,7 +308,7 @@ def _assert_casing_rules_have_severity(
     casing_rules: tuple[CasingRulePolicy, ...],
     rule_severities: dict[str, str],
 ) -> None:
-    """Fail load when a v2 casing rule carries no explicit severity (AE-0312)."""
+    """Fail load when a v2 casing rule carries no explicit severity."""
     for rule in casing_rules:
         if rule.code not in rule_severities:
             raise PresentationPolicyError(ERR_PRESENTATION_POLICY_RULE_SEVERITY_MISSING)

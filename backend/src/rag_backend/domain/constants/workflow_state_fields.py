@@ -3,9 +3,16 @@
 These name the keys used in the raw workflow state mapping and the API
 response payloads built from it. Centralizing them removes magic strings
 from the editorial workflow route response builder.
+
+- ``content_gate_validation``: fail-closed report, set (non-empty) only when the
+  content build's validate -> repair -> retry chain still ends blocking; the
+  content interrupt payload mirrors it so the reviewer sees the violations.
+- ``design_recovery_hint``: stored by the design ensure while the fresh
+  presentation validation still blocks; cleared to ``""`` once it passes.
+- ``error_message``: the optional response field surfacing the persisted failure
+  message, which the raw state stores under ``workflow_error``.
 """
 
-# Core workflow state fields
 STATE_FIELD_PROJECT_ID = "project_id"
 STATE_FIELD_CURRENT_PHASE = "current_phase"
 STATE_FIELD_PHASE_STATUS = "phase_status"
@@ -28,35 +35,24 @@ STATE_FIELD_REVISION_COUNT = "revision_count"
 STATE_FIELD_PRESENTATION_POLICY_VERSION = "presentation_policy_version"
 STATE_FIELD_LOCALIZED_SLIDES = "localized_slides"
 STATE_FIELD_PRESENTATION_VALIDATION = "presentation_validation"
-# AE-0309: fail-closed content-gate validation report. Set (non-empty) only when
-# the content build's validate -> repair -> retry chain still ends blocking; the
-# content interrupt payload mirrors it so the reviewer sees the violations.
 STATE_FIELD_CONTENT_GATE_VALIDATION = "content_gate_validation"
-# AE-0310: hint code stored by the design ensure when the fresh presentation
-# validation report still blocks (cleared to "" once validation passes).
 STATE_FIELD_DESIGN_RECOVERY_HINT = "design_recovery_hint"
 STATE_FIELD_LOCK_VERSION = "lock_version"
-# Response field carrying the persisted failure message (AE-0009). The raw
-# state stores the message under ``workflow_error`` (WORKFLOW_ERROR_KEY); this
-# names the additive, optional response field surfaced to clients.
 STATE_FIELD_ERROR_MESSAGE = "error_message"
 STATE_FIELD_WORKFLOW_ERROR = "workflow_error"
 
 STATE_DEFAULT_STATUS = "draft"
 
-# Localized slide review fields
 STATE_FIELD_SLIDE_INDEX = "slide_index"
 STATE_FIELD_SLIDE_TYPE = "slide_type"
 STATE_FIELD_PRESENTATION_PT = "presentation_pt"
 STATE_FIELD_PRESENTATION_EN = "presentation_en"
 
-# Validation report fields
 STATE_FIELD_VALIDATION_STATUS = "validation_status"
 STATE_FIELD_VALIDATED_AT = "validated_at"
 STATE_FIELD_BLOCKING = "blocking"
 STATE_FIELD_VIOLATIONS = "violations"
 
-# Validation violation fields
 STATE_FIELD_VIOLATION_CODE = "code"
 STATE_FIELD_VIOLATION_MESSAGE = "message"
 STATE_FIELD_VIOLATION_LOCALE = "locale"

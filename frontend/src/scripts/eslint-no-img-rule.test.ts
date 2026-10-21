@@ -1,5 +1,5 @@
 /**
- * AE-0202 rule-fires regression test (dogfoods AE-0180): a raw `<img>` element
+ * Rule-fires regression test: a raw `<img>` element
  * in production `src` must be an ESLint ERROR (`@next/next/no-img-element`), not a
  * warning. The rule was promoted warn -> error once the last prod `<img>`
  * (a legacy modal component) migrated to next/image; this test proves the
@@ -14,6 +14,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..", "..");
+const ESLINT_BIN = join(
+  FRONTEND_ROOT,
+  "node_modules",
+  "eslint",
+  "bin",
+  "eslint.js",
+);
 const PROBE_DIR = join(FRONTEND_ROOT, "src", "modules", "__eslint_img_probe__");
 const PROBE = join(PROBE_DIR, "probe.tsx");
 const NO_IMG_ELEMENT = "@next/next/no-img-element";
@@ -31,9 +38,9 @@ interface EslintResult {
 function lintProbe(): { exitCode: number; results: EslintResult[] } {
   try {
     const out = execFileSync(
-      "npx",
+      process.execPath,
       [
-        "eslint",
+        ESLINT_BIN,
         "--format",
         "json",
         "src/modules/__eslint_img_probe__/probe.tsx",

@@ -1,4 +1,4 @@
-"""Tests for move_ticket dev-summary auto-scaffold (AE-0169) + board I/O (AE-0237)."""
+"""Tests for move_ticket dev-summary auto-scaffold + board I/O."""
 
 from pathlib import Path
 
@@ -31,7 +31,6 @@ def test_scaffold_dev_summary_creates_template(
     assert created == tmp_path / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
     body = created.read_text(encoding="utf-8")
     assert ticket.ticket_id in body
-    # Required sections the developer must fill before Review.
     for section in (
         "Acceptance Criteria Implemented",
         "Files Changed",
@@ -59,8 +58,9 @@ def test_scaffold_dev_summary_never_overwrites(
 def test_unfilled_scaffold_is_rejected_at_review(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # AE-0166 QA fix: an auto-scaffolded (unfilled) dev-summary must NOT satisfy
-    # the Review gate just by existing — the developer has to replace it.
+    """An auto-scaffolded (unfilled) dev-summary must NOT satisfy the Review gate just
+    by existing: the developer has to replace it.
+    """
     monkeypatch.setattr(move_ticket, "REPORTS_DIR", tmp_path)
     monkeypatch.setattr(schema, "REPORTS_DIR", tmp_path)
     ticket = _a_ticket()
@@ -106,11 +106,12 @@ def test_update_board_with_board_present(
     assert section.startswith("- AE-0055")
 
 
-# Seeded-regression proof (AE-0237): moving a ticket when BOARD.md is absent must
-# regenerate the board, not raise FileNotFoundError (the FC-1 crash).
 def test_update_board_regenerates_when_board_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Seeded-regression proof: moving a ticket when BOARD.md is absent must regenerate
+    the board, not raise FileNotFoundError.
+    """
     tasks_dir = tmp_path / "tasks"
     tasks_dir.mkdir()
     (tasks_dir / "AE-0077-example.md").write_text(
@@ -131,7 +132,6 @@ def test_update_board_regenerates_when_board_absent(
 
 
 def test_template_has_no_unfilled_format_placeholders() -> None:
-    # The template id placeholder must be substituted, not left literal.
     assert "__TICKET_ID__" in move_ticket.DEV_SUMMARY_TEMPLATE
     rendered = move_ticket.DEV_SUMMARY_TEMPLATE.replace("__TICKET_ID__", "AE-9999")
     assert "__TICKET_ID__" not in rendered

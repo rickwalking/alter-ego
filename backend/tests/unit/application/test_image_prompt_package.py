@@ -2,11 +2,11 @@
 
 Gherkin: tests/features/image_generation_provider.feature
 
-Regression guard for AE-0264: the prompt renderer and ``image_provider_registry``
+Regression guard: the prompt renderer and ``image_provider_registry``
 once kept two separate strategy maps that drifted — a combo missing from the
 renderer's map silently fell back to the dark default, rendering a light palette
-with "neon glow" directives in the 2026-06-22 validation run. AE-0266 Phase 2
-folds both into one ``IMAGE_STRATEGY_REGISTRY``; this still guards that every
+with "neon glow" directives in the 2026-06-22 validation run. The consolidated
+registry folds both into one ``IMAGE_STRATEGY_REGISTRY``; this still guards that every
 supported combo resolves to a strategy.
 """
 
@@ -59,8 +59,9 @@ class TestStrategyResolution:
         assert isinstance(strategy, OpenAIFlatEditorialStrategy)
 
     def test_every_supported_combo_has_a_strategy(self) -> None:
-        # Guard against the registry / prompt-map drift that made a light
-        # palette fall back to the dark default (AE-0264).
+        """Guards against the registry / prompt-map drift that made a light palette fall
+        back to the dark default.
+        """
         missing = [
             c for c in SUPPORTED_IMAGE_COMBOS if c not in IMAGE_STRATEGY_REGISTRY
         ]
@@ -81,7 +82,6 @@ def _project_with_details(details: str | None) -> CarouselProject:
 
 @pytest.mark.unit
 class TestCustomVisualDetails:
-    # AE-0263 (inject project visual direction) + AE-0261 (revision changes prompt).
     def test_details_injected_into_scene(self) -> None:
         pkg = render_image_prompt_package(
             ImagePromptPackageRequest(
@@ -100,10 +100,10 @@ class TestCustomVisualDetails:
         assert "Visual direction:" not in base.rendered_prompt
 
     def test_details_land_after_the_locked_directives(self) -> None:
-        # AE-0298 structural guard: the user text rides in the Scene trailer
-        # AFTER the brand-lock directives. This proves positioning ONLY - it
-        # does NOT claim injection-immunity (a trailer directive can still
-        # attempt to override the no-text lock; documented residual risk).
+        """The user text rides in the Scene trailer after the brand-lock directives.
+        This proves positioning only, not injection immunity: a trailer directive can
+        still attempt to override the no-text lock (a documented residual risk).
+        """
         pkg = render_image_prompt_package(
             ImagePromptPackageRequest(
                 project=_project_with_details("misty cyber harbor"),
@@ -117,8 +117,9 @@ class TestCustomVisualDetails:
         assert lock_pos < scene_pos < direction_pos
 
     def test_details_change_the_prompt_hash(self) -> None:
-        # The reuse cache keys on prompt_hash; new direction must bust it so a
-        # revision actually regenerates instead of returning the cached image.
+        """The reuse cache keys on prompt_hash, so new direction must bust it; otherwise
+        a revision returns the cached image instead of regenerating.
+        """
         without = render_image_prompt_package(
             ImagePromptPackageRequest(
                 project=_project_with_details(None), slide=_slide()
@@ -136,6 +137,7 @@ class TestCustomVisualDetails:
 @pytest.mark.unit
 class TestLightPromptRendering:
     def test_light_project_prompt_is_editorial_not_neon(self) -> None:
+        """The light palette colors still flow into the prompt."""
         package = render_image_prompt_package(
             ImagePromptPackageRequest(
                 project=_light_project(),
@@ -147,5 +149,4 @@ class TestLightPromptRendering:
         assert "Flat editorial vector illustration" in rendered
         assert "Light background" in rendered
         assert "neon glow" not in rendered.lower()
-        # The light palette colors still flow into the prompt.
         assert CAROUSEL_THEMES["paper_editorial"]["background"] in rendered

@@ -1,10 +1,13 @@
-"""Unit tests for the carousel repair service two-commit contract (AE-0311).
+"""Unit tests for the carousel repair service two-commit contract.
 
 Gherkin: tests/features/carousel_deterministic_repair.feature
 
 SQLite convention: the advisory lock no-ops on non-Postgres, so lock
 serialization is exercised with an injected-lock double; the CAS, projection
 commit, and audit are exercised against a real in-memory session.
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
 """
 
 from __future__ import annotations
@@ -58,7 +61,6 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
     WorkflowAuditLogModel,
 )
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 _V1 = "hero_lower_third_v1"
@@ -267,6 +269,7 @@ class TestRepairService:
     async def test_stale_cas_loses_and_mutates_nothing(
         self, test_engine: AsyncEngine
     ) -> None:
+        """The row is at version 1, so lock_version=999 is stale."""
         # Scenario: a concurrent resume bumped lock_version; the repair CAS loses.
         async with _factory(test_engine)() as db:
             project = await _add_project(db)
@@ -280,7 +283,7 @@ class TestRepairService:
                 project_id=str(project.id),
                 status=str(project.status),
                 phase_status=str(project.phase_status or ""),
-                lock_version=999,  # stale: the row is at version 1
+                lock_version=999,
                 policy_version=_V1,
                 actor_user_id="user-1",
             )
@@ -307,8 +310,10 @@ class TestRepairService:
     async def test_partial_failure_retry_converges(
         self, test_engine: AsyncEngine
     ) -> None:
-        # Scenario: the process dies between commits; the idempotent retry
-        # converges both stores.
+        """The projection commits despite the checkpoint failure (drift); a retry with
+        the fresh lock_version converges the checkpoint.
+        """
+        # Scenario: the process dies between commits; the idempotent retry converges both stores.
         async with _factory(test_engine)() as db:
             project = await _add_project(db)
             pid = str(project.id)
@@ -321,10 +326,8 @@ class TestRepairService:
             workflow.fail_write = True
             with pytest.raises(RuntimeError):
                 await _service(db, workflow).repair(_command(project))
-            # Projection committed despite the checkpoint failure (drift).
             assert "## PT" not in await _slide_body(db, pid)
             assert workflow.writes == []
-            # Retry with the fresh lock_version converges the checkpoint.
             await db.refresh(project)
             workflow.fail_write = False
             result = await _service(db, workflow).repair(_command(project))
@@ -357,7 +360,8 @@ class TestRepairService:
     async def test_lock_held_raises_mutation_in_progress(
         self, test_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Injected-lock double: another mutator holds the shared lock.
+        """An injected lock double simulates another mutator holding the shared lock."""
+
         @contextlib.asynccontextmanager
         async def _held_lock(*_args: object, **_kwargs: object) -> AsyncIterator[None]:
             raise CarouselConflictError(

@@ -11,6 +11,6 @@ export interface FinalReviewPhaseReviewProps {
 export function FinalReviewPhaseReview({
   projectId,
   state,
-}: FinalReviewPhaseReviewProps): React.ReactElement {
+}: Readonly<FinalReviewPhaseReviewProps>): React.ReactElement {
   return <CreateFinalReviewTabs projectId={projectId} state={state} />;
 }

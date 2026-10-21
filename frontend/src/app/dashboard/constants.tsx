@@ -1,9 +1,5 @@
 import React from "react";
 
-/* ── SVG Icon Path Components ── */
-/* Each returns only the <path>/<circle>/<rect> children,
-   since the page.tsx wraps them in a consistent <svg> shell. */
-
 function PlusPaths() {
   return (
     <>
@@ -56,8 +52,6 @@ export {
   NEON_RED,
 };
 
-/* ── Quick Action Configuration ── */
-
 export interface QuickActionConfig {
   title: string;
   description: string;
@@ -67,6 +61,10 @@ export interface QuickActionConfig {
   iconColor: string;
 }
 
+/**
+ * Icons are path-only fragments (`<path>`/`<circle>`/`<rect>` children): the
+ * dashboard page wraps them in a consistent `<svg>` shell.
+ */
 export const QUICK_ACTIONS: QuickActionConfig[] = [
   {
     title: "New Carousel",

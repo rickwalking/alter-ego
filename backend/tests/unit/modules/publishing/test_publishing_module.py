@@ -1,4 +1,4 @@
-"""Unit tests for the publishing module skeleton + shims (AE-0126).
+"""Unit tests for the publishing module skeleton + shims.
 
 These tests prove the behavior-preserving + additive scaffolding:
 
@@ -14,7 +14,7 @@ These tests prove the behavior-preserving + additive scaffolding:
   and constructible.
 
 Behavior-preserving scaffolding; verified by mypy/lint-imports + this safety net
-(see ticket AE-0126 — Gherkin not applicable).
+(Gherkin not applicable).
 """
 
 from datetime import UTC, datetime
@@ -171,7 +171,7 @@ class TestDomainValueObjects:
 
 
 class TestOriginCoercion:
-    """Scenario: BlogPost.origin coerces raw column values (AE-0127)."""
+    """Scenario: BlogPost.origin coerces raw column values."""
 
     def test_coerce_valid_origin_values(self) -> None:
         from rag_backend.domain.constants.blog_post import BlogPostOrigin

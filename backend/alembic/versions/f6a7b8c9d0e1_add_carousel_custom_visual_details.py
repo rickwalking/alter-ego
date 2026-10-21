@@ -1,7 +1,7 @@
 """add carousel_projects.custom_visual_details
 
 Project-level visual direction injected into every slide image prompt
-(AE-0263 backdrop / custom scene details; AE-0261 revision feedback append).
+(backdrop / custom scene details, plus appended revision feedback).
 
 Revision ID: f6a7b8c9d0e1
 Revises: e5f6a7b8c9d0

@@ -219,7 +219,11 @@ class TestAsyncEditorialResume:
         mock_outline: AsyncMock,
         client: AsyncClient,
     ) -> None:
-        """Scenario: Background resume publishes review_required when outline gate opens."""
+        """Scenario: Background resume publishes review_required when outline gate opens.
+
+        The expected count includes the run.started / stage_changed / finished lifecycle
+        events.
+        """
         mock_outline.return_value = [
             {"slide_index": 1, "title": "Intro", "key_points": ["Hook"]},
         ]
@@ -248,7 +252,6 @@ class TestAsyncEditorialResume:
         events = await collect_hub_events_during(
             project_id,
             resume_and_drain,
-            # AE-0315 adds run.started/stage_changed/finished to the stream
             expected_count=9,
         )
         review_events = [
@@ -270,7 +273,11 @@ class TestAsyncEditorialResume:
         mock_resume_workflow: AsyncMock,
         client: AsyncClient,
     ) -> None:
-        """Scenario: Background resume failure publishes recoverable error event."""
+        """Scenario: Background resume failure publishes recoverable error event.
+
+        The expected count includes the run lifecycle events published ahead of the
+        error event.
+        """
         mock_resume_workflow.side_effect = RuntimeError("content generation failed")
         editor = await create_user("async-failure@example.com", UserRole.EDITOR)
         project_id = await create_carousel(editor, is_public=False)
@@ -298,7 +305,6 @@ class TestAsyncEditorialResume:
         events = await collect_hub_events_during(
             project_id,
             resume_and_drain,
-            # AE-0315 adds run lifecycle events ahead of the error event
             expected_count=4,
         )
         error_events = [

@@ -1,5 +1,5 @@
 /**
- * AE-0446: a card shows its title and subtitle in ONE language.
+ * A card shows its title and subtitle in ONE language.
  * Gherkin: tests/features/landing-card-language-ae0446.feature
  */
 import { describe, expect, it } from "vitest";

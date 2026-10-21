@@ -1,10 +1,10 @@
-"""Knowledge search port + a retriever-backed adapter (AE-0093).
+"""Knowledge search port + a retriever-backed adapter.
 
 The **search port** is the boundary-safe contract the agent search tool and the
 ``/api/search`` route depend on: a single ``search(SearchQuery) ->
 list[SearchResultView]`` operation. ``KnowledgeService`` satisfies it, so inbound
 adapters obtain hybrid search through the module's public facade instead of
-wiring a raw retriever that bypasses the module (AE-0093 AC3).
+wiring a raw retriever that bypasses the module.
 
 ``RetrieverSearchAdapter`` bridges the existing ``RetrieverPort`` (the legacy
 ``HybridRetrieverWithRRF.retrieve`` shape) onto the search port. It applies the

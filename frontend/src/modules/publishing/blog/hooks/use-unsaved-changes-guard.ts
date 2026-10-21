@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Unsaved-changes guard of the blog editor (AE-0424, F-12).
+ * Unsaved-changes guard of the blog editor.
  *
  * While the draft differs from the saved post: closing/reloading the tab
  * triggers the browser's `beforeunload` prompt, and an in-app link click asks

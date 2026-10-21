@@ -1,4 +1,4 @@
-"""The palette timestamptz one-shot on Postgres (AE-0446, Pedro's decision).
+"""The palette timestamptz one-shot on Postgres (Pedro's decision).
 
 Feature: backend/tests/features/palette_timestamptz_ae0446.feature
 """
@@ -153,12 +153,13 @@ def utc_process_tz(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 # Scenario: Palette creates work with naive and aware times after the change
-# asyncpg reads a naive value for ``timestamptz`` as the process's local time,
-# so main's naive ``utcnow()`` stays correct only in a UTC process (prod); the
-# domain now stamps aware UTC, which is correct in any timezone.
 @requires_postgres
 @pytest.mark.usefixtures("utc_process_tz")
 async def test_naive_and_aware_palette_creates_round_trip_after_apply() -> None:
+    """asyncpg reads a naive value for ``timestamptz`` as the process's local time, so
+    main's naive ``utcnow()`` stays correct only in a UTC process (prod); the domain now
+    stamps aware UTC, which is correct in any timezone.
+    """
     naive = _palette("naive", datetime(2026, 10, 21, 9, 0, 0))
     aware = _palette("aware", datetime(2026, 10, 21, 9, 0, 0, tzinfo=UTC))
     async with _naive_palettes() as engine:

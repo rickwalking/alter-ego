@@ -1,4 +1,4 @@
-"""Map the create request's content-mode fields onto the project (AE-0373)."""
+"""Map the create request's content-mode fields onto the project."""
 
 from __future__ import annotations
 

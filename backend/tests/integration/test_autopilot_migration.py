@@ -1,9 +1,16 @@
-"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361, AE-0369, AE-0370).
+"""Alembic revisions for the autopilot tables.
 
 Proves the latest revision is the single head and that upgrade/downgrade apply
 on a database stamped at the pre-autopilot head. The full chain from base is
 PostgreSQL (an older revision uses ``ALTER COLUMN … TYPE``, which SQLite
 rejects); CI's migration gate runs that chain.
+
+Revision chain: the insights revision (per-post Instagram insights snapshots) sits on
+top of the POV thesis one, then the image bridge, the audience-hours cache and the
+pov_news quotes revisions; the GrokBot cover revision is the head.
+
+``ALEMBIC_HEAD`` is the current single alembic head: a new migration bumps only that
+constant, while the per-revision tests keep asserting their own parent chain.
 """
 
 from __future__ import annotations
@@ -15,19 +22,12 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-# AE-0378: the insights revision sits on top of AE-0377's POV thesis one.
 _PARENT_HEAD = "b1c2d3e4f5a6"
 _THIS_HEAD = "c2d3e4f5a6b7"
-# AE-0393: the image bridge revision now sits on top of the insights one.
 _SINGLE_HEAD = "d3e4f5a6b7c8"
-# AE-0404: the audience-hours cache revision sits on top of the bridge one.
 _AUDIENCE_HEAD = "a0e4f0a4b4c4"
-# AE-0406: the pov_news quotes revision sits on top of the audience one.
 _QUOTES_HEAD = "c4d5e6f7a8b9"
-# AE-0418: the GrokBot cover revision is the head.
 _COVER_HEAD = "d5e6f7a8b9c0"
-# AE-0446: the current single alembic head. A new migration bumps ONLY this
-# line; the per-revision tests keep asserting their own parent chain.
 ALEMBIC_HEAD = "e6f7a8b9c0d1"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
@@ -39,7 +39,6 @@ _TABLES = (
     "autopilot_x_signals",
     "instagram_manual_publishes",
     "autopilot_notify_cursor",
-    # AE-0378: per-post Instagram insights snapshots.
     "instagram_post_insights",
     "instagram_stories",
 )
@@ -135,10 +134,8 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         assert name in present
     topic_columns = _columns(db_path, "topic_candidates")
     assert "why_viral" in topic_columns
-    # AE-0361: image preset and guidance.
     assert {"image_style", "image_guidance"} <= topic_columns
     assert "signal_hash" in topic_columns
-    # AE-0377: scout v3 mode and the draft / confirmed POV thesis.
     assert {"content_mode", "thesis_draft"} <= topic_columns
     assert "pov_thesis" in _columns(db_path, "autopilot_runs")
     run_columns = _columns(db_path, "autopilot_runs")
@@ -146,13 +143,11 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
     assert "ig_post_id" in run_columns
     assert "ig_container_created_at" in run_columns
     assert "state" in _columns(db_path, "autopilot_runs")
-    # QA r1 B3/H3/H4: split counters, queued rework, escalation version.
     for column in (
         "start_attempts",
         "rework_phase",
         "rework_feedback",
         "escalated_version",
-        # AE-0370: the owner's publish time.
         "scheduled_at",
     ):
         assert column in run_columns
@@ -163,7 +158,6 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         "ig_post_id",
         "claimed_at",
     } <= manual_columns
-    # AE-0369: one Story row per carousel.
     assert {
         "carousel_project_id",
         "state",

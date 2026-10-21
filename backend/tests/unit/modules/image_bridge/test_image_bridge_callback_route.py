@@ -1,4 +1,4 @@
-"""POST /api/v1/image-bridge/jobs/{job_id}/result (AE-0393, AC3/AC4/AC7/AC11).
+"""POST /api/v1/image-bridge/jobs/{job_id}/result (AC3/AC4/AC7/AC11).
 
 Gherkin: tests/features/image_bridge.feature
 """

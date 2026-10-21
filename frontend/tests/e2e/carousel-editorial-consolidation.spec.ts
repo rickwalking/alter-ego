@@ -14,16 +14,21 @@ async function authHeaders(
     return {};
   }
 
-  const tokenResponse = await request.post(`${BACKEND_BASE_URL}/api/auth/token`, {
-    form: {
-      username: email,
-      password,
+  const tokenResponse = await request.post(
+    `${BACKEND_BASE_URL}/api/auth/token`,
+    {
+      form: {
+        username: email,
+        password,
+      },
     },
-  });
+  );
   if (!tokenResponse.ok()) {
     return {};
   }
-  const tokenPayload = (await tokenResponse.json()) as { access_token?: string };
+  const tokenPayload = (await tokenResponse.json()) as {
+    access_token?: string;
+  };
   if (!tokenPayload.access_token) {
     return {};
   }
@@ -31,7 +36,9 @@ async function authHeaders(
 }
 
 test.describe("Carousel editorial consolidation E2E", () => {
-  test("legacy stream and generate endpoints are removed", async ({ request }, testInfo) => {
+  test("legacy stream and generate endpoints are removed", async ({
+    request,
+  }, testInfo) => {
     const headers = await authHeaders(request);
     if (!headers.Authorization) {
       testInfo.skip(
@@ -61,7 +68,7 @@ test.describe("Carousel editorial consolidation E2E", () => {
     expect([404, 410]).toContain(generateResponse.status());
   });
 
-  test("frontend api constants exclude legacy carousel stream routes", async () => {
+  test("frontend api constants exclude legacy carousel stream routes", () => {
     const apiConstantsPath = path.resolve(
       process.cwd(),
       "src/constants/api.ts",
@@ -81,8 +88,11 @@ test.describe("Carousel editorial consolidation E2E", () => {
 });
 
 test.describe("Editorial workflow API (authenticated)", () => {
-  test.beforeEach(async (_context, testInfo) => {
-    if (!process.env.PLAYWRIGHT_E2E_EMAIL || !process.env.PLAYWRIGHT_E2E_PASSWORD) {
+  test.beforeEach((_context, testInfo) => {
+    if (
+      !process.env.PLAYWRIGHT_E2E_EMAIL ||
+      !process.env.PLAYWRIGHT_E2E_PASSWORD
+    ) {
       testInfo.skip(
         true,
         "Set PLAYWRIGHT_E2E_EMAIL and PLAYWRIGHT_E2E_PASSWORD for authenticated workflow E2E",
@@ -94,17 +104,20 @@ test.describe("Editorial workflow API (authenticated)", () => {
     const headers = await authHeaders(request);
     expect(headers.Authorization).toBeTruthy();
 
-    const createResponse = await request.post(`${BACKEND_BASE_URL}/api/carousels`, {
-      headers: {
-        ...headers,
-        "Content-Type": "application/json",
+    const createResponse = await request.post(
+      `${BACKEND_BASE_URL}/api/carousels`,
+      {
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        data: {
+          topic: "Playwright workflow",
+          audience: "Developers",
+          niche: "AI",
+        },
       },
-      data: {
-        topic: "Playwright workflow",
-        audience: "Developers",
-        niche: "AI",
-      },
-    });
+    );
     expect(createResponse.ok()).toBeTruthy();
     const project = (await createResponse.json()) as { id: string };
 

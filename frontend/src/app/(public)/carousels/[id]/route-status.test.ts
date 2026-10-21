@@ -1,5 +1,5 @@
 /**
- * AE-0446: `/carousels/<unknown id>` must answer HTTP 404, not a soft 404.
+ * `/carousels/<unknown id>` must answer HTTP 404, not a soft 404.
  * Gherkin: tests/features/public-carousel-404-status-ae0446.feature
  *
  * A `loading.tsx` on this segment or any ancestor wraps the page in a route
@@ -38,8 +38,10 @@ describe("public carousel viewer route status (AE-0446)", () => {
     expect(found).toEqual([]);
   });
 
+  /**
+   * (also proves APP_DIR resolves, so the check above is not vacuous)
+   */
   // Scenario: The carousel gallery keeps its loading skeleton
-  // (also proves APP_DIR resolves, so the check above is not vacuous)
   it("keeps the gallery skeleton inside the (list) route group", () => {
     const listLoading = join(APP_DIR, "(public)", "carousels", "(list)");
     expect(existsSync(join(listLoading, "loading.tsx"))).toBe(true);

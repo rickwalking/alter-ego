@@ -1,5 +1,5 @@
 /**
- * AE-0273 — useFocusTrap. Feature: responsive-dashboard-shell.feature
+ * useFocusTrap. Feature: responsive-dashboard-shell.feature
  * Scenarios: focus is trapped inside the drawer; focus returns on close.
  */
 import { describe, expect, it } from "vitest";
@@ -24,8 +24,8 @@ function renderTrap(active: boolean): {
   const buttons = ref.current!.querySelectorAll("button");
   return {
     ref,
-    first: buttons[0] as HTMLButtonElement,
-    last: buttons[1] as HTMLButtonElement,
+    first: buttons[0]!,
+    last: buttons[1]!,
   };
 }
 

@@ -23,14 +23,14 @@ export function EditUserDialog({
   user,
   onClose,
   onSuccess,
-}: EditUserDialogProps) {
+}: Readonly<EditUserDialogProps>) {
   const t = useTranslations("admin");
   const [role, setRole] = useState(user.role);
   const [isActive, setIsActive] = useState(user.is_active);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);

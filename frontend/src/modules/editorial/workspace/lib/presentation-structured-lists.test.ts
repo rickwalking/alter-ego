@@ -1,4 +1,4 @@
-// AE-0437 — Gherkin: frontend/tests/features/content-review-item-slots-ae0437.feature
+/** Gherkin: frontend/tests/features/content-review-item-slots-ae0437.feature */
 import { describe, expect, it } from "vitest";
 import { STRUCTURED_LIST_MAX_ITEMS } from "@/constants/editorial-workflow";
 import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";

@@ -1,7 +1,7 @@
-"""In-process workflow start through the real editorial service (AE-0354).
+"""In-process workflow start through the real editorial service.
 
 The orchestrator stands in for the LLM and image providers. The runner
-adapter calls the service directly, with no HTTP client. AE-0390: the
+adapter calls the service directly, with no HTTP client. The
 research trace resolves the autopilot agent and the owner from the scope.
 """
 

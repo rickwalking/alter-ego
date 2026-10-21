@@ -41,13 +41,11 @@ class TestAnonymousConversation:
         anon_settings: None,
     ) -> None:
         """Given anonymous user, when POST /api/conversations, then returns 201 with conversation."""
-        # Arrange: in-memory SQLite database
         engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         db_config.c_engine = engine
 
-        # Act: anonymous request (no auth headers)
         app = create_app()
         transport = ASGITransport(app=app)
         async with AsyncClient(
@@ -59,17 +57,14 @@ class TestAnonymousConversation:
                 json={"title": "Anonymous Chat", "metadata": {"source": "public"}},
             )
 
-        # Assert
         assert response.status_code == 201, (
             f"Expected 201, got {response.status_code}: {response.text}"
         )
         data = response.json()
         assert "id" in data
         assert data["title"] == "Anonymous Chat"
-        # Anonymous conversations should have no user_id set
         assert data.get("user_id") is None
 
-        # Cleanup
         db_config.c_engine = None
         await close_db()
         await engine.dispose()
@@ -80,13 +75,11 @@ class TestAnonymousConversation:
         anon_settings: None,
     ) -> None:
         """Given anonymous conversation, when POST /api/conversations, then sets anon_token cookie."""
-        # Arrange: in-memory SQLite database
         engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         db_config.c_engine = engine
 
-        # Act: anonymous request
         app = create_app()
         transport = ASGITransport(app=app)
         async with AsyncClient(
@@ -98,7 +91,6 @@ class TestAnonymousConversation:
                 json={"title": "My Anonymous Chat"},
             )
 
-        # Assert
         assert response.status_code == 201
         anon_cookie = response.cookies.get("anon_token")
         assert anon_cookie is not None, (
@@ -106,7 +98,6 @@ class TestAnonymousConversation:
         )
         assert isinstance(anon_cookie, str) and len(anon_cookie) > 0
 
-        # Cleanup
         db_config.c_engine = None
         await close_db()
         await engine.dispose()

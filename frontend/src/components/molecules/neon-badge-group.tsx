@@ -16,7 +16,7 @@ export function NeonBadgeGroup({
   items,
   className,
   children,
-}: NeonBadgeGroupProps): React.ReactElement {
+}: Readonly<NeonBadgeGroupProps>): React.ReactElement {
   return (
     <div className={`flex flex-wrap gap-2 ${className ?? ""}`}>
       {items.map((item) => (

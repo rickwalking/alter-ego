@@ -1,4 +1,4 @@
-"""The run heartbeat is never blocked by the run's own phase sync (AE-0390).
+"""The run heartbeat is never blocked by the run's own phase sync.
 
 Gherkin: tests/features/workflow_tracing_and_heartbeat.feature
   Scenario: The heartbeat succeeds while a phase run is in progress
@@ -134,11 +134,12 @@ class _World:
     project_id: str
 
 
-# pytest.ini defaults async fixtures to the session loop; asyncpg connections
-# are bound to the loop that opened them, so the fixture must share the test's.
 @pytest_asyncio.fixture(loop_scope="function")
 async def world(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_World]:
-    # Register every model so the isolated schema has all the run's tables.
+    """pytest.ini defaults async fixtures to the session loop, but asyncpg connections
+    are bound to the loop that opened them, so this fixture shares the test's loop.
+    Every model is registered so the isolated schema has all the run's tables.
+    """
     importlib.import_module(_MODELS_PACKAGE)
     async with isolated_schema(list(Base.metadata.tables)) as engine:
         previous = db_config.c_engine
@@ -168,8 +169,9 @@ def _patch_run(monkeypatch: pytest.MonkeyPatch, probe: _Probe) -> None:
     real_sse = workflow_service.publish_workflow_sse_updates
 
     async def _sse_then_probe(project_id: str, state: CarouselWorkflowState) -> None:
-        # Runs after the phase sync, review events and finalize, before the
-        # runner's VALIDATING / PERSISTING stage beats and its final commit.
+        """Runs after the phase sync, review events and finalize, before the runner's
+        VALIDATING / PERSISTING stage beats and its final commit.
+        """
         await probe.touch_row(project_id)
         await real_sse(project_id, state)
 
@@ -248,11 +250,11 @@ async def _approve_research(world: _World) -> ResumeStatus:
 # Scenario: The heartbeat succeeds while a phase run is in progress
 @pytest.mark.asyncio
 async def test_heartbeat_succeeds_while_the_outline_llm_runs(world: _World) -> None:
+    """Epoch 0 is the fresh row's epoch: the beat matched and stamped the row."""
     status = await _approve_research(world)
 
     assert status is ResumeStatus.APPLIED
     assert world.probe.loop_beats == [True]
-    # epoch 0 is the fresh row's epoch: the beat matched and stamped the row.
     assert world.probe.llm_beats == [True]
 
 

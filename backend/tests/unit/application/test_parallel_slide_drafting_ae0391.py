@@ -1,6 +1,8 @@
-"""AE-0391: parallel slide drafting (bounded, ordered) and per-role wiring.
+"""Parallel slide drafting (bounded, ordered) and per-role wiring.
 
 Scenarios: see tests/features/llm_model_routing_ae0391.feature
+
+BODIES are deliberately unrelated so the distinctness check never re-drafts.
 """
 
 from __future__ import annotations
@@ -42,7 +44,6 @@ from rag_backend.infrastructure.external.routed_chat_model import RoutedChatMode
 from tests.unit.llm_fakes_ae0391 import CallLog, FakeChat
 
 SLIDE_COUNT = 7
-# Deliberately unrelated bodies so the distinctness check never re-drafts.
 BODIES = [
     "Agentes autônomos planejam tarefas longas com memória persistente.",
     "Custos de inferência caíram quando o roteamento escolheu modelos menores.",
@@ -87,9 +88,6 @@ def _clear_cache() -> None:
     get_ai_response_cache().clear()
 
 
-# --- gather_bounded ----------------------------------------------------------
-
-
 async def test_gather_bounded_keeps_order_and_respects_the_limit() -> None:
     # Scenario: slides are drafted concurrently and kept in slide order
     log = CallLog()
@@ -124,9 +122,6 @@ async def test_gather_bounded_settles_siblings_before_raising() -> None:
     assert sorted(finished) == [0, 2, 3]
 
 
-# --- generate_slide_drafts ---------------------------------------------------
-
-
 class _RecordingAgent:
     """ContentDraftAgent stand-in recording sibling context and concurrency."""
 
@@ -138,11 +133,11 @@ class _RecordingAgent:
     async def draft_slide(
         self, slide_index: int, **kwargs: object
     ) -> dict[str, object]:
+        """Later slides finish first, so the order must still follow the outline."""
         self.log.in_flight += 1
         self.log.max_in_flight = max(self.log.max_in_flight, self.log.in_flight)
         self.sibling_contexts[slide_index] = str(kwargs["sibling_context"])
         self.previous_drafts[slide_index] = str(kwargs["previous_draft"])
-        # Later slides finish first: order must still follow the outline.
         await asyncio.sleep(0.005 * (SLIDE_COUNT - slide_index))
         self.log.in_flight -= 1
         return {"draft_text": BODIES[slide_index - 1], "confidence_score": 0.9}
@@ -178,9 +173,6 @@ async def test_generate_slide_drafts_default_concurrency_is_four() -> None:
     )
 
     assert agent.log.max_in_flight == 4
-
-
-# --- integration: real editorial service, fake chat models -----------------------
 
 
 def _roles(log: CallLog, bad_slide: int | None = None) -> ChatModelRoles:
@@ -257,6 +249,9 @@ async def test_content_phase_drafts_in_parallel_on_the_fast_model() -> None:
 
 
 async def test_one_failing_slide_is_retried_then_falls_back_alone() -> None:
+    """The six good slides run once; slide 3 gets five attempts (a call plus a repair
+    each) on the primary, then one fallback call.
+    """
     # Scenario: one failing slide does not redo the others
     log = CallLog()
     agent = ContentDraftAgent(llm=_roles(log, bad_slide=3).fast)
@@ -266,8 +261,6 @@ async def test_one_failing_slide_is_retried_then_falls_back_alone() -> None:
     )
 
     assert [d["draft_text"] for d in drafts] == BODIES
-    # The 6 good slides once; slide 3 gets 5 attempts (call + repair each,
-    # AE-0395) on the primary, then 1 fallback call.
     assert (
         log.models.count("fast-model") == (SLIDE_COUNT - 1) + 2 * LLM_ATTEMPTS_PER_MODEL
     )

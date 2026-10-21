@@ -1,4 +1,4 @@
-"""Persona voice scores on one 0-100 scale, on every read path (AE-0407). Pure.
+"""Persona voice scores on one 0-100 scale, on every read path. Pure.
 
 The judge's prompt does not name the scale and the fast model often answers
 on 0-10 (prod be190a0c: a stored ``overall`` of 8.7 was compared with the
@@ -32,7 +32,7 @@ def on_hundred_scale(value: float) -> float:
 
 
 def on_hundred_scale_entry(entry: Mapping[str, object]) -> dict[str, object]:
-    """One judge entry with every numeric score on 0-100 (AE-0439, QA F-12).
+    """One judge entry with every numeric score on 0-100.
 
     The ``overall`` is scaled by itself (the gate's score); the other
     numeric fields are scaled together, only when ALL of them are at most
@@ -63,7 +63,7 @@ def on_hundred_scale_entry(entry: Mapping[str, object]) -> dict[str, object]:
 
 
 def pending_rescores(scores: object) -> dict[int, int]:
-    """AE-0433/0439: pending ``slide_N`` entries by index, with their ticks.
+    """Pending ``slide_N`` entries by index, with their ticks.
 
     An entry marked ``rescore_pending`` carries a STALE ``overall``: it
     awaits a re-score. The ticks count how often the judge stayed

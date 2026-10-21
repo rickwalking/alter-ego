@@ -21,7 +21,7 @@ export function VoiceScore({
   personas,
   personaId,
   onPersonaChange,
-}: VoiceScoreProps): React.ReactElement {
+}: Readonly<VoiceScoreProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const parsed = blogQualitySchema.safeParse(quality);
   const score = parsed.success ? Math.round(parsed.data.voice_score) : null;

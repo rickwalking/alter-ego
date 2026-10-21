@@ -1,4 +1,4 @@
-"""Save-checklist strategy: a one-screen checklist to save (AE-0376, POV save)."""
+"""Save-checklist strategy: a one-screen checklist to save (POV save)."""
 
 from collections.abc import Mapping
 

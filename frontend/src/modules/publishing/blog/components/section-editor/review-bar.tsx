@@ -23,13 +23,13 @@ const STATUS = {
 } as const;
 
 /**
- * Review / publish / schedule controls (AE-0424), driven by the post status
+ * Review / publish / schedule controls, driven by the post status
  * and the existing workflow guards. A draft offers "Publish now" (the author
- * self-approves, AE-0441) or a submit for review, to an optional distinct
+ * self-approves) or a submit for review, to an optional distinct
  * reviewer (empty = the author). Publishing a draft is left to the API status
- * guard, whose error is shown here (AE-0438, F-11).
+ * guard, whose error is shown here.
  */
-export function ReviewBar(props: ReviewBarProps): React.ReactElement {
+export function ReviewBar(props: Readonly<ReviewBarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const { status, disabled, error } = props;
   return (
@@ -68,7 +68,7 @@ export function ReviewBar(props: ReviewBarProps): React.ReactElement {
   );
 }
 
-function DraftControls(props: ReviewBarProps): React.ReactElement {
+function DraftControls(props: Readonly<ReviewBarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [reviewerId, setReviewerId] = useState("");
   const { disabled } = props;
@@ -117,7 +117,9 @@ function DraftControls(props: ReviewBarProps): React.ReactElement {
   );
 }
 
-function UnderReviewControls(props: ReviewBarProps): React.ReactElement {
+function UnderReviewControls(
+  props: Readonly<ReviewBarProps>,
+): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [reason, setReason] = useState("");
   const { disabled } = props;

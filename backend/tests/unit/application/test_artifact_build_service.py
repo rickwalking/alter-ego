@@ -292,7 +292,7 @@ def _current_index_version(project_root: Path) -> str | None:
 @pytest.mark.asyncio
 @pytest.mark.unit
 class TestArtifactBuildIndexOrdering:
-    """AE-0313: current.json is written only AFTER a successful activation CAS."""
+    """The current.json index is written only AFTER a successful activation CAS."""
 
     async def test_fresh_build_writes_index_after_activation(
         self,
@@ -330,6 +330,7 @@ class TestArtifactBuildIndexOrdering:
         self,
         tmp_path: Path,
     ) -> None:
+        """The losing build must not re-point current.json at its version."""
         # Scenario: a CAS-losing concurrent build never touches current.json.
         winner = f"{ARTIFACT_VERSION_PREFIX}{'9' * 64}"
         (tmp_path / ARTIFACT_CURRENT_INDEX_FILENAME).write_text(
@@ -367,7 +368,6 @@ class TestArtifactBuildIndexOrdering:
             )
 
         assert isinstance(result, ArtifactBuildFailure)
-        # The losing build must NOT have re-pointed current.json at its version.
         assert _current_index_version(tmp_path) == winner
 
     async def test_activate_existing_writes_current_index(
@@ -426,9 +426,10 @@ class TestArtifactBuildIndexOrdering:
         self,
         tmp_path: Path,
     ) -> None:
-        # Digest determinism (r5): two renders of identical slide DATA yield the
-        # same version, so the second build re-activates via _activate_existing
-        # (a true no-op) instead of growing versions unbounded.
+        """Digest determinism: re-rendering identical slide data into fresh files (new
+        bytes and timestamps) yields the same version, so the second build re-activates
+        via _activate_existing (a true no-op) instead of growing versions unbounded.
+        """
         project = _make_project(tmp_path)
         slides = [_make_slide(1, project.id), _make_slide(2, project.id)]
         _populate_legacy_output(tmp_path, [1, 2])
@@ -451,7 +452,6 @@ class TestArtifactBuildIndexOrdering:
             return_value=build_repo,
         ):
             first = await service.build_and_activate(db, request)
-            # Re-render identical DATA into fresh files (new bytes/timestamps).
             _populate_legacy_output(tmp_path, [1, 2])
             build_repo.get_by_project_and_version = AsyncMock(
                 return_value=MagicMock(

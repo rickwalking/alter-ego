@@ -1,4 +1,4 @@
-"""A scout-verified quote of an X post (AE-0406, ADR-0023, spec §4).
+"""A scout-verified quote of an X post (ADR-0023, spec §4).
 
 The autopilot intake checks every field against the post text stored through
 ``POST /x-signals`` before a quote reaches a topic. From there it rides the

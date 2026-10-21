@@ -18,7 +18,7 @@ export function NeonSearchBar({
   onChange,
   placeholder,
   className,
-}: NeonSearchBarProps): React.ReactElement {
+}: Readonly<NeonSearchBarProps>): React.ReactElement {
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     onChange?.(e.target.value);
   };

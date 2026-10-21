@@ -1,4 +1,4 @@
-"""Unit tests: the blog reviewer resolution (AE-0441).
+"""Unit tests: the blog reviewer resolution.
 
 Feature: backend/tests/features/blog_post_ai_contract_ae0424.feature
 (review section: the author may review their own post).

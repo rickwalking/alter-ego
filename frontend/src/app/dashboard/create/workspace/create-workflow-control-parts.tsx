@@ -102,7 +102,7 @@ export function ControlNotices({
   editBudgetBlocked,
   contentHasEdits,
   showPublishLink,
-}: ControlNoticesProps): React.JSX.Element {
+}: Readonly<ControlNoticesProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   return (
     <>

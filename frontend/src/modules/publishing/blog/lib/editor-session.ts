@@ -1,5 +1,5 @@
 /**
- * Pure session transitions of the blog editor (AE-0424).
+ * Pure session transitions of the blog editor.
  *
  * A session is `{ base, original, draft }`: the last server post, the draft as
  * that post reads, and the owner's edited draft. Every server answer goes

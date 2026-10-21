@@ -12,7 +12,7 @@ import type { ScheduledPublishPickerProps } from "./types";
 export function ScheduledPublishPicker({
   postId,
   onScheduled,
-}: ScheduledPublishPickerProps) {
+}: Readonly<ScheduledPublishPickerProps>) {
   const t = useTranslations("workflow.schedule");
   const [datetime, setDatetime] = useState("");
   const [submitting, setSubmitting] = useState(false);

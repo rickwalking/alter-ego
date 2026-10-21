@@ -1,5 +1,22 @@
 """Carousel pipeline constants —
 statuses, slide types, dimensions, languages, image presets.
+
+``CAROUSEL_SLIDES_CONFIG_FORMAT`` is the persisted deck size after drafting
+(``7_slides``, ``9_slides``). Prompt versions: v4 adds cross-slide sibling context,
+imperative rework framing, a previous-draft diff channel and a live model config; v5
+requires ``long_form_notes`` so the carousel blog is not H1-only; v6 requires sentence
+case (proper nouns kept) and a body on every non-CTA slide; v7 is the Radar IA
+generation (caption first: hook on line 1, 3-5 hashtags, one CTA); v8 translations also
+cover ``tldr_strip`` and item texts; v9 translations write EN emphasis as ``<strong>``
+only and never echo locale markers or field labels. PT slides say "Deslize", not
+"Swipe". Flat editorial is the light counterpart of the neon preset, paired with the
+light palettes, and the default style. ``pov_editorial`` ("Foto + Editorial") is for
+Ponto de Vista decks: slide 1 is the owner's photo and only the point slides get an
+illustration, which also cuts image spend. All image generation routes through OpenAI
+(production has no Gemini key), so every supported combo uses it; the startup guard
+checks the default and the creation guard rejects a combo whose provider has no API key
+at project creation, before any workflow spend. Its error carries a stable prefix
+clients can branch on.
 """
 
 from rag_backend.domain.constants.carousel_themes import (
@@ -11,7 +28,6 @@ from rag_backend.domain.constants.carousel_themes import (
     THEME_CATEGORY_KEYWORDS,
 )
 
-# Carousel statuses
 CAROUSEL_STATUS_PENDING = "pending"
 CAROUSEL_STATUS_RESEARCHING = "researching"
 CAROUSEL_STATUS_DRAFTING = "drafting"
@@ -32,61 +48,42 @@ VALID_CAROUSEL_STATUSES = {
     CAROUSEL_STATUS_FAILED,
 }
 
-# Slide types
 SLIDE_TYPE_INTRO = "intro"
 SLIDE_TYPE_SUMMARY = "summary"
 SLIDE_TYPE_CONTENT = "content"
 SLIDE_TYPE_CLOSING = "closing"
 SLIDE_TYPE_CTA = "cta"
 
-# Default aspect ratio
 CAROUSEL_ASPECT_RATIO = "1080x1350"
 CAROUSEL_WIDTH = 1080
 CAROUSEL_HEIGHT = 1350
 
-# Default language
 CAROUSEL_DEFAULT_LANGUAGE = "pt-BR"
 
-# Default slides config
 CAROUSEL_DEFAULT_SLIDES_CONFIG = "1 intro, 1 summary, 3 content, 1 closing, 1 cta"
 CAROUSEL_SLIDES_CONFIG_SEVEN = "7_slides"
-# AE-0374: the persisted deck size after drafting (``7_slides``, ``9_slides``).
 CAROUSEL_SLIDES_CONFIG_FORMAT = "{count}_slides"
 
-# Template versions
 TEMPLATE_VERSION_V1 = "v1"
 TEMPLATE_VERSION_V2 = "v2"
 CAROUSEL_PROMPT_VERSION_V3 = "v3"
-# AE-0291: v4 adds cross-slide sibling context, imperative rework-feedback framing,
-# a previous-draft diff channel, and a live model config (temperature/max_tokens).
 CAROUSEL_PROMPT_VERSION_V4 = "v4"
-# AE-0347: v5 requires long_form_notes so the carousel blog is no longer H1-only.
 CAROUSEL_PROMPT_VERSION_V5 = "v5"
-# AE-0366: v6 requires sentence case (proper nouns kept) and a body on every
-# non-CTA slide.
 CAROUSEL_PROMPT_VERSION_V6 = "v6"
-# AE-0372: v7 is the Radar IA generation of the growth plan (caption first:
-# hook on line 1, 3-5 hashtags, one CTA).
 CAROUSEL_PROMPT_VERSION_V7 = "v7"
 CAROUSEL_CAPTION_PROMPT_VERSION = CAROUSEL_PROMPT_VERSION_V7
-# AE-0430: v8 slide_translations also translates tldr_strip and item texts.
 CAROUSEL_PROMPT_VERSION_V8 = "v8"
-# AE-0436: v9 slide_translations writes EN emphasis as <strong> only (never **)
-# and never echoes locale markers or field labels.
 CAROUSEL_PROMPT_VERSION_V9 = "v9"
 CAROUSEL_TRANSLATION_PROMPT_VERSION = CAROUSEL_PROMPT_VERSION_V9
 DEFAULT_TEMPLATE_VERSION = TEMPLATE_VERSION_V2
 DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 
-# Language codes
 LANGUAGE_PT = "pt"
 LANGUAGE_EN = "en"
 
-# Swipe text (AE-0372: PT slides say "Deslize", not the English "Swipe")
 SWIPE_TEXT_PT = "Deslize \u2192"
 SWIPE_TEXT_EN = "Swipe \u2192"
 
-# Research source types
 RESEARCH_SOURCE_TWITTER = "twitter"
 RESEARCH_SOURCE_BLOG = "blog"
 RESEARCH_SOURCE_REDDIT = "reddit"
@@ -103,23 +100,16 @@ VALID_RESEARCH_SOURCE_TYPES = {
     RESEARCH_SOURCE_DOCUMENTATION,
 }
 
-# Image generation providers
 IMAGE_MODEL_GEMINI = "gemini"
 IMAGE_MODEL_OPENAI = "openai"
 
 VALID_IMAGE_MODELS: set[str] = {IMAGE_MODEL_GEMINI, IMAGE_MODEL_OPENAI}
 
-# Image style presets
 IMAGE_STYLE_COMIC_NEON = "comic_neon"
 IMAGE_STYLE_CINEMATIC = "cinematic"
 IMAGE_STYLE_HYPERREAL = "hyperreal"
 IMAGE_STYLE_NEO_ANIME = "neo_anime"
-# Flat editorial vector preset — the light/editorial counterpart, paired with
-# the light palettes (risograph, paper_editorial, clinical_mint).
 IMAGE_STYLE_FLAT_EDITORIAL = "flat_editorial"
-# AE-0376: "Foto + Editorial" for Ponto de Vista decks. Slide 1 is the owner's
-# photo (no generation) and only the point slides get a light flat-editorial
-# illustration (the contract's image_required), which also cuts image spend.
 IMAGE_STYLE_POV_EDITORIAL = "pov_editorial"
 
 VALID_IMAGE_STYLES: set[str] = {
@@ -131,16 +121,9 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_POV_EDITORIAL,
 }
 
-# Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY
-# — intentionally (AE-0308): ALL image generation routes through OpenAI, so every
-# supported combo below uses IMAGE_MODEL_OPENAI. The AE-0215 startup guard checks
-# the default; the AE-0308 creation guard checks every requested combo.
 IMAGE_MODEL_DEFAULT = IMAGE_MODEL_OPENAI
-# AE-0372: flat editorial, aligned with the wizard and the autopilot, so not
-# every post looks like the same neon AI art (growth plan 16.4 #7).
 IMAGE_STYLE_DEFAULT = IMAGE_STYLE_FLAT_EDITORIAL
 
-# Export constants
 HD_SUBDIR_NAME = "hd"
 SHARED_IMAGES_DIR_NAME = "images"
 SLIDE_FILENAME_PREFIX = "slide_"
@@ -150,15 +133,11 @@ IMAGE_FORMAT_JPEG_LOWER = "jpeg"
 IMAGE_FORMAT_PNG = "PNG"
 IMAGE_FORMAT_WEBP = "WEBP"
 
-# AE-0308 creation guard: a combo whose provider has no API key is rejected at
-# project creation (before any workflow spend), not at the images phase. The
-# stable machine-readable prefix lets clients branch on the error class.
 ERR_IMAGE_PROVIDER_UNCONFIGURED = (
     "image_provider_unconfigured: image provider {!r} has no API key configured "
     "on this deployment; choose a preset backed by a configured provider"
 )
 
-# Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC),

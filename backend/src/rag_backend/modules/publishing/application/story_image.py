@@ -1,4 +1,4 @@
-"""The Instagram Story image announcing a carousel post (AE-0369).
+"""The Instagram Story image announcing a carousel post.
 
 Pure Pillow, no database. The PT slide 1 is centred on a blurred, darkened
 copy of itself with a short caption band above it, as a 1080x1920 JPEG of at

@@ -34,7 +34,7 @@ function hasAnyArtifact(counts: ArtifactCounts): boolean {
 
 export function CreateWorkflowArtifacts({
   state,
-}: CreateWorkflowArtifactsProps): React.JSX.Element | null {
+}: Readonly<CreateWorkflowArtifactsProps>): React.JSX.Element | null {
   const t = useTranslations("editorialWorkflow.artifacts");
 
   if (!state) {

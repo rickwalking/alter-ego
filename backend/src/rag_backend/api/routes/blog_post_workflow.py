@@ -1,4 +1,7 @@
-"""API routes for blog post workflow transitions (Phase 3 WF-003)."""
+"""API routes for blog post workflow transitions (Phase 3 WF-003).
+
+Path params are fields of the target dataclass (resolved with Depends()).
+"""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -81,7 +84,7 @@ def _event_service() -> WorkflowEventService:
 def _scheduler() -> ScheduledPublishService:
     """Build the scheduled-publish service exactly as the legacy route did.
 
-    Byte-identical to the pre-AE-0128 ``_scheduler`` helper — the same session
+    Byte-identical to the original ``_scheduler`` helper — the same session
     maker, the same Redis-backed workflow-event service, and the same notification
     service — so the schedule write + the due-post sweep are unchanged.
     """
@@ -138,7 +141,7 @@ def resolve_blog_reviewer(
 ) -> str:
     """The reviewer to assign: the requested one, else the post's author.
 
-    The author may review their own post (AE-0441, single-author deployment).
+    The author may review their own post (single-author deployment).
     """
     return requested or author_id or current_user_id
 
@@ -158,15 +161,16 @@ async def submit_blog_post_for_review(
 ) -> BlogPostResponse:
     """Submit a blog post for review.
 
-    The author may review their own post (AE-0441, single-author deployment):
+    The author may review their own post (single-author deployment):
     with no ``reviewer_id`` the author is the reviewer.
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one. It applies the same
+    readiness guard as publish, so an unpublishable post is never queued for review.
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.DRAFT)
-    # Same guard as publish: never queue a review of an unpublishable post.
     assert_ready_to_publish(post)
     old_status = post.status
 
@@ -207,10 +211,12 @@ async def approve_blog_post(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> BlogPostResponse:
-    """Approve a blog post (assigned reviewer or admin only)."""
+    """Approve a blog post (assigned reviewer or admin only).
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one.
+    """
     post = await get_blog_post_by_id(db, post_id)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
@@ -241,10 +247,14 @@ async def reject_blog_post(
     current_user: EditorUser,
     reason: str = Query(..., max_length=MAX_REJECT_REASON_LENGTH),
 ) -> BlogPostResponse:
-    """Reject a blog post (assigned reviewer or admin only)."""
+    """Reject a blog post (assigned reviewer or admin only).
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one. editor_comments is
+    reassigned, not appended to: SQLAlchemy does not track an in-place JSON list
+    mutation, so the reason would never be stored.
+    """
     post = await get_blog_post_by_id(db, post_id)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.UNDER_REVIEW)
     assert_blog_post_reviewer_or_admin(post, current_user)
@@ -254,8 +264,6 @@ async def reject_blog_post(
     post.submitted_for_review_at = None
     bump_lock_version(post)
 
-    # Reassign (not .append): an in-place JSON list mutation is not tracked by
-    # SQLAlchemy, so the reason was silently never stored (AE-0424).
     post.editor_comments = [
         *(post.editor_comments or []),
         {
@@ -286,7 +294,6 @@ async def reject_blog_post(
     return post
 
 
-# Path params are fields of the target dataclass (``Depends()``).
 PUBLISH_PATH = "/blog-posts/{post_id}/publish"
 UNPUBLISH_PATH = "/blog-posts/{post_id}/unpublish"
 
@@ -317,13 +324,14 @@ async def publish_blog_post(
     """Publish an approved blog post (author or admin only).
 
     The ``blog.v2`` document needs >= 1 non-empty section; a null cover is
-    allowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``
-    the editor sends is checked (409 when stale, AE-0424).
+    allowed (cards/OG fall back to a neutral default). An ``If-Match``
+    the editor sends is checked (409 when stale).
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one.
     """
     db, current_user = target.db, target.current_user
     post = await get_blog_post_for_user(db, target.post_id, current_user)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
     await check_optional_if_match(post.lock_version, target.if_match)
@@ -351,11 +359,15 @@ async def publish_blog_post(
 async def unpublish_blog_post(
     request: Request, target: Annotated[PublishTarget, Depends()]
 ) -> BlogPostResponse:
-    """Unpublish a blog post (optimistic-locked visibility flip; AE-0296)."""
+    """Unpublish a blog post (optimistic-locked visibility flip).
+
+    The transition runs under the row lock: an overlapping slot write (review reset)
+    either commits first and is seen here, or waits for this one. A visibility flip is a
+    versioned write like any other: the version is bumped so a concurrent editor's stale
+    If-Match is rejected instead of clobbered.
+    """
     db, current_user, if_match = target.db, target.current_user, target.if_match
     post = await get_blog_post_for_user(db, target.post_id, current_user)
-    # Transition under the row lock: an overlapping slot write (review reset)
-    # either commits first and is seen here, or waits for us (AE-0424).
     post = await lock_blog_post(db, post.id)
     if if_match is None:
         raise HTTPException(
@@ -373,8 +385,6 @@ async def unpublish_blog_post(
     old_status = post.status
 
     await target.publishing.service.unpublish_blog(post)
-    # A visibility flip is a versioned write like any other: bump the version
-    # so a concurrent editor's stale If-Match is rejected instead of clobbered.
     post.lock_version = if_match + 1
 
     await _emit_status_change(

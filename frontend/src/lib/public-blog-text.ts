@@ -1,5 +1,5 @@
 /**
- * Text helpers for the public blog surfaces (AE-0412, QA 2026-10-16 B21/B22).
+ * Text helpers for the public blog surfaces.
  *
  * Generated carousel copy carries emphasis markup (`<strong>`, `**`) and, on
  * some projects, placeholder titles such as "slide". Public pages must never
@@ -66,7 +66,7 @@ export function isPlaceholderTitle(title: string): boolean {
 
 /** First candidate that is a real title, without markup; "" when none is. */
 export function resolveDisplayTitle(
-  candidates: ReadonlyArray<string | null | undefined>,
+  candidates: readonly (string | null | undefined)[],
 ): string {
   for (const candidate of candidates) {
     if (candidate && !isPlaceholderTitle(candidate)) {

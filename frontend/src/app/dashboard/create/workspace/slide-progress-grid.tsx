@@ -20,7 +20,9 @@ interface SlideProgressGridProps {
  * each mutates from `pending → in_flight → done | failed` as workers
  * finish, and this grid reflects the live state.
  */
-export function SlideProgressGrid({ slides }: SlideProgressGridProps) {
+export function SlideProgressGrid({
+  slides,
+}: Readonly<SlideProgressGridProps>) {
   const t = useTranslations("create");
   if (slides.length === 0) return null;
 

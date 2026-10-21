@@ -10,27 +10,27 @@ import {
 import type { CalendarDay } from "@/modules/editorial-operations";
 import { useContentCalendar } from "@/modules/editorial";
 
-type UseCalendarDaysResult = {
+interface UseCalendarDaysResult {
   days: CalendarDay[];
   loading: boolean;
   error: string | null;
-};
+}
 
 /**
  * Loads the content calendar for the month anchored at `anchor` and derives the
  * month-grid days. The fetch is scoped to the visible grid window (passed as
  * `start`/`end` to `/api/content-calendar`), and items are placed on their true
  * date by `buildCalendarDaysFromApi`.
+ *
+ * The grid cells are LOCAL dates but the backend window is UTC: a naive
+ * toISOString() of the local boundaries shifts by the viewer's offset and could
+ * drop an edge-cell event. The window is padded by one day on each side so every
+ * visible local cell is covered for any timezone; placement stays exact because
+ * buildCalendarDaysFromApi matches each item to a cell by its yyyy-MM-dd prefix.
  */
 export function useCalendarDays(anchor: Date): UseCalendarDaysResult {
   const { start, end } = useMemo(() => {
     const range = calendarGridRange(anchor);
-    // The grid cells are LOCAL dates but the backend window is UTC; a naive
-    // toISOString() of the local boundaries shifts by the viewer's offset and
-    // could drop an edge-cell event whose instant falls just outside the UTC
-    // window. Pad ±1 day so every visible local cell is covered for any
-    // timezone — placement stays exact because buildCalendarDaysFromApi matches
-    // each item to a cell by its yyyy-MM-dd prefix (so the pad can't bleed).
     return {
       start: subDays(range.start, 1).toISOString(),
       end: addDays(range.end, 1).toISOString(),

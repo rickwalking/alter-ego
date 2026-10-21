@@ -1,9 +1,13 @@
-"""Server-side slug generation for hand-authored blog posts (AE-0411).
+"""Server-side slug generation for hand-authored blog posts.
 
 ``blog_posts.slug`` is ``UNIQUE NOT NULL``. A create request without a slug used
 to persist ``""``, so every create after the first slug-less post hit the unique
 constraint (409 "New Post"). The service now derives a slug from the title plus a
 short random suffix, so two posts with the same title still get distinct slugs.
+
+NFKD splits accented letters into base letter and combining mark so the marks can be
+dropped (“Revisão” becomes “revisao”). The title part is kept short so the slug stays
+readable and well under 255 characters.
 """
 
 from __future__ import annotations
@@ -13,16 +17,12 @@ import unicodedata
 import uuid
 from typing import Final, Literal
 
-# NFKD splits accented letters into base letter + combining mark, so the marks
-# can be dropped ("Revisão" → "revisao").
 _NORMAL_FORM: Final[Literal["NFKD"]] = "NFKD"
 _ASCII = "ascii"
 _IGNORE = "ignore"
 _NON_SLUG_CHARS = re.compile(r"[^a-z0-9]+")
 _SLUG_SEPARATOR = "-"
-# Fallback stem when the title has no ASCII letters or digits (e.g. emoji only).
 _FALLBACK_STEM = "post"
-# Title part kept short so the slug stays readable and well under 255 chars.
 _MAX_STEM_LENGTH = 80
 _SUFFIX_LENGTH = 8
 _SLUG_KEY = "slug"

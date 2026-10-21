@@ -1,7 +1,7 @@
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 /** Notification types for the notification center. */
 
-export type NotificationItem = {
+export interface NotificationItem {
   id: string;
   user_id: string;
   notification_type: string;
@@ -12,44 +12,44 @@ export type NotificationItem = {
   content_type: string | null;
   deadline_at: string | null;
   created_at: string;
-};
+}
 
-export type NotificationListResponse = {
+export interface NotificationListResponse {
   items: NotificationItem[];
   total: number;
-};
+}
 
-export type ReviewAssignmentPayload = {
+export interface ReviewAssignmentPayload {
   reviewer_id: string;
   content_id: string;
   content_type: string;
   title: string;
   deadline_hours?: number;
-};
+}
 
-export type ContentLock = {
+export interface ContentLock {
   content_id: string;
   content_type: string;
   user_id: string;
   user_name: string;
   expires_at: string;
-};
+}
 
-/** Which content a collaborative lock is for (AE-0446). */
+/** Which content a collaborative lock is for. */
 export interface LockTarget {
   contentId: string;
   contentType: string;
 }
 
-/** The lock state ``useCollaborativeEdit`` keeps (AE-0446). */
+/** The lock state ``useCollaborativeEdit`` keeps. */
 export interface LockState {
   activeLock: ContentLock | null;
   isLockedByOther: boolean;
   applyLockState: (lock: ContentLock | null) => void;
-  mountedRef: MutableRefObject<boolean>;
+  mountedRef: RefObject<boolean>;
 }
 
-/** The lock actions ``useCollaborativeEdit`` exposes (AE-0446). */
+/** The lock actions ``useCollaborativeEdit`` exposes. */
 export interface LockActions {
   acquireLock: () => Promise<boolean>;
   releaseLock: () => Promise<void>;

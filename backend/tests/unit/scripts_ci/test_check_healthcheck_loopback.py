@@ -1,10 +1,10 @@
-"""Rule-fires tests for scripts/ci/check_healthcheck_loopback.py (AE-0390, AE-0180).
+"""Rule-fires tests for scripts/ci/check_healthcheck_loopback.py.
 
 The checker fails CI when a compose ``healthcheck:`` block or a Dockerfile
 ``HEALTHCHECK`` names ``localhost``. A clean-tree pass is not enough: these
 tests prove a seeded violation exits 1.
 
-AE-0153: CI/config part of AE-0390. The healthcheck behaviour itself is in
+CI/config part of the healthcheck work. The healthcheck behaviour itself is in
 backend/tests/features/workflow_tracing_and_heartbeat.feature.
 """
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0390 — a CLI checker test must invoke a subprocess
+import subprocess  # noqa: S404  # integrity-ok: a CLI checker test must invoke a subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -59,7 +59,7 @@ CHECKER_MOD = _load_checker()
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0390 — fixed interpreter, test-controlled paths
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, test-controlled paths
         [PYTHON, str(CHECKER), *args],
         capture_output=True,
         text=True,

@@ -1,5 +1,5 @@
 /**
- * AE-0166 regression: `fetch()` inside `useEffect` must be an ESLint ERROR
+ * Regression: `fetch()` inside `useEffect` must be an ESLint ERROR
  * (not merely a warning) — including in `src/modules`/`src/components`, where a
  * since-removed scoped `no-restricted-syntax` block used to silently override it
  * (ESLint flat config replaces, not merges, same-key rules across objects).
@@ -13,6 +13,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..", "..");
+const ESLINT_BIN = join(
+  FRONTEND_ROOT,
+  "node_modules",
+  "eslint",
+  "bin",
+  "eslint.js",
+);
 const PROBE_DIR = join(
   FRONTEND_ROOT,
   "src",
@@ -35,9 +42,9 @@ interface EslintResult {
 function lintProbe(): { exitCode: number; results: EslintResult[] } {
   try {
     const out = execFileSync(
-      "npx",
+      process.execPath,
       [
-        "eslint",
+        ESLINT_BIN,
         "--format",
         "json",
         "src/modules/__eslint_fetch_probe__/probe.tsx",
@@ -58,8 +65,7 @@ describe("fetch-in-useEffect is an ESLint error (AE-0166)", () => {
   beforeEach(() => mkdirSync(PROBE_DIR, { recursive: true }));
   afterEach(() => rmSync(PROBE_DIR, { recursive: true, force: true }));
 
-  // A cold `npx eslint` with projectService type-checking takes ~11s on CI
-  // runners, so this subprocess test needs a generous timeout.
+  /** A cold `npx eslint` with projectService type-checking takes ~11s on CI runners, so this subprocess test needs a generous timeout. */
   it(
     "ERRORS on fetch() inside useEffect within src/modules",
     () => {

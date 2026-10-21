@@ -38,9 +38,11 @@ export const FAILED_CARD_COLORS = {
 } as const;
 
 /**
- * AE-0403: violation codes with a translated field-error message under
+ * Violation codes with a translated field-error message under
  * ``editorialWorkflow.review.fieldErrors.codes``. Any other code falls back to
- * the backend message.
+ * the backend message. From ``assistant_chatter`` on, the list carries every
+ * other presentation-validator code, so no backend English message reaches the
+ * PT review.
  */
 export const FIELD_ERROR_MESSAGE_CODES: ReadonlySet<string> = new Set([
   "body_too_long",
@@ -62,8 +64,6 @@ export const FIELD_ERROR_MESSAGE_CODES: ReadonlySet<string> = new Set([
   "body_empty",
   "heading_repeated_in_body",
   "icon_name_not_allowlisted",
-  // AE-0414 (B24): every other presentation-validator code, so no backend
-  // English message reaches the PT review.
   "assistant_chatter",
   "body_too_short",
   "closing_actions_missing",
@@ -84,17 +84,17 @@ export const FIELD_ERROR_MESSAGE_CODES: ReadonlySet<string> = new Set([
   "wrong_language",
 ]);
 
-/** AE-0403: codes whose message needs the ``{limit}`` read from the backend. */
+/** Codes whose message needs the ``{limit}`` read from the backend. */
 export const FIELD_ERROR_LIMIT_CODES: ReadonlySet<string> = new Set([
   "body_too_long",
   "heading_too_long",
   "copy_too_many_lines",
 ]);
 
-/** AE-0403: the EN emphasis markup shown inside the emphasis field error. */
+/** The EN emphasis markup shown inside the emphasis field error. */
 export const EMPHASIS_TAG_EXAMPLE = "<strong>…</strong>";
 
-/** AE-0403: backend locale codes → the localized-slide payload keys. */
+/** Backend locale codes → the localized-slide payload keys. */
 export const VIOLATION_LOCALE_TO_PRESENTATION_KEY: Readonly<
   Record<string, "presentation_pt" | "presentation_en">
 > = {
@@ -102,5 +102,5 @@ export const VIOLATION_LOCALE_TO_PRESENTATION_KEY: Readonly<
   en: "presentation_en",
 };
 
-/** AE-0414 (B09): ``POST /repair`` status when nothing could be changed. */
+/** ``POST /repair`` status when nothing could be changed. */
 export const REPAIR_STATUS_NOOP = "noop";

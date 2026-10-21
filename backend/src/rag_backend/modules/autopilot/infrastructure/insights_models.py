@@ -1,4 +1,4 @@
-"""ORM row for ``instagram_post_insights`` (AE-0378, ADR-0021 D11).
+"""ORM row for ``instagram_post_insights`` (ADR-0021 D11).
 
 One row per Instagram media id: the latest snapshot. Every metric column is
 nullable because the Graph API may omit a metric; ``NULL`` is "n/d".
@@ -39,7 +39,7 @@ class InstagramPostInsightsModel(AutopilotOrmBase):
 
 
 class InstagramAudienceHoursModel(AutopilotOrmBase):
-    """The cached ``online_followers`` of one account (AE-0404).
+    """The cached ``online_followers`` of one account.
 
     ``online_followers`` maps the UTC hour (``"0"``-``"23"``) to followers
     online. ``checked_at`` is the last Graph attempt; ``fetched_at`` the last

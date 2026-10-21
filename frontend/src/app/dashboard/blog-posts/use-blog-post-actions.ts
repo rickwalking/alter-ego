@@ -24,7 +24,7 @@ interface UseBlogPostActionsResult {
 }
 
 /**
- * Page-level state machine for the card management actions (AE-0296):
+ * Page-level state machine for the card management actions:
  * delete goes through an explicit confirmation dialog; hide (unpublish)
  * fires directly; guard failures surface as localized error copy.
  */

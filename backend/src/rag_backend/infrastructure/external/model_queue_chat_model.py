@@ -1,4 +1,4 @@
-"""Queue of chat models behind per-model circuit breakers (AE-0399).
+"""Queue of chat models behind per-model circuit breakers.
 
 ``ModelQueueChatModel`` is a ``BaseChatModel`` so every carousel consumer keeps
 its contract. Each call walks the queue in order: a model whose breaker is

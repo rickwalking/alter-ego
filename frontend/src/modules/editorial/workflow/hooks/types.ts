@@ -1,12 +1,12 @@
 /**
  * Editorial workflow hook data-shape types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), object-shape types
  * live here rather than inline in the hook `.ts` files.
  */
 
-export type CalendarItem = {
+export interface CalendarItem {
   id: string;
   content_type: string;
   title: string;
@@ -15,16 +15,16 @@ export type CalendarItem = {
   is_scheduled?: boolean;
   phase?: string;
   phase_status?: string;
-};
+}
 
-export type ContentCalendar = {
+export interface ContentCalendar {
   items: CalendarItem[];
   start: string;
   end: string;
   total: number;
-};
+}
 
-export type KanbanCard = {
+export interface KanbanCard {
   id: string;
   title: string;
   topic: string;
@@ -32,13 +32,13 @@ export type KanbanCard = {
   phase_status: string;
   workflow_status?: string | null;
   updated_at: string | null;
-};
+}
 
-export type KanbanColumn = {
+export interface KanbanColumn {
   phase: string;
   cards: KanbanCard[];
-};
+}
 
-export type WorkflowKanban = {
+export interface WorkflowKanban {
   columns: KanbanColumn[];
-};
+}

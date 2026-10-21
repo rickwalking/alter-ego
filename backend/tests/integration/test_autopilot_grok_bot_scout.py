@@ -1,4 +1,4 @@
-"""POST /api/autopilot/x-signals and /scout-failed (AE-0360).
+"""POST /api/autopilot/x-signals and /scout-failed.
 
 Gherkin: tests/features/autopilot_grok_bot_scout.feature
 """
@@ -57,6 +57,7 @@ _VALID_X = _posts((_status_url("openai", timedelta(hours=1)), "openai", "note"))
 async def test_accepted_x_urls_join_the_topic_allowlist(
     owner_chat: None, tmp_path: Path
 ) -> None:
+    """Every rejection carries the additive ``index`` and ``field`` keys."""
     del owner_chat
     first = _status_url("openai", timedelta(hours=1))
     second = _status_url("anthropic", timedelta(hours=2))
@@ -87,7 +88,6 @@ async def test_accepted_x_urls_join_the_topic_allowlist(
     assert cited.status_code == 200
     assert cited.json()["rejected"] == []
     assert len(cited.json()["accepted"]) == 1
-    # AE-0406: additive ``index`` and ``field`` on every rejection.
     assert foreign.json()["rejected"] == [
         {
             "index": 0,

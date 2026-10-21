@@ -5,7 +5,7 @@ import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
 import type { SaveHookInput } from "./types";
 
-/** AE-0375: response of `PUT /api/carousels/{id}/hook`. */
+/** Response of `PUT /api/carousels/{id}/hook`. */
 const saveHookResponseSchema = z.object({
   project_id: z.string(),
   hook_text: z.string(),
@@ -14,7 +14,7 @@ const saveHookResponseSchema = z.object({
 export type SaveHookResponse = z.infer<typeof saveHookResponseSchema>;
 
 /**
- * AE-0375: store the owner's slide-1 hook (≤60 characters, ≤10 words). The
+ * Store the owner's slide-1 hook (≤60 characters, ≤10 words). The
  * content phase drafts slide 1 with it.
  */
 export function useSaveCarouselHook() {

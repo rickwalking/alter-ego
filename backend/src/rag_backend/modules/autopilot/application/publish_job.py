@@ -84,7 +84,10 @@ from rag_backend.modules.autopilot.recovery_constants import (
 
 @dataclass(frozen=True, kw_only=True)
 class PublishJobDependencies:
-    """Collaborators for one publish job. One bundle keeps the constructor small."""
+    """Collaborators for one publish job. One bundle keeps the constructor small.
+
+    ``story`` posts the Story after the carousel; None means no Story step.
+    """
 
     runs: AutopilotRunRepository
     source: CarouselPublishSource
@@ -93,7 +96,6 @@ class PublishJobDependencies:
     clock: Clock
     checkpoint: PublishCheckpoint
     claims: PublishClaims
-    # AE-0369: posts the Story after the carousel. None: no Story step.
     story: StoryRunner | None = None
 
 
@@ -206,9 +208,11 @@ class InstagramPublishJob:
         return await self._publish(run, media)
 
     async def _blocked(self, run: AutopilotRun, reason: str) -> ManualPublishOutcome:
-        """Fail on a pre-check, except while an approve is still releasing."""
+        """Fail on a pre-check, except while an approve is still releasing.
+
+        An approved but not yet public carousel waits instead of failing.
+        """
         if release_pending(run, reason, self._deps.clock.now()):
-            # Approved but not public yet: wait, do not fail (QA r2 R4c).
             return outcome_of(PUBLISH_RESULT_FAILED, None, REASON_RELEASE_PENDING)
         return await self._fail(run, reason, None)
 
@@ -304,13 +308,16 @@ class InstagramPublishJob:
         post_id: str,
         permalink: str | None,
     ) -> ManualPublishOutcome:
+        """Post the extras, then record the run as published.
+
+        The Story runs before the transition, so a crash leaves the run publishing and
+        the next tick resumes the Story; the Story never fails the post.
+        """
         await self._deps.runs.save_post(
             SavePostCommand(
                 run_id=run.run_id, ig_post_id=post_id, ig_permalink=permalink
             )
         )
-        # Before the transition, so a crash leaves the run publishing and the
-        # next tick resumes the Story; the Story never fails the post.
         extras = with_late(
             await post_extras(self._deps.story, run.carousel_project_id),
             late_minutes(run.scheduled_at, self._deps.clock.now()),

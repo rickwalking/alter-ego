@@ -170,7 +170,7 @@ async def lock_blog_post(db: AsyncSession, post_id: UUID | str) -> BlogPostModel
     """``SELECT ... FOR UPDATE`` a blog post, refreshing the loaded instance.
 
     Writes that ran a slow provider call (image, rewrite, translation) re-read
-    the row here so they apply onto the LATEST document and status (AE-0424).
+    the row here so they apply onto the LATEST document and status.
     """
     result = await db.execute(
         select(BlogPostModel)

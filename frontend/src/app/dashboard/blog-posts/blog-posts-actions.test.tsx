@@ -1,3 +1,6 @@
+/**
+ * Scenarios: tests/features/blog-posts-management.feature.
+ */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -8,8 +11,6 @@ import {
 } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 import type { BlogPostActionHandlers } from "@/app/dashboard/blog-posts/types";
-
-// Scenarios: see tests/features/blog-posts-management.feature
 
 function makePost(overrides: Partial<DashboardBlogPost>): DashboardBlogPost {
   return {
@@ -76,8 +77,10 @@ describe("BlogPostCardActions (AE-0296)", () => {
     expect(screen.getByText("Hide (revert to draft)")).toBeInTheDocument();
   });
 
-  // Scenario (AE-0411): A carousel post waiting for its carousel release is
-  // not shown as live — hiding it would keep it hidden after the release.
+  /**
+   * (hiding it would keep it hidden after the release)
+   */
+  // Scenario: A carousel post waiting for its carousel release is not shown as live
   it("offers no Hide for a published post that is not live yet", () => {
     render(
       <BlogPostCardActions
@@ -109,7 +112,7 @@ describe("BlogPostCardActions (AE-0296)", () => {
 });
 
 describe("useBlogPostActions delete confirmation (AE-0296)", () => {
-  it("cancelling the dialog sends no delete request", async () => {
+  it("cancelling the dialog sends no delete request", () => {
     const deletePost = vi.fn();
     const unpublish = vi.fn();
     const { result } = renderHook(() =>
@@ -184,7 +187,7 @@ describe("DeleteConfirmModal (AE-0296)", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByText("Cancel"));
     expect(onCancel).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getAllByText("Delete").at(-1) as HTMLElement);
+    fireEvent.click(screen.getAllByText("Delete").at(-1)!);
     expect(onConfirm).toHaveBeenCalledOnce();
   });
 });

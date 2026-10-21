@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { BlogPost } from "@/modules/publishing";
 import { mapBlogPostToDashboard } from "./blog-post-adapter";
 
-// Scenarios: see tests/features/blog-posts-listing-status-badge.feature
-
 function makePost(status: string): BlogPost {
   return {
     id: "post-1",
@@ -39,8 +37,8 @@ describe("mapBlogPostToDashboard", () => {
     expect(dashboard.status).toBeNull();
   });
 
-  // Scenario (AE-0411): A carousel post waiting for its carousel release is
-  // not shown as live — liveness comes from the API, never from status.
+  // Scenario: A carousel post waiting for its carousel release is not shown as live
+  /** Liveness comes from the API, never from the status. */
   it("maps is_public into isPublic and defaults a missing flag to false", () => {
     const live = { ...makePost("published"), is_public: true };
     const waiting = { ...makePost("published"), is_public: false };

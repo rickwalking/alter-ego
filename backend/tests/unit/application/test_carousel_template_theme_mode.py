@@ -3,7 +3,7 @@
 Gherkin: tests/features/carousel_design_refinement.feature
 (Scenario: light palettes render dark ink text with a light scrim).
 
-AE-0265: a light-background palette must compose dark ink text + a light scrim
+a light-background palette must compose dark ink text + a light scrim
 so body copy clears WCAG AA; dark palettes keep their exact legacy values.
 """
 
@@ -20,7 +20,7 @@ from rag_backend.application.services.carousel_template.theme_mode import (
 
 _DARK = {"primary": "#ef4444", "accent": "#00d4ff", "background": "#0a0e17"}
 _LIGHT = {"primary": "#111827", "accent": "#2563eb", "background": "#f7f5f0"}
-_LIGHT_BACKGROUNDS = ("#fbf7f0", "#f7f5f0", "#f0fdfa")  # riso, paper, mint
+_LIGHT_BACKGROUNDS = ("#fbf7f0", "#f7f5f0", "#f0fdfa")
 
 
 def _parse_rgba(value: str) -> tuple[int, int, int, float]:
@@ -72,7 +72,9 @@ class TestThemeMode:
 @pytest.mark.unit
 class TestBodyContrast:
     def test_light_body_text_clears_wcag_aa(self) -> None:
-        # Body copy uses --text-60; it must clear 4.5:1 on every light palette.
+        """Body copy uses --text-60, which must clear 4.5:1 on every light palette
+        (riso, paper, mint).
+        """
         text_60 = surface_css_vars(_LIGHT)["text_60"]
         for bg in _LIGHT_BACKGROUNDS:
             effective = _blend_over(text_60, bg)
@@ -82,9 +84,10 @@ class TestBodyContrast:
 @pytest.mark.unit
 class TestBaseCss:
     def test_dark_css_unchanged(self) -> None:
+        """The scrim value is still present via a CSS variable."""
         css = _get_neon_base_css(_DARK)
         assert "--text: #ffffff;" in css
-        assert "rgba(10,12,20,0.08)" in css  # scrim value still present via var
+        assert "rgba(10,12,20,0.08)" in css
 
     def test_light_css_has_dark_ink_and_no_white_root_text(self) -> None:
         css = _get_neon_base_css(_LIGHT)

@@ -1,4 +1,4 @@
-"""A closing slide's items live under ``actions`` (AE-0437).
+"""A closing slide's items live under ``actions``.
 
 Two places put them under ``features``: the drafting skill told the model to
 return the closing checklist as ``features``, and the slide row stores a

@@ -1,4 +1,4 @@
-"""Shared client for Grok Bot scout route tests (AE-0360)."""
+"""Shared client for Grok Bot scout route tests."""
 
 from __future__ import annotations
 

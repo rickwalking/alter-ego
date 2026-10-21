@@ -94,15 +94,17 @@ def _request_has_edited_slides(body: EditorialWorkflowResumeRequest) -> bool:
 
 
 def validate_resume_action(body: EditorialWorkflowResumeRequest) -> str:
-    """Validate resume action and feedback; return sanitized feedback."""
+    """Validate resume action and feedback; return sanitized feedback.
+
+    An edited-slides submission is a complete revise on its own: the edits are the
+    input, so no feedback text is required for it.
+    """
     if body.action not in RESUME_ROUTE_SUPPORTED_ACTIONS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_UNSUPPORTED_REVIEW_ACTION,
         )
     safe_feedback = sanitize_llm_input(body.feedback or "")
-    # AE-0310: an edited-slides submission is a complete revise on its own —
-    # the edits ARE the input, so no feedback text is required for it.
     if (
         body.action == REVIEW_ACTION_REVISE
         and not safe_feedback.strip()
@@ -136,7 +138,7 @@ def ensure_resume_not_in_progress(
 ) -> None:
     """Reject resume when workflow is already running.
 
-    AE-0315: the run-in-progress detail carries ``run_started_at`` (stamped
+    the run-in-progress detail carries ``run_started_at`` (stamped
     by the ORM listener when the run flipped to in_progress) so the client
     can render the live in-progress banner instead of a generic error.
     """
@@ -165,7 +167,7 @@ async def ensure_no_artifact_mutation_in_progress(
 ) -> None:
     """Reject resume while an artifact mutator holds the project lock.
 
-    Closes the two-commit seam (AE-0316/AE-0311): a repair/republish/edit
+    Closes the two-commit seam: a repair/republish/edit
     holds the session-scoped advisory lock across its full write sequence;
     a resume must not start inside that window. The resume runner never
     acquires the lock itself — it only refuses to start while one is held.
@@ -192,7 +194,11 @@ async def validate_resume_workflow_gates(
     *,
     ctx: _ResumeGateContext,
 ) -> None:
-    """Validate revision cap and persona score before accepting resume."""
+    """Validate revision cap and persona score before accepting resume.
+
+    The revision-cap conflict names the charged phase (the target on a send-back), which
+    the typed 409 client copy reads.
+    """
     if workflow_state is None:
         return
     if body.action == REVIEW_ACTION_REVISE:
@@ -210,8 +216,6 @@ async def validate_resume_workflow_gates(
             )
         except ValueError as exc:
             if str(exc) == ERR_REVISION_CAP_EXCEEDED:
-                # AE-0310: the conflict names the CHARGED phase (the target on
-                # a send-back), consumed by the typed 409 client copy.
                 charged_phase = resolve_revision_cap_phase(
                     workflow_state, sanitized_feedback
                 )
@@ -274,7 +278,7 @@ async def bump_resume_lock_version(
 ) -> int:
     """Validate optimistic lock via the single write owner and return new version.
 
-    Routes the resume ``lock_version`` compare-and-swap through the AE-0107 write
+    Routes the resume ``lock_version`` compare-and-swap through the write
     owner (which delegates UNCHANGED to ``bump_carousel_version``) so the WO
     concurrency-token bump has a single owner. The 409/400 HTTP mapping is
     preserved byte-identically.
@@ -296,7 +300,7 @@ async def bump_resume_lock_version(
 
 
 def _ensure_target_phase_allowed(target_phase: str, checkpoint_phase: str) -> None:
-    """Reject a send-back target the checkpoint phase does not accept (AE-0310)."""
+    """Reject a send-back target the checkpoint phase does not accept."""
     if checkpoint_phase == PHASE_FINAL_REVIEW:
         return
     if checkpoint_phase == PHASE_DESIGN:
@@ -319,7 +323,7 @@ async def ensure_structured_feedback_allowed(
 ) -> None:
     """Reject structured feedback fields submitted outside their allowed phase.
 
-    AE-0310 widened the allowlists: ``edited_localized_slides`` is accepted at
+    widened the allowlists: ``edited_localized_slides`` is accepted at
     {content, design, final_review} (uniform apply + re-validate semantics) and
     ``target_phase`` is accepted at design (content only) besides final_review.
     ``edited_text`` stays final-review-only.

@@ -1,4 +1,4 @@
-"""Redirect hops are checked before any request is sent (AE-0348 QA r2 R2).
+"""Redirect hops are checked before any request is sent (QA r2 R2).
 
 A real HTTP server on 127.0.0.1 answers ``/start`` with a 302. The research
 fetcher reaches ``/start`` through a public-looking name, and must refuse the

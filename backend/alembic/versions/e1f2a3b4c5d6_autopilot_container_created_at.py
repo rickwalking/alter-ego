@@ -4,7 +4,7 @@ Revision ID: e1f2a3b4c5d6
 Revises: d0e1f2a3b4c5
 Create Date: 2026-10-13
 
-AE-0357: ADDITIVE. Instagram containers expire after 24 hours. ``updated_at``
+ADDITIVE. Instagram containers expire after 24 hours. ``updated_at``
 moves on every retry, so the reuse window needs its own timestamp.
 ``downgrade`` drops the column.
 """

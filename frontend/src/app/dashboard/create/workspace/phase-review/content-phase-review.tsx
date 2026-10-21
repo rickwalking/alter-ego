@@ -63,18 +63,22 @@ function validationStamp(state: EditorialWorkflowState): string {
   ].join("|");
 }
 
+/**
+ * Violations arriving in the content interrupt/gate payload are merged
+ * (de-duplicated) with the presentation validation ones. Unsaved edits can
+ * always be saved without approving, also when the server is no longer
+ * blocking, so a late edit never has to be sent by approving.
+ */
 export function ContentPhaseReview({
   state,
   editable = false,
   slides: controlledSlides,
   onSlidesChange,
   manualFixes,
-}: ContentPhaseReviewProps): React.ReactElement {
+}: Readonly<ContentPhaseReviewProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const baselineSlides = useMemo(() => resolveLocalizedSlides(state), [state]);
   const localizedSlides = controlledSlides ?? baselineSlides;
-  // AE-0309: merge violations arriving in the content interrupt/gate payload
-  // with the presentation validation ones (de-duplicated).
   const violations = useMemo(() => listContentReviewViolations(state), [state]);
   const addressed = useMemo(() => addressViolations(violations), [violations]);
   const errors = useSlideFieldErrors(addressed, validationStamp(state));
@@ -126,9 +130,6 @@ export function ContentPhaseReview({
         })}
       </div>
 
-      {/* AE-0437: unsaved edits can always be saved without approving, also
-          when the server is no longer blocking (prod carousel 5344b6c6: a
-          late-added EN TL;DR edit could only be sent by approving). */}
       {handlers && manualFixes && (approvalBlocked || hasChanges) ? (
         <ManualFixesFooter
           errors={errors}

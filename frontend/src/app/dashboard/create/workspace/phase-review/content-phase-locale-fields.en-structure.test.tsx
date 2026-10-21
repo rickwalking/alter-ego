@@ -1,4 +1,6 @@
-// AE-0430 — Gherkin: frontend/tests/features/content-review-en-structure-ae0430.feature
+/**
+ * Gherkin: frontend/tests/features/content-review-en-structure-ae0430.feature.
+ */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { LocalizedSlideReview } from "@/modules/publishing";

@@ -39,7 +39,7 @@ export function StepHistoryEmpty(): React.JSX.Element {
 
 export function ResearchHistory({
   state,
-}: StepHistorySectionProps): React.JSX.Element {
+}: Readonly<StepHistorySectionProps>): React.JSX.Element {
   const t = useTranslations("create.stepHistory");
   const findings = state.research_findings;
   return (
@@ -50,8 +50,7 @@ export function ResearchHistory({
       <ul className="list-disc space-y-1 pl-5">
         {findings.map((item, index) => (
           <li key={`finding-${index}`}>
-            {asString((item as Record<string, unknown>).source) ||
-              t("untitledSlide")}
+            {asString(item.source) || t("untitledSlide")}
           </li>
         ))}
       </ul>
@@ -61,7 +60,7 @@ export function ResearchHistory({
 
 export function OutlineHistory({
   state,
-}: StepHistorySectionProps): React.JSX.Element {
+}: Readonly<StepHistorySectionProps>): React.JSX.Element {
   const t = useTranslations("create.stepHistory");
   const outline = state.outline;
   return (
@@ -73,10 +72,7 @@ export function OutlineHistory({
         {outline.map((slide, index) => (
           <li key={`outline-${index}`}>
             <span style={{ color: TITLE_COLOR }}>
-              {outlineTitle(
-                slide as Record<string, unknown>,
-                t("untitledSlide"),
-              )}
+              {outlineTitle(slide, t("untitledSlide"))}
             </span>
           </li>
         ))}
@@ -88,7 +84,7 @@ export function OutlineHistory({
 /** The localized review when present, else the raw slide drafts. */
 export function ContentHistory({
   state,
-}: StepHistorySectionProps): React.JSX.Element {
+}: Readonly<StepHistorySectionProps>): React.JSX.Element {
   const t = useTranslations("create.stepHistory");
   const localizedSlides = resolveLocalizedSlides(state);
   if (localizedSlides.length > 0) {
@@ -108,7 +104,7 @@ export function ContentHistory({
       </p>
       <ol className="list-decimal space-y-3 pl-5">
         {drafts.map((slide, index) => {
-          const record = slide as Record<string, unknown>;
+          const record = slide;
           const text = resolveSlideDraftPreview(record);
           return (
             <li key={`draft-${index}`}>
@@ -126,7 +122,7 @@ export function ContentHistory({
 
 export function ImagesHistory({
   state,
-}: StepHistorySectionProps): React.JSX.Element {
+}: Readonly<StepHistorySectionProps>): React.JSX.Element {
   const t = useTranslations("create.stepHistory");
   const count = state.image_assets?.length ?? 0;
   return (
@@ -149,10 +145,10 @@ export function ReviewHistory(): React.JSX.Element {
 function PublishText({
   label,
   text,
-}: {
+}: Readonly<{
   label: string;
   text: string;
-}): React.JSX.Element | null {
+}>): React.JSX.Element | null {
   if (!text.trim()) {
     return null;
   }
@@ -168,7 +164,7 @@ function PublishText({
 
 export function PublishHistory({
   state,
-}: StepHistorySectionProps): React.JSX.Element {
+}: Readonly<StepHistorySectionProps>): React.JSX.Element {
   const t = useTranslations("create.stepHistory");
   const caption = state.caption ?? "";
   const linkedinPt = state.linkedin_post_pt ?? "";

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Run-once migration: upgrade in-flight carousels to presentation policy v2.
 
-⚠️ DEPLOY-GATED ON AE-0311 — DO NOT RUN IN PROD BEFORE THE REPAIR ENDPOINT /
-"Fix issues" button (AE-0311) IS LIVE. The v2 casing rules are warning-severity,
+⚠️ DEPLOY-GATED — DO NOT RUN IN PROD BEFORE THE REPAIR ENDPOINT /
+"Fix issues" button IS LIVE. The v2 casing rules are warning-severity,
 so this migration surfaces new visible warnings on every in-flight review.
 Without a working fix button those warnings degrade the review UX with no
 one-click remedy. The rules/severity/v2 policy deploy any time; this migration
-is the separate, AE-0311-gated deliverable (AE-0312 Decision Log r4).
+is the separate deliverable gated on that endpoint.
 
 WHAT IT DOES
 ------------
@@ -15,7 +15,7 @@ For every NON-completed project not already on v2:
   2. Re-validates the project's ``localized_slides`` under v2 and stores the
      fresh severity-aware ``presentation_validation`` report in the workflow
      checkpoint (re-labeling alone would leave the stale v1 report served
-     verbatim — AE-0312 Decision Log r5).
+     verbatim).
 Completed projects are left untouched (frozen artifacts + policy version).
 
 SAFETY
@@ -27,7 +27,7 @@ SAFETY
 - Down migration (``--downgrade``): restores v1 for non-completed rows and
   re-validates under v1 (deterministic, reproduces the prior stored report).
 
-USAGE (run inside the backend container, AFTER the AE-0311 deploy)
+USAGE (run inside the backend container, AFTER the repair-endpoint deploy)
     docker compose exec backend uv run python \
         scripts/upgrade_inflight_presentation_policy_v2.py [--dry-run] [--downgrade]
 """
@@ -115,7 +115,11 @@ async def _process_project(
     ctx: MigrationContext,
     project: CarouselProjectModel,
 ) -> bool:
-    """Bump the DB column and re-validate the checkpoint for one project."""
+    """Bump the DB column and re-validate the checkpoint for one project.
+
+    The policy column is an old-style untyped ``Column``, so it is written with
+    ``setattr`` to keep the typed write mypy-clean.
+    """
     target = _target_version(ctx.config)
     status = str(project.status)
     current_version = cast("str | None", project.presentation_policy_version)
@@ -125,7 +129,6 @@ async def _process_project(
         return False
     await _revalidate_checkpoint(ctx, str(project.id))
     if not ctx.config.dry_run:
-        # Old-style Column (untyped); setattr keeps the typed write mypy-clean.
         setattr(project, _POLICY_VERSION_COLUMN, target)
     logger.info(
         "presentation_policy_upgrade_project",

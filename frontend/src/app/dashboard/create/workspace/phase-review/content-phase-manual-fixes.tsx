@@ -13,9 +13,9 @@ import type { LocalizedSlideReview } from "@/modules/publishing";
 import { CONTENT_REVIEW_ID_PREFIX } from "./content-phase-locale-fields";
 
 /**
- * AE-0403: "submit manual fixes" at the content gate. Saves the edits through
+ * "submit manual fixes" at the content gate. Saves the edits through
  * an edits-only revise (apply + re-validate + re-interrupt); it never approves.
- * AE-0414 (B04): ``onSubmit`` receives only the slides the reviewer changed,
+ * ``onSubmit`` receives only the slides the reviewer changed,
  * each exactly as edited (never clamped to a budget).
  */
 export interface ContentManualFixesActions {
@@ -38,7 +38,7 @@ export function ManualFixesFooter({
   canSubmit,
   manualFixes,
   onSubmit,
-}: ManualFixesFooterProps): React.ReactElement {
+}: Readonly<ManualFixesFooterProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   return (
     <div className="space-y-2 rounded-md border border-destructive/30 p-3">

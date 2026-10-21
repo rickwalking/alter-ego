@@ -26,9 +26,6 @@ from rag_backend.application.services.carousel_refinement import (
 from rag_backend.domain.models import CarouselProject, CarouselSlide, CarouselTheme
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 class _FakeMixin(CarouselRefinementMixin):
     """Concrete mixin host for unit tests."""
 
@@ -69,9 +66,6 @@ def _make_slide(**overrides: object) -> CarouselSlide:
     return slide
 
 
-# ---------------------------------------------------------------------------
-# Prompt rendering (extra coverage to kill mutants)
-# ---------------------------------------------------------------------------
 @pytest.mark.unit
 class TestRenderImageRewritePromptExtra:
     """Additional edge cases for prompt rendering mutants."""
@@ -127,9 +121,6 @@ class TestRenderDesignPromptExtra:
         assert kwargs["variables"]["current_css"] == "a" * 2000
 
 
-# ---------------------------------------------------------------------------
-# regenerate_slide_image
-# ---------------------------------------------------------------------------
 @pytest.mark.unit
 class TestRegenerateSlideImage:
     """Tests for CarouselRefinementMixin.regenerate_slide_image."""
@@ -327,9 +318,6 @@ class TestRegenerateSlideImage:
         assert slide.extras == {"image_prompt": "new"}
 
 
-# ---------------------------------------------------------------------------
-# refine_carousel_design
-# ---------------------------------------------------------------------------
 @pytest.mark.unit
 class TestRefineCarouselDesign:
     """Tests for CarouselRefinementMixin.refine_carousel_design."""
@@ -429,7 +417,10 @@ class TestRefineCarouselDesign:
 
     @pytest.mark.asyncio
     async def test_css_extraction_only_start_tag_missing(self) -> None:
-        """Given HTML with only </style>, when refining, then empty CSS is passed."""
+        """Given HTML with only </style>, when refining, then empty CSS is passed.
+
+        A missing start tag yields an empty current_css.
+        """
         mixin = _FakeMixin()
         project = _make_project(output_dir="/tmp/out")
         slide = _make_slide()
@@ -443,7 +434,6 @@ class TestRefineCarouselDesign:
 
         call_args, _ = mixin._llm.generate.call_args
         content = call_args[0][0]["content"]
-        # When start tag is missing, current_css should be ""
         assert "```css\n\n```\n\nReturn ONLY" in content
         mock_write.assert_called_once_with("body {}", encoding="utf-8")
 
@@ -583,7 +573,6 @@ class TestRefineCarouselDesign:
 
         call_args, _ = mixin._llm.generate.call_args
         content = call_args[0][0]["content"]
-        # The current_css in the prompt should be truncated
         assert long_css not in content
         assert "a" * 2000 in content
 

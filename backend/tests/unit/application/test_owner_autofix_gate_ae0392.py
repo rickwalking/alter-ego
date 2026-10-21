@@ -1,4 +1,4 @@
-"""AE-0392: the gate repair's source, patch and service edges.
+"""The gate repair's source, patch and service edges.
 
 The happy paths run on the real engine in
 tests/unit/application/test_content_quality_gate_flow_ae0392.py; these cover

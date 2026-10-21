@@ -1,4 +1,4 @@
-"""Tests for the researcher subagent + research @tool adapters (AE-0249).
+"""Tests for the researcher subagent + research @tool adapters.
 
 Covers tests/features/researcher_subagent_url_navigation.feature:
 - the scrape_url / search_web @tool adapters delegate via the ResearchTool Protocol
@@ -114,7 +114,7 @@ async def test_scrape_url_adapter_degrades_on_failure() -> None:
     [
         "file:///etc/passwd",
         "ftp://example.com/x",
-        "http://169.254.169.254/latest/meta-data/",  # cloud metadata
+        "http://169.254.169.254/latest/meta-data/",
         "http://localhost/admin",
         "http://127.0.0.1:8000/",
         "http://10.0.0.5/internal",
@@ -122,11 +122,11 @@ async def test_scrape_url_adapter_degrades_on_failure() -> None:
     ],
 )
 async def test_scrape_url_adapter_blocks_unsafe_targets(unsafe_url: str) -> None:
+    """The guard must short-circuit before the service is ever invoked."""
     research = _StubResearch(page="SECRET")
     adapter = build_scrape_url_tool(research)
     result = await adapter.ainvoke({"url": unsafe_url})
     assert result.startswith(SCRAPE_BLOCKED_PREFIX)
-    # The guard must short-circuit BEFORE the service is ever invoked.
     assert research.scrape_calls == []
 
 
@@ -163,6 +163,7 @@ async def test_search_web_adapter_empty() -> None:
 
 # Scenario: Subagent specs use the DeepAgents tools/prompt/model fields
 def test_researcher_spec_uses_deepagents_fields() -> None:
+    """There is no bespoke skills key, only DeepAgents-standard fields."""
     research = _StubResearch()
     stub_model = cast("BaseChatModel", object())
     spec = build_researcher_subagent(_config(research, model=stub_model))
@@ -171,30 +172,30 @@ def test_researcher_spec_uses_deepagents_fields() -> None:
     assert isinstance(spec[SPEC_FIELD_DESCRIPTION], str)
     assert isinstance(spec[SPEC_FIELD_PROMPT], str) and spec[SPEC_FIELD_PROMPT]
     assert spec[SPEC_FIELD_MODEL] is stub_model
-    # No bespoke "skills" key — only DeepAgents-standard fields.
     assert "skills" not in spec
 
 
 def test_researcher_spec_grants_three_tools() -> None:
+    """The model field is omitted when none is supplied."""
     research = _StubResearch()
     spec = build_researcher_subagent(_config(research))
     tools = spec[SPEC_FIELD_TOOLS]
     assert isinstance(tools, list)
     names = {cast("BaseTool", t).name for t in tools}
     assert names == {"scrape_url", "search_web", "_fake_search_documents"}
-    # model omitted when not supplied
     assert SPEC_FIELD_MODEL not in spec
 
 
 # Scenario: Deterministic phases stay LangGraph nodes
 def test_deterministic_phases_are_langgraph_nodes_not_subagents() -> None:
+    """Phase subagent specs carry no runnable, task or tools: they are deterministic
+    nodes, not tool-wielding delegated subagents.
+    """
     compiled = build_carousel_workflow_graph().compile()
     node_names = set(compiled.get_graph().nodes)
     for phase in ("outline", "content", "design", "images", "final_review"):
         assert phase in node_names
 
-    # The phase subagent specs carry NO runnable/task and NO tools — they are
-    # deterministic nodes (ADR-007), not tool-wielding task-delegated subagents.
     for phase_spec in build_phase_subagent_specs():
         assert "runnable" not in phase_spec
         assert "task" not in phase_spec
@@ -202,7 +203,6 @@ def test_deterministic_phases_are_langgraph_nodes_not_subagents() -> None:
 
 
 # Scenario: Researcher subagent is registered in the chat pipeline
-# (tests/features/research_enrichment.feature, AE-0317)
 def test_rag_agent_registers_researcher_subagent() -> None:
     from unittest.mock import MagicMock
 
@@ -243,7 +243,6 @@ def test_rag_agent_skips_researcher_without_tool_access() -> None:
 
 
 # Scenario: Researcher subagent is registered in the chat pipeline
-# (negative half 2, AE-0317 r1 m8: tool access present but no research tool)
 def test_rag_agent_skips_researcher_without_research_tool() -> None:
     from unittest.mock import MagicMock
 

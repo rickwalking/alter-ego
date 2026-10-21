@@ -1,4 +1,4 @@
-"""Mirror and none resolvers (AE-0352).
+"""Mirror and none resolvers.
 
 Gherkin: tests/features/autopilot_signals.feature
   Scenario: Mirror resolver falls back on legal block

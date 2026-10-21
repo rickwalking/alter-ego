@@ -1,4 +1,4 @@
-"""Story Graph calls with the real Graph shapes (AE-0369).
+"""Story Graph calls with the real Graph shapes.
 
 Gherkin: tests/features/autopilot_story_and_music.feature
   Scenario: The Story is created, polled, and published through Graph

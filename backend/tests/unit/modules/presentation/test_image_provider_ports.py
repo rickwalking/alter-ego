@@ -1,4 +1,4 @@
-"""Deterministic fake-provider tests for the presentation image ports (AE-0119).
+"""Deterministic fake-provider tests for the presentation image ports.
 
 Phase-5 behavior-preserving port extraction: the image-generation contracts
 (:class:`ImageGenerationService`, :class:`ImageStyleStrategy`), the provider
@@ -20,8 +20,8 @@ implementing them. These tests prove:
 No live vendor SDK is called: the fake provider writes fixed bytes itself, so the
 suite is hermetic (there is no OpenAI / Gemini key in this environment).
 
-Behavior-preserving — Gherkin not applicable (see ticket AE-0119); verified by
-this suite + mypy / lint-imports / the AE-0116 safety net.
+Behavior-preserving — Gherkin not applicable; verified by
+this suite + mypy / lint-imports / the presentation safety net.
 """
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ class TestRegistryImplementsPort:
     """Scenario: the registry satisfies the ImageProviderPort contract."""
 
     def test_registry_is_an_image_provider_port(self) -> None:
-        # ImageProviderPort IS runtime-checkable (new port) — isinstance is valid.
+        """ImageProviderPort is runtime-checkable, so isinstance is valid."""
         assert isinstance(_registry(), ImageProviderPort)
 
     def test_resolve_returns_image_provider(self) -> None:
@@ -189,7 +189,7 @@ class TestResolveBehaviorUnchanged:
             assert isinstance(registry.resolve(model, style), ImageProvider)
 
     def test_comic_neon_uses_injected_openai_service(self) -> None:
-        # AE-0308: comic_neon re-routed to OpenAI — no gemini combo remains.
+        """comic_neon is routed to OpenAI; no gemini combo remains."""
         gemini = FakeImageService()
         openai = FakeImageService()
         registry = ImageProviderRegistry(gemini_service=gemini, openai_service=openai)
@@ -224,6 +224,7 @@ class TestEndToEndThroughPort:
         self,
         tmp_path: Path,
     ) -> None:
+        """The style wrapper prepends directives; the user scene appears verbatim."""
         openai = FakeImageService()
         registry: ImageProviderPort = ImageProviderRegistry(
             gemini_service=FakeImageService(),
@@ -241,5 +242,4 @@ class TestEndToEndThroughPort:
         assert result == output_path
         assert Path(output_path).read_bytes() == _FAKE_PNG_BYTES
         assert openai.calls == [(final_prompt, output_path)]
-        # The style wrapper prepends directives; the user scene appears verbatim.
         assert scene in final_prompt

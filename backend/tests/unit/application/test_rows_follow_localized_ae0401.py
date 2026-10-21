@@ -1,4 +1,4 @@
-"""AE-0401 addendum 2: the slide rows render the validated localized copy.
+"""The slide rows render the validated localized copy.
 
 Gherkin: tests/features/slide_copy_validators_ae0401.feature (rows scenarios)
 and tests/features/autopilot_slide_autofix_ae0401.feature.

@@ -14,17 +14,16 @@ vi.mock("next-intl", () => ({
     };
     return (key: string, values?: Record<string, unknown>) => {
       if (key === "goToSlide") {
-        return `Go to slide ${values?.number}`;
+        return `Go to slide ${String(values?.number)}`;
       }
       if (key === "slideAlt") {
-        return `${values?.title} – slide ${values?.number}`;
+        return `${String(values?.title)} – slide ${String(values?.number)}`;
       }
       return entries[key] ?? key;
     };
   }),
 }));
 
-// Mock next/image to render a simple img tag
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
     // eslint-disable-next-line jsx-a11y/alt-text
@@ -32,7 +31,6 @@ vi.mock("next/image", () => ({
   },
 }));
 
-// Mock jszip to avoid heavy dependency in unit tests
 const mockFile = vi.fn();
 const mockFolder = vi.fn(() => ({ file: mockFile }));
 const mockGenerateAsync = vi.fn().mockResolvedValue(new Blob(["zip-content"]));
@@ -79,7 +77,7 @@ describe("HorizontalCarouselViewer", () => {
     const user = userEvent.setup();
     global.fetch = vi.fn().mockResolvedValue({
       blob: vi.fn().mockResolvedValue(new Blob(["image-data"])),
-    } as unknown as Response);
+    });
 
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Test carousel" />);
     const button = screen.getByRole("button", { name: /Download images/i });
@@ -89,12 +87,11 @@ describe("HorizontalCarouselViewer", () => {
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
-    // Each fetch should include credentials and an AbortSignal
     expect(global.fetch).toHaveBeenCalledWith(
       "/slide1.jpg",
       expect.objectContaining({
         credentials: "include",
-        signal: expect.any(AbortSignal),
+        signal: expect.any(AbortSignal) as unknown,
       }),
     );
 
@@ -122,7 +119,6 @@ describe("HorizontalCarouselViewer", () => {
     const button = screen.getByRole("button", { name: /Download images/i });
     await user.click(button);
 
-    // While fetching, button should show loading text and be disabled
     await waitFor(() => {
       expect(
         screen.getByRole("button", { name: /Downloading\.\.\./i }),
@@ -146,7 +142,7 @@ describe("HorizontalCarouselViewer", () => {
       .mockRejectedValueOnce(new Error("network error"))
       .mockResolvedValueOnce({
         blob: vi.fn().mockResolvedValue(new Blob(["image-data"])),
-      } as unknown as Response);
+      });
 
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Test carousel" />);
     const button = screen.getByRole("button", { name: /Download images/i });
@@ -162,14 +158,12 @@ describe("HorizontalCarouselViewer", () => {
     const { container } = render(
       <HorizontalCarouselViewer slideUrls={urls} alt="Test carousel" />,
     );
-    // The first slide's wrapper div is the first child of the viewport
     const viewport = container.querySelector("#carousel-viewport");
     expect(viewport).not.toBeNull();
     const firstSlide = viewport?.querySelector("div");
     expect(firstSlide).not.toBeNull();
   });
 
-  // Edge: Empty slideUrls renders nothing
   it("returns null when no slides are provided", () => {
     const { container } = render(
       <HorizontalCarouselViewer slideUrls={[]} alt="Empty" />,
@@ -177,7 +171,6 @@ describe("HorizontalCarouselViewer", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  // Feature: QA follow-ups (AE-0416)
   // Scenario: A slide whose image is not rendered shows a placeholder
   it("replaces a slide image that fails to load with a placeholder", () => {
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Deck" />);

@@ -1,4 +1,4 @@
-"""SQLAlchemy adapter for ``RunRecoveryStore`` (AE-0348 QA round 1)."""
+"""SQLAlchemy adapter for ``RunRecoveryStore`` (QA round 1)."""
 
 from __future__ import annotations
 

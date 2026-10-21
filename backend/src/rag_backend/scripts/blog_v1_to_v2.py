@@ -1,4 +1,4 @@
-"""One-shot blog_posts.content v1 -> blog.v2 cutover command (AE-0423, ADR-0025).
+"""One-shot blog_posts.content v1 -> blog.v2 cutover command (ADR-0025).
 
 Usage (in the freshly built backend image, Postgres up, app stack down):
     python -m rag_backend.scripts.blog_v1_to_v2 --dry-run
@@ -77,7 +77,9 @@ async def run_modes(maker: SessionMaker, args: argparse.Namespace) -> int:
 
 
 async def _main(args: argparse.Namespace) -> int:
-    # Own engine, no ``create_all``: the cutover never creates or alters tables.
+    """Uses its own engine without ``create_all``: the cutover never creates or alters
+    tables.
+    """
     engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
     try:
         maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

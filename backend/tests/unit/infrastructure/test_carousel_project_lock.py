@@ -1,4 +1,4 @@
-"""Unit tests for the per-project carousel serialization lock (AE-0316).
+"""Unit tests for the per-project carousel serialization lock.
 
 Postgres-specific semantics (real advisory locks, session scope,
 concurrency) live in tests/integration/test_carousel_project_lock_pg.py;
@@ -44,10 +44,11 @@ class TestDialectGating:
     """Scenario: non-Postgres engines no-op instead of querying pg catalogs."""
 
     async def test_lock_context_noops_on_sqlite(self) -> None:
+        """The lock context must not touch pg_advisory_lock on SQLite."""
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")
         try:
             async with carousel_project_lock(engine, PROJECT_ID):
-                pass  # must not touch pg_advisory_lock on SQLite
+                pass
         finally:
             await engine.dispose()
 

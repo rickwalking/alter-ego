@@ -18,9 +18,9 @@ const SOURCE_TYPE_OPTIONS = [
 /** Title, type and content of a new source material. */
 export function AddSourceForm({
   form,
-}: {
+}: Readonly<{
   form: SourceForm;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   return (
     <form
@@ -84,10 +84,10 @@ export function AddSourceForm({
 export function SourceItem({
   source,
   onExtract,
-}: {
+}: Readonly<{
   source: ContentSource;
   onExtract: (sourceId: string) => Promise<void>;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   return (
     <div className="rounded-md border p-3 space-y-2">

@@ -1,4 +1,7 @@
-"""Content draft agent with persona enforcement (AI-008)."""
+"""Content draft agent with persona enforcement (AI-008).
+
+DRAFT_QUOTE_ID_KEY lets a pov_news slide pick a verified quote by id, never by its text.
+"""
 
 from __future__ import annotations
 
@@ -50,7 +53,6 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 LOG_LONG_FORM_NOTES_MISSING = "content_draft.long_form_notes_missing"
-# AE-0406: a ``pov_news`` slide may pick a verified quote by id (never its text).
 DRAFT_QUOTE_ID_KEY = CARD_KEY_QUOTE_ID
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
@@ -70,8 +72,8 @@ def _model_bind_kwargs(model_cfg: dict[str, object]) -> dict[str, object]:
 def _render_content_prompt(
     variables: dict[str, object], slide_policy: SlidePolicyContext | None
 ) -> tuple[str, dict[str, object]]:
-    """v6 content (fixed contracts), v7 per role (Radar IA v4, AE-0376), or
-    the POV prompt from the owner's thesis (AE-0375)."""
+    """v6 content (fixed contracts), v7 per role (Radar IA v4), or
+    the POV prompt from the owner's thesis."""
     if slide_policy is None:
         return render_prompt(
             "carousel",
@@ -135,13 +137,18 @@ class ContentDraftAgent:
     ) -> dict[str, object]:
         """Draft copy for a single slide.
 
-        AE-0375: ``policy`` (role contracts) targets the project's contract and
+        ``policy`` (role contracts) targets the project's contract and
         deck size; with ``policy.pov`` the slide is drafted from the owner's
         thesis with the ``carousel_pov/v1`` prompt.
+
+        Titles and key points use case-preserving sanitization: lowercased input made
+        the model echo lowercase copy into the slides. Revision notes are rendered once,
+        in the instruction context. The quality rubric is the current contract's (the
+        project's own when it is a role contract). The YAML model config (temperature,
+        max_tokens) is applied through a per-call bind. An empty response is re-rolled,
+        a malformed one repaired, and only what parsed is cached, since an unparseable
+        raw would poison every retry for the cache TTL.
         """
-        # AE-0366: case-preserving sanitization. The lowercasing sanitizer fed
-        # the model "a versão para robótica leva o argon..." for a correctly
-        # cased outline title, and GLM echoed the lowercase into the slides.
         title = sanitize_model_copy(title)
         safe_points = [sanitize_model_copy(p) for p in key_points]
         persona_context = sanitize_display_input(persona_context)
@@ -170,10 +177,6 @@ class ContentDraftAgent:
         )
         slide_policy = policy
         policy = load_presentation_policy(instruction.policy_version)
-        # AE-0291: revision notes are rendered ONCE, in the instruction context above.
-        # AE-0347: v5 additionally requires long_form_notes (blog source).
-        # AE-0366: v6 adds explicit sentence-case and non-empty-body rules.
-        # The v4/v5 template no longer carries a second {{ revision_notes }} block.
         variables: dict[str, object] = {
             "slide_number": slide_index,
             "title": title,
@@ -186,8 +189,6 @@ class ContentDraftAgent:
                 else render_presentation_policy_context(policy)
             ),
             "persona_context": persona_context or "Default professional voice.",
-            # AE-0366: the current contract's quality rubric (+ self-check).
-            # AE-0375: the project's own contract when it is a role contract.
             "quality_rubric": render_quality_rubric(
                 load_presentation_policy(rubric_version), RUBRIC_AUDIENCE_CONTENT
             ),
@@ -198,13 +199,7 @@ class ContentDraftAgent:
         if cached is not None:
             draft = self._parse_draft(cached)
         else:
-            # AE-0291: apply the v4 YAML model config (temperature/max_tokens) via a
-            # per-call .bind — previously discarded, so the knobs were inert.
             runnable = self._runnable_with_model_config(model_cfg)
-            # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
-            # returned empty content live on 2026-09-14 and the phase died.
-            # Re-roll an empty response, repair a malformed one, and cache only
-            # what parsed (an unparseable raw poisons every retry for the TTL).
             draft, raw = await ainvoke_json(
                 runnable,
                 full_prompt,
@@ -250,13 +245,18 @@ class ContentDraftAgent:
     def _runnable_with_model_config(
         self, model_cfg: dict[str, object]
     ) -> Runnable[LanguageModelInput, BaseMessage]:
-        """AE-0291: bind supported sampling knobs from the prompt YAML model block."""
+        """Bind supported sampling knobs from the prompt YAML model block."""
         bind_kwargs = _model_bind_kwargs(model_cfg)
         if not bind_kwargs:
             return self.llm
         return self.llm.bind(**bind_kwargs)
 
     def _parse_draft(self, raw: str) -> dict[str, object]:
+        """Parse a draft response and sanitize its long-form notes.
+
+        The notes are sanitized case-preserving at the source because they later feed
+        the translation prompt and the public blog verbatim.
+        """
         try:
             data = extract_json(raw)
         except json.JSONDecodeError as exc:
@@ -279,15 +279,13 @@ class ContentDraftAgent:
             draft["icon_name"] = icon_name.strip()
         long_form_notes = data.get("long_form_notes")
         if isinstance(long_form_notes, str) and long_form_notes.strip():
-            # AE-0347: case-preserving sanitization at the source — the notes are
-            # later fed verbatim into the translation prompt and the public blog.
             draft["long_form_notes"] = sanitize_display_input(long_form_notes)
         return draft
 
     def _warn_if_notes_missing(
         self, draft: dict[str, object], slide_index: int
     ) -> None:
-        """AE-0347: a note-less reply silently reproduces the H1-only blog section.
+        """A note-less reply silently reproduces the H1-only blog section.
 
         Fires once per drafted slide (not per parse) with enough context for ops
         to correlate the affected slide.

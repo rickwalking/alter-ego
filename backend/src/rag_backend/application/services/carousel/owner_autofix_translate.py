@@ -1,4 +1,4 @@
-"""The only LLM step of the owner autofix: re-translate untranslated EN (AE-0367).
+"""The only LLM step of the owner autofix: re-translate untranslated EN.
 
 One call per attempt for the untranslated EN texts only (never the whole
 slide), at most ``AUTOFIX_TRANSLATE_ATTEMPTS`` attempts with a timeout each.
@@ -124,12 +124,13 @@ def _accepted(
 async def _attempt(
     translator: EnRetranslator, targets: tuple[RetranslateTarget, ...]
 ) -> dict[str, str] | None:
+    """Any provider or parse failure keeps the current EN text."""
     try:
         return await asyncio.wait_for(
             translator.translate(targets),
             timeout=AUTOFIX_TRANSLATE_TIMEOUT_SECONDS,
         )
-    except Exception as exc:  # any provider/parse failure keeps the current EN
+    except Exception as exc:
         logger.warning(LOG_AUTOFIX_TRANSLATE_FAILED, error=type(exc).__name__)
         return None
 

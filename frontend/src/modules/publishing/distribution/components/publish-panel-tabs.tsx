@@ -16,12 +16,14 @@ const LINKEDIN_MAX_CHARS = 3000;
 const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 const VIEWER_LANGUAGES: readonly ViewerLanguage[] = ["pt", "en"];
 
+/**
+ * The clipboard rejects in insecure contexts; the rejection is swallowed so the
+ * caller still succeeds.
+ */
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
-  } catch {
-    // Clipboard rejects in insecure contexts; caller should still succeed.
-  }
+  } catch {}
 }
 
 /** PT / EN switch (the viewer and the LinkedIn post share the language). */
@@ -30,7 +32,7 @@ export function LanguageTabs({
   onChange,
   ariaLabel,
   className,
-}: LanguageTabsProps): React.ReactElement {
+}: Readonly<LanguageTabsProps>): React.ReactElement {
   return (
     <div role="tablist" aria-label={ariaLabel} className={className}>
       {VIEWER_LANGUAGES.map((lang) => (
@@ -55,9 +57,9 @@ export function LanguageTabs({
 
 function PublishResultLine({
   result,
-}: {
+}: Readonly<{
   result: PublishPanelProps["publishResult"];
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   if (result?.status === "success") {
     return <p className="text-success text-sm">{result.message}</p>;
   }
@@ -67,7 +69,13 @@ function PublishResultLine({
   return null;
 }
 
-/** Caption editor, copy and (when wired) publish-now for Instagram. */
+/**
+ * Caption editor, copy and (when wired) publish-now for Instagram.
+ *
+ * The Instagram caption is Portuguese only (the account posts in PT; no EN
+ * caption is generated), so the EN viewer tab says so instead of presenting the
+ * PT caption as English.
+ */
 export function InstagramTab({
   caption,
   onCaptionChange,
@@ -75,15 +83,12 @@ export function InstagramTab({
   onPublishInstagram,
   isPublishingInstagram,
   publishResult,
-}: InstagramTabProps): React.ReactElement {
+}: Readonly<InstagramTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   const hashtagCount = countHashtags(caption);
   const hashtagsOver = hashtagCount > IG_MAX_HASHTAGS;
   return (
     <div className="space-y-3">
-      {/* AE-0416: the Instagram caption is Portuguese only (the account
-        posts in PT; no EN caption is generated), so the EN viewer tab
-        says so instead of presenting the PT caption as English. */}
       {language === "en" && (
         <p
           role="note"
@@ -148,7 +153,7 @@ export function LinkedInTab({
   language,
   setLanguage,
   pdfHref,
-}: LinkedInTabProps): React.ReactElement {
+}: Readonly<LinkedInTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   return (
     <div className="space-y-3">

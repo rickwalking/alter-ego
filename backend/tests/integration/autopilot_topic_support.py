@@ -1,4 +1,4 @@
-"""Shared fixtures for autopilot topic-intake tests (AE-0353)."""
+"""Shared fixtures for autopilot topic-intake tests."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ _BRIEF_TEMPLATE = "A plain brief about {title}."
 
 
 def _brief_for(title: str, brief: str | None) -> str:
-    """AE-0361: the default brief names the title, so it stays on theme."""
+    """The default brief names the title, so it stays on theme."""
     if brief is not None:
         return brief
     return _BRIEF_TEMPLATE.format(title=title)
@@ -132,6 +132,9 @@ async def _client(
     clock: _Clock,
     reader: _Bundle | None = None,
 ) -> AsyncIterator[tuple[AsyncClient, AsyncEngine]]:
+    """The engine is disposed before the global is cleared, because ``close_db()``
+    disposes ``c_engine``.
+    """
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
     from rag_backend.api.middleware.rate_limiting import limiter
@@ -152,7 +155,6 @@ async def _client(
             yield client, engine
     finally:
         limiter.reset()
-        # Dispose before clearing the global: close_db() disposes c_engine.
         await close_db()
         db_config.c_engine = None
 

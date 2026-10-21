@@ -68,7 +68,7 @@ def photo_file(path: str) -> dict[str, _File]:
 
 
 def cover_photo_file(path: str) -> dict[str, _File]:
-    """AE-0418: the stored WebP cover re-encoded as one JPEG ``photo`` part."""
+    """The stored WebP cover re-encoded as one JPEG ``photo`` part."""
     from PIL import Image
 
     source = Path(path)

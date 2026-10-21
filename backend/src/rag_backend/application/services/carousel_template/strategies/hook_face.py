@@ -1,4 +1,4 @@
-"""Hook-face strategy: the owner's photo + a big hook (AE-0376, POV slide 1).
+"""Hook-face strategy: the owner's photo + a big hook (POV slide 1).
 
 PR #106 review: the photo is never optional. A missing or unreadable photo
 raises ``HookPhotoError`` instead of silently rendering slide 1 without it.
@@ -51,7 +51,7 @@ def hook_photo_src(project: CarouselProject) -> str:
 
 
 def _photo_html(project: CarouselProject, alt: str) -> str:
-    # AE-0418: the owner may swap the photo for a GrokBot ``ai_image`` cover.
+    """The owner may swap the photo for a GrokBot ``ai_image`` cover."""
     src = ai_cover_src(project) or hook_photo_src(project)
     return (
         f'<div class="pov-hook-photo">'

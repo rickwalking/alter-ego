@@ -1,4 +1,4 @@
-"""Shared Deep Agents harness — middleware presets (AE-0248).
+"""Shared Deep Agents harness — middleware presets.
 
 Two thin presets over LangChain's built-in middleware so every agent composed
 through the harness gets consistent context-window management and (where wanted)
@@ -6,12 +6,15 @@ human-in-the-loop tool gating:
 
 - :func:`build_summarization_middleware` caps chat context-window growth by
   summarizing older turns once a message-count threshold is crossed. Chat agents
-  adopt this (AE-0248) — it changes observable model context but does **not**
+  adopt this — it changes observable model context but does **not**
   touch ``message_repository`` persistence.
 - :func:`build_human_in_the_loop_middleware` wraps ``HumanInTheLoopMiddleware``
   for tool-approval gates.
 
 Kept minimal and generic: no carousel/chat domain coupling.
+
+Summarization triggers once the window exceeds SUMMARIZATION_TRIGGER_MESSAGES and
+retains the most recent SUMMARIZATION_KEEP_MESSAGES.
 """
 
 from __future__ import annotations
@@ -23,8 +26,6 @@ from langchain.agents.middleware import (
 from langchain.agents.middleware.human_in_the_loop import InterruptOnConfig
 from langchain_core.language_models.chat_models import BaseChatModel
 
-# Default summarization trigger/keep: summarize once the window exceeds
-# SUMMARIZATION_TRIGGER_MESSAGES, retaining the most recent SUMMARIZATION_KEEP_MESSAGES.
 SUMMARIZATION_TRIGGER_MESSAGES = 40
 SUMMARIZATION_KEEP_MESSAGES = 20
 

@@ -4,7 +4,7 @@ Revision ID: b1c2d3e4f5a6
 Revises: b0c1d2e3f4a5
 Create Date: 2026-10-15
 
-AE-0377 (ADR-0021): ADDITIVE. ``topic_candidates`` gains the scout v3
+ADR-0021: ADDITIVE. ``topic_candidates`` gains the scout v3
 ``content_mode`` (NULL = Radar IA) and the POV ``thesis_draft``;
 ``autopilot_runs`` gains ``pov_thesis``, the thesis the owner confirmed on
 Telegram before generation. Every column is nullable; no existing column is
@@ -17,7 +17,7 @@ PR #106 review: ``topic_candidates`` also gains the scout v3 ``pov_format`` and
 keep ``c2d3e4f5a6b7`` the single head; safe because the revision is idempotent
 and prod applies the SQL by hand.
 
-Idempotent (AE-0371 review): prod has no ``alembic_version`` table and the SQL
+Idempotent: prod has no ``alembic_version`` table and the SQL
 was applied by hand, so each column is added only when missing and dropped only
 when present.
 """

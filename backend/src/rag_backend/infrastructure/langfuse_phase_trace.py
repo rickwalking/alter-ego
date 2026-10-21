@@ -1,4 +1,4 @@
-"""Named Langfuse traces for workflow phases (AE-0390, AE-0442).
+"""Named Langfuse traces for workflow phases.
 
 Prod 2026-10-15: an autopilot carousel had 10 GLM generations in 3 traces.
 Only ``workflow_research`` carried metadata, outline and content generations
@@ -12,7 +12,7 @@ inside it, including the LangChain callback generations. Callers that know
 the actor but not the phase (the HTTP resume runner, the autopilot driver)
 set a ``workflow_trace_scope``; the phase seams read it.
 
-AE-0442: Langfuse v3 derives trace I/O from the root observation. The phase
+Langfuse v3 derives trace I/O from the root observation. The phase
 must therefore put the brief and the result on the span/trace itself, and a
 nested phase must reuse the outer span instead of opening a second one whose
 ``unknown`` metadata overwrites the actor. ``generation_run_name`` lets call

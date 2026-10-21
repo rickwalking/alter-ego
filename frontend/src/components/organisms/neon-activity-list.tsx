@@ -20,7 +20,7 @@ export interface NeonActivityListProps {
 export function NeonActivityList({
   title,
   activities,
-}: NeonActivityListProps): React.ReactElement {
+}: Readonly<NeonActivityListProps>): React.ReactElement {
   return (
     <NeonCard padding="md" className="overflow-hidden">
       <h2

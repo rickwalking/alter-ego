@@ -1,11 +1,11 @@
-"""AE-0371 migrations are idempotent (PR #106 review, item 2).
+"""The POV migrations are idempotent.
 
 Gherkin: tests/features/carousel_content_mode.feature
-("Re-running the AE-0371 migrations on a database that already has them").
+("Re-running the POV migrations on a database that already has them").
 Prod has no ``alembic_version`` table and the additive SQL was applied by hand,
 so ``b0c1d2e3f4a5``, ``b1c2d3e4f5a6`` and ``c2d3e4f5a6b7`` must upgrade over
 existing columns / tables and downgrade over missing ones without error.
-AE-0393's ``d3e4f5a6b7c8`` (``image_bridge_jobs``, also created at startup by
+The image bridge revision ``d3e4f5a6b7c8`` (``image_bridge_jobs``, also created at startup by
 the backend) follows the same rule and is the head now.
 """
 
@@ -24,7 +24,6 @@ from tests.integration.test_autopilot_migration import (
 
 _PRE_AUTOPILOT = "c9d0e1f2a3b4"
 _PRE_POV = "a9b0c1d2e3f4"
-# AE-0404: the audience-hours revision is the single head.
 _HEAD = "c4d5e6f7a8b9"
 _INSIGHTS = "instagram_post_insights"
 _BRIDGE_JOBS = "image_bridge_jobs"
@@ -83,7 +82,7 @@ def _indexes(db_path: Path, table: str) -> set[str]:
 def test_fresh_upgrade_creates_the_pov_schema(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Scenario: a fresh upgrade still adds every AE-0371 column and table."""
+    """Scenario: a fresh upgrade still adds every POV column and table."""
     db_path = _db_at_pre_autopilot(tmp_path)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 
@@ -95,12 +94,15 @@ def test_fresh_upgrade_creates_the_pov_schema(
 def test_upgrade_twice_over_hand_applied_sql_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Scenario: the columns and table already exist (prod) → upgrade does not fail."""
+    """Scenario: the columns and table already exist (prod) → upgrade does not fail.
+
+    Models the prod state: the schema already has everything, but alembic is stamped
+    before the POV revision.
+    """
     db_path = _db_at_pre_autopilot(tmp_path)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     _run_migration("upgrade", "head")
 
-    # Prod state: schema already has everything, but alembic thinks it's before AE-0371.
     _stamp(db_path, _PRE_POV)
     _run_migration("upgrade", "head")
     _stamp(db_path, _PRE_POV)
@@ -131,7 +133,7 @@ def test_downgrade_over_missing_objects_is_a_no_op(
 def test_bridge_table_created_at_startup_is_reused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """AE-0393: a table without its index (startup create_all) gets only the index."""
+    """A table without its index (startup create_all) gets only the index."""
     db_path = _db_at_pre_autopilot(tmp_path)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     _run_migration("upgrade", "head")

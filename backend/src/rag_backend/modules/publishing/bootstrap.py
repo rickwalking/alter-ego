@@ -6,19 +6,19 @@ lookup inside the module (ADR-0009 §9) — the inbound edge constructs the
 request-scoped collaborators (which enlist in the request's Unit of Work) and
 passes them in.
 
-**Behavior-preserving wiring (AE-0126/0128).** The publishing adapters are NOT
+**Behavior-preserving wiring.** The publishing adapters are NOT
 relocated; the inbound caller builds the request-scoped ``CarouselRepository``
-and the AE-0128 :class:`LegacyPublishingAcl` (the sole carousel/blog ORM seam)
+and the :class:`LegacyPublishingAcl` (the sole carousel/blog ORM seam)
 exactly as the legacy carousel/blog routes do today and hands them (with the
 request's Unit of Work) to this bootstrap. The collaborators are accepted via the
 typed :class:`PublishingAdapters` bundle so the function keeps to a single grouped
-argument (backend/CLAUDE.md ≤3 args). AE-0128 wires the carousel-release,
+argument (backend/CLAUDE.md ≤3 args). It wires the carousel-release,
 blog-visibility, and blog-schedule ports (backed by the ACL) into the service so
 the carousel publish flow + the standalone blog publish/unpublish/schedule routes
 route through the publishing facade. (The background scheduled-publish worker in
 ``workflow_workers.py`` still constructs ``ScheduledPublishService`` directly — a
 later worker-edge pass; the schedule port is the route-facing seam.) The additive
-outbox arrives in AE-0130.
+outbox arrives later.
 
 The ``PlatformServices`` protocol is a local placeholder (as in the reference
 template and the editorial/presentation modules) so the module is importable and
@@ -70,11 +70,11 @@ class PublishingAdapters:
 
     Built at the inbound edge (the api adapter / legacy carousel + blog routes)
     from the existing infrastructure so the module wires to them without
-    relocation (AE-0126/0128). The ``unit_of_work`` wraps that same request's
+    relocation. The ``unit_of_work`` wraps that same request's
     ``AsyncSession`` and is the single transaction owner the application service
-    commits through (ADR-0009 §9). The AE-0128 :class:`LegacyPublishingAcl` (the
+    commits through (ADR-0009 §9). The :class:`LegacyPublishingAcl` (the
     sole carousel/blog ORM seam) backs the release/visibility/schedule ports; it
-    is optional so the AE-0126 scaffolding bootstrap keeps working (service stays
+    is optional so the scaffolding bootstrap keeps working (service stays
     carousel-repository-only when absent).
     """
 
@@ -94,7 +94,7 @@ class PublishingModule:
     Work so the inbound edge can resolve publishing operations and the single
     commit boundary through the module facade (no behavior change). The carousel
     publish flow + the standalone blog publish/unpublish/schedule routes resolve
-    their writes through ``service`` (over the AE-0128 release/visibility/schedule
+    their writes through ``service`` (over the release/visibility/schedule
     ports) and commit via this UoW.
     """
 
@@ -111,11 +111,11 @@ def bootstrap_module(
     ``platform`` is accepted to demonstrate the ADR-0009 §9 bootstrap signature
     (a real module builds adapters from it once ``rag_backend.platform`` ships).
     For the behavior-preserving phase the caller supplies the already-built
-    request-scoped carousel repository + the AE-0128 ACL via ``adapters``; this
+    request-scoped carousel repository + the ACL via ``adapters``; this
     function injects them (the ACL-backed release/visibility/schedule ports) into
     the application service via the constructor.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     service = PublishingService(
         carousel_repository=adapters.carousel_repository,
         ports=_build_ports(adapters),
@@ -130,10 +130,10 @@ def _build_ports(adapters: PublishingAdapters) -> PublishingPorts:
     """Build the publishing ports from the request-scoped adapters bundle.
 
     The carousel-release, blog-visibility, and blog-schedule ports are all backed
-    by the AE-0128 :class:`LegacyPublishingAcl` (the sole carousel/blog ORM seam →
-    the byte-identical legacy writes). The AE-0129 distribution port is wired from
+    by the :class:`LegacyPublishingAcl` (the sole carousel/blog ORM seam →
+    the byte-identical legacy writes). The distribution port is wired from
     the request's channel publisher when supplied (the channel/LLM SDK stays in its
-    adapter). When no ACL is supplied (the AE-0126 scaffolding bootstrap) the
+    adapter). When no ACL is supplied (the scaffolding bootstrap) the
     service stays carousel-repository-only; the distribution port is wired
     independently so the distribution edge does not require the ACL.
     """
@@ -160,7 +160,7 @@ def _build_ports(adapters: PublishingAdapters) -> PublishingPorts:
 def _build_read_ports(
     read_acl: PublishingReadAcl | None,
 ) -> tuple[AclPublishingReadAdapter | None, AclBlogPostCrudAdapter | None]:
-    """Build the AE-0131 read + blog-CRUD ports from the read ACL (the ORM read seam).
+    """Build the read + blog-CRUD ports from the read ACL (the ORM read seam).
 
     The read edge (the carousel-blog/calendar/board/analytics + blog-CRUD routes)
     supplies the :class:`PublishingReadAcl`; the write edges (carousel/blog

@@ -10,20 +10,18 @@ from sqlalchemy.orm import declarative_base
 
 _ERR_DB_NOT_INITIALIZED = "Database not initialized. Call init_db() first."
 
-# Base class for all SQLAlchemy models
 Base = declarative_base()
 
-# Engine will be initialized in lifespan
 c_engine: AsyncEngine | None = None
 
 
 async def init_db(
     database_url: str, pool_size: int = 5, max_overflow: int = 10
 ) -> None:
-    """Initialize database engine and create tables."""
+    """Initialize database engine and create tables; a no-op if already initialized."""
     global c_engine
     if c_engine is not None:
-        return  # Already initialized (e.g., in tests)
+        return
     c_engine = create_async_engine(
         database_url,
         echo=False,

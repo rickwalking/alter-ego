@@ -1,4 +1,4 @@
-"""Which slides get generated artwork (AE-0376, ADR-0021 D8).
+"""Which slides get generated artwork (ADR-0021 D8).
 
 Fixed contracts (v1-v3) keep the slide-type rule of the images node. A role
 contract decides per slide: ``image_required`` in the project's sized

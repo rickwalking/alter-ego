@@ -1,4 +1,4 @@
-"""AE-0407: the slide fix escalates to the reasoning model, and the judge.
+"""The slide fix escalates to the reasoning model, and the judge.
 
 Fakes only: the rewriters and the scorer are scripted, no model is built.
 
@@ -137,7 +137,10 @@ class TestEscalation:
         assert pt([result.record], 1)["body"] == CLEAN_BODY
 
     async def test_fixed_on_attempt_4_by_the_reasoning_model(self) -> None:
-        """Scenario: Fixed on attempt 4 by the reasoning model."""
+        """Scenario: Fixed on attempt 4 by the reasoning model.
+
+        The reasoning model starts from the last copy and its failing check.
+        """
         fast = _Rewriter([EMOJI])
         reasoning = _Rewriter([CLEAN])
         result = await _fix(_Run(fast=fast, reasoning=reasoning))
@@ -149,7 +152,6 @@ class TestEscalation:
             (4, REASONING, "fixed"),
         ]
         assert len(fast.prompts) == 3
-        # The reasoning model starts from the last copy and its failing check.
         assert "visible_emoji_forbidden" in reasoning.prompts[0]
         assert result.issues == ()
 
@@ -195,7 +197,10 @@ class TestUnscoredJudge:
     """Item 3: a judge with no score keeps the previous score, no voice issue."""
 
     async def test_unscored_rewrite_keeps_the_previous_score(self) -> None:
-        """Scenario: A judge that fails twice leaves the slide unscored."""
+        """Scenario: A judge that fails twice leaves the slide unscored.
+
+        The kept score is marked for a re-score on the next tick.
+        """
         scorer = _Scorer([None])
         run = _Run(fast=_Rewriter([CLEAN]), scorer=scorer, target_score=50.0)
         result = await _fix(run)
@@ -203,19 +208,19 @@ class TestUnscoredJudge:
         assert result.score == 50.0
         assert scorer.texts == [CLEAN_BODY]
         patch = fix_patch({"persona_scores": {"slide_4": {"overall": 50.0}}}, [result])
-        # AE-0433: the kept score is marked for a re-score on the next tick.
         assert patch["persona_scores"] == {
             "slide_4": {"overall": 50.0, "rescore_pending": True, "unscored_ticks": 1}
         }
 
     async def test_a_low_judged_score_is_still_a_voice_issue(self) -> None:
+        """An unfixed slide keeps the target's score."""
         run = _Run(
             fast=_Rewriter([CLEAN]), scorer=_Scorer([40.0]), escalation_attempts=0
         )
         result = await _fix(run)
         assert not result.fixed
         assert [i.code for i in result.issues] == ["voice_score_low"]
-        assert result.score is None  # an unfixed slide keeps the target's score
+        assert result.score is None
 
     async def test_a_good_judged_score_is_stored(self) -> None:
         result = await _fix(

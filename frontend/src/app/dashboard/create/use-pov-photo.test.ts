@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { usePovPhoto } from "./use-pov-photo";
 
-// Gherkin: backend/tests/features/carousel_pov_layouts.feature (AE-0376)
+/** Gherkin: backend/tests/features/carousel_pov_layouts.feature. */
 const state = {
   photos: [] as { id: string; created_at: string }[],
   upload: vi.fn(),
@@ -49,9 +49,11 @@ describe("usePovPhoto", () => {
     act(() => result.current.section.onUpload(file));
     expect(state.upload).toHaveBeenCalledWith(
       { file, role: "hook" },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
+      expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
     );
-    const { onSuccess } = state.upload.mock.calls[0]![1];
+    const { onSuccess } = state.upload.mock.calls[0]![1] as {
+      onSuccess: (photo: { id: string }) => void;
+    };
     onSuccess({ id: "uploaded" });
     expect(onSelect).toHaveBeenCalledWith("uploaded");
   });

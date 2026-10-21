@@ -6,11 +6,11 @@ interface CarouselEmptyStateProps {
   hint: string;
 }
 
-/** Empty gallery state (AE-0444). */
+/** Empty gallery state. */
 export function CarouselEmptyState({
   title,
   hint,
-}: CarouselEmptyStateProps): React.ReactElement {
+}: Readonly<CarouselEmptyStateProps>): React.ReactElement {
   return (
     <div
       className="rounded-xl border border-dashed px-6 py-16 text-center"

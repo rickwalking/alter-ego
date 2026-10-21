@@ -1,4 +1,4 @@
-"""Pure text repairs for the owner "Fix issues" button (AE-0367).
+"""Pure text repairs for the owner "Fix issues" button.
 
 - ``balance_strong``: rebuild ``<strong>`` emphasis from the bare
   ``strong ... /strong`` residue a tag-stripping sanitizer leaves behind, drop
@@ -11,6 +11,9 @@
   PT copy, or still Portuguese.
 
 No I/O and idempotent.
+
+A tag-stripping sanitizer leaves residue such as "strongindirect prompt
+injections/strong" (the "<" and ">" removed).
 """
 
 from __future__ import annotations
@@ -31,14 +34,12 @@ _STRONG = "strong"
 _OPEN = "<strong>"
 _CLOSE = "</strong>"
 _TAG_PATTERN = re.compile(r"<\s*(/?)\s*([A-Za-z][A-Za-z0-9]*)[^>]*>")
-# "strongindirect prompt injections/strong" (the "<" and ">" were stripped).
 _MANGLED_PATTERN = re.compile(
     r"(?<![<\w/])strong\s?(?=\S)(.+?)\s?/strong(?![\w>])",
     flags=re.IGNORECASE,
 )
 _WORD_PATTERN = re.compile(r"[^\W\d_]+")
 _WHITESPACE_PATTERN = re.compile(r"\s+")
-# AE-0436: balanced emphasis pairs, for the per-locale convention rewrite.
 _STRONG_PAIR_PATTERN = re.compile(r"<strong>(.*?)</strong>", re.IGNORECASE | re.DOTALL)
 _BOLD_PAIR_PATTERN = re.compile(r"\*\*(.*?)\*\*", re.DOTALL)
 
@@ -78,7 +79,9 @@ def balance_strong(text: str) -> str:
 
 
 def _noun_pattern(noun: str) -> re.Pattern[str]:
-    # Never inside a URL, a domain or a handle ("github.com/x", "@argon").
+    """The pattern never matches inside a URL, a domain or a handle ("github.com/x",
+    "@argon").
+    """
     return re.compile(
         rf"(?<![\w@/.\-]){re.escape(noun)}(?![\w@/\-]|\.\w)",
         flags=re.IGNORECASE,
@@ -103,9 +106,9 @@ def _nonempty(inner: str) -> bool:
 
 
 def normalize_emphasis(locale: str, text: str) -> str:
-    """Rewrite balanced emphasis into the locale's convention (AE-0436).
+    """Rewrite balanced emphasis into the locale's convention.
 
-    The convention (AE-0403/AE-0414): PT copy marks emphasis with ``**…**``,
+    The convention: PT copy marks emphasis with ``**…**``,
     EN copy with ``<strong>…</strong>``. Balanced pairs of the other locale's
     markup are rewritten deterministically; an empty pair is left for the
     emphasis rules (it is never real emphasis). Idempotent.

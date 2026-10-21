@@ -1,4 +1,4 @@
-/** AE-0446: SSE chat event dispatch helpers. */
+/** SSE chat event dispatch helpers. */
 import { describe, expect, it, vi } from "vitest";
 import { dispatchSseEvent, sseContentText } from "./sse-event-data";
 

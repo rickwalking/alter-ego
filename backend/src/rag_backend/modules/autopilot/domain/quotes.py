@@ -1,4 +1,4 @@
-"""Verify the scout's quotes on one ``pov_news`` topic (AE-0406, spec §4).
+"""Verify the scout's quotes on one ``pov_news`` topic (spec §4).
 
 Pure: the caller supplies the topic's canonical sources and the post texts the
 backend stored through ``POST /x-signals``. The first problem found rejects the

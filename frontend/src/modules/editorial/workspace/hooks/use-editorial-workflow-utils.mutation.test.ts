@@ -36,7 +36,7 @@ const baseState: EditorialWorkflowState = {
   research_findings: [{ title: "Finding" }],
   outline: [{ title: "Intro" }],
   slide_drafts: [{ draft_text: "Body" }],
-  image_assets: ["/tmp/slide.jpg"],
+  image_assets: ["/data/slide.jpg"],
   design_applied: true,
   persona_scores: { voice_match: 90 },
   rubric_scores: { clarity: 88 },
@@ -287,7 +287,7 @@ describe("editorial workflow utils mutation coverage", () => {
       research_findings: [],
     };
 
-    const refreshState = vi.fn(async () => notReady);
+    const refreshState = vi.fn(() => Promise.resolve(notReady));
     const waitPromise = waitUntilWorkflowReadyWithTransport(
       () => null,
       refreshState,
@@ -313,7 +313,7 @@ describe("editorial workflow utils mutation coverage", () => {
   it("reads API errors and preserves fallback behavior", async () => {
     await expect(
       readApiError(
-        { json: async () => ({ detail: "conflict" }) } as Response,
+        { json: () => Promise.resolve({ detail: "conflict" }) } as Response,
         "fallback",
       ),
     ).resolves.toBe("conflict");
@@ -321,16 +321,17 @@ describe("editorial workflow utils mutation coverage", () => {
     await expect(
       readApiError(
         {
-          json: async () => ({
-            detail: [{ msg: "invalid" }, { msg: "missing" }],
-          }),
+          json: () =>
+            Promise.resolve({
+              detail: [{ msg: "invalid" }, { msg: "missing" }],
+            }),
         } as Response,
         "fallback",
       ),
     ).resolves.toBe("invalid, missing");
 
     await expect(
-      readApiError({ json: async () => ({}) } as Response, "fallback"),
+      readApiError({ json: () => Promise.resolve({}) } as Response, "fallback"),
     ).resolves.toBe("fallback");
   });
 
@@ -454,11 +455,13 @@ describe("editorial workflow utils mutation coverage", () => {
 
   it("returns early from polling when refresh becomes ready on first attempt", async () => {
     vi.useFakeTimers();
-    const refreshState = vi.fn(async () => ({
-      ...baseState,
-      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-      research_findings: [{ title: "Finding" }],
-    }));
+    const refreshState = vi.fn(() =>
+      Promise.resolve({
+        ...baseState,
+        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        research_findings: [{ title: "Finding" }],
+      }),
+    );
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
       () => null,

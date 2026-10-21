@@ -16,9 +16,9 @@ export interface CreateCarouselFormState {
   imagePreset: string;
   /** Index into the Radar IA templates, or the POV templates in POV mode. */
   selectedTemplate: number;
-  /** AE-0298: optional image-guidance text (scene/backdrop, max 500 chars). */
+  /** Optional image-guidance text (scene/backdrop, max 500 chars). */
   customVisualDetails: string;
-  /** AE-0373: Radar IA (default) or Ponto de Vista. */
+  /** Radar IA (default) or Ponto de Vista. */
   contentMode: ContentMode;
   /** POV: the owner's thesis (required in POV, max 280). */
   povThesis: string;
@@ -29,7 +29,7 @@ export interface CreateCarouselFormState {
   ctaGoal: CtaGoal;
   /** Persona id, or "" for none. */
   personaId: string;
-  /** AE-0376: POV slide-1 photo (creator asset id), or "" for none. */
+  /** POV slide-1 photo (creator asset id), or "" for none. */
   hookAssetId: string;
 }
 
@@ -50,7 +50,7 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   hookAssetId: "",
 };
 
-/** AE-0406: the POV family (thesis, slide-1 photo, 8-10 slides). */
+/** The POV family (thesis, slide-1 photo, 8-10 slides). */
 export function isPovMode(mode: ContentMode): boolean {
   return mode === CONTENT_MODES.POV || mode === CONTENT_MODES.POV_NEWS;
 }
@@ -61,7 +61,7 @@ export function isPovForm(form: CreateCarouselFormState): boolean {
 }
 
 /**
- * AE-0406 (PR #124 review): "POV: News" uses the news-analysis structure, so
+ * "POV: News" uses the news-analysis structure, so
  * the backend ignores the POV format; the wizard hides the format picker.
  */
 export function showsFormatPicker(form: CreateCarouselFormState): boolean {

@@ -9,7 +9,7 @@ import {
   tryParseBlogContent,
 } from "@/modules/publishing/blog/lib/parse-blog-content";
 
-// Feature: frontend/tests/features/blog_sections_ae0423.feature
+/** Gherkin: frontend/tests/features/blog_sections_ae0423.feature. */
 
 const SECTION = {
   id: "sec_1",
@@ -69,7 +69,9 @@ describe("parseBlogContent", () => {
   });
 
   it("defaults missing translations to an empty map", () => {
-    const { translations: _unused, ...withoutTranslations } = DOCUMENT;
+    const withoutTranslations = Object.fromEntries(
+      Object.entries(DOCUMENT).filter(([key]) => key !== "translations"),
+    );
     expect(parseBlogContent(withoutTranslations).translations).toEqual({});
   });
 

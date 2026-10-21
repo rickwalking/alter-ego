@@ -36,7 +36,11 @@ function isPollingFallback(refs: WorkflowStreamRefs): boolean {
   );
 }
 
-/** The refs the stream, the poller and the reconnect logic share. */
+/**
+ * The refs the stream, the poller and the reconnect logic share.
+ *
+ * Returns one stable refs object, since effects and callbacks depend on it.
+ */
 function useStreamRefs(
   transportMode: EditorialWorkflowTransportMode,
   state: EditorialWorkflowState | null,
@@ -48,7 +52,6 @@ function useStreamRefs(
   const transportModeRef = useRef(transportMode);
   const workflowStateRef = useRef(state);
   const phaseStatusRef = useRef(state?.phase_status);
-  // One stable object: effects and callbacks depend on it.
   const refs = useMemo<WorkflowStreamRefs>(
     () => ({
       pollTimeoutRef,
@@ -108,14 +111,21 @@ function usePollingControls(
   };
 }
 
-/** After a poll: back off further and re-arm, or stop on a failed read. */
+/**
+ * After a poll: back off further and re-arm, or stop on a failed read.
+ *
+ * A failed read stops the fallback only while still polling, so a poll answered
+ * after a disconnect does not hide it.
+ */
 function onPollAnswered(
   workflowState: EditorialWorkflowState | null,
   refs: WorkflowStreamRefs,
-  next: { stopPollingFallback: () => void; reschedule: () => void },
+  next: {
+    stopPollingFallback: () => void;
+    scheduleRef: RefObject<(() => void) | null>;
+  },
 ): void {
   if (!workflowState) {
-    // AE-0440: a poll answered after a disconnect must not hide it.
     if (isPollingFallback(refs)) {
       next.stopPollingFallback();
     }
@@ -126,7 +136,7 @@ function onPollAnswered(
     LAST_BACKOFF_INDEX,
   );
   if (isPollingFallback(refs)) {
-    next.reschedule();
+    next.scheduleRef.current?.();
   }
 }
 
@@ -158,7 +168,7 @@ function useSchedulePoll(
       void refreshState().then((workflowState) =>
         onPollAnswered(workflowState, refs, {
           stopPollingFallback,
-          reschedule: () => scheduleRef.current?.(),
+          scheduleRef,
         }),
       );
     }, delay);

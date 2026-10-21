@@ -1,4 +1,4 @@
-"""Attach the image bridge ORM table to ``Base.metadata`` (AE-0393).
+"""Attach the image bridge ORM table to ``Base.metadata``.
 
 Imported by the models package for that side effect, through the module's
 public facade (same pattern as ``autopilot_registry``).

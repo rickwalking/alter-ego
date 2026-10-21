@@ -83,7 +83,7 @@ export interface SourceForm {
   sourceType: string;
   setSourceType: (value: string) => void;
   adding: boolean;
-  addSource: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  addSource: (event: React.SubmitEvent<HTMLFormElement>) => Promise<void>;
 }
 
 /** The "add a source" form: POST, prepend the result, then reset. */
@@ -99,7 +99,7 @@ export function useSourceForm(
   );
 
   const addSource = async (
-    event: React.FormEvent<HTMLFormElement>,
+    event: React.SubmitEvent<HTMLFormElement>,
   ): Promise<void> => {
     event.preventDefault();
     if (!title.trim() || !content.trim()) {

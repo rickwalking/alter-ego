@@ -1,3 +1,6 @@
+/**
+ * Scenarios: tests/features/qa-followups-ae0416.feature (blog list paging).
+ */
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,8 +13,6 @@ import {
   blogPostsPageFilters,
 } from "@/app/dashboard/blog-posts/blog-posts-paging";
 import { useBlogPostsPaging } from "@/app/dashboard/blog-posts/use-blog-posts-paging";
-
-// Scenarios: see tests/features/qa-followups-ae0416.feature (blog list paging)
 
 describe("blog list page filters (AE-0416)", () => {
   // Scenario: The first page asks the API for one page of posts
@@ -136,7 +137,6 @@ describe("formatBlogPostDate (AE-0416)", () => {
   it("formats the date in the dashboard language", () => {
     const date = "2026-10-17T12:00:00Z";
     expect(formatBlogPostDate(date, "en")).toBe("Oct 17, 2026");
-    // AE-0417: one dashboard/public date format (AE-0412): pt "17/10/2026".
     expect(formatBlogPostDate(date, "pt")).toBe("17/10/2026");
   });
 });

@@ -1,5 +1,5 @@
 /**
- * `persona` — bounded-context public contract (AE-0139).
+ * `persona` — bounded-context public contract.
  *
  * Owns the persona surface — persona profile types, the persona-management hook,
  * and the voice-match scorer — CONSOLIDATING the previously duplicated legacy
@@ -11,7 +11,6 @@
  * See `src/modules/README.md` for the public-contract convention.
  */
 
-/* --- types --- */
 export type {
   ToneAttributes,
   PersonaProfile,
@@ -20,10 +19,8 @@ export type {
   FeedbackPayload,
 } from "./types";
 
-/* --- hooks --- */
 export { usePersonas } from "./hooks/use-personas";
 
-/* --- components --- */
 export { VoiceMatchScorer } from "./components/voice-match-scorer";
 export { NeonPersonaCard } from "./components/neon-persona-card";
 export type { NeonPersonaCardProps } from "./components/types";

@@ -1,6 +1,6 @@
 """Fail-closed content review chain: validate -> repair -> retry -> report.
 
-AE-0309: the content phase validates every localized slide payload it builds.
+the content phase validates every localized slide payload it builds.
 Parse failures are first repaired deterministically (scaffold extraction,
 shape normalization, bounded copy repair); slides that stay blocking get ONE
 injectable LLM re-draft; anything still blocking is attached to the content
@@ -8,8 +8,11 @@ interrupt payload as a blocking per-slide validation report so the reviewer
 sees the violations at the content step.
 
 The chain keys strictly on the validation report's ``blocking`` flag: a
-report with ``blocking=False`` (e.g. future warning-severity rules, AE-0312)
+report with ``blocking=False`` (e.g. future warning-severity rules)
 never consumes the LLM retry and never raises the blocking gate report.
+
+LOG_EVENT_SLIDE_PARSE_FAILED is logged once per typed slide parse failure, tagged with
+the repair outcome, so parse incidents are observable at write time.
 """
 
 from __future__ import annotations
@@ -40,8 +43,6 @@ from rag_backend.domain.constants.workflow_state_fields import (
 
 logger = structlog.get_logger(__name__)
 
-# Structured log event: one per typed slide parse failure, tagged with the
-# repair outcome so prod incidents like 38affb3e are observable at write time.
 LOG_EVENT_SLIDE_PARSE_FAILED = "carousel_slide_parse_failed"
 REPAIR_OUTCOME_DETERMINISTIC = "deterministic_repair"
 REPAIR_OUTCOME_RETRY = "llm_retry"
@@ -192,7 +193,7 @@ async def _retry_blocking_slides(
 async def build_fail_closed_review_updates(
     command: FailClosedReviewCommand,
 ) -> dict[str, object]:
-    """Build content review updates with the fail-closed chain (AE-0309)."""
+    """Build content review updates with the fail-closed chain."""
     result = await _build_review(command, command.slide_drafts)
     _log_recovered_failures(command.project_id, result)
     if not _is_blocking(result.updates):

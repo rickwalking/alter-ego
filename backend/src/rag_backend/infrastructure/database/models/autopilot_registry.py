@@ -1,4 +1,4 @@
-"""Attach autopilot ORM tables to ``Base.metadata`` (AE-0350).
+"""Attach autopilot ORM tables to ``Base.metadata``.
 
 Imported by the models package for that side effect. The import goes through
 the autopilot public facade, so this package does not reach module internals.

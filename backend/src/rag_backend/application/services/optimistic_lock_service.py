@@ -30,14 +30,16 @@ class CarouselVersionBumpParams:
 
 @dataclass(frozen=True)
 class _VersionedUpdate:
-    """Inputs for apply_versioned_update."""
+    """Inputs for apply_versioned_update.
+
+    ``snapshot`` is the saved state appended to ``version_history`` in the same UPDATE;
+    ``prior_history`` is the row's history read in this transaction (the lock-version
+    guard rejects a concurrent writer).
+    """
 
     post_id: str
     expected_version: int
     values: dict[str, object]
-    # AE-0424 (F-13): the saved state appended to ``version_history`` in the
-    # same UPDATE; ``prior_history`` is the row's history read in this
-    # transaction (the lock_version guard rejects a concurrent writer).
     snapshot: VersionSnapshot | None = None
     prior_history: object = None
 

@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Scenarios: see tests/features/blog_generate_ae0425.feature
-// ("Create a blog from a carousel", "A carousel that already has a blog row is blocked",
-//  "Start a standalone blog from a topic", "A failed generation shows a retry affordance")
+/** Gherkin: tests/features/blog_generate_ae0425.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),

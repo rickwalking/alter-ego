@@ -1,4 +1,4 @@
-"""The export preflight checks a role deck against its own slide map (AE-0374).
+"""The export preflight checks a role deck against its own slide map.
 
 Gherkin: tests/features/carousel_variable_slide_count.feature
 """

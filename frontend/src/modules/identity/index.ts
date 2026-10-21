@@ -1,5 +1,5 @@
 /**
- * `identity` — bounded-context public contract (AE-0156).
+ * `identity` — bounded-context public contract.
  *
  * Owns the frontend auth/session surface — JWT verification/decoding, the
  * HttpOnly access-token cookie helpers, login-redirect sanitization, and the
@@ -8,9 +8,9 @@
  * cross-context and `app/` consumers; everything else under
  * `modules/identity/**` is internal. Thin re-export shims remain at the old
  * paths (`@/lib/jwt-auth`, `@/lib/auth-cookie`) as a safety net only (the
- * `@/hooks/use-auth` shim was removed in AE-0154/QA cleanup — no importers).
+ * `@/hooks/use-auth` shim was removed — no importers).
  *
- * AE-0164 adds the route-level guard surface (role constants + route-class
+ * It also exposes the route-level guard surface (role constants + route-class
  * predicates + the access-token cookie name + the static-asset matcher) used by
  * `middleware.ts` and the admin route group, with a shim at
  * `@/constants/middleware`.
@@ -21,13 +21,10 @@
  * See `src/modules/README.md` for the public-contract convention.
  */
 
-/* --- types --- */
 export type { AccessTokenPayload, AuthUser, UseAuthResult } from "./types";
 
-/* --- jwt lib --- */
 export { verifyAccessToken, decodeJwtPayloadUnsafe } from "./lib/jwt-auth";
 
-/* --- cookie lib --- */
 export {
   setAccessTokenCookie,
   clearAccessTokenCookie,
@@ -35,7 +32,6 @@ export {
   isSecureRequest,
 } from "./lib/auth-cookie";
 
-/* --- route-level guards (AE-0164) --- */
 export {
   ROLES,
   PUBLIC_ROUTES,
@@ -48,9 +44,7 @@ export {
   isDashboardRoute,
   isLegacyEditorRoute,
   isEditorDashboardRoute,
-  isEditorRoute,
   isStaticAsset,
 } from "./guards";
 
-/* --- hooks --- */
 export { useAuth } from "./hooks/use-auth";

@@ -36,7 +36,7 @@ function SectionToolbar({
   readOnly,
   onMove,
   onDelete,
-}: SectionToolbarProps): React.ReactElement {
+}: Readonly<SectionToolbarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   return (
     <div className="flex gap-1">
@@ -71,7 +71,7 @@ function SectionToolbar({
 }
 
 /**
- * One section of the document (AE-0424): heading + markdown body, move
+ * One section of the document: heading + markdown body, move
  * up/down, delete, its own image slot and "Rewrite this section in my voice".
  * The section keeps its stable id (and image) when it is reordered.
  */
@@ -90,7 +90,7 @@ export function SectionCard({
   onGenerateImage,
   onRewrite,
   onSelectText,
-}: SectionCardProps): React.ReactElement {
+}: Readonly<SectionCardProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const prefix = `${language}-${section.id}`;
   const fieldIssue =

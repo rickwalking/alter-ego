@@ -26,7 +26,7 @@ export interface StructuredEditContext {
   fieldErrors: SlideFieldErrors;
   onItemChange: (edit: SlideStructuredItemEdit) => void;
   onExtraChange: (edit: SlideExtraEdit) => void;
-  /** AE-0437: add / remove item slots (PT and EN together). */
+  /** Add / remove item slots (PT and EN together). */
   onListChange?: (edit: SlideStructuredListEdit) => void;
 }
 
@@ -37,16 +37,16 @@ export function listLabel(
   return LABELLED_LISTS.has(listKey) ? tCopy(`itemLists.${listKey}`) : listKey;
 }
 
-/** AE-0437: "remove this item" (both locales, same position). */
+/** The "remove this item" button (both locales, same position). */
 export function RemoveItemButton({
   context,
   listKey,
   itemIndex,
-}: {
+}: Readonly<{
   context: StructuredEditContext;
   listKey: string;
   itemIndex: number;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   const onListChange = context.onListChange;
   if (!onListChange) {
@@ -75,16 +75,16 @@ export function RemoveItemButton({
   );
 }
 
-/** AE-0437: "add an item" slot under the list (empty lists included). */
+/** The "add an item" slot under the list (empty lists included). */
 export function AddItemButton({
   context,
   listKey,
   items,
-}: {
+}: Readonly<{
   context: StructuredEditContext;
   listKey: string;
   items: Record<string, unknown>[];
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   const onListChange = context.onListChange;
   if (!onListChange || !canAddStructuredItem(items)) {

@@ -1,6 +1,6 @@
-"""A carousel waiting at the content (or design) gate for the AE-0392 flow tests.
+"""A carousel waiting at the content (or design) gate for the gate flow tests.
 
-``seed_gate`` reuses the AE-0367 7-slide v3 carousel (rows + outline) and
+``seed_gate`` reuses the owner-autofix 7-slide v3 carousel (rows + outline) and
 writes a content-gate checkpoint whose ``localized_slides`` carry the given
 defects, with the presentation report and the fail-closed content-gate report
 the engine would have stored for them.
@@ -92,7 +92,10 @@ class GateSeed:
 async def seed_gate(
     engine: EditorialWorkflowService, db: AsyncSession, seed: GateSeed
 ) -> str:
-    """Rows + a gate checkpoint with the seeded defects; returns the project id."""
+    """Rows + a gate checkpoint with the seeded defects; returns the project id.
+
+    Seeding reaches into the inner graph engine; this is for fresh test threads only.
+    """
     project_id = await seed_carousel(db)
     slides = localized_from_slides(await rows(db, project_id))
     for breakage in seed.breaks:
@@ -112,19 +115,21 @@ async def seed_gate(
         "content_gate_validation": content_gate,
         "revision_count": {seed.phase: seed.revisions},
     }
-    graph = engine._orchestrator._engine  # test seeding of a fresh thread only
+    graph = engine._orchestrator._engine
     await graph.update_state(project_id, state, as_node=seed.phase)
     return project_id
 
 
 @dataclass
 class RealGate:
-    """``EditorialDriver`` reading the real checkpoint and row; resume recorded."""
+    """``EditorialDriver`` reading the real checkpoint and row; resume recorded.
+
+    The graph has no forbidden-phrase channel, so hits are added at this seam.
+    """
 
     db: AsyncSession
     engine: EditorialWorkflowService
     resumes: list[ResumeCommand] = field(default_factory=list)
-    # The graph has no forbidden-phrase channel: hits are added at this seam.
     forbidden_hits: tuple[str, ...] = ()
 
     async def read_gate(self, project_id: str) -> GateSnapshot:

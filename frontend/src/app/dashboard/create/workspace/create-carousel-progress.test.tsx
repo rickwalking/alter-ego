@@ -1,13 +1,14 @@
+/**
+ * Pins the Neon-token and a11y invariants introduced by the visual-token
+ * migration of the Fluxo Editorial progress panel (a pure refactor: behavior and
+ * data contract unchanged).
+ */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CarouselProgress } from "./create-carousel-progress";
 import { SlideProgressGrid } from "./slide-progress-grid";
-
-// AE-0299 — visual-token migration of the Fluxo Editorial progress panel.
-// Pure refactor (AE-0153): behavior/data contract unchanged; these tests pin
-// the Neon-token + a11y invariants the migration introduced.
 
 const WORKSPACE_DIR = join(process.cwd(), "src/app/dashboard/create/workspace");
 const MIGRATED_FILES = [

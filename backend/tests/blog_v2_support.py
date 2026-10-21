@@ -1,4 +1,4 @@
-"""Shared ``blog.v2`` content fixtures for blog-post tests (AE-0423, ADR-0025).
+"""Shared ``blog.v2`` content fixtures for blog-post tests (ADR-0025).
 
 ``blog_posts.content`` accepts only the ``blog.v2`` document on write, so tests
 that create/update/publish posts build their content here. The section id is

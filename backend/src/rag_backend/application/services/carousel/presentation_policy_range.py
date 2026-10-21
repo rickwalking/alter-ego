@@ -1,4 +1,4 @@
-"""Slide-count ranges and roles in presentation contracts (AE-0374, ADR-0021).
+"""Slide-count ranges and roles in presentation contracts (ADR-0021).
 
 A contract without ``slide_count_min``/``slide_count_max`` keeps its fixed
 ``slide_count`` exactly as before. A ranged contract lists its LONGEST

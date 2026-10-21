@@ -1,6 +1,9 @@
 """Pure helpers and the container choice for the Instagram publish job.
 
 Kept beside ``publish_job.py`` so neither file exceeds the 400-line limit.
+
+Approve makes the run ``publishing`` before the release write lands, so the
+``_RELEASE_PENDING`` reasons mean "wait", not "fail".
 """
 
 from __future__ import annotations
@@ -31,7 +34,6 @@ from rag_backend.modules.autopilot.domain.publish import (
 from rag_backend.modules.autopilot.domain.story import ContainerProbe
 from rag_backend.modules.autopilot.recovery_constants import RELEASE_GRACE_SECONDS
 
-# Approve makes the run ``publishing`` before the release write lands.
 _RELEASE_PENDING = frozenset({
     REASON_CAROUSEL_NOT_PUBLIC,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,

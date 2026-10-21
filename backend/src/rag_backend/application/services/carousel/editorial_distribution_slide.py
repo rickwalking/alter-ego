@@ -49,12 +49,15 @@ def _slide_heading(slide: dict[str, object]) -> str:
 
 
 def _slide_body(slide: dict[str, object]) -> str:
+    """Return the slide body, preferring the presentation copy.
+
+    The presentation copy is the source of truth even when its body is empty: stale
+    draft_text is never resurrected behind it.
+    """
     presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
     if presentation_pt is not None:
         body = str(presentation_pt.get("body") or "").strip()
         if not body.startswith("{"):
-            # AE-0366: the presentation copy is the source of truth, even when
-            # its body is empty: never resurrect stale draft_text behind it.
             return body
     draft_body = str(
         slide.get(SLIDE_DRAFT_TEXT_KEY, "") or slide.get(OUTLINE_LEGACY_BODY_KEY, "")
@@ -91,7 +94,7 @@ def _translation_from_presentation(
 ) -> dict[str, object]:
     """EN row copy: the (possibly reviewer-edited) presentation_en wins.
 
-    AE-0366: the translator map only fills gaps (and carries the EN
+    the translator map only fills gaps (and carries the EN
     long_form_notes); it used to override an edited presentation_en heading and
     body, so EN edits never reached the rendered slides.
     """

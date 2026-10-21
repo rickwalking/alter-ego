@@ -1,4 +1,4 @@
-"""Concrete adapters for the editorial outbound ports (AE-0111).
+"""Concrete adapters for the editorial outbound ports.
 
 These adapters are the infrastructure backing for the editorial domain ports
 (``rag_backend.modules.editorial.domain.ports``). They keep the editorial
@@ -6,7 +6,7 @@ APPLICATION/domain layers free of the carousel ORM and the concrete Postgres
 repository: every port the application depends on is satisfied here by
 **delegating** to the existing, unchanged infrastructure —
 
-* the AE-0107 single write owner via the AE-0109 :class:`LegacyCarouselAcl`
+* the single write owner via the :class:`LegacyCarouselAcl`
   (reviewer assignment, the ``lock_version`` resume CAS, and the read of the
   approval / public-release state), and
 * the wrapped editorial workflow engine (source-material synthesis and review
@@ -106,7 +106,7 @@ class AclReviewerAssignmentAdapter:
     """:class:`ReviewerAssignmentPort` backed by the carousel ACL / write owner.
 
     Forwards the ``assigned_reviewer_id`` stamp to the ACL (which delegates to the
-    AE-0107 single write owner); the commit boundary stays with the caller.
+    single write owner); the commit boundary stays with the caller.
     """
 
     def __init__(self, acl: LegacyCarouselAcl) -> None:
@@ -178,7 +178,6 @@ class AclPublicReleaseAdapter:
         )
 
 
-# Programming-error message for a mistyped review decision.
 _ERR_DECISION_TYPE = "review decision must be a ResumeWorkflowInput"
 
 

@@ -1,14 +1,14 @@
-"""Completed-project slide-text edit route (AE-0314).
+"""Completed-project slide-text edit route.
 
 Thin HTTP adapter: authenticate (owner or assigned reviewer), gate on
-``completed`` status, sanitize the edited copy case-preservingly (AE-0289), then
+``completed`` status, sanitize the edited copy case-preservingly, then
 apply the deterministic text edit under the shared per-project advisory lock via
 ``CarouselSlideEditService``. Images are never regenerated. The service stamps a
 persisted ``needs_republish`` marker in the same transaction and converges the
 checkpoint; typed 409 conflicts (``resume_already_in_progress`` while a run is
 active, ``mutation_in_progress`` while another mutator holds the lock,
 ``version_conflict`` when a concurrent mutator wins the CAS) propagate to the
-app-wide carousel-conflict handler (AE-0316).
+app-wide carousel-conflict handler.
 """
 
 from __future__ import annotations

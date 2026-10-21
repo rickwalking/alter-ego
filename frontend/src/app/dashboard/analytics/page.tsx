@@ -19,6 +19,11 @@ import {
 } from "@/constants/neon";
 import { useEditorialAnalytics } from "@/modules/editorial-operations";
 
+/**
+ * Shows a disabled state when the analytics flag is off (404) or the role has
+ * no access (403). Weekly bars sit in a min-w-0 scroll track so a long bar
+ * scrolls within its row instead of overflowing the page on mobile.
+ */
 export default function AnalyticsPage(): React.ReactElement {
   const t = useTranslations("dashboard.analytics");
   const { data, loading, error, disabled } = useEditorialAnalytics();
@@ -35,7 +40,6 @@ export default function AnalyticsPage(): React.ReactElement {
   }
 
   if (disabled) {
-    // AE-0378: the analytics flag is off (404) or the role has no access (403).
     return (
       <div className="flex-1">
         <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
@@ -105,8 +109,6 @@ export default function AnalyticsPage(): React.ReactElement {
                   >
                     {week.week_start}
                   </span>
-                  {/* Bar in a min-w-0 scroll track: a long bar scrolls within
-                      the row instead of overflowing the page on mobile. */}
                   <div className="min-w-0 flex-1 overflow-x-auto">
                     <div
                       className="h-4 rounded"

@@ -7,7 +7,7 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
 /**
- * The active-phase status badge renders the phase name ("Content" — AE-0415:
+ * The active-phase status badge renders the phase name ("Content",
  * the translated name, not the raw id) as its label; its accessible name is
  * "Content, <status>" so it is uniquely identifiable.
  */
@@ -33,12 +33,13 @@ const baseState: EditorialWorkflowState = {
   status: "draft",
 };
 
-// Feature: Workflow Error Feedback & Retry (AE-0009)
 describe("CreateWorkspaceSidebar", () => {
+  /**
+   * Given the editorial workflow has phase_status "failed"
+   * When the sidebar renders
+   * Then the active-phase status badge uses the red (error) variant
+   */
   // Scenario: Sidebar shows failure via the red status badge (AE-0284 v2)
-  //   Given the editorial workflow has phase_status "failed"
-  //   When the sidebar renders
-  //   Then the active-phase status badge uses the red (error) variant
   it("shows the current phase as a red (failed) status badge when failed", () => {
     render(
       <CreateWorkspaceSidebar
@@ -57,10 +58,12 @@ describe("CreateWorkspaceSidebar", () => {
     expect(badge).toHaveStyle({ color: NEON_RED });
   });
 
+  /**
+   * Given the editorial workflow is in "in_progress"
+   * When the sidebar renders
+   * Then the active-phase status badge uses the cyan (live) variant
+   */
   // Scenario: Non-failed workflow shows the live (cyan) state, not the error red
-  //   Given the editorial workflow is in "in_progress"
-  //   When the sidebar renders
-  //   Then the active-phase status badge uses the cyan (live) variant
   it("shows the in-progress phase as a cyan (live) badge, not red", () => {
     render(
       <CreateWorkspaceSidebar

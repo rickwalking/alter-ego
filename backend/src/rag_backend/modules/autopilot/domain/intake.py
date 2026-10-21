@@ -42,18 +42,21 @@ from rag_backend.modules.autopilot.pov_constants import (
 
 @dataclass(frozen=True, kw_only=True)
 class IntakeFacts:
-    """What the database knew before this batch was planned."""
+    """What the database knew before this batch was planned.
+
+    ``news_runs_this_week`` counts the Radar IA runs already created this São Paulo
+    week. ``post_texts`` maps a canonical status URL to the post text stored through
+    x-signals. ``covers`` holds the covers the batch names and the clock that ages
+    them.
+    """
 
     allowlist: frozenset[str]
     known_hashes: Mapping[str, UUID]
     carousel_topics: tuple[str, ...]
     runs_today: int
     daily_cap: int
-    # AE-0377: Radar IA runs already created this São Paulo week.
     news_runs_this_week: int = 0
-    # AE-0406: canonical status URL -> the post text stored through x-signals.
     post_texts: Mapping[str, str] = field(default_factory=dict)
-    # AE-0418: the covers the batch names and the clock that ages them.
     covers: CoverFacts = field(default_factory=CoverFacts)
 
 
@@ -61,7 +64,7 @@ class IntakeFacts:
 class TopicRejection:
     """One proposal the response lists under ``rejected``.
 
-    AE-0406: ``index`` is its position in the request; ``field`` names the
+    ``index`` is its position in the request; ``field`` names the
     field that caused it, when one did.
     """
 
@@ -108,7 +111,7 @@ def plan_intake(
 
 @dataclass
 class _Memory:
-    """Hashes and (AE-0418) covers already taken by earlier topics of the batch."""
+    """Hashes and covers already taken by earlier topics of the batch."""
 
     known: dict[str, UUID]
     claimed: set[UUID]
@@ -266,9 +269,9 @@ def _ids_to_queue(fresh: list[_Classified], facts: IntakeFacts) -> frozenset[UUI
 def _within_news_cap(
     ranked: list[_Classified], facts: IntakeFacts
 ) -> list[_Classified]:
-    """AE-0377: queue at most the week's remaining Radar IA runs (POV is free).
+    """Queue at most the week's remaining Radar IA runs (POV is free).
 
-    AE-0406: ``pov_news`` is POV here: it counts toward the daily cap only.
+    ``pov_news`` is POV here: it counts toward the daily cap only.
     """
     news_left = MAX_NEWS_RUNS_PER_WEEK - facts.news_runs_this_week
     kept: list[_Classified] = []
@@ -296,7 +299,7 @@ def _rejections(rows: Iterable[_Classified], reason: str) -> list[TopicRejection
 def _weekly_cap_rejections(
     fresh: list[_Classified], facts: IntakeFacts
 ) -> list[TopicRejection]:
-    """AE-0377: Radar IA topics stored but not queued (this week's run is used)."""
+    """Radar IA topics stored but not queued (this week's run is used)."""
     if facts.news_runs_this_week < MAX_NEWS_RUNS_PER_WEEK:
         return []
     news = (row for row in fresh if row.proposal.is_news)

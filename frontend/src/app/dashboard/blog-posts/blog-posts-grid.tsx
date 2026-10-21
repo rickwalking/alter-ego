@@ -29,8 +29,10 @@ import type {
 
 const PUBLISHED_STATUS = "published";
 
-/** Explains a `published` post that readers cannot see yet (AE-0411, B17). */
-function NotLiveHint({ post }: BlogPostMetaProps): React.ReactElement | null {
+/** Explains a `published` post that readers cannot see yet. */
+function NotLiveHint({
+  post,
+}: Readonly<BlogPostMetaProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   if (post.status !== PUBLISHED_STATUS || post.isPublic) {
     return null;
@@ -42,7 +44,9 @@ function NotLiveHint({ post }: BlogPostMetaProps): React.ReactElement | null {
   );
 }
 
-function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
+function BlogPostMeta({
+  post,
+}: Readonly<BlogPostMetaProps>): React.ReactElement {
   const locale = useLocale();
   return (
     <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(255,255,255,0.04)]">
@@ -60,7 +64,7 @@ function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
 export function FeaturedBlogPost({
   post,
   actions,
-}: FeaturedBlogPostProps): React.ReactElement {
+}: Readonly<FeaturedBlogPostProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   return (
     <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
@@ -92,7 +96,7 @@ export function FeaturedBlogPost({
 export function BlogPostCard({
   post,
   actions,
-}: BlogPostCardProps): React.ReactElement {
+}: Readonly<BlogPostCardProps>): React.ReactElement {
   return (
     <div
       className="rounded p-[16px] overflow-hidden transition-all duration-250 hover:-translate-y-0.5 active:translate-y-[-2px]"
@@ -132,7 +136,7 @@ export function BlogPostCard({
 export function RegularBlogPosts({
   posts,
   actions,
-}: RegularBlogPostsProps): React.ReactElement {
+}: Readonly<RegularBlogPostsProps>): React.ReactElement {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {posts.map((post) => (
@@ -143,7 +147,7 @@ export function RegularBlogPosts({
 }
 
 /**
- * The full listing (AE-0411, B07/B20): at most ONE featured card (the newest
+ * The full listing: at most ONE featured card (the newest
  * live post), every other post as a regular card, and an empty state when
  * there is nothing to show.
  */
@@ -151,7 +155,7 @@ export function BlogPostsList({
   posts,
   hasNoPosts,
   actions,
-}: BlogPostsListProps): React.ReactElement {
+}: Readonly<BlogPostsListProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   if (posts.length === 0) {
     return (

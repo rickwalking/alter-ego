@@ -1,4 +1,10 @@
-"""Deterministic presentation copy repair for one bounded attempt per locale."""
+"""Deterministic presentation copy repair for one bounded attempt per locale.
+
+The sentence-case repair skips over HTML tags so it uppercases the first visible letter,
+not a character inside a tag name. The word-boundary fallback keeps a character of
+headroom so the trailing ellipsis (and stripping trailing punctuation) can never push
+the result back over budget.
+"""
 
 from __future__ import annotations
 
@@ -67,9 +73,6 @@ def _repair_heading_sentence_case_en(heading: str) -> str:
     return "".join(chars)
 
 
-# Matches a single HTML tag (e.g. ``<b>``, ``</span>``, ``<br/>``) so the
-# sentence-case repair can skip over markup and uppercase the first *visible*
-# letter instead of a character inside a tag name.
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 
 
@@ -125,8 +128,6 @@ def _repair_text_field(
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 _ELLIPSIS = "…"
-# Reserve headroom in the word-boundary fallback so the trailing ellipsis (and a
-# rstrip of trailing punctuation) can never push the result back over budget.
 _FALLBACK_HEADROOM = 1
 
 
@@ -148,6 +149,9 @@ def _trim_body_to_budget(text: str, max_characters: int) -> str:
     Prefers keeping whole sentences (complete, on-topic, balanced markup). Only
     when a single sentence already exceeds the budget does it fall back to a
     word-boundary cut with an ellipsis. Never cuts mid-word; never exceeds budget.
+
+    When no whole sentence fits, whole words are kept up to the budget, inline markup is
+    dropped so nothing is left dangling, and the cut is marked with an ellipsis.
     """
     text = text.strip()
     if len(text) <= max_characters:
@@ -161,8 +165,6 @@ def _trim_body_to_budget(text: str, max_characters: int) -> str:
             break
     if kept:
         return _balance_inline_markup(kept)
-    # No whole sentence fits: keep whole words up to the budget, drop inline
-    # markup (so nothing is left dangling) and mark the cut with an ellipsis.
     limit = max_characters - _FALLBACK_HEADROOM
     truncated = ""
     for word in text.split():
@@ -199,7 +201,10 @@ def _repair_scaffold_fields(
     codes: Set[str],
     locale: str,
 ) -> None:
-    """Strip drafting-scaffold labels from visible copy (AE-0309, AE-0436)."""
+    """Strip drafting-scaffold labels from visible copy.
+
+    Item titles and bodies, and the TL;DR, are visible copy too.
+    """
     if VIOLATION_DRAFTING_SCAFFOLD_PRESENT not in codes:
         return
     body = payload.get("body")
@@ -208,7 +213,6 @@ def _repair_scaffold_fields(
     heading = payload.get("heading")
     if isinstance(heading, str) and heading:
         payload["heading"] = strip_scaffold_labels(heading) or heading
-    # AE-0436: item titles and bodies (and the TL;DR) are visible copy too.
     payload.update(map_texts(payload, strip_scaffold_labels))
 
 
@@ -217,7 +221,7 @@ def _repair_emphasis_locale(
     codes: Set[str],
     locale: str,
 ) -> None:
-    """Rewrite balanced emphasis into the locale's convention (AE-0436).
+    """Rewrite balanced emphasis into the locale's convention.
 
     The mismatch rule is a blocker, so the repair must fully clear it or the
     bounded repair discards the payload and the gate stays blocked (fail-closed).

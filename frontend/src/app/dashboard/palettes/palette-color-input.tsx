@@ -22,7 +22,7 @@ export function PaletteColorInput({
   onChange,
   invalid,
   errorText,
-}: PaletteColorInputProps): React.ReactElement {
+}: Readonly<PaletteColorInputProps>): React.ReactElement {
   const pickerValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : HEX_FALLBACK;
   return (
     <div className="flex flex-col gap-1">

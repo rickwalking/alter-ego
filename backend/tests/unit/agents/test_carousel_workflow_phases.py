@@ -308,7 +308,7 @@ class TestWorkflowPhaseNodes:
     def test_final_review_phase_clears_send_back_target_on_approval(
         self, mock_interrupt: object
     ) -> None:
-        """AE-0288: approval clears any stale send_back_target_phase so a later
+        """Approval clears any stale send_back_target_phase so a later
         resume from the approved_hold node cannot route on it."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
 
@@ -352,9 +352,12 @@ class TestWorkflowPhaseNodes:
     def test_final_review_phase_preserves_content_phase_on_send_back(
         self, mock_interrupt: object
     ) -> None:
-        """AE-0290: a send-back to content must record current_phase=content (not
+        """A send-back to content must record current_phase=content (not
         clobber it back to final_review), so read_checkpoint_phase reports content
-        and the edited-localized-slides gate accepts the edits."""
+        and the edited-localized-slides gate accepts the edits.
+
+        The send-back target must stay set so route_after_final_review can route.
+        """
         mock_interrupt.return_value = {
             "action": REVIEW_ACTION_REVISE,
             STRUCTURED_FEEDBACK_KEY: {
@@ -365,7 +368,6 @@ class TestWorkflowPhaseNodes:
         result = final_review_phase(_state())
 
         assert result["current_phase"] == PHASE_CONTENT
-        # AE-0290: target must stay set so route_after_final_review can route.
         assert result[SEND_BACK_TARGET_PHASE_KEY] == PHASE_CONTENT
         assert result["quality_passed"] is False
 
@@ -373,7 +375,7 @@ class TestWorkflowPhaseNodes:
     def test_final_review_phase_preserves_images_phase_on_send_back(
         self, mock_interrupt: object
     ) -> None:
-        """AE-0290: send-back to a non-content phase is preserved too."""
+        """Send-back to a non-content phase is preserved too."""
         mock_interrupt.return_value = {
             "action": REVIEW_ACTION_REVISE,
             STRUCTURED_FEEDBACK_KEY: {
@@ -390,7 +392,7 @@ class TestWorkflowPhaseNodes:
     def test_final_review_phase_rejects_bogus_send_back_target(
         self, mock_interrupt: object
     ) -> None:
-        """AE-0290 membership guard: a target outside CAROUSEL_WORKFLOW_PHASES never
+        """A target outside CAROUSEL_WORKFLOW_PHASES never
         reaches current_phase — the node falls back to final_review."""
         mock_interrupt.return_value = {
             "action": REVIEW_ACTION_REVISE,
@@ -436,7 +438,10 @@ class TestWorkflowRouting:
         )
 
     def test_structured_feedback_sets_send_back_target(self) -> None:
-        """Given structured feedback, when parsing review, then target phase is set."""
+        """Given structured feedback, when parsing review, then target phase is set.
+
+        Any revise drops the publish approval in graph state.
+        """
         updates = review_updates_from_response({
             "action": REVIEW_ACTION_REVISE,
             STRUCTURED_FEEDBACK_KEY: {
@@ -446,12 +451,11 @@ class TestWorkflowRouting:
 
         assert updates[SEND_BACK_TARGET_PHASE_KEY] == PHASE_OUTLINE
         assert updates["current_phase"] == PHASE_OUTLINE
-        # AE-0288: any revise drops the publish approval in graph state.
         assert updates["workflow_status"] == "draft"
         assert updates["quality_passed"] is False
 
     def test_revise_without_target_drops_publish_approval(self) -> None:
-        """AE-0288: a revise WITHOUT a target still clears the publish approval,
+        """A revise WITHOUT a target still clears the publish approval,
         so a held carousel cannot keep approved_for_publish during a revise."""
         updates = review_updates_from_response({"action": REVIEW_ACTION_REVISE})
 
@@ -461,7 +465,7 @@ class TestWorkflowRouting:
         assert SEND_BACK_TARGET_PHASE_KEY not in updates
 
     def testroute_after_hold_send_back_to_target(self) -> None:
-        """AE-0288: a send-back resume from the hold routes to the target phase."""
+        """A send-back resume from the hold routes to the target phase."""
         assert (
             route_after_hold(
                 _state(
@@ -473,7 +477,7 @@ class TestWorkflowRouting:
         )
 
     def testroute_after_hold_approve_finalizes(self) -> None:
-        """AE-0288: an approve resume from the hold finalizes (END)."""
+        """An approve resume from the hold finalizes (END)."""
         assert (
             route_after_hold(
                 _state(
@@ -485,7 +489,7 @@ class TestWorkflowRouting:
         )
 
     def testroute_after_hold_ignores_stale_target_without_revise(self) -> None:
-        """AE-0288: a non-awaiting_human resume must NOT route on a stale
+        """A non-awaiting_human resume must NOT route on a stale
         send_back_target_phase left from a prior cycle — it finalizes instead."""
         assert (
             route_after_hold(
@@ -504,7 +508,10 @@ class TestCarouselWorkflowEngineLifecycle:
 
     @pytest.mark.asyncio
     async def test_resume_invokes_graph_with_human_input(self) -> None:
-        """Given human input, when resuming, then graph is invoked with thread id."""
+        """Given human input, when resuming, then graph is invoked with thread id.
+
+        Every run carries a recursion limit so a self-routing loop dies fast.
+        """
         engine = CarouselWorkflowEngine()
         engine._app = AsyncMockWrapper()
 
@@ -515,7 +522,6 @@ class TestCarouselWorkflowEngineLifecycle:
         assert result["project_id"] == "project-9"
         assert engine._app.last_config == {
             "configurable": {"thread_id": "project-9"},
-            # AE-0330: every run is bounded so a self-routing loop dies fast.
             "recursion_limit": CAROUSEL_GRAPH_RECURSION_LIMIT,
         }
 
@@ -557,12 +563,15 @@ class Snapshot(NamedTuple):
 
 
 class AsyncMockWrapper:
-    """Minimal compiled graph stub for engine lifecycle tests."""
+    """Minimal compiled graph stub for engine lifecycle tests.
+
+    It has no checkpointer, like a graph compiled without one, so the park step is
+    skipped.
+    """
 
     def __init__(self, snapshot: Snapshot | None = None) -> None:
         self.snapshot = snapshot
         self.last_config: dict[str, object] | None = None
-        # Like a graph compiled without a checkpointer (AE-0405 park is skipped).
         self.checkpointer: object | None = None
 
     async def ainvoke(

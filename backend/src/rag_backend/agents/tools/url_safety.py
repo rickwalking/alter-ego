@@ -1,4 +1,4 @@
-"""SSRF boundary guard for the research ``scrape_url`` @tool (AE-0249, QA F-1).
+"""SSRF boundary guard for the research ``scrape_url`` @tool.
 
 The researcher subagent is LLM-driven and autopilot feeds third-party story
 links, so every URL handed to the scraper is untrusted. The rules live in
@@ -11,7 +11,7 @@ re-checks each redirect hop with the same code:
 - every DNS answer must be globally routable (QA r1 S-W1).
 
 Imports only the domain, so the ``agents -> application`` edge stays frozen at
-its AE-0082 baseline.
+its baseline.
 """
 
 from __future__ import annotations

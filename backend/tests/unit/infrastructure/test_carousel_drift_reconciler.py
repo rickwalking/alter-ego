@@ -1,4 +1,4 @@
-"""Unit tests for the autonomous carousel drift reconciler (AE-0311).
+"""Unit tests for the autonomous carousel drift reconciler.
 
 Gherkin: tests/features/carousel_deterministic_repair.feature
 """
@@ -128,8 +128,8 @@ class TestDriftReconciler:
     async def test_converges_repaired_projection_with_stale_checkpoint(
         self, test_engine: AsyncEngine
     ) -> None:
-        # Scenario: partial failure left a clean projection + stale-blocking
-        # checkpoint; the watchdog converges it with no client retry.
+        """The gateway stamps the row's current epoch."""
+        # Scenario: partial failure left a clean projection + stale-blocking checkpoint; the watchdog converges it with no client retry.
         async with _factory(test_engine)() as db:
             await _reset(db)
             await _add(db, body=_CLEAN_BODY, run_epoch=5)
@@ -141,7 +141,7 @@ class TestDriftReconciler:
             assert gateway.writes
             written = gateway.writes[0]["presentation_validation"]
             assert isinstance(written, dict) and written["blocking"] is False
-            assert gateway.write_epoch == 5  # stamped the row's CURRENT epoch
+            assert gateway.write_epoch == 5
             events = {log["event"] for log in logs}
             assert LOG_EVENT_DRIFT_DETECTED in events
             assert LOG_EVENT_DRIFT_CONVERGED in events
@@ -179,7 +179,7 @@ class TestDriftReconciler:
 
 @pytest.mark.asyncio
 class TestPhaseDriftReconciliation:
-    """AE-0320 scenarios (tests/features/carousel_run_lock_safety.feature)."""
+    """Phase-drift scenarios (tests/features/carousel_run_lock_safety.feature)."""
 
     async def _row(self, db: AsyncSession, project_id: str) -> CarouselProjectModel:
         found = await db.get(CarouselProjectModel, project_id)

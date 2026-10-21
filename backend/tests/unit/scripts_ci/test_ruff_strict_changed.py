@@ -4,7 +4,7 @@
       Scenario: listing the changed files drops the merge base -> the gate still runs
       Scenario: a seeded too-many-arguments violation on a changed line still fires
 
-AE-0424 (review round 2): ``changed-backend-files.sh`` runs
+Review round 2: ``changed-backend-files.sh`` runs
 ``git fetch origin main --depth=1``. On a stacked PR that shallow fetch can
 remove the merge base AFTER the gate resolved ``origin/main...HEAD``; every
 per-file ``git diff`` then failed, ``grep`` returned 1 under ``set -e`` /
@@ -15,12 +15,15 @@ the files first, then resolves the range, and treats a file without hunks as
 Each scenario builds a throwaway repo with copies of the gate + resolver and a
 stub file lister that moves ``origin/main`` to an unrelated commit (no merge
 base), then runs the gate with a ``uv`` shim that executes the real ruff.
+
+LISTER is a stub lister that prints the changed file, then points origin/main at an
+unrelated commit, as the CI shallow fetch of main effectively does.
 """
 
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0424 — a test for a bash gate must invoke a subprocess (mirrors test_diff_base.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a bash gate must invoke a subprocess (mirrors test_diff_base.py)
 import sys
 from pathlib import Path
 
@@ -37,8 +40,6 @@ VIOLATION_SOURCE = (
     "def too_many(a: int, b: int, c: int, d: int, e: int) -> int:\n"
     "    return a + b + c + d + e\n"
 )
-# The stub lister: print the changed file, then point origin/main at an
-# unrelated commit, as the CI shallow fetch of main effectively does.
 LISTER = """#!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
@@ -49,7 +50,7 @@ UV_SHIM = '#!/usr/bin/env bash\nshift\nexec "$@"\n'
 
 
 def _git(repo: Path, *args: str) -> str:
-    result = subprocess.run(  # noqa: S603  # integrity-ok: AE-0424 — fixed `git` path, test-controlled args in a throwaway repo
+    result = subprocess.run(  # noqa: S603  # integrity-ok: fixed `git` path, test-controlled args in a throwaway repo
         [GIT, *args], cwd=repo, check=True, capture_output=True, text=True
     )
     return result.stdout.strip()
@@ -92,7 +93,7 @@ def _run_gate(repo: Path, tmp_path: Path) -> subprocess.CompletedProcess[str]:
     shim_dir = _dir(tmp_path / "bin")
     _write(shim_dir / "uv", UV_SHIM, executable=True)
     path = f"{shim_dir}:{RUFF_DIR}:/usr/bin:/bin"
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0424 — fixed `bash` path, test-controlled gate copy in a throwaway repo
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed `bash` path, test-controlled gate copy in a throwaway repo
         [BASH, str(repo / "scripts" / "ci" / GATE.name)],
         cwd=repo,
         capture_output=True,

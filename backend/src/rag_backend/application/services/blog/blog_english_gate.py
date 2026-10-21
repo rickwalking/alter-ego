@@ -1,4 +1,4 @@
-"""The deterministic EN language gate of a generated article (AE-0435).
+"""The deterministic EN language gate of a generated article.
 
 Prod 2026-10-19/20 stored Portuguese as ``translations.en`` (posts ba37f6f9 and
 99886e71) with an EN voice score of 85: the voice gate never checked the
@@ -7,7 +7,7 @@ language. This gate runs after the EN quality gate, without any model:
 1. every EN section (heading + body) is checked with the carousel's
    ``wrong_language`` detector (:func:`portuguese_sections`);
 2. if any reads as Portuguese, the gated PT article is retranslated with the
-   editor's PT -> EN translation (AE-0424), at most ``max_retranslations``
+   editor's PT -> EN translation, at most ``max_retranslations``
    times; a failed call counts as one attempt;
 3. an English retranslation is scored + scanned like any EN article and kept;
    if none is English, the gate returns ``None`` and the run stores the

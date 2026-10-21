@@ -1,17 +1,20 @@
-"""Rule-fires tests for scripts/check_redis_factory.py (AE-0302, AE-0180).
+"""Rule-fires tests for scripts/check_redis_factory.py.
 
 The checker enforces that every backend Redis client is built by the
-sanctioned authenticated factory. Per AE-0180, the test proves the rule FIRES
-on a seeded violation — a clean-tree pass proves nothing.
+sanctioned authenticated factory. Per the rule-fires standard, the test proves
+the rule FIRES on a seeded violation — a clean-tree pass proves nothing.
 
     Gherkin: tests/features/redis_auth.feature —
       "a direct Redis construction outside the factory is caught"
+
+_SEEDED_DUNDER_IMPORT is token-split so this file, inside the checker's scan scope, does
+not itself match the pattern; the seeded tmp files still carry the real text.
 """
 
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0302 — a test for a CLI checker must invoke a subprocess (mirrors test_gate_capture.py / test_check_env_permissions.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a CLI checker must invoke a subprocess (mirrors test_gate_capture.py / test_check_env_permissions.py)
 import sys
 from pathlib import Path
 
@@ -32,7 +35,7 @@ _CLEAN_FIRST_PARTY = (
 
 
 def _run(*dirs: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0302 — fixed interpreter, test-controlled temp dirs
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed interpreter, test-controlled temp dirs
         [PYTHON, str(CHECKER), *map(str, dirs)],
         capture_output=True,
         text=True,
@@ -59,8 +62,6 @@ def test_fires_on_seeded_plain_import(tmp_path: Path) -> None:
     assert result.returncode == EXIT_VIOLATION, result.stdout + result.stderr
 
 
-# Token-split so THIS file (now inside the checker's scan scope) does not
-# itself match the pattern; the seeded tmp files still carry the real text.
 _SEEDED_DUNDER_IMPORT = "client_mod = " + "__import" + '__("redis.asyncio")\n'
 _SEEDED_IMPORT_MODULE = "redis_mod = importlib.import" + '_module("redis")\n'
 

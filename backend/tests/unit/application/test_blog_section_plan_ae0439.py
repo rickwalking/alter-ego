@@ -1,4 +1,4 @@
-"""AE-0439 (QA F-07): the section count prefers the real deck size and a
+"""The section count prefers the real deck size and a
 Radar IA create stores a slide count (CTA included, per ADR-0025).
 
 Gherkin: tests/features/blog_carousel_minors_ae0439.feature
@@ -47,9 +47,7 @@ class TestResolveSectionCount:
     def test_the_mode_default_is_the_last_resort(self) -> None:
         assert resolve_section_count(SectionCountSource()) == NEWS_SLIDE_COUNT_MIN
         assert (
-            resolve_section_count(
-                SectionCountSource(content_mode=CONTENT_MODE_POV)
-            )
+            resolve_section_count(SectionCountSource(content_mode=CONTENT_MODE_POV))
             == POV_SLIDE_COUNT_DEFAULT
         )
 

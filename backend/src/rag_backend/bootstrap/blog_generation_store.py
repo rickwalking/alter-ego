@@ -1,16 +1,16 @@
-"""The production store of a blog generation run (AE-0425 on AE-0424's slot path).
+"""The production store of a blog generation run (on the editor's slot path).
 
 Run state (heartbeat, final status, content reads) is lease-fenced in
 :class:`SqlBlogGenerationStore`. Every CONTENT write of the run (the article,
-then the images) goes through AE-0424's shared slot-write helper
+then the images) goes through the editor's shared slot-write helper
 (:func:`apply_slot_edit`): the row is re-read ``SELECT ... FOR UPDATE`` after
 the provider spend, the edit is applied onto the LATEST document by section id,
 stored with a version snapshot at the locked ``lock_version`` (an owner save
 during the run is the base of the write, never a 409), and the new image files
 are discarded when the write fails. The lease is checked on the locked row, in
-the same transaction, and the generated images are counted against AE-0424's
+the same transaction, and the generated images are counted against the editor's
 per-post cap is RESERVED under the row lock before the provider spend
-(``reserve_image_budget``, AE-0424 review round 2).
+(``reserve_image_budget``).
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ class SlotWriteGenerationStore:
         return await self._state.read_content(lease)
 
     async def reserve_images(self, lease: GenerationLease, wanted: int) -> int:
-        """Reserve the images one by one through AE-0424's reservation (row
+        """Reserve the images one by one through the editor's reservation (row
         lock + commit before the spend); stop at the cap (429)."""
         granted = 0
         for _image in range(wanted):

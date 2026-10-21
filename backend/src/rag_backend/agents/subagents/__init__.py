@@ -1,4 +1,4 @@
-"""DeepAgents subagent specs owned by the agents package (AE-0249).
+"""DeepAgents subagent specs owned by the agents package.
 
 Only true, isolated-context subagents live here. Deterministic carousel phases
 (outline, content, export, DB sync, persona gate) stay raw LangGraph nodes per

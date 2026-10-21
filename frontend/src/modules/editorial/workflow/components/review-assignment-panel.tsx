@@ -15,7 +15,7 @@ export function ReviewAssignmentPanel({
   contentType,
   title,
   onAssigned,
-}: ReviewAssignmentPanelProps) {
+}: Readonly<ReviewAssignmentPanelProps>) {
   const t = useTranslations("workflow.review");
   const [reviewerId, setReviewerId] = useState("");
   const [deadlineHours, setDeadlineHours] = useState("24");

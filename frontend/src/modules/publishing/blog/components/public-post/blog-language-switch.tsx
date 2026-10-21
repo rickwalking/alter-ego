@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { BlogLanguageSwitchProps } from "./types";
 
 /**
- * PT/EN content buttons on a public post (AE-0423, ADR-0025). They switch the
+ * PT/EN content buttons on a public post (ADR-0025). They switch the
  * rendered document via `?lang=` (content language) and leave the next-intl
  * UI locale untouched. Labels and hrefs come from the page (dumb component).
  */
@@ -10,7 +10,7 @@ export function BlogLanguageSwitch({
   activeLanguage,
   label,
   options,
-}: BlogLanguageSwitchProps) {
+}: Readonly<BlogLanguageSwitchProps>) {
   return (
     <nav aria-label={label} className="mb-6 flex gap-2">
       {options.map((option) => {

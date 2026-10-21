@@ -1,8 +1,8 @@
-"""Composition root of the blog writer + image run (AE-0425, ADR-0025).
+"""Composition root of the blog writer + image run (ADR-0025).
 
 Wires the application service to its concrete collaborators: the role-routed
 chat models (writer: fast; judgement: reasoning; persona scoring: fast), the
-editor's image service (AE-0424: gpt-image-2, one image template, the
+editor's image service (gpt-image-2, one image template, the
 blog-images store and its ``GET /api/blog-images/...`` route) and the
 lease-fenced SQL store. The API edge imports these builders instead of the
 container/infrastructure directly.
@@ -76,7 +76,7 @@ def standalone_slug(topic: str) -> str:
 
 
 def _image_batch(settings: Settings) -> BlogImageBatchService:
-    """Bulk generation on top of the editor's image service (AE-0424): the same
+    """Bulk generation on top of the editor's image service: the same
     gpt-image-2 provider, image template and blog-images store."""
     return BlogImageBatchService(
         BlogImageBatchDeps(
@@ -88,7 +88,7 @@ def _image_batch(settings: Settings) -> BlogImageBatchService:
 
 
 def _timings(settings: Settings) -> GenerationTimings:
-    """The AE-0435 stage budgets: text stage, then per image wave."""
+    """The stage budgets: text stage, then per image wave."""
     return GenerationTimings(
         text_timeout_seconds=settings.blog_generation_text_timeout_seconds,
         image_wave_seconds=settings.blog_image_wave_timeout_seconds,
@@ -100,8 +100,8 @@ def build_generation_service(
     persona: PersonaProfile, user_id: str
 ) -> BlogGenerationService:
     """The service for one run (voice scorer bound to its persona; content
-    writes recorded as ``user_id``'s through AE-0424's slot-write path; the
-    EN language repair uses the editor's PT -> EN translation, AE-0435)."""
+    writes recorded as ``user_id``'s through the editor's slot-write path; the
+    EN language repair uses the editor's PT -> EN translation)."""
     container = get_container()
     settings = container.settings()
     roles = container.llm_service().role_models

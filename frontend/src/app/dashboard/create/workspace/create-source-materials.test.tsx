@@ -1,5 +1,5 @@
 /**
- * AE-0446: source materials panel, pinned while it was split into a data hook,
+ * Source materials panel, pinned while it was split into a data hook,
  * a form hook and presentational parts.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -10,7 +10,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-const authenticatedFetch = vi.fn();
+const authenticatedFetch = vi.fn<(...args: unknown[]) => Promise<Response>>();
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (...args: unknown[]) => authenticatedFetch(...args),
 }));
@@ -68,7 +68,7 @@ describe("CreateSourceMaterials (AE-0446)", () => {
       ]),
     );
     const [, init] = authenticatedFetch.mock.calls[1]!;
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+    expect(JSON.parse((init as { body: string }).body)).toEqual({
       title: "Second",
       content: "notes",
       source_type: "note",

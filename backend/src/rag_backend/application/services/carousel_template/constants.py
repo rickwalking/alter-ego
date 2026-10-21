@@ -6,7 +6,7 @@ SWIPE_TEXT = SWIPE_TEXT_EN
 
 
 def swipe_text_for(language: str) -> str:
-    """The swipe hint in the slide's locale (AE-0372: "Deslize →" on PT slides)."""
+    """The swipe hint in the slide's locale ("Deslize →" on PT slides)."""
     return SWIPE_TEXT_EN if language == LANGUAGE_EN else SWIPE_TEXT_PT
 
 

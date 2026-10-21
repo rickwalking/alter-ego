@@ -8,7 +8,7 @@ presentation fields. This module defines its own new value objects —
 typed (no ``Any``), and **re-exports** the existing presentation/slide types so
 existing callers keep resolving to the IDENTICAL objects.
 
-**Re-export, not relocation (AE-0117 constraint).** The presentation policy
+**Re-export, not relocation.** The presentation policy
 dataclasses continue to live at
 ``rag_backend.application.services.carousel.presentation_policy_types``; the
 per-slide presentation/validation Pydantic models live at
@@ -21,7 +21,7 @@ behavior-preserving phase.
 The :class:`PresentationProject` is a VIEW over the carousel row's presentation
 fields (policy version/checksum, artifact version, creator watermark, design
 tokens, template/layout strategy); it does NOT own the carousel aggregate or its
-editorial workflow (that is the editorial context, AE-0108). It wraps the
+editorial workflow (that is the editorial context). It wraps the
 canonical :class:`CarouselProject` (re-exported, identical object) and reads its
 presentation-relevant fields without modifying or relocating it.
 """

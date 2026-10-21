@@ -1,4 +1,4 @@
-"""AE-0391: bad JSON after the existing retry falls back to the GLM model.
+"""Bad JSON after the existing retry falls back to the GLM model.
 
 Scenarios: see tests/features/llm_model_routing_ae0391.feature
 """
@@ -37,7 +37,7 @@ POLICY = JsonRetryPolicy(parse=_parse, agent="content_draft", model_id="content-
 
 @pytest.fixture(autouse=True)
 def _one_attempt_per_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    """These tests pin the fallback order; AE-0395 attempts are tested apart."""
+    """These tests pin the fallback order; per-model attempts are tested apart."""
     monkeypatch.setattr(llm_json_retry, "LLM_ATTEMPTS_PER_MODEL", 1)
 
 
@@ -56,6 +56,7 @@ def _routed(log: CallLog, fallback_reply: str | None) -> RoutedChatModel:
 
 
 async def test_bad_json_after_retry_is_reissued_on_the_fallback() -> None:
+    """The first attempt and its repair run on the primary, then the fallback answers."""
     # Scenario: bad JSON after the existing retry falls back
     log = CallLog()
     model = _routed(log, '{"draft_text": "ok"}')
@@ -65,7 +66,6 @@ async def test_bad_json_after_retry_is_reissued_on_the_fallback() -> None:
 
     assert parsed == {"draft_text": "ok"}
     assert raw == '{"draft_text": "ok"}'
-    # first attempt + repair on the primary, then the fallback answers.
     assert log.models == ["deepseek", "deepseek", "glm"]
     assert LLM_TAG_FALLBACK in log.tags[2]
     assert log.kwargs[2].get("temperature") == 0.3

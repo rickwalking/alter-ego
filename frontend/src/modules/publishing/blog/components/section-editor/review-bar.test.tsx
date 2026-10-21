@@ -4,8 +4,7 @@ import { ReviewBar } from "./review-bar";
 import type { ReviewBarProps } from "./types";
 import { VoiceScore } from "./voice-score";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (publish, review +
-// scheduled publish, self-review, voice score)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 function props(overrides: Partial<ReviewBarProps> = {}): ReviewBarProps {
   return {
@@ -47,8 +46,8 @@ describe("ReviewBar", () => {
     expect(p.onPublish).toHaveBeenCalled();
   });
 
-  // Scenarios: Publish now auto-approves the owner's draft; Self-review is
-  // allowed for the single author (empty reviewer field = the author)
+  // Scenario: Publish now auto-approves the owner's draft
+  // Scenario: Self-review is allowed for the single author
   it("always offers Publish now and a self submit on a draft", () => {
     const p = props();
     render(<ReviewBar {...p} />);

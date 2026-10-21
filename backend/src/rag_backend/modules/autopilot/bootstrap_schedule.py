@@ -1,4 +1,4 @@
-"""Wire the scheduled-publish due sweep for one worker tick (AE-0370).
+"""Wire the scheduled-publish due sweep for one worker tick.
 
 Kept beside ``bootstrap.py`` so that file stays under 400 lines.
 """

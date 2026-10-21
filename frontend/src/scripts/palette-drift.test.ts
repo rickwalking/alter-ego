@@ -1,5 +1,5 @@
 /**
- * Rule-fires regression test for the palette-drift gate (AE-0180 standard).
+ * Rule-fires regression test for the palette-drift gate.
  *
  * Proves `scripts/check-palette-drift.mjs --strict` EXITS NON-ZERO on a seeded
  * desync between the backend palette contract and the frontend `IMAGE_PRESETS`
@@ -7,7 +7,7 @@
  * dir and points the checker at them via its env overrides
  * (PALETTE_CONTRACT_PATH / CREATE_TS_PATH).
  *
- * Retargeted by AE-0271: the theme list is now rendered dynamically from
+ * The theme list is now rendered dynamically from
  * `GET /api/palettes`, so the gate only guards the still-static IMAGE_PRESETS
  * surface. The theme-key / label / light-key / i18n drift cases were removed
  * with the FE constants they checked.
@@ -66,7 +66,7 @@ function run({ createTs = CREATE_TS_OK }: Fixture): number {
   writeFileSync(contractPath, JSON.stringify(CONTRACT));
   writeFileSync(createPath, createTs);
   try {
-    execFileSync("node", [CHECKER, "--strict"], {
+    execFileSync(process.execPath, [CHECKER, "--strict"], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],

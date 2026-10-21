@@ -1,6 +1,6 @@
 /**
- * Locale-aware date and number formatting for every surface (AE-0412 public, AE-0417
- * dashboard). Components pass the active next-intl locale (`useLocale()`);
+ * Locale-aware date and number formatting for every surface (public
+ * and dashboard). Components pass the active next-intl locale (`useLocale()`);
  * an unknown locale falls back to the default one. Invalid input prints "".
  */
 

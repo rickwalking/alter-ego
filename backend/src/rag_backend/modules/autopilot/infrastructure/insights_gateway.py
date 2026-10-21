@@ -1,4 +1,4 @@
-"""Graph ``/{media-id}/insights`` reader (AE-0378, ADR-0021 D11).
+"""Graph ``/{media-id}/insights`` reader (ADR-0021 D11).
 
 Same host, user id and token provider as the publisher. All metrics are asked
 in one call; when Graph refuses the list (a metric it does not offer for this
@@ -83,6 +83,7 @@ class GraphInsightsGateway:
         return values
 
     async def _read(self, media_id: str, metrics: tuple[str, ...]) -> dict[str, int]:
+        """A non-JSON body (a proxy or outage page) is retried on a later read."""
         token = await self._config.token_provider.get()
         if not token or not self._config.ig_user_id:
             raise RuntimeError(ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED)
@@ -97,7 +98,6 @@ class GraphInsightsGateway:
                 raise error_from(response)
             return parse_insights(json_dict(response))
         except ValueError as exc:
-            # A non-JSON body (a proxy or outage page): retry on a later read.
             raise InstagramGraphError(
                 status_code=response.status_code,
                 error_code=ERR_INSTAGRAM_API_REQUEST_FAILED,

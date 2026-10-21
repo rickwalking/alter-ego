@@ -2,8 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CarouselLanguageSwitch } from "./carousel-language-switch";
 
-// Feature: Public carousel viewer (AE-0444)
-
 const OPTIONS = [
   { language: "pt", label: "PT", href: "?lang=pt" },
   { language: "en", label: "EN", href: "?lang=en" },

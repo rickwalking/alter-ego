@@ -1,4 +1,4 @@
-"""Rule-fires test for the autopilot public-facade contract (AE-0180 / AE-0350).
+"""Rule-fires test for the autopilot public-facade contract.
 
 A clean tree is not evidence the contract works. This plants an internal
 import under ``rag_backend.api`` in a temporary copy of the package and asserts ``lint-imports`` exits non-zero

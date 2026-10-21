@@ -4,6 +4,8 @@ Private to the module. ``Mapped[]`` columns mirror the Alembic revision
 ``autopilot_tables``. ``carousel_project_id`` is ``String(36)`` because
 ``carousel_projects.id`` is VARCHAR(36); a native UUID cannot foreign-key
 to it. Run and topic primary keys are UUIDs.
+
+Document columns are JSON on SQLite (tests) and JSONB on PostgreSQL (ADR-0006).
 """
 
 from __future__ import annotations
@@ -76,7 +78,6 @@ from rag_backend.modules.autopilot.story_constants import (
     TABLE_INSTAGRAM_STORIES,
 )
 
-# JSON on SQLite (tests), JSONB on PostgreSQL (prod, ADR-0006).
 _JSON_DOCUMENT = JSON().with_variant(JSONB(), "postgresql")
 
 
@@ -92,7 +93,12 @@ class AutopilotOrmBase(DeclarativeBase):
 
 
 class TopicCandidateModel(AutopilotOrmBase):
-    """ORM row for one scout topic candidate."""
+    """ORM row for one scout topic candidate.
+
+    ``content_mode`` NULL means Radar IA; ``pov_format``, ``slide_count``,
+    ``quotes`` and ``cover_asset_id`` (an ``autopilot_cover_assets.id``) are NULL
+    when absent or default.
+    """
 
     __tablename__ = TABLE_TOPIC_CANDIDATES
 
@@ -110,37 +116,41 @@ class TopicCandidateModel(AutopilotOrmBase):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    # AE-0361: the scout's image preset and optional visual direction.
     image_style: Mapped[str] = mapped_column(
         String(IMAGE_STYLE_MAX_CHARS),
         nullable=False,
         server_default=IMAGE_STYLE_NEO_ANIME,
     )
     image_guidance: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # AE-0377: scout v3 mode (NULL = Radar IA) and the POV draft thesis.
     content_mode: Mapped[str | None] = mapped_column(
         String(CONTENT_MODE_COLUMN_LENGTH), nullable=True
     )
     thesis_draft: Mapped[str | None] = mapped_column(
         String(THESIS_DRAFT_MAX_CHARS), nullable=True
     )
-    # PR #106 review: scout v3 POV format and slide count (NULL = default).
     pov_format: Mapped[str | None] = mapped_column(
         String(POV_FORMAT_MAX_CHARS), nullable=True
     )
     slide_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # AE-0406: the verified ``pov_news`` quotes (NULL = none).
     quotes: Mapped[list[dict[str, str]] | None] = mapped_column(
         _JSON_DOCUMENT, nullable=True
     )
-    # AE-0418: the GrokBot cover (``autopilot_cover_assets.id``, NULL = none).
     cover_asset_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 
 
 class AutopilotRunModel(AutopilotOrmBase):
-    """ORM row for one autopilot run."""
+    """ORM row for one autopilot run.
+
+    ``publish_attempts`` maps to the ``attempts`` column, which predates the split
+    from ``start_attempts``. ``publish_claimed_at`` is the compare-and-set claim
+    held while one caller is talking to Graph. The escalated wake scan rotates by
+    ``wake_checked_at``, never by ``updated_at``. ``pov_thesis`` is the thesis the
+    owner confirmed on Telegram, ``scheduled_at`` the owner's publish time while the
+    run is ``scheduled``, and ``cover_chosen`` whether the owner chose the GrokBot
+    cover for slide 1 (NULL means no).
+    """
 
     __tablename__ = TABLE_AUTOPILOT_RUNS
 
@@ -164,7 +174,6 @@ class AutopilotRunModel(AutopilotOrmBase):
     )
     state: Mapped[str] = mapped_column(String(STATE_LENGTH), nullable=False)
     state_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # The ``attempts`` column predates the split; it counts publish attempts.
     publish_attempts: Mapped[int] = mapped_column(
         "attempts", Integer, nullable=False, default=0, server_default="0"
     )
@@ -176,11 +185,9 @@ class AutopilotRunModel(AutopilotOrmBase):
     )
     rework_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     escalated_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # Compare-and-set claim held while one caller is talking to Graph.
     publish_claimed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    # QA r2 R1: the escalated wake scan rotates by this, never by updated_at.
     wake_checked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -197,15 +204,12 @@ class AutopilotRunModel(AutopilotOrmBase):
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
     ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # AE-0377: the thesis the owner confirmed on Telegram (POV runs only).
     pov_thesis: Mapped[str | None] = mapped_column(
         String(THESIS_DRAFT_MAX_CHARS), nullable=True
     )
-    # AE-0370: the owner's publish time while the run is ``scheduled``.
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    # AE-0418: the owner chose the GrokBot cover for slide 1 (NULL = no).
     cover_chosen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -283,6 +287,8 @@ class ManualPublishModel(AutopilotOrmBase):
 
     The primary key is the claim: one row per carousel, so two concurrent
     manual publishes cannot both call Graph.
+
+    ``ig_container_id`` is stored before ``media_publish`` so a retry resumes it.
     """
 
     __tablename__ = TABLE_MANUAL_PUBLISHES
@@ -301,7 +307,6 @@ class ManualPublishModel(AutopilotOrmBase):
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
     ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # QA r2 R4b: stored before ``media_publish`` so a retry resumes it.
     ig_container_id: Mapped[str | None] = mapped_column(
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
@@ -315,8 +320,10 @@ class ManualPublishModel(AutopilotOrmBase):
 
 
 class InstagramStoryModel(AutopilotOrmBase):
-    """The Story announcing one carousel (AE-0369). The primary key is the claim:
+    """The Story announcing one carousel. The primary key is the claim:
     one Story per carousel, whichever path published it.
+
+    ``story_container_id`` is stored before ``media_publish`` so a retry resumes it.
     """
 
     __tablename__ = TABLE_INSTAGRAM_STORIES
@@ -331,7 +338,6 @@ class InstagramStoryModel(AutopilotOrmBase):
         primary_key=True,
     )
     state: Mapped[str] = mapped_column(String(STATE_LENGTH), nullable=False)
-    # Stored before ``media_publish`` so a retry resumes it.
     story_container_id: Mapped[str | None] = mapped_column(
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )

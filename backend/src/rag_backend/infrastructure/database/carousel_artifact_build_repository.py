@@ -95,7 +95,11 @@ class PostgresCarouselArtifactBuildRepository:
         *,
         params: _ActivateBuildParams,
     ) -> int:
-        """Compare-and-swap activation; returns the new lock_version."""
+        """Compare-and-swap activation; returns the new lock_version.
+
+        This raw Core UPDATE bypasses the ORM flush fence, so the run-epoch check is
+        explicit here (the raw-UPDATE lint gate allowlists this file).
+        """
         project_id = params["project_id"]
         artifact_version = params["artifact_version"]
         source_lock_version = params["source_lock_version"]
@@ -104,9 +108,6 @@ class PostgresCarouselArtifactBuildRepository:
         project = await self._session.get(CarouselProjectModel, str(project_id))
         if project is None:
             raise ValueError(ERR_ARTIFACT_BUILD_CONFLICT)
-        # AE-0315 layer (c): this raw Core UPDATE bypasses the ORM flush fence,
-        # so the epoch check is explicit here (enumerated in the write-site
-        # survey; the raw-UPDATE lint gate allowlists this file).
         run_ctx = current_run_context()
         if run_ctx is not None and run_ctx.project_id == str(project_id):
             current_epoch = int(project.run_epoch or 0)

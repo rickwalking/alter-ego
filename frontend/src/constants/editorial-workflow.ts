@@ -7,13 +7,13 @@ export const EDITORIAL_WORKFLOW_SSE_EVENTS = {
   REVIEW_REQUIRED: "review_required",
   ERROR: "error",
   ARTIFACT: "artifact",
-  // AE-0315 run lifecycle (backend domain.constants.carousel_run).
+  /** Run lifecycle events (backend ``domain.constants.carousel_run``). */
   RUN_STARTED: "run.started",
   RUN_STAGE_CHANGED: "run.stage_changed",
   RUN_FINISHED: "run.finished",
 } as const;
 
-/** Coarse run stages emitted by the backend at stage boundaries (AE-0315). */
+/** Coarse run stages emitted by the backend at stage boundaries. */
 export const EDITORIAL_RUN_STAGES = {
   GENERATING: "generating",
   VALIDATING: "validating",
@@ -24,7 +24,7 @@ export type EditorialRunStage =
   (typeof EDITORIAL_RUN_STAGES)[keyof typeof EDITORIAL_RUN_STAGES];
 
 /**
- * AE-0315: past this elapsed time the in-progress banner offers "Check
+ * Past this elapsed time the in-progress banner offers "Check
  * again" (the backend reaper clears genuinely dead runs within a few
  * watchdog ticks; healthy runs observed in prod take ~13-15 min, so the
  * escape hatch appears well before that without ever blocking the run).
@@ -43,7 +43,7 @@ export const EDITORIAL_PHASES = {
 } as const;
 
 /**
- * AE-0440: the image node stamps ``phase_progress.phase`` with the legacy
+ * The image node stamps ``phase_progress.phase`` with the legacy
  * carousel status (``generating_images``), not the editorial phase it belongs
  * to. Tags not listed here are already editorial phase names.
  */
@@ -57,7 +57,7 @@ export const PHASE_PROGRESS_TAG_TO_EDITORIAL_PHASE: Readonly<
 export const EDITORIAL_WORKFLOW_TRANSPORT_MODE = {
   SSE: "sse",
   POLLING_FALLBACK: "polling-fallback",
-  /** AE-0440: reconnects gave up (budget spent, workflow gone or auth lost). */
+  /** Reconnects gave up (budget spent, workflow gone or auth lost). */
   DISCONNECTED: "disconnected",
 } as const;
 
@@ -70,14 +70,14 @@ export const EDITORIAL_WORKFLOW_POLL_BACKOFF_MS = [
 ] as const;
 
 /**
- * AE-0440: stream reconnects walk the backoff array above (last delay reused)
+ * Stream reconnects walk the backoff array above (last delay reused)
  * and give up after this many attempts in a row; the editor then shows a
  * visible "live updates disconnected" state with a retry button.
  */
 export const EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS = 5;
 
 /**
- * AE-0440: EventSource cannot see the HTTP status of a failed stream, so a
+ * EventSource cannot see the HTTP status of a failed stream, so a
  * stream error is followed by a GET workflow/state probe through the api-client
  * (whose 401 path is the session-expired redirect). The probe's verdict:
  * OK (state refetched, reconnect), AUTH_FAILED (redirected, never reconnect),
@@ -150,19 +150,18 @@ export const WORKFLOW_ARTIFACT_FIELD_MAP: Record<string, string> = {
 
 /**
  * Machine-readable resume conflict codes surfaced in the 409 `detail`
- * (AE-0310; backend `rag_backend.domain.constants.carousel_conflicts`).
+ * (backend `rag_backend.domain.constants.carousel_conflicts`).
  */
 export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
   REVISION_CAP_EXCEEDED: "revision_cap_exceeded",
-  // AE-0315: run-in-progress resume conflict — renders the in-progress
-  // banner (via a state refresh), never an error toast.
+  /** Run in progress: renders the in-progress banner (via a state refresh), never an error toast. */
   RUN_IN_PROGRESS: "resume_already_in_progress",
-  // AE-0315: stale lock_version — distinct copy from the other two causes.
+  /** Stale ``lock_version``: distinct copy from the other two causes. */
   VERSION_CONFLICT: "version_conflict",
 } as const;
 
 /**
- * AE-0414 (B02): machine-readable 4xx ``detail`` codes of
+ * Machine-readable 4xx ``detail`` codes of
  * ``POST /workflow/resume`` that get a translated message
  * (``editorialWorkflow.errors.resumeCodes.<code>``) instead of the raw code.
  */
@@ -179,14 +178,14 @@ export const EDITORIAL_RESUME_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * AE-0310: backend hint code carried in `design_recovery_hint` while the
+ * Backend hint code carried in `design_recovery_hint` while the
  * design step holds a blocking presentation validation report.
  */
 export const DESIGN_VALIDATION_RECOVERY_HINT =
   "design_validation_blocked_edit_or_send_back";
 
 /**
- * AE-0437: the structured item list each slide type renders (mirrors the
+ * The structured item list each slide type renders (mirrors the
  * backend gate: a summary needs ``summary_points``, a closing slide needs 3
  * ``actions``, a content slide may carry ``features``). The editor offers this
  * list even when it is empty, so a missing list can be filled by hand.
@@ -197,10 +196,10 @@ export const SLIDE_TYPE_ITEM_LIST_KEY: Readonly<Record<string, string>> = {
   content: "features",
 };
 
-/** AE-0437: most items a structured list holds (features allow 2-4). */
+/** Most items a structured list holds (features allow 2-4). */
 export const STRUCTURED_LIST_MAX_ITEMS = 4;
 
-/** AE-0437: icons a new item takes by position (Lucide contract allowlist). */
+/** Icons a new item takes by position (Lucide contract allowlist). */
 export const STRUCTURED_ITEM_DEFAULT_ICONS = [
   "target",
   "wrench",

@@ -1,10 +1,10 @@
-"""Which slides the model fix rewrites, and why (AE-0401).
+"""Which slides the model fix rewrites, and why.
 
 A slide is a target when its PT or EN copy has a blocking violation, or (at
 the content gate) when its persona voice score is under the floor. Blocking
 rules without a slide (the slide count) cannot be fixed per slide: they are
-returned apart so the caller escalates them as they are. AE-0439 (#154 B):
-a slide whose stored score is stale (``rescore_pending``) is also a target
+returned apart so the caller escalates them as they are. A
+slide whose stored score is stale (``rescore_pending``) is also a target
 at the content gate — with no issues, so the fix loop re-scores it without
 a rewrite instead of approving on the stale score.
 
@@ -83,7 +83,7 @@ def _issue(violation: SlideValidationViolation) -> SlideIssue:
 
 
 def overall_score(value: object) -> float | None:
-    """A persona-score entry's ``overall`` on 0-100; None when unscored (AE-0407)."""
+    """A persona-score entry's ``overall`` on 0-100; None when unscored."""
     return stored_overall(value)
 
 
@@ -112,7 +112,7 @@ def slide_scores(state: Mapping[str, object]) -> dict[int, float]:
 
 
 def unscored_ticks(state: Mapping[str, object]) -> dict[int, int]:
-    """AE-0433: slides whose stored score is stale, with their unscored ticks."""
+    """Slides whose stored score is stale, with their unscored ticks."""
     return pending_rescores(state.get(STATE_FIELD_PERSONA_SCORES))
 
 
@@ -147,7 +147,7 @@ def _voice_issues(query: TargetQuery) -> dict[int, tuple[float, SlideIssue]]:
 def select_targets(query: TargetQuery) -> TargetSelection:
     """The failing slides, in slide order, each with every check it fails.
 
-    AE-0439 (#154 B): at the content gate, a slide whose stored score is
+    At the content gate, a slide whose stored score is
     stale (``rescore_pending``) is also a target — with no issues, so the
     fix loop only re-scores it (no rewrite). Without this, a stale PASSING
     score lets the gate approve and the pending marker never clears.

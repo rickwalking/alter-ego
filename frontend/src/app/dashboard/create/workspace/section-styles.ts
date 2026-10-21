@@ -1,7 +1,7 @@
 import { BG_CARD, TEXT } from "@/constants/neon";
 
 /**
- * Shared inline styles for the create-carousel workspace sections (AE-0154).
+ * Shared inline styles for the create-carousel workspace sections.
  * The topic / theme / template section cards used byte-identical style objects;
  * they now import these.
  */
@@ -33,7 +33,7 @@ export const inputStyle = {
 } as const;
 
 /**
- * AE-0415 (B31): visible keyboard focus on the create-form inputs and selects
+ * Visible keyboard focus on the create-form inputs and selects
  * (the inline style used to set `outline: none` with no replacement).
  */
 export const INPUT_FOCUS_CLASS =

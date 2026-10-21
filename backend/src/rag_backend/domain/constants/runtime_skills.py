@@ -1,4 +1,12 @@
-"""Runtime skill path resolution for packaged and local development."""
+"""Runtime skill path resolution for packaged and local development.
+
+``DEFAULT_RUNTIME_SKILLS_ROOT`` is a logical addressing prefix used by
+``resolve_runtime_skill_path()`` and stripped by the read helpers; it is NOT a
+filesystem path. The skills physically live inside the backend package at
+``rag_backend/agents/skills/``, so they ship with ``COPY backend/src/ src/`` and
+resolve package-relative (no repo-root discovery, identical locally and in the
+image): this file's ``parents[2]`` is ``rag_backend``.
+"""
 
 from __future__ import annotations
 
@@ -6,17 +14,10 @@ import os
 from pathlib import Path
 
 ENV_RUNTIME_SKILLS_ROOT = "ALTER_EGO_RUNTIME_SKILLS_ROOT"
-# Logical addressing prefix used by resolve_runtime_skill_path() and stripped by the
-# read helpers below. It is NOT a filesystem path — the runtime skills physically
-# live inside the backend package (AE-0246); see get_runtime_skills_filesystem_root.
 DEFAULT_RUNTIME_SKILLS_ROOT = "skills/runtime"
 CAROUSEL_PIPELINE_SKILL_ID = "carousel-pipeline"
 PHASE_SKILL_FILENAME = "SKILL.md"
 
-# AE-0246: runtime skills are co-located inside the backend package at
-# rag_backend/agents/skills/, so they ship with `COPY backend/src/ src/` and resolve
-# package-relative (no repo-root discovery, identical local and in-image). This file
-# is rag_backend/domain/constants/runtime_skills.py -> parents[2] == rag_backend.
 _PACKAGE_SKILLS_ROOT = Path(__file__).resolve().parents[2] / "agents" / "skills"
 
 
@@ -28,7 +29,7 @@ def get_runtime_skills_root() -> str:
 def get_runtime_skills_filesystem_root() -> Path:
     """Return filesystem path to the co-located runtime skills root.
 
-    Package-relative by default (AE-0246). An ABSOLUTE
+    Package-relative by default. An ABSOLUTE
     ``ALTER_EGO_RUNTIME_SKILLS_ROOT`` override still wins (tests / custom layouts);
     a relative or unset value falls back to the packaged location.
     """

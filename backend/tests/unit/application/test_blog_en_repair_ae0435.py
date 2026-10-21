@@ -1,4 +1,4 @@
-"""One-shot repair of stored posts whose EN reads as Portuguese (AE-0435).
+"""One-shot repair of stored posts whose EN reads as Portuguese.
 
 Feature: backend/tests/features/blog_generation_en_gate_timeout_ae0435.feature
 """

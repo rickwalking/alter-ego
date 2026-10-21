@@ -1,15 +1,15 @@
-"""The publish-step slide-1 cover picker of a Ponto de Vista carousel (AE-0445).
+"""The publish-step slide-1 cover picker of a Ponto de Vista carousel.
 
 The owner of a finished ``pov`` / ``pov_news`` carousel picks slide 1's image
 among their library photos (role ``hook``) and the autopilot run's GrokBot
-cover offer (AE-0418):
+cover offer:
 
 - a library photo is staged, bound as the slide-1 photo (``hook_asset_id``)
   and any GrokBot cover is cleared, so the default POV slide 1 shows it;
 - the GrokBot offer is stored as ``slide_cover`` (the Telegram semantics).
 
 Both write through ``SlideCoverSwitchService``: lock-version CAS under the
-project lock, then the AE-0313 republish (slides + PDFs, hero images reused).
+project lock, then the republish (slides + PDFs, hero images reused).
 """
 
 from __future__ import annotations

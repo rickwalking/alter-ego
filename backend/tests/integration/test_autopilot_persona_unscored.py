@@ -1,12 +1,14 @@
-"""The autopilot approves an unscored content gate into design (AE-0364).
+"""The autopilot approves an unscored content gate into design.
 
-Feature: autopilot_runner.feature (AE-0364 scenarios)
+Feature: autopilot_runner.feature (unscored persona scenarios)
 
 Prod 2026-10-14, carousel 8e350d6e: the autopilot attaches no persona, so the
 content phase wrote 7 drafts and ``persona_scores = {}``. The engine allows
 that approve; the policy revised it until the cap. This drives the real
-``EditorialWorkflowService``, graph, checkpointer and run wrapper (the AE-0363
+``EditorialWorkflowService``, graph, checkpointer and run wrapper (the resume
 world); only the LLM artifact generation is faked.
+
+The drafts pass the presentation check, so only the persona rule is tested.
 """
 
 from __future__ import annotations
@@ -31,7 +33,6 @@ from tests.integration.test_autopilot_resume_runs_phase import _approve, world
 __all__ = ["world"]
 
 _SLIDES = 7
-# Drafts that pass the presentation check, so only the persona rule is tested.
 _DRAFTS = [
     {
         "heading": f"Agents ship {i}",

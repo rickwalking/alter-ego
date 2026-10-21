@@ -63,7 +63,7 @@ function createHookOptions(overrides?: {
   const setError = vi.fn();
   const enterPollingFallback = vi.fn();
   const stopPollingFallback = vi.fn();
-  const refreshState = vi.fn(async () => workflowStateRef.current);
+  const refreshState = vi.fn(() => Promise.resolve(workflowStateRef.current));
 
   return {
     workflowStateRef,
@@ -106,19 +106,21 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowResume", () => {
-  // Regression (c858abd): the resume call must use the bare /api endpoint
-  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
-  // with /api and nginx routes /api/* to the backend; prefixing produced
-  // /api/api/... and a 404 right after approving the research phase.
+  /**
+   * Regression: the resume call uses the bare endpoint path. The path already
+   * starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...`` and a 404.
+   */
   it("posts resume to the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-        research_findings: [{ title: "Finding" }],
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          research_findings: [{ title: "Finding" }],
+        }),
     } as Response);
 
     const { hookParams } = createHookOptions();
@@ -142,12 +144,13 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        current_phase: "outline",
-        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-        outline: [{ title: "Intro" }],
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          current_phase: "outline",
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          outline: [{ title: "Intro" }],
+        }),
     } as Response);
 
     const { hookParams, setState, stopPollingFallback } = createHookOptions();
@@ -173,13 +176,14 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
-      json: async () => ({
-        accepted: true,
-        project_id: "project-1",
-        current_phase: "research",
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-        lock_version: 2,
-      }),
+      json: () =>
+        Promise.resolve({
+          accepted: true,
+          project_id: "project-1",
+          current_phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          lock_version: 2,
+        }),
     } as Response);
 
     const { hookParams, workflowStateRef } = createHookOptions();
@@ -197,25 +201,26 @@ describe("useEditorialWorkflowResume", () => {
   });
 
   it("includes structured feedback fields in revise payloads", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body)) as {
+    mockAuthenticatedFetch.mockImplementation((_url, init) => {
+      const body = JSON.parse(init?.body as string) as {
         structured_feedback?: { target_phase?: string; edited_text?: string };
       };
       expect(body.structured_feedback).toEqual({
         target_phase: "content",
         edited_text: "Rewrite intro",
       });
-      return {
+      return Promise.resolve({
         ok: true,
         status: HTTP_STATUS.OK,
-        json: async () => ({
-          ...baseState,
-          current_phase: "content",
-          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-          outline: [{ title: "Intro" }],
-          slide_drafts: [{ draft_text: "Body" }],
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            ...baseState,
+            current_phase: "content",
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            outline: [{ title: "Intro" }],
+            slide_drafts: [{ draft_text: "Body" }],
+          }),
+      } as Response);
     });
 
     const { hookParams } = createHookOptions();
@@ -237,22 +242,22 @@ describe("useEditorialWorkflowResume", () => {
       research_findings: [{ title: "Finding" }],
     };
 
-    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+    mockAuthenticatedFetch.mockImplementation((url, init) => {
       if (
         url === "/api/carousels/project-1/workflow/resume" &&
         init?.method === HTTP_METHODS.POST
       ) {
-        const body = JSON.parse(String(init.body)) as {
+        const body = JSON.parse(init.body as string) as {
           expected_version: number;
         };
         expect(body.expected_version).toBe(3);
-        return {
+        return Promise.resolve({
           ok: true,
           status: HTTP_STATUS.OK,
-          json: async () => readyState,
-        } as Response;
+          json: () => Promise.resolve(readyState),
+        } as Response);
       }
-      throw new Error(`Unexpected fetch: ${String(url)}`);
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`));
     });
 
     const { hookParams, refreshState } = createHookOptions({
@@ -269,14 +274,12 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
-  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
-  //   The three 409 causes have distinct client copy; version conflicts get
-  //   their own message instead of the raw machine code.
+  /** The three 409 causes have distinct client copy, never the raw machine code. */
   it("surfaces client resume errors without entering polling recovery", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.CONFLICT,
-      json: async () => ({ detail: "version_conflict" }),
+      json: () => Promise.resolve({ detail: "version_conflict" }),
     } as Response);
 
     const { hookParams, setError, enterPollingFallback } = createHookOptions();
@@ -296,21 +299,23 @@ describe("useEditorialWorkflowResume", () => {
     expect(enterPollingFallback).not.toHaveBeenCalled();
   });
 
-  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
+  /**
+   * A run-in-progress 409 renders the banner (state refresh), not a toast.
+   */
   // Scenario: Resume attempt during a run explains itself
-  //   A run-in-progress 409 renders the banner (state refresh), not a toast.
   it("run-in-progress 409 refreshes state for the banner instead of erroring", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.CONFLICT,
-      json: async () => ({
-        detail: "resume_already_in_progress",
-        conflict: {
-          code: "resume_already_in_progress",
-          message: "A workflow run is already in progress for this carousel.",
-          run_started_at: "2026-07-10T03:39:00+00:00",
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          detail: "resume_already_in_progress",
+          conflict: {
+            code: "resume_already_in_progress",
+            message: "A workflow run is already in progress for this carousel.",
+            run_started_at: "2026-07-10T03:39:00+00:00",
+          },
+        }),
     } as Response);
 
     const runningState: EditorialWorkflowState = {
@@ -336,15 +341,16 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
-  // AE-0310 — Gherkin: backend/tests/features/carousel_design_phase_recovery.feature
+  /**
+   * The cap-exceeded 409 copy points to the uncapped edit path instead of
+   * surfacing the raw machine code.
+   */
   // Scenario: Direct edits remain available after all caps are exhausted
-  //   The cap-exceeded 409 copy points to the uncapped edit path instead of
-  //   surfacing the raw machine code.
   it("maps the revision-cap 409 to the uncapped-edit guidance message", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.CONFLICT,
-      json: async () => ({ detail: "revision_cap_exceeded" }),
+      json: () => Promise.resolve({ detail: "revision_cap_exceeded" }),
     } as Response);
 
     const { hookParams, setError } = createHookOptions();
@@ -374,7 +380,7 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      json: async () => ({ detail: "gateway timeout" }),
+      json: () => Promise.resolve({ detail: "gateway timeout" }),
     } as Response);
 
     const { hookParams, enterPollingFallback, refreshState } =
@@ -422,7 +428,7 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
-      json: async () => ({ accepted: false }),
+      json: () => Promise.resolve({ accepted: false }),
     } as Response);
 
     const { hookParams, setError } = createHookOptions();
@@ -442,18 +448,19 @@ describe("useEditorialWorkflowResume", () => {
   });
 
   it("includes feedback text in resume payloads", async () => {
-    mockAuthenticatedFetch.mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body)) as { feedback?: string };
+    mockAuthenticatedFetch.mockImplementation((_url, init) => {
+      const body = JSON.parse(init?.body as string) as { feedback?: string };
       expect(body.feedback).toBe("Needs more detail");
-      return {
+      return Promise.resolve({
         ok: true,
         status: HTTP_STATUS.OK,
-        json: async () => ({
-          ...baseState,
-          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-          research_findings: [{ title: "Finding" }],
-        }),
-      } as Response;
+        json: () =>
+          Promise.resolve({
+            ...baseState,
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            research_findings: [{ title: "Finding" }],
+          }),
+      } as Response);
     });
 
     const { hookParams } = createHookOptions();
@@ -468,11 +475,12 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-        research_findings: [{ title: "Finding" }],
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+          research_findings: [{ title: "Finding" }],
+        }),
     } as Response);
 
     const { hookParams, setState } = createHookOptions();
@@ -489,8 +497,9 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => {
-        throw "broken payload";
+      json: () => {
+        const nonErrorPayload: unknown = "broken payload";
+        return Promise.reject(nonErrorPayload);
       },
     } as unknown as Response);
 
@@ -514,13 +523,14 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.ACCEPTED,
-      json: async () => ({
-        accepted: true,
-        project_id: "project-1",
-        current_phase: "research",
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-        lock_version: 2,
-      }),
+      json: () =>
+        Promise.resolve({
+          accepted: true,
+          project_id: "project-1",
+          current_phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          lock_version: 2,
+        }),
     } as Response);
 
     const waitSpy = vi
@@ -547,7 +557,7 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
       status: HTTP_STATUS.FORBIDDEN,
-      json: async () => ({ detail: "forbidden" }),
+      json: () => Promise.resolve({ detail: "forbidden" }),
     } as Response);
 
     const { hookParams, setError } = createHookOptions();
@@ -577,10 +587,11 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+        }),
     } as Response);
 
     const waitSpy = vi
@@ -608,7 +619,7 @@ describe("useEditorialWorkflowResume", () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => readyState,
+      json: () => Promise.resolve(readyState),
     } as Response);
 
     const { hookParams, setState } = createHookOptions({
@@ -636,19 +647,22 @@ describe("useEditorialWorkflowResume", () => {
     ).toBe(false);
   });
 
-  // AE-0446 (PR #175 review): the wait AFTER a non-ready answer runs outside
-  // the loading/error handling, as before the hook was split: the lock is
-  // released at once and a final timeout is not shown as a resume error.
+  /**
+   * The wait after a non-ready answer runs outside the loading/error handling,
+   * as before the hook was split: the lock is released at once and a final
+   * timeout is not shown as a resume error.
+   */
   it("releases loading before the second wait and shows no resume error", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+        }),
     } as Response);
-    let finishWait: (state: EditorialWorkflowState | null) => void = () => {};
+    let finishWait = (_state: EditorialWorkflowState | null): void => undefined;
     const waitSpy = vi
       .spyOn(editorialWorkflowUtils, "waitUntilWorkflowReadyWithTransport")
       .mockImplementation(

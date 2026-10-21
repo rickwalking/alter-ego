@@ -11,7 +11,7 @@ import {
 import type { BlogEditorSidebarProps } from "@/app/dashboard/blog-posts/types";
 
 /**
- * Right column of the blog editor (AE-0424): review/publish/schedule, the
+ * Right column of the blog editor: review/publish/schedule, the
  * voice score of the shown language, version history and the AI panel. The
  * workflow controls are disabled while there are unsaved edits.
  */
@@ -27,6 +27,10 @@ function editorIsBusy({
   return editor.dirty || editor.saving || review.pending || slotsPending;
 }
 
+/**
+ * The workflow controls stay busy while a slot action runs, because it may
+ * change the content and reset the review.
+ */
 export function BlogEditorSidebar({
   editor,
   review,
@@ -34,14 +38,12 @@ export function BlogEditorSidebar({
   selection,
   slotsPending,
   onApplySuggestion,
-}: BlogEditorSidebarProps): React.ReactElement | null {
+}: Readonly<BlogEditorSidebarProps>): React.ReactElement | null {
   const { post, draft } = editor;
   if (!post || !draft) {
     return null;
   }
   const shown = activeDocument(draft.document, editor.language);
-  // A running slot action may change the content (and reset the review), so
-  // the workflow controls wait for it (AE-0424 review).
   const busy = editorIsBusy({ editor, review, slotsPending });
   return (
     <div className="space-y-4">

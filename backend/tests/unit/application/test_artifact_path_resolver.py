@@ -1,6 +1,6 @@
 """Unit tests for carousel artifact path resolution and dedup helpers.
 
-Feature: Path Resolver Dedup (see AE-0043)
+Feature: Path Resolver Dedup
 
   Scenario: resolve_language_dir uses _resolve_base
     Given resolve_language_dir is called
@@ -87,7 +87,6 @@ class TestResolversUseResolveBase:
         assert resolve_current_index_path(_make_project(output_dir=None)) is None
 
     def test_supported_languages_empty_for_missing_dirs(self, tmp_path: Path) -> None:
-        # No rendered locale directories exist under a fresh tmp_path.
         assert supported_languages(_make_project(output_dir=str(tmp_path))) == ()
 
 

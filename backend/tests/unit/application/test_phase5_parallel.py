@@ -194,7 +194,7 @@ class TestParallelImageGeneration:
     ) -> None:
         """One slide failing marks its slot 'failed' and surfaces an error.
 
-        AE-0209: the batch no longer cancels siblings — the failure is reported
+        the batch no longer cancels siblings — the failure is reported
         as an aggregate after the rest of the batch runs, with the original
         provider error chained as the cause.
         """
@@ -289,14 +289,13 @@ class _FakeRateLimitError(Exception):
 
 @pytest.mark.unit
 class TestRateLimitAwareGeneration:
-    """AE-0208: a provider 429 is survived by honoring retry-after."""
+    """A provider 429 is survived by honoring retry-after."""
 
     async def test_429_then_success_completes_phase(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Scenario: Given a provider that 429s once then succeeds, when the
-        # images phase runs, then the runner waits >= the stated retry-after
-        # and the phase completes instead of aborting.
+        """One 429 then one success; the runner waits at least the stated retry-after."""
+        # Scenario: Given a provider that 429s once then succeeds, when the images phase runs, then the runner waits >= the stated retry-after and the phase completes instead of aborting.
         attempts = 0
 
         async def flaky(prompt: str, output_path: str) -> str:
@@ -332,13 +331,12 @@ class TestRateLimitAwareGeneration:
             )
         )
 
-        assert attempts == 2  # one 429, one success
-        assert slept  # the runner waited
-        assert slept[0] >= 12.0  # honored the stated retry-after
+        assert attempts == 2
+        assert slept
+        assert slept[0] >= 12.0
 
     async def test_concurrency_capped_to_config(self, tmp_path: Path) -> None:
-        # Scenario: Given a concurrency cap of 2, when many slides generate,
-        # then no more than 2 provider calls are ever in flight at once.
+        # Scenario: Given a concurrency cap of 2, when many slides generate, then no more than 2 provider calls are ever in flight at once.
         max_concurrent = 0
         in_flight = 0
         lock = asyncio.Lock()
@@ -374,7 +372,7 @@ class TestRateLimitAwareGeneration:
 
 @pytest.mark.unit
 class TestPartialCommitAndReentry:
-    """AE-0209: a single-slide failure persists siblings; re-run completes."""
+    """A single-slide failure persists siblings; re-run completes."""
 
     @staticmethod
     def _slide_entity(project_id: UUID, n: int) -> CarouselSlide:
@@ -390,9 +388,8 @@ class TestPartialCommitAndReentry:
     async def test_sibling_persists_on_single_slide_failure(
         self, tmp_path: Path
     ) -> None:
-        # Scenario: Given slide 2 fails, when the batch runs, then slide 1's
-        # image_path is still written back to its slide row (partial commit)
-        # and an aggregate error is surfaced.
+        """The good slide is persisted despite slide 2 failing."""
+        # Scenario: Given slide 2 fails, when the batch runs, then slide 1's image_path is still written back to its slide row (partial commit) and an aggregate error is surfaced.
         project = _project(tmp_path)
         entities = [self._slide_entity(project.id, i) for i in range(1, 3)]
 
@@ -427,20 +424,22 @@ class TestPartialCommitAndReentry:
             )
 
         committed = {s.slide_number for s in updated_slides}
-        assert 1 in committed  # the good slide was persisted despite slide 2 failing
+        assert 1 in committed
 
     async def test_rerun_regenerates_only_missing_and_completes(
         self, tmp_path: Path
     ) -> None:
-        # Scenario: Given slide 1 already has an image on disk + a matching
-        # generation key, when the phase re-runs, then slide 1 is reused (not
-        # regenerated) and the phase completes.
+        """Slide 1 is pre-seeded as generated (a real JPEG on disk plus the generation
+        key the prompt package resolves to). The record-lookup reuse path finds no
+        usable record (an AsyncMock is not a CarouselImageGeneration), so reuse falls to
+        the on-disk legacy path keyed by generation_key, the re-entry path under test;
+        only slide 2 is generated.
+        """
+        # Scenario: Given slide 1 already has an image on disk + a matching generation key, when the phase re-runs, then slide 1 is reused (not regenerated) and the phase completes.
         project = _project(tmp_path)
         slide1 = self._slide_entity(project.id, 1)
         slide2 = self._slide_entity(project.id, 2)
 
-        # Pre-seed slide 1 as already generated: a real JPEG on disk + the
-        # generation key that the prompt package will resolve to.
         from rag_backend.application.services.carousel.image_prompt_package import (
             METADATA_GENERATION_KEY,
             ImagePromptPackageRequest,
@@ -479,9 +478,6 @@ class TestPartialCommitAndReentry:
         image_service.generate_image = AsyncMock(side_effect=generate)
         registry, repo = _registry_with_image_service(image_service)
         repo.get_slides_by_project = AsyncMock(return_value=[slide1, slide2])
-        # The record-lookup reuse path returns no usable record (AsyncMock is
-        # not a CarouselImageGeneration), so reuse falls to the on-disk legacy
-        # path keyed by generation_key — exactly the re-entry path under test.
 
         slides = [_slide_data(1), _slide_data(2)]
         await run_images(
@@ -494,14 +490,13 @@ class TestPartialCommitAndReentry:
             )
         )
 
-        # Only the missing slide (2) was generated; slide 1 was reused.
         assert all("slide_1.jpg" not in path for path in generated_for)
         assert any("slide_2.jpg" in path for path in generated_for)
 
 
 @pytest.mark.unit
 class TestProgressCallbackPort:
-    """AE-0121: the image node reports progress via the presentation→editorial
+    """The image node reports progress via the presentation→editorial
     callback port when injected (editorial owns the phase_progress write)."""
 
     async def test_callback_receives_snapshots_and_repo_progress_write_skipped(
@@ -512,6 +507,10 @@ class TestProgressCallbackPort:
         The node must NOT write ``phase_progress`` via ``repo.update_project`` when
         editorial owns it — and the reported snapshots reproduce the legacy
         ``phase_progress`` payload exactly (same status lifecycle).
+
+        The repo never persists progress (presentation does not write state); the
+        callback receives the lifecycle snapshots, whose phase is the legacy
+        generating_images value.
         """
         received: list[ProgressSnapshot] = []
 
@@ -537,13 +536,10 @@ class TestProgressCallbackPort:
             )
         )
 
-        # The repo NEVER persisted progress (presentation does not write state).
         repo.update_project.assert_not_called()
-        # The callback received the lifecycle snapshots (pending → … → done).
         assert received
         assert _statuses(received[0]) == ["pending", "pending"]
         assert _statuses(received[-1]) == ["done", "done"]
-        # The dict phase value is the legacy generating_images value.
         assert received[0].phase == "generating_images"
         assert received[0].sse_phase == "images"
 

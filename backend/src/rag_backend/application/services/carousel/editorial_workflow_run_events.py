@@ -1,4 +1,4 @@
-"""Run lifecycle SSE events on the existing workflow stream (AE-0315).
+"""Run lifecycle SSE events on the existing workflow stream.
 
 ``run.started`` / ``run.stage_changed`` / ``run.finished`` ride the same
 per-project SSE hub the phase events use, so the create-flow client updates

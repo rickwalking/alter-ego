@@ -34,34 +34,37 @@ function parseQuality(params: string[]): number {
   return DEFAULT_QUALITY;
 }
 
+/** Weighted primary languages of a header ("pt-BR" -> "pt": one file per primary language). */
 function parseAcceptLanguage(header: string): WeightedLanguage[] {
   return header
     .split(",")
     .map((entry) => {
       const [tag = "", ...params] = entry.split(";");
-      // "pt-BR" -> "pt": the app ships one file per primary language.
       const language = tag.trim().toLowerCase().split("-")[0] ?? "";
       return { language, quality: parseQuality(params) };
     })
     .filter((item) => item.language !== "" && item.quality > 0);
 }
 
-/** Best supported language of an Accept-Language header, by quality. */
+/**
+ * Best supported language of an Accept-Language header, by quality. The sort is
+ * stable, so equal qualities keep the header order.
+ */
 export function matchAcceptLanguage(
   header: string | null | undefined,
 ): SupportedLocale | null {
   if (!header) {
     return null;
   }
-  const ranked = parseAcceptLanguage(header)
-    // A stable sort keeps the header order for equal qualities.
-    .sort((left, right) => right.quality - left.quality);
+  const ranked = parseAcceptLanguage(header).sort(
+    (left, right) => right.quality - left.quality,
+  );
   const match = ranked.find((item) => isSupportedLocale(item.language));
   return match ? (match.language as SupportedLocale) : null;
 }
 
 /**
- * AE-0416: the request locale is the `locale` cookie when it is valid, else
+ * The request locale is the `locale` cookie when it is valid, else
  * the best supported Accept-Language match, else the default.
  */
 export function resolveLocale(sources: LocaleSources): SupportedLocale {

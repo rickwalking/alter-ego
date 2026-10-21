@@ -1,6 +1,6 @@
 /**
  * Inline component/hook type-declaration scanner shared by the checker and the
- * baseline generator, so both compute violations identically (AE-0144).
+ * baseline generator, so both compute violations identically.
  *
  * Detects NON-TRIVIAL object-shape types declared inline in a component
  * (`*.tsx`) or hook (`use-*.ts`) file under `src/modules/**`:

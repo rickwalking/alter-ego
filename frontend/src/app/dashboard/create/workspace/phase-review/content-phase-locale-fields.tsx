@@ -27,11 +27,11 @@ function CopyField({
   props,
   field,
   value,
-}: {
+}: Readonly<{
   props: ContentLocaleFieldsProps;
   field: EditableCopyField;
   value: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const { slide, localeKey, policyVersion } = props;
   const budget =
@@ -77,15 +77,18 @@ function CopyField({
   );
 }
 
-/** One locale column of a content-review slide (read-only or editable). */
+/**
+ * One locale column of a content-review slide (read-only or editable).
+ *
+ * An editable heading shows what is stored (even empty) so it can be fixed.
+ */
 export function ContentLocaleFields(
-  props: ContentLocaleFieldsProps,
+  props: Readonly<ContentLocaleFieldsProps>,
 ): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const { slide, localeKey, localeLabel } = props;
   const presentation = slide[localeKey];
   const canEdit = props.onCopyChange !== undefined;
-  // An editable heading shows what is stored (even empty) so it can be fixed.
   const heading = canEdit
     ? presentationHeading(presentation, "")
     : presentationHeading(presentation, t("untitledSlide"));

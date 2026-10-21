@@ -99,7 +99,7 @@ def get_carousel_repair_service(
     request: Request,
     session: AsyncSession,
 ) -> CarouselRepairService:
-    """Build the AE-0311 repair service bound to one request session.
+    """Build the carousel repair service bound to one request session.
 
     Repo, CAS, and audit share the single ``get_db`` instance (cached by
     FastAPI for the request, and also injected into the route) so the
@@ -146,7 +146,7 @@ def get_carousel_slide_edit_service(
     request: Request,
     session: AsyncSession,
 ) -> CarouselSlideEditService:
-    """Build the AE-0314 slide-edit service bound to one request session."""
+    """Build the slide-edit service bound to one request session."""
     from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
         build_editorial_workflow_service,
     )

@@ -1,5 +1,5 @@
 /**
- * Requests of the blog section editor (AE-0424, ADR-0025).
+ * Requests of the blog section editor (ADR-0025).
  *
  * Every content write sends `If-Match` (the loaded `lock_version`) and every
  * route answers with the full post, so the editor keeps one source of truth.

@@ -1,9 +1,8 @@
-"""Publishing byte-identical safety-net tests (AE-0125).
+"""Publishing byte-identical safety-net tests.
 
 Behavioral + golden-snapshot safety net for the Phase 6 PUBLISHING extraction.
 Phase 6 moves blog/publishing/distribution + read routes behind facades + an
-ACL and adds an additive migration + an outbox; the later slices (AE-0128 /
-AE-0129 / AE-0131) diff the live response against the committed baseline this
+ACL and adds an additive migration + an outbox; the later slices diff the live response against the committed baseline this
 module captures on the current, pre-refactor code (diff == 0).
 
 What is asserted as TRUE byte-identical golden snapshots (volatile UUID /
@@ -18,7 +17,7 @@ timestamp / date fields normalized by ``tests/snapshots/publishing/_snapshot``):
 * editorial-analytics — GET ``/api/editorial-analytics``;
 * the carousel publish flow — POST ``/api/carousels/{id}/publish`` which sets
   ``is_public=True`` (the current approval->release conflation). Capturing THIS
-  behavior is the contract AE-0128's release command must diff to zero against.
+  behavior is the contract the release command must diff to zero against.
 
 External channels are DETERMINISTICALLY stubbed and never call a live provider
 (no Meta / Instagram / OpenAI key in this env): the Instagram publisher is an
@@ -26,17 +25,25 @@ in-memory ``_StubPublisher`` injected via the container override, and the
 caption route reads the project's persisted caption (no LLM call). The
 artifact-health gate (which would require staging real rendered JPEG/PDF files)
 is replaced at the route module level with a no-op stub — a test seam mirroring
-the AE-0097 module-level patch; no production code is modified.
+the chat-stream module-level patch; no production code is modified.
 
 DEBUG + every env-sensitive setting (cookie ``secure``, the public base URL) are
 pinned (monkeypatch.setenv + settings cache clear) so the baseline is
 deterministic local vs CI — the exact local(DEBUG=true)/CI(DEBUG=false) split
-broke the Phase-3 safety net (AE-0097 lesson).
+broke the Phase-3 safety net.
 
 Feature file: tests/features/carousel_publishing_safety_net.feature
 
 Run with ``--snapshot-update`` (flag registered in tests/conftest.py) to
 regenerate the committed golden snapshots from current, pre-refactor behavior.
+
+The public base URL is pinned so the Instagram image URLs the publisher receives are
+stable. The LinkedIn fixtures come with a poison value proving readers source the
+canonical ``blog_posts.distribution`` home, never the embedded carousel column. The
+output_dir is a STABLE string surfaced by the publish/caption JSON; the artifact-health
+gate is stubbed, so no real directory needs to exist. The blog-post content is a blog.v2
+document with a fixed section id, and a fixed scheduled-publish instant makes the
+content-calendar entry deterministic.
 """
 
 from __future__ import annotations
@@ -76,38 +83,29 @@ if TYPE_CHECKING:
 
     from rag_backend.domain.models.carousel import DesignTokens
 
-# --- Constants -----------------------------------------------------------------
 SNAPSHOT_UPDATE_OPTION = "--snapshot-update"
 ANON_SECRET = "test-anon-secret-for-integration-tests"
 OWNER_EMAIL = "pub-owner@integration.example.com"
 OTHER_EMAIL = "pub-other@integration.example.com"
 
-# Pinned so the Instagram public-image URLs the publisher receives are stable.
 PUBLIC_BASE_URL = "https://fixture.example.com"
 
-# Deterministic carousel content used across publish / blog / caption snapshots.
 FIXTURE_TITLE = "Fixture Title"
 FIXTURE_SUBTITLE = "Fixture Subtitle"
 FIXTURE_BLOG_PT = "# Fixture Title: Fixture Subtitle\n\nDeterministic blog body."
 FIXTURE_BLOG_EN = "# Fixture Title EN: Fixture Subtitle EN\n\nDeterministic body."
 FIXTURE_CAPTION = "Deterministic fixture caption for the snapshot."
-# AE-0204: LinkedIn fixtures + a poison value used to prove readers source the
-# canonical ``blog_posts.distribution`` home, never the embedded carousel column.
 _FIXTURE_LINKEDIN_PT = "Deterministic LinkedIn post (PT) for the home."
 _FIXTURE_LINKEDIN_EN = "Deterministic LinkedIn post (EN) for the home."
 _POISON_CAPTION = "POISON-EMBEDDED-CAPTION-MUST-NOT-BE-READ"
 SLIDE_COUNT: Final = 3
 
-# A STABLE output_dir string (the publish/caption JSON surfaces it). The
-# artifact-health gate is stubbed, so no real directory needs to exist.
 FIXTURE_OUTPUT_DIR = "/fixture/carousel-output"
 FIXTURE_PDF_PATH = "/fixture/carousel-output/pt/carousel.pdf"
 FIXTURE_PDF_PATH_EN = "/fixture/carousel-output/en/carousel.pdf"
 
-# Deterministic Instagram publish result (the stub never calls Meta).
 STUB_IG_POST_ID = "IG_FIXTURE_POST_ID"
 
-# Deterministic design tokens persisted so the publish response is stable.
 FIXTURE_DESIGN_TOKENS: Final[dict[str, object]] = {
     "colors": {
         "primary": "#3b82f6",
@@ -132,17 +130,14 @@ FIXTURE_DESIGN_TOKENS: Final[dict[str, object]] = {
     },
 }
 
-# Deterministic blog-post payload for the CRUD snapshots.
 FIXTURE_BLOG_POST_TITLE = "Fixture Blog Post"
 FIXTURE_BLOG_POST_SLUG = "fixture-blog-post"
-# AE-0423: a blog.v2 document with a fixed section id (deterministic snapshots).
 FIXTURE_BLOG_POST_CONTENT: Final[dict[str, object]] = v2_content(
     "Deterministic blog post body."
 )
 FIXTURE_BLOG_POST_EXCERPT = "Deterministic excerpt."
 FIXTURE_BLOG_POST_KEYWORDS: Final[list[str]] = ["fixture", "snapshot"]
 
-# A fixed scheduled-publish instant so the content-calendar entry is captured.
 FIXTURE_SCHEDULED_AT = datetime(2026, 6, 20, 12, 0, 0, tzinfo=UTC)
 CALENDAR_BLOG_TITLE = "Calendar Fixture Post"
 CALENDAR_BLOG_SLUG = "calendar-fixture-post"
@@ -154,7 +149,6 @@ def snapshot_update(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption(SNAPSHOT_UPDATE_OPTION))
 
 
-# --- Engine / app factory ------------------------------------------------------
 async def _make_engine(db_path: str) -> AsyncEngine:
     from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -193,7 +187,7 @@ def _stub_artifact_health(monkeypatch: pytest.MonkeyPatch) -> None:
     it is NOT part of any JSON response under test. Both the crud publish route
     and the publishing route import ``assert_carousel_artifacts_healthy`` at
     module level, so patching that name on each module injects the no-op at the
-    app edge (mirrors the AE-0097 module-level patch). No src/ is modified.
+    app edge (mirrors the chat-stream module-level patch). No src/ is modified.
     """
     from rag_backend.api.routes.carousels import crud as crud_module
     from rag_backend.api.routes.carousels import publishing as publishing_module
@@ -229,6 +223,10 @@ class PubEnv:
         The project carries deterministic blog/caption/design content and stable
         artifact path strings; ``workflow_status`` is set to approved-for-publish
         when requested so the publish + instagram routes pass their release gate.
+
+        A carousel save no longer creates or auto-publishes a blog row, so the canonical
+        ``origin='carousel'`` row is seeded explicitly (the backfill shape, excerpt
+        NULL) to keep exercising the row read path.
         """
         from rag_backend.infrastructure.database.carousel_repository import (
             PostgresCarouselRepository,
@@ -274,9 +272,6 @@ class PubEnv:
                     image_prompt=f"Prompt {i}",
                 )
                 await repo.create_slide(slide)
-            # AE-0422: a carousel save no longer creates/auto-publishes a blog row,
-            # so the safety net seeds the canonical ``origin='carousel'`` row
-            # explicitly (the AE-0127 shape) to keep exercising the row read path.
             from rag_backend.domain.constants.blog_post import (
                 BlogPostOrigin,
                 BlogPostStatus,
@@ -335,7 +330,11 @@ class PubEnv:
 async def pub_env(
     tmp_path: object, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncGenerator[PubEnv, None]:
-    """File-backed DB + app with an owner + other editor and client helpers."""
+    """File-backed DB + app with an owner + other editor and client helpers.
+
+    DEBUG and the public base URL are pinned so every env-sensitive setting is
+    deterministic locally and in CI.
+    """
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
@@ -346,8 +345,6 @@ async def pub_env(
     assert isinstance(tmp_path, Path)
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
-    # Pin DEBUG + the public base URL so every env-sensitive setting is
-    # deterministic local vs CI (AE-0097 lesson). monkeypatch reverts at end.
     monkeypatch.setenv("DEBUG", "false")
     monkeypatch.setenv("CAROUSEL_PUBLIC_BASE_URL", PUBLIC_BASE_URL)
     get_settings.cache_clear()
@@ -396,9 +393,6 @@ def _reset_publisher() -> None:
     get_container().instagram_publisher.reset_override()
 
 
-# ==============================================================================
-# Blog-post CRUD behavior + snapshots
-# ==============================================================================
 class TestBlogPostCrud:
     """POST/GET/list/PUT/DELETE /blog-posts (feature: publishing safety net)."""
 
@@ -464,7 +458,7 @@ class TestBlogPostCrud:
     async def test_delete_returns_204(self, pub_env: PubEnv) -> None:
         """Scenario: blog post delete returns 204 and removes the post.
 
-        Sends ``If-Match`` — DELETE is optimistic-locked since AE-0296.
+        Sends ``If-Match`` — DELETE is optimistic-locked.
         """
         async with pub_env.client_for(pub_env.owner) as client:
             created = await _create_blog_post(client)
@@ -477,9 +471,6 @@ class TestBlogPostCrud:
         assert after.status_code == 404
 
 
-# ==============================================================================
-# Public carousel blog behavior + snapshots
-# ==============================================================================
 class TestPublicCarouselBlog:
     """GET /carousels/{id}/blog + /blog/{lang} (public surface)."""
 
@@ -524,12 +515,12 @@ class TestPublicCarouselBlog:
         """Scenario: the ``origin='carousel'`` row (the production path) yields the
         byte-identical /blog response captured by the embedded golden snapshot.
 
-        Since AE-0422 a carousel save no longer creates the row, so
+        A carousel save no longer creates the row, so
         ``seed_carousel`` seeds the canonical ``origin='carousel'`` blog_posts row
-        explicitly (the AE-0127 backfill shape) and the read path sources the body +
+        explicitly (the backfill shape) and the read path sources the body +
         404 signal SOLELY from that row. This proves the row-path response is
         byte-identical to the embedded golden snapshot (``carousel_blog``) — the
-        de-risking guarantee for the AE-0162 drop.
+        de-risking guarantee for dropping the embedded columns.
         """
         from sqlalchemy import select
 
@@ -541,7 +532,6 @@ class TestPublicCarouselBlog:
             is_public=True, approved_for_publish=False
         )
 
-        # The seed created exactly one carousel-origin row for the project.
         session_maker = get_session_maker()
         async with session_maker() as session:
             rows = (
@@ -560,19 +550,15 @@ class TestPublicCarouselBlog:
         row = rows[0]
         assert row.slug == f"carousel-{project_id}"
         assert row.title == FIXTURE_TITLE
-        assert row.excerpt is None  # AE-0127 row shape preserved (excerpt NULL)
+        assert row.excerpt is None
         assert row.content["markdown"] == FIXTURE_BLOG_PT
 
         async with pub_env.client_for(pub_env.owner) as client:
             with_row = await client.get(f"/api/carousels/{project_id}/blog")
         assert with_row.status_code == 200
-        # Byte-identical via the row path to the committed embedded golden snapshot.
         assert publishing_snapshot.diff_snapshot("carousel_blog", with_row) == []
 
 
-# ==============================================================================
-# Distribution: caption + publish/instagram (deterministic channel stub)
-# ==============================================================================
 class TestDistribution:
     """POST /caption + /publish/instagram with a deterministic publisher."""
 
@@ -611,7 +597,6 @@ class TestDistribution:
         body = resp.json()
         assert body["status"] == "published"
         assert body["ig_post_id"] == STUB_IG_POST_ID
-        # The route built public image URLs from the pinned base URL.
         assert stub.calls
         _caption, urls = stub.calls[0]
         assert all(url.startswith(f"{PUBLIC_BASE_URL}/") for url in urls)
@@ -637,12 +622,12 @@ class TestDistribution:
         assert resp.status_code == 403
 
 
-# ==============================================================================
-# AE-0204: caption + LinkedIn are served from the canonical distribution home
-# (blog_posts.distribution), NOT the embedded carousel columns.
-# ==============================================================================
 class TestDistributionCanonicalHome:
-    """The 3 distribution fields source from ``blog_posts.distribution`` (AE-0204)."""
+    """The 3 distribution fields source from ``blog_posts.distribution``.
+
+    Caption and LinkedIn are served from the canonical distribution home
+    (blog_posts.distribution), NOT the embedded carousel columns.
+    """
 
     @pytest.mark.asyncio
     async def test_dual_write_populates_canonical_home(self, pub_env: PubEnv) -> None:
@@ -652,6 +637,10 @@ class TestDistributionCanonicalHome:
         chokepoint mirrors all three into the canonical ``blog_posts.distribution``
         column on the ``origin='carousel'`` row — byte-identical to the embedded
         values — so the row becomes the source of truth every reader consumes.
+
+        Follows the writer pattern (refine_copy / editorial_distribution_pack): load the
+        entity, set the LinkedIn posts and persist via the repository so the dual-write
+        chokepoint mirrors them into the canonical home.
         """
         from sqlalchemy import select
 
@@ -675,9 +664,6 @@ class TestDistributionCanonicalHome:
         )
 
         session_maker = get_session_maker()
-        # A writer (refine_copy / editorial_distribution_pack pattern): load the
-        # entity, set the LinkedIn posts on it, and persist via the repository so
-        # the dual-write chokepoint mirrors them into the canonical home.
         async with session_maker() as session:
             repo = PostgresCarouselRepository(session)
             project = await repo.get_project_by_id(UUID(project_id))
@@ -713,7 +699,7 @@ class TestDistributionCanonicalHome:
     async def test_caption_route_reads_from_home_not_embedded_column(
         self, pub_env: PubEnv
     ) -> None:
-        """Rule-fires (AE-0180): the caption read sources the HOME, not the column.
+        """Rule-fires: the caption read sources the HOME, not the column.
 
         Seed a carousel, then DESYNC the embedded ``carousel_projects.caption``
         column to a poison value while leaving the canonical
@@ -721,6 +707,9 @@ class TestDistributionCanonicalHome:
         must still return the canonical caption — proving no reader sources the
         field from the embedded column. This test FAILS if a reader regresses to the
         embedded column.
+
+        Only the embedded column is poisoned (the home keeps FIXTURE_CAPTION); the
+        canonical home wins and the poison value is never read.
         """
         from rag_backend.infrastructure.database.config import get_session_maker
         from rag_backend.infrastructure.database.models.carousel import (
@@ -731,7 +720,6 @@ class TestDistributionCanonicalHome:
             is_public=True, approved_for_publish=True
         )
 
-        # Desync: poison the embedded column ONLY (the home keeps FIXTURE_CAPTION).
         session_maker = get_session_maker()
         async with session_maker() as session:
             model = await session.get(CarouselProjectModel, project_id)
@@ -742,16 +730,12 @@ class TestDistributionCanonicalHome:
         async with pub_env.client_for(pub_env.owner) as client:
             resp = await client.post(f"/api/carousels/{project_id}/caption")
         assert resp.status_code == 200
-        # The canonical home wins — the poison embedded value is never read.
         assert resp.json()["caption"] == FIXTURE_CAPTION
         assert resp.json()["caption"] != _POISON_CAPTION
 
 
-# ==============================================================================
-# Carousel publish flow (approval -> is_public release) — CURRENT behavior
-# ==============================================================================
 class TestCarouselPublishFlow:
-    """POST /carousels/{id}/publish sets is_public=True (AE-0128 diff target)."""
+    """POST /carousels/{id}/publish sets is_public=True (release diff target)."""
 
     @pytest.mark.asyncio
     async def test_publish_sets_is_public(
@@ -783,9 +767,6 @@ class TestCarouselPublishFlow:
         assert resp.status_code == 403
 
 
-# ==============================================================================
-# Calendar / board / analytics behavior
-# ==============================================================================
 class TestCalendarBoardAnalytics:
     """GET /content-calendar + /workflow-board + /editorial-analytics."""
 
@@ -830,9 +811,6 @@ class TestCalendarBoardAnalytics:
         assert summary["draft_count"] == 1
 
 
-# ==============================================================================
-# Golden snapshots — deterministic byte-identical baselines (AE-0128/0129/0131)
-# ==============================================================================
 class TestPublishingSnapshots:
     """Blog/publish/distribution/calendar/board/analytics golden snapshots."""
 
@@ -889,7 +867,7 @@ class TestPublishingSnapshots:
     async def test_snapshot_blog_post_delete(
         self, pub_env: PubEnv, snapshot_update: bool
     ) -> None:
-        """Golden: DELETE /blog-posts/{id} (204) — If-Match required (AE-0296)."""
+        """Golden: DELETE /blog-posts/{id} (204) — If-Match required."""
         async with pub_env.client_for(pub_env.owner) as client:
             created = await _create_blog_post(client)
             resp = await client.delete(
@@ -966,7 +944,7 @@ class TestPublishingSnapshots:
     ) -> None:
         """Golden: POST /carousels/{id}/publish (200) — sets is_public=True.
 
-        This is the CURRENT approval->release flow AE-0128's release command
+        This is the CURRENT approval->release flow the release command
         must diff to zero against.
         """
         project_id = await pub_env.seed_carousel(
@@ -1014,9 +992,6 @@ class TestPublishingSnapshots:
         await self._check("editorial_analytics", resp, update=snapshot_update)
 
 
-# ==============================================================================
-# Falsifiability guard — the snapshot diff is not a no-op
-# ==============================================================================
 class TestSafetyNetIsFalsifiable:
     """Prove the byte-identical snapshot diff rejects a mutated payload."""
 
@@ -1028,9 +1003,7 @@ class TestSafetyNetIsFalsifiable:
         )
         async with pub_env.client_for(pub_env.owner) as client:
             resp = await client.get(f"/api/carousels/{project_id}/blog")
-        # Live response matches the committed baseline.
         assert publishing_snapshot.diff_snapshot("carousel_blog", resp) == []
-        # A mutated copy of the SAME response must be rejected by the same check.
         snapshot = publishing_snapshot.build_snapshot(resp)
         mutated = publishing_snapshot.load_snapshot("carousel_blog")
         assert mutated == snapshot

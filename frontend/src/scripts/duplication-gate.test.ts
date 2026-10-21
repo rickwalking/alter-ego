@@ -5,7 +5,7 @@
  * Scenario: Test boilerplate does not trip the blocking gate
  * Scenario: The committed source duplication stays at or below the threshold
  *
- * Proves the AE-0149 jscpd gate actually enforces: a seeded duplicate block
+ * Proves the jscpd gate actually enforces: a seeded duplicate block
  * makes jscpd exit non-zero, distinct files pass, and the ignore globs keep
  * test boilerplate out of the blocking gate.
  */
@@ -19,7 +19,7 @@ const FRONTEND_ROOT = join(import.meta.dirname, "..", "..");
 const JSCPD_BIN = join(FRONTEND_ROOT, "node_modules", ".bin", "jscpd");
 const JSCPD_CONFIG = join(FRONTEND_ROOT, ".jscpd.json");
 
-// A ≥5-line / ≥50-token block — large enough to exceed minLines:5 / minTokens:50.
+/** A ≥5-line / ≥50-token block, large enough to exceed minLines:5 / minTokens:50. */
 const DUPLICATED_BLOCK = `
 export function accumulateStreamTokens(previous: string, token: string): string {
   const trimmed = token.replace(/\\u0000/g, "");

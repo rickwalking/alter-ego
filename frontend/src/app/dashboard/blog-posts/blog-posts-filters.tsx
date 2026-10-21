@@ -20,7 +20,7 @@ const SELECT_STYLE = {
 } as const;
 
 /**
- * Status filter + real post counter (AE-0411). The old category filter was
+ * Status filter + real post counter. The old category filter was
  * removed: posts carry no category on the backend, so it always emptied the
  * list (B20).
  */
@@ -29,11 +29,12 @@ export function BlogPostsFilters({
   onStatusFilterChange,
   shownCount,
   totalCount,
-}: BlogPostsFiltersProps): React.ReactElement {
+}: Readonly<BlogPostsFiltersProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
+  const allShownKey = shownCount === 1 ? "countOne" : "countOther";
   const counter =
     shownCount === totalCount
-      ? t(shownCount === 1 ? "countOne" : "countOther", { count: shownCount })
+      ? t(allShownKey, { count: shownCount })
       : t("countOfTotal", { count: shownCount, total: totalCount });
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">

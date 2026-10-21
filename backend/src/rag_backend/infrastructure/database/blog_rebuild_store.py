@@ -1,11 +1,11 @@
-"""SQL adapter of the AE-0426 hidden-post rebuild (``blog_posts``).
+"""SQL adapter of the hidden-post rebuild (``blog_posts``).
 
-Reads every row carrying the AE-0422 ``hidden_bad_post`` marker and performs the
+Reads every row carrying the ``hidden_bad_post`` marker and performs the
 two writes of a rebuild:
 
 * :meth:`SqlBlogRebuildStore.start_attempt` — the same row becomes a ``draft``
   with its publish stamps cleared, its legacy body replaced by a fresh ``blog.v2``
-  document (the AE-0424 slot path only edits v2), a fresh generation lease and
+  document (the slot-write path only edits v2), a fresh generation lease and
   ``lock_version + 1`` (compare-and-set, so a concurrent edit wins).
 * :meth:`SqlBlogRebuildStore.mark_rebuilt` — ``hidden_bad_post.rebuilt_at`` is
   stamped in the existing marker (it is kept for audit).

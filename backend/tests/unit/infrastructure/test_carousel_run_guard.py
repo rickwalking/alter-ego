@@ -1,9 +1,12 @@
-"""Unit tests for the AE-0315 run-column invariant + run-epoch flush fence.
+"""Unit tests for the run-column invariant + run-epoch flush fence.
 
 Feature: tests/features/carousel_run_progress_reaper.feature
 Covers: atomic stamp/clear on phase_status value changes (incl. the three
 write-owner bypass sites), no-op-hydrate safety, and the layer-(a) flush
 fence semantics (contextvar-gated; user writes never falsely rejected).
+
+Every test uses the ``no_outbox_relay`` fixture: commits here would otherwise run the
+outbox relay on a foreign engine.
 """
 
 from __future__ import annotations
@@ -45,7 +48,6 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
 )
 
-# AE-0446: commits here would run the outbox relay on a foreign engine.
 pytestmark = pytest.mark.usefixtures("no_outbox_relay")
 
 _NON_IN_PROGRESS_STATUSES = [
@@ -117,8 +119,9 @@ class TestRunColumnInvariant:
     async def test_every_non_in_progress_transition_clears_run_columns(
         self, test_engine, target_status: str
     ) -> None:
-        # Suite-wide assertion (ticket AC): EVERY value-changing transition to
-        # a non-in_progress status clears the run columns in the same flush.
+        """Every value-changing transition to a non-in_progress status clears the run
+        columns in the same flush.
+        """
         async with _factory(test_engine)() as db:
             project_id = await _add_in_progress_with_run_columns(db)
             project = await db.get(CarouselProjectModel, project_id)
@@ -131,14 +134,15 @@ class TestRunColumnInvariant:
     async def test_noop_hydrate_never_clears_live_run_columns(
         self, test_engine
     ) -> None:
-        # Owner-bypass site #3: update_from_entity re-writing the SAME
-        # phase_status (no-op hydrate) must not clear a live run's columns.
+        """Owner-bypass site #3: update_from_entity re-writing the same phase_status (no-op
+        hydrate) must not clear a live run's columns.
+        """
         async with _factory(test_engine)() as db:
             project_id = await _add_in_progress_with_run_columns(db)
             project = await db.get(CarouselProjectModel, project_id)
             assert project is not None
             entity = project.to_entity()
-            entity.title = "Hydrated title"  # unrelated column change
+            entity.title = "Hydrated title"
             project.update_from_entity(entity)
             assert project.phase_status == PHASE_STATUS_IN_PROGRESS
             await db.commit()
@@ -148,8 +152,9 @@ class TestRunColumnInvariant:
     async def test_hydrator_transition_out_clears_run_columns(
         self, test_engine
     ) -> None:
-        # Owner-bypass site #3 (value-changing case): the hydrator flipping
-        # phase_status out of in_progress clears the run columns.
+        """Owner-bypass site #3, value-changing case: the hydrator flipping phase_status
+        out of in_progress clears the run columns.
+        """
         async with _factory(test_engine)() as db:
             project_id = await _add_in_progress_with_run_columns(db)
             project = await db.get(CarouselProjectModel, project_id)
@@ -164,8 +169,9 @@ class TestRunColumnInvariant:
     async def test_timeout_auto_reject_clears_leftover_run_columns(
         self, test_engine
     ) -> None:
-        # Owner-bypass site #1: workflow_timeout_repository._reject flips
-        # phase_status directly; leftover run columns must clear with it.
+        """Owner-bypass site #1: workflow_timeout_repository._reject flips phase_status
+        directly; leftover run columns must clear with it.
+        """
         async with _factory(test_engine)() as db:
             project = _project(PHASE_STATUS_AWAITING_HUMAN)
             project.run_started_at = datetime.now(UTC)
@@ -182,8 +188,9 @@ class TestRunColumnInvariant:
             assert project.run_started_at is None
 
     async def test_phase5_backfill_clears_run_columns(self, test_engine) -> None:
-        # Owner-bypass site #2: the phase-5 migration backfill writes
-        # phase_status without the write owner.
+        """Owner-bypass site #2: the phase-5 migration backfill writes phase_status without
+        the write owner.
+        """
         async with _factory(test_engine)() as db:
             project = _project(PHASE_STATUS_IN_PROGRESS)
             project.current_phase = PHASE_BRIEF
@@ -207,8 +214,9 @@ class TestRunEpochFlushFence:
     async def test_non_run_write_concurrent_with_epoch_bump_succeeds(
         self, test_engine
     ) -> None:
-        # Contextvar unset (user/admin/operator context): a write racing a
-        # reaper epoch bump must NEVER be rejected by the fence.
+        """With the contextvar unset (user/admin/operator context), a write racing a reaper
+        epoch bump must never be rejected by the fence.
+        """
         factory = _factory(test_engine)
         async with factory() as db:
             project_id = await _add_in_progress_with_run_columns(db)
@@ -229,6 +237,7 @@ class TestRunEpochFlushFence:
     async def test_run_owned_write_with_stale_epoch_is_rejected(
         self, test_engine, run_context
     ) -> None:
+        """The run context is captured before the bump, so its epoch is stale."""
         factory = _factory(test_engine)
         async with factory() as db:
             project_id = await _add_in_progress_with_run_columns(db)
@@ -239,7 +248,7 @@ class TestRunEpochFlushFence:
                 .values(run_epoch=CarouselProjectModel.run_epoch + 1)
             )
             await other.commit()
-        run_context(project_id, 0)  # captured before the bump -> stale
+        run_context(project_id, 0)
         async with factory() as db:
             project = await db.get(CarouselProjectModel, project_id)
             assert project is not None
@@ -250,10 +259,11 @@ class TestRunEpochFlushFence:
     async def test_run_owned_write_with_current_epoch_passes(
         self, test_engine, run_context
     ) -> None:
+        """The row epoch is still 0, so the run context is current."""
         factory = _factory(test_engine)
         async with factory() as db:
             project_id = await _add_in_progress_with_run_columns(db)
-        run_context(project_id, 0)  # row epoch is still 0 -> current
+        run_context(project_id, 0)
         async with factory() as db:
             project = await db.get(CarouselProjectModel, project_id)
             assert project is not None
@@ -264,8 +274,9 @@ class TestRunEpochFlushFence:
     async def test_slide_write_is_fenced_at_the_same_boundary(
         self, test_engine, run_context
     ) -> None:
-        # Concurrent per-slide writes share the run context; a stale-epoch
-        # slide INSERT is rejected at the same flush boundary.
+        """Concurrent per-slide writes share the run context; a stale-epoch slide INSERT is
+        rejected at the same flush boundary.
+        """
         factory = _factory(test_engine)
         async with factory() as db:
             project_id = await _add_in_progress_with_run_columns(db)
@@ -298,14 +309,15 @@ class TestRunEpochFlushFence:
             other_project = _project(PHASE_STATUS_AWAITING_HUMAN)
             db.add(other_project)
             await db.commit()
-            run_context(fenced_id, 99)  # stale for fenced_id
+            run_context(fenced_id, 99)
             other_project.title = "unrelated project write"
             await db.commit()
             assert other_project.title == "unrelated project write"
 
     async def test_columns_exist_with_epoch_default_zero(self, test_engine) -> None:
-        # Migration parity: create_all gives SQLite the three columns; the
-        # epoch server-default is 0.
+        """Migration parity: create_all gives SQLite the three columns and the epoch
+        server-default is 0.
+        """
         async with _factory(test_engine)() as db:
             project = _project(PHASE_STATUS_PENDING)
             db.add(project)

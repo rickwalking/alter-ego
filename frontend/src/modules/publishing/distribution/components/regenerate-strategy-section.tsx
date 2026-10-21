@@ -26,7 +26,7 @@ function StrategyTemplateCard({
   template,
   active,
   onSelect,
-}: StrategyTemplateCardProps): React.ReactElement {
+}: Readonly<StrategyTemplateCardProps>): React.ReactElement {
   return (
     <div
       role="button"
@@ -78,7 +78,7 @@ function StrategyTemplateCard({
 export function RegenerateStrategySection({
   project,
   projectId,
-}: RegenerateStrategySectionProps): React.ReactElement {
+}: Readonly<RegenerateStrategySectionProps>): React.ReactElement {
   const t = useTranslations("publish.regenerateStrategy");
   const {
     data: strategiesData,

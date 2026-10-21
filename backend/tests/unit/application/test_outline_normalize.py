@@ -19,12 +19,12 @@ from rag_backend.domain.constants.carousel import (
 
 class TestNormalizeEditorialOutline:
     def test_trims_extra_slides_to_max(self) -> None:
+        """An outline without roles keeps the fixed 7-slide trim."""
         raw = [
             {"slide_index": index, "title": f"Slide {index}", "key_points": ["a"]}
             for index in range(1, 12)
         ]
         result = normalize_editorial_outline(raw)
-        # AE-0374: an outline without roles keeps the fixed 7-slide trim.
         assert len(result) == LEGACY_SLIDE_COUNT
         assert LEGACY_SLIDE_COUNT < MAX_SLIDES
 

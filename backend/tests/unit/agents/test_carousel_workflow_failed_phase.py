@@ -2,7 +2,7 @@
 
 Scenarios: see tests/features/carousel_failed_phase_terminates.feature
 
-Live 2026-09-14 (AE-0330): the content node returned early on
+Live 2026-09-14: the content node returned early on
 ``phase_status=failed`` without interrupting, and the gate routed it straight
 back into itself — ~10,000 steps at 4/s with no LLM call, until langgraph's
 10007 recursion limit. It happened twice on one project: first on a genuine
@@ -149,7 +149,7 @@ class TestContentNodeFailedHandling:
 
         assert result["phase_status"] == PHASE_STATUS_FAILED
         assert result[WORKFLOW_ERROR_KEY] == ERR_INVALID_JSON
-        assert result["current_phase"] == PHASE_CONTENT  # names the failed phase
+        assert result["current_phase"] == PHASE_CONTENT
         mock_interrupt.assert_not_called()
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
@@ -181,8 +181,8 @@ class TestEngineTerminatesInsteadOfLooping:
         assert CAROUSEL_GRAPH_RECURSION_LIMIT < 10007
 
     async def test_failed_content_ends_the_run_and_a_retry_reenters(self) -> None:
+        """Without the fix this raises GraphRecursionError — the live loop."""
         # Scenario: a content failure ends the run; the retry rebuilds and proceeds.
-        # Without the fix this raises GraphRecursionError — the live loop.
         runner = _Runner(fail_content=True)
         with TemporaryDirectory() as tmp_dir:
             db_path = Path(tmp_dir) / "workflow.sqlite"
@@ -199,18 +199,18 @@ class TestEngineTerminatesInsteadOfLooping:
                     {"topic": "AI"},
                     research_findings=[{"source": "s", "key_points": ["k"]}],
                 )
-                await engine.resume(project_id, approve)  # research -> outline gate
-                state = await engine.resume(project_id, approve)  # outline -> content
+                await engine.resume(project_id, approve)
+                state = await engine.resume(project_id, approve)
 
                 assert state["phase_status"] == PHASE_STATUS_FAILED
                 assert state[WORKFLOW_ERROR_KEY] == ERR_INVALID_JSON
                 assert state["current_phase"] == PHASE_CONTENT
                 ended = await engine._app.aget_state(cfg)
-                assert ended.next == ()  # left the graph, did not loop
+                assert ended.next == ()
                 assert runner.calls.count(PHASE_CONTENT) == 1
 
                 runner.fail_content = False
-                state = await engine.resume(project_id, approve)  # the retry
+                state = await engine.resume(project_id, approve)
 
                 assert state["slide_drafts"] == _DRAFTS
                 assert state["phase_status"] != PHASE_STATUS_FAILED

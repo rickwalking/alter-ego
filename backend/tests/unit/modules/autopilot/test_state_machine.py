@@ -1,8 +1,13 @@
-"""Domain state machine for autopilot runs (AE-0350).
+"""Domain state machine for autopilot runs.
 
 Gherkin: tests/features/autopilot_state_machine.feature
 The table below is the architecture §4 spec, duplicated so a missing edge
 fails this test instead of passing a loop over the implementation.
+
+_SPEC mirrors docs/architecture/grokbot-autopilot.md §4 plus later edges: a refused
+editorial approve keeps the owner review open, a POV run waits for the owner's thesis,
+the owner sets a publish time, and the owner moves a scheduled run to another day or
+time.
 """
 
 from __future__ import annotations
@@ -22,7 +27,6 @@ from rag_backend.modules.autopilot.domain.state_machine import (
 
 _S = AutopilotRunState
 
-# docs/architecture/grokbot-autopilot.md §4
 _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.QUEUED, _S.GENERATING),
     (_S.QUEUED, _S.FAILED),
@@ -40,19 +44,15 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.PUBLISHING, _S.PUBLISHED),
     (_S.PUBLISHING, _S.PUBLISH_FAILED),
     (_S.PUBLISH_FAILED, _S.PUBLISHING),
-    # QA r1: a refused editorial approve keeps the owner review open.
     (_S.PUBLISHING, _S.AWAITING_OWNER),
-    # AE-0377: a POV run waits for the owner's thesis.
     (_S.QUEUED, _S.AWAITING_THESIS),
     (_S.AWAITING_THESIS, _S.QUEUED),
     (_S.AWAITING_THESIS, _S.REJECTED),
     (_S.AWAITING_THESIS, _S.EXPIRED),
-    # AE-0370: the owner's publish time.
     (_S.AWAITING_OWNER, _S.SCHEDULED),
     (_S.SCHEDULED, _S.PUBLISHING),
     (_S.SCHEDULED, _S.AWAITING_OWNER),
     (_S.SCHEDULED, _S.EXPIRED),
-    # AE-0404: the owner moves a scheduled run to another day or time.
     (_S.SCHEDULED, _S.SCHEDULED),
 })
 
@@ -99,7 +99,7 @@ def test_illegal_pair_raises(
 
 
 def test_queued_to_failed_is_allowed() -> None:
-    """AE-0354: three provider failures on start may fail a queued run."""
+    """Three provider failures on start may fail a queued run."""
     assert_allowed(TransitionPair(expected=_S.QUEUED, new=_S.FAILED))
 
 

@@ -1,4 +1,4 @@
-"""Double-publish edge windows (AE-0348 QA r2 R4).
+"""Double-publish edge windows (QA r2 R4).
 
 Gherkin: tests/features/autopilot_instagram_publish.feature
   Scenario: A stale publish claim is not taken over while Graph may still run
@@ -71,11 +71,10 @@ from tests.unit.modules.autopilot.test_instagram_publish_job import (
 _COMMAND = ManualPublishCommand(project_id=_PROJECT, caption="cap", image_urls=_SEVEN)
 
 
-# --- R4a: the stale window outlasts the slowest Graph publish ----------------
-
-
 def test_worst_case_graph_publish_is_derived_from_the_retry_constants() -> None:
-    # quota, expired-container status, items, parent, polls, publish, permalink
+    """Counts the quota, expired-container status, items, parent, polls, publish and
+    permalink requests.
+    """
     requests = 1 + 1 + MAX_INSTAGRAM_CAROUSEL_ITEMS + 1 + META_POLL_MAX_ATTEMPTS + 1 + 1
     expected = (
         requests * META_MAX_ATTEMPTS * GRAPH_REQUEST_DEADLINE_SECONDS
@@ -157,9 +156,6 @@ async def test_expired_unpublished_container_is_replaced() -> None:
     assert repo.runs[run.run_id].ig_container_id == "container-new"
 
 
-# --- R4b: the manual (no-run) path stores its container first ---------------
-
-
 # Scenario: A manual publish crash after the container reuses that container
 @pytest.mark.asyncio
 async def test_manual_container_is_stored_before_media_publish() -> None:
@@ -202,9 +198,6 @@ async def test_manual_crash_mid_publish_keeps_the_container_for_the_retry() -> N
     assert gateway.opens == 1
     assert outcome.ig_post_id == "post-1"
     assert claims.manual[_PROJECT].ig_container_id == "container-new"
-
-
-# --- R4c: approved but not public yet ----------------------------------------
 
 
 # Scenario: An approved carousel that is not public yet is not failed

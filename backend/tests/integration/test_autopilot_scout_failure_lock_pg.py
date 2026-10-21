@@ -1,4 +1,4 @@
-"""Concurrent scout-failed POSTs respect the daily cap (AE-0348 QA r2 R7).
+"""Concurrent scout-failed POSTs respect the daily cap.
 
 Gherkin: tests/features/autopilot_grok_bot_scout.feature
   Scenario: Concurrent scout failures respect the daily cap

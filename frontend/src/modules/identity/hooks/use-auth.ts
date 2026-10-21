@@ -10,11 +10,11 @@ import type { UseAuthResult } from "../types";
 const ROLE_ADMIN = "admin";
 const ROLE_EDITOR = "editor";
 
+/** Current session user, role flags and logout. Backend logout is best-effort: network errors are ignored and the redirect to login still happens. */
 export function useAuth(): UseAuthResult {
   const { data: user = null, isPending } = useQuery(currentUserOptions());
 
   const logoutMutation = useMutation({
-    // Backend logout is best-effort; ignore network errors and still redirect.
     mutationFn: () => postLogout().catch(() => undefined),
     onSettled: () => {
       window.location.href = PUBLIC_ROUTE_PATHS.LOGIN;

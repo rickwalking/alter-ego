@@ -241,7 +241,7 @@ describe("Utils Module", () => {
 
       it("Then it should handle multiple arguments correctly", () => {
         const fn = vi.fn<(a: number, b: number, c: string) => string>(
-          (a: number, b: number, c: string) => a + b + c,
+          (a: number, b: number, c: string) => `${a + b}${c}`,
         ) as unknown as (...args: unknown[]) => unknown;
         const debouncedFn = debounce(fn, 100);
 

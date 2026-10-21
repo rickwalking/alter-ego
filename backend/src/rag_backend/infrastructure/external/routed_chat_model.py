@@ -1,4 +1,4 @@
-"""Role-routed chat model with an automatic fallback model (AE-0391).
+"""Role-routed chat model with an automatic fallback model.
 
 ``RoutedChatModel`` is a ``BaseChatModel`` so every carousel consumer keeps its
 contract (``ainvoke`` / ``bind`` / ``with_config``). It delegates each call to
@@ -6,7 +6,7 @@ the primary model of its role under a per-call timeout and, when that call
 fails (any error except auth, a timeout, or empty content), re-issues the same
 call on the fallback model, logging ``llm_fallback_used``.
 
-AE-0395: each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (exponential
+Each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (exponential
 backoff, logged as ``llm_retry``) before the call moves to the fallback, and the
 fallback gets the same number before the error surfaces. Auth errors never
 retry: the same key would fail the same way.
@@ -156,6 +156,11 @@ class RoutedChatModel(BaseChatModel):
         request: _RoutedRequest,
         timeout: float,
     ) -> AIMessage:
+        """Invoke one model under a timeout.
+
+        Empty content triggers the fallback only from a primary call; a fallback's own
+        empty answer is returned as-is so callers keep their existing empty handling.
+        """
         fallback = request.fallback or self.is_fallback
         config = merge_configs(
             request.config, self._run_config(model, fallback=fallback)
@@ -164,8 +169,6 @@ class RoutedChatModel(BaseChatModel):
             model.ainvoke(request.prompt, config, stop=request.stop, **request.kwargs),
             timeout,
         )
-        # Empty content only triggers the fallback; a fallback's own empty answer
-        # is returned as-is so callers keep their existing empty handling.
         if self.fallback is not None and not fallback and _is_empty(message):
             raise EmptyLLMResponseError(model_id_of(model))
         return message
@@ -269,7 +272,7 @@ class _RoutedRequest:
 
 @runtime_checkable
 class HasFallback(Protocol):
-    """A chat model that can hand a call to its fallback (AE-0391, AE-0399)."""
+    """A chat model that can hand a call to its fallback."""
 
     def as_fallback(self) -> BaseChatModel | None:
         """The model to re-issue a call on, or None when there is none."""

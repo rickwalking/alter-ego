@@ -1,6 +1,6 @@
-"""Re-drive a parked workflow node: service, runner, engine (AE-0363).
+"""Re-drive a parked workflow node: service, runner, engine.
 
-Gherkin: tests/features/autopilot_runner.feature (AE-0363 scenarios)
+Gherkin: tests/features/autopilot_runner.feature
 """
 
 from __future__ import annotations
@@ -55,7 +55,10 @@ def _service(
 
 @pytest.mark.asyncio
 async def test_redrive_runs_the_pending_node_and_syncs_the_row() -> None:
-    """Scenario: A re-drive runs the node with an empty resume context."""
+    """Scenario: A re-drive runs the node with an empty resume context.
+
+    The sync is committed at once so the row lock is released.
+    """
     service, orchestrator = _service(dict(_PERSISTED))
     db = MagicMock()
     with (
@@ -76,7 +79,6 @@ async def test_redrive_runs_the_pending_node_and_syncs_the_row() -> None:
     )
     owner.assert_called_with(db)
     owner.return_value.sync_phase.assert_awaited_once_with(_PROJECT, _PERSISTED)
-    # AE-0390: the sync is committed at once so the row lock is released.
     owner.return_value.commit.assert_awaited_once_with()
     sse.assert_awaited_once_with(_PROJECT, _PERSISTED)
 
@@ -110,13 +112,15 @@ def _params(action: str) -> resume_runner.BackgroundResumeParams:
 
 @pytest.mark.asyncio
 async def test_run_phase_redrive_never_sends_a_review() -> None:
-    """Scenario: The run wrapper re-drives instead of resuming."""
+    """Scenario: The run wrapper re-drives instead of resuming.
+
+    The re-drive loads the project's persona, like a resume.
+    """
     service = MagicMock()
     service.redrive_pending_phase = AsyncMock(return_value=dict(_PERSISTED))
     service.resume_workflow = AsyncMock()
     db = MagicMock()
     persona = MagicMock(name="persona")
-    # AE-0421: the re-drive loads the project's persona, like a resume.
     with patch(
         "rag_backend.application.services.carousel.resume_persona.load_project_persona",
         new_callable=AsyncMock,
@@ -131,11 +135,11 @@ async def test_run_phase_redrive_never_sends_a_review() -> None:
 
 @pytest.mark.asyncio
 async def test_run_phase_review_passes_every_field() -> None:
+    """The resume loads the project's persona (none here)."""
     service = MagicMock()
     service.resume_workflow = AsyncMock(return_value=dict(_PERSISTED))
     service.redrive_pending_phase = AsyncMock()
     db = MagicMock()
-    # AE-0397: the resume loads the project's persona (none here).
     with patch(
         "rag_backend.application.services.carousel.resume_persona.load_project_persona",
         new_callable=AsyncMock,
@@ -216,7 +220,7 @@ async def test_orchestrator_binds_the_context_before_continuing() -> None:
 
 @pytest.mark.asyncio
 async def test_redrive_runs_the_node_with_the_project_persona() -> None:
-    """Scenario (AE-0421): a re-drive drafts and scores with the persona."""
+    """Scenario: a re-drive drafts and scores with the persona."""
     service, orchestrator = _service(dict(_PERSISTED))
     persona = MagicMock(name="persona")
     with (

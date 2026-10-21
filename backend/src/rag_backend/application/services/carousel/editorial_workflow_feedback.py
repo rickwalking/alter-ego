@@ -28,7 +28,7 @@ def _resolve_feedback_phase(params: PhaseFeedbackPersistParams) -> str:
     On a final-review send-back the reviewer targets an earlier phase
     (e.g. ``content``); the note must be filed there so that phase's
     regeneration notes pick it up — not under the current ``final_review``
-    phase (AE-0288).
+    phase.
     """
     target = params.target_phase
     if target in FINAL_REVIEW_SEND_BACK_PHASES:
@@ -42,7 +42,7 @@ async def read_checkpoint_phase(
 ) -> str:
     """Return the phase of the gate the checkpoint is parked at.
 
-    AE-0413: this used to return the raw stored ``current_phase``, which on the
+    this used to return the raw stored ``current_phase``, which on the
     first content gate still said ``outline`` (the content node is interrupted,
     so its return value was never committed) while the API state said
     ``content``. The structured-feedback guard then 422'd the manual fixes
@@ -62,8 +62,11 @@ async def persist_phase_feedback(
     """Store reviewer feedback and increment the charged phase's revision count.
 
     The counter is keyed by the phase that will re-run (target phase on a
-    send-back, current phase otherwise). ``count_revision=False`` (AE-0310)
+    send-back, current phase otherwise). ``count_revision=False``
     stores the note only — uncapped submissions never consume the budget.
+
+    The note is tagged with its source and time so the regeneration that uses it can
+    move it to the history.
     """
     trimmed = (params.feedback or "").strip()
     if not trimmed:
@@ -71,8 +74,6 @@ async def persist_phase_feedback(
     phase = _resolve_feedback_phase(params)
     if not phase:
         return
-    # AE-0405: the note is tagged (source + time) so the regeneration that
-    # uses it can move it to the history.
     updates = add_feedback_note(
         params.prior,
         NewFeedbackNote(phase=phase, note=trimmed, source=params.source),
@@ -91,7 +92,7 @@ async def settle_feedback_before_resume(
 ) -> CarouselWorkflowState:
     """Settle content notes no regeneration will use; return the updated prior.
 
-    AE-0405 migration on read: legacy untagged notes already steered the last
+    migration on read: legacy untagged notes already steered the last
     regeneration and move to the history; an active autopilot note is dropped
     once the content gate is approved.
     """

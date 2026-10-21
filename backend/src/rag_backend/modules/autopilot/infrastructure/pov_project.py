@@ -1,4 +1,4 @@
-"""Carousel fields of an autopilot run (AE-0377, split from the driver).
+"""Carousel fields of an autopilot run (split from the driver).
 
 PR #106 review: a POV run carries the scout's format and slide count (the
 defaults were applied when the spec was built) and its slide-1 photo; every
@@ -42,7 +42,7 @@ class PovFields(TypedDict):
 
 
 def _is_pov(spec: ProjectSpec) -> bool:
-    """AE-0406: ``pov`` and ``pov_news`` both build a POV carousel."""
+    """``pov`` and ``pov_news`` both build a POV carousel."""
     return is_pov_family(spec.content_mode)
 
 
@@ -53,6 +53,7 @@ def policy_version_for(spec: ProjectSpec) -> str:
 
 
 def pov_fields_for(spec: ProjectSpec) -> PovFields:
+    """Includes the verified quotes and the sources of the caption footer."""
     if not _is_pov(spec):
         return PovFields(
             pov_thesis=None,
@@ -70,7 +71,6 @@ def pov_fields_for(spec: ProjectSpec) -> PovFields:
         slide_count=spec.slide_count,
         hook_asset_id=as_uuid(spec.hook_asset_id),
         persona_id=spec.persona_id,
-        # AE-0406: the verified quotes and the sources of the caption footer.
         pov_quotes=spec.quotes if news else (),
         pov_sources=spec.sources if news else (),
     )

@@ -111,7 +111,7 @@ class TestDecodeRequiredImages:
 
 @pytest.mark.unit
 class TestDecodeScriptReasons:
-    """AE-0439 (#155a): a rejection is reported for what actually happened.
+    """A rejection is reported for what actually happened.
 
     The script runs in the browser, so it is executed here with Node and a
     minimal DOM harness (one missing image, one stalled image).

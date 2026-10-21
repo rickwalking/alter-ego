@@ -1,4 +1,4 @@
-"""Run-once in-flight presentation-policy upgrade helpers (AE-0312).
+"""Run-once in-flight presentation-policy upgrade helpers.
 
 Pure, testable core for the deploy-gated migration that bumps non-completed
 carousels from v1 to v2 AND re-validates their localized slides under v2, so
@@ -7,8 +7,8 @@ final_review and the publish health card). Bumping the version alone would leave
 the STORED v1 report served verbatim — a final_review-parked project would be
 approved off a stale report that never checked casing.
 
-The migration is DEPLOY-GATED on AE-0311 (the repair endpoint / "Fix issues"
-button). It must NOT run in prod before AE-0311 ships — warnings without a
+The migration is DEPLOY-GATED on the repair endpoint (the "Fix issues"
+button). It must NOT run in prod before that endpoint ships — warnings without a
 working fix button would degrade every in-flight review. See
 ``scripts/upgrade_inflight_presentation_policy_v2.py``.
 """

@@ -1,8 +1,11 @@
-"""One-time callback tokens (AE-0393).
+"""One-time callback tokens.
 
 The plaintext token goes to the Grok Bot once, in the webhook body. Only its
 SHA-256 hex digest is stored, and a presented token is compared in constant
 time over the digests (the ``autopilot/api/auth.py`` pattern).
+
+A decoy digest is compared when the job is unknown, so that path costs the same as a
+wrong token and answers the same 401.
 """
 
 from __future__ import annotations
@@ -14,8 +17,6 @@ import secrets
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.modules.image_bridge.constants import CALLBACK_TOKEN_BYTES
 
-# Compared against when the job is unknown, so that path costs the same as a
-# wrong token and answers the same 401.
 _NO_JOB_DIGEST = hashlib.sha256(b"").hexdigest()
 
 

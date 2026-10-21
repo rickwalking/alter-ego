@@ -1,7 +1,7 @@
 """Single write owner for the presentation ``carousel_projects`` columns + slide
-rows (AE-0118).
+rows.
 
-Per the AE-0115 presentation surface-ownership map (§2 columns, §7 slide columns,
+Per the presentation surface-ownership map (§2 columns, §7 slide columns,
 §4 multi-writer set) every *presentation-owned* (PO) column of the legacy
 ``carousel_projects`` row and every ``CarouselSlideModel`` row has exactly one
 write owner. This module is that owner — the presentation single-writer adapter.
@@ -27,7 +27,7 @@ upward is reached through the presentation public facade.
   compound CAS (§3).
 * The resume ``lock_version`` bump — **delegated UNCHANGED** to
   :meth:`OptimisticLockService.bump_carousel_version`, the SAME shared CAS
-  primitive the editorial AE-0107 owner uses (§3.1).
+  primitive the editorial write owner uses (§3.1).
 
 **Shared-owner coordination (§3.1).** ``lock_version`` is the single
 optimistic-lock token guarding BOTH the editorial resume bump and the
@@ -50,11 +50,15 @@ previously called ``session.commit()`` for the presentation columns now call
 ``CarouselArtifactBuildService`` (unchanged), so this owner does not double-commit
 it.
 
-**Behavior-preserving (AE-0118).** The column / slide values written here are
-byte-identical to the pre-AE-0118 scattered writers (admin design-token refresh,
+**Behavior-preserving.** The column / slide values written here are
+byte-identical to the legacy scattered writers (admin design-token refresh,
 the artifact build PDF-path writes, the generic slide writes); only the
-*ownership* and the *commit boundary* are consolidated. No routes are moved
-(AE-0120), no schema changes, no second persistence translator.
+*ownership* and the *commit boundary* are consolidated. No routes are moved, no schema
+changes, no second persistence translator.
+
+A write to an absent project or slide row raises the generic repository's not-found
+error, so the behavior (and the admin refresh per-project error capture) stays byte-
+identical.
 """
 
 from __future__ import annotations
@@ -81,9 +85,6 @@ from rag_backend.platform.database import SqlAlchemyUnitOfWork
 if TYPE_CHECKING:
     from rag_backend.domain.models.carousel import DesignTokens
 
-# Error raised when a presentation write targets an absent project/slide row.
-# Mirrors the generic repository's not-found contract so the behavior (and the
-# admin refresh per-project error capture) stays byte-identical.
 _ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
 _ERR_SLIDE_NOT_FOUND = "Carousel slide {} not found"
 
@@ -109,7 +110,6 @@ class PresentationWriteOwner:
         """Commit the presentation writes staged in the request (UoW)."""
         await self._uow.commit()
 
-    # --- Project-column writes (re-stamp the row from the entity; flush only) ---
     async def update_project(self, project: CarouselProject) -> None:
         """Persist the presentation columns from the canonical entity (flush only).
 
@@ -142,7 +142,6 @@ class PresentationWriteOwner:
         project.design_tokens = design_tokens
         await self.update_project(project)
 
-    # --- Slide-row writes (canonical entity ↔ model; flush only) ---------------
     async def create_slide(self, slide: CarouselSlide) -> None:
         """Create a slide row from the canonical entity (flush only)."""
         model = CarouselSlideModel.from_entity(slide)
@@ -157,7 +156,6 @@ class PresentationWriteOwner:
         model.update_from_entity(slide)
         await self._session.flush()
 
-    # --- Compare-and-swap paths (shared lock_version token; delegated) ---------
     async def activate_artifact(
         self,
         params: _ActivateBuildParams,
@@ -182,7 +180,7 @@ class PresentationWriteOwner:
         """Run the resume ``lock_version`` CAS via the SHARED primitive (flush only).
 
         Delegates UNCHANGED to ``OptimisticLockService.bump_carousel_version`` —
-        the SAME shared CAS primitive the editorial AE-0107 owner uses (§3.1) —
+        the SAME shared CAS primitive the editorial write owner uses (§3.1) —
         so the two owners coordinate on the one ``lock_version`` token: a resume
         bump invalidates a stale ``source_lock_version`` held by an in-flight
         activation (and vice-versa), and the loser gets ``ERR_VERSION_CONFLICT``

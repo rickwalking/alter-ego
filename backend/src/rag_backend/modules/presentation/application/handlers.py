@@ -1,15 +1,15 @@
-"""Command/query handlers for the carousel presentation surface (AE-0120).
+"""Command/query handlers for the carousel presentation surface.
 
 Private to the module — the public facade re-exports the handler class and its
 typed command/query objects; cross-module code never imports this path directly.
 These handlers are the use-case entry points the thin presentation route adapters
 (``media`` / ``preview`` / ``strategies`` / ``admin`` / ``creator-asset`` and the
 ``crud`` project-GET design-token merge) delegate to: each reads/writes the
-presentation surface through the AE-0118 :class:`PresentationPersistenceAcl`
+presentation surface through the :class:`PresentationPersistenceAcl`
 seam (the single ORM importer, alongside its owner) and returns plain data the
 route maps to the HTTP response / FileResponse.
 
-Behavior-preserving (AE-0120). Every handler reproduces the legacy route's data
+Behavior-preserving. Every handler reproduces the legacy route's data
 operations EXACTLY: the same project/slide reads, the same design-token merge,
 the same strategy re-render, the same admin bulk loops, and the same
 creator-asset upload/select calls. HTTP concerns — status codes, access checks
@@ -19,13 +19,16 @@ URL strings — stay in the route adapter, mirroring how the editorial workflow
 handlers keep access checks + SSE framing at the edge.
 
 The handlers WRAP the existing collaborators: the ACL (read/write seam over the
-AE-0118 single write owner), the carousel-refinement service (strategy
+single write owner), the carousel-refinement service (strategy
 re-render), and the creator-asset application service. They never reconstruct or
 replace them. This application module imports NO carousel/slide ORM and NO
 concrete Postgres repository — only the module's own ACL (whose infrastructure
 layer owns the single ORM seam) and application-layer services/value objects.
-Writes commit through the AE-0118 write owner via the ACL; these handlers never
+Writes commit through the write owner via the ACL; these handlers never
 call ``db.commit()`` directly.
+
+The admin bulk loops use the legacy admin routes' status filter and paging
+(``status=COMPLETED, limit=1000, offset=0``).
 """
 
 from __future__ import annotations
@@ -64,8 +67,6 @@ from rag_backend.modules.presentation.infrastructure.presentation_acl import (
     PresentationPersistenceAcl,
 )
 
-# Status filter + paging for the admin bulk loops — byte-identical to the legacy
-# admin routes (``status=COMPLETED, limit=1000, offset=0``).
 _ADMIN_PROJECT_STATUS = CarouselStatus.COMPLETED
 _ADMIN_PROJECT_LIMIT = 1000
 _ADMIN_PROJECT_OFFSET = 0
@@ -119,7 +120,7 @@ class PresentationHandlers:
     """Use-case handlers wrapping the presentation ACL + collaborators.
 
     Constructed per request by the inbound edge from the bootstrapped
-    presentation module. Holds the AE-0118 :class:`PresentationPersistenceAcl`
+    presentation module. Holds the :class:`PresentationPersistenceAcl`
     (the single read/write seam over the presentation columns + slide rows) and
     the request-scoped collaborators (the generic carousel repository — used only
     for the read queries the legacy presentation routes issued — the refinement
@@ -138,7 +139,6 @@ class PresentationHandlers:
         self._registry = collaborators.registry
         self._creator_assets = collaborators.creator_assets
 
-    # --- Read side: project / slide reads (presentation responses) -------------
     async def get_project(self, project_id: UUID) -> CarouselProject | None:
         """Load the carousel project for a presentation response, or ``None``.
 
@@ -169,7 +169,7 @@ class PresentationHandlers:
     def merge_design_tokens(project: CarouselProject) -> dict[str, object]:
         """Merge the project's DB design tokens with the on-disk slide layout.
 
-        The presentation-owned read (AE-0115 §6): byte-identical to
+        The presentation-owned read: byte-identical to
         ``merge_design_tokens_with_disk(project)`` — response-only, nothing is
         persisted. Centralized here so the ``design`` / ``preview/design`` /
         ``crud`` project-GET routes reach the merge through the facade instead of
@@ -177,7 +177,6 @@ class PresentationHandlers:
         """
         return merge_design_tokens_with_disk(project)
 
-    # --- Strategies ------------------------------------------------------------
     def list_strategies(self) -> StrategyListResponse:
         """List the registered slide-layout strategies (registry-driven).
 
@@ -218,7 +217,6 @@ class PresentationHandlers:
         """
         await self._refinement.re_render_slides(project_id, strategy=name)
 
-    # --- Admin bulk loops ------------------------------------------------------
     async def list_completed_projects(self) -> list[CarouselProject]:
         """Load all COMPLETED projects for the admin bulk loops.
 
@@ -240,8 +238,8 @@ class PresentationHandlers:
         """Regenerate + persist design tokens for each project via the owner.
 
         Byte-identical to the legacy admin ``refresh-design-tokens``: for each
-        project it stamps ``generate_design_tokens(project)`` through the AE-0118
-        single write owner (flush only) capturing per-project errors, then commits
+        project it stamps ``generate_design_tokens(project)`` through the single write
+        owner (flush only) capturing per-project errors, then commits
         ONCE through the ACL (the platform UoW single committer). Routes no longer
         call ``session.commit()`` directly.
         """
@@ -299,7 +297,6 @@ class PresentationHandlers:
             errors=errors,
         )
 
-    # --- Creator assets --------------------------------------------------------
     async def upload_creator_asset(
         self,
         command: CreatorAssetUploadCommand,

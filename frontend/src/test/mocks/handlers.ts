@@ -1,12 +1,10 @@
 import { http, HttpResponse } from "msw";
 
 export const handlers = [
-  // Health check
   http.get("/api/health", () => {
     return HttpResponse.json({ status: "ok" });
   }),
 
-  // Chat endpoints
   http.post("/api/chat", async ({ request }) => {
     const body = (await request.json()) as { message: string };
     return HttpResponse.json({
@@ -33,7 +31,6 @@ export const handlers = [
     ]);
   }),
 
-  // Knowledge base endpoints
   http.get("/api/knowledge", () => {
     return HttpResponse.json([
       {

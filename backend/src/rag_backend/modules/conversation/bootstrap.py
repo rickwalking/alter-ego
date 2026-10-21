@@ -6,7 +6,7 @@ global container lookup inside the module (ADR-0009 §9) — the inbound edge
 constructs the request-scoped collaborators (which enlist in the request's Unit
 of Work) and passes them in.
 
-**Behavior-preserving wiring (AE-0100).** The conversation adapters are NOT
+**Behavior-preserving wiring.** The conversation adapters are NOT
 relocated in Phase 3; they remain at their legacy locations. The inbound caller
 builds them exactly as the legacy routes do today (the request-scoped
 ``ConversationRepository`` and ``MessageRepository``, plus the bound
@@ -50,7 +50,7 @@ class ConversationAdapters:
     """Pre-constructed, request-scoped collaborators for the conversation module.
 
     Built at the inbound edge (the api adapter / legacy route) from the existing
-    infrastructure so the module wires to them without relocation (AE-0100). The
+    infrastructure so the module wires to them without relocation. The
     ``unit_of_work`` wraps that same request's ``AsyncSession`` and is the single
     transaction owner the application service commits through (ADR-0009 §9). The
     ``agent_factory`` is the bound :class:`LegacyChatAgentFactory` that wraps the
@@ -70,7 +70,7 @@ class ConversationModule:
     Bundles the conversation application service, the chat agent factory, and the
     request-scoped Unit of Work so the inbound edge can resolve conversation
     operations, agent construction, and the single commit boundary through the
-    module facade (no behavior change; AE-0101 moves the CRUD/chat routes behind
+    module facade (no behavior change; the CRUD/chat routes delegate to
     handlers that commit via this UoW).
     """
 
@@ -92,7 +92,7 @@ def bootstrap_module(
     the application service via the constructor and exposes the bound agent
     factory unchanged.
     """
-    _ = platform  # real modules construct adapters from platform services
+    _ = platform
     service = ConversationService(
         conversation_repository=adapters.conversation_repository,
         message_repository=adapters.message_repository,

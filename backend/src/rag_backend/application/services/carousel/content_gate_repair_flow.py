@@ -1,4 +1,4 @@
-"""Where the content ensure uses the targeted gate repair (AE-0430).
+"""Where the content ensure uses the targeted gate repair.
 
 - ``repair_blocked_content_gate``: after the content review build (drafting,
   translation and any revision all happen before it), a blocking
@@ -91,7 +91,11 @@ async def repair_blocked_content_gate(
     updates: Mapping[str, object],
     context: GateRepairContext,
 ) -> dict[str, object]:
-    """Updates after repairing a blocked content gate; {} when nothing changed."""
+    """Updates after repairing a blocked content gate; {} when nothing changed.
+
+    The outline is passed so missing closing actions and summary points can be restored
+    from it.
+    """
     merged: dict[str, object] = {**state, **updates}
     slides = _slides(merged)
     if context.repairer is None or _blocking_gate(merged) is None or not slides:
@@ -103,7 +107,6 @@ async def repair_blocked_content_gate(
             policy_version=_policy_version(merged),
             style_guide=context.style_guide,
             project_id=context.project_id,
-            # AE-0437: missing closing actions / summary points from the outline.
             outline=outline_from_state(merged),
         )
     )

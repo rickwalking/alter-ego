@@ -3,8 +3,8 @@
 The public facade re-exports this under ``AuthenticationService``; cross-module
 code never imports this path directly.
 
-This is a **behavior-preserving** facade over the existing login + JWT helpers
-(AE-0098): credential checking reuses the password port and the user
+This is a **behavior-preserving** facade over the existing login + JWT helpers:
+credential checking reuses the password port and the user
 repository; token issue/validate delegate to the injected
 :class:`~rag_backend.modules.identity.application.ports.TokenIssuer`, which
 wraps the UNCHANGED ``infrastructure.auth`` functions. The HS256 payload,

@@ -1,4 +1,4 @@
-// AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
+/** Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature */
 // Scenario: Copy using the other locale's emphasis can be converted
 import { describe, expect, it } from "vitest";
 import {

@@ -1,4 +1,4 @@
-// AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
+/** Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature */
 // Scenario: A live counter warns when copy is over budget on a v4 deck
 import { describe, expect, it } from "vitest";
 import {

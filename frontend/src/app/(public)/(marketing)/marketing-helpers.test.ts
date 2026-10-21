@@ -1,5 +1,5 @@
 /**
- * AE-0446: landing "Latest Posts" card copy stays in one language.
+ * Landing "Latest Posts" card copy stays in one language.
  * Gherkin: tests/features/landing-card-language-ae0446.feature
  */
 import { describe, expect, it } from "vitest";

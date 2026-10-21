@@ -1,4 +1,4 @@
-/** Public carousel gallery/viewer constants (AE-0444). */
+/** Public carousel gallery/viewer constants. */
 
 /** Minimum horizontal swipe distance before it counts as a slide change. */
 export const CAROUSEL_SWIPE_THRESHOLD_PX = 48;

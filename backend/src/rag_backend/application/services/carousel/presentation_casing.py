@@ -1,6 +1,6 @@
 """Sentence-case + non-empty-body validation and deterministic casing repair.
 
-AE-0312 introduced PT casing rules; AE-0366 (policy v3) makes them BLOCKING and extends them
+PT casing rules are BLOCKING from policy v3 and extend
 to every rendered headline/body text in BOTH locales: the slide heading and
 body plus the titles and bodies of structured items (features, summary points,
 closing actions). The structural rubric rules (``body_empty`` and friends) live in
@@ -154,7 +154,6 @@ def _rule_active(
 
 
 def _severity(policy: CarouselPresentationPolicy, code: str) -> ViolationSeverity:
-    # The policy stores validated severities; narrow to the model Literal.
     return "warning" if policy.is_casing_warning(code) else "blocker"
 
 
@@ -221,8 +220,9 @@ def make_casing_violation(
 
 
 def _is_en_heading(finding: CasingFinding) -> bool:
-    # The slide heading in EN is already checked by validate_slide_payload's
-    # always-on EN heading rule; skip it here to avoid a duplicate violation.
+    """The EN slide heading is already checked by the always-on EN heading rule of
+    ``validate_slide_payload``; it is skipped here to avoid a duplicate violation.
+    """
     return (
         finding.field == _FIELD_HEADING
         and finding.code == VIOLATION_HEADING_NOT_SENTENCE_CASE_EN

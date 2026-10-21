@@ -1,4 +1,4 @@
-"""Escalated wake scan rotates by last check (AE-0348 QA r2 R1).
+"""Escalated wake scan rotates by last check.
 
 Gherkin: tests/features/autopilot_runner.feature
   Scenario: A fixed escalation wakes even behind five abandoned ones

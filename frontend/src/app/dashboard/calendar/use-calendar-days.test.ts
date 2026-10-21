@@ -3,8 +3,10 @@ import { renderHook } from "@testing-library/react";
 import { addDays, subDays } from "date-fns";
 import { calendarGridRange } from "@/modules/editorial-operations";
 
+/**
+ * timezone (see tests/features/calendar-month-navigation.feature).
+ */
 // Scenario: the fetch window must cover every visible local cell for any
-// timezone (see tests/features/calendar-month-navigation.feature).
 
 const { mockUseContentCalendar } = vi.hoisted(() => ({
   mockUseContentCalendar: vi.fn(),
@@ -26,7 +28,7 @@ describe("useCalendarDays", () => {
   });
 
   it("requests a window padded ±1 day around the visible grid", () => {
-    const anchor = new Date(2026, 5, 1); // June 2026
+    const anchor = new Date(2026, 5, 1);
     renderHook(() => useCalendarDays(anchor));
 
     const [start, end] = mockUseContentCalendar.mock.calls[0] as [
@@ -37,8 +39,6 @@ describe("useCalendarDays", () => {
 
     expect(start).toBe(subDays(range.start, 1).toISOString());
     expect(end).toBe(addDays(range.end, 1).toISOString());
-    // The sent window strictly contains the visible grid boundaries, so an
-    // edge-cell event can't fall outside it regardless of the viewer's offset.
     expect(new Date(start).getTime()).toBeLessThan(range.start.getTime());
     expect(new Date(end).getTime()).toBeGreaterThan(range.end.getTime());
   });

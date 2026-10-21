@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Strict `#rrggbb` — mirrors the backend allow-list (AE-0270 prompt-injection guard). */
+/** Strict `#rrggbb` — mirrors the backend allow-list (a prompt-injection guard). */
 export const HEX_COLOUR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 /** Light vs dark background — drives the derived image style (read-only, D3). */
@@ -38,7 +38,7 @@ export const customPaletteSchema = z.object({
   updated_at: z.string(),
 });
 
-/** The full catalog: read-only roots + active custom palettes (AE-0270 GET /palettes). */
+/** The full catalog: read-only roots + active custom palettes (`GET /palettes`). */
 export const paletteCatalogResponseSchema = z.object({
   roots: z.array(rootPaletteSchema),
   custom: z.array(customPaletteSchema),

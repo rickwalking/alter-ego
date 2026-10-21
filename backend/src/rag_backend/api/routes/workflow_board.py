@@ -1,11 +1,14 @@
 """Workflow Kanban board API (UI-018).
 
-Thin HTTP adapter (AE-0131). The phase-column aggregation reads the carousel
+Thin HTTP adapter. The phase-column aggregation reads the carousel
 rows through the publishing facade's read projection (the sole carousel/blog ORM
 read seam behind the :class:`PublishingReadPort`); this route imports no carousel
 ORM. The admin/owner-or-reviewer scope is resolved at the edge and passed to the
 projection as the ``author_id`` filter, then the projection columns are mapped
 one-to-one onto the existing ``WorkflowKanbanResponse`` schema (byte-identical).
+
+KANBAN_PHASES is re-exported (same object) from the publishing facade so the legacy
+symbol keeps resolving; the publishing module owns the column ordering.
 """
 
 from typing import Annotated
@@ -35,9 +38,6 @@ from rag_backend.modules.publishing import (
 
 router = APIRouter(tags=["workflow_board"], dependencies=[RequireWorkflowBoard])
 
-# Re-exported (object-identity) from the publishing facade so the legacy
-# ``KANBAN_PHASES`` symbol keeps resolving for existing importers; the column
-# ordering is owned by the publishing module (single source of truth).
 KANBAN_PHASES = BOARD_PHASES
 
 

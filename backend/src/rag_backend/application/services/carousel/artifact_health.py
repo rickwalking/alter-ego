@@ -73,15 +73,18 @@ class ImageDimensions:
 
 @dataclass(frozen=True)
 class CarouselArtifactHealthRequest:
+    """Inputs for one carousel artifact health evaluation.
+
+    validate_pre_promotion validates the freshly rendered outputs under the project root
+    (plain pt/ and en/ dirs) instead of the active versioned serving root: the finalize
+    and republish pipeline re-renders into the project root before the build promotes a
+    new version, so checking the old version root would report the fresh PDFs as
+    missing.
+    """
+
     project: CarouselProject
     slides: Sequence[CarouselSlide]
     require_english: bool | None = None
-    # AE-0313: validate the FRESHLY RENDERED pre-promotion outputs under the
-    # project root (plain ``pt/`` / ``en/`` dirs) instead of the currently
-    # active versioned serving root. The finalize/republish pipeline re-renders
-    # into the project root BEFORE the artifact build promotes a new version;
-    # validating the old version root would false-negative the fresh PDFs as
-    # missing (the 66014ba3 incident) and skip the stale-version manifest check.
     validate_pre_promotion: bool = False
 
 
@@ -127,7 +130,11 @@ class PdfCheckRequest:
 def evaluate_carousel_artifacts(
     request: CarouselArtifactHealthRequest,
 ) -> CarouselArtifactHealthReport:
-    """Validate all files needed before final review, publish, or Instagram."""
+    """Validate all files needed before final review, publish, or Instagram.
+
+    Pre-promotion outputs have no versioned manifest yet (the artifact build writes it),
+    so the manifest check is skipped in that mode.
+    """
     serving_paths = resolve_and_reconcile_serving_paths(request.project)
     output_dir = _health_root(
         serving_paths, validate_pre_promotion=request.validate_pre_promotion
@@ -171,9 +178,6 @@ def evaluate_carousel_artifacts(
     raw_root = serving_paths.project_root if serving_paths is not None else output_dir
     errors.extend(_validate_raw_images(request, raw_root))
     errors.extend(_validate_pdfs(request, output_dir, expected))
-    # Pre-promotion outputs have no versioned manifest yet (it is written during
-    # the artifact build); the still-active version's manifest is irrelevant to
-    # the fresh render, so the manifest check is skipped in that mode.
     if request.project.artifact_version and not request.validate_pre_promotion:
         errors.extend(_validate_manifest(request.project))
     return _report(
@@ -307,10 +311,13 @@ def _validate_raw_images(
     request: CarouselArtifactHealthRequest,
     output_dir: Path,
 ) -> list[str]:
+    """Check that every illustrated slide has its raw image.
+
+    A role contract illustrates only its image_required slides.
+    """
     if not request.project.generate_images:
         return []
     slide_data = [unpack_extras(slide) for slide in request.slides]
-    # AE-0376: a role contract illustrates only its image_required slides.
     artwork = artwork_slide_numbers(request.project)
     errors = [
         _MISSING_IMAGE_PROMPT.format(slide.slide_number)

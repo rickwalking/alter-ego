@@ -1,4 +1,4 @@
-"""Postgres integration tests for the carousel serialization lock (AE-0316).
+"""Postgres integration tests for the carousel serialization lock.
 
 Requires a Postgres ``DATABASE_URL`` (the CI ``postgres`` service or a local
 instance); skipped otherwise, matching test_schema_drift_live.py.

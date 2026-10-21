@@ -1,4 +1,4 @@
-"""Each graph phase builds its artifacts inside the phase trace (AE-0390).
+"""Each graph phase builds its artifacts inside the phase trace.
 
 Gherkin: tests/features/workflow_tracing_and_heartbeat.feature
   Scenario Outline: A resumed phase runs its LLM calls in a named, tagged trace

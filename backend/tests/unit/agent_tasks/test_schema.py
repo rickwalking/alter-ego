@@ -165,7 +165,6 @@ pytest
     return path
 
 
-# AE-0181 — Feature: existence-only QA-report gate hardened to content + attribution
 #   Scenario: a real, attributed QA report satisfies the Review gate
 def test_review_passes_with_attributed_qa_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -197,7 +196,7 @@ def test_review_fails_on_empty_qa_report(
     (reports / "AE-9996.dev-summary.md").write_text(
         "# Dev Summary\nTicket: AE-9996\nReal content.\n", encoding="utf-8"
     )
-    (reports / "AE-9996.qa.md").write_text("\n\n", encoding="utf-8")  # empty
+    (reports / "AE-9996.qa.md").write_text("\n\n", encoding="utf-8")
     errors = can_transition(ticket, STATUS_REVIEW)
     assert any("empty or a placeholder" in e for e in errors)
 
@@ -214,7 +213,6 @@ def test_review_fails_on_unattributed_qa_report(
     (reports / "AE-9996.dev-summary.md").write_text(
         "# Dev Summary\nTicket: AE-9996\nReal content.\n", encoding="utf-8"
     )
-    # Report content names a DIFFERENT ticket — it must not satisfy AE-9996.
     (reports / "AE-9996.qa.md").write_text(
         "# QA Validation Report — AE-1234\n\n## Overall Score: 90\nQA for 1234.\n",
         encoding="utf-8",
@@ -232,7 +230,6 @@ def test_dev_complete_fails_on_unattributed_dev_summary(
     reports = tmp_path / "reports"
     reports.mkdir()
     monkeypatch.setattr("scripts.agent_tasks.schema.REPORTS_DIR", reports)
-    # Dev-summary body names a different ticket (no "AE-9996").
     (reports / "AE-9996.dev-summary.md").write_text(
         "# Dev Summary\nTicket: AE-1234\nWork for a different ticket.\n",
         encoding="utf-8",
@@ -260,9 +257,10 @@ def test_ae_0001_dev_complete_valid() -> None:
 
 
 def test_invalid_status_message_is_self_documenting(tmp_path: Path) -> None:
-    # AE-0222: a wrong status (e.g. "Todo") must not just say "Invalid status";
-    # the error has to list the valid options and name the entry state so the
-    # author can fix it without reading constants.py.
+    """A wrong status (e.g. "Todo") must not just say "Invalid status": the error lists
+    the valid options and names the entry state so the author can fix it without reading
+    constants.py.
+    """
     content = """# AE-9999 — Test
 
 Status: Todo
@@ -280,7 +278,6 @@ Tier: T2
     assert len(errors) == 1
     message = errors[0]
     assert message.startswith("Invalid status: Todo")
-    # Lists every valid status and names the entry state.
     for status in ALL_STATUSES:
         assert status in message
     assert f"'{STATUS_INTAKE}'" in message

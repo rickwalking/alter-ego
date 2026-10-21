@@ -1,13 +1,13 @@
 """Carousel editorial workflow API routes (AI-004, UI-016 backend).
 
-Thin HTTP/SSE adapters (AE-0110). Each endpoint parses + access-checks the
+Thin HTTP/SSE adapters. Each endpoint parses + access-checks the
 request at the edge, resolves the editorial workflow ENGINE through the
 module-level ``build_editorial_workflow_service`` seam (kept module-level so the
-AE-0106 safety-net stub still overrides it), delegates the engine orchestration +
+safety-net stub still overrides it), delegates the engine orchestration +
 the workflow-owned commit to the editorial :class:`EditorialWorkflowHandlers`
 (via the editorial facade), and maps the result to the response. The routes no
 longer import the carousel ORM, never resolve the global container, and never
-call ``db.commit()`` directly — the WO writes commit through the AE-0107 single
+call ``db.commit()`` directly — the WO writes commit through the single
 write owner via the platform Unit of Work, inside the handlers.
 
 The LangGraph checkpoint identifiers (``thread_id == project_id``), the
@@ -127,7 +127,11 @@ async def get_editorial_workflow_state(
     current_user: EditorUser,
     handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
-    """Return persisted workflow state for UI polling."""
+    """Return persisted workflow state for UI polling.
+
+    Run metadata (for banner reconstruction on reload) is attached only while the merged
+    state reports in_progress.
+    """
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     engine = build_editorial_workflow_service(request)
     view = await handlers.get_state(engine, str(project_id))
@@ -141,8 +145,6 @@ async def get_editorial_workflow_state(
         phase_progress=view.phase_progress,
         lock_version=view.lock_version,
     )
-    # AE-0315: run metadata (banner reconstruction on reload) — only attached
-    # while the merged state reports in_progress.
     return apply_run_metadata(
         response,
         RunMetadataInput(
@@ -166,10 +168,18 @@ async def start_editorial_workflow(
     current_user: EditorUser,
     handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
-    """Run AI synthesis, outline, and draft phases then pause at human gates."""
-    # AE-0373: keep only the persona id, never the row. A held row stays in the
-    # session identity map with its server-side ``updated_at`` expired after the
-    # engine's flush, and the ACL re-read would lazy-load it outside the greenlet.
+    """Run AI synthesis, outline, and draft phases then pause at human gates.
+
+    Only the project's persona id is kept, never the row: a held row stays in the
+    session identity map with its server-side updated_at expired after the engine's
+    flush, and the ACL re-read would lazy-load it outside the greenlet. The wizard's
+    persona applies when the request names none, so the persona gate covers both modes.
+
+    Engine errors are logged; a synthesis parse error gets its specific detail and any
+    other ValueError keeps the generic one. A provider outage or rate limit during the
+    synchronous start surfaces as a structured retryable error, not a generic 500; other
+    errors re-raise unchanged.
+    """
     project_persona_id = (
         await get_carousel_project_for_user(db, project_id, current_user)
     ).persona_id
@@ -181,8 +191,6 @@ async def start_editorial_workflow(
                 detail=ERR_SELF_REVIEW,
             )
     engine = build_editorial_workflow_service(request)
-    # AE-0373: the wizard's persona (stored on the project) when the start
-    # request names none, so the persona gate applies to both modes.
     persona = await load_persona(db, body.persona_id or project_persona_id)
     sanitized_sources = [
         {
@@ -209,11 +217,6 @@ async def start_editorial_workflow(
             ),
         )
     except ValueError as exc:
-        # AE-0318: this catch used to swallow the engine error unlogged with a
-        # generic detail, which made prod synthesis failures undiagnosable. The
-        # synthesis-specific detail is scoped to the synthesis parse error; any
-        # other engine ValueError keeps the legacy generic detail (but is now
-        # logged too).
         logger.exception(
             "workflow_start_failed",
             project_id=str(project_id),
@@ -229,10 +232,6 @@ async def start_editorial_workflow(
             detail=detail,
         ) from None
     except Exception as exc:
-        # AE-0319: a provider outage/rate-limit during the synchronous start
-        # (observed live: OpenCode Go 429 GoUsageLimitError) must surface as a
-        # structured retryable error, not a generic 500. Non-provider errors
-        # re-raise unchanged.
         provider_detail = classify_provider_error(exc)
         if provider_detail is None:
             raise
@@ -287,7 +286,11 @@ async def resume_editorial_workflow(
     current_user: EditorUser,
     handlers: EditorialWorkflowHandlersDep,
 ) -> JSONResponse:
-    """Accept human review and resume workflow asynchronously (RW-010)."""
+    """Accept human review and resume workflow asynchronously (RW-010).
+
+    Structured feedback is validated before the lock is bumped: a 422 after the bump
+    would leave the client on a stale version and reset its edits.
+    """
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     safe_feedback = validate_resume_action(body)
     ensure_resume_reviewer_access(project, current_user)
@@ -302,8 +305,6 @@ async def resume_editorial_workflow(
             db=db, project_id=str(project_id), project_title=project.topic
         ),
     )
-    # AE-0413: validate the structured feedback BEFORE bumping the lock: a 422
-    # after the bump left the client on a stale version and reset its edits.
     await ensure_structured_feedback_allowed(engine, str(project_id), body)
     new_lock_version = await bump_resume_lock_version(
         db,

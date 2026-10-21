@@ -1,4 +1,3 @@
-// AE-0403 — Gherkin: frontend/tests/features/review-form-field-errors.feature
 // Scenario: Manual fixes at the content step save without approving
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
@@ -66,10 +65,10 @@ function field(selector: string): HTMLTextAreaElement {
 function Harness({
   state,
   manualFixes,
-}: {
+}: Readonly<{
   state: EditorialWorkflowState;
   manualFixes?: ContentManualFixesActions;
-}): React.ReactElement {
+}>): React.ReactElement {
   const [slides, setSlides] = useState<LocalizedSlideReview[] | undefined>();
   return (
     <ContentPhaseReview

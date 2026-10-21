@@ -9,8 +9,6 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import enMessages from "@/i18n/locales/en.json";
 import ptMessages from "@/i18n/locales/pt.json";
 
-// Scenarios: see tests/features/create-workflow-status-badge.feature
-
 describe("resolveWorkflowStatusVisual", () => {
   it.each([
     {
@@ -89,8 +87,10 @@ describe("resolveWorkflowStatusVisual", () => {
       "published",
       "completed",
       "draft",
-    ].sort();
-    expect([...KNOWN_WORKFLOW_STATUSES].sort()).toEqual(expected);
+    ].sort((a, b) => a.localeCompare(b));
+    expect(
+      [...KNOWN_WORKFLOW_STATUSES].sort((a, b) => a.localeCompare(b)),
+    ).toEqual(expected);
   });
 
   it("only the in_progress state pulses", () => {
@@ -105,12 +105,18 @@ describe("resolveWorkflowStatusVisual", () => {
   });
 });
 
+/**
+ * next-intl silently renders the raw key when a label is missing in a locale,
+ * so en and pt must expose the exact same create.status keys.
+ */
 describe("status label i18n parity", () => {
-  // next-intl silently renders the raw key when a label is missing in a locale,
-  // so assert en and pt expose the exact same create.status keys.
   it("en and pt define the same create.status keys", () => {
-    const en = Object.keys(enMessages.create.status).sort();
-    const pt = Object.keys(ptMessages.create.status).sort();
+    const en = Object.keys(enMessages.create.status).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const pt = Object.keys(ptMessages.create.status).sort((a, b) =>
+      a.localeCompare(b),
+    );
     expect(pt).toEqual(en);
     expect(en.length).toBeGreaterThanOrEqual(9);
   });

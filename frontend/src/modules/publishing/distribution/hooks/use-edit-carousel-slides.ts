@@ -11,11 +11,11 @@ import { slideFieldViolationSchema } from "@/schemas/carousel";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
 /**
- * AE-0314: persist reviewer text edits to a COMPLETED carousel's slides without
+ * Persist reviewer text edits to a COMPLETED carousel's slides without
  * regenerating images. The endpoint writes the edited copy to the projection +
  * checkpoint, marks a server-guaranteed republish, and returns the fresh
  * severity-aware validation report (rendered on a blocking rejection).
- * AE-0403: ``field_violations`` addresses each violation to its form field.
+ * ``field_violations`` addresses each violation to its form field.
  */
 const slideEditResponseSchema = z.object({
   project_id: z.string(),

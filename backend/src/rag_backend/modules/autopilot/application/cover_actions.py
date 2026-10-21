@@ -1,4 +1,4 @@
-"""Owner taps on "Usar capa do Grok" / back to the default (AE-0418, ADR-0024).
+"""Owner taps on "Usar capa do Grok" / back to the default (ADR-0024).
 
 A mixin for ``OwnerActionService`` (same entry point, owner allowlist and
 deferred replies as the thesis buttons). Owner-only and idempotent:

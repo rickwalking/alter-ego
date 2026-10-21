@@ -4,10 +4,10 @@ This module is the **single** seam between the editorial bounded context and the
 legacy carousel persistence. It is the **only** file under
 ``rag_backend.modules.editorial`` that imports the carousel ORM / legacy carousel
 persistence (``CarouselProjectModel``); the editorial application and domain
-layers stay free of it (enforced by the AE-0112 import contract). Everything the
+layers stay free of it (enforced by the import contract). Everything the
 ACL exposes upward is in editorial terms (``EditorialProject`` /
 ``EditorialWorkflow``); everything it writes downward goes **through** the
-AE-0107 :class:`CarouselProjectWriteOwner`, never by mutating the ORM row here.
+:class:`CarouselProjectWriteOwner`, never by mutating the ORM row here.
 
 **Read side.** Translates a session-attached ``CarouselProjectModel`` into the
 editorial aggregate: the canonical :class:`CarouselProject` entity (via the
@@ -20,17 +20,21 @@ aggregate so callers can read the concurrency token without touching the ORM.
 **Write side.** The workflow-owned (WO) writes — reviewer assignment, the
 phase/workflow-status sync from LangGraph state, the background-runner
 phase-status set, and the resume ``lock_version`` compare-and-swap — are all
-**delegated** to the injected :class:`CarouselProjectWriteOwner` (the AE-0107
-single write owner). The ACL adds no persistence of its own and never calls
+**delegated** to the injected :class:`CarouselProjectWriteOwner` (the single write
+owner). The ACL adds no persistence of its own and never calls
 ``session.add`` / ``flush`` / ``commit`` on the carousel row, so the owner stays
 the sole writer and the single committer for those fields.
 
-**Behavior-preserving (AE-0109).** No routes are moved (AE-0110), no schema
+**Behavior-preserving.** No routes are moved, no schema
 changes, no second persistence translator, and no workflow/agent behavior
 change. The ``lock_version`` semantics and the LangGraph checkpoint identifier
 (``thread_id == project_id``) are passed through unchanged: the ACL never
 rewrites an id and never bumps the lock outside the owner's byte-identical resume
 CAS.
+
+A row whose ``lock_version`` is unset gets the same default token as the legacy reads
+(``int(model.lock_version or 1)``), so the token the ACL surfaces matches what the
+resume CAS expects.
 """
 
 from __future__ import annotations
@@ -60,9 +64,6 @@ if TYPE_CHECKING:
         WorkflowEngine,
     )
 
-# Default optimistic-lock token for a row whose ``lock_version`` is unset, kept
-# identical to the legacy reads (``int(model.lock_version or 1)``) so the token
-# the ACL surfaces matches what the resume CAS expects.
 _DEFAULT_LOCK_VERSION = 1
 
 
@@ -93,7 +94,7 @@ class EditorialProjectView:
 class LegacyCarouselAcl:
     """Translate legacy carousel persistence to/from editorial concepts.
 
-    The ACL binds the request-scoped session (for reads) and the AE-0107
+    The ACL binds the request-scoped session (for reads) and the
     :class:`CarouselProjectWriteOwner` (for all WO writes). It performs no
     persistence of its own: reads go through the ORM model's existing
     ``to_entity`` translator, and every write is delegated to the owner so the
@@ -108,7 +109,6 @@ class LegacyCarouselAcl:
         self._session = session
         self._write_owner = write_owner
 
-    # --- Read side: legacy row -> editorial aggregate --------------------------
     @staticmethod
     def to_editorial(model: CarouselProjectModel) -> EditorialProjectView:
         """Map a legacy ``CarouselProjectModel`` to the editorial aggregate.
@@ -139,7 +139,6 @@ class LegacyCarouselAcl:
             return None
         return self.to_editorial(model)
 
-    # --- Engine binding: run the wrapped engine over the bound session --------
     async def get_workflow_state_with_session(
         self,
         engine: WorkflowEngine,
@@ -163,7 +162,7 @@ class LegacyCarouselAcl:
         """Run the engine start use case with the request session bound.
 
         Binding the session here keeps the engine's reviewer-assignment + phase
-        sync staging through the AE-0107 owner exactly as before; the commit is
+        sync staging through the owner exactly as before; the commit is
         owned by the caller via :meth:`commit`.
         """
         return await engine.start_workflow(
@@ -179,12 +178,11 @@ class LegacyCarouselAcl:
     ) -> str:
         """Flip the engine to in_progress with the request session bound.
 
-        The engine stages the phase-status sync through the AE-0107 owner; the
+        The engine stages the phase-status sync through the owner; the
         commit is owned by the caller via :meth:`commit`.
         """
         return await engine.mark_resume_in_progress(project_id, db=self._session)
 
-    # --- Write side: editorial intents -> AE-0107 owner -----------------------
     async def assign_reviewer(self, project_id: str, reviewer_id: str) -> None:
         """Stamp the WO ``assigned_reviewer_id`` via the single write owner."""
         await self._write_owner.assign_reviewer(project_id, reviewer_id)

@@ -39,32 +39,27 @@ vi.mock("next-intl", async () => {
   };
 });
 
-// MSW server setup
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-// Cleanup after each test
 afterEach(() => {
   cleanup();
 });
 
-// Mock matchMedia
-// jsdom has no matchMedia; keep a real one if the environment provides it.
 if (!("matchMedia" in globalThis)) {
   global.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
 }
 
-// Mock IntersectionObserver
 class MockIntersectionObserver {
   observe = vi.fn();
   disconnect = vi.fn();
@@ -77,7 +72,6 @@ Object.defineProperty(window, "IntersectionObserver", {
   value: MockIntersectionObserver,
 });
 
-// Mock ResizeObserver
 class MockResizeObserver {
   observe = vi.fn();
   disconnect = vi.fn();
@@ -90,7 +84,6 @@ Object.defineProperty(window, "ResizeObserver", {
   value: MockResizeObserver,
 });
 
-// Mock scrollTo
 Object.defineProperty(window, "scrollTo", {
   writable: true,
   value: vi.fn(),

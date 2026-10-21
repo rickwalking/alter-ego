@@ -1,4 +1,4 @@
-"""Story image render (AE-0369).
+"""Story image render.
 
 Gherkin: tests/features/autopilot_story_and_music.feature
 """
@@ -65,6 +65,7 @@ class TestStoryImageRender:
     def test_slide_one_sits_in_the_middle_over_a_darker_background(
         self, tmp_path: Path
     ) -> None:
+        """The blurred copy is darkened, so it is clearly dimmer than slide 1."""
         paths = story_paths(str(_output(tmp_path)), None)
         assert paths is not None
         render_story_image(paths)
@@ -76,7 +77,6 @@ class TestStoryImageRender:
         assert isinstance(centre, tuple)
         assert isinstance(background, tuple)
         assert abs(centre[0] - _SLIDE_COLOR[0]) < 12
-        # The blurred copy is darkened, so it is clearly dimmer than slide 1.
         assert background[0] < centre[0] * 0.7
 
     def test_caption_reads_novo_post_no_perfil(self) -> None:

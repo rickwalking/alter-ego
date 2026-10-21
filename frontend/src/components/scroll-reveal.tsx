@@ -12,7 +12,7 @@ export function ScrollReveal({
   children,
   className,
   delay = 0,
-}: ScrollRevealProps) {
+}: Readonly<ScrollRevealProps>) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 

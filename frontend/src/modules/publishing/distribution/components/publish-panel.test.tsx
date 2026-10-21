@@ -39,16 +39,16 @@ vi.mock("next-intl", () => ({
     };
     return (key: string, values?: Record<string, unknown>) => {
       if (key === "instagram.hashtagHelp") {
-        return `Hashtags ${values?.count}/${values?.max}`;
+        return `Hashtags ${String(values?.count)}/${String(values?.max)}`;
       }
       if (key === "linkedin.postLabel") {
-        return `LinkedIn post (${values?.language})`;
+        return `LinkedIn post (${String(values?.language)})`;
       }
       if (key === "goToSlide") {
-        return `Go to slide ${values?.number}`;
+        return `Go to slide ${String(values?.number)}`;
       }
       if (key === "slideAlt") {
-        return `${values?.title} – slide ${values?.number}`;
+        return `${String(values?.title)} – slide ${String(values?.number)}`;
       }
       return entries[key] ?? key;
     };
@@ -148,11 +148,12 @@ describe("PublishPanel", () => {
     ).toBeDisabled();
   });
 
+  /**
+   * Spying on the jsdom clipboard is flaky, so this asserts the button is
+   * present and clickable without throwing; the clipboard call path itself is
+   * tested manually in the dev server.
+   */
   // Scenario: Copy caption writes to clipboard
-  // Browser clipboard API is covered by jsdom at a level that makes
-  // spying on the navigator flaky; assert the button is present and
-  // clickable without throwing — the clipboard call path itself is
-  // tested manually in the dev server.
   it("renders a clickable Copy caption button", async () => {
     const user = userEvent.setup();
     render(<PublishPanel project={buildProject()} />);
@@ -161,24 +162,20 @@ describe("PublishPanel", () => {
     await user.click(button);
   });
 
+  /** Two "en" tabs exist (viewer toggle + LinkedIn language toggle) and share the same state, so the first one is clicked. */
   // Scenario: LinkedIn post language toggle swaps content
   it("swaps LinkedIn body when switching PT↔EN", async () => {
     const user = userEvent.setup();
     render(<PublishPanel project={buildProject()} />);
     await user.click(screen.getByRole("tab", { name: "LinkedIn" }));
-    expect(
-      (screen.getByLabelText("LinkedIn post (PT)") as HTMLTextAreaElement)
-        .value,
-    ).toBe("Post em português");
-    // Two "en" tabs now exist (viewer toggle + LinkedIn language toggle).
-    // The LinkedIn one lives inside the LinkedIn tab's tablist; pick the
-    // first since both share the same state.
+    expect(screen.getByLabelText("LinkedIn post (PT)")).toHaveValue(
+      "Post em português",
+    );
     const enTabs = screen.getAllByRole("tab", { name: "en" });
     await user.click(enTabs[0]!);
-    expect(
-      (screen.getByLabelText("LinkedIn post (EN)") as HTMLTextAreaElement)
-        .value,
-    ).toBe("English post body");
+    expect(screen.getByLabelText("LinkedIn post (EN)")).toHaveValue(
+      "English post body",
+    );
   });
 
   // Scenario: Download PDF link points to the pdf route
@@ -209,7 +206,6 @@ describe("PublishPanel", () => {
     expect(screen.getByText(/Manual steps/)).toBeInTheDocument();
   });
 
-  // Edge: Publish button calls the handler with the current caption
   it("invokes onPublishInstagram with the current caption", async () => {
     const user = userEvent.setup();
     const handler = vi.fn().mockResolvedValue(undefined);
@@ -225,7 +221,6 @@ describe("PublishPanel", () => {
     expect(handler).toHaveBeenCalledWith("caption #one");
   });
 
-  // Feature: QA follow-ups (AE-0416) — publish page slide viewer (B25)
   describe("slide viewer (AE-0416)", () => {
     const EIGHT_SLIDES = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -282,7 +277,6 @@ describe("PublishPanel", () => {
       expect(screen.getByRole("note")).toHaveTextContent(
         "The Instagram caption is Portuguese only",
       );
-      // Without an English title the alt text keeps the PT title.
       expect(screen.getAllByRole("img")[0]!.getAttribute("alt")).toBe(
         "Title – slide 1",
       );

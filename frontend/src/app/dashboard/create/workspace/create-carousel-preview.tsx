@@ -42,22 +42,26 @@ function buildHeroImageUrl(project: CarouselProjectResponse): string | null {
   return tokens?.images?.hero ?? null;
 }
 
+/**
+ * Falls back to the topic when the title is null, empty or whitespace (the
+ * original `title || topic` intent; `??` would wrongly keep an empty title).
+ */
 function displayTitle(project: CarouselProjectResponse): string {
-  // Fall back to the topic when the title is null/empty/whitespace (the original
-  // `title || topic` intent — `??` would wrongly keep an empty-string title).
   return project.title?.trim() ? project.title : project.topic;
 }
 
 const TEMPLATE_VERSION_PREFIX = "v";
 
-/** AE-0415 (B33): "v2" stays "v2" (the stored value may already carry the v). */
+/** "v2" stays "v2" (the stored value may already carry the v). */
 function formatTemplateVersion(version: string): string {
   return version.toLowerCase().startsWith(TEMPLATE_VERSION_PREFIX)
     ? version
     : `${TEMPLATE_VERSION_PREFIX}${version}`;
 }
 
-function PreviewHeader({ project }: CarouselPreviewProps): React.ReactElement {
+function PreviewHeader({
+  project,
+}: Readonly<CarouselPreviewProps>): React.ReactElement {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -80,7 +84,9 @@ function PreviewHeader({ project }: CarouselPreviewProps): React.ReactElement {
   );
 }
 
-function CreatorBadge({ project }: CarouselPreviewProps): React.ReactElement {
+function CreatorBadge({
+  project,
+}: Readonly<CarouselPreviewProps>): React.ReactElement {
   return (
     <div className="px-4 py-3 flex items-center gap-3 border-t border-[var(--color-border)]">
       {project.creator_avatar_url && (
@@ -108,9 +114,39 @@ function CreatorBadge({ project }: CarouselPreviewProps): React.ReactElement {
   );
 }
 
+/** Rendered slides when present, else the hero image, else nothing. */
+function renderPreviewMedia({
+  slideUrls,
+  heroUrl,
+  title,
+}: Readonly<{
+  slideUrls: string[] | null;
+  heroUrl: string | null;
+  title: string;
+}>): React.ReactElement | null {
+  if (slideUrls && slideUrls.length > 0) {
+    return <PreviewSlides slideUrls={slideUrls} title={title} />;
+  }
+  if (!heroUrl) {
+    return null;
+  }
+  return (
+    <div className="relative aspect-[4/3] w-full overflow-hidden">
+      <Image
+        src={heroUrl}
+        alt={title}
+        fill
+        className="object-cover"
+        sizes="(min-width: 1024px) 33vw, 100vw"
+        unoptimized
+      />
+    </div>
+  );
+}
+
 export function CarouselPreview({
   project,
-}: CarouselPreviewProps): React.ReactElement {
+}: Readonly<CarouselPreviewProps>): React.ReactElement {
   const t = useTranslations("create");
   const slideUrls = extractRenderedSlides(project);
   const heroUrl = buildHeroImageUrl(project);
@@ -120,20 +156,7 @@ export function CarouselPreview({
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] overflow-hidden">
       <PreviewHeader project={project} />
 
-      {slideUrls && slideUrls.length > 0 ? (
-        <PreviewSlides slideUrls={slideUrls} title={title} />
-      ) : heroUrl ? (
-        <div className="relative aspect-[4/3] w-full overflow-hidden">
-          <Image
-            src={heroUrl}
-            alt={title}
-            fill
-            className="object-cover"
-            sizes="(min-width: 1024px) 33vw, 100vw"
-            unoptimized
-          />
-        </div>
-      ) : null}
+      {renderPreviewMedia({ slideUrls, heroUrl, title })}
 
       {Boolean(project.creator_name) && <CreatorBadge project={project} />}
 

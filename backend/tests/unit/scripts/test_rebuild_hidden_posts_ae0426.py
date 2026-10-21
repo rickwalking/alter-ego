@@ -1,4 +1,4 @@
-"""CLI surface of the AE-0426 rebuild script (parser + summary + exit code)."""
+"""CLI surface of the hidden-post rebuild script (parser + summary + exit code)."""
 
 from __future__ import annotations
 

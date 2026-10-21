@@ -1,4 +1,4 @@
-"""Unit tests for the carousel repair projection mapping (AE-0311).
+"""Unit tests for the carousel repair projection mapping.
 
 Gherkin: tests/features/carousel_deterministic_repair.feature
 """

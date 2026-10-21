@@ -20,7 +20,9 @@ const ABOUT_PARAGRAPH_BASE = {
   lineHeight: 1.8,
 } as const;
 
-function AboutSocialLinks({ t }: MarketingAboutProps): React.ReactElement {
+function AboutSocialLinks({
+  t,
+}: Readonly<MarketingAboutProps>): React.ReactElement {
   const links = [
     {
       label: t("about.socialLinkedIn"),
@@ -66,7 +68,9 @@ function AboutSocialLinks({ t }: MarketingAboutProps): React.ReactElement {
   );
 }
 
-export function AboutPortrait({ t }: MarketingAboutProps): React.ReactElement {
+export function AboutPortrait({
+  t,
+}: Readonly<MarketingAboutProps>): React.ReactElement {
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -113,7 +117,9 @@ export function AboutPortrait({ t }: MarketingAboutProps): React.ReactElement {
   );
 }
 
-export function AboutBio({ t }: MarketingAboutProps): React.ReactElement {
+export function AboutBio({
+  t,
+}: Readonly<MarketingAboutProps>): React.ReactElement {
   return (
     <div>
       <h3
@@ -164,7 +170,6 @@ export function AboutBio({ t }: MarketingAboutProps): React.ReactElement {
           </span>
         ))}
       </div>
-      {/* Social Links */}
       <AboutSocialLinks t={t} />
     </div>
   );

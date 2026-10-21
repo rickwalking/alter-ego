@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversationMessages } from "@/modules/conversation/hooks/use-chat";
 import { chatKeys } from "@/modules/conversation/queries";
@@ -49,7 +49,7 @@ function mergeMessages(
 /** Attach the streamed sources to the trailing assistant message. */
 function withAssistantSources(
   prev: Message[],
-  sources: Message["sources"] | undefined,
+  sources: Message["sources"],
 ): Message[] {
   const last = prev[prev.length - 1];
   if (last?.role !== "assistant") {
@@ -59,8 +59,8 @@ function withAssistantSources(
 }
 
 /** Backend sends sources in data.content (e.g. {"type":"sources","content":[]}). */
-function streamedSources(data: SseEventData): Message["sources"] | undefined {
-  return (data.sources ?? data.content) as Message["sources"] | undefined;
+function streamedSources(data: SseEventData): Message["sources"] {
+  return data.sources ?? data.content;
 }
 
 /** The persisted history when enabled (an empty list otherwise). */
@@ -85,7 +85,7 @@ function useFinalizeStream(
   stream: ChatStreamState,
   loadHistory: boolean,
 ): {
-  finalizedRef: MutableRefObject<boolean>;
+  finalizedRef: RefObject<boolean>;
   finalizeStream: (convId: string) => void;
 } {
   const queryClient = useQueryClient();

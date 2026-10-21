@@ -5,7 +5,10 @@ import {
 } from "../constants";
 import type { BlogPostBadgeProps } from "./types";
 
-export function BlogPostBadge({ children, color }: BlogPostBadgeProps) {
+export function BlogPostBadge({
+  children,
+  color,
+}: Readonly<BlogPostBadgeProps>) {
   const { bg, text } =
     BLOG_POST_BADGE_COLORS[color] ?? BLOG_POST_BADGE_FALLBACK;
   return (

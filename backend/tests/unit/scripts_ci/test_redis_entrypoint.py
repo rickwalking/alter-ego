@@ -1,22 +1,24 @@
-"""Rule-fires + config-integrity tests for scripts/deploy/redis-entrypoint.sh (AE-0302).
+"""Rule-fires + config-integrity tests for scripts/deploy/redis-entrypoint.sh.
 
 Server-side fail-closed: an empty REDIS_PASSWORD in a production-like
 environment must make the container REFUSE to start — never start an open
-``requirepass ""`` instance. Per AE-0180 the failing branch is tested with a
-seeded violation, and the build-time config-integrity assertion (the
+``requirepass ""`` instance. Per the rule-fires standard the failing branch is
+tested with a seeded violation, and the build-time config-integrity assertion (the
 ``rename-command`` lines are present) is the check that auth cannot be
 re-opened via ``CONFIG SET requirepass ""`` (the runtime NOAUTH probe at
 deploy time proves auth is required *now*; the two are deliberately separate).
 
     Gherkin: tests/features/redis_auth.feature —
       "missing password fails closed on the server side too"
+
+DISABLED_COMMANDS are the admin verbs that must be disabled in prod.
 """
 
 from __future__ import annotations
 
 import os
 import shutil
-import subprocess  # noqa: S404  # integrity-ok: AE-0302 — a test for a shell entrypoint must invoke a subprocess (mirrors test_check_env_permissions.py)
+import subprocess  # noqa: S404  # integrity-ok: a test for a shell entrypoint must invoke a subprocess (mirrors test_check_env_permissions.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -27,7 +29,6 @@ ENV_PRODUCTION = "production"
 ENV_DEVELOPMENT = "development"
 MODE_EXECUTABLE = 0o755
 
-# Admin verbs that must be disabled in prod (config-integrity, AC part (a)).
 DISABLED_COMMANDS = ("CONFIG", "FLUSHALL", "FLUSHDB", "DEBUG", "SHUTDOWN")
 
 _FAKE_REDIS_SERVER = """#!/bin/sh
@@ -42,7 +43,7 @@ def _run(
     merged = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), **env}
     if fake_bin is not None:
         merged["PATH"] = f"{fake_bin}:{merged['PATH']}"
-    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0302 — fixed sh path, the real entrypoint under a test-controlled env
+    return subprocess.run(  # noqa: S603  # integrity-ok: fixed sh path, the real entrypoint under a test-controlled env
         [SH, str(ENTRYPOINT)],
         capture_output=True,
         text=True,
@@ -77,7 +78,8 @@ def test_fires_on_unset_environment_without_password() -> None:
 
 
 def test_fires_on_unrecognized_environment_without_password() -> None:
-    result = _run({"ENVIRONMENT": "prod"})  # typo'd value must fail closed
+    """A typo'd ENVIRONMENT value must fail closed."""
+    result = _run({"ENVIRONMENT": "prod"})
 
     assert result.returncode != 0, result.stdout + result.stderr
 
@@ -122,10 +124,11 @@ def test_development_without_password_starts_unauthenticated(
     assert "--requirepass" not in capture.read_text(encoding="utf-8").splitlines()
 
 
-# Build-time config-integrity assertion (AC part (a)): the rename-command
-# lines are present in the shipped entrypoint, so auth cannot be re-opened at
-# runtime via CONFIG SET — independent of the runtime NOAUTH probe.
 def test_entrypoint_ships_the_rename_command_lockdown() -> None:
+    """Build-time config-integrity assertion: the rename-command lines are in the shipped
+    entrypoint, so auth cannot be re-opened at runtime via CONFIG SET, independent of
+    the runtime NOAUTH probe.
+    """
     text = ENTRYPOINT.read_text(encoding="utf-8")
 
     for command in DISABLED_COMMANDS:

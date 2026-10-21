@@ -1,4 +1,4 @@
-// AE-0403 — Gherkin: frontend/tests/features/review-form-field-errors.feature
+/** Gherkin: frontend/tests/features/review-form-field-errors.feature */
 import { afterEach, describe, expect, it } from "vitest";
 import type { SlideValidationViolation } from "@/modules/editorial/workspace/types-ai";
 import {

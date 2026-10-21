@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import { isLockedByAnotherUser } from "./collaborative-lock";
 import type { ContentLock } from "../types";
 
-// Feature: phase3_workflow_collaboration.feature
 // Scenario: Collaborative editing lock detection
 
 describe("isLockedByAnotherUser", () => {

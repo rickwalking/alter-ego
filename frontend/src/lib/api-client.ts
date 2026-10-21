@@ -4,14 +4,12 @@ import { HTTP_STATUS } from "@/constants/api";
 import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
-// API Response Schema
 export const apiResponseSchema = z.object({
   success: z.boolean(),
   data: z.unknown(),
   message: z.string().optional(),
 });
 
-// Error Response Schema
 export const errorResponseSchema = z.object({
   success: z.literal(false),
   error: z.object({
@@ -32,7 +30,7 @@ function redirectToLoginAfterUnauthorized(): void {
 }
 
 export class ApiError extends Error {
-  /** AE-0415: the raw FastAPI `detail` (e.g. the 422 validation list). */
+  /** The raw FastAPI `detail` (e.g. the 422 validation list). */
   public detail?: unknown;
 
   constructor(
@@ -70,7 +68,7 @@ function fetchWithCredentials(
     credentials: "include",
     headers: {
       "Content-Type": JSON_CONTENT_TYPE,
-      ...options?.headers,
+      ...(options?.headers as Record<string, string> | undefined),
     },
   });
 }
@@ -142,6 +140,7 @@ function envelopeError(json: unknown): ApiError {
   return new ApiError(HTTP_STATUS.BAD_REQUEST, "API request failed");
 }
 
+/** Accepts both the wrapped {success, data} envelope and direct responses. */
 export async function apiCall<T>(
   url: string,
   schema: z.ZodSchema<T>,
@@ -152,7 +151,6 @@ export async function apiCall<T>(
 
   const json: unknown = await response.json();
 
-  // Support both wrapped {success, data} and direct responses
   const responseResult = apiResponseSchema.safeParse(json);
   if (!responseResult.success) {
     return parseApiData(schema, json);
@@ -179,7 +177,7 @@ export async function apiCallNoContent(
 }
 
 /**
- * AE-0376: POST a multipart form (file upload) and validate the JSON reply.
+ * POST a multipart form (file upload) and validate the JSON reply.
  *
  * Unlike `apiCall` it sends no JSON `Content-Type`, so the browser sets the
  * multipart boundary; errors go through the same `ApiError` path.

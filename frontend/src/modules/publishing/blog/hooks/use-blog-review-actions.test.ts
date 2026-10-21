@@ -6,8 +6,7 @@ import { blogPost, jsonResponse } from "../editor.test-utils";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 import { useBlogReviewActions } from "./use-blog-review-actions";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (publish, review +
-// scheduled publish, self-review; AE-0441: the author may always self-review)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -42,13 +41,13 @@ async function renderReview(extra: Route = () => undefined) {
 }
 
 function urls(): string[] {
-  return mockFetch.mock.calls.map(([url]) => String(url));
+  return mockFetch.mock.calls.map(([url]) => url);
 }
 
 beforeEach(() => {
   mockFetch.mockReset();
   mockFetch.mockImplementation((url, init) =>
-    Promise.resolve(route(String(url), init) as Response),
+    Promise.resolve(route(url, init)!),
   );
 });
 
@@ -124,7 +123,7 @@ describe("review controls", () => {
       await result.current.review.publishNow();
     });
     const flow = urls().filter((url) =>
-      /submit-review|approve|publish$/.test(url),
+      /submit-review|approve|(?:publish$)/.test(url),
     );
     expect(flow).toEqual([
       "/api/blog-posts/p-1/submit-review",
@@ -143,7 +142,7 @@ describe("review controls", () => {
       await result.current.review.unpublish();
     });
     const calls = mockFetch.mock.calls.filter(([url]) =>
-      /schedule|unpublish/.test(String(url)),
+      /schedule|unpublish/.test(url),
     );
     expect(calls.map(([, init]) => init?.method)).toEqual([
       "POST",
@@ -184,13 +183,14 @@ describe("review controls", () => {
 
   it("clears the review error on the next successful action", async () => {
     let fail = true;
-    const { result } = await renderReview((url) =>
-      url.endsWith("/approve")
-        ? fail
-          ? jsonResponse({ detail: "invalid_status" }, 400)
-          : jsonResponse(blogPost({ status: "approved" }))
-        : undefined,
-    );
+    const { result } = await renderReview((url) => {
+      if (!url.endsWith("/approve")) {
+        return undefined;
+      }
+      return fail
+        ? jsonResponse({ detail: "invalid_status" }, 400)
+        : jsonResponse(blogPost({ status: "approved" }));
+    });
     await act(async () => {
       await result.current.review.approve();
     });

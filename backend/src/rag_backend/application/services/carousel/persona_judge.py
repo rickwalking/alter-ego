@@ -1,11 +1,11 @@
-"""The persona voice judge, retried once, never a fake verdict (AE-0407).
+"""The persona voice judge, retried once, never a fake verdict.
 
 Prod be190a0c: on the same texts the fast-model judge answered ``overall``
 0.0, then 7.8, then 78. A call that raises, times out, or parses to a 0 /
 missing ``overall`` is a failed call, not a score: it is retried once, and a
 second failure returns None (unscored) so no caller ever stores 0.0.
 
-AE-0433: the judge's own timeout equals one queue model's timeout, so a
+The judge's own timeout equals one queue model's timeout, so a
 retry on the same queue never reached its next model (prod 8e484fe5: two
 timeouts on the slow first model, then "unscored"). With a ``fallback``
 judge (the same persona on the next model of the role's queue) the retry
@@ -42,11 +42,12 @@ class VoiceJudge(Protocol):
 async def _one_call(
     judge: VoiceJudge, text: str
 ) -> tuple[dict[str, object] | None, str]:
+    """A provider or timeout failure is retried, not scored."""
     try:
         result = await asyncio.wait_for(
             judge.evaluate_match(text), timeout=PERSONA_JUDGE_TIMEOUT_SECONDS
         )
-    except Exception as exc:  # a provider/timeout failure is retried, not scored
+    except Exception as exc:
         return None, f"{PERSONA_JUDGE_REASON_ERROR}:{type(exc).__name__}"
     if stored_overall(result) is None:
         return None, PERSONA_JUDGE_REASON_NO_SCORE
@@ -65,7 +66,7 @@ async def judge_voice(
 ) -> dict[str, object] | None:
     """The judge's scores of ``text``; None when two calls gave no score.
 
-    The retry runs on ``fallback`` when one is given (AE-0433).
+    The retry runs on ``fallback`` when one is given.
     """
     for attempt in range(1, PERSONA_JUDGE_CALLS + 1):
         caller = _caller(judge, fallback, attempt)

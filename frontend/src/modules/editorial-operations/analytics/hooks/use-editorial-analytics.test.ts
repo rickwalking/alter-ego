@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useEditorialAnalytics } from "./use-editorial-analytics";
 
-// Gherkin: backend/tests/features/instagram_insights.feature (AE-0378)
-const fetchMock = vi.fn();
+const fetchMock = vi.fn<(url: string) => Promise<Response>>();
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (url: string) => fetchMock(url),

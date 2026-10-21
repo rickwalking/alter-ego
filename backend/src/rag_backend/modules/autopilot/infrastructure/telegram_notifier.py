@@ -114,7 +114,7 @@ class TelegramNotifier:
         return ReviewSendResult(album_ids=album_ids, keyboard_id=keyboard_id)
 
     async def send_status(self, notice: StatusNotice) -> StatusSendResult:
-        """Send one text message (AE-0418: or photo) and return its id."""
+        """Send one text message (or photo) and return its id."""
         self._require_token()
         if notice.photo_path:
             payload = await self._status_photo(notice, notice.photo_path)
@@ -176,7 +176,7 @@ class TelegramNotifier:
         return await self._post(TELEGRAM_METHOD_PHOTO, data, cover_photo_file(path))
 
     async def _cover_preview(self, notice: ReviewNotice) -> None:
-        """AE-0418: the GrokBot cover after the album, while it is not slide 1.
+        """The GrokBot cover after the album, while it is not slide 1.
 
         A failed preview is logged; it never blocks the review itself.
         """

@@ -1,35 +1,35 @@
 /**
  * Editorial workflow component prop types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
 
-export type BlogPostEditExtrasProps = {
+export interface BlogPostEditExtrasProps {
   postId: string;
   title: string;
   status: string;
   bodyText: string;
   previousBodyText?: string;
   onScheduled?: () => void;
-};
+}
 
-export type ReviewAssignmentPanelProps = {
+export interface ReviewAssignmentPanelProps {
   contentId: string;
   contentType: string;
   title: string;
   onAssigned?: () => void;
-};
+}
 
-export type ScheduledPublishPickerProps = {
+export interface ScheduledPublishPickerProps {
   postId: string;
   onScheduled?: () => void;
-};
+}
 
-export type VersionDiffViewProps = {
+export interface VersionDiffViewProps {
   leftLabel: string;
   rightLabel: string;
   leftText: string;
   rightText: string;
-};
+}

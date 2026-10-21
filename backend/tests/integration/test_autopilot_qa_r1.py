@@ -1,4 +1,4 @@
-"""Persistence-backed QA round 1 fixes (AE-0348): B2, B3, H1, cursor, intake.
+"""Persistence-backed QA round 1 fixes: B2, B3, H1, cursor, intake.
 
 Gherkin:
   tests/features/autopilot_instagram_publish.feature
@@ -225,6 +225,7 @@ async def test_manual_publish_is_refused_while_the_run_awaits_the_owner(
 async def test_manual_publish_without_a_run_posts_once(
     db_session: AsyncSession,
 ) -> None:
+    """The stepped gateway stores the container before publishing."""
     project_id = await _carousel(db_session)
     gateway = _Gateway()
     manual = ManualInstagramPublish(_deps(db_session, gateway))
@@ -232,7 +233,6 @@ async def test_manual_publish_without_a_run_posts_once(
     first = await manual.publish(_manual_command(project_id))
     second = await manual.publish(_manual_command(project_id))
 
-    # QA r2 R4b: the stepped gateway stores the container before publishing.
     assert (gateway.opens, gateway.finishes, gateway.atomics) == (1, 1, 0)
     assert first.ig_post_id == "post-1"
     assert second.ig_post_id == "post-1"
@@ -313,6 +313,9 @@ async def test_manual_publish_through_a_publishing_run_releases_its_claim(
 async def test_event_source_reads_oldest_first_after_the_cursor(
     db_session: AsyncSession,
 ) -> None:
+    """Settled events inside the re-scan window are read again (the dispatcher's ledger
+    skips them); the unsettled one is never dropped.
+    """
     run_id = uuid4()
     base = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
     db_session.add_all([
@@ -327,8 +330,6 @@ async def test_event_source_reads_oldest_first_after_the_cursor(
     await source.advance(first[1])
     rest = [e for e in await source.recent() if e.run_id == run_id]
 
-    # QA r2 R5: settled events inside the re-scan window are read again (the
-    # dispatcher's ledger skips them); the unsettled one is never dropped.
     assert [e.event_id for e in rest] == [e.event_id for e in first]
 
 

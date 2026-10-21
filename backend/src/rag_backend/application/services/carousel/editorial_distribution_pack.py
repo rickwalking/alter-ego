@@ -74,7 +74,7 @@ def _ensure_blog_titles(
     slide_drafts: list[dict[str, object]],
     translations_en: dict[int, dict[str, object]],
 ) -> None:
-    """AE-0347: derive PT/EN titles from the intro slide when none are set.
+    """Derive PT/EN titles from the intro slide when none are set.
 
     The editorial path never called ``set_title``/``set_title_en``, so the blog H1
     fell back to the raw (often English) ``topic`` in BOTH languages. Never
@@ -101,10 +101,10 @@ def _ensure_blog_titles(
 async def load_carousel_project(
     db: AsyncSession, project_id: str
 ) -> CarouselProject | None:
-    """The project row as a domain entity (AE-0375: the content-mode brief).
+    """The project row as a domain entity (it carries the content-mode brief).
 
     Lives beside the existing inline repository construction so no new
-    application -> infrastructure edge is added (import ratchet, AE-0078).
+    application -> infrastructure edge is added (import ratchet).
     """
     try:
         project_uuid = UUID(project_id)
@@ -118,7 +118,10 @@ async def build_editorial_distribution_updates(
     *,
     linkedin_generator: LinkedInPostGenerator | None = None,
 ) -> dict[str, object]:
-    """Generate and persist distribution fields; return workflow state updates."""
+    """Generate and persist distribution fields; return workflow state updates.
+
+    The research summary is English, so only the EN blog body gets it.
+    """
     repo = PostgresCarouselRepository(session=context.db)
     project = await repo.get_project_by_id(UUID(context.project_id))
     if project is None or not context.slide_drafts:
@@ -153,7 +156,6 @@ async def build_editorial_distribution_updates(
             outline=context.outline,
         ),
     )
-    # AE-0416: the research summary is English, so only the EN body gets it.
     blog_en = build_blog_markdown_en_from_translations(
         BlogBuildContext(
             slide_drafts=context.slide_drafts,
@@ -196,20 +198,19 @@ def _with_news_cards(
     translations_en: dict[int, dict[str, object]],
     slide_drafts: list[dict[str, object]],
 ) -> dict[int, dict[str, object]]:
-    """AE-0406: a ``pov_news`` EN slide shows its quote card's ``text_en``."""
+    """A ``pov_news`` EN slide shows its quote card's ``text_en``."""
     if not is_pov_news(project.content_mode) or not project.pov_quotes:
         return translations_en
     return with_en_quote_cards(translations_en, slide_drafts, project.pov_quotes)
 
 
 def _with_news_footer(project: CarouselProject, caption: str) -> str:
-    """AE-0406: ``Fontes: @handle, domain.com`` on a ``pov_news`` caption (code)."""
+    """``Fontes: @handle, domain.com`` on a ``pov_news`` caption (code)."""
     if not is_pov_news(project.content_mode):
         return caption
     return with_source_footer(caption, project.pov_sources)
 
 
-# Backward-compatible re-export
 SlideDraftsContext = _SlideDraftsContext
 
 

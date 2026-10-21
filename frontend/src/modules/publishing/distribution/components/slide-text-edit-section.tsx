@@ -37,7 +37,7 @@ import {
 const EDIT_ID_PREFIX = "publish-edit";
 const NO_VIOLATIONS: SlideValidationViolation[] = [];
 
-/** AE-0403: the refused save's violations, each addressed to its field. */
+/** The refused save's violations, each addressed to its field. */
 function responseViolations(
   data: EditCarouselSlidesResponse,
 ): SlideValidationViolation[] {
@@ -45,7 +45,7 @@ function responseViolations(
 }
 
 export function SlideTextEditSection(
-  props: SlideTextEditSectionProps,
+  props: Readonly<SlideTextEditSectionProps>,
 ): React.ReactElement {
   const { projectId, slides, policyVersion, runInProgress, onEdited } = props;
   const t = useTranslations("publish.slideEditor");

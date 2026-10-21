@@ -27,9 +27,6 @@ import sys
 from collections.abc import Callable
 from uuid import UUID
 
-from rag_backend.application.services.carousel.artifact_build_service import (
-    CarouselArtifactBuildService,
-)
 from rag_backend.application.services.carousel.legacy_presentation_regeneration import (
     LegacyRegenerationError,
     RegeneratePresentationCommand,
@@ -38,6 +35,10 @@ from rag_backend.application.services.carousel.legacy_presentation_regeneration 
     RegenerationResult,
     default_target_policy_version,
     regenerate_legacy_presentation,
+)
+
+from rag_backend.application.services.carousel.artifact_build_service import (
+    CarouselArtifactBuildService,
 )
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,
@@ -53,7 +54,6 @@ from rag_backend.infrastructure.logging import get_logger, setup_logging
 
 logger = get_logger()
 
-# Audit output labels
 _LABEL_PROJECT_ID = "project_id"
 _LABEL_CURRENT_POLICY = "current_policy"
 _LABEL_TARGET_POLICY = "target_policy"
@@ -68,7 +68,6 @@ _LABEL_RENDERED = "rendered"
 _LABEL_ARTIFACT_VERSION = "artifact_version"
 _LABEL_MANIFEST_PATH = "manifest_path"
 
-# Always-printed scalar audit fields, mapped to their accessors.
 _AUDIT_FIELDS: tuple[tuple[str, Callable[[RegenerationAuditReport], object]], ...] = (
     (_LABEL_PROJECT_ID, lambda a: a.project_id),
     (_LABEL_CURRENT_POLICY, lambda a: a.current_policy_version),

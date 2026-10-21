@@ -1,4 +1,4 @@
-"""Version snapshots of a blog post (AE-0424 F-13; AE-0438 F-05).
+"""Version snapshots of a blog post.
 
 Every content write (PUT, restore, image/rewrite/translation writes) appends one
 entry to ``blog_posts.version_history`` in the same transaction as the write.
@@ -9,7 +9,7 @@ original draft) is always kept plus the most recent ones, up to
 ``BLOG_VERSION_HISTORY_MAX``. A write whose pre-state equals the newest entry
 adds nothing.
 
-AE-0438 (F-05): an **empty** document (the generation bootstrap or a cleared
+An **empty** document (the generation bootstrap or a cleared
 document) is never snapshotted — the generation's first write would otherwise
 store the empty bootstrap as version 1, kept forever as "the original draft",
 and restoring it 422s. Skipping it makes the first appended entry the first
@@ -63,7 +63,7 @@ def is_empty_document(content: object) -> bool:
     """True when a snapshot holds no content: the bootstrap or a cleared doc.
 
     Restoring such a snapshot would 422 (zero sections), so it is never worth
-    keeping in the history (AE-0438, F-05).
+    keeping in the history.
     """
     if not isinstance(content, dict):
         return True
@@ -115,7 +115,7 @@ def append_version(
 ) -> list[dict[str, object]]:
     """A new bounded history list: the old entries plus one numbered snapshot.
 
-    An empty snapshot (AE-0438, F-05) adds nothing: the generation's first
+    An empty snapshot adds nothing: the generation's first
     write must not capture the empty bootstrap, so the first entry becomes the
     first stored AI draft.
     """
@@ -143,7 +143,7 @@ def append_version(
 def drop_empty_entries(history: object) -> list[dict[str, object]] | None:
     """The history without empty snapshots, renumbered 1..N; ``None`` when clean.
 
-    The one-shot repair for history written before AE-0438: leading bootstrap
+    The one-shot repair for older history: leading bootstrap
     snapshots are dropped so the first stored AI draft becomes version 1.
     """
     raw: list[object] = list(history) if isinstance(history, list) else []

@@ -13,6 +13,11 @@ interface DesignTokenImages {
   rendered_slides_en?: string[];
 }
 
+/**
+ * The publish viewer wants the rendered slides (with text overlay), not the raw
+ * hero images; it falls back to legacy `slides` for projects generated before
+ * the rendered_slides_* fields existed.
+ */
 function designTokenSlidePaths(
   project: CarouselProjectResponse,
   language: ViewerLanguage,
@@ -21,9 +26,6 @@ function designTokenSlidePaths(
     | { images?: DesignTokenImages }
     | null
     | undefined;
-  // The publish viewer wants the RENDERED slides (with text overlay),
-  // not the raw hero images. Fall back to legacy `slides` for projects
-  // generated before the rendered_slides_* fields existed.
   const images: DesignTokenImages = tokens?.images ?? {};
   const ptSlides = images.rendered_slides_pt ?? images.slides ?? [];
   const enSlides = images.rendered_slides_en ?? ptSlides;
@@ -31,7 +33,7 @@ function designTokenSlidePaths(
 }
 
 /**
- * AE-0416 (B25): one `slide_N.jpg` per real slide of the project, so an
+ * One `slide_N.jpg` per real slide of the project, so an
  * 8-slide deck shows "1 / 8" even when the stored design tokens still list an
  * older render. Without a slide list it falls back to the design tokens.
  */
@@ -45,7 +47,7 @@ export function viewerSlidePaths(source: ViewerSlideSource): string[] {
   return designTokenSlidePaths(source.project, source.language);
 }
 
-/** Title used in the slide alt text, in the viewer's language (AE-0416). */
+/** Title used in the slide alt text, in the viewer's language. */
 export function viewerSlideTitle(
   project: CarouselProjectResponse,
   language: ViewerLanguage,

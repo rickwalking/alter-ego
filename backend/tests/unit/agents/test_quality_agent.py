@@ -532,7 +532,6 @@ class TestQualityAgent:
         with pytest.raises(Exception, match="LLM error"):
             await agent.evaluate("content")
 
-    # Mutation-killing tests for __init__
     def test_init_stores_rubric(
         self, rubric: QualityRubric, mock_llm: AsyncMock
     ) -> None:
@@ -558,7 +557,6 @@ class TestQualityAgent:
         """Given no embedding service, when creating agent, then service is None."""
         assert agent._embedding_service is None
 
-    # Mutation-killing tests for evaluate
     async def test_evaluate_sanitizes_content_in_prompt(
         self, agent: QualityAgent, mock_llm: AsyncMock
     ) -> None:
@@ -604,7 +602,6 @@ class TestQualityAgent:
         assert "sanitized_source1" in prompt
         assert "sanitized_source2" in prompt
 
-    # Mutation-killing tests for _build_evaluation_prompt
     def test_build_evaluation_prompt_includes_exact_applicable_types(
         self, mock_llm: AsyncMock
     ) -> None:
@@ -621,7 +618,6 @@ class TestQualityAgent:
 
         assert "APPLICABLE TO: carousel, blog_post" in prompt
 
-    # Mutation-killing tests for _parse_evaluation_response
     def test_parse_evaluation_response_invalid_json_exact_defaults(
         self, agent: QualityAgent
     ) -> None:
@@ -751,7 +747,6 @@ class TestQualityAgent:
         tone = result["criteria_scores"]["tone"]
         assert tone["feedback"] == ""
 
-    # Mutation-killing tests for evaluate_criterion
     async def test_evaluate_criterion_hybrid_returns_75(
         self, agent: QualityAgent
     ) -> None:
@@ -771,7 +766,6 @@ class TestQualityAgent:
 
         assert score == 75.0
 
-    # Mutation-killing tests for _ai_evaluate
     async def test_ai_evaluate_prompt_includes_sources(
         self, agent: QualityAgent, mock_llm: AsyncMock
     ) -> None:
@@ -796,7 +790,6 @@ class TestQualityAgent:
         assert "source1" in prompt
         assert "source2" in prompt
 
-    # Mutation-killing tests for _extract_score
     def test_extract_score_empty_string(self, agent: QualityAgent) -> None:
         """Given empty response, when extracting score, then 50.0 is returned."""
         score = agent._extract_score("")
@@ -816,7 +809,6 @@ class TestQualityAgent:
         assert isinstance(score, float)
         assert score == 85.0
 
-    # Mutation-killing tests for generate_improvement_suggestions
     async def test_generate_suggestions_exactly_at_threshold_returns_empty(
         self, agent: QualityAgent, mock_llm: AsyncMock
     ) -> None:
@@ -862,33 +854,38 @@ class TestQualityAgent:
         prompt = mock_llm.ainvoke.call_args[0][0][0].content
         assert "sanitized_content" in prompt
 
-    # Mutation-killing tests for calculate_originality
     async def test_calculate_originality_exact_source_bonus(
         self, agent: QualityAgent
     ) -> None:
-        """Given multiple sources, when calculating originality, then exact source bonus is applied."""
+        """Given multiple sources, when calculating originality, then exact source bonus is applied.
+
+        Expected: base 50.0 + source bonus min(3 * 10, 30) = 30 + content bonus min(1 /
+        1000, 20) = 0.001.
+        """
         score = await agent.calculate_originality("a", ["s1", "s2", "s3"])
 
-        # base_score = 50.0, source_bonus = min(3 * 10, 30) = 30, content_bonus = min(1 / 1000, 20) = 0.001
         assert score == 80.001
 
     async def test_calculate_originality_exact_content_bonus(
         self, agent: QualityAgent
     ) -> None:
-        """Given long content, when calculating originality, then exact content bonus is applied."""
+        """Given long content, when calculating originality, then exact content bonus is applied.
+
+        Expected: base 50.0 + source bonus 0 + content bonus min(1000 / 1000, 20) = 1.0.
+        """
         score = await agent.calculate_originality("x" * 1000, [])
 
-        # base_score = 50.0, source_bonus = 0, content_bonus = min(1000 / 1000, 20) = 1.0
         assert score == 51.0
 
     async def test_calculate_originality_capped_at_100(
         self, agent: QualityAgent
     ) -> None:
-        """Given many sources and long content, when calculating originality, then score is capped at 100."""
-        # MAX_LLM_INPUT_LENGTH = 10000, so "x" * 20000 is truncated to 10000 chars
-        # content_bonus = min(10000 / 1000, 20) = 10
-        # source_bonus = min(10 * 10, 30) = 30
-        # base_score = 50, total = 90
+        """Given many sources and long content, when calculating originality, then score is capped at 100.
+
+        The input is truncated to MAX_LLM_INPUT_LENGTH (10000 chars), so the content
+        bonus is min(10000 / 1000, 20) = 10, the source bonus min(10 * 10, 30) = 30, and
+        the total 50 + 10 + 30 = 90.
+        """
         score = await agent.calculate_originality("x" * 20000, ["s"] * 10)
 
         assert score == 90.0
@@ -901,7 +898,6 @@ class TestQualityAgent:
 
         assert score == 50.0
 
-    # Mutation-killing tests for _cosine_similarity
     def test_cosine_similarity_identical_vectors_returns_one(
         self, agent: QualityAgent
     ) -> None:
@@ -930,7 +926,6 @@ class TestQualityAgent:
 
         assert isinstance(score, float)
 
-    # Mutation-killing tests for evaluate_eeat
     async def test_evaluate_eeat_invalid_json_all_defaults_exactly_50(
         self, agent: QualityAgent, mock_llm: AsyncMock
     ) -> None:

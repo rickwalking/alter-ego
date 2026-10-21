@@ -20,7 +20,7 @@ class HybridRetrieverWithRRF:
     where k is a constant (typically 60)
     """
 
-    RRF_K = 60  # RRF constant
+    RRF_K = 60
     _DOCUMENT_ID_KEY = "document_id"
 
     def __init__(
@@ -39,7 +39,6 @@ class HybridRetrieverWithRRF:
         dense_embeddings = await self._embedding_service.embed_dense([request.query])
         sparse_embeddings = await self._embedding_service.embed_sparse([request.query])
 
-        # Determine which namespace(s) to search
         namespaces = self._resolve_namespaces(request.namespace_prefix)
 
         all_results: list[SearchResult] = []
@@ -70,16 +69,13 @@ class HybridRetrieverWithRRF:
         of these namespaces — it uses its own data sources.
         """
         if namespace_prefix is None:
-            # Default: search all knowledge-base scopes
             return DEFAULT_KB_NAMESPACES
         if namespace_prefix == NAMESPACE_PERSONAL:
-            # Alter-Ego agent: personal CV/bio + public blog posts
             return DEFAULT_KB_NAMESPACES
         if namespace_prefix == NAMESPACE_CAROUSEL:
             return [NAMESPACE_CAROUSEL]
         if namespace_prefix == NAMESPACE_INTERNAL:
             return [NAMESPACE_INTERNAL]
-        # Exact namespace match for any other value
         return [namespace_prefix]
 
     def _apply_filters(
@@ -124,7 +120,6 @@ class HybridRetrieverWithRRF:
         if not results:
             return []
 
-        # Deduplicate by chunk_id to remove cross-namespace duplicates
         seen_chunks: set[str] = set()
         unique_results: list[SearchResult] = []
         for result in results:
@@ -136,16 +131,13 @@ class HybridRetrieverWithRRF:
         if not unique_results:
             return []
 
-        # Calculate RRF score for each individual chunk
         chunk_scores: list[tuple[SearchResult, float]] = []
         for rank, result in enumerate(unique_results, start=1):
             rrf_score = 1.0 / (self.RRF_K + rank)
             chunk_scores.append((result, rrf_score))
 
-        # Sort by RRF score (descending)
         chunk_scores.sort(key=lambda x: x[1], reverse=True)
 
-        # Assign final scores and ranks
         final_results = []
         for i, (result, rrf_score) in enumerate(chunk_scores[:top_k], start=1):
             result.score = rrf_score

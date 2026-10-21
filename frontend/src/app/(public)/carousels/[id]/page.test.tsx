@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CarouselPublicResponse } from "@/schemas/carousel";
 
 vi.mock("@/i18n/request-locale", () => ({
-  getRequestLocale: vi.fn(async () => "pt"),
+  getRequestLocale: vi.fn(() => Promise.resolve("pt")),
 }));
 
 vi.mock("next-intl/server", () => ({
-  getTranslations: vi.fn(async () => (key: string) => `carousels.${key}`),
+  getTranslations: vi.fn(() =>
+    Promise.resolve((key: string) => `carousels.${key}`),
+  ),
 }));
 
 vi.mock("@/lib/server-fetch", () => ({
@@ -58,8 +60,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-// Feature: Public carousel viewer (AE-0444)
-// frontend/tests/features/public_carousel_viewer_ae0444.feature
 describe("Public carousel viewer page metadata (AE-0444)", () => {
   it("uses the English title, subtitle and cover", async () => {
     mockFetch.mockResolvedValueOnce(carousel());

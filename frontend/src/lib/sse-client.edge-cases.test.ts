@@ -4,9 +4,12 @@ import { streamSseEvents } from "./sse-client";
 import { createSseResponse } from "./sse-client.test-utils";
 import type { SseEvent } from "./sse-client";
 
-// Feature: SSE Client — Edge Cases & Mutation Coverage
-// These tests cover less common SSE protocol scenarios that would
-// otherwise survive as mutants in mutation testing.
+/** Resolves once the signal aborts. */
+function abortedSignal(signal: AbortSignal): Promise<void> {
+  return new Promise<void>((resolve) => {
+    signal.addEventListener("abort", () => resolve(), { once: true });
+  });
+}
 
 describe("streamSseEvents edge cases", () => {
   let onEvent: Mock<(event: SseEvent) => void>;
@@ -14,9 +17,9 @@ describe("streamSseEvents edge cases", () => {
   let onComplete: Mock<() => void>;
 
   beforeEach(() => {
-    onEvent = vi.fn() as Mock<(event: SseEvent) => void>;
-    onError = vi.fn() as Mock<(error: Error) => void>;
-    onComplete = vi.fn() as Mock<() => void>;
+    onEvent = vi.fn();
+    onError = vi.fn();
+    onComplete = vi.fn();
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -24,10 +27,12 @@ describe("streamSseEvents edge cases", () => {
     vi.unstubAllGlobals();
   });
 
+  /**
+   * Given an SSE event without an id prefix
+   * When streamSseEvents is called
+   * Then the event is dispatched with undefined id
+   */
   // Scenario: Event without id: field kills the null-id mutant
-  //   Given an SSE event without an id prefix
-  //   When streamSseEvents is called
-  //   Then the event is dispatched with undefined id
   it("dispatches event even without id field", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -52,10 +57,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE event with invalid JSON data
+   * When streamSseEvents is called
+   * Then the data contains the raw string
+   */
   // Scenario: Non-JSON data falls back to raw field
-  //   Given an SSE event with invalid JSON data
-  //   When streamSseEvents is called
-  //   Then the data contains the raw string
   it("falls back to raw data when JSON parsing fails", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -78,10 +85,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE response with \r\n line endings
+   * When streamSseEvents is called
+   * Then events are still correctly parsed
+   */
   // Scenario: CRLF \r\n line endings are handled
-  //   Given an SSE response with \r\n line endings
-  //   When streamSseEvents is called
-  //   Then events are still correctly parsed
   it("handles CRLF line endings", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -107,10 +116,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE response with Unicode text content
+   * When streamSseEvents is called
+   * Then the Unicode text is correctly decoded
+   */
   // Scenario: Unicode/multi-byte content is handled
-  //   Given an SSE response with Unicode text content
-  //   When streamSseEvents is called
-  //   Then the Unicode text is correctly decoded
   it("handles unicode content correctly", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -135,11 +146,13 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given a valid SSE response with an empty body
+   * When streamSseEvents is called
+   * Then no events are dispatched
+   * And onComplete is called
+   */
   // Scenario: Empty response body produces no events
-  //   Given a valid SSE response with an empty body
-  //   When streamSseEvents is called
-  //   Then no events are dispatched
-  //   And onComplete is called
   it("handles empty response body gracefully", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(createSseResponse([""]));
@@ -157,10 +170,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an active SSE stream that receives an abort mid-way
+   * When the abort signal is triggered
+   * Then no error callback is called
+   */
   // Scenario: Mid-stream abort after receiving some events
-  //   Given an active SSE stream that receives an abort mid-way
-  //   When the abort signal is triggered
-  //   Then no error callback is called
   it("silently handles mid-stream abort signal", async () => {
     const abortController = new AbortController();
     vi.mocked(fetch).mockImplementationOnce(() => {
@@ -176,7 +191,6 @@ describe("streamSseEvents edge cases", () => {
         body: {
           getReader: () => {
             let index = 0;
-            let aborted = false;
             const reader = {
               read: async () => {
                 if (index < chunks.length) {
@@ -184,23 +198,11 @@ describe("streamSseEvents edge cases", () => {
                   index++;
                   return { done: false, value };
                 }
-                // Hang until aborted
-                await new Promise<void>((resolve) => {
-                  const onAbort = () => {
-                    aborted = true;
-                    resolve();
-                  };
-                  abortController.signal.addEventListener("abort", onAbort, {
-                    once: true,
-                  });
-                });
-                if (aborted) {
-                  throw new DOMException(
-                    "The operation was aborted",
-                    "AbortError",
-                  );
-                }
-                return { done: true, value: undefined };
+                await abortedSignal(abortController.signal);
+                throw new DOMException(
+                  "The operation was aborted",
+                  "AbortError",
+                );
               },
             };
             return reader;
@@ -218,7 +220,6 @@ describe("streamSseEvents edge cases", () => {
       onComplete,
     });
 
-    // Let the first event be read, then abort
     await new Promise((resolve) => setTimeout(resolve, 10));
     abortController.abort();
 

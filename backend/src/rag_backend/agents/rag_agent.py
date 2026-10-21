@@ -93,6 +93,13 @@ class RAGAgent:
         knowledge_search: KnowledgeSearchPort | None = None,
         research_tool: ResearchTool | None = None,
     ) -> None:
+        """Build the RAG chat agent on the shared deep-agent harness.
+
+        Chat agents persist through message_repository only, never a LangGraph
+        checkpointer: a second durable write path would dual-write. The harness builder
+        routes this chat config through that guard, and the summarization middleware
+        caps context-window growth without touching message_repository persistence.
+        """
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
@@ -111,11 +118,6 @@ class RAGAgent:
 
         self._llm = build_chat_model(settings)
 
-        # ADR-0013 / AE-0247: chat agents persist via message_repository only —
-        # never a LangGraph checkpointer (a second durable write path = the
-        # AE-0163 dual-write trap). The harness builder routes this chat config
-        # through the guard. SummarizationMiddleware caps context-window growth
-        # without touching message_repository persistence (AE-0248).
         self._agent = build_deep_agent(
             DeepAgentConfig(
                 model=self._llm,
@@ -129,13 +131,15 @@ class RAGAgent:
         )
 
     def _build_subagents(self) -> list[dict[str, object]]:
-        """Return DeepAgents-compatible subagent specs."""
+        """Return DeepAgents-compatible subagent specs.
+
+        The researcher subagent is registered so chat can search the web and navigate
+        pasted URLs, behind the same gate as the editorial subagent (carousel tool
+        access required).
+        """
         subagents: list[dict[str, object]] = []
         if self._editorial_subagent is not None:
             subagents.append(self._editorial_subagent)
-        # AE-0317: register the AE-0249 researcher (previously built but never
-        # wired anywhere) so chat can search the web / navigate pasted URLs.
-        # Same gate as the editorial subagent: carousel tool access required.
         if self._research_tool is not None and self._carousel_tool_access is not None:
             subagents.append(
                 build_researcher_subagent(

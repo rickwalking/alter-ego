@@ -4,7 +4,7 @@ Creates the carousel, starts the workflow, reads the gate, and resumes
 approve or revise. Provider 429/503 become a status. A lock conflict
 does not call resume a second time.
 
-AE-0363: approve, revise, and re-drive run through the editorial
+Approve, revise, and re-drive run through the editorial
 ``run_automation_phase`` facade operation, the same run-owned path as the
 HTTP resume. The tick commits the lock bump and the ``in_progress`` flip
 before the phase runs, so no transaction is held across LLM work, and the
@@ -120,15 +120,15 @@ class InProcessEditorialDriver:
     async def create_project(self, spec: ProjectSpec) -> str:
         """Insert a private pt-BR carousel owned by the autopilot user.
 
-        AE-0361: OpenAI images, the scout's preset, and its
+        OpenAI images, the scout's preset, and its
         image guidance (or the template) as the project's visual direction.
-        AE-0362: the pipeline's default 7-slide config, the count the editorial
+        The pipeline's default 7-slide config, the count the editorial
         pipeline actually builds.
-        AE-0377: a POV spec creates a "Ponto de Vista" carousel from the
+        A POV spec creates a "Ponto de Vista" carousel from the
         owner-confirmed thesis (pov_hook_v1, follow CTA). PR #106 review: with
         the scout's format and slide count, the slide-1 photo (staged by the
         editorial ACL) and the autopilot persona.
-        AE-0395: the palette rotates per São Paulo day (``rotated_theme``).
+        The palette rotates per São Paulo day (``rotated_theme``).
         """
         project = CarouselProject(
             topic=spec.topic,
@@ -172,7 +172,7 @@ class InProcessEditorialDriver:
     async def read_gate(self, project_id: str) -> GateSnapshot:
         """Load workflow state and measure image files. No resume.
 
-        AE-0363: the status comes from the checkpoint reconciled with the row,
+        The status comes from the checkpoint reconciled with the row,
         so a run in flight waits and a parked workflow is flagged.
         """
         engine = self._config.engine_factory()
@@ -218,7 +218,7 @@ class InProcessEditorialDriver:
         )
 
     async def redrive(self, command: RedriveCommand) -> ResumeResult:
-        """Re-run a parked pending node once (AE-0363). No review is sent."""
+        """Re-run a parked pending node once. No review is sent."""
         return await self._run(
             redrive_automation_phase,
             AutomationRun(
@@ -311,11 +311,11 @@ def _state_of(view: WorkflowStateView | None) -> dict[str, object]:
 
 
 def _structured_feedback(command: ResumeCommand) -> dict[str, object] | None:
+    """Gate feedback is tagged so it is applied once and never re-fed."""
     structured: dict[str, object] = {}
     if command.target_phase:
         structured[STRUCTURED_FEEDBACK_TARGET_PHASE_KEY] = command.target_phase
     if command.feedback.strip():
-        # AE-0405: tag gate feedback so it is applied once, never re-fed.
         structured[STRUCTURED_FEEDBACK_SOURCE_KEY] = FEEDBACK_SOURCE_AUTOPILOT
     return structured or None
 
@@ -337,7 +337,7 @@ def _measure(path: str) -> ImageFact:
 
 
 def _trace_scope(project_id: str) -> WorkflowTraceScope:
-    """AE-0390: the phase seams name the trace; the run adds the owner."""
+    """The phase seams name the trace; the run adds the owner."""
     return WorkflowTraceScope(
         project_id=project_id,
         agent_name=AGENT_NAME_AUTOPILOT,

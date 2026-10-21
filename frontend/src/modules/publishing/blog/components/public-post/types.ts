@@ -1,8 +1,8 @@
 /**
  * Public blog-post component prop types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
- * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
+ * Per the component-type-location convention
+ * (`frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
 
@@ -48,7 +48,7 @@ export interface BlogPostHeroProps {
 export interface BlogLanguageSwitchProps {
   activeLanguage: string;
   label: string;
-  options: ReadonlyArray<{ language: string; label: string; href: string }>;
+  options: readonly { language: string; label: string; href: string }[];
 }
 
 export interface PublicCoverImageProps {

@@ -43,7 +43,7 @@ function CalendarEmptyMonth(): React.ReactElement {
 function CalendarDayEvent({
   event,
   dateLabel,
-}: CalendarDayEventProps): React.ReactElement {
+}: Readonly<CalendarDayEventProps>): React.ReactElement {
   const contentMeta = CALENDAR_CONTENT_META[event.contentType];
   return (
     <div>
@@ -106,7 +106,9 @@ function CalendarDayEvent({
   );
 }
 
-function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
+function CalendarDayCell({
+  cell,
+}: Readonly<CalendarDayCellProps>): React.ReactElement {
   const locale = useLocale();
   const dateLabel = formatCalendarDayLabel(cell.iso, locale);
   return (
@@ -145,15 +147,19 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
   );
 }
 
-export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
+/**
+ * Keeps the month view and scroll-snaps horizontally on small screens so cells
+ * stay about 91px wide or more (min-w 640 / 7) instead of crushing.
+ */
+export function CalendarGrid({
+  days,
+}: Readonly<CalendarGridProps>): React.ReactElement {
   const locale = useLocale();
   const weekdayHeaders = calendarWeekdayHeaders(locale);
   const hasCurrentDays = days.filter((day) => day.cur).length > 0;
   return (
     <div className="overflow-x-auto [overscroll-behavior-x:contain]">
       <div
-        // Keep the month view; scroll-snap horizontally on small screens so
-        // cells stay ≥~91px wide (min-w 640 / 7) instead of crushing.
         className="grid min-w-[640px] snap-x snap-mandatory grid-cols-7"
         style={{
           gap: 1,

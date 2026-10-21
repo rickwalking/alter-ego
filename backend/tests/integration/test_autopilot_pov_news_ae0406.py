@@ -1,4 +1,4 @@
-"""POST /x-signals then /topics with ``pov_news`` quotes (AE-0406, spec §2-§6).
+"""POST /x-signals then /topics with ``pov_news`` quotes (spec §2-§6).
 
 Gherkin: tests/features/autopilot_pov_news_ae0406.feature
 """
@@ -143,6 +143,7 @@ async def test_unknown_quote_key_is_a_422(configured_key: None, tmp_path: Path) 
 async def test_an_unserved_quote_source_is_rejected_first(
     configured_key: None, tmp_path: Path
 ) -> None:
+    """``other`` was never served, so the topic's sources fail first."""
     del configured_key
     async for client, _engine, _notices in _client(tmp_path / "newsnox.db"):
         url = await _send_post(client)
@@ -153,14 +154,11 @@ async def test_an_unserved_quote_source_is_rejected_first(
             _PATH_TOPICS, headers=_headers(), json={"topics": [topic]}
         )
     rejected = response.json()["rejected"]
-    # ``other`` was never served, so the topic's sources fail first.
     assert [(r["reason"], r["field"]) for r in rejected] == [
         ("source_not_in_signals", "sources[1]")
     ]
 
 
-# PR #124 review: a missing quote field rejects one topic; a handle-case
-# difference between the stored post and the quote URL is still the same post.
 @pytest.mark.asyncio
 async def test_missing_field_and_handle_case(
     configured_key: None, tmp_path: Path

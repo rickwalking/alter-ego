@@ -1,4 +1,4 @@
-"""An escalation close never drops a carousel the owner fixed (AE-0348 QA r3 Q3).
+"""An escalation close never drops a carousel the owner fixed (QA r3 Q3).
 
 Gherkin: tests/features/autopilot_runner.feature
   Scenario: A fixed escalation is woken, never closed

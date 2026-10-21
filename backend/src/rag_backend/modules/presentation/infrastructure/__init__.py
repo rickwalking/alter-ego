@@ -1,7 +1,7 @@
 """Infrastructure layer for the presentation bounded context.
 
 Private to the module. Concrete adapters are exposed upward ONLY through the
-module's public facade. As of AE-0118 this layer holds the presentation
+module's public facade. This layer holds the presentation
 persistence seam:
 
 * :class:`PresentationWriteOwner` — the single writer of the presentation
@@ -16,7 +16,7 @@ The generic carousel persistence adapter is NOT relocated; it remains at its
 legacy location and is supplied to the module's ``bootstrap_module`` by the
 inbound edge as the re-exported ``CarouselRepository`` port.
 
-As of AE-0119 this layer also holds the image-provider adapters
+This layer also holds the image-provider adapters
 (:class:`OpenAIImageService` / :class:`GeminiImageService`, implementing the
 ``ImageGenerationService`` port, and :class:`ImageProviderRegistry`, implementing
 the ``ImageProviderPort`` registry contract). These are re-exported from their

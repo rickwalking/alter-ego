@@ -4,7 +4,7 @@ import type {
   ViolationSeverity,
 } from "@/modules/editorial/workspace/types-ai";
 
-/** AE-0312: warning-tier casing violations render distinctly from blockers. */
+/** Warning-tier casing violations render distinctly from blockers. */
 export const VIOLATION_SEVERITY_WARNING: ViolationSeverity = "warning";
 export const VIOLATION_SEVERITY_BLOCKER: ViolationSeverity = "blocker";
 
@@ -15,7 +15,7 @@ export function isWarningViolation(
 }
 
 /**
- * AE-0312: non-blocking warnings get a muted/amber treatment; blockers keep the
+ * Non-blocking warnings get a muted/amber treatment; blockers keep the
  * destructive treatment. A violation with no severity defaults to blocker.
  */
 export function violationToneClasses(
@@ -172,16 +172,19 @@ export function resolvePresentationPreviewText(
   return parts.join("\n");
 }
 
+/**
+ * Raw structured extras of a slide presentation. Item lists (even empty ones)
+ * are edited as lists, so they are never listed here as a raw
+ * "Campo estruturado: actions []" extra.
+ */
 export function listStructuredExtras(
   presentation: Record<string, unknown>,
-): Array<{ key: string; value: unknown }> {
+): { key: string; value: unknown }[] {
   return PRESENTATION_STRUCTURED_EXTRA_KEYS.flatMap((key) => {
     const value = presentation[key];
     if (value === undefined || value === null) {
       return [];
     }
-    // AE-0437: an item list (even an empty one) is edited as a list, never
-    // shown as a raw "Campo estruturado: actions []" extra.
     if (
       PRESENTATION_STRUCTURED_ITEM_LIST_KEYS.includes(
         key as (typeof PRESENTATION_STRUCTURED_ITEM_LIST_KEYS)[number],
@@ -236,7 +239,7 @@ export function listPresentationViolations(
 }
 
 /**
- * AE-0309: true when the content interrupt/gate payload carries a blocking
+ * True when the content interrupt/gate payload carries a blocking
  * fail-closed report (validate -> repair -> retry all failed for a slide).
  */
 export function hasBlockingContentGateValidation(
@@ -261,7 +264,7 @@ function violationKey(violation: SlideValidationViolation): string {
 }
 
 /**
- * AE-0309: presentation violations merged with the ones arriving in the
+ * Presentation violations merged with the ones arriving in the
  * content interrupt/gate payload, de-duplicated for a single review list.
  */
 export function listContentReviewViolations(

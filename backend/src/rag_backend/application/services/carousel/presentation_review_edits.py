@@ -52,7 +52,11 @@ def merge_localized_slide_edits(
     current_slides: list[dict[str, object]],
     edited_slides: list[dict[str, object]],
 ) -> list[dict[str, object]]:
-    """Merge edited PT/EN payloads into current localized slides by slide index."""
+    """Merge edited PT/EN payloads into current localized slides by slide index.
+
+    A reviewer-provided payload supersedes the stored parse failure and the
+    casing-repair markers for that locale.
+    """
     edits_by_index: dict[int, dict[str, object]] = {}
     for edit in edited_slides:
         index = edit.get(SLIDE_INDEX_KEY)
@@ -70,10 +74,7 @@ def merge_localized_slide_edits(
             payload = as_dict(edit.get(locale_key))
             if payload:
                 updated[locale_key] = dict(payload)
-                # AE-0309: a reviewer-provided payload supersedes the stored
-                # parse failure for that locale.
                 drop_parse_failure_marker(updated, _LOCALE_BY_PAYLOAD_KEY[locale_key])
-                # AE-0366: the reviewer's copy also supersedes casing markers.
                 drop_casing_repair_markers(updated, _LOCALE_BY_PAYLOAD_KEY[locale_key])
         merged.append(updated)
     return merged
@@ -100,7 +101,7 @@ def _apply_pt_edits(
 ) -> dict[str, object]:
     """Apply PT locale edits to the updated draft.
 
-    AE-0366: the edited ``presentation_pt`` is the source of truth the slide
+    The edited ``presentation_pt`` is the source of truth the slide
     rows are persisted from. It is always stored on the draft, the draft
     ``title`` follows its heading, and ``draft_text`` mirrors its body (even an
     empty one) so no stale raw copy can resurface at persist time.
@@ -178,14 +179,16 @@ def _validated_edit_updates(
     merged: list[dict[str, object]],
     policy_version: str | None,
 ) -> dict[str, object]:
-    """Re-validate merged slides and build the base review updates."""
+    """Re-validate merged slides and build the base review updates.
+
+    The fail-closed gate report is kept in sync with the edited slides, so a fixed slide
+    clears the content-gate alert.
+    """
     report = validate_localized_slides(merged, policy_version=policy_version)
     report_dict = validation_report_to_dict(report)
     return {
         WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: merged,
         WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: report_dict,
-        # AE-0309: keep the fail-closed gate report in sync with the edited
-        # slides so a fixed slide clears the content-gate alert.
         STATE_FIELD_CONTENT_GATE_VALIDATION: (
             dict(report_dict) if report_dict.get(STATE_FIELD_BLOCKING) is True else {}
         ),
@@ -196,15 +199,17 @@ def apply_localized_slide_edits(
     state: Mapping[str, object],
     edited_slides: list[dict[str, object]],
 ) -> dict[str, object]:
-    """Apply reviewer edits and return re-validated workflow state updates."""
+    """Apply reviewer edits and return re-validated workflow state updates.
+
+    Only the slides the reviewer actually edited are written back to the drafts and
+    translations; untouched slides keep their draft fields.
+    """
     review = resolve_presentation_review_from_state(state)
     current_raw = review.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
     current = [slide for slide in (current_raw or []) if isinstance(slide, dict)]
     policy_version_raw = review.get(WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY)
     policy_version = str(policy_version_raw) if policy_version_raw else None
     merged = merge_localized_slide_edits(current, edited_slides)
-    # AE-0366: only the slides the reviewer actually edited are written back to
-    # the drafts/translations; untouched slides keep their draft fields.
     edited_indices = {
         edit.get(SLIDE_INDEX_KEY)
         for edit in edited_slides

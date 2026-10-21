@@ -7,8 +7,7 @@ import { LanguageTabs } from "./language-tabs";
 import { MigrationBanner } from "./migration-banner";
 import type { BlogSectionEditorProps } from "./types";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (section editing,
-// images, cover, PT/EN buttons, migration banner, localized copy)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 const IDLE = { pending: false, error: null };
 

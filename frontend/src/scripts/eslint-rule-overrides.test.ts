@@ -1,5 +1,5 @@
 /**
- * AE-0179 rule-fires regression test (dogfoods AE-0180) for the ESLint
+ * Rule-fires regression test for the ESLint
  * flat-config same-key override guard (scripts/check-eslint-rule-overrides.mjs).
  *
  * Feature: detect a rule key declared across overlapping flat-config objects
@@ -29,7 +29,7 @@ function run(env: Record<string, string> = {}): {
   output: string;
 } {
   try {
-    const output = execFileSync("node", [SCRIPT], {
+    const output = execFileSync(process.execPath, [SCRIPT], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...env },
@@ -45,8 +45,7 @@ function run(env: Record<string, string> = {}): {
   }
 }
 
-// A config with a global `no-restricted-syntax` ERROR (the H1 flagship rule)
-// silently re-declared as a scoped WARN over src/modules — the exact footgun.
+/** A config with a global `no-restricted-syntax` ERROR (the H1 flagship rule) silently re-declared as a scoped WARN over src/modules: the exact footgun. */
 const SEEDED_CONFIG = `
 export default [
   {

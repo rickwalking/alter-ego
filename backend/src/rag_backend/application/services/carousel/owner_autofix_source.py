@@ -1,4 +1,4 @@
-"""Load what the owner autofix reads for one carousel (AE-0367).
+"""Load what the owner autofix reads for one carousel.
 
 The persisted slide rows are the source of truth (what the renderer reads):
 they become canonical localized-slide records. The workflow checkpoint gives
@@ -212,7 +212,7 @@ def _checkpoint_version(state: Mapping[str, object], fallback: str) -> str:
 
 
 async def load_gate_source(request: AutofixSourceRequest) -> AutofixSource | None:
-    """The checkpoint copy at a review gate (AE-0392); None when there is none.
+    """The checkpoint copy at a review gate; None when there is none.
 
     Before finalize the rows are not the copy the engine validates: the
     checkpoint's ``localized_slides`` are. The plan context is built the same
