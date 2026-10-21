@@ -148,7 +148,7 @@ gate_backend_healthcheck_loopback() { cd "$REPO_ROOT" && python3 scripts/ci/chec
 gate_backend_bandit()      { cd "$REPO_ROOT/backend" && { uv run bandit -r src/ || echo "ADVISORY: bandit findings above (non-blocking, mirrors CI)."; }; }
 gate_backend_pip_audit() {
   cd "$REPO_ROOT/backend"
-  uv run pip-audit --desc --ignore-vuln PYSEC-2022-42969 --ignore-vuln PYSEC-2026-196
+  uv run pip-audit --desc
 }
 
 gate_backend_integrity()  { bash "$SCRIPT_DIR/check-integrity.sh" backend; }
