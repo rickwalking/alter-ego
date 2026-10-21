@@ -86,7 +86,7 @@ async function throwIfErrorResponse(response: Response): Promise<void> {
     redirectToLoginAfterUnauthorized();
     throw new ApiError(
       HTTP_STATUS.UNAUTHORIZED,
-      errorData?.message || "Unauthorized",
+      errorData?.message ?? "Unauthorized",
       errorData?.code,
     );
   }
@@ -98,7 +98,7 @@ async function throwIfErrorResponse(response: Response): Promise<void> {
     }
     throw new ApiError(
       HTTP_STATUS.FORBIDDEN,
-      errorData?.message || "Forbidden",
+      errorData?.message ?? "Forbidden",
       errorData?.code,
     );
   }
@@ -107,7 +107,7 @@ async function throwIfErrorResponse(response: Response): Promise<void> {
     const errorData = await parseErrorBody(response);
     const error = new ApiError(
       response.status,
-      errorData?.message || `HTTP error! status: ${response.status}`,
+      errorData?.message ?? `HTTP error! status: ${response.status}`,
       errorData?.code,
     );
     error.detail = errorData?.detail;

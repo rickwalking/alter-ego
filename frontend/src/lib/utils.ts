@@ -67,11 +67,28 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 /**
+ * First candidate with visible text, trimmed, or "" when none.
+ * Use instead of chained `||` when an empty/blank string must not be displayed.
+ */
+export function firstNonBlank(
+  candidates: ReadonlyArray<string | null | undefined>,
+): string {
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim() ?? "";
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return "";
+}
+
+/**
  * Generate a unique ID
  */
 export function generateId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
+  const webCrypto = globalThis.crypto as Crypto | undefined;
+  if (webCrypto?.randomUUID) {
+    return webCrypto.randomUUID();
   }
   // Fallback for environments without crypto.randomUUID
   return `${Date.now()}-${Math.random()

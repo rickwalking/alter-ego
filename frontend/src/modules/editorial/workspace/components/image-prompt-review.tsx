@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
+import { firstNonBlank } from "@/lib/utils";
 import type { ImagePromptReviewProps } from "./types";
 
 export function ImagePromptReview({
@@ -29,8 +30,10 @@ export function ImagePromptReview({
       <div className="space-y-3">
         {prompts.map((prompt) => {
           const inputId = `image-prompt-${prompt.slide_index}`;
-          const promptText =
-            prompt.rendered_image_prompt?.trim() || prompt.image_prompt;
+          const promptText = firstNonBlank([
+            prompt.rendered_image_prompt,
+            prompt.image_prompt,
+          ]);
           const metadataBadges = [
             prompt.image_model ? `Model: ${prompt.image_model}` : null,
             prompt.image_style ? `Style: ${prompt.image_style}` : null,

@@ -20,6 +20,7 @@ import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
 import type { PublicBlogPostSummary } from "@/schemas/public-blog-post";
+import { firstNonBlank } from "@/lib/utils";
 
 const SUBTITLE_MAX_WORDS = 15;
 const TRUNCATION_SUFFIX = "...";
@@ -66,10 +67,10 @@ function projectToCard(
   locale: SupportedLocale,
   fallbackTitle?: string,
 ): NeonBlogPostCardProps {
-  const title = projectTitle(project, locale) || fallbackTitle || "";
+  const title = projectTitle(project, locale) || (fallbackTitle ?? "");
   const rawSubtitle =
     locale === "en"
-      ? project.subtitle_en || project.subtitle
+      ? firstNonBlank([project.subtitle_en, project.subtitle])
       : project.subtitle;
   return {
     id: project.id,

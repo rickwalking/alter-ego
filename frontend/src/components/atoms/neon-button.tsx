@@ -67,7 +67,7 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
     },
     ref,
   ) => {
-    const isDisabled = disabled || loading;
+    const isDisabled = disabled === true || loading === true;
 
     return (
       <button

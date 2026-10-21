@@ -16,7 +16,7 @@ interface HeaderProps {
 
 export function Header({ locale }: HeaderProps) {
   const t = useTranslations("common");
-  const currentLocale = locale || DEFAULT_LOCALE;
+  const currentLocale = locale ?? DEFAULT_LOCALE;
   const { user, isAdmin, isEditor, logout, isLoading } = useAuth();
   const isAuthenticated = user !== null;
 

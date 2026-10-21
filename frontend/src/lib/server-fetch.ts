@@ -26,7 +26,7 @@ export function getBaseUrl(): string {
   if (typeof window === "undefined" && envUrl?.startsWith("/")) {
     return PRODUCTION_BACKEND_URL;
   }
-  return envUrl || DEFAULT_BACKEND_URL;
+  return envUrl !== undefined && envUrl !== "" ? envUrl : DEFAULT_BACKEND_URL;
 }
 
 async function validatedFetch<T>(

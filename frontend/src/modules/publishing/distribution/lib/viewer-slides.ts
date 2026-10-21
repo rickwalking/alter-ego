@@ -3,6 +3,7 @@ import type {
   ViewerLanguage,
   ViewerSlideSource,
 } from "@/modules/publishing/distribution/types";
+import { firstNonBlank } from "@/lib/utils";
 
 const LANGUAGE_EN: ViewerLanguage = "en";
 
@@ -49,6 +50,8 @@ export function viewerSlideTitle(
   project: CarouselProjectResponse,
   language: ViewerLanguage,
 ): string {
-  const ptTitle = project.title || project.topic;
-  return language === LANGUAGE_EN ? project.title_en || ptTitle : ptTitle;
+  const ptTitle = firstNonBlank([project.title, project.topic]);
+  return language === LANGUAGE_EN
+    ? firstNonBlank([project.title_en, ptTitle])
+    : ptTitle;
 }

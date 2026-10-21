@@ -16,6 +16,7 @@ import { PublicCoverImage } from "@/modules/publishing";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import { truncateWords } from "@/app/(public)/(marketing)/marketing-helpers";
+import { firstNonBlank } from "@/lib/utils";
 import type { MarketingPostProps } from "@/app/(public)/(marketing)/types";
 
 const POST_FALLBACK_CATEGORY = "Post";
@@ -34,8 +35,8 @@ function localizedSubtitle(
   locale: string,
 ): string {
   return locale === "en"
-    ? post.subtitle_en || post.subtitle || post.topic
-    : post.subtitle || post.topic;
+    ? firstNonBlank([post.subtitle_en, post.subtitle, post.topic])
+    : firstNonBlank([post.subtitle, post.topic]);
 }
 
 function heroImageUrl(post: MarketingPostProps["post"]): string {
