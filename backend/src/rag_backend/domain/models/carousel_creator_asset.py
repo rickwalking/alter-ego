@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
+
 
 @dataclass
 class CarouselCreatorAsset:
@@ -19,8 +21,8 @@ class CarouselCreatorAsset:
     # AE-0373: photo library role (hook / cta / pov) and an optional pose tag.
     role: str | None = None
     pose_tag: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass(frozen=True)

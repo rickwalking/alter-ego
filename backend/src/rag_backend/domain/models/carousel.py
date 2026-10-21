@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import TypedDict
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
 from rag_backend.domain.constants import IMAGE_MODEL_DEFAULT, IMAGE_STYLE_DEFAULT
 from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.domain.models.slide_cover import SlideCover
@@ -203,26 +204,26 @@ class CarouselProject:
     # ONLY by the write owner (mark/clear); never round-tripped through the ORM
     # ``update_from_entity`` hydrator, so it cannot be clobbered.
     needs_republish_since: datetime | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
     def update_status(
         self, status: CarouselStatus, error_message: str | None = None
     ) -> None:
         self.status = status
         self.error_message = error_message
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def mark_completed(self, output_dir: str) -> None:
         self.status = CarouselStatus.COMPLETED
         self.output_dir = output_dir
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
         self.error_message = None
 
     def mark_failed(self, error_message: str) -> None:
         self.status = CarouselStatus.FAILED
         self.error_message = error_message
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def set_theme_colors(self, primary: str, accent: str, background: str) -> None:
         self.primary_color = primary
@@ -232,12 +233,12 @@ class CarouselProject:
     def set_title(self, title: str, subtitle: str | None = None) -> None:
         self.title = title
         self.subtitle = subtitle
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def set_title_en(self, title: str, subtitle: str | None = None) -> None:
         self.title_en = title
         self.subtitle_en = subtitle
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def get_blog(self, language: str = "pt") -> str | None:
         if self.blog_translations and language in self.blog_translations:
@@ -273,8 +274,8 @@ class CarouselSlide:
     image_prompt: str | None = None
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
     extras: dict[str, object] | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -287,4 +288,4 @@ class ResearchSource:
     extracted_content: str | None = None
     relevance_score: float = 0.0
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)

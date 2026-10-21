@@ -6,6 +6,8 @@ from enum import StrEnum
 from typing import TypedDict
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
+
 
 class EvaluationMethod(StrEnum):
     """Methods for evaluating rubric criteria."""
@@ -47,8 +49,8 @@ class QualityRubric:
     criteria: list[RubricCriterion] = field(default_factory=list)
     applicable_content_types: list[str] = field(default_factory=lambda: ["carousel"])
     is_default: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
     version: int = 1
 
 
@@ -59,7 +61,7 @@ class RubricEvaluationScore:
     rubric_id: UUID
     content_id: UUID
     content_type: str
-    evaluated_at: datetime = field(default_factory=datetime.utcnow)
+    evaluated_at: datetime = field(default_factory=utc_now)
     scores: dict[str, dict[str, float | bool]] = field(default_factory=dict)
     overall_score: float = 0.0
     passed: bool = False

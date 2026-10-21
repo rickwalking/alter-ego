@@ -12,15 +12,11 @@ strategy, ADR-0019 D3).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
 from rag_backend.domain.constants.palette_types import Palette, PaletteMode
-
-
-def _utc_now() -> datetime:
-    """Aware UTC: the ``timestamptz`` columns store the instant (AE-0446)."""
-    return datetime.now(UTC)
 
 
 @dataclass
@@ -35,8 +31,8 @@ class CustomPalette:
     keywords: tuple[str, ...] = ()
     archived: bool = False
     created_by: str | None = None
-    created_at: datetime = field(default_factory=_utc_now)
-    updated_at: datetime = field(default_factory=_utc_now)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
     @property
     def reference(self) -> str:

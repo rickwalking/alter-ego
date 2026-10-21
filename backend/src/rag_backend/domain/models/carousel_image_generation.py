@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
+
 JsonScalar = str | int | float | bool
 
 
@@ -27,5 +29,5 @@ class CarouselImageGeneration:
     provider_image_id: str | None = None
     error_json: dict[str, JsonScalar] | None = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)

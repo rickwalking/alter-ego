@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
+
 
 class ToneAttributes(TypedDict):
     """Tone attributes for persona voice profile."""
@@ -41,15 +43,15 @@ class PersonaProfile:
     expertise_areas: list[str] = field(
         default_factory=lambda: ["cybersecurity", "entrepreneurship", "AI"]
     )
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
     version: int = 1
 
     def add_forbidden_phrase(self, phrase: str) -> None:
         """Add a phrase that should never appear."""
         if phrase not in self.forbidden_phrases:
             self.forbidden_phrases.append(phrase)
-            self.updated_at = datetime.utcnow()
+            self.updated_at = utc_now()
 
     def add_writing_sample(self, sample: str) -> None:
         """Add a writing sample for voice analysis."""
@@ -57,4 +59,4 @@ class PersonaProfile:
         # Keep only the best 50 samples
         if len(self.writing_samples) > 50:
             self.writing_samples = self.writing_samples[-50:]
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
