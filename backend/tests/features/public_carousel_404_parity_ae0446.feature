@@ -20,3 +20,8 @@ Feature: Public carousel 404s do not reveal that a private carousel exists
     When an anonymous visitor requests one of its public slide images
     And an anonymous visitor requests the same slide image for an unknown id
     Then both responses are a 404 with the same body
+
+  Scenario: A private carousel that is not rendered yet answers like an unknown id
+    Given a private carousel without rendered output exists
+    When an anonymous visitor requests one of its public images
+    Then the response is the same 404 as for an unknown id
