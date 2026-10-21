@@ -8,6 +8,7 @@ Area: Frontend
 Owner: Claude (owner request via orchestrator, 2026-10-20)
 Agent Lane: developer → qa → release
 Branch: feat/ae-0443-landing-copy-links-header
+PR: #164
 Kanban Card: TBD
 Created: 2026-10-20
 Updated: 2026-10-20
