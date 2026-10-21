@@ -13,11 +13,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from rag_backend.application.services.blog import blog_generation_runner
-from rag_backend.application.services.carousel import editorial_workflow_service
 from rag_backend.application.services.blog_workflow_observability import (
     BlogPhaseScope,
     blog_phase_trace,
 )
+from rag_backend.application.services.carousel import editorial_workflow_service
 from rag_backend.domain.constants.blog_editor import PHASE_BLOG_SECTION_IMAGE
 from rag_backend.domain.constants.blog_generation import (
     AGENT_BLOG_IMAGES,

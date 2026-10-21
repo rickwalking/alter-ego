@@ -28,7 +28,6 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.domain.models import UserRole
 from rag_backend.infrastructure import langfuse_client
-from tests.langfuse_trace_fakes import TraceCollector
 from tests.integration.carousel_consolidation.helpers import (
     auth_header,
     collect_hub_events_during,
@@ -39,6 +38,7 @@ from tests.integration.carousel_consolidation.helpers import (
     seed_workflow_phase,
     wait_for_workflow_state,
 )
+from tests.langfuse_trace_fakes import TraceCollector
 
 
 class TestAsyncEditorialResume:
