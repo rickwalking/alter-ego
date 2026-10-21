@@ -81,3 +81,15 @@ Feature: Langfuse traces carry input, output and useful names (AE-0442)
     Given a configured Langfuse client
     When a background blog generation run finishes
     Then the client is flushed
+
+  Scenario: A tracing failure never changes the workflow result
+    Given a phase trace whose Langfuse span cannot be opened
+    When the phase body returns 7 slides
+    Then the phase body still returns 7 slides
+    And no tracing exception is raised
+
+  Scenario: A flush failure never changes the workflow result
+    Given a phase trace whose Langfuse flush fails
+    When the phase body returns 7 slides
+    Then the phase body still returns 7 slides
+    And no tracing exception is raised

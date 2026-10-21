@@ -21,6 +21,9 @@ from rag_backend.application.services.carousel.editorial_workflow_service import
     EditorialWorkflowService,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
+from rag_backend.domain.constants.carousel_workflow import (
+    WORKFLOW_METADATA_EDITORIAL_7_PHASE,
+)
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
@@ -89,6 +92,7 @@ async def test_start_uses_the_editorial_service_in_process(
     def _spy(
         metadata: dict[str, str],
         callbacks: list[object] | None = None,
+        **_kwargs: object,
     ) -> Iterator[None]:
         captured.append(build_phase_trace(metadata).metadata)
         yield
@@ -132,6 +136,7 @@ async def test_start_uses_the_editorial_service_in_process(
             LANGFUSE_FIELD_PHASE: GATE_RESEARCH,
             LANGFUSE_FIELD_PROJECT_ID: project_id,
             LANGFUSE_FIELD_USER_ID: _OWNER,
+            "workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE,
         }
     ]
     assert service._orchestrator.synthesize_research.await_count == 1

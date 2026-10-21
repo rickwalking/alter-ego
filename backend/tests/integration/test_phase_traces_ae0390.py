@@ -11,7 +11,7 @@ the phase LLM call is a fake that notes which trace it ran in.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,6 +41,9 @@ from rag_backend.application.services.carousel.phase_artifact_runner import (
 )
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
+)
+from rag_backend.domain.constants.carousel_workflow import (
+    WORKFLOW_METADATA_EDITORIAL_7_PHASE,
 )
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.config import Base
@@ -205,17 +208,25 @@ async def _http_approve(world: _World) -> None:
     )
 
 
-def _assert_phase_trace(trace: RecordedTrace, phase: str, agent: str) -> None:
+def _assert_phase_trace(
+    trace: RecordedTrace,
+    phase: str,
+    agent: str,
+    *,
+    extra_metadata: Mapping[str, str] | None = None,
+) -> None:
     project_id = trace.metadata["project_id"]
     assert project_id != "unknown"
     assert trace.name == trace.trace_name == f"workflow_{phase}"
-    assert trace.metadata == {
+    expected_metadata = {
         "project_id": project_id,
         "phase": phase,
         "agent_name": agent,
         "user_id": _OWNER,
         "content_type": "carousel",
+        **(extra_metadata or {}),
     }
+    assert trace.metadata == expected_metadata
     assert trace.user_id == _OWNER
     assert trace.tags == [f"phase:{phase}", f"agent:{agent}", "content:carousel"]
     assert trace.propagated["tags"] == trace.tags
@@ -279,7 +290,12 @@ async def test_autopilot_start_traces_research_as_autopilot(
     assert status is StartStatus.STARTED
     assert len(seen) == 1
     assert seen[0] is not None
-    _assert_phase_trace(seen[0], "research", "autopilot")
+    _assert_phase_trace(
+        seen[0],
+        "research",
+        "autopilot",
+        extra_metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+    )
 
 
 @pytest.mark.asyncio
@@ -310,4 +326,9 @@ async def test_http_start_traces_research_with_the_creator(
     )
 
     assert seen[0] is not None
-    _assert_phase_trace(seen[0], "research", "editorial_workflow")
+    _assert_phase_trace(
+        seen[0],
+        "research",
+        "editorial_workflow",
+        extra_metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+    )

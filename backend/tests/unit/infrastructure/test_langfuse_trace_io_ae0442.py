@@ -150,6 +150,60 @@ class TestPhaseTraceIO:
         assert trace.span is None
 
 
+class TestTracingFailures:
+    # Scenario: A tracing failure never changes the workflow result
+    def test_unopenable_span_does_not_break_the_phase(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        collector = install_trace_collector(monkeypatch)
+
+        def fail_open(**_: object) -> object:
+            raise RuntimeError("langfuse down")
+
+        monkeypatch.setattr(collector, "start_as_current_span", fail_open)
+
+        with phase_trace({"phase": "content"}) as trace:
+            result = {"slide_count": 7}
+            trace.set_output(result)
+
+        assert result == {"slide_count": 7}
+        assert collector.flushes == 1
+
+    def test_failed_updates_do_not_break_the_phase(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        install_trace_collector(monkeypatch)
+
+        def fail_update(*_: object, **__: object) -> None:
+            raise RuntimeError("langfuse down")
+
+        monkeypatch.setattr(
+            "tests.langfuse_trace_fakes._FakeSpan.update_trace", fail_update
+        )
+        monkeypatch.setattr("tests.langfuse_trace_fakes._FakeSpan.update", fail_update)
+
+        with phase_trace({"phase": "content"}) as trace:
+            trace.set_output({"slide_count": 7})
+
+        assert trace.output == {"slide_count": 7}
+
+    # Scenario: A flush failure never changes the workflow result
+    def test_failed_flush_does_not_break_the_phase(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        collector = install_trace_collector(monkeypatch)
+
+        def fail_flush() -> None:
+            raise RuntimeError("langfuse down")
+
+        monkeypatch.setattr(collector, "flush", fail_flush)
+
+        with phase_trace({"phase": "content"}):
+            result = {"slide_count": 7}
+
+        assert result == {"slide_count": 7}
+
+
 class TestBlogGenerationTrace:
     # Scenario: A blog generation trace carries the writer brief and the article summary
     def test_blog_phase_trace_carries_brief_and_summary(

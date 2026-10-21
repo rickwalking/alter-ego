@@ -28,6 +28,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, fields, replace
 from typing import Protocol, cast
 
+import structlog
 from langfuse import propagate_attributes as _langfuse_propagate
 
 from rag_backend.domain.constants.langfuse_tracing import (
@@ -56,6 +57,8 @@ from rag_backend.domain.constants.langfuse_tracing import (
 from rag_backend.infrastructure.langfuse_client import get_langfuse_client
 from rag_backend.infrastructure.logging import redact_secrets
 
+logger = structlog.get_logger(__name__)
+
 
 class TraceSpan(Protocol):
     """The subset of a Langfuse span the phase trace uses."""
@@ -65,6 +68,16 @@ class TraceSpan(Protocol):
     def update(self, **kwargs: object) -> object: ...
 
     def create_event(self, *, name: str, **kwargs: object) -> object: ...
+
+
+class TraceClient(Protocol):
+    """The subset of the Langfuse client the phase trace uses."""
+
+    def start_as_current_span(
+        self, **kwargs: object
+    ) -> AbstractContextManager[object]: ...
+
+    def flush(self) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -216,8 +229,8 @@ def phase_trace(
         f"{attributes.metadata[TRACE_FIELD_CONTENT_TYPE]}"
         f".{attributes.metadata[TRACE_FIELD_PHASE]}"
     )
-    client = get_langfuse_client()
-    if client is None:
+    raw_client = get_langfuse_client()
+    if raw_client is None:
         run_token = _RUN_BASE.set(run_base)
         try:
             yield PhaseTrace(
@@ -233,13 +246,60 @@ def phase_trace(
             _RUN_BASE.reset(run_token)
         return
 
-    with client.start_as_current_span(
-        name=attributes.name,
-        input=payload,
-        metadata=attributes.metadata,
-    ) as raw_span:
-        span = cast(TraceSpan, raw_span)
-        span.update_trace(
+    client = cast(TraceClient, raw_client)
+    with _run_with_span(client, attributes, payload) as handle:
+        yield handle
+
+
+def _open_span(
+    client: TraceClient,
+    attributes: PhaseTraceAttributes,
+    payload: Mapping[str, object],
+) -> tuple[AbstractContextManager[object] | None, TraceSpan | None]:
+    try:
+        manager = client.start_as_current_span(
+            name=attributes.name,
+            input=payload,
+            metadata=attributes.metadata,
+        )
+        return manager, cast(TraceSpan, manager.__enter__())
+    except Exception:
+        logger.warning(
+            "langfuse_phase_span_open_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+        return None, None
+
+
+def _close_span(
+    manager: AbstractContextManager[object] | None,
+    attributes: PhaseTraceAttributes,
+) -> None:
+    if manager is None:
+        return
+    try:
+        manager.__exit__(None, None, None)
+    except Exception:
+        logger.warning(
+            "langfuse_phase_span_close_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+
+
+@contextmanager
+def _run_with_span(
+    client: TraceClient,
+    attributes: PhaseTraceAttributes,
+    payload: Mapping[str, object],
+) -> Iterator[PhaseTrace]:
+    run_base = (
+        f"{attributes.metadata[TRACE_FIELD_CONTENT_TYPE]}"
+        f".{attributes.metadata[TRACE_FIELD_PHASE]}"
+    )
+    manager, span = _open_span(client, attributes, payload)
+    if span is not None:
+        _try_update_trace(
+            span,
             name=attributes.name,
             user_id=attributes.user_id,
             session_id=attributes.session_id,
@@ -247,30 +307,31 @@ def phase_trace(
             metadata=attributes.metadata,
             tags=list(attributes.tags),
         )
-        handle = PhaseTrace(
-            name=attributes.name,
-            span=span,
-            trace_input=payload,
-            metadata=attributes.metadata,
-            tags=attributes.tags,
-            user_id=attributes.user_id,
-            session_id=attributes.session_id,
-        )
-        active_token = _ACTIVE.set(handle)
-        run_token = _RUN_BASE.set(run_base)
-        try:
-            with _propagate(attributes):
-                try:
-                    yield handle
-                except Exception as exc:
-                    _finish_error(handle, exc)
-                    raise
-                else:
-                    _finish_success(handle)
-        finally:
-            _RUN_BASE.reset(run_token)
-            _ACTIVE.reset(active_token)
-            client.flush()
+    handle = PhaseTrace(
+        name=attributes.name,
+        span=span,
+        trace_input=payload,
+        metadata=attributes.metadata,
+        tags=attributes.tags,
+        user_id=attributes.user_id,
+        session_id=attributes.session_id,
+    )
+    active_token = _ACTIVE.set(handle)
+    run_token = _RUN_BASE.set(run_base)
+    try:
+        with _safe_propagate(attributes):
+            try:
+                yield handle
+            except Exception as exc:
+                _finish_error(handle, exc)
+                raise
+            else:
+                _finish_success(handle)
+    finally:
+        _RUN_BASE.reset(run_token)
+        _ACTIVE.reset(active_token)
+        _close_span(manager, attributes)
+        _safe_flush(client)
 
 
 def sanitize_trace_value(value: object) -> object:
@@ -316,25 +377,31 @@ def _finish_success(handle: PhaseTrace) -> None:
         output = {TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED}
     if handle.span is None:
         return
-    handle.span.update(output=output)
-    handle.span.update_trace(output=output)
+    try:
+        handle.span.update(output=output)
+        handle.span.update_trace(output=output)
+    except Exception:
+        logger.warning("langfuse_phase_success_output_failed", phase=handle.name)
 
 
 def _finish_error(handle: PhaseTrace, error: Exception) -> None:
-    message = redact_secrets(str(error))[:TRACE_IO_VALUE_MAX_CHARS]
-    output = {
-        TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_ERROR,
-        TRACE_ERROR_FIELD_TYPE: type(error).__name__,
-        TRACE_ERROR_FIELD_MESSAGE: message,
-    }
     if handle.span is None:
         return
-    handle.span.update(
-        output=output,
-        level="ERROR",
-        status_message=message,
-    )
-    handle.span.update_trace(output=output)
+    try:
+        message = redact_secrets(str(error))[:TRACE_IO_VALUE_MAX_CHARS]
+        output = {
+            TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_ERROR,
+            TRACE_ERROR_FIELD_TYPE: type(error).__name__,
+            TRACE_ERROR_FIELD_MESSAGE: message,
+        }
+        handle.span.update(
+            output=output,
+            level="ERROR",
+            status_message=message,
+        )
+        handle.span.update_trace(output=output)
+    except Exception:
+        logger.warning("langfuse_phase_error_output_failed", phase=handle.name)
 
 
 def _merge_active(active: PhaseTrace, attributes: PhaseTraceAttributes) -> None:
@@ -343,18 +410,56 @@ def _merge_active(active: PhaseTrace, attributes: PhaseTraceAttributes) -> None:
     active.metadata = merged
     if active.span is None:
         return
-    active.span.update(metadata=merged)
-    active.span.update_trace(metadata=merged, tags=list(active.tags))
+    try:
+        active.span.update(metadata=merged)
+        active.span.update_trace(metadata=merged, tags=list(active.tags))
+    except Exception:
+        logger.warning("langfuse_phase_nested_merge_failed", phase=active.name)
 
 
-def _propagate(attributes: PhaseTraceAttributes) -> AbstractContextManager[object]:
-    return _langfuse_propagate(
-        trace_name=attributes.name,
-        user_id=attributes.user_id,
-        session_id=attributes.session_id,
-        metadata=attributes.metadata,
-        tags=list(attributes.tags),
-    )
+def _try_update_trace(span: TraceSpan, **kwargs: object) -> None:
+    try:
+        span.update_trace(**kwargs)
+    except Exception:
+        logger.warning("langfuse_phase_trace_attributes_failed")
+
+
+@contextmanager
+def _safe_propagate(attributes: PhaseTraceAttributes) -> Iterator[None]:
+    manager: AbstractContextManager[object] | None = None
+    try:
+        manager = _langfuse_propagate(
+            trace_name=attributes.name,
+            user_id=attributes.user_id,
+            session_id=attributes.session_id,
+            metadata=attributes.metadata,
+            tags=list(attributes.tags),
+        )
+        manager.__enter__()
+    except Exception:
+        logger.warning(
+            "langfuse_phase_propagate_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+        manager = None
+    try:
+        yield
+    finally:
+        if manager is not None:
+            try:
+                manager.__exit__(None, None, None)
+            except Exception:
+                logger.warning(
+                    "langfuse_phase_propagate_close_failed",
+                    phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+                )
+
+
+def _safe_flush(client: TraceClient) -> None:
+    try:
+        client.flush()
+    except Exception:
+        logger.warning("langfuse_phase_flush_failed")
 
 
 def _scope_of(metadata: Mapping[str, str]) -> WorkflowTraceScope:

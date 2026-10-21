@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, TypedDict, cast
 from uuid import UUID
 
+import structlog
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse import Langfuse
 
@@ -32,6 +33,8 @@ from rag_backend.infrastructure.langfuse_phase_trace import (
     phase_trace,
     workflow_trace_scope,
 )
+
+logger = structlog.get_logger(__name__)
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
@@ -321,23 +324,27 @@ def create_workflow_trace(
     output = {TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED}
     tags = [content_type, "workflow"]
 
-    span = client.start_span(
-        name=name,
-        input=trace_input,
-        metadata=trace_metadata,
-    )
-    span.update_trace(
-        name=name,
-        user_id=user_id,
-        session_id=project_id,
-        input=trace_input,
-        output=output,
-        metadata=trace_metadata,
-        tags=tags,
-    )
-    span.update(output=output)
-    span.end()
-    client.flush()
+    try:
+        span = client.start_span(
+            name=name,
+            input=trace_input,
+            metadata=trace_metadata,
+        )
+        span.update_trace(
+            name=name,
+            user_id=user_id,
+            session_id=project_id,
+            input=trace_input,
+            output=output,
+            metadata=trace_metadata,
+            tags=tags,
+        )
+        span.update(output=output)
+        span.end()
+        client.flush()
+    except Exception:
+        logger.warning("langfuse_workflow_trace_failed", trace_name=name)
+        return None
     return span
 
 
@@ -430,11 +437,19 @@ def record_human_review(
         ) as trace,
     ):
         if trace.span is not None:
-            trace.span.create_event(
-                name=TRACE_EVENT_HUMAN_REVIEW_TEMPLATE.format(phase=params["phase"]),
-                input=review_input,
-                metadata=dict(params),
-            )
+            try:
+                trace.span.create_event(
+                    name=TRACE_EVENT_HUMAN_REVIEW_TEMPLATE.format(
+                        phase=params["phase"]
+                    ),
+                    input=review_input,
+                    metadata=dict(params),
+                )
+            except Exception:
+                logger.warning(
+                    "langfuse_human_review_event_failed",
+                    phase=params["phase"],
+                )
         trace.set_output({
             TRACE_STATUS_FIELD: "recorded",
             "action": params["action"],
