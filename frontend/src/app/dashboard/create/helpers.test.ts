@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { carouselCreateRequestSchema } from "@/schemas/carousel";
-import {
-  DEFAULT_IMAGE_PRESET,
-  FLAT_EDITORIAL_PRESET,
-} from "@/constants/create";
+import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 import {
   NICHE_MAX_LENGTH,
   buildCarouselCreateRequest,
@@ -59,7 +56,7 @@ describe("buildCarouselCreateRequest custom_visual_details (AE-0298)", () => {
 // (tests/features/radar-ia-quick-fixes.feature, AE-0372)
 describe("buildCarouselCreateRequest image defaults (AE-0372)", () => {
   it("defaults to the flat editorial preset", () => {
-    expect(DEFAULT_IMAGE_PRESET).toBe(FLAT_EDITORIAL_PRESET);
+    expect(DEFAULT_IMAGE_PRESET).toBe("openai__flat_editorial");
     const request = buildCarouselCreateRequest({
       ...BASE_FORM,
       imagePreset: "",

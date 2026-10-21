@@ -20,6 +20,9 @@ export const IMAGE_STYLES = {
  * the backend registers are selectable here — the API rejects anything
  * else with 422, so keeping the frontend list narrow prevents dead ends.
  */
+/** The flat editorial preset value (see DEFAULT_ and LIGHT_THEME_IMAGE_PRESET). */
+const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
+
 export const IMAGE_PRESETS = [
   {
     // AE-0308: comic neon re-routed to OpenAI — prod has no Gemini key.
@@ -47,7 +50,7 @@ export const IMAGE_PRESETS = [
     labelKey: "imagePresets.openai_neo_anime",
   },
   {
-    value: "openai__flat_editorial",
+    value: FLAT_EDITORIAL_PRESET,
     model: IMAGE_MODELS.OPENAI,
     style: IMAGE_STYLES.FLAT_EDITORIAL,
     labelKey: "imagePresets.openai_flat_editorial",
@@ -61,14 +64,15 @@ export const IMAGE_PRESETS = [
   },
 ] as const;
 
-/** The light/editorial preset value — recommended for light themes. */
-export const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
-
 /**
  * AE-0372: flat editorial is the default in the wizard, the backend and the
- * autopilot, so not every post looks like the same neon AI art.
+ * autopilot, so not every post looks like the same neon AI art. It is also the
+ * preset recommended for light themes.
  */
 export const DEFAULT_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
+
+/** The preset a light theme switches to (flat editorial reads best on light). */
+export const LIGHT_THEME_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
 
 /** AE-0376: the preset a Ponto de Vista deck switches to. */
 export const POV_EDITORIAL_PRESET = "openai__pov_editorial";

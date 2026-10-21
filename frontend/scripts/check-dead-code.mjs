@@ -10,8 +10,8 @@
  *   - Grandfathered finding (in the baseline) -> ignored.
  *   - Resolved grandfathered identities -> reported (baseline may ratchet DOWN).
  *
- * Flip to full-tree blocking by setting DEAD_CODE_FULL_TREE_BLOCKING=1 once the
- * grandfathered count reaches 0 (see frontend/AGENTS.md operating-model note).
+ * Full-tree blocking: DEAD_CODE_FULL_TREE_BLOCKING=1 (set by gates.sh since AE-0446,
+ * when the grandfathered count reached 0; see frontend/AGENTS.md).
  *
  * Run as: npm run lint:dead-code   (gates.sh frontend:dead-code)
  * Diff base: GATES_BASE_REF (default origin/main).

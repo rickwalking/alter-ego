@@ -231,7 +231,7 @@ gate_frontend_duplication()     { require_tool jscpd || return $?; cd "$REPO_ROO
 # NET-NEW unused exports in PR-changed files (day one); pre-existing/unchanged-file
 # findings are advisory until the full-tree flip. Baseline is down-only (raising
 # its count is flagged by check-integrity.sh). Needs git history for the diff.
-gate_frontend_dead_code()       { require_tool knip || return $?; cd "$REPO_ROOT/frontend" && npm run lint:dead-code; }
+gate_frontend_dead_code()       { require_tool knip || return $?; cd "$REPO_ROOT/frontend" && DEAD_CODE_FULL_TREE_BLOCKING=1 npm run lint:dead-code; }
 # Advisory in CI (continue-on-error); reports test-file duplication, never blocks.
 gate_frontend_duplication_tests() { require_tool jscpd || return $?; cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
 # Advisory dead-FILE report (AE-0178): knip file scope surfaces unused files

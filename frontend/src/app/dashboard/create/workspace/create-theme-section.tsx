@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { FLAT_EDITORIAL_PRESET, IMAGE_PRESETS } from "@/constants/create";
+import { LIGHT_THEME_IMAGE_PRESET, IMAGE_PRESETS } from "@/constants/create";
 import { NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 import {
@@ -43,8 +43,8 @@ export function CreateThemeSection({
       theme: theme as CreateCarouselFormState["theme"],
     };
     const isLight = findThemeMode(themeOptions, theme) === PALETTE_MODES[0];
-    if (isLight && form.imagePreset !== FLAT_EDITORIAL_PRESET) {
-      patch.imagePreset = FLAT_EDITORIAL_PRESET;
+    if (isLight && form.imagePreset !== LIGHT_THEME_IMAGE_PRESET) {
+      patch.imagePreset = LIGHT_THEME_IMAGE_PRESET;
     }
     onChange(patch);
   };

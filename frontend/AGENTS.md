@@ -49,16 +49,15 @@ nsTypes`) — the orphaned-constant class. Unused-**file** detection is out of
 - Gated by `npm run lint:dead-code` (`gates.sh frontend:dead-code` + the
   `frontend / Dead code` CI job). Identity-keyed baseline lives in
   `frontend/scripts/dead-code-baseline.json` (`type|file|symbol`).
-- **Day-one blocking is changed-file-scoped:** net-new findings in PR-changed
-  files block; pre-existing/unchanged-file findings are **advisory** (the
-  grandfathered debt) until the full-tree flip.
+- **Full-tree blocking (AE-0446):** the grandfathered baseline reached 0, so
+  the gate runs with `DEAD_CODE_FULL_TREE_BLOCKING=1` (`scripts/ci/gates.sh`):
+  any net-new unused export anywhere in the tree blocks. (Before the flip, only
+  findings in PR-changed files blocked.)
 - The baseline is **down-only** — raising its `count` is flagged by
   `scripts/ci/check-integrity.sh`. Regenerate (only to ratchet DOWN, after
   removing dead code) with `npm run dead-code:baseline`.
 - **Operating model:** the gate adds a `knip` run to CI (~seconds; owned by the
-  frontend quality-gates workflow). **Flip to full-tree blocking** (set
-  `DEAD_CODE_FULL_TREE_BLOCKING=1` in the gate) once the grandfathered `count`
-  reaches 0 — at that point there is no advisory debt left to defer.
+  frontend quality-gates workflow).
 - Run it locally: `cd frontend && npm run lint:dead-code`.
 
 ### 2. No Magic Strings

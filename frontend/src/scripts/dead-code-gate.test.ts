@@ -4,6 +4,8 @@
  * BLOCKER: a replace-same-count change (remove one grandfathered orphan, add a
  * new one) must FAIL because identity — not count — is the key.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -108,5 +110,39 @@ describe("classifyDeadCode", () => {
     expect(blocking.map((f: { name: string }) => f.name)).toEqual([
       "NEW_ORPHAN",
     ]);
+  });
+});
+
+// AE-0446: the grandfathered baseline reached 0, so the CI gate runs the
+// classifier in full-tree mode. Pin the flip so it cannot silently revert to
+// changed-file-only blocking.
+describe("dead-code gate runs full-tree blocking in CI (AE-0446)", () => {
+  it("sets DEAD_CODE_FULL_TREE_BLOCKING=1 in the frontend dead-code gate", () => {
+    const gates = readFileSync(
+      join(import.meta.dirname, "..", "..", "..", "scripts", "ci", "gates.sh"),
+      "utf8",
+    );
+    const gateLine = gates
+      .split("\n")
+      .find((line) => line.startsWith("gate_frontend_dead_code()"));
+    expect(gateLine).toContain(
+      "DEAD_CODE_FULL_TREE_BLOCKING=1 npm run lint:dead-code",
+    );
+  });
+
+  it("keeps the grandfathered baseline empty", () => {
+    const baseline = JSON.parse(
+      readFileSync(
+        join(
+          import.meta.dirname,
+          "..",
+          "..",
+          "scripts",
+          "dead-code-baseline.json",
+        ),
+        "utf8",
+      ),
+    ) as { allowlist?: string[] };
+    expect(baseline.allowlist ?? []).toEqual([]);
   });
 });

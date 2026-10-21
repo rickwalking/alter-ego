@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@/test/utils";
 import { INITIAL_CREATE_FORM_STATE } from "@/app/dashboard/create/types";
-import { FLAT_EDITORIAL_PRESET } from "@/constants/create";
+import { LIGHT_THEME_IMAGE_PRESET } from "@/constants/create";
 import type { ThemeOption } from "@/app/dashboard/create/theme-options";
 import { CreateThemeSection } from "./create-theme-section";
 
@@ -49,7 +49,7 @@ describe("CreateThemeSection", () => {
     fireEvent.change(themeSelect!, { target: { value: "paper_editorial" } });
     expect(onChange).toHaveBeenCalledWith({
       theme: "paper_editorial",
-      imagePreset: FLAT_EDITORIAL_PRESET,
+      imagePreset: LIGHT_THEME_IMAGE_PRESET,
     });
   });
 

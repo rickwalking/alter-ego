@@ -20,5 +20,11 @@
   "ignoreExportsUsedInFile": true,
   "next": true,
   "vitest": true,
-  "storybook": true
+  "storybook": true,
+  "ignoreDependencies": [
+    "@commitlint/cli",
+    "lint-staged",
+    "braces",
+    "tailwindcss"
+  ]
 }
