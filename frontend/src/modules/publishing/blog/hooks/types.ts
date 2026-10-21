@@ -123,3 +123,9 @@ export interface SlotRun {
   task: (target: LockedPost) => Promise<BlogPost>;
   merge: DraftMerge;
 }
+
+/** Per-slot status plus the runner that drives it (AE-0446). */
+export interface SlotRunner {
+  status: Record<string, SlotStatus>;
+  run: (slotRun: SlotRun) => Promise<void>;
+}

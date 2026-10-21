@@ -32,6 +32,7 @@ import type {
   BlogEditorError,
   BlogEditorSlotActions,
   SlotRun,
+  SlotRunner,
   SlotStatus,
   UseBlogPostEditorResult,
 } from "./types";
@@ -61,10 +62,11 @@ function toError(err: unknown): BlogEditorError {
   return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
 }
 
-export function useBlogEditorActions(
-  editor: UseBlogPostEditorResult,
-  personaId: string | null,
-): BlogEditorSlotActions {
+/**
+ * Per-slot pending/error state around one server action: save first, run the
+ * task, merge the result; a pending migration surfaces as the editor error.
+ */
+function useSlotRunner(editor: UseBlogPostEditorResult): SlotRunner {
   const [status, setStatus] = useState<Record<string, SlotStatus>>({});
   const mark = (key: string, next: SlotStatus): void =>
     setStatus((prev) => ({ ...prev, [key]: next }));
@@ -87,6 +89,15 @@ export function useBlogEditorActions(
       }
     }
   };
+
+  return { status, run };
+}
+
+export function useBlogEditorActions(
+  editor: UseBlogPostEditorResult,
+  personaId: string | null,
+): BlogEditorSlotActions {
+  const { status, run } = useSlotRunner(editor);
 
   const generateImage = (
     slot: BlogImageSlotRef,
