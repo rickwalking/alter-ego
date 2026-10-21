@@ -122,3 +122,18 @@ export interface CoverPick {
   switched: boolean;
   handleChoose: (assetId: string) => void;
 }
+
+/** Save/cancel buttons of the publish-page slide text editor (AE-0446). */
+export interface SlideEditActionsProps {
+  refused: boolean;
+  canSave: boolean;
+  saving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+/** Rebuild/success line of the publish-page slide text editor (AE-0446). */
+export interface SlideEditStatusProps {
+  pending: boolean;
+  done: boolean;
+}
