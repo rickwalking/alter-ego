@@ -31,7 +31,7 @@ _COLUMNS = (
 
 
 def test_revision_sits_on_top_of_the_quotes() -> None:
-    # The single-head check moved to the newest revision's test (AE-0446).
+    """The single-head check lives in the newest revision's test."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     revision = script.get_revision(_REVISION)

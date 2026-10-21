@@ -1,15 +1,18 @@
-"""Make the ``palettes`` timestamps timezone-aware (AE-0446, Pedro's decision).
+"""Make the ``palettes`` timestamps timezone-aware (Pedro's decision).
 
-Prod does not run Alembic on deploy (AE-0207) and bootstraps with
+Prod does not run Alembic on deploy and bootstraps with
 ``create_all``, which never alters an existing column. So the
 ``timestamp`` -> ``timestamptz`` change that revision ``e6f7a8b9c0d1`` makes
 for fresh databases reaches prod through this idempotent one-shot instead,
-run by the deploy right after the blog cutover (AE-0423 pattern).
+run by the deploy right after the blog cutover, the same pattern.
 
 The stored naive values were written as UTC, so they are converted with
 ``AT TIME ZONE 'UTC'`` (the instant is unchanged). Both columns change in one
 transaction; a column that is already ``timestamptz`` is left alone, and a
 database that is not Postgres (SQLite in tests) is a no-op.
+
+The ALTER statements interpolate column names only from the fixed column tuple, never
+from input.
 """
 
 from __future__ import annotations
@@ -33,7 +36,6 @@ _NAIVE_COLUMNS_SQL = text(
     " AND table_name = :table AND data_type = :naive"
     " ORDER BY column_name"
 )
-# Column names come only from the fixed tuple above (never from input).
 _ALTER_SQL = {
     column: text(
         f"ALTER TABLE {PALETTES_TABLE} ALTER COLUMN {column}"

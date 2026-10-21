@@ -8,6 +8,9 @@ rejects); CI's migration gate runs that chain.
 Revision chain: the insights revision (per-post Instagram insights snapshots) sits on
 top of the POV thesis one, then the image bridge, the audience-hours cache and the
 pov_news quotes revisions; the GrokBot cover revision is the head.
+
+``ALEMBIC_HEAD`` is the current single alembic head: a new migration bumps only that
+constant, while the per-revision tests keep asserting their own parent chain.
 """
 
 from __future__ import annotations
@@ -25,8 +28,6 @@ _SINGLE_HEAD = "d3e4f5a6b7c8"
 _AUDIENCE_HEAD = "a0e4f0a4b4c4"
 _QUOTES_HEAD = "c4d5e6f7a8b9"
 _COVER_HEAD = "d5e6f7a8b9c0"
-# AE-0446: the current single alembic head. A new migration bumps ONLY this
-# line; the per-revision tests keep asserting their own parent chain.
 ALEMBIC_HEAD = "e6f7a8b9c0d1"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
