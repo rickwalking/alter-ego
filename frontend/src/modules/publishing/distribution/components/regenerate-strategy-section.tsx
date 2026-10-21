@@ -10,13 +10,70 @@ import {
   useAvailableStrategies,
   useRegenerateSlides,
 } from "@/modules/editorial";
-import type { RegenerateStrategySectionProps } from "@/modules/publishing/distribution/types";
+import type {
+  RegenerateStrategySectionProps,
+  StrategyTemplateCardProps,
+} from "@/modules/publishing/distribution/types";
 import {
   CYAN,
   CYAN_DIM,
   SECTION_CARD_STYLE,
 } from "@/modules/publishing/distribution/constants";
 import { findTemplateIndex } from "@/modules/publishing/distribution/utils";
+
+/** One layout template choice (highlighted when it is the active one). */
+function StrategyTemplateCard({
+  template,
+  active,
+  onSelect,
+}: StrategyTemplateCardProps): React.ReactElement {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onSelect();
+        }
+      }}
+      style={{
+        background: active ? CYAN_DIM : BG_CARD,
+        border: active
+          ? `1px solid ${CYAN}`
+          : "1px solid rgba(255,255,255,0.06)",
+        borderRadius: "8px",
+        padding: "14px",
+        cursor: "pointer",
+        transition: "all 0.2s",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: "20px", marginBottom: "4px" }}>
+        {template.icon}
+      </div>
+      <h4
+        style={{
+          fontSize: "12px",
+          fontWeight: 600,
+          color: TEXT,
+          margin: 0,
+        }}
+      >
+        {template.name}
+      </h4>
+      <p
+        style={{
+          fontSize: "10px",
+          color: TEXT_DIM,
+          margin: "4px 0 0",
+        }}
+      >
+        {template.desc}
+      </p>
+    </div>
+  );
+}
 
 export function RegenerateStrategySection({
   project,
@@ -99,51 +156,12 @@ export function RegenerateStrategySection({
               ) ??
                 false);
             return (
-              <div
+              <StrategyTemplateCard
                 key={tpl.name}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleTemplateSelect(idx)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    handleTemplateSelect(idx);
-                  }
-                }}
-                style={{
-                  background: isActive ? CYAN_DIM : BG_CARD,
-                  border: isActive
-                    ? `1px solid ${CYAN}`
-                    : "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: "8px",
-                  padding: "14px",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ fontSize: "20px", marginBottom: "4px" }}>
-                  {tpl.icon}
-                </div>
-                <h4
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: TEXT,
-                    margin: 0,
-                  }}
-                >
-                  {tpl.name}
-                </h4>
-                <p
-                  style={{
-                    fontSize: "10px",
-                    color: TEXT_DIM,
-                    margin: "4px 0 0",
-                  }}
-                >
-                  {tpl.desc}
-                </p>
-              </div>
+                template={tpl}
+                active={isActive}
+                onSelect={() => handleTemplateSelect(idx)}
+              />
             );
           })}
         </div>
