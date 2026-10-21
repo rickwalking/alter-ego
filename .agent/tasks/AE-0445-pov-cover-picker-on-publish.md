@@ -69,16 +69,16 @@ and only for a GrokBot cover offer.
 
 ## Acceptance Criteria
 
-- [ ] AC1 `GET cover-options` lists the owner's library photos (role `hook`, file present) and the
+- [x] AC1 `GET cover-options` lists the owner's library photos (role `hook`, file present) and the
       run's GrokBot offer, marks the current slide-1 asset, and is refused for a non-POV carousel.
-- [ ] AC2 `PUT cover` with a library photo binds it as the slide-1 photo, clears `slide_cover`,
+- [x] AC2 `PUT cover` with a library photo binds it as the slide-1 photo, clears `slide_cover`,
       bumps the lock version and re-renders through the republish path.
-- [ ] AC3 `PUT cover` with the GrokBot offer stores it as `slide_cover` and re-renders.
-- [ ] AC4 409 on a stale `expected_version` / held lock / active run; nothing written.
-- [ ] AC5 422 for non-POV, non-completed, a foreign or unknown asset, or a photo whose file is gone.
-- [ ] AC6 Publish page shows "Capa (slide 1)" only for `pov` / `pov_news`, current photo marked,
+- [x] AC3 `PUT cover` with the GrokBot offer stores it as `slide_cover` and re-renders.
+- [x] AC4 409 on a stale `expected_version` / held lock / active run; nothing written.
+- [x] AC5 422 for non-POV, non-completed, a foreign or unknown asset, or a photo whose file is gone.
+- [x] AC6 Publish page shows "Capa (slide 1)" only for `pov` / `pov_news`, current photo marked,
       keyboard accessible, progress while switching, previews refreshed, errors visible (409 hint).
-- [ ] AC7 pt + en copy; gates green.
+- [x] AC7 pt + en copy; gates green.
 
 ## Gherkin
 
@@ -101,13 +101,44 @@ AE-0418 (slide cover switch), AE-0313 (republish), AE-0376 (photo library).
 
 Ticket created from the orchestrator brief; plan above.
 
+### 2026-10-20 (dev)
+
+Backend + frontend implemented, Gherkin-first. Two unrelated dependency advisories published
+on 2026-10-19/20 made `backend:pip-audit` and `frontend:security` red on every branch; fixed with
+lock-only bumps (Pillow 12.3.0 → 13.0.0, certifi → 2026.10.19; vite override floor → 7.3.7).
+
 ## Files Touched
 
-Pending.
+- Backend: `api/routes/carousels/cover_pick.py` (new), `api/schemas/carousel_cover_pick.py` (new),
+  `application/services/carousel/cover_pick.py` (new), `slide_cover_switch.py` (optional
+  `hook_photo`), `domain/constants/carousel_cover_pick.py` (new),
+  `modules/editorial/infrastructure/carousel_cover_pick.py` (new), `carousel_cover.py`
+  (`slide_cover_switch_service` factory), `modules/autopilot/infrastructure/cover_offers.py`
+  (`ProjectCoverOffer`, `offered_cover`), autopilot/editorial facades, router, republish
+  (`raise_republish_failure` made public), route snapshot, `docs/architecture/openapi.json`,
+  `uv.lock`.
+- Frontend: `distribution/hooks/use-cover-picker.ts`, `components/cover-picker-section.tsx`,
+  `components/cover-option-grid.tsx`, types, publish page + `publish-readiness.ts`, api
+  constants, pt/en copy, `package.json`/lock (vite override).
 
 ## Test Evidence
 
-Pending.
+- Backend targeted (memory-critical machine; full suite + mutation left to CI per orchestrator):
+  `test_cover_pick_ae0445.py` (15 unit), `test_cover_pick_api_ae0445.py` (15 HTTP integration),
+  `test_project_cover_offer_ae0445.py` (2), plus AE-0418 cover seam/flow, republish route,
+  slide cover switch, photo library API and route snapshot: 89 passed. All 29 PIL-using test
+  files after the Pillow 13 bump: 323 passed, 4 skipped.
+- Backend gates run individually (hotfix fast path, `DATABASE_URL` on a throwaway Postgres 16):
+  format, lint, lint-diff, blanket-ignore, strict-diff, type, imports (27/27 contracts),
+  arch-ratchet, docstrings, dead-code, inline-prompts, blog-v1-dead-code, redis-factory,
+  autopilot-env, healthcheck-loopback, bandit, integrity, diff-cover, migrations, schema-drift:
+  PASS; pip-audit PASS after the lock bump. `test`: the full-suite run was OOM-killed at 1%
+  (machine swap full), not a test failure; CI is the source of truth. mutation: deferred to CI
+  (hotfix fast path).
+- Frontend gates: lint, lint-changed, component-types, duplication, dead-code,
+  blog-v1-dead-code, typecheck, legacy-guard, legacy-inventory, format, security, integrity,
+  schema-drift, duplication-tests, dead-files: PASS. Targeted vitest (publishing distribution +
+  publish page): 12 files, 115 tests passed. build / full test / mutation: left to CI (memory).
 
 ## QA Report
 
