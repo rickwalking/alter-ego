@@ -30,10 +30,10 @@ _COLUMNS = (
 )
 
 
-def test_revision_is_the_single_head_on_top_of_the_quotes() -> None:
+def test_revision_sits_on_top_of_the_quotes() -> None:
+    # The single-head check moved to the newest revision's test (AE-0446).
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_REVISION]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

@@ -83,7 +83,9 @@ async def clients(tmp_path: Path) -> AsyncIterator[EditorClients]:
 
 class TestFirstVersionIsTheDraft:
     # Scenario: Generation's first write does not snapshot the empty bootstrap
-    async def test_bootstrap_write_appends_nothing(self, clients: EditorClients) -> None:
+    async def test_bootstrap_write_appends_nothing(
+        self, clients: EditorClients
+    ) -> None:
         post = await create_post(clients.author, two_sections("Original", "Dois"))
         await set_fields(post["id"], content=BOOTSTRAP, version_history=None)
         article = two_sections("Artigo do escritor", "Dois")
@@ -107,7 +109,9 @@ class TestFirstVersionIsTheDraft:
         self, clients: EditorClients
     ) -> None:
         post = await create_post(clients.author, two_sections("Original", "Dois"))
-        saved = (await put(clients.author, post, {"content": two_sections("V1", "Dois")})).json()
+        saved = (
+            await put(clients.author, post, {"content": two_sections("V1", "Dois")})
+        ).json()
         await put(clients.author, saved, {"content": v2_content("")})
         history = await versions(clients.author, post["id"])
         assert [entry["version_number"] for entry in history] == [1, 2]
@@ -115,10 +119,7 @@ class TestFirstVersionIsTheDraft:
             "Original",
             "V1",
         ]
-        assert all(
-            entry["snapshot"]["sections"][0]["body_md"]
-            for entry in history
-        )
+        assert all(entry["snapshot"]["sections"][0]["body_md"] for entry in history)
 
 
 class TestRestoreOfEmptySnapshot:
@@ -127,7 +128,9 @@ class TestRestoreOfEmptySnapshot:
         self, clients: EditorClients
     ) -> None:
         post = await create_post(clients.author, two_sections("Original", "Dois"))
-        saved = (await put(clients.author, post, {"content": two_sections("V1", "Dois")})).json()
+        saved = (
+            await put(clients.author, post, {"content": two_sections("V1", "Dois")})
+        ).json()
         await set_fields(
             post["id"],
             version_history=[
@@ -157,9 +160,7 @@ async def db(
     await engine.dispose()
 
 
-async def _insert_post(
-    maker: async_sessionmaker[AsyncSession], history: object
-) -> str:
+async def _insert_post(maker: async_sessionmaker[AsyncSession], history: object) -> str:
     post_id = str(uuid4())
     async with maker() as session:
         session.add(
@@ -176,15 +177,11 @@ async def _insert_post(
     return post_id
 
 
-async def _history(
-    maker: async_sessionmaker[AsyncSession], post_id: str
-) -> object:
+async def _history(maker: async_sessionmaker[AsyncSession], post_id: str) -> object:
     async with maker() as session:
         row = (
             await session.execute(
-                select(BlogPostModel.version_history).where(
-                    BlogPostModel.id == post_id
-                )
+                select(BlogPostModel.version_history).where(BlogPostModel.id == post_id)
             )
         ).scalar_one()
         return row

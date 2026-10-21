@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.test_autopilot_migration import (
+    ALEMBIC_HEAD,
     _alembic_config,
     _columns,
     _run_migration,
@@ -33,7 +34,7 @@ def test_revision_is_the_single_head_on_top_of_the_audience_hours() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     # AE-0418: the GrokBot cover revision now sits on top of this one.
-    assert list(script.get_heads()) == [_COVER_HEAD]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     assert script.get_revision(_COVER_HEAD).down_revision == _REVISION
     revision = script.get_revision(_REVISION)
     assert revision is not None

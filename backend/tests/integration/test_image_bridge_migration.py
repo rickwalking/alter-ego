@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.test_autopilot_migration import (
+    ALEMBIC_HEAD,
     _alembic_config,
     _columns,
     _run_migration,
@@ -65,7 +66,7 @@ def test_revision_is_chained_on_top_of_insights() -> None:
     """Chained on the AE-0378 insights revision; AE-0406's is the head now."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == ["d5e6f7a8b9c0"]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.test_autopilot_migration import (
+    ALEMBIC_HEAD,
     _alembic_config,
     _columns,
     _run_migration,
@@ -56,7 +57,7 @@ def test_revision_chains_on_the_story_revision() -> None:
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT
-    assert list(script.get_heads()) == [_HEAD]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     pov = script.get_revision(_POV_THESIS)
     assert pov is not None
     assert pov.down_revision == _REVISION
