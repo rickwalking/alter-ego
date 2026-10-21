@@ -955,7 +955,7 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `tests/unit/test_sse_event_inventory_contract.py::<module>`: Names matching the per-module rules are event-name constants and in scope for the freeze; anything else (payload-field names, interval/config constants, consumer-group names) is intentionally not…
 - `vulture_whitelist.py::<module>`: Lists protocol parameters that are part of an interface contract but not yet used. Vulture strips leading underscores, so both forms are whitelisted.
 
-## Frontend (201 doc blocks)
+## Frontend (255 doc blocks)
 
 - `frontend/eslint.config.mjs::typeCheckedRules`: Severity policy: `error` rules gate the build (the `lint` gate runs `eslint --quiet`, which fails on errors only); `warn` rules are an advisory backlog surfaced on changed files by `lint:changed`…
 - `frontend/eslint.config.mjs::SIZE_RULES`: Size/complexity rules tuned by the project block below; the strict presets never touch them.
@@ -983,14 +983,17 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/app/(public)/(marketing)/marketing-helpers.ts::localizedSubtitle`: Falls back to the topic only on a Portuguese card: the topic is the Portuguese source text.
 - `frontend/src/app/(public)/blog/[id]/page.test.ts::VIEW`: A view carrying the post's own v2 cover and sections; the OG image must be that cover, never a carousel design image.
 - `frontend/src/app/(public)/blog/[id]/page.tsx::generateMetadata`: * The OG image is the post's own cover only, never a carousel slide.
+- `frontend/src/app/(public)/carousels/[id]/route-status.test.ts::line 41`: (also proves APP_DIR resolves, so the check above is not vacuous)
 - `frontend/src/app/api/carousels/[id]/workflow/_lib/proxy-workflow-action.test.ts::it`: A null-body Response carries no content-type header (a string body would auto-set text/plain), which exercises the helper's JSON fallback.
 - `frontend/src/app/api/carousels/[id]/workflow/resume/route.ts::maxDuration`: Lets long-running LLM resume calls through the Next.js proxy. Route segment config must be a statically-analyzable literal (it cannot reference an imported constant), so the 300s value stays inline.
 - `frontend/src/app/api/carousels/[id]/workflow/start/route.ts::maxDuration`: Route segment config must be a statically-analyzable literal (it cannot reference an imported constant), so the 300s value stays inline.
+- `frontend/src/app/auth/logout/route.test.ts::line 119`: Given a request to "/auth/logout?redirect=..." whose URL host is the standalone server bind address "0.0.0.0:3000" with forwarded headers When the logout handler runs Then the Location uses the…
 - `frontend/src/app/dashboard/analytics/page.tsx::AnalyticsPage`: Shows a disabled state when the analytics flag is off (404) or the role has no access (403). Weekly bars sit in a min-w-0 scroll track so a long bar scrolls within its row instead of overflowing…
 - `frontend/src/app/dashboard/blog-posts/[id]/edit/blog-editor-sidebar.tsx::BlogEditorSidebar`: * A running slot action may change the content (and reset the review), so the workflow controls also wait for it.
 - `frontend/src/app/dashboard/blog-posts/[id]/edit/blog-post-editor-view.tsx::BlogPostEditorView`: * The writer/image run owns the document until it finishes, so the editor is read-only while it generates.
 - `frontend/src/app/dashboard/blog-posts/[id]/edit/page.test.tsx::<file>`: Scenarios: tests/features/blog_editor_ae0424.feature (editor wiring, unsaved guard, conflict, migration banner, localized copy) and tests/features/blog-dashboard-ae0411.feature (Editor).
 - `frontend/src/app/dashboard/blog-posts/blog-posts-actions.test.tsx::<file>`: Scenarios: tests/features/blog-posts-management.feature.
+- `frontend/src/app/dashboard/blog-posts/blog-posts-actions.test.tsx::line 80`: (hiding it would keep it hidden after the release)
 - `frontend/src/app/dashboard/blog-posts/blog-posts-grid-locale.test.tsx::<file>`: Dashboard dates follow the active locale. Scenarios: tests/features/dashboard-locale-dates-ae0417.feature.
 - `frontend/src/app/dashboard/blog-posts/blog-posts-grid.test.tsx::<file>`: Scenarios: tests/features/blog-posts-listing-status-badge.feature ("Listing renders posts of every workflow status without crashing").
 - `frontend/src/app/dashboard/blog-posts/blog-posts-list.test.tsx::<file>`: Scenarios: tests/features/blog-dashboard-ae0411.feature (List).
@@ -1001,19 +1004,25 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/app/dashboard/blog-posts/use-new-blog-post.test.ts::<file>`: Scenarios: tests/features/blog-dashboard-ae0411.feature ("Creating a post that fails shows an error", "Dashboard copy is localized").
 - `frontend/src/app/dashboard/calendar/calendar-grid.tsx::CalendarGrid`: Keeps the month view and scroll-snaps horizontally on small screens so cells stay about 91px wide or more (min-w 640 / 7) instead of crushing.
 - `frontend/src/app/dashboard/calendar/calendar-header.tsx::CalendarHeader`: `pl-14` clears the layout-level mobile hamburger; layout and z-index use Tailwind (stacking-map aligned) while the neon surface styling stays inline.
+- `frontend/src/app/dashboard/calendar/use-calendar-days.test.ts::line 6`: timezone (see tests/features/calendar-month-navigation.feature).
 - `frontend/src/app/dashboard/calendar/use-calendar-days.ts::useCalendarDays`: * The grid cells are LOCAL dates but the backend window is UTC: a naive toISOString() of the local boundaries shifts by the viewer's offset and could drop an edge-cell event. The window is padded…
 - `frontend/src/app/dashboard/calendar/use-calendar-month.test.ts::<file>`: Scenarios: tests/features/calendar-month-navigation.feature.
 - `frontend/src/app/dashboard/chat/chat-header.tsx::ChatHeader`: `pl-14` clears the layout-level mobile hamburger (z-50); layout uses Tailwind so the header reflows while the neon surface styling stays inline. The panel-left icon is distinct from the global nav…
 - `frontend/src/app/dashboard/chat/chat-sidebar.tsx::ChatSidebar`: Below md the list is an off-canvas drawer; at md+ it is a persistent 280px pane, so the focus trap and scroll lock never engage there even if `open` is stale from mobile. Reuses the shared…
 - `frontend/src/app/dashboard/constants.tsx::QUICK_ACTIONS`: Icons are path-only fragments (`<path>`/`<circle>`/`<rect>` children): the dashboard page wraps them in a consistent `<svg>` shell.
 - `frontend/src/app/dashboard/create/[id]/create-retry-handler.test.ts::describe`: Retry restarts the workflow; a failure re-enables the button and keeps the error card by resetting `retrying` to false without navigating.
+- `frontend/src/app/dashboard/create/[id]/create-retry-handler.test.ts::line 12`: Given a failed workflow When the user retries and start() rejects Then retrying is set true then back to false (button re-enables) And navigation does NOT happen (the error card stays)
 - `frontend/src/app/dashboard/create/[id]/page.tsx::CreateWorkspacePage`: A fresh project has no workflow state (its GET answers 404), so the workflow is only fetched once it started. Starting the workflow opens the gate it is really on. Retry is idempotent: the…
 - `frontend/src/app/dashboard/create/[id]/publish/page.tsx::DashboardCreatePublishPage`: The page refreshes the workflow state itself and waits for it before deciding whether the artifacts exist. After a "Rebuild PDF" the rebuilt artifact version cache-busts the served PDF/slide URLs.…
+- `frontend/src/app/dashboard/create/[id]/publish/publish-readiness.test.ts::line 83`: (frontend/tests/features/publish-cover-picker-ae0445.feature)
 - `frontend/src/app/dashboard/create/create-error-message.test.ts::t`: Echo translator (key + params), so assertions target the looked-up copy.
 - `frontend/src/app/dashboard/create/create-progress-steps.tsx::STEP_NUM_PENDING_BG`: Faint tints local to the stepper: no exact token exists in the Neon palette, so they live here rather than in the drift-guarded neon.ts.
 - `frontend/src/app/dashboard/create/create-progress-steps.tsx::STEP_VISUAL_COLORS`: Label and step-number colors for each visual step state.
 - `frontend/src/app/dashboard/create/create-progress-steps.tsx::CreateProgressSteps`: Scrolls horizontally on mobile instead of clipping or squishing the steps (each step is shrink-0 with a minimum width, at least 44px tall on touch devices) and distributes the steps evenly at md+.
+- `frontend/src/app/dashboard/create/create-workspace-sidebar.test.tsx::line 37`: Given the editorial workflow has phase_status "failed" When the sidebar renders Then the active-phase status badge uses the red (error) variant
+- `frontend/src/app/dashboard/create/create-workspace-sidebar.test.tsx::line 61`: Given the editorial workflow is in "in_progress" When the sidebar renders Then the active-phase status badge uses the cyan (live) variant
 - `frontend/src/app/dashboard/create/helpers.test.ts::<file>`: Scenarios: tests/features/create-image-guidance.feature.
+- `frontend/src/app/dashboard/create/helpers.test.ts::line 56`: (tests/features/radar-ia-quick-fixes.feature)
 - `frontend/src/app/dashboard/create/helpers.test.ts::describe`: Scenarios: tests/features/create-content-mode.feature.
 - `frontend/src/app/dashboard/create/helpers.ts::presetFromValue`: An unknown value falls back to the default preset (flat editorial), not to whichever preset happens to be listed first.
 - `frontend/src/app/dashboard/create/page.tsx::CreateCarouselPage`: Any form change clears the error: an error about the previous input is stale.
@@ -1026,6 +1035,7 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/app/dashboard/create/workspace/create-content-mode.test.tsx::POV_FORM`: Gherkin: tests/features/create-content-mode.feature.
 - `frontend/src/app/dashboard/create/workspace/create-draft-blog-preview.tsx::CreateDraftBlogPreview`: Nothing generated yet (404) is an empty state, not an error.
 - `frontend/src/app/dashboard/create/workspace/create-phase-review.test.tsx::<file>`: Gherkin: backend/tests/features/carousel_deterministic_repair.feature.
+- `frontend/src/app/dashboard/create/workspace/create-phase-review.test.tsx::line 4`: content-phase and design-phase violation panels.
 - `frontend/src/app/dashboard/create/workspace/create-photo-section.test.tsx::PHOTOS`: Gherkin: backend/tests/features/carousel_pov_layouts.feature.
 - `frontend/src/app/dashboard/create/workspace/create-run-progress-banner.test.tsx::<file>`: Scenarios: backend/tests/features/carousel_run_progress_reaper.feature - User sees a live in-progress banner during a revision - The banner is never permanent ("Check again" past the threshold)
 - `frontend/src/app/dashboard/create/workspace/create-theme-section.test.tsx::THEME_OPTIONS`: Gherkin: tests/features/palette_crud_api.feature and palette-drift-gate.feature (the dropdown renders the dynamic catalog; light palettes still nudge the flat-editorial preset, driven by each…
@@ -1044,7 +1054,9 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-locale-fields.tsx::PresentationExtras`: An editable column also offers every structured field the other locale has, so an EN TL;DR the translation dropped stays fixable.
 - `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-locale-fields.tsx::ContentLocaleFields`: * An editable heading shows what is stored (even empty) so it can be fixed.
 - `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-review.manual-fixes.test.tsx::LONG_PT_BODY`: A 300-character PT body, over the 220-character budget.
+- `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-review.test.tsx::<file>`: Then the interrupt payload carries a blocking violation for that slide And the content step UI shows the slide number and violation messages
 - `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-review.tsx::ContentPhaseReview`: Violations from the content interrupt/gate payload are merged (de-duplicated) with the presentation validation ones. Once a manual-fix submission comes back (run finished), focus jumps to the…
+- `frontend/src/app/dashboard/create/workspace/phase-review/design-phase-review.test.tsx::line 3`: And the re-interrupt payload carries a client-displayable hint
 - `frontend/src/app/dashboard/create/workspace/phase-review/design-phase-review.tsx::DesignPhaseReview`: The backend ``design_recovery_hint`` and a blocking report both signal the dead-end state; either one surfaces the recovery panel.
 - `frontend/src/app/dashboard/create/workspace/project-summary-card.tsx::ProjectSummaryCard`: The status prefers the editorial "ready to publish" signal, otherwise it reflects the live phase run status; a missing status resolves to Draft inside the badge.
 - `frontend/src/app/dashboard/create/workspace/workflow-status-badge.test.tsx::describe`: The translator mock echoes the key so the tests assert which label key was looked up. Outside production an unknown status throws (drift guard); the titlecase fallback is the production-only last…
@@ -1064,9 +1076,29 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/lib/api-client.test.ts::it`: Without a ``success`` field apiCall validates the raw JSON against the schema directly; ``{data: {id, name}}`` fails it.
 - `frontend/src/lib/auth-cookie.ts::<file>`: Re-export shim: the canonical home is ``@/modules/identity``.
 - `frontend/src/lib/jwt-auth.ts::<file>`: Re-export shim: the canonical home is ``@/modules/identity``.
+- `frontend/src/lib/public-blog-cards.test.ts::line 95`: never links a bare project id when the public feed is unavailable.
 - `frontend/src/lib/server-fetch-base-url.test.ts::simulateServerSide`: ``typeof window`` is "undefined" when the binding holds undefined: the server-side branch.
+- `frontend/src/lib/server-fetch.test.ts::line 125`: Given the public carousel list is fetched for the landing page When the request is built Then it filters by status=completed so drafts are never counted
 - `frontend/src/lib/server-fetch.ts::getBaseUrl`: Server-side (Docker) ``API_BASE_URL`` overrides the internal hostname fallback; exported for the prod-reachability test.
 - `frontend/src/lib/sse-client.edge-cases.test.ts::abortedSignal`: Resolves once the signal aborts.
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 30`: Given an SSE event without an id prefix When streamSseEvents is called Then the event is dispatched with undefined id
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 60`: Given an SSE event with invalid JSON data When streamSseEvents is called Then the data contains the raw string
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 88`: Given an SSE response with \r\n line endings When streamSseEvents is called Then events are still correctly parsed
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 119`: Given an SSE response with Unicode text content When streamSseEvents is called Then the Unicode text is correctly decoded
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 149`: Given a valid SSE response with an empty body When streamSseEvents is called Then no events are dispatched And onComplete is called
+- `frontend/src/lib/sse-client.edge-cases.test.ts::line 173`: Given an active SSE stream that receives an abort mid-way When the abort signal is triggered Then no error callback is called
+- `frontend/src/lib/sse-client.test.ts::line 24`: Given a streaming SSE response with a token event When streamSseEvents is called Then onEvent is called with the token event And onComplete is called
+- `frontend/src/lib/sse-client.test.ts::line 57`: Given a streaming SSE response with multiple token events When streamSseEvents is called Then onEvent is called for each token
+- `frontend/src/lib/sse-client.test.ts::line 97`: Given a streaming response where SSE events span across chunk boundaries When streamSseEvents is called Then all events are still parsed correctly
+- `frontend/src/lib/sse-client.test.ts::line 130`: Given a streaming response with keep-alive ping comments When streamSseEvents is called Then comment lines are ignored and events are still dispatched
+- `frontend/src/lib/sse-client.test.ts::line 164`: Given a non-200 HTTP response When streamSseEvents is called Then onError is called with the HTTP status code (no statusText leakage)
+- `frontend/src/lib/sse-client.test.ts::returns`: Given a response with incorrect content type When streamSseEvents is called Then onError is called with the content type error
+- `frontend/src/lib/sse-client.test.ts::line 216`: Given an AbortController that is aborted When streamSseEvents is called with the abort signal Then no callbacks are called (abort is silent)
+- `frontend/src/lib/sse-client.test.ts::line 241`: Given a network failure When streamSseEvents is called Then onError is called with the error
+- `frontend/src/lib/sse-client.test.ts::line 265`: Given a streaming response with an error event followed by stream end When streamSseEvents is called Then onEvent is called with the error event AND onComplete is called
+- `frontend/src/lib/sse-client.test.ts::line 297`: Given a lastEventId option When streamSseEvents is called Then the Last-Event-ID header is included in the request
+- `frontend/src/lib/sse-client.test.ts::line 328`: Given a response with a null body When streamSseEvents is called Then onError is called
+- `frontend/src/lib/sse-client.test.ts::line 357`: Given a stream that ends without a trailing blank line after the last event When streamSseEvents is called Then the last event is still dispatched
 - `frontend/src/lib/sse-client.ts::parseSseLine`: Comment lines (``:``, keep-alive pings) and unknown lines are ignored.
 - `frontend/src/lib/use-chat-stream.ts::useChatStream`: Any in-flight stream is aborted on unmount.
 - `frontend/src/lib/use-off-canvas.ts::useOffCanvas`: Route-change closing adjusts state during render on a changed pathname, the recommended pattern over a setState-in-effect (avoids cascading renders).
@@ -1078,18 +1110,33 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/modules/editorial-operations/board/blog-posts/components/badge.test.tsx::it`: Regression: an unknown key used to destructure ``undefined`` and crash the whole listing.
 - `frontend/src/modules/editorial/workflow/components/version-diff-view.tsx::DIFF_LINE_CLASS`: Row highlight per diff line type.
 - `frontend/src/modules/editorial/workflow/components/version-diff-view.tsx::DIFF_LINE_PREFIX`: Gutter marker per diff line type.
+- `frontend/src/modules/editorial/workflow/hooks/use-content-calendar.test.ts::a`: the latest one (see tests/features/calendar-month-navigation.feature).
 - `frontend/src/modules/editorial/workflow/hooks/use-content-calendar.ts::useContentCalendar`: The in-flight request is tracked so a slower stale response (fast month navigation) never overwrites the latest window; unmount aborts and clears it so a superseded request's ``finally`` cannot…
 - `frontend/src/modules/editorial/workspace/components/auto-repair-button.tsx::AutoRepairButton`: Runs the deterministic repair; a no-op wrote nothing, so the state is not re-read.
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 7`: Given the editorial workflow has phase_status "failed" And current_phase is "content" When the workspace page renders Then a prominent error card is displayed And the card shows "Content failed"…
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 37`: Falls back to the raw phase id when no i18n label exists.
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 54`: The error detail block is omitted when no message is present.
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 71`: When the user clicks "Retry Workflow" Then the workflow start() is called with the project's inputs
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 93`: And the button is disabled while retrying
+- `frontend/src/modules/editorial/workspace/components/workflow-failed-card.test.tsx::line 115`: A disabled button cannot trigger onRetry (idempotency at the UI layer).
 - `frontend/src/modules/editorial/workspace/constants.ts::FIELD_ERROR_MESSAGE_CODES`: From ``assistant_chatter`` on, the list carries every other presentation-validator code, so no backend English message reaches the PT review.
 - `frontend/src/modules/editorial/workspace/hooks/types.ts::ResumeOutcome`: The settled resume result, wrapped so the request's try/finally returns a plain value: the pending finalization runs outside its catch, as before.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.mutation.test.ts::line 249`: Given the research gate is awaiting review When the backend answers 202 "in_progress" Then the state flips to in_progress and the hook waits for the next gate
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.test.ts::it`: Regression: the resume call uses the bare endpoint path. The path already starts with ``/api`` and nginx routes ``/api/*`` to the backend; a ``NEXT_PUBLIC_API_URL`` prefix produced…
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.test.ts::it`: The three 409 causes have distinct client copy, never the raw machine code.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.test.ts::line 302`: A run-in-progress 409 renders the banner (state refresh), not a toast.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.test.ts::line 344`: The cap-exceeded 409 copy points to the uncapped edit path instead of surfacing the raw machine code.
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.ts::acceptedResumeState`: The state adopted after a 202: a newer ready gate keeps its phase status, any other state takes the accepted (in-progress) status.
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.ts::useEditorialWorkflowResume`: Each machine-readable 409 cause gets distinct copy and a known 4xx code is translated, never shown raw. After a 202 the backend has already marked the run in progress, so the acted-on gate is…
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-sse.test.ts::it`: Regression: the stream opens on the bare endpoint path. The path already starts with ``/api`` and nginx routes ``/api/*`` to the backend; a ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...``.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-sse.test.ts::line 197`: Then the stale snapshot is confirmed against workflow/state before it is applied
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-sse.ts::useEditorialWorkflowSse`: EventSource hides the status of a failed stream, so the reconnect hook probes auth before (and instead of) reconnecting, and a poll answered after a disconnect must not hide it.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::line 132`: Then the browser should not start a 3 second polling interval for workflow state
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::line 220`: Then the client should poll workflow state as fallback And polling should use increasing backoff intervals
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::line 259`: Then interval polling should stop And the transport mode should return to SSE primary
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::callsAfterReconnect`: The reopened stream refetches the state once; no poll runs while SSE is primary.
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::it`: A same-phase running -> ready flip is confirmed against GET workflow/state first.
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::line 425`: Given GET workflow/state reports phase_status "in_progress" And the SSE snapshot replays the checkpoint as "awaiting_human" Then the running state is kept
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.test.ts::it`: Regression: the state call is not wrapped in resolveClientApiUrl. The path already starts with ``/api`` and nginx routes ``/api/*`` to the backend; a ``NEXT_PUBLIC_API_URL`` prefix produced…
 - `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow.ts::useEditorialWorkflow`: Editorial workflow state, transport and review actions of one project. ``initialFetch: false`` skips the first state read for a project that never started its workflow (its GET answers 404).
 - `frontend/src/modules/editorial/workspace/lib/presentation-copy-budgets.test.ts::<file>`: Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
@@ -1122,14 +1169,17 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/modules/publishing/blog/generation/generation-requests.test.ts::line 3`: Gherkin: tests/features/blog_generate_ae0425.feature.
 - `frontend/src/modules/publishing/blog/generation/generation-state.test.ts::describe`: Gherkin: tests/features/blog_generate_ae0425.feature.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-editor-actions.test.ts::line 22`: Gherkin: tests/features/blog_editor_ae0424.feature.
+- `frontend/src/modules/publishing/blog/hooks/use-blog-editor-data.test.ts::line 8`: (tests/features/blog_editor_ae0424.feature)
 - `frontend/src/modules/publishing/blog/hooks/use-blog-post-editor-generation.test.ts::line 10`: Gherkin: tests/features/blog_generate_ae0425.feature ("Generation progress is polled and shown"): while the run writes the post, each newer server version replaces the read-only session.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-post-editor.test.ts::line 15`: Gherkin: tests/features/blog_editor_ae0424.feature, tests/features/blog-dashboard-ae0411.feature.
+- `frontend/src/modules/publishing/blog/hooks/use-blog-post-editor.test.ts::line 188`: our own slot write landing during the PUT is retried on top instead.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-post-editor.ts::useBlogPostEditor`: Blog section editor state; ``latest`` holds the last committed session for answers that arrive after a re-render (a 409 retry, the lock an action must use).
 - `frontend/src/modules/publishing/blog/hooks/use-blog-posts.test.ts::line 12`: Gherkin: tests/features/blog-posts-management.feature.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-posts.test.ts::describe`: Gherkin: tests/features/blog-dashboard-ae0411.feature.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-posts.ts::useBlogPosts`: Blog post listing with its mutations; a delete rejected for a stale lock version refreshes the listing so a retry uses fresh data.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-review-actions.test.ts::line 9`: Gherkin: tests/features/blog_editor_ae0424.feature.
 - `frontend/src/modules/publishing/blog/hooks/use-blog-review-actions.ts::line 3`: A failed action's error is shown in the review bar (with its code-specific copy), next to the control that failed.
+- `frontend/src/modules/publishing/blog/hooks/use-unsaved-changes-guard.test.ts::line 5`: (tests/features/blog_editor_ae0424.feature)
 - `frontend/src/modules/publishing/blog/lib/editor-document.test.ts::describe`: Gherkin: tests/features/blog_editor_ae0424.feature.
 - `frontend/src/modules/publishing/blog/lib/editor-error.test.ts::describe`: Gherkin: tests/features/blog_editor_errors_ae0438.feature.
 - `frontend/src/modules/publishing/blog/lib/editor-session.test.ts::typed`: Gherkin: tests/features/blog_editor_ae0424.feature.
@@ -1137,16 +1187,19 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/modules/publishing/distribution/components/cover-picker-section.test.tsx::line 9`: Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature and frontend/tests/features/workflow-lock-version-ae0447.feature (backend contract:…
 - `frontend/src/modules/publishing/distribution/components/horizontal-carousel-viewer.tsx::HorizontalCarouselViewer`: Slides whose image did not load (not rendered yet) get a placeholder instead of a broken image; a slide that fails to fetch is left out of the download.
 - `frontend/src/modules/publishing/distribution/components/publish-failed-notice.test.tsx::describe`: When phase_status is "failed" the publish page shows the WorkflowFailedCard (error message + "Back to workspace" link) instead of the awaitingFinalApproval message. The failed branch is extracted…
+- `frontend/src/modules/publishing/distribution/components/publish-failed-notice.test.tsx::line 15`: Given the editorial workflow has phase_status "failed" When the publish page renders Then the WorkflowFailedCard with the backend error message is shown And a "Back to workspace" link is shown And…
 - `frontend/src/modules/publishing/distribution/components/publish-panel.test.tsx::line 151`: Spying on the jsdom clipboard is flaky, so this asserts the button is present and clickable without throwing; the clipboard call path itself is tested manually in the dev server.
 - `frontend/src/modules/publishing/distribution/components/publish-panel.test.tsx::line 165`: Two "en" tabs exist (viewer toggle + LinkedIn language toggle) and share the same state, so the first one is clicked.
 - `frontend/src/modules/publishing/distribution/components/publish-panel.tsx::cacheBustVersion`: Combine the project's updated_at with the freshly built artifact version (when a "Rebuild PDF" just ran) so served PDF/slide URLs are cache-busted on version change.
 - `frontend/src/modules/publishing/distribution/components/publish-panel.tsx::PublishPanel`: Publish step: slide viewer, Instagram caption and LinkedIn copy. A clipboard write that rejects (insecure contexts) is ignored so the copy action still succeeds. The Instagram caption is…
+- `frontend/src/modules/publishing/distribution/components/rebuild-pdf-section.test.tsx::line 8`: backend/tests/features/carousel_republish.feature).
 - `frontend/src/modules/publishing/distribution/components/slide-text-edit-section.field-errors.test.tsx::line 8`: Gherkin: frontend/tests/features/review-form-field-errors.feature (uses the real en messages from the global next-intl mock).
 - `frontend/src/modules/publishing/distribution/components/slide-text-edit-section.test.tsx::line 9`: Gherkin: backend/tests/features/carousel_text_edit_no_regen.feature
 - `frontend/src/modules/publishing/distribution/hooks/use-cover-picker.ts::workflowVersionSchema`: The CAS version is read right before the PUT, never from page state (the workflow SSE merge dropped `lock_version`, and a successful switch bumps it).
 - `frontend/src/modules/publishing/distribution/hooks/use-publish-chat.ts::usePublishChat`: Persistent agent chat of the publish page. A conversation is created when no stored id exists (creation errors such as a 429 are silently ignored), and an invalid or mismatched stored id is replaced.
 - `frontend/src/modules/publishing/distribution/lib/viewer-slides.test.ts::project`: Gherkin: tests/features/qa-followups-ae0416.feature.
 - `frontend/src/modules/publishing/distribution/lib/viewer-slides.ts::designTokenSlidePaths`: The RENDERED slides (with text overlay) from the design tokens, not the raw hero images; falls back to legacy `slides` for projects generated before the rendered_slides_* fields existed.
+- `frontend/src/schemas/carousel.test.ts::line 352`: (backend/tests/features/image_generation_provider.feature)
 - `frontend/src/schemas/carousel.ts::theme`: Root key, "auto" or a custom-palette UUID; matches the backend varchar(64) so custom-palette references validate.
 - `frontend/src/schemas/carousel.ts::content_mode`: Content mode and the "Ponto de Vista" inputs (ADR-0021).
 - `frontend/src/schemas/carousel.ts::hook_asset_id`: Required by the API when content_mode is "pov" or "pov_news".
@@ -1158,3 +1211,4 @@ Generated from the diff against main: every docstring (backend) or JSDoc block (
 - `frontend/src/scripts/eslint-fetch-rule.test.ts::it`: A cold `npx eslint` with projectService type-checking takes ~11s on CI runners, so this subprocess test needs a generous timeout.
 - `frontend/src/scripts/eslint-rule-overrides.test.ts::SEEDED_CONFIG`: A config with a global `no-restricted-syntax` ERROR (the H1 flagship rule) silently re-declared as a scoped WARN over src/modules: the exact footgun.
 - `frontend/tests/e2e/auth-baseline.spec.ts::line 109`: useAuth.logout() does `fetch POST /api/auth/logout` then `window.location.href = "/login"`. (2) Because the still valid admin cookie survives, navigating to "/login" hits the middleware, which…
+- `frontend/tests/e2e/auth-baseline.spec.ts::line 121`: a naive "logout lands on /login" expectation).
