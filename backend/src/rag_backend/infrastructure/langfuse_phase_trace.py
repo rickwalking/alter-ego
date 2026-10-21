@@ -60,36 +60,11 @@ from rag_backend.infrastructure.logging import redact_secrets
 class TraceSpan(Protocol):
     """The subset of a Langfuse span the phase trace uses."""
 
-    def update_trace(  # noqa: PLR0913 — mirrors the Langfuse SDK signature
-        self,
-        *,
-        name: str | None = ...,
-        user_id: str | None = ...,
-        session_id: str | None = ...,
-        input: object | None = ...,  # noqa: A002 — Langfuse keyword
-        output: object | None = ...,
-        metadata: Mapping[str, str] | None = ...,
-        tags: list[str] | None = ...,
-    ) -> object: ...
+    def update_trace(self, **kwargs: object) -> object: ...
 
-    def update(  # noqa: PLR0913 — mirrors the Langfuse SDK signature
-        self,
-        *,
-        input: object | None = ...,  # noqa: A002 — Langfuse keyword
-        output: object | None = ...,
-        metadata: Mapping[str, str] | None = ...,
-        level: str | None = ...,
-        status_message: str | None = ...,
-    ) -> object: ...
+    def update(self, **kwargs: object) -> object: ...
 
-    def create_event(  # noqa: PLR0913 — mirrors the Langfuse SDK signature
-        self,
-        *,
-        name: str,
-        input: object | None = ...,  # noqa: A002 — Langfuse keyword
-        output: object | None = ...,
-        metadata: Mapping[str, object] | None = ...,
-    ) -> object: ...
+    def create_event(self, *, name: str, **kwargs: object) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -220,17 +195,17 @@ def build_phase_trace(metadata: Mapping[str, str]) -> PhaseTraceAttributes:
 def phase_trace(
     metadata: Mapping[str, str],
     *,
-    input: object | None = None,  # noqa: A002 — Langfuse keyword
+    trace_input: object | None = None,
 ) -> Iterator[PhaseTrace]:
     """Run the enclosed LLM calls inside the named, tagged phase trace.
 
-    ``input`` is the phase brief (topic, attempt, model queue, ...). The result
-    defaults to ``{"status": "completed"}'``; call ``trace.set_output(...)``
-    before exiting to record a richer summary. An exception records a redacted
-    error output and is re-raised.
+    ``trace_input`` is the phase brief (topic, attempt, model queue, ...). The
+    result defaults to ``{"status": "completed"}'``; call
+    ``trace.set_output(...)`` before exiting to record a richer summary. An
+    exception records a redacted error output and is re-raised.
     """
     attributes = build_phase_trace(metadata)
-    trace_input = build_trace_input(attributes, input)
+    payload = build_trace_input(attributes, trace_input)
     active = _ACTIVE.get()
     if active is not None:
         _merge_active(active, attributes)
@@ -248,7 +223,7 @@ def phase_trace(
             yield PhaseTrace(
                 name=attributes.name,
                 span=None,
-                trace_input=trace_input,
+                trace_input=payload,
                 metadata=attributes.metadata,
                 tags=attributes.tags,
                 user_id=attributes.user_id,
@@ -260,7 +235,7 @@ def phase_trace(
 
     with client.start_as_current_span(
         name=attributes.name,
-        input=trace_input,
+        input=payload,
         metadata=attributes.metadata,
     ) as raw_span:
         span = cast(TraceSpan, raw_span)
@@ -268,14 +243,14 @@ def phase_trace(
             name=attributes.name,
             user_id=attributes.user_id,
             session_id=attributes.session_id,
-            input=trace_input,
+            input=payload,
             metadata=attributes.metadata,
             tags=list(attributes.tags),
         )
         handle = PhaseTrace(
             name=attributes.name,
             span=span,
-            trace_input=trace_input,
+            trace_input=payload,
             metadata=attributes.metadata,
             tags=attributes.tags,
             user_id=attributes.user_id,

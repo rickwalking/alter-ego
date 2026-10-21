@@ -193,7 +193,7 @@ class BlogImageBatchService:
             TRACE_INPUT_SECTION_HEADING: subject.heading,
         }
         try:
-            with blog_phase_trace(scope, input=trace_input) as trace_handle:
+            with blog_phase_trace(scope, trace_input=trace_input) as trace_handle:
                 image = await self._deps.images.generate(request)
                 trace_handle.set_output({
                     TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED,

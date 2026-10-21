@@ -73,10 +73,16 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
+    flush_langfuse,
     propagate_attributes,
     record_human_review,
 )
 from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
+
+
+def flush_workflow_traces() -> None:
+    """Flush buffered observations at the end of a background run."""
+    flush_langfuse()
 
 
 @dataclass
@@ -130,7 +136,7 @@ class EditorialWorkflowService:
                 TRACE_FIELD_USER_ID: workflow_input.user_id,
                 "workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE,
             },
-            input={
+            trace_input={
                 "topic": workflow_input.topic,
                 "source_count": len(workflow_input.sources),
             },

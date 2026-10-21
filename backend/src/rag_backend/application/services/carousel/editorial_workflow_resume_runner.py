@@ -29,6 +29,7 @@ from rag_backend.application.services.carousel.editorial_workflow_run_heartbeat 
 )
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
+    flush_workflow_traces,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     ResumeWorkflowInput,
@@ -62,7 +63,6 @@ from rag_backend.domain.models.carousel_run import (
     carousel_run_epoch_var,
 )
 from rag_backend.infrastructure.database.config import get_session_maker
-from rag_backend.infrastructure.langfuse_client import flush_langfuse
 from rag_backend.modules.editorial.public import (
     CarouselProjectWriteOwner,
     open_run_trace_scope,
@@ -147,7 +147,7 @@ async def execute_resume_run(
         with await open_run_trace_scope(params.project_id, params.reviewer_id):
             await _execute_owned_run(service, params)
     finally:
-        flush_langfuse()
+        flush_workflow_traces()
 
 
 async def _execute_owned_run(

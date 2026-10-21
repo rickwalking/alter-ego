@@ -14,14 +14,20 @@ from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_PROJECT_ID,
     TRACE_FIELD_USER_ID,
 )
-from rag_backend.infrastructure.langfuse_phase_trace import PhaseTrace
 from rag_backend.infrastructure.monitoring_langfuse import (
+    PhaseTrace,
     _TraceConfig,
     create_workflow_trace,
+    flush_langfuse,
     propagate_attributes,
 )
 
 TRACE_UNKNOWN_POST_ID = "unknown"
+
+
+def flush_workflow_traces() -> None:
+    """Flush buffered observations at the end of a background run."""
+    flush_langfuse()
 
 
 @dataclass(frozen=True)
@@ -79,13 +85,13 @@ class BlogPhaseScope:
 def blog_phase_trace(
     scope: BlogPhaseScope,
     *,
-    input: object | None = None,  # noqa: A002 — Langfuse keyword
+    trace_input: object | None = None,
 ) -> AbstractContextManager[PhaseTrace]:
     """Run the enclosed LLM/image calls in the named ``workflow_<phase>`` trace.
 
     Carries the required metadata (``project_id``, ``phase``, ``agent_name``,
-    ``user_id``) with ``content_type="blog_post"`` (AE-0425, AC9). ``input`` is
-    the phase brief recorded on the trace/span (AE-0442).
+    ``user_id``) with ``content_type="blog_post"`` (AE-0425, AC9).
+    ``trace_input`` is the phase brief recorded on the trace/span (AE-0442).
     """
     metadata = {
         TRACE_FIELD_PROJECT_ID: scope.project_id,
@@ -94,7 +100,7 @@ def blog_phase_trace(
         TRACE_FIELD_AGENT_NAME: scope.agent_name,
         TRACE_FIELD_CONTENT_TYPE: TRACE_CONTENT_TYPE_BLOG_POST,
     }
-    return propagate_attributes(metadata, input=input)
+    return propagate_attributes(metadata, trace_input=trace_input)
 
 
 __all__ = [

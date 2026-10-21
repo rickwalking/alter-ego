@@ -354,7 +354,9 @@ class TestBackgroundFlush:
     ) -> None:
         flushes: list[bool] = []
         monkeypatch.setattr(
-            blog_generation_runner, "flush_langfuse", lambda: flushes.append(True)
+            blog_generation_runner,
+            "flush_workflow_traces",
+            lambda: flushes.append(True),
         )
         service = MagicMock()
         service.run = MagicMock()

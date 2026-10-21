@@ -274,7 +274,7 @@ class BlogGenerationService:
             TRACE_INPUT_TITLE: brief.title,
             TRACE_INPUT_SECTION_COUNT: brief.section_count,
         }
-        with blog_phase_trace(scope, input=brief_input) as trace:
+        with blog_phase_trace(scope, trace_input=brief_input) as trace:
             async with asyncio.timeout(self._deps.timings.text_timeout_seconds):
                 article = await self._deps.writer.draft(brief)
                 pt, en = await self._gate(brief, article)

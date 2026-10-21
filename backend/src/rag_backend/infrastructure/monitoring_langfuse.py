@@ -21,6 +21,7 @@ from rag_backend.domain.constants.langfuse_tracing import (
 )
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import (
+    flush_langfuse,
     get_langfuse_client,
 )
 from rag_backend.infrastructure.langfuse_phase_trace import (
@@ -269,7 +270,8 @@ def get_langfuse_runnable_config(
 def propagate_attributes(
     metadata: dict[str, str],
     callbacks: list[object] | None = None,
-    input: object | None = None,  # noqa: A002 — Langfuse keyword
+    *,
+    trace_input: object | None = None,
 ) -> Generator[PhaseTrace, None, None]:
     """Run the enclosed LLM calls in the named, tagged phase trace (AE-0390).
 
@@ -278,7 +280,7 @@ def propagate_attributes(
     outer phase span (AE-0442) instead of clobbering its trace metadata.
     """
     _ = callbacks
-    with phase_trace(metadata, input=input) as trace:
+    with phase_trace(metadata, trace_input=trace_input) as trace:
         yield trace
 
 
@@ -473,11 +475,13 @@ def add_error_span(
 
 __all__ = [
     "LangfuseCallbackHandler",
+    "PhaseTrace",
     "WorkflowTraceScope",
     "add_error_span",
     "add_quality_score",
     "add_voice_match_score",
     "create_workflow_trace",
+    "flush_langfuse",
     "get_langfuse_handler",
     "get_langfuse_runnable_config",
     "phase_trace",
