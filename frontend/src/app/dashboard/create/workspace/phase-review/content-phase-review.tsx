@@ -1,61 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useTranslations } from "next-intl";
-import { NeonBadge } from "@/components/atoms/neon-badge";
-import { NeonButton } from "@/components/atoms/neon-button";
-import {
-  NeonAlert,
-  NeonAlertDescription,
-} from "@/components/molecules/neon-alert";
+
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
 } from "@/modules/publishing";
 import {
   addressViolations,
-  applySlideCopyEdit,
-  applySlideExtraEdit,
-  applySlideStructuredItemEdit,
-  applySlideStructuredListEdit,
-  BlockingSlidesNotice,
-  buildSlideFieldErrors,
   changedLocalizedSlides,
-  fieldErrorKey,
-  focusInvalidField,
   hasBlockingContentGateValidation,
   hasBlockingPresentationViolations,
   listContentReviewViolations,
   resolveLocalizedSlides,
-  slideDomId,
   slidesHaveCopyChanges,
-  SlideViolationSummary,
-  structuredItemFieldPath,
   useSlideFieldErrors,
-  violationsForSlide,
-  type SlideCopyEdit,
-  type SlideExtraEdit,
-  type SlideFieldErrorState,
-  type SlideStructuredItemEdit,
-  type SlideStructuredListEdit,
 } from "@/modules/editorial";
-import {
-  CONTENT_REVIEW_ID_PREFIX,
-  ContentLocaleFields,
-} from "./content-phase-locale-fields";
-import { ContentViolationList } from "./content-phase-violations";
 
-/**
- * AE-0403: "submit manual fixes" at the content gate. Saves the edits through
- * an edits-only revise (apply + re-validate + re-interrupt); it never approves.
- * AE-0414 (B04): ``onSubmit`` receives only the slides the reviewer changed,
- * each exactly as edited (never clamped to a budget).
- */
-export interface ContentManualFixesActions {
-  onSubmit: (slides: LocalizedSlideReview[]) => void;
-  submitting?: boolean;
-}
+import { ContentViolationList } from "./content-phase-violations";
+import { contentEditHandlers } from "./content-edit-handlers";
+import { useManualFixSubmission } from "./use-manual-fix-submission";
+import {
+  ContentReviewHeader,
+  ContentSlideRow,
+} from "./content-phase-review-parts";
+import {
+  ManualFixesFooter,
+  type ContentManualFixesActions,
+} from "./content-phase-manual-fixes";
+
+export type { ContentManualFixesActions } from "./content-phase-manual-fixes";
 
 export interface ContentPhaseReviewProps {
   state: EditorialWorkflowState;
@@ -65,13 +41,17 @@ export interface ContentPhaseReviewProps {
   manualFixes?: ContentManualFixesActions;
 }
 
-interface ManualFixesFooterProps {
-  errors: SlideFieldErrorState;
-  /** The server still blocks approval (shows the blocking-slides hint). */
-  blocked: boolean;
-  canSubmit: boolean;
-  manualFixes: ContentManualFixesActions;
-  onSubmit: () => void;
+/** Whether the content gate, or any presentation check, blocks approval. */
+function approvalBlocks(state: EditorialWorkflowState): {
+  contentGateBlocked: boolean;
+  approvalBlocked: boolean;
+} {
+  const contentGateBlocked = hasBlockingContentGateValidation(state);
+  return {
+    contentGateBlocked,
+    approvalBlocked:
+      contentGateBlocked || hasBlockingPresentationViolations(state),
+  };
 }
 
 /** One validation run of the content gate (a resume bumps ``lock_version``). */
@@ -81,42 +61,6 @@ function validationStamp(state: EditorialWorkflowState): string {
     state.presentation_validation?.validated_at ?? "",
     state.content_gate_validation?.validated_at ?? "",
   ].join("|");
-}
-
-function ManualFixesFooter({
-  errors,
-  blocked,
-  canSubmit,
-  manualFixes,
-  onSubmit,
-}: ManualFixesFooterProps): React.ReactElement {
-  const t = useTranslations("editorialWorkflow.review");
-  return (
-    <div className="space-y-2 rounded-md border border-destructive/30 p-3">
-      {blocked ? (
-        <BlockingSlidesNotice
-          message={t("fieldErrors.manualFixesHint")}
-          slideIndexes={errors.slideIndexes}
-          onSelectSlide={(slideIndex) =>
-            focusInvalidField(
-              CONTENT_REVIEW_ID_PREFIX,
-              errors.fieldErrors,
-              slideIndex,
-            )
-          }
-        />
-      ) : null}
-      <NeonButton
-        size="sm"
-        disabled={!canSubmit || manualFixes.submitting === true}
-        onClick={onSubmit}
-      >
-        {manualFixes.submitting === true
-          ? t("fieldErrors.submittingManualFixes")
-          : t("fieldErrors.submitManualFixes")}
-      </NeonButton>
-    </div>
-  );
 }
 
 export function ContentPhaseReview({
@@ -134,66 +78,20 @@ export function ContentPhaseReview({
   const violations = useMemo(() => listContentReviewViolations(state), [state]);
   const addressed = useMemo(() => addressViolations(violations), [violations]);
   const errors = useSlideFieldErrors(addressed, validationStamp(state));
-  const awaitingResult = useRef(false);
-  const runInProgress =
-    state.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
-  const contentGateBlocked = hasBlockingContentGateValidation(state);
-  const approvalBlocked =
-    hasBlockingPresentationViolations(state) || contentGateBlocked;
-  const promptCount = state.slide_image_prompts?.length ?? 0;
-  const canEdit = editable && onSlidesChange !== undefined;
+  const { contentGateBlocked, approvalBlocked } = approvalBlocks(state);
   const hasChanges = slidesHaveCopyChanges(baselineSlides, localizedSlides);
 
-  // AE-0403: once a manual-fix submission comes back (run finished), jump to
-  // the first field that is still invalid (a DOM focus, not data fetching).
-  useEffect(() => {
-    if (!awaitingResult.current || runInProgress) {
-      return;
-    }
-    awaitingResult.current = false;
-    focusInvalidField(
-      CONTENT_REVIEW_ID_PREFIX,
-      buildSlideFieldErrors(addressed),
-    );
-  }, [addressed, runInProgress]);
+  const handlers =
+    editable && onSlidesChange
+      ? contentEditHandlers(localizedSlides, onSlidesChange, errors.clearField)
+      : null;
 
-  const handleCopyChange = (edit: SlideCopyEdit): void => {
-    onSlidesChange?.(applySlideCopyEdit(localizedSlides, edit));
-    errors.clearField(fieldErrorKey(edit.slideIndex, edit.locale, edit.field));
-  };
-
-  // AE-0414 (B11): structured items and free-text extras are editable too.
-  const handleItemChange = (edit: SlideStructuredItemEdit): void => {
-    onSlidesChange?.(applySlideStructuredItemEdit(localizedSlides, edit));
-    errors.clearField(
-      fieldErrorKey(
-        edit.slideIndex,
-        edit.locale,
-        structuredItemFieldPath(edit.listKey, edit.itemIndex, edit.field),
-      ),
-    );
-  };
-
-  // AE-0437: add / remove a structured item slot (PT and EN together).
-  const handleListChange = (edit: SlideStructuredListEdit): void => {
-    onSlidesChange?.(applySlideStructuredListEdit(localizedSlides, edit));
-  };
-
-  const handleExtraChange = (edit: SlideExtraEdit): void => {
-    onSlidesChange?.(applySlideExtraEdit(localizedSlides, edit));
-    const path = edit.field ? `${edit.extraKey}.${edit.field}` : edit.extraKey;
-    errors.clearField(fieldErrorKey(edit.slideIndex, edit.locale, path));
-  };
-
-  const submitManualFixes = (): void => {
-    if (!manualFixes) {
-      return;
-    }
-    awaitingResult.current = true;
-    manualFixes.onSubmit(
+  const submitManualFixes = useManualFixSubmission(manualFixes, {
+    addressed,
+    runInProgress: state.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    changedSlides: () =>
       changedLocalizedSlides(baselineSlides, localizedSlides),
-    );
-  };
+  });
 
   if (localizedSlides.length === 0) {
     return (
@@ -205,86 +103,25 @@ export function ContentPhaseReview({
 
   return (
     <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-medium">{t("contentTitle")}</p>
-        {state.presentation_policy_version ? (
-          <NeonBadge variant="outline">
-            {t("presentationPolicy", {
-              version: state.presentation_policy_version,
-            })}
-          </NeonBadge>
-        ) : null}
-      </div>
-
-      {promptCount > 0 ? (
-        <p className="text-[var(--color-text-muted)] text-xs">
-          {t("imagePromptsLink", { count: promptCount })}
-        </p>
-      ) : null}
-
-      {contentGateBlocked ? (
-        <NeonAlert variant="destructive">
-          <NeonAlertDescription>{t("contentGateBlocked")}</NeonAlertDescription>
-        </NeonAlert>
-      ) : null}
-
-      {approvalBlocked ? (
-        <NeonAlert variant="destructive">
-          <NeonAlertDescription>
-            {t("presentationBlocked")}
-          </NeonAlertDescription>
-        </NeonAlert>
-      ) : null}
+      <ContentReviewHeader
+        policyVersion={state.presentation_policy_version}
+        imagePrompts={state.slide_image_prompts}
+        contentGateBlocked={contentGateBlocked}
+        approvalBlocked={approvalBlocked}
+      />
 
       <ContentViolationList violations={addressed} />
 
       <div className="space-y-3">
         {localizedSlides.map((slide) => {
-          const localeProps = {
-            slide,
-            policyVersion: state.presentation_policy_version,
-            fieldErrors: errors.fieldErrors,
-            onCopyChange: canEdit ? handleCopyChange : undefined,
-            onStructuredItemChange: canEdit ? handleItemChange : undefined,
-            onExtraChange: canEdit ? handleExtraChange : undefined,
-            onStructuredListChange: canEdit ? handleListChange : undefined,
-          };
-
           return (
-            <div
+            <ContentSlideRow
               key={`${slide.slide_index}-${slide.slide_type}`}
-              id={slideDomId(CONTENT_REVIEW_ID_PREFIX, slide.slide_index)}
-              tabIndex={-1}
-              className="space-y-2 border-[var(--color-border)] border-b pb-3 last:border-0"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium text-[var(--color-text)]">
-                  {t("slideLabel", { index: slide.slide_index })}
-                </p>
-                <NeonBadge variant="secondary">{slide.slide_type}</NeonBadge>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <ContentLocaleFields
-                  {...localeProps}
-                  localeKey="presentation_pt"
-                  localeLabel={t("localePt")}
-                />
-                <ContentLocaleFields
-                  {...localeProps}
-                  localeKey="presentation_en"
-                  localeLabel={t("localeEn")}
-                />
-              </div>
-              {canEdit ? (
-                <SlideViolationSummary
-                  slideIndex={slide.slide_index}
-                  violations={violationsForSlide(
-                    errors.open,
-                    slide.slide_index,
-                  )}
-                />
-              ) : null}
-            </div>
+              slide={slide}
+              policyVersion={state.presentation_policy_version}
+              errors={errors}
+              handlers={handlers}
+            />
           );
         })}
       </div>
@@ -292,7 +129,7 @@ export function ContentPhaseReview({
       {/* AE-0437: unsaved edits can always be saved without approving, also
           when the server is no longer blocking (prod carousel 5344b6c6: a
           late-added EN TL;DR edit could only be sent by approving). */}
-      {canEdit && manualFixes && (approvalBlocked || hasChanges) ? (
+      {handlers && manualFixes && (approvalBlocked || hasChanges) ? (
         <ManualFixesFooter
           errors={errors}
           blocked={approvalBlocked}
