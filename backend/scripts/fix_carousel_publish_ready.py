@@ -19,25 +19,24 @@ from rag_backend.application.services.carousel.editorial_distribution_pack impor
     SlideDraftsContext,
     apply_slide_drafts_to_database,
 )
-from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     generate_carousel_images,
 )
-from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
-from rag_backend.domain.constants import ENCODING_UTF8, LANGUAGE_PT
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_drafts,
 )
+from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.presentation_review import (
     deserialize_translations_en,
-    serialize_translations_en,
 )
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.application.services.carousel.types import unpack_extras
+from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.domain.constants import ENCODING_UTF8, LANGUAGE_PT
 from rag_backend.domain.models.carousel import CarouselStatus
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.container import get_container

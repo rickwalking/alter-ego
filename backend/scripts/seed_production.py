@@ -47,7 +47,7 @@ async def seed_database():
                 now(),
             )
 
-        with open(SEED_FILE, encoding="utf-8") as f:
+        with Path(SEED_FILE).open(encoding="utf-8") as f:
             projects = json.load(f)
 
         print(f"Seeding {len(projects)} carousel projects...")

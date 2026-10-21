@@ -24,7 +24,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import asyncpg
-
 from rag_backend.domain.enums.run_mode import RunMode
 
 _DSN_ENV = "DATABASE_URL"

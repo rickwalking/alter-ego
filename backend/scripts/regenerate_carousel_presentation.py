@@ -27,9 +27,6 @@ import sys
 from collections.abc import Callable
 from uuid import UUID
 
-from rag_backend.application.services.carousel.artifact_build_service import (
-    CarouselArtifactBuildService,
-)
 from rag_backend.application.services.carousel.legacy_presentation_regeneration import (
     LegacyRegenerationError,
     RegeneratePresentationCommand,
@@ -38,6 +35,10 @@ from rag_backend.application.services.carousel.legacy_presentation_regeneration 
     RegenerationResult,
     default_target_policy_version,
     regenerate_legacy_presentation,
+)
+
+from rag_backend.application.services.carousel.artifact_build_service import (
+    CarouselArtifactBuildService,
 )
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,

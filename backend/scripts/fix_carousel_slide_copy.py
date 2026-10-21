@@ -20,7 +20,6 @@ from rag_backend.application.services.carousel.malformed_draft_normalizer import
 )
 from rag_backend.application.services.carousel.presentation_review import (
     build_presentation_review_updates,
-    deserialize_translations_en,
     serialize_translations_en,
 )
 from rag_backend.application.services.carousel.refinement_service import (
