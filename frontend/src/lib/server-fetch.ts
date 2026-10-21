@@ -66,7 +66,7 @@ export async function fetchCompletedProjects(
   limit: number = SERVER_FETCH.DEFAULT_PROJECT_LIMIT,
 ): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
   const result = await validatedFetch(
-    `${API_ENDPOINTS.CAROUSELS}?public=true&limit=${limit}`,
+    `${API_ENDPOINTS.CAROUSELS}?public=true&status=${SERVER_FETCH.COMPLETED_STATUS}&limit=${limit}`,
     carouselProjectListResponseSchema,
     { cache: "no-store" },
   );

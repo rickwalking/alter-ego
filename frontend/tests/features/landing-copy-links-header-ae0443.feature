@@ -14,8 +14,8 @@ Feature: Landing page truth, links and public header
   # Stats derived from data
   # ---------------------------------------------------------------------------
 
-  Scenario: Published-carousel stat comes from the public carousel total
-    Given the public carousel list reports a total of 15
+  Scenario: Published-carousel stat comes from the public completed-carousel total
+    Given the public completed-carousel list reports a total of 15
     When the stats section renders
     Then the carousel stat shows "15"
     And the stats section does not show a hardcoded "50+"

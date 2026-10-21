@@ -1,6 +1,6 @@
 # AE-0443 — Landing copy, card links, header login and hero badge (owner request)
 
-Status: In Progress
+Status: Review
 Tier: T1
 Priority: P1
 Type: Bug
@@ -66,19 +66,19 @@ Owner review, 2026-10-20:
 
 ## Acceptance Criteria
 
-- [ ] AC1: the carousel stat renders the public+completed total from
+- [x] AC1: the carousel stat renders the public+completed total from
   `fetchCompletedProjects` (no hardcoded `50+`, no hardcoded replacement).
-- [ ] AC2: "8+ years" stays (true, consistent with the About bio); the `∞`
+- [x] AC2: "8+ years" stays (true, consistent with the About bio); the `∞`
   topics stat is removed, not replaced by a guessed number.
-- [ ] AC3: Blog card → `/blog`, Carousels card → `/carousels`, Chat card →
+- [x] AC3: Blog card → `/blog`, Carousels card → `/carousels`, Chat card →
   `/chat`; the whole card is the link, with a visible keyboard focus ring.
-- [ ] AC4: public header has no Login link and has "Carrosséis"/"Carousels"
+- [x] AC4: public header has no Login link and has "Carrosséis"/"Carousels"
   next to Blog → `/carousels`.
-- [ ] AC5: hero renders no "Alter-Ego v2.0" badge; the `hero.badgeVersion` key
+- [x] AC5: hero renders no "Alter-Ego v2.0" badge; the `hero.badgeVersion` key
   is gone from both locales.
-- [ ] AC6: landing copy reviewed in pt/en (grammar, overclaims, latest-posts
+- [x] AC6: landing copy reviewed in pt/en (grammar, overclaims, latest-posts
   copy), locales key-synced.
-- [ ] AC7: Gherkin + component tests (stats total, card hrefs, no login link,
+- [x] AC7: Gherkin + component tests (stats total, card hrefs, no login link,
   no badge, copy parity) and frontend gates green locally (CI mutation is the
   source of truth).
 
@@ -86,8 +86,14 @@ Owner review, 2026-10-20:
 
 - **Stats source**: `data.total` from the existing `fetchCompletedProjects(5)`
   call. `limit=5` only caps the items for the latest-posts cards; `total` is the
-  full public+completed count, so no extra request and no guess. Prod on
-  2026-10-20 = 15.
+  full count for the query, so no extra request and no guess.
+  **Correction (2026-10-20, during verification):** `fetchCompletedProjects`
+  previously queried `?public=true` only, so `total` counted every public
+  project (26 on prod), not completed ones. It now also sends
+  `status=completed`, matching its name and the ticket's metric. Prod query
+  `?public=true&status=completed` = 15; the landing stat therefore renders 15
+  and drafts are never counted. This also keeps the latest-posts list limited
+  to finished public projects.
 - **Which stats survive**: keep "8+ years" (already stated in the About bio and
   true) and the derived carousel count. Drop "∞ topics": it is neither
   measurable nor meaningful, and a replacement number would be invented.
@@ -124,17 +130,48 @@ Coordinates with AE-0444 (`/carousels` page). Link only; no page here.
 Read-only prod check confirmed 15 public+completed carousels. Ticket created;
 specs/tests/code next.
 
+Implemented stats/copy/cards/header/hero changes, Gherkin + component tests.
+During local verification the landing rendered 26: `fetchCompletedProjects`
+sent only `?public=true`, so `total` counted every public project. Added
+`status=completed` (matching the function name and this ticket's metric);
+prod now returns 15 and the landing stat matches. Verified on the local dev
+server against the public prod read endpoint (no writes), then captured
+desktop/mobile screenshots.
+
 ## Files Touched
 
-Pending.
+- `frontend/src/app/(public)/(marketing)/{page,marketing-stats,marketing-features,marketing-primary-feature,marketing-hero,types}.tsx` (+ tests)
+- `frontend/src/components/layout/public-header.tsx` (+ test)
+- `frontend/src/constants/{public-routes,middleware.test,server-fetch}.ts`
+- `frontend/src/modules/identity/guards.ts`
+- `frontend/src/lib/server-fetch.ts` (+ test)
+- `frontend/src/i18n/locales/{pt,en}.json`
+- `frontend/tests/features/landing-copy-links-header-ae0443.feature`
+- `frontend/package-lock.json` (vite 7.3.5 → 7.3.7 patch for the high-severity audit gate; not gate loosening)
+- `docs/pr-assets/ae-0443/landing-{desktop,mobile}.png` (PR evidence)
 
 ## Test Evidence
 
-Pending (frontend gates).
+Local frontend gates (all non-mutation, run individually via
+`bash scripts/ci/gates.sh frontend:<gate>`; mutation is CI-only):
+
+`lint`, `lint-changed`, `component-types`, `duplication`, `dead-code`,
+`blog-v1-dead-code`, `typecheck`, `build`, `legacy-guard`,
+`legacy-inventory`, `format`, `security`, `integrity`, `test`,
+`schema-drift`, `duplication-tests`, `dead-files` — **all PASS**.
+
+`frontend:test`: 207 files / 1706 tests passed. New coverage:
+`marketing-stats.test.tsx` (15, no 50+/∞), `marketing-features.test.tsx`
+(card hrefs/focus), `public-header.test.tsx` (no Login, Carousels),
+`landing-copy.test.ts` (pt/en parity + copy fixes),
+`server-fetch.test.ts` (`status=completed` filter).
+
+Screenshots: `docs/pr-assets/ae-0443/landing-desktop.png` and
+`landing-mobile.png` (local dev server, public prod read API, 15 carousels).
 
 ## QA Report
 
-Pending.
+Pending CI + orchestrator verification.
 
 ## Blockers
 

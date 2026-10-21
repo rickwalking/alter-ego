@@ -118,6 +118,25 @@ describe("server-fetch", () => {
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain("limit=5");
     });
+
+    // Feature: Landing page truth, links and public header (AE-0443)
+    // Scenario: Published-carousel stat counts only public, completed projects
+    //   Given the public carousel list is fetched for the landing page
+    //   When the request is built
+    //   Then it filters by status=completed so drafts are never counted
+    it("filters the public list to completed projects", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(MOCK_PROJECT_LIST),
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
+
+      await fetchCompletedProjects(5);
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("public=true");
+      expect(calledUrl).toContain("status=completed");
+    });
   });
 
   describe("fetchCarouselDesign (AE-0423)", () => {

@@ -3,4 +3,6 @@
 export const SERVER_FETCH = {
   /** Default page size for public project listings. */
   DEFAULT_PROJECT_LIMIT: 20,
+  /** Only finished projects are shown publicly (AE-0443). */
+  COMPLETED_STATUS: "completed",
 } as const;
