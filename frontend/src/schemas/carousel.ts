@@ -220,8 +220,6 @@ export const slideFieldViolationSchema = z.object({
   item_field: z.string().nullable().optional(),
 });
 
-export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
-
 export type CarouselDesignResponse = z.infer<
   typeof carouselDesignResponseSchema
 >;
