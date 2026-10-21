@@ -73,12 +73,11 @@ export interface CoverThumbProps {
 
 /**
  * AE-0445: publish-page "Capa (slide 1)" for a Ponto de Vista carousel. A pick
- * re-renders slides + PDFs server-side at the workflow ``lockVersion``;
+ * re-renders slides + PDFs server-side at the current workflow lock version;
  * ``onSwitched`` receives the fresh artifact version (cache-bust + refetch).
  */
 export interface CoverPickerSectionProps {
   projectId: string;
-  lockVersion: number;
   onSwitched: (artifactVersion: string | null) => void;
 }
 

@@ -29,6 +29,10 @@ const coverOptionsSchema = z.object({
   options: z.array(coverOptionSchema),
 });
 
+// AE-0447: the CAS version is read right before the PUT, never from page state
+// (the workflow SSE merge dropped `lock_version`, and a successful switch bumps it).
+const workflowVersionSchema = z.object({ lock_version: z.number() });
+
 const coverPickResponseSchema = z.object({
   project_id: z.string(),
   status: z.string(),
@@ -63,8 +67,12 @@ export function usePickCover(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectId, assetId, expectedVersion }: CoverPickInput) =>
-      apiCall(
+    mutationFn: async ({ projectId, assetId }: CoverPickInput) => {
+      const { lock_version: expectedVersion } = await apiCall(
+        API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
+        workflowVersionSchema,
+      );
+      return apiCall(
         API_ENDPOINTS.CAROUSEL_COVER(projectId),
         coverPickResponseSchema,
         {
@@ -74,7 +82,8 @@ export function usePickCover(): UseMutationResult<
             expected_version: expectedVersion,
           }),
         },
-      ),
+      );
+    },
     onSuccess: (_data, { projectId }) => {
       void queryClient.invalidateQueries({
         queryKey: coverOptionKeys.detail(projectId),

@@ -28,7 +28,6 @@ function failureKey(error: Error | null): "conflict" | "failed" {
  */
 export function CoverPickerSection({
   projectId,
-  lockVersion,
   onSwitched,
 }: CoverPickerSectionProps): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
@@ -43,7 +42,7 @@ export function CoverPickerSection({
       }
       setSwitched(false);
       pick.mutate(
-        { projectId, assetId, expectedVersion: lockVersion },
+        { projectId, assetId },
         {
           onSuccess: (data) => {
             setSwitched(true);
@@ -52,7 +51,7 @@ export function CoverPickerSection({
         },
       );
     },
-    [pick, options.data?.current_asset_id, projectId, lockVersion, onSwitched],
+    [pick, options.data?.current_asset_id, projectId, onSwitched],
   );
 
   const items = options.data?.options ?? [];

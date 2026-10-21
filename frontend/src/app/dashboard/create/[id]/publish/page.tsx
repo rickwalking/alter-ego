@@ -315,7 +315,6 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
               <div style={{ marginTop: "16px" }}>
                 <CoverPickerSection
                   projectId={projectId}
-                  lockVersion={workflowState.lock_version ?? 1}
                   onSwitched={handleRebuilt}
                 />
               </div>
