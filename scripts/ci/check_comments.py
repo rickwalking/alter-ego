@@ -10,7 +10,8 @@ live in docstrings. A ``#`` comment is allowed only when a tool or gate reads it
   ``integrity-ok:`` escape hatch read by ``scripts/ci/check-integrity.sh``);
 * a Gherkin reference read by ``scripts/check_gherkin_refs.py``
   (``# Scenario: <title>``), plus indented continuation lines (``#   rest``)
-  that directly follow it when a long title wraps;
+  that directly follow it, only while the joined text is still the start of a
+  real ``.feature`` scenario title (a wrapped title, never an attached note);
 * a licence header (``SPDX-License-Identifier`` / ``Copyright``).
 
 Ticket ids, decision ids and to-do markers (``_TICKET`` and ``_MARKER``)
@@ -32,11 +33,19 @@ import re
 import sys
 import tokenize
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BACKEND = _REPO_ROOT / "backend"
 _SCAN_DIRS = ("src", "tests", "scripts", "alembic")
+_FEATURE_ROOTS = (
+    _REPO_ROOT / "backend" / "tests" / "features",
+    _REPO_ROOT / "frontend" / "tests" / "features",
+)
+_FEATURE_TITLE = re.compile(r"^\s*Scenario(?: Outline)?:\s*(?P<title>.+?)\s*$")
+_SCENARIO_PREFIX = re.compile(r"^#\s*(?:Scenario(?: Outline)?:)?")
+_NON_ALNUM = re.compile(r"[^0-9a-z]+")
 _DIRECTIVE = re.compile(
     r"^#\s*(noqa\b|type:\s*ignore\b|pragma\b|pyright:|mypy:|fmt:\s*(off|on|skip)\b"
     r"|isort:|ruff:|nosec\b|integrity-ok:)"
@@ -69,6 +78,27 @@ class Violation:
         return f"{self.path}:{self.line}: {self.reason}: {snippet}"
 
 
+def _normalise(text: str) -> str:
+    return _NON_ALNUM.sub(" ", text.lower()).strip()
+
+
+@cache
+def _scenario_titles() -> frozenset[str]:
+    titles: set[str] = set()
+    for root in _FEATURE_ROOTS:
+        for feature in root.rglob("*.feature"):
+            for row in feature.read_text(encoding="utf-8").splitlines():
+                match = _FEATURE_TITLE.match(row)
+                if match:
+                    titles.add(_normalise(match.group("title")))
+    return frozenset(titles)
+
+
+def _wraps_a_title(joined: str) -> bool:
+    prefix = _normalise(joined)
+    return any(title.startswith(prefix) for title in _scenario_titles())
+
+
 def _is_standalone(token: tokenize.TokenInfo) -> bool:
     return not token.line[: token.start[1]].strip()
 
@@ -91,10 +121,19 @@ def _noise_reason(text: str) -> str | None:
     return None
 
 
+def _continues_title(
+    token: tokenize.TokenInfo, scenario_line: int, scenario_text: str
+) -> bool:
+    if token.start[0] != scenario_line + 1 or not _CONTINUATION.match(token.string):
+        return False
+    return _wraps_a_title(scenario_text + " " + _SCENARIO_PREFIX.sub("", token.string))
+
+
 def comment_violations(path: str, source: str) -> list[Violation]:
     """Every ``#`` comment in ``source`` that the policy rejects."""
     violations: list[Violation] = []
     scenario_line = -2
+    scenario_text = ""
     readline = io.StringIO(source).readline
     for token in tokenize.generate_tokens(readline):
         if token.type != tokenize.COMMENT:
@@ -103,10 +142,11 @@ def comment_violations(path: str, source: str) -> list[Violation]:
         standalone = _is_standalone(token)
         if standalone and _SCENARIO.match(token.string):
             scenario_line = line
+            scenario_text = _SCENARIO_PREFIX.sub("", token.string)
             continue
-        continues = line == scenario_line + 1 and _CONTINUATION.match(token.string)
-        if standalone and continues:
+        if standalone and _continues_title(token, scenario_line, scenario_text):
             scenario_line = line
+            scenario_text += " " + _SCENARIO_PREFIX.sub("", token.string)
             continue
         if _is_tool_comment(token):
             reason = _noise_reason(token.string)

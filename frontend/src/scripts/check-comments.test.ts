@@ -18,12 +18,19 @@ interface RunResult {
   output: string;
 }
 
+let featuresDir = "";
+
 function run(root?: string): RunResult {
   try {
     const output = execFileSync(process.execPath, [SCRIPT], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
-      env: { ...process.env, ...(root ? { COMMENTS_ROOT: root } : {}) },
+      env: {
+        ...process.env,
+        ...(root
+          ? { COMMENTS_ROOT: root, COMMENTS_FEATURES: featuresDir }
+          : {}),
+      },
       stdio: ["pipe", "pipe", "pipe"],
     });
     return { status: 0, output };
@@ -57,6 +64,21 @@ const SEEDED: readonly (readonly [string, string, string])[] = [
   ["block comment", "/* note */\nexport const a = 1;\n", "non-doc"],
   ["commented-out code", "// const old = compute();\n", "non-doc"],
   [
+    "note riding on a complete title",
+    "// Scenario: Title\n//   and a note riding on it\nexport const a = 1;\n",
+    "non-doc",
+  ],
+  [
+    "prose that mentions eslint",
+    "// eslint flags this\nexport const a = 1;\n",
+    "non-doc",
+  ],
+  [
+    "prose that mentions a copyright",
+    "// see the Copyright page\nexport const a = 1;\n",
+    "non-doc",
+  ],
+  [
     "JSX comment",
     "export const C = () => <div>{/* note */}</div>;\n",
     "non-doc",
@@ -74,9 +96,15 @@ describe("comment policy check", () => {
   let dir: string;
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "comments-"));
+    featuresDir = mkdtempSync(join(tmpdir(), "comments-features-"));
+    writeFileSync(
+      join(featuresDir, "seeded.feature"),
+      "Feature: Seeded\n  Scenario: Title\n  Scenario: A long scenario title that wraps over two comment lines\n",
+    );
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
+    rmSync(featuresDir, { recursive: true, force: true });
   });
 
   it("passes on the real source tree", () => {

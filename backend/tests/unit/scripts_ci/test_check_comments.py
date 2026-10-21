@@ -31,6 +31,17 @@ def answer() -> int:  {_NO_COVER}
 '''
 
 
+_TITLES = frozenset(
+    {"a long scenario title that wraps over two comment lines", "title"},
+)
+
+
+@pytest.fixture(autouse=True)
+def known_titles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the feature titles a wrapped reference may continue."""
+    monkeypatch.setattr(gate, "_scenario_titles", lambda: _TITLES)
+
+
 def _reasons(source: str) -> list[str]:
     return [violation.reason for violation in gate.check_source("x.py", source)]
 
@@ -69,6 +80,27 @@ def test_docstring_scenario_line_may_repeat_a_ticket_id() -> None:
 def test_continuation_needs_a_scenario_line_directly_above() -> None:
     source = "# Scenario: Title\n\n#   not a continuation\n"
     assert _reasons(source) == [gate._REASON_COMMENT]
+
+
+def test_indented_note_after_a_complete_title_is_not_a_continuation() -> None:
+    source = "# Scenario: Title\n#   and a note riding on it\n"
+    assert _reasons(source) == [gate._REASON_COMMENT]
+
+
+def test_feature_titles_are_read_from_the_feature_roots(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "x.feature").write_text(
+        "Feature: F\n  Scenario: Wrapped Title Here\n", encoding="utf-8"
+    )
+    monkeypatch.undo()
+    monkeypatch.setattr(gate, "_FEATURE_ROOTS", (tmp_path,))
+    gate._scenario_titles.cache_clear()
+    try:
+        source = "# Scenario: Wrapped title\n#   here\n"
+        assert gate.check_source("x.py", source) == []
+    finally:
+        gate._scenario_titles.cache_clear()
 
 
 def test_unindented_line_after_a_scenario_is_not_a_continuation() -> None:
