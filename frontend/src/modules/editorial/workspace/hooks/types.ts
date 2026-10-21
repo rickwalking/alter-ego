@@ -222,3 +222,44 @@ export interface WorkflowCore {
   setTransportMode: Dispatch<SetStateAction<EditorialWorkflowTransportMode>>;
   refreshState: () => Promise<EditorialWorkflowState | null>;
 }
+
+/** Refs shared by the workflow stream, poller and reconnect (AE-0446). */
+export interface WorkflowStreamRefs {
+  pollTimeoutRef: MutableRefObject<number | null>;
+  backoffIndexRef: MutableRefObject<number>;
+  sourceRef: MutableRefObject<EventSource | null>;
+  connectRef: MutableRefObject<(() => void) | null>;
+  transportModeRef: MutableRefObject<EditorialWorkflowTransportMode>;
+  workflowStateRef: MutableRefObject<EditorialWorkflowState | null>;
+  phaseStatusRef: MutableRefObject<
+    EditorialWorkflowState["phase_status"] | undefined
+  >;
+}
+
+/** Transport switches of the workflow stream (AE-0446). */
+export interface PollingControls {
+  clearPollTimeout: () => void;
+  stopPollingFallback: () => void;
+  enterPollingFallback: () => void;
+  markDisconnected: () => void;
+}
+
+/** What the stream-connection effect needs (AE-0446). */
+export interface StreamConnectionDeps {
+  params: UseEditorialWorkflowSseParams;
+  refs: WorkflowStreamRefs;
+  controls: PollingControls;
+  stream: Pick<
+    WorkflowStreamReconnectApi,
+    "handleStreamError" | "handleStreamOpen" | "cancelReconnect"
+  >;
+}
+
+/** What the polling-fallback effect needs (AE-0446). */
+export interface PollWhileFallbackDeps {
+  transportMode: EditorialWorkflowTransportMode;
+  phaseStatus: EditorialWorkflowState["phase_status"] | undefined;
+  refs: WorkflowStreamRefs;
+  clearPollTimeout: () => void;
+  schedulePollFallback: () => void;
+}
