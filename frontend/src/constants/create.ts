@@ -50,7 +50,7 @@ export const IMAGE_PRESETS = [
     labelKey: "imagePresets.openai_neo_anime",
   },
   {
-    value: FLAT_EDITORIAL_PRESET,
+    value: "openai__flat_editorial",
     model: IMAGE_MODELS.OPENAI,
     style: IMAGE_STYLES.FLAT_EDITORIAL,
     labelKey: "imagePresets.openai_flat_editorial",
