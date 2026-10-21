@@ -48,6 +48,11 @@ readonly EXIT_SKIP=77
 FRONTEND_BIN_DIR="${FRONTEND_BIN_DIR:-$REPO_ROOT/frontend/node_modules/.bin}"
 # shellcheck source=scripts/lib/require_tool.sh
 source "$REPO_ROOT/scripts/lib/require_tool.sh"
+# AE-0448: mutation runs in CI only — outside GitHub Actions the mutation gates
+# SKIP (77) before starting mutmut/Stryker. CI still runs them (GATES_REQUIRE_ALL=1
+# turns a SKIP there into a FAIL, so the guard cannot hide a missing run).
+# shellcheck source=scripts/lib/mutation_ci_only.sh
+source "$REPO_ROOT/scripts/lib/mutation_ci_only.sh"
 
 # Gates skipped by --changed-only: need a service (DB) or are slow / whole-repo.
 CHANGED_ONLY_SKIP=" test diff-cover migrations schema-drift mutation build "
@@ -209,7 +214,7 @@ gate_backend_schema_drift() {
   uv run python -m rag_backend.infrastructure.database.check_drift_cli
 }
 
-gate_backend_mutation() { bash "$SCRIPT_DIR/mutation-score-gate.sh" 75; }
+gate_backend_mutation() { mutation_ci_only || return $?; bash "$SCRIPT_DIR/mutation-score-gate.sh" 75; }
 
 # =============================================================================
 # Frontend gates — byte-faithful to frontend-quality-gates.yml
@@ -250,8 +255,8 @@ gate_frontend_test()            { cd "$REPO_ROOT/frontend" && npm run test -- --
 gate_frontend_security()        { cd "$REPO_ROOT/frontend" && npm audit --audit-level=high; }
 gate_frontend_format()          { cd "$REPO_ROOT/frontend" && npx prettier --check "src/**/*.{ts,tsx,json,css,md}"; }
 gate_frontend_integrity()       { bash "$SCRIPT_DIR/check-integrity.sh" frontend; }
-# Advisory in CI (continue-on-error); reported but never blocks.
-gate_frontend_mutation()        { cd "$REPO_ROOT/frontend" && { npm run test:mutate || echo "ADVISORY: Stryker findings above (non-blocking, mirrors CI)."; }; }
+# Advisory in CI (continue-on-error); reported but never blocks. CI only (AE-0448).
+gate_frontend_mutation()        { mutation_ci_only || return $?; cd "$REPO_ROOT/frontend" && { npm run test:mutate || echo "ADVISORY: Stryker findings above (non-blocking, mirrors CI)."; }; }
 # OpenAPI<->Zod schema-drift (AE-0141). BLOCKING (AE-0157): drift reconciled to
 # 0; the npm script runs with --strict so any new drift exits non-zero.
 gate_frontend_schema_drift()    { cd "$REPO_ROOT/frontend" && npm run check:schema-drift; }

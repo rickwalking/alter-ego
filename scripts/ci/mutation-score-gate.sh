@@ -11,10 +11,16 @@
 #
 # Usage: mutation-score-gate.sh [THRESHOLD]
 #   THRESHOLD  Minimum acceptable score as a percentage (default: 75).
+#
+# CI only (AE-0448): outside GitHub Actions this exits 77 before starting mutmut
+# unless ALLOW_LOCAL_MUTATION=1 (see scripts/lib/mutation_ci_only.sh).
 set -euo pipefail
 
 THRESHOLD="${1:-75}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/lib/mutation_ci_only.sh
+source "$ROOT/scripts/lib/mutation_ci_only.sh"
+mutation_ci_only || exit $?
 STATS_FILE="$ROOT/backend/mutants/mutmut-cicd-stats.json"
 
 cd "$ROOT/backend"
@@ -66,7 +72,7 @@ To fix:
   1. Inspect surviving mutants:   cd backend && uv run mutmut results
   2. Show a specific mutant:       cd backend && uv run mutmut show <id>
   3. Strengthen the test that should have killed it (add/assert behavior).
-  4. Re-run locally:               bash scripts/ci/mutation-score-gate.sh ${THRESHOLD}
+  4. Re-check on the PR's CI mutation job (mutation runs in CI only — AE-0448).
 
 See docs/decisions/0005-adopt-mutation-testing.md for thresholds.
 EOF

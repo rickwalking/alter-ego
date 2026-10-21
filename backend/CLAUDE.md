@@ -116,6 +116,9 @@ uv run ruff format src/          # Formatting
 - **Mock external dependencies** (Pinecone, OpenAI, etc.)
 - **Use SQLite in-memory for database tests**
 - **Mutation testing** — `mutmut` runs weekly
+  - **CI only (AE-0448)** — never run `mutmut` or `scripts/ci/mutation-score-gate.sh`
+    locally (out of memory); read `backend / Mutation (blocking ≥75%)` on the PR
+    with `gh pr checks` / `gh run view --log`
   - Target: 70%+ mutation score on business logic modules
   - Use `mutate_only_covered_lines = true` and `type_check_command` to reduce noise
   - Exclude logging statements with `do_not_mutate_patterns`

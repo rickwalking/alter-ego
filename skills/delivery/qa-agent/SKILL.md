@@ -100,7 +100,7 @@ The final report must include:
 | Mode | When |
 |------|------|
 | **full** (default) | T2/T3 — Phase 0 gates + all six subagents |
-| **lite** | T1 — **still runs Phase 0 gates + the Integrity subagent (never skippable)** plus AC validation and security if high-risk; may skip the deep manual OWASP pass and full mutation only |
+| **lite** | T1 — **still runs Phase 0 gates + the Integrity subagent (never skippable)** plus AC validation and security if high-risk; may skip the deep manual OWASP pass only (mutation is read from CI in every mode — never run locally) |
 | **external** | **DEFAULT / REQUIRED for agent-authored or same-session work** (AE-0260) — the implementation was authored in the same session/agent as the QA would be. Also when the human requests an outside check. Not discretionary: bias-free QA must not depend on a human asking. |
 | **wave** | Several related tickets completed together — one external run covering the set, with per-ticket AC validation |
 
@@ -197,18 +197,32 @@ makes a green QA mean a green CI.
 bash scripts/ci/gates.sh backend  --changed-only
 bash scripts/ci/gates.sh frontend --changed-only
 
-# Then the full run where feasible (needs Postgres for test/diff-cover/migrations;
-# mutation is slow but REQUIRED for the verdict — do not skip it as "too slow"):
+# Then the full run where feasible (needs Postgres for test/diff-cover/migrations).
+# The mutation gates SKIP here by design — mutation runs in CI only (AE-0448):
 bash scripts/ci/gates.sh backend
 bash scripts/ci/gates.sh frontend
+
+# Mutation verdict: read it from the CI jobs on the PR head instead of running it.
+gh pr checks <pr>                                  # "backend / Mutation (blocking ≥75%)",
+                                                   # "frontend / Mutation (advisory)"
+gh run view <run-id> --log | grep -i "mutation score"   # score + PASS/FAIL line
 ```
+
+> **Never run mutation locally** (Pedro's call, AE-0448): a local mutmut / Stryker
+> run exhausts this machine's memory. Do not set `ALLOW_LOCAL_MUTATION=1`, do not
+> call `mutmut` / `stryker` / `mutation-score-gate.sh` / `npm run test:mutate`
+> directly. The local `backend:mutation` / `frontend:mutation` SKIP is expected;
+> replace it in the Gate Reproduction table with the CI job's result for the
+> PR head commit.
 
 1. Parse the `GATES_JSON:` summary line from each run. Record every gate's
    status (PASS / FAIL / SKIP) into the **Gate Reproduction table**.
 2. **Any FAIL is a 🔴 Blocker** — capture the exact tool output; that is what CI
    will print. Do not paraphrase it away.
 3. **Any SKIP is INCONCLUSIVE** — note *why* (e.g. "no Postgres locally") and
-   that CI will decide it. A material skip blocks a PASS verdict (Rule 6).
+   that CI will decide it. A material skip blocks a PASS verdict (Rule 6). The
+   mutation SKIP is resolved by the CI mutation job result (above): green ⇒ PASS,
+   red ⇒ 🔴 Blocker, not finished / not run on the head commit ⇒ INCONCLUSIVE.
 4. If Postgres is available locally, set `DATABASE_URL` so `test`, `diff-cover`,
    and `migrations` actually run instead of skipping. Prefer running them.
 5. Only after Phase 0 establishes the gate baseline do you launch the dimension
@@ -309,19 +323,24 @@ their Phase 0 results.** This subagent's job is the *judgment* layer on top:
 **Scope**: Test quality via mutation score
 
 Checklist:
-- [ ] **Backend**: the Phase 0 `mutation` gate enforces **≥75% (blocking)** via
-      `mutation-score-gate.sh`. Confirm it PASSED; if it SKIPPED (too slow / not
-      run), the verdict is INCONCLUSIVE — say so, do not assume pass.
-- [ ] **Frontend**: Stryker is **advisory** (non-blocking) in CI — report the
-      score, never block on it alone.
-- [ ] **Report surviving mutants** — list the top 5 most concerning survivors
-      with file/line; these are weak assertions to flag even when the gate passes.
+- [ ] **Backend**: the CI job `backend / Mutation (blocking ≥75%)` enforces
+      **≥75% (blocking)** via `mutation-score-gate.sh`. Confirm it is green on the
+      PR head commit (`gh pr checks <pr>`); red ⇒ 🔴 Blocker; pending / not run on
+      that commit ⇒ INCONCLUSIVE — say so, do not assume pass.
+- [ ] **Frontend**: the CI job `frontend / Mutation (advisory)` runs Stryker,
+      **advisory** (non-blocking) — report the score from its log, never block on
+      it alone.
+- [ ] **Report surviving mutants** — from the CI job log (`gh run view <run-id>
+      --log`, the "Show mutation results" step) list the top 5 most concerning
+      survivors with file/line; these are weak assertions to flag even when the
+      gate passes. Never run mutmut / Stryker locally to get them (AE-0448).
 - [ ] **Check for equivalent mutants** — flag clearly-equivalent ones.
 
 > The backend mutation threshold is **75%**, not 70%. The number lives in
 > `gates.sh` / `mutation-score-gate.sh`; never hardcode a different one here.
-> Mutation is slow but it is a blocking gate — do not skip it as "too slow" and
-> then return PASS.
+> Mutation is a blocking gate that runs in CI only (AE-0448) — the verdict still
+> requires the CI mutation job to be green; read it, never run it, and never
+> return PASS on a mutation job that has not finished.
 
 #### Subagent 4 — Acceptance Criteria & Gherkin Coverage
 **Scope**: every criterion is satisfied AND the `.feature` specs are complete.
@@ -419,7 +438,8 @@ A material SKIP ⇒ INCONCLUSIVE. Never round up.)
 | Gate | Status | Notes |
 |------|--------|-------|
 | backend:lint / type / strict-diff / imports / arch-ratchet / … | PASS/FAIL/SKIP | exact tool output on FAIL; reason on SKIP |
-| backend:test / diff-cover / mutation / migrations | PASS/FAIL/SKIP | SKIP = INCONCLUSIVE (CI will decide) |
+| backend:test / diff-cover / migrations | PASS/FAIL/SKIP | SKIP = INCONCLUSIVE (CI will decide) |
+| backend:mutation / frontend:mutation | CI result | from the CI job on the PR head (never run locally — AE-0448) |
 | frontend:lint / typecheck / test / … | PASS/FAIL/SKIP | |
 
 ## Overall Score: XX/100 (Grade X)   ← secondary to the verdict above

@@ -108,6 +108,11 @@ Read `Tier:` from `.agent/tasks/` ticket (default T2 if absent).
    bash scripts/ci/gates.sh <scope>            # PASS, or SKIP only where a service is absent
    bash scripts/ci/check-integrity.sh <scope>  # zero net-new blockers
    ```
+   The `backend:mutation` / `frontend:mutation` SKIP is expected: mutation runs
+   in CI only (Pedro's call, AE-0448 — local mutmut / Stryker runs out of
+   memory). Never run mutmut / Stryker / `npm run test:mutate` locally and never
+   set `ALLOW_LOCAL_MUTATION=1`; read the mutation result from the PR's CI jobs
+   (`gh pr checks <pr>`, `gh run view <run-id> --log`).
    Do **not** advance to `Dev Complete` while any gate FAILs or the integrity
    scan reports a net-new blocker. Fix the underlying issue — never suppress,
    skip, loosen a threshold, or import across a DDD layer to go green. Capture
@@ -139,6 +144,8 @@ Status: Dev Complete
 ### Gate Reproduction (scripts/ci/gates.sh)
 Paste the `GATES_JSON:` summary line(s). Every gate PASS, or SKIP only where a
 service is genuinely unavailable locally (name which, and that CI will run it).
+The mutation gates always SKIP locally (CI only, AE-0448) — record
+`mutation: CI only` and, once the PR exists, the CI mutation job result.
 \`\`\`
 GATES_JSON: {"pass":N,"fail":0,"skip":M,"results":[...]}
 \`\`\`
@@ -205,7 +212,8 @@ For each acceptance criterion:
 ### Phase 3: Final Verification
 
 1. **Reproduce the CI gates**: `bash scripts/ci/gates.sh <scope>` — every gate
-   must be PASS (or SKIP only where a service is genuinely unavailable locally).
+   must be PASS (or SKIP only where a service is genuinely unavailable locally,
+   plus the mutation gates, which run in CI only — AE-0448).
 2. **Run the integrity scan**: `bash scripts/ci/check-integrity.sh <scope>` —
    zero net-new blockers. Fix the underlying issue; never suppress to go green.
 3. Verify no files exceed 400 lines and no magic strings were introduced.

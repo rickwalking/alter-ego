@@ -36,7 +36,8 @@ bash scripts/ci/gates.sh backend        # and/or frontend
 bash scripts/ci/check-integrity.sh backend
 ```
 
-Every gate must be PASS (SKIP only where a service is genuinely unavailable) and
+Every gate must be PASS (SKIP only where a service is genuinely unavailable, plus
+the mutation gates, which run in CI only — AE-0448; never run them locally) and
 the integrity scan must report **zero net-new blockers**. Fix any failure
 properly — never suppress, skip, loosen a threshold, or cross a DDD layer to go
 green. Only enter the external QA loop once the gates are green.

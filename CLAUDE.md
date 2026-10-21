@@ -63,6 +63,14 @@ alter-ego/
 - **Test behavior, not implementation**
 - **Mock external dependencies**
 - **Mutation testing** — Weekly `mutmut` (backend) and Stryker (frontend) runs to validate assertion quality
+  - **Runs in CI only (Pedro's call, AE-0448)** — never run `mutmut` / Stryker /
+    `npm run test:mutate` / `mutation-score-gate.sh` locally (a local run exhausts
+    the dev machine's memory). Locally `gates.sh backend:mutation` and
+    `frontend:mutation` SKIP (77) before starting either tool; read the verdict from
+    the PR head's CI jobs instead: `gh pr checks <pr>` (`backend / Mutation
+    (blocking ≥75%)`, `frontend / Mutation (advisory)`) and `gh run view <run-id>
+    --log`. `ALLOW_LOCAL_MUTATION=1` bypasses the guard only on a machine known to
+    have the memory — agents must not set it.
   - Target: 70%+ mutation score on business logic
   - Disable `Regex` and `ObjectLiteral` mutators (high noise)
   - Run incrementally on PRs after 80%+ baseline established
@@ -298,7 +306,9 @@ not assert it:
   **gate's** real code. Paste the `GATES_JSON:` line it echoes into the
   `.dev-summary.md` (and the `.qa.md` for Review) — the move-time guard
   (`move_ticket.py` → `can_transition`) requires it: missing block or `fail>0`
-  BLOCKS; `skip>0` is a WARNING (AE-0258).
+  BLOCKS; `skip>0` is a WARNING (AE-0258). The mutation gates always SKIP
+  locally (CI only, AE-0448); the Dev Complete / QA verdict still needs the PR's
+  CI mutation job green.
 - **Never pipe a gate to `tail`/`head`.** The pipe returns the pipe's exit (e.g.
   `tail` = 0), masking a non-zero gate (this misread a red PR as green). Capture
   the exit to a file (the wrapper does this) instead.
@@ -313,13 +323,13 @@ exception to the full-run rule above:
 - **Local verification:** run every backend gate **except mutation**, individually
   (`bash scripts/ci/gates.sh backend:<gate>`, with `DATABASE_URL` set so test /
   diff-cover / migrations / schema-drift really run), plus a **Python 3.11 import
-  check** (prod image is `python:3.11-slim`). Skip local `mutmut`; record
+  check** (prod image is `python:3.11-slim`). Mutation never runs locally (AE-0448); record
   `mutation: deferred to CI (hotfix fast path)` in the dev summary.
 - **Merge:** once CI's **Test & Coverage** and all other non-mutation checks are
   green and every review thread is resolved, merge with `gh pr merge --admin`
   without waiting for CI mutation. Watch CI mutation on `main` afterwards and fix
   forward if it fails.
-- Feature / epic PRs keep the full gate run, mutation, and QA.
+- Feature / epic PRs keep the full gate run, the CI mutation job green before merge, and QA.
 
 ## Development Skills
 
