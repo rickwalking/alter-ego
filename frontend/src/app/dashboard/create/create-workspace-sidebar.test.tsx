@@ -34,10 +34,12 @@ const baseState: EditorialWorkflowState = {
 };
 
 describe("CreateWorkspaceSidebar", () => {
+  /**
+   * Given the editorial workflow has phase_status "failed"
+   * When the sidebar renders
+   * Then the active-phase status badge uses the red (error) variant
+   */
   // Scenario: Sidebar shows failure via the red status badge (AE-0284 v2)
-  //   Given the editorial workflow has phase_status "failed"
-  //   When the sidebar renders
-  //   Then the active-phase status badge uses the red (error) variant
   it("shows the current phase as a red (failed) status badge when failed", () => {
     render(
       <CreateWorkspaceSidebar
@@ -56,10 +58,12 @@ describe("CreateWorkspaceSidebar", () => {
     expect(badge).toHaveStyle({ color: NEON_RED });
   });
 
+  /**
+   * Given the editorial workflow is in "in_progress"
+   * When the sidebar renders
+   * Then the active-phase status badge uses the cyan (live) variant
+   */
   // Scenario: Non-failed workflow shows the live (cyan) state, not the error red
-  //   Given the editorial workflow is in "in_progress"
-  //   When the sidebar renders
-  //   Then the active-phase status badge uses the cyan (live) variant
   it("shows the in-progress phase as a cyan (live) badge, not red", () => {
     render(
       <CreateWorkspaceSidebar

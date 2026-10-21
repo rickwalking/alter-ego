@@ -2,8 +2,10 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useUnsavedChangesGuard } from "./use-unsaved-changes-guard";
 
+/**
+ * (tests/features/blog_editor_ae0424.feature)
+ */
 // Scenario: Leaving with unsaved changes is guarded
-//   (tests/features/blog_editor_ae0424.feature)
 
 function clickLink(target?: string): MouseEvent {
   const link = document.createElement("a");

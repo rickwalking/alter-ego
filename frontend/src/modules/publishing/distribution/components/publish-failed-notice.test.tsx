@@ -12,12 +12,14 @@ import { PublishFailedNotice } from "./publish-failed-notice";
 describe("PublishFailedNotice (publish page failed state)", () => {
   const WORKSPACE_HREF = "/dashboard/create/project-1/workspace?step=outline";
 
+  /**
+   * Given the editorial workflow has phase_status "failed"
+   * When the publish page renders
+   * Then the WorkflowFailedCard with the backend error message is shown
+   * And a "Back to workspace" link is shown
+   * And the awaitingFinalApproval message is NOT shown
+   */
   // Scenario: Failed phase shows error card on the publish page
-  //   Given the editorial workflow has phase_status "failed"
-  //   When the publish page renders
-  //   Then the WorkflowFailedCard with the backend error message is shown
-  //   And a "Back to workspace" link is shown
-  //   And the awaitingFinalApproval message is NOT shown
   it("shows the failed card, error message and back-to-workspace link", () => {
     render(
       <PublishFailedNotice

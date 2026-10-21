@@ -98,8 +98,7 @@ class TestBlogVisibility:
     async def test_public_carousel_with_draft_row_is_hidden(
         self, client: AsyncClient
     ) -> None:
-        # Scenario: A public carousel whose blog row is a draft 404s anonymously
-        #   .
+        # Scenario: A public carousel whose blog row is a draft 404s anonymously .
         editor = await create_user("hidden@example.com", UserRole.EDITOR)
         project_id = await create_carousel(
             editor,

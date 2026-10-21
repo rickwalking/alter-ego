@@ -295,9 +295,7 @@ class TestRateLimitAwareGeneration:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """One 429 then one success; the runner waits at least the stated retry-after."""
-        # Scenario: Given a provider that 429s once then succeeds, when the
-        #   images phase runs, then the runner waits >= the stated retry-after
-        #   and the phase completes instead of aborting.
+        # Scenario: Given a provider that 429s once then succeeds, when the images phase runs, then the runner waits >= the stated retry-after and the phase completes instead of aborting.
         attempts = 0
 
         async def flaky(prompt: str, output_path: str) -> str:
@@ -338,8 +336,7 @@ class TestRateLimitAwareGeneration:
         assert slept[0] >= 12.0
 
     async def test_concurrency_capped_to_config(self, tmp_path: Path) -> None:
-        # Scenario: Given a concurrency cap of 2, when many slides generate,
-        #   then no more than 2 provider calls are ever in flight at once.
+        # Scenario: Given a concurrency cap of 2, when many slides generate, then no more than 2 provider calls are ever in flight at once.
         max_concurrent = 0
         in_flight = 0
         lock = asyncio.Lock()
@@ -392,9 +389,7 @@ class TestPartialCommitAndReentry:
         self, tmp_path: Path
     ) -> None:
         """The good slide is persisted despite slide 2 failing."""
-        # Scenario: Given slide 2 fails, when the batch runs, then slide 1's
-        #   image_path is still written back to its slide row (partial commit)
-        #   and an aggregate error is surfaced.
+        # Scenario: Given slide 2 fails, when the batch runs, then slide 1's image_path is still written back to its slide row (partial commit) and an aggregate error is surfaced.
         project = _project(tmp_path)
         entities = [self._slide_entity(project.id, i) for i in range(1, 3)]
 
@@ -440,9 +435,7 @@ class TestPartialCommitAndReentry:
         the on-disk legacy path keyed by generation_key, the re-entry path under test;
         only slide 2 is generated.
         """
-        # Scenario: Given slide 1 already has an image on disk + a matching
-        #   generation key, when the phase re-runs, then slide 1 is reused (not
-        #   regenerated) and the phase completes.
+        # Scenario: Given slide 1 already has an image on disk + a matching generation key, when the phase re-runs, then slide 1 is reused (not regenerated) and the phase completes.
         project = _project(tmp_path)
         slide1 = self._slide_entity(project.id, 1)
         slide2 = self._slide_entity(project.id, 2)

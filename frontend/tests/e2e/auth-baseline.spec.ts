@@ -118,8 +118,10 @@ test.describe("auth baseline safety net", () => {
    * clicking Logout bounces /login -> /dashboard/chat and the session cookie
    * is STILL present; the test asserts that real behavior.
    */
+  /**
+   * a naive "logout lands on /login" expectation).
+   */
   // Scenario: Logout (BASELINE — captures the ACTUAL behavior, which differs from
-  //   a naive "logout lands on /login" expectation).
   test("logout from the dashboard shell calls logout, keeps the cookie, and bounces back to /dashboard/chat", async ({
     page,
     context,

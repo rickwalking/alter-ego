@@ -129,8 +129,7 @@ class TestDriftReconciler:
         self, test_engine: AsyncEngine
     ) -> None:
         """The gateway stamps the row's current epoch."""
-        # Scenario: partial failure left a clean projection + stale-blocking
-        #   checkpoint; the watchdog converges it with no client retry.
+        # Scenario: partial failure left a clean projection + stale-blocking checkpoint; the watchdog converges it with no client retry.
         async with _factory(test_engine)() as db:
             await _reset(db)
             await _add(db, body=_CLEAN_BODY, run_epoch=5)

@@ -80,8 +80,10 @@ describe("offersRadarTemplates", () => {
 });
 
 describe("offersCoverPicker", () => {
+  /**
+   * (frontend/tests/features/publish-cover-picker-ae0445.feature)
+   */
   // Scenario: The picker is shown for Ponto de Vista carousels only
-  //   (frontend/tests/features/publish-cover-picker-ae0445.feature)
   it("offers the slide-1 cover picker only to Ponto de Vista projects", () => {
     expect(offersCoverPicker({ content_mode: "pov" })).toBe(true);
     expect(offersCoverPicker({ content_mode: "pov_news" })).toBe(true);

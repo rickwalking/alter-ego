@@ -122,10 +122,12 @@ describe("server-fetch", () => {
       expect(calledUrl).toContain("limit=5");
     });
 
+    /**
+     * Given the public carousel list is fetched for the landing page
+     * When the request is built
+     * Then it filters by status=completed so drafts are never counted
+     */
     // Scenario: Published-carousel stat counts only public, completed projects
-    //   Given the public carousel list is fetched for the landing page
-    //   When the request is built
-    //   Then it filters by status=completed so drafts are never counted
     it("filters the public list to completed projects", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,

@@ -185,8 +185,10 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
     expect(result.current.dirty).toBe(true);
   });
 
+  /**
+   * our own slot write landing during the PUT is retried on top instead.
+   */
   // Scenario: A concurrent save conflict is surfaced — but a 409 caused by
-  //   our own slot write landing during the PUT is retried on top instead.
   it("retries a save that lost the race to our own slot write", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));

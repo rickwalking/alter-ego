@@ -162,8 +162,7 @@ class TestTransitionsAreVersioned:
         approved = await clients.reviewer.post(f"{BLOG_POSTS_URL}/{post['id']}/approve")
         assert approved.json()["lock_version"] == post["lock_version"] + 2
 
-    # Scenario: Editing after approval resets the post to draft (a save that
-    #   was prepared before the approval cannot silently skip the reset).
+    # Scenario: Editing after approval resets the post to draft (a save that was prepared before the approval cannot silently skip the reset).
     async def test_save_prepared_before_approval_conflicts(
         self, clients: EditorClients
     ) -> None:

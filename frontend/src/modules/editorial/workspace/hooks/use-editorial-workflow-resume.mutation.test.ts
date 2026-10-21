@@ -246,10 +246,12 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     waitSpy.mockRestore();
   });
 
+  /**
+   * Given the research gate is awaiting review
+   * When the backend answers 202 "in_progress"
+   * Then the state flips to in_progress and the hook waits for the next gate
+   */
   // Scenario: Requesting a revision shows the running state at once
-  //   Given the research gate is awaiting review
-  //   When the backend answers 202 "in_progress"
-  //   Then the state flips to in_progress and the hook waits for the next gate
   it("flips the acted-on ready gate to in_progress on 202 and waits for the next gate", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,

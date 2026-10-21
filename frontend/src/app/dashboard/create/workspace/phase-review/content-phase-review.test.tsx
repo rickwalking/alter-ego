@@ -1,6 +1,8 @@
+/**
+ * Then the interrupt payload carries a blocking violation for that slide
+ * And the content step UI shows the slide number and violation messages
+ */
 // Scenario: Unrepairable slide surfaces at the content review step
-//   Then the interrupt payload carries a blocking violation for that slide
-//   And the content step UI shows the slide number and violation messages
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";

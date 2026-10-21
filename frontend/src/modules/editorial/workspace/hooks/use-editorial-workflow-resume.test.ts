@@ -299,8 +299,10 @@ describe("useEditorialWorkflowResume", () => {
     expect(enterPollingFallback).not.toHaveBeenCalled();
   });
 
+  /**
+   * A run-in-progress 409 renders the banner (state refresh), not a toast.
+   */
   // Scenario: Resume attempt during a run explains itself
-  //   A run-in-progress 409 renders the banner (state refresh), not a toast.
   it("run-in-progress 409 refreshes state for the banner instead of erroring", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
@@ -339,9 +341,11 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
+  /**
+   * The cap-exceeded 409 copy points to the uncapped edit path instead of
+   * surfacing the raw machine code.
+   */
   // Scenario: Direct edits remain available after all caps are exhausted
-  //   The cap-exceeded 409 copy points to the uncapped edit path instead of
-  //   surfacing the raw machine code.
   it("maps the revision-cap 409 to the uncapped-edit guidance message", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,

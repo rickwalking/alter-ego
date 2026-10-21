@@ -77,8 +77,10 @@ describe("BlogPostCardActions (AE-0296)", () => {
     expect(screen.getByText("Hide (revert to draft)")).toBeInTheDocument();
   });
 
+  /**
+   * (hiding it would keep it hidden after the release)
+   */
   // Scenario: A carousel post waiting for its carousel release is not shown as live
-  //   (hiding it would keep it hidden after the release)
   it("offers no Hide for a published post that is not live yet", () => {
     render(
       <BlogPostCardActions

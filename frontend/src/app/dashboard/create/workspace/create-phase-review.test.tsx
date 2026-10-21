@@ -1,8 +1,10 @@
 /**
  * Gherkin: backend/tests/features/carousel_deterministic_repair.feature.
  */
+/**
+ * content-phase and design-phase violation panels.
+ */
 // Scenario: the "Fix issues automatically" button is rendered alongside the
-//   content-phase and design-phase violation panels.
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EditorialWorkflowState } from "@/modules/publishing";

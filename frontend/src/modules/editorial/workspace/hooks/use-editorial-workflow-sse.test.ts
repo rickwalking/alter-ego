@@ -194,8 +194,10 @@ describe("useEditorialWorkflowSse", () => {
     );
   });
 
+  /**
+   * Then the stale snapshot is confirmed against workflow/state before it is applied
+   */
   // Scenario: A reload during a running phase keeps the running state
-  //   Then the stale snapshot is confirmed against workflow/state before it is applied
   it("confirms a same-phase running -> ready flip via refreshState instead of applying it", async () => {
     const { setState, refreshState } = renderSseHook();
 

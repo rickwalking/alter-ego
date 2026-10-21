@@ -311,8 +311,7 @@ class TestRepairService:
         """The projection commits despite the checkpoint failure (drift); a retry with
         the fresh lock_version converges the checkpoint.
         """
-        # Scenario: the process dies between commits; the idempotent retry
-        #   converges both stores.
+        # Scenario: the process dies between commits; the idempotent retry converges both stores.
         async with _factory(test_engine)() as db:
             project = await _add_project(db)
             pid = str(project.id)

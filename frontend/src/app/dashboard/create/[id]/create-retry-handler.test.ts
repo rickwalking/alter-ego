@@ -9,11 +9,13 @@ describe("createRetryWorkflowHandler", () => {
   const project = { topic: "AI", audience: "Devs", niche: "Security" };
   const sources = [{ title: "Doc", content: "text", source_type: "document" }];
 
+  /**
+   * Given a failed workflow
+   * When the user retries and start() rejects
+   * Then retrying is set true then back to false (button re-enables)
+   * And navigation does NOT happen (the error card stays)
+   */
   // Scenario: Retry FAILURE resets retrying and keeps the error card (F-3)
-  //   Given a failed workflow
-  //   When the user retries and start() rejects
-  //   Then retrying is set true then back to false (button re-enables)
-  //   And navigation does NOT happen (the error card stays)
   it("resets retrying to false and does not navigate when start rejects", async () => {
     const setRetrying = vi.fn();
     const start = vi.fn(() => {

@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "../editor.test-utils";
 import { useBlogEditorData } from "./use-blog-editor-data";
 
+/**
+ * (tests/features/blog_editor_ae0424.feature)
+ */
 // Scenario: Saving appends a version snapshot visible in the sidebar
-//   (tests/features/blog_editor_ae0424.feature)
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 

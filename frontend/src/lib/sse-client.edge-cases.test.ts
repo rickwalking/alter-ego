@@ -27,10 +27,12 @@ describe("streamSseEvents edge cases", () => {
     vi.unstubAllGlobals();
   });
 
+  /**
+   * Given an SSE event without an id prefix
+   * When streamSseEvents is called
+   * Then the event is dispatched with undefined id
+   */
   // Scenario: Event without id: field kills the null-id mutant
-  //   Given an SSE event without an id prefix
-  //   When streamSseEvents is called
-  //   Then the event is dispatched with undefined id
   it("dispatches event even without id field", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -55,10 +57,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE event with invalid JSON data
+   * When streamSseEvents is called
+   * Then the data contains the raw string
+   */
   // Scenario: Non-JSON data falls back to raw field
-  //   Given an SSE event with invalid JSON data
-  //   When streamSseEvents is called
-  //   Then the data contains the raw string
   it("falls back to raw data when JSON parsing fails", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -81,10 +85,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE response with \r\n line endings
+   * When streamSseEvents is called
+   * Then events are still correctly parsed
+   */
   // Scenario: CRLF \r\n line endings are handled
-  //   Given an SSE response with \r\n line endings
-  //   When streamSseEvents is called
-  //   Then events are still correctly parsed
   it("handles CRLF line endings", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -110,10 +116,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an SSE response with Unicode text content
+   * When streamSseEvents is called
+   * Then the Unicode text is correctly decoded
+   */
   // Scenario: Unicode/multi-byte content is handled
-  //   Given an SSE response with Unicode text content
-  //   When streamSseEvents is called
-  //   Then the Unicode text is correctly decoded
   it("handles unicode content correctly", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -138,11 +146,13 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given a valid SSE response with an empty body
+   * When streamSseEvents is called
+   * Then no events are dispatched
+   * And onComplete is called
+   */
   // Scenario: Empty response body produces no events
-  //   Given a valid SSE response with an empty body
-  //   When streamSseEvents is called
-  //   Then no events are dispatched
-  //   And onComplete is called
   it("handles empty response body gracefully", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(createSseResponse([""]));
@@ -160,10 +170,12 @@ describe("streamSseEvents edge cases", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  /**
+   * Given an active SSE stream that receives an abort mid-way
+   * When the abort signal is triggered
+   * Then no error callback is called
+   */
   // Scenario: Mid-stream abort after receiving some events
-  //   Given an active SSE stream that receives an abort mid-way
-  //   When the abort signal is triggered
-  //   Then no error callback is called
   it("silently handles mid-stream abort signal", async () => {
     const abortController = new AbortController();
     vi.mocked(fetch).mockImplementationOnce(() => {

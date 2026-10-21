@@ -92,8 +92,10 @@ describe("buildPublicBlogCards", () => {
     expect(noCover!.imageUrl).toBeUndefined();
   });
 
+  /**
+   * never links a bare project id when the public feed is unavailable.
+   */
   // Scenario: A carousel-origin post with no v2 row is 404 — so the listing
-  //   never links a bare project id when the public feed is unavailable.
   it("renders no cards when the public feed is unavailable", () => {
     expect(
       buildPublicBlogCards({

@@ -116,12 +116,14 @@ describe("GET /auth/logout", () => {
     expect(location.searchParams.get("error")).toBe(SESSION_EXPIRED_ERROR);
   });
 
+  /**
+   * Given a request to "/auth/logout?redirect=..." whose URL host is the
+   * standalone server bind address "0.0.0.0:3000" with forwarded headers
+   * When the logout handler runs
+   * Then the Location uses the public host over https and never contains
+   * "0.0.0.0" or "localhost"
+   */
   // Scenario: The login Location never exposes the internal server host (AE-0431)
-  //   Given a request to "/auth/logout?redirect=..." whose URL host is the
-  //     standalone server bind address "0.0.0.0:3000" with forwarded headers
-  //   When the logout handler runs
-  //   Then the Location uses the public host over https and never contains
-  //     "0.0.0.0" or "localhost"
   it("uses the forwarded host and protocol instead of the bind address", async () => {
     mockBackendLogout();
     const request = new NextRequest(

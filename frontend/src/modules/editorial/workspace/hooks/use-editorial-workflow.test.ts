@@ -129,8 +129,10 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflow", () => {
+  /**
+   * Then the browser should not start a 3 second polling interval for workflow state
+   */
   // Scenario: SSE delivers phase_change without polling during approve
-  //   Then the browser should not start a 3 second polling interval for workflow state
   it("does not poll on a fixed interval while loading", async () => {
     let statePolls = 0;
     mockAuthenticatedFetch.mockImplementation((url, init) => {
@@ -215,9 +217,11 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.state?.current_phase).toBe("outline");
   });
 
+  /**
+   * Then the client should poll workflow state as fallback
+   * And polling should use increasing backoff intervals
+   */
   // Scenario: Polling fallback activates only when SSE disconnects
-  //   Then the client should poll workflow state as fallback
-  //   And polling should use increasing backoff intervals
   it("polls workflow state with backoff when SSE fails", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -252,9 +256,11 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBeGreaterThan(callsAfterFirstPoll);
   });
 
+  /**
+   * Then interval polling should stop
+   * And the transport mode should return to SSE primary
+   */
   // Scenario: Polling fallback stops when SSE reconnects
-  //   Then interval polling should stop
-  //   And the transport mode should return to SSE primary
   it("stops polling fallback when SSE reconnects", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -416,10 +422,12 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
+  /**
+   * Given GET workflow/state reports phase_status "in_progress"
+   * And the SSE snapshot replays the checkpoint as "awaiting_human"
+   * Then the running state is kept
+   */
   // Scenario: A reload during a running phase keeps the running state
-  //   Given GET workflow/state reports phase_status "in_progress"
-  //   And the SSE snapshot replays the checkpoint as "awaiting_human"
-  //   Then the running state is kept
   it("keeps the running state when the SSE snapshot replays a stale gate", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 

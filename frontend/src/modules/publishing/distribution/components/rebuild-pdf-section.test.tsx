@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { RebuildPdfSection } from "./rebuild-pdf-section";
 
+/**
+ * backend/tests/features/carousel_republish.feature).
+ */
 // Scenario: Publish page "Rebuild PDF" action (see
-//   backend/tests/features/carousel_republish.feature).
 
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => {

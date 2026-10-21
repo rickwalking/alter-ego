@@ -3,8 +3,10 @@ import { renderHook } from "@testing-library/react";
 import { addDays, subDays } from "date-fns";
 import { calendarGridRange } from "@/modules/editorial-operations";
 
+/**
+ * timezone (see tests/features/calendar-month-navigation.feature).
+ */
 // Scenario: the fetch window must cover every visible local cell for any
-//   timezone (see tests/features/calendar-month-navigation.feature).
 
 const { mockUseContentCalendar } = vi.hoisted(() => ({
   mockUseContentCalendar: vi.fn(),

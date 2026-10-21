@@ -63,8 +63,7 @@ def test_matching_live_schema_passes(pg_engine) -> None:
     assert report.has_drift is False
 
 
-# Scenario: model gains a column the live DB never got (no migration / not applied)
-#           -> drift detected (the exact prod failure: caption_en/origin/distribution).
+# Scenario: model gains a column the live DB never got (no migration / not applied) -> drift detected (the exact prod failure: caption_en/origin/distribution).
 def test_mapped_column_missing_from_live_db_fails(pg_engine) -> None:
     """Drop the column to simulate a live DB lacking a freshly added model column."""
     with pg_engine.begin() as connection:

@@ -53,8 +53,10 @@ describe("buildCarouselCreateRequest custom_visual_details (AE-0298)", () => {
   });
 });
 
+/**
+ * (tests/features/radar-ia-quick-fixes.feature)
+ */
 // Scenario: Missing image style falls back to flat editorial
-//   (tests/features/radar-ia-quick-fixes.feature)
 describe("buildCarouselCreateRequest image defaults (AE-0372)", () => {
   it("defaults to the flat editorial preset", () => {
     expect(DEFAULT_IMAGE_PRESET).toBe("openai__flat_editorial");

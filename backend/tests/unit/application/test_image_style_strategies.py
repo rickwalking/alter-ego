@@ -74,15 +74,13 @@ class TestOpenAIComicNeonStrategy:
         assert result.index(scene) > result.index("Comic/manga")
 
     def test_forbids_brand_names_and_likenesses(self) -> None:
-        # Scenario: the final prompt forbids real-world brand names and
-        #   celebrity likenesses (parity with every other OpenAI preset).
+        # Scenario: the final prompt forbids real-world brand names and celebrity likenesses (parity with every other OpenAI preset).
         lowered = OpenAIComicNeonStrategy().wrap("scene", _PALETTE).lower()
         assert "no real-world brand names" in lowered
         assert "no celebrity or ceo likenesses" in lowered
 
     def test_prompt_is_pre_ae0308_text_plus_brand_block_only(self) -> None:
-        # Scenario: the prompt is otherwise byte-identical to the
-        #   Gemini-era prompt (characterization pin).
+        # Scenario: the prompt is otherwise byte-identical to the Gemini-era prompt (characterization pin).
         result = OpenAIComicNeonStrategy().wrap(
             "a hooded figure at a neon terminal", _PALETTE
         )

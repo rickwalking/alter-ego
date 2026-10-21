@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 
+/**
+ * the latest one (see tests/features/calendar-month-navigation.feature).
+ */
 // Scenario: fast month navigation must not let a slow stale window overwrite
-//   the latest one (see tests/features/calendar-month-navigation.feature).
 
 vi.mock("next-intl", () => {
   const translate = (key: string): string => key;
