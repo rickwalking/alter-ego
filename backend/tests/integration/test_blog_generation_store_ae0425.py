@@ -185,8 +185,7 @@ async def test_content_writes_go_through_the_slot_path(sessions: Sessions) -> No
     await store.apply_document(lease, _replace_with("Corpo 2"))
     row = await _row(sessions, lease.post_id)
     assert [
-        entry["snapshot"]["sections"][0]["body_md"]
-        for entry in row.version_history
+        entry["snapshot"]["sections"][0]["body_md"] for entry in row.version_history
     ] == ["Corpo"]
 
 

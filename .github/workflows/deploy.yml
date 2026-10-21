@@ -284,6 +284,22 @@ jobs:
               echo "::error::blog v2 cutover exited $BLOG_CUTOVER_EXIT; bringing the stack up anyway (AE-0428 removed the read fail-safe: non-v2 rows now fail closed until re-run), failing the job after"
             fi
 
+            # --- Palette timestamps timezone-aware (AE-0446, Pedro's decision)
+            # One-shot, idempotent DDL: palettes.created_at/updated_at
+            # timestamp -> timestamptz (values read as UTC). Prod bootstraps with
+            # create_all, which never alters an existing column, so this is how
+            # the change of migration e6f7a8b9c0d1 reaches prod. A no-op once the
+            # columns are aware. Same shape as the blog cutover: it NEVER blocks
+            # the stack (exit code captured, job failed at the very end).
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.palette_timestamptz --apply --verify
+            PALETTE_TZ_EXIT=$?
+            set -e
+            if [ "$PALETTE_TZ_EXIT" -ne 0 ]; then
+              echo "::error::palette timestamptz exited $PALETTE_TZ_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -332,5 +348,12 @@ jobs:
             # (AE-0428: there is no read fail-safe anymore, so re-run the cutover).
             if [ "$BLOG_CUTOVER_EXIT" -ne 0 ]; then
               echo "::error::blog v2 cutover failed (exit $BLOG_CUTOVER_EXIT): run 'python -m rag_backend.scripts.blog_v1_to_v2 --dry-run' / '--apply --verify' on the droplet"
+              exit 1
+            fi
+
+            # AE-0446 (Pedro's decision): surface a failed palette timestamptz step only now,
+            # with the stack up (palette writes may 500 until it is re-run).
+            if [ "$PALETTE_TZ_EXIT" -ne 0 ]; then
+              echo "::error::palette timestamptz failed (exit $PALETTE_TZ_EXIT): run 'python -m rag_backend.scripts.palette_timestamptz --apply --verify' on the droplet"
               exit 1
             fi
