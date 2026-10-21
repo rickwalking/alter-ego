@@ -63,7 +63,7 @@
     {
       "url": "/carousels",
       "kind": "page",
-      "file": "src/app/(public)/carousels/page.tsx",
+      "file": "src/app/(public)/carousels/(list)/page.tsx",
       "segmentConfig": {
         "dynamic": "\"force-dynamic\""
       }
