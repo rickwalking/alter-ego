@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonButton } from "@/components/atoms/neon-button";
+
 import {
-  canAddStructuredItem,
   fieldDomId,
   fieldErrorKey,
   INSIGHT_QUOTE_EXTRA_KEY,
@@ -12,15 +11,17 @@ import {
   resolveExtraBudget,
   resolveItemBudget,
   structuredItemFieldPath,
-  type PresentationLocaleKey,
-  type SlideExtraEdit,
   type SlideFieldErrors,
-  type SlideStructuredItemEdit,
-  type SlideStructuredListEdit,
 } from "@/modules/editorial";
-import type { LocalizedSlideReview } from "@/modules/publishing";
+
 import { ContentCopyField } from "./content-phase-copy-field";
 import { useStructuredExtraLabel } from "./content-phase-readonly-extras";
+import {
+  listLabel,
+  RemoveItemButton,
+  AddItemButton,
+} from "./content-phase-item-buttons";
+import type { StructuredEditContext } from "./content-phase-item-buttons";
 
 /** AE-0403: content-review DOM ids (``slide-{n}-{locale}-{field}``). */
 export const CONTENT_REVIEW_ID_PREFIX = "slide";
@@ -28,26 +29,8 @@ export const CONTENT_REVIEW_ID_PREFIX = "slide";
 /** Item fields the reviewer edits (``icon_name`` stays as generated). */
 const ITEM_TEXT_FIELDS = ["title", "body"] as const;
 
-/** Structured lists with a translated item label. */
-const LABELLED_LISTS: ReadonlySet<string> = new Set([
-  "summary_points",
-  "features",
-  "actions",
-]);
-
 /** Text fields of an object extra (``insight``) the reviewer can edit. */
 const EXTRA_TEXT_FIELDS = ["title", "body", "quote", "attribution"] as const;
-
-export interface StructuredEditContext {
-  slide: LocalizedSlideReview;
-  localeKey: PresentationLocaleKey;
-  policyVersion?: string | null;
-  fieldErrors: SlideFieldErrors;
-  onItemChange: (edit: SlideStructuredItemEdit) => void;
-  onExtraChange: (edit: SlideExtraEdit) => void;
-  /** AE-0437: add / remove item slots (PT and EN together). */
-  onListChange?: (edit: SlideStructuredListEdit) => void;
-}
 
 /**
  * AE-0414: an extra the reviewer can edit — a string, or an object with at
@@ -88,89 +71,6 @@ function fieldProps(
     id: fieldDomId(CONTENT_REVIEW_ID_PREFIX, key),
     violations: context.fieldErrors.get(key),
   };
-}
-
-function listLabel(
-  tCopy: ReturnType<typeof useTranslations>,
-  listKey: string,
-): string {
-  return LABELLED_LISTS.has(listKey) ? tCopy(`itemLists.${listKey}`) : listKey;
-}
-
-/** AE-0437: "remove this item" (both locales, same position). */
-function RemoveItemButton({
-  context,
-  listKey,
-  itemIndex,
-}: {
-  context: StructuredEditContext;
-  listKey: string;
-  itemIndex: number;
-}): React.ReactElement | null {
-  const tCopy = useTranslations("editorialWorkflow.review.copyField");
-  const onListChange = context.onListChange;
-  if (!onListChange) {
-    return null;
-  }
-  return (
-    <NeonButton
-      type="button"
-      size="sm"
-      variant="ghost"
-      className="ml-auto h-6 px-2"
-      onClick={() =>
-        onListChange({
-          slideIndex: context.slide.slide_index,
-          listKey,
-          operation: "remove",
-          itemIndex,
-        })
-      }
-    >
-      {tCopy("removeItem", {
-        list: listLabel(tCopy, listKey),
-        index: itemIndex + 1,
-      })}
-    </NeonButton>
-  );
-}
-
-/** AE-0437: "add an item" slot under the list (empty lists included). */
-function AddItemButton({
-  context,
-  listKey,
-  items,
-}: {
-  context: StructuredEditContext;
-  listKey: string;
-  items: Record<string, unknown>[];
-}): React.ReactElement | null {
-  const tCopy = useTranslations("editorialWorkflow.review.copyField");
-  const onListChange = context.onListChange;
-  if (!onListChange || !canAddStructuredItem(items)) {
-    return null;
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <NeonButton
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() =>
-          onListChange({
-            slideIndex: context.slide.slide_index,
-            listKey,
-            operation: "add",
-          })
-        }
-      >
-        {tCopy("addItem", { list: listLabel(tCopy, listKey) })}
-      </NeonButton>
-      <span className="text-[var(--color-text-muted)] text-xs">
-        {tCopy("itemSlotsHint")}
-      </span>
-    </div>
-  );
 }
 
 /**
@@ -319,3 +219,4 @@ export function EditableStructuredExtra({
     </div>
   );
 }
+export type { StructuredEditContext } from "./content-phase-item-buttons";
