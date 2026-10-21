@@ -1,7 +1,7 @@
 """LangFuse client initialization and management."""
 
 from collections.abc import Callable
-from threading import Event, Lock, Thread
+from threading import Semaphore, Thread
 
 import structlog
 from langfuse import Langfuse
@@ -12,10 +12,8 @@ LANGFUSE_CLIENT: Langfuse | None = None
 
 logger = structlog.get_logger(__name__)
 
-_FLUSH_EVENT = Event()
-_FLUSH_LOCK = Lock()
-_FLUSH_PENDING: Callable[[], None] | None = None
-_FLUSH_THREAD: Thread | None = None
+_MAX_ACTIVE_FLUSHES = 8
+_FLUSH_SLOTS = Semaphore(_MAX_ACTIVE_FLUSHES)
 
 
 def init_langfuse(
@@ -69,36 +67,37 @@ def get_langfuse_client() -> Langfuse | None:
     return LANGFUSE_CLIENT
 
 
-def _flush_worker() -> None:
-    """Flush the latest requested client without blocking the caller."""
-    global _FLUSH_PENDING
-    while True:
-        _FLUSH_EVENT.wait()
-        with _FLUSH_LOCK:
-            flush = _FLUSH_PENDING
-            _FLUSH_PENDING = None
-            _FLUSH_EVENT.clear()
-        if flush is None:
-            continue
-        try:
-            flush()
-        except Exception:
-            logger.warning("langfuse_background_flush_failed")
+def _run_flush(flush: Callable[[], None]) -> None:
+    """Run one flush, then release its bounded slot."""
+    try:
+        flush()
+    except Exception:
+        logger.warning("langfuse_background_flush_failed")
+    finally:
+        _FLUSH_SLOTS.release()
 
 
 def schedule_flush(flush: Callable[[], None]) -> None:
-    """Request a coalesced background flush; callers never wait on the exporter."""
-    global _FLUSH_PENDING, _FLUSH_THREAD
-    with _FLUSH_LOCK:
-        _FLUSH_PENDING = flush
-        if _FLUSH_THREAD is None or not _FLUSH_THREAD.is_alive():
-            _FLUSH_THREAD = Thread(
-                target=_flush_worker,
-                name="langfuse-flush",
-                daemon=True,
-            )
-            _FLUSH_THREAD.start()
-    _FLUSH_EVENT.set()
+    """Request a background flush; callers never wait on the exporter.
+
+    Each request runs on a daemon thread, capped at
+    ``_MAX_ACTIVE_FLUSHES``. When the exporter hangs, excess requests are
+    dropped (tracing is best-effort) instead of blocking business work or
+    growing an unbounded queue. A hung flush cannot starve later flushes.
+    """
+    if not _FLUSH_SLOTS.acquire(blocking=False):
+        logger.warning("langfuse_background_flush_dropped")
+        return
+    try:
+        Thread(
+            target=_run_flush,
+            args=(flush,),
+            name="langfuse-flush",
+            daemon=True,
+        ).start()
+    except Exception:
+        _FLUSH_SLOTS.release()
+        raise
 
 
 def flush_langfuse() -> None:

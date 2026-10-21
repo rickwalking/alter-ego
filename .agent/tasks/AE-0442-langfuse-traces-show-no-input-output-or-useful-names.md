@@ -202,16 +202,23 @@ OTLP exporter retried an unreachable Langfuse host on the resume task.
 
 Fixed:
 
-- `langfuse_client.schedule_flush` now coalesces flush requests onto one
-  daemon worker thread. Callers return immediately; a hanging exporter can
-  never delay a phase or a background resume. Errors are logged, not raised.
+- `langfuse_client.schedule_flush` runs each flush on a daemon thread, capped
+  at eight active flushes. Callers return immediately; a hanging exporter can
+  never delay a phase or a background resume, and one hung flush cannot starve
+  later flushes. Excess requests are dropped, errors are logged, never raised.
 - `flush_langfuse`, per-phase `_safe_flush`, and `create_workflow_trace` all
   use the background scheduler; no tracing flush is awaited on the business
-  path. The worker coalesces bursts instead of growing a queue.
+  path.
 - Added a resume integration test that installs a blocking exporter flush and
-  proves the background resume still reaches the outline gate in <3s, plus a
-  unit test that the flush request itself returns in <0.5s.
-- Updated flush assertions to poll the worker (`wait_for_flushes`).
+  proves the background resume still reaches the outline gate in <3s, plus
+  unit tests that the flush request returns in <0.5s and that a hung flush
+  does not starve a later one.
+- Updated flush assertions to poll the workers (`wait_for_flushes`).
+
+CI then exposed two ruff import-order errors in the new tests; fixed with
+`ruff check --fix` (commit `9e6b5f4a`). The next mutation run showed the
+single-worker design could starve later flushes behind a hung one, so the
+scheduler was changed to the bounded fan-out above.
 
 Reproduced the exact mutation baseline test locally (passes, 2.41s).
 

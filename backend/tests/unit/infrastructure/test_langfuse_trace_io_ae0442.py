@@ -40,6 +40,7 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     record_human_review,
 )
 from tests.langfuse_trace_fakes import (
+    TraceCollector,
     install_trace_collector,
     wait_for_flushes,
 )
@@ -423,6 +424,22 @@ class TestBackgroundFlush:
         release.set()
 
         assert elapsed < 0.5
+
+    # Scenario: A hung flush does not starve a later flush
+    def test_a_hung_flush_does_not_starve_a_later_flush(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        release = threading.Event()
+        hung = TraceCollector()
+        monkeypatch.setattr(hung, "flush", lambda: release.wait(5))
+        later = TraceCollector()
+        langfuse_client.schedule_flush(hung.flush)
+        langfuse_client.schedule_flush(later.flush)
+
+        try:
+            assert wait_for_flushes(later)
+        finally:
+            release.set()
 
     # Scenario: A finished background runner flushes Langfuse
     @pytest.mark.asyncio

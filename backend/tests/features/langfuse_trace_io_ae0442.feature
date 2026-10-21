@@ -99,3 +99,8 @@ Feature: Langfuse traces carry input, output and useful names (AE-0442)
     When a background runner requests a tracing flush
     Then the request returns immediately
     And the workflow result is unchanged
+
+  Scenario: A hung flush does not starve a later flush
+    Given a Langfuse client whose flush hangs on the exporter
+    When another trace requests its own flush
+    Then the later flush still reaches the exporter
