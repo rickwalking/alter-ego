@@ -12,7 +12,11 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
-from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
+from rag_backend.agents.chat_streaming import (
+    chat_event_from_stream,
+    is_token_event,
+    last_ai_message_text,
+)
 from rag_backend.agents.harness import (
     AGENT_KIND_CHAT,
     DeepAgentConfig,
@@ -193,35 +197,12 @@ class AlterEgoAgent:
             lf_config,
             version="v2",
         ):
-            event_name = event.get("event")
-
-            if event_name == "on_tool_end":
-                tool_output = event.get("data", {}).get("output")
-                tool_name = event.get("name", "")
-                if tool_output is not None:
-                    yield {
-                        "type": "tool_result",
-                        "tool": tool_name,
-                        "result": tool_output,
-                    }
-                    continue
-
-            if event_name != "on_chat_model_stream":
+            chat_event = chat_event_from_stream(event)
+            if chat_event is None:
                 continue
-
-            chunk = event.get("data", {}).get("chunk")
-            if chunk is None:
-                continue
-            content = getattr(chunk, "content", None)
-            if not content:
-                continue
-
-            token = extract_stream_token(content)
-            if not token:
-                continue
-
-            full_response += token
-            yield {"type": "token", "content": token}
+            if is_token_event(chat_event):
+                full_response += chat_event.get("content", "")
+            yield chat_event
 
         if persist_messages:
             assistant_message = Message(
@@ -253,13 +234,7 @@ class AlterEgoAgent:
                     lf_config,
                 )
 
-        messages = result.get("messages", [])
-        response = ""
-        for msg in reversed(messages):
-            if isinstance(msg, AIMessage) and msg.content:
-                response = extract_message_text(msg.content)
-                if response:
-                    break
+        response = last_ai_message_text(result.get("messages", []))
 
         if persist_messages:
             assistant_message = Message(
