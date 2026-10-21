@@ -6,11 +6,14 @@ Gherkin: tests/features/langfuse_trace_io_ae0442.feature
 from __future__ import annotations
 
 import json
+import threading
+import time
 from unittest.mock import MagicMock
 
 import pytest
 
 from rag_backend.application.services.blog import blog_generation_runner
+from rag_backend.application.services.carousel import editorial_workflow_service
 from rag_backend.application.services.blog_workflow_observability import (
     BlogPhaseScope,
     blog_phase_trace,
@@ -22,7 +25,7 @@ from rag_backend.domain.constants.blog_generation import (
     PHASE_BLOG_GENERATION,
 )
 from rag_backend.domain.models.carousels import ReviewEventParams
-from rag_backend.infrastructure import monitoring_langfuse
+from rag_backend.infrastructure import langfuse_client, monitoring_langfuse
 from rag_backend.infrastructure.langfuse_phase_trace import (
     WorkflowTraceScope,
     generation_run_name,
@@ -36,7 +39,10 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     propagate_attributes,
     record_human_review,
 )
-from tests.langfuse_trace_fakes import install_trace_collector
+from tests.langfuse_trace_fakes import (
+    install_trace_collector,
+    wait_for_flushes,
+)
 
 _CAROUSEL_SCOPE = WorkflowTraceScope(
     project_id="p-1",
@@ -97,7 +103,7 @@ class TestPhaseTraceIO:
         assert recorded.user_id == "owner-1"
         assert recorded.session_id == "p-1"
         assert "phase:content" in recorded.tags
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
     # Scenario: A failing phase records a redacted error as output
     def test_failure_records_error_output_and_reraises(
@@ -122,7 +128,7 @@ class TestPhaseTraceIO:
         assert _GRAPH_SECRET not in output["error_message"]
         assert recorded.span_output == output
         assert recorded.level == "ERROR"
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
     # Scenario: A phase flush happens even when the phase fails
     def test_flush_happens_once_per_phase(
@@ -130,11 +136,10 @@ class TestPhaseTraceIO:
     ) -> None:
         collector = install_trace_collector(monkeypatch)
 
-        for _ in range(2):
+        for expected in (1, 2):
             with phase_trace({"phase": "images"}):
                 pass
-
-        assert collector.flushes == 2
+            assert wait_for_flushes(collector, expected)
 
     def test_no_client_yields_a_handle_without_tracing(
         self, monkeypatch: pytest.MonkeyPatch
@@ -167,7 +172,7 @@ class TestTracingFailures:
             trace.set_output(result)
 
         assert result == {"slide_count": 7}
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
     def test_failed_updates_do_not_break_the_phase(
         self, monkeypatch: pytest.MonkeyPatch
@@ -306,7 +311,7 @@ class TestReviewEvents:
         assert recorded.input["action"] == "approve"
         assert recorded.output == {"status": "recorded", "action": "approve"}
         assert recorded.user_id == "reviewer-1"
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
     def test_review_event_is_a_noop_without_langfuse(
         self, monkeypatch: pytest.MonkeyPatch
@@ -378,7 +383,7 @@ class TestNestedPropagation:
         assert recorded.metadata["user_id"] == "owner-1"
         assert recorded.metadata["agent_name"] == AGENT_BLOG_IMAGES
         assert recorded.metadata["post_id"] == "post-9"
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
 
 class TestSecretRedaction:
@@ -403,6 +408,22 @@ class TestSecretRedaction:
 
 
 class TestBackgroundFlush:
+    # Scenario: A hanging exporter never blocks the workflow
+    def test_flush_is_non_blocking_when_the_exporter_hangs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        collector = install_trace_collector(monkeypatch)
+        monkeypatch.setattr(langfuse_client, "LANGFUSE_CLIENT", collector)
+        release = threading.Event()
+        monkeypatch.setattr(collector, "flush", lambda: release.wait(5))
+
+        started = time.monotonic()
+        editorial_workflow_service.flush_workflow_traces()
+        elapsed = time.monotonic() - started
+        release.set()
+
+        assert elapsed < 0.5
+
     # Scenario: A finished background runner flushes Langfuse
     @pytest.mark.asyncio
     async def test_blog_generation_runner_flushes_when_done(

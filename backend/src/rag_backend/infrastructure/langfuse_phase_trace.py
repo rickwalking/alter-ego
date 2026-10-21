@@ -54,7 +54,10 @@ from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_TAG_PHASE_TEMPLATE,
     TRACE_VALUE_UNKNOWN,
 )
-from rag_backend.infrastructure.langfuse_client import get_langfuse_client
+from rag_backend.infrastructure.langfuse_client import (
+    get_langfuse_client,
+    schedule_flush,
+)
 from rag_backend.infrastructure.logging import redact_secrets
 
 logger = structlog.get_logger(__name__)
@@ -457,7 +460,7 @@ def _safe_propagate(attributes: PhaseTraceAttributes) -> Iterator[None]:
 
 def _safe_flush(client: TraceClient) -> None:
     try:
-        client.flush()
+        schedule_flush(client.flush)
     except Exception:
         logger.warning("langfuse_phase_flush_failed")
 

@@ -11,7 +11,8 @@ span updates and events, so tests can prove the Langfuse list is not empty.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -172,6 +173,21 @@ class TraceCollector:
         yield None
 
 
+def wait_until(predicate: Callable[[], bool], timeout: float = 2.0) -> bool:
+    """Poll a background result (the flush worker) without sleeping forever."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.005)
+    return predicate()
+
+
+def wait_for_flushes(collector: TraceCollector, expected: int = 1) -> bool:
+    """Wait for the non-blocking flush worker to observe ``expected`` flushes."""
+    return wait_until(lambda: collector.flushes >= expected)
+
+
 def install_trace_collector(monkeypatch: pytest.MonkeyPatch) -> TraceCollector:
     """Route ``phase_trace`` to a fresh collector for this test."""
     collector = TraceCollector()
@@ -187,4 +203,6 @@ __all__ = [
     "RecordedTrace",
     "TraceCollector",
     "install_trace_collector",
+    "wait_for_flushes",
+    "wait_until",
 ]

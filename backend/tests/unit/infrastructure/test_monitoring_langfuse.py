@@ -20,6 +20,7 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     create_workflow_trace,
     record_human_review,
 )
+from tests.langfuse_trace_fakes import wait_until
 
 
 class TestLangfuseInit:
@@ -207,7 +208,7 @@ class TestTraceFunctions:
         assert trace_call["output"] == {"status": "completed"}
         mock_span.update.assert_called_once_with(output={"status": "completed"})
         mock_span.end.assert_called_once()
-        mock_client.flush.assert_called_once()
+        assert wait_until(lambda: mock_client.flush.call_count == 1)
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
     def test_add_quality_score_with_none_trace(

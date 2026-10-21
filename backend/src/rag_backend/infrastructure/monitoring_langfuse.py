@@ -24,6 +24,7 @@ from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import (
     flush_langfuse,
     get_langfuse_client,
+    schedule_flush,
 )
 from rag_backend.infrastructure.langfuse_phase_trace import (
     PhaseTrace,
@@ -341,10 +342,13 @@ def create_workflow_trace(
         )
         span.update(output=output)
         span.end()
-        client.flush()
     except Exception:
         logger.warning("langfuse_workflow_trace_failed", trace_name=name)
         return None
+    try:
+        schedule_flush(client.flush)
+    except Exception:
+        logger.warning("langfuse_workflow_flush_failed", trace_name=name)
     return span
 
 

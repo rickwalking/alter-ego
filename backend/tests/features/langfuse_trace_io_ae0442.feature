@@ -93,3 +93,9 @@ Feature: Langfuse traces carry input, output and useful names (AE-0442)
     When the phase body returns 7 slides
     Then the phase body still returns 7 slides
     And no tracing exception is raised
+
+  Scenario: A hanging exporter never blocks the workflow
+    Given a Langfuse client whose flush hangs on the exporter
+    When a background runner requests a tracing flush
+    Then the request returns immediately
+    And the workflow result is unchanged

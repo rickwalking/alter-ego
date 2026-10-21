@@ -6,6 +6,7 @@ Feature: carousel_pipeline_consolidation.feature @cp-async-resume
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -26,6 +27,8 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_IN_PROGRESS,
 )
 from rag_backend.domain.models import UserRole
+from rag_backend.infrastructure import langfuse_client
+from tests.langfuse_trace_fakes import TraceCollector
 from tests.integration.carousel_consolidation.helpers import (
     auth_header,
     collect_hub_events_during,
@@ -153,6 +156,58 @@ class TestAsyncEditorialResume:
         statuses = sorted([first.status_code, second.status_code])
         assert statuses[0] == 202
         assert statuses[1] == 409
+
+    @pytest.mark.asyncio
+    @patch(
+        "rag_backend.application.services.carousel.phase_artifact_runner.generate_outline",
+        new_callable=AsyncMock,
+    )
+    async def test_background_resume_does_not_wait_for_a_hanging_exporter(
+        self,
+        mock_outline: AsyncMock,
+        client: AsyncClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A stuck Langfuse exporter must not delay the background resume."""
+        mock_outline.return_value = [
+            {"slide_index": 1, "title": "Intro", "key_points": ["Hook"]},
+        ]
+        collector = TraceCollector()
+        release = threading.Event()
+        monkeypatch.setattr(collector, "flush", lambda: release.wait(10))
+        monkeypatch.setattr(langfuse_client, "LANGFUSE_CLIENT", collector)
+        editor = await create_user("async-hanging@example.com", UserRole.EDITOR)
+        project_id = await create_carousel(editor, is_public=False)
+        await seed_workflow_phase(
+            client,
+            project_id,
+            phase=PHASE_RESEARCH,
+            phase_status=PHASE_STATUS_AWAITING_HUMAN,
+            extra_state={
+                "research_findings": [{"title": "Finding", "summary": "Detail"}],
+            },
+        )
+        version = await get_lock_version(project_id)
+
+        started = time.monotonic()
+        try:
+            response = await client.post(
+                f"/api/carousels/{project_id}/workflow/resume",
+                json={"action": "approve", "expected_version": version},
+                headers=auth_header(editor),
+            )
+            assert response.status_code == 202
+            await asyncio.wait_for(drain_background_tasks(), timeout=5.0)
+            await wait_for_workflow_state(
+                client,
+                project_id,
+                auth_header(editor),
+                phase=PHASE_OUTLINE,
+            )
+        finally:
+            release.set()
+
+        assert time.monotonic() - started < 3.0
 
     @pytest.mark.asyncio
     @patch(

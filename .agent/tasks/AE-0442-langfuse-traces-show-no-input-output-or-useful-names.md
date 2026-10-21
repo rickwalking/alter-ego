@@ -194,6 +194,27 @@ CI `backend / Test & Coverage` then passed in 11m6s on `4a297dcc`. The
 separate `backend-gate` job hung after 2% of tests and failed at 21m32s with
 no test failure summary; the new CI run is the arbiter.
 
+### 2026-10-21 — mutation baseline hang fixed
+
+PR #167 mutation gate failed its baseline because the resume test timed out;
+the new `flush_workflow_traces` called `client.flush()` synchronously and the
+OTLP exporter retried an unreachable Langfuse host on the resume task.
+
+Fixed:
+
+- `langfuse_client.schedule_flush` now coalesces flush requests onto one
+  daemon worker thread. Callers return immediately; a hanging exporter can
+  never delay a phase or a background resume. Errors are logged, not raised.
+- `flush_langfuse`, per-phase `_safe_flush`, and `create_workflow_trace` all
+  use the background scheduler; no tracing flush is awaited on the business
+  path. The worker coalesces bursts instead of growing a queue.
+- Added a resume integration test that installs a blocking exporter flush and
+  proves the background resume still reaches the outline gate in <3s, plus a
+  unit test that the flush request itself returns in <0.5s.
+- Updated flush assertions to poll the worker (`wait_for_flushes`).
+
+Reproduced the exact mutation baseline test locally (passes, 2.41s).
+
 Decisions/deviations:
 
 - The Langfuse `input` keyword is only used at SDK call sites; our helpers use
@@ -213,6 +234,8 @@ Decisions/deviations:
 - `backend/tests/integration/test_blog_rebuild_hidden_ae0426.py`
 - `backend/tests/integration/test_phase_traces_ae0390.py`
 - `backend/tests/integration/test_autopilot_runner_start.py`
+- `backend/tests/integration/carousel_consolidation/test_workflow_async_resume.py`
+- `backend/tests/langfuse_trace_fakes.py`
 - `backend/tests/langfuse_trace_fakes.py`
 - `backend/tests/unit/infrastructure/test_langfuse_trace_io_ae0442.py`
 - `backend/tests/unit/infrastructure/test_langfuse_phase_trace_ae0390.py`
@@ -242,6 +265,8 @@ Targeted tests (run individually; all green):
   failures never changing the workflow outcome).
 - `tests/unit/infrastructure/test_langfuse_phase_trace_ae0390.py` — 11 passed.
 - `tests/unit/infrastructure/test_monitoring_langfuse.py` — 15 passed.
+- `tests/integration/carousel_consolidation/test_workflow_async_resume.py` —
+  6 passed (includes hanging-exporter resume test).
 - `tests/unit/application/test_editorial_workflow_service.py` — 45 passed.
 - `tests/unit/application/test_blog_generation_service_ae0425.py` — 18 passed.
 - `tests/unit/application/test_blog_image_batch_ae0425.py` +
