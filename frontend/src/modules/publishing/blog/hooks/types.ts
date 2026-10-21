@@ -6,7 +6,7 @@
  * live here rather than inline in the `use-*.ts` hook files.
  */
 
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 import type { DraftMergeFn, EditorSessionState } from "../lib/editor-session";
 import type { LockedPost } from "../blog-editor-requests";
@@ -16,7 +16,12 @@ import type {
   BlogImageSlotRef,
 } from "../lib/editor-document";
 import type { BlogPostVersion } from "../components/types";
-import type { BlogEditorError, BlogPost, BlogVoicePersona } from "../types";
+import type {
+  BlogEditorError,
+  BlogPost,
+  BlogPostUpdatePayload,
+  BlogVoicePersona,
+} from "../types";
 
 /** Re-export: the editor error shape lives in the domain types (AE-0438). */
 export type { BlogEditorError };
@@ -147,4 +152,29 @@ export interface BlogPostList {
   filters: BlogPostFilters;
   setFilters: Dispatch<SetStateAction<BlogPostFilters>>;
   fetchPosts: (activeFilters?: BlogPostFilters) => Promise<void>;
+}
+
+/** What saving/restoring one editor session needs (AE-0446). */
+export interface EditorPersistenceDeps {
+  session: EditorSession | null;
+  setSession: Dispatch<SetStateAction<EditorSession | null>>;
+  latest: MutableRefObject<EditorSession | null>;
+  payload: BlogPostUpdatePayload | null;
+  validation: BlogEditorValidation | null;
+}
+
+/** Save + restore for the blog editor (AE-0446). */
+export interface EditorPersistence {
+  persist: () => Promise<BlogPost | null>;
+  handleRestore: (versionNumber: number) => Promise<BlogEditorError | null>;
+  saving: boolean;
+  error: BlogEditorError | null;
+  setError: Dispatch<SetStateAction<BlogEditorError | null>>;
+}
+
+/** Draft-derived editor values (AE-0446). */
+export interface DraftState {
+  draft: BlogEditorDraft | null;
+  validation: BlogEditorValidation | null;
+  payload: BlogPostUpdatePayload | null;
 }
