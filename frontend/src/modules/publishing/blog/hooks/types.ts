@@ -136,3 +136,15 @@ export interface SuggestArgs {
   suggestionType: string;
   context?: string;
 }
+
+/** The list state ``useBlogPosts`` keeps (AE-0446). */
+export interface BlogPostList {
+  posts: BlogPost[];
+  setPosts: Dispatch<SetStateAction<BlogPost[]>>;
+  total: number;
+  loading: boolean;
+  error: string | null;
+  filters: BlogPostFilters;
+  setFilters: Dispatch<SetStateAction<BlogPostFilters>>;
+  fetchPosts: (activeFilters?: BlogPostFilters) => Promise<void>;
+}

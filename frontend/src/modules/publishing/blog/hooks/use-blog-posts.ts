@@ -5,9 +5,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
-import { API_BASE, HTTP_STATUS } from "@/constants/api";
-import { HTTP_HEADER_IF_MATCH } from "@/constants/workflow";
+import type { Dispatch, SetStateAction } from "react";
 import type {
   BlogPost,
   BlogPostCreatePayload,
@@ -15,23 +13,21 @@ import type {
 } from "../types";
 import {
   BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
-  BLOG_POST_ERR_SLUG_CONFLICT,
-  BLOG_POST_ERR_VALIDATION,
   BLOG_POST_ERR_VERSION_CONFLICT,
   BlogPostMutationError,
 } from "../constants";
-import type { BlogPostFilters } from "./types";
+import {
+  createBlogPost,
+  deleteBlogPost,
+  fetchBlogPostPage,
+  postBlogPostAction,
+  unpublishBlogPost,
+  updateBlogPost,
+} from "../blog-post-list-requests";
+import type { BlogPostFilters, BlogPostList } from "./types";
 
-async function readErrorDetail(response: Response): Promise<string | null> {
-  try {
-    const body = (await response.json()) as { detail?: unknown };
-    return typeof body.detail === "string" ? body.detail : null;
-  } catch {
-    return null;
-  }
-}
-
-export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
+/** The paged, filtered list: loads on mount and whenever the filters change. */
+function useBlogPostList(initialFilters: BlogPostFilters): BlogPostList {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -43,23 +39,9 @@ export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
       try {
         setLoading(true);
         setError(null);
-        const params = new URLSearchParams();
-        if (activeFilters.status) params.set("status", activeFilters.status);
-        if (activeFilters.search) params.set("search", activeFilters.search);
-        if (activeFilters.limit)
-          params.set("limit", String(activeFilters.limit));
-        if (activeFilters.offset)
-          params.set("offset", String(activeFilters.offset));
-        const qs = params.toString();
-        const response = await authenticatedFetch(
-          `${API_BASE}/blog-posts${qs ? `?${qs}` : ""}`,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch blog posts");
-        }
-        const data = await response.json();
-        setPosts(data.items);
-        setTotal(data.total ?? data.items.length);
+        const page = await fetchBlogPostPage(activeFilters);
+        setPosts(page.items);
+        setTotal(page.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -69,118 +51,105 @@ export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
     [filters],
   );
 
-  const createPost = async (data: BlogPostCreatePayload) => {
-    const response = await authenticatedFetch(`${API_BASE}/blog-posts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (response.status === HTTP_STATUS.CONFLICT) {
-      throw new BlogPostMutationError(BLOG_POST_ERR_SLUG_CONFLICT);
-    }
-    if (response.status === HTTP_STATUS.UNPROCESSABLE_ENTITY) {
-      throw new BlogPostMutationError(BLOG_POST_ERR_VALIDATION);
-    }
-    if (!response.ok) throw new Error("Failed to create blog post");
-    const post = await response.json();
-    setPosts((prev) => [post, ...prev]);
-    return post;
-  };
-
-  const updatePost = async (
-    id: string,
-    data: BlogPostUpdatePayload,
-    lockVersion: number,
-  ) => {
-    const response = await authenticatedFetch(`${API_BASE}/blog-posts/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        [HTTP_HEADER_IF_MATCH]: String(lockVersion),
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error("Failed to update blog post");
-    const post = await response.json();
-    setPosts((prev) => prev.map((p) => (p.id === id ? post : p)));
-    return post;
-  };
-
-  const deletePost = async (id: string, lockVersion: number) => {
-    const response = await authenticatedFetch(`${API_BASE}/blog-posts/${id}`, {
-      method: "DELETE",
-      headers: { [HTTP_HEADER_IF_MATCH]: String(lockVersion) },
-    });
-    if (response.status === HTTP_STATUS.CONFLICT) {
-      const detail = await readErrorDetail(response);
-      if (detail === BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED) {
-        throw new BlogPostMutationError(BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED);
-      }
-      // Stale lock version: refresh the listing so a retry uses fresh data.
-      await fetchPosts();
-      throw new BlogPostMutationError(BLOG_POST_ERR_VERSION_CONFLICT);
-    }
-    if (!response.ok) throw new Error("Failed to delete blog post");
-    setPosts((prev) => prev.filter((p) => p.id !== id));
-    return true;
-  };
-
-  const unpublishPost = async (id: string, lockVersion: number) => {
-    const response = await authenticatedFetch(
-      `${API_BASE}/blog-posts/${id}/unpublish`,
-      {
-        method: "POST",
-        headers: { [HTTP_HEADER_IF_MATCH]: String(lockVersion) },
-      },
-    );
-    if (response.status === HTTP_STATUS.CONFLICT) {
-      await fetchPosts();
-      throw new BlogPostMutationError(BLOG_POST_ERR_VERSION_CONFLICT);
-    }
-    if (!response.ok) throw new Error("Failed to unpublish blog post");
-    const post = (await response.json()) as BlogPost;
-    setPosts((prev) => prev.map((p) => (p.id === id ? post : p)));
-    return post;
-  };
-
-  const submitForReview = async (id: string, reviewerId: string) => {
-    const response = await authenticatedFetch(
-      `${API_BASE}/blog-posts/${id}/submit-review?reviewer_id=${encodeURIComponent(reviewerId)}`,
-      { method: "POST" },
-    );
-    if (!response.ok) throw new Error("Failed to submit for review");
-    await fetchPosts();
-    return true;
-  };
-
-  const approvePost = async (id: string) => {
-    const response = await authenticatedFetch(
-      `${API_BASE}/blog-posts/${id}/approve`,
-      {
-        method: "POST",
-      },
-    );
-    if (!response.ok) throw new Error("Failed to approve blog post");
-    await fetchPosts();
-    return true;
-  };
-
-  const publishPost = async (id: string) => {
-    const response = await authenticatedFetch(
-      `${API_BASE}/blog-posts/${id}/publish`,
-      {
-        method: "POST",
-      },
-    );
-    if (!response.ok) throw new Error("Failed to publish blog post");
-    await fetchPosts();
-    return true;
-  };
-
   useEffect(() => {
     void fetchPosts(filters);
   }, [fetchPosts, filters]);
 
+  return {
+    posts,
+    setPosts,
+    total,
+    loading,
+    error,
+    filters,
+    setFilters,
+    fetchPosts,
+  };
+}
+
+function replacePost(
+  setPosts: Dispatch<SetStateAction<BlogPost[]>>,
+  post: BlogPost,
+): void {
+  setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
+}
+
+/** Delete, refreshing the list (then throwing) when the lock was stale. */
+async function deleteAndSync(
+  { setPosts, fetchPosts }: BlogPostList,
+  id: string,
+  lockVersion: number,
+): Promise<boolean> {
+  const outcome = await deleteBlogPost(id, lockVersion);
+  if (outcome === "carouselBlocked") {
+    throw new BlogPostMutationError(BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED);
+  }
+  if (outcome === "versionConflict") {
+    // Stale lock version: refresh the listing so a retry uses fresh data.
+    await fetchPosts();
+    throw new BlogPostMutationError(BLOG_POST_ERR_VERSION_CONFLICT);
+  }
+  setPosts((prev) => prev.filter((p) => p.id !== id));
+  return true;
+}
+
+/** Unpublish, refreshing the list (then throwing) when the lock was stale. */
+async function unpublishAndSync(
+  { setPosts, fetchPosts }: BlogPostList,
+  id: string,
+  lockVersion: number,
+): Promise<BlogPost> {
+  const post = await unpublishBlogPost(id, lockVersion);
+  if (post === null) {
+    await fetchPosts();
+    throw new BlogPostMutationError(BLOG_POST_ERR_VERSION_CONFLICT);
+  }
+  replacePost(setPosts, post);
+  return post;
+}
+
+/** Create/update/delete/unpublish plus the review workflow transitions. */
+function blogPostMutations(list: BlogPostList) {
+  const { setPosts, fetchPosts } = list;
+  const transition =
+    (action: string, failure: string) =>
+    async (id: string): Promise<boolean> => {
+      await postBlogPostAction(id, { action, failure });
+      await fetchPosts();
+      return true;
+    };
+  return {
+    create: async (data: BlogPostCreatePayload) => {
+      const post = await createBlogPost(data);
+      setPosts((prev) => [post, ...prev]);
+      return post;
+    },
+    update: async (
+      id: string,
+      data: BlogPostUpdatePayload,
+      lockVersion: number,
+    ) => {
+      const post = await updateBlogPost(id, { data, lockVersion });
+      replacePost(setPosts, post);
+      return post;
+    },
+    delete: (id: string, lockVersion: number) =>
+      deleteAndSync(list, id, lockVersion),
+    unpublish: (id: string, lockVersion: number) =>
+      unpublishAndSync(list, id, lockVersion),
+    submitForReview: async (id: string, reviewerId: string) => {
+      const action = `submit-review?reviewer_id=${encodeURIComponent(reviewerId)}`;
+      return transition(action, "Failed to submit for review")(id);
+    },
+    approve: transition("approve", "Failed to approve blog post"),
+    publish: transition("publish", "Failed to publish blog post"),
+  };
+}
+
+export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
+  const list = useBlogPostList(initialFilters);
+  const { posts, total, loading, error, filters, setFilters, fetchPosts } =
+    list;
   return {
     posts,
     total,
@@ -189,12 +158,6 @@ export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
     filters,
     setFilters,
     refetch: fetchPosts,
-    create: createPost,
-    update: updatePost,
-    delete: deletePost,
-    unpublish: unpublishPost,
-    submitForReview,
-    approve: approvePost,
-    publish: publishPost,
+    ...blogPostMutations(list),
   };
 }
