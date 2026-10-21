@@ -122,6 +122,31 @@ function parseSseLine(line: string, state: SseParserState): SseEvent | null {
   return null;
 }
 
+/** The event's JSON data, or ``{raw}`` when it is not JSON. */
+function parseEventData(raw: string): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return { raw };
+  }
+}
+
+/** The SSE ``event:`` field, else the backend's ``data.type``. */
+function eventTypeOf(
+  field: SseEventType | undefined,
+  data: Record<string, unknown>,
+): SseEventType | undefined {
+  if (field) {
+    return field;
+  }
+  return typeof data.type === "string" && data.type
+    ? (data.type as SseEventType)
+    : undefined;
+}
+
 /**
  * Flush the accumulated event from the parser state.
  * Resets accumulators and returns the parsed SseEvent (or ``null`` if empty).
@@ -130,27 +155,12 @@ function flushEvent(state: SseParserState): SseEvent | null {
   if (!state.currentData && !state.currentEvent) {
     return null;
   }
-
-  let parsedData: Record<string, unknown> = {};
-  if (state.currentData) {
-    try {
-      parsedData = JSON.parse(state.currentData) as Record<string, unknown>;
-    } catch {
-      parsedData = { raw: state.currentData };
-    }
-  }
-
+  const data = parseEventData(state.currentData);
   // Backend embeds event type in data.type rather than using SSE event: field
-  const eventType =
-    state.currentEvent ??
-    (parsedData.type && typeof parsedData.type === "string"
-      ? (parsedData.type as SseEventType)
-      : undefined);
-
   const event: SseEvent = {
     id: state.currentId,
-    event: eventType,
-    data: parsedData,
+    event: eventTypeOf(state.currentEvent, data),
+    data,
   };
 
   // Reset accumulators
@@ -179,28 +189,32 @@ function processChunk(chunk: string, state: SseParserState): SseEvent[] {
     if (delimIndex === -1) {
       break; // No complete event yet — wait for more data
     }
-
-    // Extract the event lines (everything up to the blank line)
-    const eventBlock = state.buffer.slice(searchStart, delimIndex);
-    // Advance past the blank line
-    searchStart = delimIndex + findDelimiterLength(state.buffer, delimIndex);
-
-    // Parse each line in the event block — this sets state.currentData etc.
-    const lines = eventBlock.split("\n");
-    for (const line of lines) {
-      parseSseLine(line, state);
-    }
-    // Blank-line boundary hit — flush the accumulated event
-    const event = flushEvent(state);
+    const event = consumeEventBlock(
+      state.buffer.slice(searchStart, delimIndex),
+      state,
+    );
     if (event !== null) {
       events.push(event);
     }
+    // Advance past the blank line
+    searchStart = delimIndex + findDelimiterLength(state.buffer, delimIndex);
   }
 
   // Keep remaining (incomplete) data in the buffer
   state.buffer = state.buffer.slice(searchStart);
 
   return events;
+}
+
+/** Parse one event block's lines, then flush the event at its blank line. */
+function consumeEventBlock(
+  block: string,
+  state: SseParserState,
+): SseEvent | null {
+  for (const line of block.split("\n")) {
+    parseSseLine(line, state);
+  }
+  return flushEvent(state);
 }
 
 /**
@@ -256,12 +270,94 @@ function flushBuffer(state: SseParserState): SseEvent | null {
     return null;
   }
 
-  const lines = remaining.split("\n");
-  for (const line of lines) {
-    parseSseLine(line, state);
-  }
+  return consumeEventBlock(remaining, state);
+}
 
-  return flushEvent(state);
+type SseRequest = Pick<
+  SseStreamOptions,
+  "url" | "body" | "headers" | "signal" | "lastEventId"
+>;
+
+/** JSON in, event stream out, plus ``Last-Event-ID`` when resuming. */
+function sseRequestHeaders(
+  headers: Record<string, string>,
+  lastEventId: string | undefined,
+): Record<string, string> {
+  const requestHeaders: Record<string, string> = {
+    [HEADER_CONTENT_TYPE]: MIME_APPLICATION_JSON,
+    [HEADER_ACCEPT]: MIME_TEXT_EVENT_STREAM,
+    ...headers,
+  };
+  if (lastEventId) {
+    requestHeaders[HEADER_LAST_EVENT_ID] = lastEventId;
+  }
+  return requestHeaders;
+}
+
+/** POST the request and return the body reader of a valid event stream. */
+async function openSseStream({
+  url,
+  body,
+  headers = {},
+  signal,
+  lastEventId,
+}: SseRequest): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+  const response = await fetch(url, {
+    method: METHOD_POST,
+    headers: sseRequestHeaders(headers, lastEventId),
+    body: JSON.stringify(body),
+    credentials: CREDENTIALS_INCLUDE,
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const contentType = response.headers.get(HEADER_CONTENT_TYPE) ?? "";
+  if (!contentType.includes(MIME_TEXT_EVENT_STREAM)) {
+    throw new Error(`Unexpected content type: ${contentType}`);
+  }
+  if (!response.body) {
+    throw new Error("Response body is not readable");
+  }
+  return response.body.getReader();
+}
+
+/** Decode the stream and emit each event as it completes, then the tail. */
+async function pumpSseEvents(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onEvent: (event: SseEvent) => void,
+): Promise<void> {
+  const decoder = new TextDecoder();
+  const parserState = createParserState();
+  for (
+    let result = await reader.read();
+    !result.done;
+    result = await reader.read()
+  ) {
+    const chunk = decoder.decode(result.value, { stream: true });
+    for (const event of processChunk(chunk, parserState)) {
+      onEvent(event);
+    }
+  }
+  // Process any remaining data after the stream closes
+  const finalEvent = flushBuffer(parserState);
+  if (finalEvent !== null) {
+    onEvent(finalEvent);
+  }
+}
+
+/** Report a stream failure; a user abort is expected, not an error. */
+function reportSseError(
+  error: unknown,
+  onError: SseStreamOptions["onError"],
+): void {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return;
+  }
+  const wrappedError =
+    error instanceof Error ? error : new Error(String(error));
+  console.warn("[sse-client] Connection error:", wrappedError.message);
+  onError?.(wrappedError);
 }
 
 /**
@@ -274,80 +370,14 @@ function flushBuffer(state: SseParserState): SseEvent | null {
  *
  * Supports resumability via the ``Last-Event-ID`` header.
  */
-export async function streamSseEvents({
-  url,
-  body,
-  headers = {},
-  signal,
-  lastEventId,
-  onEvent,
-  onError,
-  onComplete,
-}: SseStreamOptions): Promise<void> {
+export async function streamSseEvents(
+  options: SseStreamOptions,
+): Promise<void> {
   try {
-    const requestHeaders: Record<string, string> = {
-      [HEADER_CONTENT_TYPE]: MIME_APPLICATION_JSON,
-      [HEADER_ACCEPT]: MIME_TEXT_EVENT_STREAM,
-      ...headers,
-    };
-
-    if (lastEventId) {
-      requestHeaders[HEADER_LAST_EVENT_ID] = lastEventId;
-    }
-
-    const response = await fetch(url, {
-      method: METHOD_POST,
-      headers: requestHeaders,
-      body: JSON.stringify(body),
-      credentials: CREDENTIALS_INCLUDE,
-      signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const contentType = response.headers.get(HEADER_CONTENT_TYPE) ?? "";
-    if (!contentType.includes(MIME_TEXT_EVENT_STREAM)) {
-      throw new Error(`Unexpected content type: ${contentType}`);
-    }
-
-    if (!response.body) {
-      throw new Error("Response body is not readable");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    const parserState = createParserState();
-
-    for (
-      let result = await reader.read();
-      !result.done;
-      result = await reader.read()
-    ) {
-      const chunk = decoder.decode(result.value, { stream: true });
-      const events = processChunk(chunk, parserState);
-
-      for (const event of events) {
-        onEvent(event);
-      }
-    }
-
-    // Process any remaining data after the stream closes
-    const finalEvent = flushBuffer(parserState);
-    if (finalEvent !== null) {
-      onEvent(finalEvent);
-    }
-
-    onComplete?.();
+    const reader = await openSseStream(options);
+    await pumpSseEvents(reader, options.onEvent);
+    options.onComplete?.();
   } catch (error) {
-    // AbortError is expected when the user cancels — do not report as error
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return;
-    }
-    const wrappedError =
-      error instanceof Error ? error : new Error(String(error));
-    console.warn("[sse-client] Connection error:", wrappedError.message);
-    onError?.(wrappedError);
+    reportSseError(error, options.onError);
   }
 }
