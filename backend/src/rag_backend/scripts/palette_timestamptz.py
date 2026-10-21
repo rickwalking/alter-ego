@@ -1,4 +1,4 @@
-"""One-shot: make the palette timestamps timezone-aware (AE-0446, D-6).
+"""One-shot: make the palette timestamps timezone-aware (AE-0446, Pedro's decision).
 
 Usage (in the freshly built backend image, Postgres up, app stack down):
     python -m rag_backend.scripts.palette_timestamptz --apply --verify

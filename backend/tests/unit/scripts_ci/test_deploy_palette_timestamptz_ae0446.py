@@ -1,4 +1,4 @@
-"""Deploy ordering of the palette timestamptz one-shot (AE-0446, D-6).
+"""Deploy ordering of the palette timestamptz one-shot (AE-0446, Pedro's decision).
 
 Feature: backend/tests/features/palette_timestamptz_ae0446.feature
 Scenario: The deploy runs it after the blog cutover and never keeps the stack down

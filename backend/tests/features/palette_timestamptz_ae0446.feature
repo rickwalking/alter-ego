@@ -1,4 +1,4 @@
-Feature: Palette timestamps become timezone-aware with the deploy (AE-0446, D-6)
+Feature: Palette timestamps become timezone-aware with the deploy (AE-0446, Pedro's decision)
   Prod does not run Alembic and create_all never alters a column, so the
   deploy runs an idempotent one-shot that turns palettes.created_at and
   updated_at into timestamptz. No manual ALTER on prod.

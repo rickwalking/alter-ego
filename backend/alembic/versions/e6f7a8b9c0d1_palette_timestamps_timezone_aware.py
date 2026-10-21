@@ -15,7 +15,7 @@ Not a LangGraph checkpoint table: the checkpoint-drain rule does not apply.
 prod: the deploy does not run alembic (AE-0207), so the same ALTER reaches
 prod through the idempotent one-shot ``python -m
 rag_backend.scripts.palette_timestamptz --apply --verify`` that deploy.yml
-runs after the blog cutover (owner decision D-6; no manual ALTER).
+runs after the blog cutover (Pedro's decision; no manual ALTER).
 """
 
 from __future__ import annotations

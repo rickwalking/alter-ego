@@ -1,4 +1,4 @@
-"""Make ``palettes.created_at`` / ``updated_at`` timezone-aware (AE-0446, D-6).
+"""Make the ``palettes`` timestamps timezone-aware (AE-0446, Pedro's decision).
 
 Prod does not run Alembic on deploy (AE-0207) and bootstraps with
 ``create_all``, which never alters an existing column. So the

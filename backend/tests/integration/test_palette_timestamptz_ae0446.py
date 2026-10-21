@@ -1,4 +1,4 @@
-"""The palette timestamptz one-shot on Postgres (AE-0446, D-6).
+"""The palette timestamptz one-shot on Postgres (AE-0446, Pedro's decision).
 
 Feature: backend/tests/features/palette_timestamptz_ae0446.feature
 """

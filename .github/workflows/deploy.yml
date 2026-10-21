@@ -284,7 +284,7 @@ jobs:
               echo "::error::blog v2 cutover exited $BLOG_CUTOVER_EXIT; bringing the stack up anyway (AE-0428 removed the read fail-safe: non-v2 rows now fail closed until re-run), failing the job after"
             fi
 
-            # --- Palette timestamps timezone-aware (AE-0446, owner decision D-6)
+            # --- Palette timestamps timezone-aware (AE-0446, Pedro's decision)
             # One-shot, idempotent DDL: palettes.created_at/updated_at
             # timestamp -> timestamptz (values read as UTC). Prod bootstraps with
             # create_all, which never alters an existing column, so this is how
@@ -351,7 +351,7 @@ jobs:
               exit 1
             fi
 
-            # AE-0446 (D-6): surface a failed palette timestamptz step only now,
+            # AE-0446 (Pedro's decision): surface a failed palette timestamptz step only now,
             # with the stack up (palette writes may 500 until it is re-run).
             if [ "$PALETTE_TZ_EXIT" -ne 0 ]; then
               echo "::error::palette timestamptz failed (exit $PALETTE_TZ_EXIT): run 'python -m rag_backend.scripts.palette_timestamptz --apply --verify' on the droplet"
