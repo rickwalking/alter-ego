@@ -635,4 +635,57 @@ describe("useEditorialWorkflowResume", () => {
       }),
     ).toBe(false);
   });
+
+  // AE-0446 (PR #175 review): the wait AFTER a non-ready answer runs outside
+  // the loading/error handling, as before the hook was split: the lock is
+  // released at once and a final timeout is not shown as a resume error.
+  it("releases loading before the second wait and shows no resume error", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: true,
+      status: HTTP_STATUS.OK,
+      json: async () => ({
+        ...baseState,
+        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      }),
+    } as Response);
+    let finishWait: (state: EditorialWorkflowState | null) => void = () => {};
+    const waitSpy = vi
+      .spyOn(editorialWorkflowUtils, "waitUntilWorkflowReadyWithTransport")
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishWait = resolve;
+          }),
+      );
+    const { hookParams, setLoading, setError, refreshState } =
+      createHookOptions();
+    const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
+
+    let outcome: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      outcome = result.current
+        .resume("approve")
+        .catch((error: unknown) => error);
+      await vi.waitFor(() => expect(waitSpy).toHaveBeenCalled());
+    });
+    expect(setLoading).toHaveBeenLastCalledWith(false);
+
+    await act(async () => {
+      finishWait(null);
+      expect(await outcome).toEqual(new Error("error.resumeFailed"));
+    });
+    expect(setError).not.toHaveBeenCalledWith("error.resumeFailed");
+    expect(refreshState).not.toHaveBeenCalled();
+    waitSpy.mockRestore();
+  });
+
+  it("keeps the same resume function across renders with equal params", () => {
+    const { hookParams } = createHookOptions();
+    const { result, rerender } = renderHook(() =>
+      useEditorialWorkflowResume({ ...hookParams }),
+    );
+    const first = result.current.resume;
+    rerender();
+    expect(result.current.resume).toBe(first);
+  });
 });

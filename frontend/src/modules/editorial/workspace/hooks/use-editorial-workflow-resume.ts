@@ -1,10 +1,11 @@
 /** Resume/approve/revise actions for editorial workflow hook. */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { EditorialWorkflowState } from "@/modules/editorial/workspace/types-ai";
 import {
   markResumeRunning,
   sendResume,
+  type FinishResume,
   type ResumeContext,
 } from "@/modules/editorial/workspace/lib/resume-workflow";
 import type {
@@ -14,9 +15,57 @@ import type {
 
 export type { EditorialReviseOptions } from "./types";
 
+/** The params as one object that only changes when one of its fields does. */
+function useStableResumeDeps({
+  projectId,
+  lockVersion,
+  translateError,
+  workflowStateRef,
+  transportModeRef,
+  refreshState,
+  setState,
+  setPhaseEvents,
+  setLoading,
+  setError,
+  enterPollingFallback,
+  stopPollingFallback,
+}: UseEditorialWorkflowResumeParams): UseEditorialWorkflowResumeParams {
+  return useMemo(
+    () => ({
+      projectId,
+      lockVersion,
+      translateError,
+      workflowStateRef,
+      transportModeRef,
+      refreshState,
+      setState,
+      setPhaseEvents,
+      setLoading,
+      setError,
+      enterPollingFallback,
+      stopPollingFallback,
+    }),
+    [
+      enterPollingFallback,
+      lockVersion,
+      projectId,
+      refreshState,
+      setError,
+      setLoading,
+      setPhaseEvents,
+      setState,
+      stopPollingFallback,
+      translateError,
+      transportModeRef,
+      workflowStateRef,
+    ],
+  );
+}
+
 export function useEditorialWorkflowResume(
-  deps: UseEditorialWorkflowResumeParams,
+  params: UseEditorialWorkflowResumeParams,
 ) {
+  const deps = useStableResumeDeps(params);
   const resume = useCallback(
     async (
       action: string,
@@ -30,8 +79,9 @@ export function useEditorialWorkflowResume(
         actedOnPhase: deps.workflowStateRef.current?.current_phase,
       };
       markResumeRunning(ctx);
+      let finish: FinishResume;
       try {
-        return await sendResume(ctx, { action, feedback, options });
+        finish = await sendResume(ctx, { action, feedback, options });
       } catch (err) {
         const message =
           err instanceof Error
@@ -43,6 +93,9 @@ export function useEditorialWorkflowResume(
       } finally {
         deps.setLoading(false);
       }
+      // Outside the try on purpose: a second wait for the gate releases the
+      // loading lock, and its "resumeFailed" is not shown as a resume error.
+      return finish();
     },
     [deps],
   );

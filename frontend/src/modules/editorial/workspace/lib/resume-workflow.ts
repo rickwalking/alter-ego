@@ -199,11 +199,23 @@ async function finalizeResume(
   throw new Error(deps.translateError("resumeFailed"));
 }
 
-async function pollForReady(
+/**
+ * The last resume step, run by the caller AFTER its loading/error handling:
+ * a second wait for the gate (or its "resumeFailed") must not keep the
+ * actions locked nor raise the resume error (same as before the split).
+ */
+export type FinishResume = () => Promise<EditorialWorkflowState>;
+
+function finishWith(
   ctx: ResumeContext,
-): Promise<EditorialWorkflowState> {
+  workflowState: EditorialWorkflowState | null,
+): FinishResume {
+  return () => finalizeResume(ctx, workflowState);
+}
+
+async function pollForReady(ctx: ResumeContext): Promise<FinishResume> {
   ctx.deps.enterPollingFallback();
-  return finalizeResume(ctx, await waitForReadyState(ctx));
+  return finishWith(ctx, await waitForReadyState(ctx));
 }
 
 /**
@@ -214,7 +226,7 @@ async function pollForReady(
 async function handleAccepted(
   ctx: ResumeContext,
   response: Response,
-): Promise<EditorialWorkflowState> {
+): Promise<FinishResume> {
   const { deps, actedOnPhase } = ctx;
   const accepted =
     (await response.json()) as EditorialWorkflowResumeAcceptedResponse;
@@ -236,16 +248,16 @@ async function handleAccepted(
   });
   const current = deps.workflowStateRef.current;
   if (current && isWorkflowReady(current)) {
-    return finalizeResume(ctx, current);
+    return finishWith(ctx, current);
   }
-  return finalizeResume(ctx, await waitForReadyState(ctx));
+  return finishWith(ctx, await waitForReadyState(ctx));
 }
 
 /** 4xx: a run-in-progress 409 shows the banner; anything else throws its copy. */
 async function handleClientError(
   { deps }: ResumeContext,
   response: Response,
-): Promise<EditorialWorkflowState> {
+): Promise<FinishResume> {
   const detail = await readApiError(
     response,
     deps.translateError("resumeFailed"),
@@ -260,7 +272,7 @@ async function handleClientError(
     if (refreshed) {
       deps.setState(refreshed);
       deps.workflowStateRef.current = refreshed;
-      return refreshed;
+      return () => Promise.resolve(refreshed);
     }
   }
   throw new Error(resumeErrorMessage(detail, deps.translateError));
@@ -270,15 +282,12 @@ async function handleClientError(
 async function handleResumeResponse(
   ctx: ResumeContext,
   response: Response,
-): Promise<EditorialWorkflowState> {
+): Promise<FinishResume> {
   if (response.status === HTTP_STATUS.ACCEPTED) {
     return handleAccepted(ctx, response);
   }
   if (response.ok) {
-    return finalizeResume(
-      ctx,
-      (await response.json()) as EditorialWorkflowState,
-    );
+    return finishWith(ctx, (await response.json()) as EditorialWorkflowState);
   }
   if (isResumeClientErrorStatus(response.status)) {
     return handleClientError(ctx, response);
@@ -295,11 +304,14 @@ async function handleResumeResponse(
   );
 }
 
-/** POST the resume; a network failure falls back to polling for the gate. */
+/**
+ * POST the resume; a network failure falls back to polling for the gate.
+ * Resolves to the finishing step (see ``FinishResume``).
+ */
 export async function sendResume(
   ctx: ResumeContext,
   request: ResumeRequest,
-): Promise<EditorialWorkflowState> {
+): Promise<FinishResume> {
   const payload = await buildResumePayload(ctx, request);
   let response: Response;
   try {
