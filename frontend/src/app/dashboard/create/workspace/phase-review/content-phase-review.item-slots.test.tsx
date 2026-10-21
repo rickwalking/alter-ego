@@ -1,4 +1,3 @@
-// AE-0437 — Gherkin: frontend/tests/features/content-review-item-slots-ae0437.feature
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";

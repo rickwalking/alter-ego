@@ -1,4 +1,3 @@
-// AE-0309 — Gherkin: backend/tests/features/carousel_content_fail_closed.feature
 // Scenario: Unrepairable slide surfaces at the content review step
 //   Then the interrupt payload carries a blocking violation for that slide
 //   And the content step UI shows the slide number and violation messages
@@ -72,8 +71,6 @@ describe("ContentPhaseReview content-gate violations (AE-0309)", () => {
     const violation = screen.getByText("slide_parse_failed").closest("li");
     expect(violation).toHaveTextContent("Slide 4");
     expect(violation).toHaveTextContent("PT");
-    // AE-0414 (B24): the known code shows its translated message, not the
-    // backend's English one.
     expect(violation).toHaveTextContent(
       "The generated copy for this slide could not be read; rewrite its heading and body",
     );
@@ -107,7 +104,6 @@ describe("ContentPhaseReview content-gate violations (AE-0309)", () => {
     ).not.toBeInTheDocument();
   });
 
-  // AE-0312 — Gherkin: backend/tests/features/carousel_pt_casing_severity.feature
   // Scenario: warning-tier violations render distinctly from blockers.
   it("labels warning-severity casing violations as non-blocking warnings", () => {
     const warningReport: SlideValidationReport = {
@@ -137,7 +133,6 @@ describe("ContentPhaseReview content-gate violations (AE-0309)", () => {
       .closest("li");
     expect(violation).toHaveTextContent("Warning");
     expect(violation?.className).not.toContain("destructive");
-    // A non-blocking report must not raise the approval-blocked alert.
     expect(
       screen.queryByText(
         "Approval is blocked until all presentation violations are resolved.",

@@ -32,7 +32,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a date to a readable string in `locale` (AE-0417; en by default:
+ * Format a date to a readable string in `locale` (en by default:
  * "Jan 15, 2024", pt "15/01/2024").
  */
 export function formatDate(
@@ -94,12 +94,12 @@ export function secureRandomUnit(): number {
   return value / UINT32_RANGE;
 }
 
+/** A unique id: ``crypto.randomUUID`` when available, else a time + random fallback. */
 export function generateId(): string {
   const webCrypto = globalThis.crypto as Crypto | undefined;
   if (webCrypto?.randomUUID) {
     return webCrypto.randomUUID();
   }
-  // Fallback for environments without crypto.randomUUID
   return `${Date.now()}-${secureRandomUnit()
     .toString(BASE36_RADIX)
     .substring(BASE36_SUFFIX_START, BASE36_SUFFIX_END)}`;

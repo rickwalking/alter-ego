@@ -2,8 +2,8 @@
  * Cross-context import scanner shared by the boundary checker and the baseline
  * generator, so both compute violations identically.
  *
- * Covers, during the Phase 7 feature -> module migration window (AE-0136):
- *   - the legacy `features` barrel-less rule (AE-0083, broadened in AE-0138):
+ * Covers, during the Phase 7 feature -> module migration window:
+ *   - the legacy `features` barrel-less rule (since broadened):
  *     `features` has NO public barrel, so ANY consumer (a `features/A/**` file,
  *     a `modules/<m>/**` file, or `app/`) importing `@/features/B/<anything>`
  *     of a DIFFERENT context B is a cross-context edge. A `features/A/**` file
@@ -16,7 +16,7 @@
  *     `@/modules/<m>/index`), never a deep internal `@/modules/<m>/<internal>`;
  *     a module importing its OWN internals is allowed.
  *
- * The stable allowlist key stays `<file>::<to-context>` so the AE-0083 baseline
+ * The stable allowlist key stays `<file>::<to-context>` so the original baseline
  * keys keep matching and regenerating it remains byte-identical.
  */
 
@@ -191,7 +191,6 @@ function publicContractViolations(relPath, from, ownLayerName, specifiers) {
       if (!ctx) {
         continue;
       }
-      // A module importing its own internals is allowed.
       const isOwnModule = ownLayerName === layer.name && ctx === from;
       if (isOwnModule) {
         continue;
@@ -231,7 +230,6 @@ function barrelLessViolations(relPath, from, ownLayerName, specifiers) {
       if (!to) {
         continue;
       }
-      // A file may reach into its OWN context of this same layer.
       const isOwnContext = ownLayerName === layer.name && to === from;
       if (isOwnContext) {
         continue;
@@ -247,6 +245,12 @@ function barrelLessViolations(relPath, from, ownLayerName, specifiers) {
  * internal import (legacy cross-feature + module public-contract breaches).
  *
  * @returns {Violation[]} sorted deterministically by file then specifier
+ *
+ * A module may import its own internals and a file may reach into its own
+ * context of the same layer. The module public-contract rule and the barrel-less
+ * features rule apply to every consumer, including `modules/<m>` files (which
+ * never own a feature context). The app consumer owns no context, so every
+ * owner-layer rule applies to it.
  */
 export function scanCrossFeatureImports() {
   /** @type {Violation[]} */
@@ -261,21 +265,16 @@ export function scanCrossFeatureImports() {
       const from = contextOfFile(relPath, layer);
       const specifiers = extractSpecifiers(readFileSync(absPath, "utf8"));
 
-      // Module public-contract rule applies to other-module consumers too.
       violations.push(
         ...publicContractViolations(relPath, from, layer.name, specifiers),
       );
 
-      // Barrel-less rule (features): ANY consumer importing a foreign feature
-      // context is cross-context — including a `modules/<m>` file (it never
-      // owns a feature context), closing the migration blind spot.
       violations.push(
         ...barrelLessViolations(relPath, from, layer.name, specifiers),
       );
     }
   }
 
-  // The app consumer owns no context: every owner-layer rule applies to it.
   if (existsSync(APP_CONSUMER.dir)) {
     for (const absPath of walkSourceFiles(APP_CONSUMER.dir)) {
       const relPath = toRelativePosix(absPath);

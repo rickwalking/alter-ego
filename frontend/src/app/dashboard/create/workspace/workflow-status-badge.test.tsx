@@ -2,19 +2,21 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { WorkflowStatusBadge } from "./workflow-status-badge";
 
-// Scenarios: see tests/features/create-workflow-status-badge.feature
-
 vi.mock("next-intl", () => ({
-  // Echo the key so we can assert which label key was looked up.
   useTranslations: () => (key: string) => key,
 }));
 
+/**
+ * The translator mock echoes the key so the tests assert which label key was
+ * looked up. Outside production an unknown status throws (drift guard); the
+ * titlecase fallback is the production-only last resort. A labelled chip must
+ * still announce the status word (not colour alone) and is not a live region.
+ */
 describe("WorkflowStatusBadge", () => {
   it("renders a live pulsing dot for in_progress", () => {
     const { container } = render(<WorkflowStatusBadge status="in_progress" />);
     const badge = screen.getByRole("status");
     expect(badge).toHaveAttribute("aria-label", "status.inProgress");
-    // The dot is the animated leading element inside the badge.
     expect(container.querySelector(".animate-pulse")).not.toBeNull();
   });
 
@@ -28,8 +30,6 @@ describe("WorkflowStatusBadge", () => {
   });
 
   it("titlecases an unknown status as its own label (production guard)", () => {
-    // Outside production an unknown status throws (AE-0299 drift guard);
-    // the titlecase fallback is the production-only last resort.
     vi.stubEnv("NODE_ENV", "production");
     try {
       render(<WorkflowStatusBadge status="brand_new_state" />);
@@ -40,8 +40,6 @@ describe("WorkflowStatusBadge", () => {
   });
 
   it("keeps the status in the accessible name on a label override", () => {
-    // A labelled chip (phase name) must still announce the status word, not
-    // convey it by colour alone — and it is not a live region.
     render(<WorkflowStatusBadge status="failed" label="content" />);
     const badge = screen.getByLabelText("content, status.failed");
     expect(badge).toHaveTextContent("content");

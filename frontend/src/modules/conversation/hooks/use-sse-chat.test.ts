@@ -1,5 +1,5 @@
 /**
- * Gherkin: tests/features/conversation-sse-chat.feature (AE-0155)
+ * Gherkin: tests/features/conversation-sse-chat.feature
  *
  * Race/lifecycle-focused tests for useSseChat using a CONTROLLABLE fake SSE
  * stream (events are driven by the test, not auto-fired) and a REAL QueryClient
@@ -139,7 +139,6 @@ describe("useSseChat", () => {
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(invalidateSpy).not.toHaveBeenCalled();
-    // optimistic user + assistant remain (no history reconciliation)
     expect(result.current.messages.map((m) => m.content)).toEqual(["hi", "yo"]);
   });
 
@@ -174,7 +173,6 @@ describe("useSseChat", () => {
       result.current.messages.filter((m) => m.content === "dup"),
     ).toHaveLength(1);
 
-    // History arrives mid-stream already containing the same user message.
     setHistory([
       { id: "h1", role: "user", content: "dup", sources: [], created_at: "t" },
     ]);
@@ -210,7 +208,7 @@ describe("useSseChat", () => {
       await act(() =>
         Promise.resolve(void result.current.sendMessage("second")),
       );
-      expect(stream.count).toBe(1); // guarded by isStreaming
+      expect(stream.count).toBe(1);
     });
   });
 
@@ -219,7 +217,6 @@ describe("useSseChat", () => {
     const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
 
     await act(() => Promise.resolve(void result.current.sendMessage("hi")));
-    // COMPLETE event fires finalize; resolving the promise fires onComplete -> finalize again.
     stream.emit("complete", {});
     stream.complete();
 

@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { CarouselViewer } from "./carousel-viewer";
 import type { CarouselPublicSlide } from "@/schemas/carousel";
 
-// Feature: Public carousel viewer (AE-0444)
-// frontend/tests/features/public_carousel_viewer_ae0444.feature
-
 const SLIDES: CarouselPublicSlide[] = [
   { slide_number: 1, heading: "Abertura", image_url: "/slide-1.jpg" },
   { slide_number: 2, heading: "Contexto", image_url: "/slide-2.jpg" },

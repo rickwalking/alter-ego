@@ -246,7 +246,6 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     waitSpy.mockRestore();
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: Requesting a revision shows the running state at once
   //   Given the research gate is awaiting review
   //   When the backend answers 202 "in_progress"
@@ -399,9 +398,7 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     await act(async () => {
       try {
         await result.current.resume("approve");
-      } catch {
-        // expected
-      }
+      } catch {}
     });
 
     expect(refreshState).toHaveBeenCalled();

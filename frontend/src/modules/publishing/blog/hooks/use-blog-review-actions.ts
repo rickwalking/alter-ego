@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * Review, publish and schedule controls of the blog editor (AE-0424).
+ * Review, publish and schedule controls of the blog editor.
  *
  * They call the existing `blog_post_workflow` routes through the status
  * guards (a draft cannot jump to `published`: the 400 is shown, not
- * swallowed). The author may review their own post (AE-0441), so "Publish
+ * swallowed). The author may review their own post, so "Publish
  * now" on a draft runs submit-review (the author as reviewer) -> approve ->
- * publish in one flow.
+ * publish in one flow. A failed action's error is shown in the review bar
+ * (with its code-specific copy), next to the control that failed.
  */
 
 import { useState } from "react";
@@ -38,8 +39,6 @@ export function useBlogReviewActions(
   editor: UseBlogPostEditorResult,
 ): BlogReviewActions {
   const [pending, setPending] = useState(false);
-  // AE-0438 (F-11): the failed action's error is shown IN the review bar
-  // (with its code-specific copy), next to the control that failed.
   const [error, setError] = useState<BlogEditorError | null>(null);
 
   const run = async (

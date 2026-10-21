@@ -25,7 +25,6 @@ function project(templateVersion: string | null): CarouselProjectResponse {
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415)
 // Scenario: The template version is not doubled
 describe("CarouselPreview template version (AE-0415, B33)", () => {
   it("shows a stored 'v2' as 'v2', not 'vv2'", () => {

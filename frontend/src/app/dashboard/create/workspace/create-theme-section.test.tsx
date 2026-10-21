@@ -5,9 +5,11 @@ import { LIGHT_THEME_IMAGE_PRESET } from "@/constants/create";
 import type { ThemeOption } from "@/app/dashboard/create/theme-options";
 import { CreateThemeSection } from "./create-theme-section";
 
-// Gherkin: tests/features/palette_crud_api.feature + palette-drift-gate.feature
-// (the dropdown now renders the dynamic catalog; light palettes still nudge the
-// flat-editorial preset, driven by each option's API mode — AE-0271).
+/**
+ * Gherkin: tests/features/palette_crud_api.feature and palette-drift-gate.feature
+ * (the dropdown renders the dynamic catalog; light palettes still nudge the
+ * flat-editorial preset, driven by each option's API mode).
+ */
 const THEME_OPTIONS: ThemeOption[] = [
   { value: "auto", label: "Auto-detect", mode: null },
   { value: "plasma_magenta", label: "Plasma Magenta", mode: "dark" },
@@ -34,7 +36,6 @@ describe("CreateThemeSection", () => {
 
   it("nudges to the flat-editorial preset when a light theme is selected", () => {
     const onChange = vi.fn();
-    // AE-0372: flat editorial is now the initial preset, so start from another.
     render(
       <CreateThemeSection
         form={{

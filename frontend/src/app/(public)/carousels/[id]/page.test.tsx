@@ -60,8 +60,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-// Feature: Public carousel viewer (AE-0444)
-// frontend/tests/features/public_carousel_viewer_ae0444.feature
 describe("Public carousel viewer page metadata (AE-0444)", () => {
   it("uses the English title, subtitle and cover", async () => {
     mockFetch.mockResolvedValueOnce(carousel());

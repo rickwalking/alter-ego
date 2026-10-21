@@ -1,5 +1,5 @@
 /**
- * AE-0224 rule-fires regression test (dogfoods AE-0180): a bare magic number in
+ * Rule-fires regression test: a bare magic number in
  * production `src` (outside the ignored small set and the constants/schemas
  * layers) must be an ESLint ERROR (`no-magic-numbers`). The rule was enabled as
  * `error` alongside centralizing API_BASE / HTTP_STATUS; this test proves it
@@ -67,11 +67,10 @@ describe("no-magic-numbers is an ESLint error (AE-0224)", () => {
   beforeEach(() => mkdirSync(PROBE_DIR, { recursive: true }));
   afterEach(() => rmSync(PROBE_DIR, { recursive: true, force: true }));
 
+  /** 8080 is outside the ignored set (-1, 0, 1, 2, 100) and is not an array index, default value or enum: a clear magic-number violation. */
   it(
     "ERRORS on a bare magic number in production src",
     () => {
-      // 8080 is outside the ignored set (-1, 0, 1, 2, 100); not an array index,
-      // default value, or enum — a clear magic-number violation.
       writeFileSync(
         PROBE,
         `export function probe(): number {\n` + `  return 8080 * 3;\n` + `}\n`,

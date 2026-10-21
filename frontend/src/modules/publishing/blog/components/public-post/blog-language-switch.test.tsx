@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { BlogLanguageSwitch } from "./blog-language-switch";
 
-// Feature: Public blog renders the v2 document (AE-0423)
 // Scenario: PT/EN content buttons switch the rendered document
 
 const OPTIONS = [

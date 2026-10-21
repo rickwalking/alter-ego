@@ -20,7 +20,6 @@ function state(
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415)
 describe("CreateWorkflowProgress", () => {
   // Scenario: An approved project shows no stale "in progress" panel
   it("hides a leftover progress label once the run is over", () => {
@@ -67,9 +66,11 @@ describe("CreateWorkflowProgress", () => {
   });
 });
 
-// Feature: tests/features/workflow-stream-recovery-ae0440.feature
+/**
+ * Scenarios: tests/features/workflow-stream-recovery-ae0440.feature.
+ * In production phase_progress was never cleared when the images phase ended.
+ */
 describe("CreateWorkflowProgress stale phase progress (AE-0440)", () => {
-  // Prod 5344b6c6: phase_progress is never cleared when the images phase ends.
   const imagesProgress = {
     phase: "generating_images",
     label: "Generating 4 slide images in parallel",
@@ -150,7 +151,7 @@ describe("CreateWorkflowProgress stale phase progress (AE-0440)", () => {
   });
 });
 
-// AE-0446 (#169 review): phase_progress is untyped JSON from the API/SSE.
+/** `phase_progress` is untyped JSON from the API/SSE. */
 describe("CreateWorkflowProgress malformed phase progress (AE-0446)", () => {
   it("renders nothing, instead of crashing, when the label is missing", () => {
     const { container } = render(

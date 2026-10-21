@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * App-Router URL inventory (AE-0136).
+ * App-Router URL inventory.
  *
  * Enumerates every App Router `app/**\/page.tsx` (a URL-rendering page),
  * `app/**\/route.ts` (a Route Handler), and the metadata routes
@@ -113,11 +113,11 @@ function isNonUrlSegment(segment) {
 function urlOf(relPosixPath) {
   const afterApp = relPosixPath.slice("src/app/".length);
   const parts = afterApp.split("/");
-  const fileName = parts.pop(); // drop page.tsx / route.ts / metadata file
+  const fileName = parts.pop();
   const urlParts = parts.filter((segment) => !isNonUrlSegment(segment));
   const metadataUrl = METADATA_ROUTE_URLS[fileName];
   if (metadataUrl) {
-    urlParts.push(metadataUrl.slice(1)); // strip leading "/" before joining
+    urlParts.push(metadataUrl.slice(1));
   }
   return `/${urlParts.join("/")}`.replace(/\/+$/, "") || "/";
 }

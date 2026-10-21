@@ -9,7 +9,7 @@ import {
 } from "../constants";
 import { useBlogPosts } from "./use-blog-posts";
 
-// Scenarios: see tests/features/blog-posts-management.feature
+/** Gherkin: tests/features/blog-posts-management.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),
@@ -73,7 +73,6 @@ describe("useBlogPosts delete (AE-0296)", () => {
         code: BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
       });
     });
-    // The post is NOT removed on a guard rejection.
     expect(result.current.posts).toHaveLength(1);
   });
 
@@ -85,7 +84,7 @@ describe("useBlogPosts delete (AE-0296)", () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({ detail: BLOG_POST_ERR_VERSION_CONFLICT }, 409),
     );
-    mockFetch.mockResolvedValueOnce(listResponse()); // refetch after conflict
+    mockFetch.mockResolvedValueOnce(listResponse());
     await act(async () => {
       const error = await result.current
         .delete("p-1", 1)
@@ -95,7 +94,6 @@ describe("useBlogPosts delete (AE-0296)", () => {
         BLOG_POST_ERR_VERSION_CONFLICT,
       );
     });
-    // 1 list + 1 delete + 1 refetch
     expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 });
@@ -139,7 +137,7 @@ describe("useBlogPosts unpublish (AE-0296)", () => {
   });
 });
 
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature
+/** Gherkin: tests/features/blog-dashboard-ae0411.feature. */
 describe("useBlogPosts create errors (AE-0411)", () => {
   it.each([
     [409, BLOG_POST_ERR_SLUG_CONFLICT],

@@ -8,7 +8,7 @@ import { localizedCarouselCopy } from "@/lib/public-carousels";
 const LINK_MARKERS_PATTERN = /[[\]()]/g;
 
 /**
- * Strip lightweight markdown markers (and, AE-0412, emphasis HTML) from `text` and truncate to at most
+ * Strip lightweight markdown markers (and emphasis HTML) from `text` and truncate to at most
  * `maxWords` words, appending an ellipsis when truncated. Behavior is
  * identical to the original inline helper on the marketing home page.
  */
@@ -29,12 +29,15 @@ export function localizedTitle(post: CarouselListItem, locale: string): string {
   return localizedCarouselCopy(post, cardLocale(locale)).title || post.topic;
 }
 
+/**
+ * Falls back to the topic only on a Portuguese card: the topic is the
+ * Portuguese source text.
+ */
 export function localizedSubtitle(
   post: CarouselListItem,
   locale: string,
 ): string {
   const copy = localizedCarouselCopy(post, cardLocale(locale));
-  // The topic is the Portuguese source text: only a Portuguese card uses it.
   const fallback =
     copy.language === BLOG_LANGUAGES.PORTUGUESE ? post.topic : "";
   return copy.subtitle ?? fallback;

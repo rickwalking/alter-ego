@@ -12,9 +12,7 @@ import { updateSection } from "../lib/editor-document";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 import type { BlogEditorError } from "./types";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (section editing,
-// versions, concurrent save conflict, migration banner) and
-// tests/features/blog-dashboard-ae0411.feature (Editor load/save)
+/** Gherkin: tests/features/blog_editor_ae0424.feature, tests/features/blog-dashboard-ae0411.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -188,7 +186,7 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
   });
 
   // Scenario: A concurrent save conflict is surfaced — but a 409 caused by
-  // our own slot write landing during the PUT is retried on top instead.
+  //   our own slot write landing during the PUT is retried on top instead.
   it("retries a save that lost the race to our own slot write", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));

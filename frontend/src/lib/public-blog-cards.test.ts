@@ -3,9 +3,6 @@ import { buildPublicBlogCards } from "@/lib/public-blog-cards";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 import type { PublicBlogPostSummary } from "@/schemas/public-blog-post";
 
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
-// tests/features/public-blog-polish-ae0412.feature
-
 type Project = CarouselProjectListResponse["items"][number];
 
 function project(overrides: Partial<Project> = {}): Project {
@@ -53,7 +50,7 @@ const POST: PublicBlogPostSummary = {
   project_id: null,
 };
 
-/** Public posts linked to each project (the only listing source, AE-0423). */
+/** Public posts linked to each project (the only listing source). */
 function linked(projects: Project[]): { items: PublicBlogPostSummary[] } {
   return {
     items: projects.map((p) => ({
@@ -74,7 +71,6 @@ function cardsFor(projects: Project[], locale: "pt" | "en") {
 }
 
 describe("buildPublicBlogCards", () => {
-  // Feature: Public blog renders the v2 document (AE-0423)
   // Scenario: The listing card uses a fallback when the cover is null
   it("uses the post cover, never the carousel hero, for a linked post", () => {
     const [withCover] = buildPublicBlogCards({
@@ -97,7 +93,7 @@ describe("buildPublicBlogCards", () => {
   });
 
   // Scenario: A carousel-origin post with no v2 row is 404 — so the listing
-  // never links a bare project id when the public feed is unavailable.
+  //   never links a bare project id when the public feed is unavailable.
   it("renders no cards when the public feed is unavailable", () => {
     expect(
       buildPublicBlogCards({

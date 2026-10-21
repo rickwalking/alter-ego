@@ -1,5 +1,9 @@
 import { TEXT_DIM } from "@/constants/neon";
 
+/**
+ * Also defines the landing particle drift keyframes, distinct from the
+ * `particle-float` in globals.css used elsewhere.
+ */
 export function MarketingFooter(): React.ReactElement {
   return (
     <>
@@ -28,7 +32,6 @@ export function MarketingFooter(): React.ReactElement {
         </div>
       </footer>
 
-      {/* Landing particle drift — distinct from globals.css particle-float used elsewhere */}
       <style>{`
         @keyframes particle-float-landing {
           0% { transform: translateY(0) translateX(0); opacity: 0; }

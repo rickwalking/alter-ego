@@ -8,7 +8,7 @@ import type { SlideValidationViolation } from "@/modules/editorial/workspace/typ
 import type { SlideFieldErrorState } from "./types";
 
 /**
- * AE-0403: the per-field error state of a review form. ``validationStamp``
+ * The per-field error state of a review form. ``validationStamp``
  * identifies one validation run: when it changes, every field's error comes
  * back (even if the new violations equal the old ones); a re-render or a state
  * poll with the same stamp keeps the fields the owner already edited cleared.

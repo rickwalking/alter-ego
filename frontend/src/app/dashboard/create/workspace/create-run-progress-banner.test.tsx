@@ -1,3 +1,8 @@
+/**
+ * Scenarios: backend/tests/features/carousel_run_progress_reaper.feature
+ * - User sees a live in-progress banner during a revision
+ * - The banner is never permanent ("Check again" past the threshold)
+ */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CreateRunProgressBanner } from "./create-run-progress-banner";
@@ -6,12 +11,7 @@ import {
   EDITORIAL_RUN_STAGES,
 } from "@/constants/editorial-workflow";
 
-// Scenarios: backend/tests/features/carousel_run_progress_reaper.feature
-//   - User sees a live in-progress banner during a revision
-//   - The banner is never permanent ("Check again" past the threshold)
-
 vi.mock("next-intl", () => ({
-  // Echo key + params so assertions can target the looked-up copy.
   useTranslations:
     () =>
     (key: string, params?: Record<string, unknown>): string =>
@@ -45,7 +45,6 @@ describe("CreateRunProgressBanner", () => {
     expect(banner).toHaveAttribute("role", "status");
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: The banner names the phase that is running
   it("names the next phase after an approval", () => {
     render(
@@ -103,7 +102,6 @@ describe("CreateRunProgressBanner", () => {
   });
 
   it("renders without elapsed details when run_started_at is missing", () => {
-    // Pre-migration runs have no run_started_at — the banner still informs.
     render(
       <CreateRunProgressBanner
         currentPhase="design"

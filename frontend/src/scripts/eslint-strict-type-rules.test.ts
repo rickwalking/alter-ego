@@ -1,9 +1,9 @@
 /**
- * AE-0446 rule-fires regression test (AE-0180): the two type-aware rules that
- * were advisory `warn`s since AE-0166 are now ESLint ERRORS in production `src`:
+ * Rule-fires regression test: the two type-aware rules that
+ * were advisory `warn`s are now ESLint ERRORS in production `src`:
  * `@typescript-eslint/no-unnecessary-condition` and
- * `@typescript-eslint/prefer-nullish-coalescing`. Their backlog (69 + 50 at
- * AE-0166, 65 + 5 at the AE-0446 baseline) was paid down to 0 before the
+ * `@typescript-eslint/prefer-nullish-coalescing`. Their backlog was paid down
+ * to 0 before the
  * promotion; this test proves a seeded violation of each still fails the lint.
  *
  * A probe module is written under a real `src/modules/**` path so it is

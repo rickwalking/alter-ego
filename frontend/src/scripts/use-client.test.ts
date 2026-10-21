@@ -1,5 +1,5 @@
 /**
- * AE-0166: the use-client static check — a .tsx component calling client-only
+ * The use-client static check — a .tsx component calling client-only
  * React hooks must declare "use client". Passes on the real tree; ERRORS on a
  * seeded violation.
  */
@@ -88,7 +88,6 @@ describe("use-client static check (AE-0166)", () => {
       join(dir, "hooks", "use-thing.ts"),
       `import { useState } from "react";\nexport function useThing(){ return useState(0); }\n`,
     );
-    // .ts files are out of scope (only .tsx components are checked).
     const { status } = run(dir);
     expect(status).toBe(0);
   });

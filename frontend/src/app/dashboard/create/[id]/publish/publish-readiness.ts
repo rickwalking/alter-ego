@@ -13,7 +13,7 @@ const READY_PHASES: ReadonlySet<string> = new Set([
 const RADAR_CONTENT_MODE = "news_analysis";
 
 /**
- * AE-0415 (B25): the publish artifacts (PDF, slide images) and the actions that
+ * The publish artifacts (PDF, slide images) and the actions that
  * rebuild or edit them exist only once the workflow reached the final review
  * (or was approved). A project with no editorial workflow state (legacy
  * pipeline) is ready when it has a PDF.
@@ -32,14 +32,14 @@ export function isPublishReady(
   );
 }
 
-/** AE-0415 (B25): the Radar IA layout templates only fit Radar IA projects. */
+/** The Radar IA layout templates only fit Radar IA projects. */
 export function offersRadarTemplates(
   project: Pick<CarouselProjectResponse, "content_mode">,
 ): boolean {
   return (project.content_mode ?? RADAR_CONTENT_MODE) === RADAR_CONTENT_MODE;
 }
 
-/** AE-0445: the slide-1 cover picker belongs to Ponto de Vista projects only. */
+/** The slide-1 cover picker belongs to Ponto de Vista projects only. */
 export function offersCoverPicker(
   project: Pick<CarouselProjectResponse, "content_mode">,
 ): boolean {

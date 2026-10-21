@@ -12,7 +12,7 @@ export function outlineTitle(
   return asString(slide.title) || asString(slide.heading) || fallback;
 }
 
-/** AE-0375: hook candidates stored on outline slide 1 (POV / Radar IA v4). */
+/** Hook candidates stored on outline slide 1 (POV / Radar IA v4). */
 export function outlineHookCandidates(
   slide: Record<string, unknown> | undefined,
 ): string[] {
@@ -22,7 +22,7 @@ export function outlineHookCandidates(
     : [];
 }
 
-/** AE-0375: false when the outline check found no thesis word on slides 1-2. */
+/** False when the outline check found no thesis word on slides 1-2. */
 export function outlineThesisEarly(
   slide: Record<string, unknown> | undefined,
 ): boolean {

@@ -15,7 +15,7 @@ export interface LabeledSelectProps {
   marginBottom?: string;
 }
 
-/** Labelled `<select>` for the create-carousel sections (AE-0373). */
+/** Labelled `<select>` for the create-carousel sections. */
 export function LabeledSelect({
   label,
   value,

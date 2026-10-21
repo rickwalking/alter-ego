@@ -3,11 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PublishFailedNotice } from "./publish-failed-notice";
 
-// Feature: Workflow Error Feedback & Retry (AE-0009, AC#19)
-//   The publish page, when phase_status === "failed", shows the
-//   WorkflowFailedCard (error message + "Back to workspace" link) instead of
-//   the awaitingFinalApproval message. The failed branch is extracted into
-//   PublishFailedNotice so it can be tested without the full page harness.
+/**
+ * When phase_status is "failed" the publish page shows the WorkflowFailedCard
+ * (error message + "Back to workspace" link) instead of the
+ * awaitingFinalApproval message. The failed branch is extracted into
+ * PublishFailedNotice so it can be tested without the full page harness.
+ */
 describe("PublishFailedNotice (publish page failed state)", () => {
   const WORKSPACE_HREF = "/dashboard/create/project-1/workspace?step=outline";
 
@@ -26,20 +27,17 @@ describe("PublishFailedNotice (publish page failed state)", () => {
       />,
     );
 
-    // WorkflowFailedCard renders as an alert with the phase + error message.
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Content failed")).toBeInTheDocument();
     expect(
       screen.getByText("Invalid JSON response from LLM"),
     ).toBeInTheDocument();
 
-    // "Back to workspace" link points at the create workspace.
     const backLink = screen.getByRole("link", {
       name: "← Back to workspace",
     });
     expect(backLink).toHaveAttribute("href", WORKSPACE_HREF);
 
-    // The awaitingFinalApproval branch is NOT rendered in the failed state.
     expect(screen.queryByText(/Complete final review/)).not.toBeInTheDocument();
   });
 
@@ -51,7 +49,6 @@ describe("PublishFailedNotice (publish page failed state)", () => {
       configurable: true,
       value: { href: "" },
     });
-    // Capture href assignment.
     Object.defineProperty(window.location, "href", {
       configurable: true,
       set: assignMock,

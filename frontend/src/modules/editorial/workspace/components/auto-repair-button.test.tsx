@@ -1,7 +1,3 @@
-// Gherkin: backend/tests/features/carousel_deterministic_repair.feature
-// Scenarios: user repairs from the UI, run-in-progress banner path (not toast),
-// completed carousel chains repair -> republish (via the onRepublishNeeded prop
-// the publish page supplies).
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,7 +107,6 @@ describe("AutoRepairButton", () => {
     expect(onRepaired).not.toHaveBeenCalled();
   });
 
-  // AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
   // Scenario: Auto-fix that cannot fix anything says so
   it("says how many blockers it could not fix on a no-op", async () => {
     const blocker = {
@@ -152,7 +147,6 @@ describe("AutoRepairButton", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("remaining:38");
     expect(screen.queryByText("noChanges")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repair-summary")).not.toBeInTheDocument();
-    // A no-op wrote nothing, so the state is not re-read.
     expect(onRepaired).not.toHaveBeenCalled();
   });
 

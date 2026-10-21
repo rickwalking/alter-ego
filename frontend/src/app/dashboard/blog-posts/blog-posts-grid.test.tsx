@@ -1,3 +1,7 @@
+/**
+ * Scenarios: tests/features/blog-posts-listing-status-badge.feature ("Listing
+ * renders posts of every workflow status without crashing").
+ */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BLOG_POST_STATUSES } from "@/modules/publishing";
@@ -12,9 +16,6 @@ const NOOP_ACTIONS: BlogPostActionHandlers = {
   onDelete: () => undefined,
   onHide: () => undefined,
 };
-
-// Scenarios: see tests/features/blog-posts-listing-status-badge.feature
-// ("Listing renders posts of every workflow status without crashing")
 
 function makeDashboardPost(
   overrides: Partial<DashboardBlogPost>,

@@ -5,7 +5,7 @@ interface CarouselPlaceholderIconProps {
   className?: string;
 }
 
-/** Decorative carousel glyph shared by cards and the empty state (AE-0444). */
+/** Decorative carousel glyph shared by cards and the empty state. */
 export function CarouselPlaceholderIcon({
   size,
   className,

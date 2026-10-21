@@ -2,8 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOCALE } from "./config";
 import { matchAcceptLanguage, resolveLocale } from "./locale";
 
-// Scenarios: see tests/features/qa-followups-ae0416.feature (Locale)
-
 const headerValues = vi.hoisted(() => ({
   cookie: undefined as string | undefined,
   acceptLanguage: null as string | null,

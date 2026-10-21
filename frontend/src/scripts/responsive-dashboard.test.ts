@@ -1,6 +1,6 @@
 /**
- * AE-0277: rule-fires regression test for the responsive-dashboard gate.
- * Proves each detection branch FIRES on a seeded violation (AE-0180), the false-
+ * Rule-fires regression test for the responsive-dashboard gate.
+ * Proves each detection branch FIRES on a seeded violation, the false-
  * positive guards hold, the allow-list is in sync, and the real tree passes.
  */
 import { execFileSync } from "node:child_process";
@@ -54,13 +54,11 @@ describe("responsive-dashboard gate (AE-0277)", () => {
     }
   });
 
-  // Branch A — frozen grid
   it("FIRES on inline gridTemplateColumns", () => {
     const src = `<div style={{ display: "grid", gridTemplateColumns: "1fr 360px" }} />`;
     expect(rules(src)).toContain("gridTemplateColumns");
   });
 
-  // Branch B — frozen shell offset
   it("FIRES on px marginLeft >= 64", () => {
     expect(rules(`<div style={{ marginLeft: 240 }} />`)).toContain(
       "marginLeft",
@@ -79,24 +77,20 @@ describe("responsive-dashboard gate (AE-0277)", () => {
     );
   });
 
-  // Branch C — frozen pane width on a layout container
   it("FIRES on fixed width >= 200px on a flex/grid container", () => {
     const src = `<div style={{ display: "flex", width: "280px" }} />`;
     expect(rules(src)).toContain("layout-width");
   });
 
   it("does NOT fire on small widths or non-layout widths (false-positive guard)", () => {
-    // small leaf width (avatar) with flex centering
     expect(
       rules(`<div style={{ display: "flex", width: "36px" }} />`),
     ).not.toContain("layout-width");
-    // wide width but not a flex/grid container
     expect(rules(`<div style={{ width: "280px" }} />`)).not.toContain(
       "layout-width",
     );
   });
 
-  // End-to-end: a seeded violation file makes the CLI exit non-zero.
   it("CLI exits non-zero on a seeded violation file", () => {
     const dir = mkdtempSync(join(tmpdir(), "resp-dash-"));
     const file = join(dir, "bad.tsx");

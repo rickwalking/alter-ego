@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { WorkflowFailedCard } from "./workflow-failed-card";
 
-// Feature: Workflow Error Feedback & Retry (AE-0009)
 describe("WorkflowFailedCard", () => {
   // Scenario: Failed phase shows error card on workspace
   //   Given the editorial workflow has phase_status "failed"

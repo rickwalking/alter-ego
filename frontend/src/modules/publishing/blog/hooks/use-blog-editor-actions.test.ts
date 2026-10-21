@@ -19,8 +19,7 @@ import {
 } from "./use-blog-editor-actions";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (images, cover,
-// rewrite in voice, PT/EN translation, migration banner)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 

@@ -4,7 +4,7 @@ import { apiCall, apiUpload } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { UploadCreatorPhotoInput } from "./types";
 
-/** AE-0376: one photo of the owner's library. */
+/** One photo of the owner's library. */
 export const creatorPhotoSchema = z.object({
   id: z.string(),
   role: z.string().nullable().optional(),

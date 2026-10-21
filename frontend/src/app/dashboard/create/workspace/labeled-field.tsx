@@ -27,11 +27,11 @@ const counterStyle = {
 } as const;
 
 /**
- * Labelled text field used by the create-carousel workspace sections (AE-0154).
+ * Labelled text field used by the create-carousel workspace sections.
  * The topic/audience/brief fields shared identical label + input markup; they
  * now render through this. Supports both single-line input and textarea.
  *
- * AE-0415 (B31/B32): the label is tied to the control (`htmlFor`/`id`), the
+ * the label is tied to the control (`htmlFor`/`id`), the
  * control shows a visible focus ring, and a field with a `maxLength` shows a
  * live `count/max` counter (described-by) instead of silently truncating.
  */

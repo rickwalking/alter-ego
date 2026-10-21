@@ -23,7 +23,7 @@ import {
   withServerTranslation,
 } from "./editor-document";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 describe("section edits (AE-0424)", () => {
   // Scenario: Editing a section heading and body persists it

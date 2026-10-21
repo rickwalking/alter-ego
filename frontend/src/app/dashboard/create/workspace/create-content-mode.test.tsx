@@ -5,7 +5,7 @@ import { CreateModeSection } from "./create-mode-section";
 import { CreatePovSection } from "./create-pov-section";
 import { CreateTemplateSection } from "./create-template-section";
 
-// Gherkin: tests/features/create-content-mode.feature (AE-0373)
+/** Gherkin: tests/features/create-content-mode.feature. */
 const POV_FORM = { ...INITIAL_CREATE_FORM_STATE, contentMode: "pov" as const };
 const PERSONAS = [{ id: "p-1", name: "Pedro" }];
 
@@ -150,7 +150,6 @@ describe("CreateTemplateSection modes", () => {
         onChange={vi.fn()}
       />,
     );
-    // AE-0415 (B31): the cards are radios that expose the selection.
     const radios = screen.getAllByRole("radio");
     expect(radios).toHaveLength(6);
     expect(radios[0]).toHaveAttribute("aria-checked", "true");

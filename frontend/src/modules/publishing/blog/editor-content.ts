@@ -1,5 +1,5 @@
 /**
- * Blog editor draft helpers (AE-0411 validation; AE-0424 `blog.v2` draft).
+ * Blog editor draft helpers (validation and the `blog.v2` draft).
  *
  * The editor edits a draft `{ title, excerpt, document }` where `document` is
  * the strict `blog.v2` document (no v1 body/markdown branch). These helpers

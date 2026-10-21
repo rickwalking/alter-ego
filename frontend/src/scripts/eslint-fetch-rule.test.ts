@@ -1,5 +1,5 @@
 /**
- * AE-0166 regression: `fetch()` inside `useEffect` must be an ESLint ERROR
+ * Regression: `fetch()` inside `useEffect` must be an ESLint ERROR
  * (not merely a warning) — including in `src/modules`/`src/components`, where a
  * since-removed scoped `no-restricted-syntax` block used to silently override it
  * (ESLint flat config replaces, not merges, same-key rules across objects).
@@ -65,8 +65,7 @@ describe("fetch-in-useEffect is an ESLint error (AE-0166)", () => {
   beforeEach(() => mkdirSync(PROBE_DIR, { recursive: true }));
   afterEach(() => rmSync(PROBE_DIR, { recursive: true, force: true }));
 
-  // A cold `npx eslint` with projectService type-checking takes ~11s on CI
-  // runners, so this subprocess test needs a generous timeout.
+  /** A cold `npx eslint` with projectService type-checking takes ~11s on CI runners, so this subprocess test needs a generous timeout. */
   it(
     "ERRORS on fetch() inside useEffect within src/modules",
     () => {

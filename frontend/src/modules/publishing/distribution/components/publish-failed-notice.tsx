@@ -14,7 +14,7 @@ const BACK_LINK_STYLE = {
 } as const;
 
 /**
- * Failed-state notice for the publish page (AE-0009, AC#19).
+ * Failed-state notice for the publish page.
  *
  * When the editorial workflow's ``phase_status`` is ``failed``, the publish
  * page renders this notice instead of the "awaiting final approval" message.

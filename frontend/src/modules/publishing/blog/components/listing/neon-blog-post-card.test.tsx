@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { NeonBlogPostCard } from "./neon-blog-post-card";
 
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
-// tests/features/public-blog-polish-ae0412.feature
+/** Gherkin: tests/features/public-blog-polish-ae0412.feature. */
 const BASE_PROPS = {
   id: "post-1",
   title: "A post",

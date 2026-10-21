@@ -1,6 +1,6 @@
 /**
- * Read the generation run state out of a post's `ai_generation_metadata`
- * (AE-0425). The metadata is a free-form JSON object, so every field is
+ * Read the generation run state out of a post's `ai_generation_metadata`.
+ * The metadata is a free-form JSON object, so every field is
  * narrowed here and anything unexpected reads as "no run".
  */
 
@@ -22,7 +22,7 @@ export interface GenerationState {
   warnings: string[];
   errors: GenerationError[];
   recoverable: boolean;
-  /** Cover + one per section (N + 1); 0 on rows written before AE-0425. */
+  /** Cover + one per section (N + 1); 0 on rows written before generation runs recorded it. */
   imageSlots: number;
   imageCount: number;
 }

@@ -4,10 +4,7 @@ import { BlogPostContent } from "./blog-post-content";
 import type { BlogImage, BlogSection } from "@/schemas/blog-document";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
-// Feature: Public blog body never renders carousel slides (AE-0422)
-// frontend/tests/features/blog_no_carousel_slides_ae0422.feature
-// Feature: Public blog renders the v2 document (AE-0423)
-// frontend/tests/features/blog_sections_ae0423.feature
+/** Gherkin: frontend/tests/features/blog_no_carousel_slides_ae0422.feature, frontend/tests/features/blog_sections_ae0423.feature. */
 
 function createDesign(
   overrides: Partial<CarouselDesignResponse["images"]> = {},

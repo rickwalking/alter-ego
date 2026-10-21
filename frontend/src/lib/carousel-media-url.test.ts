@@ -42,7 +42,6 @@ describe("carousel-media-url", () => {
     ).toBe("/api/carousels/proj-1/preview/images/slide_2.jpg?lang=en");
   });
 
-  // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
   // Scenario: Listing card maps an owner-only preview hero to the public route
   it("rewrites authenticated preview URLs to public image routes keeping lang", () => {
     expect(

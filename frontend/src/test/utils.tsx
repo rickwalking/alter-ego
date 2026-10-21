@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/locales/en.json";
 
-// Create a test query client
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
@@ -16,7 +15,6 @@ const createTestQueryClient = () =>
     },
   });
 
-// All providers wrapper
 interface AllProvidersProps {
   children: ReactNode;
   queryClient: QueryClient;
@@ -30,7 +28,6 @@ function AllProviders({ children, queryClient }: Readonly<AllProvidersProps>) {
   );
 }
 
-// Custom render function
 export function renderWithProviders(
   ui: ReactElement,
   options?: Omit<RenderOptions, "wrapper">,
@@ -46,6 +43,5 @@ export function renderWithProviders(
   };
 }
 
-// Re-export everything from testing-library
 export * from "@testing-library/react";
 export { renderWithProviders as render };

@@ -12,14 +12,8 @@ import {
 import { ApiError } from "@/lib/api-client";
 import type { Message } from "@/schemas/chat";
 
-// Message-role literals (mirror the @/schemas/chat role enum) used by assertions.
 const MESSAGE_ROLE_USER = "user";
 const MESSAGE_ROLE_ASSISTANT = "assistant";
-
-// Feature: Publish Page Chat Persistence
-// As a carousel author
-// I want my chat with the agent to survive page refreshes
-// So that the agent retains context across sessions
 
 vi.mock("next/navigation", () => ({
   useParams: vi.fn(),
@@ -336,7 +330,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
   });
 
-  // Mutation guard: creation failure does not crash or write localStorage
   it("handles conversation creation failure gracefully", async () => {
     const mutateAsync = vi
       .fn()
@@ -437,7 +430,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
   });
 
-  // Edge case: sendMessage while already streaming does nothing
   it("does not send a message when already streaming", async () => {
     mockStreamSseEvents.mockImplementation(async () => {
       await new Promise((r) => setTimeout(r, 100));
@@ -454,7 +446,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     });
     expect(result.current.isStreaming).toBe(true);
 
-    // Second send while streaming should not call streamSseEvents again
     const callCount = mockStreamSseEvents.mock.calls.length;
     act(() => {
       result.current.sendMessage("second");
@@ -462,7 +453,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(mockStreamSseEvents.mock.calls.length).toBe(callCount);
   });
 
-  // Edge case: empty sendMessage does nothing
   it("does not send an empty or whitespace-only message", async () => {
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
       wrapper: createWrapper(),
@@ -478,7 +468,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(result.current.isStreaming).toBe(false);
   });
 
-  // Mutation-killing: guard clause prevents duplicate creation
   it("does not create a conversation when conversationId already exists", async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-new" });
     mockUseCreateConversation.mockReturnValue({
@@ -486,7 +475,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useCreateConversation>);
 
-    // Seed localStorage so the hook starts with a conversationId
     const store: Record<string, string> = {
       [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-existing",
     };
@@ -503,12 +491,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
       wrapper: createWrapper(),
     });
 
-    // Wait a tick to ensure the layout effect has run
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  // Mutation-killing: sendMessage trims whitespace and appends to messages
   it("trims whitespace from outgoing messages and appends them", async () => {
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
       wrapper: createWrapper(),
@@ -530,7 +516,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(result.current.messages[0]?.content).toBe("hello world");
   });
 
-  // Mutation-killing: COMPLETE message stops streaming
   it("stops streaming when a complete message arrives", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "Hello" } });
@@ -567,7 +552,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     result.current.sendMessage("first");
     await waitFor(() => expect(mockStreamSseEvents).toHaveBeenCalledTimes(1));
 
-    // Simulate a second message
     mockStreamSseEvents.mockClear();
     result.current.sendMessage("second");
     await waitFor(() => expect(mockStreamSseEvents).toHaveBeenCalledTimes(1));
@@ -591,7 +575,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(mockStreamSseEvents).toHaveBeenCalledTimes(1);
   });
 
-  // Mutation-killing: onComplete clears streaming state
   it("clears streaming state when the stream completes", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent, onComplete }) => {
       onEvent({ event: "token", data: { content: "msg" } });
@@ -772,7 +755,6 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  // Mutation-killing: non-refine_carousel_copy tool results do not invalidate
   it("does not invalidate carousel query for unrelated tool results", async () => {
     const invalidateQueries = vi.fn();
     mockUseQueryClient.mockReturnValue({

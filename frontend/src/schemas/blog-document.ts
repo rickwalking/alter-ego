@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * The blog post document (`blog_posts.content`, schema `blog.v2`; AE-0423,
- * ADR-0025). Mirrors the backend `BlogDocument`. The public API serves a
+ * The blog post document (`blog_posts.content`, schema `blog.v2`; ADR-0025).
+ * Mirrors the backend `BlogDocument`. The public API serves a
  * projection of it (no quality, image prompt/model), so editor-only keys are
  * optional here. There is no v1 shape: anything without `schema: "blog.v2"`
  * is rejected by `parseBlogContent`.
@@ -38,7 +38,7 @@ export const blogDocumentSchema = blogLanguageDocumentSchema.extend({
   translations: z.record(z.string(), blogLanguageDocumentSchema).default({}),
 });
 
-/** Editor-only voice/repetition scores (`content.quality`, AE-0425 writes). */
+/** Editor-only voice/repetition scores (`content.quality`, written by the generation run). */
 export const blogQualitySchema = z.object({
   voice_score: z.number(),
   voice_breakdown: z

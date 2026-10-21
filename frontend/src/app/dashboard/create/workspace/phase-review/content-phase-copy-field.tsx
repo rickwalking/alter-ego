@@ -25,7 +25,7 @@ export interface ContentCopyFieldProps {
 }
 
 /**
- * AE-0414 (B29): live length counter under a content field. Always shows the
+ * Live length counter under a content field. Always shows the
  * character count; with a known budget it shows ``n/max`` (and lines) and turns
  * into an alert once the copy is over budget.
  */
@@ -69,7 +69,7 @@ export function CopyLengthCounter({
   );
 }
 
-/** AE-0414 (B29): copy written with the other locale's emphasis markup. */
+/** Copy written with the other locale's emphasis markup. */
 function EmphasisMismatch({
   localeKey,
   value,
@@ -130,7 +130,7 @@ export function ContentCopyField(
   );
 }
 
-/** AE-0414 (B29): the locale's emphasis convention, shown once per column. */
+/** The locale's emphasis convention, shown once per column. */
 export function EmphasisConventionHint({
   localeKey,
 }: Readonly<{

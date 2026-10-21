@@ -32,7 +32,7 @@ export interface CreateModeSectionProps {
   personas: readonly PersonaOption[];
 }
 
-/** AE-0376: POV decks switch to the "Foto + Editorial" preset, Radar IA back. */
+/** POV decks switch to the "Foto + Editorial" preset, Radar IA back. */
 function modePatch(mode: ContentMode): Partial<CreateCarouselFormState> {
   const imagePreset = isPovMode(mode)
     ? POV_EDITORIAL_PRESET
@@ -47,7 +47,7 @@ const MODE_KEYS: Record<ContentMode, string> = {
 };
 
 /**
- * AE-0373: Modo (Radar IA / Ponto de Vista) drives the rest of the wizard;
+ * Modo (Radar IA / Ponto de Vista) drives the rest of the wizard;
  * the persona applies to both modes.
  */
 export function CreateModeSection({

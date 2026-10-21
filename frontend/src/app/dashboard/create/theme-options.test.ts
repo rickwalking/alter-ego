@@ -6,8 +6,10 @@ import {
   findThemeMode,
 } from "./theme-options";
 
-// Gherkin: tests/features/palette-drift-gate.feature (the dropdown renders the
-// dynamic catalog union; AE-0271).
+/**
+ * Gherkin: tests/features/palette-drift-gate.feature (the dropdown renders the
+ * dynamic catalog union).
+ */
 const CATALOG: PaletteCatalogResponse = {
   roots: [
     {

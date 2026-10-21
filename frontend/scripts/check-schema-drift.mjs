@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenAPI <-> Zod schema-drift check (AE-0141).
+ * OpenAPI <-> Zod schema-drift check.
  *
  * Compares a curated set of the frontend's domain Zod response/request schemas
  * (src/schemas/*.ts) against the committed backend OpenAPI artifact
@@ -54,7 +54,6 @@ const SCHEMAS_DIR = join(FRONTEND_ROOT, "src/schemas");
  * @type {{ zod: string, file: string, openapi: string, kind: "response" | "request" }[]}
  */
 const SCHEMA_MAP = [
-  // --- conversation / chat ---
   { zod: "messageSourceSchema", file: "chat.ts", openapi: "MessageSource", kind: "response" },
   { zod: "messageSchema", file: "chat.ts", openapi: "MessageResponse", kind: "response" },
   { zod: "conversationSchema", file: "chat.ts", openapi: "ConversationResponse", kind: "response" },
@@ -62,12 +61,10 @@ const SCHEMA_MAP = [
   { zod: "messageListResponseSchema", file: "chat.ts", openapi: "MessageListResponse", kind: "response" },
   { zod: "chatRequestSchema", file: "chat.ts", openapi: "ChatRequest", kind: "request" },
   { zod: "chatResponseSchema", file: "chat.ts", openapi: "ChatResponse", kind: "response" },
-  // --- knowledge ---
   { zod: "documentSchema", file: "knowledge.ts", openapi: "DocumentResponse", kind: "response" },
   { zod: "documentListResponseSchema", file: "knowledge.ts", openapi: "DocumentListResponse", kind: "response" },
   { zod: "createDocumentRequestSchema", file: "knowledge.ts", openapi: "DocumentCreate", kind: "request" },
   { zod: "documentUploadResponseSchema", file: "knowledge.ts", openapi: "DocumentUploadResponse", kind: "response" },
-  // --- carousel ---
   { zod: "carouselDesignColorsSchema", file: "carousel.ts", openapi: "CarouselDesignColors", kind: "response" },
   { zod: "carouselDesignTypographySchema", file: "carousel.ts", openapi: "CarouselDesignTypography", kind: "response" },
   { zod: "carouselDesignImagesSchema", file: "carousel.ts", openapi: "CarouselDesignImages", kind: "response" },
@@ -192,7 +189,6 @@ function classifyZodExpr(expr) {
   } else if (/^z\.object\b/.test(expr) || /^z\.record\b/.test(expr)) {
     type = "object";
   }
-  // z.unknown() / nested schema refs / composites stay OPAQUE (no type assertion).
   return { type, nullable, optional };
 }
 
@@ -230,7 +226,7 @@ function classifyOpenApiProp(prop) {
     return { type: "object", nullable: false };
   }
   if (Array.isArray(prop.anyOf)) {
-    const variants = /** @type {Record<string, unknown>[]} */ (prop.anyOf);
+    const variants =  (prop.anyOf);
     const nullable = variants.some((v) => v.type === "null");
     const main = variants.find((v) => v.type !== "null") ?? {};
     const inner = classifyOpenApiProp(main);
@@ -249,7 +245,7 @@ function classifyOpenApiProp(prop) {
 function parseOpenApiComponent(component) {
   /** @type {Record<string, { type: string, nullable: boolean }>} */
   const props = {};
-  const rawProps = /** @type {Record<string, Record<string, unknown>>} */ (
+  const rawProps =  (
     component.properties ?? {}
   );
   for (const [name, prop] of Object.entries(rawProps)) {
@@ -257,7 +253,7 @@ function parseOpenApiComponent(component) {
   }
   const required = new Set(
     Array.isArray(component.required)
-      ? /** @type {string[]} */ (component.required)
+      ?  (component.required)
       : [],
   );
   return { props, required };
@@ -290,14 +286,12 @@ function compareEntry(entry, openApiSchemas) {
   const zodNames = new Set(Object.keys(zodFields));
   const apiNames = new Set(Object.keys(apiProps));
 
-  // Fields the frontend validates that the API no longer declares.
   for (const name of zodNames) {
     if (!apiNames.has(name)) {
       findings.push(`EXTRA-FRONTEND-FIELD: "${name}" is validated by the frontend but absent from the API schema.`);
     }
   }
 
-  // Required API fields the frontend schema omits entirely.
   for (const name of apiNames) {
     if (!zodNames.has(name)) {
       const tag = required.has(name) ? "MISSING-REQUIRED-FIELD" : "UNMODELED-OPTIONAL-FIELD";
@@ -305,7 +299,6 @@ function compareEntry(entry, openApiSchemas) {
     }
   }
 
-  // Type / nullability mismatches on shared fields.
   for (const name of zodNames) {
     const api = apiProps[name];
     if (!api) {

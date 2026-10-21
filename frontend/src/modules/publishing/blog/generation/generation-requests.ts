@@ -1,5 +1,5 @@
 /**
- * Blog generation requests (AE-0425, ADR-0025).
+ * Blog generation requests (ADR-0025).
  *
  * All three routes answer 202 with the draft id; the caller navigates to the
  * editor, which polls the post while `generation.status` is in progress.

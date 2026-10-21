@@ -28,7 +28,7 @@ export interface DashboardAnalyticsProps {
 }
 
 /**
- * The editorial-analytics stats. AE-0378: a flag-off (404) or no-access (403)
+ * The editorial-analytics stats. A flag-off (404) or no-access (403)
  * route shows a "disabled" card and a failed load shows an inline message;
  * neither replaces the rest of the dashboard any more.
  */

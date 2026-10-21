@@ -7,9 +7,11 @@ import { blogPostKeys } from "../blog-post-requests";
 import { isGenerationInProgress } from "../generation/generation-state";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 
-// Scenarios: tests/features/blog_generate_ae0425.feature
-// ("Generation progress is polled and shown") — review fix 2: while the run
-// writes the post, each newer server version replaces the read-only session.
+/**
+ * Gherkin: tests/features/blog_generate_ae0425.feature ("Generation progress
+ * is polled and shown"): while the run writes the post, each newer server
+ * version replaces the read-only session.
+ */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -94,7 +96,6 @@ describe("useBlogPostEditor across a retry (AE-0425 review A)", () => {
     await waitFor(() => expect(hook.result.current.post).not.toBeNull());
     expect(isGenerationInProgress(hook.result.current.post)).toBe(false);
 
-    // Retry clicked: the server copy is now in progress (new lease, bumped).
     const running = blogPost({
       lock_version: 3,
       ai_generation_metadata: { generation: { status: "in_progress" } },
@@ -104,7 +105,6 @@ describe("useBlogPostEditor across a retry (AE-0425 review A)", () => {
       expect(isGenerationInProgress(hook.result.current.post)).toBe(true),
     );
 
-    // The run finished and attached its images: unlocked, images shown.
     const document = v2Document();
     const image = { url: "/api/blog-images/p-1/a.jpg", alt: "Capa" };
     const done = blogPost({

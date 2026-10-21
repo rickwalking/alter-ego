@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Server-side actions of the blog section editor (AE-0424, ADR-0025).
+ * Server-side actions of the blog section editor (ADR-0025).
  *
  * Slot actions (generate/regenerate an image, rewrite a section in the
  * persona voice, generate the EN translation) save pending edits first, then

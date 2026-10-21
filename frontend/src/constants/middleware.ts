@@ -1,4 +1,4 @@
-// Re-export shim (AE-0164): canonical home is @/modules/identity (guards).
+/** Re-export shim: the canonical home is the ``@/modules/identity`` guards. */
 export {
   ROLES,
   PUBLIC_ROUTES,

@@ -8,7 +8,7 @@ export interface RegenerateStrategySectionProps {
 
 export type ViewerLanguage = "pt" | "en";
 
-/** Inputs for the publish viewer's slide list (AE-0416). */
+/** Inputs for the publish viewer's slide list. */
 export interface ViewerSlideSource {
   project: CarouselProjectResponse;
   language: ViewerLanguage;

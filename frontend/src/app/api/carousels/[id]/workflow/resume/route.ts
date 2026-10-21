@@ -4,9 +4,11 @@ import {
   WORKFLOW_ACTIONS,
 } from "../_lib/proxy-workflow-action";
 
-// Allow long-running LLM resume calls through the Next.js proxy.
-// Next.js route segment config must be a statically-analyzable literal
-// (it cannot reference an imported constant), so this 300s value stays inline.
+/**
+ * Lets long-running LLM resume calls through the Next.js proxy. Route segment
+ * config must be a statically-analyzable literal (it cannot reference an
+ * imported constant), so the 300s value stays inline.
+ */
 export const maxDuration = 300;
 
 export function POST(

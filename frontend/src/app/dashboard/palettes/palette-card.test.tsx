@@ -2,8 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@/test/utils";
 import { PaletteCard } from "./palette-card";
 
-// Gherkin: tests/features/palette_crud_api.feature (catalog view: roots are
-// read-only; custom palettes are editable + archivable — AE-0271).
 const BASE = {
   name: "Aurora",
   primary: "#102030",
@@ -33,7 +31,6 @@ describe("PaletteCard", () => {
     const onArchive = vi.fn();
     render(<PaletteCard {...BASE} isRoot={false} onArchive={onArchive} />);
     fireEvent.click(screen.getByRole("button", { name: /^archive$/i }));
-    // After clicking, a confirm prompt appears; the action only fires on confirm.
     expect(screen.getByText(/archive this palette/i)).toBeInTheDocument();
     expect(onArchive).not.toHaveBeenCalled();
     const buttons = screen.getAllByRole("button", { name: /archive/i });

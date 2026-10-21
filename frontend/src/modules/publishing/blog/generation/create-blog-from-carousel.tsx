@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * "Create blog post from this carousel" entry point (AE-0425, ADR-0025).
+ * "Create blog post from this carousel" entry point (ADR-0025).
  *
  * Always creates a draft and opens its editor. A carousel that already has a
  * post gets no duplicate: an "already exists" message links to that post. A

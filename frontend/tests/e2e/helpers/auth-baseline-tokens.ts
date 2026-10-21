@@ -1,5 +1,5 @@
 /**
- * AE-0165 — Auth baseline safety net helpers.
+ * Auth baseline safety net helpers.
  *
  * Builds CRAFTED, UNSIGNED JWTs to drive the frontend middleware as it behaves
  * TODAY: the frontend runtime has no `AUTH_JWT_SECRET`/`SECRET_KEY`, so
@@ -10,7 +10,7 @@
  * shape with an arbitrary signature string.
  *
  * This is a BEHAVIOR-CAPTURE baseline (no app code changes). If a later
- * identity-module relocation (AE-0156/0164) introduces a real secret, these
+ * identity-module relocation introduces a real secret, these
  * tokens would stop validating and the specs would need a signing step — that
  * divergence is the point: the baseline pins current behavior.
  */

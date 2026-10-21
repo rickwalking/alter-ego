@@ -1,6 +1,5 @@
 /**
- * Pure edits of the `blog.v2` document in the section editor (AE-0424,
- * ADR-0025).
+ * Pure edits of the `blog.v2` document in the section editor (ADR-0025).
  *
  * The editor edits ONE content language at a time: PT is the top-level
  * `cover` + `sections`, EN is `translations.en` (same shape). Every helper

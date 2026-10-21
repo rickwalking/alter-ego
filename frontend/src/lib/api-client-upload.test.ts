@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { apiUpload, ApiError } from "./api-client";
 
-// AE-0376: multipart upload helper (photo library).
 const schema = z.object({ id: z.string() });
 
 describe("apiUpload", () => {

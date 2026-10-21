@@ -1,4 +1,3 @@
-// AE-0403 — Gherkin: frontend/tests/features/review-form-field-errors.feature
 // Scenario: Manual fixes at the content step save without approving
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";

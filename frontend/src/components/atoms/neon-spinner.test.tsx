@@ -2,9 +2,6 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { NeonSpinner, Spinner } from "@/components/atoms/neon-spinner";
 
-// Feature: Reusable Spinner Component (consolidated atom)
-// Consolidates the former ui/spinner.tsx into the NeonSpinner atom (AE-0068).
-
 describe("NeonSpinner (pure SVG atom)", () => {
   // Scenario: Default spinner renders for assistive technology
   describe("When a NeonSpinner is rendered with no props", () => {
@@ -91,8 +88,6 @@ describe("Spinner (labeled wrapper)", () => {
       );
     });
 
-    // Regression guard (QA F-3): the inner SVG must be aria-hidden so the
-    // labeled wrapper is the SINGLE status live region, not two nested ones.
     it("Then there is exactly one status region (inner svg is aria-hidden)", () => {
       render(<Spinner label="Loading strategies" />);
       expect(screen.getAllByRole("status")).toHaveLength(1);

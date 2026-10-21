@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * "Create blog post from this carousel" (AE-0425, ADR-0025).
+ * "Create blog post from this carousel" (ADR-0025).
  *
  * Starts the writer (always a draft) and opens the editor on the new post. A
  * carousel that already has a post gets no duplicate: the existing post id is

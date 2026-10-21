@@ -1,4 +1,4 @@
-// AE-0407 — Gherkin: frontend/tests/features/content-review-insight-card-ae0407.feature
+/** Gherkin: frontend/tests/features/content-review-insight-card-ae0407.feature */
 import { describe, expect, it } from "vitest";
 import {
   formatQuoteHandle,

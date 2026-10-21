@@ -1,4 +1,3 @@
-// AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
 // Scenario: A rejected manual fix shows a translated message and no page error
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

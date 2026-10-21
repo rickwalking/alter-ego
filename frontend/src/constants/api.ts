@@ -54,14 +54,14 @@ export const API_ENDPOINTS = {
   CAROUSEL_PUBLISH: (id: string) => `/api/carousels/${id}/publish`,
   CAROUSEL_REPAIR: (id: string) => `/api/carousels/${id}/repair`,
   CAROUSEL_REPUBLISH: (id: string) => `/api/carousels/${id}/republish`,
-  /** AE-0445: the POV slide-1 cover picker on the publish step. */
+  /** The POV slide-1 cover picker on the publish step. */
   CAROUSEL_COVER_OPTIONS: (id: string) => `/api/carousels/${id}/cover-options`,
   CAROUSEL_COVER: (id: string) => `/api/carousels/${id}/cover`,
   CAROUSEL_STRATEGIES: "/api/carousels/strategies",
   CAROUSEL_STRATEGY_APPLY: (id: string) => `/api/carousels/${id}/strategy`,
-  /** AE-0375: the owner's slide-1 hook pick at the outline gate. */
+  /** The owner's slide-1 hook pick at the outline gate. */
   CAROUSEL_HOOK: (id: string) => `/api/carousels/${id}/hook`,
-  /** AE-0376: the owner's photo library and the POV slide-1 photo. */
+  /** The owner's photo library and the POV slide-1 photo. */
   CREATOR_ASSETS: "/api/carousels/creator-assets",
   CREATOR_ASSET_IMAGE: (id: string) =>
     `/api/carousels/creator-assets/${id}/image`,
@@ -75,7 +75,7 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/workflow/stream`,
   BLOG_POSTS: "/api/blog-posts",
   BLOG_POST_BY_ID: (id: string) => `/api/blog-posts/${id}`,
-  // AE-0425: generation entry points (202 + a draft; the editor then polls).
+  /** Generation entry point: 202 plus a draft; the editor then polls. */
   BLOG_POST_FROM_CAROUSEL: "/api/blog-posts/from-carousel",
   BLOG_POST_GENERATE: "/api/blog-posts/generate",
   BLOG_POST_GENERATION_RETRY: (id: string) =>
@@ -96,7 +96,7 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: "/api/notifications",
   CONTENT_CALENDAR: "/api/content-calendar",
   BLOG_SCHEDULE: (id: string) => `/api/blog-posts/${id}/schedule`,
-  /** Section editor routes (AE-0424, ADR-0025). */
+  /** Section editor routes (ADR-0025). */
   BLOG_POST_COVER_IMAGE: (id: string) => `/api/blog-posts/${id}/cover/image`,
   BLOG_POST_SECTION_IMAGE: (id: string, sectionId: string) =>
     `/api/blog-posts/${id}/sections/${sectionId}/image`,

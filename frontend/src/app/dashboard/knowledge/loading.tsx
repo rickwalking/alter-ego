@@ -4,19 +4,16 @@ import { NeonSkeleton } from "@/components/atoms/neon-skeleton";
 export default function KnowledgeLoading() {
   return (
     <Container className="py-8">
-      {/* Header */}
       <div className="mb-8 space-y-2">
         <NeonSkeleton className="h-10 w-64" />
         <NeonSkeleton className="h-5 w-96" />
       </div>
 
-      {/* Search and Add button */}
       <div className="flex items-center gap-4 mb-6">
         <NeonSkeleton className="h-10 flex-1" />
         <NeonSkeleton className="h-10 w-36" />
       </div>
 
-      {/* Document grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="border rounded-lg p-6 space-y-4">

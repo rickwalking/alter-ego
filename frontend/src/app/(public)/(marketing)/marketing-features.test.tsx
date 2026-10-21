@@ -44,7 +44,6 @@ function translator(key: string): string {
 
 const t = translator as unknown as Translator;
 
-// Feature: Landing page truth, links and public header (AE-0443)
 // Scenario: Every capability card links to its public route
 describe("MarketingFeatures", () => {
   it("turns every capability card into a link to its public route", () => {

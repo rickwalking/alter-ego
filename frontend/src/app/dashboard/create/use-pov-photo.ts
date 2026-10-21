@@ -8,7 +8,7 @@ export interface PovPhotoState {
 }
 
 /**
- * AE-0376: the wizard's "Foto do slide 1": the owner's hook photos (newest
+ * The wizard's "Foto do slide 1": the owner's hook photos (newest
  * first, preselected once) and upload. PR #106 review: the chosen photo is
  * sent as `hook_asset_id` in the create request (required for POV), so the
  * backend binds it before the project exists without its photo.

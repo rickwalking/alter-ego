@@ -7,7 +7,6 @@ vi.mock("next/headers", () => ({
       get: (name: string) => (name === "locale" ? { value: "pt" } : undefined),
     }),
   ),
-  // AE-0416: the request locale also reads Accept-Language.
   headers: vi.fn(() => Promise.resolve({ get: () => null })),
 }));
 
@@ -31,8 +30,10 @@ function props(id: string, lang?: string) {
   };
 }
 
-// AE-0423: the view carries the post's own v2 cover and sections; the OG image
-// is the cover (never a carousel design image).
+/**
+ * A view carrying the post's own v2 cover and sections; the OG image must be
+ * that cover, never a carousel design image.
+ */
 const VIEW = {
   title: "Opinião impopular",
   subtitle: "o modelo de IA não é o gargalo.",
@@ -45,7 +46,6 @@ beforeEach(() => {
   mockResolve.mockReset();
 });
 
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
 // Scenario: Each post page has its own metadata
 describe("generateMetadata for /blog/[id]", () => {
   it("uses the post title, subtitle and cover", async () => {

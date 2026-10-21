@@ -32,6 +32,11 @@ const rowStyle = {
   gap: "12px",
 } as const;
 
+/**
+ * Project summary. The status prefers the editorial "ready to publish" signal,
+ * otherwise it reflects the live phase run status; a missing status resolves to
+ * Draft inside the badge.
+ */
 export function ProjectSummaryCard({
   topic,
   audience,
@@ -42,8 +47,6 @@ export function ProjectSummaryCard({
 }: Readonly<ProjectSummaryCardProps>): React.ReactElement {
   const t = useTranslations("create.summary");
   const phaseLabel = usePhaseLabel();
-  // Prefer the editorial "ready to publish" signal; otherwise reflect the live
-  // phase run status. A missing status resolves to Draft inside the badge.
   const effectiveStatus =
     workflowStatus === EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH
       ? workflowStatus

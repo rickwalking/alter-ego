@@ -7,7 +7,6 @@ import { ParticleBackground } from "@/components/particle-background";
 export function MarketingDecorations(): React.ReactElement {
   return (
     <>
-      {/* Grid Background */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         aria-hidden="true"
@@ -24,7 +23,6 @@ export function MarketingDecorations(): React.ReactElement {
         />
       </div>
 
-      {/* Scanline Overlay */}
       <div
         className="fixed inset-0 pointer-events-none z-50"
         style={{
@@ -33,7 +31,6 @@ export function MarketingDecorations(): React.ReactElement {
         }}
       />
 
-      {/* Particles */}
       <ParticleBackground />
     </>
   );

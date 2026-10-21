@@ -1,5 +1,5 @@
 /**
- * Blog section editor constants (AE-0424, ADR-0025).
+ * Blog section editor constants (ADR-0025).
  *
  * Error kinds the editor maps to copy, and the backend `detail` codes that
  * mean "this row is still legacy markdown" (the cutover has not reached it):
@@ -34,7 +34,7 @@ export const BLOG_MIGRATION_PENDING_CODES = [
 ] as const;
 
 /**
- * Backend `detail` codes with their own copy (AE-0438, F-11). The value is the
+ * Backend `detail` codes with their own copy. The value is the
  * message key under `dashboard.blogPosts.editor.errors.code.<value>`; codes not
  * listed here fall back to the kind-level message (`errors.<kind>`).
  */

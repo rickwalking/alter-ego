@@ -12,7 +12,6 @@ import {
 import { CARD_ACCENT_COLORS, CARD_PADDING_MAP } from "@/schemas/neon-card";
 import { TEXT_MUTED } from "@/constants/neon";
 
-// Feature: NeonCard Component
 describe("NeonCard Component", () => {
   // Scenario: Default card renders with dark background
   describe("When a NeonCard with content is rendered", () => {

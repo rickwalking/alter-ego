@@ -8,9 +8,6 @@ import {
   toCategoryLabel,
 } from "@/lib/public-blog-text";
 
-// Feature: Public blog renders correctly for anonymous visitors (AE-0412)
-// tests/features/public-blog-polish-ae0412.feature
-
 describe("stripEmphasisMarkup", () => {
   // Scenario: Emphasis markup in a title is not shown raw
   it("removes emphasis HTML and markdown and collapses whitespace", () => {

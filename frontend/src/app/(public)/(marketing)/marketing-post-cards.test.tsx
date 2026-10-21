@@ -1,5 +1,5 @@
 /**
- * AE-0446: landing "Latest Posts" cards list carousel projects, so they must
+ * Landing "Latest Posts" cards list carousel projects, so they must
  * open the carousel viewer. Linking to `/blog/<carousel id>` made every visit
  * (and every link prefetch) 404 on `/api/public/blog-posts/<carousel id>`.
  * Gherkin: tests/features/landing-card-language-ae0446.feature

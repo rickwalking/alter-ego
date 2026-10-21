@@ -1,12 +1,12 @@
 /**
- * Content-Security-Policy — the SINGLE authoritative definition (AE-0305).
+ * Content-Security-Policy — the SINGLE authoritative definition.
  *
  * next.config.ts consumes `buildContentSecurityPolicy`; nginx sets no CSP and
  * must stay silent (guarded by csp.test.ts). The `http://localhost:8000`
  * img-src entry exists only so `next dev` can render images served by the
  * local backend — it is a development artifact and never ships to production.
  *
- * Scope note (ticket AE-0305): the `img-src https:` wildcard is deliberately
+ * Scope note: the `img-src https:` wildcard is deliberately
  * unchanged — tightening it is a separate decision, out of scope here.
  */
 

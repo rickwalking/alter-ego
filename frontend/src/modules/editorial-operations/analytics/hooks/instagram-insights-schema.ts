@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * AE-0378: `GET /api/instagram/insights`. A metric the Graph API did not
+ * `GET /api/instagram/insights`. A metric the Graph API did not
  * return is `null` and the UI shows "n/d" — never an estimate.
  */
 const metric = z.number().int().nullable();

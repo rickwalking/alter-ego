@@ -1,5 +1,5 @@
 /**
- * View-models for the public /carousels gallery and viewer (AE-0444).
+ * View-models for the public /carousels gallery and viewer.
  *
  * Keeps the pages dumb: the API's list item and public projection are reduced
  * to clean, localized cards/neighbors, with cover URLs mapped to the public
@@ -126,7 +126,7 @@ export interface LocalizedCarouselCopy {
 }
 
 /**
- * AE-0446: a card shows its title and subtitle in ONE language. The locale's
+ * A card shows its title and subtitle in ONE language. The locale's
  * language wins when it has a real title; otherwise the card falls back to the
  * other language as a whole, never an English title over a Portuguese subtitle.
  */

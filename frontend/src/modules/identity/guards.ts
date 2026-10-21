@@ -1,11 +1,11 @@
 /**
- * `identity` — route-level auth guard surface (AE-0164).
+ * `identity` — route-level auth guard surface.
  *
  * The role constants, route-classification predicates, the access-token cookie
  * name, and the static-asset matcher that the Next.js `middleware` and the admin
  * route group use to gate access. Relocated from `constants/middleware.ts` in a
  * behavior-preserving pass so the identity context owns the full auth contract
- * (the client lib from AE-0156 + these route-level guards). A thin re-export
+ * (the client lib + these route-level guards). A thin re-export
  * shim remains at `@/constants/middleware` so existing imports keep resolving.
  *
  * App Router URLs, redirects, and cookie/JWT semantics are unchanged.

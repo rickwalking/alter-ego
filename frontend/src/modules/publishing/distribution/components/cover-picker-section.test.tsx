@@ -6,8 +6,11 @@ import { createElement, type ReactNode } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { CoverPickerSection } from "./cover-picker-section";
 
-// Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature
-// (backend contract: backend/tests/features/carousel_cover_pick_ae0445.feature)
+/**
+ * Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature and
+ * frontend/tests/features/workflow-lock-version-ae0447.feature (backend
+ * contract: backend/tests/features/carousel_cover_pick_ae0445.feature).
+ */
 
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => {
@@ -165,7 +168,7 @@ describe("CoverPickerSection", () => {
   });
 
   // Scenario: A version conflict shows a reload hint
-  // AE-0447 Scenario: The pick sends the server's current version, not page state
+  // Scenario: The pick sends the server's current version, not page state
   it("reads the current lock version right before the switch", async () => {
     routeApi(
       OPTIONS,

@@ -1,8 +1,8 @@
 /**
- * AE-0273: trap keyboard focus inside a container while `active`. On activate,
+ * Trap keyboard focus inside a container while `active`. On activate,
  * focus moves to the first focusable element; Tab/Shift+Tab cycle within the
  * container; on deactivate, focus returns to whatever was focused before
- * (the drawer trigger). Reusable by the sidebar (AE-0273) and chat (AE-0276)
+ * (the drawer trigger). Reusable by the sidebar and chat
  * drawers — single source, no jscpd duplication.
  */
 import { useEffect, type RefObject } from "react";

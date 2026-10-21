@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@/test/utils";
 import { HookPicker } from "./hook-picker";
 
-// Gherkin: backend/tests/features/carousel_pov_prompts.feature (Hook pick, AE-0375)
 const mutate = vi.fn();
 const state = { isPending: false, isSuccess: false, isError: false };
 

@@ -1,5 +1,5 @@
 /**
- * AE-0154: shared LabeledField for the create-carousel workspace sections.
+ * Shared LabeledField for the create-carousel workspace sections.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -71,7 +71,6 @@ describe("LabeledField", () => {
         marginBottom="14px"
       />,
     );
-    // The field wrapper is the input's parent <div>.
     expect(screen.getByRole("textbox").parentElement).toHaveStyle({
       marginBottom: "14px",
     });
@@ -88,7 +87,6 @@ describe("LabeledField", () => {
   });
 });
 
-// Feature: Create-flow UI fixes (AE-0415)
 describe("LabeledField accessibility and limits (AE-0415)", () => {
   // Scenario: Create form labels are tied to their inputs
   it("ties the label to the input and the textarea", () => {

@@ -1,7 +1,7 @@
 import type { BlogPostFilters } from "@/modules/publishing";
 import type { BlogPostListQuery } from "@/app/dashboard/blog-posts/types";
 
-/** Posts per dashboard page (AE-0416); the API allows up to 100. */
+/** Posts per dashboard page; the API allows up to 100. */
 export const BLOG_POSTS_PAGE_SIZE = 24;
 /** Wait this long after the last keystroke before searching the API. */
 export const BLOG_POSTS_SEARCH_DEBOUNCE_MS = 300;
@@ -12,7 +12,7 @@ export function blogPostsPageCount(total: number): number {
 }
 
 /**
- * API filters for one dashboard page (AE-0416): status and search go to the
+ * API filters for one dashboard page: status and search go to the
  * server, so they cover every post, not only the page that is loaded.
  */
 export function blogPostsPageFilters(

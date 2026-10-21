@@ -1,5 +1,5 @@
 /**
- * AE-0440: workflow stream recovery (auth probe, backoff, disconnected state).
+ * Workflow stream recovery (auth probe, backoff, disconnected state).
  *
  * Feature: tests/features/workflow-stream-recovery-ae0440.feature
  * The stream is a mocked EventSource; the auth probe is the real api-client

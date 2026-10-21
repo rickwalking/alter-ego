@@ -75,7 +75,7 @@ function PickStatus({
 }
 
 /**
- * AE-0445: "Capa (slide 1)" on the publish step of a Ponto de Vista carousel.
+ * "Capa (slide 1)" on the publish step of a Ponto de Vista carousel.
  * Lists the owner's library photos (and the GrokBot offer), marks the current
  * one, and swaps slide 1 on a pick: the server re-renders slides + PDFs, then
  * `onSwitched` refreshes the previews with the new artifact version.

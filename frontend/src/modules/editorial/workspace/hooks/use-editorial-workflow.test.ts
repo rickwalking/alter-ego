@@ -129,7 +129,6 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflow", () => {
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE delivers phase_change without polling during approve
   //   Then the browser should not start a 3 second polling interval for workflow state
   it("does not poll on a fixed interval while loading", async () => {
@@ -216,7 +215,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.state?.current_phase).toBe("outline");
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: Polling fallback activates only when SSE disconnects
   //   Then the client should poll workflow state as fallback
   //   And polling should use increasing backoff intervals
@@ -254,7 +252,6 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBeGreaterThan(callsAfterFirstPoll);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: Polling fallback stops when SSE reconnects
   //   Then interval polling should stop
   //   And the transport mode should return to SSE primary
@@ -290,8 +287,7 @@ describe("useEditorialWorkflow", () => {
       EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
     );
 
-    // AE-0440: the reopened stream refetches the state once; after that no
-    // poll runs while SSE is primary.
+    /** The reopened stream refetches the state once; no poll runs while SSE is primary. */
     const callsAfterReconnect = countStateFetches();
 
     await act(async () => {
@@ -301,7 +297,6 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBe(callsAfterReconnect);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: No progress polling loop at awaiting_human gate
   it("does not poll fallback while awaiting human review", async () => {
     mockWorkflowStateResponse({
@@ -335,7 +330,6 @@ describe("useEditorialWorkflow", () => {
     expect(countStateFetches()).toBe(callsBeforeWait);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: Mount hydrates workflow state once then opens SSE
   it("hydrates workflow state once on mount and opens one SSE connection", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -353,7 +347,6 @@ describe("useEditorialWorkflow", () => {
     );
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE progress merges nested phase_progress into client state
   it("merges progress events into phase_progress state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -386,8 +379,7 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // AE-0415 (B15): a same-phase running -> ready flip is confirmed against
-  // GET workflow/state before it is applied.
+  /** A same-phase running -> ready flip is confirmed against GET workflow/state first. */
   it("merges review_required gate payload into workflow state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
 
@@ -424,7 +416,6 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: A reload during a running phase keeps the running state
   //   Given GET workflow/state reports phase_status "in_progress"
   //   And the SSE snapshot replays the checkpoint as "awaiting_human"
@@ -464,7 +455,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.awaitingHumanReview).toBe(false);
   });
 
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE delivers phase_change without polling during approve
   it("merges phase changes from SSE events", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -717,7 +707,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.error).toBeNull();
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Polling recovery waits for artifacts not only gate status
   it("continues recovery polling until slide drafts exist", async () => {
     let statePolls = 0;
@@ -790,7 +779,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.error).toBeNull();
   });
 
-  // Feature: Async resume client behavior
   // Scenario: Approve clears loading via SSE not resume HTTP response
   it("accepts async 202 resume and waits for review_required SSE event", async () => {
     mockAuthenticatedFetch.mockImplementation((url, init) => {
@@ -852,7 +840,6 @@ describe("useEditorialWorkflow", () => {
     );
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Artifact SSE hydrates review panel during resume recovery
   it("merges artifact SSE payloads into workflow state", async () => {
     const { result } = renderHook(() => useEditorialWorkflow("project-1"));
@@ -879,7 +866,6 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Loading state persists until expected artifacts exist for the next gate
   it("keeps loading until outline artifacts exist after async approve", async () => {
     mockAuthenticatedFetch.mockImplementation((url, init) => {
@@ -976,8 +962,6 @@ describe("useEditorialWorkflow", () => {
       await expect(result.current.approve()).rejects.toThrow();
     });
     await waitFor(() => {
-      // AE-0315: the version-conflict 409 now maps to distinct client copy
-      // (editorialWorkflow.errors.versionConflict) instead of the raw code.
       expect(result.current.error).toBe(
         "This carousel changed in another session. Refresh the page and try again.",
       );
@@ -1141,11 +1125,11 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  // Regression (c858abd): the workflow/state call must NOT be wrapped in
-  // resolveClientApiUrl. The endpoint path already starts with /api, and in
-  // production nginx routes /api/* straight to the backend; prefixing it with
-  // NEXT_PUBLIC_API_URL produced /api/api/... and a 404. So even when
-  // NEXT_PUBLIC_API_URL is set, refresh must use the bare endpoint path.
+  /**
+   * Regression: the state call is not wrapped in resolveClientApiUrl. The path
+   * already starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...`` and a 404.
+   */
   it("refreshes workflow state via the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
     mockAuthenticatedFetch.mockImplementation((url) => {
@@ -1631,7 +1615,6 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.phaseEvents).toEqual([]);
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: A fresh project does not request the workflow state
   it("skips the mount fetch when initialFetch is false", async () => {
     renderHook(() =>

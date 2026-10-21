@@ -1,4 +1,3 @@
-// AE-0403 — Gherkin: frontend/tests/features/review-form-field-errors.feature
 // Scenario: Every field-error message exists in pt and en
 import { describe, expect, it } from "vitest";
 import en from "@/i18n/locales/en.json";

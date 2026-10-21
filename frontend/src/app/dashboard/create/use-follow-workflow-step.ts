@@ -18,7 +18,7 @@ export interface FollowWorkflowStepOptions {
 }
 
 /**
- * AE-0415 (B26): when the workflow moves to a new gate, the page follows it if
+ * When the workflow moves to a new gate, the page follows it if
  * the owner was looking at the previous live step (or a step ahead of it). A
  * historical step the owner opened stays put: its id differs from the previous
  * live step, and a step chosen after the move sees no further change.

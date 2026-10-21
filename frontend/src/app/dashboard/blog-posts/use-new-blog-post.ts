@@ -21,7 +21,7 @@ interface UseNewBlogPostResult {
  * Encapsulates the "create a draft and navigate to the editor" action used by
  * the Blog Posts dashboard top bar. It flips `creating` on, creates a draft
  * titled with the localized "Untitled draft", navigates on success, and on
- * failure resets `creating` and exposes a localized error (AE-0411, B06).
+ * failure resets `creating` and exposes a localized error.
  */
 export function useNewBlogPost(
   create: ReturnType<typeof useBlogPosts>["create"],

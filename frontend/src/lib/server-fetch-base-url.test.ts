@@ -2,12 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BACKEND_URL, PRODUCTION_BACKEND_URL } from "@/constants/api";
 import { getBaseUrl } from "./server-fetch";
 
-// Scenarios: see tests/features/public-blog-detail.feature
-// ("Server-side base URL is overridable for production", AE-0297)
-
+/** ``typeof window`` is "undefined" when the binding holds undefined: the server-side branch. */
 function simulateServerSide(): void {
-  // `typeof window` evaluates to "undefined" when the binding holds undefined,
-  // which is exactly the server-side branch getBaseUrl guards on.
   vi.stubGlobal("window", undefined);
 }
 

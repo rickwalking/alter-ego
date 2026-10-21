@@ -41,7 +41,7 @@ export function applySlideCopyEdit(
 }
 
 /**
- * AE-0314: structured-extras edit (summary points / closing features). Edits one
+ * Structured-extras edit (summary points / closing features). Edits one
  * field (`title`/`body`) of one item in a locale's structured-item list, keeping
  * the rest of the item and the array immutable.
  */
@@ -56,7 +56,7 @@ export interface SlideStructuredItemEdit {
   value: string;
 }
 
-/** AE-0430: the locale payload plus the structure the other locale has. */
+/** The locale payload plus the structure the other locale has. */
 function editablePresentation(
   slide: LocalizedSlideReview,
   locale: PresentationLocaleKey,
@@ -64,6 +64,7 @@ function editablePresentation(
   return mirrorLocaleStructure(slide[locale], slide[otherLocaleKey(locale)]);
 }
 
+/** Apply one structured-item edit; an edit on a field mirrored from the other locale creates it. */
 export function applySlideStructuredItemEdit(
   slides: LocalizedSlideReview[],
   edit: SlideStructuredItemEdit,
@@ -72,7 +73,6 @@ export function applySlideStructuredItemEdit(
     if (slide.slide_index !== edit.slideIndex) {
       return slide;
     }
-    // AE-0430: an edit on a field mirrored from the other locale creates it.
     const presentation = editablePresentation(slide, edit.locale);
     const current = presentation[edit.listKey];
     if (!Array.isArray(current)) {
@@ -92,7 +92,7 @@ export function applySlideStructuredItemEdit(
 }
 
 /**
- * AE-0414: free-text structured extras the content review can edit — a string
+ * Free-text structured extras the content review can edit — a string
  * (``tldr_strip``, the CTA ``creator_*`` fields) or one ``title``/``body`` of an
  * object extra (``insight``). Lists use ``SlideStructuredItemEdit``.
  */
@@ -134,7 +134,7 @@ export function applySlideExtraEdit(
 }
 
 /**
- * AE-0414: a slide's full reviewable copy (both locales, every field — heading,
+ * A slide's full reviewable copy (both locales, every field — heading,
  * body, structured items and extras), so an edit anywhere counts as a change.
  */
 function slideCopySignature(slide: LocalizedSlideReview): string {
@@ -158,7 +158,7 @@ export function slidesHaveCopyChanges(
 }
 
 /**
- * AE-0414: the slides the reviewer actually changed, sent verbatim (never
+ * The slides the reviewer actually changed, sent verbatim (never
  * clamped or trimmed). The backend merges edits by ``slide_index``, so an
  * untouched slide is never round-tripped and can never be overwritten.
  */
@@ -249,14 +249,16 @@ function slideFromDraft(
 }
 
 /**
- * AE-0414 (B10): every slide of the deck, resolved PER SLIDE INDEX.
+ * Every slide of the deck, resolved PER SLIDE INDEX.
  *
  * ``state.localized_slides`` is the copy the validator checks (violations point
  * at it), the repair endpoint rewrites and manual edits merge into, so it wins
  * for each slide it carries in good shape. A slide missing from it, or whose
  * localized copy is malformed (raw JSON body), falls back to its draft
  * (structured ``presentation_*`` per locale, else the legacy flat copy). A
- * draft without presentations no longer drops its slide from the editor.
+ * draft without presentations no longer drops its slide from the editor. A
+ * malformed localized slide only yields to a draft that exists; it is still
+ * shown (never dropped) when it is the slide's only source.
  */
 export function resolveLocalizedSlides(
   state: EditorialWorkflowState,
@@ -267,8 +269,6 @@ export function resolveLocalizedSlides(
     bySlide.set(resolved.slide_index, resolved);
   });
   for (const slide of state.localized_slides ?? []) {
-    // A malformed localized slide only yields to a draft that exists; it is
-    // still shown (never dropped) when it is the slide's only source.
     if (
       !localizedSlideLooksMalformed(slide) ||
       !bySlide.has(slide.slide_index)

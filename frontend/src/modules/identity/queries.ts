@@ -1,5 +1,5 @@
 /**
- * `identity` — TanStack Query options + keys for the client session (AE-0184).
+ * `identity` — TanStack Query options + keys for the client session.
  *
  * The session probe (`/api/auth/me`) is intentionally routed through the shared
  * `authenticatedFetch` client rather than `apiCall`: a 401 here means "logged

@@ -6,7 +6,7 @@ interface CarouselEmptyStateProps {
   hint: string;
 }
 
-/** Empty gallery state (AE-0444). */
+/** Empty gallery state. */
 export function CarouselEmptyState({
   title,
   hint,

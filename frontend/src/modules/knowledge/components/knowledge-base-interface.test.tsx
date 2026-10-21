@@ -40,7 +40,6 @@ vi.mock("../hooks/use-documents", () => ({
   }),
 }));
 
-// Mock child components
 vi.mock("@/components/layout", () => ({
   Container: ({
     children,
@@ -138,7 +137,6 @@ vi.mock("./file-upload", () => ({
   ),
 }));
 
-// Mock generateId
 vi.mock("@/lib/utils", () =>
   Promise.resolve({
     generateId: vi.fn(() => "new-id-123"),

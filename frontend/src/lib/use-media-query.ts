@@ -1,5 +1,5 @@
 /**
- * AE-0273/AE-0276: subscribe to a CSS media query via useSyncExternalStore (the
+ * Subscribe to a CSS media query via useSyncExternalStore (the
  * canonical external-store subscription — no setState-in-effect). Returns false
  * during SSR and when matchMedia is absent/partial (jsdom), so drawer scroll-lock
  * and focus-trap never engage on desktop. Used to gate drawer behavior to below
@@ -21,6 +21,7 @@ function mediaQueryList(query: string): Partial<MediaQueryList> | undefined {
   return window.matchMedia(query);
 }
 
+/** Whether the media query matches; the SSR snapshot is always false (no viewport on the server). */
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onChange: () => void): (() => void) => {
@@ -45,6 +46,5 @@ export function useMediaQuery(query: string): boolean {
     return mediaQueryList(query)?.matches ?? false;
   }, [query]);
 
-  // SSR snapshot is always false (no viewport on the server).
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }

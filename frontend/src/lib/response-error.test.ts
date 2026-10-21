@@ -1,5 +1,5 @@
 /**
- * AE-0446: error text for failed API responses.
+ * Error text for failed API responses.
  * Gherkin: tests/features/api-error-detail-ae0446.feature
  */
 import { describe, expect, it } from "vitest";

@@ -1,8 +1,8 @@
 /**
  * Blog hook shape types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
- * `frontend/scripts/component-type-location.config.mjs`), object-shape types
+ * Per the component-type-location convention
+ * (`frontend/scripts/component-type-location.config.mjs`), object-shape types
  * live here rather than inline in the `use-*.ts` hook files.
  */
 
@@ -23,7 +23,7 @@ import type {
   BlogVoicePersona,
 } from "../types";
 
-/** Re-export: the editor error shape lives in the domain types (AE-0438). */
+/** Re-export: the editor error shape lives in the domain types. */
 export type { BlogEditorError };
 
 export interface UseBlogAiState {

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * AE-0179 — guard against the ESLint flat-config "replace-not-merge" footgun.
+ * Guard against the ESLint flat-config "replace-not-merge" footgun.
  *
  * In flat config, when two config objects both set the same rule key and both
  * match a file, the LATER object's value REPLACES the earlier — arrays are NOT
- * merged. During AE-0166 a scoped `no-restricted-syntax` *warn* block silently
+ * merged. Once a scoped `no-restricted-syntax` *warn* block silently
  * overrode the global fetch-in-useEffect *error* in src/modules/src/components,
  * so the flagship rule was unenforced exactly where it mattered. It shipped green
- * and was only caught by an adversarial reviewer (finding H1).
+ * and was only caught by an adversarial reviewer.
  *
  * This guard FAILS when the SAME rule key is declared by more than one LOCAL
  * config object (objects authored in eslint.config.mjs — preset spreads from
@@ -47,9 +47,11 @@ const DEFAULT_ALLOWLIST = resolve(
   "eslint-rule-override-allowlist.json",
 );
 
-// Representative probe paths spanning the real src/ structure + the special
-// scopes (pages, lib, hooks, modules, constants, schemas, tests). Overlap is
-// detected if any single probe is matched by two objects setting the same key.
+/**
+ * Representative probe paths spanning the real src/ structure plus the special
+ * scopes (pages, lib, hooks, modules, constants, schemas, tests). Overlap is
+ * detected when a single probe is matched by two objects setting the same key.
+ */
 const PROBE_PATHS = [
   "src/app/page.tsx",
   "src/app/x/page.tsx",
@@ -105,6 +107,10 @@ function loadAllowlist() {
   return parsed.allow ?? {};
 }
 
+/**
+ * Preset objects (eslint-config-next spreads) are excluded by reference: a
+ * local object overriding a preset is the intended flat-config mechanism.
+ */
 async function loadLocalRuleObjects() {
   const configPath = process.env.ESLINT_OVERRIDE_CONFIG ?? DEFAULT_CONFIG;
   const mod = await import(pathToFileURL(configPath).href);
@@ -112,8 +118,6 @@ async function loadLocalRuleObjects() {
   if (!Array.isArray(config)) {
     throw new Error(`ESLint config at ${configPath} did not default-export an array.`);
   }
-  // Preset objects (eslint-config-next spreads) are excluded by reference: a
-  // local object overriding a preset is the intended flat-config mechanism.
   const presets = new Set([...nextVitals, ...nextTs]);
   return config.filter((o) => o && o.rules && !presets.has(o));
 }

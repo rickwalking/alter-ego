@@ -1,4 +1,4 @@
-/** AE-0440: auth probe that follows an editorial workflow stream error. */
+/** Auth probe that follows an editorial workflow stream error. */
 
 import { z } from "zod";
 import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
@@ -33,7 +33,7 @@ function outcomeOfError(err: unknown): WorkflowStreamProbeResult {
 /**
  * GET workflow/state through the api-client. EventSource hides the status of
  * a failed stream; this request does not, and the api-client sends a 401 to
- * the session-expired login (AE-0429/AE-0431) and a 403 to the 403 page.
+ * the session-expired login and a 403 to the 403 page.
  */
 export async function probeWorkflowStream(
   projectId: string,

@@ -1,5 +1,5 @@
 /**
- * Contract test freezing frontend SSE event-name constants (AE-0076).
+ * Contract test freezing frontend SSE event-name constants.
  *
  * Feature: SSE event names are frozen during the migration
  * See tests/features/sse-event-inventory.feature
@@ -27,7 +27,6 @@ interface SseEventInventory {
 }
 
 const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
-// frontend/src/lib/<this file> -> up 3 = frontend/, up 4 = repo root.
 const ARTIFACT_PATH = resolve(
   CURRENT_DIR,
   "../../../docs/architecture/sse-event-inventory.json",

@@ -1,5 +1,5 @@
 /**
- * AE-0171: the build-output gitignore pre-flight. Documented build/coverage
+ * The build-output gitignore pre-flight. Documented build/coverage
  * outputs must be gitignored; the check FAILS on a seeded non-ignored output.
  */
 import { execFileSync } from "node:child_process";

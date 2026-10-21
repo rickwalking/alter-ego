@@ -42,15 +42,17 @@ function buildHeroImageUrl(project: CarouselProjectResponse): string | null {
   return tokens?.images?.hero ?? null;
 }
 
+/**
+ * Falls back to the topic when the title is null, empty or whitespace (the
+ * original `title || topic` intent; `??` would wrongly keep an empty title).
+ */
 function displayTitle(project: CarouselProjectResponse): string {
-  // Fall back to the topic when the title is null/empty/whitespace (the original
-  // `title || topic` intent — `??` would wrongly keep an empty-string title).
   return project.title?.trim() ? project.title : project.topic;
 }
 
 const TEMPLATE_VERSION_PREFIX = "v";
 
-/** AE-0415 (B33): "v2" stays "v2" (the stored value may already carry the v). */
+/** "v2" stays "v2" (the stored value may already carry the v). */
 function formatTemplateVersion(version: string): string {
   return version.toLowerCase().startsWith(TEMPLATE_VERSION_PREFIX)
     ? version

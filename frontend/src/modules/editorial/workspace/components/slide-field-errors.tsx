@@ -17,7 +17,7 @@ import type {
 const INVALID_FIELD_CLASS = "border-destructive";
 const ERROR_ID_SUFFIX = "-error";
 
-/** AE-0403: the message(s) under one flagged field, wired via aria-describedby. */
+/** The message(s) under one flagged field, wired via aria-describedby. */
 export function FieldErrorMessage({
   id,
   violations,
@@ -33,7 +33,7 @@ export function FieldErrorMessage({
   );
 }
 
-/** AE-0403: a textarea flagged by its violations; the message sits under it. */
+/** A textarea flagged by its violations; the message sits under it. */
 export function FlaggableTextarea({
   id,
   violations,
@@ -56,7 +56,7 @@ export function FlaggableTextarea({
   );
 }
 
-/** AE-0403: "Slide 9 · EN corpo: …" lines at the bottom of a slide form. */
+/** "Slide 9 · EN corpo: …" lines at the bottom of a slide form. */
 export function SlideViolationSummary({
   slideIndex,
   violations,
@@ -85,7 +85,7 @@ export function SlideViolationSummary({
   );
 }
 
-/** AE-0403: the global blocking line plus one link per still-flagged slide. */
+/** The global blocking line plus one link per still-flagged slide. */
 export function BlockingSlidesNotice({
   message,
   slideIndexes,

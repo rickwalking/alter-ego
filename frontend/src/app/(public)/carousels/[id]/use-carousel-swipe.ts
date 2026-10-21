@@ -11,7 +11,7 @@ interface CarouselSwipeHandlers {
   handleTouchEnd: (event: TouchEvent<HTMLDivElement>) => void;
 }
 
-/** Horizontal swipe gestures for the public carousel viewer (AE-0444). */
+/** Horizontal swipe gestures for the public carousel viewer. */
 export function useCarouselSwipe({
   onPrevious,
   onNext,

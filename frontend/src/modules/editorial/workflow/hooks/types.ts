@@ -1,7 +1,7 @@
 /**
  * Editorial workflow hook data-shape types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), object-shape types
  * live here rather than inline in the hook `.ts` files.
  */

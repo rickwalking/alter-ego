@@ -17,7 +17,7 @@ interface CarouselPaginationProps {
   labels: CarouselPaginationLabels;
 }
 
-/** Previous/next gallery pagination (AE-0444). */
+/** Previous/next gallery pagination. */
 export function CarouselPagination({
   page,
   totalPages,

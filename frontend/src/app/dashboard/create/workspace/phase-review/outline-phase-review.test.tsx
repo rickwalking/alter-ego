@@ -5,7 +5,6 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/editorial";
 import { OutlinePhaseReview } from "./outline-phase-review";
 
-// Gherkin: backend/tests/features/carousel_pov_prompts.feature (AE-0375)
 vi.mock("@/modules/editorial/workspace/hooks/use-save-hook", () => ({
   useSaveCarouselHook: () => ({
     mutate: vi.fn(),

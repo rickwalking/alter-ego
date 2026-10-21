@@ -1,5 +1,5 @@
 /**
- * AE-0150: shared SSE chat streaming hook used by useSseChat and usePublishChat.
+ * Shared SSE chat streaming hook used by useSseChat and usePublishChat.
  * Verifies the user-turn start, token folding, ref reset, and unmount abort.
  */
 import { act, renderHook } from "@testing-library/react";

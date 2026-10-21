@@ -40,9 +40,7 @@ export async function readApiError(
         return messages.join(", ");
       }
     }
-  } catch {
-    // Ignore malformed error payloads.
-  }
+  } catch {}
   return fallback;
 }
 
@@ -153,7 +151,7 @@ function isFullWorkflowState(
 }
 
 /**
- * AE-0315: run metadata merge — run.finished ends the run (fields cleared);
+ * Run metadata merge — run.finished ends the run (fields cleared);
  * other events carry forward the payload's run fields or the previous state.
  */
 function mergeRunMetadata(
@@ -183,7 +181,7 @@ type CarriedWorkflowFields = Omit<
 
 /**
  * Fields every event carries forward: the payload's value, else the previous
- * state's (AE-0447: never drop the CAS ``lock_version`` the actions send).
+ * state's (never drop the CAS ``lock_version`` the actions send).
  */
 function mergeCarriedFields(
   prev: EditorialWorkflowState | null,

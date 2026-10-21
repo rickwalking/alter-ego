@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate the COMMITTED component-type-location baseline (AE-0144).
+ * Generate the COMMITTED component-type-location baseline.
  *
  * Reproducible command:
  *   npm run component-types:baseline

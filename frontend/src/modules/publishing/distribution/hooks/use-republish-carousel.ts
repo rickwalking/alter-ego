@@ -9,7 +9,7 @@ import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
 
 /**
- * AE-0313: rebuild + re-activate a completed carousel's PDF/slide artifacts
+ * Rebuild + re-activate a completed carousel's PDF/slide artifacts
  * from the persisted slide data. Idempotent — safe to click twice (unchanged
  * content re-activates the same version).
  */

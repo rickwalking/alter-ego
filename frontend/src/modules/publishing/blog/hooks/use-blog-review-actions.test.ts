@@ -6,8 +6,7 @@ import { blogPost, jsonResponse } from "../editor.test-utils";
 import { useBlogPostEditor } from "./use-blog-post-editor";
 import { useBlogReviewActions } from "./use-blog-review-actions";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (publish, review +
-// scheduled publish, self-review; AE-0441: the author may always self-review)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 

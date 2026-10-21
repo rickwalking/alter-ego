@@ -32,6 +32,7 @@ import { buildThemeOptions } from "@/app/dashboard/create/theme-options";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 
+/** Any form change clears the error: an error about the previous input is stale. */
 export default function CreateCarouselPage(): React.ReactElement {
   const router = useRouter();
   const locale = useLocale();
@@ -51,7 +52,6 @@ export default function CreateCarouselPage(): React.ReactElement {
   const handleChange = useCallback(
     (patch: Partial<CreateCarouselFormState>): void => {
       setForm((prev) => ({ ...prev, ...patch }));
-      // AE-0415 (B32): an error about the previous input is stale now.
       setError(null);
     },
     [],

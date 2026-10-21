@@ -1,5 +1,5 @@
 /**
- * AE-0273/0276: useMediaQuery — gates drawer scroll-lock/focus-trap to below a
+ * useMediaQuery — gates drawer scroll-lock/focus-trap to below a
  * breakpoint. Must be SSR/jsdom-safe (no throw when matchMedia is absent/partial).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";

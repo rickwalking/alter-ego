@@ -19,7 +19,7 @@ const LABELLED_EXTRAS: ReadonlySet<string> = new Set([
   "creator_website",
 ]);
 
-/** AE-0414: "Nome do criador" instead of "Campo estruturado: creator_name". */
+/** "Nome do criador" instead of "Campo estruturado: creator_name". */
 export function useStructuredExtraLabel(): (extraKey: string) => string {
   const t = useTranslations("editorialWorkflow.review");
   return (extraKey: string): string =>
@@ -40,7 +40,6 @@ function ReadOnlyExtraValue({
     return <PresentationStructuredItems items={value} />;
   }
   if (typeof value === "string") {
-    // AE-0414: an empty value says so instead of showing a bare label.
     return (
       <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
         {value.trim() ? value : tCopy("emptyValue")}
@@ -54,7 +53,7 @@ function ReadOnlyExtraValue({
   );
 }
 
-/** AE-0407: a ``pov_news`` insight renders as a quote card, never raw JSON. */
+/** A ``pov_news`` insight renders as a quote card, never raw JSON. */
 export function ReadOnlyExtra({
   extraKey,
   value,

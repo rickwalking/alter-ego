@@ -1,4 +1,3 @@
-/* ── Colors ── */
 export const NEON_CYAN = "#00d4ff";
 export const NEON_CYAN_DIM = "rgba(0,212,255,0.12)";
 export const NEON_MAGENTA = "#ff2770";
@@ -11,32 +10,28 @@ export const NEON_GREEN = "#22c55e";
 export const NEON_RED = "#ef4444";
 export const NEON_PURPLE = "#a855f7";
 
-/* ── Backgrounds ── */
 export const BG_DEEP = "#060a12";
 export const BG_SURFACE = "#0a0f1e";
 export const BG_CARD = "#0d1324";
 export const BG_ELEVATED = "#111a30";
 export const BG_SIDEBAR = "#080c18";
 
-/* ── Text ── */
 export const TEXT = "rgba(255,255,255,0.88)";
 export const TEXT_MUTED = "rgba(255,255,255,0.55)";
 export const TEXT_DIM = "rgba(255,255,255,0.3)";
 
-/* ── Gradients ── */
 export const CYAN_GRADIENT =
   "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)";
 
-/* ── Card / Input ── */
 export const NEON_CARD_BORDER = "rgba(255,255,255,0.06)";
 export const NEON_CARD_HOVER_BORDER = "rgba(0,212,255,0.2)";
 export const NEON_INPUT_BG = "rgba(6,10,18,0.45)";
 
-/* ── Borders & overlays (dashboard inline styles) ── */
 export const NEON_BORDER_SUBTLE = "rgba(0,212,255,0.06)";
 export const NEON_BORDER_LIGHT = "rgba(0,212,255,0.08)";
 export const NEON_BORDER_MEDIUM = "rgba(0,212,255,0.1)";
 export const NEON_BORDER_STRONG = "rgba(0,212,255,0.15)";
+/** Focus border; the persona avatar reuses it directly (no duplicate-value alias). */
 export const NEON_BORDER_FOCUS = "rgba(0,212,255,0.2)";
 export const NEON_BORDER_DASHED = "rgba(0,212,255,0.15)";
 export const NEON_BORDER_DASHED_HOVER = "rgba(0,212,255,0.35)";
@@ -64,5 +59,3 @@ export const NEON_RED_BORDER = "rgba(239,68,68,0.3)";
 export const NEON_PROGRESS_GLOW = "0 0 12px rgba(0,212,255,0.3)";
 export const NEON_SIDEBAR_LOGO_SHADOW =
   "0 0 12px rgba(0,212,255,0.12), inset 0 0 12px rgba(0,212,255,0.12)";
-// Persona avatar reuses the focus border (single source of truth:
-// NEON_BORDER_FOCUS). Import that directly rather than a duplicate-value alias.

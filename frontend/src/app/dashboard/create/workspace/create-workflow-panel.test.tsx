@@ -111,7 +111,7 @@ function gateState(
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415) — tests/features/create-flow-ui-ae0415.feature
+/** Scenarios: tests/features/create-flow-ui-ae0415.feature. */
 describe("CreateWorkflowPanel live gates (AE-0415)", () => {
   // Scenario: The live research gate shows the findings and their sources
   it("lists the research findings with their sources on the live research gate", () => {
@@ -217,7 +217,7 @@ describe("CreateWorkflowPanel persona gate (AE-0415, B01)", () => {
   });
 });
 
-// Feature: tests/features/workflow-stream-recovery-ae0440.feature
+/** Scenarios: tests/features/workflow-stream-recovery-ae0440.feature. */
 describe("CreateWorkflowPanel live updates (AE-0440)", () => {
   function renderWithTransport(
     workflow: ReturnType<typeof useEditorialWorkflow>,

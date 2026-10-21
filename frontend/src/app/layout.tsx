@@ -35,6 +35,11 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Root layout. The app is dark-mode only: Tailwind's ``dark:`` variant resolves
+ * against the ``.dark`` class on ``<html>``, so setting it once here keeps every
+ * dark-styled rule active without a toggle or provider.
+ */
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -44,9 +49,6 @@ export default async function RootLayout({
   const locale = await getRequestLocale();
 
   return (
-    // The whole app is dark-mode only. Tailwind's `dark:` variant resolves
-    // against the `.dark` class on <html>, so setting it once here keeps
-    // every dark-styled rule active without a toggle or provider.
     <html lang={locale} className="dark" suppressHydrationWarning>
       <body
         className={`${inter.variable} font-sans antialiased`}

@@ -15,9 +15,6 @@ import type {
   CarouselPublicResponse,
 } from "@/schemas/carousel";
 
-// Feature: Public carousel gallery (AE-0444)
-// frontend/tests/features/public_carousels_page_ae0444.feature
-
 type Project = CarouselProjectListResponse["items"][number];
 
 function project(overrides: Partial<Project> = {}): Project {

@@ -71,7 +71,7 @@ function SectionToolbar({
 }
 
 /**
- * One section of the document (AE-0424): heading + markdown body, move
+ * One section of the document: heading + markdown body, move
  * up/down, delete, its own image slot and "Rewrite this section in my voice".
  * The section keeps its stable id (and image) when it is reordered.
  */

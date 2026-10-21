@@ -8,6 +8,10 @@ import {
   CALENDAR_MONO_FONT,
 } from "@/modules/editorial-operations";
 
+/**
+ * `pl-14` clears the layout-level mobile hamburger; layout and z-index use
+ * Tailwind (stacking-map aligned) while the neon surface styling stays inline.
+ */
 export function CalendarHeader({
   loading,
 }: Readonly<{
@@ -15,8 +19,6 @@ export function CalendarHeader({
 }>): React.ReactElement {
   return (
     <div
-      // `pl-14` clears the layout-level mobile hamburger; layout/zIndex via
-      // Tailwind (stacking-map aligned). Neon surface styling stays inline.
       className="sticky top-0 z-50 flex h-14 items-center justify-between pr-4 pl-14 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${CALENDAR_COLORS.bdr}`,

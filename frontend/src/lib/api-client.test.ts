@@ -398,6 +398,10 @@ describe("API Client Module", () => {
         vi.unstubAllGlobals();
       });
 
+      /**
+       * Without a ``success`` field apiCall validates the raw JSON against the
+       * schema directly; ``{data: {id, name}}`` fails it.
+       */
       it("Then it should throw an ApiError for missing success field", async () => {
         vi.stubGlobal(
           "fetch",
@@ -406,12 +410,6 @@ describe("API Client Module", () => {
             json: () => Promise.resolve({ data: { id: "1", name: "Test" } }),
           }),
         );
-
-        // When the response has no `success` field, apiCall falls through
-        // to the direct-schema branch and tries to validate the raw JSON
-        // against `testSchema` (expects {id, name} at top level). The
-        // actual shape is {data: {id, name}}, so validation fails and we
-        // throw with "Invalid data from API".
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
           "Invalid data from API",
         );
@@ -429,7 +427,7 @@ describe("API Client Module", () => {
             json: () =>
               Promise.resolve({
                 success: true,
-                data: { id: "1" }, // Missing 'name' field
+                data: { id: "1" },
               }),
           }),
         );
@@ -525,7 +523,6 @@ describe("API Client Module", () => {
             json: () =>
               Promise.resolve({
                 success: false,
-                // Missing error object
               }),
           }),
         );

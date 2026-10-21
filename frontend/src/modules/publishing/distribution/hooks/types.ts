@@ -3,8 +3,8 @@ import type { ChatStream } from "@/lib/use-chat-stream";
 /**
  * Distribution hook return/payload types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
- * `frontend/scripts/component-type-location.config.mjs`), hook object shapes
+ * Per the component-type-location convention
+ * (`frontend/scripts/component-type-location.config.mjs`), hook object shapes
  * live here rather than inline in the `use-*.ts` files.
  */
 
@@ -22,7 +22,7 @@ export interface InstagramPublishPayload {
   caption: string;
 }
 
-/** AE-0445: one slide-1 cover pick at the workflow lock version read. */
+/** One slide-1 cover pick at the workflow lock version read. */
 export interface CoverPickInput {
   projectId: string;
   assetId: string;

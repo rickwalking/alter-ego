@@ -23,13 +23,13 @@ interface EditorialPhaseReviewProps {
   contentSlides?: LocalizedSlideReview[];
   onContentSlidesChange?: (slides: LocalizedSlideReview[]) => void;
   contentEditable?: boolean;
-  /** AE-0403: save content-gate edits without approving (edits-only revise). */
+  /** Save content-gate edits without approving (edits-only revise). */
   contentManualFixes?: ContentManualFixesActions;
-  /** AE-0310: design-step recovery actions (edit copy / send back). */
+  /** Design-step recovery actions (edit copy / send back). */
   designRecovery?: DesignRecoveryActions;
-  /** AE-0311: refresh workflow state after a one-click deterministic repair. */
+  /** Refresh workflow state after a one-click deterministic repair. */
   onRepaired?: () => void;
-  /** AE-0415 (B15): a run is executing — no auto-fix (it would 409). */
+  /** A run is executing — no auto-fix (it would 409). */
   actionsLocked?: boolean;
 }
 

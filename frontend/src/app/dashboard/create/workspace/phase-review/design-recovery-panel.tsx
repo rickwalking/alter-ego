@@ -24,7 +24,7 @@ import {
   RecoverySendBackSection,
 } from "./design-recovery-sections";
 
-/** AE-0310: recovery callbacks wired from the workflow panel. */
+/** Recovery callbacks wired from the workflow panel. */
 export interface DesignRecoveryActions {
   onSubmitEditedSlides: (slides: LocalizedSlideReview[]) => void;
   onSendBackToContent: (feedback: string) => void;

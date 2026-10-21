@@ -24,7 +24,7 @@ import { SectionCard } from "./section-card";
 import type { BlogSectionEditorProps } from "./types";
 
 /**
- * The `blog.v2` section editor (AE-0424): PT/EN content buttons, the cover
+ * The `blog.v2` section editor: PT/EN content buttons, the cover
  * slot and one card per section of the active language (add / delete /
  * reorder). Only the active language subtree is edited.
  */

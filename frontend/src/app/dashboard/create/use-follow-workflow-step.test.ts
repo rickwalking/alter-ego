@@ -18,7 +18,6 @@ function setup(initial: Props) {
   return { ...hook, onFollow };
 }
 
-// Feature: Create-flow UI fixes (AE-0415) — B26 auto-advance
 describe("useFollowWorkflowStep", () => {
   // Scenario: The page follows the workflow to the next gate
   it("follows the workflow from the live step to the new gate", () => {

@@ -9,7 +9,7 @@ import { PhaseProgressDetail } from "./phase-progress-detail";
 
 /**
  * ``phase_progress`` is untyped JSON: validate it instead of casting, so a
- * payload without a ``label`` renders nothing rather than crashing (AE-0446).
+ * payload without a ``label`` renders nothing rather than crashing.
  * Live SSE progress may be untagged, hence the optional ``phase``.
  */
 const liveProgressSchema = carouselPhaseProgressSchema.extend({
@@ -29,7 +29,7 @@ interface EditorialWorkflowProgressProps {
 }
 
 /**
- * AE-0440: ``phase_progress`` is never cleared when its phase ends, so a
+ * ``phase_progress`` is never cleared when its phase ends, so a
  * completed project still carries the images grid ("Generating 4 slide
  * images… 4/4"). Progress tagged with another workflow phase is history;
  * untagged progress (a live SSE progress event) or a tag that names no
@@ -54,7 +54,7 @@ function isProgressOfPhase(
  * Fine-grained progress of the running editorial phase (label, counter,
  * per-slide grid) under the running banner.
  *
- * AE-0415: shown only while a run is active — a leftover `phase_progress`
+ * shown only while a run is active — a leftover `phase_progress`
  * label on an approved project is history, not work (B28) — and without the
  * legacy pipeline step list, which named stages that do not match the
  * editorial phases and repeated the label (B27). The phase itself is named by

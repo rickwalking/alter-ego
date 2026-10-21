@@ -1,3 +1,6 @@
+/**
+ * Scenarios: tests/features/create-image-guidance.feature.
+ */
 import { describe, expect, it } from "vitest";
 import { carouselCreateRequestSchema } from "@/schemas/carousel";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
@@ -8,8 +11,6 @@ import {
   fallbackNiche,
 } from "./helpers";
 import { INITIAL_CREATE_FORM_STATE, showsFormatPicker } from "./types";
-
-// Scenarios: see tests/features/create-image-guidance.feature
 
 const HOOK_PHOTO_ID = "0b7c1d2e-3f4a-4b5c-8d6e-7f8091a2b3c4";
 
@@ -53,7 +54,7 @@ describe("buildCarouselCreateRequest custom_visual_details (AE-0298)", () => {
 });
 
 // Scenario: Missing image style falls back to flat editorial
-// (tests/features/radar-ia-quick-fixes.feature, AE-0372)
+//   (tests/features/radar-ia-quick-fixes.feature)
 describe("buildCarouselCreateRequest image defaults (AE-0372)", () => {
   it("defaults to the flat editorial preset", () => {
     expect(DEFAULT_IMAGE_PRESET).toBe("openai__flat_editorial");
@@ -82,7 +83,7 @@ describe("buildCarouselCreateRequest image defaults (AE-0372)", () => {
   });
 });
 
-// Scenarios: tests/features/create-content-mode.feature (AE-0373)
+/** Scenarios: tests/features/create-content-mode.feature. */
 describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
   it("sends the POV fields in POV mode", () => {
     const request = buildCarouselCreateRequest({
@@ -124,7 +125,6 @@ describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
     expect(request.persona_id).toBeNull();
   });
 
-  // PR #106 review: POV needs the thesis AND the slide-1 photo.
   it("requires the thesis and the slide-1 photo to submit in POV mode", () => {
     const pov = { ...BASE_FORM, contentMode: "pov" as const };
     expect(canSubmitCreateForm(pov)).toBe(false);
@@ -160,7 +160,6 @@ describe("buildCarouselCreateRequest pov_news (AE-0406)", () => {
       slide_count: 9,
       hook_asset_id: HOOK_PHOTO_ID,
     });
-    // PR #124 review: no format picker, so no pov_format is sent.
     expect(request.pov_format).toBeUndefined();
     expect(carouselCreateRequestSchema.safeParse(request).success).toBe(true);
     expect(canSubmitCreateForm(news)).toBe(true);
@@ -179,10 +178,9 @@ describe("showsFormatPicker (AE-0406)", () => {
   });
 });
 
-// Feature: Create-flow UI fixes (AE-0415) — B18
 // Scenario: A long topic with an empty brief no longer breaks the niche limit
 describe("niche fallback (AE-0415)", () => {
-  const longTopic = `${"palavra ".repeat(56)}fim`; // 451 characters
+  const longTopic = `${"palavra ".repeat(56)}fim`;
 
   it("cuts a long topic at a word boundary to the niche limit", () => {
     const niche = fallbackNiche(longTopic);

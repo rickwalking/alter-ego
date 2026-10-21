@@ -15,7 +15,7 @@ import {
 } from "./presentation-review-utils";
 
 /**
- * AE-0437: add and remove structured list items in the content review.
+ * Add and remove structured list items in the content review.
  *
  * Prod carousel 7acaf967: the closing slide had ``actions: []`` and the editor
  * showed "Campo estruturado: actions []" with no way to add an item, so the
@@ -81,7 +81,6 @@ function editedLocale(
   locale: PresentationLocaleKey,
   edit: SlideStructuredListEdit,
 ): Record<string, unknown> {
-  // AE-0430: start from what the column shows (its own + mirrored structure).
   const presentation = mirrorLocaleStructure(
     slide[locale],
     slide[otherLocaleKey(locale)],

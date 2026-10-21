@@ -1,4 +1,3 @@
-// AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -14,7 +13,8 @@ import {
   type ContentManualFixesActions,
 } from "./content-phase-review";
 
-const LONG_PT_BODY = `${"palavra ".repeat(37)}fim.`; // 300 chars > 220
+/** A 300-character PT body, over the 220-character budget. */
+const LONG_PT_BODY = `${"palavra ".repeat(37)}fim.`;
 
 function contentSlide(index: number): LocalizedSlideReview {
   return {

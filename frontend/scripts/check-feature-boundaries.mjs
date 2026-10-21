@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Enforce frontend feature/module boundaries (AE-0083, AE-0136) — the
- * cross-context import ratchet that mirrors the backend ratchet (AE-0082).
+ * Enforce frontend feature/module boundaries — the
+ * cross-context import ratchet that mirrors the backend ratchet.
  *
  * Run as part of:
  *   npm run lint            # eslint + this check (+ url:check + lint:circular)
@@ -47,6 +47,10 @@ function loadBaseline() {
   return { count: parsed.count ?? 0, allowlist: parsed.allowlist ?? [] };
 }
 
+/**
+ * Ratchets on DISTINCT file -> foreign-context relationships, the allowlist
+ * unit, so two imports of the same foreign context from one file count once.
+ */
 function main() {
   const { count: baselineCount, allowlist } = loadBaseline();
   const allowed = new Set(allowlist);
@@ -56,8 +60,6 @@ function main() {
     (violation) => !allowed.has(violationKey(violation)),
   );
 
-  // Ratchet on DISTINCT file -> foreign-context relationships (the allowlist
-  // unit), so two imports of the same foreign context from one file count once.
   const distinctCount = new Set(violations.map(violationKey)).size;
 
   const errors = [];

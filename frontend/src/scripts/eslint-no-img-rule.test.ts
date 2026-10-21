@@ -1,5 +1,5 @@
 /**
- * AE-0202 rule-fires regression test (dogfoods AE-0180): a raw `<img>` element
+ * Rule-fires regression test: a raw `<img>` element
  * in production `src` must be an ESLint ERROR (`@next/next/no-img-element`), not a
  * warning. The rule was promoted warn -> error once the last prod `<img>`
  * (a legacy modal component) migrated to next/image; this test proves the

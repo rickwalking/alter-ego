@@ -4,10 +4,6 @@ import { streamSseEvents } from "./sse-client";
 import { createSseResponse } from "./sse-client.test-utils";
 import type { SseEvent } from "./sse-client";
 
-// Feature: SSE Client — Edge Cases & Mutation Coverage
-// These tests cover less common SSE protocol scenarios that would
-// otherwise survive as mutants in mutation testing.
-
 /** Resolves once the signal aborts. */
 function abortedSignal(signal: AbortSignal): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -190,7 +186,6 @@ describe("streamSseEvents edge cases", () => {
                   index++;
                   return { done: false, value };
                 }
-                // Hang until aborted
                 await abortedSignal(abortController.signal);
                 throw new DOMException(
                   "The operation was aborted",
@@ -213,7 +208,6 @@ describe("streamSseEvents edge cases", () => {
       onComplete,
     });
 
-    // Let the first event be read, then abort
     await new Promise((resolve) => setTimeout(resolve, 10));
     abortController.abort();
 

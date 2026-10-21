@@ -1,5 +1,5 @@
 /**
- * AE-0429: the session-expired logout handler lives at `/auth/logout`, outside
+ * The session-expired logout handler lives at `/auth/logout`, outside
  * `/api` (nginx proxies `/api/*` to FastAPI, so a Next route there never runs).
  * Covers the Gherkin scenarios in
  * `tests/features/session-expired-redirect-ae0429.feature`.
@@ -116,7 +116,6 @@ describe("GET /auth/logout", () => {
     expect(location.searchParams.get("error")).toBe(SESSION_EXPIRED_ERROR);
   });
 
-  // Feature: An expired session logs out through a front-end route (AE-0429)
   // Scenario: The login Location never exposes the internal server host (AE-0431)
   //   Given a request to "/auth/logout?redirect=..." whose URL host is the
   //     standalone server bind address "0.0.0.0:3000" with forwarded headers

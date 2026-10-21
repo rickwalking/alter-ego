@@ -39,7 +39,7 @@ export const BLOG_POST_BADGE_COLORS: Record<string, BlogPostBadgeVisual> = {
 
 /**
  * Neutral badge visual used when a badge color key is not in the palette map —
- * an unknown key must never crash the listing (AE-0295).
+ * an unknown key must never crash the listing.
  */
 export const BLOG_POST_BADGE_FALLBACK: BlogPostBadgeVisual = {
   bg: NEUTRAL_BADGE_BG,
@@ -47,7 +47,7 @@ export const BLOG_POST_BADGE_FALLBACK: BlogPostBadgeVisual = {
 };
 
 /**
- * Workflow-status badge palette (AE-0295). Keyed by the complete
+ * Workflow-status badge palette. Keyed by the complete
  * `BlogPostStatus` vocabulary — `Record<BlogPostStatus, …>` makes a missing
  * status a compile error, not a runtime crash. Distinct from the carousel
  * *workflow* status palette (`resolveWorkflowStatusVisual`); never conflate.
@@ -65,7 +65,7 @@ export const BLOG_POST_STATUS_COLORS: Record<
 
 /**
  * Badge for a post stored `published` that anonymous readers cannot see yet
- * (carousel not released, AE-0411) — amber like other not-live states.
+ * (carousel not released) — amber like other not-live states.
  */
 export const BLOG_POST_NOT_LIVE_COLORS: BlogPostBadgeVisual = {
   bg: NEON_AMBER_DIM,

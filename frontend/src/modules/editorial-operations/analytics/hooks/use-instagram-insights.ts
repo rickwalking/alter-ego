@@ -15,7 +15,7 @@ export const instagramInsightsKeys = {
   all: ["instagram-insights"] as const,
 };
 
-/** AE-0378: per-post Instagram metrics for the dashboard KPI card. */
+/** Per-post Instagram metrics for the dashboard KPI card. */
 export function useInstagramInsights() {
   return useQuery({
     queryKey: instagramInsightsKeys.all,

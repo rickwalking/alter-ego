@@ -22,7 +22,6 @@ function workflow(
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415) — B25 publish page readiness
 describe("isPublishReady", () => {
   // Scenario: The publish page of an unfinished carousel says it is not ready
   it("is not ready before the final review", () => {
@@ -82,7 +81,7 @@ describe("offersRadarTemplates", () => {
 
 describe("offersCoverPicker", () => {
   // Scenario: The picker is shown for Ponto de Vista carousels only
-  // (frontend/tests/features/publish-cover-picker-ae0445.feature)
+  //   (frontend/tests/features/publish-cover-picker-ae0445.feature)
   it("offers the slide-1 cover picker only to Ponto de Vista projects", () => {
     expect(offersCoverPicker({ content_mode: "pov" })).toBe(true);
     expect(offersCoverPicker({ content_mode: "pov_news" })).toBe(true);

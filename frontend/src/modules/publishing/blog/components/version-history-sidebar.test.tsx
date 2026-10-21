@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { v2Document } from "../editor.test-utils";
 import { snapshotText, VersionHistorySidebar } from "./version-history-sidebar";
 
-// Scenarios: Saving appends a version snapshot visible in the sidebar /
-// Restoring a version loads it into the editor /
-// A failed restore shows its error in the version sidebar (AE-0438, F-11)
-// (tests/features/blog_editor_ae0424.feature, blog_editor_errors_ae0438.feature)
+/** Gherkin: tests/features/blog_editor_ae0424.feature (version snapshots, restore) and tests/features/blog_editor_errors_ae0438.feature (a failed restore shows its error). */
 
 describe("VersionHistorySidebar", () => {
   it("lists versions, previews the snapshot and restores", () => {

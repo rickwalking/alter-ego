@@ -7,10 +7,6 @@ import {
 } from "../constants";
 import { BlogPostStatusBadge } from "./status-badge";
 
-// Scenarios: see tests/features/blog-posts-listing-status-badge.feature
-// ("Status badge shows a distinct label and color per status",
-//  "Unknown backend status renders a neutral badge instead of crashing")
-
 describe("BLOG_POST_STATUS_COLORS", () => {
   it("covers exactly the BlogPostStatus vocabulary", () => {
     expect(

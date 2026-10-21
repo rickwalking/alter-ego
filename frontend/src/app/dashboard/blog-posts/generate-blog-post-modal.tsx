@@ -11,7 +11,7 @@ import { useGenerateBlogPost } from "@/app/dashboard/blog-posts/use-generate-blo
 const NAMESPACE = "dashboard.blogPosts.generation";
 const TOPIC_INPUT_ID = "generate-blog-topic";
 
-/** "Generate with AI" button + topic modal of the Blog Posts top bar (AE-0425). */
+/** "Generate with AI" button + topic modal of the Blog Posts top bar. */
 export function GenerateBlogPostAction(): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   const generate = useGenerateBlogPost();

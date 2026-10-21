@@ -86,8 +86,11 @@ function EditorNotices({
 }
 
 /**
- * The loaded blog editor (AE-0424): title/excerpt, the `blog.v2` section
+ * The loaded blog editor: title/excerpt, the `blog.v2` section
  * editor and the review/voice/version/AI sidebar, with the unsaved guard.
+ *
+ * The writer/image run owns the document until it finishes, so the editor is
+ * read-only while it generates.
  */
 export function BlogPostEditorView({
   editor,
@@ -106,7 +109,6 @@ export function BlogPostEditorView({
   const { draft, validation, error } = editor;
   const migrationPending =
     !draft || error?.kind === BLOG_EDITOR_ERROR_KINDS.MIGRATION_PENDING;
-  // AE-0425: the writer/image run owns the document until it finishes.
   const generating = isGenerationInProgress(post ?? null);
   const leave = (): void => {
     if (confirmLeave()) {

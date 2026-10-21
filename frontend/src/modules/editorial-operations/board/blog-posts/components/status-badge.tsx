@@ -29,11 +29,11 @@ function resolveBadge({
 }
 
 /**
- * Workflow-status badge (AE-0295). The `status` prop is typed as
+ * Workflow-status badge. The `status` prop is typed as
  * `BlogPostStatus | null` — handing it an arbitrary string (e.g. a carousel
  * workflow status) is a compile error; `null` marks a drifted/unknown backend
  * value and renders the neutral fallback. A `published` post that is not
- * publicly readable yet renders "not public yet" (AE-0411).
+ * publicly readable yet renders "not public yet".
  */
 export function BlogPostStatusBadge(props: Readonly<BlogPostStatusBadgeProps>) {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);

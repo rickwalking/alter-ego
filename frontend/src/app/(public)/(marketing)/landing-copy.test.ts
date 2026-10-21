@@ -26,7 +26,6 @@ const HOME_PT = pt.home as TranslationNode;
 const COMMON_NAV_EN = en.common.nav as TranslationNode;
 const COMMON_NAV_PT = pt.common.nav as TranslationNode;
 
-// Feature: Landing page truth, links and public header (AE-0443)
 // Scenario: Landing copy is complete and in sync in both locales
 describe("landing copy", () => {
   it("has the same landing keys in pt and en", () => {

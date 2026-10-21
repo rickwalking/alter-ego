@@ -8,8 +8,6 @@ import type {
   SlideStructuredItemEdit,
 } from "@/modules/editorial/workspace/lib/presentation-slide-resolution";
 
-// AE-0314 — Gherkin: backend/tests/features/carousel_text_edit_no_regen.feature
-
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => (key: string) => key),
 }));
@@ -84,7 +82,6 @@ it("warns with a budget hint when the body exceeds the policy budget", () => {
       onCopyChange: vi.fn(),
     }),
   );
-  // The over-budget PT body raises an alert-role budget hint before submit.
   expect(getByRole("alert")).toHaveTextContent("/220 chars");
 });
 

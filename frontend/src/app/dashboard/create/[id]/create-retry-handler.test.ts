@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRetryWorkflowHandler } from "./create-retry-handler";
 
-// Feature: Workflow Error Feedback & Retry (AE-0009)
-//   Retry restarts the workflow; failure must re-enable the button and keep the
-//   error card by resetting `retrying` to false without navigating.
+/**
+ * Retry restarts the workflow; a failure re-enables the button and keeps the
+ * error card by resetting `retrying` to false without navigating.
+ */
 describe("createRetryWorkflowHandler", () => {
   const project = { topic: "AI", audience: "Devs", niche: "Security" };
   const sources = [{ title: "Doc", content: "text", source_type: "document" }];
@@ -32,11 +33,9 @@ describe("createRetryWorkflowHandler", () => {
     await handler();
 
     expect(start).toHaveBeenCalledTimes(1);
-    // Button disabled while in-flight, then re-enabled on failure.
     expect(setRetrying).toHaveBeenNthCalledWith(1, true);
     expect(setRetrying).toHaveBeenNthCalledWith(2, false);
     expect(setRetrying).toHaveBeenCalledTimes(2);
-    // Error card stays: no navigation on failure.
     expect(navigateOnSuccess).not.toHaveBeenCalled();
   });
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Enforce the frontend component-type-location convention (AE-0144) — the
+ * Enforce the frontend component-type-location convention — the
  * "13x class" ratchet that mirrors the feature/module-boundary ratchet
  * (`check-feature-boundaries.mjs` + `feature-boundary-baseline.json`).
  *
@@ -45,6 +45,7 @@ function loadBaseline() {
   return { count: parsed.count ?? 0, allowlist: parsed.allowlist ?? [] };
 }
 
+/** Ratchets on DISTINCT file/kind/name declarations, the allowlist unit. */
 function main() {
   const { count: baselineCount, allowlist } = loadBaseline();
   const allowed = new Set(allowlist);
@@ -54,7 +55,6 @@ function main() {
     (violation) => !allowed.has(violationKey(violation)),
   );
 
-  // Ratchet on DISTINCT file/kind/name declarations (the allowlist unit).
   const distinctCount = new Set(violations.map(violationKey)).size;
 
   const errors = [];

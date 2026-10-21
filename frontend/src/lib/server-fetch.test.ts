@@ -122,7 +122,6 @@ describe("server-fetch", () => {
       expect(calledUrl).toContain("limit=5");
     });
 
-    // Feature: Landing page truth, links and public header (AE-0443)
     // Scenario: Published-carousel stat counts only public, completed projects
     //   Given the public carousel list is fetched for the landing page
     //   When the request is built

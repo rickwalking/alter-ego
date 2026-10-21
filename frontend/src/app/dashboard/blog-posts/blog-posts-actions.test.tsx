@@ -1,3 +1,6 @@
+/**
+ * Scenarios: tests/features/blog-posts-management.feature.
+ */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -8,8 +11,6 @@ import {
 } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 import type { BlogPostActionHandlers } from "@/app/dashboard/blog-posts/types";
-
-// Scenarios: see tests/features/blog-posts-management.feature
 
 function makePost(overrides: Partial<DashboardBlogPost>): DashboardBlogPost {
   return {
@@ -76,8 +77,8 @@ describe("BlogPostCardActions (AE-0296)", () => {
     expect(screen.getByText("Hide (revert to draft)")).toBeInTheDocument();
   });
 
-  // Scenario (AE-0411): A carousel post waiting for its carousel release is
-  // not shown as live — hiding it would keep it hidden after the release.
+  // Scenario: A carousel post waiting for its carousel release is not shown as live
+  //   (hiding it would keep it hidden after the release)
   it("offers no Hide for a published post that is not live yet", () => {
     render(
       <BlogPostCardActions

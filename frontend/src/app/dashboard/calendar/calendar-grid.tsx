@@ -147,6 +147,10 @@ function CalendarDayCell({
   );
 }
 
+/**
+ * Keeps the month view and scroll-snaps horizontally on small screens so cells
+ * stay about 91px wide or more (min-w 640 / 7) instead of crushing.
+ */
 export function CalendarGrid({
   days,
 }: Readonly<CalendarGridProps>): React.ReactElement {
@@ -156,8 +160,6 @@ export function CalendarGrid({
   return (
     <div className="overflow-x-auto [overscroll-behavior-x:contain]">
       <div
-        // Keep the month view; scroll-snap horizontally on small screens so
-        // cells stay ≥~91px wide (min-w 640 / 7) instead of crushing.
         className="grid min-w-[640px] snap-x snap-mandatory grid-cols-7"
         style={{
           gap: 1,

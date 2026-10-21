@@ -8,8 +8,7 @@ import {
   sessionFromPost,
 } from "./editor-session";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature (concurrent save
-// conflict, section editing) + AE-0424 review (no lost keystrokes/paid slots)
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 const typed = (title: string) => {
   const session = sessionFromPost(blogPost());

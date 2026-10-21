@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { usePovPhoto } from "./use-pov-photo";
 
-// Gherkin: backend/tests/features/carousel_pov_layouts.feature (AE-0376)
+/** Gherkin: backend/tests/features/carousel_pov_layouts.feature. */
 const state = {
   photos: [] as { id: string; created_at: string }[],
   upload: vi.fn(),

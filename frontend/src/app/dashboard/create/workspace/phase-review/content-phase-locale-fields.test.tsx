@@ -1,4 +1,6 @@
-// AE-0407 — Gherkin: frontend/tests/features/content-review-insight-card-ae0407.feature
+/**
+ * Gherkin: frontend/tests/features/content-review-insight-card-ae0407.feature.
+ */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { LocalizedSlideReview } from "@/modules/publishing";

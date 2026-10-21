@@ -10,7 +10,7 @@ import { BLOG_EDITOR_I18N_NAMESPACE } from "@/constants/blog-editor";
 import type { MigrationBannerProps } from "./types";
 
 /**
- * Blocking "migration pending" banner (AE-0424 AC15): the stored row is still
+ * Blocking "migration pending" banner: the stored row is still
  * legacy markdown, so content writes are refused by the API. The editor shows
  * the API error and never parses or persists the legacy shape itself.
  */

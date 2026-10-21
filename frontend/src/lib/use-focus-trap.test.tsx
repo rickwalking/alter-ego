@@ -1,5 +1,5 @@
 /**
- * AE-0273 — useFocusTrap. Feature: responsive-dashboard-shell.feature
+ * useFocusTrap. Feature: responsive-dashboard-shell.feature
  * Scenarios: focus is trapped inside the drawer; focus returns on close.
  */
 import { describe, expect, it } from "vitest";

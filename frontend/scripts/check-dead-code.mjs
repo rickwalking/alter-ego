@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Frontend dead-export gate (AE-0152). Runs knip, compares unused exports/types
+ * Frontend dead-export gate. Runs knip, compares unused exports/types
  * against the grandfathered baseline, and enforces the ratchet:
  *
  *   - NET-NEW finding in a PR-changed file -> BLOCK (day-one changed-file
@@ -10,8 +10,8 @@
  *   - Grandfathered finding (in the baseline) -> ignored.
  *   - Resolved grandfathered identities -> reported (baseline may ratchet DOWN).
  *
- * Full-tree blocking: DEAD_CODE_FULL_TREE_BLOCKING=1 (set by gates.sh since AE-0446,
- * when the grandfathered count reached 0; see frontend/AGENTS.md).
+ * Full-tree blocking: DEAD_CODE_FULL_TREE_BLOCKING=1 (set by gates.sh once the
+ * grandfathered count reached 0; see frontend/AGENTS.md).
  *
  * Run as: npm run lint:dead-code   (gates.sh frontend:dead-code)
  * Diff base: GATES_BASE_REF (default origin/main).
@@ -60,7 +60,7 @@ function gitDiffNames(range) {
  * ref has diverged), so the gate still works off a stacked PR.
  *
  * This is the canonical REFERENCE implementation of the 3-tier fallback. The
- * shared bash port `scripts/lib/diff_base.sh` (AE-0177) mirrors this logic for
+ * shared bash port `scripts/lib/diff_base.sh` mirrors this logic for
  * the bash gates (check-integrity, changed-{frontend,backend}-files, ruff-strict);
  * keep the two in parity. Kept in JS here to avoid a node->bash shell-out on the
  * hot dead-code path.
@@ -80,12 +80,12 @@ function changedFrontendFiles() {
   }
 }
 
+/** When changed files cannot be determined, the changed-file logic never blocks. */
 function main() {
   const allowed = loadBaseline();
   const changed = changedFrontendFiles();
   const findings = scanDeadCodeExports();
 
-  // If we cannot determine changed files, never block on changed-file logic.
   const { blocking, advisory, resolved } = classifyDeadCode({
     findings,
     allowed,

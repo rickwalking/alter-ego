@@ -1,7 +1,7 @@
 /**
  * Blog-post board component prop types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
@@ -17,7 +17,7 @@ export interface BlogPostStatusBadgeProps {
   /** `null` = unknown/drifted backend status → neutral fallback badge. */
   status: BlogPostStatus | null;
   /**
-   * AE-0411: `false` on a `published` post means anonymous readers cannot see
+   * `false` on a `published` post means anonymous readers cannot see
    * it yet (carousel not released) — the badge says so instead of "Published".
    * Omitted = no live-state info (badge shows the stored status).
    */

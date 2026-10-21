@@ -1,7 +1,7 @@
 /**
  * Editorial workspace component prop types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
@@ -36,7 +36,7 @@ export interface PresentationStructuredItemsProps {
   className?: string;
 }
 
-/** AE-0407: the ``pov_news`` quote card shown in the content review. */
+/** The ``pov_news`` quote card shown in the content review. */
 export interface PresentationInsightQuoteCardProps {
   insight: PresentationInsightQuote;
 }
@@ -49,7 +49,7 @@ export interface WorkflowFailedCardProps {
 }
 
 /**
- * AE-0314: shared slide-text editor used by both the review-step recovery panel
+ * Shared slide-text editor used by both the review-step recovery panel
  * and the publish-page editor (one component, no duplicated editor bodies).
  * ``onStructuredItemChange``/``showBudget`` are opt-in so the design-recovery
  * panel keeps its exact DOM while the publish page enables extras + budget.
@@ -62,13 +62,13 @@ export interface SlideCopyEditorProps {
   policyVersion?: string | null;
   showBudget?: boolean;
   onStructuredItemChange?: (edit: SlideStructuredItemEdit) => void;
-  /** AE-0403: blocking violations per field (red border + message + aria). */
+  /** Blocking violations per field (red border + message + aria). */
   fieldErrors?: SlideFieldErrors;
-  /** AE-0403: open violations listed at the bottom of each slide form. */
+  /** Open violations listed at the bottom of each slide form. */
   violations?: SlideValidationViolation[];
 }
 
-/** AE-0314: a locale's editable structured-item list (summary points/features). */
+/** A locale's editable structured-item list (summary points/features). */
 export interface StructuredList {
   listKey: string;
   items: Record<string, unknown>[];
@@ -86,7 +86,7 @@ export interface AutoRepairButtonProps {
   onRepublishNeeded?: () => void;
 }
 
-/** AE-0375: the slide-1 hook picker at the outline gate. */
+/** The slide-1 hook picker at the outline gate. */
 export interface HookPickerProps {
   projectId: string;
   /** Up to five candidates generated from the owner's thesis. */
@@ -97,32 +97,32 @@ export interface HookPickerProps {
   thesisEarly?: boolean;
 }
 
-/** AE-0403: a textarea that shows its own field error (border + aria). */
+/** A textarea that shows its own field error (border + aria). */
 export interface FlaggableTextareaProps extends NeonTextareaProps {
   id: string;
   violations: SlideValidationViolation[] | undefined;
 }
 
-/** AE-0403: the error message rendered under one flagged field. */
+/** The error message rendered under one flagged field. */
 export interface FieldErrorMessageProps {
   id: string;
   violations: SlideValidationViolation[] | undefined;
 }
 
-/** AE-0403: per-slide summary at the bottom of a slide form. */
+/** Per-slide summary at the bottom of a slide form. */
 export interface SlideViolationSummaryProps {
   slideIndex: number;
   violations: SlideValidationViolation[];
 }
 
-/** AE-0403: the global blocking line, linking every slide still flagged. */
+/** The global blocking line, linking every slide still flagged. */
 export interface BlockingSlidesNoticeProps {
   message: string;
   slideIndexes: number[];
   onSelectSlide: (slideIndex: number) => void;
 }
 
-/** AE-0414 (B09): what one auto-repair fixed and how many blockers it left. */
+/** What one auto-repair fixed and how many blockers it left. */
 export interface RepairOutcome {
   fixed: RepairSlideDiff[];
   remaining: number;

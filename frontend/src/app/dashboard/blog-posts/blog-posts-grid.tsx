@@ -29,7 +29,7 @@ import type {
 
 const PUBLISHED_STATUS = "published";
 
-/** Explains a `published` post that readers cannot see yet (AE-0411, B17). */
+/** Explains a `published` post that readers cannot see yet. */
 function NotLiveHint({
   post,
 }: Readonly<BlogPostMetaProps>): React.ReactElement | null {
@@ -147,7 +147,7 @@ export function RegularBlogPosts({
 }
 
 /**
- * The full listing (AE-0411, B07/B20): at most ONE featured card (the newest
+ * The full listing: at most ONE featured card (the newest
  * live post), every other post as a regular card, and an empty state when
  * there is nothing to show.
  */

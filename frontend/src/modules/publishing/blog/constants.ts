@@ -1,5 +1,5 @@
 /**
- * Blog post domain constants (AE-0295).
+ * Blog post domain constants.
  *
  * `BLOG_POST_STATUSES` mirrors the backend `BlogPostStatus` StrEnum
  * (`backend/src/rag_backend/domain/constants/blog_post.py`) — the backend is
@@ -23,7 +23,7 @@ export function toBlogPostStatus(value: string): BlogPostStatus | null {
 }
 
 /**
- * Blog post provenance (AE-0296) — mirrors the backend `BlogPostOrigin`
+ * Blog post provenance — mirrors the backend `BlogPostOrigin`
  * StrEnum. Carousel-origin rows back the public carousel blog projection and
  * cannot be hard-deleted while linked to their project.
  */
@@ -42,12 +42,12 @@ export function toBlogPostOrigin(
     : BLOG_POST_ORIGIN_STANDALONE;
 }
 
-/** Backend mutation-guard error details surfaced to the UI (AE-0296). */
+/** Backend mutation-guard error details surfaced to the UI. */
 export const BLOG_POST_ERR_VERSION_CONFLICT = "version_conflict";
 export const BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED =
   "carousel_origin_delete_blocked";
 
-/** Create hit an existing slug (backend 409 detail, AE-0411). */
+/** Create hit an existing slug (backend 409 detail). */
 export const BLOG_POST_ERR_SLUG_CONFLICT = "blog_post_slug_conflict";
 /** Backend rejected the payload (422) — e.g. empty or over-long title. */
 export const BLOG_POST_ERR_VALIDATION = "validation_failed";

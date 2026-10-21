@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Dead-code (unused export/type) scanning + classification for the AE-0152
+ * Dead-code (unused export/type) scanning + classification for the
  * frontend dead-export gate. Wraps `knip` and exposes pure helpers so the
  * ratchet logic is unit-testable (see dead-code.test.ts).
  *
@@ -88,7 +88,12 @@ export function classifyDeadCode({
   return { netNew, blocking, advisory, resolved };
 }
 
-/** Run knip and return parsed findings. Throws only on a real knip failure. */
+/**
+ * Run knip and return parsed findings. Throws only on a real knip failure.
+ *
+ * knip should not exit non-zero with --no-exit-code, but if it does its stdout
+ * is still parsed defensively.
+ */
 export function scanDeadCodeExports() {
   let stdout;
   try {
@@ -105,8 +110,6 @@ export function scanDeadCodeExports() {
       { cwd: FRONTEND_ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
     );
   } catch (err) {
-    // knip exits non-zero when it finds issues; with --no-exit-code it should
-    // not, but be defensive and still parse stdout if present.
     stdout = err.stdout?.toString() ?? "";
     if (!stdout) throw err;
   }

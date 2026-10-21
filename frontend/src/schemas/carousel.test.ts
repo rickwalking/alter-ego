@@ -350,7 +350,7 @@ describe("Carousel Slide Response Schema", () => {
   });
 });
 // Scenario: Pluggable image provider combo validation
-// (see backend tests/features/image_generation_provider.feature)
+//   (backend/tests/features/image_generation_provider.feature)
 describe("Carousel Create Request Schema — image_model/image_style", () => {
   const BASE = {
     topic: "T",

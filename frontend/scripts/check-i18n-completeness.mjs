@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AE-0214 — i18n completeness lint: every statically-referenced translation key
+ * i18n completeness lint: every statically-referenced translation key
  * must exist in EVERY locale.
  *
  * Background: `create.preview.previousSlide` / `create.preview.nextSlide` were
@@ -41,15 +41,19 @@ const DEFAULT_ALLOWLIST = join(
   "i18n-completeness-allowlist.json",
 );
 
-// `const t = useTranslations("ns")` / `const t = await getTranslations("ns")`.
-// Captures alias (group 1) and namespace (group 2). Namespace must be a string
-// literal — `getTranslations({ locale, namespace })` object form is skipped
-// (no usable static namespace).
+/**
+ * Matches `const t = useTranslations("ns")` / `const t = await getTranslations("ns")`,
+ * capturing the alias (group 1) and namespace (group 2). The namespace must be a
+ * string literal; the `getTranslations({ locale, namespace })` object form has no
+ * usable static namespace and is skipped.
+ */
 const HOOK_DECL_RE =
   /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:useTranslations|getTranslations)\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g;
 
-// Block + line comment stripper (shared idiom with check-use-client.mjs) so a
-// `t("x")` mentioned only in a comment is not treated as a real reference.
+/**
+ * Strips block and line comments (shared idiom with check-use-client.mjs) so a
+ * `t("x")` mentioned only in a comment is not treated as a real reference.
+ */
 function stripComments(src) {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -109,6 +113,9 @@ function loadAllowlist() {
 /**
  * Collect static full-key references from one file's source.
  * @returns {Array<{key: string, file: string}>}
+ *
+ * Matches `alias("literal")` and `alias.rich/.raw/.markup/.has("literal")`; the
+ * first argument must be a plain string literal, so dynamic keys are skipped.
  */
 function collectReferences(file) {
   const code = stripComments(readFileSync(file, "utf8"));
@@ -120,9 +127,6 @@ function collectReferences(file) {
 
   const refs = [];
   for (const [alias, ns] of aliasToNs) {
-    // `alias("literal")` or `alias.rich/.raw/.markup/.has("literal")`. The first
-    // arg MUST be a plain string literal (no template literals / variables) —
-    // dynamic keys are intentionally skipped.
     const callRe = new RegExp(
       String.raw`\b${alias}(?:\.(?:rich|raw|markup|has))?\s*\(\s*["']([^"']+)["']`,
       "g",

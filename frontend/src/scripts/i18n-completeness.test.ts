@@ -1,5 +1,5 @@
 /**
- * AE-0214: the i18n-completeness static check — every statically referenced
+ * The i18n-completeness static check — every statically referenced
  * translation key (`useTranslations("ns")` + `t("key")`) must exist in EVERY
  * locale. Passes on the real tree; ERRORS on a seeded referenced-but-missing
  * key.
@@ -68,7 +68,7 @@ describe("i18n-completeness static check (AE-0214)", () => {
     );
     const localesDir = seedLocales(dir, {
       en: { create: { preview: { previousSlide: "Previous" } } },
-      pt: { create: { preview: { viewBlog: "Ver" } } }, // missing previousSlide
+      pt: { create: { preview: { viewBlog: "Ver" } } },
     });
     const { status, output } = run({
       I18N_SCAN_ROOT: src,

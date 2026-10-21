@@ -22,7 +22,7 @@ interface UseGenerateBlogPostResult {
 }
 
 /**
- * Standalone "Generate with AI" (AE-0425, F-09): a topic becomes a draft
+ * Standalone "Generate with AI": a topic becomes a draft
  * written in the owner's voice; the editor opens on it while it generates.
  */
 export function useGenerateBlogPost(): UseGenerateBlogPostResult {

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { InstagramPostInsights } from "@/modules/editorial-operations";
 import { formatMetric, sumMetric } from "./instagram-insights-helpers";
 
-// Gherkin: backend/tests/features/instagram_insights.feature (AE-0378)
 function post(
   overrides: Partial<InstagramPostInsights> = {},
 ): InstagramPostInsights {

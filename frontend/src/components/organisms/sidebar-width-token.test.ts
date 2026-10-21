@@ -1,5 +1,5 @@
 /**
- * AE-0273 — guards the single-source-of-truth for the dashboard rail width.
+ * guards the single-source-of-truth for the dashboard rail width.
  * The Tailwind class literals (`w-[Npx]` in the sidebar, `lg:ml-[Npx]` in the
  * dashboard layout) must equal the JS constant `SIDEBAR_WIDTH_PX`, or the rail
  * and the content offset drift apart. (A CSS `--sidebar-width` var was dropped
@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
 
-const ROOT = process.cwd(); // vitest runs from the frontend package root
+const ROOT = process.cwd();
 const SIDEBAR = resolve(ROOT, "src/components/organisms/neon-sidebar.tsx");
 const LAYOUT = resolve(ROOT, "src/app/dashboard/layout.tsx");
 

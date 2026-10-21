@@ -22,7 +22,7 @@ interface WorkflowRouteContext {
  * Proxy a carousel workflow action (start/resume) to the backend, forwarding
  * the request body, content-type, and auth cookie, and mirroring the backend
  * status and content-type back. Shared by the start/ and resume/ route
- * handlers so the proxy logic lives in one place (AE-0150).
+ * handlers so the proxy logic lives in one place.
  */
 export async function proxyWorkflowAction(
   request: NextRequest,

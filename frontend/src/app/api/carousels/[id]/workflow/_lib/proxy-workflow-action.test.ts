@@ -1,5 +1,5 @@
 /**
- * AE-0150: shared carousel workflow proxy helper (start/resume routes).
+ * Shared carousel workflow proxy helper (start/resume routes).
  * Verifies the request is forwarded to the correct backend action with body,
  * content-type, and cookie, and that the backend status + content-type are
  * mirrored back (including the fallback when headers are absent).
@@ -80,9 +80,11 @@ describe("proxyWorkflowAction", () => {
     expect(response.status).toBe(502);
   });
 
+  /**
+   * A null-body Response carries no content-type header (a string body would
+   * auto-set text/plain), which exercises the helper's JSON fallback.
+   */
   it("falls back to application/json when request/response omit content-type", async () => {
-    // A null-body Response carries no content-type header (a string body would
-    // auto-set text/plain), which exercises the helper's JSON fallback.
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 200 }),
     );

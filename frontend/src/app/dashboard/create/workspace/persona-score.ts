@@ -1,7 +1,7 @@
 /**
- * AE-0415 (B01): persona voice scores on one 0-100 scale in the create flow.
+ * Persona voice scores on one 0-100 scale in the create flow.
  *
- * Mirrors the backend helper `rag_backend/domain/persona_score.py` (AE-0407):
+ * Mirrors the backend helper `rag_backend/domain/persona_score.py`:
  * a stored `overall` in (0, 10] is a 0-10 answer and reads x10; a 0, a
  * missing or a non-numeric `overall` is a failed judge call — unscored, never
  * low — and is ignored by the content-approval gate.

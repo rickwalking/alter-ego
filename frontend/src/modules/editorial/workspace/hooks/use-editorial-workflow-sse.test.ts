@@ -129,10 +129,11 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowSse", () => {
-  // Regression (c858abd): the SSE stream opens against the bare /api endpoint
-  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
-  // with /api and nginx routes /api/* to the backend; prefixing produced
-  // /api/api/... and broke live progress streaming.
+  /**
+   * Regression: the stream opens on the bare endpoint path. The path already
+   * starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...``.
+   */
   it("opens SSE on the bare /api endpoint path with credentials", async () => {
     renderSseHook();
 
@@ -193,7 +194,6 @@ describe("useEditorialWorkflowSse", () => {
     );
   });
 
-  // Feature: Create-flow UI fixes (AE-0415)
   // Scenario: A reload during a running phase keeps the running state
   //   Then the stale snapshot is confirmed against workflow/state before it is applied
   it("confirms a same-phase running -> ready flip via refreshState instead of applying it", async () => {

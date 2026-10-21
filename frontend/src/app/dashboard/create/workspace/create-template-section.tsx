@@ -37,8 +37,8 @@ interface TemplateCard {
 }
 
 /**
- * AE-0373: the four POV formats in POV mode, the six Radar IA templates
- * otherwise. AE-0415 (B24): Radar names come from `create.templates`.
+ * The four POV formats in POV mode, the six Radar IA templates
+ * otherwise. Radar names come from `create.templates`.
  */
 function useTemplateCards(
   form: CreateCarouselFormState,
@@ -60,7 +60,7 @@ function useTemplateCards(
 }
 
 /**
- * AE-0415 (B31): the cards are a radio group of real buttons — the selection
+ * The cards are a radio group of real buttons — the selection
  * is exposed as `aria-checked`, and Enter/Space come from the button itself.
  */
 export function CreateTemplateSection({

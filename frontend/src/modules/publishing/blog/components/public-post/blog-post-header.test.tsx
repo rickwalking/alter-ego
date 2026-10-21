@@ -85,7 +85,6 @@ describe("BlogPostHeader Component", () => {
       });
     });
 
-    // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
     // Scenario: The swipe hint is translated
     describe("When the swipe hint is rendered", () => {
       it("Then it displays the localized hint, not the design's English text", () => {

@@ -12,7 +12,7 @@ function hookWordCount(text: string): number {
 }
 
 /**
- * AE-0375: the owner picks one of the generated hooks (or edits it) before
+ * The owner picks one of the generated hooks (or edits it) before
  * approving the outline. The content phase drafts slide 1 with the saved hook.
  */
 export function HookPicker({

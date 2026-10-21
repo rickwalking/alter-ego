@@ -7,7 +7,7 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
 /**
- * The active-phase status badge renders the phase name ("Content" — AE-0415:
+ * The active-phase status badge renders the phase name ("Content",
  * the translated name, not the raw id) as its label; its accessible name is
  * "Content, <status>" so it is uniquely identifiable.
  */
@@ -33,7 +33,6 @@ const baseState: EditorialWorkflowState = {
   status: "draft",
 };
 
-// Feature: Workflow Error Feedback & Retry (AE-0009)
 describe("CreateWorkspaceSidebar", () => {
   // Scenario: Sidebar shows failure via the red status badge (AE-0284 v2)
   //   Given the editorial workflow has phase_status "failed"

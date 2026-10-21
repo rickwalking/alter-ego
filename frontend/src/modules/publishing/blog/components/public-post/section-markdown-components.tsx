@@ -3,8 +3,8 @@ import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
 /**
- * react-markdown allow-list + themed renderers for a public section body
- * (AE-0423). `h1` renders as an H2 (the page header owns the only H1) and
+ * react-markdown allow-list + themed renderers for a public section body.
+ * `h1` renders as an H2 (the page header owns the only H1) and
  * `img` is not allowed: section images come from the document, never markdown.
  */
 

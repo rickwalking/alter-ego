@@ -34,7 +34,6 @@ const MOCK_DESIGN: CarouselDesignResponse = {
 describe("BlogPostHero Component", () => {
   // Scenario: Blog post hero renders image with design styling
   describe("Given a BlogPostHero with an image URL and design tokens", () => {
-    // AE-0423: the hero is the post's own cover with its stored alt.
     const defaultProps = {
       cover: {
         url: "/api/carousels/1/images/hero",
@@ -50,11 +49,10 @@ describe("BlogPostHero Component", () => {
         expect(img).toHaveAttribute("alt", "Understanding Zero Trust");
       });
 
+      /** next/image re-assigns `src` when an onError handler is set, which resolves it against the document origin. */
       it("Then the image src points to the provided URL", () => {
         render(<BlogPostHero {...defaultProps} />);
         const img = screen.getByRole("img");
-        // next/image re-assigns `src` when an onError handler is set (AE-0412),
-        // which resolves it against the document origin.
         const src = new URL(img.getAttribute("src") ?? "", "http://x.test");
         expect(src.pathname).toBe("/api/carousels/1/images/hero");
       });
@@ -74,7 +72,6 @@ describe("BlogPostHero Component", () => {
     });
   });
 
-  // Feature: Public blog renders correctly for anonymous visitors (AE-0412)
   // Scenario: A missing image does not render a broken image
   describe("Given the hero image fails to load", () => {
     it("Then the whole hero is removed", () => {
@@ -89,7 +86,6 @@ describe("BlogPostHero Component", () => {
     });
   });
 
-  // Feature: Public blog renders the v2 document (AE-0423)
   // Scenario: A missing cover uses a neutral default
   describe("Given the document's cover is null", () => {
     it("Then a neutral default hero is shown and no image is rendered", () => {

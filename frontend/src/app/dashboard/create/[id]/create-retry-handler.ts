@@ -32,7 +32,7 @@ export interface RetryWorkflowHandlerDeps {
 }
 
 /**
- * Build the editorial-workflow retry handler (AE-0009).
+ * Build the editorial-workflow retry handler.
  *
  * Extracted from the create workspace page so the retry branches are unit
  * testable without a full page harness:

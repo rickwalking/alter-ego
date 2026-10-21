@@ -3,9 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { NotificationCenter } from "@/modules/editorial/workflow/components/notification-center";
 import type { NotificationItem } from "@/modules/editorial/workflow/types";
 
-// Feature: Dashboard dates follow the active locale (AE-0417)
-// tests/features/dashboard-locale-dates-ae0417.feature
-
 vi.mock("next-intl", () => ({
   useLocale: () => "pt",
   useTranslations: () => (key: string) => key,

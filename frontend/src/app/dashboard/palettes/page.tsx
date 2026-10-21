@@ -23,7 +23,7 @@ import { PaletteFormModal } from "./palette-form-modal";
 import { PalettesEmptyState } from "./palettes-empty-state";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
-// Responsive auto-fill grid; 200px min so cards fit a 360px phone.
+/** Responsive auto-fill grid; the 200px minimum fits cards on a 360px phone. */
 const GRID_CLASS = "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4";
 
 type FormTarget = { kind: "create" } | { kind: "edit"; palette: CustomPalette };

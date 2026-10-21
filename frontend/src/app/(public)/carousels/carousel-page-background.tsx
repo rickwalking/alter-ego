@@ -1,6 +1,6 @@
 import { NEON_CYAN_DIM, NEON_MAGENTA_DIM } from "@/constants/neon";
 
-/** Ambient neon glow shared by the public carousel pages (AE-0444). */
+/** Ambient neon glow shared by the public carousel pages. */
 export function CarouselPageBackground(): React.ReactElement {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">

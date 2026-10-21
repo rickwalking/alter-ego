@@ -26,7 +26,7 @@ import {
   unpublishPost,
 } from "./blog-editor-requests";
 
-// Scenarios: tests/features/blog_editor_ae0424.feature
+/** Gherkin: tests/features/blog_editor_ae0424.feature. */
 
 const mockFetch = vi.mocked(authenticatedFetch);
 const LOCKED = { id: "p-1", lockVersion: 2 };

@@ -24,7 +24,6 @@ function column(phase: string, statuses: string[]): KanbanColumn {
   };
 }
 
-// Feature: Create-flow UI fixes (AE-0415) — B24 board in the dashboard language
 describe("localizeBoardColumns", () => {
   it("names columns by phase and cards by status label", () => {
     const [research, finalReview] = localizeBoardColumns(
@@ -52,7 +51,6 @@ describe("localizeBoardColumns", () => {
     expect(legacy!.cards[0]!.phaseStatus).toBe("Some New Status");
   });
 
-  // Feature: QA follow-ups (AE-0416) — The board shows a localized Rejected column
   it("titles the rejected column and badges each card with its phase", () => {
     const rejected: KanbanColumn = {
       ...column("rejected", ["rejected", "rejected"]),

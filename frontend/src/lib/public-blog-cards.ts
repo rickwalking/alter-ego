@@ -1,10 +1,10 @@
 /**
- * Card view-models for the public /blog listing (AE-0297, AE-0412).
+ * Card view-models for the public /blog listing.
  *
  * The listing is the public blog-posts feed (published-only, includes
  * standalone posts); carousel-origin entries are enriched with their project's
- * localized copy, while the image is always the post's own cover (AE-0423).
- * On public-feed failure the listing is empty (no dead project-id links). AE-0412: hero URLs go through the public image route (never the
+ * localized copy, while the image is always the post's own cover.
+ * On public-feed failure the listing is empty (no dead project-id links). Hero URLs go through the public image route (never the
  * owner-only preview route), titles are clean and never a placeholder, and
  * only a short niche becomes the category chip.
  */
@@ -51,12 +51,12 @@ function cardSubtitle(
   return subtitle;
 }
 
+/** A carousel card; title and subtitle come from one language, never mixed. */
 function projectToCard(
   project: CarouselProjectItem,
   locale: SupportedLocale,
   fallbackTitle?: string,
 ): NeonBlogPostCardProps {
-  // AE-0446: title and subtitle come from ONE language, never mixed.
   const copy = localizedCarouselCopy(project, locale);
   const title = copy.title || (fallbackTitle ?? "");
   const rawSubtitle = copy.subtitle;
@@ -71,8 +71,8 @@ function projectToCard(
 }
 
 /**
- * The card image is the post's own cover projection (`featured_image_url`,
- * AE-0423). A null cover leaves the card text-only (deterministic neutral
+ * The card image is the post's own cover projection (`featured_image_url`).
+ * A null cover leaves the card text-only (deterministic neutral
  * fallback) — never the carousel hero or a slide.
  */
 function postCoverUrl(post: PublicBlogPostSummary): string | undefined {
@@ -99,14 +99,16 @@ export interface PublicBlogCardSources {
   locale: SupportedLocale;
 }
 
+/**
+ * Blog cards from the public blog-post feed, the only listing source. A
+ * carousel project id is not a readable blog URL, so an unavailable feed renders
+ * no cards instead of dead links.
+ */
 export function buildPublicBlogCards({
   publicFeed,
   carouselFeed,
   locale,
 }: PublicBlogCardSources): NeonBlogPostCardProps[] {
-  // AE-0423: the public blog-post feed is the only listing source. A carousel
-  // project id is no longer a readable blog URL (no legacy `/blog/{project_id}`
-  // fallback), so an unavailable feed renders no cards instead of dead links.
   if (!publicFeed) {
     return [];
   }

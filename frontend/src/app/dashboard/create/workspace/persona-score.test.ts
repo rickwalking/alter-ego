@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { personaScoreShortfalls } from "./persona-score";
 
-// Feature: Create-flow UI fixes (AE-0415) — B01 persona voice gate
-// Mirrors backend/src/rag_backend/domain/persona_score.py (AE-0407).
+/** Mirrors backend/src/rag_backend/domain/persona_score.py. */
 describe("personaScoreShortfalls", () => {
   // Scenario: A 0-10 persona score is read on the 0-100 scale
   it("reads an overall in (0, 10] as a 0-10 answer (x10)", () => {

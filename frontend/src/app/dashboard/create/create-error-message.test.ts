@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api-client";
 import { createErrorMessage } from "./create-error-message";
 
-// Echo translator: key + params, so assertions target the looked-up copy.
+/** Echo translator (key + params), so assertions target the looked-up copy. */
 const t = (key: string, values?: Record<string, string | number>): string =>
   values ? `${key}:${JSON.stringify(values)}` : key;
 
@@ -19,7 +19,6 @@ const nicheTooLong = {
   ctx: { max_length: 200 },
 };
 
-// Feature: Create-flow UI fixes (AE-0415) — B18 readable API errors
 describe("createErrorMessage", () => {
   // Scenario: API validation errors are readable
   it("names the field and its limit once for a duplicated 422 detail", () => {

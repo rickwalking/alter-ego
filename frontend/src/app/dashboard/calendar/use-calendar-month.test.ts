@@ -1,9 +1,10 @@
+/**
+ * Scenarios: tests/features/calendar-month-navigation.feature.
+ */
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { useCalendarMonth } from "./use-calendar-month";
-
-// Scenarios: see tests/features/calendar-month-navigation.feature
 
 const TITLE = "MMMM yyyy";
 

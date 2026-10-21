@@ -5,7 +5,7 @@ const HERO_FRAME_CLASS =
   "relative mb-10 h-72 w-full overflow-hidden rounded-2xl md:h-96";
 
 /**
- * Article hero: the post's own cover with its stored alt (AE-0423, ADR-0025),
+ * Article hero: the post's own cover with its stored alt (ADR-0025),
  * or a neutral themed default when the cover is null — never a carousel slide.
  */
 export function BlogPostHero({ cover, design }: Readonly<BlogPostHeroProps>) {

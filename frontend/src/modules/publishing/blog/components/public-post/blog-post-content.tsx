@@ -12,7 +12,7 @@ import type {
 } from "./types";
 
 /**
- * Public renderer of a `blog.v2` document (AE-0423, ADR-0025): each section's
+ * Public renderer of a `blog.v2` document (ADR-0025): each section's
  * own heading, body and image with its stored alt. The title H1 belongs to the
  * page header, so no section renders an H1 (a stray `#` in a body becomes an
  * H2), and markdown images are not rendered: images come only from the

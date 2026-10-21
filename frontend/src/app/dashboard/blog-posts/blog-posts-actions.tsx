@@ -15,10 +15,10 @@ import type {
 const PUBLISHED_STATUS = "published";
 
 /**
- * Edit / Hide / Delete controls per card (AE-0296). Hide is offered for
+ * Edit / Hide / Delete controls per card. Hide is offered for
  * published posts that are live (unpublish → draft; restore = normal publish
  * workflow). A carousel post awaiting its carousel release is not live, and
- * hiding it would keep it hidden after the release (AE-0411), so no Hide.
+ * hiding it would keep it hidden after the release, so no Hide.
  * Delete is hidden for carousel-origin posts — the backend 409-guards them
  * while linked to their project; Hide (or deleting the carousel) is the path.
  */

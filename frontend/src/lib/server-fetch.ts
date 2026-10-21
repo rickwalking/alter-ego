@@ -15,10 +15,11 @@ import {
   publicBlogPostResponseSchema,
 } from "@/schemas/public-blog-post";
 
-// Exported for the AE-0297 prod-reachability test: API_BASE_URL must override
-// the internal Docker hostname fallback server-side.
+/**
+ * API base URL. Server-side (Docker) ``API_BASE_URL`` overrides the internal
+ * hostname fallback; exported for the prod-reachability test.
+ */
 export function getBaseUrl(): string {
-  // Server-side in Docker: explicit override
   if (typeof window === "undefined" && process.env.API_BASE_URL) {
     return process.env.API_BASE_URL;
   }
@@ -88,7 +89,7 @@ export async function fetchCompletedProjects(
 }
 
 /**
- * Carousel design tokens for theming a carousel-origin blog post (AE-0423).
+ * Carousel design tokens for theming a carousel-origin blog post.
  *
  * Theme only (colors/typography/layout): the public blog never reads article
  * text from the carousel `/blog` endpoint, and the caller drops `images`.
@@ -105,7 +106,7 @@ export async function fetchCarouselDesign(
 }
 
 /**
- * Published carousel gallery page (AE-0444). Newest-first by creation date;
+ * Published carousel gallery page. Newest-first by creation date;
  * a failed/empty feed returns an empty page instead of throwing.
  */
 export async function fetchPublicCarousels(
@@ -121,7 +122,7 @@ export async function fetchPublicCarousels(
   return result ?? { items: [], total: 0, limit, offset };
 }
 
-/** One published carousel's lean public viewer projection (AE-0444). */
+/** One published carousel's lean public viewer projection. */
 export async function fetchPublicCarousel(
   id: string,
 ): Promise<z.infer<typeof carouselPublicResponseSchema> | null> {

@@ -1,5 +1,5 @@
 /**
- * `identity` — public type surface (AE-0156).
+ * `identity` — public type surface.
  *
  * Object-shape types for the identity hooks and JWT lib live here so the
  * component-type-location ratchet (`npm run lint:component-types`) stays green

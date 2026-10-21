@@ -12,7 +12,7 @@ export type {
 } from "./types";
 
 /**
- * AE-0378: the route answers 404 when the editorial-analytics flag is off and
+ * The route answers 404 when the editorial-analytics flag is off and
  * 403 for a role without access. Both are a "disabled" state, not an error.
  */
 const ANALYTICS_DISABLED_STATUSES: ReadonlySet<number> = new Set([

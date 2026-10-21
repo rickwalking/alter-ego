@@ -4,7 +4,6 @@ import { streamSseEvents } from "./sse-client";
 import { createSseResponse } from "./sse-client.test-utils";
 import type { SseEvent } from "./sse-client";
 
-// Feature: SSE Client
 // Scenario: Parse single token event from stream
 describe("streamSseEvents", () => {
   let onEvent: Mock<(event: SseEvent) => void>;
@@ -97,8 +96,6 @@ describe("streamSseEvents", () => {
   //   Then all events are still parsed correctly
   it("handles chunk boundaries that split SSE events", async () => {
     const mockFetch = vi.mocked(fetch);
-    // Split 'id: 1\ndata: {"type":"token","content":"Hello"}\n\n'
-    // into two chunks
     mockFetch.mockResolvedValue(
       createSseResponse([
         'id: 1\ndata: {"type":"tok',
@@ -186,7 +183,6 @@ describe("streamSseEvents", () => {
   it("calls onError on unexpected content type", async () => {
     const mockFetch = vi.mocked(fetch);
     const response = createSseResponse(["data: {}\n\n"]);
-    // Override content type
     response.headers.set("content-type", "application/json");
     mockFetch.mockResolvedValue(response);
 
@@ -276,7 +272,6 @@ describe("streamSseEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.event).toBe("error");
     expect(events[0]?.data.content).toBe("Something went wrong");
-    // Backend sends error as an event in the stream, not as HTTP error
     expect(onError).not.toHaveBeenCalled();
     expect(onComplete).toHaveBeenCalledOnce();
   });

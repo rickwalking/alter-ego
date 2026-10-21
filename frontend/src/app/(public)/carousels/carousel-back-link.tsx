@@ -6,7 +6,7 @@ interface CarouselBackLinkProps {
   label: string;
 }
 
-/** Back link shared by the public carousel pages (AE-0444). */
+/** Back link shared by the public carousel pages. */
 export function CarouselBackLink({
   href,
   label,

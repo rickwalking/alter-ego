@@ -12,7 +12,7 @@ const THUMB_HEIGHT = 90;
 const IDLE_BORDER = "1px solid rgba(255,255,255,0.08)";
 
 /**
- * AE-0445: the slide-1 cover options as a radio group of thumbnails. Each
+ * The slide-1 cover options as a radio group of thumbnails. Each
  * thumbnail is a native button (Tab to reach it, Enter/Space to choose it);
  * the current cover is checked and labelled.
  */

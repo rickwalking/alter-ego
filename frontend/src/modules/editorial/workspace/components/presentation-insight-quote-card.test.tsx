@@ -1,4 +1,3 @@
-// AE-0407 — Gherkin: frontend/tests/features/content-review-insight-card-ae0407.feature
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PresentationInsightQuoteCard } from "./presentation-insight-quote-card";

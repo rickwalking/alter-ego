@@ -15,7 +15,7 @@ import { EditorErrorNotice } from "../editor-error-notice";
 import type { LanguageTabsProps } from "./types";
 
 /**
- * PT / EN content-language buttons (AE-0424). They switch the edited
+ * PT / EN content-language buttons. They switch the edited
  * document (`content` vs `content.translations.en`), never the UI locale. A
  * missing EN document is read-only with a "Generate EN translation" action.
  */

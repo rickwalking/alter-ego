@@ -15,11 +15,11 @@ export interface BoardTranslators {
   status: Translate;
   /** Phase ids with a `create.phases` entry. */
   knownPhases: ReadonlySet<string>;
-  /** Title of the Rejected column (AE-0416). */
+  /** Title of the Rejected column. */
   rejectedColumn: string;
 }
 
-/** Board column the API fills with rejected projects (AE-0416). */
+/** Board column the API fills with rejected projects. */
 const BOARD_COLUMN_REJECTED = WORKFLOW_PHASE_STATUS.REJECTED;
 
 function statusLabel(status: string, t: BoardTranslators): string {
@@ -35,7 +35,7 @@ function phaseLabel(phase: string, t: BoardTranslators): string {
 }
 
 /**
- * AE-0415 (B24): the workflow board shows phase names and status labels in
+ * The workflow board shows phase names and status labels in
  * the dashboard language instead of raw snake_case ids
  * ("approved_for_publish" -> "Pronto para publicar").
  */
@@ -58,7 +58,7 @@ export function localizeBoardColumns(
 }
 
 /**
- * AE-0416: rejected projects have their own column, so each card's badge names
+ * Rejected projects have their own column, so each card's badge names
  * the phase it was rejected at instead of repeating "Rejected".
  */
 function localizeRejectedColumn(

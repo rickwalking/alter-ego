@@ -29,6 +29,12 @@ export interface ChatSidebarProps {
   id?: string;
 }
 
+/**
+ * Below md the list is an off-canvas drawer; at md+ it is a persistent 280px
+ * pane, so the focus trap and scroll lock never engage there even if `open` is
+ * stale from mobile. Reuses the shared useFocusTrap/useScrollLock primitives
+ * rather than duplicating drawer logic (jscpd gate).
+ */
 export function ChatSidebar({
   conversations,
   activeConv,
@@ -39,12 +45,9 @@ export function ChatSidebar({
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === true;
-  // Below md the list is an off-canvas drawer; at md+ it is a persistent pane,
-  // so trap/lock must not engage there even if `open` is stale from mobile.
   const isDrawer = useMediaQuery("(max-width: 767px)");
   const drawerActive = isOpen && isDrawer;
 
-  // Reuse the AE-0273 primitives — no duplicated drawer logic (jscpd gate).
   useFocusTrap(ref, drawerActive);
   useScrollLock(drawerActive);
 
@@ -52,7 +55,6 @@ export function ChatSidebar({
     <div
       ref={ref}
       id={id}
-      // Off-canvas drawer below md, persistent 280px pane at md+.
       className={cn(
         "fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col",
         "transition-transform duration-200 ease-out",

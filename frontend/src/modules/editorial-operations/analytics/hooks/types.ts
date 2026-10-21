@@ -1,7 +1,7 @@
 /**
  * Editorial analytics hook types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), hook contract shapes
  * live here rather than inline in the `use-*.ts` files.
  */
@@ -23,7 +23,7 @@ export interface EditorialAnalytics {
   velocity_by_week: { week_start: string; published_count: number }[];
 }
 
-/** AE-0378: `disabled` = the analytics flag is off (404) or the role has no access (403). */
+/** `disabled` = the analytics flag is off (404) or the role has no access (403). */
 export interface EditorialAnalyticsState {
   data: EditorialAnalytics | null;
   loading: boolean;

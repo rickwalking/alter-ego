@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { defaultPersonaId, useDefaultPersona } from "./use-default-persona";
 
-// Gherkin: tests/features/create-content-mode.feature (AE-0373)
+/** Gherkin: tests/features/create-content-mode.feature. */
 describe("defaultPersonaId", () => {
   it("finds Pedro case-insensitively", () => {
     expect(

@@ -1,5 +1,5 @@
 /**
- * `conversation` — bounded-context public contract (AE-0139).
+ * `conversation` — bounded-context public contract.
  *
  * Owns the chat / conversation surface — conversation CRUD hooks, the SSE
  * streaming chat hook, and the conversation query options — migrated from the
@@ -10,7 +10,6 @@
  * See `src/modules/README.md` for the public-contract convention.
  */
 
-/* --- query options / keys --- */
 export {
   chatKeys,
   conversationsOptions,
@@ -20,7 +19,6 @@ export {
   sendConversationMessage,
 } from "./queries";
 
-/* --- conversation hooks --- */
 export {
   MESSAGES_KEY,
   useConversations,
@@ -31,7 +29,6 @@ export {
   useDeleteConversation,
 } from "./hooks/use-chat";
 
-/* --- SSE streaming chat hook --- */
 export {
   useSseChat,
   type UseSseChatOptions,

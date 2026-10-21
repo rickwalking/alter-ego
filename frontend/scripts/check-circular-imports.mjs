@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Dependency-free circular-import detector for `src/**` (AE-0136).
+ * Dependency-free circular-import detector for `src/**`.
  *
  * Barrel (`index.ts`) consolidation under `modules/` is a classic source of
  * import cycles that tsc/eslint/Vitest do NOT catch. Rather than add an npm
@@ -114,13 +114,12 @@ function resolveSpecifier(specifier, fromFile) {
   } else if (specifier.startsWith("./") || specifier.startsWith("../")) {
     base = resolve(dirname(fromFile), specifier);
   } else {
-    return null; // bare/external import
+    return null;
   }
   const resolved = resolveToFile(base);
   if (!resolved) {
     return null;
   }
-  // Only track edges that stay within src/.
   return resolved.startsWith(SRC_DIR + sep) ? resolved : null;
 }
 
@@ -218,7 +217,6 @@ function findCycles(graph) {
     }
   }
 
-  // Iterate deterministically.
   for (const v of [...graph.keys()].sort()) {
     if (!idx.has(v)) {
       strongConnect(v);

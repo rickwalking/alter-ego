@@ -42,7 +42,7 @@ function SlotError({
 }
 
 /**
- * Cover / section image slot (AE-0424): generate, regenerate with an edited
+ * Cover / section image slot: generate, regenerate with an edited
  * prompt, remove, and edit alt + caption. A failed generation shows its error
  * on this slot with a retry; the rest of the document stays editable.
  */

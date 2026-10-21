@@ -1,6 +1,6 @@
 import type { InstagramPostInsights } from "@/modules/editorial-operations";
 
-/** AE-0378: the per-post counts the dashboard sums (Section-13 KPIs). */
+/** The per-post counts the dashboard sums (Section-13 KPIs). */
 export type InstagramMetricKey =
   | "views"
   | "reach"

@@ -1,4 +1,3 @@
-// AE-0310 — Gherkin: backend/tests/features/carousel_design_phase_recovery.feature
 // Scenario: Reviewer edits the flagged slide in place at design
 // Scenario: Reviewer sends the workflow back to content from design
 // Scenario: Plain design revise re-validates instead of looping
@@ -121,7 +120,6 @@ describe("DesignPhaseReview recovery (AE-0310)", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit slide copy" }));
 
-    // Only the flagged slide (4) is editable — slide 1 has no editor.
     expect(
       screen.getByLabelText("Body", {
         selector: "#recovery-4-presentation_pt-body",

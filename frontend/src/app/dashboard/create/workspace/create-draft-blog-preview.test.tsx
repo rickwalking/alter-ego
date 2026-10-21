@@ -22,7 +22,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-// Feature: Create-flow UI fixes (AE-0415)
 describe("CreateDraftBlogPreview", () => {
   // Scenario: The brief preview of a fresh project is an empty state
   it("shows the empty state, not an error, when nothing was generated (404)", async () => {

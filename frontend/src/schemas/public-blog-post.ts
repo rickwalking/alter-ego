@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Lean public blog-post payloads (AE-0297, ADR-0013). Mirrors the backend
+ * Lean public blog-post payloads (ADR-0013). Mirrors the backend
  * allow-list schemas — internal/editorial fields never appear here.
  */
 

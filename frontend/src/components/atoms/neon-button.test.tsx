@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NeonButton, neonButtonVariants } from "@/components/atoms/neon-button";
 
-// Feature: NeonButton Component
 describe("NeonButton Component", () => {
   describe("neonButtonVariants", () => {
     it("applies primary gradient classes", () => {

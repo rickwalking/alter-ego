@@ -8,8 +8,6 @@ vi.mock("next-intl/server", () => ({
 
 import { generateMetadata } from "./page";
 
-// Feature: Public carousel gallery (AE-0444)
-// frontend/tests/features/public_carousels_page_ae0444.feature
 describe("Public carousels page metadata (AE-0444)", () => {
   it("has its own metadata", async () => {
     const metadata = await generateMetadata();

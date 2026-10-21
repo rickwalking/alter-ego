@@ -1,12 +1,13 @@
+/**
+ * Scenarios: tests/features/blog-dashboard-ae0411.feature ("Creating a post
+ * that fails shows an error", "Dashboard copy is localized").
+ */
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BLOG_POST_ERR_SLUG_CONFLICT,
   BlogPostMutationError,
 } from "@/modules/publishing";
-
-// Scenarios: see tests/features/blog-dashboard-ae0411.feature
-// ("Creating a post that fails shows an error", "Dashboard copy is localized")
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({

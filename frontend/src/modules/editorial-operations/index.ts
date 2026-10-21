@@ -1,5 +1,5 @@
 /**
- * `editorial-operations` — bounded-context public contract (AE-0138).
+ * `editorial-operations` — bounded-context public contract.
  *
  * Owns the operational dashboard surface — the editorial board (blog-posts,
  * calendar, chat, personas, rubrics, workflow board adapters) and editorial
@@ -17,7 +17,6 @@
  * its internals. See `src/modules/README.md` for the convention.
  */
 
-/* --- board: blog-posts --- */
 export * from "./board/blog-posts/types";
 export * from "./board/blog-posts/constants";
 export * from "./board/blog-posts/helpers";
@@ -25,26 +24,21 @@ export * from "./board/blog-posts/components/badge";
 export * from "./board/blog-posts/components/status-badge";
 export * from "./board/blog-posts/adapters/blog-post-adapter";
 
-/* --- board: calendar --- */
 export * from "./board/calendar/types";
 export * from "./board/calendar/constants";
 export * from "./board/calendar/helpers";
 export * from "./board/calendar/components/svg-icon";
 export * from "./board/calendar/adapters/calendar-adapter";
 
-/* --- board: chat --- */
 export * from "./board/chat/types";
 export * from "./board/chat/constants";
 export * from "./board/chat/adapters/chat-adapter";
 
-/* --- board: personas --- */
 export * from "./board/personas/adapters/persona-adapter";
 
-/* --- board: rubrics --- */
 export * from "./board/rubrics/types";
 export * from "./board/rubrics/adapters/rubric-adapter";
 
-/* --- board: workflow --- */
 export * from "./board/workflow/constants";
 export * from "./board/workflow/adapters/workflow-adapter";
 export {
@@ -52,6 +46,5 @@ export {
   type NeonKanbanBoardProps,
 } from "./board/workflow/components/neon-kanban-board";
 
-/* --- analytics --- */
 export * from "./analytics/hooks/use-editorial-analytics";
 export * from "./analytics/hooks/use-instagram-insights";

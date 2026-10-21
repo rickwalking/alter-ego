@@ -10,7 +10,7 @@ import {
 } from "@/modules/editorial";
 
 /**
- * The content gate's violation list. AE-0414 (B24): each line shows the
+ * The content gate's violation list. Each line shows the
  * translated message and field label (pt/en) instead of the backend's English
  * message and raw field path; unknown codes keep the backend message.
  */

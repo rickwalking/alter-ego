@@ -37,7 +37,6 @@ const baseState: EditorialWorkflowState = {
 };
 
 describe("presentation review utils", () => {
-  // Feature: Versioned carousel presentation contract
   // Scenario: Invalid copy remains invalid after repair and blocks approval
   it("detects blocking presentation violations", () => {
     const state: EditorialWorkflowState = {
@@ -266,8 +265,7 @@ describe("presentation review utils", () => {
   });
 });
 
-// AE-0312: warning-tier violations render distinctly from blockers.
-// Feature: tests/features/carousel_pt_casing_severity.feature
+/** Gherkin: tests/features/carousel_pt_casing_severity.feature (warning-tier violations render distinctly from blockers). */
 describe("violation severity styling (AE-0312)", () => {
   it("classifies warning-severity casing violations as warnings", () => {
     expect(

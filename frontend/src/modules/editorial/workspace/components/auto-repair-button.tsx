@@ -24,7 +24,7 @@ function isRunInProgress(error: unknown): boolean {
 }
 
 /**
- * AE-0414 (B09): what the repair fixed AND what it could not fix. The open
+ * What the repair fixed AND what it could not fix. The open
  * blockers come from the fresh report; the per-slide ``remaining_codes`` are
  * the fallback when the report carries none.
  */
@@ -42,6 +42,7 @@ function repairOutcome(response: RepairCarouselResponse): RepairOutcome {
   };
 }
 
+/** Runs the deterministic repair; a no-op wrote nothing, so the state is not re-read. */
 export function AutoRepairButton({
   projectId,
   onRepaired,
@@ -55,7 +56,6 @@ export function AutoRepairButton({
   const finish = useCallback(
     (response: RepairCarouselResponse): void => {
       setSummary(repairOutcome(response));
-      // A no-op wrote nothing: refreshing would only re-read the same state.
       if (response.status === REPAIR_STATUS_NOOP) {
         return;
       }

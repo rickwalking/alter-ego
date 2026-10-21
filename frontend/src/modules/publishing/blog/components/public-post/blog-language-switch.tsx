@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { BlogLanguageSwitchProps } from "./types";
 
 /**
- * PT/EN content buttons on a public post (AE-0423, ADR-0025). They switch the
+ * PT/EN content buttons on a public post (ADR-0025). They switch the
  * rendered document via `?lang=` (content language) and leave the next-intl
  * UI locale untouched. Labels and hrefs come from the page (dumb component).
  */

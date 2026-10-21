@@ -3,7 +3,6 @@ import { render, screen } from "@/test/utils";
 import type { InstagramInsights } from "@/modules/editorial-operations";
 import { InstagramInsightsCard } from "./instagram-insights-card";
 
-// Gherkin: backend/tests/features/instagram_insights.feature (AE-0378)
 const state: {
   data: InstagramInsights | undefined;
   isLoading: boolean;

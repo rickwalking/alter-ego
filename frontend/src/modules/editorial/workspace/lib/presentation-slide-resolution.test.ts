@@ -1,4 +1,4 @@
-// AE-0414 — Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature
+/** Gherkin: frontend/tests/features/content-review-manual-fixes-ae0414.feature */
 import { describe, expect, it } from "vitest";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
@@ -14,7 +14,8 @@ import {
   slidesHaveCopyChanges,
 } from "./presentation-slide-resolution";
 
-const LONG_BODY = `${"palavra ".repeat(37)}fim.`; // 300 characters
+/** 300 characters. */
+const LONG_BODY = `${"palavra ".repeat(37)}fim.`;
 
 function localized(index: number, heading: string): LocalizedSlideReview {
   return {

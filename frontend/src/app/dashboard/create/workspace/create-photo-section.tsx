@@ -24,7 +24,7 @@ export interface CreatePhotoSectionProps {
 const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
 
 /**
- * AE-0376: "Foto do slide 1" for Ponto de Vista decks. Pick a cut-out photo
+ * "Foto do slide 1" for Ponto de Vista decks. Pick a cut-out photo
  * from the library (newest first, the default) or upload a new one.
  */
 export function CreatePhotoSection({

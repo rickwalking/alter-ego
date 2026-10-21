@@ -20,7 +20,7 @@ const SELECT_STYLE = {
 } as const;
 
 /**
- * Status filter + real post counter (AE-0411). The old category filter was
+ * Status filter + real post counter. The old category filter was
  * removed: posts carry no category on the backend, so it always emptied the
  * list (B20).
  */

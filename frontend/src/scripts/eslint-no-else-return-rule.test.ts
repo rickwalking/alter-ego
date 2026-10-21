@@ -1,8 +1,8 @@
 /**
- * AE-0226 rule-fires regression test (dogfoods AE-0180): an `else` block after a
+ * Rule-fires regression test: an `else` block after a
  * returning `if` in production `src` must be an ESLint ERROR (`no-else-return`),
- * not a warning. The early-return / guard-clause rule was enabled as `error`
- * (AE-0147); this test proves it actually fires so it cannot silently regress to
+ * not a warning. The early-return / guard-clause rule was enabled as `error`;
+ * this test proves it actually fires so it cannot silently regress to
  * a warning or get disabled.
  *
  * A probe module is written under a real `src/modules/**` path so it is matched

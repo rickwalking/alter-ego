@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The editor's view of a post's generation run (AE-0425).
+ * The editor's view of a post's generation run.
  *
  * Shares the editor's detail query (same key) and re-reads it every
  * `GENERATION_POLL_INTERVAL_MS` while the run is in progress, so the sections

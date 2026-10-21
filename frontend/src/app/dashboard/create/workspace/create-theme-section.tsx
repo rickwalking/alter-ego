@@ -27,6 +27,10 @@ export interface CreateThemeSectionProps {
   themeOptions: readonly ThemeOption[];
 }
 
+/**
+ * Light palettes only render correctly with the flat_editorial preset, so
+ * selecting one nudges the preset toward it to avoid a mismatched dark scene.
+ */
 export function CreateThemeSection({
   form,
   onChange,
@@ -36,8 +40,6 @@ export function CreateThemeSection({
   const selectedIsLight =
     findThemeMode(themeOptions, form.theme) === PALETTE_MODES[0];
 
-  // Light palettes only render correctly with the flat_editorial preset, so
-  // selecting one nudges the preset toward it to avoid a mismatched dark scene.
   const handleThemeChange = (theme: string): void => {
     const patch: Partial<CreateCarouselFormState> = {
       theme: theme,

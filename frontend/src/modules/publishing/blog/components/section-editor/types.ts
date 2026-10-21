@@ -1,5 +1,5 @@
 /**
- * Section editor prop types (AE-0424; colocated per AE-0144).
+ * Section editor prop types (colocated per the component-type-location convention).
  */
 
 import type {
@@ -79,7 +79,7 @@ export interface ReviewBarProps {
   scheduledPublishAt: string | null;
   /** Pending edits or a running action disable the workflow controls. */
   disabled: boolean;
-  /** The failed review/publish action, shown in the bar (AE-0438, F-11). */
+  /** The failed review/publish action, shown in the bar. */
   error: BlogEditorError | null;
   onSubmitReview: (reviewerId: string | null) => void;
   onApprove: () => void;

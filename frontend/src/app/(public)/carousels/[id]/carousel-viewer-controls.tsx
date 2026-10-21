@@ -3,7 +3,7 @@ import type { CarouselPublicSlide } from "@/schemas/carousel";
 
 const INACTIVE_DOT_COLOR = "rgba(255,255,255,0.2)";
 
-/** Directional chevron for the viewer controls (AE-0444). */
+/** Directional chevron for the viewer controls. */
 export function CarouselChevron({
   direction,
 }: Readonly<{
@@ -38,7 +38,7 @@ interface CarouselSlideDotsProps {
   labelFor: (slideNumber: number) => string;
 }
 
-/** Slide dots with the active indicator (AE-0444). */
+/** Slide dots with the active indicator. */
 export function CarouselSlideDots({
   slides,
   activeIndex,

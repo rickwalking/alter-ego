@@ -6,7 +6,7 @@ import { createElement, type ReactNode } from "react";
 import { RebuildPdfSection } from "./rebuild-pdf-section";
 
 // Scenario: Publish page "Rebuild PDF" action (see
-// backend/tests/features/carousel_republish.feature).
+//   backend/tests/features/carousel_republish.feature).
 
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => {

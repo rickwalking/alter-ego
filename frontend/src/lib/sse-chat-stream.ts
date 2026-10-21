@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import type { Message } from "@/schemas/chat";
 
 /**
- * Shared SSE chat streaming primitives (AE-0150).
+ * Shared SSE chat streaming primitives.
  *
  * Both `useSseChat` (conversation) and `usePublishChat` (publishing) optimistic
  * a user message and (re)start a streaming request the same way. This module
@@ -35,10 +35,12 @@ export interface AppendStreamTokenOutput {
 }
 
 /**
- * Fold a streamed token into the optimistic message list (AE-0150). Shared by
+ * Fold a streamed token into the optimistic message list. Shared by
  * the conversation and publishing chat hooks so the SSE token-accumulation
  * algorithm lives in one place. Pure: callers persist the returned
- * `streamingMsgId` onto their own ref.
+ * `streamingMsgId` onto their own ref. Tokens accumulate onto the existing
+ * assistant message by message id, because React batching may have cleared the
+ * ref on a COMPLETE event.
  */
 export function appendStreamToken({
   messages,
@@ -49,9 +51,6 @@ export function appendStreamToken({
 }: AppendStreamTokenInput): AppendStreamTokenOutput {
   const last = messages[messages.length - 1];
   if (last?.role === ASSISTANT_ROLE && last.id === streamingMsgId) {
-    // Accumulate onto the existing streaming assistant message, keying off the
-    // message id (the ref may have been cleared by a COMPLETE event due to
-    // React batching).
     return {
       messages: [
         ...messages.slice(0, -1),

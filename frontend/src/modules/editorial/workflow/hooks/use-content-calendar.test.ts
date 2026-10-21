@@ -2,10 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 
 // Scenario: fast month navigation must not let a slow stale window overwrite
-// the latest one (see tests/features/calendar-month-navigation.feature).
+//   the latest one (see tests/features/calendar-month-navigation.feature).
 
 vi.mock("next-intl", () => {
-  // Stable translator identity so the effect only re-runs when start/end change.
   const translate = (key: string): string => key;
   return { useTranslations: () => translate };
 });
@@ -48,11 +47,9 @@ describe("useContentCalendar", () => {
       { initialProps: { start: "A0", end: "A1" } },
     );
 
-    // The window changes (next month) before the first request resolves.
     rerender({ start: "B0", end: "B1" });
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
 
-    // The latest (second) window resolves first and is committed.
     await act(() => {
       second.resolve(
         jsonResponse({ items: [], start: "B0", end: "B1", total: 0 }),
@@ -61,7 +58,6 @@ describe("useContentCalendar", () => {
     });
     await waitFor(() => expect(result.current.calendar?.start).toBe("B0"));
 
-    // The stale (first) window resolves afterwards and must NOT overwrite it.
     await act(() => {
       first.resolve(
         jsonResponse({ items: [], start: "A0", end: "A1", total: 0 }),

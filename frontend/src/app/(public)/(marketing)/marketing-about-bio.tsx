@@ -170,7 +170,6 @@ export function AboutBio({
           </span>
         ))}
       </div>
-      {/* Social Links */}
       <AboutSocialLinks t={t} />
     </div>
   );

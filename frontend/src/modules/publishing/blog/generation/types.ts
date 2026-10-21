@@ -1,4 +1,4 @@
-/** Types of the blog generation hooks and components (AE-0425). */
+/** Types of the blog generation hooks and components. */
 
 import type { GenerationState } from "./generation-state";
 

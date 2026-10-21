@@ -27,8 +27,10 @@ const CYAN_DIM = NEON_CYAN_DIM;
 const TEAL = NEON_TEAL;
 const TEAL_DIM = NEON_TEAL_DIM;
 
-// Named faint tints local to the stepper (no exact token exists in the Neon
-// palette; kept here rather than added to the drift-guarded neon.ts).
+/**
+ * Faint tints local to the stepper: no exact token exists in the Neon palette,
+ * so they live here rather than in the drift-guarded neon.ts.
+ */
 const STEP_NUM_PENDING_BG = "rgba(255,255,255,0.04)";
 const STEP_DIVIDER = "rgba(255,255,255,0.04)";
 
@@ -56,6 +58,11 @@ export interface CreateProgressStepsProps {
   completedStepIds?: readonly CreateStepId[];
 }
 
+/**
+ * Scrolls horizontally on mobile instead of clipping or squishing the steps
+ * (each step is shrink-0 with a minimum width, at least 44px tall on touch
+ * devices) and distributes the steps evenly at md+.
+ */
 export function CreateProgressSteps({
   activeStepId,
   onStepChange,
@@ -67,7 +74,6 @@ export function CreateProgressSteps({
     <div
       role="tablist"
       aria-label={t("ariaLabel")}
-      // Scroll horizontally on mobile instead of clipping/squishing the steps.
       className="mb-7 flex overflow-x-auto rounded-lg"
       style={{
         background: BG_CARD,
@@ -92,8 +98,6 @@ export function CreateProgressSteps({
             aria-controls={`create-step-${step.id}`}
             id={`create-tab-${step.id}`}
             onClick={() => onStepChange(step.id)}
-            // shrink-0 + min width so steps scroll (not squish) on mobile;
-            // distribute evenly at md+. ≥44px tall on touch devices.
             className="flex shrink-0 items-center gap-2 px-4 py-3 text-left [@media(pointer:coarse)]:min-h-11 md:flex-1 md:shrink"
             style={{
               fontSize: "12px",

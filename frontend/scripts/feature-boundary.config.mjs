@@ -1,9 +1,9 @@
 /**
  * Shared configuration for the frontend feature/module-boundary ratchet.
  *
- * Mirrors the backend import ratchet (AE-0082): existing cross-context internal
+ * Mirrors the backend import ratchet: existing cross-context internal
  * imports are grandfathered via a committed baseline; NEW ones fail the build.
- * See AE-0083, AE-0136, and ADR-0009.
+ * See ADR-0009.
  *
  * ## Owner layers
  *
@@ -14,7 +14,7 @@
  *
  * | Layer      | dir            | importPrefix     | publicContract | Rule                                              |
  * | ---------- | -------------- | ---------------- | -------------- | ------------------------------------------------- |
- * | `features` | `src/features` | `@/features/`    | false          | legacy: a feature must not import another's internals (AE-0083) |
+ * | `features` | `src/features` | `@/features/`    | false          | legacy: a feature must not import another's internals |
  * | `modules`  | `src/modules`  | `@/modules/`     | true           | a consumer must target the barrel, never a deep internal        |
  *
  * ## App consumer
@@ -110,13 +110,14 @@ export const APP_CONSUMER = {
   relDir: "src/app",
 };
 
-/* ------------------------------------------------------------------------- *
- * Back-compat exports (do not remove): the original AE-0083 API. Other tools
- * and the baseline generator referenced these names; they remain valid for the
- * legacy `features` layer so nothing else breaks.
- * ------------------------------------------------------------------------- */
 
-/** @deprecated Use `OWNER_LAYERS`. Source directory of the legacy `features` layer. */
+/**
+ * Back-compat exports (do not remove): `FEATURES_DIR`, `FEATURES_REL` and
+ * `FEATURE_IMPORT_PREFIX` are the original API that other tools and the baseline
+ * generator reference; they stay valid for the legacy `features` layer.
+ *
+ * @deprecated Use `OWNER_LAYERS`. Source directory of the legacy `features` layer.
+ */
 export const FEATURES_DIR = OWNER_LAYERS[0].dir;
 
 /** @deprecated Use `OWNER_LAYERS`. ROOT-relative POSIX path of the `features` layer. */

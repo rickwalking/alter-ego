@@ -12,13 +12,15 @@ import {
 } from "@/app/dashboard/create/types";
 import { AUTO_THEME_VALUE } from "@/app/dashboard/create/theme-options";
 
+/**
+ * An unknown value falls back to the default preset (flat editorial), not to
+ * whichever preset happens to be listed first.
+ */
 function presetFromValue(value: string): { model: string; style: string } {
   const preset = IMAGE_PRESETS.find((p) => p.value === value);
   if (preset) {
     return { model: preset.model, style: preset.style };
   }
-  // AE-0372: an unknown value falls back to the default (flat editorial),
-  // not to whichever preset happens to be listed first.
   const fallback =
     IMAGE_PRESETS.find((p) => p.value === DEFAULT_IMAGE_PRESET) ??
     IMAGE_PRESETS[0];
@@ -31,7 +33,7 @@ const _TEMPLATE_STRATEGY_FALLBACK = "hero_content";
 export const NICHE_MAX_LENGTH = 200;
 
 /**
- * AE-0415 (B18): an empty Brief falls back to the topic, cut at a word
+ * An empty Brief falls back to the topic, cut at a word
  * boundary to the niche limit (the topic allows 500 characters, niche 200).
  */
 export function fallbackNiche(topic: string): string {
@@ -56,7 +58,12 @@ type ContentModeRequest = Pick<
   | "hook_asset_id"
 >;
 
-/** AE-0373: POV fields only in POV mode (the API rejects them on Radar IA). */
+/**
+ * POV fields only in POV mode (the API rejects them on Radar IA).
+ *
+ * "POV: News" has no format picker (the backend ignores the format), and the
+ * slide-1 photo is required for POV.
+ */
 function contentModeFields(form: CreateCarouselFormState): ContentModeRequest {
   if (!isPovForm(form)) {
     return { content_mode: form.contentMode, cta_goal: form.ctaGoal };
@@ -66,11 +73,9 @@ function contentModeFields(form: CreateCarouselFormState): ContentModeRequest {
     content_mode: form.contentMode,
     pov_thesis: form.povThesis.trim(),
     pov_personal_proof: form.povPersonalProof.trim() || null,
-    // AE-0406: "POV: News" has no format picker (the backend ignores it).
     pov_format: showsFormatPicker(form) ? template.format : undefined,
     slide_count: form.slideCount,
     cta_goal: form.ctaGoal,
-    // PR #106 review: the slide-1 photo is required for POV.
     hook_asset_id: form.hookAssetId,
   };
 }
@@ -102,7 +107,7 @@ export function buildCarouselCreateRequest(
   };
 }
 
-/** AE-0373: the wizard can submit (POV needs a thesis and the slide-1 photo). */
+/** The wizard can submit (POV needs a thesis and the slide-1 photo). */
 export function canSubmitCreateForm(form: CreateCarouselFormState): boolean {
   if (!form.topic.trim() || !form.audience.trim()) {
     return false;

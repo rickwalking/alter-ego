@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Regenerate the dead-code baseline (AE-0152) — the grandfathered allowlist of
+ * Regenerate the dead-code baseline — the grandfathered allowlist of
  * currently-unused exports/types. DOWN-ONLY: only run this to ratchet the
  * baseline lower as dead code is removed; raising the count is flagged by
  * scripts/ci/check-integrity.sh.

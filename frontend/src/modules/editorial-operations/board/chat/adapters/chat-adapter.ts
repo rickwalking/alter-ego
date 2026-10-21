@@ -24,7 +24,7 @@ const AVATAR_PALETTE = [
   { avatar: "WF", bg: DASHBOARD_CHAT_TEAL_DIM, color: DASHBOARD_CHAT_TEAL },
 ] as const;
 
-/** AE-0417: `locale` is the active UI locale; times are formatted in it. */
+/** `locale` is the active UI locale; times are formatted in it. */
 export function mapConversationToDashboard(
   conversation: Conversation,
   index: number,

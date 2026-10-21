@@ -13,7 +13,7 @@ interface CarouselLanguageSwitchProps {
   options: CarouselLanguageOption[];
 }
 
-/** PT/EN content links on a public carousel viewer (AE-0444). */
+/** PT/EN content links on a public carousel viewer. */
 export function CarouselLanguageSwitch({
   activeLanguage,
   label,

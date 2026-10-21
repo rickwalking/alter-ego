@@ -1,5 +1,5 @@
 /**
- * AE-0170: external QA/kaizen runs are isolated in a throwaway git worktree, and
+ * External QA/kaizen runs are isolated in a throwaway git worktree, and
  * a rogue HEAD-detach / branch-move of the primary repo is detected + restored.
  * Delegates to the self-contained bash check (uses temp repos; never touches the
  * working repo).

@@ -1,5 +1,5 @@
 /**
- * AE-0403: address slide validation violations to the form field that caused
+ * Address slide validation violations to the form field that caused
  * them, so both review forms (publish-page slide editor, content-phase review)
  * can highlight the field, list a per-slide summary and clear an error as soon
  * as its field is edited.
@@ -16,7 +16,7 @@ const KEY_SEPARATOR = ":";
 const DOM_ID_UNSAFE = /[[\].]+/g;
 const DOM_ID_DASH = "-";
 const LIMIT_PATTERN = /max (\d+)/i;
-// Mirrors backend STRUCTURED_ITEM_FIELD_PATTERN (``summary_points[0].body``).
+/** Mirrors the backend ``STRUCTURED_ITEM_FIELD_PATTERN`` (``summary_points[0].body``). */
 const STRUCTURED_ITEM_FIELD = /^([a-z_]+)\[(\d+)\]\.([a-z_]+)$/;
 
 /** ``summary_points[0].body`` for an item, ``heading``/``body`` otherwise. */

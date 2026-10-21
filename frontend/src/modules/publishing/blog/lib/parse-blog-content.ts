@@ -6,7 +6,7 @@ import {
 } from "@/schemas/blog-document";
 
 /**
- * Strict `blog.v2` parse helper (AE-0423, ADR-0025) — the frontend mirror of
+ * Strict `blog.v2` parse helper (ADR-0025) — the frontend mirror of
  * the backend `parse_blog_content`. There is no v1 branch: a legacy markdown
  * blob, a JSON array or any other `schema` is rejected. The backend read
  * fail-safe adapts a non-migrated row before the API, so the public page

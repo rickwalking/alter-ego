@@ -106,10 +106,11 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowResume", () => {
-  // Regression (c858abd): the resume call must use the bare /api endpoint
-  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
-  // with /api and nginx routes /api/* to the backend; prefixing produced
-  // /api/api/... and a 404 right after approving the research phase.
+  /**
+   * Regression: the resume call uses the bare endpoint path. The path already
+   * starts with ``/api`` and nginx routes ``/api/*`` to the backend; a
+   * ``NEXT_PUBLIC_API_URL`` prefix produced ``/api/api/...`` and a 404.
+   */
   it("posts resume to the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
@@ -273,9 +274,7 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
-  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
-  //   The three 409 causes have distinct client copy; version conflicts get
-  //   their own message instead of the raw machine code.
+  /** The three 409 causes have distinct client copy, never the raw machine code. */
   it("surfaces client resume errors without entering polling recovery", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
@@ -300,7 +299,6 @@ describe("useEditorialWorkflowResume", () => {
     expect(enterPollingFallback).not.toHaveBeenCalled();
   });
 
-  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
   // Scenario: Resume attempt during a run explains itself
   //   A run-in-progress 409 renders the banner (state refresh), not a toast.
   it("run-in-progress 409 refreshes state for the banner instead of erroring", async () => {
@@ -341,7 +339,6 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
-  // AE-0310 — Gherkin: backend/tests/features/carousel_design_phase_recovery.feature
   // Scenario: Direct edits remain available after all caps are exhausted
   //   The cap-exceeded 409 copy points to the uncapped edit path instead of
   //   surfacing the raw machine code.

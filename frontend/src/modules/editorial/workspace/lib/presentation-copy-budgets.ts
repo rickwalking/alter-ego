@@ -2,7 +2,7 @@
  * Copy budgets of the carousel presentation policies (mirrors the backend
  * contracts in ``backend/.../carousel-pipeline/contracts/*.yaml``).
  *
- * AE-0414: every ``hero_lower_third_v1..v4`` contract carries the SAME copy
+ * every ``hero_lower_third_v1..v4`` contract carries the SAME copy
  * budgets, so the budgets apply to every hero version (they used to apply to v1
  * only, which hid the live counter and the over-budget warning on v4 decks).
  * ``pov_hook_v1`` has its own (tighter hook) budgets. An unknown policy has no
@@ -15,7 +15,7 @@ export interface PresentationFieldBudget {
   maxLines?: number;
 }
 
-/** AE-0414: the measured use of one field against its (optional) budget. */
+/** The measured use of one field against its (optional) budget. */
 export interface BudgetUsage {
   characters: number;
   lines: number;
@@ -67,11 +67,11 @@ const POLICY_BUDGETS: Readonly<Record<string, BudgetTable>> = {
 /** The backend default policy (``DEFAULT_PRESENTATION_POLICY_VERSION``). */
 const DEFAULT_POLICY_VERSION = "hero_lower_third_v1";
 
+/** Heading budget per slide type; the backend applies ``content_heading`` to closing/cta visible headings. */
 const SLIDE_TYPE_HEADING_BUDGET_KEY: Readonly<Record<string, string>> = {
   intro: "intro_heading",
   summary: "summary_heading",
   content: "content_heading",
-  // Backend applies content_heading to closing/cta visible headings.
   closing: "content_heading",
   cta: "content_heading",
 };
@@ -126,7 +126,7 @@ export function resolveBodyBudget(
   return lookupBudget(policyVersion, SLIDE_TYPE_BODY_BUDGET_KEY[slideType]);
 }
 
-/** AE-0414: budget of one structured item field (``features[0].title``). */
+/** Budget of one structured item field (``features[0].title``). */
 export function resolveItemBudget(
   listKey: string,
   field: string,
@@ -136,7 +136,7 @@ export function resolveItemBudget(
   return lookupBudget(policyVersion, prefix ? `${prefix}_${field}` : undefined);
 }
 
-/** AE-0414: budget of a CTA string extra (``creator_name``…). */
+/** Budget of a CTA string extra (``creator_name``…). */
 export function resolveExtraBudget(
   extraKey: string,
   policyVersion?: string | null,
@@ -161,7 +161,7 @@ export function isBudgetExceeded(
   return budget.maxLines !== undefined && countLines(value) > budget.maxLines;
 }
 
-/** AE-0414: live counter data for a field (always measured, budget optional). */
+/** Live counter data for a field (always measured, budget optional). */
 export function measureBudgetUsage(
   value: string,
   budget: PresentationFieldBudget | null,

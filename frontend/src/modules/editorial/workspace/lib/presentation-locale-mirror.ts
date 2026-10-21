@@ -4,7 +4,7 @@ import {
 } from "./presentation-review-utils";
 
 /**
- * AE-0430: a locale column shows every structured field the other locale has.
+ * A locale column shows every structured field the other locale has.
  *
  * Prod carousel 5344b6c6: PT slide 1 had a TL;DR strip and EN had none, so the
  * EN column offered no TL;DR field and the blocking

@@ -3,11 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Scenarios: see tests/features/blog_generate_ae0425.feature
-// ("Generation progress is polled and shown", "A partial generation surfaces failed image slots",
-//  "A failed generation shows a retry affordance",
-//  "A restart-interrupted generation is explained and retryable",
-//  "A private carousel warns that the post cannot be public")
+/** Gherkin: tests/features/blog_generate_ae0425.feature. */
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),
@@ -85,7 +81,6 @@ describe("BlogGenerationStatus (AE-0425)", () => {
   });
 
   it("offers to generate only the missing images of a partial run", async () => {
-    // Review fix 3: a partial run's retry fills the empty slots only.
     mockFetch
       .mockResolvedValueOnce(
         jsonResponse(
@@ -209,7 +204,7 @@ describe("BlogGenerationStatus (AE-0425)", () => {
     expect(generationPollInterval(undefined)).toBe(false);
   });
 
-  // Re-review follow-up: a retry would replace unsaved editor edits.
+  /** A retry would replace unsaved editor edits, so it stays disabled until they are saved; only the status GET is sent. */
   it.each([
     ["failed", "Retry generation"],
     ["partial", "Generate the missing images"],
@@ -226,7 +221,7 @@ describe("BlogGenerationStatus (AE-0425)", () => {
         "Save (or discard) your unsaved changes before retrying",
       );
       fireEvent.click(button);
-      expect(mockFetch).toHaveBeenCalledTimes(1); // only the GET, no retry
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     },
   );
 

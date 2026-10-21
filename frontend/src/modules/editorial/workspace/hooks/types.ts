@@ -1,7 +1,7 @@
 /**
  * Editorial workspace hook data-shape types (colocated `types.ts`).
  *
- * Per the component-type-location convention (AE-0144,
+ * Per the component-type-location convention (
  * `frontend/scripts/component-type-location.config.mjs`), object-shape types
  * live here rather than inline in the hook `.ts` files.
  */
@@ -56,7 +56,7 @@ export interface UseEditorialWorkflowSseParams {
   refreshState: () => Promise<EditorialWorkflowState | null>;
 }
 
-/** AE-0440: the verdict of the auth probe that follows a stream error. */
+/** The verdict of the auth probe that follows a stream error. */
 export interface WorkflowStreamProbeResult {
   outcome: WorkflowStreamProbeOutcome;
   /** The refetched workflow state, present only when `outcome` is OK. */
@@ -104,7 +104,7 @@ export interface EditorialWorkflowResumeAcceptedResponse {
 
 export interface WorkflowEventPayload {
   event?: string;
-  /** AE-0447: the CAS version a full-state snapshot carries. */
+  /** The CAS version a full-state snapshot carries. */
   lock_version?: number;
   phase?: string;
   phase_status?: string;
@@ -138,20 +138,19 @@ export interface WorkflowEventPayload {
   presentation_policy_version?: string | null;
   localized_slides?: EditorialWorkflowState["localized_slides"];
   presentation_validation?: EditorialWorkflowState["presentation_validation"];
-  // AE-0315 run lifecycle payload fields (run.started / run.stage_changed /
-  // run.finished).
+  /** Run lifecycle payload field (``run.started`` / ``run.stage_changed`` / ``run.finished``). */
   run_started_at?: string | null;
   run_stage?: string | null;
   reason?: string;
 }
 
-/** AE-0415: options of `useEditorialWorkflow`. */
+/** Options of `useEditorialWorkflow`. */
 export interface UseEditorialWorkflowOptions {
   /** Fetch workflow/state on mount (default true; false for a fresh project). */
   initialFetch?: boolean;
 }
 
-/** AE-0415 (B27): the review action that started a run, and its phase. */
+/** The review action that started a run, and its phase. */
 export interface RecordedResume {
   action: string;
   phase: string;
@@ -165,19 +164,19 @@ export interface StartWorkflowInput {
   personaId?: string;
 }
 
-/** AE-0375: the owner's slide-1 hook for one carousel. */
+/** The owner's slide-1 hook for one carousel. */
 export interface SaveHookInput {
   projectId: string;
   hookText: string;
 }
 
-/** AE-0376: one photo upload to the creator library. */
+/** One photo upload to the creator library. */
 export interface UploadCreatorPhotoInput {
   file: File;
   role: string;
 }
 
-/** AE-0403: the per-field error state of a slide review form. */
+/** The per-field error state of a slide review form. */
 export interface SlideFieldErrorState {
   /** Blocking violations still open (edited fields drop out). */
   open: SlideValidationViolation[];

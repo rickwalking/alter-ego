@@ -24,7 +24,6 @@ import {
 } from "./use-editorial-workflow-utils";
 
 describe("useEditorialWorkflow utils", () => {
-  // Feature: Unified workflow progress in create workspace
   // Scenario: SSE progress merges nested phase_progress into client state
   it("merges nested phase_progress from SSE progress events", () => {
     const payload = {
@@ -98,7 +97,6 @@ describe("useEditorialWorkflow utils", () => {
     ).toBe(true);
   });
 
-  // Feature: Resume recovery without false errors or manual refresh
   // Scenario: Polling recovery waits for artifacts not only gate status
   it("requires artifacts before workflow is ready at human gate", () => {
     const emptyOutlineGate = {
@@ -370,7 +368,7 @@ describe("useEditorialWorkflow utils", () => {
     expect(merged.caption).toBe("Draft caption");
   });
 
-  // AE-0447 Scenario: A live-stream update never drops the CAS lock version
+  // Scenario: A live-stream update never drops the CAS lock version
   it("keeps lock_version across partial events and full snapshots", () => {
     const previous: EditorialWorkflowState = {
       project_id: "project-1",
@@ -979,7 +977,6 @@ describe("useEditorialWorkflow utils", () => {
   });
 });
 
-// AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
 describe("run metadata merge (AE-0315)", () => {
   const runningState: EditorialWorkflowState = {
     project_id: "project-1",
