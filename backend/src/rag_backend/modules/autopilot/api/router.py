@@ -172,7 +172,7 @@ router.include_router(cover_assets_router)
 def _failure_status(error: str) -> int:
     """Empty reasons are a client error. Delivery problems are unavailable."""
     if error == DETAIL_SCOUT_REASON_EMPTY:
-        return status.HTTP_422_UNPROCESSABLE_ENTITY
+        return status.HTTP_422_UNPROCESSABLE_CONTENT
     return status.HTTP_503_SERVICE_UNAVAILABLE
 
 

@@ -104,7 +104,7 @@ async def get_cover_pick_context(
 
 def _refused(error: CoverPickError) -> HTTPException:
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error.code
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=error.code
     )
 
 
@@ -116,7 +116,7 @@ def _raise_unless_switched(result: SlideCoverSwitchResult) -> None:
         )
     if result.status != AUTOFIX_STATUS_FIXED:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_COVER_PICK_ASSET_NOT_ALLOWED,
         )
     if result.render_errors:

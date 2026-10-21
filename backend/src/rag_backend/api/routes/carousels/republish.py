@@ -68,7 +68,7 @@ def raise_republish_failure(errors: tuple[str, ...]) -> None:
             CarouselConflict.for_code(CONFLICT_CODE_BUILD_IN_PROGRESS)
         )
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=format_artifact_health_errors(errors),
     )
 
@@ -96,7 +96,7 @@ async def republish_carousel(
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     if project.status != CarouselStatus.COMPLETED:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_REPUBLISH_NOT_COMPLETED,
         )
     _reject_if_run_active(project.phase_status)

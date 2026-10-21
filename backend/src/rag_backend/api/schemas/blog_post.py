@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
 
@@ -85,8 +85,7 @@ class BlogPostResponse(BaseModel):
     scheduled_publish_at: datetime | None = None
     lock_version: int = 1
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BlogPostSummaryResponse(BaseModel):
@@ -118,8 +117,7 @@ class BlogPostSummaryResponse(BaseModel):
     # cannot tell the dashboard that a post is live.
     is_public: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BlogPostListResponse(BaseModel):
@@ -177,8 +175,7 @@ class EditorialCommentResponse(BaseModel):
     created_at: datetime
     resolved_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EditorialCommentListResponse(BaseModel):
@@ -218,8 +215,7 @@ class ContentSourceResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ContentSourceListResponse(BaseModel):
