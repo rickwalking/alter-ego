@@ -49,6 +49,39 @@ export interface PublishPanelProps {
   slideNumbers?: readonly number[];
 }
 
+/** AE-0445: one slide-1 cover option (library photo or GrokBot offer). */
+export interface CoverOptionView {
+  asset_id: string;
+  source: "library" | "offer";
+  kind?: string;
+}
+
+export interface CoverOptionGridProps {
+  options: readonly CoverOptionView[];
+  currentAssetId: string | null;
+  disabled: boolean;
+  onChoose: (assetId: string) => void;
+}
+
+export interface CoverThumbProps {
+  option: CoverOptionView;
+  number: number;
+  current: boolean;
+  disabled: boolean;
+  onChoose: (assetId: string) => void;
+}
+
+/**
+ * AE-0445: publish-page "Capa (slide 1)" for a Ponto de Vista carousel. A pick
+ * re-renders slides + PDFs server-side at the workflow ``lockVersion``;
+ * ``onSwitched`` receives the fresh artifact version (cache-bust + refetch).
+ */
+export interface CoverPickerSectionProps {
+  projectId: string;
+  lockVersion: number;
+  onSwitched: (artifactVersion: string | null) => void;
+}
+
 export interface RebuildPdfSectionProps {
   projectId: string;
   onRebuilt: (artifactVersion: string | null) => void;
