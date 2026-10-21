@@ -11,6 +11,7 @@ from .editorial_workflow import router as editorial_workflow_router
 from .hook import router as hook_router
 from .media import router as media_router
 from .preview import router as preview_router
+from .public_view import router as public_view_router
 from .publishing import router as publishing_router
 from .repair import router as repair_router
 from .republish import router as republish_router
@@ -30,6 +31,7 @@ router.include_router(creator_assets_router, prefix=PREFIX)
 router.include_router(cover_pick_router, prefix=PREFIX)
 router.include_router(hook_router, prefix=PREFIX)
 router.include_router(media_router, prefix=PREFIX)
+router.include_router(public_view_router, prefix=PREFIX)
 router.include_router(preview_router, prefix=PREFIX)
 router.include_router(publishing_router, prefix=PREFIX)
 router.include_router(repair_router, prefix=PREFIX)

@@ -2223,6 +2223,10 @@
             "title": "Is Public",
             "type": "boolean"
           },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
           "linkedin_post_en": {
             "anyOf": [
               {
@@ -2474,6 +2478,7 @@
           "topic",
           "audience",
           "niche",
+          "language",
           "title",
           "subtitle",
           "theme",
@@ -2487,6 +2492,141 @@
           "updated_at"
         ],
         "title": "CarouselProjectResponse",
+        "type": "object"
+      },
+      "CarouselPublicResponse": {
+        "description": "Lean public projection of a published carousel (AE-0444).",
+        "properties": {
+          "available_languages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Languages",
+            "type": "array"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "slide_count": {
+            "title": "Slide Count",
+            "type": "integer"
+          },
+          "slides_by_language": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/CarouselPublicSlide"
+              },
+              "type": "array"
+            },
+            "title": "Slides By Language",
+            "type": "object"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "subtitle_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle En"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "title_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title En"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "created_at",
+          "slide_count",
+          "available_languages",
+          "slides_by_language"
+        ],
+        "title": "CarouselPublicResponse",
+        "type": "object"
+      },
+      "CarouselPublicSlide": {
+        "description": "One slide in the anonymous public viewer (AE-0444).\n\nOnly the number, its heading (for alt text), and the public image URL. The\nowner-only ``image_path`` / preview URL never enters this projection.",
+        "properties": {
+          "heading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading"
+          },
+          "image_url": {
+            "title": "Image Url",
+            "type": "string"
+          },
+          "slide_number": {
+            "title": "Slide Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slide_number",
+          "image_url"
+        ],
+        "title": "CarouselPublicSlide",
         "type": "object"
       },
       "CarouselRepairResponse": {
@@ -11519,6 +11659,20 @@
           },
           {
             "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "updated_at",
+              "enum": [
+                "created_at",
+                "updated_at"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -12922,6 +13076,53 @@
           }
         ],
         "summary": "Preview Carousel Image",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/public": {
+      "get": {
+        "description": "Return the anonymous viewer projection for a published carousel.",
+        "operationId": "get_public_carousel_api_carousels__project_id__public_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselPublicResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Carousel",
         "tags": [
           "carousels"
         ]

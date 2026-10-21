@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
   CAROUSEL_DESIGN: (id: string, lang?: string) =>
     `/api/carousels/${id}/design${lang ? `?lang=${lang}` : ""}`,
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
+  CAROUSEL_PUBLIC: (id: string) => `/api/carousels/${id}/public`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,
   CAROUSEL_PDF: (id: string) => `/api/carousels/${id}/pdf`,

@@ -115,6 +115,9 @@ class CarouselProjectResponse(ContentModeResponseFields):
     topic: str
     audience: str
     niche: str
+    # AE-0444: additive so the public gallery can label a card's content
+    # language without an N+1 design/slides request.
+    language: str
     title: str | None
     subtitle: str | None
     title_en: str | None = None
@@ -164,6 +167,34 @@ class CarouselProjectListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class CarouselPublicSlide(BaseModel):
+    """One slide in the anonymous public viewer (AE-0444).
+
+    Only the number, its heading (for alt text), and the public image URL. The
+    owner-only ``image_path`` / preview URL never enters this projection.
+    """
+
+    slide_number: int
+    heading: str | None = None
+    image_url: str
+
+
+class CarouselPublicResponse(BaseModel):
+    """Lean public projection of a published carousel (AE-0444)."""
+
+    id: UUID
+    title: str | None = None
+    title_en: str | None = None
+    subtitle: str | None = None
+    subtitle_en: str | None = None
+    language: str
+    created_at: datetime
+    slide_count: int
+    available_languages: list[str]
+    slides_by_language: dict[str, list[CarouselPublicSlide]]
+    cover_url: str | None = None
 
 
 class CarouselRepublishResponse(BaseModel):

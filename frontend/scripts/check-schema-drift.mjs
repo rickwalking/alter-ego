@@ -75,6 +75,8 @@ const SCHEMA_MAP = [
   { zod: "carouselDesignResponseSchema", file: "carousel.ts", openapi: "CarouselDesignResponse", kind: "response" },
   { zod: "carouselProjectResponseSchema", file: "carousel.ts", openapi: "CarouselProjectResponse", kind: "response" },
   { zod: "carouselProjectListResponseSchema", file: "carousel.ts", openapi: "CarouselProjectListResponse", kind: "response" },
+  { zod: "carouselPublicSlideSchema", file: "carousel.ts", openapi: "CarouselPublicSlide", kind: "response" },
+  { zod: "carouselPublicResponseSchema", file: "carousel.ts", openapi: "CarouselPublicResponse", kind: "response" },
   { zod: "carouselSlideResponseSchema", file: "carousel.ts", openapi: "CarouselSlideResponse", kind: "response" },
   { zod: "slideFieldViolationSchema", file: "carousel.ts", openapi: "SlideFieldViolation", kind: "response" },
 ];

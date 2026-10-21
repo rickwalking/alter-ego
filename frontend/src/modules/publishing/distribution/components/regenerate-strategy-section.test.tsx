@@ -48,6 +48,7 @@ function buildProject(
     topic: "AI Testing",
     audience: "Devs",
     niche: "ML",
+    language: "pt-BR",
     title: "Title",
     subtitle: null,
     theme: "auto",

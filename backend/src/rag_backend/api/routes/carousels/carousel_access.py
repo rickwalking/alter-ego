@@ -14,11 +14,24 @@ from rag_backend.application.services.carousel.artifact_health import (
 )
 from rag_backend.domain.constants.access_control import ERR_CAROUSEL_NOT_PUBLIC
 from rag_backend.domain.models import CarouselProject, CarouselSlide, User
+from rag_backend.domain.models.carousel import CarouselStatus
 
 
 def assert_carousel_public(project: CarouselProject) -> None:
     """Allow only published carousels on public media routes."""
     if project.is_public:
+        return
+    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_PUBLIC)
+
+
+def assert_carousel_public_completed(project: CarouselProject) -> None:
+    """Allow only published, fully generated carousels on the public viewer.
+
+    The gallery feed filters ``status=completed``; the viewer enforces the same
+    rule at the edge so a public-but-in-progress project is a uniform 404
+    (ADR-0013) instead of an empty or half-rendered deck.
+    """
+    if project.is_public and project.status == CarouselStatus.COMPLETED:
         return
     raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_PUBLIC)
 

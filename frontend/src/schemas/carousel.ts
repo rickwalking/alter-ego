@@ -43,6 +43,7 @@ export const carouselProjectResponseSchema = z.object({
   topic: z.string(),
   audience: z.string(),
   niche: z.string(),
+  language: z.string(),
   title: z.string().nullable(),
   subtitle: z.string().nullable(),
   title_en: z.string().nullable().optional(),
@@ -94,6 +95,26 @@ export const carouselProjectListResponseSchema = z.object({
   total: z.number(),
   limit: z.number(),
   offset: z.number(),
+});
+
+export const carouselPublicSlideSchema = z.object({
+  slide_number: z.number(),
+  heading: z.string().nullable(),
+  image_url: z.string(),
+});
+
+export const carouselPublicResponseSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  title_en: z.string().nullable(),
+  subtitle: z.string().nullable(),
+  subtitle_en: z.string().nullable(),
+  language: z.string(),
+  created_at: z.string(),
+  slide_count: z.number(),
+  available_languages: z.array(z.string()),
+  slides_by_language: z.record(z.string(), z.array(carouselPublicSlideSchema)),
+  cover_url: z.string().nullable(),
 });
 
 export const carouselSlideResponseSchema = z.object({
@@ -209,6 +230,10 @@ export type CarouselProjectResponse = z.infer<
 >;
 export type CarouselProjectListResponse = z.infer<
   typeof carouselProjectListResponseSchema
+>;
+export type CarouselPublicSlide = z.infer<typeof carouselPublicSlideSchema>;
+export type CarouselPublicResponse = z.infer<
+  typeof carouselPublicResponseSchema
 >;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;

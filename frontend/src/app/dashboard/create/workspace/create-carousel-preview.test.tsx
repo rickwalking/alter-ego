@@ -9,6 +9,7 @@ function project(templateVersion: string | null): CarouselProjectResponse {
     topic: "Topic",
     audience: "Audience",
     niche: "Niche",
+    language: "pt-BR",
     title: "Title",
     subtitle: null,
     theme: "auto",
