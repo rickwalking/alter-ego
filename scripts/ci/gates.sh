@@ -124,6 +124,10 @@ gate_backend_dead_code()   { cd "$REPO_ROOT/backend" && uv run vulture src/ vult
 # Anti-hardcoded-prompt checker (AE-0244): prompts must live in the registry
 # (.md/.yaml), not inline in agents/ or application/services/. stdlib-only AST scan.
 gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_prompts.py; }
+# AE-0446: every NEW Gherkin scenario needs a test that names it ("Scenario: <title>");
+# the pre-existing backlog is grandfathered in scripts/gherkin_refs_baseline.json (shrink-only).
+gate_backend_gherkin_refs()  { cd "$REPO_ROOT" && python3 scripts/check_gherkin_refs.py --scope backend; }
+gate_frontend_gherkin_refs() { cd "$REPO_ROOT" && python3 scripts/check_gherkin_refs.py --scope frontend; }
 # Blog-v1 dead-code regression guard (AE-0428): the removed v1 carousel-blog
 # surface (blog_image_map, v1 blog schemas/hooks/components, cleanup_blog_markdown)
 # must not reappear in backend/src or frontend/src. stdlib-only token scan. Runs in
@@ -267,6 +271,7 @@ BACKEND_GATES=(
   docstrings:gate_backend_docstrings
   dead-code:gate_backend_dead_code
   inline-prompts:gate_backend_inline_prompts
+  gherkin-refs:gate_backend_gherkin_refs
   blog-v1-dead-code:gate_blog_v1_dead_code
   redis-factory:gate_backend_redis_factory
   autopilot-env:gate_backend_autopilot_env
@@ -291,6 +296,7 @@ FRONTEND_GATES=(
   typecheck:gate_frontend_typecheck
   build:gate_frontend_build
   legacy-guard:gate_frontend_legacy_guard
+  gherkin-refs:gate_frontend_gherkin_refs
   legacy-inventory:gate_frontend_legacy_inventory
   format:gate_frontend_format
   security:gate_frontend_security
