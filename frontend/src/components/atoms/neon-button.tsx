@@ -50,6 +50,14 @@ export interface NeonButtonProps
   iconPosition?: "left" | "right";
 }
 
+/** The decorative icon, hidden while the spinner shows. */
+function buttonIcon(
+  icon: React.ReactNode,
+  loading: boolean | undefined,
+): React.ReactNode {
+  return !loading && icon ? <span aria-hidden="true">{icon}</span> : null;
+}
+
 export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
   (
     {
@@ -68,6 +76,7 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
     ref,
   ) => {
     const isDisabled = disabled === true || loading === true;
+    const iconNode = buttonIcon(icon, loading);
 
     return (
       <button
@@ -81,14 +90,10 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
         aria-busy={loading}
         {...props}
       >
-        {loading && <NeonSpinner size="sm" />}
-        {!loading && icon && iconPosition === "left" && (
-          <span aria-hidden="true">{icon}</span>
-        )}
+        {loading ? <NeonSpinner size="sm" /> : null}
+        {iconPosition === "left" ? iconNode : null}
         {children}
-        {!loading && icon && iconPosition === "right" && (
-          <span aria-hidden="true">{icon}</span>
-        )}
+        {iconPosition === "right" ? iconNode : null}
       </button>
     );
   },
