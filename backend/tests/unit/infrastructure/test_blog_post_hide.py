@@ -35,6 +35,9 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
 )
 
+# AE-0446: commits here would run the outbox relay on a foreign engine.
+pytestmark = pytest.mark.usefixtures("no_outbox_relay")
+
 _NOW = datetime(2026, 10, 18, 12, 0, 0, tzinfo=UTC)
 _REASON = "AE-0422 AC6 test"
 _RUN = HideRun(reason=_REASON, now=_NOW)

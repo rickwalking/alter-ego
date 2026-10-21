@@ -367,6 +367,17 @@ class TestEditorialWorkflowServiceGetState:
         assert result["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
 
 
+def _db_without_project() -> AsyncMock:
+    """A session whose project lookup finds nothing (run_started_at stays None).
+
+    A bare AsyncMock would hand back a mock project whose
+    ``run_started_at.isoformat()`` is an un-awaited coroutine.
+    """
+    db = AsyncMock()
+    db.get.return_value = None
+    return db
+
+
 class TestEditorialWorkflowServiceMarkResumeInProgress:
     """Scenario: mark_resume_in_progress with different states."""
 
@@ -398,7 +409,9 @@ class TestEditorialWorkflowServiceMarkResumeInProgress:
         with patch(
             "rag_backend.application.services.carousel.editorial_workflow_support.publish_workflow_phase_change",
         ):
-            phase = await service.mark_resume_in_progress("project-1", db=AsyncMock())
+            phase = await service.mark_resume_in_progress(
+                "project-1", db=_db_without_project()
+            )
         assert phase == PHASE_RESEARCH
         service._sync_project_phase.assert_awaited_once()
 
@@ -880,7 +893,7 @@ class TestMarkResumeInProgressPublishLock:
             patch.object(service, "_sync_project_phase", sync),
             patch(self._PUBLISH_PHASE_CHANGE, new=AsyncMock()),
         ):
-            await service.mark_resume_in_progress("project-1", AsyncMock())
+            await service.mark_resume_in_progress("project-1", _db_without_project())
 
         synced_state = sync.await_args.args[2]
         assert (
@@ -904,7 +917,7 @@ class TestMarkResumeInProgressPublishLock:
             patch.object(service, "_sync_project_phase", sync),
             patch(self._PUBLISH_PHASE_CHANGE, new=AsyncMock()),
         ):
-            await service.mark_resume_in_progress("project-1", AsyncMock())
+            await service.mark_resume_in_progress("project-1", _db_without_project())
 
         synced_state = sync.await_args.args[2]
         assert synced_state["workflow_status"] != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
