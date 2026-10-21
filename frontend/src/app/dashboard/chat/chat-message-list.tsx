@@ -18,6 +18,137 @@ export interface ChatMessageListProps {
   isStreaming?: boolean;
 }
 
+const AVATAR_BASE_STYLE: React.CSSProperties = {
+  width: "32px",
+  height: "32px",
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontFamily: DASHBOARD_CHAT_MONO_FONT,
+  fontWeight: 700,
+  flexShrink: 0,
+};
+
+/** The assistant's ◆ or the owner's initials. */
+function ChatAvatar({ assistant }: { assistant: boolean }): React.ReactElement {
+  if (assistant) {
+    return (
+      <div
+        style={{
+          ...AVATAR_BASE_STYLE,
+          fontSize: "14px",
+          background: DASHBOARD_CHAT_CYAN_DIM,
+          color: DASHBOARD_CHAT_CYAN,
+        }}
+      >
+        ◆
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        ...AVATAR_BASE_STYLE,
+        fontSize: "11px",
+        background: DASHBOARD_CHAT_BG_ELEVATED,
+        color: DASHBOARD_CHAT_TEXT_MUTED,
+      }}
+    >
+      PM
+    </div>
+  );
+}
+
+/** One message: avatar, bubble and time, mirrored for the owner. */
+function ChatMessageRow({
+  msg,
+}: {
+  msg: DashboardChatMessage;
+}): React.ReactElement {
+  const assistant = msg.role === "assistant";
+  const user = msg.role === "user";
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "10px",
+        maxWidth: "720px",
+        flexDirection: user ? "row-reverse" : "row",
+        alignSelf: user ? "flex-end" : "flex-start",
+      }}
+    >
+      <ChatAvatar assistant={assistant} />
+      <div>
+        <div
+          style={{
+            padding: "10px 16px",
+            borderRadius: "10px",
+            fontSize: "13px",
+            lineHeight: 1.65,
+            whiteSpace: "pre-wrap",
+            background: assistant
+              ? DASHBOARD_CHAT_BG_CARD
+              : DASHBOARD_CHAT_CYAN_DIM,
+            border: assistant
+              ? `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`
+              : `1px solid ${DASHBOARD_CHAT_BORDER_STRONG}`,
+            color: assistant ? DASHBOARD_CHAT_TEXT_MUTED : DASHBOARD_CHAT_TEXT,
+          }}
+        >
+          {msg.text}
+        </div>
+        <div
+          style={{
+            fontFamily: DASHBOARD_CHAT_MONO_FONT,
+            fontSize: "9px",
+            color: DASHBOARD_CHAT_TEXT_DIM,
+            marginTop: "4px",
+            textAlign: user ? "right" : "left",
+          }}
+        >
+          {msg.time}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The assistant's "typing" bubble while a reply streams. */
+function TypingIndicator(): React.ReactElement {
+  return (
+    <div
+      style={{ display: "flex", gap: "10px", maxWidth: "720px", opacity: 0.6 }}
+    >
+      <ChatAvatar assistant />
+      <div
+        style={{
+          padding: "10px 16px",
+          borderRadius: "10px",
+          fontSize: "13px",
+          background: DASHBOARD_CHAT_BG_CARD,
+          border: `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <span
+          className="chat-typing-dot"
+          style={{
+            display: "inline-block",
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: DASHBOARD_CHAT_CYAN,
+          }}
+        />
+        {DASHBOARD_CHAT_TYPING_LABEL}
+      </div>
+    </div>
+  );
+}
+
 export function ChatMessageList({
   messages,
   isStreaming = false,
@@ -34,146 +165,9 @@ export function ChatMessageList({
       }}
     >
       {messages.map((msg, index) => (
-        <div
-          key={`${msg.role}-${index}`}
-          style={{
-            display: "flex",
-            gap: "10px",
-            maxWidth: "720px",
-            flexDirection: msg.role === "user" ? "row-reverse" : "row",
-            alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-          }}
-        >
-          {msg.role === "assistant" ? (
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: DASHBOARD_CHAT_MONO_FONT,
-                fontSize: "14px",
-                fontWeight: 700,
-                flexShrink: 0,
-                background: DASHBOARD_CHAT_CYAN_DIM,
-                color: DASHBOARD_CHAT_CYAN,
-              }}
-            >
-              ◆
-            </div>
-          ) : (
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: DASHBOARD_CHAT_MONO_FONT,
-                fontSize: "11px",
-                fontWeight: 700,
-                flexShrink: 0,
-                background: DASHBOARD_CHAT_BG_ELEVATED,
-                color: DASHBOARD_CHAT_TEXT_MUTED,
-              }}
-            >
-              PM
-            </div>
-          )}
-          <div>
-            <div
-              style={{
-                padding: "10px 16px",
-                borderRadius: "10px",
-                fontSize: "13px",
-                lineHeight: 1.65,
-                whiteSpace: "pre-wrap",
-                background:
-                  msg.role === "assistant"
-                    ? DASHBOARD_CHAT_BG_CARD
-                    : DASHBOARD_CHAT_CYAN_DIM,
-                border:
-                  msg.role === "assistant"
-                    ? `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`
-                    : `1px solid ${DASHBOARD_CHAT_BORDER_STRONG}`,
-                color:
-                  msg.role === "assistant"
-                    ? DASHBOARD_CHAT_TEXT_MUTED
-                    : DASHBOARD_CHAT_TEXT,
-              }}
-            >
-              {msg.text}
-            </div>
-            <div
-              style={{
-                fontFamily: DASHBOARD_CHAT_MONO_FONT,
-                fontSize: "9px",
-                color: DASHBOARD_CHAT_TEXT_DIM,
-                marginTop: "4px",
-                textAlign: msg.role === "user" ? "right" : "left",
-              }}
-            >
-              {msg.time}
-            </div>
-          </div>
-        </div>
+        <ChatMessageRow key={`${msg.role}-${index}`} msg={msg} />
       ))}
-      {isStreaming && (
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            maxWidth: "720px",
-            opacity: 0.6,
-          }}
-        >
-          <div
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: DASHBOARD_CHAT_MONO_FONT,
-              fontSize: "14px",
-              fontWeight: 700,
-              flexShrink: 0,
-              background: DASHBOARD_CHAT_CYAN_DIM,
-              color: DASHBOARD_CHAT_CYAN,
-            }}
-          >
-            ◆
-          </div>
-          <div
-            style={{
-              padding: "10px 16px",
-              borderRadius: "10px",
-              fontSize: "13px",
-              background: DASHBOARD_CHAT_BG_CARD,
-              border: `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`,
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <span
-              className="chat-typing-dot"
-              style={{
-                display: "inline-block",
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: DASHBOARD_CHAT_CYAN,
-              }}
-            />
-            {DASHBOARD_CHAT_TYPING_LABEL}
-          </div>
-        </div>
-      )}
+      {isStreaming && <TypingIndicator />}
       <style>{`
         @keyframes chat-pulse-dot {
           0%, 100% { opacity: 0.35; transform: scale(0.85); }

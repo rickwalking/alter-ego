@@ -26,6 +26,65 @@ import { BlogPostEditFields } from "@/app/dashboard/blog-posts/[id]/edit/blog-po
 import { BlogEditorSidebar } from "@/app/dashboard/blog-posts/[id]/edit/blog-editor-sidebar";
 import type { BlogPostEditorViewProps } from "@/app/dashboard/blog-posts/types";
 
+type EditorProp = BlogPostEditorViewProps["editor"];
+
+/** The id + lock version the editor data loads for ("" / 0 before a post). */
+function editorDataKey(post: EditorProp["post"]): [string, number] {
+  return [post?.id ?? "", post?.lock_version ?? 0];
+}
+
+/** Title, unsaved badge, back and save. */
+function EditorHeader({
+  editor,
+  saveBlocked,
+  onLeave,
+}: {
+  editor: EditorProp;
+  saveBlocked: boolean;
+  onLeave: () => void;
+}): React.ReactElement {
+  const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
+  return (
+    <div className="mb-6 flex items-center justify-between gap-4">
+      <h1 className="text-2xl font-bold">{t("heading")}</h1>
+      <div className="flex items-center gap-2">
+        {editor.dirty && (
+          <span className="text-xs text-text-muted">{t("unsaved.badge")}</span>
+        )}
+        <NeonButton variant="outline" onClick={onLeave}>
+          {t("back")}
+        </NeonButton>
+        <NeonButton
+          onClick={() => void editor.handleSave()}
+          disabled={editor.saving || !editor.dirty || saveBlocked}
+        >
+          {editor.saving ? t("saving") : t("save")}
+        </NeonButton>
+      </div>
+    </div>
+  );
+}
+
+/** Generation progress, the migration banner, or the editor error. */
+function EditorNotices({
+  editor,
+  migrationPending,
+}: {
+  editor: EditorProp;
+  migrationPending: boolean;
+}): React.ReactElement {
+  const { post, error } = editor;
+  return (
+    <>
+      {post && (
+        <BlogGenerationStatus postId={post.id} unsavedChanges={editor.dirty} />
+      )}
+      {migrationPending && <MigrationBanner detail={error?.detail ?? null} />}
+      {error && !migrationPending && <EditorErrorNotice error={error} />}
+    </>
+  );
+}
+
 /**
  * The loaded blog editor (AE-0424): title/excerpt, the `blog.v2` section
  * editor and the review/voice/version/AI sidebar, with the unsaved guard.
@@ -36,7 +95,7 @@ export function BlogPostEditorView({
   const router = useRouter();
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const post = editor.post;
-  const data = useBlogEditorData(post?.id ?? "", post?.lock_version ?? 0);
+  const data = useBlogEditorData(...editorDataKey(post));
   const actions = useBlogEditorActions(editor, data.personaId);
   const review = useBlogReviewActions(editor);
   const { confirmLeave } = useUnsavedChangesGuard(
@@ -57,32 +116,12 @@ export function BlogPostEditorView({
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">{t("heading")}</h1>
-        <div className="flex items-center gap-2">
-          {editor.dirty && (
-            <span className="text-xs text-text-muted">
-              {t("unsaved.badge")}
-            </span>
-          )}
-          <NeonButton variant="outline" onClick={leave}>
-            {t("back")}
-          </NeonButton>
-          <NeonButton
-            onClick={() => void editor.handleSave()}
-            disabled={
-              editor.saving || !editor.dirty || migrationPending || generating
-            }
-          >
-            {editor.saving ? t("saving") : t("save")}
-          </NeonButton>
-        </div>
-      </div>
-      {post && (
-        <BlogGenerationStatus postId={post.id} unsavedChanges={editor.dirty} />
-      )}
-      {migrationPending && <MigrationBanner detail={error?.detail ?? null} />}
-      {error && !migrationPending && <EditorErrorNotice error={error} />}
+      <EditorHeader
+        editor={editor}
+        saveBlocked={migrationPending || generating}
+        onLeave={leave}
+      />
+      <EditorNotices editor={editor} migrationPending={migrationPending} />
       {draft && validation && (
         <fieldset
           disabled={generating}
