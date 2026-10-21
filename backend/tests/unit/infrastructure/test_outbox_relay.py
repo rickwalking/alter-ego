@@ -298,3 +298,25 @@ async def test_relay_after_commit_stops_on_no_progress(
     await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
 
     assert run_once.await_count == 1  # no forward progress -> no second pass
+
+
+# Scenario: a relay pass with no database engine is logged, never raised (AE-0446).
+@pytest.mark.asyncio
+async def test_relay_after_commit_without_engine_does_not_raise(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``get_session_maker`` failing (no engine) is a logged relay failure."""
+
+    def _no_engine() -> None:
+        raise RuntimeError("Database not initialized")
+
+    monkeypatch.setattr(
+        "rag_backend.infrastructure.database.config.get_session_maker", _no_engine
+    )
+    warn = MagicMock()
+    monkeypatch.setattr(outbox_dispatch.logger, "warning", warn)
+
+    await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
+
+    warn.assert_called_once()
+    assert warn.call_args.args[0] == "outbox_relay_pass_failed"
