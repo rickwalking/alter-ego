@@ -135,6 +135,10 @@ describe("useContentEdits", () => {
     expect(result.current.contentSlides[0]?.presentation_pt.title).not.toBe(
       "Edited title",
     );
+
+    // A stale read of the older version must not bring the edits back.
+    rerender({ state: { ...baseState, lock_version: 3 } });
+    expect(result.current.contentHasEdits).toBe(false);
   });
 
   it("works with no state and with no lock version", () => {

@@ -96,18 +96,19 @@ export function useContentEdits(state: WorkflowState): {
     [state],
   );
   const lockVersion = state?.lock_version;
-  // Edits are keyed to the lock version they were made on: a newer version
-  // (e.g. after an approval) resets them without an effect.
-  const [edits, setEdits] = useState<{
-    lockVersion: number | undefined;
-    slides: LocalizedSlideReview[];
-  } | null>(null);
-  const edited =
-    edits !== null && edits.lockVersion === lockVersion ? edits.slides : null;
+  const [edited, setEdited] = useState<LocalizedSlideReview[] | null>(null);
+  // Any lock-version change (e.g. after an approval) drops the edits, once
+  // and one way: an older version read back later does not restore them.
+  // Adjusted during render, not in an effect.
+  const [seenLockVersion, setSeenLockVersion] = useState(lockVersion);
+  if (seenLockVersion !== lockVersion) {
+    setSeenLockVersion(lockVersion);
+    setEdited(null);
+  }
   return {
     contentSlides: edited ?? baseline,
     contentHasEdits: edited !== null && slidesHaveCopyChanges(baseline, edited),
-    setEditedContentSlides: (slides) => setEdits({ lockVersion, slides }),
+    setEditedContentSlides: setEdited,
   };
 }
 
