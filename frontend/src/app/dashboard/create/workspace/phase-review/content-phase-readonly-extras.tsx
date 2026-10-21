@@ -32,7 +32,9 @@ function formatStructuredValue(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
-function ReadOnlyExtraValue({ value }: { value: unknown }): React.ReactElement {
+function ReadOnlyExtraValue({
+  value,
+}: Readonly<{ value: unknown }>): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   if (isPresentationStructuredItemList(value)) {
     return <PresentationStructuredItems items={value} />;
@@ -56,10 +58,10 @@ function ReadOnlyExtraValue({ value }: { value: unknown }): React.ReactElement {
 export function ReadOnlyExtra({
   extraKey,
   value,
-}: {
+}: Readonly<{
   extraKey: string;
   value: unknown;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const extraLabel = useStructuredExtraLabel();
   const quote =
@@ -83,10 +85,10 @@ export function ReadOnlyExtra({
 export function IconRow({
   presentation,
   localeLabel,
-}: {
+}: Readonly<{
   presentation: Record<string, unknown>;
   localeLabel: string;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const iconNames = listPresentationIconNames(presentation);
   if (iconNames.length === 0) {
     return null;

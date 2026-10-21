@@ -26,7 +26,7 @@ export interface CreatePovSectionProps {
 export function CreatePovSection({
   form,
   onChange,
-}: CreatePovSectionProps): React.ReactElement {
+}: Readonly<CreatePovSectionProps>): React.ReactElement {
   const t = useTranslations("create.pov");
   const thesisMissing = form.povThesis.trim().length === 0;
   return (

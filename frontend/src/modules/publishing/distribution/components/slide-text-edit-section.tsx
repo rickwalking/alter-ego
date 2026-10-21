@@ -45,7 +45,7 @@ function responseViolations(
 }
 
 export function SlideTextEditSection(
-  props: SlideTextEditSectionProps,
+  props: Readonly<SlideTextEditSectionProps>,
 ): React.ReactElement {
   const { projectId, slides, policyVersion, runInProgress, onEdited } = props;
   const t = useTranslations("publish.slideEditor");

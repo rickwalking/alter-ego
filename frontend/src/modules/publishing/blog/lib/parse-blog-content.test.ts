@@ -69,7 +69,9 @@ describe("parseBlogContent", () => {
   });
 
   it("defaults missing translations to an empty map", () => {
-    const { translations: _unused, ...withoutTranslations } = DOCUMENT;
+    const withoutTranslations = Object.fromEntries(
+      Object.entries(DOCUMENT).filter(([key]) => key !== "translations"),
+    );
     expect(parseBlogContent(withoutTranslations).translations).toEqual({});
   });
 

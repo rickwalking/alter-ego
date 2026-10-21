@@ -21,7 +21,7 @@ describe("external_agent worktree isolation + HEAD-detach guard (AE-0170)", () =
     let output = "";
     let status = 0;
     try {
-      output = execFileSync("bash", [CHECK], {
+      output = execFileSync(CHECK, [], {
         cwd: REPO_ROOT,
         encoding: "utf8",
         stdio: ["pipe", "pipe", "pipe"],

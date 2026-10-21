@@ -5,7 +5,7 @@ import { useLocale } from "next-intl";
 import { addMonths, startOfMonth, subMonths } from "date-fns";
 import { formatCalendarTitle } from "@/modules/editorial-operations";
 
-export type UseCalendarMonthResult = {
+export interface UseCalendarMonthResult {
   /** First day of the viewed month (stable state used to derive the grid). */
   anchor: Date;
   /** Viewed month in the active locale, e.g. "June 2026" / "Junho de 2026". */
@@ -13,7 +13,7 @@ export type UseCalendarMonthResult = {
   goPrev: () => void;
   goNext: () => void;
   goToday: () => void;
-};
+}
 
 /**
  * Owns the viewed-month anchor, defaulting to the current month. The anchor is

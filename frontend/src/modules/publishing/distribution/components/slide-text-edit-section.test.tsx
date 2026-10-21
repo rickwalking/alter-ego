@@ -113,7 +113,7 @@ it("saves the edit then chains the republish", async () => {
   await userEvent.click(screen.getByText("save"));
   expect(republishMutate).toHaveBeenCalledWith(
     { projectId: "proj-1" },
-    expect.objectContaining({ onSuccess: expect.any(Function) }),
+    expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
   );
 });
 

@@ -132,15 +132,14 @@ export const carouselSlideResponseSchema = z.object({
  * Only these (model, style) tuples are wired in the backend registry.
  * Anything else is rejected by the API with 422 before the pipeline runs.
  */
-export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
-  [
-    ["openai", "comic_neon"],
-    ["openai", "cinematic"],
-    ["openai", "hyperreal"],
-    ["openai", "neo_anime"],
-    ["openai", "flat_editorial"],
-    ["openai", "pov_editorial"],
-  ];
+export const SUPPORTED_IMAGE_COMBOS: readonly (readonly [string, string])[] = [
+  ["openai", "comic_neon"],
+  ["openai", "cinematic"],
+  ["openai", "hyperreal"],
+  ["openai", "neo_anime"],
+  ["openai", "flat_editorial"],
+  ["openai", "pov_editorial"],
+];
 
 export const carouselCreateRequestSchema = z
   .object({

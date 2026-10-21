@@ -2,15 +2,30 @@
 
 import type { VersionDiffViewProps } from "./types";
 
+type DiffLineType = "same" | "removed" | "added";
+
+/** Row highlight per diff line type. */
+const DIFF_LINE_CLASS: Readonly<Record<DiffLineType, string>> = {
+  removed: "bg-red-500/10 text-red-700 dark:text-red-300",
+  added: "bg-green-500/10 text-green-700 dark:text-green-300",
+  same: "",
+};
+
+/** Gutter marker per diff line type. */
+const DIFF_LINE_PREFIX: Readonly<Record<DiffLineType, string>> = {
+  removed: "- ",
+  added: "+ ",
+  same: "  ",
+};
+
 function computeLineDiff(
   left: string,
   right: string,
-): Array<{ type: "same" | "removed" | "added"; line: string }> {
+): { type: "same" | "removed" | "added"; line: string }[] {
   const leftLines = left.split("\n");
   const rightLines = right.split("\n");
   const maxLen = Math.max(leftLines.length, rightLines.length);
-  const result: Array<{ type: "same" | "removed" | "added"; line: string }> =
-    [];
+  const result: { type: "same" | "removed" | "added"; line: string }[] = [];
 
   for (let i = 0; i < maxLen; i += 1) {
     const l = leftLines[i];
@@ -30,7 +45,7 @@ export function VersionDiffView({
   rightLabel,
   leftText,
   rightText,
-}: VersionDiffViewProps) {
+}: Readonly<VersionDiffViewProps>) {
   const diff = computeLineDiff(leftText, rightText);
 
   return (
@@ -44,19 +59,9 @@ export function VersionDiffView({
         {diff.map((entry, index) => (
           <div
             key={`${entry.type}-${index}`}
-            className={
-              entry.type === "removed"
-                ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                : entry.type === "added"
-                  ? "bg-green-500/10 text-green-700 dark:text-green-300"
-                  : ""
-            }
+            className={DIFF_LINE_CLASS[entry.type]}
           >
-            {entry.type === "removed"
-              ? "- "
-              : entry.type === "added"
-                ? "+ "
-                : "  "}
+            {DIFF_LINE_PREFIX[entry.type]}
             {entry.line}
           </div>
         ))}

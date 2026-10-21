@@ -41,10 +41,10 @@ type SseEventName = "token" | "complete" | "error" | "sources" | "tool_result";
 
 /** A controllable fake stream: captures each call's callbacks for the test to drive. */
 function controllableStream() {
-  const calls: Array<{
+  const calls: {
     opts: Parameters<typeof streamSseEvents>[0];
     resolve: () => void;
-  }> = [];
+  }[] = [];
   mockStream.mockImplementation((opts) => {
     return new Promise<void>((resolve) => {
       calls.push({ opts, resolve });
@@ -106,8 +106,9 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => {
+    await act(() => {
       void result.current.sendMessage("hello");
+      return Promise.resolve();
     });
     expect(stream.count).toBe(1);
     expect(result.current.isStreaming).toBe(true);
@@ -132,7 +133,7 @@ describe("useSseChat", () => {
       enableHistory: false,
     });
 
-    await act(async () => void result.current.sendMessage("hi"));
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
     stream.emit("token", { content: "yo" });
     stream.complete();
 
@@ -146,7 +147,7 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("hi"));
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
     stream.emit("error", { content: "model exploded" });
 
     expect(result.current.error).toBe("model exploded");
@@ -157,7 +158,7 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("hi"));
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
     stream.emit("token", { content: "answer" });
     stream.emit("sources", { content: [{ id: "s1" }] });
 
@@ -168,7 +169,7 @@ describe("useSseChat", () => {
     controllableStream();
     const { result, rerender } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("dup"));
+    await act(() => Promise.resolve(void result.current.sendMessage("dup")));
     expect(
       result.current.messages.filter((m) => m.content === "dup"),
     ).toHaveLength(1);
@@ -188,23 +189,27 @@ describe("useSseChat", () => {
     it("ignores empty content", async () => {
       const stream = controllableStream();
       const { result } = renderChat({ conversationId: CONV_ID });
-      await act(async () => void result.current.sendMessage("   "));
+      await act(() => Promise.resolve(void result.current.sendMessage("   ")));
       expect(stream.count).toBe(0);
     });
 
     it("ignores send with no conversation id", async () => {
       const stream = controllableStream();
       const { result } = renderChat({ conversationId: null });
-      await act(async () => void result.current.sendMessage("hi"));
+      await act(() => Promise.resolve(void result.current.sendMessage("hi")));
       expect(stream.count).toBe(0);
     });
 
     it("ignores a concurrent send while already streaming", async () => {
       const stream = controllableStream();
       const { result } = renderChat({ conversationId: CONV_ID });
-      await act(async () => void result.current.sendMessage("first"));
+      await act(() =>
+        Promise.resolve(void result.current.sendMessage("first")),
+      );
       expect(stream.count).toBe(1);
-      await act(async () => void result.current.sendMessage("second"));
+      await act(() =>
+        Promise.resolve(void result.current.sendMessage("second")),
+      );
       expect(stream.count).toBe(1); // guarded by isStreaming
     });
   });
@@ -213,7 +218,7 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("hi"));
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
     // COMPLETE event fires finalize; resolving the promise fires onComplete -> finalize again.
     stream.emit("complete", {});
     stream.complete();
@@ -226,8 +231,8 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("hi"));
-    const signal = stream.last()!.opts.signal as AbortSignal;
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
+    const signal = stream.last()!.opts.signal!;
     expect(signal.aborted).toBe(false);
     expect(result.current.isStreaming).toBe(true);
 
@@ -242,8 +247,8 @@ describe("useSseChat", () => {
     const stream = controllableStream();
     const { result, unmount } = renderChat({ conversationId: CONV_ID });
 
-    await act(async () => void result.current.sendMessage("hi"));
-    const signal = stream.last()!.opts.signal as AbortSignal;
+    await act(() => Promise.resolve(void result.current.sendMessage("hi")));
+    const signal = stream.last()!.opts.signal!;
     expect(signal.aborted).toBe(false);
 
     unmount();

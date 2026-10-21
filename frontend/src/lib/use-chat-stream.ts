@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import type { Message } from "@/schemas/chat";
 
@@ -17,7 +17,7 @@ export interface ChatStream {
   setOptimisticMessages: Dispatch<SetStateAction<Message[]>>;
   isStreaming: boolean;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
-  abortRef: MutableRefObject<AbortController | null>;
+  abortRef: RefObject<AbortController | null>;
   /** Append the optimistic user message and begin a stream; returns its signal. */
   startUserTurn: (content: string) => AbortSignal;
   /** Fold a streamed token into the optimistic message list. */

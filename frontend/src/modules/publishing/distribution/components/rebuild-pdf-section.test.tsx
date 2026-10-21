@@ -95,7 +95,7 @@ it("calls the republish mutation on confirm", async () => {
 
   expect(mockMutate).toHaveBeenCalledWith(
     { projectId: "proj-1" },
-    expect.objectContaining({ onSuccess: expect.any(Function) }),
+    expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
   );
 });
 

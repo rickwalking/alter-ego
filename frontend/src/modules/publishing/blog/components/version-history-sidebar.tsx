@@ -49,7 +49,7 @@ export function VersionHistorySidebar({
   currentText,
   disabled,
   onRestore,
-}: VersionHistorySidebarProps): React.JSX.Element {
+}: Readonly<VersionHistorySidebarProps>): React.JSX.Element {
   const t = useTranslations("dashboard.blogPosts.versions");
   const [selected, setSelected] = useState<BlogPostVersion | null>(null);
   const [restoreError, setRestoreError] = useState<BlogEditorError | null>(

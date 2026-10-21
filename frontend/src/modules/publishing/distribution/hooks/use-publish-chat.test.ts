@@ -71,17 +71,18 @@ function createWrapper() {
   };
 }
 
-function mockLocalStorage(store: Record<string, string | null> = {}): {
+function mockLocalStorage(seed: Record<string, string | null> = {}): {
   getItem: typeof localStorage.getItem;
   setItem: typeof localStorage.setItem;
   removeItem: typeof localStorage.removeItem;
 } {
-  const getItem = vi.fn((key: string) => store[key] ?? null);
+  const store = new Map(Object.entries(seed));
+  const getItem = vi.fn((key: string) => store.get(key) ?? null);
   const setItem = vi.fn((key: string, value: string) => {
-    store[key] = value;
+    store.set(key, value);
   });
   const removeItem = vi.fn((key: string) => {
-    delete store[key];
+    store.delete(key);
   });
   Object.defineProperty(globalThis, "localStorage", {
     value: { getItem, setItem, removeItem },
@@ -273,9 +274,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
       invalidateQueries,
     } as unknown as ReturnType<typeof useQueryClient>);
 
-    mockStreamSseEvents.mockImplementation(async ({ onEvent }) => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "tool_result", data: { tool: "refine_carousel_copy" } });
       onEvent({ event: "complete", data: {} });
+      return Promise.resolve();
     });
 
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
@@ -297,9 +299,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
   // Scenario: Given SSE error during stream, sets isStreaming false
   it("sets isStreaming to false when an error event arrives", async () => {
-    mockStreamSseEvents.mockImplementation(async ({ onEvent }) => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "Hello" } });
       onEvent({ event: "error", data: { content: "something broke" } });
+      return Promise.resolve();
     });
 
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
@@ -529,9 +532,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
   // Mutation-killing: COMPLETE message stops streaming
   it("stops streaming when a complete message arrives", async () => {
-    mockStreamSseEvents.mockImplementation(async ({ onEvent }) => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "Hello" } });
       onEvent({ event: "complete", data: {} });
+      return Promise.resolve();
     });
 
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
@@ -662,8 +666,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       ).toBe(true),
     );
 
-    await act(async () => {
+    await act(() => {
       emitSecondToken?.();
+      return Promise.resolve();
     });
 
     await waitFor(() =>
@@ -675,8 +680,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       ).toBe(true),
     );
 
-    await act(async () => {
+    await act(() => {
       emitComplete?.();
+      return Promise.resolve();
     });
   });
 
@@ -732,9 +738,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
     abortSpy.mockRestore();
   });
 
-  it("does not send when conversationId is not ready yet", async () => {
+  it("does not send when conversationId is not ready yet", () => {
     mockUseCreateConversation.mockReturnValue({
-      mutateAsync: vi.fn(() => new Promise(() => {})),
+      mutateAsync: vi.fn(() => new Promise(() => undefined)),
       isPending: true,
     } as unknown as ReturnType<typeof useCreateConversation>);
 
@@ -773,9 +779,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
       invalidateQueries,
     } as unknown as ReturnType<typeof useQueryClient>);
 
-    mockStreamSseEvents.mockImplementation(async ({ onEvent }) => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "tool_result", data: { tool: "some_other_tool" } });
       onEvent({ event: "complete", data: {} });
+      return Promise.resolve();
     });
 
     const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
@@ -892,8 +899,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       ).toBe(true);
     });
 
-    await act(async () => {
+    await act(() => {
       emitSecondToken?.();
+      return Promise.resolve();
     });
 
     await waitFor(() => {
@@ -1166,8 +1174,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       ]),
     );
 
-    await act(async () => {
+    await act(() => {
       emitSecondToken?.();
+      return Promise.resolve();
     });
 
     await waitFor(() => {
@@ -1178,8 +1187,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       expect(assistantMessages[1]?.content).toBe("New reply");
     });
 
-    await act(async () => {
+    await act(() => {
       emitComplete?.();
+      return Promise.resolve();
     });
   });
 
@@ -1309,8 +1319,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
     expect(mutateAsync).toHaveBeenCalledTimes(1);
 
-    await act(async () => {
+    await act(() => {
       resolveCreate?.({ id: "conv-pending" });
+      return Promise.resolve();
     });
   });
 
@@ -1338,7 +1349,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
     const zeroDelayTimerIds = setTimeoutSpy.mock.results.flatMap(
       (result, index) =>
-        setTimeoutSpy.mock.calls[index]?.[1] === 0 ? [result.value] : [],
+        setTimeoutSpy.mock.calls[index]?.[1] === 0
+          ? [result.value as unknown]
+          : [],
     );
     unmount();
     expect(
@@ -1384,8 +1397,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       ).toEqual([expect.objectContaining({ content: "First answer" })]),
     );
 
-    await act(async () => {
+    await act(() => {
       completeFirstTurn?.();
+      return Promise.resolve();
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
 

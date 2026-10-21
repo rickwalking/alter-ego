@@ -29,7 +29,7 @@ export function NeonTabs({
   defaultValue,
   children,
   className,
-}: NeonTabsProps): React.ReactElement {
+}: Readonly<NeonTabsProps>): React.ReactElement {
   const [activeTab, setActiveTab] = useState(defaultValue);
 
   return (
@@ -45,7 +45,7 @@ export interface NeonTabListProps {
 
 export function NeonTabList({
   children,
-}: NeonTabListProps): React.ReactElement {
+}: Readonly<NeonTabListProps>): React.ReactElement {
   return (
     <div
       className="flex gap-1 border-b border-[var(--color-neon-card-border)] mb-4"
@@ -66,7 +66,7 @@ export function NeonTabTrigger({
   value,
   children,
   badge,
-}: NeonTabTriggerProps): React.ReactElement {
+}: Readonly<NeonTabTriggerProps>): React.ReactElement {
   const { activeTab, setActiveTab } = useNeonTab();
   const isActive = activeTab === value;
 
@@ -101,7 +101,7 @@ export interface NeonTabPanelProps {
 export function NeonTabPanel({
   value,
   children,
-}: NeonTabPanelProps): React.ReactElement | null {
+}: Readonly<NeonTabPanelProps>): React.ReactElement | null {
   const { activeTab } = useNeonTab();
 
   if (activeTab !== value) {

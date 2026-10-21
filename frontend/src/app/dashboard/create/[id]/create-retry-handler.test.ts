@@ -15,8 +15,8 @@ describe("createRetryWorkflowHandler", () => {
   //   And navigation does NOT happen (the error card stays)
   it("resets retrying to false and does not navigate when start rejects", async () => {
     const setRetrying = vi.fn();
-    const start = vi.fn(async () => {
-      throw new Error("network down");
+    const start = vi.fn(() => {
+      return Promise.reject(new Error("network down"));
     });
     const navigateOnSuccess = vi.fn();
 
@@ -43,7 +43,7 @@ describe("createRetryWorkflowHandler", () => {
   // Scenario: Retry SUCCESS resets retrying and navigates
   it("resets retrying and navigates when start resolves", async () => {
     const setRetrying = vi.fn();
-    const start = vi.fn(async () => null);
+    const start = vi.fn(() => Promise.resolve(null));
     const navigateOnSuccess = vi.fn();
 
     const handler = createRetryWorkflowHandler({
@@ -71,7 +71,7 @@ describe("createRetryWorkflowHandler", () => {
   // Scenario: Guard - no project or already retrying short-circuits.
   it("does nothing when project is missing", async () => {
     const setRetrying = vi.fn();
-    const start = vi.fn(async () => null);
+    const start = vi.fn(() => Promise.resolve(null));
     const handler = createRetryWorkflowHandler({
       project: null,
       retrying: false,
@@ -89,7 +89,7 @@ describe("createRetryWorkflowHandler", () => {
 
   it("does nothing when a retry is already in flight", async () => {
     const setRetrying = vi.fn();
-    const start = vi.fn(async () => null);
+    const start = vi.fn(() => Promise.resolve(null));
     const handler = createRetryWorkflowHandler({
       project,
       retrying: true,

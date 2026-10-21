@@ -9,7 +9,7 @@ export function NeonRubricCard({
   score,
   maxScore = 100,
   criteria,
-}: NeonRubricCardProps): React.ReactElement {
+}: Readonly<NeonRubricCardProps>): React.ReactElement {
   const percent = Math.round((score / maxScore) * 100);
   const scoreColor = percent >= 70 ? NEON_GREEN : NEON_CYAN;
 

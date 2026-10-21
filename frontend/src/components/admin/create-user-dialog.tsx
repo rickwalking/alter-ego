@@ -12,7 +12,7 @@ interface CreateUserDialogProps {
 export function CreateUserDialog({
   onClose,
   onSuccess,
-}: CreateUserDialogProps) {
+}: Readonly<CreateUserDialogProps>) {
   const t = useTranslations("admin");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -22,7 +22,7 @@ export function CreateUserDialog({
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");

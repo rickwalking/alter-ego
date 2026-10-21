@@ -95,7 +95,7 @@ export async function fetchCompletedProjects(
  */
 export async function fetchCarouselDesign(
   id: string,
-  lang: string = "pt",
+  lang = "pt",
 ): Promise<z.infer<typeof carouselDesignResponseSchema> | null> {
   return validatedFetch(
     API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
@@ -110,7 +110,7 @@ export async function fetchCarouselDesign(
  */
 export async function fetchPublicCarousels(
   limit: number = SERVER_FETCH.PUBLIC_CAROUSEL_PAGE_SIZE,
-  offset: number = 0,
+  offset = 0,
 ): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
   const result = await validatedFetch(
     `${API_ENDPOINTS.CAROUSELS}?public=true&status=${SERVER_FETCH.COMPLETED_STATUS}&sort=created_at&limit=${limit}&offset=${offset}`,

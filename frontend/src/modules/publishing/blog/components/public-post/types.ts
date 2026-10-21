@@ -48,7 +48,7 @@ export interface BlogPostHeroProps {
 export interface BlogLanguageSwitchProps {
   activeLanguage: string;
   label: string;
-  options: ReadonlyArray<{ language: string; label: string; href: string }>;
+  options: readonly { language: string; label: string; href: string }[];
 }
 
 export interface PublicCoverImageProps {

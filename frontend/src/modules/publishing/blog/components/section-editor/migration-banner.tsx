@@ -16,7 +16,7 @@ import type { MigrationBannerProps } from "./types";
  */
 export function MigrationBanner({
   detail,
-}: MigrationBannerProps): React.ReactElement {
+}: Readonly<MigrationBannerProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   return (
     <NeonAlert

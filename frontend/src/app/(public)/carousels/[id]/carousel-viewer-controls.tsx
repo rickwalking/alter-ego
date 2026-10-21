@@ -6,9 +6,9 @@ const INACTIVE_DOT_COLOR = "rgba(255,255,255,0.2)";
 /** Directional chevron for the viewer controls (AE-0444). */
 export function CarouselChevron({
   direction,
-}: {
+}: Readonly<{
   direction: "left" | "right";
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -44,7 +44,7 @@ export function CarouselSlideDots({
   activeIndex,
   onSelect,
   labelFor,
-}: CarouselSlideDotsProps): React.ReactElement {
+}: Readonly<CarouselSlideDotsProps>): React.ReactElement {
   return (
     <div className="mt-4 flex flex-wrap justify-center gap-1">
       {slides.map((slide, slideIndex) => {

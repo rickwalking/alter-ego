@@ -45,7 +45,10 @@ const ICON_CHILDREN: Record<CalendarIconName, ReactNode> = {
   ),
 };
 
-export function CalendarSvgIcon({ name, size = 16 }: CalendarSvgIconProps) {
+export function CalendarSvgIcon({
+  name,
+  size = 16,
+}: Readonly<CalendarSvgIconProps>) {
   return (
     <svg
       width={size}

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next-intl/server", () => ({
-  getTranslations: vi.fn(async () => (key: string) => `carousels.${key}`),
+  getTranslations: vi.fn(() =>
+    Promise.resolve((key: string) => `carousels.${key}`),
+  ),
 }));
 
 import { generateMetadata } from "./page";

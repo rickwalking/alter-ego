@@ -35,7 +35,7 @@ export function ChatSidebar({
   onSelectConversation,
   open,
   id,
-}: ChatSidebarProps): React.ReactElement {
+}: Readonly<ChatSidebarProps>): React.ReactElement {
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === true;

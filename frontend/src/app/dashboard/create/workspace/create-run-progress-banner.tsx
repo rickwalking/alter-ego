@@ -136,7 +136,7 @@ export function CreateRunProgressBanner({
   runningAction,
   onCheckAgain,
   checkAgainDisabled = false,
-}: CreateRunProgressBannerProps): React.JSX.Element {
+}: Readonly<CreateRunProgressBannerProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.runProgress");
   const phaseLabel = usePhaseLabel();
   const copy = bannerCopy(currentPhase, runningAction);

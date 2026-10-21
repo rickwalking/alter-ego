@@ -15,7 +15,7 @@ const STAT_LABEL_STYLE = {
 export function MarketingStats({
   t,
   carouselTotal,
-}: MarketingStatsProps): React.ReactElement {
+}: Readonly<MarketingStatsProps>): React.ReactElement {
   return (
     <ScrollReveal>
       <div

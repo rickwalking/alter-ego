@@ -11,11 +11,11 @@ import {
   useBlogPosts,
 } from "@/modules/publishing";
 
-type UseNewBlogPostResult = {
+interface UseNewBlogPostResult {
   creating: boolean;
   createError: string | null;
   handleNewPost: () => Promise<void>;
-};
+}
 
 /**
  * Encapsulates the "create a draft and navigate to the editor" action used by

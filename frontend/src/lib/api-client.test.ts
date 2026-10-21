@@ -40,11 +40,12 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: true,
-              data: mockData,
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: true,
+                data: mockData,
+              }),
+          }),
         );
 
         const result = await apiCall("/api/test", testSchema);
@@ -55,11 +56,12 @@ describe("API Client Module", () => {
       it("Then it should include Content-Type header by default", async () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
-          json: async () => ({
-            success: true,
-            data: { id: "1", name: "Test" },
-          }),
-        } as Response);
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: { id: "1", name: "Test" },
+            }),
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCall("/api/test", testSchema);
@@ -69,7 +71,7 @@ describe("API Client Module", () => {
           expect.objectContaining({
             headers: expect.objectContaining({
               "Content-Type": "application/json",
-            }),
+            }) as unknown,
           }),
         );
         vi.unstubAllGlobals();
@@ -78,11 +80,12 @@ describe("API Client Module", () => {
       it("Then it should merge custom headers", async () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
-          json: async () => ({
-            success: true,
-            data: { id: "1", name: "Test" },
-          }),
-        } as Response);
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: { id: "1", name: "Test" },
+            }),
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCall("/api/test", testSchema, {
@@ -95,7 +98,7 @@ describe("API Client Module", () => {
             headers: expect.objectContaining({
               "Content-Type": "application/json",
               Authorization: "Bearer token",
-            }),
+            }) as unknown,
           }),
         );
         vi.unstubAllGlobals();
@@ -107,8 +110,8 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => mockData,
-          } as Response),
+            json: () => Promise.resolve(mockData),
+          }),
         );
 
         const result = await apiCall("/api/test", testSchema);
@@ -119,11 +122,12 @@ describe("API Client Module", () => {
       it("Then it should include credentials on every request", async () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
-          json: async () => ({
-            success: true,
-            data: { id: "1", name: "Test" },
-          }),
-        } as Response);
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: { id: "1", name: "Test" },
+            }),
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCall("/api/test", testSchema);
@@ -140,11 +144,12 @@ describe("API Client Module", () => {
       it("Then it should pass custom options to fetch", async () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
-          json: async () => ({
-            success: true,
-            data: { id: "1", name: "Test" },
-          }),
-        } as Response);
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: { id: "1", name: "Test" },
+            }),
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCall("/api/test", testSchema, {
@@ -174,8 +179,9 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 401,
-            json: async () => ({ message: "Session expired", code: "AUTH" }),
-          } as Response),
+            json: () =>
+              Promise.resolve({ message: "Session expired", code: "AUTH" }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -191,10 +197,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 401,
-            json: async () => {
-              throw new Error("not json");
+            json: () => {
+              return Promise.reject(new Error("not json"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -210,8 +216,8 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 401,
-            json: async () => ({ message: "Session expired" }),
-          } as Response),
+            json: () => Promise.resolve({ message: "Session expired" }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -234,11 +240,12 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => ({
-              message: "Access denied",
-              code: "ACL_DENY",
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                message: "Access denied",
+                code: "ACL_DENY",
+              }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -254,10 +261,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => {
-              throw new Error("not json");
+            json: () => {
+              return Promise.reject(new Error("not json"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -273,8 +280,8 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => ({ message: "Access denied" }),
-          } as Response),
+            json: () => Promise.resolve({ message: "Access denied" }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -291,8 +298,9 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 404,
-            json: async () => ({ message: "Not found", code: "NOT_FOUND" }),
-          } as Response),
+            json: () =>
+              Promise.resolve({ message: "Not found", code: "NOT_FOUND" }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -307,8 +315,8 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 500,
-            json: async () => ({ message: "Server error" }),
-          } as Response),
+            json: () => Promise.resolve({ message: "Server error" }),
+          }),
         );
 
         try {
@@ -326,11 +334,12 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 400,
-            json: async () => ({
-              message: "Bad request",
-              code: "VALIDATION_ERROR",
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                message: "Bad request",
+                code: "VALIDATION_ERROR",
+              }),
+          }),
         );
 
         try {
@@ -348,10 +357,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 500,
-            json: async () => {
-              throw new Error("Invalid JSON");
+            json: () => {
+              return Promise.reject(new Error("Invalid JSON"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -370,11 +379,12 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: true,
-              data: { id: "1" },
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: true,
+                data: { id: "1" },
+              }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -393,8 +403,8 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ data: { id: "1", name: "Test" } }),
-          } as Response),
+            json: () => Promise.resolve({ data: { id: "1", name: "Test" } }),
+          }),
         );
 
         // When the response has no `success` field, apiCall falls through
@@ -416,11 +426,12 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: true,
-              data: { id: "1" }, // Missing 'name' field
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: true,
+                data: { id: "1" }, // Missing 'name' field
+              }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -442,8 +453,8 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({ id: "1" }),
-          } as Response),
+            json: () => Promise.resolve({ id: "1" }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -464,14 +475,15 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: false,
-              error: {
-                code: "VALIDATION_FAILED",
-                message: "Invalid input data",
-              },
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: false,
+                error: {
+                  code: "VALIDATION_FAILED",
+                  message: "Invalid input data",
+                },
+              }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -485,14 +497,15 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: false,
-              error: {
-                code: "AUTH_REQUIRED",
-                message: "Authentication required",
-              },
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: false,
+                error: {
+                  code: "AUTH_REQUIRED",
+                  message: "Authentication required",
+                },
+              }),
+          }),
         );
 
         try {
@@ -509,11 +522,12 @@ describe("API Client Module", () => {
           "fetch",
           vi.fn().mockResolvedValue({
             ok: true,
-            json: async () => ({
-              success: false,
-              // Missing error object
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                success: false,
+                // Missing error object
+              }),
+          }),
         );
 
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
@@ -652,7 +666,7 @@ describe("API Client Module", () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
           status: 204,
-        } as Response);
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCallNoContent("/api/documents/1");
@@ -663,7 +677,7 @@ describe("API Client Module", () => {
             credentials: "include",
             headers: expect.objectContaining({
               "Content-Type": "application/json",
-            }),
+            }) as unknown,
           }),
         );
       });
@@ -671,7 +685,7 @@ describe("API Client Module", () => {
       it("Then it should resolve without a value on success", async () => {
         vi.stubGlobal(
           "fetch",
-          vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
+          vi.fn().mockResolvedValue({ ok: true, status: 204 }),
         );
 
         await expect(
@@ -688,11 +702,12 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 401,
-            json: async () => ({
-              message: "Session expired",
-              code: "AUTH_EXPIRED",
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                message: "Session expired",
+                code: "AUTH_EXPIRED",
+              }),
+          }),
         );
 
         await expect(
@@ -713,10 +728,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 401,
-            json: async () => {
-              throw new Error("not json");
+            json: () => {
+              return Promise.reject(new Error("not json"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(
@@ -734,7 +749,7 @@ describe("API Client Module", () => {
       it("Then it should resolve without a value", async () => {
         vi.stubGlobal(
           "fetch",
-          vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
+          vi.fn().mockResolvedValue({ ok: true, status: 204 }),
         );
 
         await expect(
@@ -747,7 +762,7 @@ describe("API Client Module", () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
           status: 204,
-        } as Response);
+        });
         vi.stubGlobal("fetch", mockFetch);
 
         await apiCallNoContent("/api/documents/1", {
@@ -762,7 +777,7 @@ describe("API Client Module", () => {
             headers: expect.objectContaining({
               "Content-Type": "application/json",
               "X-Foo": "bar",
-            }),
+            }) as unknown,
           }),
         );
         vi.unstubAllGlobals();
@@ -777,11 +792,12 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => ({
-              message: "Access denied",
-              code: "ACL_DENY",
-            }),
-          } as Response),
+            json: () =>
+              Promise.resolve({
+                message: "Access denied",
+                code: "ACL_DENY",
+              }),
+          }),
         );
 
         await expect(
@@ -801,10 +817,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => {
-              throw new Error("not json");
+            json: () => {
+              return Promise.reject(new Error("not json"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(
@@ -824,8 +840,8 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 404,
-            json: async () => ({ message: "Document not found" }),
-          } as Response),
+            json: () => Promise.resolve({ message: "Document not found" }),
+          }),
         );
 
         await expect(
@@ -840,8 +856,9 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 403,
-            json: async () => ({ message: "forbidden", code: "ACL_DENY" }),
-          } as Response),
+            json: () =>
+              Promise.resolve({ message: "forbidden", code: "ACL_DENY" }),
+          }),
         );
 
         try {
@@ -861,10 +878,10 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({
             ok: false,
             status: 500,
-            json: async () => {
-              throw new Error("not json");
+            json: () => {
+              return Promise.reject(new Error("not json"));
             },
-          } as unknown as Response),
+          }),
         );
 
         await expect(
@@ -898,8 +915,9 @@ describe("API Client Module", () => {
         vi.fn().mockResolvedValue({
           ok: false,
           status: 401,
-          json: async () => ({ message: "Session expired", code: "AUTH" }),
-        } as Response),
+          json: () =>
+            Promise.resolve({ message: "Session expired", code: "AUTH" }),
+        }),
       );
 
       await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -920,8 +938,8 @@ describe("API Client Module", () => {
         vi.fn().mockResolvedValue({
           ok: false,
           status: 403,
-          json: async () => ({ message: "Access denied" }),
-        } as Response),
+          json: () => Promise.resolve({ message: "Access denied" }),
+        }),
       );
 
       await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
@@ -941,8 +959,8 @@ describe("API Client Module", () => {
         vi.fn().mockResolvedValue({
           ok: false,
           status: 401,
-          json: async () => ({ message: "Session expired" }),
-        } as Response),
+          json: () => Promise.resolve({ message: "Session expired" }),
+        }),
       );
 
       await expect(apiCallNoContent("/api/documents/1")).rejects.toMatchObject({
@@ -962,8 +980,9 @@ describe("API Client Module", () => {
         vi.fn().mockResolvedValue({
           ok: false,
           status: 403,
-          json: async () => ({ message: "Access denied", code: "ACL_DENY" }),
-        } as Response),
+          json: () =>
+            Promise.resolve({ message: "Access denied", code: "ACL_DENY" }),
+        }),
       );
 
       await expect(apiCallNoContent("/api/documents/1")).rejects.toMatchObject({

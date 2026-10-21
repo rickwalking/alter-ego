@@ -10,7 +10,7 @@ interface CarouselBackLinkProps {
 export function CarouselBackLink({
   href,
   label,
-}: CarouselBackLinkProps): React.ReactElement {
+}: Readonly<CarouselBackLinkProps>): React.ReactElement {
   return (
     <Link
       href={href}

@@ -20,6 +20,9 @@ const BASE36_RADIX = 36;
 const BASE36_SUFFIX_START = 2;
 const BASE36_SUFFIX_END = 9;
 
+/** Number of distinct 32-bit unsigned values (2^32). */
+const UINT32_RANGE = 4_294_967_296;
+
 /**
  * Merge Tailwind CSS classes with proper precedence
  * Combines clsx for conditional classes and tailwind-merge for deduplication
@@ -71,7 +74,7 @@ export function truncate(str: string, maxLength: number): string {
  * Use instead of chained `||` when an empty/blank string must not be displayed.
  */
 export function firstNonBlank(
-  candidates: ReadonlyArray<string | null | undefined>,
+  candidates: readonly (string | null | undefined)[],
 ): string {
   for (const candidate of candidates) {
     const trimmed = candidate?.trim() ?? "";
@@ -85,13 +88,19 @@ export function firstNonBlank(
 /**
  * Generate a unique ID
  */
+/** A uniform float in [0, 1) drawn from the Web Crypto CSPRNG. */
+export function secureRandomUnit(): number {
+  const [value = 0] = globalThis.crypto.getRandomValues(new Uint32Array(1));
+  return value / UINT32_RANGE;
+}
+
 export function generateId(): string {
   const webCrypto = globalThis.crypto as Crypto | undefined;
   if (webCrypto?.randomUUID) {
     return webCrypto.randomUUID();
   }
   // Fallback for environments without crypto.randomUUID
-  return `${Date.now()}-${Math.random()
+  return `${Date.now()}-${secureRandomUnit()
     .toString(BASE36_RADIX)
     .substring(BASE36_SUFFIX_START, BASE36_SUFFIX_END)}`;
 }

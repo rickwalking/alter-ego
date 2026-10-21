@@ -16,7 +16,7 @@ export function NeonBlogPostCard({
   href,
   featured,
   locale = DEFAULT_LOCALE,
-}: NeonBlogPostCardComponentProps): React.ReactElement {
+}: Readonly<NeonBlogPostCardComponentProps>): React.ReactElement {
   const formattedDate = formatPublicDate(createdAt, locale);
   return (
     <Link href={href} className="block no-underline">

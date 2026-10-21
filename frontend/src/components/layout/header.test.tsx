@@ -21,7 +21,6 @@ const NAV_LABELS: Record<string, string> = {
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => NAV_LABELS[key] ?? key,
-  // AE-0417: the header's notification center formats dates in the locale.
   useLocale: () => "en",
 }));
 
@@ -31,7 +30,6 @@ vi.mock("@/components/language-switcher", () => ({
   ),
 }));
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -48,7 +46,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockUseAuth = vi.fn();
+const mockUseAuth = vi.fn<() => unknown>();
 vi.mock("@/modules/identity", () => ({
   useAuth: () => mockUseAuth(),
 }));

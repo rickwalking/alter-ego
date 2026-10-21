@@ -24,7 +24,7 @@ const EXCERPT_ROWS = 2;
 function FieldError({
   id,
   message,
-}: FieldErrorProps): React.ReactElement | null {
+}: Readonly<FieldErrorProps>): React.ReactElement | null {
   if (!message) {
     return null;
   }
@@ -51,7 +51,7 @@ export function BlogPostEditFields({
   excerpt,
   onExcerptChange,
   validation,
-}: BlogPostEditFieldsProps): React.ReactElement {
+}: Readonly<BlogPostEditFieldsProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const titleError = validation.title
     ? t(`validation.${validation.title}`, { max: BLOG_TITLE_MAX_LENGTH })

@@ -10,7 +10,7 @@ export interface ResearchPhaseReviewProps {
 
 export function ResearchPhaseReview({
   state,
-}: ResearchPhaseReviewProps): React.ReactElement | null {
+}: Readonly<ResearchPhaseReviewProps>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
 
   if (state.research_findings.length === 0) {

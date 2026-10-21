@@ -58,7 +58,7 @@ export function CarouselCard({
   card,
   labels,
   locale,
-}: CarouselCardProps): React.ReactElement {
+}: Readonly<CarouselCardProps>): React.ReactElement {
   const date = formatPublicDate(card.createdAt, locale);
   return (
     <Link

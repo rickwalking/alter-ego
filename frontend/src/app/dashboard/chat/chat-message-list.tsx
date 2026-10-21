@@ -152,7 +152,7 @@ function TypingIndicator(): React.ReactElement {
 export function ChatMessageList({
   messages,
   isStreaming = false,
-}: ChatMessageListProps): React.ReactElement {
+}: Readonly<ChatMessageListProps>): React.ReactElement {
   return (
     <div
       style={{

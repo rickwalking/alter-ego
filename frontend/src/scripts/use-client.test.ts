@@ -14,7 +14,7 @@ const SCRIPT = join(FRONTEND_ROOT, "scripts", "check-use-client.mjs");
 
 function run(root?: string): { status: number; output: string } {
   try {
-    const output = execFileSync("node", [SCRIPT], {
+    const output = execFileSync(process.execPath, [SCRIPT], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...(root ? { USE_CLIENT_ROOT: root } : {}) },

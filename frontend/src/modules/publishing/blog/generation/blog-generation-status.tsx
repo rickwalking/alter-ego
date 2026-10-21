@@ -66,7 +66,7 @@ function RetryControl({
 function FailedNotice({
   state,
   ...retry
-}: BlogGenerationNoticeProps): React.ReactElement {
+}: Readonly<BlogGenerationNoticeProps>): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   const interrupted = state.errors.some(
     (error) => error.code === ERR_GENERATION_INTERRUPTED,
@@ -82,7 +82,7 @@ function FailedNotice({
 }
 
 function RunNotice(
-  props: BlogGenerationNoticeProps,
+  props: Readonly<BlogGenerationNoticeProps>,
 ): React.ReactElement | null {
   const t = useTranslations(NAMESPACE);
   const { state } = props;
@@ -121,7 +121,7 @@ function RunNotice(
 
 function CarouselPrivateWarning({
   projectId,
-}: CarouselPrivateWarningProps): React.ReactElement {
+}: Readonly<CarouselPrivateWarningProps>): React.ReactElement {
   const t = useTranslations(NAMESPACE);
   return (
     <p
@@ -146,7 +146,7 @@ function CarouselPrivateWarning({
 export function BlogGenerationStatus({
   postId,
   unsavedChanges = false,
-}: BlogGenerationStatusProps): React.ReactElement | null {
+}: Readonly<BlogGenerationStatusProps>): React.ReactElement | null {
   const { state, projectId, retrying, retryFailed, retry } =
     useBlogGeneration(postId);
   if (!state) {

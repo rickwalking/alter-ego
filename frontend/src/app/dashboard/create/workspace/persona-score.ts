@@ -12,7 +12,7 @@ import { PERSONA_VOICE_MATCH_MIN_SCORE } from "@/constants/editorial-workflow";
 const PERSONA_SCORE_TEN_POINT_MAX = 10;
 const PERSONA_SCORE_TEN_TO_HUNDRED = 10;
 const PERSONA_SCORE_OVERALL_KEY = "overall";
-const SLIDE_KEY_NUMBER_PATTERN = /(\d+)\s*$/;
+const DIGIT_PATTERN = /^\d$/;
 
 /** One slide whose voice score is under the approval threshold. */
 export interface PersonaScoreShortfall {
@@ -49,8 +49,12 @@ function storedOverall(entry: unknown): number | null {
 }
 
 function slideNumberOf(key: string): number | null {
-  const match = SLIDE_KEY_NUMBER_PATTERN.exec(key);
-  return match ? Number(match[1]) : null;
+  const trimmed = key.trimEnd();
+  let start = trimmed.length;
+  while (start > 0 && DIGIT_PATTERN.test(trimmed.charAt(start - 1))) {
+    start -= 1;
+  }
+  return start < trimmed.length ? Number(trimmed.slice(start)) : null;
 }
 
 /** Slides scored below the threshold, in slide order. Unscored slides are skipped. */

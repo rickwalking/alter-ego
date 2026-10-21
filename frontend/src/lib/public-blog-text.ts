@@ -66,7 +66,7 @@ export function isPlaceholderTitle(title: string): boolean {
 
 /** First candidate that is a real title, without markup; "" when none is. */
 export function resolveDisplayTitle(
-  candidates: ReadonlyArray<string | null | undefined>,
+  candidates: readonly (string | null | undefined)[],
 ): string {
   for (const candidate of candidates) {
     if (candidate && !isPlaceholderTitle(candidate)) {

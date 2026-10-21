@@ -33,7 +33,7 @@ const LOCKED = { id: "p-1", lockVersion: 2 };
 
 function lastCall(): { url: string; init: RequestInit } {
   const [url, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
-  return { url: String(url), init: init ?? {} };
+  return { url, init: init ?? {} };
 }
 
 function ifMatch(init: RequestInit): string | null {
@@ -87,7 +87,7 @@ describe("content writes send If-Match", () => {
     expect(url).toBe("/api/blog-posts/p-1");
     expect(init.method).toBe("PUT");
     expect(ifMatch(init)).toBe("2");
-    expect(JSON.parse(String(init.body))).toEqual({ title: "Novo" });
+    expect(JSON.parse(init.body as string)).toEqual({ title: "Novo" });
   });
 
   it("targets the cover and section image routes with the language", async () => {
@@ -96,7 +96,9 @@ describe("content writes send If-Match", () => {
       prompt: null,
     });
     expect(lastCall().url).toBe("/api/blog-posts/p-1/cover/image?language=pt");
-    expect(JSON.parse(String(lastCall().init.body))).toEqual({ prompt: null });
+    expect(JSON.parse(lastCall().init.body as string)).toEqual({
+      prompt: null,
+    });
     await patchSlotImage(LOCKED, {
       slot: { language: "en", sectionId: SEC_2 },
       patch: { alt: "A" },
@@ -119,7 +121,7 @@ describe("content writes send If-Match", () => {
     expect(lastCall().url).toBe(
       `/api/blog-posts/p-1/sections/${SEC_2}/rewrite?language=pt`,
     );
-    expect(JSON.parse(String(lastCall().init.body))).toEqual({
+    expect(JSON.parse(lastCall().init.body as string)).toEqual({
       persona_id: "persona-1",
     });
     await generateEnTranslation(LOCKED);
@@ -178,7 +180,7 @@ describe("workflow routes", () => {
   // Scenario: Scheduling publishes at the chosen time / Cancelling a schedule
   it("schedules and cancels", async () => {
     await schedulePost(LOCKED, "2026-10-20T10:00:00.000Z");
-    expect(JSON.parse(String(lastCall().init.body))).toEqual({
+    expect(JSON.parse(lastCall().init.body as string)).toEqual({
       scheduled_publish_at: "2026-10-20T10:00:00.000Z",
     });
     await cancelSchedule(LOCKED);

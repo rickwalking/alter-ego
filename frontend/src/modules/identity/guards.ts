@@ -100,11 +100,6 @@ export function isEditorDashboardRoute(pathname: string): boolean {
   return true;
 }
 
-/** @deprecated Use isEditorDashboardRoute or isLegacyEditorRoute */
-export function isEditorRoute(pathname: string): boolean {
-  return isLegacyEditorRoute(pathname) || isEditorDashboardRoute(pathname);
-}
-
 export const COOKIE_ACCESS_TOKEN = "access_token";
 
 export const STATIC_FILE_PATTERN =

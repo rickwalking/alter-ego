@@ -19,7 +19,9 @@ interface RubricPanelProps {
   rubric: RubricData;
 }
 
-export function RubricPanel({ rubric }: RubricPanelProps): React.ReactElement {
+export function RubricPanel({
+  rubric,
+}: Readonly<RubricPanelProps>): React.ReactElement {
   return (
     <div
       style={{

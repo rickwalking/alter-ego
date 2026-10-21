@@ -14,7 +14,7 @@ export interface CreatePersonaCardProps {
 
 export function CreatePersonaCard({
   onCreate,
-}: CreatePersonaCardProps): React.ReactElement {
+}: Readonly<CreatePersonaCardProps>): React.ReactElement {
   return (
     <div
       role="button"

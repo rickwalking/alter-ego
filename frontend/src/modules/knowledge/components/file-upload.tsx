@@ -13,7 +13,10 @@ import {
 } from "./file-upload-parts";
 import { type FileUploadProps } from "./types";
 
-export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
+export function FileUpload({
+  onUploadComplete,
+  onCancel,
+}: Readonly<FileUploadProps>) {
   const t = useTranslations("knowledge.upload");
   const form = useFileUploadForm();
   const { upload, selectedFile } = form;

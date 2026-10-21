@@ -49,7 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PublicCarouselsPage({
   searchParams,
-}: CarouselsPageProps): Promise<React.ReactElement> {
+}: Readonly<CarouselsPageProps>): Promise<React.ReactElement> {
   const t = await getTranslations("carousels");
   const locale = await getRequestLocale();
   const { page: pageParam } = await searchParams;

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { NEON_CYAN, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 import { LOCALE_COOKIE } from "@/i18n/locale";
 
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 type LanguageSwitcherVariant = "default" | "neon";
 
@@ -17,7 +17,7 @@ interface LanguageSwitcherProps {
 export function LanguageSwitcher({
   currentLocale,
   variant = "default",
-}: LanguageSwitcherProps) {
+}: Readonly<LanguageSwitcherProps>) {
   const t = useTranslations("blog.languageSwitch");
   const [locale, setLocale] = useState(currentLocale);
 

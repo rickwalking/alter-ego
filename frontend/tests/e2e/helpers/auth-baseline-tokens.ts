@@ -47,7 +47,7 @@ function base64UrlEncode(value: string): string {
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
-    .replace(/=+$/, "");
+    .replaceAll("=", "");
 }
 
 function encodeSegment(payload: Record<string, unknown>): string {

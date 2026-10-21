@@ -10,7 +10,7 @@ export function BlogLanguageSwitch({
   activeLanguage,
   label,
   options,
-}: BlogLanguageSwitchProps) {
+}: Readonly<BlogLanguageSwitchProps>) {
   return (
     <nav aria-label={label} className="mb-6 flex gap-2">
       {options.map((option) => {

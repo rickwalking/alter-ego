@@ -25,7 +25,7 @@ const PUBLISHED_STATUS = "published";
 export function BlogPostCardActions({
   post,
   actions,
-}: BlogPostCardActionsProps): React.ReactElement {
+}: Readonly<BlogPostCardActionsProps>): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const deletable = post.origin !== BLOG_POST_ORIGIN_CAROUSEL;
   return (
@@ -62,7 +62,7 @@ export function DeleteConfirmModal({
   post,
   onConfirm,
   onCancel,
-}: DeleteConfirmModalProps): React.ReactElement | null {
+}: Readonly<DeleteConfirmModalProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   if (!post) {
     return null;

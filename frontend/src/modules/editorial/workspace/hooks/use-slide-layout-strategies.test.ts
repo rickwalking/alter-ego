@@ -149,7 +149,7 @@ describe("useRegenerateSlides", () => {
   });
 
   it("disables the button while mutation is in-flight", async () => {
-    mockApiCall.mockImplementationOnce(() => new Promise(() => {}));
+    mockApiCall.mockImplementationOnce(() => new Promise(() => undefined));
     const { result } = renderHook(() => useRegenerateSlides(), {
       wrapper: createWrapper(),
     });

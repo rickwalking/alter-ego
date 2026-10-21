@@ -54,7 +54,7 @@ export function CreateModeSection({
   form,
   onChange,
   personas,
-}: CreateModeSectionProps): React.ReactElement {
+}: Readonly<CreateModeSectionProps>): React.ReactElement {
   const t = useTranslations("create.mode");
   const personaOptions = [
     { value: "", label: t("personaNone") },

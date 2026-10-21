@@ -74,7 +74,7 @@ export function CreateWorkspaceSidebar({
   workflowState,
   activeStepId,
   projectId,
-}: CreateWorkspaceSidebarProps): React.ReactElement {
+}: Readonly<CreateWorkspaceSidebarProps>): React.ReactElement {
   const t = useTranslations("create");
 
   const showPublishCta =

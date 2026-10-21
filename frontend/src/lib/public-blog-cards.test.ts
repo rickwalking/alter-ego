@@ -188,9 +188,8 @@ describe("buildPublicBlogCards", () => {
       "pt",
     );
     expect(same!.subtitle).toBeUndefined();
-    expect(long!.subtitle).toBe(
-      `${Array.from({ length: 15 }, (_, i) => `w${i}`).join(" ")}...`,
-    );
+    const words = Array.from({ length: 15 }, (_, i) => `w${i}`).join(" ");
+    expect(long!.subtitle).toBe(`${words}...`);
   });
 
   it("maps a standalone public post", () => {

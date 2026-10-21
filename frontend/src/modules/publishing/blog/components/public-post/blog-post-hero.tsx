@@ -8,7 +8,7 @@ const HERO_FRAME_CLASS =
  * Article hero: the post's own cover with its stored alt (AE-0423, ADR-0025),
  * or a neutral themed default when the cover is null — never a carousel slide.
  */
-export function BlogPostHero({ cover, design }: BlogPostHeroProps) {
+export function BlogPostHero({ cover, design }: Readonly<BlogPostHeroProps>) {
   const { colors } = design;
   const frameStyle = {
     border: `1px solid ${colors.primary}33`,

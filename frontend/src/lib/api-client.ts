@@ -70,7 +70,7 @@ function fetchWithCredentials(
     credentials: "include",
     headers: {
       "Content-Type": JSON_CONTENT_TYPE,
-      ...options?.headers,
+      ...(options?.headers as Record<string, string> | undefined),
     },
   });
 }

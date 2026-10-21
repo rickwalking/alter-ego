@@ -2,7 +2,7 @@ interface RoleBadgeProps {
   role: string;
 }
 
-export function RoleBadge({ role }: RoleBadgeProps) {
+export function RoleBadge({ role }: Readonly<RoleBadgeProps>) {
   const isAdmin = role === "admin";
 
   return (

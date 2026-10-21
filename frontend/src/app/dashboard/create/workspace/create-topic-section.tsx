@@ -19,7 +19,7 @@ export interface CreateTopicSectionProps {
 export function CreateTopicSection({
   form,
   onChange,
-}: CreateTopicSectionProps): React.ReactElement {
+}: Readonly<CreateTopicSectionProps>): React.ReactElement {
   const t = useTranslations("create.form");
   return (
     <div style={sectionCardStyle}>

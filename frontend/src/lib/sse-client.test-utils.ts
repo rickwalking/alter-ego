@@ -13,13 +13,13 @@ export function createMockReader(chunks: Uint8Array[]): {
 } {
   let index = 0;
   return {
-    read: async () => {
+    read: () => {
       if (index < chunks.length) {
         const value = chunks[index]!;
         index++;
-        return { done: false, value };
+        return Promise.resolve({ done: false, value });
       }
-      return { done: true, value: undefined };
+      return Promise.resolve({ done: true, value: undefined });
     },
   };
 }

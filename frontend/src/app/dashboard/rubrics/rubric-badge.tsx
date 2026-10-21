@@ -9,7 +9,7 @@ interface RubricBadgeProps {
 export function RubricBadge({
   label,
   color,
-}: RubricBadgeProps): React.ReactElement {
+}: Readonly<RubricBadgeProps>): React.ReactElement {
   const c = getRubricColor(color);
   return (
     <span

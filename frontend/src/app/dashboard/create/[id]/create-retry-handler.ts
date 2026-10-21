@@ -1,10 +1,10 @@
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
-type WorkflowSource = {
+interface WorkflowSource {
   title: string;
   content: string;
   source_type?: string;
-};
+}
 
 type StartWorkflow = (input: {
   topic: string;

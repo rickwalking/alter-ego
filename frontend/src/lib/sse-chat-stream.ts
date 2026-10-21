@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 
 import type { Message } from "@/schemas/chat";
 
@@ -73,8 +73,8 @@ export function appendStreamToken({
 
 /** The per-stream accumulation refs a chat hook clears when a stream begins. */
 export interface StreamAccumulationRefs {
-  contentRef: MutableRefObject<string>;
-  msgIdRef: MutableRefObject<string | null>;
+  contentRef: RefObject<string>;
+  msgIdRef: RefObject<string | null>;
 }
 
 /** Build the optimistic user message appended before a stream starts. */

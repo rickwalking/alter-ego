@@ -96,7 +96,7 @@ export async function generateMetadata({
 export default async function PublicCarouselViewerPage({
   params,
   searchParams,
-}: CarouselViewerPageProps): Promise<React.ReactElement> {
+}: Readonly<CarouselViewerPageProps>): Promise<React.ReactElement> {
   const { id } = await params;
   const { lang } = await searchParams;
   const carousel = await loadCarousel(id);

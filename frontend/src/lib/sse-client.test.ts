@@ -12,9 +12,9 @@ describe("streamSseEvents", () => {
   let onComplete: Mock<() => void>;
 
   beforeEach(() => {
-    onEvent = vi.fn() as Mock<(event: SseEvent) => void>;
-    onError = vi.fn() as Mock<(error: Error) => void>;
-    onComplete = vi.fn() as Mock<() => void>;
+    onEvent = vi.fn();
+    onError = vi.fn();
+    onComplete = vi.fn();
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -305,7 +305,7 @@ describe("streamSseEvents", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "last-event-id": "1",
-        }),
+        }) as unknown,
       }),
     );
   });

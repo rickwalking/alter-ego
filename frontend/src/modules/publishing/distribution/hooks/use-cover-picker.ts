@@ -49,7 +49,7 @@ export const coverOptionKeys = {
 
 export function useCoverOptions(
   projectId: string,
-): UseQueryResult<CoverOptions, Error> {
+): UseQueryResult<CoverOptions> {
   return useQuery({
     queryKey: coverOptionKeys.detail(projectId),
     queryFn: () =>

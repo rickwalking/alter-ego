@@ -9,7 +9,7 @@ export type { NeonKanbanBoardProps } from "./types";
 
 export function NeonKanbanBoard({
   columns,
-}: NeonKanbanBoardProps): React.ReactElement {
+}: Readonly<NeonKanbanBoardProps>): React.ReactElement {
   return (
     <div
       className="flex snap-x gap-4 overflow-x-auto pb-4"

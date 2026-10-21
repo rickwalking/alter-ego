@@ -10,13 +10,13 @@ import {
   type GenerationStatus,
 } from "./generation-constants";
 
-export type GenerationError = {
+export interface GenerationError {
   code: string;
   slot?: string;
   reason?: string;
-};
+}
 
-export type GenerationState = {
+export interface GenerationState {
   status: GenerationStatus;
   attempt: number;
   warnings: string[];
@@ -25,7 +25,7 @@ export type GenerationState = {
   /** Cover + one per section (N + 1); 0 on rows written before AE-0425. */
   imageSlots: number;
   imageCount: number;
-};
+}
 
 const KNOWN_STATUSES = new Set<string>(Object.values(GENERATION_STATUS));
 

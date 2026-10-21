@@ -25,7 +25,7 @@ export function LanguageTabs({
   translationStatus,
   onChange,
   onGenerateTranslation,
-}: LanguageTabsProps): React.ReactElement {
+}: Readonly<LanguageTabsProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const missingEnglish = language === BLOG_CONTENT_EN && !hasEnglish;
   return (

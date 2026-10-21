@@ -28,7 +28,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 }
 
 function jsonResponse(body: unknown): Response {
-  return { ok: true, json: async () => body } as unknown as Response;
+  return { ok: true, json: () => Promise.resolve(body) } as unknown as Response;
 }
 
 describe("useContentCalendar", () => {
@@ -53,18 +53,20 @@ describe("useContentCalendar", () => {
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
 
     // The latest (second) window resolves first and is committed.
-    await act(async () => {
+    await act(() => {
       second.resolve(
         jsonResponse({ items: [], start: "B0", end: "B1", total: 0 }),
       );
+      return Promise.resolve();
     });
     await waitFor(() => expect(result.current.calendar?.start).toBe("B0"));
 
     // The stale (first) window resolves afterwards and must NOT overwrite it.
-    await act(async () => {
+    await act(() => {
       first.resolve(
         jsonResponse({ items: [], start: "A0", end: "A1", total: 0 }),
       );
+      return Promise.resolve();
     });
     expect(result.current.calendar?.start).toBe("B0");
   });
@@ -77,7 +79,7 @@ describe("useContentCalendar", () => {
     renderHook(() => useContentCalendar("S", "E"));
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
-    const url = mockFetch.mock.calls[0]![0] as string;
+    const url = mockFetch.mock.calls[0]![0];
     expect(url).toContain("start=S");
     expect(url).toContain("end=E");
   });

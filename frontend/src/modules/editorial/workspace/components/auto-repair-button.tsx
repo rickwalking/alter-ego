@@ -46,7 +46,7 @@ export function AutoRepairButton({
   projectId,
   onRepaired,
   onRepublishNeeded,
-}: AutoRepairButtonProps): React.ReactElement {
+}: Readonly<AutoRepairButtonProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   const repair = useRepairCarousel();
   const [summary, setSummary] = useState<RepairOutcome | null>(null);
@@ -108,9 +108,9 @@ export function AutoRepairButton({
 
 function RepairSummary({
   outcome,
-}: {
+}: Readonly<{
   outcome: RepairOutcome;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   return (
     <div className="space-y-1">
@@ -131,9 +131,9 @@ function RepairSummary({
 
 function FixedList({
   diffs,
-}: {
+}: Readonly<{
   diffs: RepairSlideDiff[];
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.autoRepair");
   return (
     <ul

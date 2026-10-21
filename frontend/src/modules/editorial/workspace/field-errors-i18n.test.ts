@@ -21,7 +21,9 @@ const ptErrors = pt.editorialWorkflow.review.fieldErrors;
 
 describe("field-error i18n (AE-0403)", () => {
   it("has the same field-error keys in pt and en", () => {
-    expect(flatKeys(ptErrors).sort()).toEqual(flatKeys(enErrors).sort());
+    expect(flatKeys(ptErrors).sort((a, b) => a.localeCompare(b))).toEqual(
+      flatKeys(enErrors).sort((a, b) => a.localeCompare(b)),
+    );
   });
 
   it.each([...FIELD_ERROR_MESSAGE_CODES])(

@@ -78,7 +78,8 @@ export function applySlideStructuredItemEdit(
     if (!Array.isArray(current)) {
       return slide;
     }
-    const nextItems = current.map((item, index) =>
+    const items: unknown[] = current;
+    const nextItems = items.map((item, index) =>
       index === edit.itemIndex && item && typeof item === "object"
         ? { ...(item as Record<string, unknown>), [edit.field]: edit.value }
         : item,

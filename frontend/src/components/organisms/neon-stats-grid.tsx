@@ -9,7 +9,7 @@ export interface NeonStatsGridProps {
 
 export function NeonStatsGrid({
   cards,
-}: NeonStatsGridProps): React.ReactElement {
+}: Readonly<NeonStatsGridProps>): React.ReactElement {
   return (
     <div
       className="grid gap-4"

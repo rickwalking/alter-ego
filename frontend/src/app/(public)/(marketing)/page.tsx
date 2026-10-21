@@ -17,13 +17,13 @@ function HomePageContent({
   tb,
   data,
   locale,
-}: {
+}: Readonly<{
   t: Translator;
   tc: Translator;
   tb: Translator;
   data: CarouselProjectListResponse;
   locale: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <>
       <MarketingDecorations />

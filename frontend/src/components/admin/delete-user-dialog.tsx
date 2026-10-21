@@ -23,7 +23,7 @@ export function DeleteUserDialog({
   user,
   onClose,
   onSuccess,
-}: DeleteUserDialogProps) {
+}: Readonly<DeleteUserDialogProps>) {
   const t = useTranslations("admin");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);

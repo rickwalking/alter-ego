@@ -55,7 +55,7 @@ export function ImageSlot({
   issue,
   onGenerate,
   onChange,
-}: ImageSlotProps): React.ReactElement {
+}: Readonly<ImageSlotProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [prompt, setPrompt] = useState(image?.prompt ?? "");
   const busy = readOnly || status.pending;
@@ -106,11 +106,7 @@ export function ImageSlot({
           loading={status.pending}
           onClick={generate}
         >
-          {status.error
-            ? t("image.retry")
-            : image
-              ? t("image.regenerate")
-              : t("image.generate")}
+          {t(imageActionKey(Boolean(status.error), Boolean(image)))}
         </NeonButton>
         {image && (
           <NeonButton
@@ -127,13 +123,27 @@ export function ImageSlot({
   );
 }
 
+/** Generate-button label: retry after an error, regenerate over an image, else generate. */
+function imageActionKey(
+  hasError: boolean,
+  hasImage: boolean,
+): "image.retry" | "image.regenerate" | "image.generate" {
+  if (hasError) {
+    return "image.retry";
+  }
+  if (hasImage) {
+    return "image.regenerate";
+  }
+  return "image.generate";
+}
+
 function ImageTexts({
   slotId,
   image,
   readOnly,
   issue,
   onChange,
-}: ImageTextsProps): React.ReactElement {
+}: Readonly<ImageTextsProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const altError = issue ? t(`issues.${issue}`) : null;
   return (

@@ -72,7 +72,7 @@ describe("image slots", () => {
     });
     const [url, init] = mockFetch.mock.calls[1]!;
     expect(url).toBe(`/api/blog-posts/p-1/sections/${SEC_3}/image?language=pt`);
-    expect(JSON.parse(String(init?.body))).toEqual({ prompt: "Um farol" });
+    expect(JSON.parse(init?.body as string)).toEqual({ prompt: "Um farol" });
     const draft = result.current.editor.draft?.document;
     expect(draft?.sections[2]!.image?.url).toBe("/api/blog-images/p-1/n.jpg");
     expect(result.current.editor.post?.lock_version).toBe(3);
@@ -127,7 +127,7 @@ describe("image slots", () => {
 
   it("reports a running slot action (review controls wait for it)", async () => {
     const { result } = await renderActions();
-    let finish: (value: Response) => void = () => undefined;
+    let finish: (value: Response) => void = (_value) => undefined;
     mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (finish = r)));
     let running: Promise<void> = Promise.resolve();
     act(() => {
@@ -219,7 +219,7 @@ describe("rewrite and translation", () => {
     await act(async () => {
       await result.current.actions.rewrite(SEC_1);
     });
-    expect(JSON.parse(String(mockFetch.mock.calls[1]![1]?.body))).toEqual({
+    expect(JSON.parse(mockFetch.mock.calls[1]![1]?.body as string)).toEqual({
       persona_id: "persona-1",
     });
     const sections = result.current.editor.draft?.document.sections ?? [];

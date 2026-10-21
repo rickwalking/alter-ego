@@ -14,7 +14,7 @@ export function CaptionEditor({
   placeholder,
   ariaLabel,
   helpText,
-}: CaptionEditorProps) {
+}: Readonly<CaptionEditorProps>) {
   const count = value.length;
   const over = count > maxChars;
 

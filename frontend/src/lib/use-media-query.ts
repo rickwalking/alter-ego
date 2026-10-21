@@ -25,11 +25,11 @@ export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onChange: () => void): (() => void) => {
       if (!hasMatchMedia()) {
-        return () => {};
+        return () => undefined;
       }
       const mql = mediaQueryList(query);
       if (!mql?.addEventListener || !mql.removeEventListener) {
-        return () => {};
+        return () => undefined;
       }
       const { addEventListener, removeEventListener } = mql;
       addEventListener.call(mql, "change", onChange);

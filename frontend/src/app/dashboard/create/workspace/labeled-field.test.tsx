@@ -7,6 +7,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LabeledField } from "./labeled-field";
 
+/** True when the text holds an opening parenthesis followed later by a closing one. */
+function hasParenthesizedText(content: string): boolean {
+  const open = content.indexOf("(");
+  return open >= 0 && content.includes(")", open + 1);
+}
+
 describe("LabeledField", () => {
   it("renders the label and optional hint", () => {
     render(
@@ -14,7 +20,7 @@ describe("LabeledField", () => {
         label="Carousel Topic"
         hint="max 500 chars"
         value=""
-        onChange={() => {}}
+        onChange={() => undefined}
       />,
     );
     expect(screen.getByText("Carousel Topic")).toBeInTheDocument();
@@ -35,7 +41,7 @@ describe("LabeledField", () => {
       <LabeledField
         label="Brief"
         value="hello"
-        onChange={() => {}}
+        onChange={() => undefined}
         multiline
       />,
     );
@@ -49,7 +55,7 @@ describe("LabeledField", () => {
       <LabeledField
         label="Topic"
         value=""
-        onChange={() => {}}
+        onChange={() => undefined}
         maxLength={500}
       />,
     );
@@ -61,7 +67,7 @@ describe("LabeledField", () => {
       <LabeledField
         label="A"
         value=""
-        onChange={() => {}}
+        onChange={() => undefined}
         marginBottom="14px"
       />,
     );
@@ -70,15 +76,15 @@ describe("LabeledField", () => {
       marginBottom: "14px",
     });
 
-    rerender(<LabeledField label="A" value="" onChange={() => {}} />);
+    rerender(<LabeledField label="A" value="" onChange={() => undefined} />);
     expect(screen.getByRole("textbox").parentElement?.style.marginBottom).toBe(
       "",
     );
   });
 
   it("omits the hint span when no hint is given", () => {
-    render(<LabeledField label="Topic" value="" onChange={() => {}} />);
-    expect(screen.queryByText(/\(.*\)/)).not.toBeInTheDocument();
+    render(<LabeledField label="Topic" value="" onChange={() => undefined} />);
+    expect(screen.queryByText(hasParenthesizedText)).not.toBeInTheDocument();
   });
 });
 
@@ -88,8 +94,13 @@ describe("LabeledField accessibility and limits (AE-0415)", () => {
   it("ties the label to the input and the textarea", () => {
     render(
       <>
-        <LabeledField label="Topic" value="" onChange={() => {}} />
-        <LabeledField label="Brief" value="" onChange={() => {}} multiline />
+        <LabeledField label="Topic" value="" onChange={() => undefined} />
+        <LabeledField
+          label="Brief"
+          value=""
+          onChange={() => undefined}
+          multiline
+        />
       </>,
     );
     expect(screen.getByLabelText("Topic").tagName).toBe("INPUT");
@@ -102,7 +113,7 @@ describe("LabeledField accessibility and limits (AE-0415)", () => {
       <LabeledField
         label="Topic"
         value="twelve chars"
-        onChange={() => {}}
+        onChange={() => undefined}
         maxLength={500}
       />,
     );
@@ -114,7 +125,9 @@ describe("LabeledField accessibility and limits (AE-0415)", () => {
   });
 
   it("shows no counter without a limit", () => {
-    render(<LabeledField label="Topic" value="abc" onChange={() => {}} />);
+    render(
+      <LabeledField label="Topic" value="abc" onChange={() => undefined} />,
+    );
     expect(screen.queryByText(/\/\d+$/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Topic")).not.toHaveAttribute(
       "aria-describedby",

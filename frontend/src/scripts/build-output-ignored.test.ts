@@ -21,7 +21,7 @@ function runCheck(env: Record<string, string> = {}): {
   output: string;
 } {
   try {
-    const output = execFileSync("bash", [SCRIPT], {
+    const output = execFileSync(SCRIPT, [], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...env },

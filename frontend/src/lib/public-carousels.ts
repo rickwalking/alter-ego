@@ -91,14 +91,14 @@ export function carouselLanguageTag(language: string): string {
 }
 
 export function carouselTitle(
-  candidates: ReadonlyArray<string | null | undefined>,
+  candidates: readonly (string | null | undefined)[],
   fallbackTitle: string,
 ): string {
   return resolveDisplayTitle(candidates) || fallbackTitle;
 }
 
 export function carouselSubtitle(
-  candidates: ReadonlyArray<string | null | undefined>,
+  candidates: readonly (string | null | undefined)[],
 ): string | null {
   for (const candidate of candidates) {
     if (isNonEmptyString(candidate)) {

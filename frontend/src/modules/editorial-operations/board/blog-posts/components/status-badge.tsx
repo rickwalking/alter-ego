@@ -35,7 +35,7 @@ function resolveBadge({
  * value and renders the neutral fallback. A `published` post that is not
  * publicly readable yet renders "not public yet" (AE-0411).
  */
-export function BlogPostStatusBadge(props: BlogPostStatusBadgeProps) {
+export function BlogPostStatusBadge(props: Readonly<BlogPostStatusBadgeProps>) {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const { key, visual } = resolveBadge(props);
   return (

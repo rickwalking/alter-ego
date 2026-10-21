@@ -78,7 +78,7 @@ export function PublishPanel({
   publishResult,
   cacheBustToken,
   slideNumbers,
-}: PublishPanelProps) {
+}: Readonly<PublishPanelProps>) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
   const [language, setLanguage] = useState<LanguageTab>("pt");

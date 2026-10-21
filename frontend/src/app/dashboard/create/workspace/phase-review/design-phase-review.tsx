@@ -18,7 +18,7 @@ export interface DesignPhaseReviewProps {
 export function DesignPhaseReview({
   state,
   recovery,
-}: DesignPhaseReviewProps): React.ReactElement {
+}: Readonly<DesignPhaseReviewProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
   // AE-0310: the backend hint (design_recovery_hint) and the blocking report

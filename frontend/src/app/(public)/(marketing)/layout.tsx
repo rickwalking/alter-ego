@@ -1,9 +1,9 @@
 import { PublicShellFrame } from "@/components/layout/public-header";
 
-export default async function MarketingLayout({
+export default function MarketingLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>): Promise<React.ReactElement> {
-  return <PublicShellFrame>{children}</PublicShellFrame>;
+  return Promise.resolve(<PublicShellFrame>{children}</PublicShellFrame>);
 }

@@ -21,7 +21,7 @@ export function toPublicCarouselImageUrl(url: string): string {
     PREVIEW_IMAGES_SEGMENT,
     PUBLIC_IMAGES_SEGMENT,
   );
-  const lang = `?${query}`.match(LANG_QUERY_PATTERN)?.[1];
+  const lang = LANG_QUERY_PATTERN.exec(`?${query}`)?.[1];
   return lang ? `${publicPath}?lang=${lang}` : publicPath;
 }
 
@@ -32,7 +32,7 @@ export function appendCacheBuster(url: string, version: string): string {
 }
 
 function slideFilenameFromPath(path: string): string | null {
-  const match = path.match(SLIDE_FILENAME_PATTERN);
+  const match = SLIDE_FILENAME_PATTERN.exec(path);
   if (!match) {
     return null;
   }

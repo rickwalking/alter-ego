@@ -9,7 +9,7 @@ import {
   generateStandaloneBlogPost,
 } from "@/modules/publishing";
 
-type UseGenerateBlogPostResult = {
+interface UseGenerateBlogPostResult {
   open: boolean;
   topic: string;
   pending: boolean;
@@ -19,7 +19,7 @@ type UseGenerateBlogPostResult = {
   hide: () => void;
   setTopic: (topic: string) => void;
   submit: () => Promise<void>;
-};
+}
 
 /**
  * Standalone "Generate with AI" (AE-0425, F-09): a topic becomes a draft

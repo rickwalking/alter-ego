@@ -10,11 +10,11 @@ import {
 import type { CalendarDay } from "@/modules/editorial-operations";
 import { useContentCalendar } from "@/modules/editorial";
 
-type UseCalendarDaysResult = {
+interface UseCalendarDaysResult {
   days: CalendarDay[];
   loading: boolean;
   error: string | null;
-};
+}
 
 /**
  * Loads the content calendar for the month anchored at `anchor` and derives the

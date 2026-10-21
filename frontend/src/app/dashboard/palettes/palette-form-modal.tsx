@@ -33,7 +33,7 @@ export function PaletteFormModal({
   onSave,
   isPending,
   serverError,
-}: PaletteFormModalProps): React.ReactElement {
+}: Readonly<PaletteFormModalProps>): React.ReactElement {
   const t = useTranslations("palettes");
   const form = usePaletteForm(palette);
   const isEdit = palette !== undefined;

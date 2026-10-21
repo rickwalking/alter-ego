@@ -86,6 +86,14 @@ export interface WorkflowStreamReconnectApi {
   cancelReconnect: () => void;
 }
 
+/**
+ * The settled resume result, wrapped so the request's try/finally returns a
+ * plain value: the pending finalization runs outside its catch, as before.
+ */
+export interface ResumeOutcome {
+  pending: Promise<EditorialWorkflowState>;
+}
+
 export interface EditorialWorkflowResumeAcceptedResponse {
   accepted: boolean;
   project_id: string;
@@ -153,7 +161,7 @@ export interface StartWorkflowInput {
   topic: string;
   audience: string;
   brief: string;
-  sources: Array<{ title: string; content: string; source_type?: string }>;
+  sources: { title: string; content: string; source_type?: string }[];
   personaId?: string;
 }
 

@@ -28,7 +28,7 @@ export function NeonToast({
   variant = "info",
   duration = 4000,
   onDismiss,
-}: NeonToastProps): React.ReactElement | null {
+}: Readonly<NeonToastProps>): React.ReactElement | null {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {

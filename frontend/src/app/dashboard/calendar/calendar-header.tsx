@@ -10,9 +10,9 @@ import {
 
 export function CalendarHeader({
   loading,
-}: {
+}: Readonly<{
   loading: boolean;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <div
       // `pl-14` clears the layout-level mobile hamburger; layout/zIndex via

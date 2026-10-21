@@ -22,7 +22,7 @@ export function ChatComposer({
   onChange,
   onSend,
   disabled = false,
-}: ChatComposerProps): React.ReactElement {
+}: Readonly<ChatComposerProps>): React.ReactElement {
   return (
     <div
       style={{

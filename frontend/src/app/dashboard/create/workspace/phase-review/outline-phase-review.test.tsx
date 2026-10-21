@@ -24,7 +24,7 @@ function stateWith(outline: Record<string, unknown>[]): EditorialWorkflowState {
     outline,
     slide_drafts: [],
     status: "draft",
-  } as EditorialWorkflowState;
+  };
 }
 
 const POV_OUTLINE = [

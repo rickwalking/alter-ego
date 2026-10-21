@@ -15,7 +15,7 @@ import type { HorizontalCarouselViewerProps } from "./types";
 export function HorizontalCarouselViewer({
   slideUrls,
   alt,
-}: HorizontalCarouselViewerProps) {
+}: Readonly<HorizontalCarouselViewerProps>) {
   const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);

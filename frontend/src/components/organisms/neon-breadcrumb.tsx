@@ -11,7 +11,7 @@ export interface NeonBreadcrumbProps {
 
 export function NeonBreadcrumb({
   items,
-}: NeonBreadcrumbProps): React.ReactElement {
+}: Readonly<NeonBreadcrumbProps>): React.ReactElement {
   return (
     <div
       style={{

@@ -48,7 +48,7 @@ export async function installWorkflowSseTestBridge(page: Page): Promise<void> {
         options?: boolean | AddEventListenerOptions,
       ): void => {
         if (typeof listener === "function") {
-          trackListener(source, type, listener as SseListener);
+          trackListener(source, type, listener);
         }
         originalAddEventListener(type, listener, options);
       }) as typeof source.addEventListener;
@@ -76,7 +76,10 @@ export async function installWorkflowSseTestBridge(page: Page): Promise<void> {
         string,
         (eventType: string, payload: Record<string, unknown>) => void
       >
-    )[bridgeKey] = (eventType: string, payload: Record<string, unknown>): void => {
+    )[bridgeKey] = (
+      eventType: string,
+      payload: Record<string, unknown>,
+    ): void => {
       if (!activeSource) {
         return;
       }
@@ -116,7 +119,7 @@ export async function emitWorkflowSseEvent(
 
 export function buildOutlineReviewRequiredPayload(
   projectId: string,
-  outline: Array<Record<string, unknown>>,
+  outline: Record<string, unknown>[],
 ): Record<string, unknown> {
   return {
     event: EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,

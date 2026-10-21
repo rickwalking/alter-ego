@@ -27,7 +27,7 @@ export async function readApiError(
 ): Promise<string> {
   try {
     const payload = (await response.json()) as {
-      detail?: string | Array<{ msg?: string }>;
+      detail?: string | { msg?: string }[];
     };
     if (typeof payload.detail === "string") {
       return payload.detail;

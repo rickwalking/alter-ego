@@ -21,7 +21,7 @@ export function CoverOptionGrid({
   currentAssetId,
   disabled,
   onChoose,
-}: CoverOptionGridProps): React.ReactElement {
+}: Readonly<CoverOptionGridProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   return (
     <div
@@ -49,7 +49,7 @@ function CoverThumb({
   current,
   disabled,
   onChoose,
-}: CoverThumbProps): React.ReactElement {
+}: Readonly<CoverThumbProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const offer = option.source === COVER_SOURCE_OFFER;
   const label = offer ? t("offerLabel") : t("photoLabel", { number });

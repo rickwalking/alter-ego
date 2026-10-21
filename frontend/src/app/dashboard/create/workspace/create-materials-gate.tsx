@@ -15,7 +15,7 @@ export function CreateMaterialsGate({
   loading,
   onStartWithMaterials,
   onStartWithoutMaterials,
-}: CreateMaterialsGateProps): React.JSX.Element {
+}: Readonly<CreateMaterialsGateProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.gate");
 
   return (

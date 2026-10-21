@@ -15,9 +15,9 @@ const TERMINAL_LINE_BASE = {
 /** The animated terminal mock shown in the hero's right column. */
 export function MarketingHeroTerminal({
   t,
-}: {
+}: Readonly<{
   t: Translator;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <div
       className="relative flex justify-center items-center min-w-0 max-[900px]:order-[-1]"

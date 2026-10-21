@@ -29,7 +29,7 @@ function run(env: Record<string, string> = {}): {
   output: string;
 } {
   try {
-    const output = execFileSync("node", [SCRIPT], {
+    const output = execFileSync(process.execPath, [SCRIPT], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       env: { ...process.env, ...env },

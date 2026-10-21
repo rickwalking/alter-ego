@@ -16,9 +16,9 @@ import {
  */
 export function ContentViolationList({
   violations,
-}: {
+}: Readonly<{
   violations: SlideValidationViolation[];
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
   const message = useFieldErrorMessage();
   const fieldLabel = useViolationFieldLabel();

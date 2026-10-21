@@ -78,7 +78,7 @@ export async function generateMetadata({
 export default async function PublicBlogPostPage({
   params,
   searchParams,
-}: BlogPostPageProps) {
+}: Readonly<BlogPostPageProps>) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
   const currentLang = await resolveLang(langParam);

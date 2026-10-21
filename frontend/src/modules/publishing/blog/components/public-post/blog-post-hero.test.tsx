@@ -55,7 +55,7 @@ describe("BlogPostHero Component", () => {
         const img = screen.getByRole("img");
         // next/image re-assigns `src` when an onError handler is set (AE-0412),
         // which resolves it against the document origin.
-        const src = new URL(img.getAttribute("src") ?? "", "http://x");
+        const src = new URL(img.getAttribute("src") ?? "", "http://x.test");
         expect(src.pathname).toBe("/api/carousels/1/images/hero");
       });
 

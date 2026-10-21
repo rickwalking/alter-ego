@@ -39,7 +39,7 @@ export function ProjectSummaryCard({
   currentPhase,
   workflowStatus,
   phaseStatus = null,
-}: ProjectSummaryCardProps): React.ReactElement {
+}: Readonly<ProjectSummaryCardProps>): React.ReactElement {
   const t = useTranslations("create.summary");
   const phaseLabel = usePhaseLabel();
   // Prefer the editorial "ready to publish" signal; otherwise reflect the live

@@ -83,7 +83,7 @@ function PickStatus({
 export function CoverPickerSection({
   projectId,
   onSwitched,
-}: CoverPickerSectionProps): React.ReactElement {
+}: Readonly<CoverPickerSectionProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const options = useCoverOptions(projectId);
   const currentAssetId = options.data?.current_asset_id ?? null;

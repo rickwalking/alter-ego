@@ -19,7 +19,7 @@ export function ScheduleControl({
   disabled,
   onSchedule,
   onCancelSchedule,
-}: ScheduleControlProps): React.ReactElement {
+}: Readonly<ScheduleControlProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [when, setWhen] = useState("");
   if (scheduledPublishAt) {

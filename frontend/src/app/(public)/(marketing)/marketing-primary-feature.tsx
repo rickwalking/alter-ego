@@ -8,7 +8,7 @@ export const MARKETING_CARD_FOCUS =
 
 export function MarketingPrimaryFeature({
   t,
-}: MarketingFeaturesProps): React.ReactElement {
+}: Readonly<MarketingFeaturesProps>): React.ReactElement {
   return (
     <Link
       href={PUBLIC_ROUTE_PATHS.CHAT}

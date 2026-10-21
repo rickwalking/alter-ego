@@ -247,7 +247,7 @@ describe("useCreateConversation", () => {
   it("logs create errors without updating the cache", async () => {
     const consoleError = vi
       .spyOn(console, "error")
-      .mockImplementation(() => {});
+      .mockImplementation(() => undefined);
     mockApiCall.mockRejectedValueOnce(new Error("create failed"));
     const queryClient = createQueryClient();
     queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);
@@ -304,7 +304,7 @@ describe("useSendMessage", () => {
   it("logs send errors without invalidating queries", async () => {
     const consoleError = vi
       .spyOn(console, "error")
-      .mockImplementation(() => {});
+      .mockImplementation(() => undefined);
     mockApiCall.mockRejectedValueOnce(new Error("send failed"));
     const queryClient = createQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
@@ -406,7 +406,7 @@ describe("useDeleteConversation", () => {
   it("logs delete errors without mutating the cache", async () => {
     const consoleError = vi
       .spyOn(console, "error")
-      .mockImplementation(() => {});
+      .mockImplementation(() => undefined);
     mockDelete.mockRejectedValueOnce(new ApiError(500, "delete failed"));
     const queryClient = createQueryClient();
     queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);

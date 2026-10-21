@@ -7,9 +7,9 @@ import { NEON_CYAN } from "@/constants/neon";
  */
 export function MarketingSectionEyebrow({
   label,
-}: {
+}: Readonly<{
   label: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <div
       style={{

@@ -22,7 +22,7 @@ interface WorkflowLiveUpdatesDisconnectedProps {
 
 export function WorkflowLiveUpdatesDisconnected({
   onRetry,
-}: WorkflowLiveUpdatesDisconnectedProps): React.JSX.Element {
+}: Readonly<WorkflowLiveUpdatesDisconnectedProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.transport");
   return (
     <NeonAlert role="status" data-testid="live-updates-disconnected">

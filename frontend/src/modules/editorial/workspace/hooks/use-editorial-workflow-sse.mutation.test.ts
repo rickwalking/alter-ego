@@ -18,8 +18,10 @@ class MockEventSource {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
-  static instances: MockEventSource[] = [];
-  static lastInit: EventSourceInit | undefined;
+  static readonly instances: MockEventSource[] = [];
+  static get lastInit(): EventSourceInit | undefined {
+    return MockEventSource.instances.at(-1)?.init;
+  }
 
   readyState = MockEventSource.CONNECTING;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
@@ -27,14 +29,13 @@ class MockEventSource {
   onopen: (() => void) | null = null;
   private listeners = new Map<
     string,
-    Array<(event: MessageEvent<string>) => void>
+    ((event: MessageEvent<string>) => void)[]
   >();
 
   constructor(
     public url: string,
-    init?: EventSourceInit,
+    public init?: EventSourceInit,
   ) {
-    MockEventSource.lastInit = init;
     MockEventSource.instances.push(this);
   }
 
@@ -91,7 +92,7 @@ function renderSseHook(
   const setPhaseEvents = vi.fn();
   const setTransportMode = vi.fn();
   const setError = vi.fn();
-  const refreshState = vi.fn(async () => baseState);
+  const refreshState = vi.fn(() => Promise.resolve(baseState));
 
   const hook = renderHook(
     ({ projectId, state, transportMode }) =>
@@ -127,8 +128,7 @@ function renderSseHook(
 }
 
 beforeEach(() => {
-  MockEventSource.instances = [];
-  MockEventSource.lastInit = undefined;
+  MockEventSource.instances.length = 0;
   vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
   // @ts-expect-error — swap in the mock for the duration of each test.
   globalThis.EventSource = MockEventSource;
@@ -427,13 +427,13 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     const { refreshState, rerender } = renderSseHook({
       transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK,
     });
-    refreshState.mockImplementation(async () => {
+    refreshState.mockImplementation(() => {
       rerender({
         projectId: "project-1",
         state: readyState,
         transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK,
       });
-      return readyState;
+      return Promise.resolve(readyState);
     });
 
     vi.useFakeTimers();

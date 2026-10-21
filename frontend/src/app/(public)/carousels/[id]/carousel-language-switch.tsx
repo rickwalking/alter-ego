@@ -18,7 +18,7 @@ export function CarouselLanguageSwitch({
   activeLanguage,
   label,
   options,
-}: CarouselLanguageSwitchProps): React.ReactElement {
+}: Readonly<CarouselLanguageSwitchProps>): React.ReactElement {
   return (
     <nav
       aria-label={label}

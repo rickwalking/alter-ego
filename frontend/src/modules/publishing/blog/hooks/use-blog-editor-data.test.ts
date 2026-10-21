@@ -25,7 +25,7 @@ beforeEach(() => {
   mockFetch.mockReset();
   mockFetch.mockImplementation((url) =>
     Promise.resolve(
-      String(url).endsWith("/versions")
+      url.endsWith("/versions")
         ? jsonResponse([{ version_number: 1, snapshot: {} }])
         : jsonResponse({
             items: [
@@ -51,9 +51,7 @@ describe("useBlogEditorData", () => {
     rerender({ lock: 3 });
     await waitFor(() =>
       expect(
-        mockFetch.mock.calls.filter(([url]) =>
-          String(url).endsWith("/versions"),
-        ),
+        mockFetch.mock.calls.filter(([url]) => url.endsWith("/versions")),
       ).toHaveLength(2),
     );
     act(() => result.current.setPersonaId("b"));

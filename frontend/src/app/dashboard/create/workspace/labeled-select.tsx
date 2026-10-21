@@ -22,7 +22,7 @@ export function LabeledSelect({
   options,
   onChange,
   marginBottom,
-}: LabeledSelectProps): React.ReactElement {
+}: Readonly<LabeledSelectProps>): React.ReactElement {
   return (
     <div style={marginBottom ? { marginBottom } : undefined}>
       <label

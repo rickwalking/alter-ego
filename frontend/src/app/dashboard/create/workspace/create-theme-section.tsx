@@ -31,7 +31,7 @@ export function CreateThemeSection({
   form,
   onChange,
   themeOptions,
-}: CreateThemeSectionProps): React.ReactElement {
+}: Readonly<CreateThemeSectionProps>): React.ReactElement {
   const t = useTranslations("create");
   const selectedIsLight =
     findThemeMode(themeOptions, form.theme) === PALETTE_MODES[0];
@@ -40,7 +40,7 @@ export function CreateThemeSection({
   // selecting one nudges the preset toward it to avoid a mismatched dark scene.
   const handleThemeChange = (theme: string): void => {
     const patch: Partial<CreateCarouselFormState> = {
-      theme: theme as CreateCarouselFormState["theme"],
+      theme: theme,
     };
     const isLight = findThemeMode(themeOptions, theme) === PALETTE_MODES[0];
     if (isLight && form.imagePreset !== LIGHT_THEME_IMAGE_PRESET) {

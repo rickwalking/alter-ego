@@ -45,7 +45,7 @@ export function LabeledField({
   multiline = false,
   rows = 4,
   marginBottom,
-}: LabeledFieldProps): React.ReactElement {
+}: Readonly<LabeledFieldProps>): React.ReactElement {
   const id = useId();
   const counterId = `${id}-counter`;
   const controlProps = {

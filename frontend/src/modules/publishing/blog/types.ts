@@ -24,7 +24,7 @@ export interface BlogPost {
   author_id?: string | null;
   reviewer_id?: string | null;
   /** Reject reasons are `{text, author_id, status}` objects (AE-0424). */
-  editor_comments: Array<string | Record<string, unknown>>;
+  editor_comments: (string | Record<string, unknown>)[];
   sources: string[];
   citations: Record<string, unknown>[];
   ai_suggestions: Record<string, unknown>[];

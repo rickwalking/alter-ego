@@ -19,9 +19,9 @@ afterEach(() => {
 describe("getBaseUrl server-side resolution (AE-0297)", () => {
   it("prefers the explicit API_BASE_URL override in production", () => {
     simulateServerSide();
-    vi.stubEnv("API_BASE_URL", "http://droplet-internal:8000");
+    vi.stubEnv("API_BASE_URL", "http://droplet-internal.test:8000");
     vi.stubEnv("NEXT_PUBLIC_API_URL", "/api");
-    expect(getBaseUrl()).toBe("http://droplet-internal:8000");
+    expect(getBaseUrl()).toBe("http://droplet-internal.test:8000");
   });
 
   it("falls back to the Docker-internal hostname for relative public URLs", () => {
@@ -39,7 +39,7 @@ describe("getBaseUrl server-side resolution (AE-0297)", () => {
   });
 
   it("client-side ignores API_BASE_URL and uses the public env URL", () => {
-    vi.stubEnv("API_BASE_URL", "http://droplet-internal:8000");
+    vi.stubEnv("API_BASE_URL", "http://droplet-internal.test:8000");
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
     expect(getBaseUrl()).toBe("http://localhost:8000");
   });

@@ -19,7 +19,7 @@ export function WorkflowFailedCard({
   errorMessage,
   onRetry,
   isRetrying,
-}: WorkflowFailedCardProps): React.ReactElement {
+}: Readonly<WorkflowFailedCardProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow");
 
   const phaseLabelKey = FAILED_CARD_PHASE_LABEL_KEY[currentPhase];

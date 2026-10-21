@@ -5,7 +5,7 @@ import type { SupportedLocale } from "@/i18n/config";
 import { stripEmphasisMarkup } from "@/lib/public-blog-text";
 import { localizedCarouselCopy } from "@/lib/public-carousels";
 
-const LINK_MARKERS_PATTERN = /\[|\]|\(|\)/g;
+const LINK_MARKERS_PATTERN = /[[\]()]/g;
 
 /**
  * Strip lightweight markdown markers (and, AE-0412, emphasis HTML) from `text` and truncate to at most

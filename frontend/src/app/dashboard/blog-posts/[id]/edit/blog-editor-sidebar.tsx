@@ -34,7 +34,7 @@ export function BlogEditorSidebar({
   selection,
   slotsPending,
   onApplySuggestion,
-}: BlogEditorSidebarProps): React.ReactElement | null {
+}: Readonly<BlogEditorSidebarProps>): React.ReactElement | null {
   const { post, draft } = editor;
   if (!post || !draft) {
     return null;

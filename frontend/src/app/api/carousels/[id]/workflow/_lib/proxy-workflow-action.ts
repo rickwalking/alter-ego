@@ -14,7 +14,9 @@ export const WORKFLOW_ACTIONS = {
 export type WorkflowAction =
   (typeof WORKFLOW_ACTIONS)[keyof typeof WORKFLOW_ACTIONS];
 
-type WorkflowRouteContext = { params: Promise<{ id: string }> };
+interface WorkflowRouteContext {
+  params: Promise<{ id: string }>;
+}
 
 /**
  * Proxy a carousel workflow action (start/resume) to the backend, forwarding

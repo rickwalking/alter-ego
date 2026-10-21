@@ -34,7 +34,7 @@ export interface DashboardAnalyticsProps {
  */
 export function DashboardAnalyticsStats({
   state,
-}: DashboardAnalyticsProps): React.ReactElement {
+}: Readonly<DashboardAnalyticsProps>): React.ReactElement {
   const tAnalytics = useTranslations("dashboard.analytics");
 
   if (state.loading) {
@@ -69,7 +69,7 @@ export function DashboardAnalyticsStats({
 /** The status breakdown and the drafts/velocity lists (only with data). */
 export function DashboardAnalyticsActivity({
   state,
-}: DashboardAnalyticsProps): React.ReactElement | null {
+}: Readonly<DashboardAnalyticsProps>): React.ReactElement | null {
   const t = useTranslations("dashboard.overview");
   if (!state.data) {
     return null;
@@ -81,7 +81,7 @@ export function DashboardAnalyticsActivity({
       title: status.replace(/_/g, " "),
       description: `${count} items`,
       time: "Live",
-      badgeVariant: (DOT_TO_BADGE["#00d4ff"] ?? "cyan") as NeonBadgeVariant,
+      badgeVariant: DOT_TO_BADGE["#00d4ff"] ?? "cyan",
     }),
   );
 

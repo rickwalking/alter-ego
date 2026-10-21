@@ -49,9 +49,11 @@ describe("usePovPhoto", () => {
     act(() => result.current.section.onUpload(file));
     expect(state.upload).toHaveBeenCalledWith(
       { file, role: "hook" },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
+      expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
     );
-    const { onSuccess } = state.upload.mock.calls[0]![1];
+    const { onSuccess } = state.upload.mock.calls[0]![1] as {
+      onSuccess: (photo: { id: string }) => void;
+    };
     onSuccess({ id: "uploaded" });
     expect(onSelect).toHaveBeenCalledWith("uploaded");
   });

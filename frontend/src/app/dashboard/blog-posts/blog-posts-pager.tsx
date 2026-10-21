@@ -11,7 +11,7 @@ export function BlogPostsPager({
   page,
   pageCount,
   onPageChange,
-}: BlogPostsPagerProps): React.ReactElement | null {
+}: Readonly<BlogPostsPagerProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   if (pageCount <= 1) {
     return null;

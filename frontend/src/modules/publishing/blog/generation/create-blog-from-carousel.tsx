@@ -22,7 +22,7 @@ const NOTE_CLASS = "m-0 text-[13px]";
 export function CreateBlogFromCarousel({
   projectId,
   isPublic,
-}: CreateBlogFromCarouselProps): React.ReactElement {
+}: Readonly<CreateBlogFromCarouselProps>): React.ReactElement {
   const t = useTranslations("publish.blogFromCarousel");
   const { pending, failed, existingPostId, create } =
     useCreateBlogFromCarousel(projectId);

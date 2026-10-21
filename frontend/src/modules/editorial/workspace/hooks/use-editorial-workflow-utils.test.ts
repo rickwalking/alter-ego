@@ -167,7 +167,7 @@ describe("useEditorialWorkflow utils", () => {
       hasPhaseArtifacts({
         ...base,
         current_phase: EDITORIAL_PHASES.IMAGES,
-        image_assets: ["/tmp/slide.jpg"],
+        image_assets: ["/data/slide.jpg"],
       }),
     ).toBe(true);
     expect(
@@ -181,7 +181,7 @@ describe("useEditorialWorkflow utils", () => {
 
   it("waits on in-memory SSE state before falling back to polling refresh", async () => {
     vi.useFakeTimers();
-    const refreshState = vi.fn(async () => null);
+    const refreshState = vi.fn(() => Promise.resolve(null));
     let current: EditorialWorkflowState | null = {
       project_id: "project-1",
       current_phase: "research",
@@ -216,7 +216,7 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => ({ detail: "version_conflict" }),
+          json: () => Promise.resolve({ detail: "version_conflict" }),
         } as Response,
         "fallback",
       ),
@@ -225,16 +225,17 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => ({
-            detail: [{ msg: "field required" }, { msg: "invalid action" }],
-          }),
+          json: () =>
+            Promise.resolve({
+              detail: [{ msg: "field required" }, { msg: "invalid action" }],
+            }),
         } as Response,
         "fallback",
       ),
     ).resolves.toBe("field required, invalid action");
 
     await expect(
-      readApiError({ json: async () => ({}) } as Response, "fallback"),
+      readApiError({ json: () => Promise.resolve({}) } as Response, "fallback"),
     ).resolves.toBe("fallback");
   });
 
@@ -242,8 +243,8 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => {
-            throw new Error("invalid json");
+          json: () => {
+            return Promise.reject(new Error("invalid json"));
           },
         } as unknown as Response,
         "resume failed",
@@ -317,15 +318,17 @@ describe("useEditorialWorkflow utils", () => {
 
   it("falls back to refresh polling when SSE preference is disabled", async () => {
     vi.useFakeTimers();
-    const refreshState = vi.fn(async () => ({
-      project_id: "project-1",
-      current_phase: "outline",
-      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-      research_findings: [],
-      outline: [{ title: "Intro" }],
-      slide_drafts: [],
-      status: "draft",
-    }));
+    const refreshState = vi.fn(() =>
+      Promise.resolve({
+        project_id: "project-1",
+        current_phase: "outline",
+        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        research_findings: [],
+        outline: [{ title: "Intro" }],
+        slide_drafts: [],
+        status: "draft",
+      }),
+    );
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
       () => null,
@@ -349,7 +352,7 @@ describe("useEditorialWorkflow utils", () => {
       research_findings: [{ title: "Finding" }],
       outline: [],
       slide_drafts: [],
-      image_assets: ["/tmp/image.jpg"],
+      image_assets: ["/data/image.jpg"],
       design_applied: true,
       caption: "Draft caption",
       status: "draft",
@@ -363,7 +366,7 @@ describe("useEditorialWorkflow utils", () => {
 
     expect(merged.current_phase).toBe("outline");
     expect(merged.research_findings).toHaveLength(1);
-    expect(merged.image_assets).toEqual(["/tmp/image.jpg"]);
+    expect(merged.image_assets).toEqual(["/data/image.jpg"]);
     expect(merged.caption).toBe("Draft caption");
   });
 
@@ -472,7 +475,7 @@ describe("useEditorialWorkflow utils", () => {
       research_findings: [{ title: "Finding" }],
       outline: [{ title: "Intro" }],
       slide_drafts: [{ draft_text: "Body" }],
-      image_assets: ["/tmp/slide.jpg"],
+      image_assets: ["/data/slide.jpg"],
       design_applied: true,
       caption: "Caption",
       blog_markdown: "# Blog",
@@ -480,7 +483,7 @@ describe("useEditorialWorkflow utils", () => {
     });
 
     expect(merged.current_phase).toBe("content");
-    expect(merged.image_assets).toEqual(["/tmp/slide.jpg"]);
+    expect(merged.image_assets).toEqual(["/data/slide.jpg"]);
     expect(merged.caption).toBe("Caption");
   });
 
@@ -576,7 +579,7 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => ({ detail: [{ msg: "" }] }),
+          json: () => Promise.resolve({ detail: [{ msg: "" }] }),
         } as Response,
         "fallback",
       ),
@@ -586,10 +589,10 @@ describe("useEditorialWorkflow utils", () => {
   it("polls until refresh returns a ready workflow state", async () => {
     vi.useFakeTimers();
     let attempts = 0;
-    const refreshState = vi.fn(async () => {
+    const refreshState = vi.fn(() => {
       attempts += 1;
       if (attempts < 2) {
-        return {
+        return Promise.resolve({
           project_id: "project-1",
           current_phase: "outline",
           phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
@@ -597,9 +600,9 @@ describe("useEditorialWorkflow utils", () => {
           outline: [],
           slide_drafts: [],
           status: "draft",
-        };
+        });
       }
-      return {
+      return Promise.resolve({
         project_id: "project-1",
         current_phase: "outline",
         phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
@@ -607,7 +610,7 @@ describe("useEditorialWorkflow utils", () => {
         outline: [{ title: "Intro" }],
         slide_drafts: [],
         status: "draft",
-      };
+      });
     });
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
@@ -634,7 +637,7 @@ describe("useEditorialWorkflow utils", () => {
       slide_drafts: [],
       status: "draft",
     };
-    const refreshState = vi.fn(async () => current);
+    const refreshState = vi.fn(() => Promise.resolve(current));
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
       () => current,
@@ -747,7 +750,7 @@ describe("useEditorialWorkflow utils", () => {
       hasPhaseArtifacts({
         ...base,
         current_phase: EDITORIAL_PHASES.IMAGES,
-        image_assets: ["/tmp/slide.jpg"],
+        image_assets: ["/data/slide.jpg"],
       }),
     ).toBe(true);
     expect(
@@ -783,16 +786,17 @@ describe("useEditorialWorkflow utils", () => {
   it("reads API errors from string and array validation payloads", async () => {
     await expect(
       readApiError(
-        { json: async () => ({ detail: "conflict" }) } as Response,
+        { json: () => Promise.resolve({ detail: "conflict" }) } as Response,
         "fallback",
       ),
     ).resolves.toBe("conflict");
     await expect(
       readApiError(
         {
-          json: async () => ({
-            detail: [{ msg: "bad field" }, { msg: "missing" }],
-          }),
+          json: () =>
+            Promise.resolve({
+              detail: [{ msg: "bad field" }, { msg: "missing" }],
+            }),
         } as Response,
         "fallback",
       ),
@@ -800,8 +804,8 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => {
-            throw new Error("broken");
+          json: () => {
+            return Promise.reject(new Error("broken"));
           },
         } as unknown as Response,
         "fallback",
@@ -890,10 +894,10 @@ describe("useEditorialWorkflow utils", () => {
   it("returns the final refresh result after exhausting poll attempts", async () => {
     vi.useFakeTimers();
     let attempts = 0;
-    const refreshState = vi.fn(async () => {
+    const refreshState = vi.fn(() => {
       attempts += 1;
       if (attempts < 3) {
-        return {
+        return Promise.resolve({
           project_id: "project-1",
           current_phase: "outline",
           phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
@@ -901,9 +905,9 @@ describe("useEditorialWorkflow utils", () => {
           outline: [],
           slide_drafts: [],
           status: "draft",
-        };
+        });
       }
-      return {
+      return Promise.resolve({
         project_id: "project-1",
         current_phase: "outline",
         phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
@@ -911,7 +915,7 @@ describe("useEditorialWorkflow utils", () => {
         outline: [{ title: "Intro" }],
         slide_drafts: [],
         status: "draft",
-      };
+      });
     });
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
@@ -944,7 +948,7 @@ describe("useEditorialWorkflow utils", () => {
       outline: [{ title: "Intro" }],
     };
     let reads = 0;
-    const refreshState = vi.fn(async () => null);
+    const refreshState = vi.fn(() => Promise.resolve(null));
 
     const waitPromise = waitUntilWorkflowReadyWithTransport(
       () => {

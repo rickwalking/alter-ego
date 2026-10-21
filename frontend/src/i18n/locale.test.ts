@@ -10,16 +10,18 @@ const headerValues = vi.hoisted(() => ({
 }));
 
 vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: (name: string) =>
-      name === "locale" && headerValues.cookie !== undefined
-        ? { value: headerValues.cookie }
-        : undefined,
-  }),
-  headers: async () => ({
-    get: (name: string) =>
-      name === "accept-language" ? headerValues.acceptLanguage : null,
-  }),
+  cookies: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === "locale" && headerValues.cookie !== undefined
+          ? { value: headerValues.cookie }
+          : undefined,
+    }),
+  headers: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === "accept-language" ? headerValues.acceptLanguage : null,
+    }),
 }));
 
 describe("resolveLocale (AE-0416)", () => {

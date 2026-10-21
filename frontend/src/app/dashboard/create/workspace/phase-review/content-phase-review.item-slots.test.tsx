@@ -80,10 +80,10 @@ function stateWith(
 function Harness({
   state,
   manualFixes,
-}: {
+}: Readonly<{
   state: EditorialWorkflowState;
   manualFixes?: ContentManualFixesActions;
-}): React.ReactElement {
+}>): React.ReactElement {
   const [slides, setSlides] = useState<LocalizedSlideReview[] | undefined>();
   return (
     <ContentPhaseReview

@@ -22,7 +22,7 @@ import type {
 
 const SECTION_IMAGE_SIZES = "(max-width: 768px) 100vw, 768px";
 
-function SectionBody({ markdown, design }: SectionBodyProps) {
+function SectionBody({ markdown, design }: Readonly<SectionBodyProps>) {
   return (
     <ReactMarkdown
       allowedElements={SECTION_ALLOWED_ELEMENTS}
@@ -33,7 +33,7 @@ function SectionBody({ markdown, design }: SectionBodyProps) {
   );
 }
 
-function SectionHeading({ heading, design }: SectionHeadingProps) {
+function SectionHeading({ heading, design }: Readonly<SectionHeadingProps>) {
   if (!heading) return null;
   return (
     <h2
@@ -48,7 +48,7 @@ function SectionHeading({ heading, design }: SectionHeadingProps) {
   );
 }
 
-function Section({ heading, bodyMd, image, design }: SectionProps) {
+function Section({ heading, bodyMd, image, design }: Readonly<SectionProps>) {
   return (
     <section className="space-y-6">
       <SectionHeading heading={heading} design={design} />
@@ -66,7 +66,10 @@ function Section({ heading, bodyMd, image, design }: SectionProps) {
   );
 }
 
-export function BlogPostContent({ sections, design }: BlogPostContentProps) {
+export function BlogPostContent({
+  sections,
+  design,
+}: Readonly<BlogPostContentProps>) {
   return (
     <div className="space-y-6">
       {sections.map((section) => (

@@ -29,7 +29,7 @@ const STATUS = {
  * reviewer (empty = the author). Publishing a draft is left to the API status
  * guard, whose error is shown here (AE-0438, F-11).
  */
-export function ReviewBar(props: ReviewBarProps): React.ReactElement {
+export function ReviewBar(props: Readonly<ReviewBarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const { status, disabled, error } = props;
   return (
@@ -68,7 +68,7 @@ export function ReviewBar(props: ReviewBarProps): React.ReactElement {
   );
 }
 
-function DraftControls(props: ReviewBarProps): React.ReactElement {
+function DraftControls(props: Readonly<ReviewBarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [reviewerId, setReviewerId] = useState("");
   const { disabled } = props;
@@ -117,7 +117,9 @@ function DraftControls(props: ReviewBarProps): React.ReactElement {
   );
 }
 
-function UnderReviewControls(props: ReviewBarProps): React.ReactElement {
+function UnderReviewControls(
+  props: Readonly<ReviewBarProps>,
+): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [reason, setReason] = useState("");
   const { disabled } = props;

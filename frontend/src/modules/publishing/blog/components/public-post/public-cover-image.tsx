@@ -15,7 +15,7 @@ export function PublicCoverImage({
   frameClassName,
   frameStyle,
   overlay,
-}: PublicCoverImageProps): React.ReactElement | null {
+}: Readonly<PublicCoverImageProps>): React.ReactElement | null {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return null;

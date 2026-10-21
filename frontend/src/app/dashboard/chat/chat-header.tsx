@@ -21,7 +21,7 @@ export function ChatHeader({
   onToggleConversations,
   conversationsOpen,
   conversationsId,
-}: ChatHeaderProps): React.ReactElement {
+}: Readonly<ChatHeaderProps>): React.ReactElement {
   return (
     <header
       // `pl-14` clears the layout-level mobile hamburger (z-50); layout via

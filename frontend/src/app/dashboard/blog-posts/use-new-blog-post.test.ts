@@ -4,7 +4,6 @@ import {
   BLOG_POST_ERR_SLUG_CONFLICT,
   BlogPostMutationError,
 } from "@/modules/publishing";
-import type { BlogPost } from "@/modules/publishing";
 
 // Scenarios: see tests/features/blog-dashboard-ae0411.feature
 // ("Creating a post that fails shows an error", "Dashboard copy is localized")
@@ -22,7 +21,7 @@ beforeEach(() => {
 
 describe("useNewBlogPost (AE-0411)", () => {
   it("creates a localized untitled draft with a body and opens the editor", async () => {
-    const create = vi.fn().mockResolvedValue({ id: "new-1" } as BlogPost);
+    const create = vi.fn().mockResolvedValue({ id: "new-1" });
     const { result } = renderHook(() => useNewBlogPost(create));
     await act(async () => {
       await result.current.handleNewPost();

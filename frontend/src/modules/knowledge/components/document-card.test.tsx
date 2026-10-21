@@ -4,11 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { DocumentCard } from "./document-card";
 import type { Document } from "@/schemas/knowledge";
 
-vi.mock("@/lib/utils", async () => ({
-  formatDate: vi.fn(() => "Jan 1, 2024"),
-  cn: (...inputs: (string | undefined | false | null)[]) =>
-    inputs.filter(Boolean).join(" "),
-}));
+vi.mock("@/lib/utils", () =>
+  Promise.resolve({
+    formatDate: vi.fn(() => "Jan 1, 2024"),
+    cn: (...inputs: (string | undefined | false | null)[]) =>
+      inputs.filter(Boolean).join(" "),
+  }),
+);
 
 describe("DocumentCard Component", () => {
   const mockDocument: Document = {

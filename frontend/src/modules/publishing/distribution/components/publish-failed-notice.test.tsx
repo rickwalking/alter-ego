@@ -49,7 +49,7 @@ describe("PublishFailedNotice (publish page failed state)", () => {
     const originalLocation = window.location;
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...originalLocation, href: "" },
+      value: { href: "" },
     });
     // Capture href assignment.
     Object.defineProperty(window.location, "href", {

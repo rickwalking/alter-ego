@@ -22,7 +22,7 @@ interface AllProvidersProps {
   queryClient: QueryClient;
 }
 
-function AllProviders({ children, queryClient }: AllProvidersProps) {
+function AllProviders({ children, queryClient }: Readonly<AllProvidersProps>) {
   return (
     <NextIntlClientProvider locale="en" messages={messages}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

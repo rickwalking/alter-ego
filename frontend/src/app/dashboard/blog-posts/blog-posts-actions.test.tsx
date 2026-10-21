@@ -109,7 +109,7 @@ describe("BlogPostCardActions (AE-0296)", () => {
 });
 
 describe("useBlogPostActions delete confirmation (AE-0296)", () => {
-  it("cancelling the dialog sends no delete request", async () => {
+  it("cancelling the dialog sends no delete request", () => {
     const deletePost = vi.fn();
     const unpublish = vi.fn();
     const { result } = renderHook(() =>
@@ -184,7 +184,7 @@ describe("DeleteConfirmModal (AE-0296)", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByText("Cancel"));
     expect(onCancel).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getAllByText("Delete").at(-1) as HTMLElement);
+    fireEvent.click(screen.getAllByText("Delete").at(-1)!);
     expect(onConfirm).toHaveBeenCalledOnce();
   });
 });

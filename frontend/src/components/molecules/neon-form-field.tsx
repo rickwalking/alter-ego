@@ -16,7 +16,7 @@ export function NeonFormField({
   required,
   children,
   className,
-}: NeonFormFieldComponentProps): React.ReactElement {
+}: Readonly<NeonFormFieldComponentProps>): React.ReactElement {
   return (
     <div className={`space-y-2 ${className ?? ""}`}>
       <NeonLabel htmlFor={name} required={required}>

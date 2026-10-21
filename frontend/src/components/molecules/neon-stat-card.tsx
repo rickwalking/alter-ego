@@ -26,7 +26,7 @@ export function NeonStatCard({
   loading,
   icon,
   iconBg,
-}: NeonStatCardComponentProps): React.ReactElement {
+}: Readonly<NeonStatCardComponentProps>): React.ReactElement {
   if (loading) {
     return (
       <NeonCard padding="md">

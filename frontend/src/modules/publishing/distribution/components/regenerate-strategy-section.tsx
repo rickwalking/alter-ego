@@ -78,7 +78,7 @@ function StrategyTemplateCard({
 export function RegenerateStrategySection({
   project,
   projectId,
-}: RegenerateStrategySectionProps): React.ReactElement {
+}: Readonly<RegenerateStrategySectionProps>): React.ReactElement {
   const t = useTranslations("publish.regenerateStrategy");
   const {
     data: strategiesData,

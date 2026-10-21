@@ -4,7 +4,7 @@ export interface PersonasEmptyStateProps {
 
 export function PersonasEmptyState({
   searchQuery,
-}: PersonasEmptyStateProps): React.ReactElement {
+}: Readonly<PersonasEmptyStateProps>): React.ReactElement {
   return (
     <div
       style={{

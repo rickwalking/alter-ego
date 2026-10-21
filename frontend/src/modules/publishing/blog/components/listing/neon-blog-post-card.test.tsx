@@ -45,7 +45,7 @@ describe("NeonBlogPostCard", () => {
     const { container } = render(<NeonBlogPostCard {...BASE_PROPS} />);
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
-    fireEvent.error(img as HTMLImageElement);
+    fireEvent.error(img!);
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("A post")).toBeInTheDocument();
     expect(screen.getByText("AI models")).toBeInTheDocument();

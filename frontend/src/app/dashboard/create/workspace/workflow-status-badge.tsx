@@ -34,7 +34,7 @@ export function WorkflowStatusBadge({
   status,
   label,
   size = "sm",
-}: WorkflowStatusBadgeProps): React.ReactElement {
+}: Readonly<WorkflowStatusBadgeProps>): React.ReactElement {
   const t = useTranslations("create");
   const { variant, pulse, labelKey } = resolveWorkflowStatusVisual(status);
   const statusText = labelKey

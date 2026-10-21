@@ -43,7 +43,7 @@ function CalendarEmptyMonth(): React.ReactElement {
 function CalendarDayEvent({
   event,
   dateLabel,
-}: CalendarDayEventProps): React.ReactElement {
+}: Readonly<CalendarDayEventProps>): React.ReactElement {
   const contentMeta = CALENDAR_CONTENT_META[event.contentType];
   return (
     <div>
@@ -106,7 +106,9 @@ function CalendarDayEvent({
   );
 }
 
-function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
+function CalendarDayCell({
+  cell,
+}: Readonly<CalendarDayCellProps>): React.ReactElement {
   const locale = useLocale();
   const dateLabel = formatCalendarDayLabel(cell.iso, locale);
   return (
@@ -145,7 +147,9 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
   );
 }
 
-export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
+export function CalendarGrid({
+  days,
+}: Readonly<CalendarGridProps>): React.ReactElement {
   const locale = useLocale();
   const weekdayHeaders = calendarWeekdayHeaders(locale);
   const hasCurrentDays = days.filter((day) => day.cur).length > 0;

@@ -38,8 +38,10 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/preview/images/${filename}`,
   CAROUSEL_BLOG_LANG: (id: string, lang: string) =>
     `/api/carousels/${id}/blog/${lang}`,
-  CAROUSEL_DESIGN: (id: string, lang?: string) =>
-    `/api/carousels/${id}/design${lang ? `?lang=${lang}` : ""}`,
+  CAROUSEL_DESIGN: (id: string, lang?: string) => {
+    const query = lang ? `?lang=${lang}` : "";
+    return `/api/carousels/${id}/design${query}`;
+  },
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
   CAROUSEL_PUBLIC: (id: string) => `/api/carousels/${id}/public`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
@@ -194,7 +196,8 @@ export const DEFAULT_BACKEND_URL =
 
 /**
  * In-cluster backend URL used when running inside Docker / production and no
- * explicit `API_BASE_URL` override is provided.
+ * explicit `API_BASE_URL` override is provided. The hop stays on the private
+ * Docker network and TLS terminates at the edge proxy, so it is plain HTTP.
  */
 export const PRODUCTION_BACKEND_URL = "http://backend:8000";
 

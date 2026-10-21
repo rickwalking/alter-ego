@@ -66,7 +66,7 @@ function useTemplateCards(
 export function CreateTemplateSection({
   form,
   onChange,
-}: CreateTemplateSectionProps): React.ReactElement {
+}: Readonly<CreateTemplateSectionProps>): React.ReactElement {
   const t = useTranslations("create.form");
   const cards = useTemplateCards(form);
   return (

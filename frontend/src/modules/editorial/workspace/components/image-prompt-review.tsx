@@ -9,7 +9,7 @@ import type { ImagePromptReviewProps } from "./types";
 export function ImagePromptReview({
   prompts,
   readOnly = true,
-}: ImagePromptReviewProps): React.ReactElement | null {
+}: Readonly<ImagePromptReviewProps>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
 
   if (!prompts?.length) {

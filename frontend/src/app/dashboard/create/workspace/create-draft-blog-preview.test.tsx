@@ -14,7 +14,7 @@ function respond(status: number, body: unknown = {}): void {
   mockFetch.mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
-    json: async () => body,
+    json: () => Promise.resolve(body),
   } as Response);
 }
 

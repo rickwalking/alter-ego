@@ -7,7 +7,7 @@ import type { PresentationInsightQuoteCardProps } from "./types";
 /** AE-0407: read-only ``pov_news`` quote card (quote, name, ``@handle · X``). */
 export function PresentationInsightQuoteCard({
   insight,
-}: PresentationInsightQuoteCardProps): React.ReactElement {
+}: Readonly<PresentationInsightQuoteCardProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   return (
     <figure

@@ -2,15 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
 
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({
-    get: (name: string) => (name === "locale" ? { value: "pt" } : undefined),
-  })),
+  cookies: vi.fn(() =>
+    Promise.resolve({
+      get: (name: string) => (name === "locale" ? { value: "pt" } : undefined),
+    }),
+  ),
   // AE-0416: the request locale also reads Accept-Language.
-  headers: vi.fn(async () => ({ get: () => null })),
+  headers: vi.fn(() => Promise.resolve({ get: () => null })),
 }));
 
 vi.mock("next-intl/server", () => ({
-  getTranslations: vi.fn(async () => (key: string) => `blog.${key}`),
+  getTranslations: vi.fn(() => Promise.resolve((key: string) => `blog.${key}`)),
 }));
 
 vi.mock("@/lib/public-blog", () => ({

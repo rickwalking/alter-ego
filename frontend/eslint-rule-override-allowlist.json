@@ -9,6 +9,9 @@
     "no-magic-numbers": "Logic-layer error + test-file off — test fixtures legitimately use literals.",
     "@typescript-eslint/no-non-null-assertion": "Production `src` error + test-file off — `!` is idiomatic for known-present fixtures in tests (AE-0199).",
     "@next/next/no-img-element": "Production `src` error + test-file off — tests mock next/image with a plain `<img>` so component tests skip Next's Image runtime (AE-0202).",
-    "no-restricted-syntax": "Global fetch-in-useEffect error is INTENTIONALLY re-declared in the hooks block (flat config REPLACES, not merges; the hooks block re-asserts it AND adds the bare-fetch guard) — see eslint.config.mjs AE-0166/AE-0184 notes."
+    "no-restricted-syntax": "Global fetch-in-useEffect error is INTENTIONALLY re-declared in the hooks block (flat config REPLACES, not merges; the hooks block re-asserts it AND adds the bare-fetch guard) — see eslint.config.mjs AE-0166/AE-0184 notes.",
+    "@typescript-eslint/prefer-promise-reject-errors": "Strict-preset error everywhere; the test-file block re-declares it with `allowThrowingUnknown` so tests can cover the non-Error rejection branch with an explicitly `unknown`-typed reason (still error for literal non-Error rejections).",
+    "sonarjs/no-hardcoded-passwords": "Sonar recommended error in production; off in test files because tests/e2e/auth.setup.ts falls back to the seeded e2e account's well-known password when PLAYWRIGHT_E2E_PASSWORD is unset (no real credential in test code).",
+    "sonarjs/no-clear-text-protocols": "Sonar recommended error everywhere except src/constants/api.ts, whose in-cluster backend URL (http://backend:8000) stays on the private Docker network behind the TLS edge proxy; a reviewed exception instead of disguising the literal."
   }
 }

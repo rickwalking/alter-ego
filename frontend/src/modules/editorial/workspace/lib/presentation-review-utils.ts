@@ -174,7 +174,7 @@ export function resolvePresentationPreviewText(
 
 export function listStructuredExtras(
   presentation: Record<string, unknown>,
-): Array<{ key: string; value: unknown }> {
+): { key: string; value: unknown }[] {
   return PRESENTATION_STRUCTURED_EXTRA_KEYS.flatMap((key) => {
     const value = presentation[key];
     if (value === undefined || value === null) {

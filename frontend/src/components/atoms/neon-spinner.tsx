@@ -70,7 +70,7 @@ export function Spinner({
   size = "md",
   label,
   className = "",
-}: SpinnerProps): React.ReactElement {
+}: Readonly<SpinnerProps>): React.ReactElement {
   return (
     <div
       role="status"

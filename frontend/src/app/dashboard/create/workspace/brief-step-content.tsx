@@ -34,7 +34,7 @@ export function BriefStepContent({
   onStartWorkflow,
   onSourcesChange,
   editorialWorkflow,
-}: BriefStepContentProps): React.ReactElement {
+}: Readonly<BriefStepContentProps>): React.ReactElement {
   const t = useTranslations("create");
   const showGate = !workflowStarted && !editorialWorkflow.hasActiveWorkflow;
 

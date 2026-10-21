@@ -38,7 +38,7 @@ async function renderLoaded(post = blogPost()) {
 
 function lastBody(): Record<string, unknown> {
   const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
-  return JSON.parse(String(init?.body)) as Record<string, unknown>;
+  return JSON.parse(init?.body as string) as Record<string, unknown>;
 }
 
 beforeEach(() => {
@@ -169,7 +169,7 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
   it("keeps keystrokes typed while the save is in flight", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Enviado" })));
-    let resolve: (value: Response) => void = () => undefined;
+    let resolve: (value: Response) => void = (_value) => undefined;
     mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (resolve = r)));
     let saving: Promise<boolean> = Promise.resolve(false);
     act(() => {
@@ -192,7 +192,7 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
   it("retries a save that lost the race to our own slot write", async () => {
     const { result } = await renderLoaded();
     act(() => result.current.updateDraft((d) => ({ ...d, title: "Novo" })));
-    let reject: (value: Response) => void = () => undefined;
+    let reject: (value: Response) => void = (_value) => undefined;
     mockFetch.mockReturnValueOnce(new Promise<Response>((r) => (reject = r)));
     let saving: Promise<boolean> = Promise.resolve(false);
     act(() => {

@@ -9,7 +9,7 @@ interface CarouselPlaceholderIconProps {
 export function CarouselPlaceholderIcon({
   size,
   className,
-}: CarouselPlaceholderIconProps): React.ReactElement {
+}: Readonly<CarouselPlaceholderIconProps>): React.ReactElement {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

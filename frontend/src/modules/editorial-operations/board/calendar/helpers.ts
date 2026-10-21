@@ -94,7 +94,9 @@ export function buildCalendarDaysFromApi(
 
   for (const item of items) {
     const key = eventDayKey(item.event_date);
-    (eventsByDay[key] ??= []).push(mapCalendarItemToEvent(item));
+    const dayEvents = eventsByDay[key] ?? [];
+    dayEvents.push(mapCalendarItemToEvent(item));
+    eventsByDay[key] = dayEvents;
   }
 
   return buildMonthGrid(anchor).map((cell) => ({

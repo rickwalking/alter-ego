@@ -64,7 +64,7 @@ function blankItem(item: unknown): unknown {
 }
 
 function mirroredList(current: unknown, source: unknown[]): unknown {
-  const items = Array.isArray(current) ? current : [];
+  const items: unknown[] = Array.isArray(current) ? current : [];
   if (Array.isArray(current) && items.length >= source.length) {
     return current;
   }

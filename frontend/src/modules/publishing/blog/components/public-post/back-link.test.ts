@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("next-intl/server", () => ({
-  getTranslations: vi.fn(async (ns: string) => {
+  getTranslations: vi.fn((ns: string) => {
     const translations: Record<string, Record<string, string>> = {
       blog: {
         backToPosts: "Back to posts",
         backHome: "Back to home",
       },
     };
-    return (key: string) => translations[ns]?.[key] ?? key;
+    return Promise.resolve((key: string) => translations[ns]?.[key] ?? key);
   }),
 }));
 

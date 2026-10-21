@@ -37,9 +37,11 @@ describe("BlogPostStatus FE/BE contract (AE-0295 drift guard)", () => {
         ?.split("\nclass ")[0];
       expect(classBody).toBeDefined();
       const backendValues = [...(classBody ?? "").matchAll(/= "([a-z_]+)"/g)]
-        .map((m) => m[1])
-        .sort();
-      expect([...BLOG_POST_STATUSES].sort()).toEqual(backendValues);
+        .map((m) => m[1] ?? "")
+        .sort((a, b) => a.localeCompare(b));
+      expect(
+        [...BLOG_POST_STATUSES].sort((a, b) => a.localeCompare(b)),
+      ).toEqual(backendValues);
     },
   );
 });

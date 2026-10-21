@@ -20,7 +20,7 @@ export function HookPicker({
   candidates,
   initialHook,
   thesisEarly = true,
-}: HookPickerProps): React.ReactElement {
+}: Readonly<HookPickerProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.hookPicker");
   const save = useSaveCarouselHook();
   const [hook, setHook] = useState(initialHook);

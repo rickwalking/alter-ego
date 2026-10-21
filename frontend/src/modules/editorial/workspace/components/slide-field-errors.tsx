@@ -21,7 +21,7 @@ const ERROR_ID_SUFFIX = "-error";
 export function FieldErrorMessage({
   id,
   violations,
-}: FieldErrorMessageProps): React.ReactElement | null {
+}: Readonly<FieldErrorMessageProps>): React.ReactElement | null {
   const message = useFieldErrorMessage();
   if (!violations || violations.length === 0) {
     return null;
@@ -39,7 +39,7 @@ export function FlaggableTextarea({
   violations,
   className,
   ...props
-}: FlaggableTextareaProps): React.ReactElement {
+}: Readonly<FlaggableTextareaProps>): React.ReactElement {
   const invalid = (violations?.length ?? 0) > 0;
   const errorId = `${id}${ERROR_ID_SUFFIX}`;
   return (
@@ -60,7 +60,7 @@ export function FlaggableTextarea({
 export function SlideViolationSummary({
   slideIndex,
   violations,
-}: SlideViolationSummaryProps): React.ReactElement | null {
+}: Readonly<SlideViolationSummaryProps>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review.fieldErrors");
   const message = useFieldErrorMessage();
   const fieldLabel = useViolationFieldLabel();
@@ -90,7 +90,7 @@ export function BlockingSlidesNotice({
   message,
   slideIndexes,
   onSelectSlide,
-}: BlockingSlidesNoticeProps): React.ReactElement {
+}: Readonly<BlockingSlidesNoticeProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review.fieldErrors");
   return (
     <div className="space-y-1 text-destructive text-xs" role="alert">

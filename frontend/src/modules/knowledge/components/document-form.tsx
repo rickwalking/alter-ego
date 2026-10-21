@@ -10,7 +10,10 @@ import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { type DocumentFormProps } from "./types";
 
-export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
+export function DocumentForm({
+  onSubmit,
+  onCancel,
+}: Readonly<DocumentFormProps>) {
   const t = useTranslations("knowledge");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -28,7 +31,7 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
     onSubmit({
       title: title.trim(),

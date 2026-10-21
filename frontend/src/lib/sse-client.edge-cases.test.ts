@@ -8,15 +8,22 @@ import type { SseEvent } from "./sse-client";
 // These tests cover less common SSE protocol scenarios that would
 // otherwise survive as mutants in mutation testing.
 
+/** Resolves once the signal aborts. */
+function abortedSignal(signal: AbortSignal): Promise<void> {
+  return new Promise<void>((resolve) => {
+    signal.addEventListener("abort", () => resolve(), { once: true });
+  });
+}
+
 describe("streamSseEvents edge cases", () => {
   let onEvent: Mock<(event: SseEvent) => void>;
   let onError: Mock<(error: Error) => void>;
   let onComplete: Mock<() => void>;
 
   beforeEach(() => {
-    onEvent = vi.fn() as Mock<(event: SseEvent) => void>;
-    onError = vi.fn() as Mock<(error: Error) => void>;
-    onComplete = vi.fn() as Mock<() => void>;
+    onEvent = vi.fn();
+    onError = vi.fn();
+    onComplete = vi.fn();
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -176,7 +183,6 @@ describe("streamSseEvents edge cases", () => {
         body: {
           getReader: () => {
             let index = 0;
-            let aborted = false;
             const reader = {
               read: async () => {
                 if (index < chunks.length) {
@@ -185,22 +191,11 @@ describe("streamSseEvents edge cases", () => {
                   return { done: false, value };
                 }
                 // Hang until aborted
-                await new Promise<void>((resolve) => {
-                  const onAbort = () => {
-                    aborted = true;
-                    resolve();
-                  };
-                  abortController.signal.addEventListener("abort", onAbort, {
-                    once: true,
-                  });
-                });
-                if (aborted) {
-                  throw new DOMException(
-                    "The operation was aborted",
-                    "AbortError",
-                  );
-                }
-                return { done: true, value: undefined };
+                await abortedSignal(abortController.signal);
+                throw new DOMException(
+                  "The operation was aborted",
+                  "AbortError",
+                );
               },
             };
             return reader;

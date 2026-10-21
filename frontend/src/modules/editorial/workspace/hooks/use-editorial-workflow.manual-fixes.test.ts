@@ -26,8 +26,8 @@ class SilentEventSource {
   onmessage: (() => void) | null = null;
   onerror: (() => void) | null = null;
   onopen: (() => void) | null = null;
-  addEventListener(): void {}
-  removeEventListener(): void {}
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
   close(): void {
     this.readyState = SilentEventSource.CLOSED;
   }
@@ -52,18 +52,21 @@ const editedSlide: LocalizedSlideReview = {
 };
 
 function answerResume(status: number, detail: string): void {
-  mockFetch.mockImplementation(async (url, init) => {
+  mockFetch.mockImplementation((url, init) => {
     if (
       url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
       init?.method === "POST"
     ) {
-      return {
+      return Promise.resolve({
         ok: false,
         status,
-        json: async () => ({ detail }),
-      } as Response;
+        json: () => Promise.resolve({ detail }),
+      } as Response);
     }
-    return { ok: true, json: async () => contentState } as Response;
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(contentState),
+    } as Response);
   });
 }
 

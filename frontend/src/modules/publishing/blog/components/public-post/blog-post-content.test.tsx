@@ -116,7 +116,7 @@ describe("BlogPostContent (AE-0422, AE-0423)", () => {
       "Gráfico de custos",
     ]);
     const paths = images.map(
-      (img) => new URL(img.getAttribute("src") ?? "", "http://x").pathname,
+      (img) => new URL(img.getAttribute("src") ?? "", "http://x.test").pathname,
     );
     expect(paths).toEqual(["/1.jpg", "/2.jpg"]);
     expect(screen.getByRole("heading", { name: "Um" })).toBeInTheDocument();

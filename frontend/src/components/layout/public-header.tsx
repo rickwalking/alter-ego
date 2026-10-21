@@ -32,7 +32,7 @@ interface PublicHeaderNavProps {
 export function PublicHeaderNav({
   t,
   locale,
-}: PublicHeaderNavProps): React.ReactElement {
+}: Readonly<PublicHeaderNavProps>): React.ReactElement {
   return (
     <nav className="flex min-w-0 items-center gap-4 sm:gap-7">
       {PUBLIC_HEADER_NAV_ITEMS.map((item) => (
@@ -114,18 +114,18 @@ export async function PublicHeader(): Promise<React.ReactElement> {
 }
 
 /** Full-page wrapper for marketing/blog routes (header + scrollable main). */
-export async function PublicShellFrame({
+export function PublicShellFrame({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>): Promise<React.ReactElement> {
-  return (
+  return Promise.resolve(
     <div
       className="flex min-h-screen flex-col"
       style={{ background: BG_DEEP, position: "relative", zIndex: 1 }}
     >
       <PublicHeader />
       <main className="flex-1">{children}</main>
-    </div>
+    </div>,
   );
 }

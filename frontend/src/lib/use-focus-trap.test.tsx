@@ -24,8 +24,8 @@ function renderTrap(active: boolean): {
   const buttons = ref.current!.querySelectorAll("button");
   return {
     ref,
-    first: buttons[0] as HTMLButtonElement,
-    last: buttons[1] as HTMLButtonElement,
+    first: buttons[0]!,
+    last: buttons[1]!,
   };
 }
 

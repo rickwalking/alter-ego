@@ -34,7 +34,7 @@ export function CreatePhotoSection({
   onUpload,
   uploading,
   uploadFailed,
-}: CreatePhotoSectionProps): React.ReactElement {
+}: Readonly<CreatePhotoSectionProps>): React.ReactElement {
   const t = useTranslations("create.photo");
   return (
     <div style={sectionCardStyle}>

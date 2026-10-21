@@ -36,7 +36,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
 ]);
 
 function fieldOf(issue: ValidationIssue): string {
-  const loc = Array.isArray(issue.loc) ? issue.loc : [];
+  const loc: readonly unknown[] = Array.isArray(issue.loc) ? issue.loc : [];
   const last = loc[loc.length - 1];
   return typeof last === "string" ? last : "";
 }

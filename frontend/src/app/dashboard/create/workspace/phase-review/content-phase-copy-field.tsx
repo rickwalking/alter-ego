@@ -32,10 +32,10 @@ export interface ContentCopyFieldProps {
 export function CopyLengthCounter({
   value,
   budget,
-}: {
+}: Readonly<{
   value: string;
   budget: PresentationFieldBudget | null;
-}): React.ReactElement {
+}>): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   const usage = measureBudgetUsage(value, budget);
   const parts = [
@@ -74,11 +74,11 @@ function EmphasisMismatch({
   localeKey,
   value,
   onChange,
-}: {
+}: Readonly<{
   localeKey: PresentationLocaleKey;
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   if (!emphasisConventionMismatch(localeKey, value)) {
     return null;
@@ -103,7 +103,7 @@ function EmphasisMismatch({
 
 /** One editable content-review field: textarea + errors + counter + markup. */
 export function ContentCopyField(
-  props: ContentCopyFieldProps,
+  props: Readonly<ContentCopyFieldProps>,
 ): React.ReactElement {
   return (
     <div className="space-y-1">
@@ -133,9 +133,9 @@ export function ContentCopyField(
 /** AE-0414 (B29): the locale's emphasis convention, shown once per column. */
 export function EmphasisConventionHint({
   localeKey,
-}: {
+}: Readonly<{
   localeKey: PresentationLocaleKey;
-}): React.ReactElement {
+}>): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   return (
     <p className="text-[var(--color-text-muted)] text-xs">

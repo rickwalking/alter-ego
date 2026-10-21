@@ -12,7 +12,7 @@ import type { RebuildPdfSectionProps } from "./types";
 export function RebuildPdfSection({
   projectId,
   onRebuilt,
-}: RebuildPdfSectionProps): React.ReactElement {
+}: Readonly<RebuildPdfSectionProps>): React.ReactElement {
   const t = useTranslations("publish.rebuildPdf");
   const republish = useRepublishCarousel();
   const [confirmOpen, setConfirmOpen] = useState(false);

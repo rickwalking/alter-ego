@@ -35,8 +35,8 @@ function loginUrlWithRedirect(redirect: string): string {
 }
 
 function mockBackendLogout(
-  implementation: () => Promise<Response> = async () =>
-    new Response(null, { status: 204 }),
+  implementation: () => Promise<Response> = () =>
+    Promise.resolve(new Response(null, { status: 204 })),
 ): MockInstance<typeof fetch> {
   return vi.spyOn(globalThis, "fetch").mockImplementation(implementation);
 }
@@ -63,7 +63,7 @@ describe("GET /auth/logout", () => {
     expectCookieCleared(response);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toMatch(/\/api\/auth\/logout$/);
+    expect(url).toMatch(/\/api\/auth\/logout$/);
     expect(init?.method).toBe("POST");
     expect(locationOf(response).toString()).toBe(
       loginUrlWithRedirect(LOGIN_REDIRECT),
@@ -104,8 +104,8 @@ describe("GET /auth/logout", () => {
   });
 
   it("still clears the cookie and redirects when the backend logout fails", async () => {
-    mockBackendLogout(async () => {
-      throw new Error("backend down");
+    mockBackendLogout(() => {
+      return Promise.reject(new Error("backend down"));
     });
 
     const response = await GET(makeRequest("/auth/logout"));

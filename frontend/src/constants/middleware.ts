@@ -11,6 +11,5 @@ export {
   isDashboardRoute,
   isLegacyEditorRoute,
   isEditorDashboardRoute,
-  isEditorRoute,
   isStaticAsset,
 } from "@/modules/identity";

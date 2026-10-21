@@ -24,7 +24,7 @@ export function CarouselPagination({
   previousHref,
   nextHref,
   labels,
-}: CarouselPaginationProps): React.ReactElement | null {
+}: Readonly<CarouselPaginationProps>): React.ReactElement | null {
   if (totalPages <= 1) return null;
 
   return (

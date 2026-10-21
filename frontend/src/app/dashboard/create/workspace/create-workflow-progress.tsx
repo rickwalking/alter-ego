@@ -63,7 +63,7 @@ function isProgressOfPhase(
 export function CreateWorkflowProgress({
   state,
   loading,
-}: EditorialWorkflowProgressProps): React.JSX.Element | null {
+}: Readonly<EditorialWorkflowProgressProps>): React.JSX.Element | null {
   const isActiveWork =
     loading || state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
   const progress = parseProgress(state?.phase_progress);

@@ -10,7 +10,7 @@ interface PalettesEmptyStateProps {
 /** Teaching empty state for the custom-palette section (roots still render). */
 export function PalettesEmptyState({
   onCreate,
-}: PalettesEmptyStateProps): React.ReactElement {
+}: Readonly<PalettesEmptyStateProps>): React.ReactElement {
   const t = useTranslations("palettes");
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-white/10 px-6 py-10 text-center">

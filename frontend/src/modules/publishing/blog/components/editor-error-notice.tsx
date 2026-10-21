@@ -19,7 +19,7 @@ import type { EditorErrorNoticeProps } from "./types";
  */
 export function EditorErrorNotice({
   error,
-}: EditorErrorNoticeProps): React.ReactElement | null {
+}: Readonly<EditorErrorNoticeProps>): React.ReactElement | null {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   if (!error) {
     return null;

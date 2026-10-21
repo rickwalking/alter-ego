@@ -19,7 +19,7 @@ export interface OutlinePhaseReviewProps {
 export function OutlinePhaseReview({
   state,
   projectId,
-}: OutlinePhaseReviewProps): React.ReactElement {
+}: Readonly<OutlinePhaseReviewProps>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
 

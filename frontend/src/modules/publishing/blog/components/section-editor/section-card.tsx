@@ -90,7 +90,7 @@ export function SectionCard({
   onGenerateImage,
   onRewrite,
   onSelectText,
-}: SectionCardProps): React.ReactElement {
+}: Readonly<SectionCardProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const prefix = `${language}-${section.id}`;
   const fieldIssue =

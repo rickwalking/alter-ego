@@ -14,10 +14,10 @@ vi.mock("next-intl", () => ({
     };
     return (key: string, values?: Record<string, unknown>) => {
       if (key === "goToSlide") {
-        return `Go to slide ${values?.number}`;
+        return `Go to slide ${String(values?.number)}`;
       }
       if (key === "slideAlt") {
-        return `${values?.title} – slide ${values?.number}`;
+        return `${String(values?.title)} – slide ${String(values?.number)}`;
       }
       return entries[key] ?? key;
     };
@@ -79,7 +79,7 @@ describe("HorizontalCarouselViewer", () => {
     const user = userEvent.setup();
     global.fetch = vi.fn().mockResolvedValue({
       blob: vi.fn().mockResolvedValue(new Blob(["image-data"])),
-    } as unknown as Response);
+    });
 
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Test carousel" />);
     const button = screen.getByRole("button", { name: /Download images/i });
@@ -94,7 +94,7 @@ describe("HorizontalCarouselViewer", () => {
       "/slide1.jpg",
       expect.objectContaining({
         credentials: "include",
-        signal: expect.any(AbortSignal),
+        signal: expect.any(AbortSignal) as unknown,
       }),
     );
 
@@ -146,7 +146,7 @@ describe("HorizontalCarouselViewer", () => {
       .mockRejectedValueOnce(new Error("network error"))
       .mockResolvedValueOnce({
         blob: vi.fn().mockResolvedValue(new Blob(["image-data"])),
-      } as unknown as Response);
+      });
 
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Test carousel" />);
     const button = screen.getByRole("button", { name: /Download images/i });

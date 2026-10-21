@@ -91,7 +91,7 @@ function EditorNotices({
  */
 export function BlogPostEditorView({
   editor,
-}: BlogPostEditorViewProps): React.ReactElement {
+}: Readonly<BlogPostEditorViewProps>): React.ReactElement {
   const router = useRouter();
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const post = editor.post;

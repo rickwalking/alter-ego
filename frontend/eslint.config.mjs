@@ -3,6 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import pluginQuery from "@tanstack/eslint-plugin-query";
 import sonarjs from "eslint-plugin-sonarjs";
+import tseslint from "typescript-eslint";
 
 // AE-0166 — severity policy. `error` rules GATE the build (the `lint` gate runs
 // `eslint --quiet`, which fails on errors only). `warn` rules are advisory: a
@@ -40,6 +41,102 @@ const typeCheckedRules = {
   "@typescript-eslint/no-unnecessary-condition": "error",
 };
 
+/** Size/complexity rules tuned by the project block below; the strict presets never touch them. */
+const SIZE_RULES = new Set([
+  "max-lines-per-function",
+  "max-lines",
+  "max-statements",
+  "complexity",
+  "max-depth",
+  "sonarjs/cognitive-complexity",
+]);
+
+/** Rules whose severity and options the project block below declares itself. */
+const PROJECT_OWNED_RULES = new Set([
+  "@typescript-eslint/no-unused-vars",
+  ...Object.keys(typeCheckedRules),
+]);
+
+/**
+ * Preset rule options that differ from the preset defaults (severity stays "error").
+ * - no-confusing-void-expression `ignoreArrowShorthand`: the idiomatic React handler shorthand
+ *   `onClick={() => setOpen(false)}` stays legal; void values in any other position still error.
+ * - restrict-template-expressions `allowNumber`: numbers stringify predictably (CSS lengths,
+ *   counts, ids); every other non-string type still errors. This matches recommendedTypeChecked.
+ */
+const PRESET_RULE_OPTIONS = {
+  "@typescript-eslint/no-confusing-void-expression": {
+    ignoreArrowShorthand: true,
+  },
+  "@typescript-eslint/restrict-template-expressions": {
+    allowAny: false,
+    allowBoolean: false,
+    allowNever: false,
+    allowNullish: false,
+    allowNumber: true,
+    allowRegExp: false,
+  },
+};
+
+/** Severity value that disables a rule in a preset. */
+const OFF = "off";
+
+/** Severity every enabled preset rule is raised to. */
+const ERROR = "error";
+
+/**
+ * Raises a preset rule entry to "error", keeping its options; a rule the preset turns off stays off.
+ * @param {string} rule
+ * @param {unknown} entry
+ * @returns {unknown}
+ */
+function toErrorEntry(rule, entry) {
+  const severity = Array.isArray(entry) ? entry[0] : entry;
+  if (severity === OFF || severity === 0) return OFF;
+  if (rule in PRESET_RULE_OPTIONS) return [ERROR, PRESET_RULE_OPTIONS[rule]];
+  return Array.isArray(entry) ? [ERROR, ...entry.slice(1)] : ERROR;
+}
+
+/** typescript-eslint strictTypeChecked + stylisticTypeChecked and sonarjs recommended, all at "error". */
+const strictPresetRules = Object.fromEntries(
+  Object.entries({
+    ...Object.assign(
+      {},
+      ...[
+        ...tseslint.configs.strictTypeChecked,
+        ...tseslint.configs.stylisticTypeChecked,
+      ].map((config) => config.rules ?? {}),
+    ),
+    ...sonarjs.configs.recommended.rules,
+  })
+    .filter(([rule]) => !SIZE_RULES.has(rule) && !PROJECT_OWNED_RULES.has(rule))
+    .map(([rule, entry]) => [rule, toErrorEntry(rule, entry)]),
+);
+
+/**
+ * Strict-preset rules relaxed for test files only.
+ * - prefer-promise-reject-errors `allowThrowingUnknown`: tests that cover the non-Error rejection
+ *   branch reject with a deliberately `unknown`-typed value; literal non-Error rejections still error.
+ * - no-hardcoded-passwords: the e2e setup falls back to the seeded test account's well-known
+ *   password when PLAYWRIGHT_E2E_PASSWORD is unset; no real credential lives in test code.
+ */
+const TEST_PRESET_RULE_OVERRIDES = {
+  "@typescript-eslint/prefer-promise-reject-errors": [
+    ERROR,
+    { allowThrowingUnknown: true },
+  ],
+  "sonarjs/no-hardcoded-passwords": OFF,
+};
+
+/**
+ * Files whose clear-text URL is a reviewed exception to sonarjs/no-clear-text-protocols:
+ * the in-cluster backend URL stays on the private Docker network behind the TLS edge proxy.
+ */
+const IN_CLUSTER_HTTP_FILES = ["src/constants/api.ts"];
+
+/** Comment markers that must not survive in source. */
+const WARNING_COMMENT_TERMS = ["todo", "fixme", "xxx", "hack"];
+
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -58,6 +155,16 @@ export default defineConfig([
     "**/*.stories.tsx",
     "**/*.stories.ts",
   ]),
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      ...strictPresetRules,
+      "no-warning-comments": [
+        ERROR,
+        { terms: WARNING_COMMENT_TERMS, location: "anywhere" },
+      ],
+    },
+  },
   {
     plugins: {
       "@tanstack/query": pluginQuery,
@@ -291,6 +398,13 @@ export default defineConfig([
       // don't pull Next's Image runtime); the rule is `error` in production `src`
       // but off in test files for that idiomatic mock pattern.
       "@next/next/no-img-element": "off",
+      ...TEST_PRESET_RULE_OVERRIDES,
+    },
+  },
+  {
+    files: IN_CLUSTER_HTTP_FILES,
+    rules: {
+      "sonarjs/no-clear-text-protocols": OFF,
     },
   },
 ]);

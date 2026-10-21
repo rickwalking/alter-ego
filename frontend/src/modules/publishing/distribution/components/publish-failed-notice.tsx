@@ -25,7 +25,7 @@ export function PublishFailedNotice({
   currentPhase,
   errorMessage,
   workspaceHref,
-}: PublishFailedNoticeProps): React.ReactElement {
+}: Readonly<PublishFailedNoticeProps>): React.ReactElement {
   const t = useTranslations("publish");
   return (
     <div style={{ marginBottom: "16px" }}>

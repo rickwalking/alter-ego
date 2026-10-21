@@ -20,7 +20,7 @@ export interface EditorialAnalyticsSummary {
 
 export interface EditorialAnalytics {
   summary: EditorialAnalyticsSummary;
-  velocity_by_week: Array<{ week_start: string; published_count: number }>;
+  velocity_by_week: { week_start: string; published_count: number }[];
 }
 
 /** AE-0378: `disabled` = the analytics flag is off (404) or the role has no access (403). */

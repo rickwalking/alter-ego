@@ -25,7 +25,9 @@ vi.mock("next-intl", () => ({
       empty: "Nenhuma foto na biblioteca.",
     };
     return (key: string, values?: Record<string, number>) =>
-      key === "photoLabel" ? `Foto ${values?.number}` : (entries[key] ?? key);
+      key === "photoLabel"
+        ? `Foto ${String(values?.number)}`
+        : (entries[key] ?? key);
   }),
 }));
 
@@ -48,9 +50,7 @@ const OPTIONS = {
   ],
 };
 
-type Answer = unknown | Error | Promise<unknown>;
-
-function routeApi(options: Answer, pick?: Answer, lockVersion = 7): void {
+function routeApi(options: unknown, pick?: unknown, lockVersion = 7): void {
   mockApiCall.mockImplementation((url: string) => {
     if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT)) {
       return Promise.resolve({ lock_version: lockVersion });
@@ -109,7 +109,7 @@ describe("CoverPickerSection", () => {
   // Scenario: Choosing another photo switches the cover and refreshes the previews
   // Scenario: The picker is keyboard accessible
   it("switches with the lock version, shows progress, then refreshes", async () => {
-    let finish: (value: unknown) => void = () => undefined;
+    let finish: (value: unknown) => void = (_value) => undefined;
     const pending = new Promise((resolve) => {
       finish = resolve;
     });

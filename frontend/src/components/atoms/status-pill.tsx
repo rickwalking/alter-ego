@@ -8,7 +8,7 @@ export interface StatusPillProps {
 }
 
 /**
- * Small status pill with a leading dot (AE-0154). Shared by the persona and
+ * Small status pill with a leading dot. Shared by the persona and
  * rubric status badges, which differ only in their colour palette — the caller
  * resolves `color`/`background` from its own palette and passes them in.
  */
@@ -16,7 +16,7 @@ export function StatusPill({
   label,
   color,
   background,
-}: StatusPillProps): React.ReactElement {
+}: Readonly<StatusPillProps>): React.ReactElement {
   return (
     <span
       style={{

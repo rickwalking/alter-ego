@@ -52,9 +52,9 @@ export function InstagramInsightsCard(): React.ReactElement {
 
 function InsightsBody({
   data,
-}: {
+}: Readonly<{
   data: InstagramInsights;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("dashboard.instagram");
   const locale = useLocale();
   const nd = t("notAvailable");

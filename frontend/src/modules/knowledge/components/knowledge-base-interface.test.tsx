@@ -139,19 +139,23 @@ vi.mock("./file-upload", () => ({
 }));
 
 // Mock generateId
-vi.mock("@/lib/utils", async () => ({
-  generateId: vi.fn(() => "new-id-123"),
-  formatDate: vi.fn(() => "Jan 1, 2024"),
-  cn: (...inputs: (string | undefined | false | null)[]) =>
-    inputs.filter(Boolean).join(" "),
-}));
+vi.mock("@/lib/utils", () =>
+  Promise.resolve({
+    generateId: vi.fn(() => "new-id-123"),
+    formatDate: vi.fn(() => "Jan 1, 2024"),
+    cn: (...inputs: (string | undefined | false | null)[]) =>
+      inputs.filter(Boolean).join(" "),
+  }),
+);
 
 describe("KnowledgeBaseInterface Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    knowledgeMocks.createDocument.mockImplementation((_data, options) => {
-      options?.onSuccess?.();
-    });
+    knowledgeMocks.createDocument.mockImplementation(
+      (_data: unknown, options?: { onSuccess?: () => void }) => {
+        options?.onSuccess?.();
+      },
+    );
   });
 
   describe("Given the KnowledgeBaseInterface is rendered", () => {
@@ -248,7 +252,9 @@ describe("KnowledgeBaseInterface Component", () => {
 
         expect(knowledgeMocks.createDocument).toHaveBeenCalledWith(
           { title: "Test", content: "Content", tags: [] },
-          expect.objectContaining({ onSuccess: expect.any(Function) }),
+          expect.objectContaining({
+            onSuccess: expect.any(Function) as unknown,
+          }),
         );
       });
 

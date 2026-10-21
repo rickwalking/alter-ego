@@ -43,7 +43,7 @@ export function CreatePhaseReview({
   designRecovery,
   onRepaired,
   actionsLocked = false,
-}: EditorialPhaseReviewProps): React.JSX.Element | null {
+}: Readonly<EditorialPhaseReviewProps>): React.JSX.Element | null {
   const phase = state.current_phase;
   const autoRepair = actionsLocked ? null : (
     <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />

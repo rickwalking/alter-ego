@@ -19,7 +19,7 @@ interface PreviewBlogResponse {
 
 export function CreateDraftBlogPreview({
   projectId,
-}: WorkspaceDraftBlogPreviewProps): React.JSX.Element {
+}: Readonly<WorkspaceDraftBlogPreviewProps>): React.JSX.Element {
   const t = useTranslations("create.workspace");
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

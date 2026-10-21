@@ -13,9 +13,9 @@ import { BlogPostStatusBadge } from "./status-badge";
 
 describe("BLOG_POST_STATUS_COLORS", () => {
   it("covers exactly the BlogPostStatus vocabulary", () => {
-    expect(Object.keys(BLOG_POST_STATUS_COLORS).sort()).toEqual(
-      [...BLOG_POST_STATUSES].sort(),
-    );
+    expect(
+      Object.keys(BLOG_POST_STATUS_COLORS).sort((a, b) => a.localeCompare(b)),
+    ).toEqual([...BLOG_POST_STATUSES].sort((a, b) => a.localeCompare(b)));
   });
 
   it("defines a non-empty bg and text for every status", () => {

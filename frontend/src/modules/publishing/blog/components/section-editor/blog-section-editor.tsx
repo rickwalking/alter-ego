@@ -39,7 +39,7 @@ export function BlogSectionEditor({
   onRewrite,
   onGenerateTranslation,
   onSelectText,
-}: BlogSectionEditorProps): React.ReactElement {
+}: Readonly<BlogSectionEditorProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const current = activeDocument(document, language);
   const hasEnglish = Boolean(document.translations[BLOG_CONTENT_EN]);

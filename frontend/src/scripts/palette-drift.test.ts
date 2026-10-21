@@ -66,7 +66,7 @@ function run({ createTs = CREATE_TS_OK }: Fixture): number {
   writeFileSync(contractPath, JSON.stringify(CONTRACT));
   writeFileSync(createPath, createTs);
   try {
-    execFileSync("node", [CHECKER, "--strict"], {
+    execFileSync(process.execPath, [CHECKER, "--strict"], {
       cwd: FRONTEND_ROOT,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],

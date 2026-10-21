@@ -20,11 +20,11 @@ function NeighborLink({
   neighbor,
   label,
   direction,
-}: {
+}: Readonly<{
   neighbor: PublicCarouselNeighbor;
   label: string;
   direction: "left" | "right";
-}): React.ReactElement {
+}>): React.ReactElement {
   const align =
     direction === "left" ? "items-start text-left" : "items-end text-right";
   return (
@@ -57,7 +57,7 @@ export function CarouselNeighbors({
   nextLabel,
   listLabel,
   listHref,
-}: CarouselNeighborsProps): React.ReactElement {
+}: Readonly<CarouselNeighborsProps>): React.ReactElement {
   return (
     <nav
       aria-label={listLabel}

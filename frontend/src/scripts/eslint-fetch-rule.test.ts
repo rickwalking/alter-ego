@@ -13,6 +13,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..", "..");
+const ESLINT_BIN = join(
+  FRONTEND_ROOT,
+  "node_modules",
+  "eslint",
+  "bin",
+  "eslint.js",
+);
 const PROBE_DIR = join(
   FRONTEND_ROOT,
   "src",
@@ -35,9 +42,9 @@ interface EslintResult {
 function lintProbe(): { exitCode: number; results: EslintResult[] } {
   try {
     const out = execFileSync(
-      "npx",
+      process.execPath,
       [
-        "eslint",
+        ESLINT_BIN,
         "--format",
         "json",
         "src/modules/__eslint_fetch_probe__/probe.tsx",

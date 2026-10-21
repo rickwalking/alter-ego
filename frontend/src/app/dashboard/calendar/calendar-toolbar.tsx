@@ -20,7 +20,7 @@ export function CalendarToolbar({
   onPrev,
   onNext,
   onToday,
-}: CalendarToolbarProps): React.ReactElement {
+}: Readonly<CalendarToolbarProps>): React.ReactElement {
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>
