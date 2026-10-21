@@ -9,6 +9,7 @@ import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
+import type { CoverPickInput } from "./types";
 
 /**
  * AE-0445: the slide-1 cover picker of a Ponto de Vista carousel on the
@@ -16,7 +17,7 @@ import { carouselKeys } from "@/modules/carousel-presentation";
  * autopilot run has one, the GrokBot cover offer; a pick re-renders the
  * slides + PDFs server-side and returns the fresh artifact version.
  */
-export const coverOptionSchema = z.object({
+const coverOptionSchema = z.object({
   asset_id: z.string(),
   source: z.enum(["library", "offer"]),
   kind: z.string().optional(),
@@ -35,15 +36,8 @@ const coverPickResponseSchema = z.object({
   artifact_version: z.string().nullable().optional(),
 });
 
-export type CoverOption = z.infer<typeof coverOptionSchema>;
 export type CoverOptions = z.infer<typeof coverOptionsSchema>;
 export type CoverPickResponse = z.infer<typeof coverPickResponseSchema>;
-
-export interface CoverPickInput {
-  projectId: string;
-  assetId: string;
-  expectedVersion: number;
-}
 
 export const coverOptionKeys = {
   detail: (projectId: string) => ["carousel-cover-options", projectId] as const,
