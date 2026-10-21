@@ -96,6 +96,10 @@ npm run build-storybook          # Static Storybook build
 - **Use `type` for object shapes, `interface` for extendable contracts**
 - **Props interfaces defined for all components**
 
+### Comments
+
+- **JSDoc only** — no `//`, `/* */` or JSX `{/* */}` notes, ticket/decision ids or TODO markers in source or tests. Put real information in the symbol's JSDoc. Allowed: tool directives (`eslint-disable*`, `@ts-expect-error`, `prettier-ignore`, …) and `// Scenario: <title>` Gherkin references. Gate: `npm run lint:comments` (part of `npm run lint`).
+
 ### Constants
 
 - **No magic strings** — Extract all string literals to named constants
