@@ -1,7 +1,6 @@
 """Google Gemini image generation service."""
 
 import asyncio
-import time
 from pathlib import Path
 
 from google import genai
@@ -80,17 +79,3 @@ class GeminiImageService(ImageGenerationService):
         return await asyncio.to_thread(
             self._generate_image_blocking, prompt, output_path
         )
-
-    def generate_image_sync(
-        self,
-        prompt: str,
-        output_path: str,
-        delay_seconds: float = 2.0,
-    ) -> str:
-        """Generate an image synchronously with rate-limit delay.
-
-        Returns the path to the saved image file.
-        """
-        result = self._generate_image_blocking(prompt, output_path)
-        time.sleep(delay_seconds)
-        return result

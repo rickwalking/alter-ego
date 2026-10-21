@@ -34,18 +34,6 @@ class ContentSource:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
-    def add_key_point(self, point: str) -> None:
-        """Add an extracted key point."""
-        if point and point not in self.extracted_key_points:
-            self.extracted_key_points.append(point)
-            self.updated_at = datetime.utcnow()
-
-    def add_tag(self, tag: str) -> None:
-        """Add a tag."""
-        if tag and tag not in self.tags:
-            self.tags.append(tag)
-            self.updated_at = datetime.utcnow()
-
 
 @dataclass
 class EditorialComment:
@@ -61,16 +49,6 @@ class EditorialComment:
     ai_suggestion: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     resolved_at: datetime | None = None
-
-    def mark_resolved(self) -> None:
-        """Mark the comment as resolved."""
-        self.status = "resolved"
-        self.resolved_at = datetime.utcnow()
-
-    def mark_dismissed(self) -> None:
-        """Mark the comment as dismissed."""
-        self.status = "dismissed"
-        self.resolved_at = datetime.utcnow()
 
 
 @dataclass

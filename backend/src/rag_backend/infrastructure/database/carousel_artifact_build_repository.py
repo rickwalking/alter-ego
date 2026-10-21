@@ -57,22 +57,6 @@ class PostgresCarouselArtifactBuildRepository:
             return None
         return model.to_entity()
 
-    async def get_active_build(self, project_id: UUID) -> CarouselArtifactBuild | None:
-        stmt = (
-            select(CarouselArtifactBuildModel)
-            .where(
-                CarouselArtifactBuildModel.project_id == str(project_id),
-                CarouselArtifactBuildModel.status == ARTIFACT_BUILD_STATUS_ACTIVE,
-            )
-            .order_by(CarouselArtifactBuildModel.updated_at.desc())
-            .limit(1)
-        )
-        result = await self._session.execute(stmt)
-        model = result.scalar_one_or_none()
-        if model is None:
-            return None
-        return model.to_entity()
-
     async def upsert_build(self, build: CarouselArtifactBuild) -> CarouselArtifactBuild:
         existing = await self.get_by_project_and_version(
             build.project_id,

@@ -94,62 +94,6 @@ class ConversationService:
             conversation_id, limit=limit
         )
 
-    async def get_context_window(self, conversation_id: UUID) -> list[dict[str, str]]:
-        """Get the context window for the LLM.
-
-        Retrieves messages that fit within the token limit,
-        formatted for LangChain/OpenAI.
-
-        Args:
-            conversation_id: The conversation UUID
-
-        Returns:
-            List of message dictionaries with 'role' and 'content'
-        """
-        messages = await self._message_repository.get_recent_context(
-            conversation_id, max_tokens=self._max_context_tokens
-        )
-
-        return [
-            {
-                "role": msg.role.value,
-                "content": msg.content,
-            }
-            for msg in messages
-        ]
-
-    async def add_message(
-        self,
-        conversation_id: UUID,
-        *,
-        data: _MessageData,
-    ) -> Message:
-        """Add a message to a conversation.
-
-        Args:
-            conversation_id: The conversation UUID
-            data: Message payload (role, content, sources)
-
-        Returns:
-            The created message
-        """
-        message = Message(
-            role=data.role,
-            content=data.content,
-            conversation_id=conversation_id,
-            sources=data.sources or [],
-        )
-
-        created_message = await self._message_repository.create(message)
-
-        # Update conversation timestamp
-        conversation = await self._conversation_repository.get_by_id(conversation_id)
-        if conversation:
-            conversation.touch()
-            await self._conversation_repository.update(conversation)
-
-        return created_message
-
     async def delete_conversation(self, conversation_id: UUID) -> bool:
         """Delete a conversation and all its messages.
 

@@ -16,15 +16,6 @@ class SparseEmbedding(TypedDict):
     values: list[float]
 
 
-class ImageResult(TypedDict):
-    """Per-slide image generation outcome."""
-
-    number: int
-    status: str
-    path: str
-    skipped: bool
-
-
 class ChatEvent(TypedDict, total=False):
     """Event yielded by RAGAgent.chat."""
 

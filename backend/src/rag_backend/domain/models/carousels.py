@@ -3,15 +3,6 @@
 from typing import TypedDict
 
 
-class ListCarouselsParams(TypedDict):
-    """Parameters for listing carousel projects."""
-
-    user: str | None
-    status_filter: str | None
-    limit: int
-    offset: int
-
-
 class HybridSearchParams(TypedDict):
     """Parameters for hybrid search operations."""
 

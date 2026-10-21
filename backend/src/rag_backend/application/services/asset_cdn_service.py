@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from rag_backend.domain.constants.cdn import (
     CDN_PATH_BLOG_IMAGES,
-    CDN_PATH_CAROUSEL_IMAGES,
 )
 
 
@@ -25,13 +24,6 @@ class AssetCdnService:
             return relative_path
         filename = relative_path.split("/")[-1]
         return f"{self._cdn_base_url}/{CDN_PATH_BLOG_IMAGES}/{filename}"
-
-    def resolve_carousel_image(self, project_id: str, slide_index: int) -> str:
-        """Return CDN URL for a carousel slide image."""
-        if not self._enabled:
-            return f"/api/carousels/{project_id}/images/slide_{slide_index}.jpg"
-        base = f"{self._cdn_base_url}/{CDN_PATH_CAROUSEL_IMAGES}/{project_id}"
-        return f"{base}/slide_{slide_index}.jpg"
 
     def resolve_url(self, path: str) -> str:
         """Resolve any asset path to CDN URL if enabled."""

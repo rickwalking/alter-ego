@@ -51,34 +51,6 @@ class QualityRubric:
     updated_at: datetime = field(default_factory=datetime.utcnow)
     version: int = 1
 
-    def add_criterion(
-        self,
-        name: str,
-        description: str,
-        weight: float,
-        evaluation_method: EvaluationMethod,
-        min_threshold: float,
-        scoring_scale: ScoringScale,
-        prompt_template: str,
-    ) -> None:
-        """Add a criterion to the rubric."""
-        criterion: RubricCriterion = {
-            "id": f"{name.lower().replace(' ', '_')}_criterion",
-            "name": name,
-            "description": description,
-            "weight": weight,
-            "evaluation_method": evaluation_method,
-            "min_threshold": min_threshold,
-            "scoring_scale": scoring_scale,
-            "prompt_template": prompt_template,
-        }
-        self.criteria.append(criterion)
-        self.updated_at = datetime.utcnow()
-
-    def get_total_weight(self) -> float:
-        """Calculate total weight of all criteria."""
-        return sum(c["weight"] for c in self.criteria)
-
 
 @dataclass
 class RubricEvaluationScore:
@@ -92,18 +64,3 @@ class RubricEvaluationScore:
     overall_score: float = 0.0
     passed: bool = False
     feedback: list[dict[str, object]] = field(default_factory=list)
-
-    def add_score(
-        self, criterion_id: str, score: float, weight: float, passed: bool
-    ) -> None:
-        """Add a criterion score."""
-        self.scores[criterion_id] = {
-            "score": score,
-            "weight": weight,
-            "passed": passed,
-        }
-
-    def set_overall(self, overall_score: float, passed: bool) -> None:
-        """Set overall score and pass/fail status."""
-        self.overall_score = overall_score
-        self.passed = passed
