@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import warnings
 from dataclasses import dataclass
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 from rag_backend.domain.constants.carousel import (
     IMAGE_FORMAT_JPEG,
@@ -39,6 +41,9 @@ from rag_backend.domain.constants.creator_asset import (
     ERR_CREATOR_ASSET_TRUNCATED,
     build_staged_creator_asset_relative_path,
 )
+
+if TYPE_CHECKING:
+    from PIL.Image import Image as PilImage
 
 _WEBP_SAVE_QUALITY = 90
 _WEBP_SAVE_METHOD = 6
@@ -144,13 +149,26 @@ def _target_mode(image: object) -> str:
     return _MODE_RGBA if mode in _ALPHA_MODES or has_key else _MODE_RGB
 
 
+def open_within_pixel_budget(content: bytes) -> PilImage:
+    """Open (lazily, header only) an upload under the creator pixel budget.
+
+    Pillow raises ``DecompressionBombError`` above 2x ``MAX_IMAGE_PIXELS`` and
+    only *warns* between 1x and 2x. Callers reject that range themselves with a
+    precise error code right after opening, so the warning is suppressed here.
+    """
+    from PIL import Image
+
+    Image.MAX_IMAGE_PIXELS = CREATOR_ASSET_MAX_PIXELS
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+        return Image.open(BytesIO(content))
+
+
 def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
     from PIL import Image, ImageOps
 
-    Image.MAX_IMAGE_PIXELS = CREATOR_ASSET_MAX_PIXELS
-
     try:
-        with Image.open(BytesIO(content)) as image:
+        with open_within_pixel_budget(content) as image:
             _reject_if_animated(image)
             width, height = image.size
             _validate_dimensions(width, height)
