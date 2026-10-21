@@ -16,10 +16,11 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from threading import Semaphore
 
 import pytest
 
-from rag_backend.infrastructure import langfuse_phase_trace
+from rag_backend.infrastructure import langfuse_client, langfuse_phase_trace
 
 
 @dataclass
@@ -191,6 +192,14 @@ def wait_for_flushes(collector: TraceCollector, expected: int = 1) -> bool:
 def install_trace_collector(monkeypatch: pytest.MonkeyPatch) -> TraceCollector:
     """Route ``phase_trace`` to a fresh collector for this test."""
     collector = TraceCollector()
+    # AE-0446: the flush slots are process-wide. A hung exporter left by
+    # another test must not make this test's flush be dropped, so each
+    # collector gets its own (same-size) slot pool.
+    monkeypatch.setattr(
+        langfuse_client,
+        "_FLUSH_SLOTS",
+        Semaphore(langfuse_client._MAX_ACTIVE_FLUSHES),
+    )
     monkeypatch.setattr(langfuse_phase_trace, "get_langfuse_client", lambda: collector)
     monkeypatch.setattr(
         langfuse_phase_trace, "_langfuse_propagate", collector.propagate

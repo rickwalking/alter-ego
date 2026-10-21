@@ -7,7 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from rag_backend import monitoring_langfuse as root_monitoring
 from rag_backend.domain.models.carousels import ReviewEventParams
+from rag_backend.infrastructure import langfuse_client
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.monitoring_langfuse import (
     LangfuseCallbackHandler,
@@ -33,14 +35,27 @@ class TestLangfuseInit:
         assert result is None
 
     @patch("rag_backend.infrastructure.langfuse_client.Langfuse")
-    def test_init_langfuse_with_valid_keys(self, mock_langfuse: MagicMock) -> None:
-        """Given valid keys, when initializing, then Langfuse instance is returned."""
+    def test_init_langfuse_with_valid_keys(
+        self, mock_langfuse: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Given valid keys, when initializing, then Langfuse instance is returned.
+
+        AE-0446: init also initialises the root ``monitoring_langfuse`` client.
+        Unmocked, that built a REAL Langfuse client + OTLP exporter aimed at
+        ``http://localhost``, set ``LANGFUSE_*`` in ``os.environ`` and left both
+        module globals set for every later test (hung span exports then filled
+        the flush slots). Both sides are mocked and the globals are restored.
+        """
         mock_instance = MagicMock()
         mock_langfuse.return_value = mock_instance
+        root_init = MagicMock()
+        monkeypatch.setattr(langfuse_client, "LANGFUSE_CLIENT", None)
+        monkeypatch.setattr(root_monitoring, "init_langfuse", root_init)
 
         result = init_langfuse("public", "secret", "http://localhost")
 
         assert result == mock_instance
+        root_init.assert_called_once_with("public", "secret", "http://localhost")
 
 
 class TestLangfuseCallbackHandler:
