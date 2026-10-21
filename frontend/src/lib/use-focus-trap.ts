@@ -18,46 +18,48 @@ const FOCUSABLE_SELECTOR = [
 
 const TAB_KEY = "Tab";
 
+function focusableIn(node: HTMLElement): HTMLElement[] {
+  return Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+}
+
+/** Tab / Shift+Tab wrap around the first and last focusable element. */
+function trapTabKey(node: HTMLElement): (event: KeyboardEvent) => void {
+  return (event: KeyboardEvent): void => {
+    if (event.key !== TAB_KEY) {
+      return;
+    }
+    const items = focusableIn(node);
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (first === undefined || last === undefined) {
+      return;
+    }
+    const activeEl = document.activeElement;
+    if (event.shiftKey && activeEl === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+    if (!event.shiftKey && activeEl === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+}
+
 export function useFocusTrap(
   ref: RefObject<HTMLElement | null>,
   active: boolean,
 ): void {
   useEffect(() => {
-    if (!active) {
-      return;
-    }
     const node = ref.current;
-    if (!node) {
+    if (!active || !node) {
       return;
     }
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const focusable = (): HTMLElement[] =>
-      Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    focusableIn(node)[0]?.focus();
 
-    focusable()[0]?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== TAB_KEY) {
-        return;
-      }
-      const items = focusable();
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (first === undefined || last === undefined) {
-        return;
-      }
-      const activeEl = document.activeElement;
-      if (event.shiftKey && activeEl === first) {
-        event.preventDefault();
-        last.focus();
-        return;
-      }
-      if (!event.shiftKey && activeEl === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
+    const handleKeyDown = trapTabKey(node);
     node.addEventListener("keydown", handleKeyDown);
     return () => {
       node.removeEventListener("keydown", handleKeyDown);
