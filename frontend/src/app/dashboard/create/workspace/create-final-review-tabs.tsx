@@ -26,21 +26,21 @@ interface PreviewBlogResponse {
   markdown?: string;
 }
 
-export function CreateFinalReviewTabs({
-  projectId,
-  state,
-}: FinalReviewTabsProps): React.JSX.Element {
-  const t = useTranslations("editorialWorkflow.review.finalReview");
-  const [activeTab, setActiveTab] = useState<FinalReviewTab>(
-    FINAL_REVIEW_TABS.CAROUSEL,
-  );
+interface BlogPreview {
+  previewMarkdown: string | null;
+  previewLoading: boolean;
+  previewError: string | null;
+}
+
+/** Load the rendered blog preview each time the blog tab is opened. */
+function useBlogPreview(
+  projectId: string,
+  active: boolean,
+  errorMessage: string,
+): BlogPreview {
   const [previewMarkdown, setPreviewMarkdown] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const caption = resolveCaption(state);
-  const blogMarkdown = resolveBlogMarkdown(state);
-  const rubricScores = resolveRubricScores(state);
-  const scoreEntries = Object.entries(rubricScores);
 
   const loadBlogPreview = useCallback(async () => {
     setPreviewLoading(true);
@@ -50,24 +50,82 @@ export function CreateFinalReviewTabs({
         API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG(projectId, DEFAULT_BLOG_LANGUAGE),
       );
       if (!response.ok) {
-        setPreviewError(t("blogPreviewError"));
+        setPreviewError(errorMessage);
         return;
       }
       const payload = (await response.json()) as PreviewBlogResponse;
       setPreviewMarkdown(payload.markdown ?? "");
     } catch {
-      setPreviewError(t("blogPreviewError"));
+      setPreviewError(errorMessage);
     } finally {
       setPreviewLoading(false);
     }
-  }, [projectId, t]);
+  }, [projectId, errorMessage]);
 
   useEffect(() => {
-    if (activeTab !== FINAL_REVIEW_TABS.BLOG) {
+    if (!active) {
       return;
     }
     void loadBlogPreview();
-  }, [activeTab, loadBlogPreview]);
+  }, [active, loadBlogPreview]);
+
+  return { previewMarkdown, previewLoading, previewError };
+}
+
+interface BlogPreviewPanelProps {
+  loading: boolean;
+  error: string | null;
+  markdown: string;
+  loadingText: string;
+  placeholderText: string;
+}
+
+function blogPreviewContent({
+  loading,
+  error,
+  markdown,
+  loadingText,
+  placeholderText,
+}: BlogPreviewPanelProps): React.JSX.Element {
+  const muted = "text-[var(--color-text-muted)]";
+  if (loading) {
+    return <p className={muted}>{loadingText}</p>;
+  }
+  if (error) {
+    return <p className={muted}>{error}</p>;
+  }
+  if (!markdown) {
+    return <p className={muted}>{placeholderText}</p>;
+  }
+  return (
+    <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-[var(--color-surface)] p-3 text-[var(--color-text-muted)] text-xs">
+      {markdown}
+    </pre>
+  );
+}
+
+/** Loading, error, the rendered markdown, or the empty placeholder. */
+function BlogPreviewPanel(props: BlogPreviewPanelProps): React.JSX.Element {
+  return <div className="space-y-2">{blogPreviewContent(props)}</div>;
+}
+
+export function CreateFinalReviewTabs({
+  projectId,
+  state,
+}: FinalReviewTabsProps): React.JSX.Element {
+  const t = useTranslations("editorialWorkflow.review.finalReview");
+  const [activeTab, setActiveTab] = useState<FinalReviewTab>(
+    FINAL_REVIEW_TABS.CAROUSEL,
+  );
+  const caption = resolveCaption(state);
+  const blogMarkdown = resolveBlogMarkdown(state);
+  const rubricScores = resolveRubricScores(state);
+  const scoreEntries = Object.entries(rubricScores);
+  const { previewMarkdown, previewLoading, previewError } = useBlogPreview(
+    projectId,
+    activeTab === FINAL_REVIEW_TABS.BLOG,
+    t("blogPreviewError"),
+  );
 
   const displayedBlogMarkdown = previewMarkdown ?? blogMarkdown;
 
@@ -105,23 +163,13 @@ export function CreateFinalReviewTabs({
           <ContentPhaseReview state={state} editable={false} />
         )}
         {activeTab === FINAL_REVIEW_TABS.BLOG && (
-          <div className="space-y-2">
-            {previewLoading ? (
-              <p className="text-[var(--color-text-muted)]">
-                {t("blogPreviewLoading")}
-              </p>
-            ) : previewError ? (
-              <p className="text-[var(--color-text-muted)]">{previewError}</p>
-            ) : displayedBlogMarkdown ? (
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-[var(--color-surface)] p-3 text-[var(--color-text-muted)] text-xs">
-                {displayedBlogMarkdown}
-              </pre>
-            ) : (
-              <p className="text-[var(--color-text-muted)]">
-                {t("blogPlaceholder")}
-              </p>
-            )}
-          </div>
+          <BlogPreviewPanel
+            loading={previewLoading}
+            error={previewError}
+            markdown={displayedBlogMarkdown}
+            loadingText={t("blogPreviewLoading")}
+            placeholderText={t("blogPlaceholder")}
+          />
         )}
         {activeTab === FINAL_REVIEW_TABS.CAPTION && (
           <div className="space-y-2">

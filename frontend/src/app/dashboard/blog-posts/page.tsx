@@ -27,6 +27,49 @@ import {
   useBlogPostsPaging,
 } from "@/app/dashboard/blog-posts/use-blog-posts-paging";
 
+interface BlogPostsStatusProps {
+  loading: boolean;
+  loadError: string | null;
+  notice: string | null;
+}
+
+/** The spinner while loading; otherwise the load error and the action notice. */
+function BlogPostsStatus({
+  loading,
+  loadError,
+  notice,
+}: BlogPostsStatusProps): React.ReactElement | null {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <NeonSpinner size="lg" />
+      </div>
+    );
+  }
+  return (
+    <>
+      {loadError ? (
+        <p
+          className="text-center py-8"
+          style={{ color: NEON_RED }}
+          role="alert"
+        >
+          {loadError}
+        </p>
+      ) : null}
+      {notice ? (
+        <p
+          className="text-center py-2"
+          style={{ color: NEON_RED }}
+          role="alert"
+        >
+          {notice}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export default function BlogPostsPage(): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const {
@@ -101,29 +144,11 @@ export default function BlogPostsPage(): React.ReactElement {
             totalCount={Math.max(total, dashboardPosts.length)}
           />
         )}
-        {loading && (
-          <div className="flex justify-center py-12">
-            <NeonSpinner size="lg" />
-          </div>
-        )}
-        {error && !loading && (
-          <p
-            className="text-center py-8"
-            style={{ color: NEON_RED }}
-            role="alert"
-          >
-            {t("errors.loadFailed")}
-          </p>
-        )}
-        {notice && !loading && (
-          <p
-            className="text-center py-2"
-            style={{ color: NEON_RED }}
-            role="alert"
-          >
-            {notice}
-          </p>
-        )}
+        <BlogPostsStatus
+          loading={loading}
+          loadError={error ? t("errors.loadFailed") : null}
+          notice={notice}
+        />
         {!loading && !error && (
           <>
             <BlogPostsList

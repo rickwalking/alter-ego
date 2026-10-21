@@ -6,7 +6,12 @@
  * live here rather than inline in the hook `.ts` files.
  */
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type {
+  Dispatch,
+  MutableRefObject,
+  RefObject,
+  SetStateAction,
+} from "react";
 import type {
   EditorialWorkflowTransportMode,
   WorkflowStreamProbeOutcome,
@@ -172,4 +177,89 @@ export interface SlideFieldErrorState {
   slideIndexes: number[];
   /** Drop a field's errors as soon as that field is edited. */
   clearField: (key: string) => void;
+}
+
+/** The reconnect backoff timer (AE-0446: split out of the reconnect hook). */
+export interface ReconnectTimer {
+  attemptsRef: MutableRefObject<number>;
+  clearTimer: () => void;
+  scheduleReconnect: () => void;
+}
+
+/** What reviving the stream on tab focus needs (AE-0446). */
+export interface ResumeOnVisibleDeps extends Pick<
+  UseWorkflowStreamReconnectParams,
+  "connectRef" | "sourceRef" | "refreshState"
+> {
+  probeThen: (onReopenable: () => void) => void;
+  reconnectNow: () => void;
+}
+
+/** What starting a workflow needs (AE-0446: split out of the main hook). */
+export type StartWorkflowDeps = Pick<
+  UseEditorialWorkflowResumeParams,
+  | "projectId"
+  | "translateError"
+  | "workflowStateRef"
+  | "refreshState"
+  | "setState"
+  | "setPhaseEvents"
+  | "setLoading"
+  | "setError"
+>;
+
+/** ``useEditorialWorkflow``'s own state + refresh (AE-0446). */
+export interface WorkflowCore {
+  state: EditorialWorkflowState | null;
+  setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
+  phaseEvents: string[];
+  setPhaseEvents: Dispatch<SetStateAction<string[]>>;
+  loading: boolean;
+  setLoading: Dispatch<SetStateAction<boolean>>;
+  error: string | null;
+  setError: Dispatch<SetStateAction<string | null>>;
+  transportMode: EditorialWorkflowTransportMode;
+  setTransportMode: Dispatch<SetStateAction<EditorialWorkflowTransportMode>>;
+  refreshState: () => Promise<EditorialWorkflowState | null>;
+}
+
+/** Refs shared by the workflow stream, poller and reconnect (AE-0446). */
+export interface WorkflowStreamRefs {
+  pollTimeoutRef: MutableRefObject<number | null>;
+  backoffIndexRef: MutableRefObject<number>;
+  sourceRef: MutableRefObject<EventSource | null>;
+  connectRef: MutableRefObject<(() => void) | null>;
+  transportModeRef: MutableRefObject<EditorialWorkflowTransportMode>;
+  workflowStateRef: MutableRefObject<EditorialWorkflowState | null>;
+  phaseStatusRef: MutableRefObject<
+    EditorialWorkflowState["phase_status"] | undefined
+  >;
+}
+
+/** Transport switches of the workflow stream (AE-0446). */
+export interface PollingControls {
+  clearPollTimeout: () => void;
+  stopPollingFallback: () => void;
+  enterPollingFallback: () => void;
+  markDisconnected: () => void;
+}
+
+/** What the stream-connection effect needs (AE-0446). */
+export interface StreamConnectionDeps {
+  params: UseEditorialWorkflowSseParams;
+  refs: WorkflowStreamRefs;
+  controls: PollingControls;
+  stream: Pick<
+    WorkflowStreamReconnectApi,
+    "handleStreamError" | "handleStreamOpen" | "cancelReconnect"
+  >;
+}
+
+/** What the polling-fallback effect needs (AE-0446). */
+export interface PollWhileFallbackDeps {
+  transportMode: EditorialWorkflowTransportMode;
+  phaseStatus: EditorialWorkflowState["phase_status"] | undefined;
+  refs: WorkflowStreamRefs;
+  clearPollTimeout: () => void;
+  schedulePollFallback: () => void;
 }

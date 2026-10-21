@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
@@ -45,6 +46,9 @@ import type { BlogPost, BlogPostUpdatePayload } from "../types";
 import type {
   BlogEditorError,
   DraftMerge,
+  EditorPersistence,
+  EditorPersistenceDeps,
+  DraftState,
   EditorSession,
   UseBlogPostEditorResult,
 } from "./types";
@@ -94,6 +98,21 @@ export function locked(post: BlogPost): LockedPost {
   return { id: post.id, lockVersion: post.lock_version };
 }
 
+/** A first load, another post, or a newer version while either copy generates. */
+function shouldAdoptLoaded(
+  session: EditorSession | null,
+  loaded: BlogPost,
+): boolean {
+  if (session?.base.id !== loaded.id) {
+    return true;
+  }
+  const newer = session.base.lock_version !== loaded.lock_version;
+  return (
+    newer &&
+    (isGenerationInProgress(session.base) || isGenerationInProgress(loaded))
+  );
+}
+
 function useEditorSession(postId: string) {
   const query = useQuery({
     queryKey: blogPostKeys.detail(postId),
@@ -109,50 +128,51 @@ function useEditorSession(postId: string) {
   // copy is generating: the editor's copy (the run's writes, then its final
   // status) or the server's (a Retry clicked here flipped it to in_progress,
   // so the editor locks at once instead of staying editable on "failed").
-  const stale =
-    loaded !== null &&
-    session !== null &&
-    session.base.lock_version !== loaded.lock_version &&
-    (isGenerationInProgress(session.base) || isGenerationInProgress(loaded));
-  if (loaded && (session?.base.id !== loaded.id || stale)) {
+  if (loaded && shouldAdoptLoaded(session, loaded)) {
     setSession(sessionFromPost(loaded));
   }
   return { query, session, setSession };
 }
 
-export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
-  const { query, session, setSession } = useEditorSession(postId);
-  // The latest committed session, for answers that arrive after a re-render
-  // (a 409 retry, the lock an action must use).
-  const latest = useRef<EditorSession | null>(session);
-  useEffect(() => {
-    latest.current = session;
-  }, [session]);
-  const [language, setLanguage] =
-    useState<BlogContentLanguage>(BLOG_CONTENT_PT);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<BlogEditorError | null>(null);
+/** Save (with the own-bump 409 retry) and version restore for one session. */
+/** Restore a stored version into the session (null on success). */
+async function restoreSessionVersion(
+  session: EditorSession | null,
+  versionNumber: number,
+  setSession: EditorPersistenceDeps["setSession"],
+): Promise<BlogEditorError | null> {
+  if (!session) {
+    return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
+  }
+  try {
+    const restored = await restoreVersion(locked(session.base), versionNumber);
+    setSession(sessionFromPost(restored));
+    return null;
+  } catch (err) {
+    return toEditorError(err);
+  }
+}
+
+/** The draft, its validation and the pending update payload (if dirty). */
+function draftState(session: EditorSession | null): DraftState {
   const draft = session?.draft ?? null;
   const original = session?.original ?? null;
-  const validation = draft ? validateBlogEditorDraft(draft) : null;
-  const payload =
-    draft && original ? buildBlogPostUpdate(original, draft) : null;
-
-  const updateDraft = (
-    edit: (current: BlogEditorDraft) => BlogEditorDraft,
-  ): void => {
-    setSession((prev) =>
-      prev?.draft ? { ...prev, draft: edit(prev.draft) } : prev,
-    );
+  return {
+    draft,
+    validation: draft ? validateBlogEditorDraft(draft) : null,
+    payload: draft && original ? buildBlogPostUpdate(original, draft) : null,
   };
+}
 
-  const replaceFromServer = (post: BlogPost): void =>
-    setSession(sessionFromPost(post));
-
-  const applyServerPost = (post: BlogPost, merge: DraftMerge): void => {
-    setSession((prev) => sessionAfterSlot(prev, post, merge));
-  };
-
+function useEditorPersistence({
+  session,
+  setSession,
+  latest,
+  payload,
+  validation,
+}: EditorPersistenceDeps): EditorPersistence {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<BlogEditorError | null>(null);
   const persist = async (): Promise<BlogPost | null> => {
     if (!session) {
       return null;
@@ -181,25 +201,51 @@ export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
     }
   };
 
-  const handleRestore = async (
-    versionNumber: number,
-  ): Promise<BlogEditorError | null> => {
-    if (!session) {
-      return { kind: BLOG_EDITOR_ERROR_KINDS.FAILED, detail: null };
-    }
-    try {
-      replaceFromServer(
-        await restoreVersion(locked(session.base), versionNumber),
-      );
-      return null;
-    } catch (err) {
-      return toEditorError(err);
-    }
+  const handleRestore = (versionNumber: number) =>
+    restoreSessionVersion(session, versionNumber, setSession);
+
+  return { persist, handleRestore, saving, error, setError };
+}
+
+/** A ref that always holds the last committed value. */
+function useLatest<T>(value: T): MutableRefObject<T> {
+  const ref = useRef<T>(value);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref;
+}
+
+export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
+  const { query, session, setSession } = useEditorSession(postId);
+  // The latest committed session, for answers that arrive after a re-render
+  // (a 409 retry, the lock an action must use).
+  const latest = useLatest(session);
+  const [language, setLanguage] =
+    useState<BlogContentLanguage>(BLOG_CONTENT_PT);
+  const { draft, validation, payload } = draftState(session);
+
+  const updateDraft = (
+    edit: (current: BlogEditorDraft) => BlogEditorDraft,
+  ): void => {
+    setSession((prev) =>
+      prev?.draft ? { ...prev, draft: edit(prev.draft) } : prev,
+    );
   };
+
+  const replaceFromServer = (post: BlogPost): void =>
+    setSession(sessionFromPost(post));
+
+  const applyServerPost = (post: BlogPost, merge: DraftMerge): void => {
+    setSession((prev) => sessionAfterSlot(prev, post, merge));
+  };
+
+  const { persist, handleRestore, saving, error, setError } =
+    useEditorPersistence({ session, setSession, latest, payload, validation });
 
   return {
     post: session?.base,
-    loading: query.isPending && Boolean(postId),
+    loading: query.isPending && postId !== "",
     loadFailed: query.isError,
     draft,
     language,

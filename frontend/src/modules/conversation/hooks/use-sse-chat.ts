@@ -1,14 +1,27 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConversationMessages } from "@/modules/conversation/hooks/use-chat";
 import { chatKeys } from "@/modules/conversation/queries";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { useChatStream } from "@/lib/use-chat-stream";
+import {
+  dispatchSseEvent,
+  sseContentText,
+  type SseEventData,
+  type SseEventHandlers,
+} from "@/lib/sse-event-data";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
-import type { UseSseChatOptions, UseSseChatReturn } from "./types";
+import type {
+  ChatStreamState,
+  ChatTurnCallbacks,
+  SendChatDeps,
+  UseSseChatOptions,
+  UseSseChatReturn,
+} from "./types";
 
 const SSE_CHAT_USER_ID_PREFIX = "user-";
 const STREAM_MESSAGE_ID_PREFIX = "stream-";
@@ -33,25 +46,51 @@ function mergeMessages(
   return [...historyMessages, ...uniqueOptimistic];
 }
 
-export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
+/** Attach the streamed sources to the trailing assistant message. */
+function withAssistantSources(
+  prev: Message[],
+  sources: Message["sources"] | undefined,
+): Message[] {
+  const last = prev[prev.length - 1];
+  if (last?.role !== "assistant") {
+    return prev;
+  }
+  return [...prev.slice(0, -1), { ...last, sources: sources ?? [] }];
+}
+
+/** Backend sends sources in data.content (e.g. {"type":"sources","content":[]}). */
+function streamedSources(data: SseEventData): Message["sources"] | undefined {
+  return (data.sources ?? data.content) as Message["sources"] | undefined;
+}
+
+/** The persisted history when enabled (an empty list otherwise). */
+function useHistory(
+  loadHistory: boolean,
+  conversationId: string | null,
+): Message[] {
+  const { data: fetchedHistory = [] } = useConversationMessages(
+    loadHistory ? conversationId : null,
+  );
+  return useMemo(
+    () => (loadHistory ? fetchedHistory : []),
+    [loadHistory, fetchedHistory],
+  );
+}
+
+/**
+ * End a stream once (COMPLETE and the reader's onComplete both fire); with
+ * history on, refetch it and then drop the optimistic copies.
+ */
+function useFinalizeStream(
+  stream: ChatStreamState,
+  loadHistory: boolean,
+): {
+  finalizedRef: MutableRefObject<boolean>;
+  finalizeStream: (convId: string) => void;
+} {
   const queryClient = useQueryClient();
-  const {
-    optimisticMessages,
-    setOptimisticMessages,
-    isStreaming,
-    setIsStreaming,
-    abortRef,
-    startUserTurn,
-    appendToken,
-    resetStreamingRefs,
-  } = useChatStream(SSE_CHAT_USER_ID_PREFIX, STREAM_MESSAGE_ID_PREFIX);
-  const [error, setError] = useState<string | null>(null);
   const finalizedRef = useRef(false);
-
-  const conversationId = options.conversationId ?? null;
-
-  const loadHistory = options.enableHistory !== false;
-
+  const { setIsStreaming, resetStreamingRefs, setOptimisticMessages } = stream;
   const finalizeStream = useCallback(
     (convId: string) => {
       if (finalizedRef.current) {
@@ -77,100 +116,115 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
       setOptimisticMessages,
     ],
   );
-  const { data: fetchedHistory = [] } = useConversationMessages(
-    loadHistory ? conversationId : null,
+  return { finalizedRef, finalizeStream };
+}
+
+/** The SSE handlers for one chat turn of conversation ``convId``. */
+function chatTurnHandlers(
+  turn: ChatTurnCallbacks,
+  convId: string,
+): SseEventHandlers {
+  return {
+    [SSE_EVENT_TYPE.TOKEN]: (data) =>
+      turn.appendToken(sseContentText(data, "")),
+    [SSE_EVENT_TYPE.SOURCES]: (data) =>
+      turn.setOptimisticMessages((prev) =>
+        withAssistantSources(prev, streamedSources(data)),
+      ),
+    [SSE_EVENT_TYPE.COMPLETE]: () => turn.finalizeStream(convId),
+    [SSE_EVENT_TYPE.ERROR]: (data) =>
+      failStream(turn, sseContentText(data, "Unknown error")),
+  };
+}
+
+/** Show the error and end the stream. */
+function failStream(turn: ChatTurnCallbacks, message: string): void {
+  turn.setError(message);
+  turn.setIsStreaming(false);
+  turn.resetStreamingRefs();
+}
+
+/** Stream one user turn into the conversation, folding each SSE event in. */
+function useSendChatMessage({
+  stream,
+  conversationId,
+  isStreaming,
+  setError,
+  finalizedRef,
+  finalizeStream,
+}: SendChatDeps): UseSseChatReturn["sendMessage"] {
+  const { startUserTurn, appendToken, setOptimisticMessages } = stream;
+  const { setIsStreaming, resetStreamingRefs } = stream;
+  return useCallback(
+    async (content: string, overrideConversationId?: string) => {
+      const convId = overrideConversationId ?? conversationId;
+      if (!content.trim() || isStreaming || !convId) return;
+      finalizedRef.current = false;
+      setError(null);
+      const turn: ChatTurnCallbacks = {
+        appendToken,
+        setOptimisticMessages,
+        setIsStreaming,
+        resetStreamingRefs,
+        setError,
+        finalizeStream,
+      };
+      await streamSseEvents({
+        url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
+        body: { content: content.trim() },
+        signal: startUserTurn(content.trim()),
+        onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
+        onError: (err) => failStream(turn, err.message),
+        onComplete: () => finalizeStream(convId),
+      });
+    },
+    [
+      conversationId,
+      isStreaming,
+      finalizedRef,
+      setError,
+      startUserTurn,
+      appendToken,
+      setOptimisticMessages,
+      setIsStreaming,
+      resetStreamingRefs,
+      finalizeStream,
+    ],
   );
-  const historyMessages = useMemo(
-    () => (loadHistory ? fetchedHistory : []),
-    [loadHistory, fetchedHistory],
+}
+
+export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
+  const stream = useChatStream(
+    SSE_CHAT_USER_ID_PREFIX,
+    STREAM_MESSAGE_ID_PREFIX,
   );
+  const { optimisticMessages, setOptimisticMessages, isStreaming } = stream;
+  const { abortRef, setIsStreaming, resetStreamingRefs } = stream;
+  const [error, setError] = useState<string | null>(null);
+  const conversationId = options.conversationId ?? null;
+  const loadHistory = options.enableHistory !== false;
+  const { finalizedRef, finalizeStream } = useFinalizeStream(
+    stream,
+    loadHistory,
+  );
+  const historyMessages = useHistory(loadHistory, conversationId);
 
   const startNewChat = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    abortRef.current?.abort();
     setOptimisticMessages([]);
     setIsStreaming(false);
     setError(null);
     resetStreamingRefs();
   }, [abortRef, setOptimisticMessages, setIsStreaming, resetStreamingRefs]);
 
-  const sendMessage = useCallback(
-    async (content: string, overrideConversationId?: string) => {
-      if (!content.trim() || isStreaming) return;
-
-      const convId = overrideConversationId ?? conversationId;
-      if (!convId) return;
-
-      finalizedRef.current = false;
-      setError(null);
-
-      const signal = startUserTurn(content.trim());
-
-      await streamSseEvents({
-        url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
-        body: { content: content.trim() },
-        signal,
-        onEvent: (event) => {
-          const data = event.data;
-
-          if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            appendToken(typeof data.content === "string" ? data.content : "");
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.SOURCES) {
-            // Backend sends sources in data.content (e.g. {"type":"sources","content":[]})
-            const sources = (data.sources ?? data.content) as
-              | Message["sources"]
-              | undefined;
-            setOptimisticMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === "assistant") {
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, sources: sources ?? [] },
-                ];
-              }
-              return prev;
-            });
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.COMPLETE) {
-            finalizeStream(convId);
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.ERROR) {
-            const errorContent =
-              typeof data.content === "string" ? data.content : "Unknown error";
-            setError(errorContent);
-            setIsStreaming(false);
-            resetStreamingRefs();
-          }
-        },
-        onError: (err) => {
-          setError(err.message);
-          setIsStreaming(false);
-          resetStreamingRefs();
-        },
-        onComplete: () => {
-          finalizeStream(convId);
-        },
-      });
-    },
-    [
-      conversationId,
-      finalizeStream,
-      isStreaming,
-      startUserTurn,
-      appendToken,
-      setIsStreaming,
-      setOptimisticMessages,
-      resetStreamingRefs,
-    ],
-  );
+  const sendMessage = useSendChatMessage({
+    stream,
+    conversationId,
+    isStreaming,
+    setError,
+    finalizedRef,
+    finalizeStream,
+  });
 
   const messages = useMemo(
     () => mergeMessages(historyMessages, optimisticMessages),

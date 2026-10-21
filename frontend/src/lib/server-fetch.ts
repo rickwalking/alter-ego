@@ -29,35 +29,47 @@ export function getBaseUrl(): string {
   return envUrl !== undefined && envUrl !== "" ? envUrl : DEFAULT_BACKEND_URL;
 }
 
+interface ServerFetchOptions {
+  revalidate?: number;
+  cache?: RequestInit["cache"];
+}
+
+/** `cache` wins; otherwise ISR via `next.revalidate`; otherwise defaults. */
+function toFetchInit(
+  options?: ServerFetchOptions,
+): RequestInit & { next?: { revalidate?: number } } {
+  if (options?.cache) {
+    return { cache: options.cache };
+  }
+  if (options?.revalidate) {
+    return { next: { revalidate: options.revalidate } };
+  }
+  return {};
+}
+
+/** Parse an OK response against the schema; null (logged) on a contract break. */
+async function parseValidated<T>(
+  res: Response,
+  schema: z.ZodSchema<T>,
+): Promise<T | null> {
+  const json: unknown = await res.json();
+  const result = schema.safeParse(json);
+  if (!result.success) {
+    console.error("Server fetch validation failed:", result.error.issues);
+    return null;
+  }
+  return result.data;
+}
+
+/** Server-side fetch: null on network error, non-OK status or invalid data. */
 async function validatedFetch<T>(
   url: string,
   schema: z.ZodSchema<T>,
-  options?: { revalidate?: number; cache?: RequestInit["cache"] },
+  options?: ServerFetchOptions,
 ): Promise<T | null> {
-  const baseUrl = getBaseUrl();
-
   try {
-    const fetchOptions: RequestInit & { next?: { revalidate?: number } } = {};
-    if (options?.cache) {
-      fetchOptions.cache = options.cache;
-    } else if (options?.revalidate) {
-      fetchOptions.next = { revalidate: options.revalidate };
-    }
-    const res = await fetch(`${baseUrl}${url}`, fetchOptions);
-
-    if (!res.ok) {
-      return null;
-    }
-
-    const json: unknown = await res.json();
-    const result = schema.safeParse(json);
-
-    if (!result.success) {
-      console.error("Server fetch validation failed:", result.error.issues);
-      return null;
-    }
-
-    return result.data;
+    const res = await fetch(`${getBaseUrl()}${url}`, toFetchInit(options));
+    return res.ok ? await parseValidated(res, schema) : null;
   } catch {
     return null;
   }

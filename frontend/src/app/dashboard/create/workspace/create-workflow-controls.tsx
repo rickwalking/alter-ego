@@ -2,13 +2,23 @@
 
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonTextarea } from "@/components/atoms/neon-textarea";
-import {
-  EDITORIAL_PHASES,
-  FINAL_REVIEW_SEND_BACK_PHASES,
-  type FinalReviewSendBackPhase,
-} from "@/constants/editorial-workflow";
+import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import type { CreateWorkflowControlsProps } from "@/modules/editorial";
+import {
+  ControlNotices,
+  FeedbackFields,
+} from "./create-workflow-control-parts";
+
+/** Approving the content step sends the edited slides along. */
+function approveOptionsFor(
+  state: CreateWorkflowControlsProps["state"],
+  contentHasEdits: boolean,
+  contentSlides: CreateWorkflowControlsProps["contentSlides"],
+): { editedLocalizedSlides: typeof contentSlides } | undefined {
+  return state?.current_phase === EDITORIAL_PHASES.CONTENT && contentHasEdits
+    ? { editedLocalizedSlides: contentSlides }
+    : undefined;
+}
 
 export function CreateWorkflowControls({
   state,
@@ -25,7 +35,7 @@ export function CreateWorkflowControls({
   contentHasEdits,
   contentSlides,
   personaApproveBlocked,
-  personaShortfallDetail = null,
+  personaShortfallDetail,
   presentationApproveBlocked,
   editBudgetBlocked,
   designReviseBlocked,
@@ -40,57 +50,15 @@ export function CreateWorkflowControls({
   return (
     <div className="space-y-2 text-sm">
       {showLiveControls && (
-        <div className="space-y-2">
-          {isFinalReviewGate && (
-            <div className="space-y-1">
-              <label
-                className="block font-medium"
-                htmlFor="editorial-send-back-phase"
-              >
-                {t("sendBack.label")}
-              </label>
-              <select
-                id="editorial-send-back-phase"
-                className="w-full rounded-md border px-3 py-2 text-sm"
-                style={{
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(6,10,18,0.45)",
-                  color: "rgba(255,255,255,0.88)",
-                }}
-                value={sendBackTarget}
-                onChange={(event) => {
-                  setSendBackTarget(
-                    event.target.value as FinalReviewSendBackPhase,
-                  );
-                }}
-              >
-                {FINAL_REVIEW_SEND_BACK_PHASES.map((phase) => (
-                  <option key={phase} value={phase}>
-                    {t(`sendBack.phases.${phase}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <label className="block font-medium" htmlFor="editorial-feedback">
-            {t("feedback.label")}
-          </label>
-          <NeonTextarea
-            id="editorial-feedback"
-            value={feedback}
-            onChange={(event) => {
-              setFeedback(event.target.value);
-              if (feedbackError && event.target.value.trim()) {
-                setFeedbackError(null);
-              }
-            }}
-            placeholder={t("feedback.placeholder")}
-            rows={3}
-          />
-          {feedbackError && (
-            <p className="text-destructive text-xs">{feedbackError}</p>
-          )}
-        </div>
+        <FeedbackFields
+          feedback={feedback}
+          setFeedback={setFeedback}
+          feedbackError={feedbackError}
+          setFeedbackError={setFeedbackError}
+          sendBackTarget={sendBackTarget}
+          setSendBackTarget={setSendBackTarget}
+          isFinalReviewGate={isFinalReviewGate}
+        />
       )}
       <div className="flex flex-col gap-2">
         {loading && (
@@ -107,12 +75,9 @@ export function CreateWorkflowControls({
             size="sm"
             disabled={loading || !showLiveControls || approveBlocked}
             onClick={() => {
-              const approveOptions =
-                state?.current_phase === EDITORIAL_PHASES.CONTENT &&
-                contentHasEdits
-                  ? { editedLocalizedSlides: contentSlides }
-                  : undefined;
-              void approve(approveOptions);
+              void approve(
+                approveOptionsFor(state, contentHasEdits, contentSlides),
+              );
             }}
           >
             {t("actions.approve")}
@@ -126,36 +91,15 @@ export function CreateWorkflowControls({
             {t("actions.requestRevision")}
           </NeonButton>
         </div>
-        {designReviseBlocked && (
-          <p className="text-[var(--color-text-muted)] text-xs">
-            {t("presentation.designReviseDisabled")}
-          </p>
-        )}
-        {personaApproveBlocked && (
-          <p className="text-destructive text-xs">
-            {personaShortfallDetail ?? t("persona.belowThreshold")}
-          </p>
-        )}
-        {presentationApproveBlocked && (
-          <p className="text-destructive text-xs">
-            {t("presentation.blockedApproval")}
-          </p>
-        )}
-        {editBudgetBlocked && (
-          <p className="text-destructive text-xs">
-            {t("presentation.editBudgetBlocked")}
-          </p>
-        )}
-        {contentHasEdits && !editBudgetBlocked && (
-          <p className="text-[var(--color-text-muted)] text-xs">
-            {t("presentation.unsavedEdits")}
-          </p>
-        )}
-        {showPublishLink && (
-          <p className="text-[var(--color-text-muted)] text-xs">
-            {t("publishReady")}
-          </p>
-        )}
+        <ControlNotices
+          designReviseBlocked={designReviseBlocked}
+          personaApproveBlocked={personaApproveBlocked}
+          personaShortfallDetail={personaShortfallDetail}
+          presentationApproveBlocked={presentationApproveBlocked}
+          editBudgetBlocked={editBudgetBlocked}
+          contentHasEdits={contentHasEdits}
+          showPublishLink={showPublishLink}
+        />
       </div>
     </div>
   );

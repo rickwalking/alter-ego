@@ -1,3 +1,4 @@
+import type { FileUploadForm } from "../hooks/types";
 /**
  * Knowledge-base component prop types (colocated `types.ts`).
  *
@@ -39,4 +40,27 @@ export interface DocumentFormProps {
 export interface FileUploadProps {
   onUploadComplete?: () => void;
   onCancel?: () => void;
+}
+
+/** The dropped/picked file shown in the drop zone (AE-0446). */
+export interface SelectedFileSummaryProps {
+  file: File;
+  pending: boolean;
+  typeValid: boolean;
+  onRemove: () => void;
+}
+
+/** Title + tags inputs for the upload (AE-0446). */
+export interface UploadMetadataFieldsProps {
+  title: string;
+  onTitleChange: (value: string) => void;
+  tags: string;
+  onTagsChange: (value: string) => void;
+  disabled: boolean;
+}
+
+/** The upload drop target (AE-0446). */
+export interface DropZoneProps {
+  form: FileUploadForm;
+  typeValid: boolean;
 }

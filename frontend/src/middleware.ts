@@ -7,7 +7,6 @@ import {
   isPublicRoute,
   isAuthRoute,
   isAdminRoute,
-  isDashboardRoute,
   isEditorDashboardRoute,
   isLegacyEditorRoute,
   isPublicChatRoute,
@@ -35,61 +34,69 @@ function redirectWithClearedSession(
   return response;
 }
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const token = request.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
-
-  if (isPublicRoute(pathname)) {
+/** No session cookie: auth pages render, everything else goes to login. */
+function anonymousResponse(
+  request: NextRequest,
+  pathname: string,
+): NextResponse {
+  if (isAuthRoute(pathname)) {
     return NextResponse.next();
   }
+  return NextResponse.redirect(loginRedirectUrl(request, pathname));
+}
 
-  if (isStaticAsset(pathname)) {
-    return NextResponse.next();
-  }
-
-  if (!token) {
-    if (isAuthRoute(pathname)) {
-      return NextResponse.next();
-    }
-    if (isDashboardRoute(pathname) || isLegacyEditorRoute(pathname)) {
-      return NextResponse.redirect(loginRedirectUrl(request, pathname));
-    }
-    return NextResponse.redirect(loginRedirectUrl(request, pathname));
-  }
-
-  const payload = await verifyAccessToken(token);
-  if (!payload) {
-    if (isAuthRoute(pathname)) {
-      const response = NextResponse.next();
-      clearAccessTokenCookie(response);
-      return response;
-    }
+/** A cookie that no longer verifies: clear it (and re-login off auth pages). */
+function invalidSessionResponse(
+  request: NextRequest,
+  pathname: string,
+): NextResponse {
+  if (!isAuthRoute(pathname)) {
     return redirectWithClearedSession(request, pathname);
   }
+  const response = NextResponse.next();
+  clearAccessTokenCookie(response);
+  return response;
+}
 
-  const { role } = payload;
-
-  if (isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
-  }
-
-  if (isPublicChatRoute(pathname)) {
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
-  }
-
+/** Admin pages need an admin; editor pages need an admin or an editor. */
+function roleCanOpen(pathname: string, role: string): boolean {
   if (isAdminRoute(pathname) && role !== ROLES.ADMIN) {
+    return false;
+  }
+  const editorOnly =
+    isEditorDashboardRoute(pathname) || isLegacyEditorRoute(pathname);
+  return !editorOnly || role === ROLES.ADMIN || role === ROLES.EDITOR;
+}
+
+/** A signed-in user: skip login/public chat, enforce the role. */
+function authenticatedResponse(
+  request: NextRequest,
+  pathname: string,
+  role: string,
+): NextResponse {
+  if (isAuthRoute(pathname) || isPublicChatRoute(pathname)) {
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
+  }
+  if (!roleCanOpen(pathname, role)) {
     return NextResponse.redirect(new URL("/403", request.url));
   }
-
-  if (
-    (isEditorDashboardRoute(pathname) || isLegacyEditorRoute(pathname)) &&
-    role !== ROLES.ADMIN &&
-    role !== ROLES.EDITOR
-  ) {
-    return NextResponse.redirect(new URL("/403", request.url));
-  }
-
   return NextResponse.next();
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (isPublicRoute(pathname) || isStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
+  const token = request.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
+  if (!token) {
+    return anonymousResponse(request, pathname);
+  }
+  const payload = await verifyAccessToken(token);
+  if (!payload) {
+    return invalidSessionResponse(request, pathname);
+  }
+  return authenticatedResponse(request, pathname, payload.role);
 }
 
 export const config = {

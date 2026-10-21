@@ -8,8 +8,8 @@ import {
   appendCacheBuster,
   slideUrlsForPublishPanel,
 } from "@/lib/carousel-media-url";
-import { CaptionEditor, countHashtags } from "./caption-editor";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
+import { InstagramTab, LanguageTabs, LinkedInTab } from "./publish-panel-tabs";
 import type { EditorState, PublishPanelProps } from "./types";
 import {
   viewerSlidePaths,
@@ -19,11 +19,6 @@ import type {
   ViewerLanguage,
   ViewerSlideSource,
 } from "@/modules/publishing/distribution/types";
-
-const IG_MAX_CHARS = 2200;
-const IG_MAX_HASHTAGS = 30;
-const LINKEDIN_MAX_CHARS = 3000;
-const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 
 type LanguageTab = ViewerLanguage;
 type ActiveTab = "instagram" | "linkedin";
@@ -112,42 +107,16 @@ export function PublishPanel({
       seed: editor.seed,
       ...(language === "pt" ? { linkedinPt: text } : { linkedinEn: text }),
     }));
-  const hashtagCount = countHashtags(editor.caption);
-  const hashtagsOver = hashtagCount > IG_MAX_HASHTAGS;
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // Clipboard rejects in insecure contexts; caller should still succeed.
-    }
-  };
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
       <section aria-label={t("carouselLabel")} className="space-y-3">
-        <div
-          role="tablist"
-          aria-label={t("viewerLanguageLabel")}
+        <LanguageTabs
+          language={language}
+          onChange={setLanguage}
+          ariaLabel={t("viewerLanguageLabel")}
           className="flex justify-end gap-1"
-        >
-          {(["pt", "en"] as LanguageTab[]).map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              role="tab"
-              aria-selected={language === lang}
-              onClick={() => setLanguage(lang)}
-              className={`rounded-md border px-3 py-1 text-xs uppercase ${
-                language === lang
-                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                  : "border-[var(--color-border)] text-[var(--color-text-muted)]"
-              }`}
-            >
-              {lang}
-            </button>
-          ))}
-        </div>
+        />
         <HorizontalCarouselViewer
           slideUrls={slideUrls}
           alt={viewerSlideTitle(project, language)}
@@ -187,140 +156,23 @@ export function PublishPanel({
         </div>
 
         {activeTab === "instagram" && (
-          <div className="space-y-3">
-            {/* AE-0416: the Instagram caption is Portuguese only (the account
-              posts in PT; no EN caption is generated), so the EN viewer tab
-              says so instead of presenting the PT caption as English. */}
-            {language === "en" && (
-              <p
-                role="note"
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-[var(--color-text-muted)] text-xs"
-              >
-                {t("instagram.captionPtOnly")}
-              </p>
-            )}
-            <CaptionEditor
-              value={editor.caption}
-              onChange={setCaption}
-              maxChars={IG_MAX_CHARS}
-              placeholder={t("instagram.placeholder")}
-              ariaLabel={t("instagram.captionLabel")}
-              helpText={t("instagram.hashtagHelp", {
-                count: hashtagCount,
-                max: IG_MAX_HASHTAGS,
-              })}
-            />
-            {hashtagsOver && (
-              <p className="text-destructive text-xs">
-                {t("instagram.hashtagOver")}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void copyToClipboard(editor.caption);
-                }}
-                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
-              >
-                {t("instagram.copyCaption")}
-              </button>
-              {onPublishInstagram && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void onPublishInstagram(editor.caption);
-                  }}
-                  disabled={
-                    isPublishingInstagram === true ||
-                    editor.caption.length === 0 ||
-                    editor.caption.length > IG_MAX_CHARS ||
-                    hashtagsOver
-                  }
-                  className="rounded-md bg-[var(--color-primary)] px-4 py-1.5 font-medium text-sm text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isPublishingInstagram
-                    ? t("instagram.publishing")
-                    : t("instagram.publishNow")}
-                </button>
-              )}
-            </div>
-            {publishResult?.status === "success" && (
-              <p className="text-success text-sm">{publishResult.message}</p>
-            )}
-            {publishResult?.status === "error" && (
-              <p className="text-destructive text-sm">
-                {publishResult.message}
-              </p>
-            )}
-          </div>
+          <InstagramTab
+            caption={editor.caption}
+            onCaptionChange={setCaption}
+            language={language}
+            onPublishInstagram={onPublishInstagram}
+            isPublishingInstagram={isPublishingInstagram}
+            publishResult={publishResult}
+          />
         )}
-
         {activeTab === "linkedin" && (
-          <div className="space-y-3">
-            <div
-              role="tablist"
-              aria-label={t("linkedin.languageTabsLabel")}
-              className="flex gap-1"
-            >
-              {(["pt", "en"] as LanguageTab[]).map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  role="tab"
-                  aria-selected={language === lang}
-                  onClick={() => setLanguage(lang)}
-                  className={`rounded-md border px-3 py-1 text-xs uppercase ${
-                    language === lang
-                      ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] text-[var(--color-text-muted)]"
-                  }`}
-                >
-                  {lang}
-                </button>
-              ))}
-            </div>
-            <CaptionEditor
-              value={activeLinkedInText}
-              onChange={setActiveLinkedInText}
-              maxChars={LINKEDIN_MAX_CHARS}
-              placeholder={t("linkedin.placeholder")}
-              ariaLabel={t("linkedin.postLabel", {
-                language: language.toUpperCase(),
-              })}
-              helpText={t("linkedin.help")}
-            />
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void copyToClipboard(activeLinkedInText);
-                }}
-                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
-              >
-                {t("linkedin.copyPost")}
-              </button>
-              <a
-                href={pdfUrl(project, language, cacheBustToken)}
-                target="_blank"
-                rel="noopener"
-                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
-              >
-                {t("linkedin.downloadPdf")}
-              </a>
-              <a
-                href={LINKEDIN_COMPOSE_URL}
-                target="_blank"
-                rel="noopener"
-                className="rounded-md bg-[var(--color-primary)] px-4 py-1.5 font-medium text-sm text-[var(--color-text)]"
-              >
-                {t("linkedin.openLinkedIn")}
-              </a>
-            </div>
-            <p className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-[var(--color-text-muted)] text-xs">
-              {t("linkedin.manualSteps")}
-            </p>
-          </div>
+          <LinkedInTab
+            text={activeLinkedInText}
+            onTextChange={setActiveLinkedInText}
+            language={language}
+            setLanguage={setLanguage}
+            pdfHref={pdfUrl(project, language, cacheBustToken)}
+          />
         )}
       </section>
     </div>

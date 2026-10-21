@@ -22,6 +22,8 @@ import {
 import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
 import type {
   RecordedResume,
+  StartWorkflowDeps,
+  WorkflowCore,
   StartWorkflowInput,
   UseEditorialWorkflowOptions,
 } from "./types";
@@ -55,120 +57,81 @@ function resolveRunningAction(
   return lastResume.action;
 }
 
-export function useEditorialWorkflow(
+/** GET the workflow state; null when it does not exist or the read failed. */
+async function fetchWorkflowState(
   projectId: string,
-  options?: UseEditorialWorkflowOptions,
-) {
-  const t = useTranslations("editorialWorkflow.errors");
-  const initialFetch = options?.initialFetch ?? true;
-  const [state, setState] = useState<EditorialWorkflowState | null>(null);
-  // AE-0415 (B27): which review action started the current run, and on which
-  // phase, so the running banner can name the phase that is really running.
-  const [lastResume, setLastResume] = useState<RecordedResume | null>(null);
-  const [phaseEvents, setPhaseEvents] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [transportMode, setTransportMode] =
-    useState<EditorialWorkflowTransportMode>(
-      EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+): Promise<EditorialWorkflowState | null> {
+  try {
+    const response = await authenticatedFetch(
+      API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
     );
-
-  const refreshState =
-    useCallback(async (): Promise<EditorialWorkflowState | null> => {
-      try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
-        );
-        if (response.status === HTTP_STATUS.NOT_FOUND) {
-          return null;
-        }
-        if (!response.ok) {
-          return null;
-        }
-        const workflowState = (await response.json()) as EditorialWorkflowState;
-        setState(workflowState);
-        if (workflowState.current_phase) {
-          setPhaseEvents((prev) =>
-            appendUniquePhase(prev, workflowState.current_phase),
-          );
-        }
-        return workflowState;
-      } catch {
-        return null;
-      }
-    }, [projectId]);
-
-  const {
-    enterPollingFallback,
-    stopPollingFallback,
-    reconnectLiveUpdates,
-    transportModeRef,
-    workflowStateRef,
-  } = useEditorialWorkflowSse({
-    projectId,
-    sseEnabled: Boolean(state?.current_phase),
-    state,
-    transportMode,
-    setState,
-    setPhaseEvents,
-    setTransportMode,
-    setError,
-    refreshState,
-  });
-
-  // AE-0415 (B30): a project that never started its workflow has no state
-  // (GET answers 404); callers that know this skip the request.
-  useEffect(() => {
-    if (!initialFetch) {
-      return;
+    if (response.status === HTTP_STATUS.NOT_FOUND || !response.ok) {
+      return null;
     }
-    void refreshState();
-  }, [initialFetch, refreshState]);
+    return (await response.json()) as EditorialWorkflowState;
+  } catch {
+    return null;
+  }
+}
 
-  const { resume } = useEditorialWorkflowResume({
-    projectId,
-    lockVersion: state?.lock_version,
-    translateError: t,
-    workflowStateRef,
-    transportModeRef,
-    refreshState,
+/** Store a server state and record its phase in the phase timeline. */
+function adoptState(
+  workflowState: EditorialWorkflowState,
+  {
     setState,
     setPhaseEvents,
-    setLoading,
-    setError,
-    enterPollingFallback,
-    stopPollingFallback,
-  });
+  }: Pick<StartWorkflowDeps, "setState" | "setPhaseEvents">,
+): void {
+  setState(workflowState);
+  if (workflowState.current_phase) {
+    setPhaseEvents((prev) =>
+      appendUniquePhase(prev, workflowState.current_phase),
+    );
+  }
+}
 
-  const start = useCallback(
+async function postWorkflowStart(
+  projectId: string,
+  input: StartWorkflowInput,
+  failure: string,
+): Promise<EditorialWorkflowState> {
+  const response = await authenticatedFetch(
+    API_ENDPOINTS.CAROUSEL_WORKFLOW_START(projectId),
+    {
+      method: HTTP_METHODS.POST,
+      body: JSON.stringify({
+        topic: input.topic,
+        audience: input.audience,
+        brief: input.brief,
+        sources: input.sources,
+        persona_id: input.personaId,
+      }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(await readApiError(response, failure));
+  }
+  return (await response.json()) as EditorialWorkflowState;
+}
+
+/** Start the workflow; on failure show the error and re-read the state. */
+function useStartWorkflow(
+  deps: StartWorkflowDeps,
+): (input: StartWorkflowInput) => Promise<EditorialWorkflowState> {
+  const { projectId, translateError: t, workflowStateRef, refreshState } = deps;
+  const { setState, setPhaseEvents, setLoading, setError } = deps;
+  return useCallback(
     async (input: StartWorkflowInput): Promise<EditorialWorkflowState> => {
       setLoading(true);
       setError(null);
       try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.CAROUSEL_WORKFLOW_START(projectId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({
-              topic: input.topic,
-              audience: input.audience,
-              brief: input.brief,
-              sources: input.sources,
-              persona_id: input.personaId,
-            }),
-          },
+        const workflowState = await postWorkflowStart(
+          projectId,
+          input,
+          t("startFailed"),
         );
-        if (!response.ok) {
-          throw new Error(await readApiError(response, t("startFailed")));
-        }
-        const workflowState = (await response.json()) as EditorialWorkflowState;
-        setState(workflowState);
+        adoptState(workflowState, { setState, setPhaseEvents });
         workflowStateRef.current = workflowState;
-        if (workflowState.current_phase) {
-          setPhaseEvents((prev) =>
-            appendUniquePhase(prev, workflowState.current_phase),
-          );
-        }
         return workflowState;
       } catch (err) {
         const message = err instanceof Error ? err.message : t("startUnknown");
@@ -179,34 +142,38 @@ export function useEditorialWorkflow(
         setLoading(false);
       }
     },
-    [projectId, refreshState, t, workflowStateRef],
+    [
+      projectId,
+      refreshState,
+      t,
+      workflowStateRef,
+      setState,
+      setPhaseEvents,
+      setLoading,
+      setError,
+    ],
   );
+}
 
+type ResumeFn = ReturnType<typeof useEditorialWorkflowResume>["resume"];
+
+/** Approve / revise, remembering which action started the run (AE-0415 B27). */
+function reviewActions(
+  resume: ResumeFn,
+  state: EditorialWorkflowState | null,
+  setLastResume: (value: RecordedResume) => void,
+) {
+  const phase = state?.current_phase ?? "";
   return {
-    state,
-    phaseEvents,
-    loading,
-    error,
-    transportMode,
-    reconnectLiveUpdates,
-    start,
-    resume,
-    refreshState,
     approve: (reviseOptions?: EditorialReviseOptions) => {
-      setLastResume({
-        action: EDITORIAL_REVIEW_ACTIONS.APPROVE,
-        phase: state?.current_phase ?? "",
-      });
+      setLastResume({ action: EDITORIAL_REVIEW_ACTIONS.APPROVE, phase });
       return resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, reviseOptions);
     },
     revise: (
       feedback: string,
       reviseOptions?: EditorialReviseOptions,
     ): Promise<EditorialWorkflowState | null> => {
-      setLastResume({
-        action: EDITORIAL_REVIEW_ACTIONS.REVISE,
-        phase: state?.current_phase ?? "",
-      });
+      setLastResume({ action: EDITORIAL_REVIEW_ACTIONS.REVISE, phase });
       const pending = resume(
         EDITORIAL_REVIEW_ACTIONS.REVISE,
         feedback,
@@ -216,6 +183,100 @@ export function useEditorialWorkflow(
         ? pending.catch(() => null)
         : pending;
     },
+  };
+}
+
+/** The hook's own state plus the GET that refreshes it. */
+function useWorkflowCore(projectId: string): WorkflowCore {
+  const [state, setState] = useState<EditorialWorkflowState | null>(null);
+  const [phaseEvents, setPhaseEvents] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [transportMode, setTransportMode] =
+    useState<EditorialWorkflowTransportMode>(
+      EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+    );
+  const refreshState =
+    useCallback(async (): Promise<EditorialWorkflowState | null> => {
+      const workflowState = await fetchWorkflowState(projectId);
+      if (workflowState) {
+        adoptState(workflowState, { setState, setPhaseEvents });
+      }
+      return workflowState;
+    }, [projectId]);
+  return {
+    state,
+    setState,
+    phaseEvents,
+    setPhaseEvents,
+    loading,
+    setLoading,
+    error,
+    setError,
+    transportMode,
+    setTransportMode,
+    refreshState,
+  };
+}
+
+/**
+ * AE-0415 (B30): a project that never started its workflow has no state
+ * (GET answers 404); callers that know this skip the request.
+ */
+function useInitialRefresh(
+  initialFetch: boolean,
+  refreshState: () => Promise<unknown>,
+): void {
+  useEffect(() => {
+    if (!initialFetch) {
+      return;
+    }
+    void refreshState();
+  }, [initialFetch, refreshState]);
+}
+
+export function useEditorialWorkflow(
+  projectId: string,
+  options?: UseEditorialWorkflowOptions,
+) {
+  const t = useTranslations("editorialWorkflow.errors");
+  const core = useWorkflowCore(projectId);
+  const { state, refreshState } = core;
+  // AE-0415 (B27): which review action started the current run, and on which
+  // phase, so the running banner can name the phase that is really running.
+  const [lastResume, setLastResume] = useState<RecordedResume | null>(null);
+  const sse = useEditorialWorkflowSse({
+    ...core,
+    projectId,
+    sseEnabled: Boolean(state?.current_phase),
+  });
+  useInitialRefresh(options?.initialFetch ?? true, refreshState);
+  const { workflowStateRef } = sse;
+  const { resume } = useEditorialWorkflowResume({
+    ...core,
+    ...sse,
+    projectId,
+    lockVersion: state?.lock_version,
+    translateError: t,
+  });
+  const start = useStartWorkflow({
+    ...core,
+    projectId,
+    translateError: t,
+    workflowStateRef,
+  });
+
+  return {
+    state,
+    phaseEvents: core.phaseEvents,
+    loading: core.loading,
+    error: core.error,
+    transportMode: core.transportMode,
+    reconnectLiveUpdates: sse.reconnectLiveUpdates,
+    start,
+    resume,
+    refreshState,
+    ...reviewActions(resume, state, setLastResume),
     runningAction: resolveRunningAction(state, lastResume),
     awaitingHumanReview:
       state?.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,

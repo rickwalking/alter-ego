@@ -16,6 +16,22 @@ export interface OffCanvasState {
   close: () => void;
 }
 
+/** Close on Escape while open. */
+function useCloseOnEscape(open: boolean, close: () => void): void {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === ESCAPE_KEY) {
+        close();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, close]);
+}
+
 export function useOffCanvas(): OffCanvasState {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -32,19 +48,7 @@ export function useOffCanvas(): OffCanvasState {
     setOpen(false);
   }
 
-  // Close on Escape while open.
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === ESCAPE_KEY) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  useCloseOnEscape(open, close);
 
   return { open, setOpen, toggle, close };
 }

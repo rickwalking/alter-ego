@@ -18,6 +18,23 @@ function buildCalendarUrl(start?: string, end?: string): string {
   return `${WORKFLOW_API.CONTENT_CALENDAR}${query}`;
 }
 
+/** GET the calendar window; a non-OK status throws ``failedText``. */
+async function requestCalendar(
+  url: string,
+  signal: AbortSignal,
+  failedText: string,
+): Promise<ContentCalendar> {
+  const response = await authenticatedFetch(url, { signal });
+  if (!response.ok) {
+    throw new Error(failedText);
+  }
+  return (await response.json()) as ContentCalendar;
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export function useContentCalendar(start?: string, end?: string) {
   const t = useTranslations("workflow.errors");
   const [calendar, setCalendar] = useState<ContentCalendar | null>(null);
@@ -35,17 +52,15 @@ export function useContentCalendar(start?: string, end?: string) {
     setLoading(true);
     setError(null);
     try {
-      const response = await authenticatedFetch(buildCalendarUrl(start, end), {
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(t("loadCalendarFailed"));
-      }
-      const data = (await response.json()) as ContentCalendar;
+      const data = await requestCalendar(
+        buildCalendarUrl(start, end),
+        controller.signal,
+        t("loadCalendarFailed"),
+      );
       if (isCurrent()) setCalendar(data);
     } catch (err) {
       if (controller.signal.aborted || !isCurrent()) return;
-      setError(err instanceof Error ? err.message : t("unknown"));
+      setError(errorMessage(err, t("unknown")));
     } finally {
       if (isCurrent()) setLoading(false);
     }

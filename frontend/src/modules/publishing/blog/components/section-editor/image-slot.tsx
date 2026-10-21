@@ -18,10 +18,28 @@ import {
 } from "@/constants/blog-editor";
 import { NEON_RED } from "@/constants/neon";
 import { EditorErrorNotice } from "../editor-error-notice";
-import type { ImageSlotProps, ImageTextsProps } from "./types";
+import type { ImageSlotProps, ImageTextsProps, SlotErrorProps } from "./types";
 
 const LABEL_CLASS = "mb-1 block text-xs font-semibold text-text-muted";
 const PROMPT_ROWS = 2;
+
+/** A failed generation reads "failed"; any other error keeps its notice. */
+function SlotError({
+  error,
+  failedText,
+}: SlotErrorProps): React.ReactElement | null {
+  if (!error) {
+    return null;
+  }
+  if (error.kind !== BLOG_EDITOR_ERROR_KINDS.AI_FAILED) {
+    return <EditorErrorNotice error={error} />;
+  }
+  return (
+    <NeonAlert variant="destructive" role="alert">
+      <NeonAlertDescription>{failedText}</NeonAlertDescription>
+    </NeonAlert>
+  );
+}
 
 /**
  * Cover / section image slot (AE-0424): generate, regenerate with an edited
@@ -48,26 +66,26 @@ export function ImageSlot({
       data-testid={`${slotId}-slot`}
     >
       <p className="text-xs font-semibold">{label}</p>
-      {image && (
-        <div className="relative aspect-video w-full overflow-hidden rounded">
-          <Image
-            src={image.url}
-            alt={image.alt}
-            fill
-            unoptimized
-            className="object-cover"
+      {image ? (
+        <>
+          <div className="relative aspect-video w-full overflow-hidden rounded">
+            <Image
+              src={image.url}
+              alt={image.alt}
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          </div>
+          <ImageTexts
+            slotId={slotId}
+            image={image}
+            readOnly={readOnly}
+            issue={issue}
+            onChange={onChange}
           />
-        </div>
-      )}
-      {image && (
-        <ImageTexts
-          slotId={slotId}
-          image={image}
-          readOnly={readOnly}
-          issue={issue}
-          onChange={onChange}
-        />
-      )}
+        </>
+      ) : null}
       <label htmlFor={`${slotId}-prompt`} className={LABEL_CLASS}>
         {t("image.prompt")}
       </label>
@@ -80,14 +98,7 @@ export function ImageSlot({
         disabled={busy}
         onChange={(e) => setPrompt(e.target.value)}
       />
-      {status.error &&
-        (status.error.kind === BLOG_EDITOR_ERROR_KINDS.AI_FAILED ? (
-          <NeonAlert variant="destructive" role="alert">
-            <NeonAlertDescription>{t("image.failed")}</NeonAlertDescription>
-          </NeonAlert>
-        ) : (
-          <EditorErrorNotice error={status.error} />
-        ))}
+      <SlotError error={status.error} failedText={t("image.failed")} />
       <div className="flex flex-wrap gap-2">
         <NeonButton
           size="sm"

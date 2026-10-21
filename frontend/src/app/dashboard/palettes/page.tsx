@@ -39,6 +39,38 @@ function errorKey(err: unknown): string {
   return "error.generic";
 }
 
+interface TargetPaletteFormProps {
+  target: FormTarget | null;
+  onClose: () => void;
+  onSave: (request: PaletteCreateRequest) => void;
+  isPending: boolean;
+  serverError: string | null;
+}
+
+/** The create/edit modal for the current target (nothing when closed). */
+function TargetPaletteForm({
+  target,
+  onClose,
+  onSave,
+  isPending,
+  serverError,
+}: TargetPaletteFormProps): React.ReactElement | null {
+  if (!target) {
+    return null;
+  }
+  const editing = target.kind === "edit" ? target.palette : undefined;
+  return (
+    <PaletteFormModal
+      key={editing?.id ?? "create"}
+      palette={editing}
+      onClose={onClose}
+      onSave={onSave}
+      isPending={isPending}
+      serverError={serverError}
+    />
+  );
+}
+
 export default function PalettesPage(): React.ReactElement {
   const t = useTranslations("palettes");
   const locale = useLocale();
@@ -153,16 +185,13 @@ export default function PalettesPage(): React.ReactElement {
         )}
       </div>
 
-      {target && (
-        <PaletteFormModal
-          key={target.kind === "edit" ? target.palette.id : "create"}
-          palette={target.kind === "edit" ? target.palette : undefined}
-          onClose={closeForm}
-          onSave={handleSave}
-          isPending={isSaving}
-          serverError={serverError}
-        />
-      )}
+      <TargetPaletteForm
+        target={target}
+        onClose={closeForm}
+        onSave={handleSave}
+        isPending={isSaving}
+        serverError={serverError}
+      />
     </div>
   );
 }

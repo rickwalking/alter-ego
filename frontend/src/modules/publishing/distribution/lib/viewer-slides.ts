@@ -24,9 +24,9 @@ function designTokenSlidePaths(
   // The publish viewer wants the RENDERED slides (with text overlay),
   // not the raw hero images. Fall back to legacy `slides` for projects
   // generated before the rendered_slides_* fields existed.
-  const ptSlides =
-    tokens?.images?.rendered_slides_pt ?? tokens?.images?.slides ?? [];
-  const enSlides = tokens?.images?.rendered_slides_en ?? ptSlides;
+  const images: DesignTokenImages = tokens?.images ?? {};
+  const ptSlides = images.rendered_slides_pt ?? images.slides ?? [];
+  const enSlides = images.rendered_slides_en ?? ptSlides;
   return language === LANGUAGE_EN ? enSlides : ptSlides;
 }
 

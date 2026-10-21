@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from "react";
+import type { ChatStream } from "@/lib/use-chat-stream";
 /**
  * Distribution hook return/payload types (colocated `types.ts`).
  *
@@ -24,4 +26,24 @@ export interface InstagramPublishPayload {
 export interface CoverPickInput {
   projectId: string;
   assetId: string;
+}
+
+/** ``useState`` pair holding the publish chat's conversation id (AE-0446). */
+export type ConversationIdState = [
+  string | null,
+  Dispatch<SetStateAction<string | null>>,
+];
+
+/** The stream callbacks one publish-chat turn drives (AE-0446). */
+export type PublishTurnCallbacks = Pick<
+  ChatStream,
+  "appendToken" | "setIsStreaming" | "resetStreamingRefs"
+>;
+
+/** What sending one publish-chat turn needs (AE-0446). */
+export interface SendPublishDeps {
+  projectId: string;
+  conversationId: string | null;
+  isStreaming: boolean;
+  stream: ChatStream;
 }

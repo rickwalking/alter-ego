@@ -5,6 +5,23 @@ import { buildContentSecurityPolicy } from "./src/constants/csp";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+const DASHBOARD_PREFIX = "/dashboard";
+
+/** Pre-dashboard URLs that now live under /dashboard (temporary redirects). */
+const LEGACY_DASHBOARD_PATHS = [
+  "/create",
+  "/create/:id",
+  "/create/:id/publish",
+  "/knowledge",
+  "/personas",
+  "/rubrics",
+  "/blog-posts",
+  "/blog-posts/:id/edit",
+  "/workflow",
+  "/calendar",
+  "/analytics",
+] as const;
+
 const nextConfig: NextConfig = {
   // Standalone output for Docker (reduces image size)
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
@@ -57,69 +74,15 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Redirects
+  // Redirects: /home -> /, and the pre-dashboard paths -> /dashboard/*.
   async redirects() {
     return [
-      {
-        source: "/home",
-        destination: "/",
-        permanent: true,
-      },
-      {
-        source: "/create",
-        destination: "/dashboard/create",
+      { source: "/home", destination: "/", permanent: true },
+      ...LEGACY_DASHBOARD_PATHS.map((source) => ({
+        source,
+        destination: `${DASHBOARD_PREFIX}${source}`,
         permanent: false,
-      },
-      {
-        source: "/create/:id",
-        destination: "/dashboard/create/:id",
-        permanent: false,
-      },
-      {
-        source: "/create/:id/publish",
-        destination: "/dashboard/create/:id/publish",
-        permanent: false,
-      },
-      {
-        source: "/knowledge",
-        destination: "/dashboard/knowledge",
-        permanent: false,
-      },
-      {
-        source: "/personas",
-        destination: "/dashboard/personas",
-        permanent: false,
-      },
-      {
-        source: "/rubrics",
-        destination: "/dashboard/rubrics",
-        permanent: false,
-      },
-      {
-        source: "/blog-posts",
-        destination: "/dashboard/blog-posts",
-        permanent: false,
-      },
-      {
-        source: "/blog-posts/:id/edit",
-        destination: "/dashboard/blog-posts/:id/edit",
-        permanent: false,
-      },
-      {
-        source: "/workflow",
-        destination: "/dashboard/workflow",
-        permanent: false,
-      },
-      {
-        source: "/calendar",
-        destination: "/dashboard/calendar",
-        permanent: false,
-      },
-      {
-        source: "/analytics",
-        destination: "/dashboard/analytics",
-        permanent: false,
-      },
+      })),
     ];
   },
 

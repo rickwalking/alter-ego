@@ -75,44 +75,71 @@ function fetchWithCredentials(
   });
 }
 
+/** Message used when an auth error body carries none. */
+const AUTH_FALLBACK_MESSAGES: Readonly<Partial<Record<number, string>>> = {
+  [HTTP_STATUS.UNAUTHORIZED]: "Unauthorized",
+  [HTTP_STATUS.FORBIDDEN]: "Forbidden",
+};
+
+/** The 401 login redirect and the 403 page redirect. */
+function redirectForAuthStatus(status: number): void {
+  if (status === HTTP_STATUS.UNAUTHORIZED) {
+    redirectToLoginAfterUnauthorized();
+    return;
+  }
+  if (status === HTTP_STATUS.FORBIDDEN && typeof window !== "undefined") {
+    window.location.href = FORBIDDEN_REDIRECT_PATH;
+  }
+}
+
 /**
  * Map non-OK HTTP statuses to `ApiError`, threading the 401 login redirect and
  * the 403 page redirect. Returns normally when the response is OK; the caller
  * then parses the body (or skips it, for No Content responses).
  */
 async function throwIfErrorResponse(response: Response): Promise<void> {
-  if (response.status === HTTP_STATUS.UNAUTHORIZED) {
-    const errorData = await parseErrorBody(response);
-    redirectToLoginAfterUnauthorized();
-    throw new ApiError(
-      HTTP_STATUS.UNAUTHORIZED,
-      errorData?.message ?? "Unauthorized",
-      errorData?.code,
-    );
+  if (response.ok) {
+    return;
   }
-
-  if (response.status === HTTP_STATUS.FORBIDDEN) {
-    const errorData = await parseErrorBody(response);
-    if (typeof window !== "undefined") {
-      window.location.href = FORBIDDEN_REDIRECT_PATH;
-    }
-    throw new ApiError(
-      HTTP_STATUS.FORBIDDEN,
-      errorData?.message ?? "Forbidden",
-      errorData?.code,
-    );
-  }
-
-  if (!response.ok) {
-    const errorData = await parseErrorBody(response);
-    const error = new ApiError(
-      response.status,
-      errorData?.message ?? `HTTP error! status: ${response.status}`,
-      errorData?.code,
-    );
+  const { status } = response;
+  const errorData = await parseErrorBody(response);
+  redirectForAuthStatus(status);
+  const authFallback = AUTH_FALLBACK_MESSAGES[status];
+  const error = new ApiError(
+    status,
+    errorData?.message ?? authFallback ?? `HTTP error! status: ${status}`,
+    errorData?.code,
+  );
+  if (authFallback === undefined) {
     error.detail = errorData?.detail;
-    throw error;
   }
+  throw error;
+}
+
+/** Validate API data against the caller's schema (500 on a contract break). */
+function parseApiData<T>(schema: z.ZodSchema<T>, data: unknown): T {
+  const dataResult = schema.safeParse(data);
+  if (!dataResult.success) {
+    console.error("Data validation failed:", dataResult.error.issues);
+    throw new ApiError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      "Invalid data from API",
+    );
+  }
+  return dataResult.data;
+}
+
+/** The `{success:false, error}` envelope as an `ApiError`. */
+function envelopeError(json: unknown): ApiError {
+  const errorResult = errorResponseSchema.safeParse(json);
+  if (errorResult.success) {
+    return new ApiError(
+      HTTP_STATUS.BAD_REQUEST,
+      errorResult.data.error.message,
+      errorResult.data.error.code,
+    );
+  }
+  return new ApiError(HTTP_STATUS.BAD_REQUEST, "API request failed");
 }
 
 export async function apiCall<T>(
@@ -123,43 +150,17 @@ export async function apiCall<T>(
   const response = await fetchWithCredentials(url, options);
   await throwIfErrorResponse(response);
 
-  const json = await response.json();
+  const json: unknown = await response.json();
 
   // Support both wrapped {success, data} and direct responses
   const responseResult = apiResponseSchema.safeParse(json);
-  if (responseResult.success) {
-    if (!responseResult.data.success) {
-      const errorResult = errorResponseSchema.safeParse(json);
-      if (errorResult.success) {
-        throw new ApiError(
-          HTTP_STATUS.BAD_REQUEST,
-          errorResult.data.error.message,
-          errorResult.data.error.code,
-        );
-      }
-      throw new ApiError(HTTP_STATUS.BAD_REQUEST, "API request failed");
-    }
-    const dataResult = schema.safeParse(responseResult.data.data);
-    if (!dataResult.success) {
-      console.error("Data validation failed:", dataResult.error.issues);
-      throw new ApiError(
-        HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        "Invalid data from API",
-      );
-    }
-    return dataResult.data;
+  if (!responseResult.success) {
+    return parseApiData(schema, json);
   }
-
-  // Direct response — validate against provided schema
-  const dataResult = schema.safeParse(json);
-  if (!dataResult.success) {
-    console.error("Data validation failed:", dataResult.error.issues);
-    throw new ApiError(
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      "Invalid data from API",
-    );
+  if (!responseResult.data.success) {
+    throw envelopeError(json);
   }
-  return dataResult.data;
+  return parseApiData(schema, responseResult.data.data);
 }
 
 /**

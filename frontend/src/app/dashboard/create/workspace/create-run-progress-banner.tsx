@@ -92,6 +92,43 @@ function formatClock(date: Date): string {
   return `${hours}:${minutes}`;
 }
 
+interface Elapsed {
+  ms: number;
+  minutes: number;
+  seconds: number;
+}
+
+function elapsedSince(startedAtMs: number, now: number): Elapsed {
+  const ms = Math.max(0, now - startedAtMs);
+  return {
+    ms,
+    minutes: Math.floor(ms / 60_000),
+    seconds: Math.floor((ms % 60_000) / 1_000),
+  };
+}
+
+/** Offer "check again" once the run has been going for a while. */
+function checkAgainDue(elapsed: Elapsed | null): boolean {
+  return elapsed !== null && elapsed.ms >= EDITORIAL_RUN_CHECK_AGAIN_AFTER_MS;
+}
+
+/** Live elapsed time since the run started (a UI timer, not data fetching). */
+function useElapsed(startedAtMs: number | null): Elapsed | null {
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (startedAtMs === null) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, ELAPSED_TICK_MS);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [startedAtMs]);
+  return startedAtMs === null ? null : elapsedSince(startedAtMs, now);
+}
+
 export function CreateRunProgressBanner({
   currentPhase,
   runStartedAt,
@@ -104,30 +141,8 @@ export function CreateRunProgressBanner({
   const phaseLabel = usePhaseLabel();
   const copy = bannerCopy(currentPhase, runningAction);
   const startedAt = parseStartedAt(runStartedAt);
-  const startedAtMs = startedAt?.getTime() ?? null;
-  const [now, setNow] = useState<number>(() => Date.now());
-
-  // Live elapsed ticker — a UI timer, not data fetching.
-  useEffect(() => {
-    if (startedAtMs === null) {
-      return;
-    }
-    const interval = window.setInterval(() => {
-      setNow(Date.now());
-    }, ELAPSED_TICK_MS);
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [startedAtMs]);
-
-  const elapsedMs =
-    startedAtMs !== null ? Math.max(0, now - startedAtMs) : null;
-  const elapsedMinutes =
-    elapsedMs !== null ? Math.floor(elapsedMs / 60_000) : null;
-  const elapsedSeconds =
-    elapsedMs !== null ? Math.floor((elapsedMs % 60_000) / 1_000) : null;
-  const showCheckAgain =
-    elapsedMs !== null && elapsedMs >= EDITORIAL_RUN_CHECK_AGAIN_AFTER_MS;
+  const elapsed = useElapsed(startedAt?.getTime() ?? null);
+  const showCheckAgain = checkAgainDue(elapsed);
   const stageLabel =
     runStage && KNOWN_STAGES.includes(runStage) ? t(`stage.${runStage}`) : null;
 
@@ -140,12 +155,12 @@ export function CreateRunProgressBanner({
             {t(copy.phaseKey, { phase: phaseLabel(copy.phase) })}
             {stageLabel ? ` — ${stageLabel}` : null}
           </p>
-          {startedAt && elapsedMinutes !== null && elapsedSeconds !== null && (
+          {startedAt && elapsed !== null && (
             <p>
               {t("startedAt", { time: formatClock(startedAt) })}{" "}
               {t("elapsed", {
-                minutes: elapsedMinutes,
-                seconds: elapsedSeconds,
+                minutes: elapsed.minutes,
+                seconds: elapsed.seconds,
               })}
             </p>
           )}

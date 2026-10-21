@@ -10,6 +10,11 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { useChatStream } from "@/lib/use-chat-stream";
+import {
+  dispatchSseEvent,
+  sseContentText,
+  type SseEventHandlers,
+} from "@/lib/sse-event-data";
 import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
@@ -20,7 +25,12 @@ import {
   TOOL_REFINE_CAROUSEL_COPY,
 } from "@/constants/publish-chat";
 import { carouselKeys } from "@/modules/carousel-presentation";
-import type { UsePublishChatReturn } from "./types";
+import type {
+  ConversationIdState,
+  PublishTurnCallbacks,
+  SendPublishDeps,
+  UsePublishChatReturn,
+} from "./types";
 
 function readStoredConversationId(projectId: string): string | null {
   if (typeof window === "undefined") return null;
@@ -35,28 +45,27 @@ function buildContextPrefix(projectId: string): string {
   return `(carousel project_id=${projectId}) `;
 }
 
-export function usePublishChat(projectId: string): UsePublishChatReturn {
-  const queryClient = useQueryClient();
-  const createConversation = useCreateConversation();
-  const [conversationId, setConversationId] = useState<string | null>(() =>
-    readStoredConversationId(projectId),
+/** The project id a conversation was created for (null when untagged). */
+function conversationProjectId(metadata: unknown): string | null {
+  if (
+    !metadata ||
+    typeof metadata !== "object" ||
+    !(CONVERSATION_METADATA_PROJECT_ID in metadata)
+  ) {
+    return null;
+  }
+  return String(
+    (metadata as Record<string, unknown>)[CONVERSATION_METADATA_PROJECT_ID],
   );
-  const {
-    optimisticMessages,
-    isStreaming,
-    setIsStreaming,
-    startUserTurn,
-    appendToken,
-    resetStreamingRefs,
-  } = useChatStream(OPTIMISTIC_MESSAGE_ID_PREFIX, STREAM_MESSAGE_ID_PREFIX);
+}
+
+/** Create (and remember) a conversation when none is stored for the project. */
+function useEnsureConversation(
+  projectId: string,
+  [conversationId, setConversationId]: ConversationIdState,
+): void {
+  const createConversation = useCreateConversation();
   const creatingRef = useRef(false);
-
-  const { data: historyMessages = [], error: historyError } =
-    useConversationMessages(conversationId);
-
-  const { data: conversation } = useConversation(conversationId);
-
-  // Create a new conversation when no stored ID exists.
   useLayoutEffect(() => {
     if (!projectId || conversationId || creatingRef.current) return;
 
@@ -76,86 +85,91 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
       .finally(() => {
         creatingRef.current = false;
       });
-  }, [projectId, conversationId, createConversation]);
+  }, [projectId, conversationId, createConversation, setConversationId]);
+}
 
-  // Handle invalid or mismatched conversation IDs.
+/** Forget a stored conversation that is gone (404) or belongs elsewhere. */
+function useDropStaleConversation(
+  projectId: string,
+  [conversationId, setConversationId]: ConversationIdState,
+  historyError: unknown,
+): void {
+  const { data: conversation } = useConversation(conversationId);
   useLayoutEffect(() => {
     if (!conversationId || !projectId) return;
 
     const isNotFound =
       historyError instanceof ApiError &&
       historyError.status === HTTP_STATUS.NOT_FOUND;
-
-    const metadataProjectId =
-      conversation?.metadata &&
-      typeof conversation.metadata === "object" &&
-      CONVERSATION_METADATA_PROJECT_ID in conversation.metadata
-        ? String(
-            (conversation.metadata as Record<string, unknown>)[
-              CONVERSATION_METADATA_PROJECT_ID
-            ],
-          )
-        : null;
-
+    const metadataProjectId = conversationProjectId(conversation?.metadata);
     const isMismatched =
       metadataProjectId !== null && metadataProjectId !== projectId;
-
     if (!isNotFound && !isMismatched) return;
 
     localStorage.removeItem(PUBLISH_CHAT_STORAGE_KEY(projectId));
-
     const timer = setTimeout(() => {
       setConversationId(null);
     }, 0);
-
     return () => {
       clearTimeout(timer);
     };
-  }, [conversationId, projectId, historyError, conversation]);
+  }, [
+    conversationId,
+    projectId,
+    historyError,
+    conversation,
+    setConversationId,
+  ]);
+}
 
-  const sendMessage = useCallback(
+/** The SSE handlers of one publish-chat turn. */
+function publishTurnHandlers(
+  { appendToken, setIsStreaming, resetStreamingRefs }: PublishTurnCallbacks,
+  onCarouselRefined: () => void,
+): SseEventHandlers {
+  const endStream = (): void => {
+    setIsStreaming(false);
+    resetStreamingRefs();
+  };
+  return {
+    [SSE_EVENT_TYPE.TOOL_RESULT]: (data) => {
+      if (data.tool === TOOL_REFINE_CAROUSEL_COPY) {
+        onCarouselRefined();
+      }
+    },
+    [SSE_EVENT_TYPE.TOKEN]: (data) => appendToken(sseContentText(data, "")),
+    [SSE_EVENT_TYPE.COMPLETE]: endStream,
+    [SSE_EVENT_TYPE.ERROR]: endStream,
+  };
+}
+
+/** Stream one publish-chat turn (the project id is sent as context). */
+function useSendPublishMessage({
+  projectId,
+  conversationId,
+  isStreaming,
+  stream,
+}: SendPublishDeps): UsePublishChatReturn["sendMessage"] {
+  const queryClient = useQueryClient();
+  const { startUserTurn, appendToken, setIsStreaming, resetStreamingRefs } =
+    stream;
+  return useCallback(
     (content: string) => {
       if (!content.trim() || !conversationId || isStreaming) {
         return;
       }
-
       const signal = startUserTurn(content.trim());
-
-      const payload = buildContextPrefix(projectId) + content.trim();
-
+      const turn = { appendToken, setIsStreaming, resetStreamingRefs };
+      const refreshCarousel = (): void => {
+        void queryClient.invalidateQueries({
+          queryKey: carouselKeys.detail(projectId),
+        });
+      };
       void streamSseEvents({
         url: API_ENDPOINTS.CONVERSATION_PUBLISH_CHAT_STREAM(conversationId),
-        body: { content: payload },
+        body: { content: buildContextPrefix(projectId) + content.trim() },
         signal,
-        onEvent: (event) => {
-          const data = event.data;
-
-          if (event.event === SSE_EVENT_TYPE.TOOL_RESULT) {
-            const tool = data.tool as string | undefined;
-            if (tool === TOOL_REFINE_CAROUSEL_COPY) {
-              void queryClient.invalidateQueries({
-                queryKey: carouselKeys.detail(projectId),
-              });
-            }
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            appendToken(typeof data.content === "string" ? data.content : "");
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.COMPLETE) {
-            setIsStreaming(false);
-            resetStreamingRefs();
-            return;
-          }
-
-          if (event.event === SSE_EVENT_TYPE.ERROR) {
-            setIsStreaming(false);
-            resetStreamingRefs();
-          }
-        },
+        onEvent: dispatchSseEvent(publishTurnHandlers(turn, refreshCarousel)),
         onError: () => {
           setIsStreaming(false);
           resetStreamingRefs();
@@ -176,6 +190,29 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
       resetStreamingRefs,
     ],
   );
+}
+
+export function usePublishChat(projectId: string): UsePublishChatReturn {
+  const conversationIdState = useState<string | null>(() =>
+    readStoredConversationId(projectId),
+  );
+  const [conversationId] = conversationIdState;
+  const stream = useChatStream(
+    OPTIMISTIC_MESSAGE_ID_PREFIX,
+    STREAM_MESSAGE_ID_PREFIX,
+  );
+  const { optimisticMessages, isStreaming } = stream;
+  const { data: historyMessages = [], error: historyError } =
+    useConversationMessages(conversationId);
+  useEnsureConversation(projectId, conversationIdState);
+  useDropStaleConversation(projectId, conversationIdState, historyError);
+
+  const sendMessage = useSendPublishMessage({
+    projectId,
+    conversationId,
+    isStreaming,
+    stream,
+  });
 
   const messages = useMemo(
     () => [...historyMessages, ...optimisticMessages],

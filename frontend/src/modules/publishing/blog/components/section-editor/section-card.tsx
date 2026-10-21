@@ -24,6 +24,52 @@ import type { SectionCardProps } from "./types";
 const LABEL_CLASS = "mb-1 block text-xs font-semibold text-text-muted";
 const BODY_ROWS = 10;
 
+type SectionToolbarProps = Pick<
+  SectionCardProps,
+  "index" | "count" | "readOnly" | "onMove" | "onDelete"
+>;
+
+/** Move up / move down / delete, disabled at the ends and for the last section. */
+function SectionToolbar({
+  index,
+  count,
+  readOnly,
+  onMove,
+  onDelete,
+}: SectionToolbarProps): React.ReactElement {
+  const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
+  return (
+    <div className="flex gap-1">
+      <NeonButton
+        size="sm"
+        variant="ghost"
+        disabled={readOnly || index === 0}
+        onClick={() => onMove(-1)}
+        aria-label={t("section.moveUp")}
+      >
+        {t("section.moveUp")}
+      </NeonButton>
+      <NeonButton
+        size="sm"
+        variant="ghost"
+        disabled={readOnly || index === count - 1}
+        onClick={() => onMove(1)}
+        aria-label={t("section.moveDown")}
+      >
+        {t("section.moveDown")}
+      </NeonButton>
+      <NeonButton
+        size="sm"
+        variant="ghost"
+        disabled={readOnly || count === 1}
+        onClick={onDelete}
+      >
+        {t("section.delete")}
+      </NeonButton>
+    </div>
+  );
+}
+
 /**
  * One section of the document (AE-0424): heading + markdown body, move
  * up/down, delete, its own image slot and "Rewrite this section in my voice".
@@ -55,34 +101,13 @@ export function SectionCard({
         <NeonCardTitle className="text-base">
           {t("section.title", { number: index + 1 })}
         </NeonCardTitle>
-        <div className="flex gap-1">
-          <NeonButton
-            size="sm"
-            variant="ghost"
-            disabled={readOnly || index === 0}
-            onClick={() => onMove(-1)}
-            aria-label={t("section.moveUp")}
-          >
-            {t("section.moveUp")}
-          </NeonButton>
-          <NeonButton
-            size="sm"
-            variant="ghost"
-            disabled={readOnly || index === count - 1}
-            onClick={() => onMove(1)}
-            aria-label={t("section.moveDown")}
-          >
-            {t("section.moveDown")}
-          </NeonButton>
-          <NeonButton
-            size="sm"
-            variant="ghost"
-            disabled={readOnly || count === 1}
-            onClick={onDelete}
-          >
-            {t("section.delete")}
-          </NeonButton>
-        </div>
+        <SectionToolbar
+          index={index}
+          count={count}
+          readOnly={readOnly}
+          onMove={onMove}
+          onDelete={onDelete}
+        />
       </NeonCardHeader>
       <NeonCardContent className="space-y-3">
         <div>

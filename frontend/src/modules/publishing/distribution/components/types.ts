@@ -1,3 +1,4 @@
+import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
 /**
  * Distribution component prop/state types (colocated `types.ts`).
  *
@@ -7,6 +8,7 @@
  */
 
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
 export interface CaptionEditorProps {
@@ -101,4 +103,65 @@ export interface SlideTextEditSectionProps {
   rebuildPending?: boolean;
   /** Refetch project + workflow state after a successful edit + republish. */
   onEdited: () => void;
+}
+
+export interface CoverPickDeps {
+  projectId: string;
+  currentAssetId: string | null;
+  onSwitched: CoverPickerSectionProps["onSwitched"];
+}
+
+export interface PickStatusProps {
+  pending: boolean;
+  switched: boolean;
+  switchingText: string;
+  successText: string;
+}
+
+export interface CoverPick {
+  pick: ReturnType<typeof usePickCover>;
+  switched: boolean;
+  handleChoose: (assetId: string) => void;
+}
+
+/** Save/cancel buttons of the publish-page slide text editor (AE-0446). */
+export interface SlideEditActionsProps {
+  refused: boolean;
+  canSave: boolean;
+  saving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+/** Rebuild/success line of the publish-page slide text editor (AE-0446). */
+export interface SlideEditStatusProps {
+  pending: boolean;
+  done: boolean;
+}
+
+/** PT / EN tab strip of the publish panel (AE-0446). */
+export interface LanguageTabsProps {
+  language: ViewerLanguage;
+  onChange: (language: ViewerLanguage) => void;
+  ariaLabel: string;
+  className: string;
+}
+
+/** Instagram tab of the publish panel (AE-0446). */
+export interface InstagramTabProps extends Pick<
+  PublishPanelProps,
+  "onPublishInstagram" | "isPublishingInstagram" | "publishResult"
+> {
+  caption: string;
+  onCaptionChange: (caption: string) => void;
+  language: ViewerLanguage;
+}
+
+/** LinkedIn tab of the publish panel (AE-0446). */
+export interface LinkedInTabProps {
+  text: string;
+  onTextChange: (text: string) => void;
+  language: ViewerLanguage;
+  setLanguage: (language: ViewerLanguage) => void;
+  pdfHref: string;
 }

@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
 import {
   EDITORIAL_WORKFLOW_POLL_BACKOFF_MS,
   EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS,
@@ -19,6 +20,8 @@ import {
 } from "@/constants/editorial-workflow";
 import { probeWorkflowStream } from "./workflow-stream-probe";
 import type {
+  ReconnectTimer,
+  ResumeOnVisibleDeps,
   UseWorkflowStreamReconnectParams,
   WorkflowStreamProbeResult,
   WorkflowStreamReconnectApi,
@@ -32,21 +35,38 @@ function reconnectDelay(attempt: number): number {
   return backoff[Math.min(attempt, backoff.length - 1)] ?? backoff[0];
 }
 
-export function useWorkflowStreamReconnect({
-  projectId,
-  connectRef,
-  sourceRef,
-  applyProbedState,
-  refreshState,
-  enterPollingFallback,
-  markDisconnected,
-}: UseWorkflowStreamReconnectParams): WorkflowStreamReconnectApi {
+/** Apply the probe verdict; true when the stream may be reopened. */
+function applyProbeResult(
+  result: WorkflowStreamProbeResult,
+  {
+    applyProbedState,
+    markDisconnected,
+  }: Pick<
+    UseWorkflowStreamReconnectParams,
+    "applyProbedState" | "markDisconnected"
+  >,
+): boolean {
+  if (result.outcome === WORKFLOW_STREAM_PROBE_OUTCOME.OK) {
+    if (result.state) {
+      applyProbedState(result.state);
+    }
+    return true;
+  }
+  if (result.outcome === WORKFLOW_STREAM_PROBE_OUTCOME.TRANSIENT) {
+    return true;
+  }
+  // AUTH_FAILED (api-client redirected to the session-expired login) or GONE.
+  markDisconnected();
+  return false;
+}
+
+/** The backoff timer: one pending reconnect, capped attempts. */
+function useReconnectTimer(
+  connectRef: UseWorkflowStreamReconnectParams["connectRef"],
+  markDisconnected: () => void,
+): ReconnectTimer {
   const attemptsRef = useRef(0);
   const timeoutRef = useRef<number | null>(null);
-  // True between a stream error and the next open: that open is a reconnect.
-  const failedRef = useRef(false);
-  // Bumped on cancel so a probe answered after unmount / project change is dropped.
-  const generationRef = useRef(0);
 
   const clearTimer = useCallback((): void => {
     if (timeoutRef.current !== null) {
@@ -54,13 +74,6 @@ export function useWorkflowStreamReconnect({
       timeoutRef.current = null;
     }
   }, []);
-
-  const cancelReconnect = useCallback((): void => {
-    clearTimer();
-    attemptsRef.current = 0;
-    failedRef.current = false;
-    generationRef.current += 1;
-  }, [clearTimer]);
 
   const scheduleReconnect = useCallback((): void => {
     if (attemptsRef.current >= EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS) {
@@ -75,62 +88,17 @@ export function useWorkflowStreamReconnect({
     }, delay);
   }, [connectRef, markDisconnected]);
 
-  /** Apply the probe verdict; true when the stream may be reopened. */
-  const applyProbe = useCallback(
-    (result: WorkflowStreamProbeResult): boolean => {
-      if (result.outcome === WORKFLOW_STREAM_PROBE_OUTCOME.OK) {
-        if (result.state) {
-          applyProbedState(result.state);
-        }
-        return true;
-      }
-      if (result.outcome === WORKFLOW_STREAM_PROBE_OUTCOME.TRANSIENT) {
-        return true;
-      }
-      // AUTH_FAILED (api-client redirected to the session-expired login) or GONE.
-      markDisconnected();
-      return false;
-    },
-    [applyProbedState, markDisconnected],
-  );
+  return { attemptsRef, clearTimer, scheduleReconnect };
+}
 
-  const probeThen = useCallback(
-    (onReopenable: () => void): void => {
-      const generation = generationRef.current;
-      void probeWorkflowStream(projectId).then((result) => {
-        if (generation !== generationRef.current) {
-          return;
-        }
-        if (applyProbe(result)) {
-          onReopenable();
-        }
-      });
-    },
-    [applyProbe, projectId],
-  );
-
-  const handleStreamError = useCallback((): void => {
-    clearTimer();
-    failedRef.current = true;
-    enterPollingFallback();
-    probeThen(scheduleReconnect);
-  }, [clearTimer, enterPollingFallback, probeThen, scheduleReconnect]);
-
-  const handleStreamOpen = useCallback((): void => {
-    const isReconnect = failedRef.current;
-    attemptsRef.current = 0;
-    failedRef.current = false;
-    if (isReconnect) {
-      void refreshState();
-    }
-  }, [refreshState]);
-
-  const reconnectNow = useCallback((): void => {
-    clearTimer();
-    attemptsRef.current = 0;
-    connectRef.current?.();
-  }, [clearTimer, connectRef]);
-
+/** Returning to the tab refreshes a live stream or revives one that gave up. */
+function useResumeOnVisible({
+  connectRef,
+  sourceRef,
+  refreshState,
+  probeThen,
+  reconnectNow,
+}: ResumeOnVisibleDeps): void {
   useEffect(() => {
     const onVisibilityChange = (): void => {
       if (
@@ -153,6 +121,88 @@ export function useWorkflowStreamReconnect({
       );
     };
   }, [connectRef, probeThen, reconnectNow, refreshState, sourceRef]);
+}
+
+/** Probe the stream, then reopen it only if the verdict allows (and still current). */
+function useProbeThen(
+  {
+    projectId,
+    applyProbedState,
+    markDisconnected,
+  }: Pick<
+    UseWorkflowStreamReconnectParams,
+    "projectId" | "applyProbedState" | "markDisconnected"
+  >,
+  generationRef: MutableRefObject<number>,
+): (onReopenable: () => void) => void {
+  return useCallback(
+    (onReopenable: () => void): void => {
+      const generation = generationRef.current;
+      void probeWorkflowStream(projectId).then((result) => {
+        if (generation !== generationRef.current) {
+          return;
+        }
+        if (applyProbeResult(result, { applyProbedState, markDisconnected })) {
+          onReopenable();
+        }
+      });
+    },
+    [applyProbedState, markDisconnected, projectId, generationRef],
+  );
+}
+
+export function useWorkflowStreamReconnect(
+  params: UseWorkflowStreamReconnectParams,
+): WorkflowStreamReconnectApi {
+  const { connectRef, sourceRef, refreshState } = params;
+  const { enterPollingFallback, markDisconnected } = params;
+  const { attemptsRef, clearTimer, scheduleReconnect } = useReconnectTimer(
+    connectRef,
+    markDisconnected,
+  );
+  // True between a stream error and the next open: that open is a reconnect.
+  const failedRef = useRef(false);
+  // Bumped on cancel so a probe answered after unmount / project change is dropped.
+  const generationRef = useRef(0);
+
+  const cancelReconnect = useCallback((): void => {
+    clearTimer();
+    attemptsRef.current = 0;
+    failedRef.current = false;
+    generationRef.current += 1;
+  }, [clearTimer, attemptsRef]);
+
+  const probeThen = useProbeThen(params, generationRef);
+
+  const handleStreamError = useCallback((): void => {
+    clearTimer();
+    failedRef.current = true;
+    enterPollingFallback();
+    probeThen(scheduleReconnect);
+  }, [clearTimer, enterPollingFallback, probeThen, scheduleReconnect]);
+
+  const handleStreamOpen = useCallback((): void => {
+    const isReconnect = failedRef.current;
+    attemptsRef.current = 0;
+    failedRef.current = false;
+    if (isReconnect) {
+      void refreshState();
+    }
+  }, [refreshState, attemptsRef]);
+
+  const reconnectNow = useCallback((): void => {
+    clearTimer();
+    attemptsRef.current = 0;
+    connectRef.current?.();
+  }, [clearTimer, connectRef, attemptsRef]);
+
+  useResumeOnVisible({
+    connectRef,
+    sourceRef,
+    refreshState,
+    probeThen,
+    reconnectNow,
+  });
 
   return { handleStreamError, handleStreamOpen, reconnectNow, cancelReconnect };
 }

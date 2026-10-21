@@ -28,21 +28,14 @@ import {
 import { useRepublishCarousel } from "@/modules/publishing/distribution/hooks/use-republish-carousel";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type { SlideTextEditSectionProps } from "./types";
+import {
+  RunInProgressCard,
+  SlideEditActions,
+  SlideEditStatus,
+} from "./slide-text-edit-parts";
 
 const EDIT_ID_PREFIX = "publish-edit";
 const NO_VIOLATIONS: SlideValidationViolation[] = [];
-
-function RunInProgressCard(): React.ReactElement {
-  const t = useTranslations("publish.slideEditor");
-  return (
-    <div style={SECTION_CARD_STYLE}>
-      <h3 className="text-sm font-semibold mb-1">{t("title")}</h3>
-      <p className="text-xs" style={{ color: TEXT_DIM }} role="status">
-        {t("blockedRunInProgress")}
-      </p>
-    </div>
-  );
-}
 
 /** AE-0403: the refused save's violations, each addressed to its field. */
 function responseViolations(
@@ -56,7 +49,6 @@ export function SlideTextEditSection(
 ): React.ReactElement {
   const { projectId, slides, policyVersion, runInProgress, onEdited } = props;
   const t = useTranslations("publish.slideEditor");
-  const tErrors = useTranslations("editorialWorkflow.review.fieldErrors");
   const editMutation = useEditCarouselSlides();
   const republish = useRepublishCarousel();
   const [editing, setEditing] = useState(false);
@@ -169,49 +161,16 @@ export function SlideTextEditSection(
               }
             />
           ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            {refused ? (
-              <NeonButton
-                size="sm"
-                disabled={!fixedSinceRefusal || editMutation.isPending}
-                onClick={save}
-              >
-                {editMutation.isPending
-                  ? tErrors("submittingManualFixes")
-                  : tErrors("submitManualFixes")}
-              </NeonButton>
-            ) : (
-              <NeonButton
-                size="sm"
-                disabled={!dirty || editMutation.isPending}
-                onClick={save}
-              >
-                {editMutation.isPending ? t("saving") : t("save")}
-              </NeonButton>
-            )}
-            <NeonButton
-              size="sm"
-              variant="outline"
-              onClick={() => setEditing(false)}
-            >
-              {t("cancel")}
-            </NeonButton>
-          </div>
+          <SlideEditActions
+            refused={refused}
+            canSave={refused ? fixedSinceRefusal : dirty}
+            saving={editMutation.isPending}
+            onSave={save}
+            onCancel={() => setEditing(false)}
+          />
         </div>
       )}
-      {pending ? (
-        <p
-          className="text-xs mt-2 text-[var(--color-warning,#b45309)]"
-          role="status"
-        >
-          {t("rebuildPending")}
-        </p>
-      ) : null}
-      {done && !pending ? (
-        <p className="text-xs mt-2 text-success" role="status">
-          {t("success")}
-        </p>
-      ) : null}
+      <SlideEditStatus pending={pending} done={done} />
     </div>
   );
 }

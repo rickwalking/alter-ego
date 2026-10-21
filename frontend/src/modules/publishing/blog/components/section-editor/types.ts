@@ -116,3 +116,8 @@ export interface BlogSectionEditorProps {
   onGenerateTranslation: () => void;
   onSelectText: (selection: SectionSelection) => void;
 }
+
+export interface SlotErrorProps {
+  error: ImageSlotProps["status"]["error"];
+  failedText: string;
+}

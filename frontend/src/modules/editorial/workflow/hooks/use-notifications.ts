@@ -10,6 +10,33 @@ import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { NotificationItem, NotificationListResponse } from "../types";
 
+async function requestNotifications(
+  unreadOnly: boolean,
+  failedText: string,
+): Promise<NotificationItem[]> {
+  const query = unreadOnly ? "?unread_only=true" : "";
+  const response = await authenticatedFetch(
+    `${WORKFLOW_API.NOTIFICATIONS}${query}`,
+  );
+  if (!response.ok) {
+    throw new Error(failedText);
+  }
+  const data = (await response.json()) as NotificationListResponse;
+  return data.items;
+}
+
+async function postMarkRead(id: string, failedText: string): Promise<void> {
+  const response = await authenticatedFetch(
+    WORKFLOW_API.NOTIFICATION_READ(id),
+    {
+      method: "POST",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(failedText);
+  }
+}
+
 export function useNotifications() {
   const t = useTranslations("workflow.errors");
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -21,15 +48,9 @@ export function useNotifications() {
       setLoading(true);
       setError(null);
       try {
-        const query = unreadOnly ? "?unread_only=true" : "";
-        const response = await authenticatedFetch(
-          `${WORKFLOW_API.NOTIFICATIONS}${query}`,
+        setNotifications(
+          await requestNotifications(unreadOnly, t("loadNotificationsFailed")),
         );
-        if (!response.ok) {
-          throw new Error(t("loadNotificationsFailed"));
-        }
-        const data = (await response.json()) as NotificationListResponse;
-        setNotifications(data.items);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("unknown"));
       } finally {
@@ -41,15 +62,7 @@ export function useNotifications() {
 
   const markRead = useCallback(
     async (id: string) => {
-      const response = await authenticatedFetch(
-        WORKFLOW_API.NOTIFICATION_READ(id),
-        {
-          method: "POST",
-        },
-      );
-      if (!response.ok) {
-        throw new Error(t("markReadFailed"));
-      }
+      await postMarkRead(id, t("markReadFailed"));
       setNotifications((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, status: "read" } : item,
