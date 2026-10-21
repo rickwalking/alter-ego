@@ -508,13 +508,23 @@ criteria, deep security, architecture, integrity) on top.
 # Reproduce CI locally (the QA agent does this automatically in Phase 0):
 bash scripts/ci/gates.sh backend            # all backend gates
 bash scripts/ci/gates.sh frontend           # all frontend gates
-bash scripts/ci/gates.sh backend:mutation   # one gate by name
+bash scripts/ci/gates.sh backend:lint       # one gate by name
 bash scripts/ci/gates.sh backend --changed-only   # fast subset (no DB / no slow)
 ```
 
-Gates needing Postgres (`test`, `diff-cover`, `migrations`) or that are slow
-(`mutation`) report **SKIPPED** when they can't run locally — SKIPPED is
-**INCONCLUSIVE, never PASS**. Set `DATABASE_URL` to run the DB-dependent gates.
+Gates needing Postgres (`test`, `diff-cover`, `migrations`) report **SKIPPED**
+when they can't run locally — SKIPPED is **INCONCLUSIVE, never PASS**. Set
+`DATABASE_URL` to run the DB-dependent gates.
+
+**Mutation runs in CI only (Pedro's call, AE-0448).** Outside GitHub Actions
+`backend:mutation`, `frontend:mutation`, `mutation-score-gate.sh` and
+`npm run test:mutate` SKIP (exit 77) before starting mutmut / Stryker — a local
+run exhausts the dev machine's memory. Read the verdict from the PR head's CI
+jobs (`gh pr checks <pr>`, `gh run view <run-id> --log`): `backend / Mutation
+(blocking ≥75%)` must be green; `frontend / Mutation (advisory)` is reported.
+In CI the guard is bypassed (`GITHUB_ACTIONS=true`) and `GATES_REQUIRE_ALL=1`
+still turns any SKIP into a FAIL. `ALLOW_LOCAL_MUTATION=1` opts a machine with
+enough memory back in; agents never set it.
 
 See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch protection, and rollout policy.
 

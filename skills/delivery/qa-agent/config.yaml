@@ -15,6 +15,15 @@ gates:
   # INCONCLUSIVE (never PASS). Set DATABASE_URL to run the DB-dependent ones.
   service_dependent: [backend:test, backend:diff-cover, backend:migrations]
   slow: [backend:mutation]
+  # Mutation runs in CI only (AE-0448): locally both mutation gates SKIP before
+  # starting mutmut/Stryker. Take their verdict from the CI jobs on the PR head
+  # (gh pr checks / gh run view --log); a red backend job is still a blocker.
+  ci_only:
+    gates: [backend:mutation, frontend:mutation]
+    ci_jobs:
+      backend:mutation: "backend / Mutation (blocking ≥75%)"
+      frontend:mutation: "frontend / Mutation (advisory)"
+    read: "gh pr checks <pr>; gh run view <run-id> --log"
   # Thresholds are defined in the script — do NOT duplicate values here. For
   # reference only: backend mutation ≥75% (blocking), diff-cover ≥75% on changed
   # lines (blocking), interrogate ≥80%, frontend Stryker advisory.

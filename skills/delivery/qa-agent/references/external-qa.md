@@ -54,7 +54,9 @@ Tool notes:
    Parse each `GATES_JSON:` line. Any gate FAIL ⇒ overall FAIL. Any SKIP
    (e.g. no Postgres in the sandbox) is INCONCLUSIVE — report it as
    "CI will decide" and never count it as PASS. Any net-new integrity
-   blocker ⇒ FAIL. This makes the external verdict match CI exactly and
+   blocker ⇒ FAIL. The mutation gates always SKIP locally (CI only,
+   AE-0448) — never run mutmut / Stryker; take the mutation verdict from
+   the PR head's CI jobs (`gh pr checks <pr>`). This makes the external verdict match CI exactly and
    is the primary bias defense: the gates are mechanical, not a judgment
    the model can be lenient about.
 4. Per-dimension instructions, including independent re-verification

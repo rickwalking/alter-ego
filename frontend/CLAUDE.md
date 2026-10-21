@@ -77,7 +77,7 @@ npm run build                    # Production build
 npm run test                     # Unit tests (Vitest)
 npm run test:coverage            # Coverage report (90%+ project target)
 npm run test:e2e                 # E2E tests (Playwright)
-npm run test:mutate              # StrykerJS mutation testing
+npm run test:mutate              # StrykerJS mutation testing — CI only, SKIPs (77) locally (AE-0448)
 npm run typecheck                # TypeScript check
 npm run check:legacy             # Block v1 imports in dashboard app
 npm run check:legacy-inventory   # Phase 1 scheduled file deletions
@@ -154,7 +154,9 @@ npm run build-storybook          # Static Storybook build
   - UI components: break **30%**, low **50%**, high **65%**
   - Business logic hooks: higher bars (see ADR-005)
   - Do **not** add neon component tests to `ignorePatterns` — that hides weak assertions
-  - Run scoped: `npx stryker run --mutate "src/components/atoms/neon-button.tsx"`
+  - **CI only (AE-0448)** — never run Stryker locally (`npx stryker run` included;
+    it runs this machine out of memory). Read `frontend / Mutation (advisory)` on
+    the PR with `gh pr checks` / `gh run view --log`
 
 ### Styling
 

@@ -30,6 +30,11 @@ This is the mirror of the guardian (`qa-agent`): the guardian stops a developer
 gaming a gate in a PR; Kaizen stops the *rules themselves* from being gamed over
 time. Synthesis (Phase 3) drops any down-ratchet proposal and records why.
 
+**Mutation signal comes from CI only** (Pedro's call, AE-0448): read mutation
+scores and survivors from the CI job logs (`gh run view <run-id> --log`); never
+run mutmut / Stryker locally (it runs the machine out of memory), and never
+propose a fix that moves mutation back to local runs.
+
 ## Modes
 
 | Mode | Invoke | When |
