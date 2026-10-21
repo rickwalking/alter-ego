@@ -1,3 +1,4 @@
+import type { MutableRefObject } from "react";
 /** Notification types for the notification center. */
 
 export type NotificationItem = {
@@ -33,3 +34,24 @@ export type ContentLock = {
   user_name: string;
   expires_at: string;
 };
+
+/** Which content a collaborative lock is for (AE-0446). */
+export interface LockTarget {
+  contentId: string;
+  contentType: string;
+}
+
+/** The lock state ``useCollaborativeEdit`` keeps (AE-0446). */
+export interface LockState {
+  activeLock: ContentLock | null;
+  isLockedByOther: boolean;
+  applyLockState: (lock: ContentLock | null) => void;
+  mountedRef: MutableRefObject<boolean>;
+}
+
+/** The lock actions ``useCollaborativeEdit`` exposes (AE-0446). */
+export interface LockActions {
+  acquireLock: () => Promise<boolean>;
+  releaseLock: () => Promise<void>;
+  refreshLock: () => Promise<void>;
+}
