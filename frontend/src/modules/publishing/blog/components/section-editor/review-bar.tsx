@@ -24,9 +24,10 @@ const STATUS = {
 
 /**
  * Review / publish / schedule controls (AE-0424), driven by the post status
- * and the existing workflow guards. With self-review enabled a draft offers
- * "Publish now"; otherwise it needs a distinct reviewer. Publishing a draft
- * is left to the API status guard, whose error is shown here (AE-0438, F-11).
+ * and the existing workflow guards. A draft offers "Publish now" (the author
+ * self-approves, AE-0441) or a submit for review, to an optional distinct
+ * reviewer (empty = the author). Publishing a draft is left to the API status
+ * guard, whose error is shown here (AE-0438, F-11).
  */
 export function ReviewBar(props: ReviewBarProps): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
@@ -70,38 +71,35 @@ export function ReviewBar(props: ReviewBarProps): React.ReactElement {
 function DraftControls(props: ReviewBarProps): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   const [reviewerId, setReviewerId] = useState("");
-  const { allowSelfReview, disabled } = props;
+  const { disabled } = props;
   const reviewer = reviewerId.trim();
   return (
     <div className="space-y-2">
-      {allowSelfReview ? (
-        <NeonButton size="sm" disabled={disabled} onClick={props.onPublishNow}>
-          {t("review.publishNow")}
-        </NeonButton>
-      ) : (
-        <div>
-          <label
-            htmlFor={REVIEWER_INPUT_ID}
-            className="mb-1 block text-xs font-semibold text-text-muted"
-          >
-            {t("review.reviewer")}
-          </label>
-          <NeonInput
-            id={REVIEWER_INPUT_ID}
-            value={reviewerId}
-            disabled={disabled}
-            onChange={(e) => setReviewerId(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-text-muted">
-            {t("review.reviewerHint")}
-          </p>
-        </div>
-      )}
+      <NeonButton size="sm" disabled={disabled} onClick={props.onPublishNow}>
+        {t("review.publishNow")}
+      </NeonButton>
+      <div>
+        <label
+          htmlFor={REVIEWER_INPUT_ID}
+          className="mb-1 block text-xs font-semibold text-text-muted"
+        >
+          {t("review.reviewer")}
+        </label>
+        <NeonInput
+          id={REVIEWER_INPUT_ID}
+          value={reviewerId}
+          disabled={disabled}
+          onChange={(e) => setReviewerId(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-text-muted">
+          {t("review.reviewerHint")}
+        </p>
+      </div>
       <div className="flex flex-wrap gap-2">
         <NeonButton
           size="sm"
           variant="secondary"
-          disabled={disabled || (!allowSelfReview && !reviewer)}
+          disabled={disabled}
           onClick={() => props.onSubmitReview(reviewer || null)}
         >
           {t("review.submit")}

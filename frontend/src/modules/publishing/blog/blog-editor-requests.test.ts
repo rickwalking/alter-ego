@@ -10,7 +10,6 @@ import {
   BlogEditorRequestError,
   cancelSchedule,
   errorKind,
-  fetchEditorSettings,
   fetchVersions,
   fetchVoicePersonas,
   generateEnTranslation,
@@ -187,9 +186,7 @@ describe("workflow routes", () => {
     expect(lastCall().init.method).toBe("DELETE");
   });
 
-  it("reads the editor settings, versions and personas", async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse({ allow_self_review: true }));
-    expect(await fetchEditorSettings()).toEqual({ allow_self_review: true });
+  it("reads the versions and personas", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse([{ version_number: 1 }]));
     expect(await fetchVersions("p-1")).toEqual([{ version_number: 1 }]);
     expect(lastCall().url).toBe("/api/blog-posts/p-1/versions");

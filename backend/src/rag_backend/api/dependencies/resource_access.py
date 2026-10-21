@@ -29,7 +29,6 @@ from rag_backend.domain.constants.workflow_validation import (
     ERR_NOT_ASSIGNED_REVIEWER,
     ERR_REVIEWER_ASSIGNMENT_UNSUPPORTED,
     ERR_REVIEWER_INVALID,
-    ERR_SELF_REVIEW,
     ERR_WORKFLOW_FIELD_IMMUTABLE,
     WORKFLOW_IMMUTABLE_UPDATE_FIELDS,
 )
@@ -346,11 +345,6 @@ async def assign_content_reviewer(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=target.content_id),
-        )
-    if post.author_id and post.author_id == reviewer_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SELF_REVIEW,
         )
     post.reviewer_id = reviewer_id
     await db.flush()

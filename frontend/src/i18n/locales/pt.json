@@ -1280,7 +1280,7 @@
             "archived": "Arquivado"
           },
           "reviewer": "ID do revisor",
-          "reviewerHint": "Outro editor precisa revisar este post.",
+          "reviewerHint": "Opcional: deixe em branco para revisar o post você mesmo.",
           "submit": "Enviar para revisão",
           "approve": "Aprovar",
           "reject": "Rejeitar",
@@ -1314,8 +1314,6 @@
           "failed": "A ação falhou. Tente de novo.",
           "budget": "Este post já usou toda a cota de imagens. Remova ou reaproveite imagens, ou peça a um admin para aumentar o BLOG_IMAGE_COST_CAP.",
           "code": {
-            "self_review": "Você não pode revisar o seu próprio post. Escolha um revisor diferente para enviar à revisão.",
-            "reviewer_required": "É preciso escolher um revisor para enviar este post à revisão.",
             "version_empty": "Essa versão não tem conteúdo (ela guarda o rascunho vazio anterior). Escolha outra versão.",
             "empty_document": "O documento precisa de pelo menos uma seção com texto.",
             "not_publishable": "Este post ainda não pode ser publicado: ele precisa de conteúdo válido e do rótulo de IA.",

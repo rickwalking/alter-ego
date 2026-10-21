@@ -22,7 +22,6 @@ import type {
 } from "./lib/editor-document";
 import type { BlogPostVersion } from "./components/types";
 import type {
-  BlogEditorSettings,
   BlogImagePatch,
   BlogVoicePersona,
   BlogPost,
@@ -244,12 +243,6 @@ export function schedulePost(
 export function cancelSchedule(post: LockedPost): Promise<BlogPost> {
   const init = locked(HTTP_METHODS.DELETE, post.lockVersion);
   return request<BlogPost>(API_ENDPOINTS.BLOG_SCHEDULE(post.id), init);
-}
-
-export function fetchEditorSettings(): Promise<BlogEditorSettings> {
-  return request<BlogEditorSettings>(API_ENDPOINTS.BLOG_EDITOR_SETTINGS, {
-    method: HTTP_METHODS.GET,
-  });
 }
 
 export function fetchVersions(postId: string): Promise<BlogPostVersion[]> {

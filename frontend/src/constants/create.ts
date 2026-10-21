@@ -1,12 +1,3 @@
-/** Carousel creation form field identifiers. */
-export const CREATE_FORM_FIELDS = {
-  TOPIC: "topic",
-  AUDIENCE: "audience",
-  NICHE: "niche",
-  THEME: "theme",
-  IMAGE_PRESET: "image_preset",
-} as const;
-
 /** Image generation providers. */
 export const IMAGE_MODELS = {
   GEMINI: "gemini",
@@ -116,9 +107,6 @@ export const PIPELINE_PHASES = [
   "completed",
 ] as const;
 
-/** Status polling interval in milliseconds. */
-export const STATUS_POLL_INTERVAL = 2000;
-
 /**
  * How long a phase can go without a backend status update before the UI
  * surfaces a "stalled — retrying" warning. The Anthropic SDK retries on
@@ -173,12 +161,6 @@ export const CREATE_TEMPLATES: readonly CreateTemplate[] = [
     strategy: "hero_content",
   },
 ] as const;
-
-/** Navigation route for create page (neon dashboard). */
-export const CREATE_ROUTE = "/dashboard/create";
-
-/** Route pattern for create workspace (neon dashboard). */
-export const CREATE_WORKSPACE_ROUTE = (id: string) => `/dashboard/create/${id}`;
 
 /** AE-0373 (ADR-0021): carousel content modes. NULL on the backend = Radar IA. */
 export const CONTENT_MODES = {

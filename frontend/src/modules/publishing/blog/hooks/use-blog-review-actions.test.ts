@@ -7,7 +7,7 @@ import { useBlogPostEditor } from "./use-blog-post-editor";
 import { useBlogReviewActions } from "./use-blog-review-actions";
 
 // Scenarios: tests/features/blog_editor_ae0424.feature (publish, review +
-// scheduled publish, self-review on/off)
+// scheduled publish, self-review; AE-0441: the author may always self-review)
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -24,24 +24,12 @@ function wrapper({ children }: { children: ReactNode }): ReactNode {
   return createElement(QueryClientProvider, { client }, children);
 }
 
-function respond(selfReview: boolean, extra: Route): void {
-  route = (url, init) => {
-    const answer = extra(url, init);
-    if (answer) {
-      return answer;
-    }
-    if (url === "/api/blog-editor/settings") {
-      return jsonResponse({ allow_self_review: selfReview });
-    }
-    return jsonResponse(blogPost());
-  };
+function respond(extra: Route): void {
+  route = (url, init) => extra(url, init) ?? jsonResponse(blogPost());
 }
 
-async function renderReview(
-  selfReview = false,
-  extra: Route = () => undefined,
-) {
-  respond(selfReview, extra);
+async function renderReview(extra: Route = () => undefined) {
+  respond(extra);
   const hook = renderHook(
     () => {
       const editor = useBlogPostEditor("p-1");
@@ -50,9 +38,6 @@ async function renderReview(
     { wrapper },
   );
   await waitFor(() => expect(hook.result.current.editor.draft).not.toBeNull());
-  await waitFor(() =>
-    expect(hook.result.current.review.allowSelfReview).toBe(selfReview),
-  );
   return hook;
 }
 
@@ -70,7 +55,7 @@ beforeEach(() => {
 describe("review controls", () => {
   // Scenario: Submit for review moves the post to under review
   it("submits to a reviewer and takes the new status", async () => {
-    const { result } = await renderReview(false, (url) =>
+    const { result } = await renderReview((url) =>
       url.includes("submit-review")
         ? jsonResponse(blogPost({ status: "under_review" }))
         : undefined,
@@ -97,7 +82,7 @@ describe("review controls", () => {
 
   // Scenario: Publishing a draft is blocked by the status guard
   it("shows the status-guard error and reloads the post", async () => {
-    const { result } = await renderReview(false, (url) =>
+    const { result } = await renderReview((url) =>
       url.endsWith("/publish")
         ? jsonResponse({ detail: "invalid_status" }, 400)
         : undefined,
@@ -113,26 +98,24 @@ describe("review controls", () => {
     expect(result.current.review.pending).toBe(false);
   });
 
-  // Scenario: Submitting your own post for review names the guard (AE-0438, F-11)
-  it("keeps the self-review detail code for the review bar copy", async () => {
-    const { result } = await renderReview(false, (url) =>
+  // Scenario: Self-review is allowed for the single author (no reviewer id)
+  it("submits with no reviewer so the author reviews", async () => {
+    const { result } = await renderReview((url) =>
       url.includes("submit-review")
-        ? jsonResponse({ detail: "self_review_not_allowed" }, 400)
+        ? jsonResponse(blogPost({ status: "under_review" }))
         : undefined,
     );
     await act(async () => {
-      await result.current.review.submitForReview("me");
+      await result.current.review.submitForReview(null);
     });
-    expect(result.current.review.error).toEqual({
-      kind: "status_guard",
-      detail: "self_review_not_allowed",
-    });
-    expect(result.current.editor.post?.status).toBe("draft");
+    expect(urls()).toContain("/api/blog-posts/p-1/submit-review");
+    expect(result.current.review.error).toBeNull();
+    expect(result.current.editor.post?.status).toBe("under_review");
   });
 
-  // Scenario: Publish now auto-approves when self-review is enabled
+  // Scenario: Publish now auto-approves the owner's draft
   it("runs submit -> approve -> publish for Publish now", async () => {
-    const { result } = await renderReview(true, (url) =>
+    const { result } = await renderReview((url) =>
       url.endsWith("/publish")
         ? jsonResponse(blogPost({ status: "published" }))
         : undefined,
@@ -187,7 +170,7 @@ describe("review controls", () => {
   });
 
   it("maps an unexpected failure to failed", async () => {
-    const { result } = await renderReview(false, (url) => {
+    const { result } = await renderReview((url) => {
       if (url.endsWith("/approve")) {
         throw new Error("offline");
       }
@@ -201,7 +184,7 @@ describe("review controls", () => {
 
   it("clears the review error on the next successful action", async () => {
     let fail = true;
-    const { result } = await renderReview(false, (url) =>
+    const { result } = await renderReview((url) =>
       url.endsWith("/approve")
         ? fail
           ? jsonResponse({ detail: "invalid_status" }, 400)

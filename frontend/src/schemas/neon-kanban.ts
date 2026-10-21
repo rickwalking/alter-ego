@@ -16,9 +16,5 @@ export const kanbanColumnSchema = z.object({
   cards: z.array(kanbanCardSchema),
 });
 
-export const neonKanbanPropsSchema = z.object({
-  columns: z.array(kanbanColumnSchema).min(1),
-});
-
 export type KanbanCard = z.infer<typeof kanbanCardSchema>;
 export type KanbanColumn = z.infer<typeof kanbanColumnSchema>;

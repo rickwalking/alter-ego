@@ -88,7 +88,6 @@ ERR_BLOG_TRANSLATION_FAILED: Final = "blog_translation_failed"
 # AE-0435: the model answered a section in Portuguese (never stored as EN).
 ERR_BLOG_TRANSLATION_WRONG_LANGUAGE: Final = "blog_translation_wrong_language"
 ERR_BLOG_SCHEDULE_NOT_SET: Final = "blog_schedule_not_set"
-ERR_BLOG_REVIEWER_REQUIRED: Final = "blog_reviewer_required"
 # AE-0438 (F-05): a stored snapshot with no content (pre-fix bootstrap) cannot
 # be restored; the operator command ``blog_empty_versions`` repairs the history.
 ERR_BLOG_VERSION_EMPTY: Final = "blog_version_empty"

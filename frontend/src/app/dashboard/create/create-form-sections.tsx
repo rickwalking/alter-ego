@@ -11,8 +11,3 @@ export { CreateThemeSection } from "./workspace/create-theme-section";
 export type { CreateThemeSectionProps } from "./workspace/create-theme-section";
 
 export type { CreateCarouselFormState } from "./types";
-
-export interface CreateFormSectionProps {
-  form: import("./types").CreateCarouselFormState;
-  onChange: (patch: Partial<import("./types").CreateCarouselFormState>) => void;
-}

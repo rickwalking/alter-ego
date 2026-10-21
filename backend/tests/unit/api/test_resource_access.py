@@ -27,7 +27,6 @@ from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
     CONTENT_TYPE_CAROUSEL,
     ERR_REVIEWER_ASSIGNMENT_UNSUPPORTED,
-    ERR_SELF_REVIEW,
     ERR_WORKFLOW_FIELD_IMMUTABLE,
 )
 from rag_backend.domain.models.user import UserRole
@@ -267,20 +266,21 @@ class TestAssignContentReviewer:
 
         assert post.reviewer_id == "reviewer-1"
 
-    async def test_rejects_self_review(self) -> None:
+    # AE-0441: the blog author may assign themselves as the reviewer.
+    async def test_allows_the_author_as_reviewer(self) -> None:
         db = AsyncMock()
         post = MagicMock(author_id="author-1", reviewer_id=None)
         db.get = AsyncMock(return_value=post)
+        db.flush = AsyncMock()
 
-        with pytest.raises(HTTPException) as exc_info:
-            await assign_content_reviewer(
-                db,
-                ContentTarget(content_id="post-1", content_type=CONTENT_TYPE_BLOG_POST),
-                reviewer_id="author-1",
-            )
+        await assign_content_reviewer(
+            db,
+            ContentTarget(content_id="post-1", content_type=CONTENT_TYPE_BLOG_POST),
+            reviewer_id="author-1",
+        )
 
-        assert exc_info.value.status_code == 400
-        assert exc_info.value.detail == ERR_SELF_REVIEW
+        assert post.reviewer_id == "author-1"
+        db.flush.assert_awaited_once()
 
     async def test_rejects_unsupported_content_type(self) -> None:
         db = AsyncMock()

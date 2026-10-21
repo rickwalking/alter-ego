@@ -7,9 +7,6 @@ export const BLOG_BADGES = {
   OPEN_SOURCE: "Open Source",
 } as const;
 
-/** Theme key to design token mapping, populated from API. */
-export type BlogThemeKey = string;
-
 /** CSS custom property names for blog theming. */
 export const BLOG_CSS_VARS = {
   PRIMARY: "--blog-primary",

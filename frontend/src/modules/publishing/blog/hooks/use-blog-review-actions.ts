@@ -5,20 +5,18 @@
  *
  * They call the existing `blog_post_workflow` routes through the status
  * guards (a draft cannot jump to `published`: the 400 is shown, not
- * swallowed). With `BLOG_ALLOW_SELF_REVIEW` on, "Publish now" on a draft runs
- * submit-review (the author as reviewer) -> approve -> publish in one flow.
- * The editor settings come from `GET /api/blog-editor/settings`.
+ * swallowed). The author may review their own post (AE-0441), so "Publish
+ * now" on a draft runs submit-review (the author as reviewer) -> approve ->
+ * publish in one flow.
  */
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
 import {
   approvePost,
   BlogEditorRequestError,
   cancelSchedule,
-  fetchEditorSettings,
   publishPost,
   rejectPost,
   schedulePost,
@@ -30,8 +28,6 @@ import type { BlogEditorError } from "./types";
 import { locked } from "./use-blog-post-editor";
 import type { BlogReviewActions, UseBlogPostEditorResult } from "./types";
 
-export const blogEditorSettingsKey = ["blog-editor-settings"] as const;
-
 async function publishNowFlow(post: BlogPost): Promise<BlogPost> {
   const submitted = await submitForReview(post.id, null);
   const approved = await approvePost(submitted.id);
@@ -41,10 +37,6 @@ async function publishNowFlow(post: BlogPost): Promise<BlogPost> {
 export function useBlogReviewActions(
   editor: UseBlogPostEditorResult,
 ): BlogReviewActions {
-  const settings = useQuery({
-    queryKey: blogEditorSettingsKey,
-    queryFn: fetchEditorSettings,
-  });
   const [pending, setPending] = useState(false);
   // AE-0438 (F-11): the failed action's error is shown IN the review bar
   // (with its code-specific copy), next to the control that failed.
@@ -74,7 +66,6 @@ export function useBlogReviewActions(
   };
 
   return {
-    allowSelfReview: settings.data?.allow_self_review ?? false,
     pending,
     error,
     submitForReview: (reviewerId) =>

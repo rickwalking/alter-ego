@@ -235,5 +235,4 @@ export type CarouselPublicSlide = z.infer<typeof carouselPublicSlideSchema>;
 export type CarouselPublicResponse = z.infer<
   typeof carouselPublicResponseSchema
 >;
-export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;

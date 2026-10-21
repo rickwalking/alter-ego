@@ -36,7 +36,6 @@ export function BlogEditorSidebar({
       <ReviewBar
         status={post.status}
         scheduledPublishAt={post.scheduled_publish_at ?? null}
-        allowSelfReview={review.allowSelfReview}
         disabled={busy}
         error={review.error}
         onSubmitReview={(reviewerId) => void review.submitForReview(reviewerId)}

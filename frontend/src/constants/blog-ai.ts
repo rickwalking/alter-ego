@@ -6,9 +6,6 @@ export const BLOG_AI_ACTIONS = {
   ADD_OPINION: "add_opinion",
 } as const;
 
-export type BlogAiAction =
-  (typeof BLOG_AI_ACTIONS)[keyof typeof BLOG_AI_ACTIONS];
-
 /** Voice match threshold aligned with backend. */
 export const VOICE_MATCH_MIN_SCORE = 70;
 
@@ -28,6 +25,3 @@ export const CONTENT_SOURCE_TYPES = {
   INTERVIEW: "interview",
   DATA: "data",
 } as const;
-
-export type ContentSourceType =
-  (typeof CONTENT_SOURCE_TYPES)[keyof typeof CONTENT_SOURCE_TYPES];

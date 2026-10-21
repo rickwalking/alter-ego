@@ -65,9 +65,8 @@ Feature: Blog Post Creation with the section editor (reconciled)
     Then the post status should be "published"
     And the post should be visible at /blog/{id}
 
-  Scenario: Publish now on a draft when self-review is enabled
-    Given BLOG_ALLOW_SELF_REVIEW is true
-    And a draft with at least one non-empty section
+  Scenario: Publish now on a draft (the author self-approves, AE-0441)
+    Given a draft with at least one non-empty section
     When I click "Publish now"
     Then the post is submitted, self-approved and published
     And the post should be visible at /blog/{id}

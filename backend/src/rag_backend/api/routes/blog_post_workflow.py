@@ -30,7 +30,6 @@ from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
-from rag_backend.api.schemas.blog_post_editor import BlogEditorSettingsResponse
 from rag_backend.application.services.notification_service import (
     NotificationService,
     _WorkflowUpdateParams,
@@ -42,7 +41,6 @@ from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
-from rag_backend.domain.constants.blog_editor import ERR_BLOG_REVIEWER_REQUIRED
 from rag_backend.domain.constants.blog_post import (
     BlogPostStatus,
     EditorialCommentStatus,
@@ -60,7 +58,6 @@ from rag_backend.domain.constants.workflow_events import (
 )
 from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
-    ERR_SELF_REVIEW,
     ERR_VERSION_HEADER_REQUIRED,
     MAX_REJECT_REASON_LENGTH,
     NOTIFICATION_TITLE_CHANGES_REQUESTED,
@@ -136,23 +133,14 @@ async def _emit_status_change(
     )
 
 
-def _resolve_reviewer(
-    author_id: str, requested: str | None, *, allow_self: bool
+def resolve_blog_reviewer(
+    requested: str | None, author_id: str | None, current_user_id: str
 ) -> str:
-    """The reviewer to assign; 400 on self-review unless it is allowed."""
-    if requested is None and allow_self:
-        return author_id
-    if requested is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_BLOG_REVIEWER_REQUIRED,
-        )
-    if requested == author_id and not allow_self:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_SELF_REVIEW,
-        )
-    return requested
+    """The reviewer to assign: the requested one, else the post's author.
+
+    The author may review their own post (AE-0441, single-author deployment).
+    """
+    return requested or author_id or current_user_id
 
 
 @router.post(
@@ -170,9 +158,8 @@ async def submit_blog_post_for_review(
 ) -> BlogPostResponse:
     """Submit a blog post for review.
 
-    ``BLOG_ALLOW_SELF_REVIEW`` (default false, AE-0424) lets the author be the
-    reviewer (and is the reviewer when none is given); otherwise a distinct
-    reviewer is required.
+    The author may review their own post (AE-0441, single-author deployment):
+    with no ``reviewer_id`` the author is the reviewer.
     """
     post = await get_blog_post_for_user(db, post_id, current_user)
     # Transition under the row lock: an overlapping slot write (review reset)
@@ -183,11 +170,7 @@ async def submit_blog_post_for_review(
     assert_ready_to_publish(post)
     old_status = post.status
 
-    reviewer_id = _resolve_reviewer(
-        post.author_id or current_user.id,
-        reviewer_id,
-        allow_self=get_settings().blog_allow_self_review,
-    )
+    reviewer_id = resolve_blog_reviewer(reviewer_id, post.author_id, current_user.id)
     await validate_reviewer_user(db, reviewer_id)
 
     post.status = BlogPostStatus.UNDER_REVIEW.value
@@ -400,18 +383,3 @@ async def unpublish_blog_post(
     await db.commit()
     await db.refresh(post)
     return post
-
-
-@router.get(
-    "/blog-editor/settings",
-    response_model=BlogEditorSettingsResponse,
-    summary="Blog editor deployment settings",
-)
-@limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
-async def get_blog_editor_settings(
-    request: Request, current_user: EditorUser
-) -> BlogEditorSettingsResponse:
-    """``allow_self_review`` mirrors ``BLOG_ALLOW_SELF_REVIEW`` (default false)."""
-    return BlogEditorSettingsResponse(
-        allow_self_review=get_settings().blog_allow_self_review
-    )

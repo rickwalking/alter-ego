@@ -26,9 +26,6 @@ export const CONVERSATION_METADATA_AGENT_ORIGIN = "agent_origin";
 /** Agent origin value for Alter-Ego personal chat. */
 export const AGENT_ORIGIN_ALTER_EGO = "alter_ego";
 
-/** Agent origin value for carousel workspace / publish chat. */
-export const AGENT_ORIGIN_CAROUSEL = "carousel";
-
 /** Query param for listing Alter-Ego-only conversations. */
 export const CONVERSATION_ORIGIN_FILTER_ALTER_EGO = "alter_ego";
 

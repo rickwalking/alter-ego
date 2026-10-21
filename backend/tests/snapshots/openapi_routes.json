@@ -15,7 +15,6 @@
   "GET /api/admin/users",
   "GET /api/auth/me",
   "GET /api/autopilot/signals",
-  "GET /api/blog-editor/settings",
   "GET /api/blog-images/{post_id}/{filename}",
   "GET /api/blog-posts",
   "GET /api/blog-posts/{post_id}",

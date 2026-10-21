@@ -95,8 +95,6 @@ export interface BlogEditorSlotActions {
 }
 
 export interface BlogReviewActions {
-  /** `BLOG_ALLOW_SELF_REVIEW`: "Publish now" instead of explicit steps. */
-  allowSelfReview: boolean;
   pending: boolean;
   /** The last failed review/publish/schedule action (shown in the review bar). */
   error: BlogEditorError | null;

@@ -9,8 +9,4 @@ export {
 export { NeonPagination, type NeonPaginationProps } from "./neon-pagination";
 export { NeonGridBackground } from "./neon-grid-background";
 export { NeonScanlineOverlay } from "./neon-scanline-overlay";
-export {
-  DASHBOARD_SIDEBAR_SECTIONS,
-  LOGOUT_PATH,
-  SIDEBAR_WIDTH_PX,
-} from "./constants";
+export { DASHBOARD_SIDEBAR_SECTIONS, SIDEBAR_WIDTH_PX } from "./constants";

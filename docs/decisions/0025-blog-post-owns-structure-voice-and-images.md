@@ -408,16 +408,17 @@ sequenceDiagram
   publishes rows still `approved`, so an edit automatically removes a post from the schedule.
 - **Review and scheduled publish** (owner revision) replace the earlier plain-Publish-only decision:
   keep the existing `submit-review` → `approve`/`reject` and `schedule` routes and give them editor
-  controls. Draft → under review (reviewer required) → approved → publish now, or schedule a future
+  controls. Draft → under review → approved → publish now, or schedule a future
   `scheduled_publish_at` (lead time validated); `unpublish` still returns the row to `draft`
-  (ADR-0013 invariant: non-published ⇒ uniform public 404). The single-author deployment may
-  self-approve behind `BLOG_ALLOW_SELF_REVIEW` (default **false**; enable it explicitly in the
-  single-author deployment): the setting bypasses only the
-  submit-time `ERR_SELF_REVIEW` guard, and the author is stored as the assigned reviewer so
-  `assert_blog_post_reviewer_or_admin` already passes for approve/reject. When false, a distinct
-  reviewer is required. With self-review enabled, a **"Publish now"** action on a draft auto-submits
-  and self-approves before publishing (one click, same states underneath); with it disabled, the UI
-  requires the explicit review steps.
+  (ADR-0013 invariant: non-published ⇒ uniform public 404). **The author may review their own
+  post** (AE-0441, owner decision 2026-10-20: the deployment has one user): `submit-review` with no
+  reviewer stores the author as the assigned reviewer, and an explicit reviewer may be the author
+  or a distinct valid editor, so `assert_blog_post_reviewer_or_admin` already passes for
+  approve/reject. The earlier `BLOG_ALLOW_SELF_REVIEW` switch (default false, never written by the
+  deploy, so no post could be published on prod) and its `GET /blog-editor/settings` route are
+  removed. A **"Publish now"** action on a draft auto-submits and self-approves before publishing
+  (one click, same states underneath). The carousel editorial workflow keeps its own
+  distinct-reviewer rule.
 - **Optimistic locking stays** (AE-0296) and widens: **every route that mutates `content`**
   (PUT, image generate/regenerate/patch/delete, rewrite, restore-version) requires `If-Match`;
   review/schedule/publish/unpublish keep it. Background generation writes through the same
@@ -444,7 +445,7 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 | `PATCH /blog-posts/{id}/sections/{section_id}/image` | `{alt?, caption?}` + `If-Match` | `200` | alt must be non-empty |
 | `DELETE /blog-posts/{id}/sections/{section_id}/image` | — + `If-Match` | `200` | |
 | `POST /blog-posts/{id}/sections/{section_id}/rewrite` | `{persona_id?}` + `If-Match` | `200` `{section}` | `PersonaAgent.enforce` on one section |
-| `POST /blog-posts/{id}/submit-review` | `?reviewer_id=` | `200` | draft → `under_review`; existing; reviewer must differ unless `BLOG_ALLOW_SELF_REVIEW` |
+| `POST /blog-posts/{id}/submit-review` | `?reviewer_id=` | `200` | draft → `under_review`; existing; no reviewer ⇒ the author; the author may review their own post (AE-0441) |
 | `POST /blog-posts/{id}/approve` / `/reject` | `/reject?reason=` | `200` | reviewed → `approved` / back to `draft`; existing |
 | `POST /blog-posts/{id}/publish` / `/unpublish` | — (+`If-Match`) | `200` | approved → `published` / published → `draft`; editor buttons |
 | `POST /blog-posts/{id}/schedule` | `{scheduled_publish_at}` + `If-Match` | `200` | approved + future timestamp → scheduled publish; existing sweep |
@@ -454,7 +455,6 @@ noted. Shapes below are additive to `BlogPostResponse` / `BlogPostUpdate`.
 | `PATCH /blog-posts/{id}/cover/image` | `{alt?, caption?}` + `If-Match` | `200` | added by AE-0424 (cover alt/caption, same rules as the section PATCH) |
 | `POST /blog-posts/{id}/translations/en` | — + `If-Match` | `200` | added by AE-0424: "Generate EN translation" (PT → EN per section, images kept); 409 if EN exists, 502 on failure |
 | `GET /blog-images/{post_id}/{uuid}.jpg` | — (public) | `200` image | added by AE-0424: serves the blog-images store; the canonical same-origin URL when the CDN is off |
-| `GET /blog-editor/settings` | — | `200` `{allow_self_review}` | added by AE-0424: lets the editor pick "Publish now" vs the explicit review steps |
 
 **AE-0424 implementation notes.** Every content-mutating route above answers with the full
 `BlogPostResponse` (not just `{image}`/`{section}`), so the editor gets the new `lock_version`

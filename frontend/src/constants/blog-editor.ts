@@ -39,8 +39,6 @@ export const BLOG_MIGRATION_PENDING_CODES = [
  * listed here fall back to the kind-level message (`errors.<kind>`).
  */
 export const BLOG_EDITOR_ERROR_CODE_KEYS = {
-  self_review_not_allowed: "self_review",
-  blog_reviewer_required: "reviewer_required",
   blog_version_empty: "version_empty",
   blog_document_has_no_sections: "empty_document",
   blog_document_not_publishable: "not_publishable",
