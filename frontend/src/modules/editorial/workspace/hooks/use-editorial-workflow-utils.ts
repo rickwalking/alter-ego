@@ -197,6 +197,8 @@ export function mergeWorkflowState(
         payload.presentation_policy_version ??
         prev?.presentation_policy_version,
       localized_slides: payload.localized_slides ?? prev?.localized_slides,
+      // AE-0447: an SSE event must never drop the CAS version the actions send.
+      lock_version: payload.lock_version ?? prev?.lock_version,
       presentation_validation:
         payload.presentation_validation ?? prev?.presentation_validation,
     };
@@ -234,6 +236,7 @@ export function mergeWorkflowState(
     presentation_policy_version:
       payload.presentation_policy_version ?? prev?.presentation_policy_version,
     localized_slides: payload.localized_slides ?? prev?.localized_slides,
+    lock_version: payload.lock_version ?? prev?.lock_version,
     presentation_validation:
       payload.presentation_validation ?? prev?.presentation_validation,
   };

@@ -367,6 +367,49 @@ describe("useEditorialWorkflow utils", () => {
     expect(merged.caption).toBe("Draft caption");
   });
 
+  // AE-0447 Scenario: A live-stream update never drops the CAS lock version
+  it("keeps lock_version across partial events and full snapshots", () => {
+    const previous: EditorialWorkflowState = {
+      project_id: "project-1",
+      current_phase: "final_review",
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+      image_assets: [],
+      design_applied: true,
+      status: "draft",
+      lock_version: 10,
+    };
+
+    const partial = mergeWorkflowState("project-1", previous, {
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+      phase: "final_review",
+    });
+    expect(partial.lock_version).toBe(10);
+
+    const snapshot = mergeWorkflowState("project-1", previous, {
+      project_id: "project-1",
+      current_phase: "final_review",
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+    });
+    expect(snapshot.lock_version).toBe(10);
+
+    const bumped = mergeWorkflowState("project-1", previous, {
+      project_id: "project-1",
+      current_phase: "final_review",
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+      lock_version: 11,
+    });
+    expect(bumped.lock_version).toBe(11);
+  });
+
   it("normalizes flat progress fields without nested phase_progress", () => {
     expect(
       normalizeProgressPayload({

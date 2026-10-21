@@ -50,8 +50,11 @@ const OPTIONS = {
 
 type Answer = unknown | Error | Promise<unknown>;
 
-function routeApi(options: Answer, pick?: Answer): void {
+function routeApi(options: Answer, pick?: Answer, lockVersion = 7): void {
   mockApiCall.mockImplementation((url: string) => {
+    if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT)) {
+      return Promise.resolve({ lock_version: lockVersion });
+    }
     const answer =
       url === API_ENDPOINTS.CAROUSEL_COVER_OPTIONS(PROJECT) ? options : pick;
     if (answer instanceof Error) {
@@ -70,14 +73,9 @@ function renderSection(onSwitched = vi.fn()): {
   function Wrapper({ children }: { children: ReactNode }): React.ReactElement {
     return createElement(QueryClientProvider, { client }, children);
   }
-  render(
-    <CoverPickerSection
-      projectId={PROJECT}
-      lockVersion={7}
-      onSwitched={onSwitched}
-    />,
-    { wrapper: Wrapper },
-  );
+  render(<CoverPickerSection projectId={PROJECT} onSwitched={onSwitched} />, {
+    wrapper: Wrapper,
+  });
   return { onSwitched };
 }
 
@@ -167,6 +165,36 @@ describe("CoverPickerSection", () => {
   });
 
   // Scenario: A version conflict shows a reload hint
+  // AE-0447 Scenario: The pick sends the server's current version, not page state
+  it("reads the current lock version right before the switch", async () => {
+    routeApi(
+      OPTIONS,
+      {
+        project_id: PROJECT,
+        status: "switched",
+        current_asset_id: "b",
+        artifact_version: "sha256-new",
+      },
+      11,
+    );
+    renderSection();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: "Foto 2" }));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT),
+      expect.anything(),
+    );
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_COVER(PROJECT),
+      expect.anything(),
+      {
+        method: HTTP_METHODS.PUT,
+        body: JSON.stringify({ asset_id: "b", expected_version: 11 }),
+      },
+    );
+  });
+
   it("shows the reload hint on a 409", async () => {
     routeApi(OPTIONS, new ApiError(409, "version_conflict"));
     renderSection();

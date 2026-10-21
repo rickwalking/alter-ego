@@ -24,5 +24,4 @@ export interface InstagramPublishPayload {
 export interface CoverPickInput {
   projectId: string;
   assetId: string;
-  expectedVersion: number;
 }

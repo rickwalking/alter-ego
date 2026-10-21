@@ -91,6 +91,8 @@ export interface EditorialWorkflowResumeAcceptedResponse {
 
 export interface WorkflowEventPayload {
   event?: string;
+  /** AE-0447: the CAS version a full-state snapshot carries. */
+  lock_version?: number;
   phase?: string;
   phase_status?: string;
   project_id?: string;
