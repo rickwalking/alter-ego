@@ -1,14 +1,18 @@
-"""A fake Langfuse client that records phase traces (AE-0390).
+"""A fake Langfuse client that records phase traces (AE-0390, AE-0442).
 
 ``install_trace_collector`` swaps the client ``phase_trace`` uses and the SDK's
 ``propagate_attributes`` for recorders. A fake LLM call reads
 ``collector.current()`` to learn which trace it ran in, the way a real
 LangChain callback generation attaches to the active OTel span.
+
+AE-0442: the fake also captures the trace/span input and output, the session id,
+span updates and events, so tests can prove the Langfuse list is not empty.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -19,34 +23,109 @@ from rag_backend.infrastructure import langfuse_phase_trace
 
 
 @dataclass
+class RecordedEvent:
+    """One event created inside a trace."""
+
+    name: str
+    input: object | None = None
+    output: object | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
 class RecordedTrace:
     """One opened phase trace: span + trace-level attributes."""
 
     name: str
-    span_metadata: dict[str, str]
+    span_metadata: dict[str, object]
+    span_input: object | None = None
+    span_output: object | None = None
     trace_name: str = ""
     user_id: str | None = None
-    metadata: dict[str, str] = field(default_factory=dict)
+    session_id: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
+    input: object | None = None
+    output: object | None = None
+    level: str | None = None
+    status_message: str | None = None
     propagated: dict[str, object] = field(default_factory=dict)
+    events: list[RecordedEvent] = field(default_factory=list)
 
 
 @dataclass
 class _FakeSpan:
     trace: RecordedTrace
 
+    @property
+    def name(self) -> str:
+        return self.trace.name
+
     def update_trace(
         self,
         *,
-        name: str,
-        user_id: str | None,
-        metadata: dict[str, str],
-        tags: list[str],
+        name: str | None = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        metadata: dict[str, object] | None = None,
+        tags: list[str] | None = None,
+        input: object | None = None,
+        output: object | None = None,
     ) -> None:
-        self.trace.trace_name = name
-        self.trace.user_id = user_id
-        self.trace.metadata = dict(metadata)
-        self.trace.tags = list(tags)
+        if name is not None:
+            self.trace.trace_name = name
+        if user_id is not None:
+            self.trace.user_id = user_id
+        if session_id is not None:
+            self.trace.session_id = session_id
+        if metadata is not None:
+            self.trace.metadata = dict(metadata)
+        if tags is not None:
+            self.trace.tags = list(tags)
+        if input is not None:
+            self.trace.input = input
+        if output is not None:
+            self.trace.output = output
+
+    def update(
+        self,
+        *,
+        name: str | None = None,
+        input: object | None = None,
+        output: object | None = None,
+        metadata: dict[str, object] | None = None,
+        level: str | None = None,
+        status_message: str | None = None,
+    ) -> None:
+        if name is not None:
+            self.trace.name = name
+        if input is not None:
+            self.trace.span_input = input
+        if output is not None:
+            self.trace.span_output = output
+        if metadata is not None:
+            self.trace.span_metadata = dict(metadata)
+        if level is not None:
+            self.trace.level = level
+        if status_message is not None:
+            self.trace.status_message = status_message
+
+    def create_event(
+        self,
+        *,
+        name: str,
+        input: object | None = None,
+        output: object | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> RecordedEvent:
+        event = RecordedEvent(
+            name=name,
+            input=input,
+            output=output,
+            metadata=dict(metadata or {}),
+        )
+        self.trace.events.append(event)
+        return event
 
 
 class TraceCollector:
@@ -65,9 +144,17 @@ class TraceCollector:
 
     @contextmanager
     def start_as_current_span(
-        self, *, name: str, metadata: dict[str, str]
+        self,
+        *,
+        name: str,
+        input: object | None = None,
+        metadata: dict[str, object] | None = None,
     ) -> Iterator[_FakeSpan]:
-        trace = RecordedTrace(name=name, span_metadata=dict(metadata))
+        trace = RecordedTrace(
+            name=name,
+            span_metadata=dict(metadata or {}),
+            span_input=input,
+        )
         self.traces.append(trace)
         token = self._active.set(trace)
         try:
@@ -86,6 +173,21 @@ class TraceCollector:
         yield None
 
 
+def wait_until(predicate: Callable[[], bool], timeout: float = 2.0) -> bool:
+    """Poll a background result (the flush worker) without sleeping forever."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.005)
+    return predicate()
+
+
+def wait_for_flushes(collector: TraceCollector, expected: int = 1) -> bool:
+    """Wait for the non-blocking flush worker to observe ``expected`` flushes."""
+    return wait_until(lambda: collector.flushes >= expected)
+
+
 def install_trace_collector(monkeypatch: pytest.MonkeyPatch) -> TraceCollector:
     """Route ``phase_trace`` to a fresh collector for this test."""
     collector = TraceCollector()
@@ -96,4 +198,11 @@ def install_trace_collector(monkeypatch: pytest.MonkeyPatch) -> TraceCollector:
     return collector
 
 
-__all__ = ["RecordedTrace", "TraceCollector", "install_trace_collector"]
+__all__ = [
+    "RecordedEvent",
+    "RecordedTrace",
+    "TraceCollector",
+    "install_trace_collector",
+    "wait_for_flushes",
+    "wait_until",
+]

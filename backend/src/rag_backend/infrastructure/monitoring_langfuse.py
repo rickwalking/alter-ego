@@ -5,18 +5,37 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, TypedDict, cast
 from uuid import UUID
 
+import structlog
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse import Langfuse
 
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_AGENT_EDITORIAL_WORKFLOW,
+    TRACE_CONTENT_TYPE_CAROUSEL,
+    TRACE_EVENT_HUMAN_REVIEW_TEMPLATE,
+    TRACE_FIELD_PHASE,
+    TRACE_FIELD_PROJECT_ID,
+    TRACE_FIELD_USER_ID,
+    TRACE_OUTPUT_STATUS_COMPLETED,
+    TRACE_PHASE_REVIEW,
+    TRACE_STATUS_FIELD,
+)
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import (
+    flush_langfuse,
     get_langfuse_client,
+    schedule_flush,
 )
 from rag_backend.infrastructure.langfuse_phase_trace import (
+    PhaseTrace,
     WorkflowTraceScope,
+    current_generation_run_name,
+    current_phase_trace,
     phase_trace,
     workflow_trace_scope,
 )
+
+logger = structlog.get_logger(__name__)
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
@@ -234,54 +253,103 @@ def get_langfuse_handler() -> list[BaseCallbackHandler]:
     return [cast(BaseCallbackHandler, handler)]
 
 
-def get_langfuse_runnable_config() -> "RunnableConfig":
-    """Return LangChain RunnableConfig with Langfuse callbacks when available."""
+def get_langfuse_runnable_config(
+    detail: str | None = None,
+) -> "RunnableConfig":
+    """Return LangChain RunnableConfig with Langfuse callbacks when available.
+
+    ``detail`` names the unit of work (``slide 3``, ``draft``, ``judge``) so
+    Langfuse shows ``carousel.content slide 3`` instead of ``ChatOpenAI``.
+    """
     handlers = get_langfuse_handler()
     if not handlers:
         return {}
-    return {"callbacks": handlers}
+    return {
+        "callbacks": handlers,
+        "run_name": current_generation_run_name(detail),
+    }
 
 
 @contextmanager
 def propagate_attributes(
     metadata: dict[str, str],
     callbacks: list[object] | None = None,
-) -> Generator[None, None, None]:
+    *,
+    trace_input: object | None = None,
+) -> Generator[PhaseTrace, None, None]:
     """Run the enclosed LLM calls in the named, tagged phase trace (AE-0390).
 
     Missing ``project_id``/``user_id``/``agent_name``/``content_type`` come
-    from the enclosing :func:`workflow_trace_scope`.
+    from the enclosing :func:`workflow_trace_scope`. A nested call reuses the
+    outer phase span (AE-0442) instead of clobbering its trace metadata.
     """
     _ = callbacks
-    with phase_trace(metadata):
-        yield
+    with phase_trace(metadata, trace_input=trace_input) as trace:
+        yield trace
 
 
 def create_workflow_trace(
     *,
     config: _TraceConfig,
 ) -> object:
-    """Create a trace span for a workflow using Langfuse v3 SDK."""
-    client = get_langfuse_client()
+    """Open, record and close a workflow span using the Langfuse v3 SDK.
 
+    When a phase trace is already active the caller is inside it; return that
+    span so events/scores join the existing trace instead of creating an
+    orphan. Otherwise a standalone span is written and flushed immediately.
+    """
+    active = current_phase_trace()
+    if active is not None:
+        return active.span
+
+    client = get_langfuse_client()
     if client is None:
         return None
 
-    project_id = config["project_id"]
+    project_id = str(config["project_id"])
     user_id = config["user_id"]
     content_type = config["content_type"]
     metadata = config.get("metadata")
+    name = config.get("name") or f"{content_type}_workflow"
+    trace_metadata = {
+        "project_id": project_id,
+        "user_id": user_id,
+        "content_type": content_type,
+        **(metadata or {}),
+    }
+    trace_input = {
+        TRACE_FIELD_PROJECT_ID: project_id,
+        "content_type": content_type,
+        TRACE_FIELD_USER_ID: user_id,
+    }
+    output = {TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED}
+    tags = [content_type, "workflow"]
 
-    return client.start_span(
-        name=f"{content_type}_workflow_{project_id}",
-        metadata={
-            "project_id": str(project_id),
-            "user_id": user_id,
-            "content_type": content_type,
-            "tags": [content_type, "workflow"],
-            **(metadata or {}),
-        },
-    )
+    try:
+        span = client.start_span(
+            name=name,
+            input=trace_input,
+            metadata=trace_metadata,
+        )
+        span.update_trace(
+            name=name,
+            user_id=user_id,
+            session_id=project_id,
+            input=trace_input,
+            output=output,
+            metadata=trace_metadata,
+            tags=tags,
+        )
+        span.update(output=output)
+        span.end()
+    except Exception:
+        logger.warning("langfuse_workflow_trace_failed", trace_name=name)
+        return None
+    try:
+        schedule_flush(client.flush)
+    except Exception:
+        logger.warning("langfuse_workflow_flush_failed", trace_name=name)
+    return span
 
 
 def add_quality_score(
@@ -341,27 +409,55 @@ def add_voice_match_score(
     )
 
 
-def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
-    """Record a human review event.
+def record_human_review(
+    *,
+    params: ReviewEventParams,
+    project_id: str,
+    user_id: str,
+) -> None:
+    """Record a human review event inside its own named, tagged trace.
 
-    Args:
-        trace: LangFuse trace object
-        params: Review event metadata
+    AE-0442: the old version created an event on a span that was never ended,
+    so the parent never reached Langfuse and every review became an orphan,
+    unnamed trace with no I/O.
     """
-    if trace is None:
-        return
-
-    if hasattr(trace, "create_event"):
-        trace.create_event(
-            name=f"human_review_{params['phase']}_completed",
-            metadata=params,
-        )
-        return
-
-    trace.event(  # type: ignore[attr-defined]
-        name=f"human_review_{params['phase']}_completed",
-        metadata=params,
+    review_input = {
+        TRACE_FIELD_PROJECT_ID: project_id,
+        TRACE_FIELD_PHASE: params["phase"],
+        "action": params["action"],
+        "reviewer_id": params["reviewer_id"],
+    }
+    scope = WorkflowTraceScope(
+        project_id=project_id,
+        user_id=user_id,
+        agent_name=TRACE_AGENT_EDITORIAL_WORKFLOW,
+        content_type=TRACE_CONTENT_TYPE_CAROUSEL,
     )
+    with (
+        workflow_trace_scope(scope),
+        phase_trace(
+            {TRACE_FIELD_PHASE: TRACE_PHASE_REVIEW},
+            trace_input=review_input,
+        ) as trace,
+    ):
+        if trace.span is not None:
+            try:
+                trace.span.create_event(
+                    name=TRACE_EVENT_HUMAN_REVIEW_TEMPLATE.format(
+                        phase=params["phase"]
+                    ),
+                    input=review_input,
+                    metadata=dict(params),
+                )
+            except Exception:
+                logger.warning(
+                    "langfuse_human_review_event_failed",
+                    phase=params["phase"],
+                )
+        trace.set_output({
+            TRACE_STATUS_FIELD: "recorded",
+            "action": params["action"],
+        })
 
 
 def add_error_span(
@@ -398,11 +494,13 @@ def add_error_span(
 
 __all__ = [
     "LangfuseCallbackHandler",
+    "PhaseTrace",
     "WorkflowTraceScope",
     "add_error_span",
     "add_quality_score",
     "add_voice_match_score",
     "create_workflow_trace",
+    "flush_langfuse",
     "get_langfuse_handler",
     "get_langfuse_runnable_config",
     "phase_trace",

@@ -212,6 +212,7 @@ class ContentDraftAgent:
                     parse=self._parse_draft,
                     agent="content_draft",
                     model_id=self.model_id,
+                    run_detail=f"slide {slide_index}",
                 ),
             )
             self._cache.set(full_prompt, self.model_id, raw)

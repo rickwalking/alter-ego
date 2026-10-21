@@ -84,6 +84,15 @@ from rag_backend.domain.constants.blog_generation import (
     LOG_GENERATION_LEASE_LOST,
     LOG_HEARTBEAT_FAILED,
     PHASE_BLOG_GENERATION,
+    TRACE_INPUT_POST_ID,
+    TRACE_INPUT_SECTION_COUNT,
+    TRACE_INPUT_TITLE,
+    TRACE_OUTPUT_SECTION_COUNT,
+    TRACE_OUTPUT_VOICE_SCORE,
+)
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_OUTPUT_STATUS_COMPLETED,
+    TRACE_STATUS_FIELD,
 )
 from rag_backend.domain.models.blog_document import (
     BlogDocument,
@@ -260,13 +269,23 @@ class BlogGenerationService:
             phase=PHASE_BLOG_GENERATION,
             agent_name=AGENT_BLOG_WRITER,
         )
-        with blog_phase_trace(scope):
+        brief_input = {
+            TRACE_INPUT_POST_ID: job.lease.post_id,
+            TRACE_INPUT_TITLE: brief.title,
+            TRACE_INPUT_SECTION_COUNT: brief.section_count,
+        }
+        with blog_phase_trace(scope, trace_input=brief_input) as trace:
             async with asyncio.timeout(self._deps.timings.text_timeout_seconds):
                 article = await self._deps.writer.draft(brief)
                 pt, en = await self._gate(brief, article)
                 english = await self._deps.english.ensure(
                     EnglishCheck(job.lease.post_id, pt, en, brief)
                 )
+            trace.set_output({
+                TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED,
+                TRACE_OUTPUT_SECTION_COUNT: brief.section_count,
+                TRACE_OUTPUT_VOICE_SCORE: pt.voice.overall,
+            })
         return GeneratedLanguages(
             pt=pt,
             en=english,

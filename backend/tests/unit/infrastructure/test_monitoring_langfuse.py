@@ -20,6 +20,7 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     create_workflow_trace,
     record_human_review,
 )
+from tests.langfuse_trace_fakes import wait_until
 
 
 class TestLangfuseInit:
@@ -191,7 +192,7 @@ class TestTraceFunctions:
 
         result = create_workflow_trace(
             config=_TraceConfig(
-                project_id=MagicMock(),
+                project_id="p-1",
                 user_id="user123",
                 content_type="carousel",
             ),
@@ -199,6 +200,15 @@ class TestTraceFunctions:
 
         assert result is mock_span
         mock_client.start_span.assert_called_once()
+        trace_call = mock_span.update_trace.call_args.kwargs
+        assert trace_call["name"] == "carousel_workflow"
+        assert trace_call["user_id"] == "user123"
+        assert trace_call["session_id"] == "p-1"
+        assert trace_call["input"]["project_id"] == "p-1"
+        assert trace_call["output"] == {"status": "completed"}
+        mock_span.update.assert_called_once_with(output={"status": "completed"})
+        mock_span.end.assert_called_once()
+        assert wait_until(lambda: mock_client.flush.call_count == 1)
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
     def test_add_quality_score_with_none_trace(
@@ -226,13 +236,13 @@ class TestTraceFunctions:
             suggestions=["improve"],
         )
 
-    @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
-    def test_record_human_review_with_none_trace(
+    @patch("rag_backend.infrastructure.langfuse_phase_trace.get_langfuse_client")
+    def test_record_human_review_without_a_client(
         self, mock_get_client: MagicMock
     ) -> None:
-        """Given None trace, when recording review, then no exception is raised."""
+        """Given no Langfuse client, recording a review is a no-op."""
+        mock_get_client.return_value = None
         record_human_review(
-            trace=None,
             params=ReviewEventParams(
                 phase="content",
                 action="approve",
@@ -240,6 +250,8 @@ class TestTraceFunctions:
                 time_to_respond=None,
                 feedback=None,
             ),
+            project_id="p-1",
+            user_id="user123",
         )
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")

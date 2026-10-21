@@ -1,4 +1,4 @@
-"""Named Langfuse traces for workflow phases (AE-0390).
+"""Named Langfuse traces for workflow phases (AE-0390, AE-0442).
 
 Prod 2026-10-15: an autopilot carousel had 10 GLM generations in 3 traces.
 Only ``workflow_research`` carried metadata, outline and content generations
@@ -11,6 +11,13 @@ trace attributes (name, user, metadata, tags) to every observation created
 inside it, including the LangChain callback generations. Callers that know
 the actor but not the phase (the HTTP resume runner, the autopilot driver)
 set a ``workflow_trace_scope``; the phase seams read it.
+
+AE-0442: Langfuse v3 derives trace I/O from the root observation. The phase
+must therefore put the brief and the result on the span/trace itself, and a
+nested phase must reuse the outer span instead of opening a second one whose
+``unknown`` metadata overwrites the actor. ``generation_run_name`` lets call
+sites name generations after the phase and the unit of work (``slide 3``)
+instead of the model class (``ChatOpenAI``).
 """
 
 from __future__ import annotations
@@ -19,25 +26,61 @@ from collections.abc import Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, fields, replace
+from typing import Protocol, cast
 
+import structlog
 from langfuse import propagate_attributes as _langfuse_propagate
 
 from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_AGENT_EDITORIAL_WORKFLOW,
     TRACE_CONTENT_TYPE_CAROUSEL,
+    TRACE_DEFAULT_RUN_NAME,
+    TRACE_ERROR_FIELD_MESSAGE,
+    TRACE_ERROR_FIELD_TYPE,
     TRACE_FIELD_AGENT_NAME,
     TRACE_FIELD_CONTENT_TYPE,
     TRACE_FIELD_PHASE,
     TRACE_FIELD_PROJECT_ID,
     TRACE_FIELD_USER_ID,
+    TRACE_IO_VALUE_MAX_CHARS,
     TRACE_METADATA_VALUE_MAX_CHARS,
     TRACE_NAME_TEMPLATE,
+    TRACE_OUTPUT_STATUS_COMPLETED,
+    TRACE_OUTPUT_STATUS_ERROR,
+    TRACE_RUN_NAME_SEPARATOR,
+    TRACE_STATUS_FIELD,
     TRACE_TAG_AGENT_TEMPLATE,
     TRACE_TAG_CONTENT_TEMPLATE,
     TRACE_TAG_PHASE_TEMPLATE,
     TRACE_VALUE_UNKNOWN,
 )
-from rag_backend.infrastructure.langfuse_client import get_langfuse_client
+from rag_backend.infrastructure.langfuse_client import (
+    get_langfuse_client,
+    schedule_flush,
+)
+from rag_backend.infrastructure.logging import redact_secrets
+
+logger = structlog.get_logger(__name__)
+
+
+class TraceSpan(Protocol):
+    """The subset of a Langfuse span the phase trace uses."""
+
+    def update_trace(self, **kwargs: object) -> object: ...
+
+    def update(self, **kwargs: object) -> object: ...
+
+    def create_event(self, *, name: str, **kwargs: object) -> object: ...
+
+
+class TraceClient(Protocol):
+    """The subset of the Langfuse client the phase trace uses."""
+
+    def start_as_current_span(
+        self, **kwargs: object
+    ) -> AbstractContextManager[object]: ...
+
+    def flush(self) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -56,10 +99,38 @@ class PhaseTraceAttributes:
 
     name: str
     user_id: str | None
+    session_id: str | None
     metadata: dict[str, str]
     tags: tuple[str, ...]
 
 
+@dataclass
+class PhaseTrace:
+    """Handle for a phase: set the result before the phase exits."""
+
+    name: str
+    span: TraceSpan | None
+    trace_input: object | None
+    metadata: dict[str, str]
+    tags: tuple[str, ...]
+    user_id: str | None
+    session_id: str | None
+    output: object | None = None
+
+    def set_output(self, output: object) -> None:
+        """Record the phase result; Langfuse shows it as the trace output."""
+        self.output = sanitize_trace_value(output)
+
+
+_RUN_BASE: ContextVar[str | None] = ContextVar(
+    "langfuse_generation_run_base", default=None
+)
+_RUN_DETAIL: ContextVar[str | None] = ContextVar(
+    "langfuse_generation_run_detail", default=None
+)
+_ACTIVE: ContextVar[PhaseTrace | None] = ContextVar(
+    "langfuse_active_phase_trace", default=None
+)
 _SCOPE: ContextVar[WorkflowTraceScope | None] = ContextVar(
     "langfuse_workflow_trace_scope",
     default=None,
@@ -71,6 +142,20 @@ def current_trace_scope() -> WorkflowTraceScope:
     return _SCOPE.get() or WorkflowTraceScope()
 
 
+def current_phase_trace() -> PhaseTrace | None:
+    """The phase trace an observation created now would attach to."""
+    return _ACTIVE.get()
+
+
+def current_generation_run_name(detail: str | None = None) -> str:
+    """The generation name: phase base plus an optional unit-of-work detail."""
+    base = _RUN_BASE.get() or TRACE_DEFAULT_RUN_NAME
+    chosen = detail or _RUN_DETAIL.get()
+    if not chosen:
+        return base
+    return f"{base}{TRACE_RUN_NAME_SEPARATOR}{chosen}"
+
+
 @contextmanager
 def workflow_trace_scope(scope: WorkflowTraceScope) -> Iterator[None]:
     """Overlay the non-empty fields of ``scope`` for the enclosed calls."""
@@ -79,6 +164,16 @@ def workflow_trace_scope(scope: WorkflowTraceScope) -> Iterator[None]:
         yield
     finally:
         _SCOPE.reset(token)
+
+
+@contextmanager
+def generation_run_name(detail: str) -> Iterator[None]:
+    """Name enclosed generations after the phase plus ``detail``."""
+    token = _RUN_DETAIL.set(detail)
+    try:
+        yield
+    finally:
+        _RUN_DETAIL.reset(token)
 
 
 def build_phase_trace(metadata: Mapping[str, str]) -> PhaseTraceAttributes:
@@ -95,9 +190,11 @@ def build_phase_trace(metadata: Mapping[str, str]) -> PhaseTraceAttributes:
         TRACE_FIELD_USER_ID: scope.user_id or TRACE_VALUE_UNKNOWN,
         TRACE_FIELD_CONTENT_TYPE: content,
     }
+    project_id = resolved[TRACE_FIELD_PROJECT_ID]
     return PhaseTraceAttributes(
         name=TRACE_NAME_TEMPLATE.format(phase=phase),
         user_id=scope.user_id or None,
+        session_id=project_id if project_id != TRACE_VALUE_UNKNOWN else None,
         metadata={
             key: value[:TRACE_METADATA_VALUE_MAX_CHARS]
             for key, value in resolved.items()
@@ -111,36 +208,261 @@ def build_phase_trace(metadata: Mapping[str, str]) -> PhaseTraceAttributes:
 
 
 @contextmanager
-def phase_trace(metadata: Mapping[str, str]) -> Iterator[None]:
-    """Run the enclosed LLM calls inside the named, tagged phase trace."""
-    client = get_langfuse_client()
-    if client is None:
-        yield
-        return
+def phase_trace(
+    metadata: Mapping[str, str],
+    *,
+    trace_input: object | None = None,
+) -> Iterator[PhaseTrace]:
+    """Run the enclosed LLM calls inside the named, tagged phase trace.
+
+    ``trace_input`` is the phase brief (topic, attempt, model queue, ...). The
+    result defaults to ``{"status": "completed"}'``; call
+    ``trace.set_output(...)`` before exiting to record a richer summary. An
+    exception records a redacted error output and is re-raised.
+    """
     attributes = build_phase_trace(metadata)
-    try:
-        with client.start_as_current_span(
-            name=attributes.name, metadata=attributes.metadata
-        ) as span:
-            span.update_trace(
-                name=attributes.name,
-                user_id=attributes.user_id,
-                metadata=attributes.metadata,
-                tags=list(attributes.tags),
-            )
-            with _propagate(attributes):
-                yield
-    finally:
-        client.flush()
+    payload = build_trace_input(attributes, trace_input)
+    active = _ACTIVE.get()
+    if active is not None:
+        _merge_active(active, attributes)
+        yield active
+        return
 
-
-def _propagate(attributes: PhaseTraceAttributes) -> AbstractContextManager[object]:
-    return _langfuse_propagate(
-        trace_name=attributes.name,
-        user_id=attributes.user_id,
-        metadata=attributes.metadata,
-        tags=list(attributes.tags),
+    run_base = (
+        f"{attributes.metadata[TRACE_FIELD_CONTENT_TYPE]}"
+        f".{attributes.metadata[TRACE_FIELD_PHASE]}"
     )
+    raw_client = get_langfuse_client()
+    if raw_client is None:
+        run_token = _RUN_BASE.set(run_base)
+        try:
+            yield PhaseTrace(
+                name=attributes.name,
+                span=None,
+                trace_input=payload,
+                metadata=attributes.metadata,
+                tags=attributes.tags,
+                user_id=attributes.user_id,
+                session_id=attributes.session_id,
+            )
+        finally:
+            _RUN_BASE.reset(run_token)
+        return
+
+    client = cast(TraceClient, raw_client)
+    with _run_with_span(client, attributes, payload) as handle:
+        yield handle
+
+
+def _open_span(
+    client: TraceClient,
+    attributes: PhaseTraceAttributes,
+    payload: Mapping[str, object],
+) -> tuple[AbstractContextManager[object] | None, TraceSpan | None]:
+    try:
+        manager = client.start_as_current_span(
+            name=attributes.name,
+            input=payload,
+            metadata=attributes.metadata,
+        )
+        return manager, cast(TraceSpan, manager.__enter__())
+    except Exception:
+        logger.warning(
+            "langfuse_phase_span_open_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+        return None, None
+
+
+def _close_span(
+    manager: AbstractContextManager[object] | None,
+    attributes: PhaseTraceAttributes,
+) -> None:
+    if manager is None:
+        return
+    try:
+        manager.__exit__(None, None, None)
+    except Exception:
+        logger.warning(
+            "langfuse_phase_span_close_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+
+
+@contextmanager
+def _run_with_span(
+    client: TraceClient,
+    attributes: PhaseTraceAttributes,
+    payload: Mapping[str, object],
+) -> Iterator[PhaseTrace]:
+    run_base = (
+        f"{attributes.metadata[TRACE_FIELD_CONTENT_TYPE]}"
+        f".{attributes.metadata[TRACE_FIELD_PHASE]}"
+    )
+    manager, span = _open_span(client, attributes, payload)
+    if span is not None:
+        _try_update_trace(
+            span,
+            name=attributes.name,
+            user_id=attributes.user_id,
+            session_id=attributes.session_id,
+            input=payload,
+            metadata=attributes.metadata,
+            tags=list(attributes.tags),
+        )
+    handle = PhaseTrace(
+        name=attributes.name,
+        span=span,
+        trace_input=payload,
+        metadata=attributes.metadata,
+        tags=attributes.tags,
+        user_id=attributes.user_id,
+        session_id=attributes.session_id,
+    )
+    active_token = _ACTIVE.set(handle)
+    run_token = _RUN_BASE.set(run_base)
+    try:
+        with _safe_propagate(attributes):
+            try:
+                yield handle
+            except Exception as exc:
+                _finish_error(handle, exc)
+                raise
+            else:
+                _finish_success(handle)
+    finally:
+        _RUN_BASE.reset(run_token)
+        _ACTIVE.reset(active_token)
+        _close_span(manager, attributes)
+        _safe_flush(client)
+
+
+def sanitize_trace_value(value: object) -> object:
+    """Redact secrets and bound the size of anything captured as trace I/O."""
+    if value is None or isinstance(value, bool | int | float):
+        return value
+    if isinstance(value, str):
+        return redact_secrets(value)[:TRACE_IO_VALUE_MAX_CHARS]
+    if isinstance(value, Mapping):
+        return {
+            redact_secrets(str(key))[
+                :TRACE_METADATA_VALUE_MAX_CHARS
+            ]: sanitize_trace_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list | tuple | set):
+        return [sanitize_trace_value(item) for item in value]
+    return redact_secrets(str(value))[:TRACE_IO_VALUE_MAX_CHARS]
+
+
+def build_trace_input(
+    attributes: PhaseTraceAttributes,
+    payload: object | None,
+) -> dict[str, object]:
+    """Put the actor metadata first, then the caller's phase brief."""
+    base: dict[str, object] = {
+        TRACE_FIELD_PROJECT_ID: attributes.metadata[TRACE_FIELD_PROJECT_ID],
+        TRACE_FIELD_PHASE: attributes.metadata[TRACE_FIELD_PHASE],
+        TRACE_FIELD_CONTENT_TYPE: attributes.metadata[TRACE_FIELD_CONTENT_TYPE],
+        TRACE_FIELD_AGENT_NAME: attributes.metadata[TRACE_FIELD_AGENT_NAME],
+    }
+    sanitized = sanitize_trace_value(payload)
+    if sanitized is None:
+        return base
+    if isinstance(sanitized, dict):
+        return {**base, **sanitized}
+    return {**base, "payload": sanitized}
+
+
+def _finish_success(handle: PhaseTrace) -> None:
+    output = handle.output
+    if output is None:
+        output = {TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED}
+    if handle.span is None:
+        return
+    try:
+        handle.span.update(output=output)
+        handle.span.update_trace(output=output)
+    except Exception:
+        logger.warning("langfuse_phase_success_output_failed", phase=handle.name)
+
+
+def _finish_error(handle: PhaseTrace, error: Exception) -> None:
+    if handle.span is None:
+        return
+    try:
+        message = redact_secrets(str(error))[:TRACE_IO_VALUE_MAX_CHARS]
+        output = {
+            TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_ERROR,
+            TRACE_ERROR_FIELD_TYPE: type(error).__name__,
+            TRACE_ERROR_FIELD_MESSAGE: message,
+        }
+        handle.span.update(
+            output=output,
+            level="ERROR",
+            status_message=message,
+        )
+        handle.span.update_trace(output=output)
+    except Exception:
+        logger.warning("langfuse_phase_error_output_failed", phase=handle.name)
+
+
+def _merge_active(active: PhaseTrace, attributes: PhaseTraceAttributes) -> None:
+    """Keep the outer span and merge the nested phase metadata into it."""
+    merged = {**active.metadata, **attributes.metadata}
+    active.metadata = merged
+    if active.span is None:
+        return
+    try:
+        active.span.update(metadata=merged)
+        active.span.update_trace(metadata=merged, tags=list(active.tags))
+    except Exception:
+        logger.warning("langfuse_phase_nested_merge_failed", phase=active.name)
+
+
+def _try_update_trace(span: TraceSpan, **kwargs: object) -> None:
+    try:
+        span.update_trace(**kwargs)
+    except Exception:
+        logger.warning("langfuse_phase_trace_attributes_failed")
+
+
+@contextmanager
+def _safe_propagate(attributes: PhaseTraceAttributes) -> Iterator[None]:
+    manager: AbstractContextManager[object] | None = None
+    try:
+        manager = _langfuse_propagate(
+            trace_name=attributes.name,
+            user_id=attributes.user_id,
+            session_id=attributes.session_id,
+            metadata=attributes.metadata,
+            tags=list(attributes.tags),
+        )
+        manager.__enter__()
+    except Exception:
+        logger.warning(
+            "langfuse_phase_propagate_failed",
+            phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+        )
+        manager = None
+    try:
+        yield
+    finally:
+        if manager is not None:
+            try:
+                manager.__exit__(None, None, None)
+            except Exception:
+                logger.warning(
+                    "langfuse_phase_propagate_close_failed",
+                    phase=attributes.metadata.get(TRACE_FIELD_PHASE),
+                )
+
+
+def _safe_flush(client: TraceClient) -> None:
+    try:
+        schedule_flush(client.flush)
+    except Exception:
+        logger.warning("langfuse_phase_flush_failed")
 
 
 def _scope_of(metadata: Mapping[str, str]) -> WorkflowTraceScope:
@@ -162,10 +484,17 @@ def _overlay(base: WorkflowTraceScope, top: WorkflowTraceScope) -> WorkflowTrace
 
 
 __all__ = [
+    "PhaseTrace",
     "PhaseTraceAttributes",
+    "TraceSpan",
     "WorkflowTraceScope",
     "build_phase_trace",
+    "build_trace_input",
+    "current_generation_run_name",
+    "current_phase_trace",
     "current_trace_scope",
+    "generation_run_name",
     "phase_trace",
+    "sanitize_trace_value",
     "workflow_trace_scope",
 ]

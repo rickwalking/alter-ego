@@ -25,6 +25,17 @@ GEN_KEY_IMAGE_COUNT: Final = "image_count"
 GEN_KEY_IMAGE_SLOTS: Final = "image_slots"
 METADATA_KEY_VOICE_SCORE: Final = "voice_score"
 
+# --- Langfuse trace I/O (AE-0442) -------------------------------------------
+TRACE_INPUT_POST_ID: Final = "post_id"
+TRACE_INPUT_TITLE: Final = "title"
+TRACE_INPUT_SECTION_COUNT: Final = "section_count"
+TRACE_INPUT_SLOT: Final = "slot"
+TRACE_INPUT_SECTION_HEADING: Final = "section_heading"
+TRACE_OUTPUT_SECTION_COUNT: Final = "section_count"
+TRACE_OUTPUT_VOICE_SCORE: Final = "voice_score"
+TRACE_OUTPUT_IMAGE_URL: Final = "image_url"
+TRACE_OUTPUT_ERROR_CODE: Final = "error_code"
+
 # Error entry keys (``generation.errors[]``).
 ERROR_KEY_CODE: Final = "code"
 ERROR_KEY_SLOT: Final = "slot"

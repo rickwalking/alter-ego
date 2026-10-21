@@ -17,7 +17,7 @@ from rag_backend.infrastructure.langfuse_phase_trace import (
     workflow_trace_scope,
 )
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
-from tests.langfuse_trace_fakes import install_trace_collector
+from tests.langfuse_trace_fakes import install_trace_collector, wait_for_flushes
 
 _AUTOPILOT = WorkflowTraceScope(
     project_id="p-1", agent_name="autopilot", content_type="carousel"
@@ -136,11 +136,12 @@ class TestPhaseTrace:
         assert active.propagated == {
             "trace_name": "workflow_design",
             "user_id": None,
+            "session_id": "p-1",
             "metadata": active.metadata,
             "tags": active.tags,
         }
         assert collector.current() is None
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
 
     def test_flushes_when_the_phase_fails(
         self, monkeypatch: pytest.MonkeyPatch
@@ -150,7 +151,7 @@ class TestPhaseTrace:
         with pytest.raises(RuntimeError), phase_trace({"phase": "images"}):
             raise RuntimeError("provider down")
 
-        assert collector.flushes == 1
+        assert wait_for_flushes(collector)
         assert collector.current() is None
 
     def test_legacy_propagate_attributes_opens_the_same_trace(

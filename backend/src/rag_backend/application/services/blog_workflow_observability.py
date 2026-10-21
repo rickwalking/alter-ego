@@ -15,12 +15,19 @@ from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_USER_ID,
 )
 from rag_backend.infrastructure.monitoring_langfuse import (
+    PhaseTrace,
     _TraceConfig,
     create_workflow_trace,
+    flush_langfuse,
     propagate_attributes,
 )
 
 TRACE_UNKNOWN_POST_ID = "unknown"
+
+
+def flush_workflow_traces() -> None:
+    """Flush buffered observations at the end of a background run."""
+    flush_langfuse()
 
 
 @dataclass(frozen=True)
@@ -58,8 +65,8 @@ def start_blog_workflow_trace(params: StartupParams) -> object:
     )
 
 
-def blog_ai_propagate(post_id: str, phase: str) -> object:
-    """Context manager for grouped blog AI calls."""
+def blog_ai_propagate(post_id: str, phase: str) -> AbstractContextManager[PhaseTrace]:
+    """Context manager for grouped blog AI calls; nested phases reuse the span."""
     return propagate_attributes(
         metadata={"post_id": post_id, "phase": phase, "content_type": "blog_post"},
     )
@@ -75,21 +82,25 @@ class BlogPhaseScope:
     agent_name: str
 
 
-def blog_phase_trace(scope: BlogPhaseScope) -> AbstractContextManager[None]:
+def blog_phase_trace(
+    scope: BlogPhaseScope,
+    *,
+    trace_input: object | None = None,
+) -> AbstractContextManager[PhaseTrace]:
     """Run the enclosed LLM/image calls in the named ``workflow_<phase>`` trace.
 
     Carries the required metadata (``project_id``, ``phase``, ``agent_name``,
     ``user_id``) with ``content_type="blog_post"`` (AE-0425, AC9).
+    ``trace_input`` is the phase brief recorded on the trace/span (AE-0442).
     """
-    return propagate_attributes(
-        metadata={
-            TRACE_FIELD_PROJECT_ID: scope.project_id,
-            TRACE_FIELD_USER_ID: scope.user_id,
-            TRACE_FIELD_PHASE: scope.phase,
-            TRACE_FIELD_AGENT_NAME: scope.agent_name,
-            TRACE_FIELD_CONTENT_TYPE: TRACE_CONTENT_TYPE_BLOG_POST,
-        },
-    )
+    metadata = {
+        TRACE_FIELD_PROJECT_ID: scope.project_id,
+        TRACE_FIELD_USER_ID: scope.user_id,
+        TRACE_FIELD_PHASE: scope.phase,
+        TRACE_FIELD_AGENT_NAME: scope.agent_name,
+        TRACE_FIELD_CONTENT_TYPE: TRACE_CONTENT_TYPE_BLOG_POST,
+    }
+    return propagate_attributes(metadata, trace_input=trace_input)
 
 
 __all__ = [

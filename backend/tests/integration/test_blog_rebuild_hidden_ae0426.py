@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -84,7 +85,11 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     from contextlib import nullcontext
 
     for module in (blog_generation_service, blog_image_batch):
-        monkeypatch.setattr(module, "blog_phase_trace", lambda _scope: nullcontext())
+        monkeypatch.setattr(
+            module,
+            "blog_phase_trace",
+            lambda _scope, **_kwargs: nullcontext(MagicMock()),
+        )
     monkeypatch.setattr(
         blog_image_service, "blog_ai_propagate", lambda *_args: nullcontext()
     )

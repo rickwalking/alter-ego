@@ -29,6 +29,7 @@ from rag_backend.application.services.carousel.editorial_workflow_run_heartbeat 
 )
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
+    flush_workflow_traces,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     ResumeWorkflowInput,
@@ -142,8 +143,11 @@ async def execute_resume_run(
     get the same heartbeat, run events, epoch fence, failure marking, and
     (AE-0390) the Langfuse trace scope: project, owner, and the caller's agent.
     """
-    with await open_run_trace_scope(params.project_id, params.reviewer_id):
-        await _execute_owned_run(service, params)
+    try:
+        with await open_run_trace_scope(params.project_id, params.reviewer_id):
+            await _execute_owned_run(service, params)
+    finally:
+        flush_workflow_traces()
 
 
 async def _execute_owned_run(

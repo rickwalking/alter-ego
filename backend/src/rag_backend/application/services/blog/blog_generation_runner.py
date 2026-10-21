@@ -20,6 +20,9 @@ import structlog
 from rag_backend.application.services.blog.blog_generation_service import (
     GenerationJob,
 )
+from rag_backend.application.services.blog_workflow_observability import (
+    flush_workflow_traces,
+)
 from rag_backend.domain.constants.blog_generation import (
     LOG_GENERATION_FAILED,
     TASK_NAME_PREFIX,
@@ -46,6 +49,8 @@ async def _run(service: GenerationRunner, job: GenerationJob) -> None:
         raise
     except Exception:
         logger.exception(LOG_GENERATION_FAILED, post_id=job.lease.post_id)
+    finally:
+        flush_workflow_traces()
 
 
 def schedule_blog_generation(

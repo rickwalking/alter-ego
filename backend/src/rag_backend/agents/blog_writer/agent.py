@@ -177,7 +177,12 @@ class BlogWriterAgent:
         model: BaseChatModel, prompt: str, parser: tuple[Callable[[str], T], str]
     ) -> T:
         parse, agent = parser
-        policy = JsonRetryPolicy(parse=parse, agent=agent, model_id=agent)
+        policy = JsonRetryPolicy(
+            parse=parse,
+            agent=agent,
+            model_id=agent,
+            run_detail=agent,
+        )
         try:
             parsed, _raw = await ainvoke_json(model, prompt, policy)
         except Exception as exc:
