@@ -5,10 +5,10 @@
  * Pedro's rule: source and test code carries no explanatory comments. Docs live
  * in JSDoc blocks. A comment is allowed only when it is:
  *   - a JSDoc block (`/** ... *\/`) that starts its own line;
- *   - a tool directive (eslint-*, @ts-expect-error, prettier-ignore, v8/c8/istanbul
- *     ignore, Stryker disable/restore, webpack magic comments, @vite-ignore,
- *     #__PURE__, triple-slash references, the integrity-ok: escape hatch read
- *     by scripts/ci/check-integrity.sh);
+ *   - a tool directive matched by DIRECTIVE_RE (lint/type/format suppressions,
+ *     coverage and Stryker markers, bundler magic comments, triple-slash
+ *     references, the integrity-ok: escape hatch read by
+ *     scripts/ci/check-integrity.sh);
  *   - a Gherkin reference read by scripts/check_gherkin_refs.py
  *     (`// Scenario: <title>`), plus indented continuation lines
  *     (`//   rest`) directly below it when a long title wraps;

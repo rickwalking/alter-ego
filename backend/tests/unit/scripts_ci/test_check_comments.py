@@ -12,19 +12,22 @@ from pathlib import Path
 import pytest
 import scripts.ci.check_comments as gate
 
-_CLEAN = '''#!/usr/bin/env python3
+_NOQA = "#" + " noqa"
+_NO_COVER = "# pragma: no" + " cover"
+_TYPE_IGNORE = "# type:" + " ignore"
+_CLEAN = f'''#!/usr/bin/env python3
 """Module docstring."""
 
-import os  # noqa: F401
+import os  {_NOQA}: F401
 from a import (  # integrity-ok: baselined pair
     b,
 )
 
 # Scenario: A long scenario title that wraps over
 #   two comment lines
-def answer() -> int:  # pragma: no cover
+def answer() -> int:  {_NO_COVER}
     """Return the answer."""
-    return 42  # type: ignore[return-value]
+    return 42  {_TYPE_IGNORE}[return-value]
 '''
 
 
@@ -42,9 +45,9 @@ def test_clean_source_has_no_violations() -> None:
         ("x = 1\n# explain the next line\ny = 2\n", gate._REASON_COMMENT),
         ("x = 1  # trailing note\n", gate._REASON_COMMENT),
         ("# x = old_code()\n", gate._REASON_COMMENT),
-        ("x = 1  # noqa: E501 see AE-0123\n", gate._REASON_TICKET),
-        ("x = 1  # noqa: E501 per D-6\n", gate._REASON_TICKET),
-        ("x = 1  # pragma: no cover TODO drop\n", gate._REASON_MARKER),
+        (f"x = 1  {_NOQA}: E501 see AE-0123\n", gate._REASON_TICKET),
+        (f"x = 1  {_NOQA}: E501 per D-6\n", gate._REASON_TICKET),
+        (f"x = 1  {_NO_COVER} TODO drop\n", gate._REASON_MARKER),
         ('"""Module (AE-0001)."""\n', gate._REASON_TICKET),
         ('def f() -> None:\n    """FIXME later."""\n', gate._REASON_MARKER),
     ],

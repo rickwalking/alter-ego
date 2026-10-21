@@ -11,8 +11,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException, status
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+from rag_backend.api.dependencies.auth import get_optional_user, require_admin
 from rag_backend.domain.models import (
     Document,
     DocumentScope,
@@ -231,29 +233,36 @@ class TestAgentOriginHeader:
 class TestRoleAccessBoundary:
     """Simulate mutation where role checks are bypassed."""
 
-    def test_anonymous_user_role_is_none(self):
+    @pytest.mark.asyncio
+    async def test_anonymous_user_role_is_none(self):
         """MUTATION: If anonymous users are treated as editors,
         they gain access to carousel creation.
 
         SCENARIO: Attacker bypasses auth check in carousel routes.
         EXPECTED: Test must verify anonymous users have no role.
 
-        get_optional_user returns None for anonymous users in a real request; the
-        integration tests cover it.
+        get_optional_user returns None for an anonymous request (no JWT payload)
+        without touching the user repository.
         """
+        repo = AsyncMock()
+        assert await get_optional_user(None, repo) is None
+        repo.get_by_id.assert_not_called()
 
-        assert True
-
-    def test_editor_cannot_access_admin_endpoints(self):
+    @pytest.mark.asyncio
+    async def test_editor_cannot_access_admin_endpoints(self):
         """MUTATION: If admin check is removed,
         editors can manage users.
 
         SCENARIO: Attacker removes admin_only decorator.
         EXPECTED: Test must verify 403 response.
 
-        Covered by the integration tests and Gherkin scenarios.
+        require_admin answers 403 for an authenticated editor.
         """
-        assert True
+        editor = MagicMock()
+        editor.is_admin.return_value = False
+        with pytest.raises(HTTPException) as raised:
+            await require_admin(editor)
+        assert raised.value.status_code == status.HTTP_403_FORBIDDEN
 
 
 class TestVectorStoreNamespace:

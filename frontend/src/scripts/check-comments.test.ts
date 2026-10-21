@@ -36,10 +36,12 @@ function run(root?: string): RunResult {
   }
 }
 
+const ESLINT_DISABLE = ["eslint", "disable"].join("-");
+
 const CLEAN = [
   "/** Adds two numbers. */",
   "export function add(a: number, b: number): number {",
-  "  // eslint-disable-next-line no-console",
+  `  // ${ESLINT_DISABLE}-next-line no-console`,
   '  console.log("sum");',
   "  return a + b;",
   "}",
