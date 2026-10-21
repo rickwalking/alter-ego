@@ -6,7 +6,12 @@
  * live here rather than inline in the hook `.ts` files.
  */
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type {
+  Dispatch,
+  MutableRefObject,
+  RefObject,
+  SetStateAction,
+} from "react";
 import type {
   EditorialWorkflowTransportMode,
   WorkflowStreamProbeOutcome,
@@ -172,4 +177,20 @@ export interface SlideFieldErrorState {
   slideIndexes: number[];
   /** Drop a field's errors as soon as that field is edited. */
   clearField: (key: string) => void;
+}
+
+/** The reconnect backoff timer (AE-0446: split out of the reconnect hook). */
+export interface ReconnectTimer {
+  attemptsRef: MutableRefObject<number>;
+  clearTimer: () => void;
+  scheduleReconnect: () => void;
+}
+
+/** What reviving the stream on tab focus needs (AE-0446). */
+export interface ResumeOnVisibleDeps extends Pick<
+  UseWorkflowStreamReconnectParams,
+  "connectRef" | "sourceRef" | "refreshState"
+> {
+  probeThen: (onReopenable: () => void) => void;
+  reconnectNow: () => void;
 }
