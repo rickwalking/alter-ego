@@ -165,6 +165,35 @@ Implemented in `bd334f3b`..`5bd59c53`; PR #167 opened with base `main`.
   wrappers (`flush_workflow_traces`), keeping the DDD import boundary intact.
 - Redaction reuses `redact_secrets`; captured values are bounded to 2000 chars.
 
+### 2026-10-21 — CI regression fixed
+
+The first CI run (`39532295243`) failed `backend / Test & Coverage` with 15
+integration failures. Root cause was test doubles rejecting the new keyword
+arguments, not business logic: `blog_phase_trace(..., trace_input=...)` hit
+old `lambda _scope` fixtures and the autopilot spy rejected `trace_input`.
+
+Fixed in `4a297dcc`:
+
+- `test_blog_generate_api_ae0425.py` and `test_blog_rebuild_hidden_ae0426.py`
+  patch `blog_phase_trace` with `lambda _scope, **_kwargs: nullcontext(...)`.
+- `test_autopilot_runner_start.py` spy accepts `**_kwargs`; its expected
+  metadata now includes the intentional `workflow=editorial_7_phase` key that
+  `start_workflow` propagates into the phase trace.
+- `test_phase_traces_ae0390.py` intentionally expects the same `workflow` key
+  on research traces (metadata is now merged from the enclosing workflow).
+- Tracing side effects are now best-effort: span open/close, trace/span
+  updates, propagation, events and flush catch SDK failures and log a warning,
+  so a Langfuse outage can never change a workflow outcome. Body exceptions
+  still propagate. Two safety scenarios were added to the feature.
+
+Local after fix: `test_blog_generate_api_ae0425.py` 15 passed,
+`test_blog_rebuild_hidden_ae0426.py` 9 passed,
+`test_phase_traces_ae0390.py` 4 passed,
+`test_autopilot_runner_start.py` 1 passed, trace/fake unit suites 43 passed.
+CI `backend / Test & Coverage` then passed in 11m6s on `4a297dcc`. The
+separate `backend-gate` job hung after 2% of tests and failed at 21m32s with
+no test failure summary; the new CI run is the arbiter.
+
 Decisions/deviations:
 
 - The Langfuse `input` keyword is only used at SDK call sites; our helpers use
@@ -180,6 +209,10 @@ Decisions/deviations:
 
 - `.agent/tasks/AE-0442-langfuse-traces-show-no-input-output-or-useful-names.md`
 - `backend/tests/features/langfuse_trace_io_ae0442.feature`
+- `backend/tests/integration/test_blog_generate_api_ae0425.py`
+- `backend/tests/integration/test_blog_rebuild_hidden_ae0426.py`
+- `backend/tests/integration/test_phase_traces_ae0390.py`
+- `backend/tests/integration/test_autopilot_runner_start.py`
 - `backend/tests/langfuse_trace_fakes.py`
 - `backend/tests/unit/infrastructure/test_langfuse_trace_io_ae0442.py`
 - `backend/tests/unit/infrastructure/test_langfuse_phase_trace_ae0390.py`
@@ -203,9 +236,10 @@ Decisions/deviations:
 
 Targeted tests (run individually; all green):
 
-- `tests/unit/infrastructure/test_langfuse_trace_io_ae0442.py` — 14 passed
+- `tests/unit/infrastructure/test_langfuse_trace_io_ae0442.py` — 17 passed
   (trace/span brief+result, error output, redaction, no-client, blog brief,
-  run names, review trace, nested span reuse, background flush).
+  run names, review trace, nested span reuse, background flush, tracing
+  failures never changing the workflow outcome).
 - `tests/unit/infrastructure/test_langfuse_phase_trace_ae0390.py` — 11 passed.
 - `tests/unit/infrastructure/test_monitoring_langfuse.py` — 15 passed.
 - `tests/unit/application/test_editorial_workflow_service.py` — 45 passed.
