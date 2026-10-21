@@ -10,11 +10,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from rag_backend.application.services.blog import blog_generation_runner
 from rag_backend.application.services.blog_workflow_observability import (
     BlogPhaseScope,
     blog_phase_trace,
 )
-from rag_backend.application.services.blog import blog_generation_runner
 from rag_backend.domain.constants.blog_editor import PHASE_BLOG_SECTION_IMAGE
 from rag_backend.domain.constants.blog_generation import (
     AGENT_BLOG_IMAGES,
@@ -70,7 +70,7 @@ class TestPhaseTraceIO:
             workflow_trace_scope(_CAROUSEL_SCOPE),
             phase_trace(
                 {"phase": "content"},
-                input={
+                trace_input={
                     "topic": "IA",
                     "attempt": 2,
                     "model_queue": "deepseek-v4.1-flash",
@@ -105,10 +105,12 @@ class TestPhaseTraceIO:
     ) -> None:
         collector = install_trace_collector(monkeypatch)
 
-        with pytest.raises(RuntimeError, match="provider down"):
-            with phase_trace({"phase": "content"}) as trace:
-                assert trace.name == "workflow_content"
-                raise RuntimeError(f"provider down {_SECRET_TEXT}")
+        with (
+            pytest.raises(RuntimeError, match="provider down"),
+            phase_trace({"phase": "content"}) as trace,
+        ):
+            assert trace.name == "workflow_content"
+            raise RuntimeError(f"provider down {_SECRET_TEXT}")
 
         recorded = collector.traces[0]
         output = recorded.output
@@ -163,7 +165,7 @@ class TestBlogGenerationTrace:
 
         with blog_phase_trace(
             scope,
-            input={
+            trace_input={
                 "post_id": "post-9",
                 "title": "IA no trabalho",
                 "section_count": 5,
@@ -334,7 +336,7 @@ class TestSecretRedaction:
 
         with phase_trace(
             {"phase": "content"},
-            input={"note": _SECRET_TEXT},
+            trace_input={"note": _SECRET_TEXT},
         ) as trace:
             trace.set_output({"note": _SECRET_TEXT})
 

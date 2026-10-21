@@ -201,7 +201,7 @@ async def ensure_artifacts(
     }
     with phase_trace(
         {TRACE_FIELD_PHASE: phase, TRACE_FIELD_PROJECT_ID: project_id},
-        input=trace_input,
+        trace_input=trace_input,
     ) as trace:
         result = await runner.ensure_for_phase(cast(CarouselWorkflowState, merged))
         trace.set_output({

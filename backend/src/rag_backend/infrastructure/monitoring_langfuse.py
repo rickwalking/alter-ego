@@ -426,7 +426,7 @@ def record_human_review(
         workflow_trace_scope(scope),
         phase_trace(
             {TRACE_FIELD_PHASE: TRACE_PHASE_REVIEW},
-            input=review_input,
+            trace_input=review_input,
         ) as trace,
     ):
         if trace.span is not None:

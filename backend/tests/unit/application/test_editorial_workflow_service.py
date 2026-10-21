@@ -844,7 +844,7 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
         assert span_metadata["user_id"] == "pedro-user-id"
 
         # AE-0442: the research brief reaches the trace input.
-        trace_input = mock_propagate.call_args.kwargs["input"]
+        trace_input = mock_propagate.call_args.kwargs["trace_input"]
         assert trace_input["topic"] == "AI"
         assert trace_input["source_count"] == 0
 
