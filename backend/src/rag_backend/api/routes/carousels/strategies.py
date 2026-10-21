@@ -62,7 +62,7 @@ async def apply_strategy(
 ) -> ApplyStrategyResponse:
     if not handlers.strategy_exists(name):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=_ERR_STRATEGY_NOT_FOUND.format(name),
         )
 

@@ -47,7 +47,7 @@ from rag_backend.domain.constants.blog_generation import (
     GENERATION_STATUS_PARTIAL,
     PHASE_BLOG_GENERATION,
 )
-from rag_backend.domain.models.blog_document import parse_blog_content
+from rag_backend.domain.models.blog_document import BlogImage, parse_blog_content
 from rag_backend.domain.models.blog_generation import (
     DocumentApply,
     DraftArticle,
@@ -376,11 +376,9 @@ def _owner_edits(content: dict[str, object]) -> dict[str, object]:
     and sets their own image on section 4."""
     document = parse_blog_content(content)
     sections = list(document.sections)
-    owned = {
-        "url": "https://cdn.example/owner.jpg",
-        "alt": "Minha foto",
-        "source": "upload",
-    }
+    owned = BlogImage(
+        url="https://cdn.example/owner.jpg", alt="Minha foto", source="upload"
+    )
     kept = [
         sections[0],
         sections[2].model_copy(update={"body_md": "Texto do dono."}),

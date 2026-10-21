@@ -90,7 +90,7 @@ async def edit_carousel_slides(
     )
     if project.status != CarouselStatus.COMPLETED.value:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_SLIDE_EDIT_NOT_COMPLETED,
         )
     command = SlideEditCommand(

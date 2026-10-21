@@ -97,7 +97,7 @@ def validate_resume_action(body: EditorialWorkflowResumeRequest) -> str:
     """Validate resume action and feedback; return sanitized feedback."""
     if body.action not in RESUME_ROUTE_SUPPORTED_ACTIONS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_UNSUPPORTED_REVIEW_ACTION,
         )
     safe_feedback = sanitize_llm_input(body.feedback or "")
@@ -109,7 +109,7 @@ def validate_resume_action(body: EditorialWorkflowResumeRequest) -> str:
         and not _request_has_edited_slides(body)
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_REVISE_FEEDBACK_REQUIRED,
         )
     return safe_feedback
@@ -234,12 +234,12 @@ async def validate_resume_workflow_gates(
     except ValueError as exc:
         if str(exc) == ERR_PERSONA_SCORE_TOO_LOW:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=ERR_PERSONA_SCORE_TOO_LOW,
             ) from None
         if str(exc) == ERR_PRESENTATION_VALIDATION_BLOCKED:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=ERR_PRESENTATION_VALIDATION_BLOCKED,
             ) from None
         raise HTTPException(
@@ -303,11 +303,11 @@ def _ensure_target_phase_allowed(target_phase: str, checkpoint_phase: str) -> No
         if target_phase in DESIGN_SEND_BACK_PHASES:
             return
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_SEND_BACK_TARGET_NOT_ALLOWED,
         )
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY,
     )
 
@@ -330,7 +330,7 @@ async def ensure_structured_feedback_allowed(
     checkpoint_phase = await service.read_checkpoint_phase(project_id)
     if feedback.edited_text and checkpoint_phase != PHASE_FINAL_REVIEW:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY,
         )
     if feedback.target_phase:
@@ -340,7 +340,7 @@ async def ensure_structured_feedback_allowed(
         and checkpoint_phase not in EDITED_SLIDES_ALLOWED_PHASES
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED,
         )
 

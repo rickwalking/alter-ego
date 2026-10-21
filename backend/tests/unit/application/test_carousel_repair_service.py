@@ -58,6 +58,9 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
     WorkflowAuditLogModel,
 )
 
+# AE-0446: commits here would run the outbox relay on a foreign engine.
+pytestmark = pytest.mark.usefixtures("no_outbox_relay")
+
 _V1 = "hero_lower_third_v1"
 _RAW_SCAFFOLD_BODY = (
     "## PT\n**Heading:** O disparo silencioso\n**Body:** A verdade incomoda: "

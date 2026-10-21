@@ -37,6 +37,9 @@ from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
 )
 
+# AE-0446: commits here would run the outbox relay on a foreign engine.
+pytestmark = pytest.mark.usefixtures("no_outbox_relay")
+
 _TIMEOUT_HOURS = 72
 
 

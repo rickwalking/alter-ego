@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from rag_backend.domain.constants.documents import ENCODING_UTF8
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -137,7 +138,7 @@ async def _client(
     from rag_backend.infrastructure.database.config import Base, close_db
 
     limiter.reset()
-    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     db_config.c_engine = engine
@@ -146,11 +147,14 @@ async def _client(
     if reader is not None:
         setattr(app.state, APP_STATE_SIGNALS, reader)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client, engine
-    limiter.reset()
-    db_config.c_engine = None
-    await close_db()
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client, engine
+    finally:
+        limiter.reset()
+        # Dispose before clearing the global: close_db() disposes c_engine.
+        await close_db()
+        db_config.c_engine = None
 
 
 def _headers() -> dict[str, str]:

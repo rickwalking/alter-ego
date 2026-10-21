@@ -94,7 +94,7 @@ class ResetPasswordResponse(BaseModel):
 def _invalid_role(exc: InvalidRoleError) -> HTTPException:
     """Map an invalid-role domain error to the legacy 422 response."""
     return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=f"Invalid role: {exc.role}. Must be one of {sorted(VALID_ROLES)}",
     )
 

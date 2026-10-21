@@ -59,7 +59,7 @@ def require_image_provider_configured(
     if not settings.is_production_like:
         return
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=ERR_IMAGE_PROVIDER_UNCONFIGURED.format(request.image_model),
     )
 

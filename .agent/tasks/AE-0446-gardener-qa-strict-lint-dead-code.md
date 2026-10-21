@@ -50,8 +50,8 @@ existence, a mixed-language landing card, unlisted/unused deps).
       `error` with a rule-fires test.
 - [ ] L1: size/complexity rules promoted to `error`; every lint script/CI path
       uses `--max-warnings=0`.
-- [ ] L1: backend pytest runs with `filterwarnings = error`; own warnings fixed,
-      third-party ignores justified.
+- [x] L1: backend pytest runs with `filterwarnings = error`; own warnings fixed,
+      third-party ignores justified (none needed).
 - [ ] L2: real dead code removed, knip false positives configured with a reason,
       real duplication extracted.
 - [ ] L3/L4/L5: findings fixed or documented as accepted below.
@@ -132,7 +132,7 @@ Feature: Strict type-aware lint rules gate the build
 | ESLint `no-unnecessary-condition` | 65 warn | 0, now `error` | promoted | — |
 | ESLint `prefer-nullish-coalescing` | 5 warn | 0, now `error` | promoted | — |
 | ESLint size/complexity (`max-lines-per-function` 43, `complexity` 39, `max-lines` 17, `max-statements` 7, `sonarjs/cognitive-complexity` 5) | 111 warn | pending | PR 2 | — |
-| pytest warnings | 4604 | pending | PR 3 | — |
+| pytest warnings (backend) | 4604 | 0, `filterwarnings = error` in `pytest.ini` | PR 2 (see below) | — |
 
 Root causes found while paying down `no-unnecessary-condition` (real defects, not lint noise):
 
@@ -142,6 +142,27 @@ Root causes found while paying down `no-unnecessary-condition` (real defects, no
 - SSE token/error handlers did `(data.content as string) ?? ""`: the cast made a
   missing `content` untypeable; replaced with `typeof` guards.
 - Knowledge document tags cast free-form metadata to `string[]`; now filtered.
+
+Backend warning root causes (PR 2):
+
+| Warning | Count | Fix |
+| --- | --- | --- |
+| `datetime.utcnow()` deprecated | ~28 | `domain/clock.py` `utc_now()` (aware UTC, matches `DateTime(timezone=True)` columns) |
+| Starlette `HTTP_422_UNPROCESSABLE_ENTITY` deprecated | ~23 | `HTTP_422_UNPROCESSABLE_CONTENT` |
+| Pydantic class-based `Config` (import time) | 6 models | `model_config = ConfigDict(from_attributes=True)` |
+| aiosqlite / sqlite3 unclosed connections | ~90 | (a) `autopilot_*_support._client` cleared `c_engine` before `close_db()`, and tests queried the engine after its dispose: `NullPool` on those file DBs; (b) tests whose commits ran the outbox relay on a foreign global engine: `no_outbox_relay` fixture; (c) a test ended while its generation run was still writing: wait for it; (d) palette tests never disposed engines |
+| SQLAlchemy "transaction already deassociated" | 3 | `db_session` fixture rolls back only if the test did not |
+| un-awaited coroutines | 2 | mock DB returned a mock project (`run_started_at.isoformat()` coroutine); patched `create_task` left its coroutine open |
+| Pillow `DecompressionBombWarning` | 2 | scoped to `open_within_pixel_budget()`; the pixel-budget check rejects that range with a precise code |
+| Pydantic serializer warning | 1 | test used `model_copy(update=dict)`; now a real `BlogImage` |
+| PyJWT short HMAC key | 1 | test key ≥ 32 bytes |
+| alembic `path_separator` | 1 | `path_separator = os` |
+
+Also found: `relay_after_commit` raised (instead of logging) when no engine was configured,
+contradicting its docstring; fixed with a test. Dead `[tool.pytest.ini_options]` in
+`pyproject.toml` (ignored, `pytest.ini` wins) removed. Pre-existing order dependence noted, not
+changed: `test_carousel_run_guard` auto-reject counts rows other tests left in the shared
+in-memory DB (passes in the suite's natural order).
 
 ## Findings — Level 2 (dead code + duplication)
 
@@ -157,7 +178,7 @@ clones, backend 26 clones. Fixes: pending (PR 4).
 | Tool | Result | Action |
 | --- | --- | --- |
 | bandit | 12 (1 high B701, 1 medium B104, 10 low B105/B107) | All false positive / accepted: B701 renders LLM prompt markdown (not HTML); B104 bind 0.0.0.0 is required in the container; B105/B107 are cookie/header/field-name constants. |
-| pip-audit | pass (2 ignored IDs) | Ignores `PYSEC-2022-42969`, `PYSEC-2026-196` are undocumented: document reason (pending). |
+| pip-audit | pass (2 ignored IDs) | Both ignores were stale (pip-audit reports no vulnerability without them): removed from `gates.sh` (PR 2). |
 | npm audit (prod) | 0 | — |
 | npm audit (all) | 11 moderate, dev-only (`@vitest/mocker` via storybook) | Accepted: dev-only, fix is a breaking `--force` upgrade. |
 | gitleaks | 2 | Both false positives (prose in a report, a numeric test fixture). |
@@ -171,6 +192,14 @@ clones, backend 26 clones. Fixes: pending (PR 4).
 - [ ] Orphan/unfinished code checked
 
 ## Progress Log
+
+### 2026-10-21 12:30
+
+PR #169 (L1 frontend types) merged. PR 2 (backend warnings) ready. The size/complexity
+warn→error refactor (111 findings in 64 files, incl. 17 files over the component line limit)
+moved to the end: it is the largest and least valuable change, so the warning, follow-up and
+dead-code PRs ship first. Orchestrator follow-ups (5) `phase_progress` cast and (6) landing
+cards linking `/blog/<carousel id>` folded into the follow-ups PR.
 
 ### 2026-10-21 07:10
 

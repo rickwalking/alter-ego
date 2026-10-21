@@ -49,7 +49,7 @@ def _test_settings(monkeypatch):
 
     get_settings.cache_clear()
     os.environ["SECRET_KEY"] = _TEST_JWT_SECRET
-    os.environ["ANON_SECRET_KEY"] = "test-anon-secret-key"
+    os.environ["ANON_SECRET_KEY"] = "test-anon-secret-key-for-integration"
     yield
     get_settings.cache_clear()
 

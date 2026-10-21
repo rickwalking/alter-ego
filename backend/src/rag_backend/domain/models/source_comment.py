@@ -5,6 +5,8 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
+from rag_backend.domain.clock import utc_now
+
 
 class SourceType(StrEnum):
     """Types of content sources."""
@@ -31,8 +33,8 @@ class ContentSource:
     extracted_key_points: list[str] = field(default_factory=list)
     is_primary: bool = False
     created_by: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -47,7 +49,7 @@ class EditorialComment:
     position: dict = field(default_factory=dict)
     status: str = "open"
     ai_suggestion: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
     resolved_at: datetime | None = None
 
 
@@ -62,4 +64,4 @@ class ContentVersion:
     snapshot: dict = field(default_factory=dict)
     change_summary: str = ""
     author_id: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)

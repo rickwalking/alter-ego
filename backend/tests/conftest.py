@@ -8,6 +8,7 @@ os.environ.setdefault("ANON_SECRET_KEY", "test-anon-secret-for-pytest-suite!")
 
 import asyncio
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -66,6 +67,22 @@ async def test_engine():
     await engine.dispose()
 
 
+@pytest.fixture
+def no_outbox_relay(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    """Stub the post-commit outbox relay for tests that do not exercise it.
+
+    ``WorkflowEventService`` drains the outbox through the global
+    ``db_config.c_engine`` after commit. In tests on ``test_engine`` that global
+    is whatever an earlier test installed (often an engine already disposed),
+    so the relay would open a connection nothing ever closes (AE-0446).
+    """
+    from rag_backend.application.services import workflow_event_service
+
+    relay = AsyncMock()
+    monkeypatch.setattr(workflow_event_service, "relay_after_commit", relay)
+    return relay
+
+
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a fresh database session for each test with connection-level transaction rollback.
@@ -85,7 +102,9 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         yield session
     finally:
         await session.close()
-        await transaction.rollback()
+        # A test that calls session.rollback() already ended this transaction.
+        if transaction.is_active:
+            await transaction.rollback()
         await connection.close()
 
 

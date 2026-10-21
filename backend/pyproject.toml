@@ -90,10 +90,6 @@ dev = [
     "respx>=0.23.1",
 ]
 
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-asyncio_mode = "auto"
-
 [tool.coverage.run]
 # Files excluded from coverage measurement (so they don't appear in
 # coverage.xml and are not counted by diff-cover). These are scaffolding,

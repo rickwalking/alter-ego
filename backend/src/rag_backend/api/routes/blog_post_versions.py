@@ -97,7 +97,7 @@ async def restore_blog_post_version(
     # be restored — it would 422 on the section check. Name it for the editor.
     if is_empty_document(version_data.get("snapshot")):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=ERR_BLOG_VERSION_EMPTY,
         )
 

@@ -39,7 +39,7 @@ def raise_invalid_document(exc: InvalidBlogDocumentError) -> NoReturn:
     """Map a document error to a 422 ``code`` / ``code: message`` detail."""
     detail = exc.code if exc.message == exc.code else f"{exc.code}: {exc.message}"
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail
     ) from exc
 
 
@@ -93,7 +93,7 @@ def assert_ready_to_publish(post: PublishCandidate) -> None:
         raise_invalid_document(exc)
     except DisclosureRequiredError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.code
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.code
         ) from exc
 
 

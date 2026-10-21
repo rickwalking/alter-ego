@@ -348,10 +348,13 @@ async def test_retry_while_in_progress_is_refused(
     writer = _GatedWriter(draft_article=article(7))
     harness.writer = writer
     response = await client.post(GENERATE, json={"topic": "Tema lento"})
-    retry = await client.post(f"{POSTS}/{response.json()['id']}/generation/retry")
+    post_id = response.json()["id"]
+    retry = await client.post(f"{POSTS}/{post_id}/generation/retry")
     assert retry.status_code == 409
     assert retry.json()["detail"] == "blog_generation_in_progress"
     writer.gate.set()
+    # Let the run finish: teardown cancelling it mid-query orphans a connection.
+    await _settled(client, post_id)
 
 
 async def test_a_partial_run_retries_only_its_missing_images(

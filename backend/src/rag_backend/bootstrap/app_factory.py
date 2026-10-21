@@ -9,7 +9,6 @@ relocated from ``rag_backend.api.app`` in AE-0080 with zero behavior change;
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
-from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,6 +76,7 @@ from rag_backend.bootstrap.carousel_republish_sweeper_factory import (
 )
 from rag_backend.bootstrap.carousel_run_reaper_factory import build_stale_run_reaper
 from rag_backend.bootstrap.startup_validation import run_startup_validations
+from rag_backend.domain.clock import utc_now
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
@@ -325,7 +325,7 @@ def create_app() -> FastAPI:
         return HealthResponse(
             status="healthy",
             version=settings.app_version,
-            timestamp=datetime.utcnow(),
+            timestamp=utc_now(),
         )
 
     # Detailed health check with dependency status
@@ -343,7 +343,7 @@ def create_app() -> FastAPI:
         return HealthCheckResponse(
             status=overall_status,
             version=settings.app_version,
-            timestamp=datetime.utcnow(),
+            timestamp=utc_now(),
             checks=checks,
         )
 

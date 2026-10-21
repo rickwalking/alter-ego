@@ -62,6 +62,7 @@ async def client() -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+    await engine.dispose()
     get_settings.cache_clear()
 
 
@@ -165,6 +166,7 @@ class TestGating:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             resp = await c.get("/api/palettes")
+        await engine.dispose()
         assert resp.status_code == 503
         get_settings.cache_clear()
 
@@ -186,6 +188,7 @@ class TestGating:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             resp = await c.post("/api/palettes", json=_PAYLOAD)
+        await engine.dispose()
         app.dependency_overrides.clear()
         assert resp.status_code == 503
         get_settings.cache_clear()
@@ -202,5 +205,6 @@ class TestGating:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             resp = await c.post("/api/palettes", json=_PAYLOAD)
+        await engine.dispose()
         assert resp.status_code in (401, 403)
         get_settings.cache_clear()

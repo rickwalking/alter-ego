@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 from rag_backend.application.services.carousel.creator_asset_validation import (
     NormalizedCreatorAsset,
+    open_within_pixel_budget,
 )
 from rag_backend.domain.constants.carousel import IMAGE_FORMAT_WEBP
 from rag_backend.domain.constants.creator_asset import (
@@ -79,9 +80,8 @@ def _decoded(content: bytes) -> PilImage:
     """One oriented frame, within the dimension and pixel budgets."""
     from PIL import Image, ImageOps
 
-    Image.MAX_IMAGE_PIXELS = CREATOR_ASSET_MAX_PIXELS
     try:
-        with Image.open(BytesIO(content)) as opened:
+        with open_within_pixel_budget(content) as opened:
             _check_dimensions(opened.size)
             oriented = ImageOps.exif_transpose(opened)
             return oriented.convert(_target_mode(oriented))

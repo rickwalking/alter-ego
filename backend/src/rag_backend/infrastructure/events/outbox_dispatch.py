@@ -104,10 +104,10 @@ async def relay_after_commit(publisher: EventPublisherProtocol) -> None:
     """
     from rag_backend.infrastructure.database.config import get_session_maker
 
-    session_maker = get_session_maker()
     relay = OutboxRelay(publisher)
     try:
-        async with session_maker() as session:
+        # Inside the try: "no engine configured" is a relay failure like any other.
+        async with get_session_maker()() as session:
             while True:
                 result = await relay.run_once(session)
                 await session.commit()
