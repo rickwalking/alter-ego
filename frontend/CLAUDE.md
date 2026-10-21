@@ -155,7 +155,7 @@ npm run build-storybook          # Static Storybook build
 - **Test behavior, not implementation**
 - **Use MSW for API mocking**
 - **Mutation testing (StrykerJS)** — ADR-005 thresholds in `stryker.conf.json`:
-  - UI components: break **30%**, low **50%**, high **65%**
+  - UI components: break **50%**, low **50%**, high **65%** (break raised from 30% after the CI score reached 89%)
   - Business logic hooks: higher bars (see ADR-005)
   - Do **not** add neon component tests to `ignorePatterns` — that hides weak assertions
   - **CI only (AE-0448)** — never run Stryker locally (`npx stryker run` included;

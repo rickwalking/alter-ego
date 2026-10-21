@@ -40,9 +40,9 @@
   "thresholds": {
     "high": 65,
     "low": 50,
-    "break": 30
+    "break": 50
   },
-  "thresholds_comment": "ADR-005 UI component gates: break 30%, low 50%, high 65%. Hook modules in mutate globs may score higher.",
+  "thresholds_comment": "ADR-005 UI component gates: low 50%, high 65%; break ratcheted from 30% to 50% once CI scored 89% on the full mutate set. Hook modules in mutate globs may score higher.",
   "timeoutMS": 60000,
   "concurrency": 4,
   "ignorePatterns": [
