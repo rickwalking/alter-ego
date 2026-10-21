@@ -26,6 +26,9 @@ _AUDIENCE_HEAD = "a0e4f0a4b4c4"
 _QUOTES_HEAD = "c4d5e6f7a8b9"
 # AE-0418: the GrokBot cover revision is the head.
 _COVER_HEAD = "d5e6f7a8b9c0"
+# AE-0446: the current single alembic head. A new migration bumps ONLY this
+# line; the per-revision tests keep asserting their own parent chain.
+ALEMBIC_HEAD = "e6f7a8b9c0d1"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -90,7 +93,7 @@ def test_autopilot_revision_is_the_only_head() -> None:
     """``alembic heads`` is a single head that descends from the autopilot one."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_COVER_HEAD]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     cover = script.get_revision(_COVER_HEAD)
     assert cover is not None
     assert cover.down_revision == _QUOTES_HEAD
