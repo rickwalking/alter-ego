@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { responseErrorDetail } from "@/lib/response-error";
 
 interface UserItem {
   id: string;
@@ -45,10 +46,9 @@ export function ChangePasswordDialog({
       );
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          detail?: string;
-        };
-        throw new Error(data.detail ?? t("resetError"));
+        throw new Error(
+          (await responseErrorDetail(response)) ?? t("resetError"),
+        );
       }
 
       const data = (await response.json()) as { temp_password: string };

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { responseErrorDetail } from "@/lib/response-error";
 
 interface CreateUserDialogProps {
   onClose: () => void;
@@ -45,10 +46,9 @@ export function CreateUserDialog({
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          detail?: string;
-        };
-        throw new Error(data.detail ?? t("createError"));
+        throw new Error(
+          (await responseErrorDetail(response)) ?? t("createError"),
+        );
       }
 
       const data = (await response.json()) as { temp_password?: string };

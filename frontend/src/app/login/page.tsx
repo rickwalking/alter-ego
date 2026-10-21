@@ -22,6 +22,7 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import { sanitizeLoginRedirect } from "@/modules/identity";
+import { responseErrorDetail } from "@/lib/response-error";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -52,10 +53,9 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          detail?: string;
-        };
-        throw new Error(data.detail ?? t("loginError"));
+        throw new Error(
+          (await responseErrorDetail(response)) ?? t("loginError"),
+        );
       }
 
       const params = new URLSearchParams(window.location.search);
