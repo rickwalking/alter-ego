@@ -1,3 +1,4 @@
+import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
 /**
  * Distribution component prop/state types (colocated `types.ts`).
  *
@@ -136,4 +137,31 @@ export interface SlideEditActionsProps {
 export interface SlideEditStatusProps {
   pending: boolean;
   done: boolean;
+}
+
+/** PT / EN tab strip of the publish panel (AE-0446). */
+export interface LanguageTabsProps {
+  language: ViewerLanguage;
+  onChange: (language: ViewerLanguage) => void;
+  ariaLabel: string;
+  className: string;
+}
+
+/** Instagram tab of the publish panel (AE-0446). */
+export interface InstagramTabProps extends Pick<
+  PublishPanelProps,
+  "onPublishInstagram" | "isPublishingInstagram" | "publishResult"
+> {
+  caption: string;
+  onCaptionChange: (caption: string) => void;
+  language: ViewerLanguage;
+}
+
+/** LinkedIn tab of the publish panel (AE-0446). */
+export interface LinkedInTabProps {
+  text: string;
+  onTextChange: (text: string) => void;
+  language: ViewerLanguage;
+  setLanguage: (language: ViewerLanguage) => void;
+  pdfHref: string;
 }
