@@ -45,6 +45,14 @@ from rag_backend.domain.constants.blog_generation import (
     LOG_IMAGE_FAILED,
     LOG_IMAGES_DONE,
     LOG_IMAGES_TIMED_OUT,
+    TRACE_INPUT_POST_ID,
+    TRACE_INPUT_SECTION_HEADING,
+    TRACE_INPUT_SLOT,
+    TRACE_OUTPUT_IMAGE_URL,
+)
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_OUTPUT_STATUS_COMPLETED,
+    TRACE_STATUS_FIELD,
 )
 from rag_backend.domain.models.blog_document import BlogImage
 from rag_backend.domain.models.blog_generation import GenerationTrace, ImageSubject
@@ -179,9 +187,19 @@ class BlogImageBatchService:
             scene=default_scene(subject.heading, subject.body),
             alt=subject.heading,
         )
+        trace_input = {
+            TRACE_INPUT_POST_ID: trace.post_id,
+            TRACE_INPUT_SLOT: subject.slot,
+            TRACE_INPUT_SECTION_HEADING: subject.heading,
+        }
         try:
-            with blog_phase_trace(scope):
+            with blog_phase_trace(scope, input=trace_input) as trace_handle:
                 image = await self._deps.images.generate(request)
+                trace_handle.set_output({
+                    TRACE_STATUS_FIELD: TRACE_OUTPUT_STATUS_COMPLETED,
+                    TRACE_INPUT_SLOT: subject.slot,
+                    TRACE_OUTPUT_IMAGE_URL: image.url,
+                })
         except BlogImageError as exc:
             logger.warning(LOG_IMAGE_FAILED, slot=subject.slot, code=exc.code)
             return _SlotOutcome(

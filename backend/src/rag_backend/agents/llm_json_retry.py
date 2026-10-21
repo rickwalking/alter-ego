@@ -63,6 +63,7 @@ class JsonRetryPolicy(Generic[T]):
     parse: Callable[[str], T]
     agent: str
     model_id: str
+    run_detail: str = ""
 
 
 async def ainvoke_json(
@@ -116,14 +117,14 @@ async def _ainvoke_json_on(
     policy: JsonRetryPolicy[T],
 ) -> tuple[T, str]:
     """Re-roll an empty response, repair a malformed one (one model)."""
-    raw = await _ainvoke_once(runnable, prompt)
+    raw = await _ainvoke_once(runnable, prompt, policy)
     if not raw.strip():
         logger.warning(
             "llm_empty_response_rerolling",
             agent=policy.agent,
             model_id=policy.model_id,
         )
-        raw = await _ainvoke_once(runnable, prompt)
+        raw = await _ainvoke_once(runnable, prompt, policy)
         if not raw.strip():
             logger.warning(
                 "llm_empty_response_after_reroll",
@@ -156,9 +157,13 @@ async def _ainvoke_json_on(
 async def _ainvoke_once(
     runnable: Runnable[LanguageModelInput, BaseMessage],
     prompt: str,
+    policy: JsonRetryPolicy[T],
 ) -> str:
     messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-    response = await runnable.ainvoke(messages, get_langfuse_runnable_config())
+    response = await runnable.ainvoke(
+        messages,
+        get_langfuse_runnable_config(policy.run_detail or None),
+    )
     return cast(str, response.content)
 
 
@@ -177,7 +182,10 @@ async def _arequest_repair(
         HumanMessage(content=JSON_REPAIR_PROMPT),
     ]
     try:
-        response = await runnable.ainvoke(messages, get_langfuse_runnable_config())
+        response = await runnable.ainvoke(
+            messages,
+            get_langfuse_runnable_config(policy.run_detail or None),
+        )
     except Exception as exc:
         logger.warning(
             "llm_json_repair_call_failed",

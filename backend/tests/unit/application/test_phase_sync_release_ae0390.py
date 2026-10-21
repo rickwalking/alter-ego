@@ -61,7 +61,7 @@ def order(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
     monkeypatch.setattr(workflow_service, "emit_review_event", _emit)
     monkeypatch.setattr(workflow_service, "publish_workflow_sse_updates", _sse)
     monkeypatch.setattr(workflow_service, "persist_edited_slide_copy", AsyncMock())
-    monkeypatch.setattr(workflow_service, "create_workflow_trace", lambda **_: None)
+    monkeypatch.setattr(workflow_service, "record_human_review", lambda **_: None)
     yield calls
 
 

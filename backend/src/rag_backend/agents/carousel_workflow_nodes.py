@@ -52,6 +52,8 @@ from rag_backend.domain.constants.content_feedback import (
 from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_PHASE,
     TRACE_FIELD_PROJECT_ID,
+    TRACE_INPUT_TOPIC,
+    TRACE_OUTPUT_UPDATED_KEYS,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_CONTENT_GATE_VALIDATION,
@@ -193,8 +195,20 @@ async def ensure_artifacts(
     merged["current_phase"] = phase
     # AE-0390: every phase LLM call runs in the named, tagged phase trace.
     project_id = str(state.get("project_id", ""))
-    with phase_trace({TRACE_FIELD_PHASE: phase, TRACE_FIELD_PROJECT_ID: project_id}):
-        return await runner.ensure_for_phase(cast(CarouselWorkflowState, merged))
+    trace_input = {
+        TRACE_FIELD_PHASE: phase,
+        TRACE_INPUT_TOPIC: state.get(TRACE_INPUT_TOPIC, ""),
+    }
+    with phase_trace(
+        {TRACE_FIELD_PHASE: phase, TRACE_FIELD_PROJECT_ID: project_id},
+        input=trace_input,
+    ) as trace:
+        result = await runner.ensure_for_phase(cast(CarouselWorkflowState, merged))
+        trace.set_output({
+            TRACE_FIELD_PHASE: phase,
+            TRACE_OUTPUT_UPDATED_KEYS: sorted(result),
+        })
+        return result
 
 
 def brief_phase(_state: CarouselWorkflowState) -> dict[str, object]:

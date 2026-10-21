@@ -56,3 +56,17 @@ def get_langfuse_client() -> Langfuse | None:
             settings.langfuse_host,
         )
     return LANGFUSE_CLIENT
+
+
+def flush_langfuse() -> None:
+    """Flush buffered observations when this process already has a client.
+
+    Deliberately does not lazily initialize Langfuse: a runner shutdown must
+    never create a client (and open a network connection) just to flush.
+    """
+    client = LANGFUSE_CLIENT
+    if client is not None:
+        client.flush()
+
+
+__all__ = ["flush_langfuse", "get_langfuse_client", "init_langfuse"]

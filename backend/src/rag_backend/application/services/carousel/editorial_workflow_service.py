@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from uuid import UUID
 
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +60,6 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_KEY,
     WORKFLOW_METADATA_EDITORIAL_7_PHASE,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
-    WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
     WORKFLOW_TRACE_PHASE_REVIEW,
 )
 from rag_backend.domain.constants.langfuse_tracing import (
@@ -75,8 +73,6 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
-    _TraceConfig,
-    create_workflow_trace,
     propagate_attributes,
     record_human_review,
 )
@@ -127,20 +123,16 @@ class EditorialWorkflowService:
         if existing is not None and str(existing.get("current_phase", "")).strip():
             return existing
 
-        _trace = create_workflow_trace(
-            config=_TraceConfig(
-                project_id=UUID(project_id),
-                user_id=workflow_input.user_id,
-                content_type=CONTENT_TYPE_CAROUSEL,
-                metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
-            ),
-        )
-
         with propagate_attributes(
             metadata={
                 TRACE_FIELD_PROJECT_ID: project_id,
                 TRACE_FIELD_PHASE: PHASE_RESEARCH,
                 TRACE_FIELD_USER_ID: workflow_input.user_id,
+                "workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE,
+            },
+            input={
+                "topic": workflow_input.topic,
+                "source_count": len(workflow_input.sources),
             },
         ):
             enriched_sources = await self._orchestrator.enrich_research_sources(
@@ -328,25 +320,17 @@ class EditorialWorkflowService:
                 structured_feedback=params.structured_feedback,
             ),
         )
-        trace = create_workflow_trace(
-            config=_TraceConfig(
-                project_id=UUID(params.project_id),
-                user_id=params.reviewer_id,
-                content_type=CONTENT_TYPE_CAROUSEL,
-                metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
+        record_human_review(
+            params=ReviewEventParams(
+                phase=WORKFLOW_TRACE_PHASE_REVIEW,
+                action=params.action,
+                reviewer_id=params.reviewer_id,
+                time_to_respond=None,
+                feedback=params.feedback,
             ),
+            project_id=params.project_id,
+            user_id=params.reviewer_id,
         )
-        if trace is not None:
-            record_human_review(
-                trace=trace,
-                params=ReviewEventParams(
-                    phase=WORKFLOW_TRACE_PHASE_REVIEW,
-                    action=params.action,
-                    reviewer_id=params.reviewer_id,
-                    time_to_respond=None,
-                    feedback=params.feedback,
-                ),
-            )
         workflow_input = EditorialWorkflowStartInput(
             topic="",
             audience="",

@@ -9,6 +9,7 @@ import asyncio
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -85,7 +86,11 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     for module in (blog_generation_service, blog_image_batch):
-        monkeypatch.setattr(module, "blog_phase_trace", lambda _scope: nullcontext())
+        monkeypatch.setattr(
+            module,
+            "blog_phase_trace",
+            lambda _scope, **_kwargs: nullcontext(MagicMock()),
+        )
     # The editor's single-image service (AE-0424) traces with its own helper.
     from rag_backend.application.services.blog import blog_image_service as _single
 
@@ -309,9 +314,9 @@ async def test_every_call_runs_in_a_named_blog_phase(
     scopes: list[BlogPhaseScope] = []
 
     @contextmanager
-    def record(scope: BlogPhaseScope) -> Iterator[None]:
+    def record(scope: BlogPhaseScope, **_kwargs: object) -> Iterator[MagicMock]:
         scopes.append(scope)
-        yield
+        yield MagicMock()
 
     monkeypatch.setattr(service_module, "blog_phase_trace", record)
     monkeypatch.setattr(image_module, "blog_phase_trace", record)
@@ -330,9 +335,9 @@ def test_blog_phase_trace_carries_the_required_metadata(
     captured: list[dict[str, str]] = []
 
     @contextmanager
-    def capture(metadata: dict[str, str]) -> Iterator[None]:
+    def capture(metadata: dict[str, str], **_kwargs: object) -> Iterator[MagicMock]:
         captured.append(metadata)
-        yield
+        yield MagicMock()
 
     monkeypatch.setattr(blog_workflow_observability, "propagate_attributes", capture)
     scope = BlogPhaseScope("p", "u", PHASE_BLOG_GENERATION, "blog_writer")

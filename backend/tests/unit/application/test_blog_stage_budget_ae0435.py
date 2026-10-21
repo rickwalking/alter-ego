@@ -9,6 +9,7 @@ import asyncio
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -70,9 +71,15 @@ TRACE = GenerationTrace(project_id="carousel-1", user_id="user-1", post_id=POST_
 @pytest.fixture(autouse=True)
 def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     for module in (blog_generation_service, blog_image_batch):
-        monkeypatch.setattr(module, "blog_phase_trace", lambda _scope: nullcontext())
+        monkeypatch.setattr(
+            module,
+            "blog_phase_trace",
+            lambda _scope, **_kwargs: nullcontext(MagicMock()),
+        )
     monkeypatch.setattr(
-        blog_image_service, "blog_ai_propagate", lambda *_a: nullcontext()
+        blog_image_service,
+        "blog_ai_propagate",
+        lambda *_a: nullcontext(MagicMock()),
     )
 
 

@@ -25,6 +25,7 @@ from rag_backend.domain.constants.blog_generation import (
     TASK_NAME_PREFIX,
 )
 from rag_backend.domain.models.blog_generation import GenerationOutcome
+from rag_backend.infrastructure.langfuse_client import flush_langfuse
 
 logger = structlog.get_logger(__name__)
 
@@ -46,6 +47,8 @@ async def _run(service: GenerationRunner, job: GenerationJob) -> None:
         raise
     except Exception:
         logger.exception(LOG_GENERATION_FAILED, post_id=job.lease.post_id)
+    finally:
+        flush_langfuse()
 
 
 def schedule_blog_generation(

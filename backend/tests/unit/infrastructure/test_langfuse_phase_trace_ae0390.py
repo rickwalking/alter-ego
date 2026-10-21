@@ -136,6 +136,7 @@ class TestPhaseTrace:
         assert active.propagated == {
             "trace_name": "workflow_design",
             "user_id": None,
+            "session_id": "p-1",
             "metadata": active.metadata,
             "tags": active.tags,
         }

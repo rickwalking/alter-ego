@@ -62,6 +62,7 @@ from rag_backend.domain.models.carousel_run import (
     carousel_run_epoch_var,
 )
 from rag_backend.infrastructure.database.config import get_session_maker
+from rag_backend.infrastructure.langfuse_client import flush_langfuse
 from rag_backend.modules.editorial.public import (
     CarouselProjectWriteOwner,
     open_run_trace_scope,
@@ -142,8 +143,11 @@ async def execute_resume_run(
     get the same heartbeat, run events, epoch fence, failure marking, and
     (AE-0390) the Langfuse trace scope: project, owner, and the caller's agent.
     """
-    with await open_run_trace_scope(params.project_id, params.reviewer_id):
-        await _execute_owned_run(service, params)
+    try:
+        with await open_run_trace_scope(params.project_id, params.reviewer_id):
+            await _execute_owned_run(service, params)
+    finally:
+        flush_langfuse()
 
 
 async def _execute_owned_run(

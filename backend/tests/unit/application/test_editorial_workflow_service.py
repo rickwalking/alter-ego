@@ -28,7 +28,6 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REVISE,
 )
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
-from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
@@ -600,12 +599,11 @@ class TestEditorialWorkflowServiceResume:
         new_callable=AsyncMock,
     )
     @patch(
-        "rag_backend.application.services.carousel.editorial_workflow_service.create_workflow_trace",
-        return_value=None,
+        "rag_backend.application.services.carousel.editorial_workflow_service.record_human_review",
     )
     async def test_resume_delegates_to_orchestrator_on_valid_approve(
         self,
-        _trace: MagicMock,
+        _record_review: MagicMock,
         _emit_review: AsyncMock,
         service: EditorialWorkflowService,
     ) -> None:
@@ -804,13 +802,8 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
     @patch(
         "rag_backend.application.services.carousel.editorial_workflow_service.propagate_attributes"
     )
-    @patch(
-        "rag_backend.application.services.carousel.editorial_workflow_service.create_workflow_trace",
-        return_value=None,
-    )
     async def test_start_workflow_propagates_langfuse_metadata(
         self,
-        mock_create_trace: MagicMock,
         mock_propagate: MagicMock,
         _emit_phase: AsyncMock,
         _publish_sse: AsyncMock,
@@ -844,16 +837,16 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
             ),
         )
 
-        # create_workflow_trace metadata: project_id, user_id, content_type.
-        trace_config = mock_create_trace.call_args.kwargs["config"]
-        assert str(trace_config["project_id"]) == project_id
-        assert trace_config["user_id"] == "pedro-user-id"
-        assert trace_config["content_type"] == CONTENT_TYPE_CAROUSEL
-
-        # propagate_attributes metadata: project_id + phase.
+        # propagate_attributes metadata: project_id + phase + actor.
         span_metadata = mock_propagate.call_args.kwargs["metadata"]
         assert span_metadata["project_id"] == project_id
         assert span_metadata["phase"] == PHASE_RESEARCH
+        assert span_metadata["user_id"] == "pedro-user-id"
+
+        # AE-0442: the research brief reaches the trace input.
+        trace_input = mock_propagate.call_args.kwargs["input"]
+        assert trace_input["topic"] == "AI"
+        assert trace_input["source_count"] == 0
 
 
 class TestMarkResumeInProgressPublishLock:
