@@ -4,6 +4,8 @@ import {
   fetchCarouselDesign,
   fetchPublicBlogPost,
   fetchPublicBlogPosts,
+  fetchPublicCarousel,
+  fetchPublicCarousels,
 } from "@/lib/server-fetch";
 
 vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
@@ -15,6 +17,7 @@ const MOCK_PROJECT_LIST = {
       topic: "Gemma 4",
       audience: "Developers",
       niche: "AI/ML",
+      language: "pt-BR",
       title: "Gemma 4",
       subtitle: null,
       theme: "ai_competition",
@@ -163,6 +166,106 @@ describe("server-fetch", () => {
       );
 
       expect(await fetchCarouselDesign("test-id")).toBeNull();
+    });
+  });
+
+  describe("fetchPublicCarousels (AE-0444)", () => {
+    it("requests public completed carousels newest-first", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(MOCK_PROJECT_LIST),
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
+
+      const result = await fetchPublicCarousels(12, 24);
+
+      expect(result.items).toHaveLength(1);
+      const url = String(mockFetch.mock.calls[0][0]);
+      expect(url).toContain("public=true");
+      expect(url).toContain("status=completed");
+      expect(url).toContain("sort=created_at");
+      expect(url).toContain("limit=12");
+      expect(url).toContain("offset=24");
+    });
+
+    it("falls open to an empty page on failure", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("boom"));
+
+      await expect(fetchPublicCarousels(12, 0)).resolves.toEqual({
+        items: [],
+        total: 0,
+        limit: 12,
+        offset: 0,
+      });
+    });
+
+    it("falls open when the payload fails validation", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ items: "nope" }),
+      } as Response);
+
+      await expect(fetchPublicCarousels(12, 0)).resolves.toMatchObject({
+        items: [],
+        total: 0,
+      });
+    });
+  });
+
+  describe("fetchPublicCarousel (AE-0444)", () => {
+    const MOCK_PUBLIC_CAROUSEL = {
+      id: "proj-1",
+      title: "Título",
+      title_en: "Title",
+      subtitle: null,
+      subtitle_en: null,
+      language: "pt-BR",
+      created_at: "2026-10-20T11:40:01Z",
+      slide_count: 1,
+      available_languages: ["pt"],
+      slides_by_language: {
+        pt: [
+          {
+            slide_number: 1,
+            heading: "Abertura",
+            image_url: "/api/carousels/proj-1/images/slide_1.jpg",
+          },
+        ],
+      },
+      cover_url: "/api/carousels/proj-1/images/slide_1.jpg",
+    };
+
+    it("returns the validated public projection", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(MOCK_PUBLIC_CAROUSEL),
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
+
+      const result = await fetchPublicCarousel("proj-1");
+
+      expect(result?.title).toBe("Título");
+      expect(String(mockFetch.mock.calls[0][0])).toContain(
+        "/api/carousels/proj-1/public",
+      );
+    });
+
+    it("returns null for an unknown, private or failed carousel", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response);
+
+      expect(await fetchPublicCarousel("missing")).toBeNull();
+    });
+
+    it("returns null when the payload fails validation", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: "proj-1" }),
+      } as Response);
+
+      expect(await fetchPublicCarousel("proj-1")).toBeNull();
     });
   });
 

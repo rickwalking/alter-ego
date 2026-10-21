@@ -147,9 +147,12 @@ class PostgresCarouselRepository(CarouselRepository):
         query: _ProjectQuery,
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
-        stmt = select(CarouselProjectModel).order_by(
-            CarouselProjectModel.updated_at.desc()
+        order_column = (
+            CarouselProjectModel.created_at
+            if query.get("order_by_created")
+            else CarouselProjectModel.updated_at
         )
+        stmt = select(CarouselProjectModel).order_by(order_column.desc())
         status = query.get("status")
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)

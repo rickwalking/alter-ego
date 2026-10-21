@@ -14,6 +14,7 @@ function project(overrides: Partial<Project> = {}): Project {
     topic: "Raw topic",
     audience: "Devs",
     niche: "AI models",
+    language: "pt-BR",
     title: "Título PT",
     subtitle: "Subtítulo PT",
     title_en: "Title EN",

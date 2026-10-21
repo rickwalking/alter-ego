@@ -3,6 +3,7 @@ export const PUBLIC_ROUTE_PATHS = {
   HOME: "/",
   BLOG: "/blog",
   CAROUSELS: "/carousels",
+  CAROUSEL_VIEWER: (id: string) => `/carousels/${id}`,
   CHAT: "/chat",
   LOGIN: "/login",
   /**

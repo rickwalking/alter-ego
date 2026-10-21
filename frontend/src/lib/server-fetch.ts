@@ -8,6 +8,7 @@ import { SERVER_FETCH } from "@/constants/server-fetch";
 import {
   carouselDesignResponseSchema,
   carouselProjectListResponseSchema,
+  carouselPublicResponseSchema,
 } from "@/schemas/carousel";
 import {
   publicBlogPostListResponseSchema,
@@ -88,6 +89,36 @@ export async function fetchCarouselDesign(
     API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
     carouselDesignResponseSchema,
     { cache: "no-store" },
+  );
+}
+
+/**
+ * Published carousel gallery page (AE-0444). Newest-first by creation date;
+ * a failed/empty feed returns an empty page instead of throwing.
+ */
+export async function fetchPublicCarousels(
+  limit: number = SERVER_FETCH.PUBLIC_CAROUSEL_PAGE_SIZE,
+  offset: number = 0,
+): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
+  const result = await validatedFetch(
+    `${API_ENDPOINTS.CAROUSELS}?public=true&status=${SERVER_FETCH.COMPLETED_STATUS}&sort=created_at&limit=${limit}&offset=${offset}`,
+    carouselProjectListResponseSchema,
+    { cache: "no-store" },
+  );
+
+  return result ?? { items: [], total: 0, limit, offset };
+}
+
+/** One published carousel's lean public viewer projection (AE-0444). */
+export async function fetchPublicCarousel(
+  id: string,
+): Promise<z.infer<typeof carouselPublicResponseSchema> | null> {
+  return validatedFetch(
+    API_ENDPOINTS.CAROUSEL_PUBLIC(id),
+    carouselPublicResponseSchema,
+    {
+      cache: "no-store",
+    },
   );
 }
 

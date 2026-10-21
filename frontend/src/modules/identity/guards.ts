@@ -24,6 +24,7 @@ export const PUBLIC_ROUTES = [
   PUBLIC_ROUTE_PATHS.BLOG,
   `${PUBLIC_ROUTE_PATHS.BLOG}/`,
   PUBLIC_ROUTE_PATHS.CAROUSELS,
+  `${PUBLIC_ROUTE_PATHS.CAROUSELS}/`,
   PUBLIC_ROUTE_PATHS.CHAT,
   PUBLIC_ROUTE_PATHS.LOGOUT,
 ];
@@ -35,15 +36,18 @@ export function isPublicRoute(pathname: string): boolean {
   if (pathname === PUBLIC_ROUTE_PATHS.CHAT) {
     return true;
   }
-  if (pathname === PUBLIC_ROUTE_PATHS.CAROUSELS) {
-    return true;
-  }
   if (pathname === PUBLIC_ROUTE_PATHS.LOGOUT) {
     return true;
   }
   if (
     pathname === PUBLIC_ROUTE_PATHS.BLOG ||
     pathname.startsWith(`${PUBLIC_ROUTE_PATHS.BLOG}/`)
+  ) {
+    return true;
+  }
+  if (
+    pathname === PUBLIC_ROUTE_PATHS.CAROUSELS ||
+    pathname.startsWith(`${PUBLIC_ROUTE_PATHS.CAROUSELS}/`)
   ) {
     return true;
   }

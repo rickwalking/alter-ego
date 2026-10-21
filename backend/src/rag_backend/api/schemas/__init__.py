@@ -31,6 +31,8 @@ from rag_backend.api.schemas.carousel import (
     CarouselProjectListResponse,
     CarouselProjectResponse,
     CarouselProjectUpdate,
+    CarouselPublicResponse,
+    CarouselPublicSlide,
     CarouselSlideResponse,
     InstagramPublishRequest,
     InstagramPublishResponse,

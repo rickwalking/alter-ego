@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -157,6 +157,7 @@ async def list_carousels(
     user: Annotated[User | None, Depends(get_optional_user)],
     status_filter: Annotated[CarouselStatus | None, Query(alias="status")] = None,
     public_only: Annotated[bool | None, Query(alias="public")] = None,
+    sort: Annotated[Literal["created_at", "updated_at"], Query()] = "updated_at",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
@@ -171,6 +172,7 @@ async def list_carousels(
             status=status_filter,
             public_only=force_public,
             owner_id=owner_id,
+            order_by_created=sort == "created_at",
             limit=limit,
             offset=offset,
         ),

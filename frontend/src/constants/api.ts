@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
   CAROUSEL_DESIGN: (id: string, lang?: string) =>
     `/api/carousels/${id}/design${lang ? `?lang=${lang}` : ""}`,
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
+  CAROUSEL_PUBLIC: (id: string) => `/api/carousels/${id}/public`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,
   CAROUSEL_PDF: (id: string) => `/api/carousels/${id}/pdf`,
@@ -51,6 +52,9 @@ export const API_ENDPOINTS = {
   CAROUSEL_PUBLISH: (id: string) => `/api/carousels/${id}/publish`,
   CAROUSEL_REPAIR: (id: string) => `/api/carousels/${id}/repair`,
   CAROUSEL_REPUBLISH: (id: string) => `/api/carousels/${id}/republish`,
+  /** AE-0445: the POV slide-1 cover picker on the publish step. */
+  CAROUSEL_COVER_OPTIONS: (id: string) => `/api/carousels/${id}/cover-options`,
+  CAROUSEL_COVER: (id: string) => `/api/carousels/${id}/cover`,
   CAROUSEL_STRATEGIES: "/api/carousels/strategies",
   CAROUSEL_STRATEGY_APPLY: (id: string) => `/api/carousels/${id}/strategy`,
   /** AE-0375: the owner's slide-1 hook pick at the outline gate. */

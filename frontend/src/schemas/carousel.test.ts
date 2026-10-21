@@ -52,6 +52,7 @@ const VALID_PROJECT = {
   topic: "Gemma 4",
   audience: "Developers",
   niche: "AI/ML",
+  language: "pt-BR",
   title: "Gemma 4 Deep Dive",
   subtitle: "Understanding Google's Latest Model",
   theme: "ai_competition",

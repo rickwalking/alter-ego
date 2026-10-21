@@ -50,6 +50,7 @@
     "image_model": "openai",
     "image_style": "flat_editorial",
     "is_public": true,
+    "language": "pt-BR",
     "linkedin_post_en": null,
     "linkedin_post_pt": null,
     "needs_republish_since": null,
