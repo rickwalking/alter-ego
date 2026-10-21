@@ -42,7 +42,7 @@ export interface FileUploadProps {
   onCancel?: () => void;
 }
 
-/** The dropped/picked file shown in the drop zone (AE-0446). */
+/** The dropped/picked file shown in the drop zone. */
 export interface SelectedFileSummaryProps {
   file: File;
   pending: boolean;
@@ -50,7 +50,7 @@ export interface SelectedFileSummaryProps {
   onRemove: () => void;
 }
 
-/** Title + tags inputs for the upload (AE-0446). */
+/** Title + tags inputs for the upload. */
 export interface UploadMetadataFieldsProps {
   title: string;
   onTitleChange: (value: string) => void;
@@ -59,7 +59,7 @@ export interface UploadMetadataFieldsProps {
   disabled: boolean;
 }
 
-/** The upload drop target (AE-0446). */
+/** The upload drop target. */
 export interface DropZoneProps {
   form: FileUploadForm;
   typeValid: boolean;

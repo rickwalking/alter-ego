@@ -40,7 +40,7 @@ export function ViolationList({
   selectHint,
   slideLabel,
   severityLabel,
-}: ViolationListProps): React.ReactElement {
+}: Readonly<ViolationListProps>): React.ReactElement {
   return (
     <ul className="space-y-1 text-xs">
       {violations.map((violation) => (
@@ -86,7 +86,7 @@ export function RecoveryEditSection({
   disabled,
   onSubmit,
   onCancel,
-}: RecoveryEditSectionProps): React.ReactElement {
+}: Readonly<RecoveryEditSectionProps>): React.ReactElement {
   const tRecovery = useTranslations("editorialWorkflow.review.designRecovery");
   const [editedSlides, setEditedSlides] = useState<LocalizedSlideReview[]>(() =>
     baselineSlides.map((slide) => ({ ...slide })),
@@ -133,7 +133,7 @@ export function RecoverySendBackSection({
   disabled,
   onSubmit,
   onCancel,
-}: RecoverySendBackSectionProps): React.ReactElement {
+}: Readonly<RecoverySendBackSectionProps>): React.ReactElement {
   const tRecovery = useTranslations("editorialWorkflow.review.designRecovery");
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState<string | null>(null);

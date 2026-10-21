@@ -1,11 +1,11 @@
 /**
- * AE-0446: the shared REST collection hook behind usePersonas / useRubrics.
+ * The shared REST collection hook behind usePersonas / useRubrics.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useResourceCollection } from "./use-resource-collection";
 
-const authenticatedFetch = vi.fn();
+const authenticatedFetch = vi.fn<(...args: unknown[]) => Promise<Response>>();
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (...args: unknown[]) => authenticatedFetch(...args),
 }));

@@ -10,9 +10,9 @@ import type { UploadMetadataFieldsProps } from "./types";
 
 export function UploadSuccess({
   onDone,
-}: {
+}: Readonly<{
   onDone?: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -30,9 +30,9 @@ export function UploadSuccess({
 
 export function UploadProgressBar({
   progress,
-}: {
+}: Readonly<{
   progress: number;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div className="space-y-2" role="status" aria-label="Upload progress">
@@ -62,9 +62,9 @@ export function UploadProgressBar({
 
 export function UploadErrorNotice({
   message,
-}: {
+}: Readonly<{
   message: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div
@@ -83,7 +83,7 @@ export function UploadMetadataFields({
   tags,
   onTagsChange,
   disabled,
-}: UploadMetadataFieldsProps): React.ReactElement {
+}: Readonly<UploadMetadataFieldsProps>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div className="space-y-4">

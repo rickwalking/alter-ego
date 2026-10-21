@@ -27,11 +27,11 @@ function LocaleColumn({
   slide,
   localeKey,
   props,
-}: {
+}: Readonly<{
   slide: LocalizedSlideReview;
   localeKey: PresentationLocaleKey;
   props: SlideCopyEditorProps;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const presentation = slide[localeKey];
   const localeLabel =
@@ -104,7 +104,7 @@ function LocaleColumn({
 }
 
 export function SlideCopyEditor(
-  props: SlideCopyEditorProps,
+  props: Readonly<SlideCopyEditorProps>,
 ): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const editable =

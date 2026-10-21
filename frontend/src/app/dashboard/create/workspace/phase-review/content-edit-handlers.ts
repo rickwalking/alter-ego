@@ -23,8 +23,8 @@ interface ContentEditHandlers {
 
 /**
  * The content-review edit handlers: apply the edit to the slides and clear
- * the edited field's error. AE-0414 (B11): structured items and free-text
- * extras are editable; AE-0437: list slots are added/removed (PT and EN).
+ * the edited field's error. Structured items and free-text
+ * extras are editable; list slots are added/removed (PT and EN).
  */
 export function contentEditHandlers(
   slides: LocalizedSlideReview[],

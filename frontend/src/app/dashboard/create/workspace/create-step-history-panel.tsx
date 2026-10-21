@@ -36,7 +36,7 @@ const STEP_HISTORY_SECTIONS: Partial<
 export function CreateStepHistoryPanel({
   viewStepId,
   state,
-}: CreateStepHistoryPanelProps): React.JSX.Element {
+}: Readonly<CreateStepHistoryPanelProps>): React.JSX.Element {
   const Section = STEP_HISTORY_SECTIONS[viewStepId] ?? StepHistoryEmpty;
   return <Section state={state} />;
 }

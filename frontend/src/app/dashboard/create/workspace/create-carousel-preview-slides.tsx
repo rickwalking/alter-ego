@@ -60,12 +60,12 @@ export function SlideNav({
   count,
   onPrev,
   onNext,
-}: {
+}: Readonly<{
   activeIndex: number;
   count: number;
   onPrev: () => void;
   onNext: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("create");
   return (
     <>
@@ -94,10 +94,10 @@ export function SlideNav({
 export function PreviewSlides({
   slideUrls,
   title,
-}: {
+}: Readonly<{
   slideUrls: string[];
   title: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   const { activeIndex, viewportRef, handleScroll, goPrev, goNext } =
     useSlideViewport(slideUrls);
   return (

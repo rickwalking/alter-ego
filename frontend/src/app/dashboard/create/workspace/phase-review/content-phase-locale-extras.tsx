@@ -44,7 +44,7 @@ export function structuredList(
 }
 
 /**
- * AE-0437: the list an editable column edits — the slide type's own key (a
+ * The list an editable column edits — the slide type's own key (a
  * closing slide edits ``actions``), offered even when empty.
  */
 export function editableList(
@@ -79,14 +79,16 @@ export function editContext(
   };
 }
 
+/**
+ * An editable column also offers every structured field the other locale has,
+ * so an EN TL;DR the translation dropped stays fixable.
+ */
 export function PresentationExtras({
   props,
-}: {
+}: Readonly<{
   props: ContentLocaleFieldsProps;
-}): React.ReactElement {
+}>): React.ReactElement {
   const context = editContext(props);
-  // AE-0430: an editable column also offers every structured field the
-  // other locale has (an EN TL;DR the translation dropped stays fixable).
   const presentation = context
     ? mirrorLocaleStructure(
         props.slide[props.localeKey],
@@ -142,15 +144,15 @@ export interface ContentLocaleFieldsProps {
   slide: LocalizedSlideReview;
   localeKey: PresentationLocaleKey;
   localeLabel: string;
-  /** AE-0414: drives the copy budgets (every policy version has them). */
+  /** Drives the copy budgets (every policy version has them). */
   policyVersion?: string | null;
   /** Present only while the content step is editable. */
   onCopyChange?: (edit: SlideCopyEdit) => void;
-  /** AE-0414 (B11): structured items are editable with the copy. */
+  /** Structured items are editable with the copy. */
   onStructuredItemChange?: (edit: SlideStructuredItemEdit) => void;
-  /** AE-0414 (B11): free-text extras (tldr, CTA fields, insight text). */
+  /** Free-text extras (tldr, CTA fields, insight text). */
   onExtraChange?: (edit: SlideExtraEdit) => void;
-  /** AE-0437: add / remove structured item slots. */
+  /** Add / remove structured item slots. */
   onStructuredListChange?: (edit: SlideStructuredListEdit) => void;
   fieldErrors: SlideFieldErrors;
 }

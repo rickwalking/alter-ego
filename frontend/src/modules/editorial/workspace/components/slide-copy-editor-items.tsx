@@ -38,11 +38,11 @@ export function BudgetHint({
   value,
   slideType,
   policyVersion,
-}: {
+}: Readonly<{
   value: string;
   slideType: string;
   policyVersion?: string | null;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const budget = resolveBodyBudget(slideType, policyVersion);
   const usage = formatBudgetUsage(value, budget);
   if (!usage) {
@@ -68,12 +68,12 @@ export function StructuredItemsEditor({
   locale,
   onChange,
   props,
-}: {
+}: Readonly<{
   slide: LocalizedSlideReview;
   locale: PresentationLocaleKey;
   onChange: (edit: SlideStructuredItemEdit) => void;
   props: SlideCopyEditorProps;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
   const resolved = resolveStructuredList(slide[locale]);
   if (resolved === null) {

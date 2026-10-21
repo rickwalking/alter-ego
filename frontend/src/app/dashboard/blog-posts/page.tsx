@@ -38,7 +38,7 @@ function BlogPostsStatus({
   loading,
   loadError,
   notice,
-}: BlogPostsStatusProps): React.ReactElement | null {
+}: Readonly<BlogPostsStatusProps>): React.ReactElement | null {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -70,6 +70,10 @@ function BlogPostsStatus({
   );
 }
 
+/**
+ * Lists one API page at a time; status and search filter on the server. The
+ * status filter stays mounted while a new page loads.
+ */
 export default function BlogPostsPage(): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const {
@@ -82,7 +86,6 @@ export default function BlogPostsPage(): React.ReactElement {
     delete: deletePost,
     unpublish,
   } = useBlogPosts(blogPostsPageFilters(INITIAL_BLOG_POST_LIST_QUERY));
-  // AE-0416: one API page at a time; status and search filter on the server.
   const paging = useBlogPostsPaging(setFilters);
   const { creating, createError, handleNewPost } = useNewBlogPost(create);
   const { actions, deleteTarget, actionError, confirmDelete, cancelDelete } =
@@ -135,7 +138,6 @@ export default function BlogPostsPage(): React.ReactElement {
       />
 
       <div className="p-7 flex flex-col gap-4">
-        {/* The status filter stays mounted while a new page loads (AE-0416). */}
         {!error && (
           <BlogPostsFilters
             statusFilter={paging.statusFilter}

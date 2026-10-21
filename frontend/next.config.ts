@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+import { resolveBackendUrl } from "./src/constants/api";
 import { buildContentSecurityPolicy } from "./src/constants/csp";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -22,14 +23,16 @@ const LEGACY_DASHBOARD_PATHS = [
   "/analytics",
 ] as const;
 
+/**
+ * Standalone output is opt-in via NEXT_STANDALONE (Docker image). The
+ * Content-Security-Policy header comes from src/constants/csp.ts, its single
+ * authoritative, env-gated definition (drift-guarded by csp.test.ts).
+ */
 const nextConfig: NextConfig = {
-  // Standalone output for Docker (reduces image size)
   output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
 
-  // Enable React Compiler for automatic memoization
   reactCompiler: true,
 
-  // Image optimization
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
@@ -40,29 +43,19 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Experimental features for performance
   experimental: {
-    // Optimize package imports for faster builds
     optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
   },
 
-  // Compression
   compress: true,
 
-  // Powered by header
   poweredByHeader: false,
 
-  // Trailing slash for SEO
   trailingSlash: false,
 
-  // Rewrites to proxy API requests to backend (Docker/Dev)
-  async rewrites() {
-    const backendUrl =
-      process.env.API_BASE_URL ??
-      (process.env.NODE_ENV === "production"
-        ? "http://backend:8000"
-        : "http://localhost:8000");
-    return [
+  rewrites() {
+    const backendUrl = resolveBackendUrl();
+    return Promise.resolve([
       {
         source: "/api/:path*",
         destination: `${backendUrl}/api/:path*`,
@@ -71,24 +64,22 @@ const nextConfig: NextConfig = {
         source: "/ws/:path*",
         destination: `${backendUrl}/ws/:path*`,
       },
-    ];
+    ]);
   },
 
-  // Redirects: /home -> /, and the pre-dashboard paths -> /dashboard/*.
-  async redirects() {
-    return [
+  redirects() {
+    return Promise.resolve([
       { source: "/home", destination: "/", permanent: true },
       ...LEGACY_DASHBOARD_PATHS.map((source) => ({
         source,
         destination: `${DASHBOARD_PREFIX}${source}`,
         permanent: false,
       })),
-    ];
+    ]);
   },
 
-  // Headers for security and performance
-  async headers() {
-    return [
+  headers() {
+    return Promise.resolve([
       {
         source: "/:path*",
         headers: [
@@ -109,8 +100,6 @@ const nextConfig: NextConfig = {
             value: "origin-when-cross-origin",
           },
           {
-            // AE-0305: single authoritative CSP definition lives in
-            // src/constants/csp.ts (env-gated; drift-guarded by csp.test.ts).
             key: "Content-Security-Policy",
             value: buildContentSecurityPolicy(
               process.env.NODE_ENV === "production",
@@ -131,7 +120,7 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-    ];
+    ]);
   },
 };
 

@@ -647,19 +647,22 @@ describe("useEditorialWorkflowResume", () => {
     ).toBe(false);
   });
 
-  // AE-0446 (PR #175 review): the wait AFTER a non-ready answer runs outside
-  // the loading/error handling, as before the hook was split: the lock is
-  // released at once and a final timeout is not shown as a resume error.
+  /**
+   * The wait after a non-ready answer runs outside the loading/error handling,
+   * as before the hook was split: the lock is released at once and a final
+   * timeout is not shown as a resume error.
+   */
   it("releases loading before the second wait and shows no resume error", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
-      json: async () => ({
-        ...baseState,
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-      }),
+      json: () =>
+        Promise.resolve({
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+        }),
     } as Response);
-    let finishWait: (state: EditorialWorkflowState | null) => void = () => {};
+    let finishWait = (_state: EditorialWorkflowState | null): void => undefined;
     const waitSpy = vi
       .spyOn(editorialWorkflowUtils, "waitUntilWorkflowReadyWithTransport")
       .mockImplementation(

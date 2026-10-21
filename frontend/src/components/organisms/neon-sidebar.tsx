@@ -28,23 +28,28 @@ export interface NeonSidebarProps {
   id?: string;
 }
 
+/**
+ * Off-canvas drawer below lg, persistent rail at lg+. Focus trap and body
+ * scroll lock apply only while the drawer is open off-canvas: at lg+ an open
+ * flag must not lock scroll or trap focus. The 240px width equals
+ * SIDEBAR_WIDTH_PX (kept in sync by a unit test) and is a literal, not a CSS
+ * var, because a Tailwind v4 @theme var was tree-shaken out. The rail carries
+ * the EN/PT language switcher.
+ */
 export function NeonSidebar({
   sections,
   showUserFooter = false,
   open,
   id,
-}: NeonSidebarProps): React.ReactElement {
+}: Readonly<NeonSidebarProps>): React.ReactElement {
   const t = useTranslations("common.sidebar");
   const locale = useLocale();
   const { user, logout, isLoading } = useAuth();
   const asideRef = useRef<HTMLElement>(null);
   const isOpen = open === true;
-  // Trap/lock ONLY while the drawer is actually off-canvas (below lg). At lg+
-  // the rail is persistent, so an open flag must not lock scroll or trap focus.
   const isDrawer = useMediaQuery("(max-width: 1023px)");
   const drawerActive = isOpen && isDrawer;
 
-  // Drawer a11y: trap focus and lock body scroll only while open on mobile.
   useFocusTrap(asideRef, drawerActive);
   useScrollLock(drawerActive);
 
@@ -54,9 +59,6 @@ export function NeonSidebar({
       id={id}
       aria-label={t("ariaLabel")}
       className={cn(
-        // Off-canvas drawer below lg, persistent rail at lg+.
-        // 240px == SIDEBAR_WIDTH_PX (kept in sync by a unit test). A literal,
-        // not a CSS var, because a Tailwind v4 @theme var was tree-shaken out.
         "fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col",
         "transition-transform duration-200 ease-out lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
@@ -70,7 +72,6 @@ export function NeonSidebar({
 
       <SidebarNav sections={sections} />
 
-      {/* AE-0415 (B24): the dashboard had no way to switch EN/PT. */}
       <div
         data-testid="sidebar-language-switcher"
         style={{

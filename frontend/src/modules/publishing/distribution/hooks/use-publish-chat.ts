@@ -59,7 +59,11 @@ function conversationProjectId(metadata: unknown): string | null {
   );
 }
 
-/** Create (and remember) a conversation when none is stored for the project. */
+/**
+ * Create (and remember) a conversation when none is stored for the project.
+ *
+ * Creation errors (e.g. a 429 rate limit) are silently ignored.
+ */
 function useEnsureConversation(
   projectId: string,
   [conversationId, setConversationId]: ConversationIdState,
@@ -79,9 +83,7 @@ function useEnsureConversation(
         localStorage.setItem(PUBLISH_CHAT_STORAGE_KEY(projectId), conv.id);
         setConversationId(conv.id);
       })
-      .catch(() => {
-        // Silently ignore creation errors (e.g. 429 rate-limit).
-      })
+      .catch(() => undefined)
       .finally(() => {
         creatingRef.current = false;
       });

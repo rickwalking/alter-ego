@@ -16,7 +16,7 @@ export interface ViewerSlideSource {
   slideNumbers?: readonly number[];
 }
 
-/** One layout template card of the regenerate section (AE-0446). */
+/** One layout template card of the regenerate section. */
 export interface StrategyTemplateCardProps {
   template: (typeof CREATE_TEMPLATES)[number];
   active: boolean;

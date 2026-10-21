@@ -1,5 +1,5 @@
 /**
- * AE-0446: knowledge file upload, pinned while it was split into a form hook
+ * Knowledge file upload, pinned while it was split into a form hook
  * and presentational parts.
  */
 import { fireEvent, render, screen } from "@testing-library/react";

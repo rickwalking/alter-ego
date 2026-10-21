@@ -36,7 +36,7 @@ function SectionToolbar({
   readOnly,
   onMove,
   onDelete,
-}: SectionToolbarProps): React.ReactElement {
+}: Readonly<SectionToolbarProps>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   return (
     <div className="flex gap-1">

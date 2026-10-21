@@ -40,7 +40,7 @@ export function CreateWorkflowControls({
   editBudgetBlocked,
   designReviseBlocked,
   showPublishLink,
-}: CreateWorkflowControlsProps): React.JSX.Element {
+}: Readonly<CreateWorkflowControlsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const isFinalReviewGate =
     state?.current_phase === EDITORIAL_PHASES.FINAL_REVIEW;
@@ -75,9 +75,7 @@ export function CreateWorkflowControls({
             size="sm"
             disabled={loading || !showLiveControls || approveBlocked}
             onClick={() => {
-              void approve(
-                approveOptionsFor(state, contentHasEdits, contentSlides),
-              );
+              approve(approveOptionsFor(state, contentHasEdits, contentSlides));
             }}
           >
             {t("actions.approve")}

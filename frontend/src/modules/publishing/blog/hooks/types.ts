@@ -6,7 +6,7 @@
  * live here rather than inline in the `use-*.ts` hook files.
  */
 
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import type { DraftMergeFn, EditorSessionState } from "../lib/editor-session";
 import type { LockedPost } from "../blog-editor-requests";
@@ -129,20 +129,20 @@ export interface SlotRun {
   merge: DraftMerge;
 }
 
-/** Per-slot status plus the runner that drives it (AE-0446). */
+/** Per-slot status plus the runner that drives it. */
 export interface SlotRunner {
   status: Record<string, SlotStatus>;
   run: (slotRun: SlotRun) => Promise<void>;
 }
 
-/** Arguments of ``useBlogAi().suggest`` (AE-0446). */
+/** Arguments of ``useBlogAi().suggest``. */
 export interface SuggestArgs {
   text: string;
   suggestionType: string;
   context?: string;
 }
 
-/** The list state ``useBlogPosts`` keeps (AE-0446). */
+/** The list state ``useBlogPosts`` keeps. */
 export interface BlogPostList {
   posts: BlogPost[];
   setPosts: Dispatch<SetStateAction<BlogPost[]>>;
@@ -154,16 +154,16 @@ export interface BlogPostList {
   fetchPosts: (activeFilters?: BlogPostFilters) => Promise<void>;
 }
 
-/** What saving/restoring one editor session needs (AE-0446). */
+/** What saving/restoring one editor session needs. */
 export interface EditorPersistenceDeps {
   session: EditorSession | null;
   setSession: Dispatch<SetStateAction<EditorSession | null>>;
-  latest: MutableRefObject<EditorSession | null>;
+  latest: RefObject<EditorSession | null>;
   payload: BlogPostUpdatePayload | null;
   validation: BlogEditorValidation | null;
 }
 
-/** Save + restore for the blog editor (AE-0446). */
+/** Save + restore for the blog editor. */
 export interface EditorPersistence {
   persist: () => Promise<BlogPost | null>;
   handleRestore: (versionNumber: number) => Promise<BlogEditorError | null>;
@@ -172,7 +172,7 @@ export interface EditorPersistence {
   setError: Dispatch<SetStateAction<BlogEditorError | null>>;
 }
 
-/** Draft-derived editor values (AE-0446). */
+/** Draft-derived editor values. */
 export interface DraftState {
   draft: BlogEditorDraft | null;
   validation: BlogEditorValidation | null;

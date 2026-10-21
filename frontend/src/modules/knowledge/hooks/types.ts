@@ -1,6 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { DocumentUploadResponse } from "@/schemas/knowledge";
-/** Input of the document upload mutation (AE-0446: moved out of the hook). */
+/** Input of the document upload mutation. */
 export interface UploadDocumentInput {
   file: File;
   title?: string;
@@ -8,7 +8,7 @@ export interface UploadDocumentInput {
   onProgress?: (progress: number) => void;
 }
 
-/** State + handlers of the knowledge upload form (AE-0446). */
+/** State + handlers of the knowledge upload form. */
 export interface FileUploadForm {
   isDragging: boolean;
   selectedFile: File | null;
@@ -28,7 +28,7 @@ export interface FileUploadForm {
   upload: UseMutationResult<DocumentUploadResponse, Error, UploadDocumentInput>;
 }
 
-/** The file-selection half of the upload form (AE-0446). */
+/** The file-selection half of the upload form. */
 export type FilePick = Pick<
   FileUploadForm,
   "isDragging" | "selectedFile" | "dropZone" | "onFileInput"

@@ -27,7 +27,7 @@ const PROMPT_ROWS = 2;
 function SlotError({
   error,
   failedText,
-}: SlotErrorProps): React.ReactElement | null {
+}: Readonly<SlotErrorProps>): React.ReactElement | null {
   if (!error) {
     return null;
   }

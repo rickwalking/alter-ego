@@ -68,12 +68,17 @@ export function SidebarBrand(): React.ReactElement {
   );
 }
 
-/** The section groups and their links, highlighting the current page. */
+/**
+ * The section groups and their links, highlighting the current page.
+ *
+ * Nav links get a 44px+ touch target on coarse pointers and stay compact on
+ * fine pointers to keep desktop density.
+ */
 export function SidebarNav({
   sections,
-}: {
+}: Readonly<{
   sections: SidebarSection[];
-}): React.ReactElement {
+}>): React.ReactElement {
   const pathname = usePathname();
   const t = useTranslations("common.sidebar");
   return (
@@ -106,8 +111,6 @@ export function SidebarNav({
               <Link
                 key={item.href}
                 href={item.href}
-                // Touch target: ≥44px on coarse pointers (touch), compact on
-                // fine pointers (mouse) to preserve desktop density.
                 className="flex items-center gap-3 rounded-md px-3 py-2.5 [@media(pointer:coarse)]:min-h-11"
                 style={{
                   color: isActive ? NEON_CYAN : TEXT_MUTED,

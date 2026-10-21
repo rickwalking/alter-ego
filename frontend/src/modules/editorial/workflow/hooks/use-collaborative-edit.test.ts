@@ -1,11 +1,11 @@
 /**
- * AE-0446: collaborative lock lifecycle, pinned while the hook was split.
+ * Collaborative lock lifecycle, pinned while the hook was split.
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useCollaborativeEdit } from "./use-collaborative-edit";
 
-const authenticatedFetch = vi.fn();
+const authenticatedFetch = vi.fn<(...args: unknown[]) => Promise<Response>>();
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (...args: unknown[]) => authenticatedFetch(...args),
 }));

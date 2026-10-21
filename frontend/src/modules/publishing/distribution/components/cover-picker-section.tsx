@@ -60,7 +60,7 @@ function PickStatus({
   switched,
   switchingText,
   successText,
-}: PickStatusProps): React.ReactElement | null {
+}: Readonly<PickStatusProps>): React.ReactElement | null {
   if (pending) {
     return <span role="status">{switchingText}</span>;
   }

@@ -126,7 +126,7 @@ export interface CoverPick {
   handleChoose: (assetId: string) => void;
 }
 
-/** Save/cancel buttons of the publish-page slide text editor (AE-0446). */
+/** Save/cancel buttons of the publish-page slide text editor. */
 export interface SlideEditActionsProps {
   refused: boolean;
   canSave: boolean;
@@ -135,13 +135,13 @@ export interface SlideEditActionsProps {
   onCancel: () => void;
 }
 
-/** Rebuild/success line of the publish-page slide text editor (AE-0446). */
+/** Rebuild/success line of the publish-page slide text editor. */
 export interface SlideEditStatusProps {
   pending: boolean;
   done: boolean;
 }
 
-/** PT / EN tab strip of the publish panel (AE-0446). */
+/** PT / EN tab strip of the publish panel. */
 export interface LanguageTabsProps {
   language: ViewerLanguage;
   onChange: (language: ViewerLanguage) => void;
@@ -149,7 +149,7 @@ export interface LanguageTabsProps {
   className: string;
 }
 
-/** Instagram tab of the publish panel (AE-0446). */
+/** Instagram tab of the publish panel. */
 export interface InstagramTabProps extends Pick<
   PublishPanelProps,
   "onPublishInstagram" | "isPublishingInstagram" | "publishResult"
@@ -159,7 +159,7 @@ export interface InstagramTabProps extends Pick<
   language: ViewerLanguage;
 }
 
-/** LinkedIn tab of the publish panel (AE-0446). */
+/** LinkedIn tab of the publish panel. */
 export interface LinkedInTabProps {
   text: string;
   onTextChange: (text: string) => void;

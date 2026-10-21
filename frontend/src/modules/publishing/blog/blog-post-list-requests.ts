@@ -1,5 +1,5 @@
 /**
- * AE-0446: the blog-post list/mutation requests behind ``useBlogPosts``, as
+ * The blog-post list/mutation requests behind ``useBlogPosts``, as
  * plain functions (status mapping and error messages unchanged).
  */
 import { authenticatedFetch } from "@/lib/authenticated-fetch";

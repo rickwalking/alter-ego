@@ -23,7 +23,7 @@ import {
 } from "./content-phase-item-buttons";
 import type { StructuredEditContext } from "./content-phase-item-buttons";
 
-/** AE-0403: content-review DOM ids (``slide-{n}-{locale}-{field}``). */
+/** Content-review DOM ids (``slide-{n}-{locale}-{field}``). */
 export const CONTENT_REVIEW_ID_PREFIX = "slide";
 
 /** Item fields the reviewer edits (``icon_name`` stays as generated). */
@@ -33,9 +33,9 @@ const ITEM_TEXT_FIELDS = ["title", "body"] as const;
 const EXTRA_TEXT_FIELDS = ["title", "body", "quote", "attribution"] as const;
 
 /**
- * AE-0414: an extra the reviewer can edit — a string, or an object with at
+ * An extra the reviewer can edit — a string, or an object with at
  * least one text field. A ``pov_news`` quote card is a verified verbatim quote
- * (AE-0406/0407) and stays read-only.
+ * and stays read-only.
  */
 export function isEditableExtra(extraKey: string, value: unknown): boolean {
   if (typeof value === "string") {
@@ -74,20 +74,20 @@ function fieldProps(
 }
 
 /**
- * AE-0414 (B11): every item of a structured list (summary points, features,
+ * Every item of a structured list (summary points, features,
  * closing actions) with an editable title and body, addressed by the same
- * ``list[i].field`` path the validator flags. AE-0437: items can be added
+ * ``list[i].field`` path the validator flags. Items can be added
  * (also to an empty list) and removed.
  */
 export function EditableStructuredItems({
   context,
   listKey,
   items,
-}: {
+}: Readonly<{
   context: StructuredEditContext;
   listKey: string;
   items: Record<string, unknown>[];
-}): React.ReactElement {
+}>): React.ReactElement {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   return (
     <div className="space-y-2 pt-1">
@@ -153,7 +153,7 @@ export function EditableStructuredItems({
 }
 
 /**
- * AE-0414 (B11): a free-text extra — a string (``tldr_strip``, the CTA
+ * A free-text extra — a string (``tldr_strip``, the CTA
  * ``creator_*`` fields) or the text fields of an object (``insight``).
  * Returns null for any other shape (it stays read-only).
  */
@@ -161,11 +161,11 @@ export function EditableStructuredExtra({
   context,
   extraKey,
   value,
-}: {
+}: Readonly<{
   context: StructuredEditContext;
   extraKey: string;
   value: unknown;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const tCopy = useTranslations("editorialWorkflow.review.copyField");
   const extraLabel = useStructuredExtraLabel();
   const edit = (field: string | undefined, next: string): void =>

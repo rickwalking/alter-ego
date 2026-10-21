@@ -48,11 +48,11 @@ export interface WorkflowStartInput {
   sources?: WorkflowStartSource[];
 }
 
-type WorkflowStartSource = {
+interface WorkflowStartSource {
   title: string;
   content: string;
   source_type?: string;
-};
+}
 
 const NO_SOURCES: WorkflowStartSource[] = [];
 
@@ -85,7 +85,13 @@ export function useWorkflowLifecycle(
   }, [workflowStatus, onPublished]);
 }
 
-/** Local content-slide edits, dropped when the upstream state advances. */
+/**
+ * Local content-slide edits, dropped when the upstream state advances.
+ *
+ * Any lock-version change (e.g. after an approval) drops the edits, once and
+ * one way: an older version read back later does not restore them. Adjusted
+ * during render, not in an effect.
+ */
 export function useContentEdits(state: WorkflowState): {
   contentSlides: LocalizedSlideReview[];
   contentHasEdits: boolean;
@@ -97,9 +103,6 @@ export function useContentEdits(state: WorkflowState): {
   );
   const lockVersion = state?.lock_version;
   const [edited, setEdited] = useState<LocalizedSlideReview[] | null>(null);
-  // Any lock-version change (e.g. after an approval) drops the edits, once
-  // and one way: an older version read back later does not restore them.
-  // Adjusted during render, not in an effect.
   const [seenLockVersion, setSeenLockVersion] = useState(lockVersion);
   if (seenLockVersion !== lockVersion) {
     setSeenLockVersion(lockVersion);
@@ -160,14 +163,17 @@ export function useWorkflowFeedback(
   };
 }
 
-/** AE-0415 (B01): the slides below the persona bar, named, or null. */
+/**
+ * The slides below the persona bar, named, or null.
+ *
+ * Uses one 0-100 scale (a 0-10 answer reads x10) and ignores unscored slides,
+ * as the backend gate does.
+ */
 export function usePersonaShortfallDetail(state: WorkflowState): {
   personaApproveBlocked: boolean;
   personaShortfallDetail: string | null;
 } {
   const t = useTranslations("editorialWorkflow");
-  // One 0-100 scale (a 0-10 answer reads x10) and unscored slides ignored,
-  // as the backend gate does (AE-0407).
   const shortfalls =
     state?.current_phase === EDITORIAL_PHASES.CONTENT
       ? personaScoreShortfalls(state.persona_scores)
@@ -199,7 +205,13 @@ export interface ApprovalGates {
   showPublishLink: boolean;
 }
 
-/** Approval blockers that do not depend on the persona scores. */
+/**
+ * Approval blockers that do not depend on the persona scores.
+ *
+ * A plain revise is disabled at the design gate while blocking content-level
+ * violations exist: only direct edits or a content send-back resolve them, so a
+ * revise there is a provable no-op.
+ */
 export function approvalGates(
   state: WorkflowState,
   content: { contentSlides: LocalizedSlideReview[]; contentHasEdits: boolean },
@@ -214,9 +226,6 @@ export function approvalGates(
         content.contentSlides,
         state?.presentation_policy_version,
       ),
-    // AE-0310: blocking content-level violations at the design gate are only
-    // resolvable by direct edits or a content send-back; a plain revise is a
-    // provable no-op there, so it is disabled.
     designReviseBlocked:
       phase === EDITORIAL_PHASES.DESIGN &&
       (hasBlockingPresentationViolations(state) ||
@@ -265,6 +274,7 @@ export interface StepVisibility {
   showImagePromptReview: boolean;
 }
 
+/** The research and outline gates also show what is reviewed. */
 export function stepVisibility(
   state: WorkflowState,
   step: StepView,
@@ -285,7 +295,6 @@ export function stepVisibility(
     isLiveStep: live,
     showLiveControls,
     contentEditable: showLiveControls && isContentPhase(state),
-    // AE-0415 (B13): the research and outline gates show what is reviewed too.
     showPhaseReview:
       state !== null &&
       (live || historical) &&
@@ -308,12 +317,17 @@ export interface RevisionActions {
   };
 }
 
+/**
+ * Actions lock while a run executes, so nothing mutates the project mid-run.
+ * Design-step recovery means direct edits or a content send-back. For content
+ * manual fixes the edits are the input, so an edits-only revise saves and
+ * re-validates them without approving the content step.
+ */
 export function revisionActions(
   workflow: CreateWorkflowApi,
   showLiveControls: boolean,
 ): RevisionActions {
   const { revise } = workflow;
-  // AE-0415 (B15): nothing that mutates the project while a run executes.
   const actionsLocked =
     workflow.loading ||
     workflow.state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
@@ -322,7 +336,6 @@ export function revisionActions(
   };
   return {
     actionsLocked,
-    // AE-0310: design-step recovery (direct edits or a content send-back).
     designRecovery: {
       onSubmitEditedSlides: submitEditedSlides,
       onSendBackToContent: (feedback: string): void => {
@@ -330,8 +343,6 @@ export function revisionActions(
       },
       disabled: actionsLocked || !showLiveControls,
     },
-    // AE-0403: the edits ARE the input, so an edits-only revise saves and
-    // re-validates them without approving the content step (AE-0310).
     contentManualFixes: {
       onSubmit: submitEditedSlides,
       submitting: actionsLocked,

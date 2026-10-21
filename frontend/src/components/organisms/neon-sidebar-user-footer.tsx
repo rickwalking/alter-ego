@@ -15,14 +15,19 @@ import { SIDEBAR_AVATAR_SIZE } from "@/components/organisms/constants";
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>["user"]>;
 
-/** The signed-in user's avatar, name, email and logout. */
+/**
+ * The signed-in user's avatar, name, email and logout.
+ *
+ * The logout button is a 44px+ tap target on touch devices and compact for a
+ * mouse.
+ */
 export function SidebarUserFooter({
   user,
   onLogout,
-}: {
+}: Readonly<{
   user: AuthUser;
   onLogout: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <div
       style={{
@@ -75,7 +80,6 @@ export function SidebarUserFooter({
         onClick={onLogout}
         aria-label="Logout"
         title="Logout"
-        // ≥44px tap target on touch devices; compact for mouse.
         className="flex shrink-0 items-center justify-center rounded-md h-7 w-7 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
         style={{
           border: `1px solid ${NEON_BORDER_LIGHT}`,

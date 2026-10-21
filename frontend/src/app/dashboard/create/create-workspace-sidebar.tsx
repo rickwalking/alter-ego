@@ -43,9 +43,9 @@ function summaryPhase(state: EditorialWorkflowState | null): {
 /** The running phase with its status badge, once a workflow has a phase. */
 function ActivePhaseCard({
   workflowState,
-}: {
+}: Readonly<{
   workflowState: EditorialWorkflowState | null;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const t = useTranslations("create");
   const phaseLabel = usePhaseLabel();
   if (!workflowState?.current_phase) {

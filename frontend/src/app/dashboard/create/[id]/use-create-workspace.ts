@@ -15,14 +15,18 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { createRetryWorkflowHandler } from "@/app/dashboard/create/[id]/create-retry-handler";
 import { useFollowWorkflowStep } from "@/app/dashboard/create/use-follow-workflow-step";
 
-/** AE-0415 (B30): phases of a project whose editorial workflow never started. */
+/** Phases of a project whose editorial workflow never started. */
 const NOT_STARTED_PHASES: ReadonlySet<string> = new Set(["", "brief"]);
 
 type EditorialWorkflow = ReturnType<typeof useEditorialWorkflow>;
 type CarouselProject = NonNullable<
   ReturnType<typeof useCarouselProject>["data"]
 >;
-type WorkflowSource = { title: string; content: string; source_type?: string };
+interface WorkflowSource {
+  title: string;
+  content: string;
+  source_type?: string;
+}
 
 /** Push / replace the workspace URL of one step (publish has its own page). */
 export interface WorkspaceNavigation {
@@ -96,6 +100,12 @@ export interface WorkflowStarter {
   handleRetryWorkflow: () => Promise<void>;
 }
 
+/**
+ * The retry is idempotent: duplicate clicks trigger a single restart, because
+ * the `retrying` guard short-circuits in-flight clicks before the button's
+ * disabled state propagates. On failure `retrying` resets, so the button
+ * re-enables and the error card stays (see create-retry-handler.ts).
+ */
 function useRetryWorkflow(
   project: CarouselProject | undefined,
   start: EditorialWorkflow["start"],
@@ -108,11 +118,6 @@ function useRetryWorkflow(
   },
 ): Pick<WorkflowStarter, "retrying" | "handleRetryWorkflow"> {
   const [retrying, setRetrying] = useState(false);
-  // Idempotent retry (AE-0009): duplicate clicks must trigger a single
-  // restart. The `retrying` guard short-circuits in-flight clicks before the
-  // button's disabled state propagates — previews the AE-0073 concurrency
-  // contract intent (one restart per failure). On failure, `retrying` resets so
-  // the button re-enables and the error card stays. See create-retry-handler.ts.
   const handleRetryWorkflow = useCallback(
     (): Promise<void> =>
       createRetryWorkflowHandler({
@@ -129,6 +134,7 @@ function useRetryWorkflow(
   return { retrying, handleRetryWorkflow };
 }
 
+/** After a start it opens the gate the workflow is really on. */
 function useWorkflowStarter(
   project: CarouselProject | undefined,
   editorialWorkflow: EditorialWorkflow,
@@ -157,7 +163,6 @@ function useWorkflowStarter(
           brief: project.niche,
           sources: withMaterials ? sources : [],
         });
-        // AE-0415 (B26): open the gate the workflow is really on.
         pushStep(resolveStepFromWorkflowPhase(started.current_phase));
       } catch {
         setWorkflowStarted(false);
@@ -187,7 +192,7 @@ function toWorkflowSources(sources: ContentSource[]): WorkflowSource[] {
   }));
 }
 
-/** Everything the create workspace page renders from (AE-0446). */
+/** Everything the create workspace page renders from. */
 export interface CreateWorkspace {
   projectId: string;
   activeStepId: CreateStepId;
@@ -203,12 +208,15 @@ export interface CreateWorkspace {
   starter: WorkflowStarter;
 }
 
+/**
+ * A fresh project has no workflow state (GET answers 404), so its workflow is
+ * not fetched on mount.
+ */
 export function useCreateWorkspace(): CreateWorkspace {
   const projectId = useParams<{ id: string }>().id;
   const activeStepId = parseCreateStepId(useSearchParams().get("step"));
   const projectQuery = useCarouselProject(projectId);
   const project = projectQuery.data;
-  // AE-0415 (B30): a fresh project has no workflow state (GET answers 404).
   const editorialWorkflow = useEditorialWorkflow(projectId, {
     initialFetch:
       project !== undefined &&

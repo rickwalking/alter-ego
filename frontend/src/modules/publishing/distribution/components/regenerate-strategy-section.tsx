@@ -26,7 +26,7 @@ function StrategyTemplateCard({
   template,
   active,
   onSelect,
-}: StrategyTemplateCardProps): React.ReactElement {
+}: Readonly<StrategyTemplateCardProps>): React.ReactElement {
   return (
     <div
       role="button"

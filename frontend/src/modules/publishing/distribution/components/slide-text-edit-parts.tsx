@@ -25,7 +25,7 @@ export function SlideEditActions({
   saving,
   onSave,
   onCancel,
-}: SlideEditActionsProps): React.ReactElement {
+}: Readonly<SlideEditActionsProps>): React.ReactElement {
   const t = useTranslations("publish.slideEditor");
   const tErrors = useTranslations("editorialWorkflow.review.fieldErrors");
   const savingLabel = refused ? tErrors("submittingManualFixes") : t("saving");
@@ -46,7 +46,7 @@ export function SlideEditActions({
 export function SlideEditStatus({
   pending,
   done,
-}: SlideEditStatusProps): React.ReactElement | null {
+}: Readonly<SlideEditStatusProps>): React.ReactElement | null {
   const t = useTranslations("publish.slideEditor");
   if (pending) {
     return (

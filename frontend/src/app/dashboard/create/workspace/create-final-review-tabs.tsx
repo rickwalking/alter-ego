@@ -73,11 +73,11 @@ function useBlogPreview(
 }
 
 interface BlogPreviewPanelProps {
-  loading: boolean;
-  error: string | null;
-  markdown: string;
-  loadingText: string;
-  placeholderText: string;
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly markdown: string;
+  readonly loadingText: string;
+  readonly placeholderText: string;
 }
 
 function blogPreviewContent({
@@ -112,7 +112,7 @@ function BlogPreviewPanel(props: BlogPreviewPanelProps): React.JSX.Element {
 export function CreateFinalReviewTabs({
   projectId,
   state,
-}: FinalReviewTabsProps): React.JSX.Element {
+}: Readonly<FinalReviewTabsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.review.finalReview");
   const [activeTab, setActiveTab] = useState<FinalReviewTab>(
     FINAL_REVIEW_TABS.CAROUSEL,
@@ -129,7 +129,7 @@ export function CreateFinalReviewTabs({
 
   const displayedBlogMarkdown = previewMarkdown ?? blogMarkdown;
 
-  const tabs: Array<{ id: FinalReviewTab; label: string }> = [
+  const tabs: { id: FinalReviewTab; label: string }[] = [
     { id: FINAL_REVIEW_TABS.CAROUSEL, label: t("tabs.carousel") },
     { id: FINAL_REVIEW_TABS.BLOG, label: t("tabs.blog") },
     { id: FINAL_REVIEW_TABS.CAPTION, label: t("tabs.caption") },

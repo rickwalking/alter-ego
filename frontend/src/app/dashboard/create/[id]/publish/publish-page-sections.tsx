@@ -24,10 +24,10 @@ export const panelStyle = {
 export function PublishPageHeading({
   project,
   projectId,
-}: {
+}: Readonly<{
   project: LoadedProject;
   projectId: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("publish");
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -56,12 +56,12 @@ export function PublishStatusNotices({
   projectId,
   canPublishToSite,
   artifactsReady,
-}: {
+}: Readonly<{
   workflowState: EditorialWorkflowState | null;
   projectId: string;
   canPublishToSite: boolean;
   artifactsReady: boolean;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const t = useTranslations("publish");
   if (workflowState?.phase_status === WORKFLOW_PHASE_STATUS.FAILED) {
     return canPublishToSite ? null : (
@@ -93,10 +93,10 @@ export function PublishStatusNotices({
 export function PublishNotReady({
   workflowState,
   artifactsReady,
-}: {
+}: Readonly<{
   workflowState: EditorialWorkflowState | null;
   artifactsReady: boolean;
-}): React.ReactElement | null {
+}>): React.ReactElement | null {
   const t = useTranslations("publish");
   if (
     artifactsReady ||
@@ -120,11 +120,11 @@ export function SitePublishBar({
   projectId,
   message,
   onPublish,
-}: {
+}: Readonly<{
   projectId: string;
   message: string | null;
   onPublish: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("publish");
   return (
     <div

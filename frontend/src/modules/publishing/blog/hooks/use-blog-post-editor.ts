@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Blog section editor state (AE-0411 load/save; AE-0424 `blog.v2` draft).
+ * Blog section editor state (load/save and the `blog.v2` draft).
  *
  * Loads the FULL post through the detail endpoint and edits a draft
  * `{ title, excerpt, document }` over the strict `blog.v2` document, one
@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { BLOG_EDITOR_ERROR_KINDS } from "@/constants/blog-editor";
@@ -113,6 +113,15 @@ function shouldAdoptLoaded(
   );
 }
 
+/**
+ * State is adjusted while rendering, not in an effect: a session starts the
+ * first time a post loads; later server answers update it explicitly. The
+ * generation run owns the document while it writes it: a newer server version
+ * is adopted (replacing the read-only session) when either copy is generating,
+ * the editor's (the run's writes, then its final status) or the server's (a
+ * Retry clicked here flipped it to in_progress), so the editor locks at once
+ * instead of staying editable on "failed".
+ */
 function useEditorSession(postId: string) {
   const query = useQuery({
     queryKey: blogPostKeys.detail(postId),
@@ -121,13 +130,6 @@ function useEditorSession(postId: string) {
   });
   const loaded = query.data ?? null;
   const [session, setSession] = useState<EditorSession | null>(null);
-  // Adjust state while rendering (not in an effect): start a session the
-  // first time a post loads; later server answers update it explicitly.
-  // AE-0425: the generation run owns the document while it writes it. A newer
-  // server version is adopted (replacing the read-only session) when EITHER
-  // copy is generating: the editor's copy (the run's writes, then its final
-  // status) or the server's (a Retry clicked here flipped it to in_progress,
-  // so the editor locks at once instead of staying editable on "failed").
   if (loaded && shouldAdoptLoaded(session, loaded)) {
     setSession(sessionFromPost(loaded));
   }
@@ -208,7 +210,7 @@ function useEditorPersistence({
 }
 
 /** A ref that always holds the last committed value. */
-function useLatest<T>(value: T): MutableRefObject<T> {
+function useLatest<T>(value: T): RefObject<T> {
   const ref = useRef<T>(value);
   useEffect(() => {
     ref.current = value;
@@ -216,10 +218,12 @@ function useLatest<T>(value: T): MutableRefObject<T> {
   return ref;
 }
 
+/**
+ * `latest` is the latest committed session, for answers that arrive after a
+ * re-render (a 409 retry, the lock an action must use).
+ */
 export function useBlogPostEditor(postId: string): UseBlogPostEditorResult {
   const { query, session, setSession } = useEditorSession(postId);
-  // The latest committed session, for answers that arrive after a re-render
-  // (a 409 retry, the lock an action must use).
   const latest = useLatest(session);
   const [language, setLanguage] =
     useState<BlogContentLanguage>(BLOG_CONTENT_PT);

@@ -1,8 +1,7 @@
 /**
- * The create workspace page (AE-0446: behavior pinned before the page was
- * split into a workspace hook and parts). Covers the loading / not-found
- * states, the step routing, starting and retrying the workflow (AE-0009,
- * AE-0415 B26/B30) and the publish-step hand-off.
+ * The create workspace page, behaviour pinned before the page was split into
+ * a workspace hook and parts. Covers the loading / not-found states, the step
+ * routing, starting and retrying the workflow and the publish-step hand-off.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,10 +16,10 @@ const nav = vi.hoisted(() => ({
   step: null as string | null,
 }));
 const hooks = vi.hoisted(() => ({
-  project: vi.fn(),
-  workflow: vi.fn(),
+  project: vi.fn<() => unknown>(),
+  workflow: vi.fn<() => unknown>(),
   workflowOptions: vi.fn(),
-  follow: vi.fn(),
+  follow: vi.fn<(options: unknown) => unknown>(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -142,7 +141,9 @@ function workflowState(
 
 function setWorkflow(
   state: EditorialWorkflowState | null,
-  start = vi.fn(async () => workflowState({ current_phase: "research" })),
+  start = vi.fn(() =>
+    Promise.resolve(workflowState({ current_phase: "research" })),
+  ),
 ) {
   hooks.workflow.mockReturnValue({
     state,
@@ -227,9 +228,7 @@ describe("CreateWorkspacePage", () => {
   it("re-enables the start when it fails", async () => {
     setWorkflow(
       null,
-      vi.fn(async () => {
-        throw new Error("boom");
-      }),
+      vi.fn(() => Promise.reject(new Error("boom"))),
     );
     render(<CreateWorkspacePage />);
     fireEvent.click(screen.getByText("start-with"));

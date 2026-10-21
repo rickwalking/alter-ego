@@ -53,7 +53,7 @@ function flaggedSlideIndexes(
 export function DesignRecoveryPanel({
   state,
   recovery,
-}: DesignRecoveryPanelProps): React.ReactElement {
+}: Readonly<DesignRecoveryPanelProps>): React.ReactElement {
   const tRecovery = useTranslations("editorialWorkflow.review.designRecovery");
   const t = useTranslations("editorialWorkflow.review");
   const violations = listPresentationViolations(state);

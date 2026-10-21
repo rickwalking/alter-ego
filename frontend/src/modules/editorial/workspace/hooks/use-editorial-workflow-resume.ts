@@ -62,6 +62,10 @@ function useStableResumeDeps({
   );
 }
 
+/**
+ * The final wait for the gate runs outside the try on purpose: it releases the
+ * loading lock, and its "resumeFailed" is not shown as a resume error.
+ */
 export function useEditorialWorkflowResume(
   params: UseEditorialWorkflowResumeParams,
 ) {
@@ -93,8 +97,6 @@ export function useEditorialWorkflowResume(
       } finally {
         deps.setLoading(false);
       }
-      // Outside the try on purpose: a second wait for the gate releases the
-      // loading lock, and its "resumeFailed" is not shown as a resume error.
       return finish();
     },
     [deps],

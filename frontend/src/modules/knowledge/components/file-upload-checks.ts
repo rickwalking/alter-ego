@@ -1,4 +1,4 @@
-/** Knowledge upload file checks (AE-0446: moved out of the component). */
+/** Knowledge upload file checks. */
 
 const ALLOWED_UPLOAD_TYPES = [
   "application/pdf",

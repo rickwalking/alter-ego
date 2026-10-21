@@ -27,7 +27,7 @@ import { useProjectSources, useSourceForm } from "./use-project-sources";
 export function CreateSourceMaterials({
   projectId,
   onSourcesChange,
-}: CreateSourceMaterialsProps): React.JSX.Element {
+}: Readonly<CreateSourceMaterialsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const list = useProjectSources(projectId, onSourcesChange);
   const form = useSourceForm(projectId, list);

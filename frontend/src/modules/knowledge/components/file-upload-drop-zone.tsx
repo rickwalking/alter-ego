@@ -12,7 +12,7 @@ export function SelectedFileSummary({
   pending,
   typeValid,
   onRemove,
-}: SelectedFileSummaryProps): React.ReactElement {
+}: Readonly<SelectedFileSummaryProps>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div className="space-y-3">
@@ -53,9 +53,9 @@ export function SelectedFileSummary({
 
 export function EmptyDropPrompt({
   onBrowse,
-}: {
+}: Readonly<{
   onBrowse: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
     <div className="space-y-3">
@@ -85,7 +85,7 @@ export function EmptyDropPrompt({
 export function UploadDropZone({
   form,
   typeValid,
-}: DropZoneProps): React.ReactElement {
+}: Readonly<DropZoneProps>): React.ReactElement {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { upload, selectedFile } = form;
   return (

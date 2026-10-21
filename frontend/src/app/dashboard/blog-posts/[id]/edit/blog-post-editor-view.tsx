@@ -38,11 +38,11 @@ function EditorHeader({
   editor,
   saveBlocked,
   onLeave,
-}: {
+}: Readonly<{
   editor: EditorProp;
   saveBlocked: boolean;
   onLeave: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations(BLOG_EDITOR_I18N_NAMESPACE);
   return (
     <div className="mb-6 flex items-center justify-between gap-4">
@@ -69,10 +69,10 @@ function EditorHeader({
 function EditorNotices({
   editor,
   migrationPending,
-}: {
+}: Readonly<{
   editor: EditorProp;
   migrationPending: boolean;
-}): React.ReactElement {
+}>): React.ReactElement {
   const { post, error } = editor;
   return (
     <>

@@ -56,9 +56,9 @@ export function WorkspaceNotFound(): React.ReactElement {
 
 function PublishStepCard({
   onGoToPublish,
-}: {
+}: Readonly<{
   onGoToPublish: () => void;
-}): React.ReactElement {
+}>): React.ReactElement {
   const t = useTranslations("create");
   return (
     <div style={briefCardStyle}>
@@ -82,10 +82,10 @@ type LoadedProject = NonNullable<CreateWorkspace["projectQuery"]["data"]>;
 export function WorkspaceStepBody({
   workspace,
   project,
-}: {
+}: Readonly<{
   workspace: CreateWorkspace;
   project: LoadedProject;
-}): React.ReactElement {
+}>): React.ReactElement {
   const { editorialWorkflow, activeStepId, projectId, starter } = workspace;
   const state = editorialWorkflow.state;
   if (state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED) {

@@ -1,5 +1,5 @@
 /**
- * AE-0446: "download all" for the publish carousel viewer, moved out of the
+ * "download all" for the publish carousel viewer, moved out of the
  * component unchanged — fetch every slide (30 s timeout each, failures
  * skipped), zip them and hand the archive to the browser.
  */
@@ -13,6 +13,7 @@ function archiveName(alt: string): string {
   return alt.replace(WHITESPACE, "_") || DEFAULT_ARCHIVE_NAME;
 }
 
+/** A failed fetch of one slide is ignored. */
 async function addSlide(
   folder: JSZip,
   url: string,
@@ -28,7 +29,6 @@ async function addSlide(
     clearTimeout(timeoutId);
     folder.file(`slide_${index + 1}.jpg`, await response.blob());
   } catch {
-    // Ignore individual fetch failures
   } finally {
     clearTimeout(timeoutId);
   }

@@ -11,6 +11,9 @@ import type { HorizontalCarouselViewerProps } from "./types";
  * Instagram-style carousel viewer. Horizontal snap-scroll on desktop
  * with visible slide counter; arrow buttons for prev/next navigation
  * and a download-all button.
+ *
+ * Slides whose image did not load (not rendered yet) get a placeholder instead
+ * of a broken image.
  */
 export function HorizontalCarouselViewer({
   slideUrls,
@@ -19,8 +22,6 @@ export function HorizontalCarouselViewer({
   const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
-  // AE-0416: slides whose image did not load (not rendered yet) get a
-  // placeholder instead of a broken image.
   const [missingSlides, setMissingSlides] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -107,7 +108,6 @@ export function HorizontalCarouselViewer({
           ))}
         </div>
 
-        {/* Prev / Next arrows */}
         {slideUrls.length > 1 && (
           <>
             <button

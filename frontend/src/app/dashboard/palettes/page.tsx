@@ -54,7 +54,7 @@ function TargetPaletteForm({
   onSave,
   isPending,
   serverError,
-}: TargetPaletteFormProps): React.ReactElement | null {
+}: Readonly<TargetPaletteFormProps>): React.ReactElement | null {
   if (!target) {
     return null;
   }

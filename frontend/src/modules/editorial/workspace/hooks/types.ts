@@ -6,12 +6,7 @@
  * live here rather than inline in the hook `.ts` files.
  */
 
-import type {
-  Dispatch,
-  MutableRefObject,
-  RefObject,
-  SetStateAction,
-} from "react";
+import type { Dispatch, RefObject, SetStateAction } from "react";
 import type {
   EditorialWorkflowTransportMode,
   WorkflowStreamProbeOutcome,
@@ -84,14 +79,6 @@ export interface WorkflowStreamReconnectApi {
   reconnectNow: () => void;
   /** Drop pending reconnects and in-flight probes (unmount, disable). */
   cancelReconnect: () => void;
-}
-
-/**
- * The settled resume result, wrapped so the request's try/finally returns a
- * plain value: the pending finalization runs outside its catch, as before.
- */
-export interface ResumeOutcome {
-  pending: Promise<EditorialWorkflowState>;
 }
 
 export interface EditorialWorkflowResumeAcceptedResponse {
@@ -186,14 +173,14 @@ export interface SlideFieldErrorState {
   clearField: (key: string) => void;
 }
 
-/** The reconnect backoff timer (AE-0446: split out of the reconnect hook). */
+/** The reconnect backoff timer. */
 export interface ReconnectTimer {
-  attemptsRef: MutableRefObject<number>;
+  attemptsRef: RefObject<number>;
   clearTimer: () => void;
   scheduleReconnect: () => void;
 }
 
-/** What reviving the stream on tab focus needs (AE-0446). */
+/** What reviving the stream on tab focus needs. */
 export interface ResumeOnVisibleDeps extends Pick<
   UseWorkflowStreamReconnectParams,
   "connectRef" | "sourceRef" | "refreshState"
@@ -202,7 +189,7 @@ export interface ResumeOnVisibleDeps extends Pick<
   reconnectNow: () => void;
 }
 
-/** What starting a workflow needs (AE-0446: split out of the main hook). */
+/** What starting a workflow needs. */
 export type StartWorkflowDeps = Pick<
   UseEditorialWorkflowResumeParams,
   | "projectId"
@@ -215,7 +202,7 @@ export type StartWorkflowDeps = Pick<
   | "setError"
 >;
 
-/** ``useEditorialWorkflow``'s own state + refresh (AE-0446). */
+/** ``useEditorialWorkflow``'s own state + refresh. */
 export interface WorkflowCore {
   state: EditorialWorkflowState | null;
   setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
@@ -230,20 +217,18 @@ export interface WorkflowCore {
   refreshState: () => Promise<EditorialWorkflowState | null>;
 }
 
-/** Refs shared by the workflow stream, poller and reconnect (AE-0446). */
+/** Refs shared by the workflow stream, poller and reconnect. */
 export interface WorkflowStreamRefs {
-  pollTimeoutRef: MutableRefObject<number | null>;
-  backoffIndexRef: MutableRefObject<number>;
-  sourceRef: MutableRefObject<EventSource | null>;
-  connectRef: MutableRefObject<(() => void) | null>;
-  transportModeRef: MutableRefObject<EditorialWorkflowTransportMode>;
-  workflowStateRef: MutableRefObject<EditorialWorkflowState | null>;
-  phaseStatusRef: MutableRefObject<
-    EditorialWorkflowState["phase_status"] | undefined
-  >;
+  pollTimeoutRef: RefObject<number | null>;
+  backoffIndexRef: RefObject<number>;
+  sourceRef: RefObject<EventSource | null>;
+  connectRef: RefObject<(() => void) | null>;
+  transportModeRef: RefObject<EditorialWorkflowTransportMode>;
+  workflowStateRef: RefObject<EditorialWorkflowState | null>;
+  phaseStatusRef: RefObject<EditorialWorkflowState["phase_status"] | undefined>;
 }
 
-/** Transport switches of the workflow stream (AE-0446). */
+/** Transport switches of the workflow stream. */
 export interface PollingControls {
   clearPollTimeout: () => void;
   stopPollingFallback: () => void;
@@ -251,7 +236,7 @@ export interface PollingControls {
   markDisconnected: () => void;
 }
 
-/** What the stream-connection effect needs (AE-0446). */
+/** What the stream-connection effect needs. */
 export interface StreamConnectionDeps {
   params: UseEditorialWorkflowSseParams;
   refs: WorkflowStreamRefs;
@@ -262,7 +247,7 @@ export interface StreamConnectionDeps {
   >;
 }
 
-/** What the polling-fallback effect needs (AE-0446). */
+/** What the polling-fallback effect needs. */
 export interface PollWhileFallbackDeps {
   transportMode: EditorialWorkflowTransportMode;
   phaseStatus: EditorialWorkflowState["phase_status"] | undefined;
