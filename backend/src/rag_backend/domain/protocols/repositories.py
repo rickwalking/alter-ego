@@ -132,6 +132,7 @@ class _ProjectQuery(TypedDict, total=False):
     offset: int
     public_only: bool
     owner_id: str | None
+    order_by_created: bool
 
 
 class CarouselRepository(Protocol):
