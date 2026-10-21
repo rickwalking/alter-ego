@@ -57,6 +57,10 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh backend:lint
 
+      - name: Comment policy (docstrings and tool directives only)
+        working-directory: .
+        run: bash scripts/ci/gates.sh backend:comments
+
       - name: Ruff diff check (changed files only)
         working-directory: .
         run: bash scripts/ci/gates.sh backend:lint-diff

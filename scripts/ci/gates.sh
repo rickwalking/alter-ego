@@ -133,6 +133,10 @@ gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_
 # the pre-existing backlog is grandfathered in scripts/gherkin_refs_baseline.json (shrink-only).
 gate_backend_gherkin_refs()  { cd "$REPO_ROOT" && python3 scripts/check_gherkin_refs.py --scope backend; }
 gate_frontend_gherkin_refs() { cd "$REPO_ROOT" && python3 scripts/check_gherkin_refs.py --scope frontend; }
+# Comment policy (Pedro's rule): backend .py keeps only docstrings, tool directives
+# and Gherkin "Scenario:" references; no ticket ids or TODO markers. Frontend runs
+# the same policy via `npm run lint:comments` inside `npm run lint`.
+gate_backend_comments() { cd "$REPO_ROOT" && python3 scripts/ci/check_comments.py; }
 # Blog-v1 dead-code regression guard (AE-0428): the removed v1 carousel-blog
 # surface (blog_image_map, v1 blog schemas/hooks/components, cleanup_blog_markdown)
 # must not reappear in backend/src or frontend/src. stdlib-only token scan. Runs in
@@ -277,6 +281,7 @@ BACKEND_GATES=(
   dead-code:gate_backend_dead_code
   inline-prompts:gate_backend_inline_prompts
   gherkin-refs:gate_backend_gherkin_refs
+  comments:gate_backend_comments
   blog-v1-dead-code:gate_blog_v1_dead_code
   redis-factory:gate_backend_redis_factory
   autopilot-env:gate_backend_autopilot_env
