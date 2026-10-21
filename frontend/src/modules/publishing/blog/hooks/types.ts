@@ -129,3 +129,10 @@ export interface SlotRunner {
   status: Record<string, SlotStatus>;
   run: (slotRun: SlotRun) => Promise<void>;
 }
+
+/** Arguments of ``useBlogAi().suggest`` (AE-0446). */
+export interface SuggestArgs {
+  text: string;
+  suggestionType: string;
+  context?: string;
+}

@@ -10,109 +10,54 @@ import type {
   BlogAiSuggestResult,
   VoiceScoreResult,
 } from "@/modules/publishing/blog/types-ai";
-import type { BlogAiImproveParams, UseBlogAiState } from "./types";
+import type { BlogAiImproveParams, SuggestArgs, UseBlogAiState } from "./types";
 
-export function useBlogAi(postId: string | null) {
+const ERR_POST_ID_REQUIRED = "Post ID is required";
+
+/** POST a JSON body; a non-OK status throws ``failure``. */
+async function postAiJson<T>(
+  url: string,
+  body: Record<string, unknown>,
+  failure: string,
+): Promise<T> {
+  const response = await authenticatedFetch(url, {
+    method: HTTP_METHODS.POST,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(failure);
+  }
+  return (await response.json()) as T;
+}
+
+function requirePostId(postId: string | null): string {
+  if (!postId) {
+    throw new Error(ERR_POST_ID_REQUIRED);
+  }
+  return postId;
+}
+
+type TrackAiRequest = <T>(
+  request: () => Promise<T>,
+  fallbackMessage: string,
+) => Promise<T>;
+
+/** Loading/error state around one AI request at a time (errors re-thrown). */
+function useAiRequestState(): [UseBlogAiState, TrackAiRequest] {
   const [state, setState] = useState<UseBlogAiState>({
     loading: false,
     error: null,
   });
-
-  const suggest = useCallback(
-    async (
-      text: string,
-      suggestionType: string,
-      context?: string,
-    ): Promise<BlogAiSuggestResult> => {
-      if (!postId) {
-        throw new Error("Post ID is required");
-      }
+  const track = useCallback(
+    async <T>(
+      request: () => Promise<T>,
+      fallbackMessage: string,
+    ): Promise<T> => {
       setState({ loading: true, error: null });
       try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.BLOG_POST_AI_SUGGEST(postId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({
-              text,
-              suggestion_type: suggestionType,
-              context,
-            }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Failed to generate suggestion");
-        }
-        return (await response.json()) as BlogAiSuggestResult;
+        return await request();
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Suggestion failed";
-        setState({ loading: false, error: message });
-        throw err;
-      } finally {
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    },
-    [postId],
-  );
-
-  const improve = useCallback(
-    async ({
-      text,
-      action,
-      context,
-      personaId,
-    }: BlogAiImproveParams): Promise<BlogAiImproveResult> => {
-      if (!postId) {
-        throw new Error("Post ID is required");
-      }
-      setState({ loading: true, error: null });
-      try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.BLOG_POST_AI_IMPROVE(postId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({
-              text,
-              action,
-              context,
-              persona_id: personaId,
-            }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Failed to improve text");
-        }
-        return (await response.json()) as BlogAiImproveResult;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Improve failed";
-        setState({ loading: false, error: message });
-        throw err;
-      } finally {
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    },
-    [postId],
-  );
-
-  const scoreVoice = useCallback(
-    async (personaId: string, text: string): Promise<VoiceScoreResult> => {
-      setState({ loading: true, error: null });
-      try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.PERSONA_VOICE_SCORE(personaId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({ text }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Voice scoring failed");
-        }
-        return (await response.json()) as VoiceScoreResult;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Voice scoring failed";
+        const message = err instanceof Error ? err.message : fallbackMessage;
         setState({ loading: false, error: message });
         throw err;
       } finally {
@@ -121,11 +66,73 @@ export function useBlogAi(postId: string | null) {
     },
     [],
   );
+  return [state, track];
+}
 
-  return {
-    ...state,
-    suggest,
-    improve,
-    scoreVoice,
-  };
+function requestSuggestion(
+  postId: string,
+  { text, suggestionType, context }: SuggestArgs,
+): Promise<BlogAiSuggestResult> {
+  return postAiJson<BlogAiSuggestResult>(
+    API_ENDPOINTS.BLOG_POST_AI_SUGGEST(postId),
+    { text, suggestion_type: suggestionType, context },
+    "Failed to generate suggestion",
+  );
+}
+
+function requestImprovement(
+  postId: string,
+  { text, action, context, personaId }: BlogAiImproveParams,
+): Promise<BlogAiImproveResult> {
+  return postAiJson<BlogAiImproveResult>(
+    API_ENDPOINTS.BLOG_POST_AI_IMPROVE(postId),
+    { text, action, context, persona_id: personaId },
+    "Failed to improve text",
+  );
+}
+
+function requestVoiceScore(
+  personaId: string,
+  text: string,
+): Promise<VoiceScoreResult> {
+  return postAiJson<VoiceScoreResult>(
+    API_ENDPOINTS.PERSONA_VOICE_SCORE(personaId),
+    { text },
+    "Voice scoring failed",
+  );
+}
+
+export function useBlogAi(postId: string | null) {
+  const [state, track] = useAiRequestState();
+
+  const suggest = useCallback(
+    async (
+      text: string,
+      suggestionType: string,
+      context?: string,
+    ): Promise<BlogAiSuggestResult> => {
+      const id = requirePostId(postId);
+      return track(
+        () => requestSuggestion(id, { text, suggestionType, context }),
+        "Suggestion failed",
+      );
+    },
+    [postId, track],
+  );
+
+  const improve = useCallback(
+    async (params: BlogAiImproveParams): Promise<BlogAiImproveResult> => {
+      const id = requirePostId(postId);
+      return track(() => requestImprovement(id, params), "Improve failed");
+    },
+    [postId, track],
+  );
+
+  const scoreVoice = useCallback(
+    async (personaId: string, text: string): Promise<VoiceScoreResult> =>
+      track(() => requestVoiceScore(personaId, text), "Voice scoring failed"),
+    [track],
+  );
+
+  return { ...state, suggest, improve, scoreVoice };
 }
