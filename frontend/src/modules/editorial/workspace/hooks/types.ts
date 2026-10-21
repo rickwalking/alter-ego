@@ -194,3 +194,31 @@ export interface ResumeOnVisibleDeps extends Pick<
   probeThen: (onReopenable: () => void) => void;
   reconnectNow: () => void;
 }
+
+/** What starting a workflow needs (AE-0446: split out of the main hook). */
+export type StartWorkflowDeps = Pick<
+  UseEditorialWorkflowResumeParams,
+  | "projectId"
+  | "translateError"
+  | "workflowStateRef"
+  | "refreshState"
+  | "setState"
+  | "setPhaseEvents"
+  | "setLoading"
+  | "setError"
+>;
+
+/** ``useEditorialWorkflow``'s own state + refresh (AE-0446). */
+export interface WorkflowCore {
+  state: EditorialWorkflowState | null;
+  setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
+  phaseEvents: string[];
+  setPhaseEvents: Dispatch<SetStateAction<string[]>>;
+  loading: boolean;
+  setLoading: Dispatch<SetStateAction<boolean>>;
+  error: string | null;
+  setError: Dispatch<SetStateAction<string | null>>;
+  transportMode: EditorialWorkflowTransportMode;
+  setTransportMode: Dispatch<SetStateAction<EditorialWorkflowTransportMode>>;
+  refreshState: () => Promise<EditorialWorkflowState | null>;
+}
