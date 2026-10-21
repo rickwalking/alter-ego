@@ -28,11 +28,8 @@ const DOCUMENT_VISIBILITY_EVENT = "visibilitychange";
 const DOCUMENT_VISIBLE = "visible";
 
 function reconnectDelay(attempt: number): number {
-  const index = Math.min(
-    attempt,
-    EDITORIAL_WORKFLOW_POLL_BACKOFF_MS.length - 1,
-  );
-  return EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[index];
+  const backoff = EDITORIAL_WORKFLOW_POLL_BACKOFF_MS;
+  return backoff[Math.min(attempt, backoff.length - 1)] ?? backoff[0];
 }
 
 export function useWorkflowStreamReconnect({

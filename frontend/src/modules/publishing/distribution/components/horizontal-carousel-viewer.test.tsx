@@ -182,8 +182,8 @@ describe("HorizontalCarouselViewer", () => {
   it("replaces a slide image that fails to load with a placeholder", () => {
     render(<HorizontalCarouselViewer slideUrls={urls} alt="Deck" />);
     const [first] = screen.getAllByRole("img");
-    expect(first.getAttribute("alt")).toBe("Deck – slide 1");
-    fireEvent.error(first);
+    expect(first!.getAttribute("alt")).toBe("Deck – slide 1");
+    fireEvent.error(first!);
     expect(screen.getByText("Slide not rendered yet")).toBeInTheDocument();
     expect(screen.getAllByRole("img")).toHaveLength(1);
     expect(screen.getByText("1 / 2")).toBeInTheDocument();

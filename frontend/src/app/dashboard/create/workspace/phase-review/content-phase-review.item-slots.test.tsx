@@ -135,7 +135,7 @@ describe("ContentPhaseReview — item slots (AE-0437)", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Add Action" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Add Action" })[0]!);
     const ptTitle = field("slide-6-presentation_pt-actions-0-title");
     expect(ptTitle.value).toBe("");
     expect(field("slide-6-presentation_en-actions-0-body").value).toBe("");
@@ -145,10 +145,10 @@ describe("ContentPhaseReview — item slots (AE-0437)", () => {
     );
 
     const [sent] = onSubmit.mock.calls[0] as [LocalizedSlideReview[]];
-    expect(sent[0].presentation_pt.actions).toEqual([
+    expect(sent[0]!.presentation_pt.actions).toEqual([
       { icon_name: "target", title: "Teste", body: "" },
     ]);
-    expect(sent[0].presentation_en.actions).toEqual([
+    expect(sent[0]!.presentation_en.actions).toEqual([
       { icon_name: "target", title: "", body: "" },
     ]);
   });
@@ -165,7 +165,7 @@ describe("ContentPhaseReview — item slots (AE-0437)", () => {
     );
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Remove Action 2" })[1],
+      screen.getAllByRole("button", { name: "Remove Action 2" })[1]!,
     );
 
     expect(field("slide-6-presentation_pt-actions-1-title").value).toBe(
@@ -217,6 +217,6 @@ describe("ContentPhaseReview — saving without a server block (AE-0437)", () =>
     fireEvent.click(submit);
 
     const [sent] = onSubmit.mock.calls[0] as [LocalizedSlideReview[]];
-    expect(sent[0].presentation_en.tldr_strip).toBe("Grok Bot books by phone");
+    expect(sent[0]!.presentation_en.tldr_strip).toBe("Grok Bot books by phone");
   });
 });

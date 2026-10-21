@@ -150,7 +150,7 @@ export function slidesHaveCopyChanges(
   return original.some((slide, index) => {
     const counterpart = edited[index];
     return (
-      slide.slide_index !== counterpart.slide_index ||
+      slide.slide_index !== counterpart?.slide_index ||
       slideCopySignature(slide) !== slideCopySignature(counterpart)
     );
   });

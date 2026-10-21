@@ -22,10 +22,10 @@ const EDITORIAL_PHASE_ORDER: readonly string[] = [
 /** The phase an approval of `phase` runs next; the phase itself when last/unknown. */
 export function nextEditorialPhase(phase: string): string {
   const index = EDITORIAL_PHASE_ORDER.indexOf(phase);
-  if (index < 0 || index === EDITORIAL_PHASE_ORDER.length - 1) {
+  if (index < 0) {
     return phase;
   }
-  return EDITORIAL_PHASE_ORDER[index + 1];
+  return EDITORIAL_PHASE_ORDER[index + 1] ?? phase;
 }
 
 /** Translate a phase id ("final_review") to its name; unknown ids pass through. */

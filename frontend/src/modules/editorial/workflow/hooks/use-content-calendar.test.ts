@@ -77,7 +77,7 @@ describe("useContentCalendar", () => {
     renderHook(() => useContentCalendar("S", "E"));
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
-    const url = mockFetch.mock.calls[0][0] as string;
+    const url = mockFetch.mock.calls[0]![0] as string;
     expect(url).toContain("start=S");
     expect(url).toContain("end=E");
   });

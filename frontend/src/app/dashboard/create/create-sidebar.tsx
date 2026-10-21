@@ -109,7 +109,7 @@ export function CreateSidebar({
             }}
           >
             <span style={{ color: TEXT_DIM }}>{row.label}</span>
-            {"badge" in row && row.badge ? (
+            {"badge" in row ? (
               <span
                 style={{
                   padding: "2px 6px",

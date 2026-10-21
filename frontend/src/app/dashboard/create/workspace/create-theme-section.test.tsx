@@ -46,7 +46,7 @@ describe("CreateThemeSection", () => {
       />,
     );
     const themeSelect = screen.getAllByRole("combobox")[0];
-    fireEvent.change(themeSelect, { target: { value: "paper_editorial" } });
+    fireEvent.change(themeSelect!, { target: { value: "paper_editorial" } });
     expect(onChange).toHaveBeenCalledWith({
       theme: "paper_editorial",
       imagePreset: FLAT_EDITORIAL_PRESET,
@@ -63,7 +63,7 @@ describe("CreateThemeSection", () => {
       />,
     );
     const themeSelect = screen.getAllByRole("combobox")[0];
-    fireEvent.change(themeSelect, { target: { value: "plasma_magenta" } });
+    fireEvent.change(themeSelect!, { target: { value: "plasma_magenta" } });
     expect(onChange).toHaveBeenCalledWith({ theme: "plasma_magenta" });
   });
 
@@ -77,7 +77,7 @@ describe("CreateThemeSection", () => {
       />,
     );
     const themeSelect = screen.getAllByRole("combobox")[0];
-    fireEvent.change(themeSelect, { target: { value: "paper_editorial" } });
+    fireEvent.change(themeSelect!, { target: { value: "paper_editorial" } });
     expect(onChange).toHaveBeenCalledWith({ theme: "paper_editorial" });
   });
 

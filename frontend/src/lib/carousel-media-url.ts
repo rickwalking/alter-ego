@@ -13,7 +13,7 @@ const LANG_QUERY_PATTERN = /[?&]lang=(pt|en)(?:&|$)/;
  * route), so the language is kept instead of being dropped.
  */
 export function toPublicCarouselImageUrl(url: string): string {
-  const [pathOnly, query = ""] = url.split("?");
+  const [pathOnly = "", query = ""] = url.split("?");
   if (!pathOnly.includes(PREVIEW_IMAGES_SEGMENT)) {
     return pathOnly;
   }

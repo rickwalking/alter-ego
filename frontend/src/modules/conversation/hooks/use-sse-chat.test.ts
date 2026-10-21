@@ -60,16 +60,16 @@ function controllableStream() {
       data: Record<string, unknown>,
       i = calls.length - 1,
     ) {
-      act(() => calls[i].opts.onEvent({ event, data }));
+      act(() => calls[i]!.opts.onEvent({ event, data }));
     },
     complete(i = calls.length - 1) {
       act(() => {
-        calls[i].opts.onComplete?.();
-        calls[i].resolve();
+        calls[i]!.opts.onComplete?.();
+        calls[i]!.resolve();
       });
     },
     fail(message: string, i = calls.length - 1) {
-      act(() => calls[i].opts.onError?.(new Error(message)));
+      act(() => calls[i]!.opts.onError?.(new Error(message)));
     },
   };
 }
@@ -227,7 +227,7 @@ describe("useSseChat", () => {
     const { result } = renderChat({ conversationId: CONV_ID });
 
     await act(async () => void result.current.sendMessage("hi"));
-    const signal = stream.last().opts.signal as AbortSignal;
+    const signal = stream.last()!.opts.signal as AbortSignal;
     expect(signal.aborted).toBe(false);
     expect(result.current.isStreaming).toBe(true);
 
@@ -243,7 +243,7 @@ describe("useSseChat", () => {
     const { result, unmount } = renderChat({ conversationId: CONV_ID });
 
     await act(async () => void result.current.sendMessage("hi"));
-    const signal = stream.last().opts.signal as AbortSignal;
+    const signal = stream.last()!.opts.signal as AbortSignal;
     expect(signal.aborted).toBe(false);
 
     unmount();

@@ -24,12 +24,13 @@ export function usePovPhoto(
   const items = useMemo(() => photos.data ?? [], [photos.data]);
 
   useEffect(() => {
-    if (preselected.current || items.length === 0) {
+    const first = items[0];
+    if (preselected.current || first === undefined) {
       return;
     }
     preselected.current = true;
     if (!selectedId) {
-      onSelect(items[0].id);
+      onSelect(first.id);
     }
   }, [items, selectedId, onSelect]);
 

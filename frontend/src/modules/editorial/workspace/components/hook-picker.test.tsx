@@ -25,7 +25,7 @@ describe("HookPicker", () => {
       <HookPicker
         projectId="p1"
         candidates={CANDIDATES}
-        initialHook={CANDIDATES[0]}
+        initialHook={CANDIDATES[0]!}
       />,
     );
     expect(screen.getByRole("radio", { name: CANDIDATES[0] })).toHaveAttribute(
@@ -43,7 +43,7 @@ describe("HookPicker", () => {
       <HookPicker
         projectId="p1"
         candidates={CANDIDATES}
-        initialHook={CANDIDATES[0]}
+        initialHook={CANDIDATES[0]!}
       />,
     );
     fireEvent.click(screen.getByRole("radio", { name: CANDIDATES[1] }));

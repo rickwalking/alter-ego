@@ -88,10 +88,10 @@ describe("appendStreamToken", () => {
     });
 
     expect(messages).toHaveLength(2);
-    expect(messages[1].role).toBe("assistant");
-    expect(messages[1].content).toBe("Hel");
-    expect(messages[1].id.startsWith("stream-")).toBe(true);
-    expect(streamingMsgId).toBe(messages[1].id);
+    expect(messages[1]!.role).toBe("assistant");
+    expect(messages[1]!.content).toBe("Hel");
+    expect(messages[1]!.id.startsWith("stream-")).toBe(true);
+    expect(streamingMsgId).toBe(messages[1]!.id);
   });
 
   it("appends subsequent tokens onto the existing streaming message", () => {
@@ -104,7 +104,7 @@ describe("appendStreamToken", () => {
     });
 
     expect(first.messages).toHaveLength(1);
-    expect(first.messages[0].content).toBe("Hello");
+    expect(first.messages[0]!.content).toBe("Hello");
     expect(first.streamingMsgId).toBe("stream-1");
   });
 

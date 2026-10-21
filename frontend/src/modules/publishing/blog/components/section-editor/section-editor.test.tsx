@@ -43,14 +43,14 @@ describe("BlogSectionEditor", () => {
     const p = props();
     render(<BlogSectionEditor {...p} />);
     expect(screen.getAllByText(/^Section \d$/)).toHaveLength(3);
-    fireEvent.change(screen.getAllByLabelText("Heading")[0], {
+    fireEvent.change(screen.getAllByLabelText("Heading")[0]!, {
       target: { value: "Novo" },
     });
-    expect(lastEdit(p.onDocumentChange)?.sections[0].heading).toBe("Novo");
-    fireEvent.change(screen.getAllByLabelText("Body (markdown)")[1], {
+    expect(lastEdit(p.onDocumentChange)?.sections[0]!.heading).toBe("Novo");
+    fireEvent.change(screen.getAllByLabelText("Body (markdown)")[1]!, {
       target: { value: "B" },
     });
-    expect(lastEdit(p.onDocumentChange)?.sections[1].body_md).toBe("B");
+    expect(lastEdit(p.onDocumentChange)?.sections[1]!.body_md).toBe("B");
   });
 
   // Scenario: Adding / Deleting / Reordering sections
@@ -60,15 +60,15 @@ describe("BlogSectionEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add section" }));
     expect(lastEdit(p.onDocumentChange)?.sections).toHaveLength(4);
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Delete section" })[1],
+      screen.getAllByRole("button", { name: "Delete section" })[1]!,
     );
     expect(
       lastEdit(p.onDocumentChange)?.sections.map((s) => s.id),
     ).not.toContain(SEC_2);
-    fireEvent.click(screen.getAllByRole("button", { name: "Move down" })[0]);
-    expect(lastEdit(p.onDocumentChange)?.sections[1].id).toBe(SEC_1);
-    fireEvent.click(screen.getAllByRole("button", { name: "Move up" })[1]);
-    expect(lastEdit(p.onDocumentChange)?.sections[0].id).toBe(SEC_2);
+    fireEvent.click(screen.getAllByRole("button", { name: "Move down" })[0]!);
+    expect(lastEdit(p.onDocumentChange)?.sections[1]!.id).toBe(SEC_1);
+    fireEvent.click(screen.getAllByRole("button", { name: "Move up" })[1]!);
+    expect(lastEdit(p.onDocumentChange)?.sections[0]!.id).toBe(SEC_2);
     expect(
       screen.getAllByRole("button", { name: "Move up" })[0],
     ).toBeDisabled();
@@ -81,7 +81,7 @@ describe("BlogSectionEditor", () => {
     fireEvent.click(
       screen.getAllByRole("button", {
         name: "Rewrite this section in my voice",
-      })[1],
+      })[1]!,
     );
     expect(p.onRewrite).toHaveBeenCalledWith(SEC_2);
     const body = screen.getAllByLabelText(
@@ -100,13 +100,13 @@ describe("BlogSectionEditor", () => {
     const p = props();
     render(<BlogSectionEditor {...p} />);
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Generate image" })[0],
+      screen.getAllByRole("button", { name: "Generate image" })[0]!,
     );
     expect(p.onGenerateImage).toHaveBeenCalledWith(
       { language: "pt", sectionId: null },
       null,
     );
-    fireEvent.click(screen.getAllByRole("button", { name: "Regenerate" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Regenerate" })[0]!);
     expect(p.onGenerateImage).toHaveBeenLastCalledWith(
       { language: "pt", sectionId: SEC_1 },
       "Um farol",
@@ -117,18 +117,22 @@ describe("BlogSectionEditor", () => {
   it("removes an image and edits alt + caption locally", () => {
     const p = props();
     render(<BlogSectionEditor {...p} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove image" })[0]);
-    expect(lastEdit(p.onDocumentChange)?.sections[0].image).toBeNull();
-    fireEvent.change(screen.getAllByLabelText("Alt text")[0], {
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Remove image" })[0]!,
+    );
+    expect(lastEdit(p.onDocumentChange)?.sections[0]!.image).toBeNull();
+    fireEvent.change(screen.getAllByLabelText("Alt text")[0]!, {
       target: { value: "Gráfico de custos" },
     });
-    expect(lastEdit(p.onDocumentChange)?.sections[0].image?.alt).toBe(
+    expect(lastEdit(p.onDocumentChange)?.sections[0]!.image?.alt).toBe(
       "Gráfico de custos",
     );
-    fireEvent.change(screen.getAllByLabelText("Caption")[0], {
+    fireEvent.change(screen.getAllByLabelText("Caption")[0]!, {
       target: { value: "" },
     });
-    expect(lastEdit(p.onDocumentChange)?.sections[0].image?.caption).toBeNull();
+    expect(
+      lastEdit(p.onDocumentChange)?.sections[0]!.image?.caption,
+    ).toBeNull();
   });
 
   // Scenario: An empty alt is rejected / heading issues shown

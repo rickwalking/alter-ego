@@ -81,7 +81,7 @@ describe("buildPublicBlogCards", () => {
       publicFeed: {
         items: [
           {
-            ...linked([project()]).items[0],
+            ...linked([project()]).items[0]!,
             featured_image_url: "https://cdn.example/cover.jpg",
           },
         ],
@@ -89,11 +89,11 @@ describe("buildPublicBlogCards", () => {
       carouselFeed: feed([project()]),
       locale: "pt",
     });
-    expect(withCover.imageUrl).toBe("https://cdn.example/cover.jpg");
-    expect(withCover.href).toBe("/blog/post-proj-1");
+    expect(withCover!.imageUrl).toBe("https://cdn.example/cover.jpg");
+    expect(withCover!.href).toBe("/blog/post-proj-1");
 
     const [noCover] = cardsFor([project()], "pt");
-    expect(noCover.imageUrl).toBeUndefined();
+    expect(noCover!.imageUrl).toBeUndefined();
   });
 
   // Scenario: A carousel-origin post with no v2 row is 404 — so the listing
@@ -111,10 +111,10 @@ describe("buildPublicBlogCards", () => {
   it("localizes title and subtitle", () => {
     const [pt] = cardsFor([project()], "pt");
     const [en] = cardsFor([project()], "en");
-    expect(pt.title).toBe("Título PT");
-    expect(pt.subtitle).toBe("Subtítulo PT");
-    expect(en.title).toBe("Title EN");
-    expect(en.subtitle).toBe("Subtitle EN");
+    expect(pt!.title).toBe("Título PT");
+    expect(pt!.subtitle).toBe("Subtítulo PT");
+    expect(en!.title).toBe("Title EN");
+    expect(en!.subtitle).toBe("Subtitle EN");
   });
 
   // Scenario: A placeholder title falls back to a real title
@@ -123,7 +123,7 @@ describe("buildPublicBlogCards", () => {
       [project({ title_en: "slide", title: "Gemini 4 Argon chegou." })],
       "en",
     );
-    expect(card.title).toBe("Gemini 4 Argon chegou.");
+    expect(card!.title).toBe("Gemini 4 Argon chegou.");
   });
 
   it("falls back to the topic, then to the public post title", () => {
@@ -131,7 +131,7 @@ describe("buildPublicBlogCards", () => {
       [project({ title: null, title_en: null })],
       "pt",
     );
-    expect(topicCard.title).toBe("Raw topic");
+    expect(topicCard!.title).toBe("Raw topic");
 
     const [postCard] = buildPublicBlogCards({
       publicFeed: { items: [{ ...POST, project_id: "proj-1" }] },
@@ -140,9 +140,9 @@ describe("buildPublicBlogCards", () => {
       ]),
       locale: "en",
     });
-    expect(postCard.title).toBe("Post title");
-    expect(postCard.id).toBe("post-1");
-    expect(postCard.href).toBe("/blog/post-1");
+    expect(postCard!.title).toBe("Post title");
+    expect(postCard!.id).toBe("post-1");
+    expect(postCard!.href).toBe("/blog/post-1");
   });
 
   // Scenario: Emphasis markup in a title is not shown raw
@@ -155,7 +155,7 @@ describe("buildPublicBlogCards", () => {
       ],
       "pt",
     );
-    expect(card.title).toBe("Por que todo mundo usa ChatGPT?");
+    expect(card!.title).toBe("Por que todo mundo usa ChatGPT?");
   });
 
   // Scenario: A long niche is not used as a category chip
@@ -171,8 +171,8 @@ describe("buildPublicBlogCards", () => {
       ],
       "pt",
     );
-    expect(shortNiche.niche).toBe("AI models");
-    expect(longNiche.niche).toBeUndefined();
+    expect(shortNiche!.niche).toBe("AI models");
+    expect(longNiche!.niche).toBeUndefined();
   });
 
   // Scenario: A subtitle equal to the title is not repeated
@@ -187,8 +187,8 @@ describe("buildPublicBlogCards", () => {
       ],
       "pt",
     );
-    expect(same.subtitle).toBeUndefined();
-    expect(long.subtitle).toBe(
+    expect(same!.subtitle).toBeUndefined();
+    expect(long!.subtitle).toBe(
       `${Array.from({ length: 15 }, (_, i) => `w${i}`).join(" ")}...`,
     );
   });
@@ -225,8 +225,8 @@ describe("buildPublicBlogCards", () => {
       carouselFeed: feed([]),
       locale: "pt",
     });
-    expect(card.subtitle).toBeUndefined();
-    expect(card.imageUrl).toBeUndefined();
-    expect(card.createdAt).toBe("");
+    expect(card!.subtitle).toBeUndefined();
+    expect(card!.imageUrl).toBeUndefined();
+    expect(card!.createdAt).toBe("");
   });
 });

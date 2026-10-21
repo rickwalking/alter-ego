@@ -45,8 +45,8 @@ describe("parseBlogContent", () => {
     const document = parseBlogContent(DOCUMENT);
     expect(document.cover?.alt).toBe("Capa");
     expect(document.sections.map((s) => s.id)).toEqual(["sec_1", "sec_2"]);
-    expect(document.sections[0].image?.alt).toBe("Diagrama do fluxo");
-    expect(document.sections[1].image).toBeNull();
+    expect(document.sections[0]!.image?.alt).toBe("Diagrama do fluxo");
+    expect(document.sections[1]!.image).toBeNull();
   });
 
   // Scenario: A non-v2 content blob is rejected by the parse helper
@@ -83,7 +83,7 @@ describe("resolveBlogLanguage", () => {
   // Scenario: An English translation renders under the en locale
   it("returns the translation when present", () => {
     const en = resolveBlogLanguage(parseBlogContent(DOCUMENT), "en");
-    expect(en.sections[0].heading).toBe("What happened");
+    expect(en.sections[0]!.heading).toBe("What happened");
     expect(en.cover).toBeNull();
   });
 

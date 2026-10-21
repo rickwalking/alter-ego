@@ -23,7 +23,8 @@ export function OutlinePhaseReview({
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
 
-  if (state.outline.length === 0) {
+  const first = state.outline[0];
+  if (first === undefined) {
     return (
       <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-[var(--color-text-muted)] text-sm">
         {t("emptyPhase")}
@@ -31,7 +32,6 @@ export function OutlinePhaseReview({
     );
   }
 
-  const first = state.outline[0];
   const candidates = outlineHookCandidates(first);
   return (
     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">

@@ -82,7 +82,7 @@ describe("server-fetch", () => {
       const result = await fetchCompletedProjects(20);
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].id).toBe("abc-123");
+      expect(result.items[0]!.id).toBe("abc-123");
       expect(result.total).toBe(1);
     });
 
@@ -118,7 +118,7 @@ describe("server-fetch", () => {
 
       await fetchCompletedProjects(5);
 
-      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      const calledUrl = mockFetch.mock.calls[0]![0] as string;
       expect(calledUrl).toContain("limit=5");
     });
 
@@ -136,7 +136,7 @@ describe("server-fetch", () => {
 
       await fetchCompletedProjects(5);
 
-      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      const calledUrl = mockFetch.mock.calls[0]![0] as string;
       expect(calledUrl).toContain("public=true");
       expect(calledUrl).toContain("status=completed");
     });
@@ -155,7 +155,7 @@ describe("server-fetch", () => {
 
       expect(result?.theme_name).toBe("ai_competition");
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      const url = String(mockFetch.mock.calls[0][0]);
+      const url = String(mockFetch.mock.calls[0]![0]);
       expect(url).toContain("/design");
       expect(url).not.toContain("/blog");
     });
@@ -180,7 +180,7 @@ describe("server-fetch", () => {
       const result = await fetchPublicCarousels(12, 24);
 
       expect(result.items).toHaveLength(1);
-      const url = String(mockFetch.mock.calls[0][0]);
+      const url = String(mockFetch.mock.calls[0]![0]);
       expect(url).toContain("public=true");
       expect(url).toContain("status=completed");
       expect(url).toContain("sort=created_at");
@@ -245,7 +245,7 @@ describe("server-fetch", () => {
       const result = await fetchPublicCarousel("proj-1");
 
       expect(result?.title).toBe("Título");
-      expect(String(mockFetch.mock.calls[0][0])).toContain(
+      expect(String(mockFetch.mock.calls[0]![0])).toContain(
         "/api/carousels/proj-1/public",
       );
     });
@@ -295,7 +295,7 @@ describe("server-fetch", () => {
 
       const result = await fetchPublicBlogPost(MOCK_PUBLIC_POST.id);
       expect(result?.title).toBe("A post");
-      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      const calledUrl = mockFetch.mock.calls[0]![0] as string;
       expect(calledUrl).toContain(
         `/api/public/blog-posts/${MOCK_PUBLIC_POST.id}`,
       );

@@ -259,7 +259,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
     result.current.sendMessage("Hello");
 
     await waitFor(() => expect(mockStreamSseEvents).toHaveBeenCalled());
-    const callArgs = mockStreamSseEvents.mock.calls[0][0];
+    const callArgs = mockStreamSseEvents.mock.calls[0]![0];
     expect(callArgs.url).toContain("/publish-chat/stream");
     expect(callArgs.body).toEqual({
       content: `(carousel project_id=${PROJECT_ID}) Hello`,
@@ -519,7 +519,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
     await waitFor(() => expect(mockStreamSseEvents).toHaveBeenCalled());
 
-    const callArgs = mockStreamSseEvents.mock.calls[0][0];
+    const callArgs = mockStreamSseEvents.mock.calls[0]![0];
     expect(callArgs.body.content).toBe(
       `(carousel project_id=${PROJECT_ID}) hello world`,
     );

@@ -11,6 +11,7 @@ import type {
   DashboardConversation,
 } from "@/modules/editorial-operations/board/chat/types";
 import { formatLocaleRelative, formatLocaleTime } from "@/lib/locale-format";
+import { firstNonBlank } from "@/lib/utils";
 import type { Conversation, Message } from "@/schemas/chat";
 
 const AVATAR_PALETTE = [
@@ -29,8 +30,9 @@ export function mapConversationToDashboard(
   index: number,
   locale: string,
 ): DashboardConversation {
-  const palette = AVATAR_PALETTE[index % AVATAR_PALETTE.length];
-  const title = conversation.title?.trim() || "New conversation";
+  const palette =
+    AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? AVATAR_PALETTE[0];
+  const title = firstNonBlank([conversation.title, "New conversation"]);
 
   return {
     id: conversation.id,

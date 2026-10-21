@@ -184,11 +184,11 @@ describe("ContentPhaseReview — structured fields (AE-0414 B11)", () => {
 
     const [sent] = onSubmit.mock.calls[0] as [LocalizedSlideReview[]];
     expect(sent).toHaveLength(1);
-    expect(sent[0].slide_index).toBe(2);
-    expect(sent[0].presentation_en.summary_points).toEqual([
+    expect(sent[0]!.slide_index).toBe(2);
+    expect(sent[0]!.presentation_en.summary_points).toEqual([
       { icon_name: "check", title: "Point", body: "Short EN body" },
     ]);
-    expect(sent[0].presentation_pt).toEqual(summarySlide.presentation_pt);
+    expect(sent[0]!.presentation_pt).toEqual(summarySlide.presentation_pt);
   });
 
   // Scenario: CTA structured fields show their values and are editable
@@ -233,8 +233,8 @@ describe("ContentPhaseReview — manual-fix payload (AE-0414 B04)", () => {
 
     const [sent] = onSubmit.mock.calls[0] as [LocalizedSlideReview[]];
     expect(sent.map((slide) => slide.slide_index)).toEqual([1]);
-    expect(sent[0].presentation_pt.body).toBe(LONG_PT_BODY);
-    expect(sent[0].presentation_en.heading).toBe("Title One");
+    expect(sent[0]!.presentation_pt.body).toBe(LONG_PT_BODY);
+    expect(sent[0]!.presentation_en.heading).toBe("Title One");
   });
 });
 

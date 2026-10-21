@@ -81,15 +81,16 @@ describe("applySlideStructuredListEdit (AE-0437)", () => {
       operation: "add",
     });
     const blank = { icon_name: "target", title: "", body: "" };
-    expect(slide.presentation_pt.actions).toEqual([blank]);
-    expect(slide.presentation_en.actions).toEqual([blank]);
-    const [next] = applySlideStructuredListEdit([slide], {
+    expect(slide!.presentation_pt.actions).toEqual([blank]);
+    expect(slide!.presentation_en.actions).toEqual([blank]);
+    const [next] = applySlideStructuredListEdit([slide!], {
       slideIndex: 6,
       listKey: "actions",
       operation: "add",
     });
     expect(
-      (next.presentation_pt.actions as Record<string, unknown>[])[1].icon_name,
+      (next!.presentation_pt.actions as Record<string, unknown>[])[1]!
+        .icon_name,
     ).toBe("wrench");
   });
 
@@ -103,8 +104,8 @@ describe("applySlideStructuredListEdit (AE-0437)", () => {
       listKey: "summary_points",
       operation: "add",
     });
-    expect(edited.presentation_pt.summary_points).toHaveLength(4);
-    const en = edited.presentation_en.summary_points as Record<
+    expect(edited!.presentation_pt.summary_points).toHaveLength(4);
+    const en = edited!.presentation_en.summary_points as Record<
       string,
       unknown
     >[];
@@ -120,11 +121,11 @@ describe("applySlideStructuredListEdit (AE-0437)", () => {
       operation: "remove",
       itemIndex: 1,
     });
-    expect(slide.presentation_pt.summary_points).toEqual([
+    expect(slide!.presentation_pt.summary_points).toEqual([
       POINTS_PT[0],
       POINTS_PT[2],
     ]);
-    expect(slide.presentation_en.summary_points).toEqual([
+    expect(slide!.presentation_en.summary_points).toEqual([
       POINTS_EN[0],
       POINTS_EN[2],
     ]);
@@ -150,7 +151,7 @@ describe("applySlideStructuredListEdit (AE-0437)", () => {
       listKey: "features",
       operation: "add",
     });
-    expect(same.presentation_pt.features).toHaveLength(4);
+    expect(same!.presentation_pt.features).toHaveLength(4);
     expect(untouched).toBe(other);
   });
 });

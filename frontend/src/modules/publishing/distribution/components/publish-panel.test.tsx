@@ -174,7 +174,7 @@ describe("PublishPanel", () => {
     // The LinkedIn one lives inside the LinkedIn tab's tablist; pick the
     // first since both share the same state.
     const enTabs = screen.getAllByRole("tab", { name: "en" });
-    await user.click(enTabs[0]);
+    await user.click(enTabs[0]!);
     expect(
       (screen.getByLabelText("LinkedIn post (EN)") as HTMLTextAreaElement)
         .value,
@@ -260,13 +260,13 @@ describe("PublishPanel", () => {
           slideNumbers={[2, 1]}
         />,
       );
-      await user.click(screen.getAllByRole("tab", { name: "en" })[0]);
+      await user.click(screen.getAllByRole("tab", { name: "en" })[0]!);
       const images = screen.getAllByRole("img");
       expect(images.map((img) => img.getAttribute("alt"))).toEqual([
         "English title – slide 1",
         "English title – slide 2",
       ]);
-      expect(images[0].getAttribute("src")).toContain("slide_1.jpg?lang=en");
+      expect(images[0]!.getAttribute("src")).toContain("slide_1.jpg?lang=en");
     });
 
     // Scenario: The EN tab says the Instagram caption is Portuguese
@@ -275,15 +275,15 @@ describe("PublishPanel", () => {
       render(<PublishPanel project={buildProject()} />);
       // Scenario: The PT tab shows no caption-language notice
       expect(screen.queryByRole("note")).toBeNull();
-      expect(screen.getAllByRole("img")[0].getAttribute("alt")).toBe(
+      expect(screen.getAllByRole("img")[0]!.getAttribute("alt")).toBe(
         "Title – slide 1",
       );
-      await user.click(screen.getAllByRole("tab", { name: "en" })[0]);
+      await user.click(screen.getAllByRole("tab", { name: "en" })[0]!);
       expect(screen.getByRole("note")).toHaveTextContent(
         "The Instagram caption is Portuguese only",
       );
       // Without an English title the alt text keeps the PT title.
-      expect(screen.getAllByRole("img")[0].getAttribute("alt")).toBe(
+      expect(screen.getAllByRole("img")[0]!.getAttribute("alt")).toBe(
         "Title – slide 1",
       );
     });

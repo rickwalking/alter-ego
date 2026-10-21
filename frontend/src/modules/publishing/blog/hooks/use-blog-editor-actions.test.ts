@@ -70,11 +70,11 @@ describe("image slots", () => {
     await act(async () => {
       await result.current.actions.generateImage(SLOT, "Um farol");
     });
-    const [url, init] = mockFetch.mock.calls[1];
+    const [url, init] = mockFetch.mock.calls[1]!;
     expect(url).toBe(`/api/blog-posts/p-1/sections/${SEC_3}/image?language=pt`);
     expect(JSON.parse(String(init?.body))).toEqual({ prompt: "Um farol" });
     const draft = result.current.editor.draft?.document;
-    expect(draft?.sections[2].image?.url).toBe("/api/blog-images/p-1/n.jpg");
+    expect(draft?.sections[2]!.image?.url).toBe("/api/blog-images/p-1/n.jpg");
     expect(result.current.editor.post?.lock_version).toBe(3);
     expect(result.current.actions.statusOf(imageSlotKey(SLOT))).toEqual({
       pending: false,
@@ -102,9 +102,9 @@ describe("image slots", () => {
     await act(async () => {
       await result.current.actions.generateImage(SLOT, null);
     });
-    expect(mockFetch.mock.calls[1][1]?.method).toBe("PUT");
+    expect(mockFetch.mock.calls[1]![1]?.method).toBe("PUT");
     expect(
-      new Headers(mockFetch.mock.calls[2][1]?.headers).get("If-Match"),
+      new Headers(mockFetch.mock.calls[2]![1]?.headers).get("If-Match"),
     ).toBe("3");
   });
 
@@ -219,7 +219,7 @@ describe("rewrite and translation", () => {
     await act(async () => {
       await result.current.actions.rewrite(SEC_1);
     });
-    expect(JSON.parse(String(mockFetch.mock.calls[1][1]?.body))).toEqual({
+    expect(JSON.parse(String(mockFetch.mock.calls[1]![1]?.body))).toEqual({
       persona_id: "persona-1",
     });
     const sections = result.current.editor.draft?.document.sections ?? [];
@@ -245,11 +245,11 @@ describe("rewrite and translation", () => {
     await act(async () => {
       await result.current.actions.generateTranslation();
     });
-    expect(mockFetch.mock.calls[1][0]).toBe(
+    expect(mockFetch.mock.calls[1]![0]).toBe(
       "/api/blog-posts/p-1/translations/en",
     );
     expect(
-      result.current.editor.draft?.document.translations.en.sections,
+      result.current.editor.draft?.document.translations.en!.sections,
     ).toHaveLength(1);
     expect(
       result.current.actions.statusOf(TRANSLATION_SLOT_KEY).error,

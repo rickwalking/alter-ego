@@ -122,7 +122,7 @@ describe("editing mirrored fields (AE-0430)", () => {
       extraKey: "tldr_strip",
       value: "Grok Bot books by phone",
     });
-    expect(edited.presentation_en.tldr_strip).toBe("Grok Bot books by phone");
+    expect(edited!.presentation_en.tldr_strip).toBe("Grok Bot books by phone");
   });
 
   // Scenario: Editing a mirrored EN item creates the EN list from the PT shape
@@ -135,7 +135,7 @@ describe("editing mirrored fields (AE-0430)", () => {
       field: "body",
       value: "Read every step.",
     });
-    expect(edited.presentation_en.actions).toEqual([
+    expect(edited!.presentation_en.actions).toEqual([
       { icon_name: "target", title: "", body: "" },
       { icon_name: "eye", title: "", body: "Read every step." },
       { icon_name: "shield-check", title: "", body: "" },

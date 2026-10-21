@@ -53,7 +53,7 @@ export function MarketingLatestPosts({
         <div className="mx-auto px-6" style={{ maxWidth: "1200px" }}>
           <LatestPostsHeader t={t} />
 
-          {data.items.length === 0 ? (
+          {featured === undefined ? (
             <div
               style={{
                 borderRadius: "12px",

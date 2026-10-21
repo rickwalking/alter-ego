@@ -37,7 +37,7 @@ async function renderLoaded(post = blogPost()) {
 }
 
 function lastBody(): Record<string, unknown> {
-  const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+  const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
   return JSON.parse(String(init?.body)) as Record<string, unknown>;
 }
 
@@ -48,7 +48,7 @@ beforeEach(() => {
 describe("useBlogPostEditor load", () => {
   it("loads the detail endpoint into a v2 draft", async () => {
     const { result } = await renderLoaded();
-    expect(mockFetch.mock.calls[0][0]).toBe("/api/blog-posts/p-1");
+    expect(mockFetch.mock.calls[0]![0]).toBe("/api/blog-posts/p-1");
     expect(result.current.draft?.document.sections).toHaveLength(3);
     expect(result.current.language).toBe("pt");
     expect(result.current.dirty).toBe(false);
@@ -97,10 +97,10 @@ describe("useBlogPostEditor save", () => {
       ok = await result.current.handleSave();
     });
     expect(ok).toBe(true);
-    const [, init] = mockFetch.mock.calls[1];
+    const [, init] = mockFetch.mock.calls[1]!;
     expect(new Headers(init?.headers).get("If-Match")).toBe("2");
     const content = lastBody().content as ReturnType<typeof v2Document>;
-    expect(content.sections[0].body_md).toBe("Novo");
+    expect(content.sections[0]!.body_md).toBe("Novo");
     expect(content.sections[1]).toEqual(v2Document().sections[1]);
     expect(result.current.post?.lock_version).toBe(3);
     expect(result.current.dirty).toBe(false);
@@ -208,7 +208,7 @@ describe("useBlogPostEditor in-flight saves (AE-0424 review)", () => {
       reject(jsonResponse({ detail: "version_conflict" }, 409));
       expect(await saving).toBe(true);
     });
-    const [, retryInit] = mockFetch.mock.calls[2];
+    const [, retryInit] = mockFetch.mock.calls[2]!;
     expect(new Headers(retryInit?.headers).get("If-Match")).toBe("3");
     expect(result.current.post?.lock_version).toBe(4);
     expect(result.current.error).toBeNull();
@@ -235,7 +235,7 @@ describe("useBlogPostEditor server answers", () => {
     await act(async () => {
       expect(await result.current.handleRestore(1)).toBeNull();
     });
-    expect(mockFetch.mock.calls[1][0]).toBe(
+    expect(mockFetch.mock.calls[1]![0]).toBe(
       "/api/blog-posts/p-1/restore-version/1",
     );
     expect(result.current.draft?.title).toBe("Versão 1");

@@ -51,7 +51,7 @@ describe("usePovPhoto", () => {
       { file, role: "hook" },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    const { onSuccess } = state.upload.mock.calls[0][1];
+    const { onSuccess } = state.upload.mock.calls[0]![1];
     onSuccess({ id: "uploaded" });
     expect(onSelect).toHaveBeenCalledWith("uploaded");
   });

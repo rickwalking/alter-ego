@@ -32,7 +32,7 @@ const mockFetch = vi.mocked(authenticatedFetch);
 const LOCKED = { id: "p-1", lockVersion: 2 };
 
 function lastCall(): { url: string; init: RequestInit } {
-  const [url, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+  const [url, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]!;
   return { url: String(url), init: init ?? {} };
 }
 

@@ -148,7 +148,7 @@ function reconnectDelay(attempt: number): number {
     attempt,
     EDITORIAL_WORKFLOW_POLL_BACKOFF_MS.length - 1,
   );
-  return EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[index];
+  return EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[index]!;
 }
 
 /** Fail the stream and wait out its reconnect delay `budget` times in a row. */

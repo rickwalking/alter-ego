@@ -37,7 +37,7 @@ describe("PaletteCard", () => {
     expect(screen.getByText(/archive this palette/i)).toBeInTheDocument();
     expect(onArchive).not.toHaveBeenCalled();
     const buttons = screen.getAllByRole("button", { name: /archive/i });
-    fireEvent.click(buttons[buttons.length - 1]);
+    fireEvent.click(buttons[buttons.length - 1]!);
     expect(onArchive).toHaveBeenCalledTimes(1);
   });
 
