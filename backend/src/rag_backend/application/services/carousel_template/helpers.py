@@ -2,6 +2,7 @@
 
 import html as html_module
 import re
+from collections.abc import Mapping
 
 from rag_backend.domain.models import CarouselProject
 
@@ -33,6 +34,12 @@ def _render_inline(text: str) -> str:
     with_breaks = escaped.replace("\n", "<br>")
     with_code = _CODE_RE.sub(r'<span class="code-tag">\1</span>', with_breaks)
     return _BOLD_RE.sub(r"<strong>\1</strong>", with_code)
+
+
+def slide_body_html(slide: Mapping[str, object], css_class: str) -> str:
+    """The slide ``body`` as one ``<p class="...">`` paragraph, or "" when blank."""
+    body = str(slide.get("body") or "").strip()
+    return f'<p class="{css_class}">{_render_inline(body)}</p>' if body else ""
 
 
 def _build_watermark_html(project: CarouselProject) -> str:

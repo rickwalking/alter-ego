@@ -4,7 +4,10 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
-from rag_backend.application.services.carousel_template.helpers import _render_inline
+from rag_backend.application.services.carousel_template.helpers import (
+    _render_inline,
+    slide_body_html,
+)
 from rag_backend.application.services.carousel_template.pov_shell import (
     PovShellConfig,
     render_pov_shell,
@@ -34,12 +37,7 @@ class StatementStrategy:
     ) -> str:
         opts = options or {}
         heading = _render_inline(str(slide.get("heading") or ""))
-        body_raw = str(slide.get("body") or "").strip()
-        body_html = (
-            f'<p class="pov-statement-body">{_render_inline(body_raw)}</p>'
-            if body_raw
-            else ""
-        )
+        body_html = slide_body_html(slide, "pov-statement-body")
         return render_pov_shell(
             PovShellConfig(
                 slide_number=str(slide.get("number", "")),

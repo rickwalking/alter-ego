@@ -5,7 +5,10 @@ from collections.abc import Mapping
 from typing_extensions import override
 
 from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS
-from rag_backend.application.services.carousel_template.helpers import _render_inline
+from rag_backend.application.services.carousel_template.helpers import (
+    _render_inline,
+    slide_body_html,
+)
 from rag_backend.application.services.carousel_template.lower_third_shell import (
     LowerThirdConfig,
     artwork_enabled,
@@ -44,10 +47,7 @@ class StatCardGridStrategy:
             return _FALLBACK.render(slide, project, theme, options=options)
 
         heading = _render_inline(str(slide.get("heading") or ""))
-        body_raw = str(slide.get("body") or "").strip()
-        body_html = (
-            f'<p class="body-p">{_render_inline(body_raw)}</p>' if body_raw else ""
-        )
+        body_html = slide_body_html(slide, "body-p")
         slide_number = str(slide["number"])
 
         cards_html = _build_stat_cards(stats)
