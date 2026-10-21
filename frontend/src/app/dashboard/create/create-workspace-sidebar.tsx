@@ -27,6 +27,48 @@ export interface CreateWorkspaceSidebarProps {
   projectId: string;
 }
 
+/** The phase fields the summary card shows (all null before a workflow). */
+function summaryPhase(state: EditorialWorkflowState | null): {
+  currentPhase: string | null;
+  workflowStatus: string | null;
+  phaseStatus: string | null;
+} {
+  return {
+    currentPhase: state?.current_phase ?? null,
+    workflowStatus: state?.workflow_status ?? null,
+    phaseStatus: state?.phase_status ?? null,
+  };
+}
+
+/** The running phase with its status badge, once a workflow has a phase. */
+function ActivePhaseCard({
+  workflowState,
+}: {
+  workflowState: EditorialWorkflowState | null;
+}): React.ReactElement | null {
+  const t = useTranslations("create");
+  const phaseLabel = usePhaseLabel();
+  if (!workflowState?.current_phase) {
+    return null;
+  }
+  return (
+    <div style={sidebarCardStyle}>
+      <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "8px" }}>
+        {t("workspace.workflowTitle")}
+      </h3>
+      <div className="flex items-center gap-2">
+        <span style={{ fontSize: "12px", color: TEXT_DIM }}>
+          {t("workspace.activePhase")}
+        </span>
+        <WorkflowStatusBadge
+          status={workflowState.phase_status}
+          label={phaseLabel(workflowState.current_phase)}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function CreateWorkspaceSidebar({
   project,
   workflowState,
@@ -34,7 +76,6 @@ export function CreateWorkspaceSidebar({
   projectId,
 }: CreateWorkspaceSidebarProps): React.ReactElement {
   const t = useTranslations("create");
-  const phaseLabel = usePhaseLabel();
 
   const showPublishCta =
     workflowState?.workflow_status ===
@@ -56,9 +97,7 @@ export function CreateWorkspaceSidebar({
         topic={project.topic}
         audience={project.audience}
         niche={project.niche}
-        currentPhase={workflowState?.current_phase ?? null}
-        workflowStatus={workflowState?.workflow_status ?? null}
-        phaseStatus={workflowState?.phase_status ?? null}
+        {...summaryPhase(workflowState)}
       />
 
       {showPublishCta && (
@@ -82,24 +121,7 @@ export function CreateWorkspaceSidebar({
         </Link>
       )}
 
-      {workflowState?.current_phase && (
-        <div style={sidebarCardStyle}>
-          <h3
-            style={{ fontSize: "14px", fontWeight: 700, marginBottom: "8px" }}
-          >
-            {t("workspace.workflowTitle")}
-          </h3>
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: "12px", color: TEXT_DIM }}>
-              {t("workspace.activePhase")}
-            </span>
-            <WorkflowStatusBadge
-              status={workflowState.phase_status}
-              label={phaseLabel(workflowState.current_phase)}
-            />
-          </div>
-        </div>
-      )}
+      <ActivePhaseCard workflowState={workflowState} />
 
       <CreateWorkflowArtifacts state={workflowState} />
     </div>

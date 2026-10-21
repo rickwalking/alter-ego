@@ -11,13 +11,67 @@ import {
   usePickCover,
 } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import { CoverOptionGrid } from "./cover-option-grid";
-import type { CoverPickerSectionProps } from "./types";
+import type {
+  CoverPick,
+  CoverPickDeps,
+  CoverPickerSectionProps,
+  PickStatusProps,
+} from "./types";
 
 function failureKey(error: Error | null): "conflict" | "failed" {
   if (error instanceof ApiError && error.status === HTTP_STATUS.CONFLICT) {
     return "conflict";
   }
   return "failed";
+}
+
+/** Swap slide 1 to a chosen asset (ignored while busy or for the current one). */
+function useCoverPick({
+  projectId,
+  currentAssetId,
+  onSwitched,
+}: CoverPickDeps): CoverPick {
+  const pick = usePickCover();
+  const [switched, setSwitched] = useState(false);
+  const handleChoose = useCallback(
+    (assetId: string): void => {
+      if (pick.isPending || assetId === currentAssetId) {
+        return;
+      }
+      setSwitched(false);
+      pick.mutate(
+        { projectId, assetId },
+        {
+          onSuccess: (data) => {
+            setSwitched(true);
+            onSwitched(data.artifact_version ?? null);
+          },
+        },
+      );
+    },
+    [pick, currentAssetId, projectId, onSwitched],
+  );
+  return { pick, switched, handleChoose };
+}
+
+/** "Switching…" while the swap runs, then the success line. */
+function PickStatus({
+  pending,
+  switched,
+  switchingText,
+  successText,
+}: PickStatusProps): React.ReactElement | null {
+  if (pending) {
+    return <span role="status">{switchingText}</span>;
+  }
+  if (!switched) {
+    return null;
+  }
+  return (
+    <span role="status" className="text-success">
+      {successText}
+    </span>
+  );
 }
 
 /**
@@ -32,27 +86,12 @@ export function CoverPickerSection({
 }: CoverPickerSectionProps): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const options = useCoverOptions(projectId);
-  const pick = usePickCover();
-  const [switched, setSwitched] = useState(false);
-
-  const handleChoose = useCallback(
-    (assetId: string): void => {
-      if (pick.isPending || assetId === options.data?.current_asset_id) {
-        return;
-      }
-      setSwitched(false);
-      pick.mutate(
-        { projectId, assetId },
-        {
-          onSuccess: (data) => {
-            setSwitched(true);
-            onSwitched(data.artifact_version ?? null);
-          },
-        },
-      );
-    },
-    [pick, options.data?.current_asset_id, projectId, onSwitched],
-  );
+  const currentAssetId = options.data?.current_asset_id ?? null;
+  const { pick, switched, handleChoose } = useCoverPick({
+    projectId,
+    currentAssetId,
+    onSwitched,
+  });
 
   const items = options.data?.options ?? [];
   return (
@@ -76,18 +115,18 @@ export function CoverPickerSection({
       {items.length > 0 && (
         <CoverOptionGrid
           options={items}
-          currentAssetId={options.data?.current_asset_id ?? null}
+          currentAssetId={currentAssetId}
           disabled={pick.isPending}
           onChoose={handleChoose}
         />
       )}
       <div className="mt-3 text-xs" aria-live="polite">
-        {pick.isPending && <span role="status">{t("switching")}</span>}
-        {switched && !pick.isPending && (
-          <span role="status" className="text-success">
-            {t("success")}
-          </span>
-        )}
+        <PickStatus
+          pending={pick.isPending}
+          switched={switched}
+          switchingText={t("switching")}
+          successText={t("success")}
+        />
       </div>
       {pick.isError && (
         <p role="alert" className="text-xs text-red-400">

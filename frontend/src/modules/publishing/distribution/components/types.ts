@@ -7,6 +7,7 @@
  */
 
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
 export interface CaptionEditorProps {
@@ -101,4 +102,23 @@ export interface SlideTextEditSectionProps {
   rebuildPending?: boolean;
   /** Refetch project + workflow state after a successful edit + republish. */
   onEdited: () => void;
+}
+
+export interface CoverPickDeps {
+  projectId: string;
+  currentAssetId: string | null;
+  onSwitched: CoverPickerSectionProps["onSwitched"];
+}
+
+export interface PickStatusProps {
+  pending: boolean;
+  switched: boolean;
+  switchingText: string;
+  successText: string;
+}
+
+export interface CoverPick {
+  pick: ReturnType<typeof usePickCover>;
+  switched: boolean;
+  handleChoose: (assetId: string) => void;
 }
