@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonModal } from "@/components/molecules/neon-modal";
 import { NEON_RED } from "@/constants/neon";
-import { requestErrorText } from "@/lib/use-resource-collection";
+import {
+  ResourceRequestError,
+  requestErrorText,
+} from "@/lib/use-resource-collection";
 
 export interface NeonConfirmDialogProps {
   title: string;
@@ -13,6 +16,8 @@ export interface NeonConfirmDialogProps {
   cancelLabel: string;
   /** Shown when the action fails without a message of its own. */
   errorFallback: string;
+  /** Messages for specific HTTP statuses of a failed action (e.g. 409 in use). */
+  statusMessages?: Readonly<Record<number, string>>;
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }
@@ -27,6 +32,7 @@ export function NeonConfirmDialog({
   confirmLabel,
   cancelLabel,
   errorFallback,
+  statusMessages,
   onConfirm,
   onClose,
 }: Readonly<NeonConfirmDialogProps>): React.ReactElement {
@@ -44,7 +50,11 @@ export function NeonConfirmDialog({
     try {
       await onConfirm();
     } catch (err) {
-      setError(requestErrorText(err, errorFallback));
+      const byStatus =
+        err instanceof ResourceRequestError
+          ? statusMessages?.[err.status]
+          : undefined;
+      setError(byStatus ?? requestErrorText(err, errorFallback));
       setPending(false);
     }
   };

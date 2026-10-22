@@ -1008,7 +1008,8 @@
       "body": "Delete “{name}”? This cannot be undone.",
       "confirm": "Delete",
       "cancel": "Cancel",
-      "error": "The rubric could not be deleted."
+      "error": "The rubric could not be deleted.",
+      "inUse": "This rubric is still used by carousels or evaluations, so it cannot be deleted."
     }
   },
   "publish": {

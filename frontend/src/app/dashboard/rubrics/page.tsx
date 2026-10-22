@@ -19,6 +19,8 @@ import {
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";
+/** The API answers 409 when carousels or evaluations still use the rubric. */
+const HTTP_CONFLICT = 409;
 
 type View =
   | { kind: "list" }
@@ -86,7 +88,7 @@ function RubricList({
           key={rubric.id}
           rubric={mapQualityRubricToPanelData(rubric)}
           onEdit={() => onEdit(rubric)}
-          onDelete={() => onDelete(rubric)}
+          onDelete={rubric.is_default ? undefined : () => onDelete(rubric)}
         />
       ))}
     </>
@@ -170,6 +172,7 @@ export default function RubricsPage(): React.ReactElement {
           confirmLabel={tDelete("confirm")}
           cancelLabel={tDelete("cancel")}
           errorFallback={tDelete("error")}
+          statusMessages={{ [HTTP_CONFLICT]: tDelete("inUse") }}
           onConfirm={() => handleDelete(deleting)}
           onClose={() => setDeleting(null)}
         />

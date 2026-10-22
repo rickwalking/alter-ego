@@ -18,11 +18,14 @@ const FALLBACK_ERROR = "An error occurred";
  */
 export class ResourceRequestError extends Error {
   readonly detail: string | undefined;
+  /** The HTTP status of the failed response (409 = still referenced, …). */
+  readonly status: number;
 
-  constructor(message: string, detail: string | undefined) {
+  constructor(message: string, response: { detail?: string; status: number }) {
     super(message);
     this.name = "ResourceRequestError";
-    this.detail = detail;
+    this.detail = response.detail;
+    this.status = response.status;
   }
 }
 
@@ -57,10 +60,10 @@ async function sendJson<T>(
 ): Promise<T> {
   const response = await authenticatedFetch(url, init);
   if (!response.ok) {
-    throw new ResourceRequestError(
-      failure,
-      await responseErrorDetail(response),
-    );
+    throw new ResourceRequestError(failure, {
+      detail: await responseErrorDetail(response),
+      status: response.status,
+    });
   }
   return (await response.json()) as T;
 }
@@ -68,10 +71,10 @@ async function sendJson<T>(
 async function removeItem(url: string, failure: string): Promise<void> {
   const response = await authenticatedFetch(url, { method: "DELETE" });
   if (!response.ok) {
-    throw new ResourceRequestError(
-      failure,
-      await responseErrorDetail(response),
-    );
+    throw new ResourceRequestError(failure, {
+      detail: await responseErrorDetail(response),
+      status: response.status,
+    });
   }
 }
 

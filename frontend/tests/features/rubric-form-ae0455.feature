@@ -56,14 +56,19 @@ Feature: Rubrics are created and edited in a real form
     When they press "Cancel" and decline leaving
     Then the form stays open with the entered values
 
-  Scenario: Deleting a rubric asks first and shows a refusal
+  Scenario: Deleting a rubric asks first and explains a rubric in use
     Given a rubric in the list
     When the editor presses "Delete" and confirms
     Then the API deletes the rubric and the list no longer shows it
-    When the API refuses to delete a rubric with a message
-    Then the message is shown in the delete dialog
+    When the API answers 409 because carousels or evaluations still use a rubric
+    Then the delete dialog says, translated, that the rubric is still in use
+
+  Scenario: The default rubric cannot be deleted from the list
+    Given the default rubric in the list
+    When the editor opens the rubrics page
+    Then that rubric offers "Edit" but no "Delete"
 
   Scenario: A failed request keeps the API's own message
     Given the API answers a failed rubric request with a string detail
     When the rubrics collection request fails
-    Then the error keeps the per-resource message and carries the API's detail
+    Then the error keeps the per-resource message and carries the API's detail and status

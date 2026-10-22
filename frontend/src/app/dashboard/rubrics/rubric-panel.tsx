@@ -20,7 +20,8 @@ import { ScoreCell } from "@/app/dashboard/rubrics/score-cell";
 interface RubricPanelProps {
   rubric: RubricData;
   onEdit: () => void;
-  onDelete: () => void;
+  /** Omitted for the default rubric, which the API refuses to delete. */
+  onDelete?: () => void;
 }
 
 export function RubricPanel({
@@ -90,14 +91,16 @@ export function RubricPanel({
           >
             {t("edit")}
           </NeonButton>
-          <NeonButton
-            variant="ghost"
-            size="sm"
-            aria-label={t("deleteLabel", { name: rubric.title })}
-            onClick={onDelete}
-          >
-            {t("delete")}
-          </NeonButton>
+          {onDelete && (
+            <NeonButton
+              variant="ghost"
+              size="sm"
+              aria-label={t("deleteLabel", { name: rubric.title })}
+              onClick={onDelete}
+            >
+              {t("delete")}
+            </NeonButton>
+          )}
         </div>
       </div>
 

@@ -272,11 +272,12 @@ describe("RubricsPage", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("Draft");
   });
 
-  it("deletes after confirmation and shows a refused delete", async () => {
-    // Scenario: Deleting a rubric asks first and shows a refusal
+  it("deletes after confirmation and explains a rubric still in use", async () => {
+    // Scenario: Deleting a rubric asks first and explains a rubric in use
     const user = userEvent.setup();
+    const used = { ...RUBRIC, id: "r-2", name: "Used" };
     const other = { ...RUBRIC, id: "r-9", name: "Default", is_default: true };
-    authenticatedFetch.mockResolvedValueOnce(list([RUBRIC, other]));
+    authenticatedFetch.mockResolvedValueOnce(list([RUBRIC, used, other]));
     render(<RubricsPage />);
     await user.click(
       await screen.findByRole("button", {
@@ -299,13 +300,10 @@ describe("RubricsPage", () => {
     expect(authenticatedFetch.mock.calls[1]?.[1]?.method).toBe("DELETE");
 
     await user.click(
-      screen.getByRole("button", { name: "Delete rubric Default" }),
+      screen.getByRole("button", { name: "Delete rubric Used" }),
     );
     authenticatedFetch.mockResolvedValueOnce(
-      json(
-        { detail: "Cannot delete default rubric. Create a new one first." },
-        400,
-      ),
+      json({ error: "conflict", message: "IntegrityError", details: {} }, 409),
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
@@ -313,7 +311,7 @@ describe("RubricsPage", () => {
       }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Cannot delete default rubric. Create a new one first.",
+      "This rubric is still used by carousels or evaluations, so it cannot be deleted.",
     );
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
@@ -321,7 +319,41 @@ describe("RubricsPage", () => {
       }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("Default")).toBeInTheDocument();
+    expect(screen.getByText("Used")).toBeInTheDocument();
+  });
+
+  it("offers no delete for the default rubric", async () => {
+    // Scenario: The default rubric cannot be deleted from the list
+    const other = { ...RUBRIC, id: "r-9", name: "Default", is_default: true };
+    authenticatedFetch.mockResolvedValueOnce(list([other]));
+    render(<RubricsPage />);
+    expect(
+      await screen.findByRole("button", { name: "Edit rubric Default" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Delete rubric Default" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the fallback when a delete fails without a message", async () => {
+    // Scenario: Deleting a rubric asks first and explains a rubric in use
+    const user = userEvent.setup();
+    authenticatedFetch.mockResolvedValueOnce(list([RUBRIC]));
+    render(<RubricsPage />);
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Delete rubric Carousel quality",
+      }),
+    );
+    authenticatedFetch.mockResolvedValueOnce(json({}, 500));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The rubric could not be deleted.",
+    );
   });
 
   it("shows a translated message when the list cannot load", async () => {

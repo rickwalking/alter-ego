@@ -108,10 +108,11 @@ describe("useResourceCollection (AE-0446)", () => {
     expect(error).toMatchObject({
       message: "Failed to update persona",
       detail: "Name taken",
+      status: 400,
     });
     authenticatedFetch.mockResolvedValueOnce(failed());
     const plain = await result.current.delete("a").catch((err: unknown) => err);
-    expect(plain).toMatchObject({ detail: undefined });
+    expect(plain).toMatchObject({ detail: undefined, status: 500 });
   });
 
   it("clears an earlier load error when a reload succeeds", async () => {

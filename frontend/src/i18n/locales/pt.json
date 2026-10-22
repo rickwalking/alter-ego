@@ -1008,7 +1008,8 @@
       "body": "Excluir “{name}”? Não dá para desfazer.",
       "confirm": "Excluir",
       "cancel": "Cancelar",
-      "error": "Não foi possível excluir a rubrica."
+      "error": "Não foi possível excluir a rubrica.",
+      "inUse": "Esta rubrica ainda é usada por carrosséis ou avaliações, então não pode ser excluída."
     }
   },
   "publish": {
