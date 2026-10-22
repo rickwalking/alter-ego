@@ -38,8 +38,8 @@ describe("PaletteCard", () => {
     expect(onArchive).toHaveBeenCalledTimes(1);
   });
 
+  /** Scenario: The archive question sits on its own line above the buttons */
   it("shows the archive question on its own line above the buttons", () => {
-    // Scenario: The archive question sits on its own line above the buttons
     render(<PaletteCard {...BASE} isRoot={false} />);
     fireEvent.click(screen.getByRole("button", { name: /^archive$/i }));
     const group = screen.getByRole("group", { name: "Archive this palette?" });
@@ -57,8 +57,8 @@ describe("PaletteCard", () => {
     ).toBeTruthy();
   });
 
+  /** Scenario: Cancelling the archive question returns to the card actions */
   it("returns to the card actions when the archive question is cancelled", () => {
-    // Scenario: Cancelling the archive question returns to the card actions
     const onArchive = vi.fn();
     render(<PaletteCard {...BASE} isRoot={false} onArchive={onArchive} />);
     fireEvent.click(screen.getByRole("button", { name: /^archive$/i }));

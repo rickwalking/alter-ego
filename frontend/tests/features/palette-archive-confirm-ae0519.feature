@@ -1,4 +1,3 @@
-# language: en
 @AE-0519 @frontend @dashboard
 Feature: The palette archive confirmation is readable on any card width
   Scenario: The archive question sits on its own line above the buttons
