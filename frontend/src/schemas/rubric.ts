@@ -44,5 +44,5 @@ export const rubricFormSchema = z.object({
   name: z.string().trim().min(1).max(RUBRIC_NAME_MAX),
   description: z.string(),
   applicable_content_types: z.array(z.string().min(1)).min(1),
-  criteria: z.array(rubricCriterionSchema),
+  criteria: z.array(rubricCriterionSchema).min(1),
 });

@@ -50,6 +50,13 @@ function sentBody(call: number): Record<string, unknown> {
   return JSON.parse(init?.body as string) as Record<string, unknown>;
 }
 
+async function addNamedCriterion(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<void> {
+  await user.click(screen.getByRole("button", { name: "Add criterion" }));
+  await user.type(screen.getByLabelText("Criterion name"), "Clarity");
+}
+
 async function openNewForm(): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
   authenticatedFetch.mockResolvedValueOnce(list([]));
@@ -205,11 +212,30 @@ describe("RubricsPage", () => {
     expect(authenticatedFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks a rubric without criteria until one is added", async () => {
+    // Scenario: A rubric without criteria cannot be saved
+    const user = await openNewForm();
+    await user.type(screen.getByLabelText("Name"), "Empty");
+    await user.click(screen.getByRole("button", { name: "Create rubric" }));
+
+    expect(screen.getByText("Add at least one criterion.")).toBeInTheDocument();
+    expect(authenticatedFetch).toHaveBeenCalledTimes(1);
+
+    // Scenario: Adding a criterion clears the block
+    await addNamedCriterion(user);
+    authenticatedFetch.mockResolvedValueOnce(json(RUBRIC, 201));
+    await user.click(screen.getByRole("button", { name: "Create rubric" }));
+    await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("Add at least one criterion.")).toBeNull();
+    expect(sentBody(1).criteria).toHaveLength(1);
+  });
+
   it("shows the API's refusal in the form and keeps the values", async () => {
     // Scenario: A server refusal is shown in the form
     // Scenario: A failed create is shown on the personas and rubrics pages
     const user = await openNewForm();
     await user.type(screen.getByLabelText("Name"), "Dup");
+    await addNamedCriterion(user);
     authenticatedFetch.mockResolvedValueOnce(
       json({ detail: "Rubric name already used" }, 400),
     );
@@ -225,6 +251,7 @@ describe("RubricsPage", () => {
     // Scenario: A server refusal is shown in the form
     const user = await openNewForm();
     await user.type(screen.getByLabelText("Name"), "Bad");
+    await addNamedCriterion(user);
     authenticatedFetch.mockResolvedValueOnce(
       json({ detail: [{ loc: ["body"], msg: "bad" }] }, 422),
     );

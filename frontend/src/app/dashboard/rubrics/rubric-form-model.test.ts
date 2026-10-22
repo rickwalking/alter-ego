@@ -110,6 +110,14 @@ describe("rubric form model", () => {
     });
   });
 
+  it("requires at least one criterion", () => {
+    // Scenario: A rubric without criteria cannot be saved
+    const state = { ...validState(), criteria: [] };
+    expect(validateRubricForm(state)).toEqual({
+      criteria: "errors.criteriaRequired",
+    });
+  });
+
   it("uses the generic message for a field without its own", () => {
     // Scenario: Invalid fields block the save
     const state = { ...validState(), applicable_content_types: [""] };

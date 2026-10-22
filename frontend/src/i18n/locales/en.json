@@ -1009,7 +1009,8 @@
         "choice": "Choose an option.",
         "invalid": "This value is not valid.",
         "save": "The rubric could not be saved. Check the fields and try again.",
-        "criterionName": "Enter the criterion's name."
+        "criterionName": "Enter the criterion's name.",
+        "criteriaRequired": "Add at least one criterion."
       }
     },
     "contentType": {

@@ -42,6 +42,7 @@ const FIELD_ERROR_KEYS: Record<string, string> = {
   name: "errors.name",
   "criteria.name": "errors.criterionName",
   applicable_content_types: "errors.contentTypes",
+  criteria: "errors.criteriaRequired",
   "criteria.weight": "errors.unitInterval",
   "criteria.min_threshold": "errors.unitInterval",
   "criteria.evaluation_method": "errors.choice",
