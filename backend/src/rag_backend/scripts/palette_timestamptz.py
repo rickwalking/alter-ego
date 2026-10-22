@@ -54,7 +54,9 @@ async def _main(args: argparse.Namespace) -> int:
     """Uses its own engine and no ``create_all``: only the two palette columns are
     altered.
     """
-    engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
+    engine = create_async_engine(
+        get_settings().database_url, pool_pre_ping=True, hide_parameters=True
+    )
     try:
         return await run_modes(engine, args)
     finally:

@@ -89,7 +89,9 @@ async def _main(args: argparse.Namespace) -> int:
     """
     from rag_backend.bootstrap.blog_en_repair import build_en_repair_service
 
-    engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
+    engine = create_async_engine(
+        get_settings().database_url, pool_pre_ping=True, hide_parameters=True
+    )
     try:
         maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         report = await run_mode(build_en_repair_service(maker), args)

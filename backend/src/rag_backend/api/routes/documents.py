@@ -35,6 +35,9 @@ from rag_backend.api.schemas import (
     DocumentUploadResponse,
     ErrorResponse,
 )
+from rag_backend.application.services.document_pipeline import (
+    PIPELINE_FAILURE_LOGGED,
+)
 from rag_backend.domain.models import Document, DocumentScope, DocumentStatus, User
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.retrieval.document_processor import load_file_content
@@ -113,7 +116,7 @@ async def upload_document(
     try:
         return await service.ingest(command)
     except Exception as e:
-        logger.exception("knowledge_ingest_failed")
+        _log_ingest_failure(e, command, user)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERR_DOCUMENT_PROCESSING_FAILED,
@@ -148,6 +151,27 @@ async def _read_upload_content(file: UploadFile, settings: Settings) -> str:
             detail="No text content could be extracted from the file",
         )
     return content
+
+
+def _log_ingest_failure(
+    error: Exception, command: IngestDocumentCommand, user: User
+) -> None:
+    """Log a failed ingest with safe context (never the content).
+
+    The traceback is logged once: the pipeline already logged ``pipeline_failed``
+    with it when the exception carries its note, so only the context goes here.
+    """
+    context: dict[str, object] = {
+        "user_id": str(user.id),
+        "scope": command.scope.value,
+        "content_type": command.metadata.get("content_type", ""),
+        "content_length": len(command.content),
+        "error_type": type(error).__name__,
+    }
+    if PIPELINE_FAILURE_LOGGED in getattr(error, "__notes__", ()):
+        logger.error("knowledge_ingest_failed", **context)
+        return
+    logger.exception("knowledge_ingest_failed", **context)
 
 
 def _build_upload_metadata(

@@ -17,6 +17,9 @@ from rag_backend.api.constants import (
 from rag_backend.api.dependencies.knowledge import get_knowledge_service
 from rag_backend.api.routes import documents as documents_route
 from rag_backend.api.routes import search as search_route
+from rag_backend.application.services.document_pipeline import (
+    PIPELINE_FAILURE_LOGGED,
+)
 from tests.integration.test_knowledge_safety_net import (
     KnowledgeEnv,
     kb_env,
@@ -55,6 +58,7 @@ class TestKnowledgeErrorDetail:
         route_loggers: dict[str, MagicMock],
     ) -> None:
         # Scenario: A failed search answers a fixed 500 and logs the error
+        # Scenario: Failure logs carry safe context only
         async with kb_env.client_for(kb_env.owner) as client:
             response = await client.post(
                 "/api/search", json={"query": "artificial intelligence"}
@@ -64,7 +68,10 @@ class TestKnowledgeErrorDetail:
         assert response.json()["detail"] == ERR_SEARCH_FAILED
         assert "sk-live" not in response.text
         route_loggers["search"].exception.assert_called_once_with(
-            "knowledge_search_failed"
+            "knowledge_search_failed",
+            user_id=str(kb_env.owner.id),
+            top_k=5,
+            query_length=len("artificial intelligence"),
         )
         assert failing_service.search.await_count == 1
 
@@ -85,6 +92,34 @@ class TestKnowledgeErrorDetail:
         assert response.json()["detail"] == ERR_DOCUMENT_PROCESSING_FAILED
         assert "sk-live" not in response.text
         route_loggers["documents"].exception.assert_called_once_with(
-            "knowledge_ingest_failed"
+            "knowledge_ingest_failed",
+            user_id=str(kb_env.owner.id),
+            scope="personal",
+            content_type="text/plain",
+            content_length=len("Some notes"),
+            error_type="RuntimeError",
         )
         assert failing_service.ingest.await_count == 1
+
+    async def test_pipeline_logged_ingest_failure_logs_no_second_traceback(
+        self,
+        kb_env: KnowledgeEnv,
+        failing_service: AsyncMock,
+        route_loggers: dict[str, MagicMock],
+    ) -> None:
+        # Scenario: A pipeline failure is logged with its traceback once
+        logged = RuntimeError(SECRET)
+        logged.add_note(PIPELINE_FAILURE_LOGGED)
+        failing_service.ingest = AsyncMock(side_effect=logged)
+        async with kb_env.client_for(kb_env.owner) as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files={"file": ("notes.txt", b"Some notes", "text/plain")},
+            )
+
+        assert response.status_code == 500
+        route_loggers["documents"].exception.assert_not_called()
+        route_loggers["documents"].error.assert_called_once()
+        assert route_loggers["documents"].error.call_args.args == (
+            "knowledge_ingest_failed",
+        )

@@ -80,7 +80,9 @@ async def _main(args: argparse.Namespace) -> int:
     """Uses its own engine without ``create_all``: the cutover never creates or alters
     tables.
     """
-    engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
+    engine = create_async_engine(
+        get_settings().database_url, pool_pre_ping=True, hide_parameters=True
+    )
     try:
         maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         return await run_modes(maker, args)
