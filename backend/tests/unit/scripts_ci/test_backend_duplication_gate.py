@@ -7,6 +7,7 @@ the gate reuses; the backend test job does not install frontend packages.
 
 Feature: backend:duplication blocks copy-paste in Python source
   Scenario: jscpd binary is missing -> gate SKIPs (77)
+  Scenario: every CI job that runs backend:duplication installs jscpd
 """
 
 from __future__ import annotations
@@ -47,3 +48,11 @@ def test_gate_skips_when_jscpd_is_hidden(tmp_path: Path) -> None:
 
     assert ">>> backend:duplication: SKIP" in result.stdout, result.stdout
     assert "jscpd" in result.stderr
+
+
+# Scenario: every CI job that runs backend:duplication installs jscpd
+def test_ci_jobs_running_the_gate_install_jscpd() -> None:
+    workflows = REPO_ROOT / ".github" / "workflows"
+    for name in ("ci-gate.yml", "backend-quality-gates.yml"):
+        text = (workflows / name).read_text(encoding="utf-8")
+        assert "Install jscpd (frontend devDependencies)" in text, name
