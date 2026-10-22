@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT/scripts/lib/diff_base.sh"
 
 cd "$ROOT"
-git fetch origin main --depth=1 2>/dev/null || true
+fetch_base_main || true
 
 # Resolve the range first so a tier-3 advisory degrade is detectable (a pipe
 # would hide the resolver's exit status). The resolver warns on stderr; on

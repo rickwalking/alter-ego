@@ -30,6 +30,20 @@
 # and returns 0. On tier 3 it echoes nothing, warns on stderr, and returns 1.
 # =============================================================================
 
+# Fetch origin/main without turning a full clone into a shallow one.
+# CI checks out a shallow clone, where `--depth=1` keeps the fetch cheap. In a
+# full local clone (shared by every git worktree) `--depth=1` would graft
+# origin/main to a single commit: merge bases vanish and rebases replay the
+# whole history. So the depth flag is used only when the clone is already
+# shallow. Returns git's status (callers decide whether a failure SKIPs).
+fetch_base_main() {
+  if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
+    git fetch origin main --depth=1 2>/dev/null
+  else
+    git fetch origin main 2>/dev/null
+  fi
+}
+
 # Resolve the diff range for BASE..HEAD using the 3-tier fallback.
 # Echoes the range token(s) and returns 0; returns 1 (advisory) when neither
 # the merge-base nor the two-ref form is usable.

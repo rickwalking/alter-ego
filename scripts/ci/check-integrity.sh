@@ -32,7 +32,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=scripts/lib/diff_base.sh
 source "$REPO_ROOT/scripts/lib/diff_base.sh"
 cd "$REPO_ROOT"
-git fetch origin main --depth=1 2>/dev/null || true
+fetch_base_main || true
 
 case "$SCOPE" in
   backend)  PATHSPEC=(backend/ .github/workflows/ scripts/) ;;
