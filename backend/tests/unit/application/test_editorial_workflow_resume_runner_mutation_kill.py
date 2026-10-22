@@ -18,6 +18,7 @@ from rag_backend.application.services.carousel.editorial_workflow_resume_runner 
     _execute_owned_run,
     _mark_background_resume_failed,
     _MarkFailedParams,
+    _run_background_resume,
     _revert_background_resume_stuck,
     cancel_background_resume_task,
 )
@@ -171,3 +172,31 @@ class TestRunFinishedOnFailurePaths:
             RUN_FINISHED_REASON_FAILED,
             final_phase_status=PHASE_STATUS_FAILED,
         )
+
+
+@pytest.mark.unit
+class TestBackgroundResumePriorPhaseFallback:
+    """Scenario: a prior state without a phase is treated as having an empty phase."""
+
+    async def test_prior_state_without_phase_passes_empty_prior_phase(self) -> None:
+        @asynccontextmanager
+        async def fake_session() -> AsyncIterator[AsyncMock]:
+            yield AsyncMock()
+
+        service = MagicMock()
+        service.get_workflow_state = AsyncMock(
+            return_value={"phase_status": PHASE_STATUS_AWAITING_HUMAN}
+        )
+        with (
+            patch(f"{_RUNNER}.get_session_maker", return_value=fake_session),
+            patch(f"{_RUNNER}.carousel_run_epoch_var") as epoch_var,
+            patch(f"{_RUNNER}._run_phase", new=AsyncMock(return_value={})),
+            patch(f"{_RUNNER}._detect_resume_stuck", return_value=False) as detect,
+            patch(f"{_RUNNER}.CarouselProjectWriteOwner") as owner,
+            patch(f"{_RUNNER}.publish_workflow_sse_updates", new=AsyncMock()),
+            patch(f"{_RUNNER}.publish_run_finished", new=AsyncMock()),
+        ):
+            epoch_var.get.return_value = None
+            owner.return_value.commit = AsyncMock()
+            await _run_background_resume(service, _params())
+        assert detect.call_args.args[1] == ""

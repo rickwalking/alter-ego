@@ -222,3 +222,37 @@ class TestRedriveAndErrorEventExact:
                 _PROJECT_ID, message="boom", recoverable=True
             )
         assert publish.await_args.args[0].phase == PHASE_RESEARCH
+
+
+@pytest.mark.unit
+class TestStartWorkflowEventsAndSse:
+    """Scenario: Workflow start emits the phase event for the user and publishes SSE."""
+
+    async def test_phase_event_carries_user_and_sse_targets_project(
+        self, service: EditorialWorkflowService
+    ) -> None:
+        started: dict[str, object] = {"current_phase": PHASE_RESEARCH}
+        orchestrator = service._orchestrator
+        orchestrator.get_state = AsyncMock(return_value=None)
+        orchestrator.enrich_research_sources = AsyncMock(return_value=[])
+        orchestrator.synthesize_research = AsyncMock(return_value=[])
+        orchestrator.start = AsyncMock(return_value=started)
+        with (
+            patch(f"{_SERVICE}.emit_phase_event", new=AsyncMock()) as emit,
+            patch(f"{_SERVICE}.publish_workflow_sse_updates", new=AsyncMock()) as sse,
+        ):
+            await service.start_workflow(
+                _PROJECT_ID,
+                EditorialWorkflowStartInput(
+                    topic=_TOPIC,
+                    audience="aud",
+                    brief="the brief",
+                    sources=[],
+                    user_id=_USER_ID,
+                ),
+            )
+        ctx = emit.await_args.kwargs["ctx"]
+        assert ctx.project_id == _PROJECT_ID
+        assert ctx.user_id == _USER_ID
+        sse.assert_awaited_once_with(_PROJECT_ID, started)
+
