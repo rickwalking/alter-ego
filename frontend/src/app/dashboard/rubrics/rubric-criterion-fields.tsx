@@ -37,7 +37,7 @@ function CriterionToolbar({
 }: Readonly<
   Pick<RubricCriterionFieldsProps, "index" | "count" | "onMove" | "onRemove">
 >): React.ReactElement {
-  const t = useTranslations("rubrics.form");
+  const t = useTranslations("rubrics");
   const number = index + 1;
   return (
     <div className="flex gap-1">
@@ -45,7 +45,7 @@ function CriterionToolbar({
         variant="ghost"
         size="sm"
         disabled={index === 0}
-        aria-label={t("moveUp", { number })}
+        aria-label={t("form.moveUp", { number })}
         onClick={() => onMove(-1)}
       >
         ↑
@@ -54,7 +54,7 @@ function CriterionToolbar({
         variant="ghost"
         size="sm"
         disabled={index === count - 1}
-        aria-label={t("moveDown", { number })}
+        aria-label={t("form.moveDown", { number })}
         onClick={() => onMove(1)}
       >
         ↓
@@ -62,7 +62,7 @@ function CriterionToolbar({
       <NeonButton
         variant="ghost"
         size="sm"
-        aria-label={t("remove", { number })}
+        aria-label={t("form.remove", { number })}
         onClick={onRemove}
       >
         ✕
