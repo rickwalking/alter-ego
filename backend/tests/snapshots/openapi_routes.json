@@ -73,6 +73,7 @@
   "PATCH /api/admin/users/{user_id}",
   "PATCH /api/blog-posts/{post_id}/cover/image",
   "PATCH /api/blog-posts/{post_id}/sections/{section_id}/image",
+  "PATCH /api/carousels/{project_id}/copy",
   "PATCH /api/carousels/{project_id}/slides",
   "PATCH /api/palettes/{ref}",
   "POST /api/admin/carousels/refresh-design-tokens",
