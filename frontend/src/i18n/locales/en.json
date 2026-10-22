@@ -1186,6 +1186,7 @@
     },
     "calendar": {
       "title": "Content Calendar",
+      "heading": "Calendar",
       "subtitle": "View scheduled and published content across blog posts and carousels.",
       "empty": "No scheduled content in this range",
       "scheduled": "Scheduled",

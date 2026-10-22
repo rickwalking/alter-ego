@@ -16,7 +16,7 @@ export const CALENDAR_COLORS = {
   card: "#0d1324",
   txt: "rgba(255,255,255,0.88)",
   tM: "rgba(255,255,255,0.55)",
-  tD: "rgba(255,255,255,0.3)",
+  tD: "rgba(255,255,255,0.5)",
   bdr: "rgba(0,212,255,0.06)",
 } as const;
 
