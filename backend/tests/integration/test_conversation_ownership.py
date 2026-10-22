@@ -47,6 +47,7 @@ class _FixedTokenAgent:
     async def chat(self, ctx: _ChatContext) -> AsyncIterator[dict[str, object]]:
         del ctx
         yield {"type": "token", "content": "Hello"}
+        yield {"type": "complete", "content": "Hello"}
 
 
 @dataclass
@@ -66,6 +67,11 @@ class OwnershipEnv:
             base_url="http://test/api/conversations",
             headers=headers,
         )
+
+
+async def _fixed_title(_messages: list[dict[str, str]]) -> str:
+    """Deterministic title generator (no LLM)."""
+    return "Fixed title"
 
 
 def _patch_agents(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,6 +103,9 @@ async def env(tmp_path: object) -> AsyncGenerator[OwnershipEnv, None]:
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
+    from rag_backend.api.dependencies.conversation import (
+        get_conversation_title_generator,
+    )
     from rag_backend.infrastructure.database.config import Base, close_db
 
     assert isinstance(tmp_path, Path)
@@ -112,6 +121,7 @@ async def env(tmp_path: object) -> AsyncGenerator[OwnershipEnv, None]:
         CALLER_ADMIN: await create_test_user("admin@own.test", UserRole.ADMIN),
     }
     app = create_app()
+    app.dependency_overrides[get_conversation_title_generator] = lambda: _fixed_title
     probe = OwnershipEnv(app=app, users=users, owner_conversation_id="")
     async with probe.client(CALLER_OWNER) as owner:
         created = await owner.post("", json={"title": "Private"})
@@ -184,6 +194,10 @@ async def test_non_owner_gets_404_and_changes_nothing(
 ALLOWED_ROWS = [
     (STREAM, CALLER_OWNER, 200),
     (STREAM, CALLER_ADMIN, 200),
+    (CHAT, CALLER_OWNER, 200),
+    (CHAT, CALLER_ADMIN, 200),
+    (GENERATE_TITLE, CALLER_OWNER, 200),
+    (GENERATE_TITLE, CALLER_ADMIN, 200),
     (GET_ONE, CALLER_OWNER, 200),
     (GET_ONE, CALLER_ADMIN, 200),
     (GET_MESSAGES, CALLER_OWNER, 200),
@@ -331,3 +345,20 @@ async def test_signed_in_user_cannot_read_anonymous_conversation(
         resp = await other.get(f"/{created.json()['id']}/messages")
     assert resp.status_code == 404
     assert resp.json()["detail"] == ERR_CONVERSATION_NOT_FOUND
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "endpoint", [CHAT, GET_ONE, GET_MESSAGES, GENERATE_TITLE, DELETE]
+)
+async def test_every_endpoint_hides_a_foreign_id_like_an_unknown_one(
+    env: OwnershipEnv, monkeypatch: pytest.MonkeyPatch, endpoint: str
+) -> None:
+    """Another user cannot tell a foreign conversation from a missing one."""
+    # Scenario: Unknown conversation answers the same 404 as a foreign one
+    _patch_agents(monkeypatch)
+    async with env.client(CALLER_OTHER) as other:
+        unknown = await _call(other, endpoint, NONEXISTENT_UUID)
+        foreign = await _call(other, endpoint, env.owner_conversation_id)
+    assert unknown.status_code == foreign.status_code == 404
+    assert unknown.json() == foreign.json()
