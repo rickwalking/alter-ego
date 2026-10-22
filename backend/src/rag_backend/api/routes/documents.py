@@ -14,7 +14,15 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
 from rag_backend.api.constants import (
     ERR_DOCUMENT_PROCESSING_FAILED,
@@ -91,15 +99,17 @@ async def upload_document(
     service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
     user: Annotated[User, Depends(require_editor_or_admin)],
     settings: Annotated[Settings, Depends(get_settings)],
-    title: str | None = None,
-    tags: str | None = None,
-    scope: str = "personal",
-    is_public: bool = False,
+    title: Annotated[str | None, Form()] = None,
+    tags: Annotated[str | None, Form()] = None,
+    scope: Annotated[str, Form()] = DocumentScope.PERSONAL.value,
+    is_public: Annotated[bool, Form()] = False,
 ):
     """Upload a document file and process it immediately.
 
     Accepts PDF, TXT, MD files. The document is processed through the
-    full pipeline (chunking + embedding) before returning.
+    full pipeline (chunking + embedding) before returning. ``title``,
+    ``tags`` (comma-separated), ``scope`` and ``is_public`` are multipart
+    form fields sent next to the file.
     """
     content = await _read_upload_content(file, settings)
     metadata = _build_upload_metadata(file, tags)
