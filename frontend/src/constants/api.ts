@@ -81,6 +81,8 @@ export const API_ENDPOINTS = {
   BLOG_POST_GENERATION_RETRY: (id: string) =>
     `/api/blog-posts/${id}/generation/retry`,
   PUBLIC_BLOG_POSTS: "/api/public/blog-posts",
+  PUBLIC_BLOG_POST_FOR_CAROUSEL: (projectId: string) =>
+    `/api/public/blog-posts?project_id=${projectId}&limit=1`,
   PUBLIC_BLOG_POST_BY_ID: (id: string) => `/api/public/blog-posts/${id}`,
   BLOG_POST_VERSIONS: (id: string) => `/api/blog-posts/${id}/versions`,
   BLOG_POST_AI_SUGGEST: (id: string) => `/api/blog-posts/${id}/ai-suggest`,

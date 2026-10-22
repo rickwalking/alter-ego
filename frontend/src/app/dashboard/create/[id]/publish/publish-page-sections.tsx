@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import { ROUTE_PATHS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 
 import { PublishFailedNotice } from "@/modules/publishing";
@@ -116,12 +115,13 @@ export function PublishNotReady({
   );
 }
 
+/** The site-publish button, its outcome and, after a success, the public link. */
 export function SitePublishBar({
-  projectId,
+  publishedHref,
   message,
   onPublish,
 }: Readonly<{
-  projectId: string;
+  publishedHref: string | null;
   message: string | null;
   onPublish: () => void;
 }>): React.ReactElement {
@@ -142,14 +142,16 @@ export function SitePublishBar({
       {message ? (
         <span style={{ fontSize: "13px", color: TEXT_DIM }}>
           {message}{" "}
-          <Link
-            href={ROUTE_PATHS.BLOG_POST(projectId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#00d4ff" }}
-          >
-            {t("sitePublishedLink")}
-          </Link>
+          {publishedHref ? (
+            <Link
+              href={publishedHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#00d4ff" }}
+            >
+              {t("sitePublishedLink")}
+            </Link>
+          ) : null}
         </span>
       ) : null}
     </div>

@@ -149,13 +149,19 @@ async function sitePublishError(
 export function usePublishToSite(
   projectId: string,
   refreshAll: () => Promise<unknown>,
-): { sitePublishMessage: string | null; handlePublishToSite: () => void } {
+): {
+  sitePublishMessage: string | null;
+  sitePublished: boolean;
+  handlePublishToSite: () => void;
+} {
   const t = useTranslations("publish");
   const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(
     null,
   );
+  const [sitePublished, setSitePublished] = useState(false);
   const publish = async (): Promise<void> => {
     setSitePublishMessage(null);
+    setSitePublished(false);
     try {
       const response = await authenticatedFetch(
         API_ENDPOINTS.CAROUSEL_PUBLISH(projectId),
@@ -167,6 +173,7 @@ export function usePublishToSite(
         );
       }
       setSitePublishMessage(t("sitePublished"));
+      setSitePublished(true);
       await refreshAll();
     } catch (error) {
       setSitePublishMessage(
@@ -176,6 +183,7 @@ export function usePublishToSite(
   };
   return {
     sitePublishMessage,
+    sitePublished,
     handlePublishToSite: () => {
       void publish();
     },

@@ -4,9 +4,11 @@ import { useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import {
   PublishPanel,
   mergePublishProjectWithWorkflow,
+  useCarouselBlogPostHref,
 } from "@/modules/publishing";
 import { isPublishReady } from "@/app/dashboard/create/[id]/publish/publish-readiness";
 import {
@@ -52,7 +54,10 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const t = useTranslations("publish");
   const data = usePublishPageData();
   const { projectId, projectQuery, workflowState } = data;
-  const site = usePublishToSite(projectId, data.refreshAll);
+  const blogPost = useCarouselBlogPostHref(projectId);
+  const site = usePublishToSite(projectId, () =>
+    Promise.all([data.refreshAll(), blogPost.refetch()]),
+  );
   const instagram = useInstagramPublish(projectId);
   const project = projectQuery.data;
 
@@ -92,7 +97,12 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
         />
         {canPublishToSite && (
           <SitePublishBar
-            projectId={projectId}
+            publishedHref={
+              site.sitePublished
+                ? (blogPost.href ??
+                  PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(projectId))
+                : null
+            }
             message={site.sitePublishMessage}
             onPublish={site.handlePublishToSite}
           />

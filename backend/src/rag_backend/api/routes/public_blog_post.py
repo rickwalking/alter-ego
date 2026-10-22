@@ -12,7 +12,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
@@ -61,6 +61,8 @@ async def list_public_blog_posts(
     public (the dual-write stamps them ``published`` before the site release).
     """
     published = public_blog_visibility_clause()
+    if params.project_id is not None:
+        published = and_(published, BlogPostModel.project_id == str(params.project_id))
     total = (
         await db.execute(
             select(func.count()).select_from(BlogPostModel).where(published)

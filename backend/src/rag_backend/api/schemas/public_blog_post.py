@@ -30,10 +30,14 @@ PUBLIC_BLOG_MAX_LIMIT = 50
 
 
 class PublicBlogListParams(BaseModel):
-    """Pagination for the public blog listing (status is server-forced)."""
+    """Pagination for the public blog listing (status is server-forced).
+
+    ``project_id`` narrows the list to the post made from one carousel.
+    """
 
     limit: int = Field(PUBLIC_BLOG_DEFAULT_LIMIT, ge=1, le=PUBLIC_BLOG_MAX_LIMIT)
     offset: int = Field(0, ge=0)
+    project_id: UUID | None = None
 
 
 PUBLIC_BLOG_POST_EXCLUDED_FIELDS: frozenset[str] = frozenset({

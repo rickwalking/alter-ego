@@ -51,6 +51,7 @@ export type {
 } from "./blog/types-ai";
 
 export { useBlogPosts } from "./blog/hooks/use-blog-posts";
+export { useCarouselBlogPostHref } from "./blog/hooks/use-carousel-blog-post-href";
 export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
 export type {
   BlogEditorData,
