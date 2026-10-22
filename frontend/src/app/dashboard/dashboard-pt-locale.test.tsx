@@ -128,6 +128,7 @@ describe("dashboard in Portuguese", () => {
     const { unmount } = render(
       <>
         <CalendarGrid
+          label="outubro de 2026"
           days={buildCalendarDaysFromApi(new Date(2026, 9, 1), [item], null)}
         />
         <CalendarLegend />
@@ -148,6 +149,7 @@ describe("dashboard in Portuguese", () => {
     unmount();
     render(
       <CalendarGrid
+        label="outubro de 2026"
         days={buildCalendarDaysFromApi(new Date(2026, 9, 1), [], null).map(
           (day) => ({
             ...day,

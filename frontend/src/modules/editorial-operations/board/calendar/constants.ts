@@ -118,4 +118,4 @@ export const CALENDAR_FLEX_CENTER: CSSProperties = {
 export const CALENDAR_MONO_FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 export const CALENDAR_RESPONSIVE_STYLE =
-  '@media(max-width:768px){div[role="gridcell"]{min-height:60px!important;padding:4px!important}div[role="gridcell"]>div:first-child{font-size:11px!important}}';
+  '@media(max-width:768px){div[role="cell"]{min-height:60px!important;padding:4px!important}div[role="cell"]>div:first-child{font-size:11px!important}}';

@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import pt from "@/i18n/locales/pt.json";
 import { buildCalendarDaysFromApi } from "@/modules/editorial-operations";
 import type { CalendarItem } from "@/modules/editorial";
 import { CalendarGrid } from "./calendar-grid";
@@ -70,6 +71,7 @@ describe("calendar grid accessibility", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Calendar",
     );
+    expect(pt.workflow.calendar.heading).toBe("Calendário");
   });
 
   // Scenario: Placeholder titles fall back to the localized Untitled

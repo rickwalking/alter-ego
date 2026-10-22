@@ -12,7 +12,7 @@ Updated: 2026-10-22
 
 ## Goal
 
-`/dashboard/calendar` passes axe: a real ARIA grid, a page h1, no placeholder chip titles, readable dim text.
+`/dashboard/calendar` passes axe: a real ARIA table, a page h1, no placeholder chip titles, readable dim text.
 
 ## Problem
 
@@ -22,10 +22,12 @@ such as "slide" reached the chips, and the calendar's dim text (weekday headers,
 
 ## Scope
 
-- `CalendarGrid`: `role="grid"` named by the viewed month; a header row of `columnheader`s; one `row` per week
-  (`display: contents`, layout unchanged); the empty-month message in a row/gridcell. Day cell + chip moved to
+- `CalendarGrid`: `role="table"` named by the viewed month (review: a `grid` with every cell focusable meant 35-42
+  tab stops and no arrow keys; the month is read-only, so table semantics and no tab stops); a header row of
+  `columnheader`s; one `row` per week (`display: contents`, layout unchanged); the empty-month message in a row-wide
+  `cell` (`aria-colspan=7`). Chips are plain text with a title tooltip (no `role="button"`, they have no action). Day cell + chip moved to
   `calendar-day-cell.tsx` (file size).
-- `CalendarHeader`: the "Calendar" title is the page h1.
+- `CalendarHeader`: the "Calendar" title is the page h1, translated (`workflow.calendar.heading`, en + pt).
 - Chip titles via `resolveDisplayTitle` (placeholders → localized "Untitled").
 - `CALENDAR_COLORS.tD` → `rgba(255,255,255,0.5)` (≥ 4.5:1 on header and card backgrounds).
 
@@ -38,6 +40,7 @@ such as "slide" reached the chips, and the calendar's dim text (weekday headers,
 - [x] axe on a local build: no aria-required-parent / aria-command-name / page-has-heading-one; calendar contrast
       fixed (the remaining sidebar-label contrast is fixed by AE-0470).
 - [x] Placeholder titles render "Untitled".
+- [x] No focusable day cells or chips; no chip posing as a button; empty month cell spans 7 columns; h1 translated.
 
 ## Repro Steps
 
