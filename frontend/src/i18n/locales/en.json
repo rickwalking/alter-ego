@@ -214,6 +214,18 @@
       "tagPlaceholder": "Add a tag",
       "submit": "Create Document",
       "cancel": "Cancel"
+    },
+    "scope": {
+      "label": "Scope",
+      "personal": "Personal",
+      "public": "Public",
+      "all": "All",
+      "filter": "Filter by scope",
+      "hint": "The chat reads both. Use Public for knowledge that can be shown publicly.",
+      "makePublic": "Make public",
+      "makePersonal": "Make personal",
+      "changing": "Changing…",
+      "changeFailed": "Could not change the scope. Try again."
     }
   },
   "blog": {

@@ -8,20 +8,17 @@ import {
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { useState } from "react";
-import { FileText, RotateCcw, Trash2 } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { formatDate } from "@/lib/utils";
-import {
-  type DocumentCardProps,
-  type DocumentRetryButtonProps,
-  type DocumentStateRowProps,
-} from "./types";
+import { type DocumentCardProps, type DocumentStateRowProps } from "./types";
 import {
   failureReasonKey,
   isKnownStatus,
   isStaleDocument,
-  needsRetry,
 } from "./document-state";
+import { DocumentCardActions } from "./document-card-actions";
+import { ScopeBadge } from "./scope-parts";
 
 /** Status badge, failure reason and the stale notice of a document. */
 function DocumentStateRow({
@@ -58,42 +55,15 @@ function DocumentStateRow({
   );
 }
 
-/** Reprocess a failed or stuck document. */
-function DocumentRetryButton({
-  onRetry,
-  retrying,
-  retryFailed,
-}: Readonly<DocumentRetryButtonProps>): React.ReactElement {
-  const t = useTranslations("knowledge.document");
-  return (
-    <>
-      {retryFailed && (
-        <p
-          role="alert"
-          className="mb-2 text-xs text-[var(--color-destructive)]"
-        >
-          {t("retryFailed")}
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={onRetry}
-        disabled={retrying}
-        className="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
-      >
-        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-        {retrying ? t("retrying") : t("retry")}
-      </button>
-    </>
-  );
-}
-
 export function DocumentCard({
   document,
   onDelete,
   onRetry,
   retrying = false,
   retryFailed = false,
+  onChangeScope,
+  changingScope = false,
+  scopeChangeFailed = false,
 }: Readonly<DocumentCardProps>) {
   const locale = useLocale();
   const t = useTranslations("knowledge.document");
@@ -145,19 +115,23 @@ export function DocumentCard({
       </NeonCardHeader>
       <NeonCardContent>
         <div className="flex items-center gap-2 mb-3">
+          <ScopeBadge scope={document.scope} />
           <DocumentStateRow
             document={document}
             now={now}
             badgeClassName={statusColors[document.status] ?? ""}
           />
         </div>
-        {onRetry && needsRetry(document, now) && (
-          <DocumentRetryButton
-            onRetry={onRetry}
-            retrying={retrying}
-            retryFailed={retryFailed}
-          />
-        )}
+        <DocumentCardActions
+          document={document}
+          now={now}
+          onRetry={onRetry}
+          retrying={retrying}
+          retryFailed={retryFailed}
+          onChangeScope={onChangeScope}
+          changingScope={changingScope}
+          scopeChangeFailed={scopeChangeFailed}
+        />
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag) => (

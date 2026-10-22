@@ -26,6 +26,7 @@ const knowledgeMocks = vi.hoisted(() => ({
   createDocument: vi.fn(),
   deleteDocument: vi.fn(),
   reprocessDocument: vi.fn(),
+  changeScope: vi.fn(),
 }));
 
 vi.mock("../hooks/use-documents", () => ({
@@ -41,6 +42,12 @@ vi.mock("../hooks/use-documents", () => ({
   }),
   useReprocessDocument: () => ({
     mutateAsync: knowledgeMocks.reprocessDocument,
+  }),
+  useChangeDocumentScope: () => ({
+    mutate: knowledgeMocks.changeScope,
+    isPending: false,
+    isError: false,
+    variables: undefined,
   }),
 }));
 
@@ -79,11 +86,13 @@ vi.mock("./document-list", () => ({
     onCreateNew,
     onUploadNew,
     onRetryDocument,
+    onChangeScope,
   }: {
     documents: unknown[];
     onCreateNew: () => void;
     onUploadNew: () => void;
     onRetryDocument?: (id: string) => void;
+    onChangeScope?: (id: string, scope: string) => void;
   }) => (
     <div data-testid="document-list">
       <div data-testid="document-count">{documents.length}</div>
@@ -98,6 +107,12 @@ vi.mock("./document-list", () => ({
         onClick={() => onRetryDocument?.("doc-1")}
       >
         Retry
+      </button>
+      <button
+        data-testid="scope-btn"
+        onClick={() => onChangeScope?.("doc-1", "public")}
+      >
+        Make public
       </button>
     </div>
   ),
@@ -174,7 +189,7 @@ describe("KnowledgeBaseInterface Component", () => {
 
   describe("Given the KnowledgeBaseInterface is rendered", () => {
     describe("When the component is displayed", () => {
-      // Scenario: The page has a single heading
+      /** Scenario: The page has a single heading */
       it("Then it adds no second page heading under the top bar", () => {
         render(<KnowledgeBaseInterface />);
         expect(
@@ -326,7 +341,7 @@ describe("KnowledgeBaseInterface Component", () => {
     });
   });
 
-  // Scenario: A new document is processed right after it is created
+  /** Scenario: A new document is processed right after it is created */
   it("starts processing a document right after it is created", async () => {
     knowledgeMocks.createDocument.mockImplementation(
       (_data: unknown, options: { onSuccess: (doc: { id: string }) => void }) =>
@@ -339,11 +354,22 @@ describe("KnowledgeBaseInterface Component", () => {
     expect(knowledgeMocks.reprocessDocument).toHaveBeenCalledWith("created-1");
   });
 
-  // Scenario: A failed document shows its reason and a Retry button
+  /** Scenario: A failed document shows its reason and a Retry button */
   it("reprocesses a document when its Retry is clicked", async () => {
     const user = userEvent.setup();
     render(<KnowledgeBaseInterface />);
     await user.click(screen.getByTestId("retry-btn"));
     expect(knowledgeMocks.reprocessDocument).toHaveBeenCalledWith("doc-1");
+  });
+
+  /** Scenario: The owner changes a document's scope from its card */
+  it("changes a document's scope from its card", async () => {
+    const user = userEvent.setup();
+    render(<KnowledgeBaseInterface />);
+    await user.click(screen.getByTestId("scope-btn"));
+    expect(knowledgeMocks.changeScope).toHaveBeenCalledWith({
+      id: "doc-1",
+      scope: "public",
+    });
   });
 });

@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useUploadDocument } from "./use-upload";
-import type { FilePick, FileUploadForm } from "./types";
+import {
+  DOCUMENT_SCOPE,
+  type DocumentScopeChoice,
+} from "@/constants/knowledge";
+import type { FilePick, FileUploadForm, UploadFields } from "./types";
 
 const FILE_EXTENSION = /\.[^/.]+$/;
 
@@ -41,9 +45,24 @@ function useFilePick(
   return { isDragging, selectedFile, setSelectedFile, dropZone, onFileInput };
 }
 
-export function useFileUploadForm(): FileUploadForm {
+/** Title, tags and scope of the upload, with a reset to their defaults. */
+function useUploadFields(): UploadFields {
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
+  const [scope, setScope] = useState<DocumentScopeChoice>(
+    DOCUMENT_SCOPE.PERSONAL,
+  );
+  const reset = (): void => {
+    setTitle("");
+    setTags("");
+    setScope(DOCUMENT_SCOPE.PERSONAL);
+  };
+  return { title, setTitle, tags, setTags, scope, setScope, reset };
+}
+
+export function useFileUploadForm(): FileUploadForm {
+  const { reset, ...fields } = useUploadFields();
+  const { title, setTitle, tags, scope } = fields;
   const [progress, setProgress] = useState(0);
   const upload = useUploadDocument();
   const { selectedFile, setSelectedFile, ...pick } = useFilePick(
@@ -59,13 +78,13 @@ export function useFileUploadForm(): FileUploadForm {
         file: selectedFile,
         title: title || selectedFile.name,
         tags,
+        scope,
         onProgress: setProgress,
       },
       {
         onSuccess: () => {
           setSelectedFile(null);
-          setTitle("");
-          setTags("");
+          reset();
           setProgress(0);
           onDone?.();
         },
@@ -78,11 +97,8 @@ export function useFileUploadForm(): FileUploadForm {
   };
   return {
     ...pick,
+    ...fields,
     selectedFile,
-    title,
-    setTitle,
-    tags,
-    setTags,
     progress,
     clearFile,
     submit,

@@ -8,6 +8,11 @@ import { NeonBadge } from "@/components/atoms/neon-badge";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
+import {
+  DOCUMENT_SCOPE,
+  type DocumentScopeChoice,
+} from "@/constants/knowledge";
+import { ScopeField } from "./scope-parts";
 import { type DocumentFormProps } from "./types";
 
 export function DocumentForm({
@@ -19,6 +24,9 @@ export function DocumentForm({
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [scope, setScope] = useState<DocumentScopeChoice>(
+    DOCUMENT_SCOPE.PERSONAL,
+  );
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -37,6 +45,8 @@ export function DocumentForm({
       title: title.trim(),
       content: content.trim(),
       metadata: { tags },
+      scope,
+      is_public: scope === DOCUMENT_SCOPE.PUBLIC,
     });
   };
 
@@ -100,6 +110,8 @@ export function DocumentForm({
           </div>
         )}
       </div>
+
+      <ScopeField value={scope} onChange={setScope} />
 
       <div className="flex justify-end gap-4">
         <NeonButton type="button" variant="outline" onClick={onCancel}>

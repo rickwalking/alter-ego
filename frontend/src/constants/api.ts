@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
   DOCUMENTS: "/api/documents",
   DOCUMENT_BY_ID: (id: string) => `/api/documents/${id}`,
   DOCUMENT_REPROCESS: (id: string) => `/api/documents/${id}/reprocess`,
+  DOCUMENT_SCOPE: (id: string) => `/api/documents/${id}/scope`,
   DOCUMENT_UPLOAD: "/api/documents/upload",
   CONVERSATIONS: "/api/conversations/",
   CONVERSATIONS_ALTER_EGO: "/api/conversations/?origin=alter_ego",

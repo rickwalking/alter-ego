@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle } from "lucide-react";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonLabel } from "@/components/atoms/neon-label";
+import { ScopeField } from "./scope-parts";
 import type { UploadMetadataFieldsProps } from "./types";
 
 export function UploadSuccess({
@@ -82,6 +83,8 @@ export function UploadMetadataFields({
   onTitleChange,
   tags,
   onTagsChange,
+  scope,
+  onScopeChange,
   disabled,
 }: Readonly<UploadMetadataFieldsProps>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
@@ -107,6 +110,7 @@ export function UploadMetadataFields({
           disabled={disabled}
         />
       </div>
+      <ScopeField value={scope} onChange={onScopeChange} disabled={disabled} />
     </div>
   );
 }

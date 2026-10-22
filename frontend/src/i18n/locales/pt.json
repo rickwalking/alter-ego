@@ -214,6 +214,18 @@
       "tagPlaceholder": "Adicionar uma tag",
       "submit": "Criar Documento",
       "cancel": "Cancelar"
+    },
+    "scope": {
+      "label": "Escopo",
+      "personal": "Pessoal",
+      "public": "Público",
+      "all": "Todos",
+      "filter": "Filtrar por escopo",
+      "hint": "O chat consulta os dois. Use Público para o que pode ser mostrado publicamente.",
+      "makePublic": "Tornar público",
+      "makePersonal": "Tornar pessoal",
+      "changing": "Alterando…",
+      "changeFailed": "Não foi possível alterar o escopo. Tente outra vez."
     }
   },
   "blog": {

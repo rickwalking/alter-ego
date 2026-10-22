@@ -16,6 +16,7 @@ import {
   documentOptions,
   documentsOptions,
 } from "@/modules/knowledge/queries";
+import type { ChangeDocumentScopeInput } from "./types";
 
 /**
  * Suspense-oriented document list read (ADR-010). Suspends until data resolves
@@ -81,6 +82,31 @@ export function useReprocessDocument() {
         API_ENDPOINTS.DOCUMENT_REPROCESS(id),
         documentSchema,
         { method: HTTP_METHODS.POST },
+      );
+    },
+    onSuccess: (document) => {
+      queryClient.setQueryData(documentKeys.detail(document.id), document);
+      queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
+        previous?.map((item) => (item.id === document.id ? document : item)),
+      );
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list() });
+    },
+  });
+}
+
+/** Move a document to another scope; the answered document replaces it in the list. */
+export function useChangeDocumentScope() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, scope }: ChangeDocumentScopeInput) => {
+      return apiCall<Document>(
+        API_ENDPOINTS.DOCUMENT_SCOPE(id),
+        documentSchema,
+        {
+          method: HTTP_METHODS.PATCH,
+          body: JSON.stringify({ scope }),
+        },
       );
     },
     onSuccess: (document) => {

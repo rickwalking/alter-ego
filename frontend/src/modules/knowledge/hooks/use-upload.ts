@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { HTTP_STATUS } from "@/constants/api";
+import { DOCUMENT_SCOPE } from "@/constants/knowledge";
 import { ApiError } from "@/lib/api-client";
 import {
   documentUploadResponseSchema,
@@ -9,11 +10,19 @@ import {
 import { documentKeys } from "@/modules/knowledge/queries";
 import type { UploadDocumentInput } from "./types";
 
-function uploadFormData({ file, title, tags }: UploadDocumentInput): FormData {
+/** The multipart body of an upload: the file, its fields and its scope. */
+export function uploadFormData({
+  file,
+  title,
+  tags,
+  scope = DOCUMENT_SCOPE.PERSONAL,
+}: UploadDocumentInput): FormData {
   const formData = new FormData();
   formData.append("file", file);
   if (title) formData.append("title", title);
   if (tags) formData.append("tags", tags);
+  formData.append("scope", scope);
+  formData.append("is_public", String(scope === DOCUMENT_SCOPE.PUBLIC));
   return formData;
 }
 
