@@ -49,6 +49,21 @@ class BlogAiTraceContext:
     user_id: str = "system"
 
 
+def _start_action_trace(
+    action: str, trace: BlogAiTraceContext | None
+) -> BlogAiTraceContext:
+    if action not in VALID_AI_ACTIONS:
+        raise ValueError(ERR_INVALID_AI_ACTION)
+    trace_context = trace or BlogAiTraceContext()
+    start_blog_workflow_trace(
+        StartupParams(
+            post_id=trace_context.post_id or "unknown",
+            user_id=trace_context.user_id,
+        )
+    )
+    return trace_context
+
+
 @dataclass
 class _SuggestInput:
     """Bundled input for BlogPostAIService.suggest()."""
@@ -116,16 +131,7 @@ class BlogPostAIService:
 
         Fenced or nested envelopes become plain text.
         """
-        if input_data.action not in VALID_AI_ACTIONS:
-            raise ValueError(ERR_INVALID_AI_ACTION)
-
-        trace_context = input_data.trace or BlogAiTraceContext()
-        start_blog_workflow_trace(
-            StartupParams(
-                post_id=trace_context.post_id or "unknown",
-                user_id=trace_context.user_id,
-            )
-        )
+        trace_context = _start_action_trace(input_data.action, input_data.trace)
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
         with blog_ai_propagate(trace_context.post_id or "unknown", "ai_suggest"):
@@ -155,16 +161,7 @@ class BlogPostAIService:
         input_data: _ImproveInput,
     ) -> dict[str, str]:
         """Improve selected blog text, optionally enforcing a persona voice."""
-        if input_data.action not in VALID_AI_ACTIONS:
-            raise ValueError(ERR_INVALID_AI_ACTION)
-
-        trace_context = input_data.trace or BlogAiTraceContext()
-        start_blog_workflow_trace(
-            StartupParams(
-                post_id=trace_context.post_id or "unknown",
-                user_id=trace_context.user_id,
-            )
-        )
+        trace_context = _start_action_trace(input_data.action, input_data.trace)
         safe_text = sanitize_llm_input(input_data.text)
         safe_context = sanitize_llm_input(input_data.context or "")
 

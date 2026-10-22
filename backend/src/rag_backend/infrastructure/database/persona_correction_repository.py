@@ -34,6 +34,15 @@ class _CreateCorrectionParams(TypedDict, total=False):
     project_id: str | None
 
 
+def _to_record(row: PersonaCorrectionModel) -> PersonaCorrectionRecord:
+    return PersonaCorrectionRecord(
+        original_text=str(row.original_text),
+        corrected_text=str(row.corrected_text),
+        context=str(row.context),
+        correction_type=str(row.correction_type),
+    )
+
+
 class PersonaCorrectionRepository:
     """Postgres-backed storage for FeedbackLearningLoop."""
 
@@ -68,15 +77,7 @@ class PersonaCorrectionRepository:
         )
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
-        return [
-            PersonaCorrectionRecord(
-                original_text=str(row.original_text),
-                corrected_text=str(row.corrected_text),
-                context=str(row.context),
-                correction_type=str(row.correction_type),
-            )
-            for row in rows
-        ]
+        return [_to_record(row) for row in rows]
 
     async def list_all_by_persona(
         self, persona_id: str
@@ -88,15 +89,7 @@ class PersonaCorrectionRepository:
         )
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
-        return [
-            PersonaCorrectionRecord(
-                original_text=str(row.original_text),
-                corrected_text=str(row.corrected_text),
-                context=str(row.context),
-                correction_type=str(row.correction_type),
-            )
-            for row in rows
-        ]
+        return [_to_record(row) for row in rows]
 
 
 __all__ = ["PersonaCorrectionRecord", "PersonaCorrectionRepository"]

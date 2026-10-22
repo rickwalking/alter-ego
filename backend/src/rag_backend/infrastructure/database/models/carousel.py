@@ -13,7 +13,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,6 +29,10 @@ from rag_backend.domain.models import (
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel_content_mode import (
     CarouselContentModeColumns,
+)
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
 )
 
 
@@ -148,15 +151,8 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     artifact_version = Column(String(80), nullable=True)
     slide_layout_strategy = Column(String(50), nullable=True)
 
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
 
     slides = relationship(
         "CarouselSlideModel",
@@ -368,15 +364,8 @@ class CarouselSlideModel(Base):
     image_prompt = Column(Text, nullable=True)
     slide_metadata = Column("metadata", JSON, default=dict, nullable=False)
     extras = Column(JSON, nullable=True)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
 
     project = relationship("CarouselProjectModel", back_populates="slides")
 
@@ -455,9 +444,7 @@ class ResearchSourceModel(Base):
     extracted_content = Column(Text, nullable=True)
     relevance_score = Column(Integer, default=0, nullable=False)
     source_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
 
     project = relationship("CarouselProjectModel", back_populates="research_sources")
 

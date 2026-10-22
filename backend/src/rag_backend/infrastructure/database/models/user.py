@@ -5,10 +5,8 @@ import uuid
 from sqlalchemy import (
     Boolean,
     Column,
-    DateTime,
     Index,
     String,
-    func,
 )
 
 from rag_backend.domain.models import (
@@ -16,6 +14,10 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.models import UserRole
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
+)
 
 
 class UserModel(Base):
@@ -29,15 +31,8 @@ class UserModel(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default=UserRole.EDITOR.value, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
 
     __table_args__ = (
         Index("idx_users_email", "email"),

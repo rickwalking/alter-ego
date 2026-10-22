@@ -191,32 +191,16 @@ class SqlAlchemyAutopilotRepository:
 
     async def save_post(self, command: SavePostCommand) -> bool:
         """Store the media id. A null permalink does not clear one already stored."""
-        if command.ig_permalink is None:
-            return await self._write_post_id(command)
-        return await self._write_post_and_permalink(command)
-
-    async def _write_post_id(self, command: SavePostCommand) -> bool:
+        values: dict[str, str] = {"ig_post_id": command.ig_post_id}
+        if command.ig_permalink is not None:
+            values["ig_permalink"] = command.ig_permalink
         result = await self._session.execute(
             update(AutopilotRunModel)
             .where(
                 AutopilotRunModel.id == command.run_id,
                 AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
             )
-            .values(ig_post_id=command.ig_post_id)
-        )
-        return cast(CursorResult[object], result).rowcount == 1
-
-    async def _write_post_and_permalink(self, command: SavePostCommand) -> bool:
-        result = await self._session.execute(
-            update(AutopilotRunModel)
-            .where(
-                AutopilotRunModel.id == command.run_id,
-                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
-            )
-            .values(
-                ig_post_id=command.ig_post_id,
-                ig_permalink=command.ig_permalink,
-            )
+            .values(**values)
         )
         return cast(CursorResult[object], result).rowcount == 1
 

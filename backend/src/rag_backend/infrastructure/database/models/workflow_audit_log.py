@@ -9,10 +9,11 @@ outbox introduces no new application->infrastructure import edge.
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, func
+from sqlalchemy import Column, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSON
 
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import created_at_column
 from rag_backend.infrastructure.events.outbox_dispatch import (
     EventRecord,
     build_event_records,
@@ -33,9 +34,7 @@ class WorkflowAuditLogModel(Base):
     version = Column(Integer, nullable=False, default=1)
     payload = Column(JSON, nullable=False, default=dict)
     metadata_json = Column("metadata", JSON, nullable=False, default=dict)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
 
     __table_args__ = (
         Index("idx_audit_aggregate", "aggregate_type", "aggregate_id"),

@@ -229,6 +229,26 @@ def _user_is_assigned_reviewer(reviewer_id: str | None, user: UserModel) -> bool
     return reviewer_id is not None and reviewer_id == user.id
 
 
+async def _blog_post_or_404(db: AsyncSession, content_id: str) -> BlogPostModel:
+    post = await db.get(BlogPostModel, content_id)
+    if post is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=content_id),
+        )
+    return post
+
+
+async def _carousel_or_404(db: AsyncSession, content_id: str) -> CarouselProjectModel:
+    project = await db.get(CarouselProjectModel, content_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_CAROUSEL_NOT_FOUND,
+        )
+    return project
+
+
 async def assert_content_owner_or_admin(
     db: AsyncSession,
     request: ContentAccessRequest,
@@ -238,21 +258,11 @@ async def assert_content_owner_or_admin(
     content_type = request["content_type"]
     user = request["user"]
     if content_type == CONTENT_TYPE_BLOG_POST:
-        post = await db.get(BlogPostModel, content_id)
-        if post is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=content_id),
-            )
+        post = await _blog_post_or_404(db, content_id)
         assert_owner_or_admin(post.author_id, user)
         return
     if content_type == CONTENT_TYPE_CAROUSEL:
-        project = await db.get(CarouselProjectModel, content_id)
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERR_CAROUSEL_NOT_FOUND,
-            )
+        project = await _carousel_or_404(db, content_id)
         assert_owner_or_admin(project.owner_id, user)
         return
     raise HTTPException(
@@ -270,23 +280,13 @@ async def assert_content_access(
     content_type = request["content_type"]
     user = request["user"]
     if content_type == CONTENT_TYPE_BLOG_POST:
-        post = await db.get(BlogPostModel, content_id)
-        if post is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=content_id),
-            )
+        post = await _blog_post_or_404(db, content_id)
         if not _user_is_admin(user) and not _user_is_assigned_reviewer(
             post.reviewer_id, user
         ):
             assert_owner_or_admin(post.author_id, user)
     elif content_type == CONTENT_TYPE_CAROUSEL:
-        project = await db.get(CarouselProjectModel, content_id)
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERR_CAROUSEL_NOT_FOUND,
-            )
+        project = await _carousel_or_404(db, content_id)
         if not _user_is_admin(user) and not _user_is_assigned_reviewer(
             project.assigned_reviewer_id, user
         ):

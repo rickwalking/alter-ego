@@ -368,12 +368,7 @@ class AutopilotRunner:
         reason: str,
     ) -> bool:
         return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run.run_id,
-                expected=run.state,
-                new=new,
-                reason=reason,
-            )
+            TransitionCommand.moving(run, new, reason)
         )
 
 

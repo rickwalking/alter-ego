@@ -36,6 +36,7 @@ from uuid import UUID
 from rag_backend.modules.identity.api.views import UserListView, UserView
 from rag_backend.modules.identity.application.password_service import PasswordService
 from rag_backend.modules.identity.application.user_service import UserNotFoundError
+from rag_backend.modules.identity.application.user_view import to_user_view
 from rag_backend.modules.identity.constants import (
     ERR_INVALID_ROLE,
     ERR_LAST_ADMIN,
@@ -137,7 +138,7 @@ class AdminUserHandler:
         users = await self._repository.get_all(limit=_ADMIN_LIST_LIMIT)
         total = await self._repository.count()
         return UserListView(
-            items=[_to_view(user) for user in users],
+            items=[to_user_view(user) for user in users],
             total=total,
         )
 
@@ -174,7 +175,7 @@ class AdminUserHandler:
             if command.is_active is not None:
                 _apply_active(user, is_active=command.is_active)
             updated = await self._repository.update(user)
-            view = _to_view(updated)
+            view = to_user_view(updated)
         return view
 
     async def delete(self, command: DeleteUserInput) -> None:
@@ -264,18 +265,6 @@ def _generate_secure_password(length: int = GENERATED_CREDENTIAL_LENGTH) -> str:
             and any(c in GENERATED_SPECIAL_CHARS for c in password)
         ):
             return password
-
-
-def _to_view(user: User) -> UserView:
-    return UserView(
-        id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        role=user.role.value,
-        is_active=user.is_active,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
-    )
 
 
 __all__ = [

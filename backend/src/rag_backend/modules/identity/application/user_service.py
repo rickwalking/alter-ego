@@ -22,6 +22,7 @@ from uuid import UUID
 
 from rag_backend.modules.identity.api.views import UserListView, UserView
 from rag_backend.modules.identity.application.password_service import PasswordService
+from rag_backend.modules.identity.application.user_view import to_user_view
 from rag_backend.modules.identity.constants import (
     ERR_CURRENT_CREDENTIAL_INCORRECT,
     ERR_USER_NOT_FOUND,
@@ -84,7 +85,7 @@ class UserService:
         )
         async with self._unit_of_work:
             created = await self._repository.create(user)
-            view = self._to_view(created)
+            view = to_user_view(created)
         return view
 
     async def list_users(self, query: ListUsersQuery) -> UserListView:
@@ -95,14 +96,14 @@ class UserService:
         """
         users = await self._repository.get_all(limit=query.limit, offset=query.offset)
         total = await self._repository.count()
-        return UserListView(items=[self._to_view(user) for user in users], total=total)
+        return UserListView(items=[to_user_view(user) for user in users], total=total)
 
     async def get(self, query: GetUserQuery) -> UserView | None:
         """Fetch a single user by id, or ``None`` if absent."""
         user = await self._repository.get_by_id(query.user_id)
         if user is None:
             return None
-        return self._to_view(user)
+        return to_user_view(user)
 
     async def update(self, command: UpdateUserCommand) -> UserView:
         """Apply partial profile changes to a user (committed once)."""
@@ -110,7 +111,7 @@ class UserService:
             user = await self._require_user(command.user_id)
             self._apply_updates(user, command)
             updated = await self._repository.update(user)
-            view = self._to_view(updated)
+            view = to_user_view(updated)
         return view
 
     async def assign_role(self, command: AssignRoleCommand) -> UserView:
@@ -119,7 +120,7 @@ class UserService:
             user = await self._require_user(command.user_id)
             user.set_role(command.role)
             updated = await self._repository.update(user)
-            view = self._to_view(updated)
+            view = to_user_view(updated)
         return view
 
     async def change_password(self, command: ChangePasswordCommand) -> None:
@@ -153,18 +154,6 @@ class UserService:
             user.email = command.email
         if command.is_active is not None:
             user.is_active = command.is_active
-
-    @staticmethod
-    def _to_view(user: User) -> UserView:
-        return UserView(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            role=user.role.value,
-            is_active=user.is_active,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
-        )
 
 
 __all__ = [

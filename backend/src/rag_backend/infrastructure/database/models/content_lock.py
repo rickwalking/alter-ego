@@ -2,9 +2,10 @@
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Index, String, func
+from sqlalchemy import Column, DateTime, Index, String
 
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import created_at_column
 
 
 class ContentLockModel(Base):
@@ -18,9 +19,7 @@ class ContentLockModel(Base):
     user_id = Column(String(36), nullable=False)
     user_name = Column(String(255), nullable=False, default="")
     expires_at = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
 
     __table_args__ = (
         Index("idx_content_locks_content", "content_type", "content_id", unique=True),

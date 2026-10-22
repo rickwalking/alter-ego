@@ -24,6 +24,10 @@ from rag_backend.domain.models.rubric import (
 )
 from rag_backend.domain.rubric_scoring import normalize_criteria
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
+)
 
 
 class PersonaProfileModel(Base):
@@ -50,15 +54,8 @@ class PersonaProfileModel(Base):
     paragraph_style = Column(Text, nullable=True)
     opinion_expression = Column(Text, nullable=True)
     expertise_areas = Column(JSON, default=list, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
     version = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (
@@ -141,15 +138,8 @@ class QualityRubricModel(Base):
         JSON, default=lambda: ["carousel"], nullable=False
     )
     is_default = Column(Boolean, default=False, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
     version = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (

@@ -20,9 +20,12 @@ from __future__ import annotations
 from typing import Protocol
 
 from rag_backend.modules.knowledge.api.views import SearchResultView
-from rag_backend.modules.knowledge.application.service import RetrieverPort
+from rag_backend.modules.knowledge.application.service import (
+    RetrieverPort,
+    to_retrieval_query,
+    to_search_view,
+)
 from rag_backend.modules.knowledge.domain.commands import SearchQuery
-from rag_backend.modules.knowledge.domain.models import RetrievalQuery, SearchResult
 
 
 class KnowledgeSearchPort(Protocol):
@@ -49,27 +52,8 @@ class RetrieverSearchAdapter:
         self._retriever = retriever
 
     async def search(self, query: SearchQuery) -> list[SearchResultView]:
-        results = await self._retriever.retrieve(
-            RetrievalQuery(
-                query=query.query,
-                top_k=query.top_k,
-                alpha=query.alpha,
-                filters=query.filters,
-                namespace_prefix=query.namespace_prefix,
-            )
-        )
-        return [_to_search_view(result) for result in results]
-
-
-def _to_search_view(result: SearchResult) -> SearchResultView:
-    return SearchResultView(
-        content=result.content,
-        document_id=result.document_id,
-        score=result.score,
-        rank=result.rank,
-        metadata=dict(result.metadata),
-        chunk_id=result.chunk_id,
-    )
+        results = await self._retriever.retrieve(to_retrieval_query(query))
+        return [to_search_view(result) for result in results]
 
 
 __all__ = [

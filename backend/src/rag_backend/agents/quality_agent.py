@@ -22,6 +22,7 @@ from rag_backend.domain.rubric_scoring import (
     render_criterion_prompt,
     threshold_percent,
 )
+from rag_backend.domain.similarity import cosine_similarity
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 _EVALUATE_PROMPT_FALLBACK = (
@@ -200,12 +201,7 @@ class QualityAgent:
         return round(max(0.0, min(100.0, (1.0 - max_similarity) * 100)), 2)
 
     def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-        norm_a = sum(x * x for x in a) ** 0.5
-        norm_b = sum(x * x for x in b) ** 0.5
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return float(dot_product / (norm_a * norm_b))
+        return cosine_similarity(a, b)
 
     async def evaluate_eeat(
         self,

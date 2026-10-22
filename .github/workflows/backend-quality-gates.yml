@@ -478,6 +478,43 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh backend:dead-code
 
+  duplication:
+    name: backend / Duplication
+    # Source-scoped copy-paste detection (jscpd) over backend/src. Config and the
+    # ratchet-down threshold live in backend/.jscpd.json. jscpd is the frontend
+    # devDependency (pinned in frontend/package-lock.json), so the job installs
+    # frontend deps rather than a second, unpinned copy. Definition lives in
+    # scripts/ci/gates.sh (also run by /qa-agent).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install jscpd (frontend devDependencies)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Detect source duplication (jscpd)
+        working-directory: .
+        run: bash scripts/ci/gates.sh backend:duplication
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Duplication" \
+            "New source copy-paste duplication exceeds the jscpd threshold (backend/.jscpd.json). Extract the shared logic instead of duplicating; the threshold may only ratchet DOWN."
+
   integrity:
     name: backend / Integrity (anti-gaming)
     # Diff-scoped ratchet: blocks NET-NEW gate-gaming introduced in the PR —

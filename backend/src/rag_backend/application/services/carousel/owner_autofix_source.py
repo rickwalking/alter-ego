@@ -36,6 +36,10 @@ from rag_backend.application.services.carousel.owner_autofix_vocabulary import (
 from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
+from rag_backend.application.services.carousel.state_values import (
+    mappings_at,
+    strings_of,
+)
 from rag_backend.application.services.carousel.structure_fill import (
     outline_from_state,
 )
@@ -87,21 +91,6 @@ class AutofixSource:
     state: Mapping[str, object] | None
 
 
-def _strings(value: object) -> tuple[str, ...]:
-    if not isinstance(value, list):
-        return ()
-    return tuple(
-        item.strip() for item in value if isinstance(item, str) and item.strip()
-    )
-
-
-def _dicts(state: Mapping[str, object] | None, key: str) -> list[Mapping[str, object]]:
-    raw = state.get(key) if state is not None else None
-    if not isinstance(raw, list):
-        return []
-    return [item for item in raw if isinstance(item, Mapping)]
-
-
 def _record_texts(records: list[dict[str, object]]) -> tuple[str, ...]:
     texts: list[str] = []
     for record in records:
@@ -115,11 +104,11 @@ def _research(
     state: Mapping[str, object] | None,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """(titles, sentence-case texts) of the research findings."""
-    findings = _dicts(state, STATE_FIELD_RESEARCH_FINDINGS)
+    findings = mappings_at(state, STATE_FIELD_RESEARCH_FINDINGS)
     titles = tuple(str(item.get(_TITLE) or "") for item in findings)
     texts: list[str] = [str(item.get(_SUMMARY) or "") for item in findings]
     for item in findings:
-        texts.extend(_strings(item.get(_KEY_POINTS)))
+        texts.extend(strings_of(item.get(_KEY_POINTS)))
     return titles, tuple(texts)
 
 

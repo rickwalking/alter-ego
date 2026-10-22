@@ -13,11 +13,6 @@ from rag_backend.application.services.carousel_template.helpers import (
     _render_inline,
     slide_body_html,
 )
-from rag_backend.application.services.carousel_template.lower_third_shell import (
-    LowerThirdConfig,
-    artwork_enabled,
-    render_lower_third_shell,
-)
 from rag_backend.application.services.carousel_template.pov_shell import (
     PovShellConfig,
     render_pov_shell,
@@ -25,6 +20,9 @@ from rag_backend.application.services.carousel_template.pov_shell import (
 from rag_backend.application.services.carousel_template.strategies import news_quote
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
+)
+from rag_backend.application.services.carousel_template.strategies.hero_stack import (
+    render_hero_stack,
 )
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
@@ -64,26 +62,15 @@ class InsightQuoteStrategy:
         if not quote:
             return _FALLBACK.render(slide, project, theme, options=options)
 
-        heading = _render_inline(str(slide.get("heading") or ""))
-        body_html = slide_body_html(slide, "body-p")
         attribution_html = (
             f'<span class="insight-attribution">— {attribution}</span>'
             if attribution
             else ""
         )
-        slide_number = str(slide["number"])
-        copy_inner = (
-            f'<h2 class="slide-hero-heading">{heading}</h2>\n'
-            f"      {body_html}\n"
-            f'      <div class="insight-card">{quote}{attribution_html}</div>'
-        )
-        return render_lower_third_shell(
-            LowerThirdConfig(
-                slide_number=slide_number,
-                total_slides=total_slides,
-                copy_inner_html=copy_inner,
-                show_artwork=artwork_enabled(options),
-            )
+        return render_hero_stack(
+            slide,
+            options,
+            f'<div class="insight-card">{quote}{attribution_html}</div>',
         )
 
 

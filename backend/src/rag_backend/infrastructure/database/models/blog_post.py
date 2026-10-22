@@ -11,12 +11,15 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
-    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
+)
 
 
 class BlogPostModel(Base):
@@ -85,15 +88,8 @@ class BlogPostModel(Base):
     comment_count = Column(Integer, default=0, nullable=False)
     share_count = Column(Integer, default=0, nullable=False)
 
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
     submitted_for_review_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

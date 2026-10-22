@@ -25,6 +25,7 @@ Both workflows run on **all pull requests** (any base branch) when matching path
 | `backend / Security` | bandit + pip-audit |
 | `backend / Test & Coverage` | pytest + diff-cover ≥75% vs `main` |
 | `backend / Dead Code` | vulture |
+| `backend / Duplication` | jscpd (`backend/.jscpd.json`) |
 | `backend / Mutation (advisory)` | mutmut (non-blocking) |
 
 ## Frontend jobs

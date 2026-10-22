@@ -593,6 +593,7 @@ and prove it mechanically, not in prose:
 | backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure (blocking) |
 | backend / Migrations (fresh DB) | `alembic upgrade head` + `downgrade base` round-trip on a fresh Postgres | **CI failure (blocking — AE-0084)** — fails on any migration error, non-reversible revision, or 5-min timeout |
 | backend / Dead Code | vulture | CI failure |
+| backend / Duplication | `gates.sh backend:duplication` (jscpd, `backend/.jscpd.json`) | CI failure — Python source copy-paste above the config threshold; tests and the ADR-0009 facade files (`modules/*/__init__.py`, `modules/*/public.py`) excluded; threshold may only ratchet DOWN (raising it flagged by `check-integrity.sh`) |
 | backend / Mutation (blocking ≥75%) | mutmut + `scripts/ci/mutation-score-gate.sh` | **CI failure (blocking — AE-0049)** if mutation score < 75% |
 | backend / Integrity (anti-gaming) | `scripts/ci/check-integrity.sh backend` | **CI failure (blocking)** on net-new suppressions, skipped/weakened tests, loosened thresholds, raised baselines, or prohibited DDD imports (diff-scoped; pre-existing debt never gated) |
 

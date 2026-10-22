@@ -69,6 +69,13 @@ class TransitionCommand:
         """The state pair the domain table judges, ignoring persistence."""
         return TransitionPair(expected=self.expected, new=self.new)
 
+    @classmethod
+    def moving(
+        cls, run: AutopilotRun, new: AutopilotRunState, reason: str
+    ) -> TransitionCommand:
+        """Move ``run`` from its current state to ``new``."""
+        return cls(run_id=run.run_id, expected=run.state, new=new, reason=reason)
+
 
 @dataclass(frozen=True, kw_only=True)
 class ThesisConfirmCommand:

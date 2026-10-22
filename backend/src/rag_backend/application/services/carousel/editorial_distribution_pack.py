@@ -8,9 +8,6 @@ from uuid import UUID
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.carousel.blog_composition import (
-    _resolve_slide_index,
-)
 from rag_backend.application.services.carousel.editorial_distribution_blog import (
     BlogBuildContext,
     build_blog_markdown_en_from_translations,
@@ -34,6 +31,9 @@ from rag_backend.application.services.carousel.editorial_distribution_persist im
 )
 from rag_backend.application.services.carousel.editorial_distribution_slide import (
     _slide_heading,
+)
+from rag_backend.application.services.carousel.localized_slide_builder import (
+    resolve_slide_index,
 )
 from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_TRANSLATIONS_EN_KEY,
@@ -84,7 +84,7 @@ def _ensure_blog_titles(
     if not dicts:
         return
     intro = next(
-        (s for i, s in dicts if _resolve_slide_index(s, i) == INTRO_SLIDE_INDEX),
+        (s for i, s in dicts if resolve_slide_index(s, i) == INTRO_SLIDE_INDEX),
         dicts[0][1],
     )
     if not project.title:
@@ -92,7 +92,7 @@ def _ensure_blog_titles(
         if heading and heading != DEFAULT_UNTITLED_SLIDE_LABEL:
             project.set_title(heading)
     if not project.title_en:
-        en = translations_en.get(_resolve_slide_index(intro, INTRO_SLIDE_INDEX), {})
+        en = translations_en.get(resolve_slide_index(intro, INTRO_SLIDE_INDEX), {})
         en_heading = str(en.get(OUTLINE_LEGACY_HEADING_KEY) or "").strip()
         if en_heading:
             project.set_title_en(en_heading)

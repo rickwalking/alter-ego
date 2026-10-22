@@ -1,23 +1,17 @@
 """Refine carousel copy tool for the RAG agent."""
 
 from collections.abc import Awaitable, Callable
-from uuid import UUID
 
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.prompts.registry import render_prompt
-from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
-from rag_backend.domain.constants.carousel_tools import (
-    ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID,
-    ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND,
-)
 from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.monitoring_langfuse import get_langfuse_handler
 
-from .access import CarouselToolAccessContext, verify_carousel_tool_access
+from .access import CarouselToolAccessContext, load_authorized_project
 
 MIN_TARGET_PARTS = 2
 MAX_TARGET_PARTS = 3
@@ -159,17 +153,10 @@ def build_refine_carousel_copy_tool(
                 (e.g. "make it shorter", "swap the hashtags for tech ones",
                 "less corporate").
         """
-        try:
-            project_uuid = UUID(project_id)
-        except ValueError:
-            return ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID
-
-        project = await carousel_repository.get_project_by_id(project_uuid)
-        if project is None:
-            return ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND
-        access_error = verify_carousel_tool_access(project, access)
-        if access_error is not None:
-            return ERR_CAROUSEL_TOOL_ACCESS_DENIED
+        loaded = await load_authorized_project(project_id, carousel_repository, access)
+        if isinstance(loaded, str):
+            return loaded
+        project_uuid, project = loaded
 
         original, apply_update = await _resolve_refine_target(
             project, target, carousel_repository

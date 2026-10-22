@@ -160,24 +160,25 @@ class RunRecovery:
 
         An unanswered POV thesis expires like an unanswered review.
         """
-        query = RunListQuery(state=state, limit=EXPIRY_SCAN_LIMIT)
-        cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)
         moved = 0
-        for run in await self._deps.runs.list_by_state(query):
-            if run.updated_at is None or run.updated_at > cutoff:
-                continue
+        for run in await self._stale_runs(state):
             if await self._move(run, _S.EXPIRED, reason):
                 moved += 1
         return moved
 
+    async def _stale_runs(self, state: AutopilotRunState) -> list[AutopilotRun]:
+        query = RunListQuery(state=state, limit=EXPIRY_SCAN_LIMIT)
+        cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)
+        return [
+            run
+            for run in await self._deps.runs.list_by_state(query)
+            if run.updated_at is not None and run.updated_at <= cutoff
+        ]
+
     async def _close_abandoned(self) -> int:
         """Escalations nobody fixed within the expiry window become rejected."""
-        query = RunListQuery(state=_S.ESCALATED, limit=EXPIRY_SCAN_LIMIT)
-        cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)
         moved = 0
-        for run in await self._deps.runs.list_by_state(query):
-            if run.updated_at is None or run.updated_at > cutoff:
-                continue
+        for run in await self._stale_runs(_S.ESCALATED):
             moved += await self._close_one(run)
         return moved
 
@@ -266,12 +267,7 @@ class RunRecovery:
         reason: str,
     ) -> bool:
         return await self._deps.runs.transition(
-            TransitionCommand(
-                run_id=run.run_id,
-                expected=run.state,
-                new=new,
-                reason=reason,
-            )
+            TransitionCommand.moving(run, new, reason)
         )
 
 

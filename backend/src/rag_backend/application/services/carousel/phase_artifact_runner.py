@@ -51,6 +51,7 @@ from rag_backend.application.services.carousel.revision_scope import (
     revision_scope,
     scoped_draft_updates,
 )
+from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -178,6 +179,26 @@ def _settle_used_notes(
         else FEEDBACK_STATUS_UNCHANGED
     )
     return consume_feedback_notes(state, PHASE_CONTENT, status)
+
+
+async def _outline_slides(
+    db: AsyncSession, state: CarouselWorkflowState, outline: list[object]
+) -> list[SlideData]:
+    return await ensure_slides_from_outline(
+        db,
+        str(state.get("project_id", "")),
+        [slide for slide in outline if isinstance(slide, dict)],
+    )
+
+
+async def _design_tokens_updates(
+    db: AsyncSession, state: CarouselWorkflowState, outline: list[object]
+) -> dict[str, object]:
+    slides = await _outline_slides(db, state, outline)
+    if not slides:
+        return {}
+    await apply_design_tokens(db, str(state.get("project_id", "")), slides)
+    return {"design_applied": True}
 
 
 @dataclass(frozen=True)
@@ -594,19 +615,7 @@ class PhaseArtifactRunner:
     ) -> dict[str, object]:
         if self._db is None or not isinstance(outline, list):
             return {}
-        slides = await ensure_slides_from_outline(
-            self._db,
-            str(state.get("project_id", "")),
-            [slide for slide in outline if isinstance(slide, dict)],
-        )
-        if not slides:
-            return {}
-        await apply_design_tokens(
-            self._db,
-            str(state.get("project_id", "")),
-            slides,
-        )
-        return {"design_applied": True}
+        return await _design_tokens_updates(self._db, state, outline)
 
     @staticmethod
     def _should_build_distribution(
@@ -668,19 +677,7 @@ class PhaseArtifactRunner:
         outline = pending.get("outline") or state.get("outline") or []
         if not isinstance(outline, list):
             return {}
-        slides = await ensure_slides_from_outline(
-            self._db,
-            str(state.get("project_id", "")),
-            [slide for slide in outline if isinstance(slide, dict)],
-        )
-        if not slides:
-            return {}
-        await apply_design_tokens(
-            self._db,
-            str(state.get("project_id", "")),
-            slides,
-        )
-        return {"design_applied": True}
+        return await _design_tokens_updates(self._db, state, outline)
 
     @staticmethod
     def _design_validation_updates(
@@ -727,11 +724,7 @@ class PhaseArtifactRunner:
         outline = state.get("outline") or []
         if not isinstance(outline, list):
             return {}
-        slides = await ensure_slides_from_outline(
-            self._db,
-            str(state.get("project_id", "")),
-            [slide for slide in outline if isinstance(slide, dict)],
-        )
+        slides = await _outline_slides(self._db, state, outline)
         if not slides:
             return {}
         assets = await generate_carousel_images(
