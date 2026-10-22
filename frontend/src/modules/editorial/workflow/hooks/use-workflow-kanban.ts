@@ -13,10 +13,20 @@ import {
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { WorkflowKanban } from "./types";
 
+async function requestBoard(failedText: string): Promise<WorkflowKanban> {
+  const response = await authenticatedFetch(WORKFLOW_API.WORKFLOW_BOARD);
+  if (!response.ok) {
+    throw new Error(failedText);
+  }
+  return (await response.json()) as WorkflowKanban;
+}
+
 /**
  * Loads the board and refreshes it on a poll and on window focus. Only the
  * first load reports `loading`; refetches swap the data in place so the
- * mounted board (and the page scroll) survives every poll.
+ * mounted board (and the page scroll) survives every poll. An error stays
+ * until a refresh succeeds (no flicker between failed polls), and only the
+ * newest request may update the board, so a late older answer is dropped.
  */
 export function useWorkflowKanban() {
   const t = useTranslations("workflow.errors");
@@ -24,24 +34,25 @@ export function useWorkflowKanban() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasBoardRef = useRef(false);
+  const latestRequestRef = useRef(0);
 
   const fetchBoard = useCallback(async () => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
     if (!hasBoardRef.current) {
       setLoading(true);
     }
-    setError(null);
     try {
-      const response = await authenticatedFetch(WORKFLOW_API.WORKFLOW_BOARD);
-      if (!response.ok) {
-        throw new Error(t("loadBoardFailed"));
-      }
-      const data = (await response.json()) as WorkflowKanban;
+      const data = await requestBoard(t("loadBoardFailed"));
+      if (requestId !== latestRequestRef.current) return;
       hasBoardRef.current = true;
       setBoard(data);
+      setError(null);
     } catch (err) {
+      if (requestId !== latestRequestRef.current) return;
       setError(err instanceof Error ? err.message : t("unknown"));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestRef.current) setLoading(false);
     }
   }, [t]);
 
