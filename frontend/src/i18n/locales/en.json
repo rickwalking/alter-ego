@@ -37,7 +37,12 @@
       "rubrics": "Rubrics",
       "personas": "Personas",
       "alterEgo": "Alter Ego",
-      "ariaLabel": "Sidebar navigation"
+      "ariaLabel": "Sidebar navigation",
+      "palettes": "Palettes",
+      "knowledge": "Knowledge Base",
+      "analytics": "Analytics",
+      "sectionAdmin": "Admin",
+      "adminUsers": "Users"
     },
     "logout": "Logout",
     "login": "Login"

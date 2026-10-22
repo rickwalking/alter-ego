@@ -5,6 +5,7 @@ export const sidebarItemSchema = z.object({
   labelKey: z.string(),
   icon: z.string(),
   badge: z.string().optional(),
+  access: z.enum(["admin"]).optional(),
 });
 
 export const sidebarSectionSchema = z.object({
