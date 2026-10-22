@@ -17,3 +17,7 @@ Feature: Calendar entries keep their content type
   Scenario: The frontend mapping matches the published API values
     Given the OpenAPI schema of the calendar item lists its content types
     Then the frontend maps exactly those values
+
+  Scenario: The backend schema matches the published OpenAPI artifact
+    Given the calendar item response model of the backend
+    Then its content type values equal the ones in the committed OpenAPI artifact

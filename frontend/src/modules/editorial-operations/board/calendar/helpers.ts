@@ -23,10 +23,14 @@ import {
 } from "./constants";
 import type { CalendarContentType, CalendarDay, CalendarEvent } from "./types";
 
+function isApiContentType(
+  raw: string,
+): raw is keyof typeof CALENDAR_API_CONTENT_TYPES {
+  return Object.hasOwn(CALENDAR_API_CONTENT_TYPES, raw);
+}
+
 function mapContentType(raw: string): CalendarContentType {
-  return Object.hasOwn(CALENDAR_API_CONTENT_TYPES, raw)
-    ? (CALENDAR_API_CONTENT_TYPES[raw] ?? "management")
-    : "management";
+  return isApiContentType(raw) ? CALENDAR_API_CONTENT_TYPES[raw] : "management";
 }
 
 function mapCalendarItemToEvent(item: CalendarItem): CalendarEvent {
