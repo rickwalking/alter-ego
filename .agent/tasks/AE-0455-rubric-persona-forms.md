@@ -41,6 +41,17 @@ rubrics; "New Rubric" opened `window.prompt("Rubric name")` and POSTed `criteria
 - Keyboard accessible (labels, fieldsets, aria-invalid / aria-describedby, focus on the first invalid field,
   focus on a newly added criterion and the dialog's Cancel); pt/en strings.
 
+## Scope (personas PR)
+
+- Same pattern for `/dashboard/personas`: empty state with a create button, translated page, search and
+  create tile (a real `<button>`), Edit / Delete on each persona card.
+- Form with every `PersonaProfileCreate` field: name, description, expertise areas, tone sliders (formal,
+  conversational, humorous, 0–1), sentence structure, paragraph style, opinion expression, preferred and
+  forbidden phrases (chips; commas allowed inside a phrase), writing samples (add / remove).
+- Validation mirrors the schema (`src/schemas/persona.ts`); a blank writing sample must be written or removed.
+- The submit/cancel flow and the form footer are shared with the rubric form (`useFormSubmit`,
+  `NeonFormFooter`).
+
 ## Non-Goals
 
 - No backend change: `POST/PUT/DELETE /api/rubrics` already exist.
@@ -58,10 +69,13 @@ rubrics; "New Rubric" opened `window.prompt("Rubric name")` and POSTed `criteria
 - [x] Cancel leaves without saving; unsaved changes ask first.
 - [x] Delete asks first and shows a refusal.
 - [x] All new strings exist in en and pt.
+- [x] Personas: empty state + create, edit (PUT) and delete with confirmation, every voice field editable,
+      validation, server errors inline, cancel guard, translated page.
 
 ## Gherkin Scenarios
 
 - `frontend/tests/features/rubric-form-ae0455.feature`
+- `frontend/tests/features/persona-form-ae0455.feature`
 
 ## Affected Areas
 
@@ -89,6 +103,9 @@ Rubrics PR: form, empty state, edit and delete built on the existing collection 
 carry the API's string detail. Unit tests for the page, the form model and the collection hook.
 Mutation: CI only.
 
+Personas PR: persona form, empty state, edit and delete; the submit flow and footer moved to shared
+`useFormSubmit` / `NeonFormFooter` and the rubric form uses them. Mutation: CI only.
+
 ## Files Touched
 
 - frontend/src/app/dashboard/rubrics/page.tsx
@@ -107,3 +124,17 @@ Mutation: CI only.
 - frontend/src/i18n/locales/en.json
 - frontend/src/i18n/locales/pt.json
 - frontend/tests/features/rubric-form-ae0455.feature
+- frontend/src/app/dashboard/personas/page.tsx
+- frontend/src/app/dashboard/personas/persona-form.tsx
+- frontend/src/app/dashboard/personas/persona-form-model.ts
+- frontend/src/app/dashboard/personas/use-persona-form.ts
+- frontend/src/app/dashboard/personas/persona-phrase-list-field.tsx
+- frontend/src/app/dashboard/personas/persona-samples-field.tsx
+- frontend/src/app/dashboard/personas/persona-tone-field.tsx
+- frontend/src/app/dashboard/personas/persona-tile.tsx
+- frontend/src/app/dashboard/personas/personas-empty-state.tsx
+- frontend/src/app/dashboard/personas/create-persona-card.tsx
+- frontend/src/schemas/persona.ts
+- frontend/src/lib/use-form-submit.ts
+- frontend/src/components/molecules/neon-form-footer.tsx
+- frontend/tests/features/persona-form-ae0455.feature

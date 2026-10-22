@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
-import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
-import { NEON_RED } from "@/constants/neon";
-import { requestErrorText } from "@/lib/use-resource-collection";
+import { NeonFormFooter } from "@/components/molecules/neon-form-footer";
+import {
+  NeonLabelledField,
+  invalidProps,
+} from "@/components/molecules/neon-labelled-field";
+import { useFormSubmit } from "@/lib/use-form-submit";
 import { useUnsavedChangesGuard } from "@/modules/publishing";
 import type {
   QualityRubric,
@@ -16,14 +17,7 @@ import type {
 import { RUBRIC_NAME_MAX } from "@/schemas/rubric";
 import { RubricContentTypesField } from "./rubric-content-types-field";
 import { RubricCriteriaList } from "./rubric-criteria-list";
-import {
-  NeonLabelledField,
-  invalidProps,
-} from "@/components/molecules/neon-labelled-field";
 import { useRubricForm } from "./use-rubric-form";
-
-const FIRST_INVALID_SELECTOR =
-  'input[aria-invalid="true"], fieldset[aria-invalid="true"] input';
 
 export interface RubricFormProps {
   /** The rubric being edited; omitted when creating one. */
@@ -42,38 +36,28 @@ export function RubricForm({
 }: Readonly<RubricFormProps>): React.ReactElement {
   const t = useTranslations("rubrics.form");
   const form = useRubricForm(rubric);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [showErrors, setShowErrors] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
   const { confirmLeave } = useUnsavedChangesGuard(
     form.dirty,
     t("unsavedConfirm"),
   );
+  const {
+    formRef,
+    showErrors,
+    saving,
+    serverError,
+    handleSubmit,
+    handleCancel,
+  } = useFormSubmit({
+    isValid: form.isValid,
+    toPayload: form.toPayload,
+    onSave,
+    onCancel,
+    confirmLeave,
+    saveFallback: t("errors.save"),
+  });
   const errorOf = (path: string): string | undefined => {
     const key = showErrors ? form.errors[path] : undefined;
     return key ? t(key) : undefined;
-  };
-
-  const handleSubmit = async (
-    event: React.SubmitEvent<HTMLFormElement>,
-  ): Promise<void> => {
-    event.preventDefault();
-    flushSync(() => setShowErrors(true));
-    setServerError(null);
-    if (!form.isValid) {
-      formRef.current
-        ?.querySelector<HTMLElement>(FIRST_INVALID_SELECTOR)
-        ?.focus();
-      return;
-    }
-    setSaving(true);
-    try {
-      await onSave(form.toPayload());
-    } catch (err) {
-      setServerError(requestErrorText(err, t("errors.save")));
-      setSaving(false);
-    }
   };
 
   return (
@@ -116,27 +100,14 @@ export function RubricForm({
         onToggle={form.toggleContentType}
       />
       <RubricCriteriaList form={form} errorOf={errorOf} />
-      {serverError && (
-        <p role="alert" style={{ color: NEON_RED }} className="text-sm">
-          {serverError}
-        </p>
-      )}
-      {showErrors && !form.isValid && (
-        <p role="alert" style={{ color: NEON_RED }} className="text-sm">
-          {t("fixErrors")}
-        </p>
-      )}
-      <div className="flex justify-end gap-2">
-        <NeonButton
-          variant="ghost"
-          onClick={() => confirmLeave() && onCancel()}
-        >
-          {t("cancel")}
-        </NeonButton>
-        <NeonButton type="submit" variant="primary" loading={saving}>
-          {rubric ? t("save") : t("create")}
-        </NeonButton>
-      </div>
+      <NeonFormFooter
+        serverError={serverError}
+        invalidMessage={showErrors && !form.isValid ? t("fixErrors") : null}
+        cancelLabel={t("cancel")}
+        submitLabel={rubric ? t("save") : t("create")}
+        saving={saving}
+        onCancel={handleCancel}
+      />
     </form>
   );
 }
