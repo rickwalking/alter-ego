@@ -37,6 +37,8 @@ Owner decision (2026-10-22): open a create form first and only POST on submit.
 - [x] Click opens the form, nothing is created.
 - [x] Submit creates one draft with the trimmed title and opens the editor.
 - [x] Blank title: Create disabled; Cancel creates nothing; failure shows the error in the form.
+- [x] Follow-up (#218 review, via AE-0481): Enter in the title field submits (a real `<form>`, Create is its submit
+      button), the title field is focused on open, the unused `untitledDraft` message is removed.
 
 ## Repro Steps
 

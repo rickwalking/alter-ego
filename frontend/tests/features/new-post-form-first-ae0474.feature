@@ -18,6 +18,7 @@ Feature: New Post asks for a title before creating anything
     Given the New Post form is open
     When the title is empty or only spaces
     Then "Create" is disabled and nothing is created
+    And pressing Enter creates nothing
 
   Scenario: Cancelling the form creates nothing
     Given the New Post form is open
@@ -28,3 +29,13 @@ Feature: New Post asks for a title before creating anything
     Given the New Post form is open and the create request fails
     When I click "Create"
     Then the error is shown in the form and I can try again
+
+  Scenario: The title field is focused when the form opens
+    When I click "New Post"
+    Then the Title field has the keyboard focus
+
+  Scenario: Pressing Enter in the title field creates the draft
+    Given the New Post form is open
+    When I type the title "Post via Enter" and press Enter
+    Then one draft titled "Post via Enter" is created
+    And the editor for that draft opens
