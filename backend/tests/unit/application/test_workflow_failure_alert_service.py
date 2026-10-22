@@ -34,7 +34,6 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.user import UserModel
 
-
 STUCK_PROJECT_COUNT = 15
 SECOND_ADMIN_ID = "admin-2-id"
 
