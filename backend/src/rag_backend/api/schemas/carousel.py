@@ -187,9 +187,13 @@ class CarouselPublicSlide(BaseModel):
 
 
 class CarouselPublicResponse(BaseModel):
-    """Lean public projection of a published carousel."""
+    """Lean public projection of a published carousel.
+
+    ``topic`` is the title of last resort for carousels that never got one.
+    """
 
     id: UUID
+    topic: str | None = None
     title: str | None = None
     title_en: str | None = None
     subtitle: str | None = None

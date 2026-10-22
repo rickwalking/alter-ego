@@ -183,6 +183,7 @@ export function buildPublicCarouselCards(
   );
 }
 
+/** Viewer title: localized title, the other language's, the topic, the fallback. */
 export function publicCarouselTitle(
   carousel: CarouselPublicResponse,
   locale: SupportedLocale,
@@ -190,8 +191,8 @@ export function publicCarouselTitle(
 ): string {
   const localized =
     locale === BLOG_LANGUAGES.ENGLISH
-      ? [carousel.title_en, carousel.title]
-      : [carousel.title, carousel.title_en];
+      ? [carousel.title_en, carousel.title, carousel.topic]
+      : [carousel.title, carousel.title_en, carousel.topic];
   return carouselTitle(localized, fallbackTitle);
 }
 

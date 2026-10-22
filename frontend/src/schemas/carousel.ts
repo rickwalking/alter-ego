@@ -105,6 +105,7 @@ export const carouselPublicSlideSchema = z.object({
 
 export const carouselPublicResponseSchema = z.object({
   id: z.string(),
+  topic: z.string().nullable().optional(),
   title: z.string().nullable(),
   title_en: z.string().nullable(),
   subtitle: z.string().nullable(),

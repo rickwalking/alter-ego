@@ -107,6 +107,7 @@ def _build_public_response(
 
     return CarouselPublicResponse(
         id=project.id,
+        topic=project.topic,
         title=project.title,
         title_en=project.title_en,
         subtitle=project.subtitle,

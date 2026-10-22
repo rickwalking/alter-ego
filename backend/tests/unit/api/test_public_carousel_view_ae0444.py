@@ -145,6 +145,18 @@ class TestPublicCarouselProjection:
         ]
         assert response.slides_by_language["en"][1].slide_number == 2
 
+    async def test_payload_carries_the_topic_when_untitled(self) -> None:
+        # Scenario: The public viewer payload carries the topic
+        project = _project()
+        project.topic = "GPT 5.6 saiu"
+        project.title = None
+        tokens = _tokens(pt=[f"{BASE}/slide-images/pt/slide_1.jpg"])
+
+        response = await _get(_handlers(project, slides=_slides(), tokens=tokens))
+
+        assert response.topic == "GPT 5.6 saiu"
+        assert response.title is None
+
     async def test_falls_back_to_raw_slides_when_pt_is_missing(self) -> None:
         tokens = _tokens(
             raw=[
