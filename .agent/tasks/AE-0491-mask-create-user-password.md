@@ -121,6 +121,10 @@ Feature: The create-user password is masked
 
 Tests red (3), component added, tests green; lint, typecheck, format clean.
 
+### 2026-10-22 19:40
+
+External QA round 1: WARN (unasserted attributes) — assertions added; real-browser check of the dialog done.
+
 ## Files Touched
 
 - frontend/src/components/admin/password-input.tsx (new), create-user-dialog.tsx
