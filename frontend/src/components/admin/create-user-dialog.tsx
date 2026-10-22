@@ -83,6 +83,7 @@ export function CreateUserDialog({
       success={status.success}
     >
       <form
+        method="post"
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
