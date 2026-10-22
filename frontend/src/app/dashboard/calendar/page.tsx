@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import {
   CALENDAR_COLORS,
@@ -7,17 +8,18 @@ import {
 } from "@/modules/editorial-operations";
 import { NEON_RED } from "@/constants/neon";
 import { useCalendarDays } from "@/app/dashboard/calendar/use-calendar-days";
-import { useCalendarMonth } from "@/app/dashboard/calendar/use-calendar-month";
+import { useCalendarView } from "@/app/dashboard/calendar/use-calendar-view";
 import { useClientToday } from "@/app/dashboard/calendar/use-client-today";
 import { CalendarHeader } from "@/app/dashboard/calendar/calendar-header";
 import { CalendarToolbar } from "@/app/dashboard/calendar/calendar-toolbar";
-import { CalendarGrid } from "@/app/dashboard/calendar/calendar-grid";
-import { CalendarLegend } from "@/app/dashboard/calendar/calendar-legend";
+import { CalendarViewBody } from "@/app/dashboard/calendar/calendar-view-body";
 
-export default function CalendarPage(): React.ReactElement {
+function CalendarScreen(): React.ReactElement {
   const today = useClientToday();
-  const { anchor, title, goPrev, goNext, goToday } = useCalendarMonth(today);
-  const { days, loading, error } = useCalendarDays(anchor, today);
+  const calendarView = useCalendarView(today);
+  const { view, focus, title, goPrev, goNext, goToday, setView, openDay } =
+    calendarView;
+  const { days, loading, error } = useCalendarDays(view, focus, today);
 
   return (
     <div
@@ -33,7 +35,7 @@ export default function CalendarPage(): React.ReactElement {
           {error}
         </p>
       )}
-      {(loading || !anchor) && (
+      {(loading || !focus) && (
         <div className="flex justify-center py-12">
           <NeonSpinner size="lg" />
         </div>
@@ -43,15 +45,35 @@ export default function CalendarPage(): React.ReactElement {
       <div className="p-4 md:p-7">
         <CalendarToolbar
           title={title}
+          view={view}
           onPrev={goPrev}
           onNext={goNext}
           onToday={goToday}
+          onViewChange={setView}
         />
-        {anchor ? <CalendarGrid days={days} label={title} /> : null}
-        <CalendarLegend />
+        {focus ? (
+          <CalendarViewBody
+            view={view}
+            title={title}
+            days={days}
+            onOpenDay={openDay}
+          />
+        ) : null}
       </div>
 
       <style>{CALENDAR_RESPONSIVE_STYLE}</style>
     </div>
+  );
+}
+
+/**
+ * The toolbar state lives in the URL (`useSearchParams`), which needs a
+ * Suspense boundary for the static prerender of this route.
+ */
+export default function CalendarPage(): React.ReactElement {
+  return (
+    <Suspense fallback={<NeonSpinner size="lg" />}>
+      <CalendarScreen />
+    </Suspense>
   );
 }

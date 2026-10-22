@@ -46,7 +46,13 @@ Feature: Calendar month navigation
     Then the event appears on the 10th
     And it does not appear in June or August
 
-  Scenario: A UTC time component does not shift an event's day
-    Given an item with event_date "2026-07-10T23:30:00Z"
+  Scenario: A timestamped event is placed on the viewer's local date
+    Given an item with event_date "2026-07-11T01:00:00Z"
+    And the viewer's timezone is America/Sao_Paulo
     When the July 2026 grid is built
-    Then the event is placed on the 10th regardless of local timezone
+    Then the event is placed on the 10th, its local date (22:00 on July 10)
+
+  Scenario: A date-only event keeps its date in every timezone
+    Given an item with event_date "2026-07-10"
+    When the July 2026 grid is built in any timezone
+    Then the event is placed on the 10th

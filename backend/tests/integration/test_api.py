@@ -289,7 +289,7 @@ class TestAgentRoutingByMetadata:
 
     @pytest.mark.asyncio
     async def test_unauthenticated_carousel_chat_rejected(self, client, monkeypatch):
-        """Given carousel-bound conversation, when unauthenticated POST /chat, then 403."""
+        """Given an owned carousel conversation, when unauthenticated POST /chat, then 404."""
         from rag_backend.agents.rag_agent import RAGAgent
 
         mock_agent = AsyncMock(spec=RAGAgent)
@@ -329,10 +329,8 @@ class TestAgentRoutingByMetadata:
             f"/api/conversations/{conv_id}/chat",
             json={"content": "refine this carousel"},
         )
-        assert chat_resp.status_code == 403
-        assert chat_resp.json()["detail"] == (
-            "Carousel conversations require an authenticated owner"
-        )
+        assert chat_resp.status_code == 404
+        assert chat_resp.json()["detail"] == "Conversation not found"
 
     @pytest.mark.asyncio
     async def test_normal_conversation_gets_alter_ego_origin(self, client, monkeypatch):

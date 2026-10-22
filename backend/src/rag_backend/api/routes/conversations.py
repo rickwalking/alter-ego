@@ -21,7 +21,6 @@ from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.api.constants import (
     ERR_CONVERSATION_NOT_FOUND,
-    ERR_FORBIDDEN,
     ERR_NOT_AUTHENTICATED,
 )
 from rag_backend.api.dependencies import (
@@ -39,7 +38,11 @@ from rag_backend.api.dependencies.conversation import (
     get_conversation_title_generator,
     get_legacy_chat_agent_factory,
 )
-from rag_backend.api.dependencies.resource_access import assert_conversation_access
+from rag_backend.api.dependencies.resource_access import (
+    assert_conversation_access,
+    assert_conversation_writable,
+    raise_conversation_not_found,
+)
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     ChatRequest,
@@ -79,7 +82,6 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 _DEPENDENCIES_NOT_RESOLVED = "Dependencies not resolved"
 _DB_NOT_RESOLVED = "Database session not resolved"
 _CHAT_LIMIT_DETAIL = "Conversation limit reached. Start a new chat."
-_CHAT_NOT_FOUND_DETAIL = "Conversation with id {conversation_id} not found"
 
 
 class _RouteChatAgentFactory:
@@ -106,16 +108,14 @@ async def _load_owned_conversation(
     conversation_id: UUID,
     user: User,
 ) -> Conversation:
-    """Load a conversation (404 if missing), then assert the caller owns it.
+    """Load a conversation the caller owns (or any, for admins).
 
-    Preserves the legacy 404-before-403 ordering + ``ERR_CONVERSATION_NOT_FOUND``.
+    Unknown and foreign conversations raise the same 404 so a caller cannot
+    probe which ids exist.
     """
     conversation = await handlers.get(GetConversationQuery(conversation_id))
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_CONVERSATION_NOT_FOUND,
-        )
+        raise_conversation_not_found()
     assert_conversation_access(conversation, user)
     return conversation
 
@@ -232,7 +232,6 @@ async def list_conversations(
     responses={
         200: {"description": "Conversation found"},
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
-        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -251,7 +250,6 @@ async def get_conversation(
     responses={
         200: {"description": "List of messages"},
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
-        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -280,7 +278,6 @@ async def get_conversation_messages(
     responses={
         204: {"description": "Conversation deleted successfully"},
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
-        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -305,7 +302,6 @@ async def delete_conversation(
     responses={
         200: {"description": "Title generated successfully"},
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
-        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -361,14 +357,8 @@ async def chat(
 
     conversation = await handlers.get(GetConversationQuery(conversation_id))
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=_CHAT_NOT_FOUND_DETAIL.format(conversation_id=conversation_id),
-        )
-
-    if user is not None and conversation.user_id is not None:
-        assert_conversation_access(conversation, user)
-
+        raise_conversation_not_found()
+    assert_conversation_writable(conversation, user)
     assert_carousel_conversation_chat_access(conversation, user)
 
     try:

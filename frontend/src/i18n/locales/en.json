@@ -1213,7 +1213,31 @@
         "awaiting_human": "awaiting you"
       },
       "emptyMonth": "No scheduled content this month",
-      "emptyMonthHint": "Schedule a post or carousel to see it on the calendar."
+      "emptyMonthHint": "Schedule a post or carousel to see it on the calendar.",
+      "toolbar": {
+        "viewsLabel": "Calendar view",
+        "views": {
+          "month": "Month",
+          "week": "Week",
+          "day": "Day"
+        },
+        "previous": {
+          "month": "Previous month",
+          "week": "Previous week",
+          "day": "Previous day"
+        },
+        "next": {
+          "month": "Next month",
+          "week": "Next week",
+          "day": "Next day"
+        },
+        "today": "Today"
+      },
+      "agenda": {
+        "allDay": "All day",
+        "emptyDay": "Nothing scheduled for this day",
+        "openDay": "Open {date} in the day view"
+      }
     },
     "kanban": {
       "retry": "Retry"

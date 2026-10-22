@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import NoReturn, TypedDict
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
-from rag_backend.domain.constants.access_control import (
-    ERR_ACCESS_DENIED_NOT_OWNER,
-    ERR_CONVERSATION_ACCESS_DENIED,
-)
+from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND, ERR_CONVERSATION_NOT_FOUND
+from rag_backend.domain.constants.access_control import ERR_ACCESS_DENIED_NOT_OWNER
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.workflow_events import (
@@ -84,14 +81,36 @@ def assert_domain_owner_or_admin(
         )
 
 
-def assert_conversation_access(conversation: Conversation, user: User) -> None:
-    """Ensure the authenticated user owns the conversation."""
+def raise_conversation_not_found() -> NoReturn:
+    """Raise the one 404 used for unknown AND inaccessible conversations."""
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=ERR_CONVERSATION_NOT_FOUND,
+    )
+
+
+def _owns_or_admin(conversation: Conversation, user: User | None) -> bool:
+    if user is None:
+        return False
+    return user.is_admin() or str(conversation.user_id) == str(user.id)
+
+
+def assert_conversation_writable(conversation: Conversation, user: User | None) -> None:
+    """Let anyone chat in an anonymous conversation; owned ones need owner or admin.
+
+    A caller who may not see the conversation gets the same 404 as an unknown
+    id, so its existence is never revealed.
+    """
     if conversation.user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERR_CONVERSATION_ACCESS_DENIED,
-        )
-    assert_domain_owner_or_admin(conversation.user_id, user)
+        return
+    if not _owns_or_admin(conversation, user):
+        raise_conversation_not_found()
+
+
+def assert_conversation_access(conversation: Conversation, user: User) -> None:
+    """Require the conversation owner or an admin; anything else is a 404."""
+    if conversation.user_id is None or not _owns_or_admin(conversation, user):
+        raise_conversation_not_found()
 
 
 def assert_document_access(document: Document, user: User) -> None:
@@ -359,6 +378,7 @@ __all__ = [
     "assert_content_access",
     "assert_content_owner_or_admin",
     "assert_conversation_access",
+    "assert_conversation_writable",
     "assert_document_access",
     "assert_domain_owner_or_admin",
     "assert_owner_or_admin",
@@ -368,5 +388,6 @@ __all__ = [
     "get_blog_post_for_user",
     "guard_blog_post_update_fields",
     "lock_blog_post",
+    "raise_conversation_not_found",
     "validate_reviewer_user",
 ]
