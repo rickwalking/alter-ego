@@ -94,29 +94,6 @@ async def get_current_user_optional(
     return decode_access_token(settings, token)
 
 
-async def get_anonymous_payload(
-    request: Request,
-    settings: Settings = Depends(get_settings),
-) -> dict[str, object] | None:
-    """Validate anonymous JWT token from query param or cookie.
-
-    Args:
-        request: FastAPI request object.
-        settings: Application settings.
-
-    Returns:
-        Anonymous token payload dict if valid, None otherwise.
-    """
-    token = request.query_params.get("token")
-    if not token:
-        token = request.cookies.get("anon_token")
-
-    if not token:
-        return None
-
-    return decode_anonymous_token(settings, token)
-
-
 _COOKIE_HEADER = "cookie"
 
 

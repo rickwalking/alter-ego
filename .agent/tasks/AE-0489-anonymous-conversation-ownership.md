@@ -33,12 +33,15 @@ anonymous conversations too.
   longer overwrites the token of a conversation still open; every `anon_token` in the Cookie header is read, so a
   leftover site-wide token from before this change does not hide the scoped one.
 - Reads of anonymous conversations were already closed (they need a signed-in owner).
-- "Messages are not saved after refresh" stays by design; the cookie (path `/`, `SameSite=Strict`, 60 min) covers
-  a page's lifetime.
+- "Messages are not saved after refresh" stays by design; the cookie (`Path=/api/conversations/<id>`,
+  `SameSite=Strict`, HttpOnly, 60 min) covers a page's lifetime.
+- Pedro's decision (review of #239): a HARD 60-minute limit for anonymous conversations, no renewal. After it the
+  stream answers 404; the chat errors PR (AE-0510) shows a friendly "start a new chat" message for it.
+- The unused `get_anonymous_payload` (which also accepted a URL token) is removed.
 
 ## Non-Goals
 
-- Refreshing the anon token past 60 minutes.
+- Refreshing the anon token past 60 minutes (Pedro: hard limit).
 
 ## Acceptance Criteria
 
@@ -62,7 +65,7 @@ anonymous conversations too.
 
 ## Dependencies
 
-AE-0486 (#227), which this branch builds on.
+AE-0486 (#227, merged).
 
 ## Progress Log
 
@@ -75,6 +78,7 @@ visitor now use `https://test` so the secure cookie is sent back (production is 
 ## Files Touched
 
 - backend/src/rag_backend/api/dependencies/conversation_caller.py (new), resource_access.py
+- backend/src/rag_backend/api/middleware/auth.py (cookie-only token reader; unused URL-token reader removed)
 - backend/src/rag_backend/api/routes/chat_stream.py, conversations.py
 - backend/tests/features/anonymous_conversation_ownership.feature (new)
 - backend/tests/integration/test_anonymous_conversation_ownership.py (new), conversation_access_support.py (new),
@@ -85,12 +89,13 @@ visitor now use `https://test` so the secure cookie is sent back (production is 
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0489.dev-summary.md`: every backend gate except mutation PASS locally with Postgres (test,
+diff-cover, openapi-fresh included); 15 table-driven ownership cases; mutation in CI.
 
 ## QA Report
 
-Pending.
+External QA, see `.agent/reports/AE-0489.qa.md`: no access hole; review findings fixed with tests.
 
 ## Blockers
 
-Waits for #227 to merge (stacked).
+None (#227 is merged).
