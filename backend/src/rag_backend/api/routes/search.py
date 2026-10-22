@@ -11,9 +11,10 @@ pre-refactor route.
 
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
+from rag_backend.api.constants import ERR_NOT_AUTHENTICATED, ERR_SEARCH_FAILED
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.dependencies.knowledge import get_knowledge_service
 from rag_backend.api.schemas import (
@@ -29,6 +30,7 @@ from rag_backend.modules.knowledge import (
     SearchResultView,
 )
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 _DEFAULT_DOCUMENT_TITLE = "Untitled"
@@ -86,9 +88,10 @@ async def search_documents(
             )
         )
     except Exception as e:
+        logger.exception("knowledge_search_failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {e!s}",
+            detail=ERR_SEARCH_FAILED,
         ) from e
 
     formatted_results = [_to_result_response(result) for result in results]

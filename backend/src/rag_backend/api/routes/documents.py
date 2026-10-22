@@ -13,9 +13,14 @@ Document is re-exported for callers that import the entity from here.
 from typing import Annotated
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
-from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
+from rag_backend.api.constants import (
+    ERR_DOCUMENT_PROCESSING_FAILED,
+    ERR_FORBIDDEN,
+    ERR_NOT_AUTHENTICATED,
+)
 from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
@@ -46,6 +51,7 @@ from rag_backend.modules.knowledge import (
 )
 from rag_backend.modules.knowledge.domain.commands import MetadataValue
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 _DETAIL_NOT_FOUND = "Document with id {document_id} not found"
@@ -107,9 +113,10 @@ async def upload_document(
     try:
         return await service.ingest(command)
     except Exception as e:
+        logger.exception("knowledge_ingest_failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process document: {e!s}",
+            detail=ERR_DOCUMENT_PROCESSING_FAILED,
         ) from e
 
 
