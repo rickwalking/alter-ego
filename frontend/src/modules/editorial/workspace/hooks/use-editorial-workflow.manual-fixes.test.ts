@@ -133,4 +133,50 @@ describe("useEditorialWorkflow manual fixes (AE-0414 B02)", () => {
 
     expect(result.current.error).toBe("some_new_code");
   });
+
+  // Scenario: A whitespace-only revise with edits is still edits-only
+  it("resolves a whitespace-only revise that carries edits", async () => {
+    answerResume(
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+      "edited_localized_slides_phase_not_allowed",
+    );
+    const { result } = await renderWorkflow();
+
+    let outcome: EditorialWorkflowState | null | undefined;
+    await act(async () => {
+      outcome = await result.current.revise("   ", {
+        editedLocalizedSlides: [editedSlide],
+      });
+    });
+
+    expect(outcome).toBeNull();
+  });
+
+  it.each([
+    ["feedback together with edits", "Rewrite it", [editedSlide]],
+    ["no feedback and no edit list", "", undefined],
+    ["no feedback and an empty edit list", "", []],
+  ])("still rejects a revise with %s", async (_title, feedback, edits) => {
+    answerResume(HTTP_STATUS.UNPROCESSABLE_ENTITY, "revise_feedback_required");
+    const { result } = await renderWorkflow();
+    const options =
+      edits === undefined ? undefined : { editedLocalizedSlides: edits };
+
+    await act(async () => {
+      await expect(result.current.revise(feedback, options)).rejects.toThrow(
+        "Write your feedback before requesting a revision.",
+      );
+    });
+  });
+
+  it("still rejects a revise whose options carry no edit list", async () => {
+    answerResume(HTTP_STATUS.UNPROCESSABLE_ENTITY, "revise_feedback_required");
+    const { result } = await renderWorkflow();
+
+    await act(async () => {
+      await expect(result.current.revise("", {})).rejects.toThrow(
+        "Write your feedback before requesting a revision.",
+      );
+    });
+  });
 });
