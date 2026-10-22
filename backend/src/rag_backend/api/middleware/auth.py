@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
-from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
+from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, COOKIE_ANON_TOKEN
 from rag_backend.infrastructure.auth import (
     decode_access_token,
     decode_anonymous_token,
@@ -115,3 +115,36 @@ async def get_anonymous_payload(
         return None
 
     return decode_anonymous_token(settings, token)
+
+
+_COOKIE_HEADER = "cookie"
+
+
+def _anon_cookie_tokens(request: Request) -> list[str]:
+    """Every ``anon_token`` value in the Cookie header.
+
+    A browser may send several (a conversation-scoped one and, until it
+    expires, an older site-wide one); a plain cookie dict would keep only one.
+    """
+    tokens: list[str] = []
+    for part in request.headers.get(_COOKIE_HEADER, "").split(";"):
+        name, _, value = part.strip().partition("=")
+        if name == COOKIE_ANON_TOKEN and value:
+            tokens.append(value)
+    return tokens
+
+
+async def get_anon_cookie_payloads(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> list[dict[str, object]]:
+    """Decoded payloads of the valid ``anon_token`` cookies (never a URL token).
+
+    Only the HttpOnly cookie counts as a write credential: a token in the
+    query string would end up in access logs and referrers.
+    """
+    payloads = (
+        decode_anonymous_token(settings, token)
+        for token in _anon_cookie_tokens(request)
+    )
+    return [payload for payload in payloads if payload is not None]

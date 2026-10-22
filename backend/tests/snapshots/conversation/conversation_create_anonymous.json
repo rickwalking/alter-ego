@@ -10,7 +10,7 @@
     "anon_token": {
       "httponly": true,
       "max-age": "3600",
-      "path": "/",
+      "path": "/api/conversations/<uuid>",
       "samesite": "strict",
       "secure": true,
       "value": "<jwt>"
