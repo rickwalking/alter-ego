@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -41,3 +42,26 @@ class CarouselCopyResponse(BaseModel):
     linkedin_post_pt: str | None
     linkedin_post_en: str | None
     lock_version: int
+
+
+class CarouselCopyVersionResponse(BaseModel):
+    """One stored version of the caption or a LinkedIn post.
+
+    ``author_id`` / ``author_name`` are null for the generated text kept on the
+    first edit; ``restored_from`` names the version a restore brought back.
+    """
+
+    version_number: int
+    field: str
+    text: str
+    author_id: str | None
+    author_name: str | None
+    created_at: datetime
+    restored_from: int | None = None
+
+
+class CarouselCopyVersionsResponse(BaseModel):
+    """The carousel's caption / LinkedIn versions, newest first."""
+
+    project_id: UUID
+    versions: list[CarouselCopyVersionResponse]

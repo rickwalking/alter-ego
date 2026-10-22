@@ -4,12 +4,16 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { CaptionEditor, countHashtags } from "./caption-editor";
 import { CopySaveBar } from "./copy-save-bar";
+import { CopyVersionList } from "./copy-version-list";
 import { LanguageTabs } from "./publish-panel-parts";
 import { LeaveGuardDialog } from "./leave-guard-dialog";
 import type { ReviewCopyEditorProps } from "./types";
 import type { CopyField } from "@/modules/publishing/distribution/hooks/types";
 import { useLeaveGuard } from "@/modules/publishing/distribution/hooks/use-leave-guard";
-import { COPY_FIELDS } from "@/modules/publishing/distribution/lib/copy-editor-state";
+import {
+  API_FIELD,
+  COPY_FIELDS,
+} from "@/modules/publishing/distribution/lib/copy-editor-state";
 import {
   IG_MAX_CHARS,
   IG_MAX_HASHTAGS,
@@ -21,6 +25,8 @@ import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
 
 const CAPTION_ONLY: readonly CopyField[] = ["caption"];
 const LINKEDIN_POSTS: readonly CopyField[] = ["linkedinPt", "linkedinEn"];
+const CAPTION_API_FIELDS = CAPTION_ONLY.map((field) => API_FIELD[field]);
+const LINKEDIN_API_FIELDS = LINKEDIN_POSTS.map((field) => API_FIELD[field]);
 
 /**
  * The Instagram caption editor of a review step: the publish page's limits and
@@ -29,6 +35,7 @@ const LINKEDIN_POSTS: readonly CopyField[] = ["linkedinPt", "linkedinEn"];
  */
 export function ReviewCaptionEditor({
   editor,
+  history,
 }: Readonly<ReviewCopyEditorProps>): React.ReactElement {
   const t = useTranslations("publish");
   const caption = editor.draft.caption;
@@ -56,6 +63,11 @@ export function ReviewCaptionEditor({
           onSave={() => editor.save(CAPTION_ONLY)}
         />
       )}
+      <CopyVersionList
+        history={history}
+        fields={CAPTION_API_FIELDS}
+        blocked={editor.isDirty(CAPTION_ONLY)}
+      />
     </div>
   );
 }
@@ -63,6 +75,7 @@ export function ReviewCaptionEditor({
 /** The PT / EN LinkedIn post editor of a review step, saved per language. */
 export function ReviewLinkedInEditor({
   editor,
+  history,
 }: Readonly<ReviewCopyEditorProps>): React.ReactElement {
   const t = useTranslations("publish");
   const [language, setLanguage] = useState<ViewerLanguage>("pt");
@@ -94,6 +107,11 @@ export function ReviewLinkedInEditor({
           onSave={() => editor.save(LINKEDIN_POSTS)}
         />
       )}
+      <CopyVersionList
+        history={history}
+        fields={LINKEDIN_API_FIELDS}
+        blocked={editor.isDirty(LINKEDIN_POSTS)}
+      />
     </div>
   );
 }

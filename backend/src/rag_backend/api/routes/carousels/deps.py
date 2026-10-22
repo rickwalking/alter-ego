@@ -39,6 +39,9 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 from rag_backend.infrastructure.database.config import get_session
+from rag_backend.infrastructure.database.copy_version_repository import (
+    PostgresCopyVersionStore,
+)
 
 
 def get_carousel_repo(
@@ -192,5 +195,11 @@ def get_carousel_copy_edit_route_deps(
         user=user,
         if_match=if_match,
         repo=repo,
-        service=CarouselCopyEditService(CarouselCopyEditDeps(db=session, repo=repo)),
+        service=CarouselCopyEditService(
+            CarouselCopyEditDeps(
+                db=session,
+                repo=repo,
+                versions=PostgresCopyVersionStore(session),
+            )
+        ),
     )

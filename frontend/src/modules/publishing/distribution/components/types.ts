@@ -12,6 +12,7 @@ import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-c
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type {
   CopyEditor,
+  CopyHistory,
   CopySaveStatus,
   LeaveGuard,
   SaveCopy,
@@ -52,6 +53,8 @@ export interface PublishPanelProps {
   slideNumbers?: readonly number[];
   /** Saves caption / LinkedIn edits; without it the texts are not saved. */
   onSaveCopy?: SaveCopy;
+  /** The caption / LinkedIn version history shown under the editors. */
+  copyHistory?: CopyHistory;
 }
 
 /** Save button + state line of one publish-panel text. */
@@ -181,6 +184,7 @@ export interface InstagramTabProps extends Pick<
   language: ViewerLanguage;
   /** Present when saving is wired: the save bar of the caption. */
   save?: Omit<CopySaveBarProps, "invalid">;
+  history?: CopyHistory;
 }
 
 /** LinkedIn tab of the publish panel. */
@@ -192,9 +196,26 @@ export interface LinkedInTabProps {
   pdfHref: string;
   /** Present when saving is wired: the save bar of the LinkedIn posts. */
   save?: Omit<CopySaveBarProps, "invalid">;
+  history?: CopyHistory;
 }
 
 /** A review-step editor (or its leave guard) over the shared copy editor. */
 export interface ReviewCopyEditorProps {
   editor: CopyEditor;
+  /** The version history shown under the editor. */
+  history?: CopyHistory;
+}
+
+/** The version list under one text editor. */
+export interface CopyVersionListProps {
+  history: CopyHistory | undefined;
+  /** The API field names this editor edits (``caption``, ``linkedin_post_pt``…). */
+  fields: readonly string[];
+  /** The text has unsaved edits: a restore would drop them, so it waits. */
+  blocked: boolean;
+}
+
+/** The version list once there is a history to show. */
+export interface CopyVersionEntriesProps extends CopyVersionListProps {
+  history: CopyHistory;
 }

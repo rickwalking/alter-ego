@@ -29,6 +29,7 @@ from rag_backend.api.schemas.carousel_copy import (
 )
 from rag_backend.application.services.carousel.carousel_copy_edit_service import (
     CopyEditCommand,
+    CopyEditResult,
     CopyEdits,
 )
 from rag_backend.domain.constants.carousel_copy_edit import ERR_CAPTION_PUBLISHED
@@ -37,7 +38,7 @@ from rag_backend.modules.autopilot import AutopilotBootstrapDeps, bootstrap_modu
 router = APIRouter(tags=["carousels-copy"])
 
 
-async def _reject_published_caption(
+async def reject_published_caption(
     deps: CarouselCopyEditRouteDeps, project_id: UUID
 ) -> None:
     """409 when the caption of a carousel already on Instagram is changed."""
@@ -80,7 +81,7 @@ async def save_carousel_copy(
     assert_domain_owner_or_admin(project.owner_id, deps.user)
     lock_version = require_if_match(deps.if_match)
     if payload.caption is not None:
-        await _reject_published_caption(deps, project_id)
+        await reject_published_caption(deps, project_id)
     result = await deps.service.save(
         CopyEditCommand(
             project=project,
@@ -90,8 +91,14 @@ async def save_carousel_copy(
                 linkedin_post_pt=payload.linkedin_post_pt,
                 linkedin_post_en=payload.linkedin_post_en,
             ),
+            author_id=str(deps.user.id),
         )
     )
+    return copy_response(project_id, result)
+
+
+def copy_response(project_id: UUID, result: CopyEditResult) -> CarouselCopyResponse:
+    """The saved texts and the lock version the next save must send."""
     saved = result.project
     return CarouselCopyResponse(
         project_id=project_id,
@@ -102,4 +109,4 @@ async def save_carousel_copy(
     )
 
 
-__all__ = ["router"]
+__all__ = ["copy_response", "reject_published_caption", "router"]

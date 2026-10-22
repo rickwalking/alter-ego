@@ -1,0 +1,29 @@
+"""Persistence port of the carousel copy version history."""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+from rag_backend.domain.models.carousel_copy_version import (
+    CopyVersion,
+    NewCopyVersion,
+)
+
+
+class CopyVersionStore(Protocol):
+    """Stores and reads the caption / LinkedIn versions of one carousel.
+
+    ``add`` stages the rows in the caller's session without committing, so the
+    versions land in the same transaction as the saved texts.
+    """
+
+    async def list_versions(self, project_id: str) -> list[CopyVersion]:
+        """The carousel's versions, newest first."""
+        ...
+
+    async def add(self, project_id: str, versions: list[NewCopyVersion]) -> None:
+        """Stage ``versions`` with the next numbers, in order."""
+        ...
+
+
+__all__ = ["CopyVersionStore"]

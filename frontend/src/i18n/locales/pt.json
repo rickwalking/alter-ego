@@ -1193,6 +1193,18 @@
         "captionPublished": "A legenda já foi publicada no Instagram e não pode mais ser alterada.",
         "runInProgress": "Uma etapa do fluxo está em andamento. Salve quando ela terminar."
       },
+      "history": {
+        "title": "Histórico",
+        "loading": "Carregando o histórico…",
+        "empty": "Nenhuma versão salva ainda.",
+        "version": "Versão {number}",
+        "generated": "Texto gerado",
+        "restoredFrom": "restaurada da versão {number}",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restoreVersion": "Restaurar a versão {number}",
+        "blocked": "Salve ou descarte a edição antes de restaurar uma versão."
+      },
       "leave": {
         "title": "Sair sem salvar?",
         "body": "Você tem alterações não salvas na legenda ou no post do LinkedIn. Se sair agora, elas serão perdidas.",

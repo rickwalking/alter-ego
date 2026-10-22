@@ -80,6 +80,7 @@ export function PublishPanel({
   cacheBustToken,
   slideNumbers,
   onSaveCopy,
+  copyHistory,
 }: Readonly<PublishPanelProps>) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
@@ -160,6 +161,7 @@ export function PublishPanel({
             onPublishInstagram={onPublishInstagram}
             isPublishingInstagram={isPublishingInstagram}
             publishResult={publishResult}
+            history={copyHistory}
           />
         )}
         {activeTab === "linkedin" && (
@@ -170,6 +172,7 @@ export function PublishPanel({
             language={language}
             setLanguage={setLanguage}
             pdfHref={pdfUrl(project, language, cacheBustToken)}
+            history={copyHistory}
           />
         )}
       </section>

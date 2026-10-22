@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { CaptionEditor, countHashtags } from "./caption-editor";
 import { CopySaveBar } from "./copy-save-bar";
+import { CopyVersionList } from "./copy-version-list";
 import {
   CopyTextButton,
   LanguageTabs,
@@ -16,8 +17,14 @@ import {
   captionInvalid,
   linkedinInvalid,
 } from "@/modules/publishing/distribution/lib/copy-limits";
+import { DISTRIBUTION_FIELDS } from "@/modules/publishing/distribution/lib/copy-editor-state";
 
 const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
+const CAPTION_FIELDS: readonly string[] = [DISTRIBUTION_FIELDS.CAPTION];
+const LINKEDIN_FIELDS: readonly string[] = [
+  DISTRIBUTION_FIELDS.LINKEDIN_PT,
+  DISTRIBUTION_FIELDS.LINKEDIN_EN,
+];
 
 /**
  * Caption editor, copy and (when wired) publish-now for Instagram.
@@ -34,6 +41,7 @@ export function InstagramTab({
   isPublishingInstagram,
   publishResult,
   save,
+  history,
 }: Readonly<InstagramTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   const hashtagCount = countHashtags(caption);
@@ -91,6 +99,11 @@ export function InstagramTab({
         )}
       </div>
       <PublishResultLine result={publishResult} />
+      <CopyVersionList
+        history={history}
+        fields={CAPTION_FIELDS}
+        blocked={unsaved}
+      />
     </div>
   );
 }
@@ -103,6 +116,7 @@ export function LinkedInTab({
   setLanguage,
   pdfHref,
   save,
+  history,
 }: Readonly<LinkedInTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   return (
@@ -150,6 +164,11 @@ export function LinkedInTab({
       <p className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-[var(--color-text-muted)] text-xs">
         {t("linkedin.manualSteps")}
       </p>
+      <CopyVersionList
+        history={history}
+        fields={LINKEDIN_FIELDS}
+        blocked={save?.dirty === true}
+      />
     </div>
   );
 }

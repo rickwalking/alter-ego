@@ -119,3 +119,36 @@ export interface SendPublishDeps {
   isStreaming: boolean;
   stream: ChatStream;
 }
+
+/** One stored version of the caption or a LinkedIn post (API field names). */
+export interface CopyVersionView {
+  version_number: number;
+  field: string;
+  text: string;
+  author_id: string | null;
+  author_name: string | null;
+  created_at: string;
+  restored_from?: number | null;
+}
+
+/** One restore of a stored version at the loaded lock version. */
+export interface CopyVersionRestoreInput {
+  projectId: string;
+  lockVersion: number;
+  versionNumber: number;
+}
+
+/** Where a restore stands. */
+export type CopyRestoreStatus =
+  | { kind: "idle" }
+  | { kind: "restoring"; versionNumber: number }
+  | { kind: "error"; errorKey: string };
+
+/** The history of the caption and LinkedIn posts, and its restore. */
+export interface CopyHistory {
+  versions: readonly CopyVersionView[];
+  loading: boolean;
+  status: CopyRestoreStatus;
+  /** Absent when the page has no lock version to send. */
+  restore?: (versionNumber: number) => Promise<void>;
+}

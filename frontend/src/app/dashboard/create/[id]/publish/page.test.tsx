@@ -76,6 +76,11 @@ vi.mock(
   }),
 );
 vi.mock("@/modules/publishing", async () => ({
+  useCopyHistory: () => ({
+    versions: [],
+    loading: false,
+    status: { kind: "idle" },
+  }),
   useCopySave: (
     await vi.importActual<
       typeof import("@/modules/publishing/distribution/hooks/use-copy-save")

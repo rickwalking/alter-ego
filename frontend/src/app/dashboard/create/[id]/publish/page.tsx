@@ -7,8 +7,8 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import {
   PublishPanel,
   mergePublishProjectWithWorkflow,
-  useCopySave,
 } from "@/modules/publishing";
+import { usePublishCopy } from "./use-publish-copy";
 import { isPublishReady } from "@/app/dashboard/create/[id]/publish/publish-readiness";
 import {
   useInstagramPublish,
@@ -55,9 +55,9 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const { projectId, projectQuery, workflowState } = data;
   const site = usePublishToSite(projectId, data.refreshAll);
   const instagram = useInstagramPublish(projectId);
-  const saveCopy = useCopySave(
+  const { saveCopy, copyHistory } = usePublishCopy(
     projectId,
-    workflowState?.lock_version,
+    workflowState,
     data.refreshAll,
   );
   const project = projectQuery.data;
@@ -126,6 +126,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                 cacheBustToken={data.rebuiltVersion ?? undefined}
                 slideNumbers={localizedSlides.map((slide) => slide.slide_index)}
                 onSaveCopy={saveCopy}
+                copyHistory={copyHistory}
               />
             </div>
             <PublishArtifactTools
