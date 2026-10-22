@@ -1,6 +1,6 @@
 # AE-0493 — Knowledge upload keeps the typed title and tags
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
@@ -36,12 +36,12 @@ The route never sees them and falls back to the file name.
 
 ## Acceptance Criteria
 
-- [ ] Given the KB upload form, When a file is uploaded with a title and tags, Then the document's
+- [x] Given the KB upload form, When a file is uploaded with a title and tags, Then the document's
       `title` is the typed title and its metadata carries the tags.
-- [ ] Given no title, Then the file name is used.
-- [ ] A contract test sends the multipart fields exactly as `use-upload.ts` does (`file`, `title`,
+- [x] Given no title, Then the file name is used.
+- [x] A contract test sends the multipart fields exactly as `use-upload.ts` does (`file`, `title`,
       `tags`).
-- [ ] `scope` and `is_public` are read from the same multipart body; an unknown scope still answers 400.
+- [x] `scope` and `is_public` are read from the same multipart body; an unknown scope still answers 400.
 
 ## Gherkin Scenarios
 
@@ -67,11 +67,16 @@ Cause confirmed in the code (query parameters vs multipart fields); failing cont
 
 ## Files Touched
 
-(updated as work lands)
+- backend/src/rag_backend/api/routes/documents.py
+- backend/tests/integration/test_knowledge_upload_fields_ae0493.py (new)
+- backend/tests/features/knowledge_upload_fields_ae0493.feature (new)
+- docs/architecture/openapi.json
 
 ## Test Evidence
 
-(see `.agent/reports/AE-0493.dev-summary.md`)
+Contract test red first (3 of 4 failed on origin/main), green after the fix; knowledge safety net,
+route snapshot and document endpoint tests green; full backend gate capture green (Postgres gates and
+mutation in CI). Details: `.agent/reports/AE-0493.dev-summary.md`.
 
 ## QA Report
 
