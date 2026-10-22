@@ -14,7 +14,7 @@ from sqlalchemy.exc import OperationalError
 
 import rag_backend.infrastructure.database.config as db_config
 
-BACKEND = Path(__file__).resolve().parents[3]
+BACKEND = Path(__file__).resolve().parents[2]
 ENGINE_SCAN_ROOTS = tuple(BACKEND / name for name in ("src", "scripts", "alembic"))
 ENGINE_FACTORIES = frozenset({"create_engine", "create_async_engine"})
 SECRET = "top-secret-document-content"
