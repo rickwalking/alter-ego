@@ -1,6 +1,6 @@
 # AE-0492 — Save the Instagram caption and LinkedIn post (PT/EN) edits
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
@@ -46,17 +46,17 @@ and the UI save are missing.
 
 ## Acceptance Criteria
 
-- [ ] Given the publish page of an unpublished carousel, When the owner edits the Instagram caption and
+- [x] Given the publish page of an unpublished carousel, When the owner edits the Instagram caption and
       clicks Save, Then `PATCH /api/carousels/{id}/copy` persists `caption` and a reload shows the edit.
-- [ ] Given the LinkedIn tab, When the owner edits the PT or EN post and saves, Then `linkedin_post_pt` /
+- [x] Given the LinkedIn tab, When the owner edits the PT or EN post and saves, Then `linkedin_post_pt` /
       `linkedin_post_en` persist and survive reload; "Copiar post" copies the saved text.
-- [ ] Given unsaved edits, When the owner follows an in-app link, Then a styled dialog (not
+- [x] Given unsaved edits, When the owner follows an in-app link, Then a styled dialog (not
       `window.confirm`) asks before leaving.
-- [ ] Given "Publicar no Instagram", Then the published caption is the saved caption (publish is disabled
+- [x] Given "Publicar no Instagram", Then the published caption is the saved caption (publish is disabled
       while the caption has unsaved edits).
-- [ ] Given a non-owner non-admin, Then the PATCH returns 403; given a carousel published on Instagram,
+- [x] Given a non-owner non-admin, Then the PATCH returns 403; given a carousel published on Instagram,
       Then a caption change returns 409.
-- [ ] Given a stale `If-Match`, Then the PATCH returns 409 `version_conflict` and nothing is saved; without
+- [x] Given a stale `If-Match`, Then the PATCH returns 409 `version_conflict` and nothing is saved; without
       `If-Match` it returns 428.
 
 ## Gherkin Scenarios
@@ -81,15 +81,30 @@ See `backend/tests/features/carousel_copy_edit_ae0492.feature` and
 
 ### 2026-10-22
 
-Ticket written from the dashboard QA triage; failing tests first.
+Ticket written from the dashboard QA triage; failing tests first. Backend route + service, then the
+publish panel save, the page wiring and the leave guard; lint fixes (complexity, file size, an import
+cycle, a jscpd clone with the blog guard) by extracting helpers, no rule changes.
 
 ## Files Touched
 
-(updated as work lands)
+- backend/src/rag_backend/api/routes/carousels/copy_edit.py (new), deps.py, router.py
+- backend/src/rag_backend/api/schemas/carousel_copy.py (new)
+- backend/src/rag_backend/application/services/carousel/carousel_copy_edit_service.py (new)
+- backend/src/rag_backend/domain/constants/carousel_copy_edit.py (new)
+- backend/tests/integration/test_carousel_copy_edit_ae0492.py, backend/tests/features/carousel_copy_edit_ae0492.feature (new)
+- docs/architecture/openapi.json
+- frontend/src/modules/publishing/distribution/: components/copy-save-bar.tsx, leave-guard-dialog.tsx,
+  publish-panel-parts.tsx (new), publish-panel.tsx, publish-panel-tabs.tsx, types.ts; hooks/use-copy-editor.ts,
+  use-leave-guard.ts, use-save-carousel-copy.ts (new), types.ts; lib/copy-editor-state.ts (new); tests
+- frontend/src/app/dashboard/create/[id]/publish/page.tsx, use-copy-save.ts (new), tests
+- frontend/src/constants/api.ts, frontend/src/modules/publishing/index.ts, i18n en/pt
+- frontend/tests/features/publish-copy-save-ae0492.feature (new)
 
 ## Test Evidence
 
-(see `.agent/reports/AE-0492.dev-summary.md`)
+Integration tests red first (404 before the route), 14 green after; publish-panel / page / hook Vitest
+163 green; backend gate capture green (Postgres gates and mutation in CI); frontend gates green gate by
+gate except the main-wide `frontend:security` advisory. Details: `.agent/reports/AE-0492.dev-summary.md`.
 
 ## QA Report
 
