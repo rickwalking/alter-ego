@@ -1,6 +1,7 @@
 """Unit tests for WorkflowFailureAlertService.
 
 Feature: phase5_migration_launch.feature — MON-002
+Feature: stuck_workflow_alerts.feature
 """
 
 from __future__ import annotations
@@ -9,25 +10,104 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import rag_backend.infrastructure.database.config as db_config
+from rag_backend.application.services import workflow_failure_alert_service
 from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_FAILED
 from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_OUTLINE,
     PHASE_RESEARCH,
+    PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
 )
 from rag_backend.domain.constants.workflow_alerts import (
+    ALERT_TYPE_STUCK_WORKFLOW,
     NOTIFICATION_TYPE_WORKFLOW_FAILURE,
 )
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.user import UserModel
+
+
+STUCK_PROJECT_COUNT = 15
+SECOND_ADMIN_ID = "admin-2-id"
+
+
+class _RecordingLogger:
+    """Stands in for the module logger and keeps every warning's fields."""
+
+    def __init__(self) -> None:
+        self.warnings: list[dict[str, object]] = []
+
+    def warning(self, event: str, **fields: object) -> None:
+        self.warnings.append({"event": event, **fields})
+
+    def error(self, event: str, **fields: object) -> None:
+        del event, fields
+
+    def stuck_lines(self) -> list[dict[str, object]]:
+        return [
+            line
+            for line in self.warnings
+            if line.get("alert_type") == ALERT_TYPE_STUCK_WORKFLOW
+        ]
+
+
+@pytest.fixture
+def recorded(monkeypatch: pytest.MonkeyPatch) -> _RecordingLogger:
+    recorder = _RecordingLogger()
+    monkeypatch.setattr(workflow_failure_alert_service, "logger", recorder)
+    return recorder
+
+
+def _stuck_project(updated_at: datetime) -> CarouselProjectModel:
+    return CarouselProjectModel(
+        id=str(uuid.uuid4()),
+        topic="Stuck",
+        audience="Devs",
+        niche="Tech",
+        status="draft",
+        current_phase=PHASE_RESEARCH,
+        phase_status=PHASE_STATUS_AWAITING_HUMAN,
+        updated_at=updated_at,
+        created_at=updated_at,
+    )
+
+
+async def _notification_count(db: AsyncSession, project_id: str) -> int:
+    result = await db.execute(
+        select(func.count())
+        .select_from(NotificationModel)
+        .where(NotificationModel.content_id == project_id)
+    )
+    return int(result.scalar_one())
+
+
+async def _backdate_notifications(db: AsyncSession, created_at: datetime) -> None:
+    result = await db.execute(select(NotificationModel))
+    for notification in result.scalars().all():
+        notification.created_at = created_at
+    await db.commit()
+
+
+async def _add_second_admin(db: AsyncSession) -> None:
+    db.add(
+        UserModel(
+            id=SECOND_ADMIN_ID,
+            email="admin2@test.com",
+            full_name="Admin Two",
+            hashed_password="hash",
+            role="admin",
+            is_active=True,
+        )
+    )
+    await db.commit()
 
 
 @pytest.fixture
@@ -228,3 +308,72 @@ class TestWorkflowFailureAlertService:
         await session.commit()
 
         assert count >= 1
+
+
+@pytest.mark.asyncio
+class TestStuckWorkflowEpisodes:
+    """Stuck alerts are deduplicated per stuck episode, not per hour."""
+
+    async def test_stuck_project_alerts_once_per_episode(
+        self, session: AsyncSession, recorded: _RecordingLogger
+    ) -> None:
+        """Scenario: A stuck project alerts once per stuck episode."""
+        await _add_second_admin(session)
+        now = datetime.now(UTC)
+        project = _stuck_project(now - timedelta(hours=72))
+        session.add(project)
+        await session.commit()
+        service = WorkflowFailureAlertService()
+
+        first = await service.check_and_alert(session)
+        await session.commit()
+        assert first == 1
+        assert len(recorded.stuck_lines()) == 1
+        assert await _notification_count(session, project.id) == 2
+
+        await _backdate_notifications(session, now - timedelta(hours=3))
+        later = [await service.check_and_alert(session) for _ in range(3)]
+        await session.commit()
+
+        assert later == [0, 0, 0]
+        assert len(recorded.stuck_lines()) == 1
+        assert await _notification_count(session, project.id) == 2
+
+    async def test_project_stuck_again_after_moving_alerts_again(
+        self, session: AsyncSession, recorded: _RecordingLogger
+    ) -> None:
+        """Scenario: A project that moves and gets stuck again alerts again."""
+        now = datetime.now(UTC)
+        project = _stuck_project(now - timedelta(hours=120))
+        session.add(project)
+        await session.commit()
+        service = WorkflowFailureAlertService()
+        assert await service.check_and_alert(session) == 1
+        await session.commit()
+        await _backdate_notifications(session, now - timedelta(hours=70))
+
+        project.current_phase = PHASE_OUTLINE
+        project.updated_at = now - timedelta(hours=50)
+        await session.commit()
+
+        assert await service.check_and_alert(session) == 1
+        await session.commit()
+        assert len(recorded.stuck_lines()) == 2
+        assert await _notification_count(session, project.id) == 2
+
+    async def test_already_alerted_stuck_projects_keep_the_log_quiet(
+        self, session: AsyncSession, recorded: _RecordingLogger
+    ) -> None:
+        """Scenario: Already alerted stuck projects keep the log quiet."""
+        now = datetime.now(UTC)
+        for _ in range(STUCK_PROJECT_COUNT):
+            session.add(_stuck_project(now - timedelta(hours=72)))
+        await session.commit()
+        service = WorkflowFailureAlertService()
+        assert await service.check_and_alert(session) == STUCK_PROJECT_COUNT
+        await session.commit()
+        await _backdate_notifications(session, now - timedelta(hours=2))
+        recorded.warnings.clear()
+
+        assert await service.check_and_alert(session) == 0
+        assert recorded.warnings == []
