@@ -19,7 +19,7 @@ function item(title: string): CalendarItem {
 function renderMonth(items: CalendarItem[]): void {
   render(
     <CalendarGrid
-      days={buildCalendarDaysFromApi(new Date(2026, 9, 1), items)}
+      days={buildCalendarDaysFromApi(new Date(2026, 9, 1), items, null)}
     />,
   );
 }
