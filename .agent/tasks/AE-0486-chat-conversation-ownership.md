@@ -1,6 +1,6 @@
 # AE-0486 — Chat: nobody but the owner (or an admin) reads or writes a signed-in user's conversation
 
-Status: Review
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bug
