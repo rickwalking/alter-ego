@@ -25,10 +25,13 @@ export default function BlogPostEditPage() {
 
   if (!editor.post) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <p role={editor.loadFailed ? "alert" : undefined}>
+      <div
+        className="container mx-auto py-8 px-4"
+        role={editor.loadFailed ? "alert" : undefined}
+      >
+        <h1 className="text-lg font-semibold">
           {editor.loadFailed ? t("errors.loadPostFailed") : t("notFound")}
-        </p>
+        </h1>
         <Link href={ROUTE_PATHS.BLOG_POSTS}>
           <NeonButton variant="outline" className="mt-4">
             {t("backToList")}
