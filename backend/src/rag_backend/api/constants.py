@@ -7,6 +7,8 @@ from rag_backend.domain.constants import (
 ERR_NOT_AUTHENTICATED = "Not authenticated"
 ERR_FORBIDDEN = "Forbidden"
 ERR_NOT_FOUND = "Not found"
+ERR_SEARCH_FAILED = "Search failed"
+ERR_DOCUMENT_PROCESSING_FAILED = "Failed to process document"
 
 ERR_ADMIN_REQUIRED = "Admin access required"
 ERR_USER_NOT_FOUND = "User not found"

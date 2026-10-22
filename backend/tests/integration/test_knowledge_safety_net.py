@@ -121,6 +121,11 @@ class KnowledgeEnv:
         self.owner = owner
         self._container = container
 
+    @property
+    def app(self) -> FastAPI:
+        """The app under test (for dependency overrides)."""
+        return self._app
+
     def client_for(self, user: User) -> AsyncClient:
         transport = ASGITransport(app=self._app)
         return AsyncClient(
