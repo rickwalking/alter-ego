@@ -1337,6 +1337,42 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
+          },
+          "is_public": {
+            "default": false,
+            "title": "Is Public",
+            "type": "boolean"
+          },
+          "scope": {
+            "default": "personal",
+            "maxLength": 20,
+            "title": "Scope",
+            "type": "string"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -4120,8 +4156,21 @@
             "type": "integer"
           },
           "quality_score_average": {
-            "title": "Quality Score Average",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average content rubric score (0-100); null without scores.",
+            "title": "Quality Score Average"
+          },
+          "quality_score_count": {
+            "description": "How many content rubric scores the average is built from.",
+            "title": "Quality Score Count",
+            "type": "integer"
           },
           "status_breakdown": {
             "additionalProperties": {
@@ -4144,7 +4193,8 @@
           "average_views",
           "pending_review",
           "draft_count",
-          "quality_score_average"
+          "quality_score_average",
+          "quality_score_count"
         ],
         "title": "EditorialAnalyticsSummary",
         "type": "object"
@@ -6657,6 +6707,7 @@
             "items": {
               "$ref": "#/components/schemas/RubricCriterion"
             },
+            "minItems": 1,
             "title": "Criteria",
             "type": "array"
           },
@@ -6684,7 +6735,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "criteria"
         ],
         "title": "QualityRubricCreate",
         "type": "object"
@@ -6803,6 +6855,7 @@
                 "items": {
                   "$ref": "#/components/schemas/RubricCriterion"
                 },
+                "minItems": 1,
                 "type": "array"
               },
               {
@@ -14749,7 +14802,7 @@
     },
     "/api/conversations/{conversation_id}/chat/stream": {
       "post": {
-        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in anonymous conversations. A conversation owned by\na signed-in user accepts messages only from its owner or an admin; anyone\nelse, like an unknown id, gets 404 before the stream starts.",
+        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in the anonymous conversation their ``anon_token``\ncookie was issued for. A conversation owned by a signed-in user accepts\nmessages only from its owner or an admin. Anyone else, like an unknown id,\ngets 404 before the stream starts.",
         "operationId": "chat_stream_api_conversations__conversation_id__chat_stream_post",
         "parameters": [
           {
@@ -15264,62 +15317,8 @@
     },
     "/api/documents/upload": {
       "post": {
-        "description": "Upload a document file and process it immediately.\n\nAccepts PDF, TXT, MD files. The document is processed through the\nfull pipeline (chunking + embedding) before returning.",
+        "description": "Upload a document file and process it immediately.\n\nAccepts PDF, TXT, MD files. The document is processed through the\nfull pipeline (chunking + embedding) before returning. ``title``,\n``tags`` (comma-separated), ``scope`` and ``is_public`` are multipart\nform fields sent next to the file.",
         "operationId": "upload_document_api_documents_upload_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "title",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Title"
-            }
-          },
-          {
-            "in": "query",
-            "name": "tags",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Tags"
-            }
-          },
-          {
-            "in": "query",
-            "name": "scope",
-            "required": false,
-            "schema": {
-              "default": "personal",
-              "title": "Scope",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "is_public",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Is Public",
-              "type": "boolean"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "multipart/form-data": {

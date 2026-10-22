@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { responseErrorDetail } from "@/lib/response-error";
+import { PasswordInput } from "./password-input";
 import {
   FIELD_INPUT_CLASS,
   FIELD_LABEL_CLASS,
@@ -126,13 +127,11 @@ export function CreateUserDialog({
               ({t("passwordOptional")})
             </span>
           </label>
-          <input
+          <PasswordInput
             id={`${fieldId}-password`}
-            type="text"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
             placeholder={t("passwordPlaceholder")}
-            className={FIELD_INPUT_CLASS}
           />
         </div>
 

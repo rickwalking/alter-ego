@@ -14,6 +14,8 @@ export interface NeonStatCardComponentProps {
   label: string;
   value: string | number;
   change?: { value: string; trend: StatCardTrend };
+  /** A muted line under the value (e.g. how many items it is built from). */
+  detail?: string;
   loading?: boolean;
   icon?: ReactNode;
   iconBg?: string;
@@ -23,6 +25,7 @@ export function NeonStatCard({
   label,
   value,
   change,
+  detail,
   loading,
   icon,
   iconBg,
@@ -63,6 +66,11 @@ export function NeonStatCard({
             <span className="text-xs font-medium" style={{ color: trendColor }}>
               {change.value}
             </span>
+          )}
+          {detail && (
+            <p className="text-xs" style={{ color: TEXT_MUTED }}>
+              {detail}
+            </p>
           )}
         </div>
       </div>

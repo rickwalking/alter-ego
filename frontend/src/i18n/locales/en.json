@@ -1009,7 +1009,8 @@
         "choice": "Choose an option.",
         "invalid": "This value is not valid.",
         "save": "The rubric could not be saved. Check the fields and try again.",
-        "criterionName": "Enter the criterion's name."
+        "criterionName": "Enter the criterion's name.",
+        "criteriaRequired": "Add at least one criterion."
       }
     },
     "contentType": {
@@ -1256,6 +1257,33 @@
         "allDay": "All day",
         "emptyDay": "Nothing scheduled for this day",
         "openDay": "Open {date} in the day view"
+      },
+      "scheduleButton": "Schedule Post",
+      "scheduledNotice": "“{title}” is scheduled for {date}.",
+      "schedule": {
+        "title": "Schedule a blog post",
+        "hint": "Only approved blog posts can be scheduled; it is published automatically at the chosen time. Drafts are listed but need approval first.",
+        "post": "Post",
+        "choosePost": "Choose an approved post",
+        "time": "Publish at",
+        "timezone": "Times are in your timezone: {zone}",
+        "conflict": "Also on the calendar within an hour of this time: {titles}",
+        "empty": "There are no approved blog posts to schedule.",
+        "openBlogPosts": "Open blog posts",
+        "loadFailed": "Could not load the approved posts. Close and try again.",
+        "cancel": "Cancel",
+        "submit": "Schedule",
+        "submitting": "Scheduling…",
+        "errors": {
+          "postRequired": "Choose a post.",
+          "timeRequired": "Choose a date and time.",
+          "timeInPast": "Choose a time at least a minute from now.",
+          "versionConflict": "This post changed since the list loaded. Close the dialog and try again.",
+          "notReady": "This post cannot be published yet: it needs content and the AI disclosure.",
+          "failed": "Scheduling failed. Try again."
+        },
+        "approveFirst": "{title} — approve it first",
+        "untitled": "Untitled"
       }
     },
     "kanban": {
@@ -1561,6 +1589,8 @@
       "publishedWeek": "Published This Week",
       "pendingReview": "Pending Review",
       "qualityScore": "Avg Quality Score",
+      "qualityScoreEmpty": "No data",
+      "qualityScoreCount": "{count, plural, one {# evaluation} other {# evaluations}}",
       "velocityTitle": "Publish Velocity (8 weeks)",
       "loadFailed": "Failed to load analytics",
       "disabledTitle": "Editorial analytics is off",
@@ -1615,6 +1645,8 @@
     "editorRole": "Editor",
     "adminRole": "Admin",
     "passwordLabel": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "passwordOptional": "optional",
     "passwordPlaceholder": "Leave blank to auto-generate",
     "cancel": "Cancel",

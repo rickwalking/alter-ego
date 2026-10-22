@@ -90,7 +90,7 @@ async def client():
     app = create_app()
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="https://test") as ac:
         yield ac
 
     db_config.c_engine = None
@@ -264,12 +264,15 @@ class TestPublishChatStream:
     async def test_anonymous_conversation_rejected_for_publish_chat(
         self, client, test_user
     ):
-        """Given anonymous carousel-bound conversation, when publish-chat, then 403."""
+        """Given anonymous carousel-bound conversation, when publish-chat, then 404.
+
+        A signed-in user does not hold the conversation's anon_token, so the
+        conversation is invisible to them.
+        """
         from uuid import uuid4
 
         from rag_backend.domain.constants.conversation import (
             CONVERSATION_METADATA_PROJECT_ID,
-            ERR_ANONYMOUS_CAROUSEL_CONVERSATION,
         )
         from rag_backend.domain.models import Conversation
         from rag_backend.infrastructure.database.config import get_session_maker
@@ -297,5 +300,5 @@ class TestPublishChatStream:
             json={"content": "Hello"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert response.status_code == 403
-        assert response.json()["detail"] == ERR_ANONYMOUS_CAROUSEL_CONVERSATION
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Conversation not found"

@@ -6,6 +6,7 @@ import { getRequestLocale } from "@/i18n/request-locale";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers";
 import { VercelInsights } from "@/components/vercel-insights";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/constants/site-metadata";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,9 +15,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   referrer: "no-referrer",
-  title: "Pedro Marins · Alter Ego",
-  description:
-    "An intelligent assistant that knows everything about my career, experience, and skills. Dive into my knowledge base, explore carousels, and read curated tech content.",
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   keywords: [
     "AI",
     "Blog",
@@ -28,9 +28,8 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Pedro Marins" }],
   openGraph: {
-    title: "Pedro Marins · Alter Ego",
-    description:
-      "An intelligent assistant that knows everything about my career, experience, and skills. Dive into my knowledge base, explore carousels, and read curated tech content.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     type: "website",
   },
 };

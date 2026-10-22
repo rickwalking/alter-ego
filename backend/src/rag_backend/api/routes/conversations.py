@@ -38,6 +38,10 @@ from rag_backend.api.dependencies.conversation import (
     get_conversation_title_generator,
     get_legacy_chat_agent_factory,
 )
+from rag_backend.api.dependencies.conversation_caller import (
+    ConversationCaller,
+    get_conversation_caller,
+)
 from rag_backend.api.dependencies.resource_access import (
     assert_conversation_access,
     assert_conversation_writable,
@@ -54,6 +58,7 @@ from rag_backend.api.schemas import (
     MessageListResponse,
     MessageSource,
 )
+from rag_backend.domain.constants import COOKIE_ANON_TOKEN
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.auth import create_anonymous_token
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -101,6 +106,16 @@ class _RouteChatAgentFactory:
         self, conversation: Conversation
     ) -> AlterEgoAgent | RAGAgent:
         return build_agent_for_conversation(conversation, self._db, self._container)
+
+
+def _anon_cookie_path(request: Request, conversation_id: UUID) -> str:
+    """Scope a visitor's token to its own conversation's URLs.
+
+    One cookie per conversation (same name, different path), so a second tab
+    or New chat does not overwrite the token of a conversation still open.
+    """
+    collection = request.url.path.rstrip("/")
+    return f"{collection}/{conversation_id}"
 
 
 async def _load_owned_conversation(
@@ -176,12 +191,13 @@ async def create_conversation(
     if user is None:
         anon_token = create_anonymous_token(settings, str(conversation.id))
         response.set_cookie(
-            key="anon_token",
+            key=COOKIE_ANON_TOKEN,
             value=anon_token,
             httponly=True,
             secure=not settings.debug,
             samesite="strict",
             max_age=settings.anon_token_expire_minutes * 60,
+            path=_anon_cookie_path(http_request, conversation.id),
         )
 
     return conversation
@@ -334,7 +350,7 @@ async def chat(
     body: ChatRequest,
     request: Request,
     response: Response,
-    user: Annotated[User | None, Depends(get_optional_user)] = None,
+    caller: Annotated[ConversationCaller, Depends(get_conversation_caller)],
     module: Annotated[
         ConversationModule | None, Depends(get_conversation_module)
     ] = None,
@@ -358,8 +374,8 @@ async def chat(
     conversation = await handlers.get(GetConversationQuery(conversation_id))
     if not conversation:
         raise_conversation_not_found()
-    assert_conversation_writable(conversation, user)
-    assert_carousel_conversation_chat_access(conversation, user)
+    assert_conversation_writable(conversation, caller)
+    assert_carousel_conversation_chat_access(conversation, caller.user)
 
     try:
         result = await handlers.chat(

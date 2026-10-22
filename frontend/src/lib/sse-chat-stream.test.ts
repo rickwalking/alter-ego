@@ -11,6 +11,7 @@ import {
   appendStreamToken,
   beginStream,
   createOptimisticUserMessage,
+  newStreamMessageId,
   resetStreamRefs,
 } from "./sse-chat-stream";
 
@@ -20,7 +21,6 @@ function assistantMessage(id: string, content: string): Message {
 
 function makeRefs() {
   return {
-    contentRef: { current: "seeded" },
     msgIdRef: { current: "old-id" as string | null },
   };
 }
@@ -43,25 +43,24 @@ describe("createOptimisticUserMessage", () => {
 });
 
 describe("resetStreamRefs", () => {
-  it("clears the content and streaming-message-id refs", () => {
+  it("clears the streaming-message-id ref", () => {
     const refs = makeRefs();
     resetStreamRefs(refs);
-    expect(refs.contentRef.current).toBe("");
     expect(refs.msgIdRef.current).toBeNull();
   });
 });
 
 describe("beginStream", () => {
-  it("resets refs, aborts the prior controller, and returns a fresh one", () => {
+  it("assigns a new stream id, aborts the prior controller, and returns a fresh one", () => {
     const refs = makeRefs();
     const previous = new AbortController();
     const abortSpy = vi.spyOn(previous, "abort");
 
-    const controller = beginStream(refs, previous);
+    const controller = beginStream(refs, previous, "stream-");
 
     expect(abortSpy).toHaveBeenCalledOnce();
-    expect(refs.contentRef.current).toBe("");
-    expect(refs.msgIdRef.current).toBeNull();
+    expect(refs.msgIdRef.current).not.toBe("old-id");
+    expect(refs.msgIdRef.current?.startsWith("stream-")).toBe(true);
     expect(controller).not.toBe(previous);
     expect(controller).toBeInstanceOf(AbortController);
     expect(controller.signal.aborted).toBe(false);
@@ -69,53 +68,75 @@ describe("beginStream", () => {
 
   it("works when there is no prior controller", () => {
     const refs = makeRefs();
-    const controller = beginStream(refs, null);
+    const controller = beginStream(refs, null, "stream-");
     expect(controller).toBeInstanceOf(AbortController);
     expect(controller.signal.aborted).toBe(false);
   });
 });
 
+describe("newStreamMessageId", () => {
+  it("never repeats, even within the same millisecond", () => {
+    const ids = new Set(
+      Array.from({ length: 5 }, () => newStreamMessageId("s-")),
+    );
+    expect(ids.size).toBe(5);
+    for (const id of ids) {
+      expect(id.startsWith("s-")).toBe(true);
+    }
+  });
+});
+
 describe("appendStreamToken", () => {
-  it("creates a new assistant message on the first token", () => {
-    const { messages, streamingMsgId } = appendStreamToken({
-      messages: [
-        { id: "u1", role: "user", content: "hi", sources: [], created_at: "t" },
-      ],
+  const user: Message = {
+    id: "u1",
+    role: "user",
+    content: "hi",
+    sources: [],
+    created_at: "t",
+  };
+
+  it("creates the assistant message from the first token alone", () => {
+    const messages = appendStreamToken({
+      messages: [user],
       token: "Hel",
-      accumulatedContent: "Hel",
-      streamingMsgId: null,
-      newIdPrefix: "stream-",
+      streamingMsgId: "stream-1",
     });
 
     expect(messages).toHaveLength(2);
-    expect(messages[1]!.role).toBe("assistant");
-    expect(messages[1]!.content).toBe("Hel");
-    expect(messages[1]!.id.startsWith("stream-")).toBe(true);
-    expect(streamingMsgId).toBe(messages[1]!.id);
+    expect(messages[1]).toMatchObject({
+      id: "stream-1",
+      role: "assistant",
+      content: "Hel",
+    });
   });
 
-  it("appends subsequent tokens onto the existing streaming message", () => {
-    const first = appendStreamToken({
+  it("appends subsequent tokens onto the message with the stream id", () => {
+    const messages = appendStreamToken({
       messages: [assistantMessage("stream-1", "Hel")],
       token: "lo",
-      accumulatedContent: "Hello",
       streamingMsgId: "stream-1",
-      newIdPrefix: "stream-",
     });
 
-    expect(first.messages).toHaveLength(1);
-    expect(first.messages[0]!.content).toBe("Hello");
-    expect(first.streamingMsgId).toBe("stream-1");
+    expect(messages).toEqual([assistantMessage("stream-1", "Hello")]);
   });
 
-  it("preserves the existing streaming id (does not generate a new one)", () => {
-    const { streamingMsgId } = appendStreamToken({
-      messages: [assistantMessage("stream-1", "Hel")],
+  it("finds the streaming message even when it is not the last one", () => {
+    const messages = appendStreamToken({
+      messages: [assistantMessage("stream-1", "Hel"), user],
       token: "lo",
-      accumulatedContent: "Hello",
       streamingMsgId: "stream-1",
-      newIdPrefix: "stream-",
     });
-    expect(streamingMsgId).toBe("stream-1");
+
+    expect(messages.map((message) => message.content)).toEqual(["Hello", "hi"]);
+  });
+
+  it("does not mutate its input", () => {
+    const input = [assistantMessage("stream-1", "Hel")];
+    appendStreamToken({
+      messages: input,
+      token: "lo",
+      streamingMsgId: "stream-1",
+    });
+    expect(input[0]!.content).toBe("Hel");
   });
 });

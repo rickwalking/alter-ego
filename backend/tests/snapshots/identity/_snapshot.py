@@ -40,6 +40,9 @@ if TYPE_CHECKING:
     from httpx import Response
 
 PLACEHOLDER_UUID: Final = "<uuid>"
+_UUID_IN_TEXT: Final = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+)
 PLACEHOLDER_TIMESTAMP: Final = "<timestamp>"
 PLACEHOLDER_JWT: Final = "<jwt>"
 PLACEHOLDER_TEMP_PASSWORD: Final = "<temp-password>"
@@ -111,7 +114,8 @@ def _normalize_cookies(response: Response) -> dict[str, JsonValue]:
     The cookie value itself is a fresh JWT each run so it is placeholdered for
     JWT cookies; ALL attributes (httponly, secure, samesite, max-age, path) are
     kept verbatim because they are the security contract the refactor must
-    preserve byte-for-byte.
+    preserve byte-for-byte; only a conversation id inside a cookie path (the
+    anonymous token is scoped to its conversation) becomes ``<uuid>``.
     """
     cookies: dict[str, JsonValue] = {}
     for raw in response.headers.get_list("set-cookie"):
@@ -124,7 +128,9 @@ def _normalize_cookies(response: Response) -> dict[str, JsonValue]:
                 attr_value = morsel[attr_key]
                 if attr_value != "":
                     attributes[attr_key] = (
-                        True if attr_value is True else str(attr_value)
+                        True
+                        if attr_value is True
+                        else _UUID_IN_TEXT.sub(PLACEHOLDER_UUID, str(attr_value))
                     )
             cookies[name] = attributes
     return cookies

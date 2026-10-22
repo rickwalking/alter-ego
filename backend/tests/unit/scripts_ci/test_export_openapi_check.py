@@ -18,6 +18,8 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 EXPORTER = REPO_ROOT / "backend" / "scripts" / "export_openapi.py"
 GATES = REPO_ROOT / "scripts" / "ci" / "gates.sh"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "backend-quality-gates.yml"
+CI_GATE = REPO_ROOT / ".github" / "workflows" / "ci-gate.yml"
+ARTIFACT_PATH_FILTER = "- 'docs/architecture/openapi.json'"
 GATE_NAME = "backend:openapi-fresh"
 EXIT_OK = 0
 EXIT_STALE = 1
@@ -75,3 +77,11 @@ def test_gate_is_registered_and_runs_in_ci() -> None:
     assert "openapi-fresh:gate_backend_openapi_fresh" in gates
     assert "export_openapi.py --check" in gates
     assert f"bash scripts/ci/gates.sh {GATE_NAME}" in workflow
+
+
+def test_an_artifact_only_change_triggers_the_gate() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    ci_gate = CI_GATE.read_text(encoding="utf-8")
+
+    assert workflow.count(ARTIFACT_PATH_FILTER) == 2
+    assert ci_gate.count(ARTIFACT_PATH_FILTER) == 2

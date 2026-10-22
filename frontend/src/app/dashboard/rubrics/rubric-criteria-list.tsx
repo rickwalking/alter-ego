@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
+import { NEON_RED } from "@/constants/neon";
 import { RubricCriterionFields } from "./rubric-criterion-fields";
 import type { UseRubricFormResult } from "./use-rubric-form";
 
@@ -18,6 +19,7 @@ export function RubricCriteriaList({
 }: Readonly<RubricCriteriaListProps>): React.ReactElement {
   const t = useTranslations("rubrics.form");
   const { criteria } = form.state;
+  const listError = errorOf("criteria");
   return (
     <section
       aria-labelledby="rubric-criteria-title"
@@ -28,6 +30,11 @@ export function RubricCriteriaList({
       </h3>
       {criteria.length === 0 && (
         <p className="text-xs text-text-muted">{t("noCriteria")}</p>
+      )}
+      {listError && (
+        <p className="text-xs" style={{ color: NEON_RED }}>
+          {listError}
+        </p>
       )}
       {criteria.map((criterion, index) => (
         <RubricCriterionFields

@@ -20,60 +20,57 @@ export interface AppendStreamTokenInput {
   messages: Message[];
   /** The newly received token. */
   token: string;
-  /** Running accumulated content (`contentRef.current` after appending token). */
-  accumulatedContent: string;
-  /** Current streaming assistant message id, or null before the first token. */
-  streamingMsgId: string | null;
-  /** Prefix for the generated streaming message id (e.g. "stream-"). */
-  newIdPrefix: string;
-}
-
-export interface AppendStreamTokenOutput {
-  messages: Message[];
-  /** The streaming assistant message id (existing or newly generated). */
+  /** The id of the assistant message this stream writes into. */
   streamingMsgId: string;
 }
 
+/** A fresh assistant message holding the first streamed token. */
+function streamingAssistantMessage(id: string, content: string): Message {
+  return {
+    id,
+    role: ASSISTANT_ROLE,
+    content,
+    sources: [],
+    created_at: new Date().toISOString(),
+  };
+}
+
 /**
- * Fold a streamed token into the optimistic message list. Shared by
- * the conversation and publishing chat hooks so the SSE token-accumulation
- * algorithm lives in one place. Pure: callers persist the returned
- * `streamingMsgId` onto their own ref. Tokens accumulate onto the existing
- * assistant message by message id, because React batching may have cleared the
- * ref on a COMPLETE event.
+ * Fold a streamed token into the optimistic message list. Shared by the
+ * conversation and publishing chat hooks so the SSE token-accumulation
+ * algorithm lives in one place.
+ *
+ * Pure: it depends only on its input, never on a ref read at update time, so
+ * React may batch, defer or replay the state updater and every token still
+ * lands exactly once, in order, in the one message with ``streamingMsgId``.
  */
 export function appendStreamToken({
   messages,
   token,
-  accumulatedContent,
   streamingMsgId,
-  newIdPrefix,
-}: AppendStreamTokenInput): AppendStreamTokenOutput {
-  const last = messages[messages.length - 1];
-  if (last?.role === ASSISTANT_ROLE && last.id === streamingMsgId) {
-    return {
-      messages: [
-        ...messages.slice(0, -1),
-        { ...last, content: last.content + token },
-      ],
-      streamingMsgId,
-    };
+}: AppendStreamTokenInput): Message[] {
+  const index = messages.findIndex((message) => message.id === streamingMsgId);
+  if (index === -1) {
+    return [...messages, streamingAssistantMessage(streamingMsgId, token)];
   }
-  const id = streamingMsgId ?? `${newIdPrefix}${Date.now()}`;
-  const newMsg: Message = {
-    id,
-    role: ASSISTANT_ROLE,
-    content: accumulatedContent,
-    sources: [],
-    created_at: new Date().toISOString(),
-  };
-  return { messages: [...messages, newMsg], streamingMsgId: id };
+  return messages.map((message, position) =>
+    position === index
+      ? { ...message, content: message.content + token }
+      : message,
+  );
 }
 
-/** The per-stream accumulation refs a chat hook clears when a stream begins. */
+/** The per-stream ref a chat hook resets when a stream begins. */
 export interface StreamAccumulationRefs {
-  contentRef: RefObject<string>;
   msgIdRef: RefObject<string | null>;
+}
+
+let streamSequence = 0;
+
+/** A unique id for the assistant message of a new stream. */
+export function newStreamMessageId(prefix: string): string {
+  streamSequence += 1;
+  return `${prefix}${Date.now()}-${streamSequence}`;
 }
 
 /** Build the optimistic user message appended before a stream starts. */
@@ -90,23 +87,23 @@ export function createOptimisticUserMessage(
   };
 }
 
-/** Clear the per-stream accumulation refs (content + streaming message id). */
+/** Clear the streaming message id. */
 export function resetStreamRefs(refs: StreamAccumulationRefs): void {
-  refs.contentRef.current = "";
   refs.msgIdRef.current = null;
 }
 
 /**
- * Begin a new stream: reset the accumulation refs, abort the previous in-flight
- * request, and return a fresh `AbortController`. The caller stores it on its own
- * `abortRef` (keeping the ref assignment local to the hook, which the
- * react-hooks lint rule requires for the unmount-cleanup path).
+ * Begin a new stream: give it a fresh assistant message id, abort the previous
+ * in-flight request, and return a fresh `AbortController`. The caller stores it
+ * on its own `abortRef` (keeping the ref assignment local to the hook, which
+ * the react-hooks lint rule requires for the unmount-cleanup path).
  */
 export function beginStream(
   refs: StreamAccumulationRefs,
   previousController: AbortController | null,
+  streamIdPrefix: string,
 ): AbortController {
-  resetStreamRefs(refs);
+  refs.msgIdRef.current = newStreamMessageId(streamIdPrefix);
   previousController?.abort();
   return new AbortController();
 }

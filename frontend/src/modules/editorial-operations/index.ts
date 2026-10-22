@@ -48,4 +48,8 @@ export {
 } from "./board/workflow/components/neon-kanban-board";
 
 export * from "./analytics/hooks/use-editorial-analytics";
+export {
+  qualityScoreStat,
+  type QualityScoreStat,
+} from "./analytics/quality-score";
 export * from "./analytics/hooks/use-instagram-insights";

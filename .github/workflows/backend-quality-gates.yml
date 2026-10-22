@@ -6,11 +6,13 @@ on:
     paths:
       - 'backend/**'
       - 'scripts/ci/**'
+      - 'docs/architecture/openapi.json'
       - '.github/workflows/backend-quality-gates.yml'
   pull_request:
     paths:
       - 'backend/**'
       - 'scripts/ci/**'
+      - 'docs/architecture/openapi.json'
       - '.github/workflows/backend-quality-gates.yml'
 
 concurrency:

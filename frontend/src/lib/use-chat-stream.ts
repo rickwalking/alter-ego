@@ -9,6 +9,7 @@ import {
   appendStreamToken,
   beginStream,
   createOptimisticUserMessage,
+  newStreamMessageId,
   resetStreamRefs,
 } from "./sse-chat-stream";
 
@@ -22,7 +23,7 @@ export interface ChatStream {
   startUserTurn: (content: string) => AbortSignal;
   /** Fold a streamed token into the optimistic message list. */
   appendToken: (token: string) => void;
-  /** Clear the per-stream accumulation refs (content + streaming message id). */
+  /** Forget the streaming message id (the next token starts a new reply). */
   resetStreamingRefs: () => void;
 }
 
@@ -35,58 +36,40 @@ export interface ChatStream {
  * stays in each consumer hook.
  */
 interface StreamTokens {
-  contentRef: RefObject<string>;
   msgIdRef: RefObject<string | null>;
   appendToken: (token: string) => void;
   resetStreamingRefs: () => void;
 }
 
-interface TokenFoldRefs {
-  contentRef: RefObject<string>;
-  msgIdRef: RefObject<string | null>;
-  streamIdPrefix: string;
-}
-
-/** Fold one token into the message list, remembering the streaming id. */
-function foldToken(
-  prev: Message[],
-  token: string,
-  { contentRef, msgIdRef, streamIdPrefix }: TokenFoldRefs,
-): Message[] {
-  const { messages, streamingMsgId } = appendStreamToken({
-    messages: prev,
-    token,
-    accumulatedContent: contentRef.current,
-    streamingMsgId: msgIdRef.current,
-    newIdPrefix: streamIdPrefix,
-  });
-  msgIdRef.current = streamingMsgId;
-  return messages;
-}
-
-/** The per-stream accumulation refs and the token fold over them. */
+/**
+ * The streaming message id and the token fold over it.
+ *
+ * The id is read when the token arrives, not inside the state updater, so
+ * React batching (or a COMPLETE that resets the ref in the same batch) can
+ * neither duplicate, drop nor split a reply.
+ */
 function useStreamTokens(
   streamIdPrefix: string,
   setOptimisticMessages: Dispatch<SetStateAction<Message[]>>,
 ): StreamTokens {
-  const contentRef = useRef("");
   const msgIdRef = useRef<string | null>(null);
 
   const appendToken = useCallback(
     (token: string): void => {
-      contentRef.current += token;
+      msgIdRef.current ??= newStreamMessageId(streamIdPrefix);
+      const streamingMsgId = msgIdRef.current;
       setOptimisticMessages((prev) =>
-        foldToken(prev, token, { contentRef, msgIdRef, streamIdPrefix }),
+        appendStreamToken({ messages: prev, token, streamingMsgId }),
       );
     },
     [streamIdPrefix, setOptimisticMessages],
   );
 
   const resetStreamingRefs = useCallback(() => {
-    resetStreamRefs({ contentRef, msgIdRef });
+    resetStreamRefs({ msgIdRef });
   }, []);
 
-  return { contentRef, msgIdRef, appendToken, resetStreamingRefs };
+  return { msgIdRef, appendToken, resetStreamingRefs };
 }
 
 /** Abort any in-flight stream when the consumer unmounts. */
@@ -101,31 +84,33 @@ function useAbortOnUnmount(abortRef: RefObject<AbortController | null>): void {
 
 interface UserTurnDeps {
   userIdPrefix: string;
+  streamIdPrefix: string;
   tokens: StreamTokens;
   abortRef: RefObject<AbortController | null>;
 }
 
 /** Append the optimistic user message and begin a stream; returns its signal. */
 function useStartUserTurn(
-  { userIdPrefix, tokens, abortRef }: UserTurnDeps,
+  { userIdPrefix, streamIdPrefix, tokens, abortRef }: UserTurnDeps,
   setOptimisticMessages: Dispatch<SetStateAction<Message[]>>,
   setIsStreaming: Dispatch<SetStateAction<boolean>>,
 ): (content: string) => AbortSignal {
-  const { contentRef, msgIdRef } = tokens;
+  const { msgIdRef } = tokens;
   return useCallback(
     (content: string): AbortSignal => {
       const userMsg = createOptimisticUserMessage(content, userIdPrefix);
       setOptimisticMessages((prev) => [...prev, userMsg]);
       setIsStreaming(true);
       abortRef.current = beginStream(
-        { contentRef, msgIdRef },
+        { msgIdRef },
         abortRef.current,
+        streamIdPrefix,
       );
       return abortRef.current.signal;
     },
     [
       userIdPrefix,
-      contentRef,
+      streamIdPrefix,
       msgIdRef,
       abortRef,
       setOptimisticMessages,
@@ -144,7 +129,7 @@ export function useChatStream(
   const tokens = useStreamTokens(streamIdPrefix, setOptimisticMessages);
   useAbortOnUnmount(abortRef);
   const startUserTurn = useStartUserTurn(
-    { userIdPrefix, tokens, abortRef },
+    { userIdPrefix, streamIdPrefix, tokens, abortRef },
     setOptimisticMessages,
     setIsStreaming,
   );

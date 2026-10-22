@@ -75,6 +75,18 @@ Week + Day views, URL state, local-date placement, tests. Review fixes: rebase o
 fallback, #216's type/status keys reused (agenda duplicates removed), Back restores the view, TZ restored
 correctly in tests (calendar tests pass with TZ=America/Sao_Paulo and TZ=UTC).
 
+### 2026-10-22 (PR 2 — Schedule Post)
+
+Pedro: Schedule Post schedules approved blog posts only, through the existing
+`POST /api/blog-posts/{id}/schedule` (no backend change). The header button opens a dialog: one page of
+approved posts, a `datetime-local` field in the viewer's timezone (named under it, min = now + 1 min),
+client validation (post, time, at least a minute ahead), a warning for other posts publishing within an
+hour, `If-Match` with the post's lock version, and 400/409/422/other errors explained. Success closes the
+dialog, re-fetches the calendar and shows a notice. Scenarios: `calendar-schedule-post.feature`.
+Review fixes: conflicts come from the content calendar for the chosen time ±1 h, inclusive (the blog list has
+no schedule times), so carousels count too; drafts and posts under review are listed disabled with
+"approve it first"; NeonModal traps focus (moves in on open, Tab stays inside, focus returns on close).
+
 ## Files Touched
 
 - frontend/src/app/dashboard/calendar/* (toolbar, page, view body, week/day views, agenda event, hooks, tests)

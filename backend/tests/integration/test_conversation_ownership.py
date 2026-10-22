@@ -9,148 +9,43 @@ unknown ids all get the same 404 so a conversation's existence never leaks.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, AsyncIterator
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
+from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
 
 from rag_backend.api.constants import ERR_CONVERSATION_NOT_FOUND
-from rag_backend.domain.models import User, UserRole
-from tests.integration.conftest import auth_headers_for, create_test_user
-
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-    from httpx import Response
-
-    from rag_backend.application.services.chat_stream_service import _ChatContext
-
-NONEXISTENT_UUID = "00000000-0000-0000-0000-000000000000"
-CALLER_ANON = "anon"
-CALLER_OWNER = "owner"
-CALLER_OTHER = "other"
-CALLER_ADMIN = "admin"
-STREAM = "POST /{id}/chat/stream"
-CHAT = "POST /{id}/chat"
-GET_ONE = "GET /{id}"
-GET_MESSAGES = "GET /{id}/messages"
-GENERATE_TITLE = "POST /{id}/generate-title"
-DELETE = "DELETE /{id}"
-
-
-class _FixedTokenAgent:
-    """Deterministic agent: one token, then the stream service completes."""
-
-    async def chat(self, ctx: _ChatContext) -> AsyncIterator[dict[str, object]]:
-        del ctx
-        yield {"type": "token", "content": "Hello"}
-        yield {"type": "complete", "content": "Hello"}
-
-
-@dataclass
-class OwnershipEnv:
-    """App + one conversation per owner type, and a client per caller."""
-
-    app: FastAPI
-    users: dict[str, User]
-    owner_conversation_id: str
-
-    def client(self, caller: str) -> AsyncClient:
-        """An HTTP client signed in as ``caller`` (no headers for anon)."""
-        user = self.users.get(caller)
-        headers = auth_headers_for(user) if user is not None else {}
-        return AsyncClient(
-            transport=ASGITransport(app=self.app),
-            base_url="http://test/api/conversations",
-            headers=headers,
-        )
-
-
-async def _fixed_title(_messages: list[dict[str, str]]) -> str:
-    """Deterministic title generator (no LLM)."""
-    return "Fixed title"
-
-
-def _patch_agents(monkeypatch: pytest.MonkeyPatch) -> None:
-    from rag_backend.api.routes import chat_stream as stream_module
-    from rag_backend.api.routes import conversations as conv_module
-
-    agent = MagicMock()
-    agent.chat = _FixedTokenAgent().chat
-    monkeypatch.setattr(stream_module, "build_alter_ego_agent", lambda _db, _c: agent)
-    monkeypatch.setattr(
-        conv_module, "build_agent_for_conversation", lambda _conv, _db, _c: agent
-    )
+from tests.integration.conversation_access_support import (
+    CALLER_ADMIN,
+    CALLER_ANON,
+    CALLER_OTHER,
+    CALLER_OWNER,
+    CHAT,
+    DELETE,
+    GENERATE_TITLE,
+    GET_MESSAGES,
+    GET_ONE,
+    NONEXISTENT_UUID,
+    STREAM,
+    OwnershipEnv,
+    call_endpoint,
+    ownership_env,
+    patch_agents,
+    reset_rate_limits,
+)
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limits() -> None:
-    """Every row is a fresh caller; the per-IP chat limit must not leak across rows."""
-    from rag_backend.api.middleware.rate_limiting import limiter
-
-    limiter.reset()
+def _fresh_rate_limits() -> None:
+    reset_rate_limits()
 
 
 @pytest_asyncio.fixture
-async def env(tmp_path: object) -> AsyncGenerator[OwnershipEnv, None]:
-    """File-backed SQLite app with owner/other/admin users and an owner conversation."""
-    from pathlib import Path
-
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.api.app import create_app
-    from rag_backend.api.dependencies.conversation import (
-        get_conversation_title_generator,
-    )
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    assert isinstance(tmp_path, Path)
-    engine = create_async_engine(
-        f"sqlite+aiosqlite:///{tmp_path / 'ownership.db'}", echo=False
-    )
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    db_config.c_engine = engine
-    users = {
-        CALLER_OWNER: await create_test_user("owner@own.test", UserRole.EDITOR),
-        CALLER_OTHER: await create_test_user("other@own.test", UserRole.EDITOR),
-        CALLER_ADMIN: await create_test_user("admin@own.test", UserRole.ADMIN),
-    }
-    app = create_app()
-    app.dependency_overrides[get_conversation_title_generator] = lambda: _fixed_title
-    probe = OwnershipEnv(app=app, users=users, owner_conversation_id="")
-    async with probe.client(CALLER_OWNER) as owner:
-        created = await owner.post("", json={"title": "Private"})
-    assert created.status_code == 201
-    try:
-        yield OwnershipEnv(
-            app=app, users=users, owner_conversation_id=created.json()["id"]
-        )
-    finally:
-        db_config.c_engine = None
-        await close_db()
-        await engine.dispose()
-
-
-async def _call(client: AsyncClient, endpoint: str, conversation_id: str) -> Response:
-    """Send ``endpoint`` for ``conversation_id`` and return the response."""
-    path = f"/{conversation_id}"
-    body = {"content": "Hello"}
-    if endpoint == STREAM:
-        return await client.post(f"{path}/chat/stream", json=body)
-    if endpoint == CHAT:
-        return await client.post(f"{path}/chat", json=body)
-    if endpoint == GET_ONE:
-        return await client.get(path)
-    if endpoint == GET_MESSAGES:
-        return await client.get(f"{path}/messages")
-    if endpoint == GENERATE_TITLE:
-        return await client.post(f"{path}/generate-title")
-    return await client.delete(path)
+async def env(tmp_path: Path) -> AsyncIterator[OwnershipEnv]:
+    """The shared app with an owner conversation (see conversation_access_support)."""
+    async with ownership_env(tmp_path) as built:
+        yield built
 
 
 async def _owner_message_count(env: OwnershipEnv) -> int:
@@ -182,9 +77,9 @@ async def test_non_owner_gets_404_and_changes_nothing(
     env: OwnershipEnv, monkeypatch: pytest.MonkeyPatch, endpoint: str, caller: str
 ) -> None:
     """A non-owner gets 404 "Conversation not found" and the conversation is untouched."""
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     async with env.client(caller) as client:
-        resp = await _call(client, endpoint, env.owner_conversation_id)
+        resp = await call_endpoint(client, endpoint, env.owner_conversation_id)
     assert resp.status_code == 404
     assert ERR_CONVERSATION_NOT_FOUND in resp.text
     assert await _owner_message_count(env) == 0
@@ -221,9 +116,9 @@ async def test_owner_admin_and_anonymous_reads(
     expected: int,
 ) -> None:
     """Owner and admin reach the conversation; anonymous reads stay 401."""
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     async with env.client(caller) as client:
-        resp = await _call(client, endpoint, env.owner_conversation_id)
+        resp = await call_endpoint(client, endpoint, env.owner_conversation_id)
     assert resp.status_code == expected
 
 
@@ -233,7 +128,7 @@ async def test_owner_stream_persists_both_turns(
 ) -> None:
     """The owner's stream returns SSE tokens and persists user + assistant turns."""
     # Scenario: Owner and admin can stream into the owner's conversation
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     async with env.client(CALLER_OWNER) as owner:
         resp = await owner.post(
             f"/{env.owner_conversation_id}/chat/stream", json={"content": "Hi"}
@@ -272,7 +167,7 @@ async def test_unknown_and_foreign_ids_look_the_same(
 ) -> None:
     """The stream answers an unknown id and a foreign id with the same 404 body."""
     # Scenario: Unknown conversation answers the same 404 as a foreign one
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     body = {"content": "Hello"}
     async with env.client(caller) as client:
         unknown = await client.post(f"/{NONEXISTENT_UUID}/chat/stream", json=body)
@@ -290,7 +185,7 @@ async def test_anonymous_visitor_streams_into_anonymous_conversation(
 ) -> None:
     """An anonymous conversation stays open to the anonymous stream."""
     # Scenario: Anonymous visitor keeps chatting in an anonymous conversation
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     async with env.client(CALLER_ANON) as anon:
         created = await anon.post("", json={"title": "Visitor"})
         conversation_id = created.json()["id"]
@@ -356,9 +251,9 @@ async def test_every_endpoint_hides_a_foreign_id_like_an_unknown_one(
 ) -> None:
     """Another user cannot tell a foreign conversation from a missing one."""
     # Scenario: Unknown conversation answers the same 404 as a foreign one
-    _patch_agents(monkeypatch)
+    patch_agents(monkeypatch)
     async with env.client(CALLER_OTHER) as other:
-        unknown = await _call(other, endpoint, NONEXISTENT_UUID)
-        foreign = await _call(other, endpoint, env.owner_conversation_id)
+        unknown = await call_endpoint(other, endpoint, NONEXISTENT_UUID)
+        foreign = await call_endpoint(other, endpoint, env.owner_conversation_id)
     assert unknown.status_code == foreign.status_code == 404
     assert unknown.json() == foreign.json()
