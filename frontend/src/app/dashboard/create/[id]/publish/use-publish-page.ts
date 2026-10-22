@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import {
   resolveLocalizedSlides,
@@ -11,6 +12,7 @@ import {
   useEditorialWorkflow,
 } from "@/modules/editorial";
 import {
+  useCarouselPublicPostHref,
   usePublishInstagram,
   useRepublishCarousel,
   type LocalizedSlideReview,
@@ -145,17 +147,28 @@ async function sitePublishError(
   return fallback;
 }
 
-/** Publish the approved carousel to the public site. */
+/**
+ * Publish the approved carousel to the public site. After a success,
+ * `publishedHref` is the carousel's public blog post, else its public
+ * carousel page; it is null before a publish and after a failure.
+ */
 export function usePublishToSite(
   projectId: string,
   refreshAll: () => Promise<unknown>,
-): { sitePublishMessage: string | null; handlePublishToSite: () => void } {
+): {
+  sitePublishMessage: string | null;
+  publishedHref: string | null;
+  handlePublishToSite: () => void;
+} {
+  const blogPost = useCarouselPublicPostHref(projectId);
   const t = useTranslations("publish");
   const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(
     null,
   );
+  const [sitePublished, setSitePublished] = useState(false);
   const publish = async (): Promise<void> => {
     setSitePublishMessage(null);
+    setSitePublished(false);
     try {
       const response = await authenticatedFetch(
         API_ENDPOINTS.CAROUSEL_PUBLISH(projectId),
@@ -167,7 +180,8 @@ export function usePublishToSite(
         );
       }
       setSitePublishMessage(t("sitePublished"));
-      await refreshAll();
+      setSitePublished(true);
+      await Promise.all([refreshAll(), blogPost.refetch()]);
     } catch (error) {
       setSitePublishMessage(
         error instanceof Error ? error.message : t("sitePublishFailed"),
@@ -176,6 +190,9 @@ export function usePublishToSite(
   };
   return {
     sitePublishMessage,
+    publishedHref: sitePublished
+      ? (blogPost.href ?? PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(projectId))
+      : null,
     handlePublishToSite: () => {
       void publish();
     },

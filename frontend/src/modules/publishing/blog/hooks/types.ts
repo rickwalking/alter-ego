@@ -178,3 +178,11 @@ export interface DraftState {
   validation: BlogEditorValidation | null;
   payload: BlogPostUpdatePayload | null;
 }
+
+/** The public blog post made from one carousel. */
+export interface CarouselPublicPostHref {
+  /** Public URL of the carousel's published blog post, or null when none. */
+  href: string | null;
+  /** Look the post up again (e.g. right after a site publish). */
+  refetch: () => Promise<unknown>;
+}

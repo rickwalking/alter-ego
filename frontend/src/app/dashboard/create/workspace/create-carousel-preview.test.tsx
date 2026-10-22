@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { CarouselPreview } from "./create-carousel-preview";
+
+const blogHref = vi.hoisted(() => ({ value: null as string | null }));
+vi.mock("@/modules/publishing", () => ({
+  useCarouselPublicPostHref: () => ({ href: blogHref.value, refetch: vi.fn() }),
+}));
 
 function project(templateVersion: string | null): CarouselProjectResponse {
   return {
@@ -41,5 +46,25 @@ describe("CarouselPreview template version (AE-0415, B33)", () => {
   it("shows no version chip without a version", () => {
     render(<CarouselPreview project={project(null)} />);
     expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
+  });
+});
+
+describe("CarouselPreview View Blog link", () => {
+  // Scenario: The workspace links the carousel's published blog post
+  it("links the carousel's published blog post", () => {
+    blogHref.value = "/blog/b1";
+    render(<CarouselPreview project={project(null)} />);
+    expect(
+      screen.getByRole("link", { name: "View Blog Post" }),
+    ).toHaveAttribute("href", "/blog/b1");
+  });
+
+  // Scenario: The workspace hides View Blog Post when the carousel has no published post
+  it("hides the link when there is no published post", () => {
+    blogHref.value = null;
+    render(<CarouselPreview project={project(null)} />);
+    expect(
+      screen.queryByRole("link", { name: "View Blog Post" }),
+    ).not.toBeInTheDocument();
   });
 });

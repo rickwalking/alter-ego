@@ -22,6 +22,8 @@ const m = vi.hoisted(() => ({
   ready: true,
   coverPicker: false,
   radar: false,
+  blogHref: null as string | null,
+  refetchBlogHref: vi.fn(() => Promise.resolve(undefined)),
 }));
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "p1" }) }));
@@ -73,6 +75,10 @@ vi.mock("@/modules/publishing", () => ({
     isPending: false,
   }),
   useRepublishCarousel: () => ({ mutate: m.republish }),
+  useCarouselPublicPostHref: () => ({
+    href: m.blogHref,
+    refetch: m.refetchBlogHref,
+  }),
   PublishPanel: ({
     onPublishInstagram,
     publishResult,
@@ -236,8 +242,10 @@ describe("DashboardCreatePublishPage", () => {
     expect(m.refetchProject).toHaveBeenCalled();
   });
 
-  it("publishes to the site and links the post", async () => {
+  // Scenario: After a site publish the link opens the published blog post
+  it("publishes to the site and links the blog post", async () => {
     m.workflowState = approved();
+    m.blogHref = "/blog/b1";
     m.fetch.mockResolvedValue({ ok: true });
     await renderLoaded();
     fireEvent.click(screen.getByText("publishToSite"));
@@ -248,7 +256,24 @@ describe("DashboardCreatePublishPage", () => {
       expect.stringContaining("p1"),
       expect.objectContaining({ method: "POST" }),
     );
-    expect(screen.getByText("sitePublishedLink")).toBeInTheDocument();
+    expect(m.refetchBlogHref).toHaveBeenCalled();
+    expect(
+      screen.getByRole("link", { name: "sitePublishedLink" }),
+    ).toHaveAttribute("href", "/blog/b1");
+  });
+
+  // Scenario: After a site publish without a blog post the link opens the public carousel
+  it("links the public carousel when there is no blog post", async () => {
+    m.workflowState = approved();
+    m.blogHref = null;
+    m.fetch.mockResolvedValue({ ok: true });
+    await renderLoaded();
+    fireEvent.click(screen.getByText("publishToSite"));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("link", { name: "sitePublishedLink" }),
+      ).toHaveAttribute("href", "/carousels/p1"),
+    );
   });
 
   it("shows the server's reason when the site publish fails", async () => {
@@ -262,6 +287,8 @@ describe("DashboardCreatePublishPage", () => {
     await waitFor(() =>
       expect(screen.getByText(/Not approved yet/)).toBeInTheDocument(),
     );
+    // Scenario: A failed site publish shows no link
+    expect(screen.queryByText("sitePublishedLink")).not.toBeInTheDocument();
   });
 
   it("falls back to a generic message on an unreadable failure", async () => {

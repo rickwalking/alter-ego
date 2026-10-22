@@ -92,7 +92,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
         />
         {canPublishToSite && (
           <SitePublishBar
-            projectId={projectId}
+            publishedHref={site.publishedHref}
             message={site.sitePublishMessage}
             onPublish={site.handlePublishToSite}
           />

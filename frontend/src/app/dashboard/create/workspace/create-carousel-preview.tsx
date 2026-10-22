@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { ROUTE_PATHS } from "@/constants/api";
+import { useCarouselPublicPostHref } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { PreviewSlides } from "./create-carousel-preview-slides";
 
@@ -151,6 +151,7 @@ export function CarouselPreview({
   const slideUrls = extractRenderedSlides(project);
   const heroUrl = buildHeroImageUrl(project);
   const title = displayTitle(project);
+  const { href: blogHref } = useCarouselPublicPostHref(project.id);
 
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] overflow-hidden">
@@ -168,14 +169,16 @@ export function CarouselPreview({
         </div>
       )}
 
-      <div className="p-4 border-t border-[var(--color-border)]">
-        <Link
-          href={ROUTE_PATHS.BLOG_POST(project.id)}
-          className="inline-block rounded-md bg-[var(--color-primary)] px-4 py-2 font-medium text-sm text-[var(--color-text)] transition-colors hover:opacity-90"
-        >
-          {t("preview.viewBlog")}
-        </Link>
-      </div>
+      {blogHref ? (
+        <div className="p-4 border-t border-[var(--color-border)]">
+          <Link
+            href={blogHref}
+            className="inline-block rounded-md bg-[var(--color-primary)] px-4 py-2 font-medium text-sm text-[var(--color-text)] transition-colors hover:opacity-90"
+          >
+            {t("preview.viewBlog")}
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
