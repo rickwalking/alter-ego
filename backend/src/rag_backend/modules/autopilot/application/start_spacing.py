@@ -21,7 +21,12 @@ logger = structlog.get_logger()
 
 @dataclass(frozen=True, kw_only=True)
 class StartSpacing:
-    """At least ``minimum`` between two generation starts."""
+    """At least ``minimum`` between two generation starts.
+
+    The check reads the latest start and then creates the project without a lock:
+    it relies on the single in-process worker loop stepping one run per tick, so
+    two starts never race. A second runner process would need a lock here.
+    """
 
     starts: StartHistory
     clock: Clock

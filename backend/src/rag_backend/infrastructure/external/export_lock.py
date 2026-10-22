@@ -4,8 +4,8 @@ Every ``export_slides`` call launches a headless Chromium (HD at 2x scale), the
 heaviest local step of a carousel run. ``export_slot`` admits one export at a
 time: an asyncio lock for the tasks of this process, then a session-scoped
 Postgres advisory lock held on a dedicated connection for every other process.
-The connection is checked out for the whole export and the lock released in a
-``finally``; a dropped connection releases it server-side. Without a Postgres
+The connection is checked out for the whole export; a clean exit unlocks it,
+anything else invalidates the connection so the server drops the lock. Without a Postgres
 engine (SQLite tests, scripts that never call ``init_db``) only the process lock
 applies.
 """
@@ -60,14 +60,21 @@ def _postgres_engine() -> AsyncEngine | None:
 
 @asynccontextmanager
 async def _advisory_slot(engine: AsyncEngine) -> AsyncIterator[None]:
-    """Hold the export advisory lock on a dedicated connection."""
+    """Hold the export advisory lock on a dedicated connection.
+
+    Only a clean exit unlocks and returns the connection to the pool. An export
+    that fails or is cancelled, or an unlock that fails, invalidates the
+    connection instead: its Postgres session ends and the server drops the lock,
+    so a pooled connection can never keep the slot.
+    """
     connection = await engine.connect()
     try:
         await connection.execute(_LOCK_SQL, {_KEY_PARAM: EXPORT_LOCK_KEY})
-        try:
-            yield
-        finally:
-            await connection.execute(_UNLOCK_SQL, {_KEY_PARAM: EXPORT_LOCK_KEY})
+        yield
+        await connection.execute(_UNLOCK_SQL, {_KEY_PARAM: EXPORT_LOCK_KEY})
+    except BaseException:
+        await connection.invalidate()
+        raise
     finally:
         await connection.close()
 

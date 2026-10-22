@@ -21,6 +21,13 @@ Feature: Carousel generation does not take the website down (Pedro's decision)
     When an export asks for the slot
     Then it waits until that session releases the lock
 
+  Scenario: An export that fails or is cancelled releases the Postgres lock
+    Given a Postgres database
+    And an export holds the slot
+    When that export fails or is cancelled
+    Then no session holds the export advisory lock
+    And the next export gets the slot at once
+
   Scenario: The exporter launches Chromium with the low-memory flags
     When a carousel is exported
     Then Chromium is launched with --disable-dev-shm-usage and --renderer-process-limit=1
@@ -50,6 +57,15 @@ Feature: Carousel generation does not take the website down (Pedro's decision)
     Given a queued run whose carousel was created but whose start failed
     When the runner steps it again
     Then it retries the start without waiting for the spacing
+
+  Scenario: The runner uses the configured start spacing
+    Given AUTOPILOT_START_SPACING_MINUTES is 7
+    When the worker builds the runner for a tick
+    Then the runner holds queued runs for 7 minutes after a start
+
+  Scenario: A negative start spacing is rejected
+    When AUTOPILOT_START_SPACING_MINUTES is -1
+    Then the settings fail validation
 
   Scenario: The latest start is the newest carousel created by another run
     Given two autopilot runs with carousels created at 11:05 and 11:25

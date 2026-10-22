@@ -26,6 +26,9 @@ logger = structlog.get_logger(__name__)
 PHASE_INDEX_NAME = "idx_carousel_projects_phase_status_current_phase"
 POSTGRES_DIALECT = "postgresql"
 AUTOCOMMIT = "AUTOCOMMIT"
+LOG_SKIPPED = "carousel_phase_index_skipped"
+LOG_APPLIED = "carousel_phase_index_applied"
+LOG_VERIFIED = "carousel_phase_index_verified"
 
 _STATE_SQL = text(
     "SELECT i.indisvalid FROM pg_index i"
@@ -64,7 +67,7 @@ async def _index_state(conn: AsyncConnection) -> bool | None:
 async def apply(engine: AsyncEngine) -> PhaseIndexReport:
     """Build the index unless a valid one exists; rebuild an invalid one."""
     if not is_supported(engine):
-        logger.info("carousel_phase_index_skipped", dialect=engine.dialect.name)
+        logger.info(LOG_SKIPPED, dialect=engine.dialect.name)
         return PhaseIndexReport(supported=False)
     async with engine.connect() as base:
         conn = await base.execution_options(isolation_level=AUTOCOMMIT)
@@ -80,7 +83,7 @@ async def apply(engine: AsyncEngine) -> PhaseIndexReport:
         present=True,
     )
     logger.info(
-        "carousel_phase_index_applied",
+        LOG_APPLIED,
         created=report.created,
         rebuilt_invalid=report.rebuilt_invalid,
     )
@@ -90,11 +93,11 @@ async def apply(engine: AsyncEngine) -> PhaseIndexReport:
 async def verify(engine: AsyncEngine) -> PhaseIndexReport:
     """Report whether a valid index is present."""
     if not is_supported(engine):
-        logger.info("carousel_phase_index_skipped", dialect=engine.dialect.name)
+        logger.info(LOG_SKIPPED, dialect=engine.dialect.name)
         return PhaseIndexReport(supported=False)
     async with engine.connect() as conn:
         present = await _index_state(conn) is True
-    logger.info("carousel_phase_index_verified", present=present)
+    logger.info(LOG_VERIFIED, present=present)
     return PhaseIndexReport(supported=True, present=present)
 
 
