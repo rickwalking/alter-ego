@@ -1081,7 +1081,8 @@
       "title": "Content Calendar",
       "subtitle": "View scheduled and published content across blog posts and carousels.",
       "empty": "No scheduled content in this range",
-      "scheduled": "Scheduled"
+      "scheduled": "Scheduled",
+      "untitled": "Untitled"
     },
     "kanban": {
       "retry": "Retry"

@@ -1081,7 +1081,8 @@
       "title": "Calendário de Conteúdo",
       "subtitle": "Veja conteúdo agendado e publicado em posts e carrosséis.",
       "empty": "Nenhum conteúdo agendado neste período",
-      "scheduled": "Agendado"
+      "scheduled": "Agendado",
+      "untitled": "Sem título"
     },
     "kanban": {
       "retry": "Tentar novamente"
