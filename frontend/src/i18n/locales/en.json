@@ -188,7 +188,8 @@
     "backHome": "Back to home",
     "backToPosts": "Back to posts",
     "readMore": "Read more",
-    "noPosts": "No blog posts yet. Generate one with AI, or create one from a carousel.",
+    "noPosts": "No articles are published yet. In the meantime, browse the visual carousels.",
+    "browseCarousels": "Browse the carousels",
     "loading": "Loading blog posts...",
     "error": "Failed to load blog posts",
     "languageSwitch": {

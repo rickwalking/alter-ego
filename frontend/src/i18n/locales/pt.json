@@ -188,7 +188,8 @@
     "backHome": "Voltar ao início",
     "backToPosts": "Voltar aos posts",
     "readMore": "Ler mais",
-    "noPosts": "Nenhum post ainda. Gere um com IA ou crie a partir de um carrossel.",
+    "noPosts": "Nenhum artigo publicado ainda. Enquanto isso, veja os carrosséis visuais.",
+    "browseCarousels": "Ver os carrosséis",
     "loading": "Carregando posts...",
     "error": "Falha ao carregar posts",
     "languageSwitch": {
