@@ -8,6 +8,7 @@ import {
   isAuthRoute,
   isAdminRoute,
   isEditorDashboardRoute,
+  isGuardedRoute,
   isLegacyEditorRoute,
   isPublicChatRoute,
   isStaticAsset,
@@ -85,7 +86,11 @@ function authenticatedResponse(
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublicRoute(pathname) || isStaticAsset(pathname)) {
+  if (
+    isPublicRoute(pathname) ||
+    isStaticAsset(pathname) ||
+    !isGuardedRoute(pathname)
+  ) {
     return NextResponse.next();
   }
   const token = request.cookies.get(COOKIE_ACCESS_TOKEN)?.value;

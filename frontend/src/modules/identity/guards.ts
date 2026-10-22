@@ -86,6 +86,20 @@ export function isLegacyEditorRoute(pathname: string): boolean {
   );
 }
 
+/**
+ * Paths the middleware guards: the login page (session-aware) and every page
+ * that needs a session. Any other path goes straight to the router, so an
+ * unknown URL answers the not-found page instead of a login redirect.
+ */
+export function isGuardedRoute(pathname: string): boolean {
+  return (
+    isAuthRoute(pathname) ||
+    isDashboardRoute(pathname) ||
+    isAdminRoute(pathname) ||
+    isLegacyEditorRoute(pathname)
+  );
+}
+
 /** Dashboard paths that require editor or admin (not plain authenticated users). */
 export function isEditorDashboardRoute(pathname: string): boolean {
   if (!isDashboardRoute(pathname)) {
