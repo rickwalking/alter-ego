@@ -24,7 +24,10 @@ import DashboardPage from "./page";
 import AnalyticsPage from "./analytics/page";
 import { CalendarGrid } from "./calendar/calendar-grid";
 import { CalendarLegend } from "./calendar/calendar-legend";
-import { DashboardAnalyticsActivity } from "./dashboard-analytics";
+import {
+  DashboardAnalyticsActivity,
+  DashboardAnalyticsStats,
+} from "./dashboard-analytics";
 
 function render(ui: React.ReactElement): ReturnType<typeof renderBare> {
   return renderBare(ui, {
@@ -96,6 +99,27 @@ describe("dashboard in Portuguese", () => {
     // Scenario: Without content scores the tile says there is no data
     expect(screen.getByText("Sem dados")).toBeInTheDocument();
     expect(screen.queryByText("0%")).not.toBeInTheDocument();
+  });
+
+  // Scenario: With content scores the tile shows the average and the count
+  it("shows the quality score with its count in Portuguese", () => {
+    render(
+      <DashboardAnalyticsStats
+        state={{
+          ...ANALYTICS,
+          data: {
+            summary: {
+              ...SUMMARY,
+              quality_score_average: 70.5,
+              quality_score_count: 2,
+            },
+            velocity_by_week: [],
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("70.5%")).toBeInTheDocument();
+    expect(screen.getByText("2 avaliações")).toBeInTheDocument();
   });
 
   // Scenario: Activity counts use the singular for one item

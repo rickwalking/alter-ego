@@ -1,6 +1,6 @@
 # AE-0497 — Analytics "quality score" shows real data or nothing
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Bug
@@ -83,7 +83,7 @@ Red first (4 backend tests), green after; backend capture and frontend gates gre
 
 ## QA Report
 
-Pending.
+External QA: WARN (CI-decided gates only), see `.agent/reports/AE-0497.qa.md`.
 
 ## Blockers
 

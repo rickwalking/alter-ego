@@ -18,3 +18,8 @@ Feature: The analytics quality score is real data or nothing
     And one content quality score of 90
     When the editorial analytics are read
     Then the quality score average is 90.0 and its count is 1
+
+  Scenario: The analytics endpoint returns the rounded average and the count
+    Given three content quality scores of 80, 61 and 62
+    When an editor reads GET /api/editorial-analytics
+    Then the summary carries quality_score_average 67.7 and quality_score_count 3
