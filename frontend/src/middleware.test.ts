@@ -111,4 +111,32 @@ describe("middleware route guard (AE-0446)", () => {
       location(await middleware(request("/admin/users", "ok"))),
     ).toBeNull();
   });
+
+  // Scenario: A logged-out visitor on an unknown URL gets the not-found page
+  it.each([["/nonexistent"], ["/blog-archive/2024"], ["/403"]])(
+    "lets an anonymous visit to %s through to the router",
+    async (path) => {
+      expect(location(await middleware(request(path)))).toBeNull();
+    },
+  );
+
+  // Scenario: A logged-out visitor on a protected page is still sent to login
+  it.each([
+    ["/dashboard/calendar"],
+    ["/admin/users"],
+    ["/knowledge"],
+    ["/dashboard"],
+  ])("still sends an anonymous visit to %s to login", async (path) => {
+    expect(location(await middleware(request(path)))).toBe(
+      `${ORIGIN}/login?redirect=${encodeURIComponent(path)}`,
+    );
+  });
+
+  // Scenario: A stale session cookie on an unknown URL is not turned into a login redirect
+  it("does not redirect an unknown URL with a stale cookie", async () => {
+    verifyAccessToken.mockResolvedValue(null);
+    expect(
+      location(await middleware(request("/nonexistent", "stale"))),
+    ).toBeNull();
+  });
 });

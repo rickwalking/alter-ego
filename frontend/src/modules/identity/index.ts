@@ -45,6 +45,7 @@ export {
   isDashboardRoute,
   isLegacyEditorRoute,
   isEditorDashboardRoute,
+  isGuardedRoute,
   isStaticAsset,
 } from "./guards";
 
