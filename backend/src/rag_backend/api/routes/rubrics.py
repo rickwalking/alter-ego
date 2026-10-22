@@ -21,6 +21,7 @@ from rag_backend.api.schemas.persona_rubric import (
 from rag_backend.application.services.quality_evaluation_service import (
     QualityEvaluationService,
 )
+from rag_backend.domain.constants.carousel_rubric import ERR_RUBRIC_IN_USE
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.rubric import QualityRubric
 from rag_backend.domain.rubric_scoring import normalize_criteria
@@ -29,6 +30,7 @@ from rag_backend.infrastructure.database.models import (
     QualityRubricModel,
     RubricEvaluationScoreModel,
 )
+from rag_backend.modules.editorial.public import CarouselRubricAcl
 
 MIN_PASSING_SCORE = 70.0
 
@@ -158,7 +160,11 @@ async def delete_rubric(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> None:
-    """Delete a quality rubric."""
+    """Delete a quality rubric.
+
+    A rubric that carousels were created with cannot be deleted (409 naming them),
+    so no carousel points at a missing rubric.
+    """
     rubric = await db.get(QualityRubricModel, str(rubric_id))
     if not rubric:
         raise HTTPException(
@@ -170,6 +176,15 @@ async def delete_rubric(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete default rubric. Create a new one first.",
+        )
+    using = await CarouselRubricAcl(db).carousels_using(str(rubric_id))
+    if using:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": ERR_RUBRIC_IN_USE,
+                "carousels": [{"id": pid, "topic": topic} for pid, topic in using],
+            },
         )
 
     await db.delete(rubric)

@@ -59,6 +59,7 @@ from rag_backend.modules.publishing import (
 
 from .content_mode_fields import content_mode_fields
 from .create_hook_photo import bind_hook_photo, check_hook_photo
+from .create_rubric import create_rubric_id
 from .creator_assets import get_creator_asset_service
 from .deps import get_carousel_repo
 from .editorial_workflow_routes_validate import load_persona
@@ -110,7 +111,7 @@ async def create_carousel(
     custom-palette UUID) already validated by the schema; a custom palette is resolved
     and snapshotted at generation. New carousels are stamped with their mode's
     presentation policy version (legacy NULL-version rows stay v1), and the wizard's
-    template and persona are stored.
+    template, persona and quality rubric are stored.
     """
     await check_hook_photo(assets, user, request)
     theme = request.theme
@@ -128,6 +129,7 @@ async def create_carousel(
         presentation_policy_version=create_time_policy_version(request.resolved_mode),
         slide_layout_strategy=request.strategy,
         persona_id=await _persona_id(session, request.persona_id),
+        rubric_id=await create_rubric_id(session, request),
         **content_mode_fields(request),
     )
     created = await repo.create_project(project)

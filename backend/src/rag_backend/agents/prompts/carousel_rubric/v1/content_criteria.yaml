@@ -1,0 +1,10 @@
+---
+name: carousel_rubric_content_criteria
+version: "1.0.0"
+description: "The carousel's quality rubric, appended to every content-draft prompt. The finished carousel is scored against each criterion on 0-100."
+
+template: |
+  EDITORIAL QUALITY RUBRIC "{{ rubric_name }}": the finished carousel is scored against every criterion below (0-100 each). Write each slide so the carousel meets all of them.
+  {% for criterion in criteria -%}
+  - {{ criterion.name }} (scale {{ criterion.scale }}; must reach {{ criterion.threshold }}/100): {{ criterion.description }}{% if criterion.guidance %} Reviewer guidance: {{ criterion.guidance }}{% endif %}
+  {% endfor %}

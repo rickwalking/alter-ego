@@ -408,7 +408,10 @@
         "desc": "A notícia pela sua leitura: fatos, por que importa para devs e sua opinião, com sua foto no slide 1"
       },
       "personaLabel": "Persona (voz)",
-      "personaNone": "Sem persona"
+      "personaNone": "Sem persona",
+      "rubricLabel": "Rubrica de qualidade",
+      "rubricDefault": "{name} (padrão)",
+      "rubricNone": "Política padrão (sem rubrica)"
     },
     "pov": {
       "title": "Seu ponto de vista",
@@ -760,7 +763,14 @@
         "copyLoadFailed": "Não foi possível carregar os textos salvos.",
         "copyRetry": "Tentar de novo",
         "copyBlocked": "Salve ou descarte a edição da legenda ou do LinkedIn antes de aprovar ou pedir mudanças.",
-        "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
+        "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis.",
+        "rubric": {
+          "summary": "Rubrica {name}: nota geral {score}/100",
+          "passed": "Todos os critérios atingiram o mínimo.",
+          "failed": "Há critérios abaixo do mínimo.",
+          "score": "{score}/100 (mínimo {threshold})",
+          "belowThreshold": "Abaixo do mínimo"
+        }
       },
       "hookPicker": {
         "title": "Gancho do slide 1: escolha um ou edite",

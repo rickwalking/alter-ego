@@ -3,6 +3,7 @@ import {
   DEFAULT_IMAGE_PRESET,
   IMAGE_PRESETS,
   POV_TEMPLATES,
+  RUBRIC_POLICY_ONLY,
 } from "@/constants/create";
 import type { CarouselCreateRequest } from "@/schemas/carousel";
 import {
@@ -103,8 +104,22 @@ export function buildCarouselCreateRequest(
     strategy: templateStrategy(form),
     custom_visual_details: form.customVisualDetails.trim() || null,
     persona_id: form.personaId || null,
+    ...rubricField(form.rubricId),
     ...contentModeFields(form),
   };
+}
+
+/**
+ * The wizard's rubric choice: an id, ``null`` for the presentation policy
+ * alone, or nothing (the server's default carousel rubric).
+ */
+function rubricField(
+  rubricId: string,
+): Pick<CarouselCreateRequest, "rubric_id"> {
+  if (!rubricId) {
+    return {};
+  }
+  return { rubric_id: rubricId === RUBRIC_POLICY_ONLY ? null : rubricId };
 }
 
 /** The wizard can submit (POV needs a thesis and the slide-1 photo). */

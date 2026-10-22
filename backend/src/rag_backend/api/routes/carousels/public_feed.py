@@ -24,6 +24,7 @@ PUBLIC_FEED_REDACTED: Final[dict[str, object]] = {
     "pov_personal_proof": None,
     "hook_asset_id": None,
     "persona_id": None,
+    "rubric_id": None,
     "research_sources": [],
     "slides": [],
 }

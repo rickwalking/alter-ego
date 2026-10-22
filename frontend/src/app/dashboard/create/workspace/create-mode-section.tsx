@@ -5,6 +5,7 @@ import {
   CONTENT_MODES,
   DEFAULT_IMAGE_PRESET,
   POV_EDITORIAL_PRESET,
+  RUBRIC_POLICY_ONLY,
   type ContentMode,
 } from "@/constants/create";
 import {
@@ -26,10 +27,18 @@ export interface PersonaOption {
   name: string;
 }
 
+/** A quality rubric the wizard offers (applicable to carousels). */
+export interface RubricOption {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
 export interface CreateModeSectionProps {
   form: CreateCarouselFormState;
   onChange: (patch: Partial<CreateCarouselFormState>) => void;
   personas: readonly PersonaOption[];
+  rubrics: readonly RubricOption[];
 }
 
 /** POV decks switch to the "Foto + Editorial" preset, Radar IA back. */
@@ -48,17 +57,25 @@ const MODE_KEYS: Record<ContentMode, string> = {
 
 /**
  * Modo (Radar IA / Ponto de Vista) drives the rest of the wizard;
- * the persona applies to both modes.
+ * the persona and the quality rubric apply to both modes.
  */
 export function CreateModeSection({
   form,
   onChange,
   personas,
+  rubrics,
 }: Readonly<CreateModeSectionProps>): React.ReactElement {
   const t = useTranslations("create.mode");
   const personaOptions = [
     { value: "", label: t("personaNone") },
     ...personas.map((p) => ({ value: p.id, label: p.name })),
+  ];
+  const rubricOptions = [
+    ...rubrics.map((r) => ({
+      value: r.id,
+      label: r.isDefault ? t("rubricDefault", { name: r.name }) : r.name,
+    })),
+    { value: RUBRIC_POLICY_ONLY, label: t("rubricNone") },
   ];
   return (
     <div style={sectionCardStyle}>
@@ -110,6 +127,12 @@ export function CreateModeSection({
         value={form.personaId}
         options={personaOptions}
         onChange={(personaId) => onChange({ personaId })}
+      />
+      <LabeledSelect
+        label={t("rubricLabel")}
+        value={form.rubricId || RUBRIC_POLICY_ONLY}
+        options={rubricOptions}
+        onChange={(rubricId) => onChange({ rubricId })}
       />
     </div>
   );

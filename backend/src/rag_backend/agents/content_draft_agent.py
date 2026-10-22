@@ -5,12 +5,14 @@ DRAFT_QUOTE_ID_KEY lets a pov_news slide pick a verified quote by id, never by i
 
 from __future__ import annotations
 
+import copy
 import json
 
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
+from rag_backend.agents.carousel_rubric_judge import render_rubric_criteria
 from rag_backend.agents.input_sanitizer import (
     sanitize_display_input,
     sanitize_model_copy,
@@ -44,6 +46,7 @@ from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
+from rag_backend.domain.models.carousel_rubric import CarouselRubric
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -111,6 +114,13 @@ def _render_content_prompt(
     )
 
 
+def agent_for_rubric(
+    agent: ContentDraftAgent, rubric: CarouselRubric | None
+) -> ContentDraftAgent:
+    """``agent`` drafting against ``rubric``; no rubric leaves it untouched."""
+    return agent if rubric is None else agent.with_rubric(rubric)
+
+
 class ContentDraftAgent:
     """Drafts carousel slide copy with optional persona enforcement."""
 
@@ -120,6 +130,23 @@ class ContentDraftAgent:
         self._cache = get_ai_response_cache()
         self._instruction_loader = CarouselInstructionContextLoader()
         self._prompt_version = CAROUSEL_PROMPT_VERSION_V6
+        self._rubric_block = ""
+
+    def with_rubric(self, rubric: CarouselRubric | None) -> ContentDraftAgent:
+        """This agent with the carousel's quality ``rubric`` appended to every prompt
+        it drafts; no rubric keeps this agent. A copy, so one project's rubric never
+        reaches another project's drafts.
+        """
+        if rubric is None or not rubric.criteria:
+            return self
+        scoped = copy.copy(self)
+        scoped._rubric_block = render_rubric_criteria(rubric)
+        return scoped
+
+    def _full_prompt(self, instruction: str, prompt_text: str) -> str:
+        """The instruction, the content prompt and the rubric block (when set)."""
+        parts = [instruction, prompt_text, self._rubric_block]
+        return "\n\n".join(part for part in parts if part)
 
     async def draft_slide(
         self,
@@ -194,7 +221,7 @@ class ContentDraftAgent:
             ),
         }
         prompt_text, model_cfg = _render_content_prompt(variables, slide_policy)
-        full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
+        full_prompt = self._full_prompt(instruction.instruction, prompt_text)
         cached = self._cached_raw(full_prompt)
         if cached is not None:
             draft = self._parse_draft(cached)
@@ -300,4 +327,4 @@ class ContentDraftAgent:
         )
 
 
-__all__ = ["ContentDraftAgent"]
+__all__ = ["ContentDraftAgent", "agent_for_rubric"]

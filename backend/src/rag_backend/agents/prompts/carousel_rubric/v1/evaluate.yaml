@@ -1,0 +1,19 @@
+---
+name: carousel_rubric_evaluate
+version: "1.0.0"
+description: "Scores a drafted carousel against each criterion of its quality rubric on 0-100 and answers JSON."
+
+template: |
+  You are the quality reviewer of an Instagram carousel. Score the carousel below against every criterion of the rubric "{{ rubric_name }}".
+
+  Every score is an integer from 0 to 100, whatever scale the criterion names: 0 means the criterion is not met at all, 100 means it is fully met. Judge only the text of the slides.
+
+  CRITERIA:
+  {% for criterion in criteria -%}
+  - id: {{ criterion.id }} | {{ criterion.name }}: {{ criterion.description }}{% if criterion.guidance %} Guidance: {{ criterion.guidance }}{% endif %}
+  {% endfor %}
+  CAROUSEL (slide by slide):
+  {{ content }}
+
+  Answer with JSON only, no prose around it:
+  {"criteria": [{"id": "<criterion id>", "score": <integer 0-100>, "feedback": "<one sentence in Portuguese>"}], "feedback": "<one sentence in Portuguese about the whole carousel>"}

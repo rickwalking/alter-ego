@@ -24,10 +24,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
     RubricEvaluationScoreModel,
 )
@@ -40,18 +41,30 @@ _FIRST_PARAGRAPH_MAX_LEN = 200
 _BODY_CONTENT_KEYS = ("markdown", "body")
 
 
-async def content_quality_summary(session: AsyncSession) -> dict[str, object]:
+async def content_quality_summary(
+    session: AsyncSession, author_id: str | None = None
+) -> dict[str, object]:
     """``quality_score_average`` / ``quality_score_count`` of the content scores.
 
-    The average ``overall_score`` of the rubric scores that belong to a piece of
-    content; ad-hoc evaluations of pasted text carry the nil content id and are
-    left out. Without a content score the average is ``None``: the dashboard
-    shows "no data", never a stand-in.
+    The average ``overall_score`` (0-100) of the rubric scores that belong to a
+    piece of content; ad-hoc evaluations of pasted text carry the nil content id
+    and are left out. With ``author_id`` (a non-admin caller) only the scores of
+    that user's own content count: the carousels they own and the blog posts they
+    wrote. Without a content score the average is ``None``: the dashboard shows
+    "no data", never a stand-in.
     """
     score = RubricEvaluationScoreModel
     query = select(func.avg(score.overall_score), func.count(score.id)).where(
         score.content_id != AD_HOC_EVALUATION_CONTENT_ID
     )
+    if author_id is not None:
+        owned_carousels = select(CarouselProjectModel.id).where(
+            CarouselProjectModel.owner_id == author_id
+        )
+        own_posts = select(BlogPostModel.id).where(BlogPostModel.author_id == author_id)
+        query = query.where(
+            or_(score.content_id.in_(owned_carousels), score.content_id.in_(own_posts))
+        )
     average, count = (await session.execute(query)).one()
     if not count:
         return {"quality_score_average": None, "quality_score_count": 0}

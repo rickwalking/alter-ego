@@ -5,6 +5,7 @@ from __future__ import annotations
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.agents.carousel_rubric_judge import CarouselRubricJudge
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
@@ -43,7 +44,8 @@ class CarouselEditorialOrchestrator:
         """Wire the phase agents to their per-role models.
 
         Research and outline run on the reasoning model; drafting, persona scoring and
-        distribution copy (translation, caption) run on the fast model. The field repair
+        distribution copy (translation, caption) run on the fast model; the quality
+        rubric judge runs on the reasoning model. The field repair
         of a blocked content gate also runs on the fast model and is traced in Langfuse.
         """
         roles = ChatModelRoles.coerce(llm)
@@ -56,6 +58,7 @@ class CarouselEditorialOrchestrator:
                 image_registry=image_registry,
                 draft_concurrency=roles.draft_concurrency,
                 gate_repair_tracing=get_langfuse_runnable_config,
+                rubric_judge=CarouselRubricJudge(llm=roles.reasoning),
             )
         )
         self._engine = CarouselWorkflowEngine(
