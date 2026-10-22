@@ -61,6 +61,12 @@ None.
 
 Failing tests first (3 red); fix; dead components removed; CI freeze (rule 11): committed locally.
 
+### 2026-10-22 08:30
+
+CI "E2E auth baseline" failed: with the admin items the sidebar was taller than a 720 px viewport and did not
+scroll, so Logout was off-screen and unclickable. The link list now scrolls (`overflow-y: auto`, `min-height: 0`);
+verified on a local build at 1280×720 (Logout at y≈677, clickable).
+
 ## Files Touched
 
 - frontend/src/components/organisms/constants.ts, neon-sidebar.tsx, neon-sidebar-parts.tsx

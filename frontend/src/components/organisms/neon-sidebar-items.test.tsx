@@ -72,4 +72,13 @@ describe("dashboard sidebar items", () => {
       expect(pt.common.sidebar).toHaveProperty(key);
     }
   });
+
+  // Scenario: The sidebar links scroll so the user footer stays reachable
+  it("lets the link list scroll inside the sidebar", () => {
+    auth.role = "admin";
+    render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
+    const nav = screen.getByRole("navigation");
+    expect(nav.style.overflowY).toBe("auto");
+    expect(nav.style.minHeight).toBe("0");
+  });
 });

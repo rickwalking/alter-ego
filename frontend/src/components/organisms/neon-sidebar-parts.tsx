@@ -98,6 +98,8 @@ export function SidebarNav({
     <nav
       style={{
         flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
         padding: "12px",
         display: "flex",
         flexDirection: "column",

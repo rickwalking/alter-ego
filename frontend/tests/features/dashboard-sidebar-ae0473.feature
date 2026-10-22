@@ -19,3 +19,7 @@ Feature: The dashboard sidebar reaches every dashboard page and shows no fake co
 
   Scenario: Every sidebar label exists in both languages
     Then each sidebar section and item label has an English and a Portuguese message
+
+  Scenario: The sidebar links scroll so the user footer stays reachable
+    Given the admin sidebar has more links than fit on a short screen
+    Then the link list scrolls and the language switcher and Logout stay on screen
