@@ -41,7 +41,9 @@ logged before the dedupe check, so it fires on every minute-worker run; the dedu
       notification per admin are emitted once per stuck episode (not every minute, not every hour).
 - [x] Given the project changes phase/status and gets stuck again, Then it alerts again.
 - [x] Given 15 stuck projects already alerted, Then a run emits no alert and no `stuck_workflow` log line.
-- [x] Real alerts are kept: a newly stuck project and a stale in-progress run still alert.
+- [x] Real alerts are kept: a newly stuck project and a stale in-progress run still alert; a stalled in-progress
+      run alerts once per stall.
+- [x] Only workflow-failure notifications mark an episode as alerted (a deadline reminder does not silence it).
 
 ## Gherkin Scenarios
 
@@ -117,6 +119,11 @@ Feature: Stuck workflow alerts fire once per stuck episode
 ### 2026-10-22 18:00
 
 Tests red (2); episode dedupe added; alert service and worker-notify tests green.
+
+### 2026-10-22 19:20
+
+External QA (WARN, suggestions only): added scenarios + tests for other notification types and for a stalled
+in-progress run; the type-filter mutant is now killed (checked by removing the filter: the test fails).
 
 ## Files Touched
 

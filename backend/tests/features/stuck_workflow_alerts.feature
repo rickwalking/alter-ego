@@ -19,3 +19,13 @@ Feature: Stuck workflow alerts fire once per stuck episode
     Given 15 stuck projects whose admins were already alerted in this episode
     When the workflow worker runs
     Then no alert is emitted and no stuck_workflow log line is written
+
+  Scenario: Other notifications for the project do not silence a stuck alert
+    Given a stuck project with a deadline reminder created during the stuck episode
+    When the workflow worker runs
+    Then the admins are alerted that the project is stuck
+
+  Scenario: A stalled in-progress run alerts once per stall
+    Given a carousel run in progress that has not been updated for more than 30 minutes
+    When the workflow worker checks it on several runs
+    Then one stuck_workflow alert is emitted on the first run and none on the later runs

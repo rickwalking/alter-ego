@@ -25,6 +25,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
 )
+from rag_backend.domain.constants.notifications import (
+    NOTIFICATION_TYPE_DEADLINE_REMINDER,
+)
 from rag_backend.domain.constants.workflow_alerts import (
     ALERT_TYPE_STUCK_WORKFLOW,
     NOTIFICATION_TYPE_WORKFLOW_FAILURE,
@@ -376,3 +379,42 @@ class TestStuckWorkflowEpisodes:
 
         assert await service.check_and_alert(session) == 0
         assert recorded.warnings == []
+
+    async def test_other_notifications_do_not_silence_a_stuck_alert(
+        self, session: AsyncSession, recorded: _RecordingLogger
+    ) -> None:
+        """Scenario: Other notifications for the project do not silence a stuck alert."""
+        now = datetime.now(UTC)
+        project = _stuck_project(now - timedelta(hours=72))
+        session.add(project)
+        session.add(
+            NotificationModel(
+                user_id="admin-id",
+                notification_type=NOTIFICATION_TYPE_DEADLINE_REMINDER,
+                title="Deadline",
+                content_id=project.id,
+            )
+        )
+        await session.commit()
+
+        assert await WorkflowFailureAlertService().check_and_alert(session) == 1
+        assert len(recorded.stuck_lines()) == 1
+
+    async def test_stalled_in_progress_run_alerts_once_per_stall(
+        self, session: AsyncSession, recorded: _RecordingLogger
+    ) -> None:
+        """Scenario: A stalled in-progress run alerts once per stall."""
+        now = datetime.now(UTC)
+        project = _stuck_project(now - timedelta(hours=1))
+        project.phase_status = PHASE_STATUS_IN_PROGRESS
+        session.add(project)
+        await session.commit()
+        service = WorkflowFailureAlertService()
+
+        first = await service.check_and_alert(session)
+        await session.commit()
+        later = [await service.check_and_alert(session) for _ in range(2)]
+
+        assert first == 1
+        assert later == [0, 0]
+        assert len(recorded.stuck_lines()) == 1
