@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getRequestLocale } from "@/i18n/request-locale";
 import { getTranslations } from "next-intl/server";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { BG_DEEP, NEON_CYAN, TEXT, TEXT_MUTED } from "@/constants/neon";
+import { NeonLogoMark } from "@/components/atoms/neon-logo-mark";
+import { BG_DEEP, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
@@ -85,26 +86,10 @@ export async function PublicHeader(): Promise<React.ReactElement> {
             letterSpacing: "-0.02em",
           }}
         >
-          <span
-            style={{
-              width: "32px",
-              height: "32px",
-              border: `2px solid ${NEON_CYAN}`,
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: NEON_CYAN,
-              boxShadow:
-                "0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)",
-            }}
-            aria-hidden="true"
-          >
-            P
-          </span>
+          <NeonLogoMark
+            boxShadow="0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)"
+            decorative
+          />
           <span className="hidden sm:inline">{PUBLIC_HEADER_BRAND}</span>
         </Link>
         <PublicHeaderNav t={tc} locale={locale} />

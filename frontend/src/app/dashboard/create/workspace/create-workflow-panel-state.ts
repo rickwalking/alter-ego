@@ -19,6 +19,7 @@ import {
   resolveLocalizedSlides,
   slidesHaveCopyChanges,
   type useEditorialWorkflow,
+  type WorkflowFeedback,
 } from "@/modules/editorial";
 import {
   CREATE_STEP_IDS,
@@ -113,17 +114,6 @@ export function useContentEdits(state: WorkflowState): {
     contentHasEdits: edited !== null && slidesHaveCopyChanges(baseline, edited),
     setEditedContentSlides: setEdited,
   };
-}
-
-/** The revise feedback box and the final-review send-back target. */
-export interface WorkflowFeedback {
-  feedback: string;
-  setFeedback: (value: string) => void;
-  feedbackError: string | null;
-  setFeedbackError: (value: string | null) => void;
-  sendBackTarget: FinalReviewSendBackPhase;
-  setSendBackTarget: (value: FinalReviewSendBackPhase) => void;
-  handleRevise: () => void;
 }
 
 export function useWorkflowFeedback(

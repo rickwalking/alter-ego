@@ -5,6 +5,10 @@ import Image from "next/image";
 
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  scrollViewportToSlide,
+  slideIndexFromScroll,
+} from "@/lib/slide-viewport";
 
 export interface SlideViewport {
   activeIndex: number;
@@ -22,11 +26,7 @@ export function useSlideViewport(slideUrls: string[]): SlideViewport {
     (index: number): void => {
       const viewport = viewportRef.current;
       if (!viewport) return;
-      const clamped = Math.max(0, Math.min(index, slideUrls.length - 1));
-      viewport.scrollTo({
-        left: clamped * viewport.clientWidth,
-        behavior: "smooth",
-      });
+      scrollViewportToSlide(viewport, index, slideUrls.length);
     },
     [slideUrls.length],
   );
@@ -34,7 +34,7 @@ export function useSlideViewport(slideUrls: string[]): SlideViewport {
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>): void => {
       const target = event.currentTarget;
-      const index = Math.round(target.scrollLeft / target.clientWidth);
+      const index = slideIndexFromScroll(target);
       if (index !== activeIndex) setActiveIndex(index);
     },
     [activeIndex],

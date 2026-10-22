@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonLogoMark } from "@/components/atoms/neon-logo-mark";
 import {
   NEON_CYAN,
   NEON_CYAN_DIM,
@@ -30,24 +31,7 @@ export function SidebarBrand(): React.ReactElement {
         padding: "0 20px",
       }}
     >
-      <div
-        style={{
-          width: "32px",
-          height: "32px",
-          border: `2px solid ${NEON_CYAN}`,
-          borderRadius: "4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-          fontSize: "14px",
-          fontWeight: 700,
-          color: NEON_CYAN,
-          boxShadow: NEON_SIDEBAR_LOGO_SHADOW,
-        }}
-      >
-        P
-      </div>
+      <NeonLogoMark boxShadow={NEON_SIDEBAR_LOGO_SHADOW} />
       <div style={{ marginLeft: "12px" }}>
         <div style={{ fontSize: "16px", fontWeight: 700, color: TEXT }}>
           Alter Ego

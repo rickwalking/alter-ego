@@ -9,6 +9,7 @@
  */
 
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { responseErrorDetail } from "@/lib/response-error";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
 import { HTTP_HEADER_IF_MATCH } from "@/constants/workflow";
 import {
@@ -40,15 +41,6 @@ export class BlogEditorRequestError extends Error {
   ) {
     super(detail ?? kind);
     this.name = "BlogEditorRequestError";
-  }
-}
-
-async function readDetail(response: Response): Promise<string | null> {
-  try {
-    const body = (await response.json()) as { detail?: unknown };
-    return typeof body.detail === "string" ? body.detail : null;
-  } catch {
-    return null;
   }
 }
 
@@ -85,7 +77,7 @@ export function errorKind(
 async function request<T>(url: string, init: RequestInit): Promise<T> {
   const response = await authenticatedFetch(url, init);
   if (!response.ok) {
-    const detail = await readDetail(response);
+    const detail = (await responseErrorDetail(response)) ?? null;
     throw new BlogEditorRequestError(
       errorKind(response.status, detail),
       detail,

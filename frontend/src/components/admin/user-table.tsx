@@ -7,15 +7,7 @@ import { RoleBadge } from "./role-badge";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
 import { ChangePasswordDialog } from "./change-password-dialog";
-
-interface UserItem {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-}
+import type { UserItem } from "./user-dialog-parts";
 
 interface UserTableProps {
   users: UserItem[];

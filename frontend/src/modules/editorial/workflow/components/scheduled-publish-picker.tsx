@@ -1,12 +1,11 @@
 "use client";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonLabel } from "@/components/atoms/neon-label";
-
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { WORKFLOW_API } from "@/constants/workflow";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { useWorkflowPostAction } from "../hooks/use-workflow-post-action";
 import type { ScheduledPublishPickerProps } from "./types";
 
 export function ScheduledPublishPicker({
@@ -15,34 +14,16 @@ export function ScheduledPublishPicker({
 }: Readonly<ScheduledPublishPickerProps>) {
   const t = useTranslations("workflow.schedule");
   const [datetime, setDatetime] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const { submitting, message, post } = useWorkflowPostAction(
+    { success: t("success"), failed: t("failed") },
+    onScheduled,
+  );
 
   const handleSchedule = async () => {
     if (!datetime) return;
-    setSubmitting(true);
-    setMessage(null);
-    try {
-      const response = await authenticatedFetch(
-        WORKFLOW_API.BLOG_SCHEDULE(postId),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scheduled_publish_at: new Date(datetime).toISOString(),
-          }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error(t("failed"));
-      }
-      setMessage(t("success"));
-      onScheduled?.();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("failed"));
-    } finally {
-      setSubmitting(false);
-    }
+    await post(WORKFLOW_API.BLOG_SCHEDULE(postId), {
+      scheduled_publish_at: new Date(datetime).toISOString(),
+    });
   };
 
   return (
