@@ -13,8 +13,8 @@ interface UseCalendarDaysResult {
   days: CalendarDay[];
   loading: boolean;
   error: string | null;
-  /** Re-fetches the current window (after a schedule change). */
-  refetch: () => Promise<void>;
+  /** Re-fetches the current window; resolves true when the new data was stored. */
+  refetch: () => Promise<boolean>;
 }
 
 /**

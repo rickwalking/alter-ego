@@ -81,4 +81,26 @@ describe("useContentCalendar", () => {
     expect(url).toContain("start=S");
     expect(url).toContain("end=E");
   });
+
+  // Scenario: A failed sync does not claim to be up to date
+  it("resolves refetch true on success and false on failure", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({ items: [], start: "A0", end: "A1", total: 0 }),
+    );
+    const { result } = renderHook(() => useContentCalendar("A0", "A1"));
+    await waitFor(() => expect(result.current.calendar).not.toBeNull());
+
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.refetch();
+    });
+    expect(ok).toBe(true);
+
+    mockFetch.mockResolvedValueOnce({ ok: false } as Response);
+    await act(async () => {
+      ok = await result.current.refetch();
+    });
+    expect(ok).toBe(false);
+    expect(result.current.error).toBe("loadCalendarFailed");
+  });
 });

@@ -40,6 +40,8 @@ function errorMessage(err: unknown, fallback: string): string {
  * month navigation) never overwrites the latest window's result; cleanup aborts
  * and clears it so a superseded request's `finally` cannot write state after
  * unmount. `enabled: false` skips the fetch (e.g. until the window is known).
+ * `refetch` resolves true only when its own response was stored; a failed,
+ * aborted or superseded request resolves false (it never rejects).
  */
 export function useContentCalendar(
   start?: string,
@@ -52,7 +54,7 @@ export function useContentCalendar(
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
-  const fetchCalendar = useCallback(async () => {
+  const fetchCalendar = useCallback(async (): Promise<boolean> => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -65,10 +67,13 @@ export function useContentCalendar(
         controller.signal,
         t("loadCalendarFailed"),
       );
-      if (isCurrent()) setCalendar(data);
+      if (!isCurrent()) return false;
+      setCalendar(data);
+      return true;
     } catch (err) {
-      if (controller.signal.aborted || !isCurrent()) return;
+      if (controller.signal.aborted || !isCurrent()) return false;
       setError(errorMessage(err, t("unknown")));
+      return false;
     } finally {
       if (isCurrent()) setLoading(false);
     }

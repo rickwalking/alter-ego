@@ -279,4 +279,33 @@ describe("CalendarPage views", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
+
+  // Scenario: A failed sync does not claim to be up to date
+  it("syncs the visible range and hides the sync time after a failure", async () => {
+    const user = userEvent.setup();
+    const refetch = vi
+      .fn<() => Promise<boolean>>()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    mockUseContentCalendar.mockReturnValue({
+      calendar: { items: [], start: "", end: "", total: 0 },
+      loading: false,
+      error: null,
+      refetch,
+    });
+    renderPage("?view=week&date=2026-10-21");
+    await user.click(screen.getByRole("button", { name: "Sync" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/^Synced at /)).toBeInTheDocument();
+
+    mockUseContentCalendar.mockReturnValue({
+      calendar: null,
+      loading: false,
+      error: "Failed to load calendar",
+      refetch,
+    });
+    await user.click(screen.getByRole("button", { name: "Sync" }));
+    expect(screen.getByText("Failed to load calendar")).toBeInTheDocument();
+    expect(screen.queryByText(/^Synced at /)).not.toBeInTheDocument();
+  });
 });

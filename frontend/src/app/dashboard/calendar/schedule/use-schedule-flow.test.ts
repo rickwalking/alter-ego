@@ -9,7 +9,7 @@ import { useScheduleFlow } from "./use-schedule-flow";
 describe("useScheduleFlow", () => {
   // Scenario: The calendar refreshes and confirms the schedule
   it("closes, refetches and confirms after a schedule", () => {
-    const refetch = vi.fn().mockResolvedValue(undefined);
+    const refetch = vi.fn().mockResolvedValue(true);
     const { result } = renderHook(() => useScheduleFlow(refetch));
     act(() => result.current.openDialog());
     expect(result.current.open).toBe(true);

@@ -12,7 +12,7 @@ import type { UseScheduleFlowResult } from "./types";
  * its new date and leaves a notice naming the post and its local time.
  */
 export function useScheduleFlow(
-  refetch: () => Promise<void>,
+  refetch: () => Promise<boolean>,
 ): UseScheduleFlowResult {
   const t = useTranslations("workflow.calendar");
   const locale = useLocale();

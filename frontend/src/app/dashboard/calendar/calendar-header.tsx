@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { CalendarHeaderProps } from "@/app/dashboard/calendar/types";
+import { CalendarSyncButton } from "@/app/dashboard/calendar/calendar-sync-button";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_BTN_GHOST,
@@ -18,6 +19,7 @@ import {
 export function CalendarHeader({
   loading,
   onSchedule,
+  sync,
 }: Readonly<CalendarHeaderProps>): React.ReactElement {
   const t = useTranslations("workflow.calendar");
   return (
@@ -53,9 +55,7 @@ export function CalendarHeader({
         </span>
       </div>
       <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-4">
-        <button type="button" style={CALENDAR_BTN_GHOST}>
-          <CalendarSvgIcon name="sync" size={14} /> Sync
-        </button>
+        <CalendarSyncButton {...sync} />
         <button
           type="button"
           aria-haspopup="dialog"

@@ -1265,6 +1265,11 @@
         },
         "approveFirst": "{title} — aprove primeiro",
         "untitled": "Sem título"
+      },
+      "sync": {
+        "button": "Sincronizar",
+        "syncing": "Sincronizando…",
+        "syncedAt": "Sincronizado às {time}"
       }
     },
     "kanban": {

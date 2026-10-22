@@ -15,6 +15,7 @@ import { CalendarToolbar } from "@/app/dashboard/calendar/calendar-toolbar";
 import { CalendarViewBody } from "@/app/dashboard/calendar/calendar-view-body";
 import { ScheduleDialog } from "@/app/dashboard/calendar/schedule/schedule-dialog";
 import { useScheduleFlow } from "@/app/dashboard/calendar/schedule/use-schedule-flow";
+import { useCalendarSync } from "@/app/dashboard/calendar/use-calendar-sync";
 
 function CalendarScreen(): React.ReactElement {
   const today = useClientToday();
@@ -23,6 +24,7 @@ function CalendarScreen(): React.ReactElement {
     calendarView;
   const { days, loading, error, refetch } = useCalendarDays(view, focus, today);
   const schedule = useScheduleFlow(refetch);
+  const { syncing, syncedAt, sync } = useCalendarSync(refetch);
 
   return (
     <div
@@ -43,7 +45,15 @@ function CalendarScreen(): React.ReactElement {
           <NeonSpinner size="lg" />
         </div>
       )}
-      <CalendarHeader loading={loading} onSchedule={schedule.openDialog} />
+      <CalendarHeader
+        loading={loading}
+        onSchedule={schedule.openDialog}
+        sync={{
+          syncing,
+          syncedAt: error ? null : syncedAt,
+          onSync: () => void sync(),
+        }}
+      />
       <ScheduleDialog
         open={schedule.open}
         onClose={schedule.close}
