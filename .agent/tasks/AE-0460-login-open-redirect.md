@@ -66,6 +66,13 @@ None.
 Reproduced on prod (`scripts/redirect.js` in the AE-0453 QA run), failing table-driven tests first (15/36 red),
 fix, logout route cases added.
 
+### 2026-10-22 04:20
+
+Orchestrator security review: dot segments (`/.//host`, `/..//host`, `/%2E%2E//host`, `/dashboard/..//host`) were
+normalised by URL parsing into `//host` AFTER the input checks. The normalised target is now re-checked (shape +
+same origin) and the login page is matched by its parsed pathname (`/login`, `/login/…`), so `/login-help` is no
+longer rejected. Dot-segment cases added (12 red first); reviewer fuzz set: 0 off-origin.
+
 ## Files Touched
 
 - frontend/src/modules/identity/lib/login-redirect.ts (new)

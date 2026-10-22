@@ -20,6 +20,7 @@ describe("sanitizeLoginRedirect", () => {
     ["/blog?q=agent%20loops", "/blog?q=agent%20loops"],
     ["/dashboard/../dashboard/calendar", "/dashboard/calendar"],
     ["/", "/"],
+    ["/login-help", "/login-help"],
   ])("keeps %s", (input, expected) => {
     expect(sanitizeLoginRedirect(input)).toBe(expected);
   });
@@ -41,6 +42,17 @@ describe("sanitizeLoginRedirect", () => {
     ["javascript:alert(1)"],
     ["data:text/html,hi"],
     ["https:example.org"],
+    ["/.//example.org"],
+    ["/..//example.org"],
+    ["/a/..//example.org"],
+    ["/x/../..//example.org"],
+    ["/./.././/example.org"],
+    ["/..;/..//example.org"],
+    ["/%2E//example.org"],
+    ["/%2E%2E//example.org"],
+    ["/.%2e//example.org"],
+    ["/dashboard/..//evil.com/x?y#z"],
+    ["/.//login"],
   ])("rejects %s", (input) => {
     expect(sanitizeLoginRedirect(input)).toBe(FALLBACK);
   });
@@ -80,6 +92,7 @@ describe("sanitizeLoginRedirect", () => {
     ["/login?redirect=/dashboard"],
     ["/login/"],
     ["/dashboard/../login"],
+    ["/login#x"],
   ])("rejects %s", (input) => {
     expect(sanitizeLoginRedirect(input)).toBe(FALLBACK);
   });

@@ -35,17 +35,39 @@ function decodedForms(value: string): string[] | null {
   return forms;
 }
 
-/** The path, query and hash of `value` when it parses to the placeholder origin. */
-function sameOriginTarget(value: string): string | null {
+/** `value` parsed against the placeholder origin, or null when it leaves it. */
+function sameOriginUrl(value: string): URL | null {
   const parsed = new URL(value, LOGIN_REDIRECT_PARSE_ORIGIN);
-  if (parsed.origin !== LOGIN_REDIRECT_PARSE_ORIGIN) {
-    return null;
-  }
-  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  return parsed.origin === LOGIN_REDIRECT_PARSE_ORIGIN ? parsed : null;
 }
 
-function isLoginPage(target: string): boolean {
-  return target.startsWith(PUBLIC_ROUTE_PATHS.LOGIN);
+function isLoginPage(pathname: string): boolean {
+  return (
+    pathname === PUBLIC_ROUTE_PATHS.LOGIN ||
+    pathname.startsWith(`${PUBLIC_ROUTE_PATHS.LOGIN}/`)
+  );
+}
+
+/**
+ * The normalised path + query + hash of `value` when it stays a same-origin
+ * page. URL parsing removes dot segments (``/.//host`` becomes ``//host``), so
+ * the normalised target is checked again and must still parse to the same
+ * origin.
+ */
+function safeTarget(value: string): string | null {
+  const parsed = sameOriginUrl(value);
+  if (!parsed) {
+    return null;
+  }
+  const target = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  if (
+    hasUnsafeShape(target) ||
+    !sameOriginUrl(target) ||
+    isLoginPage(parsed.pathname)
+  ) {
+    return null;
+  }
+  return target;
 }
 
 /**
@@ -53,16 +75,13 @@ function isLoginPage(target: string): boolean {
  *
  * Rejects absolute and scheme-relative URLs, backslashes, control characters
  * (tab, newline, NUL), also when hidden behind percent-encoding (``/%5Chost``,
- * ``/%2F%2Fhost``), malformed encodings, and the login page itself.
+ * ``/%2F%2Fhost``) or dot segments (``/.//host``), malformed encodings, and the
+ * login page itself.
  */
 export function sanitizeLoginRedirect(redirect: string | null): string {
   const forms = redirect ? decodedForms(redirect) : null;
   if (!redirect || !forms || forms.some(hasUnsafeShape)) {
     return DEFAULT_LOGIN_REDIRECT;
   }
-  const target = sameOriginTarget(redirect);
-  if (!target || isLoginPage(target)) {
-    return DEFAULT_LOGIN_REDIRECT;
-  }
-  return target;
+  return safeTarget(redirect) ?? DEFAULT_LOGIN_REDIRECT;
 }

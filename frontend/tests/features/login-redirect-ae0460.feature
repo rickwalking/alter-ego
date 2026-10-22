@@ -14,7 +14,7 @@ Feature: Login return path stays on this site
     Then I land on "/dashboard/chat"
 
   Scenario: Absolute and scheme-relative URLs are rejected
-    Given the login link carries "redirect=https://example.org/" or "redirect=//example.org"
+    Given the login link carries "redirect=https://example.org/", "redirect=//example.org" or a dot-segment path such as "redirect=/.//example.org" that normalizes to "//example.org"
     When I sign in
     Then I land on "/dashboard/chat"
 
