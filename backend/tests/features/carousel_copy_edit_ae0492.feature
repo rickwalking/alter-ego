@@ -48,3 +48,26 @@ Feature: The owner saves the Instagram caption and the LinkedIn posts of a carou
   Scenario: An empty or oversized save is rejected
     When the owner sends no text, or a caption longer than 2200 characters
     Then the request is refused with 422
+
+  Scenario: Saving the texts keeps the carousel approved for publish
+    Given the carousel is approved for publish
+    When the owner saves a new caption
+    Then the carousel is still approved for publish
+    And publishing it on Instagram is not refused and sends the new caption
+
+  Scenario: Instagram publishing sends the saved caption
+    Given the carousel has a saved caption
+    When the owner publishes it on Instagram without sending a caption
+    Then the saved caption is the one published
+
+  Scenario: A caption the page has not saved is never published
+    Given the carousel has a saved caption
+    When a publish request carries a different caption
+    Then the request is refused with 409 "caption_not_saved"
+    And nothing is published
+
+  Scenario: A carousel without a saved caption is not published
+    Given the carousel has no saved caption
+    When the owner publishes it on Instagram
+    Then the request is refused with 409 "caption_missing"
+    And nothing is published

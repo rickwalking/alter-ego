@@ -26,6 +26,10 @@ from rag_backend.api.schemas import (
     InstagramPublishResponse,
     InstagramPublishStatusResponse,
 )
+from rag_backend.domain.constants.carousel_copy_edit import (
+    ERR_CAPTION_MISSING,
+    ERR_CAPTION_NOT_SAVED,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
@@ -35,7 +39,7 @@ from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_AI_ENDPOINTS,
     RATE_LIMIT_CAROUSEL_PUBLISH,
 )
-from rag_backend.domain.models import CarouselStatus, User
+from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import (
     CarouselRepository,
     SocialPublisher,
@@ -102,6 +106,20 @@ def get_publishing_module_for_distribution(
     )
 
 
+def _caption_to_publish(project: CarouselProject, sent: str | None) -> str:
+    """The saved caption; 409 when it is empty or the page sent other text.
+
+    The caption saved through ``PATCH /copy`` is the only text published, so an
+    edit the page has not saved can never reach Instagram.
+    """
+    saved = project.caption or ""
+    if sent is not None and sent != saved:
+        raise HTTPException(status_code=409, detail=ERR_CAPTION_NOT_SAVED)
+    if not saved.strip():
+        raise HTTPException(status_code=409, detail=ERR_CAPTION_MISSING)
+    return saved
+
+
 @router.post(
     "/{project_id}/caption",
     responses={
@@ -138,7 +156,12 @@ async def generate_caption(
         401: {"description": ERR_NOT_AUTHENTICATED},
         403: {"description": ERR_FORBIDDEN},
         404: {"description": ERR_NOT_FOUND},
-        409: {"description": "Carousel not completed"},
+        409: {
+            "description": (
+                "Carousel not completed, the caption is not saved or empty, "
+                "or a publish is already running"
+            )
+        },
         503: {"description": "Public base URL not configured"},
     },
 )
@@ -152,9 +175,11 @@ async def publish_to_instagram(
     publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> InstagramPublishResponse:
-    """Publish the carousel's slides to Instagram with the provided caption.
+    """Publish the carousel's slides to Instagram with the saved caption.
 
-    Returns 409 when an autopilot run owns the carousel or a publish is running.
+    Returns 409 when an autopilot run owns the carousel, a publish is running,
+    the saved caption is empty, or the request carries a caption that differs
+    from the saved one (``caption_not_saved``).
     """
     project = await repo.get_project_by_id(project_id)
     if project is None:
@@ -173,6 +198,7 @@ async def publish_to_instagram(
             status_code=409,
             detail=ERR_CAROUSEL_NOT_COMPLETED,
         )
+    caption = _caption_to_publish(project, body.caption)
     slides = await repo.get_slides_by_project(project_id)
     assert_carousel_artifacts_healthy(project, slides)
     slide_numbers = [slide.slide_number for slide in slides]
@@ -196,7 +222,7 @@ async def publish_to_instagram(
                 session=db,
                 publisher=publisher,
                 project_id=str(project_id),
-                caption=body.caption,
+                caption=caption,
                 image_urls=tuple(image_urls),
                 public_base_url=configured_public_base_url(),
             )

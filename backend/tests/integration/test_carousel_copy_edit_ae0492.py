@@ -19,6 +19,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_CONTENT,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.models import (
     CarouselProject,
@@ -50,6 +51,8 @@ INITIAL_LOCK_VERSION: Final = 1
 STATE_PUBLISHED: Final = "published"
 STUB_IG_POST_ID: Final = "17890000000000001"
 IF_MATCH: Final = "If-Match"
+PUBLIC_BASE_URL: Final = "https://public.test"
+PUBLISHED_POST_ID: Final = "IG_after_copy_edit"
 
 
 async def _make_engine(db_path: str) -> AsyncEngine:
@@ -112,9 +115,7 @@ class CopyEnv:
                 current_phase=PHASE_CONTENT,
                 phase_status=PHASE_STATUS_AWAITING_HUMAN,
             )
-            created = await PostgresCarouselRepository(session).create_project(
-                project
-            )
+            created = await PostgresCarouselRepository(session).create_project(project)
             project_id = str(created.id)
             session.add(
                 BlogPostModel.from_entity({
@@ -144,6 +145,18 @@ class CopyEnv:
             for key, value in values.items():
                 setattr(model, key, value)
             await session.commit()
+
+    async def workflow_status(self, project_id: str) -> str:
+        """The carousel row's ``workflow_status``."""
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        async with get_session_maker()() as session:
+            model = await session.get(CarouselProjectModel, project_id)
+            assert model is not None
+            return model.workflow_status
 
     async def mark_instagram_published(self, project_id: str) -> None:
         """Record a finished manual Instagram publish for the carousel."""
@@ -365,3 +378,52 @@ async def test_empty_or_oversized_save_is_rejected(
     async with copy_env.client_for(copy_env.owner) as client:
         resp = await _patch_copy(client, project_id, body)
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_saving_the_texts_keeps_the_carousel_approved(
+    copy_env: CopyEnv, tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Scenario: Saving the texts keeps the carousel approved for publish
+    from unittest.mock import AsyncMock
+
+    from rag_backend.domain.protocols import PublishResult
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.infrastructure.container import get_container
+    from tests.integration.carousel_consolidation.helpers import (
+        create_minimal_carousel_artifacts,
+    )
+
+    project_id = await copy_env.seed_carousel()
+    output_dir = str(tmp_path) + "/carousel-output"
+    await copy_env.set_project(
+        project_id,
+        {
+            "workflow_status": WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+            "output_dir": output_dir,
+        },
+    )
+    await create_minimal_carousel_artifacts(project_id, output_dir=output_dir)
+    monkeypatch.setenv("CAROUSEL_PUBLIC_BASE_URL", PUBLIC_BASE_URL)
+    get_settings.cache_clear()
+    publisher = AsyncMock()
+    publisher.publish_instagram = AsyncMock(
+        return_value=PublishResult(status="published", post_id=PUBLISHED_POST_ID),
+    )
+    container = get_container()
+    container.instagram_publisher.override(publisher)
+    try:
+        async with copy_env.client_for(copy_env.owner) as client:
+            saved = await _patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+            status_after_save = await copy_env.workflow_status(project_id)
+            published = await client.post(
+                f"/api/carousels/{project_id}/publish/instagram",
+                json={"caption": EDITED_CAPTION},
+            )
+    finally:
+        container.instagram_publisher.reset_override()
+    assert saved.status_code == 200
+    assert status_after_save == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+    assert published.status_code == 200, published.text
+    assert published.json()["ig_post_id"] == PUBLISHED_POST_ID
+    assert publisher.publish_instagram.call_args[0][0] == EDITED_CAPTION

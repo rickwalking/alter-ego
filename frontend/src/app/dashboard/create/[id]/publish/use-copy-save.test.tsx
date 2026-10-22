@@ -28,6 +28,13 @@ function okResponse(lockVersion: number): Response {
   );
 }
 
+function conflict(detail: string): Response {
+  return new Response(JSON.stringify({ detail }), {
+    status: 409,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 function sentIfMatch(
   fetchMock: ReturnType<typeof vi.fn>,
   call: number,
@@ -85,12 +92,7 @@ describe("useCopySave (AE-0492)", () => {
   it("rejects with the API error so the panel can explain it", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ detail: "version_conflict" }), {
-          status: 409,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
+      vi.fn().mockResolvedValue(conflict("caption_published")),
     );
     const refreshAll = vi.fn();
     const { result } = renderHook(
@@ -99,9 +101,39 @@ describe("useCopySave (AE-0492)", () => {
     );
     await expect(result.current!({ caption: "x" })).rejects.toMatchObject({
       status: 409,
-      detail: "version_conflict",
+      detail: "caption_published",
     });
     expect(refreshAll).not.toHaveBeenCalled();
+  });
+
+  // Scenario: A save from a stale page refetches the current lock version
+  it("refetches the page on a version conflict so the next save uses the new lock version", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(conflict("version_conflict"))
+      .mockResolvedValueOnce(okResponse(6));
+    vi.stubGlobal("fetch", fetchMock);
+    let loadedLockVersion = 3;
+    const refreshAll = vi.fn(() => {
+      loadedLockVersion = 5;
+      return Promise.resolve();
+    });
+    const { result, rerender } = renderHook(
+      () => useCopySave(PROJECT_ID, loadedLockVersion, refreshAll),
+      { wrapper: wrapper() },
+    );
+    await act(async () => {
+      await expect(result.current!({ caption: "Draft" })).rejects.toMatchObject(
+        { status: 409, detail: "version_conflict" },
+      );
+    });
+    expect(refreshAll).toHaveBeenCalledTimes(1);
+    rerender();
+    await act(async () => {
+      await result.current!({ caption: "Draft" });
+    });
+    expect(sentIfMatch(fetchMock, 0)).toBe("3");
+    expect(sentIfMatch(fetchMock, 1)).toBe("5");
   });
 
   // Scenario: Saving the edited caption sends it with the loaded lock version

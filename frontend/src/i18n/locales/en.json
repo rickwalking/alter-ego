@@ -1159,7 +1159,7 @@
       "unsaved": "Unsaved changes. Save to copy or publish.",
       "errors": {
         "save": "Could not save. Try again.",
-        "stale": "This carousel changed since the page opened. Reload the page and save again (copy your text first).",
+        "stale": "This carousel changed since the page opened. The page now has the latest version: check your text and save again.",
         "captionPublished": "The caption is already published on Instagram and can no longer be changed.",
         "runInProgress": "A workflow step is running. Save when it finishes."
       },

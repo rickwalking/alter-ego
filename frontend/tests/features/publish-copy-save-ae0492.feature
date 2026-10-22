@@ -33,6 +33,12 @@ Feature: The publish page saves the caption and the LinkedIn posts
     When the save is refused as stale, as already published, or while a run is active
     Then the page shows the matching message and keeps the edited text
 
+  Scenario: A save from a stale page refetches the current lock version
+    Given the carousel changed after the page was loaded
+    When the save is refused as "version_conflict"
+    Then the page refetches the carousel and its current lock version
+    And saving again, without a reload, sends the current lock version
+
   Scenario: Leaving with unsaved edits asks first in the page's own dialog
     Given the owner edited a text without saving
     When they follow a link to another dashboard page

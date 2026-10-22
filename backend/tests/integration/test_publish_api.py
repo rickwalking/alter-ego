@@ -1,6 +1,7 @@
 """Integration tests for the Instagram publish route.
 
-Gherkin: tests/features/instagram_publisher.feature
+Gherkin: tests/features/instagram_publisher.feature and, for the saved
+caption, tests/features/carousel_copy_edit_ae0492.feature
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ from rag_backend.domain.models import CarouselStatus, User, UserRole
 from rag_backend.domain.protocols import PublishResult
 
 TEST_SECRET = "test-secret-for-publish-api-integration-tests!"
+SAVED_CAPTION = "saved caption"
+UNSAVED_CAPTION = "caption typed but never saved"
 
 
 @pytest.fixture(autouse=True)
@@ -139,6 +142,7 @@ async def _seed_completed_project(client: AsyncClient) -> str:
         assert proj is not None
         proj.status = CarouselStatus.COMPLETED
         proj.output_dir = "/tmp/test-carousel-output"
+        proj.caption = SAVED_CAPTION
         await repo.update_project(proj)
         model = await session.get(CarouselProjectModel, project_id)
         if model is not None:
@@ -180,7 +184,7 @@ class TestInstagramPublishRoute:
 
         resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
-            json={"caption": "hello"},
+            json={"caption": SAVED_CAPTION},
         )
         container.instagram_publisher.reset_override()
         assert resp.status_code == 503, resp.text
@@ -226,14 +230,54 @@ class TestInstagramPublishRoute:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_422_on_empty_caption(self, client_and_container):
-        client, _ = client_and_container
+    async def test_unsaved_caption_is_refused_and_nothing_published(
+        self, client_and_container, monkeypatch
+    ):
+        # Scenario: A caption the page has not saved is never published
+        client, container = client_and_container
         project_id = await _seed_completed_project(client)
+        monkeypatch.setenv("CAROUSEL_PUBLIC_BASE_URL", "https://public.test")
+        from rag_backend.infrastructure.config.settings import get_settings
+
+        get_settings.cache_clear()
+        fake = AsyncMock()
+        fake.publish_instagram = AsyncMock(
+            return_value=PublishResult(status="published", post_id="never"),
+        )
+        container.instagram_publisher.override(fake)
         resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
-            json={"caption": ""},
+            json={"caption": UNSAVED_CAPTION},
         )
-        assert resp.status_code == 422
+        status = await client.get(
+            f"/api/carousels/{project_id}/publish/instagram/status",
+        )
+        container.instagram_publisher.reset_override()
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "caption_not_saved"
+        assert fake.publish_instagram.await_count == 0
+        assert status.json()["state"] == "unpublished"
+
+    @pytest.mark.asyncio
+    async def test_empty_saved_caption_is_refused(
+        self, client_and_container, monkeypatch
+    ):
+        # Scenario: A carousel without a saved caption is not published
+        client, container = client_and_container
+        project_id = await _seed_completed_project(client)
+        await _set_caption(project_id, None)
+        fake = AsyncMock()
+        container.instagram_publisher.override(fake)
+        resp = await client.post(
+            f"/api/carousels/{project_id}/publish/instagram",
+            json={},
+        )
+        container.instagram_publisher.reset_override()
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "caption_missing"
+        assert fake.publish_instagram.await_count == 0
 
     @pytest.mark.asyncio
     async def test_happy_path_returns_published(
@@ -258,7 +302,7 @@ class TestInstagramPublishRoute:
 
         resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
-            json={"caption": "my caption"},
+            json={},
         )
         container.instagram_publisher.reset_override()
         assert resp.status_code == 200
@@ -266,7 +310,9 @@ class TestInstagramPublishRoute:
         assert body["status"] == "published"
         assert body["ig_post_id"] == "IG_17895_post"
 
+        # Scenario: Instagram publishing sends the saved caption
         call_args = fake.publish_instagram.call_args
+        assert call_args[0][0] == SAVED_CAPTION
         urls = call_args[0][1]
         assert all(url.startswith("https://public.test/") for url in urls)
 
@@ -293,7 +339,7 @@ class TestInstagramPublishRoute:
 
         resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
-            json={"caption": "caption"},
+            json={"caption": SAVED_CAPTION},
         )
         container.instagram_publisher.reset_override()
         body = resp.json()
@@ -338,7 +384,7 @@ class TestInstagramPublishRoute:
         container.instagram_publisher.override(fake)
         resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
-            json={"caption": "again"},
+            json={"caption": SAVED_CAPTION},
         )
         status = await client.get(
             f"/api/carousels/{project_id}/publish/instagram/status",
@@ -352,6 +398,27 @@ class TestInstagramPublishRoute:
         assert status.json()["state"] == "published"
         assert status.json()["permalink"] == "https://instagram.com/p/kept"
         assert status.json()["error"] is None
+
+
+async def _set_caption(project_id: str, caption: str | None) -> None:
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    import rag_backend.infrastructure.database.config as db_config
+    from rag_backend.infrastructure.database.carousel_repository import (
+        PostgresCarouselRepository,
+    )
+
+    assert db_config.c_engine is not None
+    Session = async_sessionmaker(db_config.c_engine, expire_on_commit=False)
+    async with Session() as session:
+        repo = PostgresCarouselRepository(session)
+        from uuid import UUID
+
+        proj = await repo.get_project_by_id(UUID(project_id))
+        assert proj is not None
+        proj.caption = caption
+        await repo.update_project(proj)
+        await session.commit()
 
 
 async def _seed_posted_run(project_id: str, post_id: str, permalink: str) -> None:

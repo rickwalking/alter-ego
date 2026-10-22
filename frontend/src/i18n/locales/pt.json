@@ -1159,7 +1159,7 @@
       "unsaved": "Alterações não salvas. Salve para copiar ou publicar.",
       "errors": {
         "save": "Não foi possível salvar. Tente de novo.",
-        "stale": "Este carrossel mudou desde que a página abriu. Recarregue a página e salve de novo (copie seu texto antes).",
+        "stale": "Este carrossel mudou desde que a página abriu. A página já tem a versão mais recente: confira seu texto e salve de novo.",
         "captionPublished": "A legenda já foi publicada no Instagram e não pode mais ser alterada.",
         "runInProgress": "Uma etapa do fluxo está em andamento. Salve quando ela terminar."
       },
