@@ -258,11 +258,12 @@ services:
         max-file: "3"
 
   minio:
-    # AE-0331: Docker Hub's minio/minio is no longer pullable (digest, latest and
-    # dated tags all 'pull access denied'), which aborted the 2026-09-15 deploy at
-    # `compose pull` after `compose down` and left prod with no containers. Same
-    # release, served from quay.io.
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # AE-0480: MinIO, Inc. withdrew every public image (Docker Hub minio/minio
+    # since AE-0331, quay.io/minio/minio 401 since 2026-10-13). pgsty/minio is
+    # the community-maintained AGPLv3 fork of the same server: same `minio`
+    # binary, MINIO_* env, /data layout and bundled `mc`. This is its last
+    # release under the MinIO name; the tag@digest pin is immutable.
+    image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
     command: server /data
     environment:
       MINIO_ROOT_USER: langfuse
@@ -281,7 +282,7 @@ services:
         max-file: "3"
 
   minio-init:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
     entrypoint:
       - sh
       - -c
