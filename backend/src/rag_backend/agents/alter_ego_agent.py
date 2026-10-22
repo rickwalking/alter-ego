@@ -11,7 +11,9 @@ from uuid import UUID
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
+from langgraph.errors import GraphRecursionError
 
+from rag_backend.agents.chat_fallback import no_knowledge_reply
 from rag_backend.agents.chat_streaming import (
     chat_event_from_stream,
     is_token_event,
@@ -25,8 +27,14 @@ from rag_backend.agents.harness import (
 )
 from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools.knowledge_base import (
+    SearchToolOptions,
     build_list_documents_tool,
     build_search_documents_tool,
+)
+from rag_backend.domain.constants.chat_stream import (
+    ALTER_EGO_RECURSION_LIMIT,
+    ALTER_EGO_SEARCH_BUDGET,
+    SSE_EVENT_TOKEN,
 )
 from rag_backend.domain.constants.namespaces import NAMESPACE_PERSONAL
 from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
@@ -45,11 +53,14 @@ from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.external.chat_model_factory import build_chat_model
+from rag_backend.infrastructure.logging import get_logger
 from rag_backend.modules.knowledge import (
     KnowledgeSearchPort,
     RetrieverSearchAdapter,
 )
 from rag_backend.monitoring_langfuse import get_langfuse_handler
+
+logger = get_logger()
 
 _ALTER_EGO_FALLBACK_PROMPT = (
     "You are Pedro Marins. Not an AI assistant. Not a chatbot. You.\n\n"
@@ -125,8 +136,11 @@ class AlterEgoAgent:
         return [
             build_search_documents_tool(
                 self._knowledge_search,
-                top_k=10,
-                namespace_prefix="personal",
+                SearchToolOptions(
+                    top_k=10,
+                    namespace_prefix="personal",
+                    max_calls=ALTER_EGO_SEARCH_BUDGET,
+                ),
             ),
             build_list_documents_tool(
                 self._document_repository,
@@ -188,24 +202,42 @@ class AlterEgoAgent:
     ) -> AsyncIterator[ChatEvent]:
         """Streaming chat implementation.
 
-        Yields tokens as they arrive from the LLM.
+        Yields tokens as they arrive from the LLM. The agent loop is capped at
+        ``ALTER_EGO_RECURSION_LIMIT`` steps; when it runs out before answering
+        (for example searching again and again for something the knowledge base
+        does not have), the visitor gets an honest "not in my knowledge yet"
+        reply instead of an error.
         """
         full_response = ""
 
         callbacks = get_langfuse_handler()
-        lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+        lf_config: RunnableConfig = {"recursion_limit": ALTER_EGO_RECURSION_LIMIT}
+        if callbacks:
+            lf_config["callbacks"] = [callbacks]
 
-        async for event in self._agent.astream_events(
-            {"messages": [*chat_history, HumanMessage(content=message)]},
-            lf_config,
-            version="v2",
-        ):
-            chat_event = chat_event_from_stream(event)
-            if chat_event is None:
-                continue
-            if is_token_event(chat_event):
-                full_response += chat_event.get("content", "")
-            yield chat_event
+        try:
+            async for event in self._agent.astream_events(
+                {"messages": [*chat_history, HumanMessage(content=message)]},
+                lf_config,
+                version="v2",
+            ):
+                chat_event = chat_event_from_stream(event)
+                if chat_event is None:
+                    continue
+                if is_token_event(chat_event):
+                    full_response += chat_event.get("content", "")
+                yield chat_event
+        except GraphRecursionError:
+            logger.warning(
+                "alter_ego_step_limit_reached",
+                conversation_id=str(conversation_id),
+                limit=ALTER_EGO_RECURSION_LIMIT,
+            )
+            fallback = no_knowledge_reply(message)
+            if full_response:
+                fallback = f"\n\n{fallback}"
+            full_response += fallback
+            yield {"type": SSE_EVENT_TOKEN, "content": fallback}
 
         if persist_messages:
             assistant_message = Message(

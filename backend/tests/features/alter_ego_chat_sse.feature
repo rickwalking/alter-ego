@@ -88,9 +88,10 @@ Feature: Alter-Ego Public Chat Streaming
     When I POST to "/api/conversations/{conv-id}/chat/stream"
     Then the response status is 200
     And I receive exactly 2 token events
-    And I receive an error event with non-empty content
+    And I receive an error event with a generic message
     And the stream ends gracefully
     And no partial assistant message is persisted
+    And an apology assistant message is persisted instead
 
   # Failure — database error during user message persist
   Scenario: Database unavailable when persisting user message

@@ -11,10 +11,12 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.constants.chat_stream import (
+    CHAT_FAILED_REPLY,
     ERR_EMPTY_MESSAGE,
     SSE_EVENT_COMPLETE,
     SSE_EVENT_ERROR,
@@ -26,6 +28,8 @@ from rag_backend.infrastructure.database.conversation_repository import (
     PostgresConversationRepository,
     PostgresMessageRepository,
 )
+
+logger = structlog.get_logger()
 
 
 @dataclass(frozen=True)
@@ -178,6 +182,34 @@ async def _persist_assistant_response(
     return ctx.event_id
 
 
+async def _close_failed_turn(
+    repos: tuple[PostgresMessageRepository, AsyncSession],
+    conversation_id: UUID,
+) -> None:
+    """Answer the failed turn with an apology so its question never dangles.
+
+    Without it the next turn's agent would see an unanswered question first and
+    reply to that instead. Partial streamed text is never saved.
+    """
+    msg_repo, db = repos
+    try:
+        await db.rollback()
+        await msg_repo.create(
+            Message(
+                role=MessageRole.ASSISTANT,
+                content=CHAT_FAILED_REPLY,
+                conversation_id=conversation_id,
+                sources=[],
+            )
+        )
+        await db.commit()
+    except Exception:
+        logger.exception(
+            "chat_stream_failed_turn_not_saved",
+            conversation_id=str(conversation_id),
+        )
+
+
 def _stop_keep_alive(
     stop_event: asyncio.Event,
     keep_alive: asyncio.Task[None],
@@ -225,7 +257,8 @@ async def stream_chat_response(
     3. Build the agent and stream token events.
     4. Yield keep-alive pings every ``SSE_KEEP_ALIVE_INTERVAL_SECONDS``.
     5. Persist the assistant message and commit AFTER the stream ends.
-    6. On any exception, yield an error event and exit cleanly.
+    6. On any exception, log it, save an apology assistant turn, and yield a
+       generic error event (never the exception text) before exiting cleanly.
     """
     if not config.content or not config.content.strip():
         async for event in _yield_error(0, ERR_EMPTY_MESSAGE):
@@ -256,14 +289,17 @@ async def stream_chat_response(
         )
         await _persist_assistant_response((msg_repo, config.db), stream_ctx, queue)
     except Exception as exc:
+        logger.exception(
+            "chat_stream_failed",
+            conversation_id=str(config.conversation_id),
+            error_type=type(exc).__name__,
+        )
+        await _close_failed_turn((msg_repo, config.db), config.conversation_id)
         stream_ctx.event_id += 1
         await queue.put(
             _format_sse_event(
                 stream_ctx.event_id,
-                {
-                    "type": SSE_EVENT_ERROR,
-                    "content": f"Error processing message: {exc!s}",
-                },
+                {"type": SSE_EVENT_ERROR, "content": CHAT_FAILED_REPLY},
             )
         )
     finally:
