@@ -239,6 +239,18 @@ describe("BlogPostEditPage (AE-0424)", () => {
     expect(screen.getByText("Blog post not found.")).toBeInTheDocument();
   });
 
+  // Scenario: The blog editor's not-found and error states have a page heading
+  it.each([[true], [false]])(
+    "gives the load-failed=%s state a level-1 heading",
+    (loadFailed) => {
+      editorState.mockReturnValue(state({ post: undefined, loadFailed }));
+      render(<BlogPostEditPage />);
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        loadFailed ? "Could not load this post" : "Blog post not found.",
+      );
+    },
+  );
+
   it("disables the review controls while a slot action runs", () => {
     slotsPending.mockReturnValue(true);
     editorState.mockReturnValue(
