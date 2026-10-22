@@ -442,7 +442,6 @@
     "backend/tests/features/publish_chat_sse.feature::Carousel copy refinement triggers cache invalidation",
     "backend/tests/features/publish_chat_sse.feature::Client resumes publish stream after connection drop",
     "backend/tests/features/publish_chat_sse.feature::Image regeneration tool is called",
-    "backend/tests/features/publish_chat_sse.feature::User tries to access another user's publish chat",
     "backend/tests/features/qa_followups_ae0416.feature::The editorial distribution build passes research only to EN",
     "backend/tests/features/rbac.feature::Admin can list all users",
     "backend/tests/features/rbac.feature::Authenticated user can access search",

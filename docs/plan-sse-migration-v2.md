@@ -249,7 +249,7 @@ The metadata check becomes a **defense-in-depth** validation rather than the pri
 
 | Endpoint | Auth Required | Auth Method |
 |----------|---------------|-------------|
-| `POST /conversations/{id}/chat/stream` | None | No auth; conversation is ephemeral |
+| `POST /conversations/{id}/chat/stream` | Optional | Anonymous conversations are open; a signed-in user's conversation answers 404 to anyone but its owner or an admin |
 | `POST /conversations/{id}/publish-chat/stream` | Required | Cookie: `access_token` only |
 
 **Anonymous Alter-Ego chat**: No auth required. Each page refresh creates a fresh conversation. No cookies, no localStorage, no history. The conversation exists in the DB only for the lifetime of the stream, then becomes orphaned (cleanup job can be added later).

@@ -2,7 +2,8 @@
 
 Provides two dedicated endpoints:
 
-* ``POST /conversations/{id}/chat/stream`` — Alter-Ego public chat (no auth).
+* ``POST /conversations/{id}/chat/stream`` — Alter-Ego chat (auth optional;
+  a signed-in user's conversation answers 404 to anyone but its owner or an admin).
 * ``POST /conversations/{id}/publish-chat/stream`` — Carousel agent chat (auth required).
 
 Both return ``text/event-stream`` responses with incremental event IDs for
@@ -34,13 +35,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.api.constants import (
-    ERR_CONVERSATION_NOT_FOUND,
     ERR_NOT_AUTHENTICATED,
     ERR_NOT_CAROUSEL_CONVERSATION,
     ERR_NOT_FOUND,
     MEDIA_TYPE_STREAM,
 )
 from rag_backend.api.dependencies import (
+    get_optional_user,
     require_authenticated_user,
 )
 from rag_backend.api.dependencies.agents import (
@@ -54,6 +55,10 @@ from rag_backend.api.dependencies.carousel_access import (
 from rag_backend.api.dependencies.conversation import (
     get_conversation_stream_handler,
     get_legacy_chat_agent_factory,
+)
+from rag_backend.api.dependencies.resource_access import (
+    assert_conversation_writable,
+    raise_conversation_not_found,
 )
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import ChatRequest, ErrorResponse
@@ -162,6 +167,7 @@ async def chat_stream(
     conversation_id: UUID,
     body: ChatRequest,
     request: Request,
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
     db: Annotated[AsyncSession, Depends(get_session)] = None,
     handler: Annotated[
         ConversationStreamHandler | None, Depends(get_conversation_stream_handler)
@@ -172,8 +178,9 @@ async def chat_stream(
 ) -> StreamingResponse:
     """Send a message to the Alter-Ego agent and stream the response via SSE.
 
-    No authentication required. Conversations are ephemeral — each page
-    refresh creates a fresh session. No cookies or localStorage are used.
+    Anonymous visitors chat in anonymous conversations. A conversation owned by
+    a signed-in user accepts messages only from its owner or an admin; anyone
+    else, like an unknown id, gets 404 before the stream starts.
     """
     if db is None or handler is None or agent_factory is None:
         raise HTTPException(
@@ -181,6 +188,7 @@ async def chat_stream(
             detail="Database session not resolved",
         )
 
+    await _load_writable_conversation(db, conversation_id, user)
     await _enforce_message_cap(db, conversation_id)
 
     command = StreamChatCommand(
@@ -265,19 +273,27 @@ async def publish_chat_stream(
     )
 
 
+async def _load_writable_conversation(
+    db: AsyncSession,
+    conversation_id: UUID,
+    user: User | None,
+) -> Conversation:
+    """Load a conversation the caller may write to; 404 when missing or foreign."""
+    service = _make_conversation_service(db)
+    conversation = await service.get_conversation(conversation_id)
+    if conversation is None:
+        raise_conversation_not_found()
+    assert_conversation_writable(conversation, user)
+    return conversation
+
+
 async def _load_carousel_conversation(
     db: AsyncSession,
     conversation_id: UUID,
     user: User,
 ) -> Conversation:
     """Load + access-check a carousel-bound conversation (404/403/400 order)."""
-    service = _make_conversation_service(db)
-    conversation = await service.get_conversation(conversation_id)
-    if conversation is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_CONVERSATION_NOT_FOUND,
-        )
+    conversation = await _load_writable_conversation(db, conversation_id, user)
     assert_carousel_conversation_chat_access(conversation, user)
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
         raise HTTPException(
