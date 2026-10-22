@@ -24,15 +24,23 @@ export interface ProjectSources {
   extractKeyPoints: (sourceId: string) => Promise<void>;
 }
 
-/** The project's source list: load on mount, refresh, extract key points. */
-export function useProjectSources(
+/** The extracted source, or the error message to show. */
+async function tryExtract(
   projectId: string,
-  onSourcesChange?: (sources: ContentSource[]) => void,
-): ProjectSources {
-  const [sources, setSources] = useState<ContentSource[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  sourceId: string,
+): Promise<{ updated: ContentSource } | { error: string }> {
+  try {
+    return { updated: await postExtract(projectId, sourceId) };
+  } catch (err) {
+    return { error: errorMessage(err, ERR_EXTRACT) };
+  }
+}
 
+/** The source list plus a setter that also notifies the parent. */
+function useSourceList(
+  onSourcesChange?: (sources: ContentSource[]) => void,
+): [ContentSource[], (next: ContentSource[]) => void] {
+  const [sources, setSources] = useState<ContentSource[]>([]);
   const updateSources = useCallback(
     (next: ContentSource[]) => {
       setSources(next);
@@ -40,6 +48,17 @@ export function useProjectSources(
     },
     [onSourcesChange],
   );
+  return [sources, updateSources];
+}
+
+/** The project's source list: load on mount, refresh, extract key points. */
+export function useProjectSources(
+  projectId: string,
+  onSourcesChange?: (sources: ContentSource[]) => void,
+): ProjectSources {
+  const [sources, updateSources] = useSourceList(onSourcesChange);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadSources = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -55,15 +74,15 @@ export function useProjectSources(
 
   const extractKeyPoints = async (sourceId: string): Promise<void> => {
     setError(null);
-    let updated: ContentSource;
-    try {
-      updated = await postExtract(projectId, sourceId);
-    } catch (err) {
-      setError(errorMessage(err, ERR_EXTRACT));
+    const outcome = await tryExtract(projectId, sourceId);
+    if ("error" in outcome) {
+      setError(outcome.error);
       return;
     }
     updateSources(
-      sources.map((source) => (source.id === sourceId ? updated : source)),
+      sources.map((source) =>
+        source.id === sourceId ? outcome.updated : source,
+      ),
     );
   };
 

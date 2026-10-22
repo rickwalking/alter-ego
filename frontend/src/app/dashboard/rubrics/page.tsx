@@ -1,6 +1,7 @@
 "use client";
 
 import { NeonButton } from "@/components/atoms/neon-button";
+import { ActionErrorAlert } from "@/components/atoms/action-error-alert";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
@@ -64,15 +65,7 @@ export default function RubricsPage(): React.ReactElement {
             <NeonSpinner size="lg" />
           </div>
         )}
-        {createError && (
-          <p
-            role="alert"
-            className="text-center py-4"
-            style={{ color: NEON_RED }}
-          >
-            {createError}
-          </p>
-        )}
+        <ActionErrorAlert message={createError} />
         {error && !loading && (
           <p className="text-center py-8" style={{ color: NEON_RED }}>
             {error}
