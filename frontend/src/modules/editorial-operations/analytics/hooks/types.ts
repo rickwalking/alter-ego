@@ -15,7 +15,10 @@ export interface EditorialAnalyticsSummary {
   average_views: number;
   pending_review: number;
   draft_count: number;
-  quality_score_average: number;
+  /** Average content rubric score (0-100); null when there is none. */
+  quality_score_average: number | null;
+  /** How many content rubric scores the average is built from. */
+  quality_score_count: number;
 }
 
 export interface EditorialAnalytics {

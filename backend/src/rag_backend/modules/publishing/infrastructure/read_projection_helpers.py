@@ -29,6 +29,20 @@ _FIRST_PARAGRAPH_MAX_LEN = 200
 _BODY_CONTENT_KEYS = ("markdown", "body")
 
 
+def as_number(value: object) -> float:
+    """Narrow a summary value to a number for the typed projection (no ``Any``)."""
+    if isinstance(value, (int, float)):
+        return value
+    return 0.0
+
+
+def as_optional_number(value: object) -> float | None:
+    """Like :func:`as_number`, but an absent value stays ``None``."""
+    if value is None:
+        return None
+    return float(as_number(value))
+
+
 def extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
     """Split the markdown ``# Heading: Subtitle`` line (legacy helper, identical)."""
     lines = markdown.strip().split("\n")
@@ -93,6 +107,8 @@ def _body_from_row(row: BlogPostModel | None) -> str | None:
 
 
 __all__ = [
+    "as_number",
+    "as_optional_number",
     "extract_first_paragraph",
     "extract_title_and_subtitle",
     "resolve_blog_body",

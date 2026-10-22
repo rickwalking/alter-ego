@@ -48,6 +48,7 @@ describe("DashboardAnalyticsStats", () => {
           pending_review: 3,
           draft_count: 4,
           quality_score_average: 81,
+          quality_score_count: 3,
         },
         velocity_by_week: [],
       },
@@ -59,8 +60,33 @@ describe("DashboardAnalyticsStats", () => {
       </>,
     );
     expect(screen.getByText("12")).toBeInTheDocument();
+    // Scenario: With content scores the tile shows the average and the count
     expect(screen.getByText("81%")).toBeInTheDocument();
     expect(screen.getByText("in review")).toBeInTheDocument();
+  });
+
+  it("says there is no data without a quality score", () => {
+    // Scenario: Without content scores the tile says there is no data
+    const state = analytics({
+      data: {
+        summary: {
+          total_posts: 2,
+          published_this_week: 1,
+          published_this_month: 1,
+          content_velocity_per_week: 1,
+          status_breakdown: { published: 2 },
+          average_views: 0,
+          pending_review: 0,
+          draft_count: 0,
+          quality_score_average: null,
+          quality_score_count: 0,
+        },
+        velocity_by_week: [],
+      },
+    });
+    render(<DashboardAnalyticsStats state={state} />);
+    expect(screen.getByText("No data")).toBeInTheDocument();
+    expect(screen.queryByText(/%$/)).toBeNull();
   });
 
   it("renders no activity lists without data", () => {

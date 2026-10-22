@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.infrastructure.database.models.persona_rubric import (
+    RubricEvaluationScoreModel,
+)
+
+AD_HOC_EVALUATION_CONTENT_ID = str(UUID(int=0))
+QUALITY_SCORE_DECIMALS = 1
 
 
 class EditorialAnalyticsService:
@@ -49,6 +56,7 @@ class EditorialAnalyticsService:
 
         in_review = status_counts.get("under_review", 0)
         drafts = status_counts.get("draft", 0)
+        quality_average, quality_count = await self._content_quality_score(db)
 
         return {
             "total_posts": len(posts),
@@ -59,7 +67,8 @@ class EditorialAnalyticsService:
             "average_views": avg_views,
             "pending_review": in_review,
             "draft_count": drafts,
-            "quality_score_average": self._estimate_quality_score(posts),
+            "quality_score_average": quality_average,
+            "quality_score_count": quality_count,
         }
 
     @staticmethod
@@ -90,22 +99,21 @@ class EditorialAnalyticsService:
         return buckets
 
     @staticmethod
-    def _estimate_quality_score(posts: list[BlogPostModel]) -> float:
-        if not posts:
-            return 0.0
-        scores: list[float] = []
-        for post in posts:
-            metadata = post.ai_generation_metadata or {}
-            if isinstance(metadata, dict):
-                score = metadata.get("quality_score")
-                if isinstance(score, (int, float)):
-                    scores.append(float(score))
-        if not scores:
-            published_ratio = sum(1 for p in posts if p.status == "published") / len(
-                posts
-            )
-            return round(published_ratio * 100, 1)
-        return round(sum(scores) / len(scores), 1)
+    async def _content_quality_score(db: AsyncSession) -> tuple[float | None, int]:
+        """Average ``overall_score`` of content rubric scores, and how many.
+
+        Ad-hoc evaluations of pasted text carry the nil content id and are not a
+        score of any content, so they are left out. Without a content score the
+        average is ``None``: the dashboard shows "no data", never a stand-in.
+        """
+        query = select(
+            func.avg(RubricEvaluationScoreModel.overall_score),
+            func.count(RubricEvaluationScoreModel.id),
+        ).where(RubricEvaluationScoreModel.content_id != AD_HOC_EVALUATION_CONTENT_ID)
+        average, count = (await db.execute(query)).one()
+        if not count:
+            return None, 0
+        return round(float(average), QUALITY_SCORE_DECIMALS), int(count)
 
 
 __all__ = ["EditorialAnalyticsService"]

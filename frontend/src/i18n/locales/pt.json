@@ -1543,6 +1543,8 @@
       "publishedWeek": "Publicados Esta Semana",
       "pendingReview": "Aguardando Revisão",
       "qualityScore": "Score Médio de Qualidade",
+      "qualityScoreEmpty": "Sem dados",
+      "qualityScoreCount": "{count, plural, one {# avaliação} other {# avaliações}}",
       "velocityTitle": "Velocidade de Publicação (8 semanas)",
       "loadFailed": "Falha ao carregar analytics",
       "disabledTitle": "Analytics editorial desativado",

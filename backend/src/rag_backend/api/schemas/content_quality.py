@@ -50,7 +50,12 @@ class EditorialAnalyticsSummary(BaseModel):
     average_views: int
     pending_review: int
     draft_count: int
-    quality_score_average: float
+    quality_score_average: float | None = Field(
+        description="Average content rubric score (0-100); null without scores."
+    )
+    quality_score_count: int = Field(
+        description="How many content rubric scores the average is built from."
+    )
 
 
 class EditorialVelocityWeek(BaseModel):
