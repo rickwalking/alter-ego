@@ -1213,7 +1213,31 @@
         "awaiting_human": "aguardando você"
       },
       "emptyMonth": "Nenhum conteúdo agendado neste mês",
-      "emptyMonthHint": "Agende um post ou carrossel para vê-lo no calendário."
+      "emptyMonthHint": "Agende um post ou carrossel para vê-lo no calendário.",
+      "toolbar": {
+        "viewsLabel": "Visualização do calendário",
+        "views": {
+          "month": "Mês",
+          "week": "Semana",
+          "day": "Dia"
+        },
+        "previous": {
+          "month": "Mês anterior",
+          "week": "Semana anterior",
+          "day": "Dia anterior"
+        },
+        "next": {
+          "month": "Próximo mês",
+          "week": "Próxima semana",
+          "day": "Próximo dia"
+        },
+        "today": "Hoje"
+      },
+      "agenda": {
+        "allDay": "Dia inteiro",
+        "emptyDay": "Nada agendado para este dia",
+        "openDay": "Abrir {date} na visualização do dia"
+      }
     },
     "kanban": {
       "retry": "Tentar novamente"

@@ -130,13 +130,17 @@ describe("buildCalendarDaysFromApi", () => {
     expect(grid.find((c) => c.iso === "2026-07-10")?.events).toHaveLength(0);
   });
 
-  it("matches by the date prefix so a UTC time component cannot shift the day", () => {
+  it("carries the item id and its instant onto a timestamped event", () => {
     const grid = buildCalendarDaysFromApi(
       new Date(2026, 6, 1),
-      [makeItem({ event_date: "2026-07-10T23:30:00Z" })],
+      [makeItem({ id: "post-9", event_date: "2026-07-10T12:00:00Z" })],
       null,
     );
-    expect(grid.find((c) => c.iso === "2026-07-10")?.events).toHaveLength(1);
+    const events = grid.find((c) => c.iso === "2026-07-10")?.events;
+    expect(events?.[0]).toMatchObject({
+      id: "post-9",
+      at: "2026-07-10T12:00:00Z",
+    });
   });
 
   it("falls back to an empty grid shape when there are no items", () => {
