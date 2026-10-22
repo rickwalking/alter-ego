@@ -41,7 +41,7 @@ frontend/
   `@/modules/<context>` is the required public contract; **every other barrel**
   (design-system `@/components/{atoms,molecules}`, module layer sub-barrels,
   co-located feature `index.ts`) is **optional sugar** — concrete paths are the
-  convention. Full decision + `knip.json` `entry` config:
+  convention. Full decision + `knip.ts` `entry` config:
   [`src/modules/README.md` → Barrel-import policy](src/modules/README.md#barrel-import-policy-ae-0241).
 - **Presentation components** must not call `useQuery` or `fetch` — data flows via props from feature hooks/pages.
 

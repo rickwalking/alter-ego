@@ -90,7 +90,7 @@ large, review-heavy change with no behavioral benefit; it would only be
 undertaken if the team later chose "barrel as the sole import surface" — a
 separate, explicitly-scoped ticket, not assumed here.
 
-**knip config (the enforcement of this decision):** `frontend/knip.json` lists the
+**knip config (the enforcement of this decision):** `frontend/knip.ts` lists the
 optional barrels as `entry` — `src/components/{atoms,molecules}/index.ts`,
 `src/modules/**/index.ts`, and `src/app/**/index.ts` — so knip no longer reports
 them as false "unused files". (The export-level dead-code ratchet,
