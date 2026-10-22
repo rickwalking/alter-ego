@@ -127,7 +127,7 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
     """Factory for a request-scoped ConversationService."""
     conv_repo = PostgresConversationRepository(db)
     msg_repo = PostgresMessageRepository(db)
-    return ConversationService(conv_repo, msg_repo, max_context_tokens=4000)
+    return ConversationService(conv_repo, msg_repo)
 
 
 def _parse_last_event_id(request: Request) -> int | None:

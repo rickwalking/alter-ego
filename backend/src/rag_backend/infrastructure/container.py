@@ -155,7 +155,6 @@ class Container(containers.DeclarativeContainer):
         ConversationService,
         conversation_repository=conversation_repository,
         message_repository=message_repository,
-        max_context_tokens=4000,
     )
 
     carousel_repository = providers.Factory(

@@ -429,7 +429,7 @@ class DocumentService(Protocol):
 ## 4. Dependency Injection Container
 
 ```python
-# src/rag_backend/container.py
+# src/rag_backend/infrastructure/container.py
 """Dependency injection container using dependency-injector."""
 
 from dependency_injector import containers, providers
@@ -511,7 +511,7 @@ container = Container()
 ```
 
 ```python
-# src/rag_backend/api/dependencies.py
+# src/rag_backend/api/dependencies/ (package)
 """FastAPI dependencies using the DI container."""
 
 from fastapi import Depends, Request

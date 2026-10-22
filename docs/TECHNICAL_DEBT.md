@@ -25,8 +25,8 @@ Items below were identified during Phase 2–3 implementation and QA. They are *
 
 | Field | Value |
 |-------|-------|
-| **File** | `frontend/src/features/blog/hooks/use-blog-posts.ts` |
-| **Issue** | Uses plain `fetch()` instead of `authenticatedFetch`; inconsistent with Phase 2 hooks |
+| **File** | `frontend/src/modules/publishing/blog/hooks/use-blog-posts.ts` |
+| **Issue** | Uses plain `fetch()` instead of `authenticatedFetch`; inconsistent with Phase 2 hooks. Status 2026-10-21: the hook now uses `authenticatedFetch`; the `reviewer_id` query param remains on submit-review |
 | **Also** | Stale `reviewer_id` query param on approve (`:99`) — backend uses `current_user.id` |
 | **Reference** | OWASP A07, QA Security WARN |
 | **Acceptance** | All blog CRUD/workflow calls use `authenticatedFetch`; remove dead `reviewer_id` param |
@@ -353,7 +353,7 @@ Carried forward from Phase 4 QA (2026-05-24):
 | TD-033 | P1 | Frontend plagiarism check UI — API exists, no component |
 | TD-034 | P1 | Frontend AI disclosure badge — API exists, no UI |
 | TD-035 | P2 | `BlogPostRepository` loads full ORM rows — no column deferral for listings |
-| TD-036 | P2 | CDN wired for blog AI images only; `resolve_carousel_image()` unused |
+| TD-036 | P2 | CDN wired for blog AI images only; no carousel image resolver (the unused `resolve_carousel_image()` was removed as dead code) |
 | TD-037 | P1 | Phase 4 frontend Vitest tests (SEO, a11y, filters, shortcuts, analytics) |
 | TD-038 | P1 | Phase 4 integration tests — 5/7 Gherkin scenarios not CI-verified |
 | TD-039 | P2 | Middleware editor-role gate for `/blog-posts`, `/analytics` (API enforces `EditorUser`) |
@@ -394,7 +394,7 @@ Carried forward from Phase 4 QA (2026-05-24):
 | Field | Value |
 |-------|-------|
 | **File** | `backend/src/rag_backend/application/services/asset_cdn_service.py` |
-| **Issue** | `resolve_carousel_image()` defined but not wired to carousel routes |
+| **Issue** | Carousel routes never rewrite image URLs to the CDN. The unused `resolve_carousel_image()` helper was removed as dead code (2026-10-21); wiring needs a new resolver |
 | **Reference** | PERF-002 partial |
 | **Acceptance** | Carousel slide/image URLs rewritten when `cdn_enabled=true` |
 

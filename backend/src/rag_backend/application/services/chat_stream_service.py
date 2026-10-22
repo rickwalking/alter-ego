@@ -125,7 +125,6 @@ async def _setup_message_repos(
     conversation_service = ConversationService(
         conversation_repository=conv_repo,
         message_repository=msg_repo,
-        max_context_tokens=4000,
     )
     conversation = await conversation_service.get_conversation(conversation_id)
     if conversation is None:

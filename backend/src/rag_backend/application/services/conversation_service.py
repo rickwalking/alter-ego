@@ -4,21 +4,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from uuid import UUID
 
-from rag_backend.domain.models import Conversation, Message, MessageRole
+from rag_backend.domain.models import Conversation, Message
 from rag_backend.domain.protocols import ConversationRepository, MessageRepository
 from rag_backend.domain.protocols.repositories import _UserQuery
 
-MAX_TITLE_TOKENS = 100
+MAX_TITLE_LENGTH = 100
 MAX_FALLBACK_TITLE_LENGTH = 50
-
-
-@dataclass(frozen=True)
-class _MessageData:
-    """Payload for adding a message to a conversation."""
-
-    role: MessageRole
-    content: str
-    sources: list[dict[str, object]] | None = None
 
 
 @dataclass(frozen=True)
@@ -38,11 +29,9 @@ class ConversationService:
         self,
         conversation_repository: ConversationRepository,
         message_repository: MessageRepository,
-        max_context_tokens: int = 4000,
     ) -> None:
         self._conversation_repository = conversation_repository
         self._message_repository = message_repository
-        self._max_context_tokens = max_context_tokens
 
     async def create_conversation(
         self,
@@ -166,8 +155,8 @@ class ConversationService:
             title = await llm_generate_func([{"role": "user", "content": prompt}])
             title = title.strip().strip('"').strip("'")
 
-            if len(title) > MAX_TITLE_TOKENS:
-                title = title[: MAX_TITLE_TOKENS - 3] + "..."
+            if len(title) > MAX_TITLE_LENGTH:
+                title = title[: MAX_TITLE_LENGTH - 3] + "..."
 
             conversation = await self._conversation_repository.get_by_id(
                 conversation_id

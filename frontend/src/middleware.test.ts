@@ -73,11 +73,7 @@ describe("middleware route guard (AE-0446)", () => {
     expect(location(response)).toBe(`${ORIGIN}/dashboard/chat`);
   });
 
-  /**
-   * Pinned as-is: "/chat" is a public route, matched before the session check,
-   * so the "signed-in public chat -> dashboard chat" branch is unreachable.
-   * Behaviour unchanged by owner decision.
-   */
+  /** "/chat" is a public route: it returns before the session is read. */
   it("keeps the public chat public even with a session", async () => {
     verifyAccessToken.mockResolvedValue({ role: "viewer" });
     expect(location(await middleware(request("/chat", "ok")))).toBeNull();

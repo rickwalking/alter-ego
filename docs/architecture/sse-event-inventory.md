@@ -103,7 +103,7 @@ above; the frontend contract test enforces this against the artifact.
 
 ### `EDITORIAL_WORKFLOW_SSE_EVENTS` (`src/constants/editorial-workflow.ts`)
 
-Consumed by `src/features/create/hooks/use-editorial-workflow-sse.ts`.
+Consumed by `src/modules/editorial/workspace/hooks/use-editorial-workflow-sse.ts`.
 
 | Key | Value | Mirrors backend |
 |-----|-------|-----------------|
@@ -118,7 +118,7 @@ Consumed by `src/features/create/hooks/use-editorial-workflow-sse.ts`.
 
 ### `SSE_EVENT_TYPE` (`src/lib/sse-client.ts`)
 
-Consumed by `src/features/chat/hooks/use-sse-chat.ts`.
+Consumed by `src/modules/conversation/hooks/use-sse-chat.ts`.
 
 | Key | Value | Mirrors backend |
 |-----|-------|-----------------|

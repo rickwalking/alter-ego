@@ -9,7 +9,6 @@ import {
   isAdminRoute,
   isEditorDashboardRoute,
   isLegacyEditorRoute,
-  isPublicChatRoute,
   isStaticAsset,
   COOKIE_ACCESS_TOKEN,
   ROLES,
@@ -68,13 +67,16 @@ function roleCanOpen(pathname: string, role: string): boolean {
   return !editorOnly || role === ROLES.ADMIN || role === ROLES.EDITOR;
 }
 
-/** A signed-in user: skip login/public chat, enforce the role. */
+/**
+ * A signed-in user: skip login, enforce the role. The public chat never gets
+ * here: public routes return before the session is read.
+ */
 function authenticatedResponse(
   request: NextRequest,
   pathname: string,
   role: string,
 ): NextResponse {
-  if (isAuthRoute(pathname) || isPublicChatRoute(pathname)) {
+  if (isAuthRoute(pathname)) {
     return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
   }
   if (!roleCanOpen(pathname, role)) {

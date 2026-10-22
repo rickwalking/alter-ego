@@ -61,8 +61,8 @@ src/rag_backend/
 ├── api/
 │   ├── routes/           # FastAPI route handlers
 │   ├── middleware/       # ASGI middleware
-│   ├── schemas.py        # Pydantic models (grouped by category)
-│   ├── dependencies.py   # FastAPI dependencies
+│   ├── schemas/          # Pydantic models (one module per category)
+│   ├── dependencies/     # FastAPI dependencies (one module per concern)
 │   └── app.py            # Application factory
 ├── application/
 │   ├── services/         # Business logic services

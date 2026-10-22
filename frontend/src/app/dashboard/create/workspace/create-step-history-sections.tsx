@@ -4,11 +4,7 @@ import { useTranslations } from "next-intl";
 import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
 import { TEXT_DIM } from "@/constants/neon";
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import {
-  resolveLocalizedSlides,
-  resolveSlideDraftPreview,
-  resolveSlideDraftTitle,
-} from "@/modules/editorial";
+import { resolveLocalizedSlides } from "@/modules/editorial";
 
 const TITLE_COLOR = "rgba(255,255,255,0.88)";
 
@@ -81,7 +77,11 @@ export function OutlineHistory({
   );
 }
 
-/** The localized review when present, else the raw slide drafts. */
+/**
+ * The localized review of the content step. `resolveLocalizedSlides` turns
+ * every slide draft into a localized slide, so with no localized slides there
+ * are no drafts either and only the empty count is shown.
+ */
 export function ContentHistory({
   state,
 }: Readonly<StepHistorySectionProps>): React.JSX.Element {
@@ -96,26 +96,11 @@ export function ContentHistory({
       />
     );
   }
-  const drafts = state.slide_drafts;
   return (
     <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
       <p className="font-medium" style={{ color: TITLE_COLOR }}>
-        {t("contentTitle", { count: drafts.length })}
+        {t("contentTitle", { count: 0 })}
       </p>
-      <ol className="list-decimal space-y-3 pl-5">
-        {drafts.map((slide, index) => {
-          const record = slide;
-          const text = resolveSlideDraftPreview(record);
-          return (
-            <li key={`draft-${index}`}>
-              <p className="font-medium" style={{ color: TITLE_COLOR }}>
-                {resolveSlideDraftTitle(record, t("untitledSlide"))}
-              </p>
-              {text ? <p className="mt-1 whitespace-pre-wrap">{text}</p> : null}
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
 }
