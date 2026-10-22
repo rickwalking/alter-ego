@@ -4,13 +4,14 @@ import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_BTN_GHOST,
   CALENDAR_COLORS,
-  CALENDAR_FLEX_CENTER,
   CALENDAR_MONO_FONT,
 } from "@/modules/editorial-operations";
 
 /**
  * `pl-14` clears the layout-level mobile hamburger; layout and z-index use
  * Tailwind (stacking-map aligned) while the neon surface styling stays inline.
+ * Like NeonTopBar it wraps on narrow screens: the breadcrumb hides below `sm`
+ * and the actions take their own full-width row, so nothing is clipped.
  */
 export function CalendarHeader({
   loading,
@@ -19,7 +20,7 @@ export function CalendarHeader({
 }>): React.ReactElement {
   return (
     <div
-      className="sticky top-0 z-50 flex h-14 items-center justify-between pr-4 pl-14 md:pr-8 lg:pl-8"
+      className="sticky top-0 z-50 flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 pr-4 pl-14 md:py-0 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${CALENDAR_COLORS.bdr}`,
         background: "rgba(6,10,18,0.6)",
@@ -27,7 +28,7 @@ export function CalendarHeader({
         opacity: loading ? 0.5 : 1,
       }}
     >
-      <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>
+      <div className="flex min-w-0 items-center gap-3">
         <span
           style={{
             fontSize: 16,
@@ -39,6 +40,7 @@ export function CalendarHeader({
           Calendar
         </span>
         <span
+          className="hidden sm:inline"
           style={{
             fontFamily: CALENDAR_MONO_FONT,
             fontSize: 11,
@@ -48,7 +50,7 @@ export function CalendarHeader({
           / <span style={{ color: CALENDAR_COLORS.tM }}>content calendar</span>
         </span>
       </div>
-      <div style={{ ...CALENDAR_FLEX_CENTER, gap: 16 }}>
+      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-4">
         <button type="button" style={CALENDAR_BTN_GHOST}>
           <CalendarSvgIcon name="sync" size={14} /> Sync
         </button>
