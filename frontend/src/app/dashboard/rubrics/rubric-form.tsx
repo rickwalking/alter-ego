@@ -7,7 +7,7 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { NEON_RED } from "@/constants/neon";
-import { ResourceRequestError } from "@/lib/use-resource-collection";
+import { requestErrorText } from "@/lib/use-resource-collection";
 import { useUnsavedChangesGuard } from "@/modules/publishing";
 import type {
   QualityRubric,
@@ -16,7 +16,10 @@ import type {
 import { RUBRIC_NAME_MAX } from "@/schemas/rubric";
 import { RubricContentTypesField } from "./rubric-content-types-field";
 import { RubricCriteriaList } from "./rubric-criteria-list";
-import { RubricField, invalidProps } from "./rubric-field";
+import {
+  NeonLabelledField,
+  invalidProps,
+} from "@/components/molecules/neon-labelled-field";
 import { useRubricForm } from "./use-rubric-form";
 
 const FIRST_INVALID_SELECTOR =
@@ -29,13 +32,6 @@ export interface RubricFormProps {
   onSave: (payload: QualityRubricCreatePayload) => Promise<void>;
   /** Leave the form without saving. */
   onCancel: () => void;
-}
-
-/** The server's own sentence when it sent one, else the translated fallback. */
-function saveErrorText(err: unknown, fallback: string): string {
-  return err instanceof ResourceRequestError && err.detail
-    ? err.detail
-    : fallback;
 }
 
 /** The rubric create/edit form: fields, criteria list, validation and save. */
@@ -75,7 +71,7 @@ export function RubricForm({
     try {
       await onSave(form.toPayload());
     } catch (err) {
-      setServerError(saveErrorText(err, t("errors.save")));
+      setServerError(requestErrorText(err, t("errors.save")));
       setSaving(false);
     }
   };
@@ -91,7 +87,11 @@ export function RubricForm({
       <h2 id="rubric-form-title" className="text-lg font-bold">
         {rubric ? t("editTitle") : t("createTitle")}
       </h2>
-      <RubricField id="rubric-name" label={t("name")} error={errorOf("name")}>
+      <NeonLabelledField
+        id="rubric-name"
+        label={t("name")}
+        error={errorOf("name")}
+      >
         <NeonInput
           id="rubric-name"
           value={form.state.name}
@@ -101,15 +101,15 @@ export function RubricForm({
           {...invalidProps("rubric-name", errorOf("name"))}
           onChange={(e) => form.setName(e.target.value)}
         />
-      </RubricField>
-      <RubricField id="rubric-description" label={t("description")}>
+      </NeonLabelledField>
+      <NeonLabelledField id="rubric-description" label={t("description")}>
         <NeonTextarea
           id="rubric-description"
           value={form.state.description}
           placeholder={t("descriptionPlaceholder")}
           onChange={(e) => form.setDescription(e.target.value)}
         />
-      </RubricField>
+      </NeonLabelledField>
       <RubricContentTypesField
         selected={form.state.applicable_content_types}
         error={errorOf("applicable_content_types")}

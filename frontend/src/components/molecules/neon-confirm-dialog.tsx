@@ -1,26 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonModal } from "@/components/molecules/neon-modal";
 import { NEON_RED } from "@/constants/neon";
-import { ResourceRequestError } from "@/lib/use-resource-collection";
-import type { QualityRubric } from "@/modules/quality";
+import { requestErrorText } from "@/lib/use-resource-collection";
 
-interface RubricDeleteDialogProps {
-  rubric: QualityRubric;
+export interface NeonConfirmDialogProps {
+  title: string;
+  body: ReactNode;
+  confirmLabel: string;
+  cancelLabel: string;
+  /** Shown when the action fails without a message of its own. */
+  errorFallback: string;
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }
 
-/** Asks before deleting a rubric; a refusal (e.g. the default rubric) stays visible. */
-export function RubricDeleteDialog({
-  rubric,
+/**
+ * Asks before a destructive action. Cancel takes focus first; a refusal
+ * (the API's own sentence, or ``errorFallback``) stays visible in the dialog.
+ */
+export function NeonConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  errorFallback,
   onConfirm,
   onClose,
-}: Readonly<RubricDeleteDialogProps>): React.ReactElement {
-  const t = useTranslations("rubrics.delete");
+}: Readonly<NeonConfirmDialogProps>): React.ReactElement {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -35,9 +44,7 @@ export function RubricDeleteDialog({
     try {
       await onConfirm();
     } catch (err) {
-      const detail =
-        err instanceof ResourceRequestError ? err.detail : undefined;
-      setError(detail ?? t("error"));
+      setError(requestErrorText(err, errorFallback));
       setPending(false);
     }
   };
@@ -46,25 +53,23 @@ export function RubricDeleteDialog({
     <NeonModal
       open
       onClose={onClose}
-      title={t("title")}
+      title={title}
       footer={
         <div className="mt-6 flex justify-end gap-2">
           <NeonButton ref={cancelRef} variant="ghost" onClick={onClose}>
-            {t("cancel")}
+            {cancelLabel}
           </NeonButton>
           <NeonButton
             variant="danger"
             loading={pending}
             onClick={() => void handleConfirm()}
           >
-            {t("confirm")}
+            {confirmLabel}
           </NeonButton>
         </div>
       }
     >
-      <p className="text-sm text-text-muted">
-        {t("body", { name: rubric.name })}
-      </p>
+      <p className="text-sm text-text-muted">{body}</p>
       {error && (
         <p role="alert" className="mt-3 text-sm" style={{ color: NEON_RED }}>
           {error}

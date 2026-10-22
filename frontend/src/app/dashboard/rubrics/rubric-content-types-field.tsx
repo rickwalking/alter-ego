@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { NEON_RED } from "@/constants/neon";
 import { RUBRIC_CONTENT_TYPES } from "@/schemas/rubric";
 import { contentTypeOptions } from "./rubric-form-model";
-import { fieldErrorId } from "./rubric-field";
+import { fieldErrorId } from "@/components/molecules/neon-labelled-field";
 
 const FIELD_ID = "rubric-content-types";
 

@@ -43,6 +43,13 @@ export interface ResourceCollection<T, C, U> {
   delete: (id: string) => Promise<boolean>;
 }
 
+/** The API's own sentence for a failed request when it sent one, else ``fallback``. */
+export function requestErrorText(err: unknown, fallback: string): string {
+  return err instanceof ResourceRequestError && err.detail
+    ? err.detail
+    : fallback;
+}
+
 async function sendJson<T>(
   url: string,
   init: RequestInit,

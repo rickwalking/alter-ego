@@ -8,7 +8,10 @@ import { NeonSelect } from "@/components/atoms/neon-select";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { EVALUATION_METHODS, SCORING_SCALES } from "@/schemas/rubric";
 import type { CriterionDraft } from "./rubric-form-model";
-import { RubricField, invalidProps } from "./rubric-field";
+import {
+  NeonLabelledField,
+  invalidProps,
+} from "@/components/molecules/neon-labelled-field";
 import type { CriterionEdit } from "./use-rubric-form";
 
 const PROMPT_TOKEN = "{content}";
@@ -94,7 +97,7 @@ export function RubricCriterionFields(
       <div className="flex justify-end">
         <CriterionToolbar {...props} />
       </div>
-      <RubricField
+      <NeonLabelledField
         id={id("name")}
         label={t("form.criterionName")}
         error={errorOf("name")}
@@ -107,8 +110,8 @@ export function RubricCriterionFields(
           {...invalidProps(id("name"), errorOf("name"))}
           onChange={(e) => set("name")(e.target.value)}
         />
-      </RubricField>
-      <RubricField
+      </NeonLabelledField>
+      <NeonLabelledField
         id={id("description")}
         label={t("form.criterionDescription")}
       >
@@ -118,9 +121,9 @@ export function RubricCriterionFields(
           autoComplete="off"
           onChange={(e) => set("description")(e.target.value)}
         />
-      </RubricField>
+      </NeonLabelledField>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <RubricField
+        <NeonLabelledField
           id={id("weight")}
           label={t("form.weight")}
           error={errorOf("weight")}
@@ -136,8 +139,8 @@ export function RubricCriterionFields(
             {...invalidProps(id("weight"), errorOf("weight"))}
             onChange={(e) => set("weight")(e.target.value)}
           />
-        </RubricField>
-        <RubricField
+        </NeonLabelledField>
+        <NeonLabelledField
           id={id("min_threshold")}
           label={t("form.minThreshold")}
           error={errorOf("min_threshold")}
@@ -153,8 +156,8 @@ export function RubricCriterionFields(
             {...invalidProps(id("min_threshold"), errorOf("min_threshold"))}
             onChange={(e) => set("min_threshold")(e.target.value)}
           />
-        </RubricField>
-        <RubricField
+        </NeonLabelledField>
+        <NeonLabelledField
           id={id("evaluation_method")}
           label={t("form.evaluationMethod")}
         >
@@ -169,8 +172,11 @@ export function RubricCriterionFields(
               </option>
             ))}
           </NeonSelect>
-        </RubricField>
-        <RubricField id={id("scoring_scale")} label={t("form.scoringScale")}>
+        </NeonLabelledField>
+        <NeonLabelledField
+          id={id("scoring_scale")}
+          label={t("form.scoringScale")}
+        >
           <NeonSelect
             id={id("scoring_scale")}
             value={criterion.scoring_scale}
@@ -182,9 +188,9 @@ export function RubricCriterionFields(
               </option>
             ))}
           </NeonSelect>
-        </RubricField>
+        </NeonLabelledField>
       </div>
-      <RubricField
+      <NeonLabelledField
         id={id("prompt_template")}
         label={t("form.promptTemplate")}
         hint={t("form.promptHint", { token: PROMPT_TOKEN })}
@@ -194,7 +200,7 @@ export function RubricCriterionFields(
           value={criterion.prompt_template}
           onChange={(e) => set("prompt_template")(e.target.value)}
         />
-      </RubricField>
+      </NeonLabelledField>
     </fieldset>
   );
 }

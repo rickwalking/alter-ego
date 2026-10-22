@@ -99,8 +99,8 @@ Mutation: CI only.
 - frontend/src/app/dashboard/rubrics/rubric-criteria-list.tsx
 - frontend/src/app/dashboard/rubrics/rubric-criterion-fields.tsx
 - frontend/src/app/dashboard/rubrics/rubric-content-types-field.tsx
-- frontend/src/app/dashboard/rubrics/rubric-field.tsx
-- frontend/src/app/dashboard/rubrics/rubric-delete-dialog.tsx
+- frontend/src/components/molecules/neon-labelled-field.tsx
+- frontend/src/components/molecules/neon-confirm-dialog.tsx
 - frontend/src/app/dashboard/rubrics/rubrics-empty-state.tsx
 - frontend/src/schemas/rubric.ts
 - frontend/src/lib/use-resource-collection.ts

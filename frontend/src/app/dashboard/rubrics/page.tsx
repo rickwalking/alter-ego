@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
+import { NeonConfirmDialog } from "@/components/molecules/neon-confirm-dialog";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
-import { RubricDeleteDialog } from "@/app/dashboard/rubrics/rubric-delete-dialog";
 import { RubricForm } from "@/app/dashboard/rubrics/rubric-form";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
 import { RubricsEmptyState } from "@/app/dashboard/rubrics/rubrics-empty-state";
@@ -95,6 +95,7 @@ function RubricList({
 
 export default function RubricsPage(): React.ReactElement {
   const t = useTranslations("rubrics.page");
+  const tDelete = useTranslations("rubrics.delete");
   const {
     rubrics,
     loading,
@@ -163,8 +164,12 @@ export default function RubricsPage(): React.ReactElement {
       </div>
 
       {deleting && (
-        <RubricDeleteDialog
-          rubric={deleting}
+        <NeonConfirmDialog
+          title={tDelete("title")}
+          body={tDelete("body", { name: deleting.name })}
+          confirmLabel={tDelete("confirm")}
+          cancelLabel={tDelete("cancel")}
+          errorFallback={tDelete("error")}
           onConfirm={() => handleDelete(deleting)}
           onClose={() => setDeleting(null)}
         />

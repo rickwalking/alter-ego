@@ -19,7 +19,7 @@ export function invalidProps(
   };
 }
 
-interface RubricFieldProps {
+export interface NeonLabelledFieldProps {
   id: string;
   label: string;
   error?: string;
@@ -29,14 +29,14 @@ interface RubricFieldProps {
 }
 
 /** A labelled form control with its hint and (translated) error text. */
-export function RubricField({
+export function NeonLabelledField({
   id,
   label,
   error,
   hint,
   className,
   children,
-}: Readonly<RubricFieldProps>): React.ReactElement {
+}: Readonly<NeonLabelledFieldProps>): React.ReactElement {
   return (
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
       <label htmlFor={id} className="text-xs text-text-muted">
