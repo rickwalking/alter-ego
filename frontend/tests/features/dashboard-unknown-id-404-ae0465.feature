@@ -23,7 +23,7 @@ Feature: Dashboard pages answer 404 for unknown ids
     Then the workspace renders
 
   Scenario: A backend error leaves the page to show its own error
-    Given the backend answers 500 or 401 for the carousel
+    Given the backend answers 500 or 401 for the carousel, or does not answer within 3 seconds
     When I open its workspace
     Then the page renders and shows its own error or login handling
 
