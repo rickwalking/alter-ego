@@ -1,6 +1,6 @@
 # AE-0498 — Rubric must have at least one criterion
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Bug
@@ -35,11 +35,11 @@ API (`api/schemas/persona_rubric.py`, `criteria = Field(default_factory=list)` o
 
 ## Acceptance Criteria
 
-- [ ] Given the rubric form with no criteria, When "Criar rubrica" is clicked, Then save is blocked with
+- [x] Given the rubric form with no criteria, When "Criar rubrica" is clicked, Then save is blocked with
       the field message "Adicione ao menos um critério." and nothing is sent.
-- [ ] Given the API, When POST has `criteria: []` (or no `criteria`), Then it returns 422 and nothing is
+- [x] Given the API, When POST has `criteria: []` (or no `criteria`), Then it returns 422 and nothing is
       stored.
-- [ ] Given the API, When PUT has `criteria: []`, Then it returns 422 and the stored criteria are kept;
+- [x] Given the API, When PUT has `criteria: []`, Then it returns 422 and the stored criteria are kept;
       a PUT without `criteria` still updates the other fields.
 
 ## Gherkin Scenarios
@@ -67,11 +67,13 @@ Cause confirmed in both schemas; failing tests first.
 
 ## Files Touched
 
-(updated as work lands)
+- backend/src/rag_backend/api/schemas/persona_rubric.py
+- frontend/src/schemas/rubric.ts; frontend/src/app/dashboard/rubrics/rubric-form-model.ts, rubric-criteria-list.tsx; i18n en/pt
+- tests + features (backend integration, frontend page/model); docs/architecture/openapi.json
 
 ## Test Evidence
 
-(see `.agent/reports/AE-0498.dev-summary.md`)
+Red first on both sides, green after; backend capture and frontend gates green. See `.agent/reports/AE-0498.dev-summary.md`.
 
 ## QA Report
 
