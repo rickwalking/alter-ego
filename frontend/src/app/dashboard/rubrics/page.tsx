@@ -4,6 +4,7 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
+import { useCreateAction } from "@/lib/use-resource-collection";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
 import { mapQualityRubricToPanelData } from "@/modules/editorial-operations";
 import { useRubrics } from "@/modules/quality";
@@ -13,16 +14,16 @@ const PAGE_CONTENT_PADDING = "24px 32px";
 
 export default function RubricsPage(): React.ReactElement {
   const { rubrics, loading, error, create, refetch } = useRubrics();
+  const { createError, createAndRefresh } = useCreateAction(create, refetch);
 
   const handleNewRubric = async (): Promise<void> => {
     const name = window.prompt("Rubric name");
     if (!name?.trim()) return;
-    await create({
+    await createAndRefresh({
       name: name.trim(),
       applicable_content_types: ["carousel"],
       criteria: [],
     });
-    await refetch();
   };
 
   return (
@@ -62,6 +63,15 @@ export default function RubricsPage(): React.ReactElement {
           <div className="flex justify-center py-12">
             <NeonSpinner size="lg" />
           </div>
+        )}
+        {createError && (
+          <p
+            role="alert"
+            className="text-center py-4"
+            style={{ color: NEON_RED }}
+          >
+            {createError}
+          </p>
         )}
         {error && !loading && (
           <p className="text-center py-8" style={{ color: NEON_RED }}>

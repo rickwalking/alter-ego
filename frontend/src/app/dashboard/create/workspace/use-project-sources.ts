@@ -54,7 +54,14 @@ export function useProjectSources(
   }, [projectId, updateSources]);
 
   const extractKeyPoints = async (sourceId: string): Promise<void> => {
-    const updated = await postExtract(projectId, sourceId);
+    setError(null);
+    let updated: ContentSource;
+    try {
+      updated = await postExtract(projectId, sourceId);
+    } catch (err) {
+      setError(errorMessage(err, ERR_EXTRACT));
+      return;
+    }
     updateSources(
       sources.map((source) => (source.id === sourceId ? updated : source)),
     );

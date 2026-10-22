@@ -21,11 +21,14 @@ const NOTIFICATION: NotificationItem = {
   created_at: new Date(2026, 9, 17, 14, 5).toISOString(),
 };
 
+const hookState: { error: string | null } = { error: null };
+
 vi.mock("@/modules/editorial/workflow/hooks/use-notifications", () => ({
   useNotifications: () => ({
     notifications: [NOTIFICATION],
     unreadCount: 1,
     loading: false,
+    error: hookState.error,
     markRead: vi.fn(),
   }),
 }));
@@ -37,5 +40,14 @@ describe("NotificationCenter (AE-0417)", () => {
     fireEvent.click(screen.getByRole("button", { name: "ariaLabel" }));
     expect(screen.getByText("Revisão pendente")).toBeInTheDocument();
     expect(screen.getByText("17/10/2026, 14:05")).toBeInTheDocument();
+  });
+
+  // Scenario: A failed "mark as read" is shown in the notification panel
+  it("shows the notifications error in the panel", () => {
+    hookState.error = "markReadFailed";
+    render(<NotificationCenter />);
+    fireEvent.click(screen.getByRole("button", { name: "ariaLabel" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("markReadFailed");
+    hookState.error = null;
   });
 });

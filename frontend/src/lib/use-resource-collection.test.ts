@@ -3,7 +3,10 @@
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useResourceCollection } from "./use-resource-collection";
+import {
+  useCreateAction,
+  useResourceCollection,
+} from "./use-resource-collection";
 
 const authenticatedFetch = vi.fn<(...args: unknown[]) => Promise<Response>>();
 vi.mock("@/lib/authenticated-fetch", () => ({
@@ -87,5 +90,52 @@ describe("useResourceCollection (AE-0446)", () => {
     await expect(result.current.delete("x")).rejects.toThrow(
       "Failed to delete persona",
     );
+  });
+
+  it("clears an earlier load error when a reload succeeds", async () => {
+    // Scenario: A successful reload clears an earlier load error
+    authenticatedFetch.mockResolvedValueOnce(failed());
+    const { result } = renderCollection();
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+
+    authenticatedFetch.mockResolvedValueOnce(
+      ok({ items: [{ id: "a", name: "A" }] }),
+    );
+    await act(() => result.current.refetch());
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.items).toHaveLength(1);
+  });
+});
+
+describe("useCreateAction", () => {
+  it("shows a failed create and does not reload", async () => {
+    // Scenario: A failed create is shown on the personas and rubrics pages
+    const create = vi.fn(() =>
+      Promise.reject(new Error("Failed to create persona")),
+    );
+    const refetch = vi.fn(() => Promise.resolve());
+    const { result } = renderHook(() => useCreateAction(create, refetch));
+
+    await act(() => result.current.createAndRefresh({ name: "x" }));
+
+    expect(result.current.createError).toBe("Failed to create persona");
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("reloads after a successful create and clears the earlier error", async () => {
+    // Scenario: A failed create is shown on the personas and rubrics pages
+    const create = vi
+      .fn<(data: { name: string }) => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("Failed to create persona"))
+      .mockResolvedValueOnce({ id: "b" });
+    const refetch = vi.fn(() => Promise.resolve());
+    const { result } = renderHook(() => useCreateAction(create, refetch));
+
+    await act(() => result.current.createAndRefresh({ name: "x" }));
+    await act(() => result.current.createAndRefresh({ name: "y" }));
+
+    expect(result.current.createError).toBeNull();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
