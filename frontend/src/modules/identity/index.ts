@@ -39,7 +39,6 @@ export {
   COOKIE_ACCESS_TOKEN,
   STATIC_FILE_PATTERN,
   isPublicRoute,
-  isPublicChatRoute,
   isAuthRoute,
   isAdminRoute,
   isDashboardRoute,

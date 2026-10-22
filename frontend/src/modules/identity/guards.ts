@@ -54,10 +54,6 @@ export function isPublicRoute(pathname: string): boolean {
   return false;
 }
 
-export function isPublicChatRoute(pathname: string): boolean {
-  return pathname === PUBLIC_ROUTE_PATHS.CHAT;
-}
-
 export function isAuthRoute(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }

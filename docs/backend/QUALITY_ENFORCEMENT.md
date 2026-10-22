@@ -363,28 +363,12 @@ class SparseEmbedding(TypedDict):
     indices: list[int]
     values: list[float]
 
-class ImageResult(TypedDict):
-    number: int
-    status: str
-    path: str
-    skipped: bool
-
-class PipelineEvent(TypedDict):
-    node: str
-    status: str
-    phase_progress: dict[str, object] | None
-
 class ChatEvent(TypedDict, total=False):
     type: str
     content: str
     tool: str
     result: str
     sources: list[dict[str, object]]
-
-class StatsResponse(TypedDict):
-    total_vectors: int
-    dimension: int
-    index_fullness: float
 ```
 
 These replace `dict[str, Any]` in protocols and services with explicit, type-safe shapes.

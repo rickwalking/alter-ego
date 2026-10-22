@@ -24,11 +24,3 @@ class ChatEvent(TypedDict, total=False):
     tool: str
     result: str
     sources: list[dict[str, object]]
-
-
-class StatsResponse(TypedDict):
-    """Vector store statistics payload."""
-
-    total_vectors: int
-    dimension: int
-    index_fullness: float

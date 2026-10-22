@@ -3,7 +3,6 @@ import {
   isDashboardRoute,
   isEditorDashboardRoute,
   isPublicRoute,
-  isPublicChatRoute,
 } from "@/constants/middleware";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
@@ -49,13 +48,6 @@ describe("middleware route helpers", () => {
     it("Then create and knowledge require editor", () => {
       expect(isEditorDashboardRoute(DASHBOARD_ROUTES.CREATE)).toBe(true);
       expect(isEditorDashboardRoute(DASHBOARD_ROUTES.KNOWLEDGE)).toBe(true);
-    });
-  });
-
-  describe("isPublicChatRoute", () => {
-    it("Then only /chat matches", () => {
-      expect(isPublicChatRoute(PUBLIC_ROUTE_PATHS.CHAT)).toBe(true);
-      expect(isPublicChatRoute(DASHBOARD_ROUTES.CHAT)).toBe(false);
     });
   });
 });

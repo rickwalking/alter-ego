@@ -85,8 +85,8 @@ uv run ruff format src/          # Formatting
 
 ### File Organization
 - **Max 400 lines per file** — Split large files into focused modules
-- **Protocols in `domain/protocols.py`** — One file per category (e.g., `protocols/repository.py`, `protocols/services.py`)
-- **Pydantic models in `api/schemas.py`** — Grouped by category with clear section comments
+- **Protocols in `domain/protocols/`** — One file per category (e.g., `protocols/repositories.py`, `protocols/vector.py`)
+- **Pydantic models in `api/schemas/`** — One module per category
 - **Constants in `constants.py`** per module/context
 
 ### Architecture

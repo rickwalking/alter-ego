@@ -72,50 +72,6 @@ export function presentationBody(
   return typeof body === "string" ? body : "";
 }
 
-export function resolveSlideDraftTitle(
-  slide: Record<string, unknown>,
-  fallback: string,
-): string {
-  const presentationPt = asRecord(slide.presentation_pt);
-  const ptHeading = presentationHeading(presentationPt, "");
-  if (ptHeading.trim()) {
-    return ptHeading;
-  }
-  const title = slide.title;
-  if (typeof title === "string" && title.trim()) {
-    return title;
-  }
-  const heading = slide.heading;
-  if (typeof heading === "string" && heading.trim()) {
-    return heading;
-  }
-  return fallback;
-}
-
-export function resolveSlideDraftPreview(
-  slide: Record<string, unknown>,
-): string {
-  const presentationPt = asRecord(slide.presentation_pt);
-  const preview = resolvePresentationPreviewText(presentationPt);
-  if (preview.trim()) {
-    return preview;
-  }
-  const ptHeading = presentationHeading(presentationPt, "");
-  if (ptHeading.trim()) {
-    return ptHeading;
-  }
-  const draftText = slide.draft_text;
-  if (
-    typeof draftText === "string" &&
-    draftText.trim() &&
-    !draftText.trim().startsWith("{")
-  ) {
-    return draftText;
-  }
-  const body = slide.body;
-  return typeof body === "string" ? body : "";
-}
-
 export function isPresentationStructuredItem(
   value: unknown,
 ): value is PresentationStructuredItem {

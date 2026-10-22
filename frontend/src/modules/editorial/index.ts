@@ -116,8 +116,6 @@ export {
   asRecord,
   presentationHeading,
   presentationBody,
-  resolveSlideDraftTitle,
-  resolveSlideDraftPreview,
   isPresentationStructuredItem,
   isPresentationStructuredItemList,
   listPresentationStructuredItems,

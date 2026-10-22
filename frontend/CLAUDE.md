@@ -13,7 +13,7 @@ frontend/
 │   │   ├── molecules/    # Composed units (NeonCard, NeonModal, NeonStatCard, …)
 │   │   ├── organisms/    # Sections (NeonSidebar, NeonKanbanBoard, NeonTopBar, …)
 │   │   └── layout/       # App shell layouts
-│   ├── features/         # Feature-based modules
+│   ├── modules/          # Bounded-context modules (see src/modules/README.md)
 │   ├── lib/              # Utilities and API client
 │   ├── schemas/          # Zod validation schemas (neon-*.ts)
 │   ├── constants/        # Application constants (neon.ts, api.ts, …)
