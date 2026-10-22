@@ -75,7 +75,7 @@ vi.mock("@/modules/publishing", () => ({
     isPending: false,
   }),
   useRepublishCarousel: () => ({ mutate: m.republish }),
-  useCarouselBlogPostHref: () => ({
+  useCarouselPublicPostHref: () => ({
     href: m.blogHref,
     refetch: m.refetchBlogHref,
   }),

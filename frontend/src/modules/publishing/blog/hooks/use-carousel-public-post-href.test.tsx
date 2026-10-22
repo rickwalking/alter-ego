@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useCarouselBlogPostHref } from "./use-carousel-blog-post-href";
+import { useCarouselPublicPostHref } from "./use-carousel-public-post-href";
 
 const apiCall = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api-client", () => ({ apiCall }));
@@ -23,7 +23,7 @@ function list(ids: string[]): object {
   };
 }
 
-describe("useCarouselBlogPostHref", () => {
+describe("useCarouselPublicPostHref", () => {
   beforeEach(() => {
     apiCall.mockReset();
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -32,7 +32,7 @@ describe("useCarouselBlogPostHref", () => {
   // Scenario: The workspace links the carousel's published blog post
   it("asks the public list for the carousel's post and links it", async () => {
     apiCall.mockResolvedValue(list(["b1"]));
-    const { result } = renderHook(() => useCarouselBlogPostHref("c1"), {
+    const { result } = renderHook(() => useCarouselPublicPostHref("c1"), {
       wrapper,
     });
     await waitFor(() => expect(result.current.href).toBe("/blog/b1"));
@@ -45,7 +45,7 @@ describe("useCarouselBlogPostHref", () => {
   // Scenario: The workspace hides View Blog Post when the carousel has no published post
   it("has no href when the carousel has no published post", async () => {
     apiCall.mockResolvedValue(list([]));
-    const { result } = renderHook(() => useCarouselBlogPostHref("c1"), {
+    const { result } = renderHook(() => useCarouselPublicPostHref("c1"), {
       wrapper,
     });
     await waitFor(() => expect(apiCall).toHaveBeenCalled());
@@ -55,7 +55,7 @@ describe("useCarouselBlogPostHref", () => {
   // Scenario: The workspace hides View Blog Post when the carousel has no published post
   it("has no href when the lookup fails", async () => {
     apiCall.mockRejectedValue(new Error("down"));
-    const { result } = renderHook(() => useCarouselBlogPostHref("c1"), {
+    const { result } = renderHook(() => useCarouselPublicPostHref("c1"), {
       wrapper,
     });
     await waitFor(() => expect(apiCall).toHaveBeenCalled());

@@ -12,7 +12,7 @@ import {
   useEditorialWorkflow,
 } from "@/modules/editorial";
 import {
-  useCarouselBlogPostHref,
+  useCarouselPublicPostHref,
   usePublishInstagram,
   useRepublishCarousel,
   type LocalizedSlideReview,
@@ -160,7 +160,7 @@ export function usePublishToSite(
   publishedHref: string | null;
   handlePublishToSite: () => void;
 } {
-  const blogPost = useCarouselBlogPostHref(projectId);
+  const blogPost = useCarouselPublicPostHref(projectId);
   const t = useTranslations("publish");
   const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(
     null,

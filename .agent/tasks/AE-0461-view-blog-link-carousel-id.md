@@ -25,7 +25,7 @@ publish page also showed the link after a **failed** site publish.
 
 - Backend: `GET /api/public/blog-posts` accepts an optional `project_id` (UUID) and narrows the published-only
   list to that carousel's post (visibility rules unchanged).
-- Frontend: `useCarouselBlogPostHref(projectId)` reads the public list with `project_id` and returns
+- Frontend: `useCarouselPublicPostHref(projectId)` reads the public list with `project_id` and returns
   `/blog/<postId>` or null.
 - Workspace preview: "View Blog Post" links the post; hidden when the carousel has no published post.
 - Publish page: after a successful site publish, "View public post" links the blog post, else the public carousel
@@ -70,7 +70,7 @@ Root cause from the crawl (19 dead links) and source; failing tests first (backe
 - backend/tests/integration/test_public_blog_project_filter_ae0461.py (new)
 - backend/tests/features/public_blog_project_filter_ae0461.feature (new)
 - frontend/src/constants/api.ts
-- frontend/src/modules/publishing/blog/hooks/use-carousel-blog-post-href.ts (+ test, new)
+- frontend/src/modules/publishing/blog/hooks/use-carousel-public-post-href.ts (+ test, new)
 - frontend/src/modules/publishing/blog/hooks/types.ts
 - frontend/src/modules/publishing/index.ts
 - frontend/src/app/dashboard/create/workspace/create-carousel-preview.tsx (+ test)

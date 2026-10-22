@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { useCarouselBlogPostHref } from "@/modules/publishing";
+import { useCarouselPublicPostHref } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { PreviewSlides } from "./create-carousel-preview-slides";
 
@@ -151,7 +151,7 @@ export function CarouselPreview({
   const slideUrls = extractRenderedSlides(project);
   const heroUrl = buildHeroImageUrl(project);
   const title = displayTitle(project);
-  const { href: blogHref } = useCarouselBlogPostHref(project.id);
+  const { href: blogHref } = useCarouselPublicPostHref(project.id);
 
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] overflow-hidden">

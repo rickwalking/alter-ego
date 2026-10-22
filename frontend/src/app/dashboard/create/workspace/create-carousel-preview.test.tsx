@@ -5,7 +5,7 @@ import { CarouselPreview } from "./create-carousel-preview";
 
 const blogHref = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock("@/modules/publishing", () => ({
-  useCarouselBlogPostHref: () => ({ href: blogHref.value, refetch: vi.fn() }),
+  useCarouselPublicPostHref: () => ({ href: blogHref.value, refetch: vi.fn() }),
 }));
 
 function project(templateVersion: string | null): CarouselProjectResponse {
