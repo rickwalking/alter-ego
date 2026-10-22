@@ -207,6 +207,7 @@ describe("RubricsPage", () => {
 
   it("shows the API's refusal in the form and keeps the values", async () => {
     // Scenario: A server refusal is shown in the form
+    // Scenario: A failed create is shown on the personas and rubrics pages
     const user = await openNewForm();
     await user.type(screen.getByLabelText("Name"), "Dup");
     authenticatedFetch.mockResolvedValueOnce(

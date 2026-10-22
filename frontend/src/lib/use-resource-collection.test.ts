@@ -5,7 +5,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ResourceRequestError,
-  useCreateAction,
   useResourceCollection,
 } from "./use-resource-collection";
 
@@ -128,37 +127,5 @@ describe("useResourceCollection (AE-0446)", () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.items).toHaveLength(1);
-  });
-});
-
-describe("useCreateAction", () => {
-  it("shows a failed create and does not reload", async () => {
-    // Scenario: A failed create is shown on the personas and rubrics pages
-    const create = vi.fn(() =>
-      Promise.reject(new Error("Failed to create persona")),
-    );
-    const refetch = vi.fn(() => Promise.resolve());
-    const { result } = renderHook(() => useCreateAction(create, refetch));
-
-    await act(() => result.current.createAndRefresh({ name: "x" }));
-
-    expect(result.current.createError).toBe("Failed to create persona");
-    expect(refetch).not.toHaveBeenCalled();
-  });
-
-  it("reloads after a successful create and clears the earlier error", async () => {
-    // Scenario: A failed create is shown on the personas and rubrics pages
-    const create = vi
-      .fn<(data: { name: string }) => Promise<unknown>>()
-      .mockRejectedValueOnce(new Error("Failed to create persona"))
-      .mockResolvedValueOnce({ id: "b" });
-    const refetch = vi.fn(() => Promise.resolve());
-    const { result } = renderHook(() => useCreateAction(create, refetch));
-
-    await act(() => result.current.createAndRefresh({ name: "x" }));
-    await act(() => result.current.createAndRefresh({ name: "y" }));
-
-    expect(result.current.createError).toBeNull();
-    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

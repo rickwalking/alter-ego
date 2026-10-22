@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   BG_CARD,
   NEON_BORDER_DASHED,
@@ -9,22 +10,19 @@ import {
 } from "@/constants/neon";
 
 export interface CreatePersonaCardProps {
-  onCreate?: () => void;
+  onCreate: () => void;
 }
 
+/** The dashed "create" tile at the end of the persona grid. */
 export function CreatePersonaCard({
   onCreate,
 }: Readonly<CreatePersonaCardProps>): React.ReactElement {
+  const t = useTranslations("personas.createCard");
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={onCreate}
-      onKeyDown={(e) => {
-        if ((e.key === "Enter" || e.key === " ") && onCreate) {
-          onCreate();
-        }
-      }}
+      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan"
       style={{
         background: BG_CARD,
         border: `2px dashed ${NEON_BORDER_DASHED}`,
@@ -45,7 +43,13 @@ export function CreatePersonaCard({
         e.currentTarget.style.background = BG_CARD;
       }}
     >
-      <div style={{ textAlign: "center", color: "rgba(255,255,255,0.55)" }}>
+      <span
+        style={{
+          display: "block",
+          textAlign: "center",
+          color: "rgba(255,255,255,0.55)",
+        }}
+      >
         <svg
           width="32"
           height="32"
@@ -59,20 +63,19 @@ export function CreatePersonaCard({
           <path d="M12 5v14" />
           <path d="M5 12h14" />
         </svg>
-        <h4
+        <span
           style={{
+            display: "block",
             fontSize: 14,
             color: "rgba(255,255,255,0.45)",
             fontWeight: 600,
             margin: "0 0 4px",
           }}
         >
-          Create Persona
-        </h4>
-        <p style={{ fontSize: 12, margin: 0 }}>
-          Define a new voice profile for your content pipeline.
-        </p>
-      </div>
-    </div>
+          {t("title")}
+        </span>
+        <span style={{ display: "block", fontSize: 12 }}>{t("body")}</span>
+      </span>
+    </button>
   );
 }

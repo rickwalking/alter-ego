@@ -2,6 +2,7 @@ import type {
   QualityRubric,
   QualityRubricCreatePayload,
 } from "@/modules/quality";
+import { fieldErrorsOf } from "@/lib/zod-field-errors";
 import {
   EVALUATION_METHODS,
   RUBRIC_CONTENT_TYPES,
@@ -35,7 +36,6 @@ export type RubricFormErrors = Record<string, string>;
 
 const NEW_CRITERION_WEIGHT = "0.5";
 const NEW_CRITERION_THRESHOLD = "0.7";
-const PATH_SEPARATOR = ".";
 
 /** The error message key of each validated field (keyed by its path without the criterion index). */
 const FIELD_ERROR_KEYS: Record<string, string> = {
@@ -125,13 +125,11 @@ function errorKeyOf(path: readonly PropertyKey[]): string {
 export function validateRubricForm(state: RubricFormState): RubricFormErrors {
   const result = rubricFormSchema.safeParse(toCandidate(state));
   if (result.success) return {};
-  const errors: RubricFormErrors = {};
-  for (const issue of result.error.issues) {
-    const path = issue.path.join(PATH_SEPARATOR);
-    errors[path] ??=
-      FIELD_ERROR_KEYS[errorKeyOf(issue.path)] ?? GENERIC_FIELD_ERROR;
-  }
-  return errors;
+  return fieldErrorsOf(
+    result.error.issues,
+    (path) => FIELD_ERROR_KEYS[errorKeyOf(path)],
+    GENERIC_FIELD_ERROR,
+  );
 }
 
 /** The trimmed create/update payload of a valid form. */

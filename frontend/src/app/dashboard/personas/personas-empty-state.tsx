@@ -1,10 +1,19 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
+
 export interface PersonasEmptyStateProps {
   searchQuery: string;
+  onCreate: () => void;
 }
 
+/** No personas (with a create action), or no match for the search. */
 export function PersonasEmptyState({
   searchQuery,
+  onCreate,
 }: Readonly<PersonasEmptyStateProps>): React.ReactElement {
+  const t = useTranslations("personas.empty");
   return (
     <div
       style={{
@@ -38,13 +47,21 @@ export function PersonasEmptyState({
           fontWeight: 700,
         }}
       >
-        No personas found
+        {t("title")}
       </h3>
       <p style={{ fontSize: 13, maxWidth: 400, lineHeight: 1.6, margin: 0 }}>
-        {searchQuery
-          ? `No results for "${searchQuery}". Try a different search term.`
-          : "Create your first persona to define a unique voice profile for your content pipeline."}
+        {searchQuery ? t("noResults", { query: searchQuery }) : t("body")}
       </p>
+      {!searchQuery && (
+        <NeonButton
+          variant="primary"
+          size="sm"
+          className="mt-4"
+          onClick={onCreate}
+        >
+          {t("action")}
+        </NeonButton>
+      )}
     </div>
   );
 }

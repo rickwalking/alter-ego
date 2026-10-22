@@ -1594,5 +1594,79 @@
     "analytics": "Analytics",
     "createCarousel": "Criar carrossel",
     "adminUsers": "Usuários"
+  },
+  "personas": {
+    "page": {
+      "title": "Personas",
+      "breadcrumb": "perfis de voz",
+      "search": "Buscar personas...",
+      "new": "Nova persona",
+      "loadError": "Não foi possível carregar as personas."
+    },
+    "empty": {
+      "title": "Nenhuma persona encontrada",
+      "noResults": "Nenhum resultado para \"{query}\". Tente outro termo.",
+      "body": "Crie a primeira persona para definir um perfil de voz único para o seu conteúdo.",
+      "action": "Criar a primeira persona"
+    },
+    "createCard": {
+      "title": "Criar persona",
+      "body": "Defina um novo perfil de voz para o seu conteúdo."
+    },
+    "card": {
+      "edit": "Editar",
+      "delete": "Excluir",
+      "editLabel": "Editar a persona {name}",
+      "deleteLabel": "Excluir a persona {name}"
+    },
+    "form": {
+      "createTitle": "Nova persona",
+      "editTitle": "Editar persona",
+      "name": "Nome",
+      "namePlaceholder": "ex.: Pedro, tech lead",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Quem é esta voz e para quem escreve",
+      "expertise": "Áreas de especialidade",
+      "expertiseHint": "Pressione Enter para adicionar cada área.",
+      "tone": "Tom",
+      "sentenceStructure": "Estrutura das frases",
+      "paragraphStyle": "Estilo dos parágrafos",
+      "opinionExpression": "Como as opiniões são expressas",
+      "preferred": "Expressões preferidas",
+      "preferredHint": "Pressione Enter para adicionar cada expressão.",
+      "forbidden": "Expressões proibidas",
+      "forbiddenHint": "Pressione Enter para adicionar cada expressão. Conteúdo que as usa é bloqueado.",
+      "removePhrase": "Remover {phrase}",
+      "samples": "Amostras de escrita",
+      "samplesHint": "Cole textos escritos nesta voz; eles orientam a comparação de voz.",
+      "sample": "Amostra {number}",
+      "addSample": "Adicionar amostra",
+      "removeSample": "Remover a amostra {number}",
+      "cancel": "Cancelar",
+      "create": "Criar persona",
+      "save": "Salvar alterações",
+      "unsavedConfirm": "Há alterações não salvas nesta persona. Sair sem salvar?",
+      "fixErrors": "Corrija os campos destacados antes de salvar.",
+      "errors": {
+        "name": "Informe um nome de 1 a 255 caracteres.",
+        "sample": "Escreva a amostra ou remova-a.",
+        "tone": "Cada valor de tom deve ficar entre 0 e 1.",
+        "invalid": "Este valor não é válido.",
+        "save": "Não foi possível salvar a persona. Confira os campos e tente de novo."
+      }
+    },
+    "tone": {
+      "formal": "Formal",
+      "conversational": "Conversacional",
+      "humorous": "Bem-humorado"
+    },
+    "delete": {
+      "title": "Excluir persona",
+      "body": "Excluir “{name}”? Não dá para desfazer.",
+      "confirm": "Excluir",
+      "cancel": "Cancelar",
+      "error": "Não foi possível excluir a persona.",
+      "inUse": "Esta persona ainda é usada por carrosséis ou correções de voz, então não pode ser excluída."
+    }
   }
 }

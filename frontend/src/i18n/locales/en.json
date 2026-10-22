@@ -1594,5 +1594,79 @@
     "analytics": "Analytics",
     "createCarousel": "Create Carousel",
     "adminUsers": "Users"
+  },
+  "personas": {
+    "page": {
+      "title": "Personas",
+      "breadcrumb": "voice profiles",
+      "search": "Search personas...",
+      "new": "New Persona",
+      "loadError": "Could not load the personas."
+    },
+    "empty": {
+      "title": "No personas found",
+      "noResults": "No results for \"{query}\". Try a different search term.",
+      "body": "Create your first persona to define a unique voice profile for your content pipeline.",
+      "action": "Create your first persona"
+    },
+    "createCard": {
+      "title": "Create Persona",
+      "body": "Define a new voice profile for your content pipeline."
+    },
+    "card": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "editLabel": "Edit persona {name}",
+      "deleteLabel": "Delete persona {name}"
+    },
+    "form": {
+      "createTitle": "New persona",
+      "editTitle": "Edit persona",
+      "name": "Name",
+      "namePlaceholder": "e.g. Pedro, tech lead",
+      "description": "Description",
+      "descriptionPlaceholder": "Who this voice is and who it writes for",
+      "expertise": "Expertise areas",
+      "expertiseHint": "Press Enter to add each area.",
+      "tone": "Tone",
+      "sentenceStructure": "Sentence structure",
+      "paragraphStyle": "Paragraph style",
+      "opinionExpression": "How opinions are expressed",
+      "preferred": "Preferred phrases",
+      "preferredHint": "Press Enter to add each phrase.",
+      "forbidden": "Forbidden phrases",
+      "forbiddenHint": "Press Enter to add each phrase. Content using them is blocked.",
+      "removePhrase": "Remove {phrase}",
+      "samples": "Writing samples",
+      "samplesHint": "Paste texts written in this voice; they guide the voice match.",
+      "sample": "Sample {number}",
+      "addSample": "Add sample",
+      "removeSample": "Remove sample {number}",
+      "cancel": "Cancel",
+      "create": "Create persona",
+      "save": "Save changes",
+      "unsavedConfirm": "You have unsaved changes to this persona. Leave without saving?",
+      "fixErrors": "Fix the highlighted fields before saving.",
+      "errors": {
+        "name": "Enter a name of 1 to 255 characters.",
+        "sample": "Write the sample or remove it.",
+        "tone": "Each tone value must be from 0 to 1.",
+        "invalid": "This value is not valid.",
+        "save": "The persona could not be saved. Check the fields and try again."
+      }
+    },
+    "tone": {
+      "formal": "Formal",
+      "conversational": "Conversational",
+      "humorous": "Humorous"
+    },
+    "delete": {
+      "title": "Delete persona",
+      "body": "Delete “{name}”? This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "error": "The persona could not be deleted.",
+      "inUse": "This persona is still used by carousels or voice corrections, so it cannot be deleted."
+    }
   }
 }
