@@ -6,14 +6,14 @@ import {
   FORWARDED_PROTOCOLS,
   HTTP_HEADER_HOST,
   HTTP_HEADER_X_FORWARDED_PROTO,
+  LOGIN_ERROR_PARAM,
+  LOGIN_ERROR_SESSION_EXPIRED,
 } from "@/constants/auth";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import {
   clearAccessTokenCookie,
   sanitizeLoginRedirect,
 } from "@/modules/identity";
-
-const SESSION_EXPIRED_ERROR = "session_expired";
 
 /**
  * Apply the forwarded public host to the login URL. Parsed defensively: the
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       sanitizeLoginRedirect(redirectParam),
     );
   }
-  loginUrl.searchParams.set("error", SESSION_EXPIRED_ERROR);
+  loginUrl.searchParams.set(LOGIN_ERROR_PARAM, LOGIN_ERROR_SESSION_EXPIRED);
 
   try {
     await fetch(`${resolveBackendUrl()}/api/auth/logout`, {

@@ -15,18 +15,32 @@ import {
 } from "@/lib/sse-event-data";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
+import {
+  CHAT_SEND_RESULT,
+  CHAT_UNKNOWN_ERROR,
+  type ChatSendResult,
+} from "../constants";
 import type {
   ChatStreamState,
   ChatTurnCallbacks,
+  ConversationTarget,
   SendChatDeps,
+  TurnCallbackDeps,
+  TurnOutcome,
+  TurnRun,
   UseSseChatOptions,
   UseSseChatReturn,
 } from "./types";
 
 const SSE_CHAT_USER_ID_PREFIX = "user-";
+const USER_ROLE: Message["role"] = "user";
 const STREAM_MESSAGE_ID_PREFIX = "stream-";
 
-export type { UseSseChatOptions, UseSseChatReturn } from "./types";
+export type {
+  ConversationTarget,
+  UseSseChatOptions,
+  UseSseChatReturn,
+} from "./types";
 
 function mergeMessages(
   historyMessages: Message[],
@@ -79,17 +93,20 @@ function useHistory(
 
 /**
  * End a stream once (COMPLETE and the reader's onComplete both fire); with
- * history on, refetch it and then drop the optimistic copies.
+ * history on, refetch it and then drop the optimistic copies, unless a newer
+ * turn (or New chat) started meanwhile: its bubbles must survive the refetch.
  */
 function useFinalizeStream(
   stream: ChatStreamState,
   loadHistory: boolean,
 ): {
   finalizedRef: RefObject<boolean>;
+  turnRef: RefObject<number>;
   finalizeStream: (convId: string) => void;
 } {
   const queryClient = useQueryClient();
   const finalizedRef = useRef(false);
+  const turnRef = useRef(0);
   const { setIsStreaming, resetStreamingRefs, setOptimisticMessages } = stream;
   const finalizeStream = useCallback(
     (convId: string) => {
@@ -102,10 +119,13 @@ function useFinalizeStream(
       if (!loadHistory) {
         return;
       }
+      const finishedTurn = turnRef.current;
       void queryClient
         .invalidateQueries({ queryKey: chatKeys.messages(convId) })
         .then(() => {
-          setOptimisticMessages([]);
+          if (turnRef.current === finishedTurn) {
+            setOptimisticMessages([]);
+          }
         });
     },
     [
@@ -116,7 +136,7 @@ function useFinalizeStream(
       setOptimisticMessages,
     ],
   );
-  return { finalizedRef, finalizeStream };
+  return { finalizedRef, turnRef, finalizeStream };
 }
 
 /** The SSE handlers for one chat turn of conversation ``convId``. */
@@ -133,64 +153,154 @@ function chatTurnHandlers(
       ),
     [SSE_EVENT_TYPE.COMPLETE]: () => turn.finalizeStream(convId),
     [SSE_EVENT_TYPE.ERROR]: (data) =>
-      failStream(turn, sseContentText(data, "Unknown error")),
+      turn.fail(sseContentText(data, CHAT_UNKNOWN_ERROR)),
   };
 }
 
-/** Show the error and end the stream. */
-function failStream(turn: ChatTurnCallbacks, message: string): void {
-  turn.setError(message);
-  turn.setIsStreaming(false);
-  turn.resetStreamingRefs();
+/** Drop a trailing user message that never got a reply (a failed turn). */
+function dropUnansweredUserTurn(prev: Message[]): Message[] {
+  return prev.at(-1)?.role === USER_ROLE ? prev.slice(0, -1) : prev;
+}
+
+/** The conversation id, creating the conversation first when needed. */
+async function resolveConversationId(
+  target: ConversationTarget,
+  signal: AbortSignal,
+): Promise<string> {
+  return typeof target === "function" ? target(signal) : target;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : CHAT_UNKNOWN_ERROR;
+}
+
+/** The callbacks of one turn; ``fail`` records the failure on ``outcome``. */
+function turnCallbacks(
+  deps: TurnCallbackDeps,
+  outcome: TurnOutcome,
+): ChatTurnCallbacks {
+  const { stream, setError, finalizeStream } = deps;
+  return {
+    appendToken: stream.appendToken,
+    setOptimisticMessages: stream.setOptimisticMessages,
+    finalizeStream,
+    fail: (message) => {
+      outcome.failed = true;
+      setError(message);
+      stream.setIsStreaming(false);
+      stream.resetStreamingRefs();
+    },
+  };
+}
+
+function turnResult(outcome: TurnOutcome, signal: AbortSignal): ChatSendResult {
+  if (outcome.failed) return CHAT_SEND_RESULT.FAILED;
+  if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
+  return CHAT_SEND_RESULT.SENT;
 }
 
 /** Stream one user turn into the conversation, folding each SSE event in. */
-function useSendChatMessage({
-  stream,
-  conversationId,
-  isStreaming,
-  setError,
-  finalizedRef,
-  finalizeStream,
-}: SendChatDeps): UseSseChatReturn["sendMessage"] {
-  const { startUserTurn, appendToken, setOptimisticMessages } = stream;
-  const { setIsStreaming, resetStreamingRefs } = stream;
+function useRunChatTurn(
+  deps: TurnCallbackDeps,
+): (run: TurnRun) => Promise<ChatSendResult> {
+  const { stream, setError, finalizedRef, turnRef, finalizeStream } = deps;
+  const { startUserTurn, setOptimisticMessages } = stream;
   return useCallback(
-    async (content: string, overrideConversationId?: string) => {
-      const convId = overrideConversationId ?? conversationId;
-      if (!content.trim() || isStreaming || !convId) return;
+    async ({ content, target }: TurnRun) => {
+      const outcome: TurnOutcome = { failed: false };
+      const turn = turnCallbacks(
+        { stream, setError, finalizedRef, turnRef, finalizeStream },
+        outcome,
+      );
+      turnRef.current += 1;
       finalizedRef.current = false;
       setError(null);
-      const turn: ChatTurnCallbacks = {
-        appendToken,
-        setOptimisticMessages,
-        setIsStreaming,
-        resetStreamingRefs,
-        setError,
-        finalizeStream,
-      };
+      setOptimisticMessages(dropUnansweredUserTurn);
+      const signal = startUserTurn(content);
+      let convId: string;
+      try {
+        convId = await resolveConversationId(target, signal);
+      } catch (error) {
+        turn.fail(errorText(error));
+        return CHAT_SEND_RESULT.FAILED;
+      }
+      if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
       await streamSseEvents({
         url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
-        body: { content: content.trim() },
-        signal: startUserTurn(content.trim()),
+        body: { content },
+        signal,
         onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
-        onError: (err) => failStream(turn, err.message),
+        onError: (err) => turn.fail(err.message),
         onComplete: () => finalizeStream(convId),
       });
+      return turnResult(outcome, signal);
     },
     [
-      conversationId,
-      isStreaming,
+      stream,
       finalizedRef,
+      turnRef,
       setError,
       startUserTurn,
-      appendToken,
       setOptimisticMessages,
-      setIsStreaming,
-      resetStreamingRefs,
       finalizeStream,
     ],
   );
+}
+
+/**
+ * Send one turn at a time: a second send while one is in flight is ignored.
+ * ``isBusy`` answers synchronously, so a caller can check before it clears
+ * the composer.
+ */
+function useSendChatMessage(
+  deps: SendChatDeps,
+): Pick<UseSseChatReturn, "sendMessage" | "isBusy"> {
+  const { conversationId } = deps;
+  const inFlightRef = useRef(false);
+  const runTurn = useRunChatTurn(deps);
+  const isBusy = useCallback(() => inFlightRef.current, []);
+  const sendMessage = useCallback(
+    async (content: string, target?: ConversationTarget | null) => {
+      const trimmed = content.trim();
+      const resolved = target ?? conversationId;
+      if (!trimmed || !resolved || inFlightRef.current) {
+        return CHAT_SEND_RESULT.IGNORED;
+      }
+      inFlightRef.current = true;
+      try {
+        return await runTurn({ content: trimmed, target: resolved });
+      } finally {
+        inFlightRef.current = false;
+      }
+    },
+    [conversationId, runTurn],
+  );
+  return { sendMessage, isBusy };
+}
+
+/** Abort the turn in flight and clear the chat (stale refetches see a new turn). */
+function useStartNewChat(
+  stream: ChatStreamState,
+  turnRef: RefObject<number>,
+  setError: SendChatDeps["setError"],
+): () => void {
+  const { abortRef, setOptimisticMessages, setIsStreaming } = stream;
+  const { resetStreamingRefs } = stream;
+  return useCallback(() => {
+    turnRef.current += 1;
+    abortRef.current?.abort();
+    setOptimisticMessages([]);
+    setIsStreaming(false);
+    setError(null);
+    resetStreamingRefs();
+  }, [
+    turnRef,
+    abortRef,
+    setOptimisticMessages,
+    setIsStreaming,
+    setError,
+    resetStreamingRefs,
+  ]);
 }
 
 export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
@@ -198,31 +308,24 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     SSE_CHAT_USER_ID_PREFIX,
     STREAM_MESSAGE_ID_PREFIX,
   );
-  const { optimisticMessages, setOptimisticMessages, isStreaming } = stream;
-  const { abortRef, setIsStreaming, resetStreamingRefs } = stream;
+  const { optimisticMessages, isStreaming } = stream;
   const [error, setError] = useState<string | null>(null);
   const conversationId = options.conversationId ?? null;
   const loadHistory = options.enableHistory !== false;
-  const { finalizedRef, finalizeStream } = useFinalizeStream(
+  const { finalizedRef, turnRef, finalizeStream } = useFinalizeStream(
     stream,
     loadHistory,
   );
   const historyMessages = useHistory(loadHistory, conversationId);
 
-  const startNewChat = useCallback(() => {
-    abortRef.current?.abort();
-    setOptimisticMessages([]);
-    setIsStreaming(false);
-    setError(null);
-    resetStreamingRefs();
-  }, [abortRef, setOptimisticMessages, setIsStreaming, resetStreamingRefs]);
+  const startNewChat = useStartNewChat(stream, turnRef, setError);
 
-  const sendMessage = useSendChatMessage({
+  const { sendMessage, isBusy } = useSendChatMessage({
     stream,
     conversationId,
-    isStreaming,
     setError,
     finalizedRef,
+    turnRef,
     finalizeStream,
   });
 
@@ -237,6 +340,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     isStreaming,
     error,
     sendMessage,
+    isBusy,
     startNewChat,
   };
 }

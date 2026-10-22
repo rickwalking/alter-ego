@@ -1,5 +1,6 @@
 /**
- * Gherkin: tests/features/conversation-sse-chat.feature
+ * Gherkin: tests/features/conversation-sse-chat.feature,
+ * tests/features/chat-stream-state.feature
  *
  * Race/lifecycle-focused tests for useSseChat using a CONTROLLABLE fake SSE
  * stream (events are driven by the test, not auto-fired) and a REAL QueryClient
@@ -7,11 +8,7 @@
  * behavior. Mocks are limited to the network/history seams.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createElement, type ReactNode } from "react";
-
-import type { Message } from "@/schemas/chat";
+import { act, waitFor } from "@testing-library/react";
 
 vi.mock("@/modules/conversation/hooks/use-chat", () => ({
   useConversationMessages: vi.fn(),
@@ -28,73 +25,12 @@ vi.mock("@/lib/sse-client", () => ({
   },
 }));
 
-import { useConversationMessages } from "@/modules/conversation/hooks/use-chat";
-import { streamSseEvents } from "@/lib/sse-client";
-import { useSseChat } from "./use-sse-chat";
-
-const mockUseConversationMessages = vi.mocked(useConversationMessages);
-const mockStream = vi.mocked(streamSseEvents);
-
-const CONV_ID = "conv-1";
-
-type SseEventName = "token" | "complete" | "error" | "sources" | "tool_result";
-
-/** A controllable fake stream: captures each call's callbacks for the test to drive. */
-function controllableStream() {
-  const calls: {
-    opts: Parameters<typeof streamSseEvents>[0];
-    resolve: () => void;
-  }[] = [];
-  mockStream.mockImplementation((opts) => {
-    return new Promise<void>((resolve) => {
-      calls.push({ opts, resolve });
-    });
-  });
-  return {
-    get count() {
-      return calls.length;
-    },
-    last: () => calls[calls.length - 1],
-    emit(
-      event: SseEventName,
-      data: Record<string, unknown>,
-      i = calls.length - 1,
-    ) {
-      act(() => calls[i]!.opts.onEvent({ event, data }));
-    },
-    complete(i = calls.length - 1) {
-      act(() => {
-        calls[i]!.opts.onComplete?.();
-        calls[i]!.resolve();
-      });
-    },
-    fail(message: string, i = calls.length - 1) {
-      act(() => calls[i]!.opts.onError?.(new Error(message)));
-    },
-  };
-}
-
-function setHistory(messages: Message[]) {
-  mockUseConversationMessages.mockReturnValue({
-    data: messages,
-  } as ReturnType<typeof useConversationMessages>);
-}
-
-function wrapperWithClient() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
-  const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-  const Wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(QueryClientProvider, { client: queryClient }, children);
-  return { Wrapper, invalidateSpy };
-}
-
-function renderChat(options: Parameters<typeof useSseChat>[0] = {}) {
-  const { Wrapper, invalidateSpy } = wrapperWithClient();
-  const view = renderHook(() => useSseChat(options), { wrapper: Wrapper });
-  return { ...view, invalidateSpy };
-}
+import {
+  CONV_ID,
+  controllableStream,
+  renderChat,
+  setHistory,
+} from "./use-sse-chat.test-utils";
 
 beforeEach(() => {
   vi.clearAllMocks();

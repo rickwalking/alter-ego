@@ -9,6 +9,16 @@
 import type { RefObject } from "react";
 import type { ChatStream } from "@/lib/use-chat-stream";
 import type { Message } from "@/schemas/chat";
+import type { ChatSendResult } from "../constants";
+
+/**
+ * The conversation to send into: its id, or a function that creates it. The
+ * creator gets the turn's signal: when it is aborted (New chat while creating)
+ * the created conversation must not be opened.
+ */
+export type ConversationTarget =
+  | string
+  | ((signal: AbortSignal) => Promise<string>);
 
 export interface UseSseChatOptions {
   conversationId?: string | null;
@@ -21,10 +31,17 @@ export interface UseSseChatReturn {
   messages: Message[];
   isStreaming: boolean;
   error: string | null;
+  /**
+   * Send one turn. The user bubble and the typing state show at once, even
+   * while ``target`` is still creating the conversation; a second call while a
+   * turn is in flight is ignored.
+   */
   sendMessage: (
     content: string,
-    overrideConversationId?: string,
-  ) => Promise<void>;
+    target?: ConversationTarget | null,
+  ) => Promise<ChatSendResult>;
+  /** Whether a turn is in flight right now (``sendMessage`` would ignore a send). */
+  isBusy: () => boolean;
   startNewChat: () => void;
 }
 
@@ -35,18 +52,33 @@ export type ChatStreamState = ChatStream;
 export interface SendChatDeps {
   stream: ChatStreamState;
   conversationId: string | null;
-  isStreaming: boolean;
   setError: (error: string | null) => void;
   finalizedRef: RefObject<boolean>;
+  /** Bumped by every new turn and by New chat; stale refetches compare it. */
+  turnRef: RefObject<number>;
   finalizeStream: (convId: string) => void;
 }
 
 /** The stable callbacks one streamed chat turn drives. */
 export type ChatTurnCallbacks = Pick<
   ChatStreamState,
-  | "appendToken"
-  | "setOptimisticMessages"
-  | "setIsStreaming"
-  | "resetStreamingRefs"
+  "appendToken" | "setOptimisticMessages"
 > &
-  Pick<SendChatDeps, "setError" | "finalizeStream">;
+  Pick<SendChatDeps, "finalizeStream"> & {
+    /** Show ``message``, end the stream and mark the turn as failed. */
+    fail: (message: string) => void;
+  };
+
+/** What running one turn needs (the conversation id arrives with the turn). */
+export type TurnCallbackDeps = Omit<SendChatDeps, "conversationId">;
+
+/** One turn's text and the conversation it goes into. */
+export interface TurnRun {
+  content: string;
+  target: ConversationTarget;
+}
+
+/** Whether a turn failed (set from inside the stream callbacks). */
+export interface TurnOutcome {
+  failed: boolean;
+}

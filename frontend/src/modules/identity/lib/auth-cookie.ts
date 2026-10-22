@@ -1,13 +1,25 @@
 import type { NextRequest, NextResponse } from "next/server";
 
 import { HTTP_HEADER_X_FORWARDED_PROTO } from "@/constants/auth";
-import { SECONDS_PER_HOUR } from "@/constants/time";
+import { SECONDS_PER_MINUTE } from "@/constants/time";
 
 import { COOKIE_ACCESS_TOKEN } from "../guards";
 
 export { COOKIE_ACCESS_TOKEN };
 
-const DEFAULT_TOKEN_MAX_AGE_SEC = SECONDS_PER_HOUR;
+/** Same env var and default as the backend's ``access_token_expire_minutes``. */
+const ACCESS_TOKEN_EXPIRE_MINUTES_ENV = "ACCESS_TOKEN_EXPIRE_MINUTES";
+const DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = 60;
+
+/** The session cookie lifetime: the backend's token lifetime, in seconds. */
+function accessTokenMaxAgeSeconds(): number {
+  const minutes = Number(process.env[ACCESS_TOKEN_EXPIRE_MINUTES_ENV]);
+  const valid =
+    Number.isInteger(minutes) && minutes > 0
+      ? minutes
+      : DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES;
+  return valid * SECONDS_PER_MINUTE;
+}
 
 /** Whether the incoming request used HTTPS (directly or via proxy). */
 export function isSecureRequest(request: NextRequest): boolean {
@@ -21,7 +33,11 @@ export function isSecureRequest(request: NextRequest): boolean {
   return forwarded.split(",")[0]?.trim() === "https";
 }
 
-/** Attach HttpOnly JWT cookie for Next.js middleware (same host as the UI). */
+/**
+ * Attach HttpOnly JWT cookie for Next.js middleware (same host as the UI), with
+ * the same attributes as the backend's login cookie: SameSite=Strict and the
+ * token's lifetime.
+ */
 export function setAccessTokenCookie(
   response: NextResponse,
   token: string,
@@ -30,9 +46,9 @@ export function setAccessTokenCookie(
   response.cookies.set(COOKIE_ACCESS_TOKEN, token, {
     httpOnly: true,
     secure: isSecureRequest(request),
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
-    maxAge: DEFAULT_TOKEN_MAX_AGE_SEC,
+    maxAge: accessTokenMaxAgeSeconds(),
   });
 }
 

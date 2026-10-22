@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import {
+  AUTH_LOGIN_REDIRECT_PARAM,
+  LOGIN_ERROR_INVALID_CREDENTIALS,
+  LOGIN_ERROR_PARAM,
+  LOGIN_ERROR_SESSION_EXPIRED,
+  LOGIN_ERROR_TOO_MANY_ATTEMPTS,
+} from "@/constants/auth";
 import { sanitizeLoginRedirect } from "@/modules/identity";
 import { responseErrorDetail } from "@/lib/response-error";
 
@@ -17,13 +23,22 @@ export interface LoginController {
   handleSubmit: (e: React.SubmitEvent) => Promise<void>;
 }
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+
 function useSessionExpiredNotice(setError: (message: string) => void) {
   const t = useTranslations("auth");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "session_expired") {
+    const notice = params.get(LOGIN_ERROR_PARAM);
+    if (notice === LOGIN_ERROR_SESSION_EXPIRED) {
       setError(t("sessionExpired"));
+    }
+    if (notice === LOGIN_ERROR_INVALID_CREDENTIALS) {
+      setError(t("loginError"));
+    }
+    if (notice === LOGIN_ERROR_TOO_MANY_ATTEMPTS) {
+      setError(t("tooManyAttempts"));
     }
   }, [setError, t]);
 }
@@ -51,6 +66,9 @@ export function useLogin(): LoginController {
         body: JSON.stringify({ email, password }),
       });
 
+      if (response.status === HTTP_TOO_MANY_REQUESTS) {
+        throw new Error(t("tooManyAttempts"));
+      }
       if (!response.ok) {
         throw new Error(
           (await responseErrorDetail(response)) ?? t("loginError"),

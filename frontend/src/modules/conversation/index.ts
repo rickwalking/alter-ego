@@ -31,6 +31,9 @@ export {
 
 export {
   useSseChat,
+  type ConversationTarget,
   type UseSseChatOptions,
   type UseSseChatReturn,
 } from "./hooks/use-sse-chat";
+
+export { CHAT_SEND_RESULT, type ChatSendResult } from "./constants";
