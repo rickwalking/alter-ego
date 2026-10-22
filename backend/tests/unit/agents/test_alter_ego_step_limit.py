@@ -20,6 +20,9 @@ from rag_backend.application.tools.knowledge_base import (
     SearchToolOptions,
     build_search_documents_tool,
 )
+from rag_backend.application.tools.knowledge_base.search_documents import (
+    QUERY_HASH_CHARS,
+)
 from rag_backend.domain.constants.chat_stream import (
     ALTER_EGO_RECURSION_LIMIT,
     NO_KNOWLEDGE_REPLY_EN,
@@ -210,3 +213,28 @@ async def test_real_harness_fits_the_search_budget_within_the_step_limit(
     assert not any(log["event"] == "alter_ego_step_limit_reached" for log in logs)
     assert NO_KNOWLEDGE_REPLY_EN not in str(events)
     assert model.replies == []
+
+
+@pytest.mark.asyncio
+async def test_search_logs_never_carry_the_visitor_text() -> None:
+    """Search logs carry the query's length and hash, never its words."""
+    # Scenario: Search logs never contain the visitor's words
+    search = MagicMock()
+    search.search = AsyncMock(return_value=[])
+    tool = build_search_documents_tool(search, SearchToolOptions(max_calls=1))
+    secret = "my private medical question"
+
+    with capture_logs() as logs:
+        await tool.ainvoke({"query": secret})
+        await tool.ainvoke({"query": secret})
+
+    search_logs = [log for log in logs if str(log["event"]).startswith("search_")]
+    assert {log["event"] for log in search_logs} == {
+        "search_documents_called",
+        "search_documents_no_results",
+        "search_documents_budget_exhausted",
+    }
+    for log in search_logs:
+        assert secret not in str(log)
+        assert log["query_length"] == len(secret)
+        assert len(str(log["query_hash"])) == QUERY_HASH_CHARS

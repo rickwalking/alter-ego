@@ -39,3 +39,8 @@ Feature: Chat errors are handled for the visitor, not shown to them
     When the agent raises an error while answering
     Then the server logs that the turn was not saved
     And the error event is still sent
+
+  Scenario: Search logs never contain the visitor's words
+    When the Alter-Ego searches the knowledge base for my question
+    Then the server logs the query's length and a short hash
+    And never the query text

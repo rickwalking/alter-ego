@@ -6,6 +6,7 @@ raw retriever, so agent retrieval goes through the same search path as
 ``/api/search``. Result formatting is unchanged.
 """
 
+import hashlib
 from dataclasses import dataclass
 
 from langchain_core.tools import BaseTool, tool
@@ -18,6 +19,18 @@ from rag_backend.infrastructure.logging import get_logger
 from rag_backend.modules.knowledge import KnowledgeSearchPort, SearchQuery
 
 logger = get_logger()
+
+QUERY_HASH_CHARS = 12
+
+
+def query_log_fields(query: str) -> dict[str, str | int]:
+    """What the logs may say about a search query: its length and a short hash.
+
+    The query is written from the visitor's own words, so its text never goes
+    to the logs; the hash still lets repeated searches be correlated.
+    """
+    digest = hashlib.sha256(query.encode("utf-8")).hexdigest()
+    return {"query_length": len(query), "query_hash": digest[:QUERY_HASH_CHARS]}
 
 
 @tool
@@ -81,7 +94,7 @@ def build_search_documents_tool(
         """
         nonlocal calls_made
         if max_calls is not None and calls_made >= max_calls:
-            logger.info("search_documents_budget_exhausted", query=query)
+            logger.info("search_documents_budget_exhausted", **query_log_fields(query))
             return SEARCH_BUDGET_EXHAUSTED
         calls_made += 1
         search_query = SearchQuery(
@@ -91,16 +104,18 @@ def build_search_documents_tool(
         )
         logger.info(
             "search_documents_called",
-            query=query,
+            **query_log_fields(query),
             top_k=top_k,
             namespace_prefix=namespace_prefix,
         )
         results = await search.search(search_query)
         if not results:
-            logger.info("search_documents_no_results", query=query)
+            logger.info("search_documents_no_results", **query_log_fields(query))
             return SEARCH_NO_RESULTS
 
-        logger.info("search_documents_found", query=query, count=len(results))
+        logger.info(
+            "search_documents_found", **query_log_fields(query), count=len(results)
+        )
 
         formatted_results = []
         for i, result in enumerate(results, 1):

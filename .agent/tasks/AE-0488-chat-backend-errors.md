@@ -5,7 +5,7 @@ Tier: T1
 Priority: High
 Type: Bug
 Area: Backend
-Owner: Worker (Claude) — /chat QA (AE-0486 follow-up), CHAT-01, CHAT-03 (backend), CHAT-04
+Owner: Claude — /chat QA (AE-0486 follow-up), CHAT-01, CHAT-03 (backend), CHAT-04
 Branch: fix/ae-0486-chat-errors
 Created: 2026-10-22
 Updated: 2026-10-22
@@ -35,6 +35,8 @@ Found by the /chat QA:
   `alter_ego_step_limit_reached`.
 - `stream_chat_response` logs `chat_stream_failed` (conversation id + error type, with the traceback), saves an
   apology assistant turn (never the partial reply) and sends a generic error event.
+
+- Search logs carry the query's length and a short hash, never the visitor's words (added during review).
 
 ## Non-Goals
 
