@@ -22,6 +22,7 @@ from rag_backend.domain.models.rubric import (
 from rag_backend.domain.models.rubric import (
     RubricEvaluationScore,
 )
+from rag_backend.domain.rubric_scoring import normalize_criteria
 from rag_backend.infrastructure.database.config import Base
 
 
@@ -164,7 +165,7 @@ class QualityRubricModel(Base):
             id=UUID(self.id),
             name=self.name,
             description=self.description,
-            criteria=self.criteria,
+            criteria=normalize_criteria(self.criteria or []),
             applicable_content_types=self.applicable_content_types or ["carousel"],
             is_default=self.is_default,
             created_at=self.created_at,

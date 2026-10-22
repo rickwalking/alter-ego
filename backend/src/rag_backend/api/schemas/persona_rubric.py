@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from rag_backend.domain.rubric_scoring import normalize_threshold
 
 
 class ToneAttributes(BaseModel):
@@ -88,6 +90,14 @@ class RubricCriterion(BaseModel):
     min_threshold: Annotated[float, Field(ge=0.0, le=1.0)]
     scoring_scale: str
     prompt_template: str
+
+    @field_validator("min_threshold", mode="before")
+    @classmethod
+    def _legacy_percent_is_a_fraction(cls, value: object) -> object:
+        """A stored legacy percentage (e.g. 70.0) reads as its fraction (0.7)."""
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            return normalize_threshold(float(value))
+        return value
 
 
 class QualityRubricCreate(BaseModel):
