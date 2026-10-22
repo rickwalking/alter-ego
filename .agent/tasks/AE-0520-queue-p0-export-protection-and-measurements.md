@@ -7,7 +7,7 @@ Type: Feature
 Area: Backend
 Owner: Claude Code (claude-opus-5-5)
 Agent Lane: developer → qa → release
-Branch: TBD
+Branch: feat/ae-0520-queue-p0 (code, PR #247); docs/ae-0520-measurements (report)
 Kanban Card: TBD
 Created: 2026-10-22
 Updated: 2026-10-22
@@ -37,12 +37,14 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given two carousels reach export at the same time, When both export, Then only one Chromium export runs at a time (test with two concurrent exports).
-- [ ] AC2 Given an export runs, When a web request arrives, Then the event loop is not blocked by PIL/img2pdf work (test asserts those calls run in a thread).
-- [ ] AC3 Given three runs are queued at 11:05, When the runner steps, Then generation starts are at least 20 minutes apart.
-- [ ] AC4 Given the deploy one-shot runs twice, When it finishes, Then the index exists once and the second run is a no-op.
+- [x] AC1 Given two carousels reach export at the same time, When both export, Then only one Chromium export runs at a time (test with two concurrent exports).
+- [x] AC2 Given an export runs, When a web request arrives, Then the event loop is not blocked by PIL/img2pdf work (test asserts those calls run in a thread).
+- [x] AC3 Given three runs are queued at 11:05, When the runner steps, Then generation starts are at least 20 minutes apart.
+- [x] AC4 Given the deploy one-shot runs twice, When it finishes, Then the index exists once and the second run is a no-op.
 - [ ] AC5 The measurements report exists with all six exit criteria answered (or marked blocked with the reason).
 
 ## Decision Log
 
 - 2026-10-22: Created from the AE-0517 plan after three skeptical review rounds (Pedro's cap).
+- 2026-10-22: AC1–AC4 in PR #247. AC5: `.agent/reports/AE-0520.measurements.md` answers criteria 2–6; criterion 1
+  (run RSS with/without HD) is blocked until the next real run (no generation ran in the sampling window).
