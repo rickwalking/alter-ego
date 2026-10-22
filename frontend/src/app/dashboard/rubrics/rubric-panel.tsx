@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
 import {
   BG_CARD,
   NEON_BORDER_SUBTLE,
@@ -17,11 +19,17 @@ import { ScoreCell } from "@/app/dashboard/rubrics/score-cell";
 
 interface RubricPanelProps {
   rubric: RubricData;
+  onEdit: () => void;
+  /** Omitted for the default rubric, which the API refuses to delete. */
+  onDelete?: () => void;
 }
 
 export function RubricPanel({
   rubric,
+  onEdit,
+  onDelete,
 }: Readonly<RubricPanelProps>): React.ReactElement {
+  const t = useTranslations("rubrics.panel");
   return (
     <div
       style={{
@@ -70,10 +78,30 @@ export function RubricPanel({
               fontWeight: 400,
             }}
           >
-            Weight: {rubric.weight}
+            {t("weight", { weight: rubric.weight })}
           </span>
         </h3>
-        <RubricStatusBadge status={rubric.status} />
+        <div className="flex items-center gap-2">
+          <RubricStatusBadge status={rubric.status} />
+          <NeonButton
+            variant="ghost"
+            size="sm"
+            aria-label={t("editLabel", { name: rubric.title })}
+            onClick={onEdit}
+          >
+            {t("edit")}
+          </NeonButton>
+          {onDelete && (
+            <NeonButton
+              variant="ghost"
+              size="sm"
+              aria-label={t("deleteLabel", { name: rubric.title })}
+              onClick={onDelete}
+            >
+              {t("delete")}
+            </NeonButton>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto [overscroll-behavior-x:contain]">
@@ -90,16 +118,21 @@ export function RubricPanel({
             background: RUBRIC_TABLE_HEADER_BG,
           }}
         >
-          <span style={{ textAlign: "left" }}>Criterion</span>
-          <span style={{ textAlign: "center" }}>Excellent (4)</span>
-          <span style={{ textAlign: "center" }}>Good (3)</span>
-          <span style={{ textAlign: "center" }}>Poor (1-2)</span>
+          <span style={{ textAlign: "left" }}>{t("criterion")}</span>
+          <span style={{ textAlign: "center" }}>{t("excellent")}</span>
+          <span style={{ textAlign: "center" }}>{t("good")}</span>
+          <span style={{ textAlign: "center" }}>{t("poor")}</span>
         </div>
 
         <div style={{ padding: "0 20px" }}>
+          {rubric.criteria.length === 0 && (
+            <p className="py-3 text-xs" style={{ color: TEXT_MUTED }}>
+              {t("noCriteria")}
+            </p>
+          )}
           {rubric.criteria.map((c, idx) => (
             <div
-              key={c.name}
+              key={`${idx}-${c.name}`}
               className="rubric-criterion grid min-w-[480px] grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2"
               style={{
                 padding: "12px 0",

@@ -4,6 +4,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ResourceRequestError,
   useCreateAction,
   useResourceCollection,
 } from "./use-resource-collection";
@@ -90,6 +91,28 @@ describe("useResourceCollection (AE-0446)", () => {
     await expect(result.current.delete("x")).rejects.toThrow(
       "Failed to delete persona",
     );
+  });
+
+  it("carries the API's string detail on a failed mutation", async () => {
+    // Scenario: A failed request keeps the API's own message
+    authenticatedFetch.mockResolvedValueOnce(ok({ items: [] }));
+    const { result } = renderCollection();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    authenticatedFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: "Name taken" }), { status: 400 }),
+    );
+    const error = await result.current
+      .update("a", { name: "x" })
+      .catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(ResourceRequestError);
+    expect(error).toMatchObject({
+      message: "Failed to update persona",
+      detail: "Name taken",
+      status: 400,
+    });
+    authenticatedFetch.mockResolvedValueOnce(failed());
+    const plain = await result.current.delete("a").catch((err: unknown) => err);
+    expect(plain).toMatchObject({ detail: undefined, status: 500 });
   });
 
   it("clears an earlier load error when a reload succeeds", async () => {

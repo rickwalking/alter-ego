@@ -926,6 +926,90 @@
       "failed": "Reprovado",
       "pass": "aprovado",
       "fail": "reprovado"
+    },
+    "page": {
+      "title": "Rubricas",
+      "breadcrumb": "pontuação de qualidade",
+      "new": "Nova rubrica",
+      "loadError": "Não foi possível carregar as rubricas."
+    },
+    "empty": {
+      "title": "Nenhuma rubrica ainda",
+      "body": "Uma rubrica lista os critérios que pontuam seu conteúdo antes da revisão.",
+      "action": "Criar a primeira rubrica"
+    },
+    "panel": {
+      "weight": "Peso: {weight}",
+      "criterion": "Critério",
+      "excellent": "Excelente (4)",
+      "good": "Bom (3)",
+      "poor": "Fraco (1-2)",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "editLabel": "Editar a rubrica {name}",
+      "deleteLabel": "Excluir a rubrica {name}",
+      "noCriteria": "Esta rubrica ainda não tem critérios."
+    },
+    "form": {
+      "createTitle": "Nova rubrica",
+      "editTitle": "Editar rubrica",
+      "name": "Nome",
+      "namePlaceholder": "ex.: Qualidade do carrossel",
+      "description": "Descrição",
+      "descriptionPlaceholder": "O que esta rubrica avalia",
+      "contentTypes": "Aplica-se a",
+      "criteria": "Critérios",
+      "noCriteria": "Nenhum critério ainda. Adicione o primeiro abaixo.",
+      "addCriterion": "Adicionar critério",
+      "criterionLegend": "Critério {number}",
+      "criterionName": "Nome do critério",
+      "criterionDescription": "Descrição do critério",
+      "weight": "Peso (0–1)",
+      "minThreshold": "Limite mínimo (0–1)",
+      "evaluationMethod": "Método de avaliação",
+      "scoringScale": "Escala de pontuação",
+      "promptTemplate": "Prompt de avaliação",
+      "promptHint": "Na avaliação por IA, escreva {token} onde entra o conteúdo.",
+      "moveUp": "Mover o critério {number} para cima",
+      "moveDown": "Mover o critério {number} para baixo",
+      "remove": "Remover o critério {number}",
+      "cancel": "Cancelar",
+      "create": "Criar rubrica",
+      "save": "Salvar alterações",
+      "unsavedConfirm": "Há alterações não salvas nesta rubrica. Sair sem salvar?",
+      "fixErrors": "Corrija os campos destacados antes de salvar.",
+      "errors": {
+        "name": "Informe um nome de 1 a 255 caracteres.",
+        "contentTypes": "Escolha pelo menos um tipo de conteúdo.",
+        "unitInterval": "Informe um número de 0 a 1.",
+        "choice": "Escolha uma opção.",
+        "invalid": "Este valor não é válido.",
+        "save": "Não foi possível salvar a rubrica. Confira os campos e tente de novo.",
+        "criterionName": "Informe o nome do critério."
+      }
+    },
+    "contentType": {
+      "carousel": "Carrossel",
+      "blog_post": "Post do blog"
+    },
+    "evaluationMethod": {
+      "ai_auto": "IA (automático)",
+      "human_required": "Revisão humana",
+      "hybrid": "Híbrido"
+    },
+    "scoringScale": {
+      "0-100": "0–100",
+      "1-10": "1–10",
+      "pass_fail": "Aprovado / reprovado",
+      "grade_a_f": "Nota A–F"
+    },
+    "delete": {
+      "title": "Excluir rubrica",
+      "body": "Excluir “{name}”? Não dá para desfazer.",
+      "confirm": "Excluir",
+      "cancel": "Cancelar",
+      "error": "Não foi possível excluir a rubrica.",
+      "inUse": "Esta rubrica ainda é usada por carrosséis ou avaliações, então não pode ser excluída."
     }
   },
   "publish": {

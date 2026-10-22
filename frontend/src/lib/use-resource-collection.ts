@@ -7,8 +7,27 @@ import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { API_BASE } from "@/constants/api";
+import { responseErrorDetail } from "@/lib/response-error";
 
 const FALLBACK_ERROR = "An error occurred";
+
+/**
+ * A failed collection request. ``message`` keeps the per-resource wording;
+ * ``detail`` is the API's own sentence when it sent one (a string ``detail``),
+ * so a form can show the server's reason next to its fields.
+ */
+export class ResourceRequestError extends Error {
+  readonly detail: string | undefined;
+  /** The HTTP status of the failed response (409 = still referenced, …). */
+  readonly status: number;
+
+  constructor(message: string, response: { detail?: string; status: number }) {
+    super(message);
+    this.name = "ResourceRequestError";
+    this.detail = response.detail;
+    this.status = response.status;
+  }
+}
 
 export interface ResourceCollectionConfig {
   /** Collection path under the API base, e.g. "personas". */
@@ -27,6 +46,13 @@ export interface ResourceCollection<T, C, U> {
   delete: (id: string) => Promise<boolean>;
 }
 
+/** The API's own sentence for a failed request when it sent one, else ``fallback``. */
+export function requestErrorText(err: unknown, fallback: string): string {
+  return err instanceof ResourceRequestError && err.detail
+    ? err.detail
+    : fallback;
+}
+
 async function sendJson<T>(
   url: string,
   init: RequestInit,
@@ -34,7 +60,10 @@ async function sendJson<T>(
 ): Promise<T> {
   const response = await authenticatedFetch(url, init);
   if (!response.ok) {
-    throw new Error(failure);
+    throw new ResourceRequestError(failure, {
+      detail: await responseErrorDetail(response),
+      status: response.status,
+    });
   }
   return (await response.json()) as T;
 }
@@ -42,7 +71,10 @@ async function sendJson<T>(
 async function removeItem(url: string, failure: string): Promise<void> {
   const response = await authenticatedFetch(url, { method: "DELETE" });
   if (!response.ok) {
-    throw new Error(failure);
+    throw new ResourceRequestError(failure, {
+      detail: await responseErrorDetail(response),
+      status: response.status,
+    });
   }
 }
 
