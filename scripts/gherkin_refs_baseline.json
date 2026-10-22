@@ -2,8 +2,6 @@
   "unreferenced": [
     "backend/tests/features/admin.feature::Admin cannot delete last admin",
     "backend/tests/features/admin.feature::Admin cannot demote last admin",
-    "backend/tests/features/admin.feature::Admin resets user password",
-    "backend/tests/features/admin.feature::Reset password currently 500s due to onupdate lazy-load defect",
     "backend/tests/features/admin.feature::Updating a non-existent user returns 404",
     "backend/tests/features/admin_render_slides.feature::Re-render slides for a carousel with missing slides",
     "backend/tests/features/admin_render_slides.feature::Report failure when Playwright export errors",
@@ -57,7 +55,6 @@
     "backend/tests/features/anonymous_chat.feature::Visitor cannot access conversation list",
     "backend/tests/features/anonymous_chat.feature::Visitor connects to WebSocket with anonymous token",
     "backend/tests/features/anonymous_chat.feature::Visitor starts an anonymous conversation",
-    "backend/tests/features/auth.feature::Change password currently 500s due to onupdate lazy-load defect",
     "backend/tests/features/auth.feature::Login response carries the access_token cookie attributes and an HS256 JWT",
     "backend/tests/features/autopilot_grok_cover_ae0418.feature::An ai_image that is too small after the 4:5 crop is rejected",
     "backend/tests/features/autopilot_owner_actions.feature::Wrong secret is rejected",
