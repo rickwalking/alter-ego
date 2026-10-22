@@ -16,7 +16,10 @@
  * See `src/modules/README.md` for the public-contract convention.
  */
 
-export type { CreateWorkflowControlsProps } from "./workspace/types";
+export type {
+  CreateWorkflowControlsProps,
+  WorkflowFeedback,
+} from "./workspace/types";
 
 export type {
   BlogAiSuggestResult,

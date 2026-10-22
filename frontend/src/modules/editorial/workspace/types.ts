@@ -2,10 +2,8 @@ import type { FinalReviewSendBackPhase } from "@/constants/editorial-workflow";
 import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
 import type { EditorialWorkflowState } from "@/modules/editorial/workspace/types-ai";
 
-export interface CreateWorkflowControlsProps {
-  state: EditorialWorkflowState | null;
-  showLiveControls: boolean;
-  loading: boolean;
+/** The revise feedback box and the final-review send-back target. */
+export interface WorkflowFeedback {
   feedback: string;
   setFeedback: (value: string) => void;
   feedbackError: string | null;
@@ -13,6 +11,12 @@ export interface CreateWorkflowControlsProps {
   sendBackTarget: FinalReviewSendBackPhase;
   setSendBackTarget: (value: FinalReviewSendBackPhase) => void;
   handleRevise: () => void;
+}
+
+export interface CreateWorkflowControlsProps extends WorkflowFeedback {
+  state: EditorialWorkflowState | null;
+  showLiveControls: boolean;
+  loading: boolean;
   approve: (options?: object) => void;
   contentHasEdits: boolean;
   contentSlides: LocalizedSlideReview[];

@@ -3,6 +3,23 @@ import { TEXT_MUTED } from "@/constants/neon";
 import { MarketingHeroTerminal } from "@/app/(public)/(marketing)/marketing-hero-terminal";
 import type { MarketingHeroProps } from "@/app/(public)/(marketing)/types";
 
+function CtaIcon({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  );
+}
+
 export function MarketingHero({
   t,
   tc,
@@ -40,33 +57,15 @@ export function MarketingHero({
               className="landing-cta-primary"
               data-testid="cta-primary"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <CtaIcon>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+              </CtaIcon>
               {tc("startChatting")}
             </Link>
             <Link href="/blog" className="landing-cta-ghost">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <CtaIcon>
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-              </svg>
+              </CtaIcon>
               {t("hero.exploreBlog")}
             </Link>
           </div>

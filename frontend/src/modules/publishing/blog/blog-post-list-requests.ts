@@ -3,6 +3,7 @@
  * plain functions (status mapping and error messages unchanged).
  */
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { responseErrorDetail } from "@/lib/response-error";
 import { API_BASE, HTTP_STATUS } from "@/constants/api";
 import { HTTP_HEADER_IF_MATCH } from "@/constants/workflow";
 import type {
@@ -38,15 +39,6 @@ function postUrl(id: string, action?: string): string {
 
 function ifMatch(lockVersion: number): Record<string, string> {
   return { [HTTP_HEADER_IF_MATCH]: String(lockVersion) };
-}
-
-async function readErrorDetail(response: Response): Promise<string | null> {
-  try {
-    const body = (await response.json()) as { detail?: unknown };
-    return typeof body.detail === "string" ? body.detail : null;
-  } catch {
-    return null;
-  }
 }
 
 function listQuery(filters: BlogPostFilters): string {
@@ -112,7 +104,7 @@ export async function deleteBlogPost(
     headers: ifMatch(lockVersion),
   });
   if (response.status === HTTP_STATUS.CONFLICT) {
-    const detail = await readErrorDetail(response);
+    const detail = (await responseErrorDetail(response)) ?? null;
     return detail === BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED
       ? "carouselBlocked"
       : "versionConflict";

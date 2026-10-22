@@ -4,6 +4,10 @@ import Image from "next/image";
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download, Loader } from "lucide-react";
+import {
+  scrollViewportToSlide,
+  slideIndexFromScroll,
+} from "@/lib/slide-viewport";
 import { downloadSlidesZip } from "../lib/download-slides-zip";
 import type { HorizontalCarouselViewerProps } from "./types";
 
@@ -30,7 +34,7 @@ export function HorizontalCarouselViewer({
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
-    const index = Math.round(target.scrollLeft / target.clientWidth);
+    const index = slideIndexFromScroll(target);
     if (index !== activeIndex) {
       setActiveIndex(index);
     }
@@ -40,11 +44,7 @@ export function HorizontalCarouselViewer({
     (index: number) => {
       const viewport = document.getElementById("carousel-viewport");
       if (!viewport) return;
-      const clamped = Math.max(0, Math.min(index, slideUrls.length - 1));
-      viewport.scrollTo({
-        left: clamped * viewport.clientWidth,
-        behavior: "smooth",
-      });
+      scrollViewportToSlide(viewport, index, slideUrls.length);
     },
     [slideUrls.length],
   );

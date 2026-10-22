@@ -6,7 +6,7 @@ import { NeonLabel } from "@/components/atoms/neon-label";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { WORKFLOW_API } from "@/constants/workflow";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { useWorkflowPostAction } from "../hooks/use-workflow-post-action";
 import type { ReviewAssignmentPayload } from "@/modules/editorial/workflow/types";
 import type { ReviewAssignmentPanelProps } from "./types";
 
@@ -19,36 +19,21 @@ export function ReviewAssignmentPanel({
   const t = useTranslations("workflow.review");
   const [reviewerId, setReviewerId] = useState("");
   const [deadlineHours, setDeadlineHours] = useState("24");
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const { submitting, message, post } = useWorkflowPostAction(
+    { success: t("assigned"), failed: t("failed") },
+    onAssigned,
+  );
 
   const handleAssign = async () => {
     if (!reviewerId.trim()) return;
-    setSubmitting(true);
-    setMessage(null);
-    try {
-      const payload: ReviewAssignmentPayload = {
-        reviewer_id: reviewerId.trim(),
-        content_id: contentId,
-        content_type: contentType,
-        title,
-        deadline_hours: Number(deadlineHours) || 24,
-      };
-      const response = await authenticatedFetch(WORKFLOW_API.ASSIGN_REVIEW, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        throw new Error(t("failed"));
-      }
-      setMessage(t("assigned"));
-      onAssigned?.();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("failed"));
-    } finally {
-      setSubmitting(false);
-    }
+    const payload: ReviewAssignmentPayload = {
+      reviewer_id: reviewerId.trim(),
+      content_id: contentId,
+      content_type: contentType,
+      title,
+      deadline_hours: Number(deadlineHours) || 24,
+    };
+    await post(WORKFLOW_API.ASSIGN_REVIEW, payload);
   };
 
   return (

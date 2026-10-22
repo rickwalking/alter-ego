@@ -42,3 +42,14 @@ export interface KanbanColumn {
 export interface WorkflowKanban {
   columns: KanbanColumn[];
 }
+
+export interface WorkflowPostActionMessages {
+  success: string;
+  failed: string;
+}
+
+export interface WorkflowPostActionResult {
+  submitting: boolean;
+  message: string | null;
+  post: (url: string, body: object) => Promise<void>;
+}
