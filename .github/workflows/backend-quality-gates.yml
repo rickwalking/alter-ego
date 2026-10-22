@@ -61,6 +61,13 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh backend:comments
 
+      - name: OpenAPI artifact is up to date (export_openapi.py --check)
+        working-directory: .
+        env:
+          SECRET_KEY: test-secret-key-for-ci-tests!!
+          ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
+        run: bash scripts/ci/gates.sh backend:openapi-fresh
+
       - name: Ruff diff check (changed files only)
         working-directory: .
         run: bash scripts/ci/gates.sh backend:lint-diff

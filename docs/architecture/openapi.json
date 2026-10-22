@@ -15018,7 +15018,7 @@
         ]
       },
       "post": {
-        "description": "Create a new document and start processing.\n\nThe document will be queued for processing (chunking and embedding generation).\nCheck the status field to track progress.",
+        "description": "Create a new document (status ``pending``, not processed yet).\n\nChunking and embedding run through ``POST /{document_id}/reprocess``, which\nthe dashboard calls right after a create; a processing failure is saved on\nthe document as ``failed`` with its reason.",
         "operationId": "create_document_api_documents_post",
         "requestBody": {
           "content": {

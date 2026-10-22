@@ -22,6 +22,10 @@ the artifact is byte-stable across runs and produces clean diffs.
 Usage:
     uv run python backend/scripts/export_openapi.py            # write artifact
     uv run python backend/scripts/export_openapi.py --check    # fail if drifted
+
+``--check`` runs in CI as the ``backend:openapi-fresh`` gate, so a backend schema
+change that is not exported fails the PR. ``--artifact`` points either mode at
+another file (used by the gate's own tests).
 """
 
 from __future__ import annotations
@@ -57,7 +61,7 @@ def _serialize(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Write (or verify) the committed OpenAPI artifact. 0 on success."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -65,35 +69,42 @@ def main() -> int:
         action="store_true",
         help="Verify the committed artifact matches the live schema; do not write.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--artifact",
+        type=Path,
+        default=_ARTIFACT_PATH,
+        help="Artifact path (default: docs/architecture/openapi.json).",
+    )
+    args = parser.parse_args(argv)
+    artifact = cast(Path, args.artifact)
 
     serialized = _serialize(_build_openapi())
 
     if args.check:
-        if not _ARTIFACT_PATH.exists():
+        if not artifact.exists():
             sys.stderr.write(
-                f"OpenAPI artifact missing at {_ARTIFACT_PATH}. "
+                f"OpenAPI artifact missing at {artifact}. "
                 "Run `uv run python backend/scripts/export_openapi.py`.\n"
             )
             return 1
-        if _ARTIFACT_PATH.read_text(encoding="utf-8") != serialized:
+        if artifact.read_text(encoding="utf-8") != serialized:
             sys.stderr.write(
                 "OpenAPI artifact is stale. The live FastAPI schema differs "
-                f"from {_ARTIFACT_PATH}. Regenerate with "
+                f"from {artifact}. Regenerate with "
                 "`uv run python backend/scripts/export_openapi.py`.\n"
             )
             return 1
-        sys.stdout.write(f"OpenAPI artifact up to date: {_ARTIFACT_PATH}\n")
+        sys.stdout.write(f"OpenAPI artifact up to date: {artifact}\n")
         return 0
 
-    _ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _ARTIFACT_PATH.write_text(serialized, encoding="utf-8")
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text(serialized, encoding="utf-8")
     components = cast(
         dict[str, object],
         cast(dict[str, object], json.loads(serialized)).get("components", {}),
     )
     schemas = cast(dict[str, object], components.get("schemas", {}))
-    sys.stdout.write(f"Wrote {_ARTIFACT_PATH} ({len(schemas)} component schemas).\n")
+    sys.stdout.write(f"Wrote {artifact} ({len(schemas)} component schemas).\n")
     return 0
 
 
