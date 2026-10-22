@@ -1261,7 +1261,7 @@
       "recentActivity": {
         "title": "Recent Activity",
         "live": "Live",
-        "items": "{count} items"
+        "items": "{count, plural, one {# item} other {# items}}"
       },
       "upcomingSchedule": {
         "title": "Upcoming Schedule",
@@ -1270,7 +1270,7 @@
         "inProgress": "{count} in progress",
         "today": "Today",
         "velocity": "Weekly velocity",
-        "postsPerWeek": "{count} posts/week",
+        "postsPerWeek": "{count, plural, one {# post/week} other {# posts/week}}",
         "trend": "Trend"
       },
       "breadcrumb": "overview"

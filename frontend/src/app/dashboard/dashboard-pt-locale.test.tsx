@@ -1,35 +1,17 @@
-import { render, screen } from "@testing-library/react";
+import { render as renderBare, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
+
+import pt from "@/i18n/locales/pt.json";
 
 import { buildCalendarDaysFromApi } from "@/modules/editorial-operations";
 import type { CalendarItem } from "@/modules/editorial";
-import type { EditorialAnalyticsState } from "@/modules/editorial-operations";
+import type {
+  EditorialAnalyticsState,
+  EditorialAnalyticsSummary,
+} from "@/modules/editorial-operations";
 
-vi.mock("next-intl", async () => {
-  const pt = (await import("@/i18n/locales/pt.json")).default;
-  const lookup = (path: string): unknown =>
-    path
-      .split(".")
-      .reduce<unknown>(
-        (node, key) =>
-          node && typeof node === "object"
-            ? (node as Record<string, unknown>)[key]
-            : undefined,
-        pt,
-      );
-  return {
-    useLocale: () => "pt",
-    useTranslations:
-      (namespace?: string) =>
-      (key: string, values?: Record<string, string | number>): string => {
-        const raw = lookup(namespace ? `${namespace}.${key}` : key);
-        if (typeof raw !== "string") return key;
-        return raw.replace(/\{(\w+)\}/g, (_, token: string) =>
-          String(values?.[token] ?? token),
-        );
-      },
-  };
-});
+vi.mock("next-intl", async (importOriginal) => importOriginal());
 vi.mock("@/modules/editorial-operations", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/editorial-operations")>()),
   useEditorialAnalytics: () => ANALYTICS,
@@ -42,20 +24,37 @@ import DashboardPage from "./page";
 import AnalyticsPage from "./analytics/page";
 import { CalendarGrid } from "./calendar/calendar-grid";
 import { CalendarLegend } from "./calendar/calendar-legend";
+import { DashboardAnalyticsActivity } from "./dashboard-analytics";
+
+function render(ui: React.ReactElement): ReturnType<typeof renderBare> {
+  return renderBare(ui, {
+    wrapper: ({ children }) => (
+      <NextIntlClientProvider
+        locale="pt"
+        messages={pt}
+        timeZone="America/Sao_Paulo"
+      >
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
+
+const SUMMARY: EditorialAnalyticsSummary = {
+  total_posts: 26,
+  published_this_week: 0,
+  published_this_month: 0,
+  content_velocity_per_week: 0,
+  status_breakdown: { draft: 26 },
+  average_views: 0,
+  pending_review: 0,
+  draft_count: 26,
+  quality_score_average: 0,
+};
 
 const ANALYTICS: EditorialAnalyticsState = {
   data: {
-    summary: {
-      total_posts: 26,
-      published_this_week: 0,
-      published_this_month: 0,
-      content_velocity_per_week: 0,
-      status_breakdown: { draft: 26 },
-      average_views: 0,
-      pending_review: 0,
-      draft_count: 26,
-      quality_score_average: 0,
-    },
+    summary: SUMMARY,
     velocity_by_week: [],
   },
   loading: false,
@@ -93,6 +92,27 @@ describe("dashboard in Portuguese", () => {
     expect(screen.getByText("Rascunho")).toBeInTheDocument();
     expect(screen.getByText("26 em andamento")).toBeInTheDocument();
     expect(screen.getByText("0 posts/semana")).toBeInTheDocument();
+  });
+
+  // Scenario: Activity counts use the singular for one item
+  it("uses the singular for a count of one", () => {
+    render(
+      <DashboardAnalyticsActivity
+        state={{
+          ...ANALYTICS,
+          data: {
+            summary: {
+              ...SUMMARY,
+              content_velocity_per_week: 1,
+              status_breakdown: { draft: 1 },
+            },
+            velocity_by_week: [],
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("1 item")).toBeInTheDocument();
+    expect(screen.getByText("1 post/semana")).toBeInTheDocument();
   });
 
   // Scenario: The calendar legend, chips and empty month are translated

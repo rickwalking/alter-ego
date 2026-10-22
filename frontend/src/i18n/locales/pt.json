@@ -1261,7 +1261,7 @@
       "recentActivity": {
         "title": "Atividade Recente",
         "live": "Ao Vivo",
-        "items": "{count} itens"
+        "items": "{count, plural, =0 {# itens} one {# item} other {# itens}}"
       },
       "upcomingSchedule": {
         "title": "Agenda",
@@ -1270,7 +1270,7 @@
         "inProgress": "{count} em andamento",
         "today": "Hoje",
         "velocity": "Velocidade semanal",
-        "postsPerWeek": "{count} posts/semana",
+        "postsPerWeek": "{count, plural, =0 {# posts/semana} one {# post/semana} other {# posts/semana}}",
         "trend": "Tendência"
       },
       "breadcrumb": "visão geral"

@@ -18,3 +18,8 @@ Feature: The dashboard speaks Portuguese when the interface is Portuguese
     Given the interface language is Portuguese
     When the content calendar shows a month with and without items
     Then the legend, the content-type and status chips and the empty-month message are in Portuguese
+
+  Scenario: Activity counts use the singular for one item
+    Given the interface language is Portuguese
+    When the dashboard activity lists show a count of one
+    Then the item and weekly-velocity counts read "1 item" and "1 post/semana"
