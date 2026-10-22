@@ -86,6 +86,11 @@ class PostgresUserRepository(UserRepository):
     async def update(self, user: User) -> User:
         """Update an existing user.
 
+        When ``updated_at`` is unchanged the column's ``onupdate`` sets it in
+        the database and the flush expires it; the model is refreshed before
+        mapping so the entity never triggers a lazy load inside the async
+        session (that lazy load raised ``MissingGreenlet`` → HTTP 500).
+
         Args:
             user: User entity with updated fields.
 
@@ -107,6 +112,7 @@ class PostgresUserRepository(UserRepository):
         model.updated_at = user.updated_at
 
         await self._session.flush()
+        await self._session.refresh(model)
         return model.to_entity()
 
     async def delete(self, user_id: UUID) -> bool:

@@ -13,10 +13,9 @@ facade.
 ``change_password`` deliberately reproduces the legacy update path verbatim:
 verify the current password first (the 401 guard runs *before* any write), then
 set ``hashed_password`` and call ``repository.update`` inside the request-scoped
-Unit of Work (the single commit owner, ADR-0009 §9). The legacy route's
-known-and-snapshotted post-update lazy-load behavior is preserved because the
-same repository ``update`` runs against the same session — no behavior is added
-or papered over here (the snapshotted finding stays locked).
+Unit of Work (the single commit owner, ADR-0009 §9). The repository refreshes
+the user after its flush, so a password-only update returns the stored row
+instead of lazy-loading the database-set ``updated_at`` (which used to 500).
 """
 
 from __future__ import annotations
@@ -82,8 +81,7 @@ class AuthCommandHandler:
 
         The wrong-current-password guard raises before any write (legacy 401
         ordering). On success the new hash is staged via ``repository.update``
-        and committed once through the Unit of Work — the same single-statement
-        path the legacy route ran, so the snapshotted contract is preserved.
+        and committed once through the Unit of Work; the route answers 204.
         """
         user = await self._require_user(command.user_id)
         if not self._passwords.verify(command.current_password, user.hashed_password):

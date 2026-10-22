@@ -52,6 +52,7 @@ ADMIN_EMAIL = "id-admin@integration.example.com"
 EDITOR_EMAIL = "id-editor@integration.example.com"
 LOGIN_PASSWORD = "SecurePass123!"
 NEW_PASSWORD = "NewSecurePass456!"
+RESET_EMAIL = "reset@integration.example.com"
 COOKIE_ACCESS = "access_token"
 COOKIE_ANON = "anon_token"
 SSE_EVENT_TYPES = ("token", "sources", "complete", "error", "tool_result")
@@ -131,6 +132,15 @@ class IdEnv:
         return await create_test_user(email, role)
 
 
+async def _login_status(env: IdEnv, email: str, password: str) -> int:
+    """Status code of a ``/api/auth/token`` login with these credentials."""
+    async with env.anon_client() as client:
+        resp = await client.post(
+            "/api/auth/token", json={"email": email, "password": password}
+        )
+    return resp.status_code
+
+
 @pytest_asyncio.fixture
 async def id_env(
     tmp_path: object, monkeypatch: pytest.MonkeyPatch
@@ -140,12 +150,14 @@ async def id_env(
     DEBUG is pinned to false so the cookie ``secure`` attribute is deterministic: an
     ambient local ``DEBUG=true`` would drop the flag and make the committed snapshot
     environment-dependent. The settings cache is cleared so the app picks up the pinned
-    value.
+    value. The login rate limiter is reset so tests that log in several times never
+    starve a later test of its per-minute budget.
     """
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
+    from rag_backend.api.middleware.rate_limiting import limiter
     from rag_backend.infrastructure.config.settings import get_settings
     from rag_backend.infrastructure.database.config import close_db
 
@@ -153,6 +165,7 @@ async def id_env(
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
     monkeypatch.setenv("DEBUG", "false")
     get_settings.cache_clear()
+    limiter.reset()
 
     assert isinstance(tmp_path, Path)
     db_path = str(tmp_path / "id_env.db")
@@ -302,23 +315,11 @@ class TestAuthBehavior:
         assert COOKIE_ACCESS in resp.headers["set-cookie"]
 
     @pytest.mark.asyncio
-    async def test_change_password_current_behavior(self, id_env: IdEnv) -> None:
-        """Scenario: Change own password — captures CURRENT behavior.
+    async def test_change_password_succeeds(self, id_env: IdEnv) -> None:
+        """Scenario: Change own password.
 
-        DISCOVERED DEFECT (reported, NOT fixed here: a tests-only change, no src
-        change): ``change_password`` reloads the user, sets
-        ``hashed_password`` (which does NOT bump ``updated_at``), then calls
-        ``PostgresUserRepository.update``. The ``users.updated_at`` column has
-        ``onupdate=func.now()``; because the entity's ``updated_at`` is unchanged
-        the UPDATE applies the server-side default, which EXPIRES the column. The
-        subsequent ``UserModel.to_entity()`` then triggers a synchronous lazy
-        reload inside the async route → ``SQLAlchemyError`` (MissingGreenlet) →
-        500. ``admin.update_user`` avoids this because ``set_role``/``activate``
-        bump ``updated_at`` to an explicit value (no server onupdate, no expiry).
-
-        This test LOCKS that deterministic 500 so the Phase-3 refactor diffs
-        against the true current contract (snapshot diff=0). When the underlying
-        defect is fixed, update this scenario to the intended 204 + re-login.
+        A password-only update must not 500: the new password logs in and the
+        old one no longer does.
         """
         async with id_env.client_for(id_env.editor) as client:
             resp = await client.post(
@@ -328,7 +329,9 @@ class TestAuthBehavior:
                     "new_password": NEW_PASSWORD,
                 },
             )
-        assert resp.status_code == 500
+        assert resp.status_code == 204
+        assert await _login_status(id_env, EDITOR_EMAIL, NEW_PASSWORD) == 200
+        assert await _login_status(id_env, EDITOR_EMAIL, LOGIN_PASSWORD) == 401
 
     @pytest.mark.asyncio
     async def test_change_password_wrong_current(self, id_env: IdEnv) -> None:
@@ -438,22 +441,24 @@ class TestAdminBehavior:
         assert resp.status_code == 409
 
     @pytest.mark.asyncio
-    async def test_reset_password_current_behavior(self, id_env: IdEnv) -> None:
-        """Scenario: Admin resets a user's password — captures CURRENT behavior.
+    async def test_reset_password_returns_working_temp_password(
+        self, id_env: IdEnv
+    ) -> None:
+        """Scenario: Admin resets user password.
 
-        DISCOVERED DEFECT (reported, NOT fixed here): identical
-        root cause to ``change_password`` — ``reset_password`` sets
-        ``hashed_password`` without bumping ``updated_at``, so ``repo.update``'s
-        post-flush ``to_entity()`` lazy-loads the server ``onupdate`` column
-        synchronously inside the async route → 500. This test LOCKS the
-        deterministic 500 baseline; flip to 200 + temp_password once fixed.
+        The reset returns 200 with a temporary password that logs in, and the
+        user's previous password stops working.
         """
-        target = await id_env.make_user(
-            "reset@integration.example.com", UserRole.EDITOR
+        target = await _create_user_with_password(
+            RESET_EMAIL, UserRole.EDITOR, LOGIN_PASSWORD
         )
         async with id_env.client_for(id_env.admin) as client:
             resp = await client.post(f"/api/admin/users/{target.id}/reset-password")
-        assert resp.status_code == 500
+        assert resp.status_code == 200
+        temp_password = resp.json()["temp_password"]
+        assert temp_password
+        assert await _login_status(id_env, RESET_EMAIL, temp_password) == 200
+        assert await _login_status(id_env, RESET_EMAIL, LOGIN_PASSWORD) == 401
 
     @pytest.mark.asyncio
     async def test_update_missing_user_404(self, id_env: IdEnv) -> None:
