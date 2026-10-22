@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   saveCopy: vi.fn(),
   refetchProject: vi.fn(() => Promise.resolve()),
   project: { current: undefined as Record<string, unknown> | undefined },
+  projectError: { current: false },
   fetch: vi.fn(),
   push: vi.fn(),
 }));
@@ -32,6 +33,7 @@ vi.mock("@/modules/editorial", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/editorial")>()),
   useCarouselProject: () => ({
     data: m.project.current,
+    isError: m.projectError.current,
     refetch: m.refetchProject,
   }),
 }));
@@ -106,7 +108,24 @@ beforeEach(() => {
   m.fetch.mockReset();
   m.push.mockReset();
   m.project.current = savedProject();
+  m.projectError.current = false;
 });
+
+function blogResponses(preview: Response): void {
+  m.fetch.mockImplementation((url: string) =>
+    Promise.resolve(
+      url.includes("from-carousel")
+        ? new Response(
+            JSON.stringify({
+              code: "blog_post_exists_for_project",
+              post_id: "post-9",
+            }),
+            { status: 409 },
+          )
+        : preview,
+    ),
+  );
+}
 
 describe("CreateFinalReviewTabs copy editing (AE-0505)", () => {
   /** Scenario: The reviewer saves an edited caption in the final review */
@@ -206,20 +225,8 @@ describe("CreateFinalReviewTabs copy editing (AE-0505)", () => {
 
   /** Scenario: The blog body is edited in the blog editor */
   it("opens the carousel's existing blog post in the blog editor", async () => {
-    m.fetch.mockImplementation((url: string) =>
-      Promise.resolve(
-        url.includes("from-carousel")
-          ? new Response(
-              JSON.stringify({
-                code: "blog_post_exists_for_project",
-                post_id: "post-9",
-              }),
-              { status: 409 },
-            )
-          : new Response(JSON.stringify({ markdown: "# Blog" }), {
-              status: 200,
-            }),
-      ),
+    blogResponses(
+      new Response(JSON.stringify({ markdown: "# Blog" }), { status: 200 }),
     );
     renderTabs();
     await openTab("Blog");
@@ -230,5 +237,79 @@ describe("CreateFinalReviewTabs copy editing (AE-0505)", () => {
     await waitFor(() =>
       expect(m.push).toHaveBeenCalledWith("/dashboard/blog-posts/post-9/edit"),
     );
+  });
+
+  /** Scenario: The blog editor waits for unsaved caption or LinkedIn edits */
+  it("keeps the blog editor closed while a caption edit is unsaved", async () => {
+    blogResponses(
+      new Response(JSON.stringify({ markdown: "# Blog" }), { status: 200 }),
+    );
+    renderTabs();
+    await openTab("Caption");
+    await replaceText(CAPTION_LABEL, "Rascunho");
+    await openTab("Blog");
+    expect(
+      screen.getByRole("button", { name: "Open in the blog editor" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Save or discard the caption or LinkedIn edit before opening the blog editor.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: The blog preview or the blog editor cannot be opened */
+  it("says so when the blog preview cannot be loaded", async () => {
+    blogResponses(new Response("{}", { status: 500 }));
+    renderTabs();
+    await openTab("Blog");
+    expect(
+      await screen.findByText("Could not load draft blog preview."),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: A save refused for another reason explains why */
+  it("explains a refused save of a published caption", async () => {
+    const published = new ApiError(409, "Conflict");
+    published.detail = "caption_published";
+    m.saveCopy.mockRejectedValue(published);
+    const { onCopySaved } = renderTabs();
+    await openTab("Caption");
+    await replaceText(CAPTION_LABEL, "Legenda tarde");
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "The caption is already published on Instagram",
+    );
+    expect(onCopySaved).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(CAPTION_LABEL)).toHaveValue("Legenda tarde");
+  });
+
+  /** Scenario: The saved texts cannot be loaded */
+  it("offers a retry when the saved texts cannot be loaded", async () => {
+    m.project.current = undefined;
+    m.projectError.current = true;
+    renderTabs();
+    await openTab("LinkedIn");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not load the saved texts.",
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Try again" }));
+    expect(m.refetchProject).toHaveBeenCalledTimes(1);
+  });
+
+  /** Scenario: Leaving the review with unsaved edits asks first */
+  it("guards in-app links while a review edit is unsaved", async () => {
+    renderTabs();
+    await openTab("Caption");
+    await replaceText(CAPTION_LABEL, "Rascunho");
+    const link = document.createElement("a");
+    link.href = "/dashboard";
+    link.textContent = "away";
+    document.body.appendChild(link);
+    await userEvent.setup().click(link);
+    expect(screen.getByText("Leave without saving?")).toBeInTheDocument();
+    link.remove();
   });
 });

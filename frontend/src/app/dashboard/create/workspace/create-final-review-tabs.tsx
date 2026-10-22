@@ -11,6 +11,7 @@ import {
   ReviewCaptionEditor,
   ReviewCopyLeaveGuard,
   ReviewLinkedInEditor,
+  COPY_FIELDS,
   type EditorialWorkflowState,
 } from "@/modules/publishing";
 import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
@@ -32,6 +33,11 @@ interface FinalReviewTabsProps {
 }
 
 const MUTED = "text-[var(--color-text-muted)]";
+
+/** The caption or a LinkedIn post has edits that are not saved yet. */
+function copyUnsaved(copy: FinalReviewCopy): boolean {
+  return copy.editor?.isDirty(COPY_FIELDS) === true;
+}
 
 interface QualityTabProps {
   readonly state: EditorialWorkflowState;
@@ -66,13 +72,38 @@ function QualityTab({ state, emptyText }: QualityTabProps): React.JSX.Element {
 interface CopyTabProps {
   readonly copy: FinalReviewCopy;
   readonly tab: FinalReviewTab;
-  readonly loadingText: string;
+}
+
+interface CopyPendingProps {
+  readonly copy: FinalReviewCopy;
+}
+
+/** Why there is no editor yet: still loading, or a failed load with a retry. */
+function CopyPending({ copy }: CopyPendingProps): React.JSX.Element {
+  const t = useTranslations("editorialWorkflow.review.finalReview");
+  if (!copy.loadFailed) {
+    return <p className={MUTED}>{t("copyLoading")}</p>;
+  }
+  return (
+    <div className="space-y-2">
+      <p role="alert" className="text-destructive">
+        {t("copyLoadFailed")}
+      </p>
+      <button
+        type="button"
+        onClick={copy.retry}
+        className="rounded-md border border-[var(--color-border)] px-3 py-1 text-xs"
+      >
+        {t("copyRetry")}
+      </button>
+    </div>
+  );
 }
 
 /** The caption or LinkedIn editor, once the saved project texts loaded. */
-function CopyTab({ copy, tab, loadingText }: CopyTabProps): React.JSX.Element {
+function CopyTab({ copy, tab }: CopyTabProps): React.JSX.Element {
   if (!copy.editor) {
-    return <p className={MUTED}>{loadingText}</p>;
+    return <CopyPending copy={copy} />;
   }
   return tab === FINAL_REVIEW_TABS.CAPTION ? (
     <ReviewCaptionEditor editor={copy.editor} />
@@ -138,11 +169,10 @@ export function CreateFinalReviewTabs({
           <FinalReviewBlogTab
             projectId={projectId}
             fallbackMarkdown={resolveBlogMarkdown(state)}
+            copyUnsaved={copyUnsaved(copy)}
           />
         )}
-        {copyTab && (
-          <CopyTab copy={copy} tab={activeTab} loadingText={t("copyLoading")} />
-        )}
+        {copyTab && <CopyTab copy={copy} tab={activeTab} />}
         {activeTab === FINAL_REVIEW_TABS.QUALITY && (
           <QualityTab state={state} emptyText={t("qualityEmpty")} />
         )}

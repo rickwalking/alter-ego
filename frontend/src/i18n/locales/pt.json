@@ -720,6 +720,8 @@
         "blogPreviewLoading": "Carregando pré-visualização do rascunho…",
         "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
         "copyLoading": "Carregando os textos salvos…",
+        "copyLoadFailed": "Não foi possível carregar os textos salvos.",
+        "copyRetry": "Tentar de novo",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
       },
       "hookPicker": {
@@ -1148,7 +1150,8 @@
       "body": "O corpo do blog é editado no editor do blog. Abre o post deste carrossel (o rascunho é criado se ainda não existir).",
       "open": "Abrir no editor do blog",
       "opening": "Abrindo…",
-      "failed": "Não foi possível abrir o editor do blog. Tente de novo."
+      "failed": "Não foi possível abrir o editor do blog. Tente de novo.",
+      "blocked": "Salve ou descarte a edição da legenda ou do LinkedIn antes de abrir o editor do blog."
     },
     "blogFromCarousel": {
       "title": "Post do blog",

@@ -40,7 +40,7 @@ describe("OpenBlogEditorButton (AE-0505)", () => {
     );
   });
 
-  /** Scenario: The blog body is edited in the blog editor */
+  /** Scenario: The blog preview or the blog editor cannot be opened */
   it("says so when the editor cannot be opened, and can retry", async () => {
     mockFetch.mockResolvedValue(jsonResponse({}, 500));
     render(<OpenBlogEditorButton projectId="proj-1" />);
@@ -50,5 +50,12 @@ describe("OpenBlogEditorButton (AE-0505)", () => {
     );
     expect(screen.getByRole("button", { name: OPEN })).toBeEnabled();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: The blog editor waits for unsaved caption or LinkedIn edits */
+  it("waits while the page has unsaved edits", () => {
+    render(<OpenBlogEditorButton projectId="proj-1" blocked />);
+    expect(screen.getByRole("button", { name: OPEN })).toBeDisabled();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

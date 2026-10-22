@@ -24,7 +24,8 @@ const LINKEDIN_POSTS: readonly CopyField[] = ["linkedinPt", "linkedinEn"];
 
 /**
  * The Instagram caption editor of a review step: the publish page's limits and
- * save bar, without copy or publish (those stay on the publish page).
+ * save bar, without copy or publish (those stay on the publish page). Without a
+ * wired save (no lock version) the text is shown with no save bar.
  */
 export function ReviewCaptionEditor({
   editor,
@@ -44,12 +45,17 @@ export function ReviewCaptionEditor({
           max: IG_MAX_HASHTAGS,
         })}
       />
-      <CopySaveBar
-        dirty={editor.isDirty(CAPTION_ONLY)}
-        status={editor.status}
-        invalid={captionInvalid(caption)}
-        onSave={() => editor.save(CAPTION_ONLY)}
-      />
+      {countHashtags(caption) > IG_MAX_HASHTAGS && (
+        <p className="text-destructive text-xs">{t("instagram.hashtagOver")}</p>
+      )}
+      {editor.canSave && (
+        <CopySaveBar
+          dirty={editor.isDirty(CAPTION_ONLY)}
+          status={editor.status}
+          invalid={captionInvalid(caption)}
+          onSave={() => editor.save(CAPTION_ONLY)}
+        />
+      )}
     </div>
   );
 }
@@ -80,12 +86,14 @@ export function ReviewLinkedInEditor({
         })}
         helpText={t("linkedin.help")}
       />
-      <CopySaveBar
-        dirty={editor.isDirty(LINKEDIN_POSTS)}
-        status={editor.status}
-        invalid={linkedinInvalid(text)}
-        onSave={() => editor.save(LINKEDIN_POSTS)}
-      />
+      {editor.canSave && (
+        <CopySaveBar
+          dirty={editor.isDirty(LINKEDIN_POSTS)}
+          status={editor.status}
+          invalid={linkedinInvalid(text)}
+          onSave={() => editor.save(LINKEDIN_POSTS)}
+        />
+      )}
     </div>
   );
 }

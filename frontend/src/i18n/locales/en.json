@@ -720,6 +720,8 @@
         "blogPreviewLoading": "Loading draft blog preview…",
         "blogPreviewError": "Could not load draft blog preview.",
         "copyLoading": "Loading the saved texts…",
+        "copyLoadFailed": "Could not load the saved texts.",
+        "copyRetry": "Try again",
         "qualityEmpty": "Quality scores are not available yet."
       },
       "hookPicker": {
@@ -1148,7 +1150,8 @@
       "body": "The blog body is edited in the blog editor. This opens the carousel's post (its draft is created if there is none yet).",
       "open": "Open in the blog editor",
       "opening": "Opening…",
-      "failed": "Could not open the blog editor. Try again."
+      "failed": "Could not open the blog editor. Try again.",
+      "blocked": "Save or discard the caption or LinkedIn edit before opening the blog editor."
     },
     "blogFromCarousel": {
       "title": "Blog post",

@@ -69,4 +69,43 @@ describe("review copy editors (AE-0505)", () => {
     fireEvent.click(screen.getByText("away"));
     expect(screen.queryByText("Leave without saving?")).not.toBeInTheDocument();
   });
+
+  /** Scenario: The reviewer saves a LinkedIn post per language */
+  it("refuses to save a LinkedIn post over 3,000 characters", () => {
+    render(
+      <ReviewLinkedInEditor
+        editor={editor({
+          draft: { caption: "", linkedinPt: "x".repeat(3001), linkedinEn: "" },
+        })}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  /** Scenario: The reviewer saves an edited caption in the final review */
+  it("flags a caption over the hashtag limit", () => {
+    const tags = Array.from({ length: 31 }, (_, i) => `#t${i}`).join(" ");
+    render(
+      <ReviewCaptionEditor
+        editor={editor({
+          draft: { caption: tags, linkedinPt: "", linkedinEn: "" },
+        })}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Over the 30-hashtag limit — Instagram will reject the post.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: The reviewer saves an edited caption in the final review */
+  it("shows no save bar when saving is not wired", () => {
+    render(<ReviewCaptionEditor editor={editor({ canSave: false })} />);
+    render(<ReviewLinkedInEditor editor={editor({ canSave: false })} />);
+    expect(
+      screen.queryByRole("button", { name: "Save" }),
+    ).not.toBeInTheDocument();
+  });
 });

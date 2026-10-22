@@ -55,4 +55,6 @@ export interface UseOpenBlogEditorResult {
 
 export interface OpenBlogEditorButtonProps {
   projectId: string;
+  /** Unsaved edits elsewhere on the page: opening the editor would drop them. */
+  blocked?: boolean;
 }

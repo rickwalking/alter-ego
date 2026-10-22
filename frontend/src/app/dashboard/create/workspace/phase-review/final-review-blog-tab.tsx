@@ -90,15 +90,19 @@ interface FinalReviewBlogTabProps {
   readonly projectId: string;
   /** The checkpoint's blog markdown, shown until the preview loads. */
   readonly fallbackMarkdown: string;
+  /** The caption / LinkedIn posts have unsaved edits: leaving would drop them. */
+  readonly copyUnsaved: boolean;
 }
 
 /**
  * The blog draft preview of the final review and the way to the blog editor,
- * where the blog body is edited (it is not edited inline here).
+ * where the blog body is edited (it is not edited inline here). The editor
+ * link waits while the caption / LinkedIn posts have unsaved edits.
  */
 export function FinalReviewBlogTab({
   projectId,
   fallbackMarkdown,
+  copyUnsaved,
 }: FinalReviewBlogTabProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.review.finalReview");
   const { previewMarkdown, previewLoading, previewError } = useBlogPreview(
@@ -114,7 +118,7 @@ export function FinalReviewBlogTab({
         loadingText={t("blogPreviewLoading")}
         placeholderText={t("blogPlaceholder")}
       />
-      <OpenBlogEditorButton projectId={projectId} />
+      <OpenBlogEditorButton projectId={projectId} blocked={copyUnsaved} />
     </div>
   );
 }

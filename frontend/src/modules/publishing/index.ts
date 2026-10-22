@@ -128,6 +128,7 @@ export {
   type CarouselCopyResponse,
 } from "./distribution/hooks/use-save-carousel-copy";
 export type { CarouselCopyTexts, CopySource } from "./distribution/hooks/types";
+export { COPY_FIELDS } from "./distribution/lib/copy-editor-state";
 export { useCopySave } from "./distribution/hooks/use-copy-save";
 export { useCopyEditor } from "./distribution/hooks/use-copy-editor";
 export {
