@@ -79,6 +79,7 @@ visitor now use `https://test` so the secure cookie is sent back (production is 
 - backend/tests/features/anonymous_conversation_ownership.feature (new)
 - backend/tests/integration/test_anonymous_conversation_ownership.py (new), conversation_access_support.py (new),
   test_conversation_ownership.py, test_chat_stream.py, test_identity_conversation_safety_net.py
+- docs/architecture/openapi.json (regenerated: the stream route docstring)
 - backend/tests/snapshots/conversation/conversation_create_anonymous.json (cookie path),
   backend/tests/snapshots/identity/_snapshot.py (a conversation id in a cookie path becomes `<uuid>`)
 
