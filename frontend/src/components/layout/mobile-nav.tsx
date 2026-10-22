@@ -54,7 +54,7 @@ export function MobileNav() {
     <div className="md:hidden">
       <button
         type="button"
-        aria-label="Open menu"
+        aria-label={t("openMenu")}
         className="text-sm px-2 py-1 border rounded"
         onClick={() => setOpen((v) => !v)}
       >

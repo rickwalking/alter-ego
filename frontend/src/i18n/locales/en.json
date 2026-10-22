@@ -20,7 +20,9 @@
       "calendar": "Calendar",
       "analytics": "Analytics",
       "admin": "Admin",
-      "carousels": "Carousels"
+      "carousels": "Carousels",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     },
     "sidebar": {
       "sectionMain": "Main",
@@ -164,7 +166,8 @@
         "titlePlaceholder": "Document title",
         "tags": "Tags (comma-separated)",
         "tagsPlaceholder": "e.g. research, notes, projects"
-      }
+      },
+      "progress": "Upload progress"
     },
     "form": {
       "createTitle": "Create New Document",
@@ -536,7 +539,8 @@
         "aiSuggest": "AI suggest",
         "showHelp": "Show this help"
       }
-    }
+    },
+    "voiceScoreFailed": "Voice scoring failed"
   },
   "editorialWorkflow": {
     "title": "Editorial Workflow",

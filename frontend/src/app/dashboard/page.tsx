@@ -24,7 +24,7 @@ export default function DashboardPage(): React.ReactElement {
       className="flex-1 text-white relative"
       style={{ fontFamily: PAGE_FONT_FAMILY }}
     >
-      <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
+      <NeonTopBar title={t("title")} breadcrumb={[{ label: "overview" }]} />
 
       <div className="p-4 md:p-7">
         <div className="mb-7">

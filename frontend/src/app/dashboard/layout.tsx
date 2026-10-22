@@ -4,6 +4,7 @@ import {
   NeonGridBackground,
   NeonScanlineOverlay,
 } from "@/components/organisms";
+import { useTranslations } from "next-intl";
 import { NeonSidebar } from "@/components/organisms/neon-sidebar";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 import { DASHBOARD_SIDEBAR_SECTIONS } from "@/components/organisms/constants";
@@ -28,6 +29,7 @@ export default function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>): React.ReactElement {
+  const t = useTranslations("common.nav");
   const { open, toggle, close } = useOffCanvas();
 
   return (
@@ -38,7 +40,7 @@ export default function DashboardLayout({
       <button
         type="button"
         onClick={toggle}
-        aria-label={open ? "Close menu" : "Open menu"}
+        aria-label={open ? t("closeMenu") : t("openMenu")}
         aria-expanded={open}
         aria-controls={SIDEBAR_ID}
         className="fixed left-2 top-2 z-50 flex h-11 w-11 items-center justify-center rounded-md lg:hidden"
@@ -54,7 +56,7 @@ export default function DashboardLayout({
       {open && (
         <button
           type="button"
-          aria-label="Close menu"
+          aria-label={t("closeMenu")}
           tabIndex={-1}
           onClick={close}
           className="fixed inset-0 z-30 bg-black/60 lg:hidden"

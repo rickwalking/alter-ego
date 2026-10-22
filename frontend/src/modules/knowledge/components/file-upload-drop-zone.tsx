@@ -14,6 +14,7 @@ export function SelectedFileSummary({
   onRemove,
 }: Readonly<SelectedFileSummaryProps>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
+  const tDocument = useTranslations("knowledge.document");
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-center gap-3">
@@ -32,7 +33,7 @@ export function SelectedFileSummary({
             type="button"
             onClick={onRemove}
             className="ml-2 rounded-full p-1 hover:bg-[var(--color-muted)]"
-            aria-label="Remove selected file"
+            aria-label={tDocument("removeFile")}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -86,6 +87,7 @@ export function UploadDropZone({
   form,
   typeValid,
 }: Readonly<DropZoneProps>): React.ReactElement {
+  const t = useTranslations("knowledge.upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { upload, selectedFile } = form;
   return (
@@ -99,7 +101,7 @@ export function UploadDropZone({
       )}
       {...form.dropZone}
       role="region"
-      aria-label="File upload area"
+      aria-label={t("dropZone")}
     >
       <input
         ref={fileInputRef}
@@ -108,7 +110,7 @@ export function UploadDropZone({
         className="hidden"
         onChange={form.onFileInput}
         disabled={upload.isPending}
-        aria-label="Select file to upload"
+        aria-label={t("selectFile")}
       />
       {selectedFile ? (
         <SelectedFileSummary

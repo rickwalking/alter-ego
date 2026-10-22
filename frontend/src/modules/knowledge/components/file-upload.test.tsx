@@ -6,8 +6,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FileUpload } from "./file-upload";
 
+const translate = (key: string): string => key;
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => translate,
 }));
 
 const mutate = vi.fn();
@@ -17,7 +18,7 @@ vi.mock("../hooks/use-upload", () => ({
 }));
 
 function pickFile(file: File): void {
-  fireEvent.change(screen.getByLabelText("Select file to upload"), {
+  fireEvent.change(screen.getByLabelText("selectFile"), {
     target: { files: [file] },
   });
 }
@@ -60,5 +61,27 @@ describe("FileUpload (AE-0446)", () => {
     uploadState.isSuccess = true;
     render(<FileUpload />);
     expect(screen.getByText("success.title")).toBeInTheDocument();
+  });
+
+  it("labels the drop area, file input and remove button from the translations", () => {
+    // Scenario: The knowledge upload labels come from the translations
+    render(<FileUpload />);
+    expect(
+      screen.getByRole("region", { name: "dropZone" }),
+    ).toBeInTheDocument();
+    pickFile(new File(["x"], "notes.md", { type: "text/markdown" }));
+    expect(
+      screen.getByRole("button", { name: "removeFile" }),
+    ).toBeInTheDocument();
+  });
+
+  it("labels the upload progress from the translations", () => {
+    // Scenario: The knowledge upload labels come from the translations
+    uploadState.isPending = true;
+    render(<FileUpload />);
+    expect(
+      screen.getByRole("status", { name: "progress" }),
+    ).toBeInTheDocument();
+    uploadState.isPending = false;
   });
 });
