@@ -76,6 +76,7 @@ export { useBlogAi } from "./blog/hooks/use-blog-ai";
 
 export { BlogGenerationStatus } from "./blog/generation/blog-generation-status";
 export { CreateBlogFromCarousel } from "./blog/generation/create-blog-from-carousel";
+export { OpenBlogEditorButton } from "./blog/generation/open-blog-editor-button";
 export { generateStandaloneBlogPost } from "./blog/generation/generation-requests";
 export { isGenerationInProgress } from "./blog/generation/generation-state";
 export {
@@ -126,7 +127,14 @@ export {
   useSaveCarouselCopy,
   type CarouselCopyResponse,
 } from "./distribution/hooks/use-save-carousel-copy";
-export type { CarouselCopyTexts } from "./distribution/hooks/types";
+export type { CarouselCopyTexts, CopySource } from "./distribution/hooks/types";
+export { useCopySave } from "./distribution/hooks/use-copy-save";
+export { useCopyEditor } from "./distribution/hooks/use-copy-editor";
+export {
+  ReviewCaptionEditor,
+  ReviewCopyLeaveGuard,
+  ReviewLinkedInEditor,
+} from "./distribution/components/review-copy-editor";
 export { HorizontalCarouselViewer } from "./distribution/components/horizontal-carousel-viewer";
 export {
   CaptionEditor,

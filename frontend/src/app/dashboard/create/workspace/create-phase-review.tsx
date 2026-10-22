@@ -31,6 +31,8 @@ interface EditorialPhaseReviewProps {
   onRepaired?: () => void;
   /** A run is executing — no auto-fix (it would 409). */
   actionsLocked?: boolean;
+  /** Refetch the workflow state after a final-review caption / LinkedIn save. */
+  onCopySaved?: () => Promise<unknown>;
 }
 
 export function CreatePhaseReview({
@@ -43,6 +45,7 @@ export function CreatePhaseReview({
   designRecovery,
   onRepaired,
   actionsLocked = false,
+  onCopySaved,
 }: Readonly<EditorialPhaseReviewProps>): React.JSX.Element | null {
   const phase = state.current_phase;
   const autoRepair = actionsLocked ? null : (
@@ -77,7 +80,13 @@ export function CreatePhaseReview({
     case EDITORIAL_PHASES.IMAGES:
       return <ImagesPhaseReview state={state} />;
     case EDITORIAL_PHASES.FINAL_REVIEW:
-      return <FinalReviewPhaseReview projectId={projectId} state={state} />;
+      return (
+        <FinalReviewPhaseReview
+          projectId={projectId}
+          state={state}
+          onCopySaved={onCopySaved}
+        />
+      );
     default:
       return null;
   }

@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("useCopySave (AE-0492)", () => {
-  // Scenario: Saving the edited caption sends it with the loaded lock version
+  /** Scenario: Saving the edited caption sends it with the loaded lock version */
   it("sends the texts to the copy route with the loaded lock version", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse(4));
     vi.stubGlobal("fetch", fetchMock);
@@ -68,7 +68,7 @@ describe("useCopySave (AE-0492)", () => {
     expect(refreshAll).toHaveBeenCalledTimes(1);
   });
 
-  // Scenario: The next save uses the lock version returned by the last save
+  /** Scenario: The next save uses the lock version returned by the last save */
   it("sends the lock version the last save returned before the refresh lands", async () => {
     const fetchMock = vi
       .fn()
@@ -88,7 +88,7 @@ describe("useCopySave (AE-0492)", () => {
     expect(sentIfMatch(fetchMock, 1)).toBe("4");
   });
 
-  // Scenario: A refused save explains why
+  /** Scenario: A refused save explains why */
   it("rejects with the API error so the panel can explain it", async () => {
     vi.stubGlobal(
       "fetch",
@@ -106,7 +106,7 @@ describe("useCopySave (AE-0492)", () => {
     expect(refreshAll).not.toHaveBeenCalled();
   });
 
-  // Scenario: A save from a stale page refetches the current lock version
+  /** Scenario: A save from a stale page refetches the current lock version */
   it("refetches the page on a version conflict so the next save uses the new lock version", async () => {
     const fetchMock = vi
       .fn()
@@ -136,7 +136,7 @@ describe("useCopySave (AE-0492)", () => {
     expect(sentIfMatch(fetchMock, 1)).toBe("5");
   });
 
-  // Scenario: Saving the edited caption sends it with the loaded lock version
+  /** Scenario: Saving the edited caption sends it with the loaded lock version */
   it("offers no save before the workflow lock version is loaded", () => {
     const { result } = renderHook(
       () => useCopySave(PROJECT_ID, undefined, vi.fn()),

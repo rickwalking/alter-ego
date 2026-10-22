@@ -9,18 +9,15 @@ import {
   PublishResultLine,
 } from "./publish-panel-parts";
 import type { InstagramTabProps, LinkedInTabProps } from "./types";
+import {
+  IG_MAX_CHARS,
+  IG_MAX_HASHTAGS,
+  LINKEDIN_MAX_CHARS,
+  captionInvalid,
+  linkedinInvalid,
+} from "@/modules/publishing/distribution/lib/copy-limits";
 
-const IG_MAX_CHARS = 2200;
-const IG_MAX_HASHTAGS = 30;
-const LINKEDIN_MAX_CHARS = 3000;
 const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
-
-/** The caption breaks an Instagram limit (length or hashtag count). */
-function captionInvalid(caption: string): boolean {
-  return (
-    caption.length > IG_MAX_CHARS || countHashtags(caption) > IG_MAX_HASHTAGS
-  );
-}
 
 /**
  * Caption editor, copy and (when wired) publish-now for Instagram.
@@ -126,9 +123,7 @@ export function LinkedInTab({
         })}
         helpText={t("linkedin.help")}
       />
-      {save && (
-        <CopySaveBar {...save} invalid={text.length > LINKEDIN_MAX_CHARS} />
-      )}
+      {save && <CopySaveBar {...save} invalid={linkedinInvalid(text)} />}
       <div className="flex flex-wrap gap-2">
         <CopyTextButton
           text={text}

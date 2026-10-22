@@ -69,14 +69,24 @@ vi.mock("@/modules/editorial", () => ({
     </div>
   ),
 }));
-vi.mock("@/modules/publishing", () => ({
+vi.mock(
+  "@/modules/publishing/distribution/hooks/use-save-carousel-copy",
+  () => ({
+    useSaveCarouselCopy: () => ({ mutateAsync: m.saveCopy }),
+  }),
+);
+vi.mock("@/modules/publishing", async () => ({
+  useCopySave: (
+    await vi.importActual<
+      typeof import("@/modules/publishing/distribution/hooks/use-copy-save")
+    >("@/modules/publishing/distribution/hooks/use-copy-save")
+  ).useCopySave,
   mergePublishProjectWithWorkflow: (project: unknown) => project,
   usePublishInstagram: () => ({
     mutateAsync: m.publishInstagram,
     isPending: false,
   }),
   useRepublishCarousel: () => ({ mutate: m.republish }),
-  useSaveCarouselCopy: () => ({ mutateAsync: m.saveCopy }),
   useCarouselPublicPostHref: () => ({
     href: m.blogHref,
     refetch: m.refetchBlogHref,
@@ -251,7 +261,7 @@ describe("DashboardCreatePublishPage", () => {
     expect(m.refetchProject).toHaveBeenCalled();
   });
 
-  // Scenario: After a site publish the link opens the published blog post
+  /** Scenario: After a site publish the link opens the published blog post */
   it("publishes to the site and links the blog post", async () => {
     m.workflowState = approved();
     m.blogHref = "/blog/b1";
@@ -271,7 +281,7 @@ describe("DashboardCreatePublishPage", () => {
     ).toHaveAttribute("href", "/blog/b1");
   });
 
-  // Scenario: After a site publish without a blog post the link opens the public carousel
+  /** Scenario: After a site publish without a blog post the link opens the public carousel */
   it("links the public carousel when there is no blog post", async () => {
     m.workflowState = approved();
     m.blogHref = null;
@@ -296,7 +306,7 @@ describe("DashboardCreatePublishPage", () => {
     await waitFor(() =>
       expect(screen.getByText(/Not approved yet/)).toBeInTheDocument(),
     );
-    // Scenario: A failed site publish shows no link
+    /** Scenario: A failed site publish shows no link */
     expect(screen.queryByText("sitePublishedLink")).not.toBeInTheDocument();
   });
 
@@ -368,7 +378,7 @@ describe("DashboardCreatePublishPage", () => {
     expect(screen.getByText("slide-edit:true:true")).toBeInTheDocument();
   });
 
-  // Scenario: Saving the edited caption sends it with the loaded lock version
+  /** Scenario: Saving the edited caption sends it with the loaded lock version */
   it("saves the panel texts at the workflow lock version", async () => {
     m.workflowState = state({ lock_version: 7 });
     await renderLoaded();

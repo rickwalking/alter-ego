@@ -122,6 +122,7 @@ export const FINAL_REVIEW_TABS = {
   CAROUSEL: "carousel",
   BLOG: "blog",
   CAPTION: "caption",
+  LINKEDIN: "linkedin",
   QUALITY: "quality",
 } as const;
 

@@ -712,13 +712,14 @@
           "carousel": "Carrossel",
           "blog": "Blog",
           "caption": "Legenda",
+          "linkedin": "LinkedIn",
           "quality": "Qualidade"
         },
         "carouselEmpty": "Nenhum conteúdo de slide disponível ainda.",
         "blogPlaceholder": "O markdown do blog aparecerá aqui quando gerado.",
         "blogPreviewLoading": "Carregando pré-visualização do rascunho…",
         "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
-        "captionEmpty": "Nenhuma legenda foi gerada ainda.",
+        "copyLoading": "Carregando os textos salvos…",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
       },
       "hookPicker": {
@@ -1142,6 +1143,12 @@
     "notReady": {
       "title": "Ainda não está pronto para publicar",
       "body": "O PDF, as imagens dos slides e as ações de publicação aparecem quando o carrossel chega à revisão final. Continue a revisão na área de trabalho."
+    },
+    "blogEditorLink": {
+      "body": "O corpo do blog é editado no editor do blog. Abre o post deste carrossel (o rascunho é criado se ainda não existir).",
+      "open": "Abrir no editor do blog",
+      "opening": "Abrindo…",
+      "failed": "Não foi possível abrir o editor do blog. Tente de novo."
     },
     "blogFromCarousel": {
       "title": "Post do blog",

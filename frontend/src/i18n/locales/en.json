@@ -712,13 +712,14 @@
           "carousel": "Carousel",
           "blog": "Blog",
           "caption": "Caption",
+          "linkedin": "LinkedIn",
           "quality": "Quality"
         },
         "carouselEmpty": "No slide content is available yet.",
         "blogPlaceholder": "Blog markdown will appear here once generated.",
         "blogPreviewLoading": "Loading draft blog preview…",
         "blogPreviewError": "Could not load draft blog preview.",
-        "captionEmpty": "No caption has been generated yet.",
+        "copyLoading": "Loading the saved texts…",
         "qualityEmpty": "Quality scores are not available yet."
       },
       "hookPicker": {
@@ -1142,6 +1143,12 @@
     "notReady": {
       "title": "Not ready to publish yet",
       "body": "The PDF, the slide images and the publishing actions appear once the carousel reaches the final review. Continue the review in the workspace."
+    },
+    "blogEditorLink": {
+      "body": "The blog body is edited in the blog editor. This opens the carousel's post (its draft is created if there is none yet).",
+      "open": "Open in the blog editor",
+      "opening": "Opening…",
+      "failed": "Could not open the blog editor. Try again."
     },
     "blogFromCarousel": {
       "title": "Blog post",

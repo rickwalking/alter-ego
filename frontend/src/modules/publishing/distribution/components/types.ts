@@ -11,6 +11,7 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type {
+  CopyEditor,
   CopySaveStatus,
   LeaveGuard,
   SaveCopy,
@@ -191,4 +192,9 @@ export interface LinkedInTabProps {
   pdfHref: string;
   /** Present when saving is wired: the save bar of the LinkedIn posts. */
   save?: Omit<CopySaveBarProps, "invalid">;
+}
+
+/** A review-step editor (or its leave guard) over the shared copy editor. */
+export interface ReviewCopyEditorProps {
+  editor: CopyEditor;
 }

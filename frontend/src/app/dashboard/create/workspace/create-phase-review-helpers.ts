@@ -47,10 +47,6 @@ function readProgressField(
   return state.phase_progress?.[key];
 }
 
-export function resolveCaption(state: EditorialWorkflowState): string {
-  return state.caption ?? asString(readProgressField(state, "caption"));
-}
-
 export function resolveBlogMarkdown(state: EditorialWorkflowState): string {
   return (
     state.blog_markdown ?? asString(readProgressField(state, "blog_markdown"))

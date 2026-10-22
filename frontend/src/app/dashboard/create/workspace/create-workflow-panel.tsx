@@ -107,6 +107,7 @@ export function CreateWorkflowPanel({
           contentManualFixes={contentManualFixes}
           designRecovery={designRecovery}
           onRepaired={() => void refreshState()}
+          onCopySaved={refreshState}
           actionsLocked={actionsLocked}
         />
       )}

@@ -46,3 +46,13 @@ export interface CreateBlogFromCarouselProps {
   projectId: string;
   isPublic: boolean;
 }
+
+export interface UseOpenBlogEditorResult {
+  pending: boolean;
+  failed: boolean;
+  open: () => Promise<void>;
+}
+
+export interface OpenBlogEditorButtonProps {
+  projectId: string;
+}
