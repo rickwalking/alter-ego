@@ -48,6 +48,23 @@ describe("checkOwnerResource", () => {
   });
 
   // Scenario: A backend error leaves the page to show its own error
+  it("gives up after a short timeout so a hanging backend cannot block the page", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    await checkOwnerResource(`/api/carousels/${ID}`);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(timeout).toHaveBeenCalledWith(3000);
+    expect(init.signal).toBe(timeout.mock.results[0]?.value);
+    timeout.mockRestore();
+  });
+
+  // Scenario: A backend error leaves the page to show its own error
+  it("is unknown when the check times out", async () => {
+    fetchMock.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    expect(await checkOwnerResource(`/api/carousels/${ID}`)).toBe("unknown");
+  });
+
+  // Scenario: A backend error leaves the page to show its own error
   it("is unknown when the backend is unreachable", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
     expect(await checkOwnerResource(`/api/carousels/${ID}`)).toBe("unknown");
