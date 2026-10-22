@@ -14,6 +14,7 @@ import type { CalendarItem } from "@/modules/editorial";
 import { toDateLocaleTag } from "@/lib/locale-format";
 import { stripEmphasisMarkup } from "@/lib/public-blog-text";
 import {
+  CALENDAR_API_CONTENT_TYPES,
   CALENDAR_EVENT_DAY_FORMAT,
   CALENDAR_ISO_DAY_FORMAT,
   CALENDAR_TITLE_FORMAT,
@@ -23,11 +24,9 @@ import {
 import type { CalendarContentType, CalendarDay, CalendarEvent } from "./types";
 
 function mapContentType(raw: string): CalendarContentType {
-  if (raw === "carousel" || raw === "blog") {
-    return raw;
-  }
-  if (raw === "meeting") return "meeting";
-  return "management";
+  return Object.hasOwn(CALENDAR_API_CONTENT_TYPES, raw)
+    ? (CALENDAR_API_CONTENT_TYPES[raw] ?? "management")
+    : "management";
 }
 
 function mapCalendarItemToEvent(item: CalendarItem): CalendarEvent {

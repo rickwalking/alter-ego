@@ -1381,6 +1381,10 @@
         "description": "Single calendar entry.",
         "properties": {
           "content_type": {
+            "enum": [
+              "blog_post",
+              "carousel"
+            ],
             "title": "Content Type",
             "type": "string"
           },
