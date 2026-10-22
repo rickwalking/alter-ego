@@ -16,7 +16,7 @@ Writes run inside the request-scoped Unit of Work — the single commit owner
 clean exit or rolls back with no partial writes on failure. Role mutations use
 the aggregate's ``set_role``/``activate``/``deactivate`` (which bump
 ``updated_at``) exactly like the legacy route, preserving its snapshotted 200
-contract (and avoiding the unrelated change-password update path).
+contract.
 
 Domain decisions (conflict / invalid role / last-admin / self-delete) raise
 typed errors; the inbound adapter maps each to the legacy HTTP status + message
@@ -190,8 +190,8 @@ class AdminUserHandler:
     async def reset_password(self, user_id: UUID) -> str:
         """Reset a user's password to a fresh temp password; return it.
 
-        Mirrors the legacy route's update path verbatim (set ``hashed_password``
-        then ``repository.update``), so its snapshotted contract is preserved.
+        Sets ``hashed_password`` and saves it through ``repository.update``;
+        the temporary password is returned once and never stored in clear.
         """
         async with self._unit_of_work:
             user = await self._require_user(user_id)
