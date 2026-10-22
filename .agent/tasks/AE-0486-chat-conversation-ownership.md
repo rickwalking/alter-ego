@@ -5,7 +5,7 @@ Tier: T1
 Priority: High
 Type: Bug
 Area: Backend
-Owner: Worker (Claude) — /chat QA, CHAT-20
+Owner: Claude — /chat QA, CHAT-20
 Branch: fix/ae-0486-chat-ownership
 Created: 2026-10-22
 Updated: 2026-10-22

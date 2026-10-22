@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND, ERR_CONVERSATION_NOT_FOUND
+from rag_backend.api.dependencies.conversation_caller import ConversationCaller
 from rag_backend.domain.constants.access_control import ERR_ACCESS_DENIED_NOT_OWNER
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
 from rag_backend.domain.constants.blog_post import BlogPostStatus
@@ -95,15 +96,20 @@ def _owns_or_admin(conversation: Conversation, user: User | None) -> bool:
     return user.is_admin() or str(conversation.user_id) == str(user.id)
 
 
-def assert_conversation_writable(conversation: Conversation, user: User | None) -> None:
-    """Let anyone chat in an anonymous conversation; owned ones need owner or admin.
+def assert_conversation_writable(
+    conversation: Conversation, caller: ConversationCaller
+) -> None:
+    """Allow chatting only in a conversation the caller holds.
 
-    A caller who may not see the conversation gets the same 404 as an unknown
-    id, so its existence is never revealed.
+    An anonymous conversation needs the visitor's ``anon_token`` issued for
+    it; a signed-in user's conversation needs its owner or an admin. Anyone
+    else gets the same 404 as an unknown id, so existence is never revealed.
     """
     if conversation.user_id is None:
+        if str(conversation.id) not in caller.anon_conversation_ids:
+            raise_conversation_not_found()
         return
-    if not _owns_or_admin(conversation, user):
+    if not _owns_or_admin(conversation, caller.user):
         raise_conversation_not_found()
 
 

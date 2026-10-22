@@ -122,6 +122,11 @@ class IdEnv:
         transport = ASGITransport(app=self._app)
         return AsyncClient(transport=transport, base_url="http://test")
 
+    def visitor_client(self) -> AsyncClient:
+        """An anonymous browser over HTTPS, so it sends back the secure anon_token."""
+        transport = ASGITransport(app=self._app)
+        return AsyncClient(transport=transport, base_url="https://test")
+
     async def make_user(self, email: str, role: UserRole) -> User:
         return await create_test_user(email, role)
 
@@ -585,7 +590,7 @@ class TestChatStreamSse:
         Falsifiable: a reordered or renamed event changes this exact list.
         """
         _patch_agents(monkeypatch)
-        async with id_env.anon_client() as client:
+        async with id_env.visitor_client() as client:
             conv_id = await self._create_conv(client)
             resp = await client.post(
                 f"/api/conversations/{conv_id}/chat/stream",
@@ -608,7 +613,7 @@ class TestChatStreamSse:
         Ids are monotonically increasing and contiguous, starting at 1.
         """
         _patch_agents(monkeypatch)
-        async with id_env.anon_client() as client:
+        async with id_env.visitor_client() as client:
             conv_id = await self._create_conv(client)
             resp = await client.post(
                 f"/api/conversations/{conv_id}/chat/stream",
@@ -626,7 +631,7 @@ class TestChatStreamSse:
     ) -> None:
         """Scenario: Last-Event-ID resumes id numbering past the given value."""
         _patch_agents(monkeypatch)
-        async with id_env.anon_client() as client:
+        async with id_env.visitor_client() as client:
             conv_id = await self._create_conv(client)
             resp = await client.post(
                 f"/api/conversations/{conv_id}/chat/stream",
@@ -641,7 +646,7 @@ class TestChatStreamSse:
     @pytest.mark.asyncio
     async def test_empty_message_emits_error_event(self, id_env: IdEnv) -> None:
         """Scenario: empty content yields a single SSE ``error`` event."""
-        async with id_env.anon_client() as client:
+        async with id_env.visitor_client() as client:
             conv_id = await self._create_conv(client)
             resp = await client.post(
                 f"/api/conversations/{conv_id}/chat/stream",
@@ -657,7 +662,7 @@ class TestChatStreamSse:
     ) -> None:
         """Scenario: unknown conversation is a 404 before any SSE event."""
         _patch_agents(monkeypatch)
-        async with id_env.anon_client() as client:
+        async with id_env.visitor_client() as client:
             resp = await client.post(
                 f"/api/conversations/{NONEXISTENT_UUID}/chat/stream",
                 json={"content": "Hello"},
