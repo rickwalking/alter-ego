@@ -6,7 +6,9 @@ import { CalendarHeader } from "./calendar-header";
 describe("CalendarHeader on narrow screens", () => {
   // Scenario: The calendar top bar fits a 375 px screen
   it("wraps its actions and hides the breadcrumb below sm", () => {
-    const { container } = render(<CalendarHeader loading={false} />);
+    const { container } = render(
+      <CalendarHeader loading={false} onSchedule={() => undefined} />,
+    );
     expect(container.firstElementChild).toHaveClass("flex-wrap", "min-h-14");
     expect(screen.getByText("content calendar").parentElement).toHaveClass(
       "hidden",

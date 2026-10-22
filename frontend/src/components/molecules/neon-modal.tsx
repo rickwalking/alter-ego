@@ -1,8 +1,9 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonCard } from "@/components/molecules/neon-card";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 export interface NeonModalProps {
   open: boolean;
@@ -12,6 +13,11 @@ export interface NeonModalProps {
   footer?: ReactNode;
 }
 
+/**
+ * Modal dialog: Escape or the backdrop closes it; keyboard focus moves into the
+ * card on open, Tab / Shift+Tab stay inside it, and focus returns to the
+ * element that opened it on close.
+ */
 export function NeonModal({
   open,
   onClose,
@@ -19,6 +25,8 @@ export function NeonModal({
   children,
   footer,
 }: Readonly<NeonModalProps>): React.ReactElement | null {
+  const cardRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(cardRef, open);
   useEffect(() => {
     if (!open) {
       return;
@@ -50,7 +58,11 @@ export function NeonModal({
         aria-label="Close modal"
         onClick={onClose}
       />
-      <NeonCard padding="lg" className="relative z-10 max-w-lg w-full">
+      <NeonCard
+        ref={cardRef}
+        padding="lg"
+        className="relative z-10 max-w-lg w-full"
+      >
         {title && (
           <h2 id="neon-modal-title" className="text-lg font-bold mb-4">
             {title}

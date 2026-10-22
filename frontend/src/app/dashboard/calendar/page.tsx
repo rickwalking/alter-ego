@@ -13,13 +13,16 @@ import { useClientToday } from "@/app/dashboard/calendar/use-client-today";
 import { CalendarHeader } from "@/app/dashboard/calendar/calendar-header";
 import { CalendarToolbar } from "@/app/dashboard/calendar/calendar-toolbar";
 import { CalendarViewBody } from "@/app/dashboard/calendar/calendar-view-body";
+import { ScheduleDialog } from "@/app/dashboard/calendar/schedule/schedule-dialog";
+import { useScheduleFlow } from "@/app/dashboard/calendar/schedule/use-schedule-flow";
 
 function CalendarScreen(): React.ReactElement {
   const today = useClientToday();
   const calendarView = useCalendarView(today);
   const { view, focus, title, goPrev, goNext, goToday, setView, openDay } =
     calendarView;
-  const { days, loading, error } = useCalendarDays(view, focus, today);
+  const { days, loading, error, refetch } = useCalendarDays(view, focus, today);
+  const schedule = useScheduleFlow(refetch);
 
   return (
     <div
@@ -40,9 +43,23 @@ function CalendarScreen(): React.ReactElement {
           <NeonSpinner size="lg" />
         </div>
       )}
-      <CalendarHeader loading={loading} />
+      <CalendarHeader loading={loading} onSchedule={schedule.openDialog} />
+      <ScheduleDialog
+        open={schedule.open}
+        onClose={schedule.close}
+        onScheduled={schedule.onScheduled}
+      />
 
       <div className="p-4 md:p-7">
+        {schedule.notice && (
+          <p
+            role="status"
+            className="mb-4 text-sm"
+            style={{ color: CALENDAR_COLORS.teal }}
+          >
+            {schedule.notice}
+          </p>
+        )}
         <CalendarToolbar
           title={title}
           view={view}

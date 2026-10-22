@@ -79,3 +79,9 @@ export interface CalendarViewBodyProps {
   days: CalendarDay[];
   onOpenDay: (day: Date) => void;
 }
+
+export interface CalendarHeaderProps {
+  loading: boolean;
+  /** Opens the Schedule Post dialog. */
+  onSchedule: () => void;
+}

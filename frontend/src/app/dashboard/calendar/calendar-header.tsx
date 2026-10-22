@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { CalendarHeaderProps } from "@/app/dashboard/calendar/types";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_BTN_GHOST,
@@ -16,9 +17,8 @@ import {
  */
 export function CalendarHeader({
   loading,
-}: Readonly<{
-  loading: boolean;
-}>): React.ReactElement {
+  onSchedule,
+}: Readonly<CalendarHeaderProps>): React.ReactElement {
   const t = useTranslations("workflow.calendar");
   return (
     <div
@@ -58,6 +58,8 @@ export function CalendarHeader({
         </button>
         <button
           type="button"
+          aria-haspopup="dialog"
+          onClick={onSchedule}
           style={{
             ...CALENDAR_BTN_GHOST,
             border: "none",
@@ -66,7 +68,7 @@ export function CalendarHeader({
             boxShadow: `0 0 16px ${CALENDAR_COLORS.cD}`,
           }}
         >
-          <CalendarSvgIcon name="plus" size={14} /> Schedule Post
+          <CalendarSvgIcon name="plus" size={14} /> {t("scheduleButton")}
         </button>
       </div>
     </div>
