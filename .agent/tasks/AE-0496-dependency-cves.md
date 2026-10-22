@@ -24,6 +24,10 @@ CVE-2026-114134 (black 26.3.1, fixed in 26.10.1) and CVE-2026-114603 (openteleme
 - `black>=26.10.1` in `backend/pyproject.toml`; `uv lock --upgrade-package black --upgrade-package
   opentelemetry-api` (the opentelemetry family moves together to 1.45.1 / 0.66b1).
 
+- Regenerate `docs/architecture/openapi.json`: main went red on the new `backend:openapi-fresh` gate because the
+  conversation-ownership change (AE-0486) dropped the documented 403 responses and landed after the gate. The
+  regenerated artifact only removes those 403 entries.
+
 ## Non-Goals
 
 - Any other dependency change.
@@ -32,6 +36,7 @@ CVE-2026-114134 (black 26.3.1, fixed in 26.10.1) and CVE-2026-114603 (openteleme
 
 - [x] `backend:pip-audit` passes.
 - [x] All other backend gates pass on the bump (mutation in CI).
+- [x] `backend:openapi-fresh` passes (artifact regenerated).
 
 ## Repro Steps
 
@@ -60,6 +65,7 @@ bump.
 ## Files Touched
 
 - backend/pyproject.toml, backend/uv.lock
+- docs/architecture/openapi.json (regenerated)
 
 ## Test Evidence
 
