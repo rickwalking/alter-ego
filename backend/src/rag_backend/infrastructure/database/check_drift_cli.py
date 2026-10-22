@@ -64,7 +64,7 @@ def main() -> int:
         print(_ERR_NO_URL, file=sys.stderr)
         return _EXIT_CONFIG
 
-    engine = create_engine(to_sync_url(database_url))
+    engine = create_engine(to_sync_url(database_url), hide_parameters=True)
     try:
         report = check_schema_drift(engine, Base.metadata)
     finally:

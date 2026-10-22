@@ -1,6 +1,6 @@
 # AE-0480 — Pin a still-available MinIO image for the Langfuse stack
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -82,7 +82,9 @@ minio version RELEASE.2025-09-07T16-13-09Z (commit-id=07c3a429bfed433e49018cb0f7
 - [x] The prod `minio` + `minio-init` pair comes up from `docker-compose.prod.yml` in a throwaway project:
       `minio-init` exits 0 after creating `langfuse-events`, `minio` uses 72MiB of its 256M limit.
 - [x] The guard test fails on the previous compose (quay tag) and passes on the new one.
-- [ ] The next deploy pulls the new image, recreates `minio`, and Langfuse traces still upload.
+- [x] The next deploy pulls the new image, recreates `minio`, and Langfuse traces still upload. Verified 2026-10-22
+      11:06Z: prod runs `docker.io/pgsty/minio@sha256:b6bfe723…`, buckets intact, Langfuse up. The old quay image is
+      no longer cached on the droplet.
 
 ## Gherkin Scenarios
 
@@ -125,3 +127,8 @@ added the compose guard test.
 - backend/tests/features/compose_object_storage_image_ae0480.feature
 - backend/tests/unit/scripts_ci/test_compose_object_storage_image_ae0480.py
 - .agent/tasks/AE-0480-pin-a-still-available-minio-image.md
+
+## Final Summary
+
+Merged as #209 and deployed: prod's Langfuse stack runs `docker.io/pgsty/minio@sha256:b6bfe723…` (recreated
+2026-10-22 11:06Z), buckets intact, Langfuse up. AE-0344 (re-pin by quay digest) is superseded by this ticket.
