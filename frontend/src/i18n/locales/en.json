@@ -1596,6 +1596,8 @@
     "editorRole": "Editor",
     "adminRole": "Admin",
     "passwordLabel": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "passwordOptional": "optional",
     "passwordPlaceholder": "Leave blank to auto-generate",
     "cancel": "Cancel",

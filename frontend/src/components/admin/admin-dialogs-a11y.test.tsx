@@ -20,7 +20,10 @@ describe("admin user dialogs", () => {
     expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
     expect(screen.getByLabelText("Full name")).toHaveAttribute("type", "text");
     expect(screen.getByLabelText("Role").tagName).toBe("SELECT");
-    expect(screen.getByLabelText(/^Password/)).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText(/^Password/)).toHaveAttribute(
+      "type",
+      "password",
+    );
   });
 
   // Scenario: Admin user form fields have labels
