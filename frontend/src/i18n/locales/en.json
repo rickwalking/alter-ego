@@ -1163,6 +1163,7 @@
     "signIn": "Sign In",
     "signingIn": "Signing in...",
     "loginError": "Invalid email or password",
+    "tooManyAttempts": "Too many sign-in attempts. Wait a minute and try again.",
     "sessionExpired": "Your session expired. Please sign in again.",
     "forbiddenTitle": "Access Denied",
     "forbiddenDescription": "You do not have permission to access this page.",

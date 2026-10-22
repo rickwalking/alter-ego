@@ -53,6 +53,7 @@ from rag_backend.application.services.chat_stream_service import (
     stream_chat_response,
 )
 from rag_backend.domain.constants.chat_stream import (
+    CHAT_FAILED_REPLY,
     ERR_EMPTY_MESSAGE,
     SSE_EVENT_COMPLETE,
     SSE_EVENT_ERROR,
@@ -247,9 +248,9 @@ class TestStreamChatResponse:
 
     @pytest.mark.asyncio
     async def test_agent_error_yields_error_event(self, mock_db, mock_conversation):
-        """Given agent that raises, when streaming, then yields error event.
+        """Given agent that raises, when streaming, then yields a generic error event.
 
-        Only the user message is persisted; the assistant message is not.
+        The user message and an apology (not the partial reply) are persisted.
         """
         agent = MockAgent(error=RuntimeError("Agent failed"))
 
@@ -286,9 +287,9 @@ class TestStreamChatResponse:
         parsed_events = [_parse_sse_event(e) for e in events]
         assert any(e["type"] == SSE_EVENT_ERROR for e in parsed_events)
         error_event = next(e for e in parsed_events if e["type"] == SSE_EVENT_ERROR)
-        assert "Agent failed" in error_event["content"]
+        assert error_event["content"] == CHAT_FAILED_REPLY
 
-        assert mock_msg_repo.create.call_count == 1
+        assert mock_msg_repo.create.call_count == 2
 
     @pytest.mark.asyncio
     async def test_tool_result_sanitization(self, mock_db, mock_conversation):

@@ -18,3 +18,21 @@ export const LOGIN_REDIRECT_PARSE_ORIGIN = "https://login-redirect.invalid";
 
 /** How many rounds of percent-decoding a return path is checked through. */
 export const LOGIN_REDIRECT_DECODE_ROUNDS = 3;
+
+/**
+ * The login form's no-JavaScript POST target (outside `/api`, which nginx sends
+ * to FastAPI). With JavaScript the form posts JSON to the API instead.
+ */
+export const LOGIN_FORM_ACTION = "/auth/login";
+
+/** Query param the login page reads to show a sign-in notice. */
+export const LOGIN_ERROR_PARAM = "error";
+
+/** `?error=` value after a failed no-JavaScript sign-in. */
+export const LOGIN_ERROR_INVALID_CREDENTIALS = "invalid_credentials";
+
+/** `?error=` value when the backend rate-limited a no-JavaScript sign-in. */
+export const LOGIN_ERROR_TOO_MANY_ATTEMPTS = "too_many_attempts";
+
+/** `?error=` value after the session expired (set by `/auth/logout`). */
+export const LOGIN_ERROR_SESSION_EXPIRED = "session_expired";
