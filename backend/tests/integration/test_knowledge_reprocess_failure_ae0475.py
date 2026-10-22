@@ -16,6 +16,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from rag_backend.domain.constants.documents import FAILURE_EMBEDDING_UNAVAILABLE
 from rag_backend.domain.models import Document, DocumentStatus, UserRole
 from tests.integration.conftest import (
     TEST_SECRET,
@@ -101,6 +102,8 @@ async def test_failed_reprocess_is_saved_with_the_reason(env: _Env) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == DocumentStatus.FAILED.value
-    assert response.json()["error_message"] == f"RuntimeError: {_REASON}"
+    assert response.json()["error_message"] == FAILURE_EMBEDDING_UNAVAILABLE
     assert again.json()["status"] == DocumentStatus.FAILED.value
-    assert again.json()["error_message"] == f"RuntimeError: {_REASON}"
+    assert again.json()["error_message"] == FAILURE_EMBEDDING_UNAVAILABLE
+    assert _REASON not in response.text
+    assert _REASON not in again.text

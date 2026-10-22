@@ -31,6 +31,25 @@ export function needsRetry(document: Document, now: number): boolean {
   return document.status === FAILED_STATUS || isStaleDocument(document, now);
 }
 
+const FAILURE_PROCESSING_ERROR = "processing_error";
+const FAILURE_REASONS: ReadonlySet<string> = new Set([
+  "embedding_unavailable",
+  "vector_store_unavailable",
+  "empty_content",
+  FAILURE_PROCESSING_ERROR,
+]);
+
+/**
+ * The `knowledge.document.failure` key of a saved failure reason. The API
+ * stores a fixed code; anything else (an older free-text reason) is shown as
+ * the generic processing error, never verbatim.
+ */
+export function failureReasonKey(errorMessage: string): string {
+  return FAILURE_REASONS.has(errorMessage)
+    ? errorMessage
+    : FAILURE_PROCESSING_ERROR;
+}
+
 /** Whether `status` has a translated label under `knowledge.document.status`. */
 export function isKnownStatus(status: string): boolean {
   return KNOWN_STATUSES.has(status);

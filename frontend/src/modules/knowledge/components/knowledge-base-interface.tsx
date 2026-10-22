@@ -14,8 +14,8 @@ import {
   useDocuments,
   useCreateDocument,
   useDeleteDocument,
-  useReprocessDocument,
 } from "../hooks/use-documents";
+import { useDocumentRetries } from "../hooks/use-document-retries";
 import { DocumentList } from "./document-list";
 import { DocumentListSkeleton } from "./document-list-skeleton";
 import { DocumentForm } from "./document-form";
@@ -43,7 +43,8 @@ function DocumentListSection({
   onUploadNew,
   onDeleteDocument,
   onRetryDocument,
-  retryingId,
+  retryingIds,
+  retryFailedIds,
 }: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
@@ -64,7 +65,8 @@ function DocumentListSection({
       onUploadNew={onUploadNew}
       onDeleteDocument={onDeleteDocument}
       onRetryDocument={onRetryDocument}
-      retryingId={retryingId}
+      retryingIds={retryingIds}
+      retryFailedIds={retryFailedIds}
     />
   );
 }
@@ -75,7 +77,7 @@ export function KnowledgeBaseInterface() {
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
   const isClient = useIsClient();
-  const reprocessDocument = useReprocessDocument();
+  const { retry, retryingIds, retryFailedIds } = useDocumentRetries();
 
   const handleCreateNew = useCallback(() => {
     setViewMode("create");
@@ -90,11 +92,11 @@ export function KnowledgeBaseInterface() {
       createDocument.mutate(data, {
         onSuccess: (created) => {
           setViewMode("list");
-          reprocessDocument.mutate(created.id);
+          retry(created.id);
         },
       });
     },
-    [createDocument, reprocessDocument],
+    [createDocument, retry],
   );
 
   const handleUploadComplete = useCallback(() => {
@@ -123,10 +125,9 @@ export function KnowledgeBaseInterface() {
             onCreateNew={handleCreateNew}
             onUploadNew={handleUploadNew}
             onDeleteDocument={handleDelete}
-            onRetryDocument={(id) => reprocessDocument.mutate(id)}
-            retryingId={
-              reprocessDocument.isPending ? reprocessDocument.variables : null
-            }
+            onRetryDocument={retry}
+            retryingIds={retryingIds}
+            retryFailedIds={retryFailedIds}
           />
         </Suspense>
       );

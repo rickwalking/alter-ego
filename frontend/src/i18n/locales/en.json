@@ -154,7 +154,14 @@
       },
       "stale": "Processing did not finish.",
       "retry": "Retry",
-      "retrying": "Retrying…"
+      "retrying": "Retrying…",
+      "retryFailed": "The retry could not start. Try again.",
+      "failure": {
+        "embedding_unavailable": "The embedding service was unavailable.",
+        "vector_store_unavailable": "The search index was unavailable.",
+        "empty_content": "The document has no text to index.",
+        "processing_error": "Processing failed."
+      }
     },
     "upload": {
       "title": "Upload Document",

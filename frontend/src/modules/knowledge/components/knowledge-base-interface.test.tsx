@@ -40,9 +40,7 @@ vi.mock("../hooks/use-documents", () => ({
     mutate: knowledgeMocks.deleteDocument,
   }),
   useReprocessDocument: () => ({
-    mutate: knowledgeMocks.reprocessDocument,
-    isPending: false,
-    variables: undefined,
+    mutateAsync: knowledgeMocks.reprocessDocument,
   }),
 }));
 
@@ -163,6 +161,7 @@ vi.mock("@/lib/utils", () =>
 describe("KnowledgeBaseInterface Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    knowledgeMocks.reprocessDocument.mockResolvedValue({});
     knowledgeMocks.createDocument.mockImplementation(
       (
         _data: unknown,

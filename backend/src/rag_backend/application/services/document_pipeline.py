@@ -1,5 +1,11 @@
 """Document processing pipeline service."""
 
+from rag_backend.domain.constants.documents import (
+    FAILURE_EMBEDDING_UNAVAILABLE,
+    FAILURE_EMPTY_CONTENT,
+    FAILURE_PROCESSING_ERROR,
+    FAILURE_VECTOR_STORE_UNAVAILABLE,
+)
 from rag_backend.domain.models import Document, DocumentStatus
 from rag_backend.domain.protocols import (
     DocumentProcessor,
@@ -14,13 +20,6 @@ PIPELINE_FAILURE_LOGGED = "document pipeline failure already logged as pipeline_
 logger = get_logger()
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
-_MAX_FAILURE_REASON_CHARS = 300
-
-
-def _failure_reason(error: Exception) -> str:
-    """A short, typed reason for a failed processing run (stored on the row)."""
-    reason = f"{type(error).__name__}: {error}"
-    return reason[:_MAX_FAILURE_REASON_CHARS]
 
 
 class DocumentProcessingPipeline:
@@ -58,7 +57,13 @@ class DocumentProcessingPipeline:
         return await self._run(document, record_failure=False)
 
     async def _run(self, document: Document, *, record_failure: bool) -> Document:
-        """Chunk, embed and upsert; on error mark failed, then raise or return."""
+        """Chunk, embed and upsert; on error mark failed, then raise or return.
+
+        The saved reason is a fixed code naming the step that failed, never the
+        error text (provider errors can carry hosts, URLs or key fragments); the
+        error itself is only logged.
+        """
+        reason = FAILURE_PROCESSING_ERROR
         logger.info(
             "pipeline_process_start",
             document_id=str(document.id),
@@ -69,11 +74,13 @@ class DocumentProcessingPipeline:
             document.update_status(DocumentStatus.PROCESSING)
             await self._document_repository.update(document)
 
+            reason = FAILURE_EMBEDDING_UNAVAILABLE
             chunks = await self._document_processor.process(document)
+            reason = FAILURE_PROCESSING_ERROR
 
             if not chunks:
                 logger.warning("pipeline_no_chunks", document_id=str(document.id))
-                document.mark_failed("No chunks generated from document")
+                document.mark_failed(FAILURE_EMPTY_CONTENT)
                 await self._document_repository.update(document)
                 return document
 
@@ -84,9 +91,11 @@ class DocumentProcessingPipeline:
             )
 
             namespace = document.scope.value
+            reason = FAILURE_VECTOR_STORE_UNAVAILABLE
             await self._vector_store.upsert_chunks(
                 chunks, document.id, namespace=namespace
             )
+            reason = FAILURE_PROCESSING_ERROR
 
             document.mark_completed(chunk_count=len(chunks))
             await self._document_repository.update(document)
@@ -101,9 +110,10 @@ class DocumentProcessingPipeline:
             logger.exception(
                 "pipeline_failed",
                 document_id=str(document.id),
+                reason=reason,
             )
             e.add_note(PIPELINE_FAILURE_LOGGED)
-            document.mark_failed(_failure_reason(e))
+            document.mark_failed(reason)
             await self._document_repository.update(document)
             if not record_failure:
                 raise

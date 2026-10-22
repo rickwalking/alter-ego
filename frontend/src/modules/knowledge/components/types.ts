@@ -16,6 +16,8 @@ export interface DocumentCardProps {
   onRetry?: () => void;
   /** A retry of this document is in flight. */
   retrying?: boolean;
+  /** The last retry of this document could not be started. */
+  retryFailed?: boolean;
 }
 
 export interface DocumentStateRowProps {
@@ -28,6 +30,7 @@ export interface DocumentStateRowProps {
 export interface DocumentRetryButtonProps {
   onRetry: () => void;
   retrying: boolean;
+  retryFailed: boolean;
 }
 
 export interface DocumentListProps {
@@ -36,7 +39,10 @@ export interface DocumentListProps {
   onUploadNew: () => void;
   onDeleteDocument: (id: string) => void;
   onRetryDocument?: (id: string) => void;
-  retryingId?: string | null;
+  /** Ids of the documents whose retry is in flight. */
+  retryingIds?: ReadonlySet<string>;
+  /** Ids of the documents whose last retry failed. */
+  retryFailedIds?: ReadonlySet<string>;
 }
 
 /**
@@ -49,7 +55,8 @@ export interface DocumentListSectionProps {
   onUploadNew: () => void;
   onDeleteDocument: (id: string) => void;
   onRetryDocument: (id: string) => void;
-  retryingId: string | null;
+  retryingIds: ReadonlySet<string>;
+  retryFailedIds: ReadonlySet<string>;
 }
 
 export interface DocumentFormProps {

@@ -154,7 +154,14 @@
       },
       "stale": "O processamento não terminou.",
       "retry": "Tentar de novo",
-      "retrying": "Tentando…"
+      "retrying": "Tentando…",
+      "retryFailed": "Não foi possível tentar de novo. Tente outra vez.",
+      "failure": {
+        "embedding_unavailable": "O serviço de embeddings estava indisponível.",
+        "vector_store_unavailable": "O índice de busca estava indisponível.",
+        "empty_content": "O documento não tem texto para indexar.",
+        "processing_error": "O processamento falhou."
+      }
     },
     "upload": {
       "title": "Enviar Documento",

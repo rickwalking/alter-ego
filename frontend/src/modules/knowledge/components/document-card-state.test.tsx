@@ -36,17 +36,65 @@ describe("DocumentCard processing state", () => {
         document={doc({
           status: "failed",
           chunk_count: 0,
-          error_message: "RuntimeError: embedding service unavailable",
+          error_message: "embedding_unavailable",
         })}
         onRetry={onRetry}
       />,
     );
     expect(screen.getByText("Failed")).toBeInTheDocument();
     expect(
-      screen.getByText("RuntimeError: embedding service unavailable"),
+      screen.getByText("The embedding service was unavailable."),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // Scenario: A saved reason that is not a known code is never shown verbatim
+  it("shows an unknown reason as the generic processing error", () => {
+    render(
+      <DocumentCard
+        document={doc({
+          status: "failed",
+          error_message: "RuntimeError: https://embed.internal.example sk-abc",
+        })}
+      />,
+    );
+    expect(screen.getByText("Processing failed.")).toBeInTheDocument();
+    expect(screen.queryByText(/embed\.internal/)).not.toBeInTheDocument();
+  });
+
+  // Scenario: Each failure reason code is shown in words
+  it.each([
+    ["vector_store_unavailable", "The search index was unavailable."],
+    ["empty_content", "The document has no text to index."],
+    ["processing_error", "Processing failed."],
+  ])("shows the %s reason in words", (code, words) => {
+    render(
+      <DocumentCard
+        document={doc({ status: "failed", error_message: code })}
+      />,
+    );
+    expect(screen.getByText(words)).toBeInTheDocument();
+    expect(
+      pt.knowledge.document.failure[
+        code as keyof typeof pt.knowledge.document.failure
+      ],
+    ).toBeTruthy();
+  });
+
+  // Scenario: A failed retry says so on its document
+  it("shows an inline error when the last retry failed", () => {
+    render(
+      <DocumentCard
+        document={doc({ status: "failed", error_message: "processing_error" })}
+        onRetry={vi.fn()}
+        retryFailed
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The retry could not start. Try again.",
+    );
+    expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
   });
 
   // Scenario: A document stuck in processing is shown as stale with Retry

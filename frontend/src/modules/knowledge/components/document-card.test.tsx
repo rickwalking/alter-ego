@@ -135,10 +135,12 @@ describe("DocumentCard Component", () => {
         const errorDoc: Document = {
           ...mockDocument,
           status: "failed",
-          error_message: "Processing failed",
+          error_message: "empty_content",
         };
         render(<DocumentCard document={errorDoc} />);
-        expect(screen.getByText("Processing failed")).toBeInTheDocument();
+        expect(
+          screen.getByText("The document has no text to index."),
+        ).toBeInTheDocument();
       });
     });
 

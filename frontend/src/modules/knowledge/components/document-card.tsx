@@ -16,7 +16,12 @@ import {
   type DocumentRetryButtonProps,
   type DocumentStateRowProps,
 } from "./types";
-import { isKnownStatus, isStaleDocument, needsRetry } from "./document-state";
+import {
+  failureReasonKey,
+  isKnownStatus,
+  isStaleDocument,
+  needsRetry,
+} from "./document-state";
 
 /** Status badge, failure reason and the stale notice of a document. */
 function DocumentStateRow({
@@ -28,17 +33,20 @@ function DocumentStateRow({
   const statusLabel = isKnownStatus(document.status)
     ? t(`status.${document.status}`)
     : document.status;
+  const failureReason = document.error_message
+    ? t(`failure.${failureReasonKey(document.error_message)}`)
+    : null;
   return (
     <>
       <NeonBadge variant="secondary" className={`text-xs ${badgeClassName}`}>
         {statusLabel}
       </NeonBadge>
-      {document.error_message && (
+      {failureReason && (
         <span
           className="text-xs text-[var(--color-destructive)] truncate"
-          title={document.error_message}
+          title={failureReason}
         >
-          {document.error_message}
+          {failureReason}
         </span>
       )}
       {isStaleDocument(document, now) && (
@@ -54,18 +62,29 @@ function DocumentStateRow({
 function DocumentRetryButton({
   onRetry,
   retrying,
+  retryFailed,
 }: Readonly<DocumentRetryButtonProps>): React.ReactElement {
   const t = useTranslations("knowledge.document");
   return (
-    <button
-      type="button"
-      onClick={onRetry}
-      disabled={retrying}
-      className="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
-    >
-      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-      {retrying ? t("retrying") : t("retry")}
-    </button>
+    <>
+      {retryFailed && (
+        <p
+          role="alert"
+          className="mb-2 text-xs text-[var(--color-destructive)]"
+        >
+          {t("retryFailed")}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        className="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
+      >
+        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+        {retrying ? t("retrying") : t("retry")}
+      </button>
+    </>
   );
 }
 
@@ -74,6 +93,7 @@ export function DocumentCard({
   onDelete,
   onRetry,
   retrying = false,
+  retryFailed = false,
 }: Readonly<DocumentCardProps>) {
   const locale = useLocale();
   const t = useTranslations("knowledge.document");
@@ -132,7 +152,11 @@ export function DocumentCard({
           />
         </div>
         {onRetry && needsRetry(document, now) && (
-          <DocumentRetryButton onRetry={onRetry} retrying={retrying} />
+          <DocumentRetryButton
+            onRetry={onRetry}
+            retrying={retrying}
+            retryFailed={retryFailed}
+          />
         )}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
