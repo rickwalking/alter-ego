@@ -1600,6 +1600,105 @@
         "title": "CarouselConflictResponse",
         "type": "object"
       },
+      "CarouselCopyResponse": {
+        "description": "The saved texts and the lock version the next save must send.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "linkedin_post_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Post En"
+          },
+          "linkedin_post_pt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Post Pt"
+          },
+          "lock_version": {
+            "title": "Lock Version",
+            "type": "integer"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "caption",
+          "linkedin_post_pt",
+          "linkedin_post_en",
+          "lock_version"
+        ],
+        "title": "CarouselCopyResponse",
+        "type": "object"
+      },
+      "CarouselCopyUpdateRequest": {
+        "description": "The texts to save; a missing (or null) field keeps its saved text.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 2200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "linkedin_post_en": {
+            "anyOf": [
+              {
+                "maxLength": 3000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Post En"
+          },
+          "linkedin_post_pt": {
+            "anyOf": [
+              {
+                "maxLength": 3000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Post Pt"
+          }
+        },
+        "title": "CarouselCopyUpdateRequest",
+        "type": "object"
+      },
       "CarouselDesignColors": {
         "properties": {
           "accent": {
@@ -12228,6 +12327,101 @@
         "summary": "Generate Caption",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/copy": {
+      "patch": {
+        "description": "Persist the edited texts; unsent texts keep their saved value.",
+        "operationId": "save_carousel_copy_api_carousels__project_id__copy_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarouselCopyUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselCopyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not the owner or an admin"
+          },
+          "404": {
+            "description": "Carousel project not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "A workflow run is active, the lock version is stale, or the caption is already published on Instagram."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "description": "If-Match missing"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save the Instagram caption and the LinkedIn posts of a carousel",
+        "tags": [
+          "carousels",
+          "carousels-copy"
         ]
       }
     },
