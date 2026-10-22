@@ -5,9 +5,11 @@ Implements the export techniques from docs/guides/carousel-export-techniques.md:
 - Strategy B: 2x Retina (2160x2700) with deviceScaleFactor
 """
 
+import asyncio
+import json
 from pathlib import Path
 
-from playwright.async_api import async_playwright
+from playwright.async_api import Page, async_playwright
 
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
@@ -32,6 +34,7 @@ from rag_backend.domain.constants.playwright_geometry import (
     ERR_SCREENSHOT_DIMENSION_MISMATCH,
 )
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
+from rag_backend.infrastructure.external.export_lock import export_slot
 from rag_backend.infrastructure.external.playwright_artwork_check import (
     ensure_artwork_files,
 )
@@ -53,6 +56,8 @@ HD_SCALE_FACTOR = 2
 
 _VIEWPORT_WIDTH = 1400
 _VIEWPORT_HEIGHT = 1800
+
+CHROMIUM_EXPORT_ARGS = ("--disable-dev-shm-usage", "--renderer-process-limit=1")
 
 _CROP_TARGET_WIDTH = CAROUSEL_WIDTH
 _CROP_TARGET_HEIGHT = CAROUSEL_HEIGHT
@@ -298,60 +303,69 @@ class PlaywrightExportService(CarouselExportService):
         html_file.write_text(html_content, encoding=ENCODING_UTF8)
         ensure_artwork_files(html_content, output_path, hd=cfg.hd)
 
-        exported_paths: list[str] = []
-        scale = HD_SCALE_FACTOR if cfg.hd else 1
-        target_width = cfg.width * scale
-        target_height = cfg.height * scale
-        injection = _CSS_INJECTION_HD if cfg.hd else _CSS_INJECTION_BASE
+        async with export_slot():
+            return await _render_slides(html_file, cfg)
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page(
-                viewport={
-                    "width": _VIEWPORT_WIDTH * scale,
-                    "height": _VIEWPORT_HEIGHT * scale,
-                },
-                device_scale_factor=scale,
-            )
 
-            file_url = f"file://{html_file.absolute()}"
-            await page.goto(file_url)
+async def _render_slides(html_file: Path, cfg: ExportConfig) -> list[str]:
+    """Launch Chromium once, prepare the page and screenshot every slide.
 
-            await page.evaluate(injection)
-            await page.evaluate(pov_export_injection(hd=cfg.hd))
-            if cfg.css_overrides:
-                import json
+    Chromium runs without ``/dev/shm`` and with one renderer process to bound its
+    memory; the border crop runs in a worker thread so the event loop stays free.
+    """
+    scale = HD_SCALE_FACTOR if cfg.hd else 1
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(args=list(CHROMIUM_EXPORT_ARGS))
+        page = await browser.new_page(
+            viewport={
+                "width": _VIEWPORT_WIDTH * scale,
+                "height": _VIEWPORT_HEIGHT * scale,
+            },
+            device_scale_factor=scale,
+        )
+        await page.goto(f"file://{html_file.absolute()}")
+        await _prepare_page(page, cfg)
+        exported_paths = await _capture_slides(page, html_file.parent, cfg)
+        await browser.close()
+    return exported_paths
 
-                safe_css = json.dumps(cfg.css_overrides)
-                override_js = (
-                    "const s = document.createElement('style');"
-                    f"s.textContent = {safe_css};"
-                    "document.head.appendChild(s);"
-                )
-                await page.evaluate(override_js)
 
-            await run_export_preflight(page, export_policy(cfg), hd=cfg.hd)
+async def _prepare_page(page: Page, cfg: ExportConfig) -> None:
+    """Inject the export CSS, the POV rules and any overrides, then preflight."""
+    await page.evaluate(_CSS_INJECTION_HD if cfg.hd else _CSS_INJECTION_BASE)
+    await page.evaluate(pov_export_injection(hd=cfg.hd))
+    if cfg.css_overrides:
+        safe_css = json.dumps(cfg.css_overrides)
+        override_js = (
+            "const s = document.createElement('style');"
+            f"s.textContent = {safe_css};"
+            "document.head.appendChild(s);"
+        )
+        await page.evaluate(override_js)
+    await run_export_preflight(page, export_policy(cfg), hd=cfg.hd)
 
-            slide_inners = await page.locator(".ig-slide-inner").all()
-            if not slide_inners:
-                slide_inners = await page.locator(".slide").all()
 
-            for i, slide in enumerate(slide_inners, 1):
-                filename = f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}"
-                slide_path = str(output_path / filename)
-                await slide.screenshot(
-                    path=slide_path,
-                    type=IMAGE_FORMAT_JPEG_LOWER,
-                    quality=cfg.quality,
-                    scale="css",
-                )
-                _crop_border_artifact(
-                    slide_path,
-                    target_width,
-                    target_height,
-                )
-                exported_paths.append(slide_path)
-
-            await browser.close()
-
-        return exported_paths
+async def _capture_slides(
+    page: Page, output_path: Path, cfg: ExportConfig
+) -> list[str]:
+    """Screenshot each ``.ig-slide-inner`` (legacy ``.slide`` as fallback)."""
+    scale = HD_SCALE_FACTOR if cfg.hd else 1
+    slide_inners = await page.locator(".ig-slide-inner").all()
+    if not slide_inners:
+        slide_inners = await page.locator(".slide").all()
+    exported_paths: list[str] = []
+    for i, slide in enumerate(slide_inners, 1):
+        slide_path = str(
+            output_path / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}"
+        )
+        await slide.screenshot(
+            path=slide_path,
+            type=IMAGE_FORMAT_JPEG_LOWER,
+            quality=cfg.quality,
+            scale="css",
+        )
+        await asyncio.to_thread(
+            _crop_border_artifact, slide_path, cfg.width * scale, cfg.height * scale
+        )
+        exported_paths.append(slide_path)
+    return exported_paths

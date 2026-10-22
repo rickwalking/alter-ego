@@ -8,11 +8,14 @@ The app factory supplies the editorial engine factory for the worker tick.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.autopilot_start import (
+    DEFAULT_START_SPACING_MINUTES,
+)
 from rag_backend.domain.constants.slide_fix import (
     AUTOFIX_ESCALATION_ATTEMPTS,
     AUTOFIX_MODEL_ATTEMPTS,
@@ -38,6 +41,7 @@ from rag_backend.modules.autopilot.application.signals_service import (
     SignalsService,
     SignalsServiceDependencies,
 )
+from rag_backend.modules.autopilot.application.start_spacing import StartSpacing
 from rag_backend.modules.autopilot.application.story_step import (
     InstagramStoryStep,
     StoryDependencies,
@@ -78,6 +82,9 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
 )
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
+)
+from rag_backend.modules.autopilot.infrastructure.start_history import (
+    SqlStartHistory,
 )
 from rag_backend.modules.autopilot.infrastructure.story_gateway import (
     story_gateway_for,
@@ -249,7 +256,8 @@ class AutopilotTickConfig:
     ``autofix_attempts``, ``autofix_escalation_attempts`` and
     ``persona_unscored_max_ticks`` come from ``AUTOPILOT_AUTOFIX_ATTEMPTS``,
     ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` and
-    ``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``.
+    ``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``; ``start_spacing_minutes`` from
+    ``AUTOPILOT_START_SPACING_MINUTES``.
     """
 
     owner_user_id: str
@@ -260,6 +268,7 @@ class AutopilotTickConfig:
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
     persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
+    start_spacing_minutes: int = DEFAULT_START_SPACING_MINUTES
 
 
 class AutopilotRunnerTickAdapter:
@@ -332,6 +341,11 @@ def _runner_deps(
         slide_fix=autofixer,
         covers=cover_offers(session),
         cover_switch=EditorialCoverSwitcher(session),
+        spacing=StartSpacing(
+            starts=SqlStartHistory(session),
+            clock=SystemClock(),
+            minimum=timedelta(minutes=config.start_spacing_minutes),
+        ),
     )
 
 

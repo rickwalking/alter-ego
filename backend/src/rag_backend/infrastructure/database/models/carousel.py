@@ -170,6 +170,11 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
         Index("idx_carousel_projects_status", "status"),
         Index("idx_carousel_projects_created_at", "created_at"),
         Index("idx_carousel_projects_updated_at", "updated_at"),
+        Index(
+            "idx_carousel_projects_phase_status_current_phase",
+            "phase_status",
+            "current_phase",
+        ),
     )
 
     def to_entity(self) -> CarouselProjectEntity:

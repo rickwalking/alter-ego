@@ -7,6 +7,9 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.domain.constants.autopilot_start import (
+    DEFAULT_START_SPACING_MINUTES,
+)
 from rag_backend.domain.constants.blog_generation import (
     DEFAULT_BLOG_GENERATION_STALE_SECONDS,
     DEFAULT_BLOG_GENERATION_TEXT_TIMEOUT_SECONDS,
@@ -93,6 +96,8 @@ class Settings(AutopilotAutofixSettings):
       (reviewer_id stays unset).
     - ``autopilot_default_publish``: ``now`` offers publish-now or a schedule on
       Approve; ``next_slot`` schedules the next good slot directly.
+    - ``autopilot_start_spacing_minutes``: minimum minutes between two autopilot
+      generation starts (default 20, 0 is off).
     - ``autopilot_persona_id`` voices autopilot carousels: empty uses the persona
       named "Pedro"; with none, POV runs escalate unscored.
     - ``image_bridge_enabled`` sends carousel images through the Grok Bot webhook
@@ -254,6 +259,15 @@ class Settings(AutopilotAutofixSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_DEFAULT_PUBLISH",
             "autopilot_default_publish",
+        ),
+    )
+
+    autopilot_start_spacing_minutes: int = Field(
+        default=DEFAULT_START_SPACING_MINUTES,
+        ge=0,
+        validation_alias=AliasChoices(
+            "AUTOPILOT_START_SPACING_MINUTES",
+            "autopilot_start_spacing_minutes",
         ),
     )
 

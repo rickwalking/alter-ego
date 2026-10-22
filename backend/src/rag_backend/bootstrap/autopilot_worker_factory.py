@@ -91,6 +91,7 @@ def build_autopilot_worker_steps(
                 ),
                 engine_factory=engine_factory,
                 stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
+                start_spacing_minutes=settings.autopilot_start_spacing_minutes,
                 notifier_configured=notifier_is_configured(token, chat_id),
             )
         ),

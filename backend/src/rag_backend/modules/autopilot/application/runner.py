@@ -36,6 +36,7 @@ from rag_backend.modules.autopilot.application.run_spec import (
     spec_refusal,
     with_inputs,
 )
+from rag_backend.modules.autopilot.application.start_spacing import StartSpacing
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_RESEARCH,
@@ -113,6 +114,7 @@ class RunnerDependencies:
 
     ``autofix`` runs the owner's queued "Fix issues"; ``gate_repair`` repairs a gate
     before any revise, then ``slide_fix`` model-fixes what still fails (no revise).
+    ``spacing`` keeps a queued run waiting until the previous start is old enough.
     """
 
     runs: AutopilotRunRepository
@@ -129,6 +131,7 @@ class RunnerDependencies:
     slide_fix: SlideFixer | None = None
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
+    spacing: StartSpacing | None = None
 
 
 _Step = GateRead
@@ -341,6 +344,8 @@ class AutopilotRunner:
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
         if run.carousel_project_id is not None:
             return run.carousel_project_id
+        if self._deps.spacing is not None and await self._deps.spacing.holds(run):
+            return None
         project_id = await self._deps.editorial.create_project(spec)
         attached = await self._deps.runs.attach_project(
             AttachProjectCommand(run_id=run.run_id, project_id=project_id)

@@ -300,6 +300,21 @@ jobs:
               echo "::error::palette timestamptz exited $PALETTE_TZ_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            # --- carousel_projects (phase_status, current_phase) index (Pedro's decision)
+            # One-shot, idempotent: CREATE INDEX CONCURRENTLY IF NOT EXISTS (an
+            # INVALID leftover is dropped and rebuilt). create_all never adds an
+            # index to an existing table, so this is how migration f7a8b9c0d1e2
+            # reaches prod. Same shape as the palette step: it NEVER blocks the
+            # stack (exit code captured, job failed at the very end).
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.carousel_phase_index --apply --verify
+            PHASE_INDEX_EXIT=$?
+            set -e
+            if [ "$PHASE_INDEX_EXIT" -ne 0 ]; then
+              echo "::error::carousel phase index exited $PHASE_INDEX_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -355,5 +370,12 @@ jobs:
             # with the stack up (palette writes may 500 until it is re-run).
             if [ "$PALETTE_TZ_EXIT" -ne 0 ]; then
               echo "::error::palette timestamptz failed (exit $PALETTE_TZ_EXIT): run 'python -m rag_backend.scripts.palette_timestamptz --apply --verify' on the droplet"
+              exit 1
+            fi
+
+            # Surface a failed carousel phase index step only now, with the stack up
+            # (the index only speeds reads; nothing breaks while it is missing).
+            if [ "$PHASE_INDEX_EXIT" -ne 0 ]; then
+              echo "::error::carousel phase index failed (exit $PHASE_INDEX_EXIT): run 'python -m rag_backend.scripts.carousel_phase_index --apply --verify' on the droplet"
               exit 1
             fi

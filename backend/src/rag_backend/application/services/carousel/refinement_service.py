@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -126,7 +127,7 @@ class CarouselRefinementService(CarouselRefinementMixin):
             project.slide_layout_strategy = strategy
 
         output_dir = Path(project.output_dir)
-        prepare_carousel_export_assets(output_dir)
+        await asyncio.to_thread(prepare_carousel_export_assets, output_dir)
         slides_data = [unpack_extras(slide) for slide in slides]
         pt_html = self._phase4_design(project, slides_data, strategy_name=strategy)
         await self._phase6_bilingual_export(
