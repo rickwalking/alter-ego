@@ -10,9 +10,14 @@ import type { useBlogPosts } from "@/modules/publishing";
 import { useNewBlogPost } from "./use-new-blog-post";
 
 const TITLE_INPUT_ID = "new-blog-post-title";
+const FORM_ID = "new-blog-post-form";
 const BLOG_POST_TITLE_MAX_CHARS = 255;
 
-/** "New Post" button + title form; the draft is created only on submit. */
+/**
+ * "New Post" button + title form; the draft is created only on submit (the
+ * Create button or Enter in the title field). The title field is focused when
+ * the form opens.
+ */
 export function NewBlogPostAction({
   create,
 }: Readonly<{
@@ -53,24 +58,35 @@ export function NewBlogPostAction({
             </NeonButton>
             <NeonButton
               size="sm"
+              type="submit"
+              form={FORM_ID}
               disabled={!form.canSubmit}
-              onClick={() => void form.submit()}
             >
               {t("actions.create")}
             </NeonButton>
           </>
         }
       >
-        <label htmlFor={TITLE_INPUT_ID} className="mb-1 block text-sm">
-          {t("fields.title")}
-        </label>
-        <NeonInput
-          id={TITLE_INPUT_ID}
-          value={form.title}
-          maxLength={BLOG_POST_TITLE_MAX_CHARS}
-          required
-          onChange={(event) => form.setTitle(event.target.value)}
-        />
+        <form
+          id={FORM_ID}
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (form.canSubmit) void form.submit();
+          }}
+        >
+          <label htmlFor={TITLE_INPUT_ID} className="mb-1 block text-sm">
+            {t("fields.title")}
+          </label>
+          <NeonInput
+            id={TITLE_INPUT_ID}
+            value={form.title}
+            maxLength={BLOG_POST_TITLE_MAX_CHARS}
+            required
+            autoFocus
+            onChange={(event) => form.setTitle(event.target.value)}
+          />
+        </form>
         {form.createError ? (
           <p
             role="alert"

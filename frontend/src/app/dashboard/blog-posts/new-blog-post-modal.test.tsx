@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -58,6 +59,39 @@ describe("NewBlogPostAction", () => {
     });
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  // Scenario: The title field is focused when the form opens
+  it("focuses the title field on open", () => {
+    openForm();
+    expect(screen.getByLabelText("Title")).toHaveFocus();
+  });
+
+  // Scenario: Pressing Enter in the title field creates the draft
+  it("creates the draft when Enter is pressed in the title field", async () => {
+    create.mockResolvedValue({ id: "new-2" });
+    openForm();
+    await userEvent.type(
+      screen.getByLabelText("Title"),
+      "Post via Enter{Enter}",
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/dashboard/blog-posts/new-2/edit"),
+    );
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith({
+      title: "Post via Enter",
+      content: { body: "" },
+      excerpt: "",
+    });
+  });
+
+  // Scenario: The form cannot be submitted without a title
+  it("ignores Enter while the title is blank", async () => {
+    openForm();
+    await userEvent.type(screen.getByLabelText("Title"), "   {Enter}");
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Title")).toBeInTheDocument();
   });
 
   // Scenario: Cancelling the form creates nothing
