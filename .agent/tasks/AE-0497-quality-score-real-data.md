@@ -1,6 +1,6 @@
 # AE-0497 — Analytics "quality score" shows real data or nothing
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Bug
@@ -40,10 +40,10 @@ blog posts (nothing writes that key), and when there was none it returned the **
 
 ## Acceptance Criteria
 
-- [ ] Given no content quality scores, Then both tiles show "Sem dados" (not 0%), and the API returns
+- [x] Given no content quality scores, Then both tiles show "Sem dados" (not 0%), and the API returns
       `quality_score_average: null`, `quality_score_count: 0`, even when posts are published.
-- [ ] Given content quality scores exist, Then the tiles show their average and the count behind it.
-- [ ] The published-ratio fallback is removed; ad-hoc evaluations (nil content id) are not counted.
+- [x] Given content quality scores exist, Then the tiles show their average and the count behind it.
+- [x] The published-ratio fallback is removed; ad-hoc evaluations (nil content id) are not counted.
 
 ## Gherkin Scenarios
 
@@ -70,11 +70,16 @@ Cause confirmed in the code; failing tests first.
 
 ## Files Touched
 
-(updated as work lands)
+- backend: editorial_analytics_service.py, publishing read_projection_helpers.py / publishing_read_acl.py /
+  domain/projections.py, api/schemas/content_quality.py, api/routes/blog_post_quality.py; analytics snapshot;
+  openapi.json; unit test + feature (new)
+- frontend: modules/editorial-operations/analytics/quality-score.ts (new) + barrel + hook types,
+  components/molecules/neon-stat-card.tsx, app/dashboard/dashboard-analytics.tsx, app/dashboard/analytics/page.tsx,
+  i18n en/pt, tests + feature
 
 ## Test Evidence
 
-(see `.agent/reports/AE-0497.dev-summary.md`)
+Red first (4 backend tests), green after; backend capture and frontend gates green. See `.agent/reports/AE-0497.dev-summary.md`.
 
 ## QA Report
 
