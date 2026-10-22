@@ -5,7 +5,7 @@ Tier: T1
 Priority: High
 Type: Bug
 Area: Frontend
-Owner: Worker (Claude) — AE-0481 shepherd, dashboard QA DQ-B-07
+Owner: Claude Code (claude-opus-5-5) — dashboard QA DQ-B-07
 Branch: fix/ae-0481-login-form-post
 Created: 2026-10-22
 Updated: 2026-10-22
