@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/page-metadata";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/request-locale";
 import { NeonBlogPostCard } from "@/modules/publishing";
@@ -14,6 +16,11 @@ export const dynamic = "force-dynamic";
 
 const BLOG_LIST_MAX_WIDTH_PX = 1200;
 const BLOG_LIST_LIMIT = 20;
+
+/** Page title for the public blog list. */
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("blog");
+}
 
 export default async function PublicBlogListPage() {
   const t = await getTranslations("blog");
