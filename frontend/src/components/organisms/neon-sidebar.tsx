@@ -16,6 +16,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   SidebarBrand,
   SidebarNav,
+  visibleSidebarSections,
 } from "@/components/organisms/neon-sidebar-parts";
 import { SidebarUserFooter } from "@/components/organisms/neon-sidebar-user-footer";
 
@@ -44,7 +45,7 @@ export function NeonSidebar({
 }: Readonly<NeonSidebarProps>): React.ReactElement {
   const t = useTranslations("common.sidebar");
   const locale = useLocale();
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isAdmin } = useAuth();
   const asideRef = useRef<HTMLElement>(null);
   const isOpen = open === true;
   const isDrawer = useMediaQuery("(max-width: 1023px)");
@@ -70,7 +71,7 @@ export function NeonSidebar({
     >
       <SidebarBrand />
 
-      <SidebarNav sections={sections} />
+      <SidebarNav sections={visibleSidebarSections(sections, isAdmin)} />
 
       <div
         data-testid="sidebar-language-switcher"

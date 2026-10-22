@@ -68,6 +68,19 @@ export function SidebarBrand(): React.ReactElement {
   );
 }
 
+/** Sections with the items the viewer may open; admin-only items need an admin. */
+export function visibleSidebarSections(
+  sections: SidebarSection[],
+  isAdmin: boolean,
+): SidebarSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.access || isAdmin),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 /**
  * The section groups and their links, highlighting the current page.
  *
