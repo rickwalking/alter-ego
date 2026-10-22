@@ -6,7 +6,7 @@ from pathlib import Path
 from rag_backend.api.schemas.calendar import CalendarItemResponse
 
 _ARTIFACT_PATH = (
-    Path(__file__).resolve().parents[4] / "docs" / "architecture" / "openapi.json"
+    Path(__file__).resolve().parents[3] / "docs" / "architecture" / "openapi.json"
 )
 
 
