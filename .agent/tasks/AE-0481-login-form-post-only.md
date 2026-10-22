@@ -28,7 +28,13 @@ the history and every proxy/CDN access log.
   the host; the site-wide `no-referrer` policy makes browsers send `Origin: null` and no `Referer` here. It signs in
   through the backend, sets the session cookie and 303s to the default landing page (the return path is not
   visible to it); any failure 303s to `/login?error=invalid_credentials` (an error code only, never the fields).
-- The login page shows "Invalid email or password" for `?error=invalid_credentials`.
+- The login page shows "Invalid email or password" for `?error=invalid_credentials`, and "Too many sign-in attempts"
+  for `?error=too_many_attempts` (backend 429 on the no-JS path; the hydrated form maps a 429 the same way).
+- Session cookie parity (#231 review): the shared `setAccessTokenCookie` sets `SameSite=Strict` and `Max-Age` from
+  `ACCESS_TOKEN_EXPIRE_MINUTES` (the backend's setting, default 60), like FastAPI's login cookie; both prod compose
+  services read the same `ACCESS_TOKEN_EXPIRE_MINUTES` (default 60). The unused-in-prod `api/auth/token` BFF shares it.
+- nginx (`nginx.conf`, `nginx.conf.ssl`): `location = /auth/login` with `limit_req zone=api burst=5 nodelay`, because
+  the backend's login limit only sees the frontend container's IP.
 - Other password forms: the admin create-user dialog (its password field) is a POST form too; it only mounts after
   a click, so it is never server-rendered. The change-password dialog has no password input (it resets).
 
@@ -43,6 +49,8 @@ the history and every proxy/CDN access log.
 - [x] A cross-site post to `/auth/login` is refused (403) without calling the backend.
 - [x] Every form with a password field is a POST form (source scan fires on a seeded GET-default form).
 - [x] Browser check: a JavaScript-disabled submit never navigates to a URL containing the credentials.
+- [x] The no-JS session cookie is HttpOnly, SameSite=Strict, with the backend's token lifetime.
+- [x] nginx rate-limits `/auth/login` per client IP; a backend 429 shows "too many attempts".
 
 ## Repro Steps
 
@@ -80,6 +88,9 @@ Referer-based return path could never work. Fetch Metadata now decides; the retu
 - frontend/src/app/login/login-form-post.test.tsx, frontend/src/scripts/password-forms-post.test.ts (new)
 - frontend/tests/e2e/auth-baseline.spec.ts
 - frontend/tests/features/login-form-post-only.feature (new)
+- frontend/src/modules/identity/lib/auth-cookie.ts (+ src/lib/auth-cookie.test.ts), src/app/login/use-login.test.ts (new)
+- frontend/src/scripts/nginx-login-limit.test.ts (new), frontend/src/i18n/locales/en.json, pt.json
+- nginx/nginx.conf, nginx/nginx.conf.ssl, docker-compose.prod.yml
 
 ## Test Evidence
 

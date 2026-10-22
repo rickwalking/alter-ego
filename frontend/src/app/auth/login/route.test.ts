@@ -86,6 +86,28 @@ describe("POST /auth/login", () => {
     });
   });
 
+  // Scenario: A rate-limited sign-in without JavaScript says to wait
+  it("returns to login with too_many_attempts when the backend answers 429", async () => {
+    mockBackend(() => Promise.resolve(new Response("{}", { status: 429 })));
+    const response = await postLogin();
+
+    const location = response.headers.get("location") ?? "";
+    expect(response.status).toBe(303);
+    expect(location).toBe("/login?error=too_many_attempts");
+    expectNoCredentialsIn(location);
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  // Scenario: The no-JavaScript sign-in sets the same session cookie as the normal login
+  it("sets a SameSite=Strict HttpOnly session cookie on the 303", async () => {
+    mockBackend(tokenResponse);
+    const response = await postLogin();
+
+    const [cookie] = response.headers.getSetCookie();
+    expect(cookie).toMatch(/; SameSite=strict/i);
+    expect(cookie).toMatch(/; HttpOnly/i);
+  });
+
   // Scenario: A failed sign-in without JavaScript returns an error code only
   it.each([
     [

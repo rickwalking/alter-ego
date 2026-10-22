@@ -31,5 +31,8 @@ export const LOGIN_ERROR_PARAM = "error";
 /** `?error=` value after a failed no-JavaScript sign-in. */
 export const LOGIN_ERROR_INVALID_CREDENTIALS = "invalid_credentials";
 
+/** `?error=` value when the backend rate-limited a no-JavaScript sign-in. */
+export const LOGIN_ERROR_TOO_MANY_ATTEMPTS = "too_many_attempts";
+
 /** `?error=` value after the session expired (set by `/auth/logout`). */
 export const LOGIN_ERROR_SESSION_EXPIRED = "session_expired";

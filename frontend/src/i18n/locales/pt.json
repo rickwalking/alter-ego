@@ -1163,6 +1163,7 @@
     "signIn": "Entrar",
     "signingIn": "Entrando...",
     "loginError": "Email ou senha inválidos",
+    "tooManyAttempts": "Muitas tentativas de entrar. Aguarde um minuto e tente de novo.",
     "sessionExpired": "Sua sessão expirou. Entre novamente.",
     "forbiddenTitle": "Acesso Negado",
     "forbiddenDescription": "Você não tem permissão para acessar esta página.",

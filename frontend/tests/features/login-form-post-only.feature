@@ -32,3 +32,16 @@ Feature: Credentials never go into a URL
     When I fill in the login form and click "Sign in"
     Then the browser posts to "/auth/login"
     And no visited URL contains the email or the password
+
+  Scenario: The no-JavaScript sign-in sets the same session cookie as the normal login
+    When a no-JavaScript sign-in succeeds
+    Then the session cookie is HttpOnly and SameSite=Strict
+    And it lives as long as the backend's token (ACCESS_TOKEN_EXPIRE_MINUTES, 60 by default)
+
+  Scenario: A rate-limited sign-in without JavaScript says to wait
+    Given the backend answers 429 to a sign-in
+    When the form is posted to "/auth/login", or the hydrated form signs in
+    Then the login page says there were too many attempts, not that the credentials are wrong
+
+  Scenario: The no-JavaScript sign-in is rate-limited per client
+    Then nginx limits "/auth/login" per client IP in both server configs

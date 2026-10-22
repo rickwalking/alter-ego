@@ -8,6 +8,7 @@ import {
   LOGIN_ERROR_INVALID_CREDENTIALS,
   LOGIN_ERROR_PARAM,
   LOGIN_ERROR_SESSION_EXPIRED,
+  LOGIN_ERROR_TOO_MANY_ATTEMPTS,
 } from "@/constants/auth";
 import { sanitizeLoginRedirect } from "@/modules/identity";
 import { responseErrorDetail } from "@/lib/response-error";
@@ -22,6 +23,8 @@ export interface LoginController {
   handleSubmit: (e: React.SubmitEvent) => Promise<void>;
 }
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+
 function useSessionExpiredNotice(setError: (message: string) => void) {
   const t = useTranslations("auth");
 
@@ -33,6 +36,9 @@ function useSessionExpiredNotice(setError: (message: string) => void) {
     }
     if (notice === LOGIN_ERROR_INVALID_CREDENTIALS) {
       setError(t("loginError"));
+    }
+    if (notice === LOGIN_ERROR_TOO_MANY_ATTEMPTS) {
+      setError(t("tooManyAttempts"));
     }
   }, [setError, t]);
 }
@@ -60,6 +66,9 @@ export function useLogin(): LoginController {
         body: JSON.stringify({ email, password }),
       });
 
+      if (response.status === HTTP_TOO_MANY_REQUESTS) {
+        throw new Error(t("tooManyAttempts"));
+      }
       if (!response.ok) {
         throw new Error(
           (await responseErrorDetail(response)) ?? t("loginError"),

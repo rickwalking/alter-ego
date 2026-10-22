@@ -71,6 +71,7 @@ services:
       LLM_MODEL_FALLBACK_REASONING: ${LLM_MODEL_FALLBACK_REASONING:-qwen3.8-max}
       CONTENT_DRAFT_CONCURRENCY: ${CONTENT_DRAFT_CONCURRENCY:-4}
       SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       ANON_SECRET_KEY: ${ANON_SECRET_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://marinssolutions.com}
@@ -178,6 +179,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: /api
       API_BASE_URL: http://backend:8000
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
     depends_on:
       - backend
     restart: unless-stopped

@@ -91,6 +91,18 @@ http {
         add_header Referrer-Policy "origin-when-cross-origin" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
+        # No-JavaScript sign-in (POST /auth/login on Next.js): rate-limited per client
+        # IP here, because the backend's login limit only sees the frontend container.
+        location = /auth/login {
+            limit_req zone=api burst=5 nodelay;
+            proxy_pass http://frontend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
+        }
+
         # Frontend (Next.js) — never cache (prevents Cloudflare from caching)
         location / {
             proxy_pass http://frontend;
