@@ -224,7 +224,11 @@ async def _run_stream(
     ctx: _StreamState,
     queue: asyncio.Queue[str],
 ) -> tuple[int, str]:
-    """Run the agent stream, pushing token events to the queue."""
+    """Run the agent stream, pushing its events to the queue.
+
+    The agent's own ``complete`` event is not forwarded: the service sends the
+    single ``complete`` after the assistant message is saved.
+    """
     agent_builder, content = source
     agent = agent_builder()
     chat_ctx = _ChatContext(
@@ -235,6 +239,8 @@ async def _run_stream(
     )
     async for chunk in agent.chat(chat_ctx):
         safe_chunk = _sanitize_chunk(chunk)
+        if safe_chunk.get("type") == SSE_EVENT_COMPLETE:
+            continue
         ctx.event_id += 1
         await queue.put(_format_sse_event(ctx.event_id, safe_chunk))
         if safe_chunk.get("type") == SSE_EVENT_TOKEN:

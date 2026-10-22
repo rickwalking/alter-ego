@@ -1,3 +1,5 @@
+"use client";
+
 import {
   DASHBOARD_CHAT_BG_CARD,
   DASHBOARD_CHAT_BG_ELEVATED,
@@ -12,6 +14,7 @@ import {
   DASHBOARD_CHAT_TYPING_LABEL,
 } from "@/modules/editorial-operations";
 import type { DashboardChatMessage } from "@/modules/editorial-operations";
+import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 
 export interface ChatMessageListProps {
   messages: DashboardChatMessage[];
@@ -151,12 +154,29 @@ function TypingIndicator(): React.ReactElement {
   );
 }
 
+/** Scroll keys: any growth of the list, and whether a turn is in flight. */
+function scrollKeys(
+  messages: DashboardChatMessage[],
+  isStreaming: boolean,
+): { contentKey: string; sending: boolean } {
+  const lastText = messages.at(-1)?.text ?? "";
+  return {
+    contentKey: `${messages.length}:${lastText.length}`,
+    sending: isStreaming,
+  };
+}
+
 export function ChatMessageList({
   messages,
   isStreaming = false,
 }: Readonly<ChatMessageListProps>): React.ReactElement {
+  const listRef = useStickToBottom<HTMLDivElement>(
+    scrollKeys(messages, isStreaming),
+  );
   return (
     <div
+      ref={listRef}
+      data-testid="chat-message-list"
       style={{
         flex: 1,
         overflowY: "auto",

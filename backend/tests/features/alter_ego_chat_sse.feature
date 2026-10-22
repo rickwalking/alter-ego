@@ -128,3 +128,10 @@ Feature: Alter-Ego Public Chat Streaming
     When I retry the POST with header "Last-Event-ID: 3"
     Then I receive token events with ids greater than 3
     And the complete event is received
+
+  # Framing — exactly one completion
+  Scenario: The stream ends with a single complete event
+    Given the agent ends its own stream with a complete event
+    When I POST to "/api/conversations/{conv-id}/chat/stream"
+    Then the response contains exactly one complete event
+    And it comes after the assistant message is saved

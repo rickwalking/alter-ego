@@ -2,6 +2,8 @@
  * Shared SSE chat streaming hook used by useSseChat and usePublishChat.
  * Verifies the user-turn start, token folding, ref reset, and unmount abort.
  */
+import { StrictMode, createElement } from "react";
+import type { ReactNode } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -46,6 +48,76 @@ describe("useChatStream", () => {
     expect(assistant!.role).toBe("assistant");
     expect(assistant!.content).toBe("Hello");
     expect(assistant!.id.startsWith("stream-")).toBe(true);
+  });
+
+  function assistantTexts(
+    messages: { role: string; content: string }[],
+  ): string[] {
+    return messages
+      .filter((message) => message.role === "assistant")
+      .map((message) => message.content);
+  }
+
+  function strictWrapper({ children }: { children: ReactNode }) {
+    return createElement(StrictMode, null, children);
+  }
+
+  // Scenario: Tokens that arrive in one batch render once, in order
+  it("folds tokens batched in one update without duplicating text", () => {
+    const { result } = renderHook(() => useChatStream("user-", "stream-"), {
+      wrapper: strictWrapper,
+    });
+    act(() => {
+      result.current.startUserTurn("oi");
+    });
+    act(() => {
+      result.current.appendToken("Tudo");
+      result.current.appendToken(" ótimo");
+      result.current.appendToken("!");
+    });
+    act(() => {
+      result.current.appendToken(" Eu");
+    });
+
+    expect(assistantTexts(result.current.optimisticMessages)).toEqual([
+      "Tudo ótimo! Eu",
+    ]);
+  });
+
+  // Scenario: The first token and a reply that ends in the same batch are kept in one bubble
+  it("keeps the first token and one bubble when the stream ends in the same batch", () => {
+    const { result } = renderHook(() => useChatStream("user-", "stream-"));
+    act(() => {
+      result.current.startUserTurn("code please");
+    });
+    act(() => {
+      result.current.appendToken("```");
+      result.current.appendToken("python");
+      result.current.resetStreamingRefs();
+    });
+
+    expect(assistantTexts(result.current.optimisticMessages)).toEqual([
+      "```python",
+    ]);
+  });
+
+  // Scenario: Tokens that arrive in one batch render once, in order
+  it("starts a separate bubble for the next turn", () => {
+    const { result } = renderHook(() => useChatStream("user-", "stream-"));
+    act(() => {
+      result.current.startUserTurn("one");
+      result.current.appendToken("first");
+      result.current.resetStreamingRefs();
+    });
+    act(() => {
+      result.current.startUserTurn("two");
+      result.current.appendToken("second");
+    });
+
+    expect(assistantTexts(result.current.optimisticMessages)).toEqual([
+      "first",
+      "second",
+    ]);
   });
 
   it("startUserTurn aborts the previous in-flight stream", () => {
