@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.api.dependencies.blog_content_write import require_if_match
@@ -32,7 +32,6 @@ from rag_backend.application.services.carousel.carousel_copy_edit_service import
     CopyEdits,
 )
 from rag_backend.domain.constants.carousel_copy_edit import ERR_CAPTION_PUBLISHED
-from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.modules.autopilot import AutopilotBootstrapDeps, bootstrap_module
 
 router = APIRouter(tags=["carousels-copy"])
@@ -73,14 +72,13 @@ async def save_carousel_copy(
     deps: Annotated[
         CarouselCopyEditRouteDeps, Depends(get_carousel_copy_edit_route_deps)
     ],
-    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> CarouselCopyResponse:
     """Persist the edited texts; unsent texts keep their saved value."""
     project = await deps.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
     assert_domain_owner_or_admin(project.owner_id, deps.user)
-    lock_version = require_if_match(if_match)
+    lock_version = require_if_match(deps.if_match)
     if payload.caption is not None:
         await _reject_published_caption(deps, project_id)
     result = await deps.service.save(
