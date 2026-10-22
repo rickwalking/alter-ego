@@ -1597,6 +1597,8 @@
     "editorRole": "Editor",
     "adminRole": "Admin",
     "passwordLabel": "Senha",
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha",
     "passwordOptional": "opcional",
     "passwordPlaceholder": "Deixe em branco para gerar automaticamente",
     "cancel": "Cancelar",
