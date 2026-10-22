@@ -30,6 +30,7 @@ async def init_db(
         max_overflow=max_overflow,
         pool_pre_ping=True,
         pool_recycle=3600,
+        hide_parameters=True,
     )
     async with c_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

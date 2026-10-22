@@ -88,7 +88,12 @@ async def search_documents(
             )
         )
     except Exception as e:
-        logger.exception("knowledge_search_failed")
+        logger.exception(
+            "knowledge_search_failed",
+            user_id=str(user.id),
+            top_k=request.top_k,
+            query_length=len(request.query),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERR_SEARCH_FAILED,

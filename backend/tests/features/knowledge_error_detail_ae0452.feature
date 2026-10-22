@@ -19,3 +19,13 @@ Feature: Knowledge failures are logged, not echoed to the client
     And the internal error text is not in the response
     And the failure is logged with its exception
 
+  Scenario: A pipeline failure is logged with its traceback once
+    Given the document pipeline already logged the failure with its traceback
+    When the upload route handles the same failure
+    Then the route logs its context without a second traceback
+
+  Scenario: Failure logs carry safe context only
+    When a search or an ingest fails
+    Then the log names the user, the sizes and the scope
+    And it never contains the query text or the document content
+

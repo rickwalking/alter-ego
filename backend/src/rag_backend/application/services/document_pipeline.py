@@ -8,6 +8,9 @@ from rag_backend.domain.protocols import (
 )
 from rag_backend.infrastructure.logging import get_logger
 
+PIPELINE_FAILURE_LOGGED = "document pipeline failure already logged as pipeline_failed"
+"""Exception note: the pipeline logged this failure with its traceback."""
+
 logger = get_logger()
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
@@ -85,6 +88,7 @@ class DocumentProcessingPipeline:
                 "pipeline_failed",
                 document_id=str(document.id),
             )
+            e.add_note(PIPELINE_FAILURE_LOGGED)
             document.mark_failed(str(e))
             await self._document_repository.update(document)
             raise
