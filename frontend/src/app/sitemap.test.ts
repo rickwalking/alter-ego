@@ -28,6 +28,15 @@ const CAROUSEL = {
   updated_at: "2026-10-19T12:00:00Z",
 };
 
+type CarouselPage = Awaited<ReturnType<typeof fetchPublicCarousels>>;
+
+function carouselPage(
+  items: (typeof CAROUSEL)[],
+  total = items.length,
+): CarouselPage {
+  return { items, total, limit: 100, offset: 0 } as unknown as CarouselPage;
+}
+
 function feeds(
   posts: (typeof POST)[] | null,
   carousels: (typeof CAROUSEL)[],
@@ -37,13 +46,10 @@ function feeds(
       ? null
       : { items: posts, total: posts.length, limit: 50, offset: 0 },
   );
-  mockCarousels.mockResolvedValue({
-    items: carousels,
-    total: carousels.length,
-    limit: 100,
-    offset: 0,
-  } as unknown as Awaited<ReturnType<typeof fetchPublicCarousels>>);
+  mockCarousels.mockResolvedValue(carouselPage(carousels));
 }
+
+const PAGES = [SITE, `${SITE}/blog`, `${SITE}/carousels`, `${SITE}/chat`];
 
 async function sitemapUrls(): Promise<string[]> {
   return (await sitemap()).map((entry) => entry.url);
@@ -67,8 +73,7 @@ describe("sitemap", () => {
 
     const urls = await sitemapUrls();
 
-    expect(urls).toEqual([SITE, `${SITE}/blog`, `${SITE}/carousels`]);
-    expect(urls.some((url) => url.includes("/chat"))).toBe(false);
+    expect(urls).toEqual(PAGES);
     expect(urls.some((url) => url.includes("/dashboard"))).toBe(false);
   });
 
@@ -84,17 +89,63 @@ describe("sitemap", () => {
 
     expect(post?.lastModified).toEqual(new Date(POST.published_at));
     expect(carousel?.lastModified).toEqual(new Date(CAROUSEL.updated_at));
-    expect(mockCarousels).toHaveBeenCalledWith(100, 0);
+    expect(mockCarousels).toHaveBeenCalledWith(100, 0, { revalidate: 3600 });
+    expect(mockPosts).toHaveBeenCalledWith(50, 0, { revalidate: 3600 });
   });
 
   it("still renders when the content feeds are unavailable", async () => {
     // Scenario: The sitemap still renders when the content feeds are unavailable
     feeds(null, []);
 
-    expect(await sitemapUrls()).toEqual([
-      SITE,
-      `${SITE}/blog`,
-      `${SITE}/carousels`,
-    ]);
+    expect(await sitemapUrls()).toEqual(PAGES);
+  });
+
+  it("pages through a feed longer than one page", async () => {
+    // Scenario: The sitemap pages through feeds longer than one page
+    const second = { ...POST, id: "post-2" };
+    const third = { ...POST, id: "post-3" };
+    mockPosts
+      .mockResolvedValueOnce({
+        items: [POST, second],
+        total: 3,
+        limit: 50,
+        offset: 0,
+      })
+      .mockResolvedValueOnce({
+        items: [third],
+        total: 3,
+        limit: 50,
+        offset: 50,
+      });
+    mockCarousels
+      .mockResolvedValueOnce(carouselPage([CAROUSEL], 2))
+      .mockResolvedValueOnce(
+        carouselPage([{ ...CAROUSEL, id: "carousel-2" }], 2),
+      );
+
+    const urls = await sitemapUrls();
+
+    expect(urls).toContain(`${SITE}/blog/post-3`);
+    expect(urls).toContain(`${SITE}/carousels/carousel-2`);
+    expect(mockPosts).toHaveBeenNthCalledWith(2, 50, 50, { revalidate: 3600 });
+    expect(mockCarousels).toHaveBeenNthCalledWith(2, 100, 100, {
+      revalidate: 3600,
+    });
+    expect(mockPosts).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops paging at the safety cap", async () => {
+    // Scenario: The sitemap pages through feeds longer than one page
+    mockPosts.mockResolvedValue({
+      items: [POST],
+      total: 10_000,
+      limit: 50,
+      offset: 0,
+    });
+    mockCarousels.mockResolvedValue(carouselPage([]));
+
+    await sitemap();
+
+    expect(mockPosts).toHaveBeenCalledTimes(20);
   });
 });

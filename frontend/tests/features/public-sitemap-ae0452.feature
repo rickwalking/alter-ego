@@ -9,8 +9,8 @@ Feature: The sitemap and robots.txt describe the real public site
 
   Scenario: The sitemap lists the public pages on the production domain
     When the sitemap is generated
-    Then it lists the home page, the blog list and the carousel gallery under "https://marinssolutions.com"
-    And it lists no chat or dashboard page
+    Then it lists the home page, the blog list, the carousel gallery and the public chat under "https://marinssolutions.com"
+    And it lists no dashboard page
 
   Scenario: The sitemap lists every published post and public carousel
     Given a published blog post and a public completed carousel
@@ -27,3 +27,9 @@ Feature: The sitemap and robots.txt describe the real public site
     Given a public carousel whose cover is a site-relative image
     When its viewer page metadata is generated
     Then the Open Graph image URL starts with "https://marinssolutions.com"
+
+  Scenario: The sitemap pages through feeds longer than one page
+    Given more published posts and public carousels than one feed page holds
+    When the sitemap is generated
+    Then it lists the items of every page, up to a safety cap of pages
+

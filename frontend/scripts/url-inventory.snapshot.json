@@ -183,7 +183,7 @@
       "kind": "metadata",
       "file": "src/app/sitemap.ts",
       "segmentConfig": {
-        "dynamic": "\"force-dynamic\""
+        "revalidate": "3600"
       }
     }
   ]
