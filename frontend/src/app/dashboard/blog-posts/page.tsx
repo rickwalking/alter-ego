@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import {
@@ -14,8 +13,8 @@ import { NEON_RED } from "@/constants/neon";
 import { BlogPostsFilters } from "@/app/dashboard/blog-posts/blog-posts-filters";
 import { BlogPostsList } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import { DeleteConfirmModal } from "@/app/dashboard/blog-posts/blog-posts-actions";
-import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
 import { GenerateBlogPostAction } from "@/app/dashboard/blog-posts/generate-blog-post-modal";
+import { NewBlogPostAction } from "@/app/dashboard/blog-posts/new-blog-post-modal";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 import { BlogPostsPager } from "@/app/dashboard/blog-posts/blog-posts-pager";
 import {
@@ -87,13 +86,12 @@ export default function BlogPostsPage(): React.ReactElement {
     unpublish,
   } = useBlogPosts(blogPostsPageFilters(INITIAL_BLOG_POST_LIST_QUERY));
   const paging = useBlogPostsPaging(setFilters);
-  const { creating, createError, handleNewPost } = useNewBlogPost(create);
   const { actions, deleteTarget, actionError, confirmDelete, cancelDelete } =
     useBlogPostActions({ deletePost, unpublish });
 
   const dashboardPosts = posts.map(mapBlogPostToDashboard);
   const isFiltered = paging.statusFilter !== "" || paging.searchInput !== "";
-  const notice = actionError ?? createError;
+  const notice = actionError;
 
   return (
     <div
@@ -111,27 +109,7 @@ export default function BlogPostsPage(): React.ReactElement {
               onChange={paging.changeSearch}
               className="w-full sm:w-[200px]"
             />
-            <NeonButton
-              size="sm"
-              disabled={creating}
-              onClick={() => void handleNewPost()}
-              icon={
-                <svg
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path d="M12 5v14" strokeLinecap="round" />
-                  <path d="M5 12h14" strokeLinecap="round" />
-                </svg>
-              }
-            >
-              {t("newPost")}
-            </NeonButton>
+            <NewBlogPostAction create={create} />
             <GenerateBlogPostAction />
           </>
         }

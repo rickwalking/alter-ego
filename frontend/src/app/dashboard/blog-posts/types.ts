@@ -110,3 +110,16 @@ export interface UseBlogPostsPagingResult {
   changeStatus: (status: string) => void;
   changeSearch: (value: string) => void;
 }
+
+/** The "New Post" form: title state, open/close and the create submit. */
+export interface UseNewBlogPostResult {
+  open: boolean;
+  title: string;
+  setTitle: (title: string) => void;
+  canSubmit: boolean;
+  creating: boolean;
+  createError: string | null;
+  show: () => void;
+  hide: () => void;
+  submit: () => Promise<void>;
+}
