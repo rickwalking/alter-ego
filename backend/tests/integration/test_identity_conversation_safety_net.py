@@ -151,8 +151,8 @@ async def id_env(
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.api.middleware.rate_limiting import limiter
     from rag_backend.api.app import create_app
+    from rag_backend.api.middleware.rate_limiting import limiter
     from rag_backend.infrastructure.config.settings import get_settings
     from rag_backend.infrastructure.database.config import close_db
 
