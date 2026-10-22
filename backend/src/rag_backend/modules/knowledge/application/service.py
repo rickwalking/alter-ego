@@ -29,6 +29,7 @@ from rag_backend.modules.knowledge.api.views import (
     SearchResultView,
 )
 from rag_backend.modules.knowledge.domain.commands import (
+    ChangeDocumentScopeCommand,
     CreateDocumentCommand,
     DeleteDocumentCommand,
     DocumentStatusQuery,
@@ -39,6 +40,7 @@ from rag_backend.modules.knowledge.domain.commands import (
     SearchQuery,
 )
 from rag_backend.modules.knowledge.domain.models import (
+    DocumentScope,
     KnowledgeDocument,
     RetrievalQuery,
     SearchResult,
@@ -66,6 +68,10 @@ class DocumentPipelinePort(Protocol):
     ) -> KnowledgeDocument: ...
 
     async def reprocess_document(self, document_id: str) -> KnowledgeDocument: ...
+
+    async def rescope_document(
+        self, document_id: str, scope: DocumentScope
+    ) -> KnowledgeDocument: ...
 
     async def delete_document(self, document_id: str) -> bool: ...
 
@@ -236,6 +242,26 @@ class KnowledgeService:
         async with self._unit_of_work:
             document = await self._pipeline.reprocess_document(str(command.document_id))
             view = self._to_view(document)
+        return view
+
+    async def change_scope(
+        self, command: ChangeDocumentScopeCommand
+    ) -> KnowledgeDocumentView | None:
+        """Move a document to ``command.scope`` (committed once), or ``None`` if absent.
+
+        A document already in that scope is returned as it is, without
+        re-indexing.
+        """
+        async with self._unit_of_work:
+            document = await self._repository.get_by_id(command.document_id)
+            if document is None:
+                return None
+            if document.scope is command.scope:
+                return self._to_view(document)
+            moved = await self._pipeline.rescope_document(
+                str(command.document_id), command.scope
+            )
+            view = self._to_view(moved)
         return view
 
     async def search(self, query: SearchQuery) -> list[SearchResultView]:

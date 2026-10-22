@@ -38,6 +38,7 @@ from rag_backend.modules.knowledge.bootstrap import (
     bootstrap_module,
 )
 from rag_backend.modules.knowledge.domain.commands import (
+    ChangeDocumentScopeCommand,
     CreateDocumentCommand,
     DeleteDocumentCommand,
     DocumentStatusQuery,
@@ -50,6 +51,7 @@ from rag_backend.modules.knowledge.domain.commands import (
 from rag_backend.modules.knowledge.domain.models import KnowledgeDocument
 
 __all__ = [
+    "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
     "DocumentStatusQuery",
