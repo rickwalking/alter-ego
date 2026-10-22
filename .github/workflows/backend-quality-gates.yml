@@ -432,6 +432,18 @@ jobs:
         if: always()
         run: uv run mutmut results
 
+      - name: Show surviving mutant diffs
+        if: always()
+        run: bash ../scripts/ci/mutation-survivor-diffs.sh mutmut-survivors.txt
+
+      - name: Upload surviving mutant diffs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutmut-survivors
+          path: backend/mutmut-survivors.txt
+          if-no-files-found: ignore
+
       - name: Post PR mutation summary on failure
         if: failure() && github.event_name == 'pull_request'
         working-directory: .
