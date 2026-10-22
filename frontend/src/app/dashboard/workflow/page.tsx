@@ -83,7 +83,7 @@ export default function WorkflowBoardPage(): React.ReactElement {
             </NeonButton>
           </div>
         )}
-        {board && !loading && !error && (
+        {board && (
           <NeonKanbanBoard
             columns={localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
               phase: tPhase,
