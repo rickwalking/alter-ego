@@ -13,6 +13,8 @@ interface UseCalendarDaysResult {
   days: CalendarDay[];
   loading: boolean;
   error: string | null;
+  /** Re-fetches the current window (after a schedule change). */
+  refetch: () => Promise<void>;
 }
 
 /**
@@ -44,7 +46,7 @@ export function useCalendarDays(
     };
   }, [view, focus]);
 
-  const { calendar, loading, error } = useContentCalendar(
+  const { calendar, loading, error, refetch } = useContentCalendar(
     window?.start,
     window?.end,
     window !== null,
@@ -58,5 +60,5 @@ export function useCalendarDays(
     [view, focus, today, calendar],
   );
 
-  return { days, loading, error };
+  return { days, loading, error, refetch };
 }

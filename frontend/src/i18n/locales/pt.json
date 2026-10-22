@@ -1237,6 +1237,33 @@
         "allDay": "Dia inteiro",
         "emptyDay": "Nada agendado para este dia",
         "openDay": "Abrir {date} na visualização do dia"
+      },
+      "scheduleButton": "Agendar post",
+      "scheduledNotice": "“{title}” foi agendado para {date}.",
+      "schedule": {
+        "title": "Agendar um post do blog",
+        "hint": "Só posts do blog aprovados podem ser agendados; ele é publicado automaticamente no horário escolhido. Rascunhos aparecem na lista, mas precisam de aprovação antes.",
+        "post": "Post",
+        "choosePost": "Escolha um post aprovado",
+        "time": "Publicar em",
+        "timezone": "Horários no seu fuso: {zone}",
+        "conflict": "Também no calendário a menos de uma hora deste horário: {titles}",
+        "empty": "Não há posts do blog aprovados para agendar.",
+        "openBlogPosts": "Abrir posts do blog",
+        "loadFailed": "Não foi possível carregar os posts aprovados. Feche e tente de novo.",
+        "cancel": "Cancelar",
+        "submit": "Agendar",
+        "submitting": "Agendando…",
+        "errors": {
+          "postRequired": "Escolha um post.",
+          "timeRequired": "Escolha uma data e um horário.",
+          "timeInPast": "Escolha um horário pelo menos um minuto à frente.",
+          "versionConflict": "Este post mudou desde que a lista carregou. Feche e tente de novo.",
+          "notReady": "Este post ainda não pode ser publicado: precisa de conteúdo e do aviso de IA.",
+          "failed": "O agendamento falhou. Tente de novo."
+        },
+        "approveFirst": "{title} — aprove primeiro",
+        "untitled": "Sem título"
       }
     },
     "kanban": {

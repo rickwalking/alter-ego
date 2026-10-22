@@ -54,6 +54,10 @@ vi.mock("next/navigation", async () => {
 vi.mock("@/modules/editorial", () => ({
   useContentCalendar: mockUseContentCalendar,
 }));
+vi.mock("@/modules/publishing", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useBlogPosts: () => ({ posts: [], loading: false, error: null }),
+}));
 
 import CalendarPage from "./page";
 
@@ -249,5 +253,30 @@ describe("CalendarPage views", () => {
     expect(
       screen.getByText("Nothing scheduled for this day"),
     ).toBeInTheDocument();
+  });
+
+  // Scenario: Schedule Post opens a dialog listing the approved blog posts
+  it("opens the Schedule Post dialog from the header", async () => {
+    const user = userEvent.setup();
+    renderPage("");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Schedule Post/ }));
+    expect(
+      screen.getByRole("dialog", { name: "Schedule a blog post" }),
+    ).toBeInTheDocument();
+  });
+
+  // Scenario: Keyboard focus stays in the dialog
+  it("returns focus to Schedule Post when the dialog closes", async () => {
+    const user = userEvent.setup();
+    renderPage("");
+    const trigger = screen.getByRole("button", { name: /Schedule Post/ });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog")).toContainElement(
+      document.activeElement as HTMLElement,
+    );
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
