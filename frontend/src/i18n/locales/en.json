@@ -1664,7 +1664,8 @@
       "body": "Delete “{name}”? This cannot be undone.",
       "confirm": "Delete",
       "cancel": "Cancel",
-      "error": "The persona could not be deleted."
+      "error": "The persona could not be deleted.",
+      "inUse": "This persona is still used by carousels or voice corrections, so it cannot be deleted."
     }
   }
 }

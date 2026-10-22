@@ -18,6 +18,8 @@ import { PersonaTile } from "@/app/dashboard/personas/persona-tile";
 import { PersonasEmptyState } from "@/app/dashboard/personas/personas-empty-state";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
+/** The API answers 409 when carousels or corrections still use the persona. */
+const HTTP_CONFLICT = 409;
 
 type View =
   | { kind: "list" }
@@ -152,6 +154,7 @@ export default function PersonasPage(): React.ReactElement {
           confirmLabel={tDelete("confirm")}
           cancelLabel={tDelete("cancel")}
           errorFallback={tDelete("error")}
+          statusMessages={{ [HTTP_CONFLICT]: tDelete("inUse") }}
           onConfirm={() => handleDelete(deleting)}
           onClose={() => setDeleting(null)}
         />

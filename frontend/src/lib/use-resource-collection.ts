@@ -153,34 +153,3 @@ export function useResourceCollection<T extends { id: string }, C, U>(
     ...mutations<T, C, U>(config, setItems),
   };
 }
-
-export interface CreateAction<C> {
-  /** The last create failure, shown by the page; null after a success. */
-  createError: string | null;
-  createAndRefresh: (data: C) => Promise<void>;
-}
-
-/**
- * Create then reload the list. A failed create is kept in ``createError``
- * (and the list is not reloaded) instead of rejecting into a click handler.
- */
-export function useCreateAction<C>(
-  create: (data: C) => Promise<unknown>,
-  refetch: () => Promise<void>,
-): CreateAction<C> {
-  const [createError, setCreateError] = useState<string | null>(null);
-  const createAndRefresh = useCallback(
-    async (data: C): Promise<void> => {
-      setCreateError(null);
-      try {
-        await create(data);
-      } catch (err) {
-        setCreateError(err instanceof Error ? err.message : FALLBACK_ERROR);
-        return;
-      }
-      await refetch();
-    },
-    [create, refetch],
-  );
-  return { createError, createAndRefresh };
-}

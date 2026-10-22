@@ -50,6 +50,13 @@ Feature: Personas are created and edited in a real form
     When the editor presses "Delete" and confirms
     Then the API deletes the persona and the list no longer shows it
 
+  Scenario: Deleting a persona still in use explains why
+    Given a persona that carousels or voice corrections still use
+    When the editor presses "Delete" and confirms
+    And the API answers 409
+    Then the delete dialog says, translated, that the persona is still in use
+    And the persona stays in the list
+
   Scenario: A search without matches says so
     Given personas in the list
     When the editor searches for a name no persona has

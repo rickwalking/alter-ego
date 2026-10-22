@@ -175,6 +175,7 @@ describe("PersonasPage", () => {
 
   it("shows the API's refusal in the form and keeps the values", async () => {
     // Scenario: A server refusal is shown in the persona form
+    // Scenario: A failed create is shown on the personas and rubrics pages
     const user = await openNewForm();
     await user.type(screen.getByLabelText("Name"), "Dup");
     authenticatedFetch.mockResolvedValueOnce(
@@ -231,6 +232,28 @@ describe("PersonasPage", () => {
     );
     expect(authenticatedFetch.mock.calls[1]?.[0]).toBe("/api/personas/p-1");
     expect(authenticatedFetch.mock.calls[1]?.[1]?.method).toBe("DELETE");
+  });
+
+  it("explains a persona still in use", async () => {
+    // Scenario: Deleting a persona still in use explains why
+    const user = userEvent.setup();
+    authenticatedFetch.mockResolvedValueOnce(list([PERSONA]));
+    render(<PersonasPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Delete persona Pedro" }),
+    );
+    authenticatedFetch.mockResolvedValueOnce(
+      json({ error: "conflict", message: "IntegrityError", details: {} }, 409),
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This persona is still used by carousels or voice corrections, so it cannot be deleted.",
+    );
+    expect(screen.getByText("Pedro")).toBeInTheDocument();
   });
 
   it("says when a search has no match and opens the form from the tile", async () => {

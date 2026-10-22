@@ -1664,7 +1664,8 @@
       "body": "Excluir “{name}”? Não dá para desfazer.",
       "confirm": "Excluir",
       "cancel": "Cancelar",
-      "error": "Não foi possível excluir a persona."
+      "error": "Não foi possível excluir a persona.",
+      "inUse": "Esta persona ainda é usada por carrosséis ou correções de voz, então não pode ser excluída."
     }
   }
 }
