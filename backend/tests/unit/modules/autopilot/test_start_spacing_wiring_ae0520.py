@@ -28,7 +28,7 @@ def _settings(**overrides: object) -> Settings:
 async def test_worker_passes_the_setting_to_the_runner(
     db_session: AsyncSession,
 ) -> None:
-    # Scenario: The runner uses the configured start spacing
+    """Scenario: The runner uses the configured start spacing."""
     steps = build_autopilot_worker_steps(
         _settings(autopilot_start_spacing_minutes=7), MagicMock()
     )
@@ -44,6 +44,6 @@ async def test_worker_passes_the_setting_to_the_runner(
 
 @pytest.mark.unit
 def test_negative_spacing_is_rejected() -> None:
-    # Scenario: A negative start spacing is rejected
+    """Scenario: A negative start spacing is rejected."""
     with pytest.raises(ValidationError):
         _settings(autopilot_start_spacing_minutes=-1)

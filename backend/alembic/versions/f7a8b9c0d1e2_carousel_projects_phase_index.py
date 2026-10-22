@@ -11,7 +11,7 @@ checkpoint-drain rule does not apply.
 
 prod: the deploy does not run alembic, so the same index reaches prod through
 the idempotent one-shot ``python -m rag_backend.scripts.carousel_phase_index
---apply --verify`` (``CREATE INDEX CONCURRENTLY IF NOT EXISTS``) that deploy.yml
+--apply --verify`` (``CREATE INDEX IF NOT EXISTS``, stack down) that deploy.yml
 runs after the palette timestamptz step.
 """
 

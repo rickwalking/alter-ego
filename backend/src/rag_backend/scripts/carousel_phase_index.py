@@ -5,7 +5,7 @@ Usage (in the freshly built backend image, Postgres up, app stack down):
     python -m rag_backend.scripts.carousel_phase_index --verify
 
 Exit codes: 0 ok, 1 ``--verify`` found no valid index, 2 usage error. Safe to
-re-run: a valid index is left alone, an invalid one is rebuilt, and a database
+re-run: an existing index is left alone, and a database
 that is not Postgres is a no-op.
 """
 

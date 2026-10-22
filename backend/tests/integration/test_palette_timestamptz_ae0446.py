@@ -95,9 +95,9 @@ def _palette(slug: str, at: datetime) -> CustomPalette:
     )
 
 
-# Scenario: Naive palette timestamps are converted as UTC
 @requires_postgres
 async def test_apply_converts_naive_columns_keeping_the_utc_instant() -> None:
+    """Scenario: Naive palette timestamps are converted as UTC."""
     async with _naive_palettes() as engine:
         code = await run_modes(engine, _modes(apply=True, verify=True))
         types = await _column_types(engine)
@@ -113,9 +113,9 @@ async def test_apply_converts_naive_columns_keeping_the_utc_instant() -> None:
     assert stored.updated_at == expected
 
 
-# Scenario: A second run changes nothing
 @requires_postgres
 async def test_second_apply_is_a_no_op() -> None:
+    """Scenario: A second run changes nothing."""
     async with _naive_palettes() as engine:
         first = await palette_timestamptz.apply(engine)
         second = await palette_timestamptz.apply(engine)
@@ -126,9 +126,9 @@ async def test_second_apply_is_a_no_op() -> None:
     assert verified.still_naive == ()
 
 
-# Scenario: Verify fails while a column is still naive
 @requires_postgres
 async def test_verify_only_fails_on_naive_columns() -> None:
+    """Scenario: Verify fails while a column is still naive."""
     async with _naive_palettes() as engine:
         code = await run_modes(engine, _modes(apply=False, verify=True))
         report = await palette_timestamptz.verify(engine)
@@ -152,11 +152,12 @@ def utc_process_tz(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     time.tzset()
 
 
-# Scenario: Palette creates work with naive and aware times after the change
 @requires_postgres
 @pytest.mark.usefixtures("utc_process_tz")
 async def test_naive_and_aware_palette_creates_round_trip_after_apply() -> None:
-    """asyncpg reads a naive value for ``timestamptz`` as the process's local time, so
+    """Scenario: Palette creates work with naive and aware times after the change.
+
+    asyncpg reads a naive value for ``timestamptz`` as the process's local time, so
     main's naive ``utcnow()`` stays correct only in a UTC process (prod); the domain now
     stamps aware UTC, which is correct in any timezone.
     """
@@ -183,9 +184,9 @@ async def test_naive_and_aware_palette_creates_round_trip_after_apply() -> None:
     assert stamps["naive"] == expected
 
 
-# Scenario: Palette creates work with naive and aware times after the change
 @requires_postgres
 async def test_default_palette_stamp_is_aware_utc_in_any_process_timezone() -> None:
+    """Scenario: Palette creates work with naive and aware times after the change."""
     palette = CustomPalette(
         name="Default",
         slug="default",

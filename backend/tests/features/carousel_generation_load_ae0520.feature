@@ -1,4 +1,4 @@
-Feature: Carousel generation does not take the website down (Pedro's decision)
+Feature: Carousel generation does not take the website down
   The morning autopilot batch and interactive runs share one 2 vCPU / 3.8 GB box
   with the website. Exports run one at a time, CPU-heavy image work runs off the
   event loop, autopilot starts are spaced, and the phase index reaches prod with
@@ -78,11 +78,6 @@ Feature: Carousel generation does not take the website down (Pedro's decision)
     When the one-shot runs with --apply --verify twice
     Then the index exists once and is valid
     And the second run creates nothing
-
-  Scenario: An invalid leftover phase index is rebuilt
-    Given an invalid phase index left by a failed concurrent build
-    When the one-shot runs with --apply --verify
-    Then the index is dropped and built again, valid
 
   Scenario: Verify fails while the phase index is missing
     Given a Postgres carousel_projects table without the phase index

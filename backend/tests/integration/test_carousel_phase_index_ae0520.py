@@ -1,4 +1,4 @@
-"""The carousel phase index one-shot on Postgres (Pedro's decision).
+"""The carousel phase index one-shot on Postgres.
 
 Feature: backend/tests/features/carousel_generation_load_ae0520.feature
 """
@@ -68,7 +68,7 @@ async def _indexes(engine: AsyncEngine) -> list[tuple[str, bool]]:
 
 @requires_postgres
 async def test_two_runs_create_the_index_once() -> None:
-    # Scenario: The phase index one-shot creates the index once
+    """Scenario: The phase index one-shot creates the index once."""
     async with _projects_without_index() as engine:
         assert await _indexes(engine) == []
         first_code = await run_modes(engine, _modes(apply=True, verify=True))
@@ -84,32 +84,8 @@ async def test_two_runs_create_the_index_once() -> None:
 
 
 @requires_postgres
-async def test_invalid_leftover_is_rebuilt() -> None:
-    # Scenario: An invalid leftover phase index is rebuilt
-    async with _projects_without_index() as engine:
-        async with engine.begin() as conn:
-            await conn.execute(
-                text(f"CREATE INDEX {_NAME} ON carousel_projects (phase_status)")
-            )
-            await conn.execute(
-                text(
-                    "UPDATE pg_index SET indisvalid = false WHERE indexrelid ="
-                    " (SELECT oid FROM pg_class WHERE relname = :name"
-                    " AND relnamespace = current_schema()::regnamespace)"
-                ),
-                {"name": _NAME},
-            )
-        assert await _indexes(engine) == [(_NAME, False)]
-        report = await carousel_phase_index.apply(engine)
-        indexes = await _indexes(engine)
-
-    assert report.rebuilt_invalid is True
-    assert indexes == [(_NAME, True)]
-
-
-@requires_postgres
 async def test_verify_only_fails_while_the_index_is_missing() -> None:
-    # Scenario: Verify fails while the phase index is missing
+    """Scenario: Verify fails while the phase index is missing."""
     async with _projects_without_index() as engine:
         code = await run_modes(engine, _modes(apply=False, verify=True))
         report = await carousel_phase_index.verify(engine)

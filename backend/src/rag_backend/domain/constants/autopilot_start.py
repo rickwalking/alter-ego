@@ -1,4 +1,4 @@
-"""Spacing between autopilot generation starts (Pedro's decision).
+"""Spacing between autopilot generation starts.
 
 The morning batch queues several runs within minutes; starting them back to back
 stacks their Chromium exports and LLM calls on the 2 vCPU / 3.8 GB box. A queued

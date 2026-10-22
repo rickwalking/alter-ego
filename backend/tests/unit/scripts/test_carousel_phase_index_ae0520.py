@@ -18,7 +18,7 @@ _Report = carousel_phase_index.PhaseIndexReport
 
 
 async def test_sqlite_is_a_no_op_that_says_so() -> None:
-    # Scenario: The phase index one-shot is a no-op outside Postgres
+    """Scenario: The phase index one-shot is a no-op outside Postgres."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     try:
         applied = await carousel_phase_index.apply(engine)
@@ -40,14 +40,11 @@ async def test_sqlite_is_a_no_op_that_says_so() -> None:
 
 
 def test_report_lines_name_what_happened() -> None:
-    # Scenario: The phase index one-shot creates the index once
+    """Scenario: The phase index one-shot creates the index once."""
     lines = carousel_phase_index.format_report
     assert lines(_Report(supported=True, created=True, present=True)) == [
         f"carousel phase index: created {_NAME}"
     ]
-    assert lines(
-        _Report(supported=True, created=True, rebuilt_invalid=True, present=True)
-    ) == [f"carousel phase index: rebuilt invalid {_NAME}"]
     assert lines(_Report(supported=True, present=True)) == [
         f"carousel phase index: {_NAME} present and valid"
     ]
@@ -55,7 +52,7 @@ def test_report_lines_name_what_happened() -> None:
 
 
 def test_no_mode_is_a_usage_error(capsys: pytest.CaptureFixture[str]) -> None:
-    # Scenario: The phase index command needs a mode
+    """Scenario: The phase index command needs a mode."""
     assert cli.main([]) == cli.EXIT_USAGE
     assert "--apply and/or --verify" in capsys.readouterr().err
 
@@ -63,7 +60,8 @@ def test_no_mode_is_a_usage_error(capsys: pytest.CaptureFixture[str]) -> None:
 def test_main_runs_against_the_configured_database(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # Scenario: The phase index one-shot is a no-op outside Postgres
+    """Scenario: The phase index one-shot is a no-op outside Postgres."""
+
     class _Settings:
         database_url = "sqlite+aiosqlite:///:memory:"
 

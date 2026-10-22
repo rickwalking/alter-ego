@@ -76,7 +76,7 @@ async def _run(session: AsyncSession, created_at: datetime | None) -> UUID:
 async def test_latest_start_is_the_newest_carousel_of_another_run(
     db_session: AsyncSession,
 ) -> None:
-    # Scenario: The latest start is the newest carousel created by another run
+    """Scenario: The latest start is the newest carousel created by another run."""
     await _run(db_session, _FIRST)
     second = await _run(db_session, _SECOND)
     queued = await _run(db_session, None)
@@ -90,7 +90,7 @@ async def test_latest_start_is_the_newest_carousel_of_another_run(
 async def test_no_latest_start_without_another_attached_run(
     db_session: AsyncSession,
 ) -> None:
-    # Scenario: The latest start is the newest carousel created by another run
+    """Scenario: The latest start is the newest carousel created by another run."""
     only = await _run(db_session, _FIRST)
     await _run(db_session, None)
 

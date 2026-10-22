@@ -96,7 +96,9 @@ async def _export(out: Path) -> list[str]:
 async def test_two_concurrent_exports_run_one_chromium_at_a_time(
     tmp_path: Path,
 ) -> None:
-    # Scenario: Two carousels exporting at the same time run one Chromium export at a time
+    """Scenario: Two carousels exporting at the same time run one Chromium export
+    at a time.
+    """
     tracker = _Tracker()
 
     with _fake_chromium(tracker):
@@ -112,7 +114,7 @@ async def test_two_concurrent_exports_run_one_chromium_at_a_time(
 
 @pytest.mark.unit
 async def test_failed_export_releases_the_slot(tmp_path: Path) -> None:
-    # Scenario: An export that fails releases the slot for the next one
+    """Scenario: An export that fails releases the slot for the next one."""
     tracker = _Tracker(fail_first=True)
 
     with _fake_chromium(tracker):
@@ -127,7 +129,7 @@ async def test_failed_export_releases_the_slot(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 async def test_chromium_launches_with_low_memory_flags(tmp_path: Path) -> None:
-    # Scenario: The exporter launches Chromium with the low-memory flags
+    """Scenario: The exporter launches Chromium with the low-memory flags."""
     tracker = _Tracker()
 
     with _fake_chromium(tracker):
@@ -142,7 +144,9 @@ async def test_chromium_launches_with_low_memory_flags(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 async def test_slot_without_postgres_uses_only_the_process_lock() -> None:
-    # Scenario: Two carousels exporting at the same time run one Chromium export at a time
+    """Scenario: Two carousels exporting at the same time run one Chromium export
+    at a time.
+    """
     with patch.object(export_lock.database_config, "c_engine", None):
         async with export_lock.export_slot():
             assert export_lock._process_lock().locked()
@@ -151,7 +155,9 @@ async def test_slot_without_postgres_uses_only_the_process_lock() -> None:
 
 @pytest.mark.unit
 async def test_slot_ignores_a_non_postgres_engine() -> None:
-    # Scenario: Two carousels exporting at the same time run one Chromium export at a time
+    """Scenario: Two carousels exporting at the same time run one Chromium export
+    at a time.
+    """
     engine = MagicMock()
     engine.dialect.name = "sqlite"
     with patch.object(export_lock.database_config, "c_engine", engine):
@@ -161,7 +167,7 @@ async def test_slot_ignores_a_non_postgres_engine() -> None:
 
 @pytest.mark.unit
 async def test_crop_runs_in_a_worker_thread(tmp_path: Path) -> None:
-    # Scenario: Image cropping and the PDF build run off the event loop
+    """Scenario: Image cropping and the PDF build run off the event loop."""
     loop_thread = threading.get_ident()
     crop_threads: list[int] = []
 
@@ -183,7 +189,7 @@ async def test_crop_runs_in_a_worker_thread(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 async def test_assets_and_pdf_build_run_in_worker_threads(tmp_path: Path) -> None:
-    # Scenario: Image cropping and the PDF build run off the event loop
+    """Scenario: Image cropping and the PDF build run off the event loop."""
     loop_thread = threading.get_ident()
     asset_threads: list[int] = []
     pdf_threads: list[int] = []

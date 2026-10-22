@@ -1,4 +1,4 @@
-"""Autopilot generation starts are spaced (Pedro's decision: 20 minutes).
+"""Autopilot generation starts are spaced (20 minutes by default).
 
 Feature: backend/tests/features/carousel_generation_load_ae0520.feature
 """
@@ -152,7 +152,7 @@ def _queued_board(count: int, at: datetime = _BATCH_AT) -> _Board:
 
 @pytest.mark.asyncio
 async def test_queued_run_waits_for_a_recent_start() -> None:
-    # Scenario: A queued run waits until the previous start is 20 minutes old
+    """Scenario: A queued run waits until the previous start is 20 minutes old."""
     board = _queued_board(1)
     board.created[uuid4()] = _BATCH_AT - timedelta(minutes=5)
     editorial = _Editorial()
@@ -167,7 +167,7 @@ async def test_queued_run_waits_for_a_recent_start() -> None:
 
 @pytest.mark.asyncio
 async def test_queued_run_starts_once_the_previous_start_is_old_enough() -> None:
-    # Scenario: A queued run waits until the previous start is 20 minutes old
+    """Scenario: A queued run waits until the previous start is 20 minutes old."""
     board = _queued_board(1)
     board.created[uuid4()] = _BATCH_AT - _SPACING
     editorial = _Editorial()
@@ -180,7 +180,7 @@ async def test_queued_run_starts_once_the_previous_start_is_old_enough() -> None
 
 @pytest.mark.asyncio
 async def test_three_runs_queued_at_1105_start_twenty_minutes_apart() -> None:
-    # Scenario: Three runs queued at 11:05 start at least 20 minutes apart
+    """Scenario: Three runs queued at 11:05 start at least 20 minutes apart."""
     board = _queued_board(3)
     runner = _runner(board, _Editorial(), _SPACING)
 
@@ -200,7 +200,7 @@ async def test_three_runs_queued_at_1105_start_twenty_minutes_apart() -> None:
 
 @pytest.mark.asyncio
 async def test_zero_spacing_starts_runs_back_to_back() -> None:
-    # Scenario: Spacing 0 starts queued runs back to back
+    """Scenario: Spacing 0 starts queued runs back to back."""
     board = _queued_board(1)
     board.created[uuid4()] = _BATCH_AT - timedelta(minutes=1)
 
@@ -211,7 +211,7 @@ async def test_zero_spacing_starts_runs_back_to_back() -> None:
 
 @pytest.mark.asyncio
 async def test_failed_start_retries_without_waiting_for_itself() -> None:
-    # Scenario: A run whose start failed retries without waiting for itself
+    """Scenario: A run whose start failed retries without waiting for itself."""
     board = _queued_board(1)
     editorial = _Editorial(start_status=StartStatus.PROVIDER_OUTAGE)
     runner = _runner(board, editorial, _SPACING)
@@ -229,7 +229,7 @@ async def test_failed_start_retries_without_waiting_for_itself() -> None:
 
 
 def test_start_wait_is_the_rest_of_the_spacing() -> None:
-    # Scenario: A queued run waits until the previous start is 20 minutes old
+    """Scenario: A queued run waits until the previous start is 20 minutes old."""
     latest = _BATCH_AT
     assert start_wait(None, _BATCH_AT, _SPACING) == NO_WAIT
     assert start_wait(latest, _BATCH_AT, NO_WAIT) == NO_WAIT
@@ -240,6 +240,6 @@ def test_start_wait_is_the_rest_of_the_spacing() -> None:
 
 
 def test_start_spacing_setting_defaults_to_twenty_minutes() -> None:
-    # Scenario: Three runs queued at 11:05 start at least 20 minutes apart
+    """Scenario: Three runs queued at 11:05 start at least 20 minutes apart."""
     assert DEFAULT_START_SPACING_MINUTES == 20
     assert Settings.model_fields["autopilot_start_spacing_minutes"].default == 20
