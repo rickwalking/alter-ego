@@ -14,7 +14,15 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
 from rag_backend.api.constants import (
     ERR_DOCUMENT_PROCESSING_FAILED,
@@ -34,6 +42,11 @@ from rag_backend.api.schemas import (
     DocumentResponse,
     DocumentUploadResponse,
     ErrorResponse,
+)
+from rag_backend.api.schemas.documents import (
+    DOCUMENT_SCOPE_MAX_LENGTH,
+    DOCUMENT_TAGS_MAX_LENGTH,
+    DOCUMENT_TITLE_MAX_LENGTH,
 )
 from rag_backend.application.services.document_pipeline import (
     PIPELINE_FAILURE_LOGGED,
@@ -91,15 +104,21 @@ async def upload_document(
     service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
     user: Annotated[User, Depends(require_editor_or_admin)],
     settings: Annotated[Settings, Depends(get_settings)],
-    title: str | None = None,
-    tags: str | None = None,
-    scope: str = "personal",
-    is_public: bool = False,
+    title: Annotated[
+        str | None, Form(min_length=1, max_length=DOCUMENT_TITLE_MAX_LENGTH)
+    ] = None,
+    tags: Annotated[str | None, Form(max_length=DOCUMENT_TAGS_MAX_LENGTH)] = None,
+    scope: Annotated[
+        str, Form(max_length=DOCUMENT_SCOPE_MAX_LENGTH)
+    ] = DocumentScope.PERSONAL.value,
+    is_public: Annotated[bool, Form()] = False,
 ):
     """Upload a document file and process it immediately.
 
     Accepts PDF, TXT, MD files. The document is processed through the
-    full pipeline (chunking + embedding) before returning.
+    full pipeline (chunking + embedding) before returning. ``title``,
+    ``tags`` (comma-separated), ``scope`` and ``is_public`` are multipart
+    form fields sent next to the file.
     """
     content = await _read_upload_content(file, settings)
     metadata = _build_upload_metadata(file, tags)

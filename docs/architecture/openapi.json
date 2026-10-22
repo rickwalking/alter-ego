@@ -1337,6 +1337,42 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
+          },
+          "is_public": {
+            "default": false,
+            "title": "Is Public",
+            "type": "boolean"
+          },
+          "scope": {
+            "default": "personal",
+            "maxLength": 20,
+            "title": "Scope",
+            "type": "string"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -15070,62 +15106,8 @@
     },
     "/api/documents/upload": {
       "post": {
-        "description": "Upload a document file and process it immediately.\n\nAccepts PDF, TXT, MD files. The document is processed through the\nfull pipeline (chunking + embedding) before returning.",
+        "description": "Upload a document file and process it immediately.\n\nAccepts PDF, TXT, MD files. The document is processed through the\nfull pipeline (chunking + embedding) before returning. ``title``,\n``tags`` (comma-separated), ``scope`` and ``is_public`` are multipart\nform fields sent next to the file.",
         "operationId": "upload_document_api_documents_upload_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "title",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Title"
-            }
-          },
-          {
-            "in": "query",
-            "name": "tags",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Tags"
-            }
-          },
-          {
-            "in": "query",
-            "name": "scope",
-            "required": false,
-            "schema": {
-              "default": "personal",
-              "title": "Scope",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "is_public",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Is Public",
-              "type": "boolean"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "multipart/form-data": {
