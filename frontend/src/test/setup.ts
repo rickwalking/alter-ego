@@ -26,16 +26,25 @@ vi.mock("next-intl", async () => {
     );
   };
 
+  type Translator = (key: string, values?: Record<string, unknown>) => string;
+  const translators = new Map<string, Translator>();
+  const translatorFor = (namespace?: string): Translator => {
+    const cacheKey = namespace ?? "";
+    const cached = translators.get(cacheKey);
+    if (cached) return cached;
+    const translate: Translator = (key, values) => {
+      const fullKey = namespace ? `${namespace}.${key}` : key;
+      return format(lookup(fullKey), key, values);
+    };
+    translators.set(cacheKey, translate);
+    return translate;
+  };
+
   return {
     NextIntlClientProvider: ({ children }: { children: ReactNode }) => children,
     useLocale: () => "en",
     useMessages: () => messages,
-    useTranslations:
-      (namespace?: string) =>
-      (key: string, values?: Record<string, unknown>) => {
-        const fullKey = namespace ? `${namespace}.${key}` : key;
-        return format(lookup(fullKey), key, values);
-      },
+    useTranslations: translatorFor,
   };
 });
 
