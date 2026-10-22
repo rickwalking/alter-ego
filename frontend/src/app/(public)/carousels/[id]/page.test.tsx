@@ -93,6 +93,19 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
     expect(metadata.openGraph?.images).toBeUndefined();
   });
 
+  // Scenario: An untitled carousel is titled with its topic
+  it("titles an untitled carousel with its topic", async () => {
+    mockFetch.mockResolvedValueOnce(
+      carousel({ title: null, title_en: null, topic: "GPT 5.6 saiu" }),
+    );
+
+    const metadata = await generateMetadata(props("meta-topic", "pt"));
+
+    expect(metadata.title).toBe("GPT 5.6 saiu · carousels.metaTitleSuffix");
+    expect(metadata.openGraph?.title).toBe(metadata.title);
+    expect(metadata.twitter?.title).toBe(metadata.title);
+  });
+
   it("keeps generic metadata for an unknown carousel", async () => {
     mockFetch.mockResolvedValueOnce(null);
 

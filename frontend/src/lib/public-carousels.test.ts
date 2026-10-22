@@ -197,6 +197,42 @@ describe("carousel language + text helpers (AE-0444)", () => {
     expect(publicCarouselSubtitle(carousel, "en")).toBe("Subtitle EN");
     expect(publicCarouselTitle(carousel, "pt", "Sem título")).toBe("Título PT");
   });
+
+  // Scenario: An untitled carousel is titled with its topic
+  it("titles an untitled projection with its topic", () => {
+    const carousel = publicCarousel({
+      title: null,
+      title_en: null,
+      topic: "GPT 5.6 saiu",
+    });
+
+    expect(publicCarouselTitle(carousel, "pt", "Sem título")).toBe(
+      "GPT 5.6 saiu",
+    );
+    expect(publicCarouselTitle(carousel, "en", "Untitled")).toBe(
+      "GPT 5.6 saiu",
+    );
+  });
+
+  // Scenario: A localized title still wins over the topic
+  it("prefers a localized title over the topic", () => {
+    const carousel = publicCarousel({ topic: "Raw topic" });
+
+    expect(publicCarouselTitle(carousel, "en", "Untitled")).toBe("Title EN");
+  });
+
+  // Scenario: A carousel with neither title nor topic uses the localized fallback
+  it("uses the localized fallback without a title or topic", () => {
+    const carousel = publicCarousel({
+      title: null,
+      title_en: null,
+      topic: null,
+    });
+
+    expect(publicCarouselTitle(carousel, "pt", "Sem título")).toBe(
+      "Sem título",
+    );
+  });
 });
 
 describe("carousel neighbors (AE-0444)", () => {

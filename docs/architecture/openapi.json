@@ -106,7 +106,7 @@
         "type": "object"
       },
       "BlogFromCarouselRequest": {
-        "description": "``POST /blog-posts/from-carousel``: always creates a draft.",
+        "description": "``POST /blog-posts/from-carousel``: always creates a draft.\n\nThe document is always PT canonical plus an EN translation; language records which\none the owner asked to edit first.",
         "properties": {
           "language": {
             "default": "pt",
@@ -142,7 +142,7 @@
         "type": "object"
       },
       "BlogGenerateRequest": {
-        "description": "``POST /blog-posts/generate``: a standalone draft from a topic.",
+        "description": "``POST /blog-posts/generate``: a standalone draft from a topic.\n\nsource_urls are references for the writer and are never fetched by the backend (no\nSSRF surface).",
         "properties": {
           "language": {
             "default": "pt",
@@ -579,7 +579,7 @@
         "type": "object"
       },
       "BlogPostResponse": {
-        "description": "Schema for blog post response.",
+        "description": "Schema for blog post response.\n\neditor_comments holds the {text, author_id, status} objects a reject appends. The\nbounded version history is served by GET /blog-posts/{id}/versions only, never\ninlined in every post response.",
         "properties": {
           "ai_disclosure_label": {
             "anyOf": [
@@ -856,7 +856,7 @@
         "type": "object"
       },
       "BlogPostSummaryResponse": {
-        "description": "Lightweight blog post for list views (PERF-001).",
+        "description": "Lightweight blog post for list views (PERF-001).\n\nis_public tells whether an anonymous visitor can read the post now: a\ncarousel-linked row is stored published by the dual-write but stays hidden until its\ncarousel is released, so status alone cannot tell that a post is live.",
         "properties": {
           "author_id": {
             "anyOf": [
@@ -1183,7 +1183,7 @@
         "type": "object"
       },
       "BlogPostVersionResponse": {
-        "description": "Schema for blog post version response.",
+        "description": "Schema for blog post version response.\n\ntitle and excerpt are snapshotted by saves too; older entries have none.",
         "properties": {
           "author_id": {
             "anyOf": [
@@ -1769,6 +1769,7 @@
         "type": "object"
       },
       "CarouselProjectCreate": {
+        "description": "Request body that creates a carousel project.\n\ntheme is a root key, \"auto\" or a custom-palette UUID (36 chars), stored as a string\nreference in a varchar(64) column.",
         "properties": {
           "audience": {
             "maxLength": 500,
@@ -1983,6 +1984,7 @@
         "type": "object"
       },
       "CarouselProjectResponse": {
+        "description": "Carousel project as returned by the API.\n\nlanguage lets the public gallery label a card without an extra design or slides\nrequest. custom_visual_details echoes the request-side scene guidance so it survives\na reload. needs_republish_since is set while a post-completion edit still owes a PDF\nrebuild; the publish page shows a \"rebuild pending\" state until the watchdog or the\nclient republishes and clears it.",
         "properties": {
           "accent_color": {
             "anyOf": [
@@ -2481,7 +2483,7 @@
         "type": "object"
       },
       "CarouselPublicResponse": {
-        "description": "Lean public projection of a published carousel (AE-0444).",
+        "description": "Lean public projection of a published carousel.\n\n``topic`` is the title of last resort for carousels that never got one.",
         "properties": {
           "available_languages": {
             "items": {
@@ -2572,6 +2574,17 @@
               }
             ],
             "title": "Title En"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
           }
         },
         "required": [
@@ -2586,7 +2599,7 @@
         "type": "object"
       },
       "CarouselPublicSlide": {
-        "description": "One slide in the anonymous public viewer (AE-0444).\n\nOnly the number, its heading (for alt text), and the public image URL. The\nowner-only ``image_path`` / preview URL never enters this projection.",
+        "description": "One slide in the anonymous public viewer.\n\nOnly the number, its heading (for alt text), and the public image URL. The\nowner-only ``image_path`` / preview URL never enters this projection.",
         "properties": {
           "heading": {
             "anyOf": [
@@ -2651,7 +2664,7 @@
         "type": "object"
       },
       "CarouselRepublishResponse": {
-        "description": "Result of an idempotent artifact republish (AE-0313).",
+        "description": "Result of an idempotent artifact republish.",
         "properties": {
           "artifact_version": {
             "anyOf": [
@@ -2721,7 +2734,7 @@
         "type": "object"
       },
       "CarouselSlideEditResponse": {
-        "description": "Result of a completed-project slide edit: fresh report + republish marker.\n\nAE-0403: ``field_violations`` restates ``validation.violations`` per form\nfield (additive; ``validation`` keeps its contract).",
+        "description": "Result of a completed-project slide edit: fresh report + republish marker.\n\n``field_violations`` restates ``validation.violations`` per form\nfield (additive; ``validation`` keeps its contract).",
         "properties": {
           "field_violations": {
             "items": {
@@ -3269,7 +3282,7 @@
       },
       "CoverAssetResponse": {
         "additionalProperties": false,
-        "description": "AE-0418: the 201 body of ``POST /assets``.",
+        "description": "The 201 body of ``POST /assets``.",
         "properties": {
           "asset_id": {
             "format": "uuid",
@@ -3426,7 +3439,7 @@
       },
       "CoverReference": {
         "additionalProperties": false,
-        "description": "AE-0418: the GrokBot cover a topic names (``cover.asset_id``).\n\nUnknown keys are a 422 for the batch. Whether the asset exists, is fresh,\nunused and (screenshot) sourced is a per-topic domain rule, so a malformed\nid is a ``cover_asset_unknown`` rejection of that topic only.",
+        "description": "The GrokBot cover a topic names (``cover.asset_id``).\n\nUnknown keys are a 422 for the batch. Whether the asset exists, is fresh,\nunused and (screenshot) sourced is a per-topic domain rule, so a malformed\nid is a ``cover_asset_unknown`` rejection of that topic only.",
         "properties": {
           "asset_id": {
             "maxLength": 64,
@@ -3511,7 +3524,7 @@
         "type": "object"
       },
       "CreatorAssetListResponse": {
-        "description": "AE-0376: the caller's photo library.",
+        "description": "The caller's photo library.",
         "properties": {
           "items": {
             "items": {
@@ -4411,7 +4424,7 @@
         "type": "object"
       },
       "EditorialWorkflowStateResponse": {
-        "description": "Current workflow state returned to clients.",
+        "description": "Current workflow state returned to clients.\n\nphase_feedback holds the active notes only; a content note leaves it once the\nregeneration used it and is then listed in phase_feedback_history.\ncontent_gate_validation is the fail-closed content-gate report, present only when\nthe validate, repair and retry chain still ended blocking. design_recovery_hint is a\nclient-displayable code set while the design step holds a blocking report (direct\nedits or a content send-back resolve it; a plain revise does not). The run_*\nmetadata is populated only while phase_status is in_progress, so the create flow\nrebuilds the in-progress banner on reload without having seen the run.started event.",
         "properties": {
           "blog_markdown": {
             "anyOf": [
@@ -4785,7 +4798,7 @@
         "type": "object"
       },
       "HookPhotoResponse": {
-        "description": "AE-0376: the project's slide-1 photo.",
+        "description": "The project's slide-1 photo.",
         "properties": {
           "hook_asset_id": {
             "format": "uuid",
@@ -4806,7 +4819,7 @@
         "type": "object"
       },
       "HookSelectRequest": {
-        "description": "The owner's slide-1 hook (AE-0375): <=60 characters and <=10 words.",
+        "description": "The owner's slide-1 hook: <=60 characters and <=10 words.",
         "properties": {
           "hook_text": {
             "maxLength": 60,
@@ -6193,7 +6206,7 @@
         "type": "object"
       },
       "PhaseFeedbackHistoryEntryResponse": {
-        "description": "A consumed reviewer note (AE-0405 lifecycle, exposed by AE-0413).\n\n``status`` is ``applied`` (a regeneration used it), ``dropped`` (a stale\nautopilot note) or ``migrated`` (a legacy note).",
+        "description": "A consumed reviewer note, moved out of the active feedback once used.\n\n``status`` is ``applied`` (a regeneration used it), ``dropped`` (a stale\nautopilot note) or ``migrated`` (a legacy note).",
         "properties": {
           "added_at": {
             "title": "Added At",
@@ -6736,7 +6749,7 @@
       },
       "QuoteProposal": {
         "additionalProperties": false,
-        "description": "AE-0406 (spec \u00a74): one verified quote of a post sent through x-signals.\n\nUnknown keys are a 422 for the batch. Every other rule is a domain rule\nthat rejects only this topic, with its reason code and ``field``,\nincluding a missing or blank field (PR #124 review: ``quote_invalid``,\n``quotes[i].<name>``), so every field defaults to None here.",
+        "description": "One verified quote of a post sent through x-signals.\n\nUnknown keys are a 422 for the batch. Every other rule is a domain rule\nthat rejects only this topic, with its reason code and ``field``,\nincluding a missing or blank field (PR #124 review: ``quote_invalid``,\n``quotes[i].<name>``), so every field defaults to None here.",
         "properties": {
           "excerpt": {
             "anyOf": [
@@ -6871,7 +6884,7 @@
       },
       "RejectedTopic": {
         "additionalProperties": false,
-        "description": "A proposal the intake did not queue, with a stable reason code.\n\nAE-0406: ``index`` (position in the request) is always present; ``field``\nonly when one field caused the rejection (the route drops it otherwise).",
+        "description": "A proposal the intake did not queue, with a stable reason code.\n\n``index`` (position in the request) is always present; ``field``\nonly when one field caused the rejection (the route drops it otherwise).",
         "properties": {
           "field": {
             "anyOf": [
@@ -7151,7 +7164,7 @@
         "type": "object"
       },
       "RubricCriterion": {
-        "description": "Schema for a rubric criterion.",
+        "description": "Schema for a rubric criterion.\n\nevaluation_method is \"ai_auto\", \"human_required\" or \"hybrid\"; scoring_scale is\n\"1-10\", \"pass_fail\", \"grade_a_f\" or \"0-100\".",
         "properties": {
           "description": {
             "title": "Description",
@@ -7612,7 +7625,7 @@
         "type": "object"
       },
       "SlideFieldViolation": {
-        "description": "One violation addressed to the form field it belongs to (AE-0403).\n\n``item_list``/``item_index``/``item_field`` are set for structured items\n(e.g. ``summary_points`` item 0 ``body``) and ``None`` for heading/body.",
+        "description": "One violation addressed to the form field it belongs to.\n\n``item_list``/``item_index``/``item_field`` are set for structured items\n(e.g. ``summary_points`` item 0 ``body``) and ``None`` for heading/body.",
         "properties": {
           "code": {
             "title": "Code",
@@ -7889,6 +7902,7 @@
       },
       "SlideValidationViolation": {
         "additionalProperties": false,
+        "description": "One presentation-rule violation on a slide.\n\n``severity`` defaults to BLOCKER so a rule that forgets to set it can never\nsilently unblock.",
         "properties": {
           "code": {
             "title": "Code",
@@ -7949,7 +7963,7 @@
         "type": "object"
       },
       "SlideValidationViolationResponse": {
-        "description": "One deterministic presentation validation violation.",
+        "description": "One deterministic presentation validation violation.\n\nseverity is \"blocker\" or \"warning\" and defaults to blocker, so a legacy report\nwithout the field keeps its blocking treatment client-side.",
         "properties": {
           "code": {
             "title": "Code",
@@ -8146,7 +8160,7 @@
       },
       "TopicProposal": {
         "additionalProperties": false,
-        "description": "One scout proposal. Unknown keys are a 422 for the whole batch.",
+        "description": "One scout proposal. Unknown keys are a 422 for the whole batch.\n\n- ``image_style`` is a plain short string; the domain rejects an unsupported\n  preset for that topic only (``image_style_unsupported``), not the batch.\n- ``mode`` defaults to Radar IA; POV carries the draft thesis the owner confirms\n  on Telegram (the domain rejects a POV without one).\n- ``pov_format`` / ``slide_count`` omitted use the autopilot default (opiniao,\n  9); they are ignored on Radar IA topics.\n- ``quotes``: up to 3 verified quotes on a ``pov_news`` topic; a 4th is a\n  ``quote_invalid`` rejection of that topic (the schema cap is abuse only).\n- ``cover`` is an optional GrokBot cover for slide 1 (every mode).",
         "properties": {
           "angle": {
             "maxLength": 300,
@@ -8719,7 +8733,7 @@
     },
     "/api/admin/migration/phase5": {
       "post": {
-        "description": "Migrate legacy carousel projects to editorial workflow schema.",
+        "description": "Migrate legacy carousel projects to editorial workflow schema.\n\nThe carousel repository owns the canonical-home read, so its bound reader is passed\nas the DistributionReader and the route adds no api-to-infrastructure import.",
         "operationId": "run_phase5_migration_api_admin_migration_phase5_post",
         "parameters": [
           {
@@ -9691,7 +9705,7 @@
     },
     "/api/blog-posts/{post_id}": {
       "delete": {
-        "description": "Delete a blog post (optimistic-locked, origin-guarded; AE-0296).",
+        "description": "Delete a blog post (optimistic-locked, origin-guarded).",
         "operationId": "delete_blog_post_api_blog_posts__post_id__delete",
         "parameters": [
           {
@@ -9794,7 +9808,7 @@
         ]
       },
       "put": {
-        "description": "Update a blog post with optimistic locking (WF-005).",
+        "description": "Update a blog post with optimistic locking (WF-005).\n\nThe versioned write, version snapshot and approval reset happen in one transaction.",
         "operationId": "update_blog_post_api_blog_posts__post_id__put",
         "parameters": [
           {
@@ -10026,7 +10040,7 @@
     },
     "/api/blog-posts/{post_id}/ai-suggest": {
       "post": {
-        "description": "Generate an AI suggestion for selected blog text.",
+        "description": "Generate an AI suggestion for selected blog text.\n\nThe post is re-read under the row lock after the call, so the suggestions merge onto\nwhat was committed meanwhile.",
         "operationId": "ai_suggest_api_blog_posts__post_id__ai_suggest_post",
         "parameters": [
           {
@@ -10085,7 +10099,7 @@
     },
     "/api/blog-posts/{post_id}/approve": {
       "post": {
-        "description": "Approve a blog post (assigned reviewer or admin only).",
+        "description": "Approve a blog post (assigned reviewer or admin only).\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one.",
         "operationId": "approve_blog_post_api_blog_posts__post_id__approve_post",
         "parameters": [
           {
@@ -10484,7 +10498,7 @@
     },
     "/api/blog-posts/{post_id}/generation/retry": {
       "post": {
-        "description": "202: a new lease/attempt on the same row (409 unless the run failed).",
+        "description": "202: a new lease/attempt on the same row (409 unless the run failed).\n\nAn article that exists is never regenerated: only its empty image slots are.",
         "operationId": "retry_blog_generation_api_blog_posts__post_id__generation_retry_post",
         "parameters": [
           {
@@ -10582,7 +10596,7 @@
     },
     "/api/blog-posts/{post_id}/publish": {
       "post": {
-        "description": "Publish an approved blog post (author or admin only).\n\nThe ``blog.v2`` document needs >= 1 non-empty section; a null cover is\nallowed (cards/OG fall back to a neutral default, AE-0423). An ``If-Match``\nthe editor sends is checked (409 when stale, AE-0424).",
+        "description": "Publish an approved blog post (author or admin only).\n\nThe ``blog.v2`` document needs >= 1 non-empty section; a null cover is\nallowed (cards/OG fall back to a neutral default). An ``If-Match``\nthe editor sends is checked (409 when stale).\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one.",
         "operationId": "publish_blog_post_api_blog_posts__post_id__publish_post",
         "parameters": [
           {
@@ -10647,7 +10661,7 @@
     },
     "/api/blog-posts/{post_id}/reject": {
       "post": {
-        "description": "Reject a blog post (assigned reviewer or admin only).",
+        "description": "Reject a blog post (assigned reviewer or admin only).\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one. editor_comments is\nreassigned, not appended to: SQLAlchemy does not track an in-place JSON list\nmutation, so the reason would never be stored.",
         "operationId": "reject_blog_post_api_blog_posts__post_id__reject_post",
         "parameters": [
           {
@@ -10706,7 +10720,7 @@
     },
     "/api/blog-posts/{post_id}/restore-version/{version_number}": {
       "post": {
-        "description": "Restore a blog post to a previous version (If-Match, snapshotted).",
+        "description": "Restore a blog post to a previous version (If-Match, snapshotted).\n\nAn empty snapshot (an old generation bootstrap) cannot be restored, since it would\nfail the section check; it gets a named error for the editor. A restore is a content\nwrite: strict blog.v2, cover projection synced, If-Match guarded and snapshotted\nlike a save.",
         "operationId": "restore_blog_post_version_api_blog_posts__post_id__restore_version__version_number__post",
         "parameters": [
           {
@@ -10780,7 +10794,7 @@
     },
     "/api/blog-posts/{post_id}/schedule": {
       "delete": {
-        "description": "Clear ``scheduled_publish_at``; the post stays ``approved`` (AE-0424).",
+        "description": "Clear ``scheduled_publish_at``; the post stays ``approved``.\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one.",
         "operationId": "cancel_blog_post_schedule_api_blog_posts__post_id__schedule_delete",
         "parameters": [
           {
@@ -10843,7 +10857,7 @@
         ]
       },
       "post": {
-        "description": "Schedule an approved post for future publication (SCHED-001, UI-024).",
+        "description": "Schedule an approved post for future publication (SCHED-001, UI-024).\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one.",
         "operationId": "schedule_blog_post_api_blog_posts__post_id__schedule_post",
         "parameters": [
           {
@@ -11333,7 +11347,7 @@
     },
     "/api/blog-posts/{post_id}/submit-review": {
       "post": {
-        "description": "Submit a blog post for review.\n\nThe author may review their own post (AE-0441, single-author deployment):\nwith no ``reviewer_id`` the author is the reviewer.",
+        "description": "Submit a blog post for review.\n\nThe author may review their own post (single-author deployment):\nwith no ``reviewer_id`` the author is the reviewer.\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one. It applies the same\nreadiness guard as publish, so an unpublishable post is never queued for review.",
         "operationId": "submit_blog_post_for_review_api_blog_posts__post_id__submit_review_post",
         "parameters": [
           {
@@ -11398,7 +11412,7 @@
     },
     "/api/blog-posts/{post_id}/translations/en": {
       "post": {
-        "description": "Translate the PT document into ``translations.en`` (502 on failure).",
+        "description": "Translate the PT document into ``translations.en`` (502 on failure).\n\nThe session is rolled back first so no transaction is held during the LLM spend.",
         "operationId": "generate_en_translation_api_blog_posts__post_id__translations_en_post",
         "parameters": [
           {
@@ -11463,7 +11477,7 @@
     },
     "/api/blog-posts/{post_id}/unpublish": {
       "post": {
-        "description": "Unpublish a blog post (optimistic-locked visibility flip; AE-0296).",
+        "description": "Unpublish a blog post (optimistic-locked visibility flip).\n\nThe transition runs under the row lock: an overlapping slot write (review reset)\neither commits first and is seen here, or waits for this one. A visibility flip is a\nversioned write like any other: the version is bumped so a concurrent editor's stale\nIf-Match is rejected instead of clobbered.",
         "operationId": "unpublish_blog_post_api_blog_posts__post_id__unpublish_post",
         "parameters": [
           {
@@ -11581,7 +11595,7 @@
     },
     "/api/carousels": {
       "get": {
-        "description": "List carousel projects. Anonymous users only see published (is_public) items.",
+        "description": "List carousel projects; anonymous and non-admin public views get finished, redacted cards.",
         "operationId": "list_carousels_api_carousels_get",
         "parameters": [
           {
@@ -11690,7 +11704,7 @@
         ]
       },
       "post": {
-        "description": "Create a new carousel project.",
+        "description": "Create a new carousel project.\n\nA preset whose image provider key is unconfigured is rejected before any workflow\nspend (422 in production-like environments). A POV project's slide-1 photo is\nchecked before insert. theme is a string reference (root key, \"auto\" or a\ncustom-palette UUID) already validated by the schema; a custom palette is resolved\nand snapshotted at generation. New carousels are stamped with their mode's\npresentation policy version (legacy NULL-version rows stay v1), and the wizard's\ntemplate and persona are stored.",
         "operationId": "create_carousel_api_carousels_post",
         "requestBody": {
           "content": {
@@ -12215,7 +12229,7 @@
     },
     "/api/carousels/{project_id}/cover": {
       "put": {
-        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.",
+        "description": "Stage, store under the lock-version CAS, then republish slides + PDFs.\n\nThe fresh artifacts reflect every pending copy edit too, so the needs-republish\nmarker is cleared as a republish does.",
         "operationId": "pick_cover_api_carousels__project_id__cover_put",
         "parameters": [
           {
@@ -12697,7 +12711,7 @@
     },
     "/api/carousels/{project_id}/images/{filename}": {
       "get": {
-        "description": "Serve a public carousel image.\n\nResolves the raw image (``<output>/images/``) first, then the rendered slide\nof ``lang`` (standard, then HD) \u2014 the same fallback the owner-only preview\nroute uses, so a public page never 404s on an image the owner can see\n(AE-0412, QA B08).",
+        "description": "Serve a public carousel image.\n\nResolves the raw image (``<output>/images/``) first, then the rendered slide\nof ``lang`` (standard, then HD) \u2014 the same fallback the owner-only preview\nroute uses, so a public page never 404s on an image the owner can see.",
         "operationId": "get_carousel_image_api_carousels__project_id__images__filename__get",
         "parameters": [
           {
@@ -12965,7 +12979,7 @@
     },
     "/api/carousels/{project_id}/preview/images/{filename}": {
       "get": {
-        "description": "Preview draft slide or hero images for authenticated project owners.",
+        "description": "Preview draft slide or hero images for authenticated project owners.\n\nThe image is looked up in the HD directory first, then standard, then hero images.",
         "operationId": "preview_carousel_image_api_carousels__project_id__preview_images__filename__get",
         "parameters": [
           {
@@ -13150,7 +13164,7 @@
     },
     "/api/carousels/{project_id}/publish/instagram": {
       "post": {
-        "description": "Publish the carousel's slides to Instagram with the provided caption.",
+        "description": "Publish the carousel's slides to Instagram with the provided caption.\n\nReturns 409 when an autopilot run owns the carousel or a publish is running.",
         "operationId": "publish_to_instagram_api_carousels__project_id__publish_instagram_post",
         "parameters": [
           {
@@ -13342,7 +13356,7 @@
     },
     "/api/carousels/{project_id}/republish": {
       "post": {
-        "description": "Re-render from persisted slides and activate a fresh artifact version.",
+        "description": "Re-render from persisted slides and activate a fresh artifact version.\n\nA successful republish (client-triggered or watchdog-swept) clears the rebuild\nmarker so the publish page leaves the \"PDF rebuild pending\" state. The finalize\npipeline persists and refreshes the same session-identity project row, so its\nartifact_version and PDF pointers are already current and no ORM re-fetch (an\napi-to-infrastructure edge) is needed.",
         "operationId": "republish_carousel_api_carousels__project_id__republish_post",
         "parameters": [
           {
@@ -13700,7 +13714,7 @@
     },
     "/api/carousels/{project_id}/workflow/resume": {
       "post": {
-        "description": "Accept human review and resume workflow asynchronously (RW-010).",
+        "description": "Accept human review and resume workflow asynchronously (RW-010).\n\nStructured feedback is validated before the lock is bumped: a 422 after the bump\nwould leave the client on a stale version and reset its edits.",
         "operationId": "resume_editorial_workflow_api_carousels__project_id__workflow_resume_post",
         "parameters": [
           {
@@ -13770,7 +13784,7 @@
     },
     "/api/carousels/{project_id}/workflow/start": {
       "post": {
-        "description": "Run AI synthesis, outline, and draft phases then pause at human gates.",
+        "description": "Run AI synthesis, outline, and draft phases then pause at human gates.\n\nOnly the project's persona id is kept, never the row: a held row stays in the\nsession identity map with its server-side updated_at expired after the engine's\nflush, and the ACL re-read would lazy-load it outside the greenlet. The wizard's\npersona applies when the request names none, so the persona gate covers both modes.\n\nEngine errors are logged; a synthesis parse error gets its specific detail and any\nother ValueError keeps the generic one. A provider outage or rate limit during the\nsynchronous start surfaces as a structured retryable error, not a generic 500; other\nerrors re-raise unchanged.",
         "operationId": "start_editorial_workflow_api_carousels__project_id__workflow_start_post",
         "parameters": [
           {
@@ -13830,7 +13844,7 @@
     },
     "/api/carousels/{project_id}/workflow/state": {
       "get": {
-        "description": "Return persisted workflow state for UI polling.",
+        "description": "Return persisted workflow state for UI polling.\n\nRun metadata (for banner reconstruction on reload) is attached only while the merged\nstate reports in_progress.",
         "operationId": "get_editorial_workflow_state_api_carousels__project_id__workflow_state_get",
         "parameters": [
           {
@@ -16531,7 +16545,7 @@
     },
     "/api/public/blog-posts": {
       "get": {
-        "description": "Published-only listing; any client status filter is ignored.\n\nAE-0347: carousel-origin rows are also gated on the parent carousel being\npublic (the dual-write stamps them ``published`` before the site release).",
+        "description": "Published-only listing; any client status filter is ignored.\n\ncarousel-origin rows are also gated on the parent carousel being\npublic (the dual-write stamps them ``published`` before the site release).",
         "operationId": "list_public_blog_posts_api_public_blog_posts_get",
         "parameters": [
           {
@@ -16588,7 +16602,7 @@
     },
     "/api/public/blog-posts/{post_id}": {
       "get": {
-        "description": "Uniform 404 for missing AND non-published posts (no existence leak).",
+        "description": "Uniform 404 for missing AND non-published posts (no existence leak).\n\nA published row with a non-v2 document is not renderable: it gets the uniform 404,\nnever a 500 and never a legacy adaptation.",
         "operationId": "get_public_blog_post_api_public_blog_posts__post_id__get",
         "parameters": [
           {
@@ -17102,7 +17116,7 @@
     },
     "/api/telegram/webhook": {
       "post": {
-        "description": "Accept one Telegram update when the secret header matches.",
+        "description": "Accept one Telegram update when the secret header matches.\n\nTelegram side effects run only after the claim and transitions are durable.",
         "operationId": "post_telegram_webhook_api_telegram_webhook_post",
         "responses": {
           "200": {
