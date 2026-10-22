@@ -47,7 +47,7 @@ export default function CalendarPage(): React.ReactElement {
           onNext={goNext}
           onToday={goToday}
         />
-        {anchor ? <CalendarGrid days={days} /> : null}
+        {anchor ? <CalendarGrid days={days} label={title} /> : null}
         <CalendarLegend />
       </div>
 

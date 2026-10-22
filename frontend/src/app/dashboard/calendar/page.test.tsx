@@ -16,7 +16,7 @@ describe("CalendarPage today", () => {
   // Scenario: The server render highlights no day
   it("renders no month grid on the server", () => {
     const html = renderToString(<CalendarPage />);
-    expect(html).not.toMatch(/<div[^>]*role="gridcell"/);
+    expect(html).not.toMatch(/<div[^>]*role="cell"/);
   });
 
   // Scenario: Today is the viewer's local date after the page loads
@@ -26,7 +26,7 @@ describe("CalendarPage today", () => {
     render(<CalendarPage />);
     expect(screen.getByText("October 2026")).toBeInTheDocument();
     const highlighted = screen
-      .getAllByRole("gridcell")
+      .getAllByRole("cell")
       .filter((cell) => cell.style.border !== "");
     expect(highlighted.map((cell) => cell.textContent.trim())).toEqual(["21"]);
   });

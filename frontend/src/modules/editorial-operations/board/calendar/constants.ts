@@ -16,7 +16,7 @@ export const CALENDAR_COLORS = {
   card: "#0d1324",
   txt: "rgba(255,255,255,0.88)",
   tM: "rgba(255,255,255,0.55)",
-  tD: "rgba(255,255,255,0.3)",
+  tD: "rgba(255,255,255,0.5)",
   bdr: "rgba(0,212,255,0.06)",
 } as const;
 
@@ -118,4 +118,4 @@ export const CALENDAR_FLEX_CENTER: CSSProperties = {
 export const CALENDAR_MONO_FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 export const CALENDAR_RESPONSIVE_STYLE =
-  '@media(max-width:768px){div[role="gridcell"]{min-height:60px!important;padding:4px!important}div[role="gridcell"]>div:first-child{font-size:11px!important}}';
+  '@media(max-width:768px){div[role="cell"]{min-height:60px!important;padding:4px!important}div[role="cell"]>div:first-child{font-size:11px!important}}';

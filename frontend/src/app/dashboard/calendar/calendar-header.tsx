@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_BTN_GHOST,
@@ -18,6 +19,7 @@ export function CalendarHeader({
 }: Readonly<{
   loading: boolean;
 }>): React.ReactElement {
+  const t = useTranslations("workflow.calendar");
   return (
     <div
       className="sticky top-0 z-50 flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 pr-4 pl-14 md:py-0 md:pr-8 lg:pl-8"
@@ -29,7 +31,7 @@ export function CalendarHeader({
       }}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span
+        <h1
           style={{
             fontSize: 16,
             fontWeight: 700,
@@ -37,8 +39,8 @@ export function CalendarHeader({
             letterSpacing: "-0.02em",
           }}
         >
-          Calendar
-        </span>
+          {t("heading")}
+        </h1>
         <span
           className="hidden sm:inline"
           style={{

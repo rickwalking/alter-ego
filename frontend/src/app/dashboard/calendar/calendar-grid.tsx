@@ -4,25 +4,23 @@ import { useLocale, useTranslations } from "next-intl";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_COLORS,
-  CALENDAR_CONTENT_META,
-  CALENDAR_FLEX_CENTER,
   CALENDAR_MONO_FONT,
-  CALENDAR_STATUS_META,
   calendarWeekdayHeaders,
-  formatCalendarDayLabel,
 } from "@/modules/editorial-operations";
-import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE } from "@/constants/neon";
-import { CONTENT_TYPE_ICON } from "@/app/dashboard/calendar/constants";
-import type {
-  CalendarDayCellProps,
-  CalendarDayEventProps,
-  CalendarGridProps,
-} from "@/app/dashboard/calendar/types";
+import { NEON_BORDER_SUBTLE } from "@/constants/neon";
+import type { CalendarDay } from "@/modules/editorial-operations";
+import { CalendarDayCell } from "./calendar-day-cell";
+import type { CalendarGridProps } from "@/app/dashboard/calendar/types";
+
+const DAYS_PER_WEEK = 7;
+const ROW_STYLE = { display: "contents" } as const;
 
 function CalendarEmptyMonth(): React.ReactElement {
   const t = useTranslations("workflow.calendar");
   return (
     <div
+      role="cell"
+      aria-colspan={DAYS_PER_WEEK}
       style={{
         gridColumn: "1 / -1",
         padding: "60px 20px",
@@ -41,122 +39,25 @@ function CalendarEmptyMonth(): React.ReactElement {
   );
 }
 
-function CalendarDayEvent({
-  event,
-  dateLabel,
-}: Readonly<CalendarDayEventProps>): React.ReactElement {
-  const t = useTranslations("workflow.calendar");
-  const contentMeta = CALENDAR_CONTENT_META[event.contentType];
-  const title = event.title || t("untitled");
-  return (
-    <div>
-      <div
-        tabIndex={0}
-        role="button"
-        title={title}
-        style={{
-          padding: "2px 6px",
-          borderRadius: 3,
-          fontSize: 10,
-          marginBottom: 2,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          cursor: "pointer",
-          background:
-            event.contentType === "meeting"
-              ? CALENDAR_COLORS.aD
-              : contentMeta.d,
-          color:
-            event.contentType === "meeting"
-              ? CALENDAR_COLORS.amber
-              : contentMeta.c,
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          ...CALENDAR_FLEX_CENTER,
-          gap: 4,
-          marginBottom: 4,
-          fontSize: 9,
-          fontFamily: CALENDAR_MONO_FONT,
-          color: CALENDAR_COLORS.tD,
-        }}
-      >
-        <CalendarSvgIcon name={CONTENT_TYPE_ICON[event.contentType]} size={9} />{" "}
-        {t(`contentType.${event.contentType}`)}
-      </div>
-      {event.status && (
-        <div
-          style={{
-            fontSize: 9,
-            padding: "1px 6px",
-            borderRadius: 3,
-            fontFamily: CALENDAR_MONO_FONT,
-            background: CALENDAR_STATUS_META[event.status].b,
-            color: CALENDAR_STATUS_META[event.status].c,
-            display: "inline-block",
-          }}
-        >
-          {t(`status.${event.status}`)}
-        </div>
-      )}
-      <div style={{ fontSize: 8, color: CALENDAR_COLORS.tM, marginTop: 2 }}>
-        {dateLabel}
-      </div>
-    </div>
-  );
-}
-
-function CalendarDayCell({
-  cell,
-}: Readonly<CalendarDayCellProps>): React.ReactElement {
-  const locale = useLocale();
-  const dateLabel = formatCalendarDayLabel(cell.iso, locale);
-  return (
-    <div
-      tabIndex={0}
-      role="gridcell"
-      className="snap-start"
-      style={{
-        minHeight: 100,
-        padding: 8,
-        background: cell.today ? CALENDAR_COLORS.cD : CALENDAR_COLORS.card,
-        border: cell.today ? `1px solid ${NEON_BORDER_FOCUS}` : "none",
-        cursor: "pointer",
-        opacity: cell.cur ? 1 : 0.3,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: CALENDAR_MONO_FONT,
-          fontSize: 13,
-          color: cell.today ? CALENDAR_COLORS.cyan : CALENDAR_COLORS.tM,
-          fontWeight: 600,
-          marginBottom: 6,
-        }}
-      >
-        {cell.day}
-      </div>
-      {cell.events.map((event, eventIndex) => (
-        <CalendarDayEvent
-          key={`${event.title}-${eventIndex}`}
-          event={event}
-          dateLabel={dateLabel}
-        />
-      ))}
-    </div>
-  );
+/** The month's day cells split into week rows of seven. */
+function weeksOf(days: CalendarDay[]): CalendarDay[][] {
+  const weeks: CalendarDay[][] = [];
+  for (let start = 0; start < days.length; start += DAYS_PER_WEEK) {
+    weeks.push(days.slice(start, start + DAYS_PER_WEEK));
+  }
+  return weeks;
 }
 
 /**
  * Keeps the month view and scroll-snaps horizontally on small screens so cells
- * stay about 91px wide or more (min-w 640 / 7) instead of crushing.
+ * stay about 91px wide or more (min-w 640 / 7) instead of crushing. Exposed as
+ * an ARIA table named by the month: a header row of weekday column headers and
+ * one row per week (rows use `display: contents`, so the CSS grid is unchanged).
+ * It is read-only, so the cells are not tab stops.
  */
 export function CalendarGrid({
   days,
+  label,
 }: Readonly<CalendarGridProps>): React.ReactElement {
   const locale = useLocale();
   const weekdayHeaders = calendarWeekdayHeaders(locale);
@@ -164,6 +65,8 @@ export function CalendarGrid({
   return (
     <div className="overflow-x-auto [overscroll-behavior-x:contain]">
       <div
+        role="table"
+        aria-label={label}
         className="grid min-w-[640px] snap-x snap-mandatory grid-cols-7"
         style={{
           gap: 1,
@@ -173,29 +76,40 @@ export function CalendarGrid({
           border: `1px solid ${NEON_BORDER_SUBTLE}`,
         }}
       >
-        {weekdayHeaders.map((header) => (
-          <div
-            key={header}
-            className="snap-start"
-            style={{
-              padding: 10,
-              textAlign: "center",
-              fontFamily: CALENDAR_MONO_FONT,
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: 2,
-              color: CALENDAR_COLORS.tD,
-              background: "rgba(6,10,18,0.5)",
-              fontWeight: 700,
-            }}
-          >
-            {header}
-          </div>
-        ))}
+        <div role="row" style={ROW_STYLE}>
+          {weekdayHeaders.map((header) => (
+            <div
+              key={header}
+              role="columnheader"
+              className="snap-start"
+              style={{
+                padding: 10,
+                textAlign: "center",
+                fontFamily: CALENDAR_MONO_FONT,
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: 2,
+                color: CALENDAR_COLORS.tD,
+                background: "rgba(6,10,18,0.5)",
+                fontWeight: 700,
+              }}
+            >
+              {header}
+            </div>
+          ))}
+        </div>
         {hasCurrentDays ? (
-          days.map((cell) => <CalendarDayCell key={cell.iso} cell={cell} />)
+          weeksOf(days).map((week) => (
+            <div key={week[0]?.iso} role="row" style={ROW_STYLE}>
+              {week.map((cell) => (
+                <CalendarDayCell key={cell.iso} cell={cell} />
+              ))}
+            </div>
+          ))
         ) : (
-          <CalendarEmptyMonth />
+          <div role="row" style={ROW_STYLE}>
+            <CalendarEmptyMonth />
+          </div>
         )}
       </div>
     </div>

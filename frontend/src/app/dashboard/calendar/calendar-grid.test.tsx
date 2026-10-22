@@ -19,6 +19,7 @@ function item(title: string): CalendarItem {
 function renderMonth(items: CalendarItem[]): void {
   render(
     <CalendarGrid
+      label="October 2026"
       days={buildCalendarDaysFromApi(new Date(2026, 9, 1), items, null)}
     />,
   );
@@ -33,17 +34,17 @@ describe("CalendarGrid chips", () => {
       ),
     ]);
     expect(
-      screen.getByRole("button", {
-        name: "Por que todo mundo usa ChatGPT e não o Claude?",
-      }),
-    ).toBeInTheDocument();
+      screen.getByTitle("Por que todo mundo usa ChatGPT e não o Claude?"),
+    ).toHaveTextContent("Por que todo mundo usa ChatGPT e não o Claude?");
     expect(screen.queryByText(/<strong>/)).not.toBeInTheDocument();
   });
 
   // Scenario: An item without a title shows a localized placeholder
   it("names an untitled item with the placeholder", () => {
     renderMonth([item(""), item("   ")]);
-    expect(screen.getAllByRole("button", { name: "Untitled" })).toHaveLength(2);
+    const chips = screen.getAllByTitle("Untitled");
+    expect(chips).toHaveLength(2);
+    for (const chip of chips) expect(chip).toHaveTextContent("Untitled");
     expect(pt.workflow.calendar.untitled).toBe("Sem título");
   });
 
@@ -52,11 +53,10 @@ describe("CalendarGrid chips", () => {
     renderMonth([
       item("Gemini 4 Argon chegou. Meses de código viraram semanas."),
     ]);
-    const chip = screen.getByRole("button", {
-      name: "Gemini 4 Argon chegou. Meses de código viraram semanas.",
-    });
-    expect(chip).toHaveAttribute(
-      "title",
+    const chip = screen.getByTitle(
+      "Gemini 4 Argon chegou. Meses de código viraram semanas.",
+    );
+    expect(chip).toHaveTextContent(
       "Gemini 4 Argon chegou. Meses de código viraram semanas.",
     );
   });

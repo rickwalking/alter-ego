@@ -5,6 +5,8 @@ import type {
 
 export interface CalendarGridProps {
   days: CalendarDay[];
+  /** Accessible name of the grid: the viewed month, e.g. "October 2026". */
+  label: string;
 }
 
 export interface CalendarDayCellProps {

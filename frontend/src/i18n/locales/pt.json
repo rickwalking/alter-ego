@@ -1187,6 +1187,7 @@
     },
     "calendar": {
       "title": "Calendário de Conteúdo",
+      "heading": "Calendário",
       "subtitle": "Veja conteúdo agendado e publicado em posts e carrosséis.",
       "empty": "Nenhum conteúdo agendado neste período",
       "scheduled": "Agendado",
