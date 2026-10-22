@@ -124,6 +124,11 @@ tests; their pinned-500 twins are removed).
 Reproduced: both endpoints 500 with `database_error` "greenlet_spawn has not been called"; the repository test fails
 with `MissingGreenlet` on Postgres 16. Fixed with a refresh after the flush; all identity tests green.
 
+### 2026-10-22 19:30
+
+External QA round 1: WARN (stale handler docstrings) — fixed. Full backend gates re-run on a quiet machine: all
+PASS except the pre-existing `pip-audit` (reported separately).
+
 ## Files Touched
 
 - backend/src/rag_backend/infrastructure/database/user_repository.py
