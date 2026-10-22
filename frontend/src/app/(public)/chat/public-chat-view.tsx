@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import { useCreateConversation } from "@/modules/conversation";
 import { useSseChat } from "@/modules/conversation";
-import {
-  AGENT_ORIGIN_ALTER_EGO,
-  CONVERSATION_METADATA_AGENT_ORIGIN,
-} from "@/constants/publish-chat";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { mapMessageToDashboard } from "@/modules/editorial-operations";
 import {
@@ -19,13 +14,11 @@ import {
 import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
+import { useChatSend } from "@/app/dashboard/chat/use-chat-send";
 
 export function PublicChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const locale = useLocale();
-  const [input, setInput] = useState("");
-
-  const createConversation = useCreateConversation();
 
   const {
     messages: sseMessages,
@@ -38,35 +31,23 @@ export function PublicChatView(): React.ReactElement {
     enableHistory: false,
   });
 
+  const { input, setInput, handleSend } = useChatSend({
+    conversationId: activeConv,
+    isStreaming,
+    sendMessage,
+    onConversationCreated: setActiveConv,
+  });
+
   const displayMessages = useMemo(
     () => sseMessages.map((message) => mapMessageToDashboard(message, locale)),
     [sseMessages, locale],
   );
 
-  const handleSend = useCallback(async () => {
-    const content = input.trim();
-    if (!content || isStreaming) return;
-
-    let convId = activeConv;
-    if (!convId) {
-      const created = await createConversation.mutateAsync({
-        metadata: {
-          [CONVERSATION_METADATA_AGENT_ORIGIN]: AGENT_ORIGIN_ALTER_EGO,
-        },
-      });
-      convId = created.id;
-      setActiveConv(convId);
-    }
-
-    setInput("");
-    await sendMessage(content, convId);
-  }, [input, isStreaming, activeConv, createConversation, sendMessage]);
-
   const handleNewChat = useCallback(() => {
     setActiveConv(null);
     setInput("");
     startNewChat();
-  }, [startNewChat]);
+  }, [startNewChat, setInput]);
 
   return (
     <div

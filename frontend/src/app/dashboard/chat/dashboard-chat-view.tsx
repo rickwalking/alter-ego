@@ -2,15 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import {
-  useConversations,
-  useCreateConversation,
-  useSseChat,
-} from "@/modules/conversation";
-import {
-  AGENT_ORIGIN_ALTER_EGO,
-  CONVERSATION_METADATA_AGENT_ORIGIN,
-} from "@/constants/publish-chat";
+import { useConversations, useSseChat } from "@/modules/conversation";
 import {
   mapConversationToDashboard,
   mapMessageToDashboard,
@@ -23,6 +15,7 @@ import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
 import { ChatSidebar } from "@/app/dashboard/chat/chat-sidebar";
+import { useChatSend } from "@/app/dashboard/chat/use-chat-send";
 import { useOffCanvas } from "@/lib/use-off-canvas";
 
 const CHAT_CONVERSATIONS_ID = "chat-conversations";
@@ -32,10 +25,8 @@ export function DashboardChatView(): React.ReactElement {
   const locale = useLocale();
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
-  const [input, setInput] = useState("");
 
   const { data: conversations = [] } = useConversations();
-  const createConversation = useCreateConversation();
 
   const effectiveConvId = useMemo(
     () =>
@@ -64,32 +55,23 @@ export function DashboardChatView(): React.ReactElement {
     [sseMessages, locale],
   );
 
-  const handleSend = useCallback(async () => {
-    const content = input.trim();
-    if (!content || isStreaming) return;
-
-    let convId = effectiveConvId;
-    if (!convId) {
-      const created = await createConversation.mutateAsync({
-        metadata: {
-          [CONVERSATION_METADATA_AGENT_ORIGIN]: AGENT_ORIGIN_ALTER_EGO,
-        },
-      });
-      convId = created.id;
-      setActiveConv(convId);
-      setIsComposingNew(false);
-    }
-
-    setInput("");
-    await sendMessage(content, convId);
-  }, [input, isStreaming, effectiveConvId, createConversation, sendMessage]);
+  const openCreatedConversation = useCallback((id: string) => {
+    setActiveConv(id);
+    setIsComposingNew(false);
+  }, []);
+  const { input, setInput, handleSend } = useChatSend({
+    conversationId: effectiveConvId,
+    isStreaming,
+    sendMessage,
+    onConversationCreated: openCreatedConversation,
+  });
 
   const handleNewChat = useCallback(() => {
     setActiveConv(null);
     setIsComposingNew(true);
     setInput("");
     startNewChat();
-  }, [startNewChat]);
+  }, [startNewChat, setInput]);
 
   const handleSelectConversation = useCallback(
     (id: string) => {
