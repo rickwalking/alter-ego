@@ -926,6 +926,89 @@
       "failed": "Failed",
       "pass": "pass",
       "fail": "fail"
+    },
+    "page": {
+      "title": "Rubrics",
+      "breadcrumb": "quality scoring",
+      "new": "New Rubric",
+      "loadError": "Could not load the rubrics."
+    },
+    "empty": {
+      "title": "No rubrics yet",
+      "body": "A rubric lists the criteria that score your content before it reaches review.",
+      "action": "Create your first rubric"
+    },
+    "panel": {
+      "weight": "Weight: {weight}",
+      "criterion": "Criterion",
+      "excellent": "Excellent (4)",
+      "good": "Good (3)",
+      "poor": "Poor (1-2)",
+      "edit": "Edit",
+      "delete": "Delete",
+      "editLabel": "Edit rubric {name}",
+      "deleteLabel": "Delete rubric {name}",
+      "noCriteria": "This rubric has no criteria yet."
+    },
+    "form": {
+      "createTitle": "New rubric",
+      "editTitle": "Edit rubric",
+      "name": "Name",
+      "namePlaceholder": "e.g. Carousel quality",
+      "description": "Description",
+      "descriptionPlaceholder": "What this rubric checks",
+      "contentTypes": "Applies to",
+      "criteria": "Criteria",
+      "noCriteria": "No criteria yet. Add the first one below.",
+      "addCriterion": "Add criterion",
+      "criterionLegend": "Criterion {number}",
+      "criterionName": "Criterion name",
+      "criterionDescription": "Criterion description",
+      "weight": "Weight (0–1)",
+      "minThreshold": "Minimum threshold (0–1)",
+      "evaluationMethod": "Evaluation method",
+      "scoringScale": "Scoring scale",
+      "promptTemplate": "Evaluation prompt",
+      "promptHint": "For AI evaluation, write {token} where the content goes.",
+      "moveUp": "Move criterion {number} up",
+      "moveDown": "Move criterion {number} down",
+      "remove": "Remove criterion {number}",
+      "cancel": "Cancel",
+      "create": "Create rubric",
+      "save": "Save changes",
+      "unsavedConfirm": "You have unsaved changes to this rubric. Leave without saving?",
+      "fixErrors": "Fix the highlighted fields before saving.",
+      "errors": {
+        "name": "Enter a name of 1 to 255 characters.",
+        "contentTypes": "Choose at least one content type.",
+        "unitInterval": "Enter a number from 0 to 1.",
+        "choice": "Choose an option.",
+        "invalid": "This value is not valid.",
+        "save": "The rubric could not be saved. Check the fields and try again.",
+        "criterionName": "Enter the criterion's name."
+      }
+    },
+    "contentType": {
+      "carousel": "Carousel",
+      "blog_post": "Blog post"
+    },
+    "evaluationMethod": {
+      "ai_auto": "AI (automatic)",
+      "human_required": "Human review",
+      "hybrid": "Hybrid"
+    },
+    "scoringScale": {
+      "0-100": "0–100",
+      "1-10": "1–10",
+      "pass_fail": "Pass / fail",
+      "grade_a_f": "Grade A–F"
+    },
+    "delete": {
+      "title": "Delete rubric",
+      "body": "Delete “{name}”? This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "error": "The rubric could not be deleted."
     }
   },
   "publish": {

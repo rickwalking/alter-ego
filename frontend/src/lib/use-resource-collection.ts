@@ -7,8 +7,24 @@ import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { API_BASE } from "@/constants/api";
+import { responseErrorDetail } from "@/lib/response-error";
 
 const FALLBACK_ERROR = "An error occurred";
+
+/**
+ * A failed collection request. ``message`` keeps the per-resource wording;
+ * ``detail`` is the API's own sentence when it sent one (a string ``detail``),
+ * so a form can show the server's reason next to its fields.
+ */
+export class ResourceRequestError extends Error {
+  readonly detail: string | undefined;
+
+  constructor(message: string, detail: string | undefined) {
+    super(message);
+    this.name = "ResourceRequestError";
+    this.detail = detail;
+  }
+}
 
 export interface ResourceCollectionConfig {
   /** Collection path under the API base, e.g. "personas". */
@@ -34,7 +50,10 @@ async function sendJson<T>(
 ): Promise<T> {
   const response = await authenticatedFetch(url, init);
   if (!response.ok) {
-    throw new Error(failure);
+    throw new ResourceRequestError(
+      failure,
+      await responseErrorDetail(response),
+    );
   }
   return (await response.json()) as T;
 }
@@ -42,7 +61,10 @@ async function sendJson<T>(
 async function removeItem(url: string, failure: string): Promise<void> {
   const response = await authenticatedFetch(url, { method: "DELETE" });
   if (!response.ok) {
-    throw new Error(failure);
+    throw new ResourceRequestError(
+      failure,
+      await responseErrorDetail(response),
+    );
   }
 }
 
