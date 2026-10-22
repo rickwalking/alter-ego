@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getDay } from "date-fns";
 import {
   buildCalendarDaysFromApi,
@@ -13,7 +13,7 @@ import { CALENDAR_WEEK_STARTS_ON } from "./constants";
 import type { CalendarItem } from "@/modules/editorial";
 
 function curDays(anchor: Date): number[] {
-  return buildMonthGrid(anchor)
+  return buildMonthGrid(anchor, null)
     .filter((cell) => cell.cur)
     .map((cell) => cell.day);
 }
@@ -50,7 +50,7 @@ describe("buildMonthGrid", () => {
   });
 
   it("produces full weeks starting on the configured week-start day", () => {
-    const grid = buildMonthGrid(new Date(2026, 1, 1));
+    const grid = buildMonthGrid(new Date(2026, 1, 1), null);
     expect(grid.length % 7).toBe(0);
     expect(getDay(new Date(`${grid[0]!.iso}T00:00:00`))).toBe(
       CALENDAR_WEEK_STARTS_ON,
@@ -59,7 +59,7 @@ describe("buildMonthGrid", () => {
 
   it("pads to whole weeks with the in-month days as one contiguous block", () => {
     // Scenario: weekday alignment with previous/next month padding days.
-    const grid = buildMonthGrid(new Date(2026, 6, 1));
+    const grid = buildMonthGrid(new Date(2026, 6, 1), null);
     const firstInMonth = grid.findIndex((cell) => cell.cur);
     const lastInMonth =
       grid.length - 1 - [...grid].reverse().findIndex((c) => c.cur);
@@ -72,14 +72,34 @@ describe("buildMonthGrid", () => {
   });
 
   it("flags at most one cell as today and none for a far-past month", () => {
-    const past = buildMonthGrid(new Date(2000, 0, 1));
+    const past = buildMonthGrid(new Date(2000, 0, 1), new Date(2026, 9, 21));
     expect(past.every((cell) => !cell.today)).toBe(true);
+  });
+
+  // Scenario: Today is the viewer's local date after the page loads
+  it("highlights the given local day, not the clock it runs on", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 21, 12));
+    const grid = buildMonthGrid(new Date(2026, 9, 1), new Date(2026, 9, 15));
+    vi.useRealTimers();
+    expect(grid.filter((cell) => cell.today).map((cell) => cell.iso)).toEqual([
+      "2026-10-15",
+    ]);
+  });
+
+  // Scenario: The server render highlights no day
+  it("highlights nothing while today is unknown", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 21, 12));
+    const grid = buildMonthGrid(new Date(2026, 9, 1), null);
+    vi.useRealTimers();
+    expect(grid.some((cell) => cell.today)).toBe(false);
   });
 });
 
 describe("calendarGridRange", () => {
   it("spans from the first visible cell to the last visible cell", () => {
-    const grid = buildMonthGrid(new Date(2026, 6, 1));
+    const grid = buildMonthGrid(new Date(2026, 6, 1), null);
     const { start, end } = calendarGridRange(new Date(2026, 6, 1));
     expect(getDay(start)).toBe(CALENDAR_WEEK_STARTS_ON);
     expect(start.getDate()).toBe(grid[0]!.day);
@@ -90,9 +110,11 @@ describe("calendarGridRange", () => {
 describe("buildCalendarDaysFromApi", () => {
   it("places an event on its true calendar date", () => {
     // Scenario: events appear on their real date (July 2026)
-    const grid = buildCalendarDaysFromApi(new Date(2026, 6, 1), [
-      makeItem({ event_date: "2026-07-10" }),
-    ]);
+    const grid = buildCalendarDaysFromApi(
+      new Date(2026, 6, 1),
+      [makeItem({ event_date: "2026-07-10" })],
+      null,
+    );
     const cell = grid.find((c) => c.iso === "2026-07-10");
     expect(cell?.events).toHaveLength(1);
     expect(cell?.events[0]!.title).toBe("Launch");
@@ -100,21 +122,25 @@ describe("buildCalendarDaysFromApi", () => {
 
   it("does not bleed an event from another month onto the same day-of-month", () => {
     // Scenario: an August 10 item must not show on July 10
-    const grid = buildCalendarDaysFromApi(new Date(2026, 6, 1), [
-      makeItem({ event_date: "2026-08-10", title: "August launch" }),
-    ]);
+    const grid = buildCalendarDaysFromApi(
+      new Date(2026, 6, 1),
+      [makeItem({ event_date: "2026-08-10", title: "August launch" })],
+      null,
+    );
     expect(grid.find((c) => c.iso === "2026-07-10")?.events).toHaveLength(0);
   });
 
   it("matches by the date prefix so a UTC time component cannot shift the day", () => {
-    const grid = buildCalendarDaysFromApi(new Date(2026, 6, 1), [
-      makeItem({ event_date: "2026-07-10T23:30:00Z" }),
-    ]);
+    const grid = buildCalendarDaysFromApi(
+      new Date(2026, 6, 1),
+      [makeItem({ event_date: "2026-07-10T23:30:00Z" })],
+      null,
+    );
     expect(grid.find((c) => c.iso === "2026-07-10")?.events).toHaveLength(1);
   });
 
   it("falls back to an empty grid shape when there are no items", () => {
-    const empty = buildEmptyCalendarDays(new Date(2026, 6, 1));
+    const empty = buildEmptyCalendarDays(new Date(2026, 6, 1), null);
     expect(empty.every((cell) => cell.events.length === 0)).toBe(true);
     expect(empty.some((cell) => cell.cur)).toBe(true);
   });
