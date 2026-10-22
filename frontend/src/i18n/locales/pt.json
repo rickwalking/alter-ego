@@ -1009,7 +1009,8 @@
         "choice": "Escolha uma opção.",
         "invalid": "Este valor não é válido.",
         "save": "Não foi possível salvar a rubrica. Confira os campos e tente de novo.",
-        "criterionName": "Informe o nome do critério."
+        "criterionName": "Informe o nome do critério.",
+        "criteriaRequired": "Adicione ao menos um critério."
       }
     },
     "contentType": {

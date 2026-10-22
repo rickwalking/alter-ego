@@ -6594,6 +6594,7 @@
             "items": {
               "$ref": "#/components/schemas/RubricCriterion"
             },
+            "minItems": 1,
             "title": "Criteria",
             "type": "array"
           },
@@ -6621,7 +6622,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "criteria"
         ],
         "title": "QualityRubricCreate",
         "type": "object"
@@ -6740,6 +6742,7 @@
                 "items": {
                   "$ref": "#/components/schemas/RubricCriterion"
                 },
+                "minItems": 1,
                 "type": "array"
               },
               {

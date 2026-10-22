@@ -97,7 +97,7 @@ class QualityRubricCreate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
-    criteria: list[RubricCriterion] = Field(default_factory=list)
+    criteria: list[RubricCriterion] = Field(..., min_length=1)
     applicable_content_types: list[str] = Field(default_factory=lambda: ["carousel"])
     is_default: bool = False
 
@@ -107,7 +107,7 @@ class QualityRubricUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
-    criteria: list[RubricCriterion] | None = None
+    criteria: Annotated[list[RubricCriterion], Field(min_length=1)] | None = None
     applicable_content_types: list[str] | None = None
     is_default: bool | None = None
 
