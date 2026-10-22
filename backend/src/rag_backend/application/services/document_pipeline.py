@@ -1,5 +1,11 @@
 """Document processing pipeline service."""
 
+from rag_backend.domain.constants.documents import (
+    FAILURE_EMBEDDING_UNAVAILABLE,
+    FAILURE_EMPTY_CONTENT,
+    FAILURE_PROCESSING_ERROR,
+    FAILURE_VECTOR_STORE_UNAVAILABLE,
+)
 from rag_backend.domain.models import Document, DocumentStatus
 from rag_backend.domain.protocols import (
     DocumentProcessor,
@@ -39,12 +45,25 @@ class DocumentProcessingPipeline:
     async def process_document(self, document: Document) -> Document:
         """Process a document through the complete pipeline.
 
+        A failure marks the document failed and re-raises, so an ingest's Unit
+        of Work rolls back and nothing partial is persisted.
+
         Args:
             document: The document to process
 
         Returns:
             The processed document with updated status
         """
+        return await self._run(document, record_failure=False)
+
+    async def _run(self, document: Document, *, record_failure: bool) -> Document:
+        """Chunk, embed and upsert; on error mark failed, then raise or return.
+
+        The saved reason is a fixed code naming the step that failed, never the
+        error text (provider errors can carry hosts, URLs or key fragments); the
+        error itself is only logged.
+        """
+        reason = FAILURE_PROCESSING_ERROR
         logger.info(
             "pipeline_process_start",
             document_id=str(document.id),
@@ -55,11 +74,13 @@ class DocumentProcessingPipeline:
             document.update_status(DocumentStatus.PROCESSING)
             await self._document_repository.update(document)
 
+            reason = FAILURE_EMBEDDING_UNAVAILABLE
             chunks = await self._document_processor.process(document)
+            reason = FAILURE_PROCESSING_ERROR
 
             if not chunks:
                 logger.warning("pipeline_no_chunks", document_id=str(document.id))
-                document.mark_failed("No chunks generated from document")
+                document.mark_failed(FAILURE_EMPTY_CONTENT)
                 await self._document_repository.update(document)
                 return document
 
@@ -70,9 +91,11 @@ class DocumentProcessingPipeline:
             )
 
             namespace = document.scope.value
+            reason = FAILURE_VECTOR_STORE_UNAVAILABLE
             await self._vector_store.upsert_chunks(
                 chunks, document.id, namespace=namespace
             )
+            reason = FAILURE_PROCESSING_ERROR
 
             document.mark_completed(chunk_count=len(chunks))
             await self._document_repository.update(document)
@@ -87,11 +110,13 @@ class DocumentProcessingPipeline:
             logger.exception(
                 "pipeline_failed",
                 document_id=str(document.id),
+                reason=reason,
             )
             e.add_note(PIPELINE_FAILURE_LOGGED)
-            document.mark_failed(str(e))
+            document.mark_failed(reason)
             await self._document_repository.update(document)
-            raise
+            if not record_failure:
+                raise
 
         return document
 
@@ -105,7 +130,9 @@ class DocumentProcessingPipeline:
             The reprocessed document
 
         Existing chunks are deleted from the current scope's namespace before
-        reprocessing.
+        reprocessing. A processing failure is recorded on the document (status
+        failed + reason) and returned instead of raised, so the caller's Unit
+        of Work commits it and the document never stays pending.
         """
         from uuid import UUID
 
@@ -122,7 +149,7 @@ class DocumentProcessingPipeline:
         document.chunk_count = 0
         await self._document_repository.update(document)
 
-        return await self.process_document(document)
+        return await self._run(document, record_failure=True)
 
     async def delete_document(self, document_id: str) -> bool:
         """Delete a document and its vectors.

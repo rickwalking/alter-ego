@@ -15,6 +15,7 @@ import {
   useCreateDocument,
   useDeleteDocument,
 } from "../hooks/use-documents";
+import { useDocumentRetries } from "../hooks/use-document-retries";
 import { DocumentList } from "./document-list";
 import { DocumentListSkeleton } from "./document-list-skeleton";
 import { DocumentForm } from "./document-form";
@@ -41,6 +42,9 @@ function DocumentListSection({
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
+  onRetryDocument,
+  retryingIds,
+  retryFailedIds,
 }: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
@@ -60,6 +64,9 @@ function DocumentListSection({
       onCreateNew={onCreateNew}
       onUploadNew={onUploadNew}
       onDeleteDocument={onDeleteDocument}
+      onRetryDocument={onRetryDocument}
+      retryingIds={retryingIds}
+      retryFailedIds={retryFailedIds}
     />
   );
 }
@@ -70,6 +77,7 @@ export function KnowledgeBaseInterface() {
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
   const isClient = useIsClient();
+  const { retry, retryingIds, retryFailedIds } = useDocumentRetries();
 
   const handleCreateNew = useCallback(() => {
     setViewMode("create");
@@ -82,12 +90,13 @@ export function KnowledgeBaseInterface() {
   const handleSubmit = useCallback(
     (data: CreateDocumentRequest) => {
       createDocument.mutate(data, {
-        onSuccess: () => {
+        onSuccess: (created) => {
           setViewMode("list");
+          retry(created.id);
         },
       });
     },
-    [createDocument],
+    [createDocument, retry],
   );
 
   const handleUploadComplete = useCallback(() => {
@@ -116,6 +125,9 @@ export function KnowledgeBaseInterface() {
             onCreateNew={handleCreateNew}
             onUploadNew={handleUploadNew}
             onDeleteDocument={handleDelete}
+            onRetryDocument={retry}
+            retryingIds={retryingIds}
+            retryFailedIds={retryFailedIds}
           />
         </Suspense>
       );

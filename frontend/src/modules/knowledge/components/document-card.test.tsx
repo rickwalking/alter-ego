@@ -135,17 +135,19 @@ describe("DocumentCard Component", () => {
         const errorDoc: Document = {
           ...mockDocument,
           status: "failed",
-          error_message: "Processing failed",
+          error_message: "empty_content",
         };
         render(<DocumentCard document={errorDoc} />);
-        expect(screen.getByText("Processing failed")).toBeInTheDocument();
+        expect(
+          screen.getByText("The document has no text to index."),
+        ).toBeInTheDocument();
       });
     });
 
     describe("When the document status is displayed", () => {
       it("Then the status badge should be visible", () => {
         render(<DocumentCard document={mockDocument} />);
-        expect(screen.getByText("completed")).toBeInTheDocument();
+        expect(screen.getByText("Completed")).toBeInTheDocument();
       });
     });
   });

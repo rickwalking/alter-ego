@@ -204,10 +204,11 @@ async def create_document(
     user: Annotated[User, Depends(require_editor_or_admin)],
     service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
-    """Create a new document and start processing.
+    """Create a new document (status ``pending``, not processed yet).
 
-    The document will be queued for processing (chunking and embedding generation).
-    Check the status field to track progress.
+    Chunking and embedding run through ``POST /{document_id}/reprocess``, which
+    the dashboard calls right after a create; a processing failure is saved on
+    the document as ``failed`` with its reason.
     """
     doc_scope = _parse_scope(request.scope)
     command = CreateDocumentCommand(

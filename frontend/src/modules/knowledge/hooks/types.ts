@@ -33,3 +33,12 @@ export type FilePick = Pick<
   FileUploadForm,
   "isDragging" | "selectedFile" | "dropZone" | "onFileInput"
 > & { setSelectedFile: (file: File | null) => void };
+
+/** Per-document retry state of the knowledge list. */
+export interface DocumentRetries {
+  /** Ids whose reprocess request is in flight. */
+  retryingIds: ReadonlySet<string>;
+  /** Ids whose last reprocess request failed. */
+  retryFailedIds: ReadonlySet<string>;
+  retry: (id: string) => void;
+}

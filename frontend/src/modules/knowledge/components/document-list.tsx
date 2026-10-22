@@ -8,11 +8,16 @@ import { Search, Plus, Upload } from "lucide-react";
 import { DocumentCard } from "./document-card";
 import { type DocumentListProps } from "./types";
 
+const NO_IDS: ReadonlySet<string> = new Set();
+
 export function DocumentList({
   documents,
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
+  onRetryDocument,
+  retryingIds = NO_IDS,
+  retryFailedIds = NO_IDS,
 }: Readonly<DocumentListProps>) {
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,6 +72,11 @@ export function DocumentList({
               key={document.id}
               document={document}
               onDelete={() => onDeleteDocument(document.id)}
+              onRetry={
+                onRetryDocument ? () => onRetryDocument(document.id) : undefined
+              }
+              retrying={retryingIds.has(document.id)}
+              retryFailed={retryFailedIds.has(document.id)}
             />
           ))}
         </div>
