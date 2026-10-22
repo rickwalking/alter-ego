@@ -1151,6 +1151,24 @@
       "privateWarning": "This carousel is private: the post will return 404 on the public site until the carousel is public.",
       "exists": "This carousel already has a blog post, so no new one was created.",
       "openExisting": "Open the existing post"
+    },
+    "copy": {
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "unsaved": "Unsaved changes. Save to copy or publish.",
+      "errors": {
+        "save": "Could not save. Try again.",
+        "stale": "This carousel changed since the page opened. Reload the page and save again (copy your text first).",
+        "captionPublished": "The caption is already published on Instagram and can no longer be changed.",
+        "runInProgress": "A workflow step is running. Save when it finishes."
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "body": "You have unsaved changes to the caption or the LinkedIn post. If you leave now, they will be lost.",
+        "confirm": "Discard and leave",
+        "cancel": "Keep editing"
+      }
     }
   },
   "auth": {

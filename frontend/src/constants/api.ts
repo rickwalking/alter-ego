@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
     return `/api/carousels/${id}/design${query}`;
   },
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
+  CAROUSEL_COPY: (id: string) => `/api/carousels/${id}/copy`,
   CAROUSEL_PUBLIC: (id: string) => `/api/carousels/${id}/public`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,

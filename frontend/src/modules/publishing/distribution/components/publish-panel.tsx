@@ -9,8 +9,13 @@ import {
   slideUrlsForPublishPanel,
 } from "@/lib/carousel-media-url";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
-import { InstagramTab, LanguageTabs, LinkedInTab } from "./publish-panel-tabs";
-import type { EditorState, PublishPanelProps } from "./types";
+import { InstagramTab, LinkedInTab } from "./publish-panel-tabs";
+import { LanguageTabs } from "./publish-panel-parts";
+import { LeaveGuardDialog } from "./leave-guard-dialog";
+import type { PublishPanelProps } from "./types";
+import { useCopyEditor } from "@/modules/publishing/distribution/hooks/use-copy-editor";
+import { useLeaveGuard } from "@/modules/publishing/distribution/hooks/use-leave-guard";
+import type { CopyField } from "@/modules/publishing/distribution/hooks/types";
 import {
   viewerSlidePaths,
   viewerSlideTitle,
@@ -21,6 +26,13 @@ import type {
 } from "@/modules/publishing/distribution/types";
 
 type LanguageTab = ViewerLanguage;
+
+const CAPTION_ONLY: readonly CopyField[] = ["caption"];
+const LINKEDIN_POSTS: readonly CopyField[] = ["linkedinPt", "linkedinEn"];
+const LINKEDIN_AND_CAPTION: readonly CopyField[] = [
+  ...CAPTION_ONLY,
+  ...LINKEDIN_POSTS,
+];
 type ActiveTab = "instagram" | "linkedin";
 
 /**
@@ -60,19 +72,6 @@ function pdfUrl(
   );
 }
 
-function createEditorState(project: CarouselProjectResponse): EditorState {
-  return {
-    seed: JSON.stringify([
-      project.caption ?? "",
-      project.linkedin_post_pt ?? "",
-      project.linkedin_post_en ?? "",
-    ]),
-    caption: project.caption ?? "",
-    linkedinPt: project.linkedin_post_pt ?? "",
-    linkedinEn: project.linkedin_post_en ?? "",
-  };
-}
-
 export function PublishPanel({
   project,
   onPublishInstagram,
@@ -80,35 +79,30 @@ export function PublishPanel({
   publishResult,
   cacheBustToken,
   slideNumbers,
+  onSaveCopy,
 }: Readonly<PublishPanelProps>) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
   const [language, setLanguage] = useState<LanguageTab>("pt");
-  const incomingEditorState = createEditorState(project);
-  const [editorState, setEditorState] = useState(incomingEditorState);
-  const editor =
-    editorState.seed === incomingEditorState.seed
-      ? editorState
-      : incomingEditorState;
-
-  if (editorState.seed !== incomingEditorState.seed) {
-    setEditorState(incomingEditorState);
-  }
+  const editor = useCopyEditor(project, onSaveCopy);
+  const guard = useLeaveGuard(
+    editor.canSave && editor.isDirty(LINKEDIN_AND_CAPTION),
+  );
 
   const slideUrls = slideUrlsFromProject(
     { project, language, slideNumbers },
     cacheBustToken,
   );
-  const activeLinkedInText =
-    language === "pt" ? editor.linkedinPt : editor.linkedinEn;
-  const setCaption = (caption: string) =>
-    setEditorState((state) => ({ ...state, seed: editor.seed, caption }));
-  const setActiveLinkedInText = (text: string) =>
-    setEditorState((state) => ({
-      ...state,
-      seed: editor.seed,
-      ...(language === "pt" ? { linkedinPt: text } : { linkedinEn: text }),
-    }));
+  const activeLinkedInField: CopyField =
+    language === "pt" ? "linkedinPt" : "linkedinEn";
+  const saveBar = (fields: readonly CopyField[]) =>
+    editor.canSave
+      ? {
+          dirty: editor.isDirty(fields),
+          status: editor.status,
+          onSave: () => editor.save(fields),
+        }
+      : undefined;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
@@ -159,8 +153,9 @@ export function PublishPanel({
 
         {activeTab === "instagram" && (
           <InstagramTab
-            caption={editor.caption}
-            onCaptionChange={setCaption}
+            caption={editor.draft.caption}
+            onCaptionChange={(text) => editor.setText("caption", text)}
+            save={saveBar(CAPTION_ONLY)}
             language={language}
             onPublishInstagram={onPublishInstagram}
             isPublishingInstagram={isPublishingInstagram}
@@ -169,14 +164,16 @@ export function PublishPanel({
         )}
         {activeTab === "linkedin" && (
           <LinkedInTab
-            text={activeLinkedInText}
-            onTextChange={setActiveLinkedInText}
+            text={editor.draft[activeLinkedInField]}
+            onTextChange={(text) => editor.setText(activeLinkedInField, text)}
+            save={saveBar(LINKEDIN_POSTS)}
             language={language}
             setLanguage={setLanguage}
             pdfHref={pdfUrl(project, language, cacheBustToken)}
           />
         )}
       </section>
+      <LeaveGuardDialog guard={guard} />
     </div>
   );
 }
