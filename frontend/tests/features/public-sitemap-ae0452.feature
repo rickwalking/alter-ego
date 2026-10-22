@@ -26,7 +26,7 @@ Feature: The sitemap and robots.txt describe the real public site
   Scenario: A carousel share image uses the production domain
     Given a public carousel whose cover is a site-relative image
     When its viewer page metadata is generated
-    Then the Open Graph image URL starts with "https://marinssolutions.com"
+    Then the Open Graph and Twitter image URLs start with "https://marinssolutions.com"
 
   Scenario: The sitemap pages through feeds longer than one page
     Given more published posts and public carousels than one feed page holds

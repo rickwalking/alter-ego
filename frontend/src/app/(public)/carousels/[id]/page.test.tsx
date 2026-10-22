@@ -75,6 +75,23 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
     });
   });
 
+  it("serves og:image and twitter:image from the production domain", async () => {
+    // Scenario: A carousel share image uses the production domain
+    mockFetch.mockResolvedValueOnce(carousel());
+
+    const metadata = await generateMetadata(props("meta-share", "en"));
+    const shareImages = [
+      ...[metadata.openGraph?.images ?? []].flat(),
+      ...[metadata.twitter?.images ?? []].flat(),
+    ].map(String);
+
+    expect(shareImages).toEqual([
+      "https://marinssolutions.com/pt-1.jpg",
+      "https://marinssolutions.com/pt-1.jpg",
+    ]);
+    expect(shareImages.some((url) => url.includes("alterego.app"))).toBe(false);
+  });
+
   it("falls back to the UI locale for an unknown lang", async () => {
     mockFetch.mockResolvedValueOnce(carousel());
 
