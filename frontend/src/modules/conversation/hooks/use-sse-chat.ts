@@ -247,14 +247,19 @@ function useRunChatTurn(
   );
 }
 
-/** Send one turn at a time: a second send while one is in flight is ignored. */
+/**
+ * Send one turn at a time: a second send while one is in flight is ignored.
+ * ``isBusy`` answers synchronously, so a caller can check before it clears
+ * the composer.
+ */
 function useSendChatMessage(
   deps: SendChatDeps,
-): UseSseChatReturn["sendMessage"] {
+): Pick<UseSseChatReturn, "sendMessage" | "isBusy"> {
   const { conversationId } = deps;
   const inFlightRef = useRef(false);
   const runTurn = useRunChatTurn(deps);
-  return useCallback(
+  const isBusy = useCallback(() => inFlightRef.current, []);
+  const sendMessage = useCallback(
     async (content: string, target?: ConversationTarget | null) => {
       const trimmed = content.trim();
       const resolved = target ?? conversationId;
@@ -270,25 +275,18 @@ function useSendChatMessage(
     },
     [conversationId, runTurn],
   );
+  return { sendMessage, isBusy };
 }
 
-export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
-  const stream = useChatStream(
-    SSE_CHAT_USER_ID_PREFIX,
-    STREAM_MESSAGE_ID_PREFIX,
-  );
-  const { optimisticMessages, setOptimisticMessages, isStreaming } = stream;
-  const { abortRef, setIsStreaming, resetStreamingRefs } = stream;
-  const [error, setError] = useState<string | null>(null);
-  const conversationId = options.conversationId ?? null;
-  const loadHistory = options.enableHistory !== false;
-  const { finalizedRef, turnRef, finalizeStream } = useFinalizeStream(
-    stream,
-    loadHistory,
-  );
-  const historyMessages = useHistory(loadHistory, conversationId);
-
-  const startNewChat = useCallback(() => {
+/** Abort the turn in flight and clear the chat (stale refetches see a new turn). */
+function useStartNewChat(
+  stream: ChatStreamState,
+  turnRef: RefObject<number>,
+  setError: SendChatDeps["setError"],
+): () => void {
+  const { abortRef, setOptimisticMessages, setIsStreaming } = stream;
+  const { resetStreamingRefs } = stream;
+  return useCallback(() => {
     turnRef.current += 1;
     abortRef.current?.abort();
     setOptimisticMessages([]);
@@ -300,10 +298,29 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     abortRef,
     setOptimisticMessages,
     setIsStreaming,
+    setError,
     resetStreamingRefs,
   ]);
+}
 
-  const sendMessage = useSendChatMessage({
+export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
+  const stream = useChatStream(
+    SSE_CHAT_USER_ID_PREFIX,
+    STREAM_MESSAGE_ID_PREFIX,
+  );
+  const { optimisticMessages, isStreaming } = stream;
+  const [error, setError] = useState<string | null>(null);
+  const conversationId = options.conversationId ?? null;
+  const loadHistory = options.enableHistory !== false;
+  const { finalizedRef, turnRef, finalizeStream } = useFinalizeStream(
+    stream,
+    loadHistory,
+  );
+  const historyMessages = useHistory(loadHistory, conversationId);
+
+  const startNewChat = useStartNewChat(stream, turnRef, setError);
+
+  const { sendMessage, isBusy } = useSendChatMessage({
     stream,
     conversationId,
     setError,
@@ -323,6 +340,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     isStreaming,
     error,
     sendMessage,
+    isBusy,
     startNewChat,
   };
 }

@@ -37,6 +37,7 @@ async function sendAndCaptureCreator(onCreated: (id: string) => void) {
       conversationId: null,
       isStreaming: false,
       sendMessage: mocks.sendMessage,
+      isBusy: () => false,
       onConversationCreated: onCreated,
     }),
   );
@@ -66,5 +67,24 @@ describe("useChatSend conversation creation", () => {
 
     await creator(abandoned.signal);
     expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  // Scenario: A double send while the conversation is being created sends one message
+  it("keeps the typed text when a turn is still in flight", async () => {
+    mocks.sendMessage.mockClear();
+    const { result } = renderHook(() =>
+      useChatSend({
+        conversationId: "conv-1",
+        isStreaming: false,
+        sendMessage: mocks.sendMessage,
+        isBusy: () => true,
+        onConversationCreated: vi.fn(),
+      }),
+    );
+    act(() => result.current.setInput("do not lose me"));
+    await act(() => result.current.handleSend());
+
+    expect(mocks.sendMessage).not.toHaveBeenCalled();
+    expect(result.current.input).toBe("do not lose me");
   });
 });

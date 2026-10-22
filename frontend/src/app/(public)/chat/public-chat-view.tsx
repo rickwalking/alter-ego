@@ -25,6 +25,7 @@ export function PublicChatView(): React.ReactElement {
     isStreaming,
     error: sseError,
     sendMessage,
+    isBusy,
     startNewChat,
   } = useSseChat({
     conversationId: activeConv,
@@ -35,6 +36,7 @@ export function PublicChatView(): React.ReactElement {
     conversationId: activeConv,
     isStreaming,
     sendMessage,
+    isBusy,
     onConversationCreated: setActiveConv,
   });
 

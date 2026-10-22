@@ -21,6 +21,7 @@ export function useChatSend({
   conversationId,
   isStreaming,
   sendMessage,
+  isBusy,
   onConversationCreated,
 }: UseChatSendOptions): UseChatSendReturn {
   const [input, setInput] = useState("");
@@ -43,7 +44,7 @@ export function useChatSend({
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if (!content || isStreaming) return;
+    if (!content || isStreaming || isBusy()) return;
     setInput("");
     const result = await sendMessage(
       content,
@@ -55,6 +56,7 @@ export function useChatSend({
   }, [
     input,
     isStreaming,
+    isBusy,
     conversationId,
     createAndOpenConversation,
     sendMessage,

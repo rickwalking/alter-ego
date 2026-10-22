@@ -22,6 +22,7 @@ vi.mock("@/modules/conversation", () => ({
     isStreaming: false,
     error: null,
     sendMessage: mocks.sendMessage,
+    isBusy: () => false,
     startNewChat: vi.fn(),
   }),
 }));

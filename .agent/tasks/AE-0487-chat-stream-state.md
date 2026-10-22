@@ -5,7 +5,7 @@ Tier: T1
 Priority: High
 Type: Bug
 Area: Frontend
-Owner: Worker (Claude) — /chat QA (AE-0486 follow-up), CHAT-02, CHAT-05, CHAT-06, CHAT-09
+Owner: Claude — /chat QA (AE-0486 follow-up), CHAT-02, CHAT-05, CHAT-06, CHAT-09
 Branch: fix/ae-0486-chat-stream-state
 Created: 2026-10-22
 Updated: 2026-10-22
@@ -37,13 +37,15 @@ Found by the /chat QA:
 - `useSseChat().sendMessage(content, target)` takes the conversation id or a creator, shows the user bubble and the
   typing state at once, ignores a second send while a turn is in flight, and returns `sent` / `failed` / `ignored`.
   On `failed` the views give the text back; the next send replaces the unanswered bubble.
+- `useSseChat().isBusy()` answers synchronously; the composer checks it before clearing, so a send that would be
+  ignored keeps the typed text (added during review).
 - `useStickToBottom` keeps the list pinned to the bottom unless the reader scrolled up (their own send re-pins it).
 - Backend: the agent's `complete` is not forwarded; the service's one (after saving) is the only one.
 
 ## Non-Goals
 
 - Localized error copy and Retry (separate /chat PR).
-- Incremental server streaming (see WORKER FINDING in the PR).
+- Incremental server streaming (the server still sends the reply at the end; tracked separately).
 
 ## Acceptance Criteria
 

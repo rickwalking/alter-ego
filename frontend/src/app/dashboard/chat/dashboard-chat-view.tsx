@@ -39,6 +39,7 @@ export function DashboardChatView(): React.ReactElement {
     isStreaming,
     error: sseError,
     sendMessage,
+    isBusy,
     startNewChat,
   } = useSseChat({ conversationId: effectiveConvId });
 
@@ -63,6 +64,7 @@ export function DashboardChatView(): React.ReactElement {
     conversationId: effectiveConvId,
     isStreaming,
     sendMessage,
+    isBusy,
     onConversationCreated: openCreatedConversation,
   });
 

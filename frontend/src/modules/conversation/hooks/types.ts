@@ -40,6 +40,8 @@ export interface UseSseChatReturn {
     content: string,
     target?: ConversationTarget | null,
   ) => Promise<ChatSendResult>;
+  /** Whether a turn is in flight right now (``sendMessage`` would ignore a send). */
+  isBusy: () => boolean;
   startNewChat: () => void;
 }
 

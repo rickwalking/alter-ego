@@ -11,6 +11,8 @@ export interface UseChatSendOptions {
   conversationId: string | null;
   isStreaming: boolean;
   sendMessage: UseSseChatReturn["sendMessage"];
+  /** A turn is in flight: a send now would be ignored, so keep the text. */
+  isBusy: UseSseChatReturn["isBusy"];
   /** Called with the new id once the first send created the conversation. */
   onConversationCreated: (id: string) => void;
 }

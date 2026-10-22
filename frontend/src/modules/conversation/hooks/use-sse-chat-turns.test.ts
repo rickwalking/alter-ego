@@ -230,4 +230,23 @@ describe("useSseChat turns", () => {
 
     expect(result.current.messages.map((m) => m.content)).toContain("second");
   });
+
+  // Scenario: A double send while the conversation is being created sends one message
+  it("reports busy synchronously while a turn is in flight", async () => {
+    const stream = controllableStream();
+    const { result } = renderChat({ conversationId: CONV_ID });
+    expect(result.current.isBusy()).toBe(false);
+
+    await act(async () => {
+      void result.current.sendMessage("hi");
+      await Promise.resolve();
+    });
+    expect(result.current.isBusy()).toBe(true);
+
+    stream.complete();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.isBusy()).toBe(false);
+  });
 });
