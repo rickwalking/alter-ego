@@ -140,6 +140,22 @@ function onPollAnswered(
   }
 }
 
+/**
+ * True while the hook is mounted; unmounting also cancels the scheduled poll,
+ * so a poll answered after the page is gone cannot re-arm the loop.
+ */
+function useMountedPolling(clearPollTimeout: () => void): RefObject<boolean> {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearPollTimeout();
+    };
+  }, [clearPollTimeout]);
+  return mountedRef;
+}
+
 /** One poll after the backoff delay; it re-arms itself while polling. */
 function useSchedulePoll(
   refs: WorkflowStreamRefs,
@@ -147,11 +163,13 @@ function useSchedulePoll(
   refreshState: UseEditorialWorkflowSseParams["refreshState"],
 ): () => void {
   const scheduleRef = useRef<(() => void) | null>(null);
+  const mountedRef = useMountedPolling(clearPollTimeout);
   const { phaseStatusRef, transportModeRef, backoffIndexRef, pollTimeoutRef } =
     refs;
   const schedulePollFallback = useCallback((): void => {
     clearPollTimeout();
     if (
+      !mountedRef.current ||
       !shouldPollWorkflowState(
         phaseStatusRef.current,
         transportModeRef.current,
@@ -174,6 +192,7 @@ function useSchedulePoll(
     }, delay);
   }, [
     clearPollTimeout,
+    mountedRef,
     refreshState,
     stopPollingFallback,
     refs,

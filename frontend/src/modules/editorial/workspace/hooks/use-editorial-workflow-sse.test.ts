@@ -458,3 +458,50 @@ describe("useEditorialWorkflowSse", () => {
     });
   });
 });
+
+describe("useEditorialWorkflowSse polling after unmount", () => {
+  const maxBackoff = Math.max(...EDITORIAL_WORKFLOW_POLL_BACKOFF_MS);
+
+  it("does not poll again when an in-flight poll answers after unmount", async () => {
+    // Scenario: A poll answered after unmount does not schedule another poll
+    const { refreshState, rerender, unmount } = renderSseHook();
+    let answer!: (state: EditorialWorkflowState) => void;
+    const pending = new Promise<EditorialWorkflowState>((resolve) => {
+      answer = resolve;
+    });
+    refreshState.mockImplementationOnce(() => pending);
+    vi.useFakeTimers();
+    rerender({
+      state: baseState,
+      transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[0]);
+    });
+    expect(refreshState).toHaveBeenCalledTimes(1);
+
+    unmount();
+    await act(async () => {
+      answer(baseState);
+      await vi.advanceTimersByTimeAsync(maxBackoff * 3);
+    });
+
+    expect(refreshState).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the scheduled poll on unmount when EventSource is missing", async () => {
+    // Scenario: A scheduled poll is cancelled on unmount without live updates support
+    vi.stubGlobal("EventSource", undefined);
+    vi.useFakeTimers();
+    const { refreshState, unmount } = renderSseHook({
+      transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK,
+    });
+
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(maxBackoff * 3);
+    });
+
+    expect(refreshState).not.toHaveBeenCalled();
+  });
+});
