@@ -41,7 +41,7 @@ function FeaturedPostImage({
         overflow: "hidden",
       }}
     >
-      <span>▸ carousel_preview.jpg</span>
+      <span aria-hidden="true">▸ carousel_preview.jpg</span>
       <PublicCoverImage
         src={imageUrl}
         alt=""

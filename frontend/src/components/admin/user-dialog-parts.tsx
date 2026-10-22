@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 
 export interface UserItem {
@@ -53,7 +53,7 @@ export function useDialogStatus(): DialogStatus {
 const CANCEL_BUTTON_CLASS =
   "rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50";
 const PRIMARY_BUTTON_CLASS =
-  "rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50";
+  "rounded-md bg-primary-700 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-800 disabled:opacity-50";
 const DESTRUCTIVE_BUTTON_CLASS =
   "rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
 
@@ -79,7 +79,7 @@ export function UserDialogShell({
         {subtitle}
 
         {error && (
-          <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800">
             {error}
           </div>
         )}
@@ -141,10 +141,14 @@ export function UserRoleSelect({
   onChange,
 }: Readonly<UserRoleSelectProps>) {
   const t = useTranslations("admin");
+  const selectId = useId();
   return (
     <div>
-      <label className={FIELD_LABEL_CLASS}>{t("roleLabel")}</label>
+      <label htmlFor={selectId} className={FIELD_LABEL_CLASS}>
+        {t("roleLabel")}
+      </label>
       <select
+        id={selectId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={FIELD_INPUT_CLASS}

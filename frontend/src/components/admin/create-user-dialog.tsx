@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { responseErrorDetail } from "@/lib/response-error";
 import {
@@ -22,6 +22,7 @@ export function CreateUserDialog({
   onSuccess,
 }: Readonly<CreateUserDialogProps>) {
   const t = useTranslations("admin");
+  const fieldId = useId();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("editor");
@@ -88,8 +89,11 @@ export function CreateUserDialog({
         className="mt-4 space-y-4"
       >
         <div>
-          <label className={FIELD_LABEL_CLASS}>{t("emailLabel")}</label>
+          <label htmlFor={`${fieldId}-email`} className={FIELD_LABEL_CLASS}>
+            {t("emailLabel")}
+          </label>
           <input
+            id={`${fieldId}-email`}
             type="email"
             required
             value={email}
@@ -99,8 +103,11 @@ export function CreateUserDialog({
         </div>
 
         <div>
-          <label className={FIELD_LABEL_CLASS}>{t("fullNameLabel")}</label>
+          <label htmlFor={`${fieldId}-full-name`} className={FIELD_LABEL_CLASS}>
+            {t("fullNameLabel")}
+          </label>
           <input
+            id={`${fieldId}-full-name`}
             type="text"
             required
             value={fullName}
@@ -112,13 +119,14 @@ export function CreateUserDialog({
         <UserRoleSelect value={role} onChange={setRole} />
 
         <div>
-          <label className={FIELD_LABEL_CLASS}>
+          <label htmlFor={`${fieldId}-password`} className={FIELD_LABEL_CLASS}>
             {t("passwordLabel")}
             <span className="ml-1 text-xs text-gray-500">
               ({t("passwordOptional")})
             </span>
           </label>
           <input
+            id={`${fieldId}-password`}
             type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

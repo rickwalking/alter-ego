@@ -45,7 +45,8 @@
       "adminUsers": "Users"
     },
     "logout": "Logout",
-    "login": "Login"
+    "login": "Login",
+    "skipToContent": "Skip to content"
   },
   "home": {
     "hero": {

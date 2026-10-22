@@ -67,7 +67,6 @@ function SecondaryFeatureCard({
   return (
     <Link
       href={feat.href}
-      aria-label={feat.title}
       className={cn(
         feat.accentClass,
         MARKETING_CARD_FOCUS,

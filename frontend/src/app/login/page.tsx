@@ -6,6 +6,8 @@ import {
   NeonScanlineOverlay,
 } from "@/components/organisms";
 import { BG_DEEP, TEXT } from "@/constants/neon";
+import { SkipLink } from "@/components/atoms/skip-link";
+import { MAIN_CONTENT_ID } from "@/constants/a11y";
 import { LoginFooter, LoginHeader } from "./login-chrome";
 import { LoginForm } from "./login-form";
 import { LoginHero } from "./login-hero";
@@ -27,9 +29,14 @@ export default function LoginPage() {
       <NeonGridBackground />
       <NeonScanlineOverlay />
 
+      <SkipLink />
       <LoginHeader />
 
-      <main className="flex-1 flex items-center justify-center relative z-10 px-4">
+      <main
+        id={MAIN_CONTENT_ID}
+        tabIndex={-1}
+        className="flex-1 flex items-center justify-center relative z-10 px-4"
+      >
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <LoginHero title={t("loginTitle")} subtitle={t("loginSubtitle")} />
           <LoginForm {...login} />
