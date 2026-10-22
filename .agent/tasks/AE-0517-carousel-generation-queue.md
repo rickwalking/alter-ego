@@ -74,3 +74,10 @@ cgroup CPU/memory limits and a global export lock; our own `generation_runs` tab
   strict FIFO (no priority ordering).
 - 2026-10-22: Pedro chose PgQueuer over the in-house job table (easier to manage queues). Guards: deploy one-shot
   for its tables, pinned version, our own attempt counter (poison guard), our generation_runs table for UI/Telegram.
+- 2026-10-22: Skeptical review round 1 (GLM 5.3): BLOCK — 1 BLOCKER (worker memory budget), 5 WARN, 1 INFO; all
+  accepted and resolved in the plan/ADR (see .agent/reports/AE-0517.skeptical-review.md).
+- 2026-10-22: Skeptical review round 2 (GLM 5.3): WARN — 0 BLOCKER, 5 WARN, 4 INFO; all accepted (P0 exit criteria now gate
+  ADR acceptance; explicit flag hand-over; single ownership lock; one schema mechanism; worker hardening).
+- 2026-10-22: Skeptical review round 3 (GLM 5.3, final per Pedro's 3-round cap): WARN — 1 BLOCKER (validation droplet would
+  hold prod credentials) + 6 WARN + 3 INFO; all resolved; blocker fix not re-reviewed (cap reached). ADR-0026 provisional
+  until P0 exit criteria 1-3; P1 merge gated on the run_stale root cause. Phase tickets AE-0520..AE-0526 created.

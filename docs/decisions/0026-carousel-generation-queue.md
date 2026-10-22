@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: proposed (accepted-provisional once P0 exit criteria 1-3 hold)
 date: 2026-10-22
 decision-makers: Pedro Marins
 consulted: architecture review (AE-0517)
@@ -51,7 +51,8 @@ keep the website fast, without new paid services or heavy infrastructure?
 
 ## Decision Outcome
 
-Chosen option (Pedro, 2026-10-22): **2, PgQueuer**, consumed by a separate `generation-worker` container (same image,
+Chosen option (Pedro, 2026-10-22), **provisional until the P0 exit criteria hold** (measured run memory and HD decision,
+a box memory budget that closes, root cause of the October `run_stale` escalations): **2, PgQueuer**, consumed by a separate `generation-worker` container (same image,
 `pgq run …`), because it gives us a maintained, MIT-licensed, asyncpg-native queue with what we would otherwise build:
 FIFO dequeue with `SKIP LOCKED`, a database-enforced concurrency limit, retries with exponential backoff, failed jobs
 held aside (our dead letter), heartbeat-based requeue of jobs from dead workers, cron schedules for the daily recovery
@@ -62,21 +63,29 @@ Guards we add around it:
 
 - PgQueuer installs its own tables (`pgq install` / `pgq upgrade`). Prod does not run migrations, so an idempotent
   deploy one-shot installs/upgrades them (palette_timestamptz pattern). The version is pinned.
+- Approvals never call PgQueuer: they write our `generation_runs` row in their own transaction (transactional outbox);
+  a dispatcher in the worker hands queued rows to PgQueuer. A broken PgQueuer install therefore cannot break approvals.
+- A semantics gate (verified against the pinned source with integration tests) precedes merge; failures switch to the
+  in-house fallback.
+- Amends ADR-012 in practice: `generation_runs` ships as an Alembic migration plus the deploy one-shot, not via
+  `create_all`.
 - PgQueuer's docs do not say whether a stale-heartbeat requeue counts as an attempt, so our handler keeps its own attempt
   counter in `generation_runs` and dead-letters a run that exceeds it (poison/OOM-loop guard).
 - Our `generation_runs` table stays the source of truth for the dashboard, Telegram, idempotency (dedupe key) and the
   autopilot state machine; PgQueuer job events are mirrored into it. The dashboard never reads PgQueuer's tables.
 - `heartbeat_timeout` 300 s and CPU-heavy steps off the event loop (`asyncio.to_thread`), so heartbeats are never starved.
 
-Not chosen: 1 (in-house table) — more code to own; it stays the fallback if PgQueuer is ever abandoned, behind the same
+Not chosen: 1 (in-house table) — roughly the same surface minus PgQueuer's dequeue/heartbeat/requeue/schedule
+primitives (our run table, outbox dispatcher and attempt counter exist either way); it stays the fallback if PgQueuer is ever abandoned, behind the same
 entrypoints. 3 adds a second Postgres driver; 4 makes Redis a second source of truth (RDB/AOF loss windows, arq in
 maintenance); 5 is heavy and has no native async tasks; 6 needs a paid LangSmith license; 7 keeps generation on the
 web event loop and loses runs on every deploy.
 
 ### Consequences
 
-- Good: the website no longer shares an event loop or memory budget with generation; deploys of the web backend no
-  longer kill runs; transient failures retry with backoff; poison runs stop in a dead-letter state with the reason; a
+- Good: the website no longer shares an event loop with generation and, once the web tier is capped (precondition),
+  no longer competes for unbounded memory; runs interrupted by a deploy (the deploy restarts the whole project) or a
+  crash resume automatically from the checkpoint after a drain step; transient failures retry with backoff; poison runs stop in a dead-letter state with the reason; a
   daily scan re-queues stuck work; Pedro sees and controls the queue; queue operations (list, requeue) come built in.
 - Good: concurrency is a setting (`GENERATION_WORKER_CONCURRENCY`, Pedro: 1) plus a global export lock of 1.
 - Bad: a third-party dependency with its own tables and a deploy one-shot to install/upgrade them; one more container
@@ -87,10 +96,16 @@ web event loop and loses runs on every deploy.
 
 ## Validation
 
-- Load test on a staging-like box: 3 queued runs while a k6/hey script measures web p95 latency; p95 must stay
+- Preconditions for accepting this ADR (P0 exit criteria in the plan): measured carousel-run RSS and HD decision, a box
+  memory budget that closes (possibly by shrinking the observability stack or a bigger droplet), the root cause of the
+  October `run_stale` escalations, an inventory of node side effects with their idempotency, and an off-box p95 baseline.
+- The test droplet never holds production outbound credentials (stubbed Telegram/Meta/Pinecone/Grok/LLM endpoints, egress
+  firewall, credential-hash check); see the plan's "Validation isolation".
+- Load test on a disposable droplet of the same size: 3 queued runs while a k6/hey script measures web p95 latency; p95 must stay
   within 20 % of the idle baseline and no container may be OOM-killed.
-- Chaos: kill the worker mid-phase and redeploy the backend mid-run; the job must resume (lease expiry) without
-  duplicate artifacts or duplicate Telegram messages.
+- Chaos: kill the worker mid-phase and run a full deploy mid-run; the job must resume within 6 min of the stack
+  returning, without duplicate artifacts or duplicate Telegram messages; flipping the flag off and on mid-run must yield
+  exactly one completed run.
 
 ## More Information
 
