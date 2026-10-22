@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRecheckSessionOnNotFound } from "@/app/dashboard/chat/use-recheck-session";
 import { useLocale } from "next-intl";
 import { useConversations, useSseChat } from "@/modules/conversation";
 import {
@@ -16,6 +17,8 @@ import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
 import { ChatSidebar } from "@/app/dashboard/chat/chat-sidebar";
 import { useChatSend } from "@/app/dashboard/chat/use-chat-send";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { ChatErrorBanner } from "@/app/dashboard/chat/chat-error-banner";
 import { useOffCanvas } from "@/lib/use-off-canvas";
 
 const CHAT_CONVERSATIONS_ID = "chat-conversations";
@@ -26,7 +29,8 @@ export function DashboardChatView(): React.ReactElement {
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
 
-  const { data: conversations = [] } = useConversations();
+  const { data: conversations = [], refetch: refetchConversations } =
+    useConversations();
 
   const effectiveConvId = useMemo(
     () =>
@@ -42,6 +46,7 @@ export function DashboardChatView(): React.ReactElement {
     isBusy,
     startNewChat,
   } = useSseChat({ conversationId: effectiveConvId });
+  useRecheckSessionOnNotFound(sseError, refetchConversations);
 
   const sidebarConversations = useMemo(
     () =>
@@ -60,7 +65,7 @@ export function DashboardChatView(): React.ReactElement {
     setActiveConv(id);
     setIsComposingNew(false);
   }, []);
-  const { input, setInput, handleSend } = useChatSend({
+  const { input, setInput, handleSend, retry } = useChatSend({
     conversationId: effectiveConvId,
     isStreaming,
     sendMessage,
@@ -97,9 +102,12 @@ export function DashboardChatView(): React.ReactElement {
         conversationsId={CHAT_CONVERSATIONS_ID}
       />
       {sseError && (
-        <p className="px-6 py-2 text-sm text-red-400" role="alert">
-          {sseError}
-        </p>
+        <ChatErrorBanner
+          kind={sseError}
+          loginRedirect={DASHBOARD_ROUTES.CHAT}
+          onRetry={() => void retry()}
+          onNewChat={handleNewChat}
+        />
       )}
       <div
         className="flex flex-1"

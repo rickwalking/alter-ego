@@ -15,9 +15,11 @@ import {
 } from "@/lib/sse-event-data";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
+import { classifyChatError } from "../chat-errors";
 import {
+  CHAT_ERROR_KIND,
   CHAT_SEND_RESULT,
-  CHAT_UNKNOWN_ERROR,
+  type ChatErrorKind,
   type ChatSendResult,
 } from "../constants";
 import type {
@@ -152,8 +154,7 @@ function chatTurnHandlers(
         withAssistantSources(prev, streamedSources(data)),
       ),
     [SSE_EVENT_TYPE.COMPLETE]: () => turn.finalizeStream(convId),
-    [SSE_EVENT_TYPE.ERROR]: (data) =>
-      turn.fail(sseContentText(data, CHAT_UNKNOWN_ERROR)),
+    [SSE_EVENT_TYPE.ERROR]: () => turn.fail(CHAT_ERROR_KIND.GENERIC),
   };
 }
 
@@ -170,10 +171,6 @@ async function resolveConversationId(
   return typeof target === "function" ? target(signal) : target;
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : CHAT_UNKNOWN_ERROR;
-}
-
 /** The callbacks of one turn; ``fail`` records the failure on ``outcome``. */
 function turnCallbacks(
   deps: TurnCallbackDeps,
@@ -184,9 +181,9 @@ function turnCallbacks(
     appendToken: stream.appendToken,
     setOptimisticMessages: stream.setOptimisticMessages,
     finalizeStream,
-    fail: (message) => {
+    fail: (kind) => {
       outcome.failed = true;
-      setError(message);
+      setError(kind);
       stream.setIsStreaming(false);
       stream.resetStreamingRefs();
     },
@@ -221,7 +218,7 @@ function useRunChatTurn(
       try {
         convId = await resolveConversationId(target, signal);
       } catch (error) {
-        turn.fail(errorText(error));
+        turn.fail(classifyChatError(error));
         return CHAT_SEND_RESULT.FAILED;
       }
       if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
@@ -230,7 +227,7 @@ function useRunChatTurn(
         body: { content },
         signal,
         onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
-        onError: (err) => turn.fail(err.message),
+        onError: (err) => turn.fail(classifyChatError(err)),
         onComplete: () => finalizeStream(convId),
       });
       return turnResult(outcome, signal);
@@ -309,7 +306,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     STREAM_MESSAGE_ID_PREFIX,
   );
   const { optimisticMessages, isStreaming } = stream;
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ChatErrorKind | null>(null);
   const conversationId = options.conversationId ?? null;
   const loadHistory = options.enableHistory !== false;
   const { finalizedRef, turnRef, finalizeStream } = useFinalizeStream(

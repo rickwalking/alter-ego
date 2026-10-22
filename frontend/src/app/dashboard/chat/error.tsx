@@ -15,7 +15,6 @@ export default function ChatError({
       reset={reset}
       namespace="chat"
       logLabel="Chat error:"
-      showErrorMessage
     />
   );
 }

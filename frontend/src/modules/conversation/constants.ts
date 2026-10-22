@@ -11,4 +11,20 @@ export const CHAT_SEND_RESULT = {
 export type ChatSendResult =
   (typeof CHAT_SEND_RESULT)[keyof typeof CHAT_SEND_RESULT];
 
-export const CHAT_UNKNOWN_ERROR = "Unknown error";
+export { CHAT_MESSAGE_MAX_LENGTH } from "@/constants/chat";
+
+/** Share of the limit at which the composer starts showing the counter. */
+export const CHAT_LENGTH_COUNTER_RATIO = 0.8;
+
+/** What went wrong with a chat turn, in terms the visitor can act on. */
+export const CHAT_ERROR_KIND = {
+  OFFLINE: "offline",
+  TOO_LONG: "tooLong",
+  LIMIT: "limit",
+  NOT_FOUND: "notFound",
+  SESSION_EXPIRED: "sessionExpired",
+  GENERIC: "generic",
+} as const;
+
+export type ChatErrorKind =
+  (typeof CHAT_ERROR_KIND)[keyof typeof CHAT_ERROR_KIND];

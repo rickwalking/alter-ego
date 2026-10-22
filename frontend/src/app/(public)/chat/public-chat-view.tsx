@@ -15,6 +15,7 @@ import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
 import { useChatSend } from "@/app/dashboard/chat/use-chat-send";
+import { ChatErrorBanner } from "@/app/dashboard/chat/chat-error-banner";
 
 export function PublicChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function PublicChatView(): React.ReactElement {
     enableHistory: false,
   });
 
-  const { input, setInput, handleSend } = useChatSend({
+  const { input, setInput, handleSend, retry } = useChatSend({
     conversationId: activeConv,
     isStreaming,
     sendMessage,
@@ -58,9 +59,11 @@ export function PublicChatView(): React.ReactElement {
     >
       <ChatHeader onNewChat={handleNewChat} />
       {sseError && (
-        <p className="shrink-0 px-6 py-2 text-sm text-red-400" role="alert">
-          {sseError}
-        </p>
+        <ChatErrorBanner
+          kind={sseError}
+          onRetry={() => void retry()}
+          onNewChat={handleNewChat}
+        />
       )}
       <div
         className="flex min-h-0 flex-1 flex-col"

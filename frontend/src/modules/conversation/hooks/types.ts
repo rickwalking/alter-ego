@@ -9,7 +9,7 @@
 import type { RefObject } from "react";
 import type { ChatStream } from "@/lib/use-chat-stream";
 import type { Message } from "@/schemas/chat";
-import type { ChatSendResult } from "../constants";
+import type { ChatErrorKind, ChatSendResult } from "../constants";
 
 /**
  * The conversation to send into: its id, or a function that creates it. The
@@ -30,7 +30,8 @@ export interface UseSseChatReturn {
   conversationId: string | null;
   messages: Message[];
   isStreaming: boolean;
-  error: string | null;
+  /** What went wrong with the last turn, or null. */
+  error: ChatErrorKind | null;
   /**
    * Send one turn. The user bubble and the typing state show at once, even
    * while ``target`` is still creating the conversation; a second call while a
@@ -52,7 +53,7 @@ export type ChatStreamState = ChatStream;
 export interface SendChatDeps {
   stream: ChatStreamState;
   conversationId: string | null;
-  setError: (error: string | null) => void;
+  setError: (error: ChatErrorKind | null) => void;
   finalizedRef: RefObject<boolean>;
   /** Bumped by every new turn and by New chat; stale refetches compare it. */
   turnRef: RefObject<number>;
@@ -65,8 +66,8 @@ export type ChatTurnCallbacks = Pick<
   "appendToken" | "setOptimisticMessages"
 > &
   Pick<SendChatDeps, "finalizeStream"> & {
-    /** Show ``message``, end the stream and mark the turn as failed. */
-    fail: (message: string) => void;
+    /** Show ``kind``, end the stream and mark the turn as failed. */
+    fail: (kind: ChatErrorKind) => void;
   };
 
 /** What running one turn needs (the conversation id arrives with the turn). */

@@ -99,12 +99,12 @@ describe("useSseChat turns", () => {
       let outcome = "";
       await act(async () => {
         outcome = await result.current.sendMessage("offline", () =>
-          Promise.reject(new Error("Failed to fetch")),
+          Promise.reject(new TypeError("Failed to fetch")),
         );
       });
 
       expect(outcome).toBe("failed");
-      expect(result.current.error).toBe("Failed to fetch");
+      expect(result.current.error).toBe("offline");
       expect(result.current.isStreaming).toBe(false);
       expect(result.current.messages.map((m) => m.content)).toEqual([
         "offline",

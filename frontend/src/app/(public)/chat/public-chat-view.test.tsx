@@ -12,15 +12,26 @@ const mocks = vi.hoisted(() => ({
   sendMessage:
     vi.fn<(content: string, target: SendTarget) => Promise<string>>(),
   createConversation: vi.fn<() => Promise<{ id: string }>>(),
+  error: null as string | null,
 }));
 
 vi.mock("@/modules/conversation", () => ({
   CHAT_SEND_RESULT: { SENT: "sent", FAILED: "failed", IGNORED: "ignored" },
+  CHAT_ERROR_KIND: {
+    OFFLINE: "offline",
+    TOO_LONG: "tooLong",
+    LIMIT: "limit",
+    NOT_FOUND: "notFound",
+    SESSION_EXPIRED: "sessionExpired",
+    GENERIC: "generic",
+  },
+  CHAT_MESSAGE_MAX_LENGTH: 2000,
+  CHAT_LENGTH_COUNTER_RATIO: 0.8,
   useCreateConversation: () => ({ mutateAsync: mocks.createConversation }),
   useSseChat: () => ({
     messages: [],
     isStreaming: false,
-    error: null,
+    error: mocks.error,
     sendMessage: mocks.sendMessage,
     isBusy: () => false,
     startNewChat: vi.fn(),
@@ -41,6 +52,7 @@ describe("PublicChatView", () => {
     vi.clearAllMocks();
     mocks.createConversation.mockResolvedValue({ id: "conv-1" });
     mocks.sendMessage.mockResolvedValue("sent");
+    mocks.error = null;
   });
 
   // Scenario: Public chat does not list conversation history
@@ -88,6 +100,21 @@ describe("PublicChatView", () => {
     typeAndSend("hello");
 
     await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalled());
+    expect(composer().value).toBe("");
+  });
+
+  /** Scenario: Retry sends the failed message again */
+  it("sends the failed message again on Try again and empties the composer", async () => {
+    mocks.sendMessage.mockResolvedValueOnce("failed");
+    mocks.error = "offline";
+    render(<PublicChatView />);
+    typeAndSend("offline message");
+    await waitFor(() => expect(composer().value).toBe("offline message"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledTimes(2));
+    expect(mocks.sendMessage.mock.calls[1]![0]).toBe("offline message");
     expect(composer().value).toBe("");
   });
 });
