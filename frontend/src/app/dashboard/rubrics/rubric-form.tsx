@@ -1,15 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonInput } from "@/components/atoms/neon-input";
-import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { NeonFormFooter } from "@/components/molecules/neon-form-footer";
 import {
-  NeonLabelledField,
-  invalidProps,
-} from "@/components/molecules/neon-labelled-field";
-import { useFormSubmit } from "@/lib/use-form-submit";
-import { useUnsavedChangesGuard } from "@/modules/publishing";
+  NeonDescriptionField,
+  NeonEntityForm,
+  NeonNameField,
+} from "@/components/molecules/neon-entity-form";
+import { useGuardedForm } from "@/lib/use-guarded-form";
 import type {
   QualityRubric,
   QualityRubricCreatePayload,
@@ -36,10 +34,6 @@ export function RubricForm({
 }: Readonly<RubricFormProps>): React.ReactElement {
   const t = useTranslations("rubrics.form");
   const form = useRubricForm(rubric);
-  const { confirmLeave } = useUnsavedChangesGuard(
-    form.dirty,
-    t("unsavedConfirm"),
-  );
   const {
     formRef,
     showErrors,
@@ -47,53 +41,32 @@ export function RubricForm({
     serverError,
     handleSubmit,
     handleCancel,
-  } = useFormSubmit({
-    isValid: form.isValid,
-    toPayload: form.toPayload,
-    onSave,
-    onCancel,
-    confirmLeave,
-    saveFallback: t("errors.save"),
-  });
-  const errorOf = (path: string): string | undefined => {
-    const key = showErrors ? form.errors[path] : undefined;
-    return key ? t(key) : undefined;
-  };
+    errorOf,
+  } = useGuardedForm({ form, onSave, onCancel, t });
 
   return (
-    <form
-      ref={formRef}
-      noValidate
-      aria-labelledby="rubric-form-title"
-      className="flex max-w-3xl flex-col gap-5"
-      onSubmit={(e) => void handleSubmit(e)}
+    <NeonEntityForm
+      formRef={formRef}
+      idPrefix="rubric"
+      title={rubric ? t("editTitle") : t("createTitle")}
+      onSubmit={handleSubmit}
     >
-      <h2 id="rubric-form-title" className="text-lg font-bold">
-        {rubric ? t("editTitle") : t("createTitle")}
-      </h2>
-      <NeonLabelledField
+      <NeonNameField
         id="rubric-name"
         label={t("name")}
+        placeholder={t("namePlaceholder")}
+        maxLength={RUBRIC_NAME_MAX}
+        value={form.state.name}
         error={errorOf("name")}
-      >
-        <NeonInput
-          id="rubric-name"
-          value={form.state.name}
-          maxLength={RUBRIC_NAME_MAX}
-          autoComplete="off"
-          placeholder={t("namePlaceholder")}
-          {...invalidProps("rubric-name", errorOf("name"))}
-          onChange={(e) => form.setName(e.target.value)}
-        />
-      </NeonLabelledField>
-      <NeonLabelledField id="rubric-description" label={t("description")}>
-        <NeonTextarea
-          id="rubric-description"
-          value={form.state.description}
-          placeholder={t("descriptionPlaceholder")}
-          onChange={(e) => form.setDescription(e.target.value)}
-        />
-      </NeonLabelledField>
+        onChange={form.setName}
+      />
+      <NeonDescriptionField
+        id="rubric-description"
+        label={t("description")}
+        placeholder={t("descriptionPlaceholder")}
+        value={form.state.description}
+        onChange={form.setDescription}
+      />
       <RubricContentTypesField
         selected={form.state.applicable_content_types}
         error={errorOf("applicable_content_types")}
@@ -108,6 +81,6 @@ export function RubricForm({
         saving={saving}
         onCancel={handleCancel}
       />
-    </form>
+    </NeonEntityForm>
   );
 }

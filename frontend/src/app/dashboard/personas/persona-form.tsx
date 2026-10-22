@@ -1,16 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { NeonFormFooter } from "@/components/molecules/neon-form-footer";
 import {
-  NeonLabelledField,
-  invalidProps,
-} from "@/components/molecules/neon-labelled-field";
-import { useFormSubmit } from "@/lib/use-form-submit";
+  NeonDescriptionField,
+  NeonEntityForm,
+  NeonNameField,
+} from "@/components/molecules/neon-entity-form";
+import { NeonLabelledField } from "@/components/molecules/neon-labelled-field";
+import { useGuardedForm } from "@/lib/use-guarded-form";
 import type { PersonaCreatePayload, PersonaProfile } from "@/modules/persona";
-import { useUnsavedChangesGuard } from "@/modules/publishing";
 import { PERSONA_NAME_MAX } from "@/schemas/persona";
 import type { PhraseListKey, StyleTextKey } from "./persona-form-model";
 import { PersonaPhraseListField } from "./persona-phrase-list-field";
@@ -79,10 +79,6 @@ export function PersonaForm({
 }: Readonly<PersonaFormProps>): React.ReactElement {
   const t = useTranslations("personas.form");
   const form = usePersonaForm(persona);
-  const { confirmLeave } = useUnsavedChangesGuard(
-    form.dirty,
-    t("unsavedConfirm"),
-  );
   const {
     formRef,
     showErrors,
@@ -90,53 +86,32 @@ export function PersonaForm({
     serverError,
     handleSubmit,
     handleCancel,
-  } = useFormSubmit({
-    isValid: form.isValid,
-    toPayload: form.toPayload,
-    onSave,
-    onCancel,
-    confirmLeave,
-    saveFallback: t("errors.save"),
-  });
-  const errorOf = (path: string): string | undefined => {
-    const key = showErrors ? form.errors[path] : undefined;
-    return key ? t(key) : undefined;
-  };
+    errorOf,
+  } = useGuardedForm({ form, onSave, onCancel, t });
 
   return (
-    <form
-      ref={formRef}
-      noValidate
-      aria-labelledby="persona-form-title"
-      className="flex max-w-3xl flex-col gap-5"
-      onSubmit={(e) => void handleSubmit(e)}
+    <NeonEntityForm
+      formRef={formRef}
+      idPrefix="persona"
+      title={persona ? t("editTitle") : t("createTitle")}
+      onSubmit={handleSubmit}
     >
-      <h2 id="persona-form-title" className="text-lg font-bold">
-        {persona ? t("editTitle") : t("createTitle")}
-      </h2>
-      <NeonLabelledField
+      <NeonNameField
         id="persona-name"
         label={t("name")}
+        placeholder={t("namePlaceholder")}
+        maxLength={PERSONA_NAME_MAX}
+        value={form.state.name}
         error={errorOf("name")}
-      >
-        <NeonInput
-          id="persona-name"
-          value={form.state.name}
-          maxLength={PERSONA_NAME_MAX}
-          autoComplete="off"
-          placeholder={t("namePlaceholder")}
-          {...invalidProps("persona-name", errorOf("name"))}
-          onChange={(e) => form.setName(e.target.value)}
-        />
-      </NeonLabelledField>
-      <NeonLabelledField id="persona-description" label={t("description")}>
-        <NeonTextarea
-          id="persona-description"
-          value={form.state.description}
-          placeholder={t("descriptionPlaceholder")}
-          onChange={(e) => form.setText("description", e.target.value)}
-        />
-      </NeonLabelledField>
+        onChange={form.setName}
+      />
+      <NeonDescriptionField
+        id="persona-description"
+        label={t("description")}
+        placeholder={t("descriptionPlaceholder")}
+        value={form.state.description}
+        onChange={(value) => form.setText("description", value)}
+      />
       <PersonaPhraseListField
         id="persona-expertise_areas"
         label={t("expertise")}
@@ -162,6 +137,6 @@ export function PersonaForm({
         saving={saving}
         onCancel={handleCancel}
       />
-    </form>
+    </NeonEntityForm>
   );
 }

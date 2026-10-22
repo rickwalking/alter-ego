@@ -1,4 +1,5 @@
 import type { PersonaCreatePayload, PersonaProfile } from "@/modules/persona";
+import { fieldErrorsOf } from "@/lib/zod-field-errors";
 import {
   DEFAULT_TONE,
   personaFormSchema,
@@ -34,7 +35,6 @@ export type PersonaFormState = Record<StyleTextKey, string> &
 /** Field path (`name`, `writing_samples.0`, …) → i18n key of its error. */
 export type PersonaFormErrors = Record<string, string>;
 
-const PATH_SEPARATOR = ".";
 const GENERIC_FIELD_ERROR = "errors.invalid";
 
 /** The error message key of each validated field (keyed by its path without the list index). */
@@ -101,13 +101,11 @@ export function validatePersonaForm(
 ): PersonaFormErrors {
   const result = personaFormSchema.safeParse(toCandidate(state));
   if (result.success) return {};
-  const errors: PersonaFormErrors = {};
-  for (const issue of result.error.issues) {
-    const path = issue.path.join(PATH_SEPARATOR);
-    errors[path] ??=
-      FIELD_ERROR_KEYS[errorKeyOf(issue.path)] ?? GENERIC_FIELD_ERROR;
-  }
-  return errors;
+  return fieldErrorsOf(
+    result.error.issues,
+    (path) => FIELD_ERROR_KEYS[errorKeyOf(path)],
+    GENERIC_FIELD_ERROR,
+  );
 }
 
 /** The trimmed create/update payload of a valid form (blank text → null). */

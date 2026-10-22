@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
-import { NeonConfirmDialog } from "@/components/molecules/neon-confirm-dialog";
+import { NeonEntityWorkspace } from "@/components/molecules/neon-entity-workspace";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
+import { useEntityEditor } from "@/lib/use-entity-editor";
 import { RubricForm } from "@/app/dashboard/rubrics/rubric-form";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
 import { RubricsEmptyState } from "@/app/dashboard/rubrics/rubrics-empty-state";
@@ -19,15 +19,6 @@ import {
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";
-/** The API answers 409 when carousels or evaluations still use the rubric. */
-const HTTP_CONFLICT = 409;
-
-type View =
-  | { kind: "list" }
-  | { kind: "create" }
-  | { kind: "edit"; rubric: QualityRubric };
-
-const LIST_VIEW: View = { kind: "list" };
 
 function PlusIcon(): React.ReactElement {
   return (
@@ -98,35 +89,10 @@ function RubricList({
 export default function RubricsPage(): React.ReactElement {
   const t = useTranslations("rubrics.page");
   const tDelete = useTranslations("rubrics.delete");
-  const {
-    rubrics,
-    loading,
-    error,
-    create,
-    update,
-    delete: remove,
-  } = useRubrics();
-  const [view, setView] = useState<View>(LIST_VIEW);
-  const [deleting, setDeleting] = useState<QualityRubric | null>(null);
-  const openCreate = (): void => setView({ kind: "create" });
-
-  const handleSave = async (
-    payload: QualityRubricCreatePayload,
-  ): Promise<void> => {
-    if (view.kind === "edit") {
-      await update(view.rubric.id, payload);
-    } else {
-      await create(payload);
-    }
-    setView(LIST_VIEW);
-  };
-
-  const handleDelete = async (rubric: QualityRubric): Promise<void> => {
-    await remove(rubric.id);
-    setDeleting(null);
-  };
-
-  const editing = view.kind === "edit" ? view.rubric : undefined;
+  const collection = useRubrics();
+  const editor = useEntityEditor<QualityRubric, QualityRubricCreatePayload>(
+    collection,
+  );
 
   return (
     <div
@@ -137,8 +103,12 @@ export default function RubricsPage(): React.ReactElement {
         title={t("title")}
         breadcrumb={[{ label: t("breadcrumb") }]}
         actions={
-          view.kind === "list" && (
-            <NeonButton size="sm" onClick={openCreate} icon={<PlusIcon />}>
+          editor.showingList && (
+            <NeonButton
+              size="sm"
+              onClick={editor.listActions.onCreate}
+              icon={<PlusIcon />}
+            >
               {t("new")}
             </NeonButton>
           )
@@ -146,37 +116,22 @@ export default function RubricsPage(): React.ReactElement {
       />
 
       <div className="page-content" style={{ padding: PAGE_CONTENT_PADDING }}>
-        {view.kind === "list" ? (
-          <RubricList
-            rubrics={rubrics}
-            loading={loading}
-            failed={error !== null}
-            onCreate={openCreate}
-            onEdit={(rubric) => setView({ kind: "edit", rubric })}
-            onDelete={setDeleting}
-          />
-        ) : (
-          <RubricForm
-            key={editing?.id ?? view.kind}
-            rubric={editing}
-            onSave={handleSave}
-            onCancel={() => setView(LIST_VIEW)}
-          />
-        )}
-      </div>
-
-      {deleting && (
-        <NeonConfirmDialog
-          title={tDelete("title")}
-          body={tDelete("body", { name: deleting.name })}
-          confirmLabel={tDelete("confirm")}
-          cancelLabel={tDelete("cancel")}
-          errorFallback={tDelete("error")}
-          statusMessages={{ [HTTP_CONFLICT]: tDelete("inUse") }}
-          onConfirm={() => handleDelete(deleting)}
-          onClose={() => setDeleting(null)}
+        <NeonEntityWorkspace
+          editor={editor}
+          deleteT={tDelete}
+          list={
+            <RubricList
+              rubrics={collection.rubrics}
+              loading={collection.loading}
+              failed={collection.error !== null}
+              {...editor.listActions}
+            />
+          }
+          renderForm={(rubric) => (
+            <RubricForm rubric={rubric} {...editor.formActions} />
+          )}
         />
-      )}
+      </div>
     </div>
   );
 }
