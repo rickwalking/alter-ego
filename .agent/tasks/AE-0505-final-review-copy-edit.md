@@ -1,6 +1,6 @@
 # AE-0505 — Edit the caption and LinkedIn posts in the final review step
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -94,6 +94,9 @@ Failing first: the new final review tab tests failed 9/9 on the pre-change code.
 capture green (18 PASS, mutation SKIP: CI only). See the dev summary.
 
 ## QA Report
+
+External QA: round 1 WARN (0 blockers), all findings fixed, confirmation PASS. See
+`.agent/reports/AE-0505.qa.md`.
 
 ## Blockers
 
