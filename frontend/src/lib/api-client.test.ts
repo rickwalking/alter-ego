@@ -991,3 +991,63 @@ describe("API Client Module", () => {
     });
   });
 });
+
+describe("API Client error details and redirects", () => {
+  const detailSchema = z.object({ id: z.string() });
+  const DETAIL = [{ msg: "field required" }];
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubErrorResponse(status: number, body: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status,
+        json: () => Promise.resolve(body),
+      }),
+    );
+  }
+
+  async function catchApiError(): Promise<ApiError> {
+    const error = await apiCall("/api/test", detailSchema).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    return error as ApiError;
+  }
+
+  // Scenario: Only a 403 sends the browser to the forbidden page
+  it.each([404, 422, 500])(
+    "does not redirect the browser to the forbidden page on a %i",
+    async (status) => {
+      const location = mockWindowLocation();
+      stubErrorResponse(status, { message: "failed" });
+
+      await catchApiError();
+
+      expect(location.href).toBe("");
+    },
+  );
+
+  // Scenario: A validation error keeps the raw detail
+  it("keeps the raw detail of a non-auth error", async () => {
+    stubErrorResponse(422, { message: "invalid", detail: DETAIL });
+
+    const error = await catchApiError();
+
+    expect(error.detail).toEqual(DETAIL);
+  });
+
+  // Scenario: Auth errors do not expose the raw detail
+  it.each([401, 403])("drops the raw detail of a %i error", async (status) => {
+    mockWindowLocation();
+    stubErrorResponse(status, { message: "denied", detail: DETAIL });
+
+    const error = await catchApiError();
+
+    expect(error.detail).toBeUndefined();
+  });
+});

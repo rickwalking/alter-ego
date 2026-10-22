@@ -6,12 +6,14 @@
  * over a stubbed `fetch`, so a 401 exercises the real session-expired redirect.
  */
 
+import type { Dispatch, SetStateAction } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import {
   EDITORIAL_WORKFLOW_POLL_BACKOFF_MS,
   EDITORIAL_WORKFLOW_SSE_MAX_RECONNECT_ATTEMPTS,
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
+  type EditorialWorkflowTransportMode,
 } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/editorial";
@@ -474,5 +476,122 @@ describe("AE-0440 workflow stream recovery", () => {
 
     expect(refreshState).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+interface StreamSetters {
+  setState: ReturnType<
+    typeof vi.fn<Dispatch<SetStateAction<EditorialWorkflowState | null>>>
+  >;
+  setPhaseEvents: ReturnType<typeof vi.fn<Dispatch<SetStateAction<string[]>>>>;
+  setTransportMode: ReturnType<
+    typeof vi.fn<Dispatch<SetStateAction<EditorialWorkflowTransportMode>>>
+  >;
+}
+
+function createSetters(): StreamSetters {
+  return {
+    setState: vi.fn<Dispatch<SetStateAction<EditorialWorkflowState | null>>>(),
+    setPhaseEvents: vi.fn<Dispatch<SetStateAction<string[]>>>(),
+    setTransportMode:
+      vi.fn<Dispatch<SetStateAction<EditorialWorkflowTransportMode>>>(),
+  };
+}
+
+/** Render the stream hook with setters that a later `rerender` can replace. */
+function renderStreamWithSetters(initial: StreamSetters) {
+  return renderHook(
+    (setters: StreamSetters) =>
+      useEditorialWorkflowSse({
+        projectId: "project-1",
+        sseEnabled: true,
+        state: runningState,
+        transportMode: EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+        setState: setters.setState,
+        setPhaseEvents: setters.setPhaseEvents,
+        setTransportMode: setters.setTransportMode,
+        setError: vi.fn(),
+        refreshState: () => Promise.resolve(runningState),
+      }),
+    { initialProps: initial },
+  );
+}
+
+describe("workflow stream recovery uses the latest callbacks", () => {
+  // Scenario: A probed state is adopted into the timeline
+  it("appends the probed phase to the previous phase events", async () => {
+    const setters = createSetters();
+    renderStreamWithSetters(setters);
+
+    await failLatestStream();
+
+    const updater = setters.setPhaseEvents.mock.calls[0]?.[0] as (
+      previous: string[],
+    ) => string[];
+    expect(updater(["research"])).toEqual(["research", "final_review"]);
+  });
+
+  // Scenario: A probed state reaches the setters of the latest render
+  it("adopts the probed state through the setters of the latest render", async () => {
+    const stale = createSetters();
+    const latest = createSetters();
+    const { rerender } = renderStreamWithSetters(stale);
+    rerender(latest);
+
+    await failLatestStream();
+
+    expect(latest.setState).toHaveBeenCalledWith(probedState);
+    expect(latest.setPhaseEvents).toHaveBeenCalledTimes(1);
+    expect(stale.setState).not.toHaveBeenCalled();
+    expect(stale.setPhaseEvents).not.toHaveBeenCalled();
+  });
+
+  // Scenario: A stream error enters the polling fallback
+  it("enters the polling fallback through the latest setTransportMode", async () => {
+    const stale = createSetters();
+    const latest = createSetters();
+    const { rerender } = renderStreamWithSetters(stale);
+    rerender(latest);
+
+    await failLatestStream();
+
+    expect(latest.setTransportMode).toHaveBeenCalledWith(
+      EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK,
+    );
+    expect(stale.setTransportMode).not.toHaveBeenCalled();
+  });
+
+  // Scenario: A gone workflow marks the stream disconnected
+  it("marks the stream disconnected through the latest setTransportMode", async () => {
+    lastProbeReply = { status: 404 };
+    const stale = createSetters();
+    const latest = createSetters();
+    const { rerender } = renderStreamWithSetters(stale);
+    rerender(latest);
+
+    await failLatestStream();
+
+    expect(latest.setTransportMode).toHaveBeenCalledWith(
+      EDITORIAL_WORKFLOW_TRANSPORT_MODE.DISCONNECTED,
+    );
+    expect(stale.setTransportMode).not.toHaveBeenCalled();
+  });
+
+  // Scenario: A reopened stream leaves the polling fallback
+  it("leaves the polling fallback through the latest setTransportMode on open", async () => {
+    const stale = createSetters();
+    const latest = createSetters();
+    const { rerender } = renderStreamWithSetters(stale);
+    rerender(latest);
+
+    await act(() => {
+      latestStream().open();
+      return Promise.resolve();
+    });
+
+    expect(latest.setTransportMode).toHaveBeenCalledWith(
+      EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+    );
+    expect(stale.setTransportMode).not.toHaveBeenCalled();
   });
 });

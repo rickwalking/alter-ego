@@ -806,6 +806,32 @@ describe("usePublishChat (SSE comprehensive)", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
   });
 
+  it("loads no history while the stored conversation id cannot be read", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-recovered" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: vi.fn(() => {
+          throw new Error("storage blocked");
+        }),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    expect(mockUseConversationMessages.mock.calls[0]?.[0]).toBeNull();
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
   it("does not replace a stored conversation when history fails with a non-404 error", async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-replacement" });
     mockUseCreateConversation.mockReturnValue({
@@ -920,6 +946,31 @@ describe("usePublishChat (SSE comprehensive)", () => {
     expect(assistantMessages[0]?.content).toBe("");
     expect(assistantMessages[0]?.content).not.toContain("Stryker");
     expect(assistantMessages[0]?.sources).toEqual([]);
+  });
+
+  it("keeps the streaming assistant message empty while a token has no content", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: {} });
+      return new Promise<void>(() => undefined);
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => {
+      const assistant = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistant).toHaveLength(1);
+      expect(assistant[0]?.content).toBe("");
+    });
   });
 
   it("clears streaming only through onComplete when no terminal SSE event arrives", async () => {

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ImagePromptReview } from "./image-prompt-review";
 
@@ -57,5 +57,46 @@ describe("ImagePromptReview", () => {
     expect(
       screen.getByLabelText("Image prompt for slide 1"),
     ).not.toHaveAttribute("readonly");
+  });
+
+  it("defaults the prompt textareas to read-only", () => {
+    render(<ImagePromptReview prompts={[prompts[0]!]} />);
+
+    expect(screen.getByLabelText("Image prompt for slide 1")).toHaveAttribute(
+      "readonly",
+    );
+  });
+
+  it("does not render when the prompts are missing", () => {
+    const { container } = render(<ImagePromptReview prompts={undefined} />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the section after the prompts title", () => {
+    render(<ImagePromptReview prompts={prompts} />);
+
+    expect(
+      screen.getByRole("region", { name: "Slide image prompts" }),
+    ).toBeInTheDocument();
+  });
+
+  it("labels each textarea with its slide label", () => {
+    render(<ImagePromptReview prompts={prompts} />);
+
+    const textarea = screen.getByLabelText("Slide 2 image prompt");
+    expect(textarea).toHaveAttribute("id", "image-prompt-2");
+    expect(textarea).toBe(screen.getByLabelText("Image prompt for slide 2"));
+  });
+
+  it("renders only the badges of the metadata a prompt carries", () => {
+    render(<ImagePromptReview prompts={prompts} />);
+
+    const [firstArticle, secondArticle] = screen.getAllByRole("article");
+    expect(
+      within(firstArticle!).getAllByText(/^(Model|Style|Theme|Key):/),
+    ).toHaveLength(4);
+    expect(secondArticle!.querySelectorAll("span")).toHaveLength(1);
+    expect(secondArticle!.querySelectorAll("div.flex-wrap")).toHaveLength(1);
   });
 });
