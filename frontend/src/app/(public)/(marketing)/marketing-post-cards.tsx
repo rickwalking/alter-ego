@@ -6,35 +6,19 @@ import {
   TEXT_DIM,
   TEXT_MUTED,
 } from "@/constants/neon";
-import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
-import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
-import { formatPublicDate, toCategoryLabel } from "@/lib/public-blog-text";
+import { formatPublicDate } from "@/lib/public-blog-text";
 import { PublicCoverImage } from "@/modules/publishing";
-import {
-  cardLocale,
-  localizedSubtitle,
-  localizedTitle,
-  truncateWords,
-} from "@/app/(public)/(marketing)/marketing-helpers";
+import { cardLocale } from "@/app/(public)/(marketing)/marketing-helpers";
 import type { MarketingPostProps } from "@/app/(public)/(marketing)/types";
 
 const POST_FALLBACK_CATEGORY = "Post";
-
-function heroImageUrl(post: MarketingPostProps["post"]): string {
-  const tokens = post.design_tokens as
-    | { images?: { hero?: string } }
-    | null
-    | undefined;
-  const rawHero = tokens?.images?.hero ?? "";
-  return rawHero ? toPublicCarouselImageUrl(rawHero) : "";
-}
 
 function formatPostDate(createdAt: string, locale: string): string {
   return formatPublicDate(createdAt, cardLocale(locale));
 }
 
-function categoryLabel(post: MarketingPostProps["post"]): string {
-  return toCategoryLabel(post.niche) ?? POST_FALLBACK_CATEGORY;
+function categoryLabel(card: MarketingPostProps["card"]): string {
+  return card.niche ?? POST_FALLBACK_CATEGORY;
 }
 
 function FeaturedPostImage({
@@ -76,15 +60,15 @@ function FeaturedPostImage({
 }
 
 export function FeaturedPostCard({
-  post,
+  card,
   locale,
 }: Readonly<MarketingPostProps>): React.ReactElement {
   return (
     <Link
-      href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}
+      href={card.href}
       className="transform rounded-xl overflow-hidden border border-[rgba(0,212,255,0.1)] bg-bg-surface flex flex-col no-underline text-inherit transition-all duration-300 min-w-0 hover:border-[rgba(0,212,255,0.2)] hover:shadow-[0_0_30px_rgba(0,212,255,0.03)] hover:-translate-y-1 active:-translate-y-1 motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0"
     >
-      <FeaturedPostImage imageUrl={heroImageUrl(post)} />
+      <FeaturedPostImage imageUrl={card.imageUrl ?? ""} />
       <div
         style={{
           padding: "28px",
@@ -110,7 +94,7 @@ export function FeaturedPostCard({
             marginBottom: "12px",
           }}
         >
-          {categoryLabel(post)}
+          {categoryLabel(card)}
         </span>
         <h3
           style={{
@@ -120,7 +104,7 @@ export function FeaturedPostCard({
             marginBottom: "8px",
           }}
         >
-          {localizedTitle(post, locale)}
+          {card.title}
         </h3>
         <p
           style={{
@@ -130,7 +114,7 @@ export function FeaturedPostCard({
             flex: 1,
           }}
         >
-          {truncateWords(localizedSubtitle(post, locale), 15)}
+          {card.subtitle}
         </p>
         <span
           style={{
@@ -140,7 +124,7 @@ export function FeaturedPostCard({
             marginTop: "16px",
           }}
         >
-          {formatPostDate(post.created_at, locale)}
+          {formatPostDate(card.createdAt, locale)}
         </span>
       </div>
     </Link>
@@ -148,12 +132,12 @@ export function FeaturedPostCard({
 }
 
 export function SecondaryPostLink({
-  post,
+  card,
   locale,
 }: Readonly<MarketingPostProps>): React.ReactElement {
   return (
     <Link
-      href={PUBLIC_ROUTE_PATHS.CAROUSEL_VIEWER(post.id)}
+      href={card.href}
       className="rounded-lg border border-neon-card-border bg-bg-card p-5 no-underline text-inherit block transition-all duration-300 min-w-0 hover:border-white/10 hover:bg-bg-elevated"
     >
       <span
@@ -167,7 +151,7 @@ export function SecondaryPostLink({
           display: "block",
         }}
       >
-        {categoryLabel(post)}
+        {categoryLabel(card)}
       </span>
       <h4
         style={{
@@ -177,7 +161,7 @@ export function SecondaryPostLink({
           lineHeight: 1.4,
         }}
       >
-        {localizedTitle(post, locale)}
+        {card.title}
       </h4>
       <span
         style={{
@@ -186,7 +170,7 @@ export function SecondaryPostLink({
           color: TEXT_DIM,
         }}
       >
-        {formatPostDate(post.created_at, locale)}
+        {formatPostDate(card.createdAt, locale)}
       </span>
     </Link>
   );

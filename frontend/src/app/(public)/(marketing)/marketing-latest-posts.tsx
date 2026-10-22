@@ -45,13 +45,20 @@ function LatestPostsHeader({
 export function MarketingLatestPosts({
   t,
   tb,
-  data,
+  cards,
   locale,
 }: Readonly<MarketingLatestPostsProps>): React.ReactElement {
-  const featured = data.items[0];
+  const titled = cards.map((card) => ({
+    ...card,
+    title: card.title || tb("untitledPost"),
+  }));
+  const featured = titled[0];
   return (
     <ScrollReveal delay={100}>
-      <section className="relative z-[1] pb-[100px] max-[600px]:pb-[60px]">
+      <section
+        className="relative z-[1] pb-[100px] max-[600px]:pb-[60px]"
+        data-testid="latest-posts"
+      >
         <div className="mx-auto px-6" style={{ maxWidth: "1200px" }}>
           <LatestPostsHeader t={t} />
 
@@ -70,7 +77,7 @@ export function MarketingLatestPosts({
             </div>
           ) : (
             <div className="grid grid-cols-[1.3fr_0.7fr] gap-6 min-w-0 max-[900px]:grid-cols-1">
-              <FeaturedPostCard post={featured} locale={locale} />
+              <FeaturedPostCard card={featured} locale={locale} />
 
               <div
                 style={{
@@ -79,10 +86,10 @@ export function MarketingLatestPosts({
                   gap: "12px",
                 }}
               >
-                {data.items.slice(1, 5).map((post) => (
+                {titled.slice(1, 5).map((card) => (
                   <SecondaryPostLink
-                    key={post.id}
-                    post={post}
+                    key={card.id}
+                    card={card}
                     locale={locale}
                   />
                 ))}
