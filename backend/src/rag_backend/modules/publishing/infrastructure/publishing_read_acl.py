@@ -92,6 +92,7 @@ from rag_backend.modules.publishing.infrastructure.public_visibility import (
 from rag_backend.modules.publishing.infrastructure.read_projection_helpers import (
     as_number,
     as_optional_number,
+    content_quality_summary,
     extract_first_paragraph,
     extract_title_and_subtitle,
     resolve_blog_body,
@@ -225,14 +226,14 @@ class PublishingReadAcl:
         return BoardProjection(columns=columns)
 
     async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
-        """Project the editorial-analytics summary + weekly velocity.
+        """Project the editorial-analytics summary, content quality score and velocity.
 
-        Byte-identical to the legacy ``EditorialAnalyticsService`` aggregation: the
-        same summary counts, status breakdown, averages, and weekly velocity
-        buckets.
+        Counts and velocity come from ``EditorialAnalyticsService``; the quality score
+        from the content rubric scores (:func:`content_quality_summary`).
         """
         service = EditorialAnalyticsService()
         summary = await service.get_summary(self._session, author_id=query.author_id)
+        summary.update(await content_quality_summary(self._session))
         velocity = await service.get_velocity_by_week(
             self._session, weeks=query.weeks, author_id=query.author_id
         )

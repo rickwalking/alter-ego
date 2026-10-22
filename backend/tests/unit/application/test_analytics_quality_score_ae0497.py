@@ -14,9 +14,6 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from rag_backend.application.services.editorial_analytics_service import (
-    EditorialAnalyticsService,
-)
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
@@ -80,10 +77,13 @@ async def test_without_content_scores_the_score_is_empty(
     db_session.add_all([_post("one", "published"), _post("two", "draft")])
     await db_session.commit()
 
-    summary = await EditorialAnalyticsService().get_summary(db_session)
+    projection = await PublishingReadAcl(db_session).project_analytics(
+        AnalyticsQuery(weeks=1)
+    )
 
-    assert summary["quality_score_average"] is None
-    assert summary["quality_score_count"] == 0
+    assert projection.summary.total_posts == 2
+    assert projection.summary.quality_score_average is None
+    assert projection.summary.quality_score_count == 0
 
 
 @pytest.mark.asyncio
