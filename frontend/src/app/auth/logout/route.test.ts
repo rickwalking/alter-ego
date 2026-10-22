@@ -92,6 +92,22 @@ describe("GET /auth/logout", () => {
     );
   });
 
+  // Scenario: The session-expired logout keeps only a safe return path
+  it.each([["/\\evil.com"], ["/%5Cevil.com"]])(
+    "drops a backslash redirect %s",
+    async (redirect) => {
+      mockBackendLogout();
+      const response = await GET(
+        makeRequest(`/auth/logout?redirect=${encodeURIComponent(redirect)}`),
+      );
+
+      expectCookieCleared(response);
+      expect(locationOf(response).toString()).toBe(
+        loginUrlWithRedirect(SAFE_REDIRECT),
+      );
+    },
+  );
+
   it("redirects to login without a redirect param when none is given", async () => {
     mockBackendLogout();
     const response = await GET(makeRequest("/auth/logout"));

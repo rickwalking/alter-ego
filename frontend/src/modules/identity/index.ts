@@ -28,9 +28,10 @@ export { verifyAccessToken, decodeJwtPayloadUnsafe } from "./lib/jwt-auth";
 export {
   setAccessTokenCookie,
   clearAccessTokenCookie,
-  sanitizeLoginRedirect,
   isSecureRequest,
 } from "./lib/auth-cookie";
+
+export { sanitizeLoginRedirect } from "./lib/login-redirect";
 
 export {
   ROLES,
