@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
+import { ActionErrorAlert } from "@/components/atoms/action-error-alert";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
@@ -58,15 +59,7 @@ export default function PersonasPage(): React.ReactElement {
             <NeonSpinner size="lg" />
           </div>
         )}
-        {createError && (
-          <p
-            role="alert"
-            className="text-center py-4"
-            style={{ color: NEON_RED }}
-          >
-            {createError}
-          </p>
-        )}
+        <ActionErrorAlert message={createError} />
         {error && !loading && (
           <p className="text-center py-8" style={{ color: NEON_RED }}>
             {error}

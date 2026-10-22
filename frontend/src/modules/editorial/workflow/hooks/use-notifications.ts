@@ -25,15 +25,16 @@ async function requestNotifications(
   return data.items;
 }
 
-async function postMarkRead(id: string, failedText: string): Promise<void> {
-  const response = await authenticatedFetch(
-    WORKFLOW_API.NOTIFICATION_READ(id),
-    {
-      method: "POST",
-    },
-  );
-  if (!response.ok) {
-    throw new Error(failedText);
+/** True when the notification was marked read; a failed or unreachable call is false. */
+async function markedRead(id: string): Promise<boolean> {
+  try {
+    const response = await authenticatedFetch(
+      WORKFLOW_API.NOTIFICATION_READ(id),
+      { method: "POST" },
+    );
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -63,9 +64,7 @@ export function useNotifications() {
   const markRead = useCallback(
     async (id: string) => {
       setError(null);
-      try {
-        await postMarkRead(id, t("markReadFailed"));
-      } catch {
+      if (!(await markedRead(id))) {
         setError(t("markReadFailed"));
         return;
       }
