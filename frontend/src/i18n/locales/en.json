@@ -1484,5 +1484,23 @@
     "nextCarousel": "Next carousel",
     "carouselList": "Carousels",
     "openNeighbor": "Open {title}"
+  },
+  "pageTitles": {
+    "suffix": "Pedro Marins",
+    "blog": "Blog",
+    "login": "Sign in",
+    "forbidden": "Access denied",
+    "notFound": "Page not found",
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "rubrics": "Rubrics",
+    "palettes": "Palettes",
+    "personas": "Personas",
+    "knowledge": "Knowledge Base",
+    "workflow": "Workflow Board",
+    "blogPosts": "Blog Posts",
+    "analytics": "Analytics",
+    "createCarousel": "Create Carousel",
+    "adminUsers": "Users"
   }
 }

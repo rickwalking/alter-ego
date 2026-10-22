@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/page-metadata";
 import { getTranslations } from "next-intl/server";
 import {
   NeonGridBackground,
@@ -6,6 +8,11 @@ import {
 } from "@/components/organisms";
 import { BG_DEEP, CYAN_GRADIENT, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
+
+/** Page title for the not-found page. */
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("notFound");
+}
 
 export default async function NotFound(): Promise<React.ReactElement> {
   const t = await getTranslations("notFound");
