@@ -20,6 +20,7 @@ import type {
 } from "@/app/dashboard/calendar/types";
 
 function CalendarEmptyMonth(): React.ReactElement {
+  const t = useTranslations("workflow.calendar");
   return (
     <div
       style={{
@@ -31,10 +32,10 @@ function CalendarEmptyMonth(): React.ReactElement {
     >
       <CalendarSvgIcon name="cal" size={48} />
       <p style={{ fontSize: 15, color: CALENDAR_COLORS.tM, margin: 0 }}>
-        No scheduled content this month
+        {t("emptyMonth")}
       </p>
       <p style={{ fontSize: 12, marginTop: 8, color: CALENDAR_COLORS.tD }}>
-        Schedule a post or carousel to see it on the calendar.
+        {t("emptyMonthHint")}
       </p>
     </div>
   );
@@ -85,7 +86,7 @@ function CalendarDayEvent({
         }}
       >
         <CalendarSvgIcon name={CONTENT_TYPE_ICON[event.contentType]} size={9} />{" "}
-        {contentMeta.l}
+        {t(`contentType.${event.contentType}`)}
       </div>
       {event.status && (
         <div
@@ -99,7 +100,7 @@ function CalendarDayEvent({
             display: "inline-block",
           }}
         >
-          {CALENDAR_STATUS_META[event.status].l}
+          {t(`status.${event.status}`)}
         </div>
       )}
       <div style={{ fontSize: 8, color: CALENDAR_COLORS.tM, marginTop: 2 }}>

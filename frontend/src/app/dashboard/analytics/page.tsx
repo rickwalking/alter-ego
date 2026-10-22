@@ -31,7 +31,10 @@ export default function AnalyticsPage(): React.ReactElement {
   if (loading) {
     return (
       <div className="flex-1">
-        <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
+        <NeonTopBar
+          title={t("title")}
+          breadcrumb={[{ label: t("breadcrumb") }]}
+        />
         <div className="flex justify-center py-20">
           <NeonSpinner size="lg" />
         </div>
@@ -42,7 +45,10 @@ export default function AnalyticsPage(): React.ReactElement {
   if (disabled) {
     return (
       <div className="flex-1">
-        <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
+        <NeonTopBar
+          title={t("title")}
+          breadcrumb={[{ label: t("breadcrumb") }]}
+        />
         <div className="text-center py-8" data-testid="analytics-disabled">
           <p className="font-semibold" style={{ color: TEXT_MUTED }}>
             {t("disabledTitle")}
@@ -58,7 +64,10 @@ export default function AnalyticsPage(): React.ReactElement {
   if (error || !data) {
     return (
       <div className="flex-1">
-        <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
+        <NeonTopBar
+          title={t("title")}
+          breadcrumb={[{ label: t("breadcrumb") }]}
+        />
         <p className="text-center py-8" style={{ color: NEON_RED }}>
           {t("loadFailed")}
         </p>
@@ -80,7 +89,10 @@ export default function AnalyticsPage(): React.ReactElement {
 
   return (
     <div className="flex-1">
-      <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
+      <NeonTopBar
+        title={t("title")}
+        breadcrumb={[{ label: t("breadcrumb") }]}
+      />
       <div className="py-8 px-8">
         <p className="mb-8" style={{ color: TEXT_MUTED }}>
           {t("subtitle")}

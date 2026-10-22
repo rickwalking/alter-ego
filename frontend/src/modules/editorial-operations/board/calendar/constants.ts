@@ -22,47 +22,41 @@ export const CALENDAR_COLORS = {
 
 export const CALENDAR_CONTENT_META: Record<
   CalendarContentType,
-  { c: string; d: string; l: string }
+  { c: string; d: string }
 > = {
-  carousel: { c: CALENDAR_COLORS.cyan, d: CALENDAR_COLORS.cD, l: "carousel" },
-  blog: { c: CALENDAR_COLORS.teal, d: "rgba(10,197,168,0.12)", l: "blog" },
-  meeting: { c: CALENDAR_COLORS.amber, d: CALENDAR_COLORS.aD, l: "meeting" },
-  management: {
-    c: CALENDAR_COLORS.purple,
-    d: CALENDAR_COLORS.pD,
-    l: "management",
-  },
+  carousel: { c: CALENDAR_COLORS.cyan, d: CALENDAR_COLORS.cD },
+  blog: { c: CALENDAR_COLORS.teal, d: "rgba(10,197,168,0.12)" },
+  meeting: { c: CALENDAR_COLORS.amber, d: CALENDAR_COLORS.aD },
+  management: { c: CALENDAR_COLORS.purple, d: CALENDAR_COLORS.pD },
 };
 
 export const CALENDAR_STATUS_META: Record<
   CalendarStatusType,
-  { c: string; b: string; l: string }
+  { c: string; b: string }
 > = {
-  published: { c: "#27ae60", b: "rgba(46,204,113,0.15)", l: "published" },
+  published: { c: "#27ae60", b: "rgba(46,204,113,0.15)" },
   approved: {
     c: CALENDAR_COLORS.cyan,
     b: "rgba(0,212,255,0.15)",
-    l: "approved",
   },
   in_progress: {
     c: CALENDAR_COLORS.cyan,
     b: "rgba(0,212,255,0.15)",
-    l: "in_progress",
   },
   awaiting_human: {
     c: "#ec3768",
     b: "rgba(236,56,153,0.15)",
-    l: "awaiting_human",
   },
 };
 
+/** Legend entries; `key` is the label under `workflow.calendar.legend`. */
 export const CALENDAR_LEGEND = [
-  { l: "Carousel", c: CALENDAR_COLORS.cyan },
-  { l: "Blog Post", c: CALENDAR_COLORS.teal },
-  { l: "Draft", c: CALENDAR_COLORS.magenta },
-  { l: "Meeting", c: CALENDAR_COLORS.amber },
-  { l: "Review", c: CALENDAR_COLORS.purple },
-  { l: "Published", c: CALENDAR_COLORS.green },
+  { key: "carousel", c: CALENDAR_COLORS.cyan },
+  { key: "blogPost", c: CALENDAR_COLORS.teal },
+  { key: "draft", c: CALENDAR_COLORS.magenta },
+  { key: "meeting", c: CALENDAR_COLORS.amber },
+  { key: "review", c: CALENDAR_COLORS.purple },
+  { key: "published", c: CALENDAR_COLORS.green },
 ] as const;
 
 export const CALENDAR_VIEW_MODES = ["Month", "Week", "Day"] as const;
