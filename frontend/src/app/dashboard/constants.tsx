@@ -52,9 +52,11 @@ export {
   NEON_RED,
 };
 
+/** Message key under `dashboard.overview.quickActions` (title + description). */
+export type QuickActionKey = "newCarousel" | "writeBlogPost" | "openChat";
+
 export interface QuickActionConfig {
-  title: string;
-  description: string;
+  key: QuickActionKey;
   href: string;
   icon: React.ReactNode;
   iconBg: string;
@@ -67,25 +69,21 @@ export interface QuickActionConfig {
  */
 export const QUICK_ACTIONS: QuickActionConfig[] = [
   {
-    title: "New Carousel",
-    description:
-      "Start a new carousel project from scratch or from a template.",
+    key: "newCarousel",
     href: DASHBOARD_ROUTES.CREATE,
     icon: <PlusPaths />,
     iconBg: NEON_CYAN_DIM,
     iconColor: NEON_CYAN,
   },
   {
-    title: "Write Blog Post",
-    description: "Draft a new blog article with AI-assisted editing.",
+    key: "writeBlogPost",
     href: DASHBOARD_ROUTES.BLOG_POSTS,
     icon: <EditPaths />,
     iconBg: NEON_MAGENTA_DIM,
     iconColor: NEON_MAGENTA,
   },
   {
-    title: "Open Chat",
-    description: "Ask the Alter Ego anything about projects and knowledge.",
+    key: "openChat",
     href: DASHBOARD_ROUTES.CHAT,
     icon: <ChatPaths />,
     iconBg: NEON_AMBER_DIM,

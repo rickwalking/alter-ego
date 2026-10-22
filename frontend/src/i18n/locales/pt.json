@@ -1189,7 +1189,29 @@
       "subtitle": "Veja conteúdo agendado e publicado em posts e carrosséis.",
       "empty": "Nenhum conteúdo agendado neste período",
       "scheduled": "Agendado",
-      "untitled": "Sem título"
+      "untitled": "Sem título",
+      "legend": {
+        "carousel": "Carrossel",
+        "blogPost": "Post do blog",
+        "draft": "Rascunho",
+        "meeting": "Reunião",
+        "review": "Revisão",
+        "published": "Publicado"
+      },
+      "contentType": {
+        "carousel": "carrossel",
+        "blog": "blog",
+        "meeting": "reunião",
+        "management": "gestão"
+      },
+      "status": {
+        "published": "publicado",
+        "approved": "aprovado",
+        "in_progress": "em andamento",
+        "awaiting_human": "aguardando você"
+      },
+      "emptyMonth": "Nenhum conteúdo agendado neste mês",
+      "emptyMonthHint": "Agende um post ou carrossel para vê-lo no calendário."
     },
     "kanban": {
       "retry": "Tentar novamente"
@@ -1238,16 +1260,36 @@
       "title": "Dashboard",
       "subtitle": "Visão geral do seu pipeline de conteúdo e atividade recente",
       "quickActions": {
-        "title": "Ações Rápidas"
+        "title": "Ações Rápidas",
+        "newCarousel": {
+          "title": "Novo carrossel",
+          "description": "Comece um carrossel do zero ou a partir de um template."
+        },
+        "writeBlogPost": {
+          "title": "Escrever post",
+          "description": "Escreva um novo artigo do blog com edição assistida por IA."
+        },
+        "openChat": {
+          "title": "Abrir chat",
+          "description": "Pergunte ao Alter Ego qualquer coisa sobre projetos e conhecimento."
+        }
       },
       "recentActivity": {
         "title": "Atividade Recente",
-        "live": "Ao Vivo"
+        "live": "Ao Vivo",
+        "items": "{count, plural, =0 {# itens} one {# item} other {# itens}}"
       },
       "upcomingSchedule": {
         "title": "Agenda",
-        "viewAll": "Ver Tudo"
-      }
+        "viewAll": "Ver Tudo",
+        "drafts": "Rascunhos",
+        "inProgress": "{count} em andamento",
+        "today": "Hoje",
+        "velocity": "Velocidade semanal",
+        "postsPerWeek": "{count, plural, =0 {# posts/semana} one {# post/semana} other {# posts/semana}}",
+        "trend": "Tendência"
+      },
+      "breadcrumb": "visão geral"
     },
     "blogPosts": {
       "title": "Posts do Blog",
@@ -1477,7 +1519,8 @@
       "velocityTitle": "Velocidade de Publicação (8 semanas)",
       "loadFailed": "Falha ao carregar analytics",
       "disabledTitle": "Analytics editorial desativado",
-      "disabledBody": "O recurso de analytics editorial está desligado neste ambiente ou para o seu perfil. O resto do dashboard continua funcionando."
+      "disabledBody": "O recurso de analytics editorial está desligado neste ambiente ou para o seu perfil. O resto do dashboard continua funcionando.",
+      "breadcrumb": "análises"
     },
     "instagram": {
       "title": "Instagram",

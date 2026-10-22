@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   CALENDAR_COLORS,
   CALENDAR_FLEX_CENTER,
@@ -7,11 +8,12 @@ import {
 } from "@/modules/editorial-operations";
 
 export function CalendarLegend(): React.ReactElement {
+  const t = useTranslations("workflow.calendar.legend");
   return (
     <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
       {CALENDAR_LEGEND.map((item) => (
         <div
-          key={item.l}
+          key={item.key}
           style={{
             ...CALENDAR_FLEX_CENTER,
             gap: 6,
@@ -29,7 +31,7 @@ export function CalendarLegend(): React.ReactElement {
               flexShrink: 0,
             }}
           />
-          {item.l}
+          {t(item.key)}
         </div>
       ))}
     </div>

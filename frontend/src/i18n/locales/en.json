@@ -1189,7 +1189,29 @@
       "subtitle": "View scheduled and published content across blog posts and carousels.",
       "empty": "No scheduled content in this range",
       "scheduled": "Scheduled",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "legend": {
+        "carousel": "Carousel",
+        "blogPost": "Blog Post",
+        "draft": "Draft",
+        "meeting": "Meeting",
+        "review": "Review",
+        "published": "Published"
+      },
+      "contentType": {
+        "carousel": "carousel",
+        "blog": "blog",
+        "meeting": "meeting",
+        "management": "management"
+      },
+      "status": {
+        "published": "published",
+        "approved": "approved",
+        "in_progress": "in progress",
+        "awaiting_human": "awaiting you"
+      },
+      "emptyMonth": "No scheduled content this month",
+      "emptyMonthHint": "Schedule a post or carousel to see it on the calendar."
     },
     "kanban": {
       "retry": "Retry"
@@ -1238,16 +1260,36 @@
       "title": "Dashboard",
       "subtitle": "Overview of your content pipeline and recent activity",
       "quickActions": {
-        "title": "Quick Actions"
+        "title": "Quick Actions",
+        "newCarousel": {
+          "title": "New Carousel",
+          "description": "Start a new carousel project from scratch or from a template."
+        },
+        "writeBlogPost": {
+          "title": "Write Blog Post",
+          "description": "Draft a new blog article with AI-assisted editing."
+        },
+        "openChat": {
+          "title": "Open Chat",
+          "description": "Ask the Alter Ego anything about projects and knowledge."
+        }
       },
       "recentActivity": {
         "title": "Recent Activity",
-        "live": "Live"
+        "live": "Live",
+        "items": "{count, plural, one {# item} other {# items}}"
       },
       "upcomingSchedule": {
         "title": "Upcoming Schedule",
-        "viewAll": "View All"
-      }
+        "viewAll": "View All",
+        "drafts": "Drafts",
+        "inProgress": "{count} in progress",
+        "today": "Today",
+        "velocity": "Weekly velocity",
+        "postsPerWeek": "{count, plural, one {# post/week} other {# posts/week}}",
+        "trend": "Trend"
+      },
+      "breadcrumb": "overview"
     },
     "blogPosts": {
       "title": "Blog Posts",
@@ -1477,7 +1519,8 @@
       "velocityTitle": "Publish Velocity (8 weeks)",
       "loadFailed": "Failed to load analytics",
       "disabledTitle": "Editorial analytics is off",
-      "disabledBody": "The editorial analytics feature is disabled for this environment or your role. The rest of the dashboard still works."
+      "disabledBody": "The editorial analytics feature is disabled for this environment or your role. The rest of the dashboard still works.",
+      "breadcrumb": "analytics"
     },
     "instagram": {
       "title": "Instagram",

@@ -66,11 +66,21 @@ export function DashboardAnalyticsStats({
   return <NeonStatsGrid cards={statCardsFor(state.data.summary, tAnalytics)} />;
 }
 
+/** Statuses with a translated label under `dashboard.blogPosts.status`. */
+const BLOG_POST_STATUSES: ReadonlySet<string> = new Set([
+  "draft",
+  "under_review",
+  "approved",
+  "published",
+  "archived",
+]);
+
 /** The status breakdown and the drafts/velocity lists (only with data). */
 export function DashboardAnalyticsActivity({
   state,
 }: Readonly<DashboardAnalyticsProps>): React.ReactElement | null {
   const t = useTranslations("dashboard.overview");
+  const tStatus = useTranslations("dashboard.blogPosts.status");
   if (!state.data) {
     return null;
   }
@@ -78,9 +88,11 @@ export function DashboardAnalyticsActivity({
   const statusActivities = Object.entries(summary.status_breakdown).map(
     ([status, count], index) => ({
       id: `status-${index}`,
-      title: status.replace(/_/g, " "),
-      description: `${count} items`,
-      time: "Live",
+      title: BLOG_POST_STATUSES.has(status)
+        ? tStatus(status)
+        : status.replace(/_/g, " "),
+      description: t("recentActivity.items", { count }),
+      time: t("recentActivity.live"),
       badgeVariant: DOT_TO_BADGE["#00d4ff"] ?? "cyan",
     }),
   );
@@ -96,16 +108,20 @@ export function DashboardAnalyticsActivity({
         activities={[
           {
             id: "drafts",
-            title: "Drafts",
-            description: `${summary.draft_count} in progress`,
-            time: "Today",
+            title: t("upcomingSchedule.drafts"),
+            description: t("upcomingSchedule.inProgress", {
+              count: summary.draft_count,
+            }),
+            time: t("upcomingSchedule.today"),
             badgeVariant: "amber",
           },
           {
             id: "velocity",
-            title: "Weekly velocity",
-            description: `${summary.content_velocity_per_week} posts/week`,
-            time: "Trend",
+            title: t("upcomingSchedule.velocity"),
+            description: t("upcomingSchedule.postsPerWeek", {
+              count: summary.content_velocity_per_week,
+            }),
+            time: t("upcomingSchedule.trend"),
             badgeVariant: "teal",
           },
         ]}

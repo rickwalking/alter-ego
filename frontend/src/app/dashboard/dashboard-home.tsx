@@ -25,7 +25,10 @@ export function DashboardHome(): React.ReactElement {
       className="flex-1 text-white relative"
       style={{ fontFamily: PAGE_FONT_FAMILY }}
     >
-      <NeonTopBar title={t("title")} breadcrumb={[{ label: "overview" }]} />
+      <NeonTopBar
+        title={t("title")}
+        breadcrumb={[{ label: t("breadcrumb") }]}
+      />
 
       <div className="p-4 md:p-7">
         <div className="mb-7">
@@ -46,7 +49,7 @@ export function DashboardHome(): React.ReactElement {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {QUICK_ACTIONS.map((action) => (
               <Link
-                key={action.title}
+                key={action.key}
                 href={action.href}
                 className="block no-underline"
               >
@@ -78,9 +81,11 @@ export function DashboardHome(): React.ReactElement {
                     className="text-sm font-semibold mb-1"
                     style={{ color: TEXT }}
                   >
-                    {action.title}
+                    {t(`quickActions.${action.key}.title`)}
                   </h3>
-                  <p className="text-xs text-text-dim">{action.description}</p>
+                  <p className="text-xs text-text-dim">
+                    {t(`quickActions.${action.key}.description`)}
+                  </p>
                 </NeonCard>
               </Link>
             ))}
