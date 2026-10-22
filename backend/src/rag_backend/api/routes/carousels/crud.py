@@ -63,6 +63,7 @@ from .creator_assets import get_creator_asset_service
 from .deps import get_carousel_repo
 from .editorial_workflow_routes_validate import load_persona
 from .helpers import assert_carousel_artifacts_healthy
+from .public_feed import is_public_feed_view, public_feed_item, public_feed_status
 
 router = APIRouter()
 
@@ -147,6 +148,13 @@ async def _persona_id(session: AsyncSession, persona_id: UUID | None) -> str | N
     return str(persona.id) if persona is not None else None
 
 
+def _list_item(project: CarouselProject, public_view: bool) -> CarouselProjectResponse:
+    """The full project, or its public card projection on the public feed."""
+    if public_view:
+        return public_feed_item(project)
+    return CarouselProjectResponse.model_validate(project)
+
+
 @router.get(
     "",
     responses={
@@ -162,11 +170,13 @@ async def list_carousels(
     offset: Annotated[int, Query(ge=0)] = 0,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
 ) -> CarouselProjectListResponse:
-    """List carousel projects. Anonymous users only see published (is_public) items."""
+    """List carousel projects; anonymous and non-admin public views get finished, redacted cards."""
     force_public = user is None or public_only is True
     owner_id: str | None = None
     if user is not None and not user.is_admin() and not force_public:
         owner_id = str(user.id)
+    public_view = is_public_feed_view(user, public_only=public_only)
+    status_filter = public_feed_status(status_filter, public_view=public_view)
     items = await repo.get_all_projects(
         query=_ProjectQuery(
             status=status_filter,
@@ -183,7 +193,7 @@ async def list_carousels(
         owner_id=owner_id,
     )
     return CarouselProjectListResponse(
-        items=[CarouselProjectResponse.model_validate(i) for i in items],
+        items=[_list_item(i, public_view) for i in items],
         total=total,
         limit=limit,
         offset=offset,
