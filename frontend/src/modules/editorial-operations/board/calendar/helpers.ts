@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import type { CalendarItem } from "@/modules/editorial";
 import { toDateLocaleTag } from "@/lib/locale-format";
+import { stripEmphasisMarkup } from "@/lib/public-blog-text";
 import {
   CALENDAR_EVENT_DAY_FORMAT,
   CALENDAR_ISO_DAY_FORMAT,
@@ -31,7 +32,7 @@ function mapContentType(raw: string): CalendarContentType {
 
 function mapCalendarItemToEvent(item: CalendarItem): CalendarEvent {
   return {
-    title: item.title,
+    title: stripEmphasisMarkup(item.title),
     contentType: mapContentType(item.content_type),
     status:
       item.phase_status === "published" ||

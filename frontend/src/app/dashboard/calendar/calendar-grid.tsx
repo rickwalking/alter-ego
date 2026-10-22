@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_COLORS,
@@ -44,12 +44,15 @@ function CalendarDayEvent({
   event,
   dateLabel,
 }: Readonly<CalendarDayEventProps>): React.ReactElement {
+  const t = useTranslations("workflow.calendar");
   const contentMeta = CALENDAR_CONTENT_META[event.contentType];
+  const title = event.title || t("untitled");
   return (
     <div>
       <div
         tabIndex={0}
         role="button"
+        title={title}
         style={{
           padding: "2px 6px",
           borderRadius: 3,
@@ -69,7 +72,7 @@ function CalendarDayEvent({
               : contentMeta.c,
         }}
       >
-        {event.title}
+        {title}
       </div>
       <div
         style={{
