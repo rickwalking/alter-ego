@@ -36,17 +36,6 @@ export function setAccessTokenCookie(
   });
 }
 
-/** Only allow same-origin relative redirects after login. */
-export function sanitizeLoginRedirect(redirect: string | null): string {
-  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
-    return "/dashboard/chat";
-  }
-  if (redirect.startsWith("/login")) {
-    return "/dashboard/chat";
-  }
-  return redirect;
-}
-
 /** Remove stale session cookie (e.g. after 401 or invalid JWT). */
 export function clearAccessTokenCookie(response: {
   cookies: { delete: (name: string) => void };
