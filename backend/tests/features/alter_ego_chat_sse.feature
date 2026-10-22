@@ -52,8 +52,9 @@ Feature: Alter-Ego Public Chat Streaming
   Scenario: Chat for non-existent conversation
     Given I am authenticated
     When I POST to "/api/conversations/00000000-0000-0000-0000-000000000000/chat/stream"
-    Then the response status is 200
-    And I receive an error event with content "Conversation 00000000-0000-0000-0000-000000000000 not found"
+    Then the response status is 404
+    And the response contains "Conversation not found"
+    And no SSE stream is started
 
   # Edge case — rate limit (per-conversation message cap)
   Scenario: Anonymous user exceeds conversation message limit

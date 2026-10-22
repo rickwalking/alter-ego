@@ -14365,16 +14365,6 @@
             },
             "description": "Not authenticated"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -14441,16 +14431,6 @@
               }
             },
             "description": "Not authenticated"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -14575,7 +14555,7 @@
     },
     "/api/conversations/{conversation_id}/chat/stream": {
       "post": {
-        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nNo authentication required. Conversations are ephemeral \u2014 each page\nrefresh creates a fresh session. No cookies or localStorage are used.",
+        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in anonymous conversations. A conversation owned by\na signed-in user accepts messages only from its owner or an admin; anyone\nelse, like an unknown id, gets 404 before the stream starts.",
         "operationId": "chat_stream_api_conversations__conversation_id__chat_stream_post",
         "parameters": [
           {
@@ -14649,6 +14629,11 @@
             "description": "Rate limit exceeded"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Chat Stream",
         "tags": [
           "chat-stream"
@@ -14691,16 +14676,6 @@
               }
             },
             "description": "Not authenticated"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -14784,16 +14759,6 @@
               }
             },
             "description": "Not authenticated"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -15018,7 +14983,7 @@
         ]
       },
       "post": {
-        "description": "Create a new document and start processing.\n\nThe document will be queued for processing (chunking and embedding generation).\nCheck the status field to track progress.",
+        "description": "Create a new document (status ``pending``, not processed yet).\n\nChunking and embedding run through ``POST /{document_id}/reprocess``, which\nthe dashboard calls right after a create; a processing failure is saved on\nthe document as ``failed`` with its reason.",
         "operationId": "create_document_api_documents_post",
         "requestBody": {
           "content": {

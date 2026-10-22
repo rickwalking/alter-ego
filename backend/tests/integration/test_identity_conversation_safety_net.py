@@ -652,20 +652,18 @@ class TestChatStreamSse:
         assert _event_types(events) == ["error"]
 
     @pytest.mark.asyncio
-    async def test_missing_conversation_emits_error_event(
+    async def test_missing_conversation_is_404(
         self, id_env: IdEnv, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Scenario: unknown conversation yields an SSE ``error`` event."""
+        """Scenario: unknown conversation is a 404 before any SSE event."""
         _patch_agents(monkeypatch)
         async with id_env.anon_client() as client:
             resp = await client.post(
                 f"/api/conversations/{NONEXISTENT_UUID}/chat/stream",
                 json={"content": "Hello"},
             )
-        assert resp.status_code == 200
-        events = _parse_sse(resp.text)
-        assert _event_types(events) == ["error"]
-        assert "not found" in str(events[0][1].get("content", "")).lower()
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Conversation not found"
 
 
 class TestIdentitySnapshots:

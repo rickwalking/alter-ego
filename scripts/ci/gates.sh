@@ -155,6 +155,9 @@ gate_backend_autopilot_env() { cd "$REPO_ROOT" && python3 scripts/ci/check_autop
 # Healthcheck loopback (AE-0390): no compose healthcheck or Dockerfile
 # HEALTHCHECK may probe localhost (busybox wget resolves it to [::1]).
 gate_backend_healthcheck_loopback() { cd "$REPO_ROOT" && python3 scripts/ci/check_healthcheck_loopback.py; }
+# OpenAPI artifact freshness: docs/architecture/openapi.json must equal the live
+# FastAPI schema (the frontend schema-drift and contract tests read the artifact).
+gate_backend_openapi_fresh() { cd "$REPO_ROOT/backend" && uv run python scripts/export_openapi.py --check; }
 # Bandit is ADVISORY in CI (report artifact, `|| true`). Mirror that here so the
 # QA verdict matches CI — the security subagent does the deep analysis.
 gate_backend_bandit()      { cd "$REPO_ROOT/backend" && { uv run bandit -r src/ || echo "ADVISORY: bandit findings above (non-blocking, mirrors CI)."; }; }
@@ -299,6 +302,7 @@ BACKEND_GATES=(
   redis-factory:gate_backend_redis_factory
   autopilot-env:gate_backend_autopilot_env
   healthcheck-loopback:gate_backend_healthcheck_loopback
+  openapi-fresh:gate_backend_openapi_fresh
   bandit:gate_backend_bandit
   pip-audit:gate_backend_pip_audit
   integrity:gate_backend_integrity
