@@ -9,6 +9,12 @@ Feature: The shared next-intl test mock behaves like next-intl
     When it re-renders
     Then it receives the same translator function
 
+  Scenario: Each namespace has its own translator reading en.json
+    Given components that read two different namespaces
+    When they translate a key
+    Then each gets its own translator
+    And the text comes from en.json
+
   Scenario: An effect keyed on the translator runs once
     Given a hook whose fetch effect depends on the translator
     When it re-renders without a real change

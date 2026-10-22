@@ -17,13 +17,13 @@ describe("global next-intl test mock", () => {
   });
 
   it("keeps namespaces apart and translates through en.json", () => {
-    // Scenario: The translator keeps its identity across renders
+    // Scenario: Each namespace has its own translator reading en.json
     const { result } = renderHook(() => ({
       common: useTranslations("common"),
       other: useTranslations("workflow.errors"),
     }));
     expect(result.current.common).not.toBe(result.current.other);
-    expect(result.current.other("unknown")).not.toBe("");
+    expect(result.current.other("unknown")).toBe("Unknown error");
   });
 
   it("does not re-run an effect keyed on the translator", () => {
