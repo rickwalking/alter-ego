@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -51,4 +52,24 @@ export async function notFoundUnlessOwnerResource(
   if ((await checkOwnerResource(apiPathFor(id))) === "missing") {
     notFound();
   }
+}
+
+/** Props Next.js passes to a `[id]` segment layout. */
+export interface OwnerResourceLayoutProps {
+  children: ReactNode;
+  params: Promise<{ id: string }>;
+}
+
+/**
+ * A `[id]` segment layout that answers the not-found page (HTTP 404) for a
+ * malformed id or an id the backend does not know, before the page streams.
+ */
+export function ownerResourceLayout(
+  apiPathFor: (id: string) => string,
+): (props: Readonly<OwnerResourceLayoutProps>) => Promise<ReactNode> {
+  return async function OwnerResourceLayout({ children, params }) {
+    const { id } = await params;
+    await notFoundUnlessOwnerResource(id, apiPathFor);
+    return children;
+  };
 }
