@@ -146,6 +146,11 @@ Pending.
   `status=completed`, the same rule as the public viewer
   (`assert_carousel_public_completed`); slides are dropped from its items
   (their `image_path` is a server path).
+- OpenAPI freshness gate (`backend:openapi-fresh`, from the #213 review) is a CI/config change: (a) no public or
+  user-visible behaviour changes (the regenerated `docs/architecture/openapi.json` only catches up with routes
+  already on main); (b) seeded-violation tests in `backend/tests/unit/scripts_ci/test_export_openapi_check.py`
+  prove a stale or missing artifact exits 1; (c) affected gates: new `backend:openapi-fresh` (Lint & Format job),
+  `frontend:schema-drift` reads the same artifact; (d) no-`.feature` classification for reviewer/QA sign-off.
 
 ## Blockers
 
