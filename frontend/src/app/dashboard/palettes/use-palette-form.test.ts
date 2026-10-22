@@ -50,4 +50,29 @@ describe("usePaletteForm", () => {
     act(() => result.current.setField("name", "  Aurora  "));
     expect(result.current.toRequest().name).toBe("Aurora");
   });
+
+  /** Scenario: Using a candidate pre-fills the form without saving */
+  it("replaces every field with a candidate and caps its keywords", () => {
+    const { result } = renderHook(() => usePaletteForm());
+    act(() =>
+      result.current.applyCandidate({
+        name: "Areia",
+        primary: "#1d4ed8",
+        accent: "#9a3412",
+        background: "#f8f5ee",
+        mode: "light",
+        keywords: Array.from({ length: 12 }, (_, i) => `k${i}`),
+        contrast: { text: 16.2, primary: 6.1, accent: 6.9 },
+      }),
+    );
+    expect(result.current.state).toEqual({
+      name: "Areia",
+      primary: "#1d4ed8",
+      accent: "#9a3412",
+      background: "#f8f5ee",
+      mode: "light",
+      keywords: Array.from({ length: 10 }, (_, i) => `k${i}`),
+    });
+    expect(result.current.isValid).toBe(true);
+  });
 });

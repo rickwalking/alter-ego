@@ -12,6 +12,7 @@
 export {
   useArchivePalette,
   useCreatePalette,
+  useGeneratePalettes,
   usePaletteCatalog,
   useUpdatePalette,
 } from "@/modules/palette/hooks/use-palettes";

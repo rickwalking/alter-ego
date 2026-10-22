@@ -980,6 +980,17 @@
       "duplicate": "Já existe uma paleta com este nome.",
       "invalid": "Alguns campos estão inválidos. Verifique as cores e o nome.",
       "generic": "Algo deu errado. Tente novamente."
+    },
+    "generator": {
+      "label": "Descreva a paleta",
+      "placeholder": "ex.: noite tropical, azul profundo com rosa neon",
+      "hint": "A IA sugere 3 paletas legíveis (contraste AA). Nada é salvo até você clicar em Criar.",
+      "generate": "Gerar",
+      "regenerate": "Gerar de novo",
+      "use": "Usar",
+      "candidates": "Sugestões da IA",
+      "contrast": "Contraste {ratio}:1",
+      "error": "Não foi possível gerar paletas agora. Tente de novo ou crie manualmente."
     }
   },
   "rubrics": {

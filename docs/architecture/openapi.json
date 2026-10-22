@@ -5989,6 +5989,51 @@
         "title": "ObservedXPost",
         "type": "object"
       },
+      "PaletteCandidateResponse": {
+        "description": "One AA-checked candidate that pre-fills the create form.",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "background": {
+            "title": "Background",
+            "type": "string"
+          },
+          "contrast": {
+            "$ref": "#/components/schemas/PaletteContrastResponse"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PaletteMode"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "primary",
+          "accent",
+          "background",
+          "mode",
+          "keywords",
+          "contrast"
+        ],
+        "title": "PaletteCandidateResponse",
+        "type": "object"
+      },
       "PaletteCatalogResponse": {
         "description": "The full catalog: read-only roots + active custom palettes (D1).",
         "properties": {
@@ -6012,6 +6057,30 @@
           "custom"
         ],
         "title": "PaletteCatalogResponse",
+        "type": "object"
+      },
+      "PaletteContrastResponse": {
+        "description": "WCAG contrast ratios against the background (each at least 4.5).",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "number"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "number"
+          },
+          "text": {
+            "title": "Text",
+            "type": "number"
+          }
+        },
+        "required": [
+          "text",
+          "primary",
+          "accent"
+        ],
+        "title": "PaletteContrastResponse",
         "type": "object"
       },
       "PaletteCreateRequest": {
@@ -6055,6 +6124,40 @@
           "mode"
         ],
         "title": "PaletteCreateRequest",
+        "type": "object"
+      },
+      "PaletteGenerateRequest": {
+        "additionalProperties": false,
+        "description": "The owner's description of the palette to generate (never stored).",
+        "properties": {
+          "description": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "PaletteGenerateRequest",
+        "type": "object"
+      },
+      "PaletteGenerateResponse": {
+        "description": "Up to three candidates from one generation.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/PaletteCandidateResponse"
+            },
+            "title": "Candidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidates"
+        ],
+        "title": "PaletteGenerateResponse",
         "type": "object"
       },
       "PaletteMode": {
@@ -16608,6 +16711,59 @@
           }
         ],
         "summary": "Create Palette",
+        "tags": [
+          "palettes"
+        ]
+      }
+    },
+    "/api/palettes/generate": {
+      "post": {
+        "description": "Up to three AA-checked candidates for the create form; nothing is stored.",
+        "operationId": "generate_palettes_api_palettes_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaletteGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteGenerateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "palette_generation_unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Palettes",
         "tags": [
           "palettes"
         ]

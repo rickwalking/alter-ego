@@ -12,6 +12,7 @@ import {
   type PaletteCreateRequest,
 } from "@/schemas/palette";
 import { PaletteColorInput } from "./palette-color-input";
+import { PaletteGenerator } from "./palette-generator";
 import { PaletteKeywordsField } from "./palette-keywords-field";
 import { PaletteSwatch } from "./palette-swatch";
 import { derivedImageStyleKey } from "./derived-image-style";
@@ -64,6 +65,8 @@ export function PaletteFormModal({
       }
     >
       <div className="flex flex-col gap-4">
+        {!isEdit && <PaletteGenerator onUse={form.applyCandidate} />}
+
         <PaletteSwatch
           primary={form.state.primary}
           accent={form.state.accent}

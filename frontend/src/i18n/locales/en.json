@@ -980,6 +980,17 @@
       "duplicate": "A palette with this name already exists.",
       "invalid": "Some fields are invalid. Check the colours and name.",
       "generic": "Something went wrong. Please try again."
+    },
+    "generator": {
+      "label": "Describe the palette",
+      "placeholder": "e.g. tropical night, deep blue with neon pink",
+      "hint": "The AI suggests 3 readable palettes (AA contrast). Nothing is saved until you click Create.",
+      "generate": "Generate",
+      "regenerate": "Generate again",
+      "use": "Use",
+      "candidates": "AI suggestions",
+      "contrast": "Contrast {ratio}:1",
+      "error": "Could not generate palettes right now. Try again or create one by hand."
     }
   },
   "rubrics": {

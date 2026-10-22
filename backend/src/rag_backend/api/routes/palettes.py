@@ -1,7 +1,8 @@
 """Custom-palette catalog CRUD API.
 
-Exposes ``GET/POST/PATCH/DELETE /palettes`` behind the ``palette_catalog`` feature
-flag (default ON since the frontend shipped). Roots are
+Exposes ``GET/POST/PATCH/DELETE /palettes`` plus ``POST /palettes/generate``
+(AI candidates that pre-fill the create form, nothing stored) behind the
+``palette_catalog`` feature flag (default ON since the frontend shipped). Roots are
 read-only (403); custom palettes are editable by any authenticated user (D7);
 delete is a soft archive (D4). Request-shape security (strict hex, name XSS,
 keyword guards) lives in the Pydantic schema; this module owns auth, the feature
@@ -28,11 +29,18 @@ from rag_backend.api.constants import (
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.feature_flags import RequirePaletteCatalog
+from rag_backend.api.dependencies.palette_generation import (
+    get_palette_generation_service,
+)
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.palette import (
     CustomPaletteResponse,
+    PaletteCandidateResponse,
     PaletteCatalogResponse,
+    PaletteContrastResponse,
     PaletteCreateRequest,
+    PaletteGenerateRequest,
+    PaletteGenerateResponse,
     PaletteUpdateRequest,
     RootPaletteResponse,
 )
@@ -43,14 +51,26 @@ from rag_backend.application.services.carousel.palette_catalog_service import (
     PaletteUpdateCommand,
     is_root_key,
 )
+from rag_backend.application.services.carousel.palette_generation_service import (
+    PaletteCandidate,
+    PaletteGenerationError,
+    PaletteGenerationRequest,
+    PaletteGenerationService,
+)
 from rag_backend.domain.constants.carousel_themes import PALETTE_REGISTRY
 from rag_backend.domain.constants.palette_catalog import (
     ERR_PALETTE_NAME_CONFLICT,
     ERR_PALETTE_NOT_FOUND,
     ERR_ROOT_PALETTE_IMMUTABLE,
 )
+from rag_backend.domain.constants.palette_generation import (
+    ERR_PALETTE_GENERATION_UNAVAILABLE,
+)
 from rag_backend.domain.constants.palette_types import PaletteKind
-from rag_backend.domain.constants.rate_limits import RATE_LIMIT_PALETTE_WRITE
+from rag_backend.domain.constants.rate_limits import (
+    RATE_LIMIT_PALETTE_GENERATE,
+    RATE_LIMIT_PALETTE_WRITE,
+)
 from rag_backend.domain.models import User
 from rag_backend.domain.models.palette import CustomPalette
 from rag_backend.domain.protocols.palette import PaletteRepository
@@ -152,6 +172,41 @@ def _to_response(palette: CustomPalette) -> CustomPaletteResponse:
     )
 
 
+@dataclass(frozen=True)
+class PaletteGenerateCtx:
+    """The caller and the generator of ``POST /palettes/generate``."""
+
+    user: User
+    service: PaletteGenerationService
+
+
+def get_palette_generate_ctx(
+    user: Annotated[User, Depends(require_authenticated_user)],
+    service: Annotated[
+        PaletteGenerationService, Depends(get_palette_generation_service)
+    ],
+) -> PaletteGenerateCtx:
+    """Resolve the authenticated generation context."""
+    return PaletteGenerateCtx(user=user, service=service)
+
+
+def _candidate_response(candidate: PaletteCandidate) -> PaletteCandidateResponse:
+    """Map a generated candidate to its API response."""
+    return PaletteCandidateResponse(
+        name=candidate.name,
+        primary=candidate.primary,
+        accent=candidate.accent,
+        background=candidate.background,
+        mode=candidate.mode,
+        keywords=list(candidate.keywords),
+        contrast=PaletteContrastResponse(
+            text=candidate.contrast.text,
+            primary=candidate.contrast.primary,
+            accent=candidate.contrast.accent,
+        ),
+    )
+
+
 def _reject_root(ref: str) -> None:
     """403 if ``ref`` names a read-only root palette (write paths only)."""
     if is_root_key(ref):
@@ -218,6 +273,35 @@ async def create_palette(
             status_code=status.HTTP_409_CONFLICT, detail=ERR_PALETTE_NAME_CONFLICT
         ) from exc
     return _to_response(created)
+
+
+@router.post(
+    "/generate",
+    responses={
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        503: {"description": ERR_PALETTE_GENERATION_UNAVAILABLE},
+    },
+)
+@limiter.limit(RATE_LIMIT_PALETTE_GENERATE)
+async def generate_palettes(
+    request: Request,
+    body: PaletteGenerateRequest,
+    ctx: Annotated[PaletteGenerateCtx, Depends(get_palette_generate_ctx)],
+) -> PaletteGenerateResponse:
+    """Up to three AA-checked candidates for the create form; nothing is stored."""
+    try:
+        candidates = await ctx.service.generate(
+            PaletteGenerationRequest(
+                description=body.description, user_id=str(ctx.user.id)
+            )
+        )
+    except PaletteGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.code
+        ) from exc
+    return PaletteGenerateResponse(
+        candidates=[_candidate_response(candidate) for candidate in candidates]
+    )
 
 
 @router.patch(
