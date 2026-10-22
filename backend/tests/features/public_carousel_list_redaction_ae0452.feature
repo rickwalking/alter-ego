@@ -16,8 +16,8 @@ Feature: The public carousel feed hides unfinished carousels and private fields
     Given a public completed carousel with a blog draft, an error message and an output directory
     When an anonymous visitor lists public carousels
     Then the item keeps its title and language
-    And its blog markdown, caption, LinkedIn copy, error message, output directory and PDF paths are empty
-    And it lists no research sources
+    And its blog markdown, caption, LinkedIn copy, POV brief, persona, hook asset, error message, output directory and PDF paths are empty
+    And it lists no research sources and no slides (slides carry server image paths)
 
   Scenario: A signed-in non-admin browsing the public feed gets the same redacted items
     Given a public completed carousel owned by another user with a blog draft
@@ -28,3 +28,19 @@ Feature: The public carousel feed hides unfinished carousels and private fields
     Given a public completed carousel with a blog draft
     When an admin lists carousels
     Then the item's blog markdown is returned
+
+  Scenario: A signed-in editor browsing the public feed never lists an unfinished carousel
+    Given a public carousel that failed
+    When a signed-in editor lists carousels with public=true, with or without a status filter
+    Then the failed carousel is not in the list
+
+  Scenario: An admin browsing the public feed still sees the full project
+    Given a public completed carousel with a blog draft
+    When an admin lists carousels with public=true
+    Then the item's blog markdown, POV brief and error message are returned
+
+  Scenario: A public feed item never carries slide image paths
+    Given a carousel project whose slides carry server image paths
+    When it is projected for the public feed
+    Then the item lists no slides and keeps its title
+

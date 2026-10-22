@@ -25,10 +25,11 @@ PUBLIC_FEED_REDACTED: Final[dict[str, object]] = {
     "hook_asset_id": None,
     "persona_id": None,
     "research_sources": [],
+    "slides": [],
 }
 
 
-def is_public_feed_view(user: User | None, public_only: bool | None) -> bool:
+def is_public_feed_view(user: User | None, *, public_only: bool | None) -> bool:
     """True when the list is served as the public feed (anonymous or non-admin public).
 
     An admin keeps the full project even with ``public=true``; everyone else
@@ -40,19 +41,25 @@ def is_public_feed_view(user: User | None, public_only: bool | None) -> bool:
 
 
 def public_feed_status(
-    user: User | None, requested: CarouselStatus | None
+    requested: CarouselStatus | None, *, public_view: bool
 ) -> CarouselStatus | None:
-    """Anonymous visitors only ever see finished carousels, like the public viewer.
+    """The public feed only ever lists finished carousels, like the public viewer.
 
     A public carousel that is still generating (or failed) is not part of the
-    gallery; the viewer already answers 404 for it.
+    gallery; the viewer already answers 404 for it. Admins and owners keep the
+    status they asked for.
     """
-    if user is not None:
-        return requested
-    return PUBLIC_FEED_STATUS
+    if public_view:
+        return PUBLIC_FEED_STATUS
+    return requested
 
 
 def public_feed_item(project: CarouselProject) -> CarouselProjectResponse:
-    """The list item without owner-only drafts, briefs, paths or errors."""
+    """The list item without owner-only drafts, briefs, paths or errors.
+
+    Slides are dropped too: their ``image_path`` is a server path under the
+    output directory, and the gallery card reads its images from the design
+    tokens.
+    """
     full = CarouselProjectResponse.model_validate(project)
     return full.model_copy(update=PUBLIC_FEED_REDACTED)

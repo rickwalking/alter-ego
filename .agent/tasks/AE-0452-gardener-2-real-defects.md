@@ -42,7 +42,7 @@ without cleanup, error details reaching clients, plus the AE-0446 follow-ups
 ## Acceptance Criteria
 
 - [ ] Public carousel feed: anonymous and non-admin `public=true` lists return only
-      finished carousels and no owner-only fields (PR: public carousel list).
+      finished carousels and no owner-only fields (#179).
 - [ ] Each further finding class ships its own PR with a failing-first test.
 - [ ] Every PR's CI is fully green; mutation read from the PR-head CI job.
 
@@ -107,7 +107,10 @@ Full file: `backend/tests/features/public_carousel_list_redaction_ae0452.feature
 
 | Class | Finding | Status |
 | --- | --- | --- |
-| Data exposure | `GET /api/carousels` (anonymous, or non-admin `public=true`) returned the full project: `blog_markdown` (the body of blog posts that are now hidden drafts), caption, LinkedIn copy, POV brief, `error_message`, `output_dir`, PDF paths, research sources; anonymous callers without `status` also got public carousels that are still generating or failed, which the public viewer 404s | PR: public carousel list |
+| Data exposure | `GET /api/carousels` (anonymous, or non-admin `public=true`) returned the full project: `blog_markdown` (the body of blog posts that are now hidden drafts), caption, LinkedIn copy, POV brief, persona/hook ids, `error_message`, `output_dir`, PDF paths, research sources; it also listed public carousels that are still generating or failed, which the public viewer 404s | #179 |
+| Frontend effect cleanup | Workflow polling fallback kept polling `workflow/state` after the workspace unmounted (late poll answer re-armed the timer; no cleanup without `EventSource`) | #182 |
+| Public SEO surface | `sitemap.xml` on `your-domain.com` with `/chat` + `/dashboard/knowledge` and no content; `robots.txt` and carousel OG images on `alterego.app` (`SITE_URL` default) | #183 |
+| Swallowed async failures | Notification mark-as-read, key-point extraction and persona/rubric create rejected into `void` click handlers (no UI feedback); `useResourceCollection.refetch` never cleared a stale error | #184 |
 
 ## QA Checklist
 
@@ -139,8 +142,10 @@ Pending.
 
 - An admin keeps the full project on every list (the dashboard needs it); the
   redaction applies to the public feed view only.
-- Anonymous callers are always served `status=completed`, the same rule as the
-  public viewer (`assert_carousel_public_completed`).
+- The public feed view (anonymous, or non-admin `public=true`) is always served
+  `status=completed`, the same rule as the public viewer
+  (`assert_carousel_public_completed`); slides are dropped from its items
+  (their `image_path` is a server path).
 
 ## Blockers
 

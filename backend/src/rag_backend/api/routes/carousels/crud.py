@@ -175,8 +175,8 @@ async def list_carousels(
     owner_id: str | None = None
     if user is not None and not user.is_admin() and not force_public:
         owner_id = str(user.id)
-    status_filter = public_feed_status(user, status_filter)
-    public_view = is_public_feed_view(user, public_only)
+    public_view = is_public_feed_view(user, public_only=public_only)
+    status_filter = public_feed_status(status_filter, public_view=public_view)
     items = await repo.get_all_projects(
         query=_ProjectQuery(
             status=status_filter,
