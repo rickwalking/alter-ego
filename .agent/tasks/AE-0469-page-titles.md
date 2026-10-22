@@ -38,6 +38,8 @@ indistinguishable and screen readers announced no page name (WCAG 2.4.2).
 
 - [x] Public: Blog / Sign in / Access denied / Page not found titles, localized.
 - [x] Dashboard and admin pages: their own titles, localized.
+- [x] Follow-up (#211 review, via AE-0481): a page's `openGraph` replaces the root one in Next.js, so
+      `pageMetadata` returns og:type "website" too, and `/blog` sets its own description + og:description (en/pt).
 
 ## Repro Steps
 

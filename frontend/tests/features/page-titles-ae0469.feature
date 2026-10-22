@@ -15,3 +15,8 @@ Feature: Every page has its own localized title
     Given the interface language is Portuguese
     When I open the calendar
     Then the title reads "Calendário · Pedro Marins"
+
+  Scenario: Page Open Graph tags keep a type and the page description
+    When a page sets its own title
+    Then its Open Graph tags still carry og:type "website"
+    And "/blog" also carries its own description as description and og:description
