@@ -168,3 +168,24 @@ describe("calendar labels in the active locale (AE-0417)", () => {
     expect(en).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
   });
 });
+
+describe("calendar content types from the API", () => {
+  function contentTypeOf(contentType: string): string | undefined {
+    const grid = buildCalendarDaysFromApi(
+      new Date(2026, 6, 1),
+      [makeItem({ content_type: contentType })],
+      null,
+    );
+    return grid.find((c) => c.iso === "2026-07-10")?.events[0]?.contentType;
+  }
+
+  it("shows a blog_post entry as a blog", () => {
+    // Scenario: A blog post entry shows as a blog
+    expect(contentTypeOf("blog_post")).toBe("blog");
+  });
+
+  it("shows a carousel entry as a carousel", () => {
+    // Scenario: A carousel entry shows as a carousel
+    expect(contentTypeOf("carousel")).toBe("carousel");
+  });
+});

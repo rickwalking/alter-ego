@@ -1381,6 +1381,10 @@
         "description": "Single calendar entry.",
         "properties": {
           "content_type": {
+            "enum": [
+              "blog_post",
+              "carousel"
+            ],
             "title": "Content Type",
             "type": "string"
           },
@@ -16569,6 +16573,23 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
             }
           }
         ],

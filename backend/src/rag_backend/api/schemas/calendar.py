@@ -4,12 +4,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from rag_backend.domain.constants.content_calendar import CalendarContentType
+
 
 class CalendarItemResponse(BaseModel):
     """Single calendar entry."""
 
     id: str
-    content_type: str
+    content_type: CalendarContentType
     title: str
     status: str
     event_date: str

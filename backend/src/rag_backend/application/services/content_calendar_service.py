@@ -8,6 +8,10 @@ from datetime import UTC, datetime
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.content_calendar import (
+    CALENDAR_CONTENT_TYPE_BLOG_POST,
+    CALENDAR_CONTENT_TYPE_CAROUSEL,
+)
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
@@ -46,7 +50,7 @@ class ContentCalendarService:
                 continue
             items.append({
                 "id": str(post.id),
-                "content_type": "blog_post",
+                "content_type": CALENDAR_CONTENT_TYPE_BLOG_POST,
                 "title": post.title,
                 "status": post.status,
                 "event_date": event_date.isoformat(),
@@ -64,7 +68,7 @@ class ContentCalendarService:
         items.extend(
             {
                 "id": str(project.id),
-                "content_type": "carousel",
+                "content_type": CALENDAR_CONTENT_TYPE_CAROUSEL,
                 "title": project.title or project.topic,
                 "status": project.status,
                 "event_date": project.updated_at.isoformat()

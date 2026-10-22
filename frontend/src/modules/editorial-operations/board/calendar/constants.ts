@@ -20,6 +20,16 @@ export const CALENDAR_COLORS = {
   bdr: "rgba(0,212,255,0.06)",
 } as const;
 
+/**
+ * The content types the calendar API sends (`CalendarItemResponse.content_type`
+ * in the OpenAPI schema) and the calendar type each one is shown as. Any other
+ * value falls back to "management".
+ */
+export const CALENDAR_API_CONTENT_TYPES = {
+  blog_post: "blog",
+  carousel: "carousel",
+} as const satisfies Readonly<Record<string, CalendarContentType>>;
+
 export const CALENDAR_CONTENT_META: Record<
   CalendarContentType,
   { c: string; d: string; l: string }
