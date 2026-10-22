@@ -35,6 +35,8 @@ interface ServerFetchOptions {
   cache?: RequestInit["cache"];
 }
 
+const NO_STORE: ServerFetchOptions = { cache: "no-store" };
+
 /** `cache` wins; otherwise ISR via `next.revalidate`; otherwise defaults. */
 function toFetchInit(
   options?: ServerFetchOptions,
@@ -112,11 +114,12 @@ export async function fetchCarouselDesign(
 export async function fetchPublicCarousels(
   limit: number = SERVER_FETCH.PUBLIC_CAROUSEL_PAGE_SIZE,
   offset = 0,
+  options: ServerFetchOptions = NO_STORE,
 ): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
   const result = await validatedFetch(
     `${API_ENDPOINTS.CAROUSELS}?public=true&status=${SERVER_FETCH.COMPLETED_STATUS}&sort=created_at&limit=${limit}&offset=${offset}`,
     carouselProjectListResponseSchema,
-    { cache: "no-store" },
+    options,
   );
 
   return result ?? { items: [], total: 0, limit, offset };
@@ -135,13 +138,16 @@ export async function fetchPublicCarousel(
   );
 }
 
+/** One page of published blog posts; null when the feed is unavailable. */
 export async function fetchPublicBlogPosts(
   limit: number = SERVER_FETCH.DEFAULT_PROJECT_LIMIT,
+  offset = 0,
+  options: ServerFetchOptions = NO_STORE,
 ): Promise<z.infer<typeof publicBlogPostListResponseSchema> | null> {
   return validatedFetch(
-    `${API_ENDPOINTS.PUBLIC_BLOG_POSTS}?limit=${limit}`,
+    `${API_ENDPOINTS.PUBLIC_BLOG_POSTS}?limit=${limit}&offset=${offset}`,
     publicBlogPostListResponseSchema,
-    { cache: "no-store" },
+    options,
   );
 }
 

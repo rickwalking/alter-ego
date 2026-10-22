@@ -1,0 +1,12 @@
+/** Sitemap feed paging and cache settings. */
+export const SITEMAP = {
+  BLOG_POST_PAGE_SIZE: 50,
+  CAROUSEL_PAGE_SIZE: 100,
+  MAX_PAGES_PER_FEED: 20,
+  REVALIDATE_SECONDS: 3600,
+  PAGE_CHANGE_FREQUENCY: "weekly",
+  CONTENT_CHANGE_FREQUENCY: "monthly",
+  HOME_PRIORITY: 1,
+  SECTION_PRIORITY: 0.8,
+  CONTENT_PRIORITY: 0.6,
+} as const;

@@ -182,7 +182,9 @@
       "url": "/sitemap.xml",
       "kind": "metadata",
       "file": "src/app/sitemap.ts",
-      "segmentConfig": {}
+      "segmentConfig": {
+        "revalidate": "3600"
+      }
     }
   ]
 }
