@@ -9,6 +9,7 @@ import {
 import { Suspense, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
+import { useIsClient } from "@/lib/use-is-client";
 import {
   useDocuments,
   useCreateDocument,
@@ -23,12 +24,6 @@ import { type DocumentListSectionProps } from "./types";
 
 type ViewMode = "list" | "create" | "upload";
 
-/**
- * Data-bound list subtree (ADR-010). Reads documents via the Suspense query
- * (`useDocuments`); the parent's `<Suspense>` renders the skeleton while it
- * loads and the route-level `error.tsx` boundary handles fetch errors. No
- * `isLoading` branch lives here.
- */
 /** Document metadata is free-form JSON: keep only string tags. */
 function stringList(value: unknown): string[] {
   return Array.isArray(value)
@@ -36,6 +31,12 @@ function stringList(value: unknown): string[] {
     : [];
 }
 
+/**
+ * Data-bound list subtree (ADR-010). Reads documents via the Suspense query
+ * (`useDocuments`); the parent's `<Suspense>` renders the skeleton while it
+ * loads and the route-level `error.tsx` boundary handles fetch errors. No
+ * `isLoading` branch lives here.
+ */
 function DocumentListSection({
   onCreateNew,
   onUploadNew,
@@ -68,6 +69,7 @@ export function KnowledgeBaseInterface() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
+  const isClient = useIsClient();
 
   const handleCreateNew = useCallback(() => {
     setViewMode("create");
@@ -104,6 +106,9 @@ export function KnowledgeBaseInterface() {
   );
 
   const renderView = (): React.ReactElement => {
+    if (viewMode === "list" && !isClient) {
+      return <DocumentListSkeleton />;
+    }
     if (viewMode === "list") {
       return (
         <Suspense fallback={<DocumentListSkeleton />}>
@@ -144,12 +149,9 @@ export function KnowledgeBaseInterface() {
 
   return (
     <Container className="py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
-        <p className="text-[var(--color-muted-foreground)] mt-2">
-          {t("description")}
-        </p>
-      </div>
+      <p className="mb-8 text-[var(--color-muted-foreground)]">
+        {t("description")}
+      </p>
 
       {renderView()}
     </Container>

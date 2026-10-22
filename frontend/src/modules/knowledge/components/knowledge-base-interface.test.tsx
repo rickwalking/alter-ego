@@ -158,11 +158,12 @@ describe("KnowledgeBaseInterface Component", () => {
 
   describe("Given the KnowledgeBaseInterface is rendered", () => {
     describe("When the component is displayed", () => {
-      it("Then the page title should be visible", () => {
+      // Scenario: The page has a single heading
+      it("Then it adds no second page heading under the top bar", () => {
         render(<KnowledgeBaseInterface />);
         expect(
-          screen.getByRole("heading", { name: /knowledge base/i }),
-        ).toBeInTheDocument();
+          screen.queryByRole("heading", { level: 1 }),
+        ).not.toBeInTheDocument();
       });
 
       it("Then the page description should be visible", () => {
