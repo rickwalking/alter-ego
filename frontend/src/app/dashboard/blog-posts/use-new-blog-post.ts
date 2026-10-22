@@ -10,33 +10,39 @@ import {
   BlogPostMutationError,
   useBlogPosts,
 } from "@/modules/publishing";
-
-interface UseNewBlogPostResult {
-  creating: boolean;
-  createError: string | null;
-  handleNewPost: () => Promise<void>;
-}
+import type { UseNewBlogPostResult } from "./types";
 
 /**
- * Encapsulates the "create a draft and navigate to the editor" action used by
- * the Blog Posts dashboard top bar. It flips `creating` on, creates a draft
- * titled with the localized "Untitled draft", navigates on success, and on
- * failure resets `creating` and exposes a localized error.
+ * The "New Post" form of the Blog Posts top bar. Opening it creates nothing;
+ * only a submit with a non-blank title creates the draft and opens its editor.
+ * A failed create keeps the form open with a localized error.
  */
 export function useNewBlogPost(
   create: ReturnType<typeof useBlogPosts>["create"],
 ): UseNewBlogPostResult {
   const router = useRouter();
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const trimmedTitle = title.trim();
 
-  const handleNewPost = async (): Promise<void> => {
+  const show = (): void => {
+    setTitle("");
+    setCreateError(null);
+    setOpen(true);
+  };
+
+  const submit = async (): Promise<void> => {
+    if (!trimmedTitle) {
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     try {
       const post = await create({
-        title: t("untitledDraft"),
+        title: trimmedTitle,
         content: { body: "" },
         excerpt: "",
       });
@@ -52,5 +58,15 @@ export function useNewBlogPost(
     }
   };
 
-  return { creating, createError, handleNewPost };
+  return {
+    open,
+    title,
+    setTitle,
+    canSubmit: trimmedTitle.length > 0 && !creating,
+    creating,
+    createError,
+    show,
+    hide: () => setOpen(false),
+    submit,
+  };
 }
