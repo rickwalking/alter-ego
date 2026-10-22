@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_copy_versions import (
@@ -22,6 +23,8 @@ from rag_backend.infrastructure.database.models.source_comment import (
 )
 from rag_backend.infrastructure.database.models.user import UserModel
 
+ERR_CREATED_AT_TYPE = "content_versions.created_at is not a datetime"
+
 
 def _snapshot(version: NewCopyVersion) -> dict[str, str | int]:
     snapshot: dict[str, str | int] = {
@@ -38,15 +41,25 @@ def _restored_from(snapshot: dict[str, object]) -> int | None:
     return value if isinstance(value, int) else None
 
 
-def _to_version(model: ContentVersionModel, author_name: str | None) -> CopyVersion:
-    snapshot: dict[str, object] = dict(model.snapshot or {})
+def _optional_text(value: object) -> str | None:
+    return None if value is None else str(value)
+
+
+def _to_version(row: Row[tuple[object, ...]]) -> CopyVersion:
+    """One selected ``(number, snapshot, author_id, created_at, name)`` row."""
+    number, raw_snapshot, author_id, created_at, author_name = row
+    snapshot: dict[str, object] = (
+        dict(raw_snapshot) if isinstance(raw_snapshot, dict) else {}
+    )
+    if not isinstance(created_at, datetime):
+        raise TypeError(ERR_CREATED_AT_TYPE)
     return CopyVersion(
-        version_number=int(model.version_number),
+        version_number=int(str(number)),
         field=str(snapshot.get(SNAPSHOT_FIELD_KEY, "")),
         text=str(snapshot.get(SNAPSHOT_TEXT_KEY, "")),
-        author_id=model.author_id,
-        author_name=author_name,
-        created_at=model.created_at,
+        author_id=_optional_text(author_id),
+        author_name=_optional_text(author_name),
+        created_at=created_at,
         restored_from=_restored_from(snapshot),
     )
 
@@ -60,7 +73,13 @@ class PostgresCopyVersionStore:
     async def list_versions(self, project_id: str) -> list[CopyVersion]:
         """The carousel's versions, newest first, with the author's name."""
         stmt = (
-            select(ContentVersionModel, UserModel.full_name)
+            select(
+                ContentVersionModel.version_number,
+                ContentVersionModel.snapshot,
+                ContentVersionModel.author_id,
+                ContentVersionModel.created_at,
+                UserModel.full_name,
+            )
             .outerjoin(UserModel, UserModel.id == ContentVersionModel.author_id)
             .where(
                 ContentVersionModel.content_id == project_id,
@@ -69,7 +88,7 @@ class PostgresCopyVersionStore:
             .order_by(ContentVersionModel.version_number.desc())
         )
         rows = (await self._session.execute(stmt)).all()
-        return [_to_version(model, name) for model, name in rows]
+        return [_to_version(row) for row in rows]
 
     async def add(self, project_id: str, versions: list[NewCopyVersion]) -> None:
         """Stage the versions after the carousel's highest number (no commit)."""

@@ -28,6 +28,7 @@ from rag_backend.application.services.carousel.refinement_service import (
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
+from rag_backend.bootstrap.carousel_copy_versions import build_copy_version_store
 from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.domain.models import User
 from rag_backend.domain.protocols import (
@@ -39,9 +40,6 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 from rag_backend.infrastructure.database.config import get_session
-from rag_backend.infrastructure.database.copy_version_repository import (
-    PostgresCopyVersionStore,
-)
 
 
 def get_carousel_repo(
@@ -199,7 +197,7 @@ def get_carousel_copy_edit_route_deps(
             CarouselCopyEditDeps(
                 db=session,
                 repo=repo,
-                versions=PostgresCopyVersionStore(session),
+                versions=build_copy_version_store(session),
             )
         ),
     )
