@@ -27,7 +27,7 @@ Items below were identified during Phase 2–3 implementation and QA. They are *
 |-------|-------|
 | **File** | `frontend/src/modules/publishing/blog/hooks/use-blog-posts.ts` |
 | **Issue** | Uses plain `fetch()` instead of `authenticatedFetch`; inconsistent with Phase 2 hooks. Status 2026-10-21: the hook now uses `authenticatedFetch`; the `reviewer_id` query param remains on submit-review |
-| **Also** | Stale `reviewer_id` query param on approve (`:99`) — backend uses `current_user.id` |
+| **Also** | Stale `reviewer_id` query param on submit-review (`use-blog-posts.ts:144`) — backend uses `current_user.id` |
 | **Reference** | OWASP A07, QA Security WARN |
 | **Acceptance** | All blog CRUD/workflow calls use `authenticatedFetch`; remove dead `reviewer_id` param |
 

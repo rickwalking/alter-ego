@@ -103,7 +103,7 @@ above; the frontend contract test enforces this against the artifact.
 
 ### `EDITORIAL_WORKFLOW_SSE_EVENTS` (`src/constants/editorial-workflow.ts`)
 
-Consumed by `src/modules/editorial/workspace/hooks/use-editorial-workflow-sse.ts`.
+Consumed by `src/modules/editorial/workspace/lib/workflow-stream-events.ts` and `src/modules/editorial/workspace/hooks/use-editorial-workflow-utils.ts` (the SSE hook reaches them through these modules).
 
 | Key | Value | Mirrors backend |
 |-----|-------|-----------------|
