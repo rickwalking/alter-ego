@@ -39,9 +39,13 @@ function errorMessage(err: unknown, fallback: string): string {
  * The in-flight request is tracked so a slower stale response (e.g. after fast
  * month navigation) never overwrites the latest window's result; cleanup aborts
  * and clears it so a superseded request's `finally` cannot write state after
- * unmount.
+ * unmount. `enabled: false` skips the fetch (e.g. until the window is known).
  */
-export function useContentCalendar(start?: string, end?: string) {
+export function useContentCalendar(
+  start?: string,
+  end?: string,
+  enabled = true,
+) {
   const t = useTranslations("workflow.errors");
   const [calendar, setCalendar] = useState<ContentCalendar | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,12 +75,15 @@ export function useContentCalendar(start?: string, end?: string) {
   }, [start, end, t]);
 
   useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
     void fetchCalendar();
     return () => {
       controllerRef.current?.abort();
       controllerRef.current = null;
     };
-  }, [fetchCalendar]);
+  }, [fetchCalendar, enabled]);
 
   return { calendar, loading, error, refetch: fetchCalendar };
 }

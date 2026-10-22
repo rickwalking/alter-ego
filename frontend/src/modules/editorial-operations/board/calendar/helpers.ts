@@ -5,7 +5,7 @@ import {
   endOfWeek,
   format,
   isSameMonth,
-  isToday,
+  isSameDay,
   parseISO,
   startOfMonth,
   startOfWeek,
@@ -64,21 +64,30 @@ function eventDayKey(eventDate: string): string {
   return eventDate.slice(0, CALENDAR_ISO_DAY_FORMAT.length);
 }
 
-/** Build the month grid for `anchor`, each cell carrying its real ISO date. */
-export function buildMonthGrid(anchor: Date): CalendarDay[] {
+/**
+ * Build the month grid for `anchor`, each cell carrying its real ISO date.
+ * `today` is the viewer's local day; null (not yet known) highlights no cell.
+ */
+export function buildMonthGrid(
+  anchor: Date,
+  today: Date | null,
+): CalendarDay[] {
   const { start, end } = calendarGridRange(anchor);
   return eachDayOfInterval({ start, end }).map((date) => ({
     day: date.getDate(),
     iso: format(date, CALENDAR_ISO_DAY_FORMAT),
     cur: isSameMonth(date, anchor),
-    today: isToday(date),
+    today: today !== null && isSameDay(date, today),
     events: [],
   }));
 }
 
 /** Empty month grid (anchor month) when the API returns no scheduled items. */
-export function buildEmptyCalendarDays(anchor: Date): CalendarDay[] {
-  return buildMonthGrid(anchor);
+export function buildEmptyCalendarDays(
+  anchor: Date,
+  today: Date | null,
+): CalendarDay[] {
+  return buildMonthGrid(anchor, today);
 }
 
 /**
@@ -89,6 +98,7 @@ export function buildEmptyCalendarDays(anchor: Date): CalendarDay[] {
 export function buildCalendarDaysFromApi(
   anchor: Date,
   items: CalendarItem[],
+  today: Date | null,
 ): CalendarDay[] {
   const eventsByDay: Record<string, CalendarEvent[]> = {};
 
@@ -99,7 +109,7 @@ export function buildCalendarDaysFromApi(
     eventsByDay[key] = dayEvents;
   }
 
-  return buildMonthGrid(anchor).map((cell) => ({
+  return buildMonthGrid(anchor, today).map((cell) => ({
     ...cell,
     events: eventsByDay[cell.iso] ?? [],
   }));

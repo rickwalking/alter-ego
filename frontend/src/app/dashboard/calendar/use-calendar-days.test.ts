@@ -29,7 +29,7 @@ describe("useCalendarDays", () => {
 
   it("requests a window padded ±1 day around the visible grid", () => {
     const anchor = new Date(2026, 5, 1);
-    renderHook(() => useCalendarDays(anchor));
+    renderHook(() => useCalendarDays(anchor, new Date(2026, 5, 10)));
 
     const [start, end] = mockUseContentCalendar.mock.calls[0] as [
       string,
@@ -41,5 +41,26 @@ describe("useCalendarDays", () => {
     expect(end).toBe(addDays(range.end, 1).toISOString());
     expect(new Date(start).getTime()).toBeLessThan(range.start.getTime());
     expect(new Date(end).getTime()).toBeGreaterThan(range.end.getTime());
+  });
+
+  // Scenario: The server render highlights no day
+  it("fetches nothing and builds no day until the local month is known", () => {
+    const { result } = renderHook(() => useCalendarDays(null, null));
+    expect(mockUseContentCalendar).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      false,
+    );
+    expect(result.current.days).toEqual([]);
+  });
+
+  // Scenario: Today is the viewer's local date after the page loads
+  it("highlights the given local today in the built month", () => {
+    const { result } = renderHook(() =>
+      useCalendarDays(new Date(2026, 9, 1), new Date(2026, 9, 21)),
+    );
+    expect(
+      result.current.days.filter((day) => day.today).map((day) => day.iso),
+    ).toEqual(["2026-10-21"]);
   });
 });

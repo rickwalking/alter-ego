@@ -8,14 +8,16 @@ import {
 import { NEON_RED } from "@/constants/neon";
 import { useCalendarDays } from "@/app/dashboard/calendar/use-calendar-days";
 import { useCalendarMonth } from "@/app/dashboard/calendar/use-calendar-month";
+import { useClientToday } from "@/app/dashboard/calendar/use-client-today";
 import { CalendarHeader } from "@/app/dashboard/calendar/calendar-header";
 import { CalendarToolbar } from "@/app/dashboard/calendar/calendar-toolbar";
 import { CalendarGrid } from "@/app/dashboard/calendar/calendar-grid";
 import { CalendarLegend } from "@/app/dashboard/calendar/calendar-legend";
 
 export default function CalendarPage(): React.ReactElement {
-  const { anchor, title, goPrev, goNext, goToday } = useCalendarMonth();
-  const { days, loading, error } = useCalendarDays(anchor);
+  const today = useClientToday();
+  const { anchor, title, goPrev, goNext, goToday } = useCalendarMonth(today);
+  const { days, loading, error } = useCalendarDays(anchor, today);
 
   return (
     <div
@@ -31,7 +33,7 @@ export default function CalendarPage(): React.ReactElement {
           {error}
         </p>
       )}
-      {loading && (
+      {(loading || !anchor) && (
         <div className="flex justify-center py-12">
           <NeonSpinner size="lg" />
         </div>
@@ -45,7 +47,7 @@ export default function CalendarPage(): React.ReactElement {
           onNext={goNext}
           onToday={goToday}
         />
-        <CalendarGrid days={days} />
+        {anchor ? <CalendarGrid days={days} /> : null}
         <CalendarLegend />
       </div>
 

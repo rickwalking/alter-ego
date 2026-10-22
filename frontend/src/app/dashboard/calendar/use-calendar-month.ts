@@ -2,12 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import { addMonths, startOfMonth, subMonths } from "date-fns";
+import { addMonths, startOfMonth } from "date-fns";
 import { formatCalendarTitle } from "@/modules/editorial-operations";
 
 export interface UseCalendarMonthResult {
-  /** First day of the viewed month (stable state used to derive the grid). */
-  anchor: Date;
+  /** First day of the viewed month, or null until the local today is known. */
+  anchor: Date | null;
   /** Viewed month in the active locale, e.g. "June 2026" / "Junho de 2026". */
   title: string;
   goPrev: () => void;
@@ -16,26 +16,35 @@ export interface UseCalendarMonthResult {
 }
 
 /**
- * Owns the viewed-month anchor, defaulting to the current month. The anchor is
- * normalized to the first of the month so the grid and the fetch window derive
- * deterministically and the value stays referentially stable between renders.
+ * Owns the viewed month as an offset from the month of `today` (the viewer's
+ * local day, null until known), so the calendar opens on the local month and
+ * "Today" returns to it. The anchor is the first of the month and stays
+ * referentially stable between renders.
  */
-export function useCalendarMonth(): UseCalendarMonthResult {
+export function useCalendarMonth(today: Date | null): UseCalendarMonthResult {
   const locale = useLocale();
-  const [anchor, setAnchor] = useState<Date>(() => startOfMonth(new Date()));
+  const [monthOffset, setMonthOffset] = useState(0);
+  const currentMonth = today ? startOfMonth(today).getTime() : null;
 
   const goPrev = useCallback(() => {
-    setAnchor((current) => subMonths(current, 1));
+    setMonthOffset((offset) => offset - 1);
   }, []);
   const goNext = useCallback(() => {
-    setAnchor((current) => addMonths(current, 1));
+    setMonthOffset((offset) => offset + 1);
   }, []);
   const goToday = useCallback(() => {
-    setAnchor(startOfMonth(new Date()));
+    setMonthOffset(0);
   }, []);
 
+  const anchor = useMemo(
+    () =>
+      currentMonth === null
+        ? null
+        : addMonths(new Date(currentMonth), monthOffset),
+    [currentMonth, monthOffset],
+  );
   const title = useMemo(
-    () => formatCalendarTitle(anchor, locale),
+    () => (anchor ? formatCalendarTitle(anchor, locale) : ""),
     [anchor, locale],
   );
 
