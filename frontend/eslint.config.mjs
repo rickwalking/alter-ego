@@ -8,8 +8,8 @@ import tseslint from "typescript-eslint";
 /**
  * Severity policy: `error` rules gate the build (the `lint` gate runs `eslint --quiet`,
  * which fails on errors only); `warn` rules are an advisory backlog surfaced on changed files
- * by `lint:changed` (which drops `--quiet`), never blanket-ignored. The remaining `warn`s are
- * the size/complexity rules. Severities only ratchet UP (warn -> error), never down.
+ * by `lint:changed` (which drops `--quiet`), never blanket-ignored. There are no
+ * remaining `warn` rules. Severities only ratchet UP (warn -> error), never down.
  *
  * These type-aware rules were each driven to 0 findings in production `src` and promoted to
  * error (rule-fires test: src/scripts/eslint-strict-type-rules.test.ts); floating promises
@@ -204,20 +204,20 @@ export default defineConfig([
       "react-hooks/exhaustive-deps": "error",
       ...typeCheckedRules,
       "max-lines": [
-        "warn",
+        "error",
         { max: 400, skipBlankLines: true, skipComments: true },
       ],
       "max-lines-per-function": [
-        "warn",
+        "error",
         { max: 50, skipBlankLines: true, skipComments: true, IIFEs: true },
       ],
-      complexity: ["warn", 10],
-      "max-depth": ["warn", 4],
+      complexity: ["error", 10],
+      "max-depth": ["error", 4],
       "no-else-return": ["error", { allowElseIf: false }],
       "no-lonely-if": "error",
       "max-params": ["error", 3],
-      "max-statements": ["warn", 25],
-      "sonarjs/cognitive-complexity": ["warn", 15],
+      "max-statements": ["error", 25],
+      "sonarjs/cognitive-complexity": ["error", 15],
       "@tanstack/query/exhaustive-deps": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
       "@next/next/no-img-element": "error",
@@ -242,11 +242,11 @@ export default defineConfig([
     ],
     rules: {
       "max-lines": [
-        "warn",
+        "error",
         { max: 200, skipBlankLines: true, skipComments: true },
       ],
       "max-lines-per-function": [
-        "warn",
+        "error",
         { max: 150, skipBlankLines: true, skipComments: true, IIFEs: true },
       ],
     },
@@ -254,15 +254,15 @@ export default defineConfig([
   {
     files: ["src/lib/**/*.ts", "src/features/**/helpers.ts"],
     rules: {
-      "max-lines-per-function": ["warn", 30],
-      "max-statements": ["warn", 20],
+      "max-lines-per-function": ["error", 30],
+      "max-statements": ["error", 20],
     },
   },
   {
     files: ["src/**/hooks/**/*.ts", "src/**/hooks/**/*.tsx"],
     rules: {
-      "max-statements": ["warn", 20],
-      complexity: ["warn", 8],
+      "max-statements": ["error", 20],
+      complexity: ["error", 8],
       "no-restricted-syntax": [
         "error",
         {

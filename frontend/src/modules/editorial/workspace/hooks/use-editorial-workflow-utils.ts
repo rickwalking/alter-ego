@@ -1,16 +1,16 @@
 /** Shared helpers for editorial workflow SSE/state merging. */
 
 import {
-  EDITORIAL_PHASES,
   EDITORIAL_WORKFLOW_RESUME_CLIENT_ERROR_STATUSES,
-  EDITORIAL_WORKFLOW_RESUME_POLL_INTERVAL_MS,
-  EDITORIAL_WORKFLOW_RESUME_POLL_MAX_ATTEMPTS,
   EDITORIAL_WORKFLOW_SSE_EVENTS,
   WORKFLOW_ARTIFACT_FIELD_MAP,
 } from "@/constants/editorial-workflow";
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/modules/editorial/workspace/types-ai";
+import type {
+  EditorialWorkflowState,
+  WorkflowPhaseStatus,
+} from "@/modules/editorial/workspace/types-ai";
 import type {
   EditorialWorkflowResumeAcceptedResponse,
   WorkflowEventPayload,
@@ -20,6 +20,12 @@ export type {
   EditorialWorkflowResumeAcceptedResponse,
   WorkflowEventPayload,
 } from "./types";
+
+export {
+  hasPhaseArtifacts,
+  isWorkflowReady,
+  waitUntilWorkflowReadyWithTransport,
+} from "./workflow-readiness";
 
 export async function readApiError(
   response: Response,
@@ -91,31 +97,34 @@ export function normalizeProgressPayload(
   return undefined;
 }
 
-export function resolveWorkflowEventPayload(
+function resolveArtifactPayload(
+  payload: WorkflowEventPayload,
+): WorkflowEventPayload | null {
+  if (payload.event !== EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT) {
+    return null;
+  }
+  const artifactType = payload.artifact_type;
+  const artifactField =
+    artifactType !== undefined
+      ? WORKFLOW_ARTIFACT_FIELD_MAP[artifactType]
+      : undefined;
+  if (!artifactField || payload.data === undefined) {
+    return null;
+  }
+  return { ...payload, [artifactField]: payload.data };
+}
+
+function resolveGatePayload(
   payload: WorkflowEventPayload,
 ): WorkflowEventPayload {
-  if (payload.event === EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT) {
-    const artifactType = payload.artifact_type;
-    const artifactField =
-      artifactType !== undefined
-        ? WORKFLOW_ARTIFACT_FIELD_MAP[artifactType]
-        : undefined;
-    if (artifactField && payload.data !== undefined) {
-      return {
-        ...payload,
-        [artifactField]: payload.data,
-      };
-    }
-  }
-
+  const gate = payload.gate_payload;
   if (
     payload.event !== EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED ||
-    !payload.gate_payload ||
-    typeof payload.gate_payload !== "object"
+    !gate ||
+    typeof gate !== "object"
   ) {
     return payload;
   }
-  const gate = payload.gate_payload;
   return {
     ...payload,
     ...gate,
@@ -123,6 +132,12 @@ export function resolveWorkflowEventPayload(
     phase_status:
       payload.phase_status ?? (gate.phase_status as string | undefined),
   };
+}
+
+export function resolveWorkflowEventPayload(
+  payload: WorkflowEventPayload,
+): WorkflowEventPayload {
+  return resolveArtifactPayload(payload) ?? resolveGatePayload(payload);
 }
 
 /**
@@ -179,6 +194,65 @@ type CarriedWorkflowFields = Omit<
   | "run_stage"
 >;
 
+type CarryKey = keyof CarriedWorkflowFields & keyof WorkflowEventPayload;
+
+function carry<K extends CarryKey>(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+  key: K,
+): (WorkflowEventPayload & EditorialWorkflowState)[K] | undefined {
+  return (
+    (payload as WorkflowEventPayload & EditorialWorkflowState)[key] ??
+    prev?.[key]
+  );
+}
+
+function mergeDefaultedFields(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): Pick<
+  CarriedWorkflowFields,
+  | "slide_image_prompts"
+  | "image_assets"
+  | "design_applied"
+  | "phase_progress"
+  | "status"
+> {
+  return {
+    slide_image_prompts: carry(prev, payload, "slide_image_prompts") ?? null,
+    image_assets: carry(prev, payload, "image_assets") ?? [],
+    design_applied: carry(prev, payload, "design_applied") ?? false,
+    phase_progress:
+      normalizeProgressPayload(payload) ??
+      carry(prev, payload, "phase_progress") ??
+      null,
+    status: carry(prev, payload, "status") ?? "draft",
+  };
+}
+
+const OPTIONAL_CARRIED_KEYS = [
+  "rubric_scores",
+  "persona_scores",
+  "caption",
+  "blog_markdown",
+  "linkedin_post_pt",
+  "linkedin_post_en",
+  "workflow_status",
+  "presentation_policy_version",
+  "localized_slides",
+  "lock_version",
+  "presentation_validation",
+] as const satisfies readonly CarryKey[];
+
+function mergeOptionalFields(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): Partial<CarriedWorkflowFields> {
+  return Object.fromEntries(
+    OPTIONAL_CARRIED_KEYS.map((key) => [key, carry(prev, payload, key)]),
+  );
+}
+
 /**
  * Fields every event carries forward: the payload's value, else the previous
  * state's (never drop the CAS ``lock_version`` the actions send).
@@ -188,29 +262,53 @@ function mergeCarriedFields(
   payload: WorkflowEventPayload,
 ): CarriedWorkflowFields {
   return {
-    slide_image_prompts:
-      payload.slide_image_prompts ?? prev?.slide_image_prompts ?? null,
-    image_assets: payload.image_assets ?? prev?.image_assets ?? [],
-    design_applied: payload.design_applied ?? prev?.design_applied ?? false,
-    phase_progress:
-      normalizeProgressPayload(payload) ??
-      payload.phase_progress ??
-      prev?.phase_progress ??
-      null,
-    rubric_scores: payload.rubric_scores ?? prev?.rubric_scores,
-    persona_scores: payload.persona_scores ?? prev?.persona_scores,
-    caption: payload.caption ?? prev?.caption,
-    blog_markdown: payload.blog_markdown ?? prev?.blog_markdown,
-    linkedin_post_pt: payload.linkedin_post_pt ?? prev?.linkedin_post_pt,
-    linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
-    workflow_status: payload.workflow_status ?? prev?.workflow_status,
-    status: payload.status ?? prev?.status ?? "draft",
-    presentation_policy_version:
-      payload.presentation_policy_version ?? prev?.presentation_policy_version,
-    localized_slides: payload.localized_slides ?? prev?.localized_slides,
-    lock_version: payload.lock_version ?? prev?.lock_version,
-    presentation_validation:
-      payload.presentation_validation ?? prev?.presentation_validation,
+    ...mergeOptionalFields(prev, payload),
+    ...mergeDefaultedFields(prev, payload),
+  };
+}
+
+type ListKey = "research_findings" | "outline" | "slide_drafts";
+
+function carryList<K extends ListKey>(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+  key: K,
+): EditorialWorkflowState[K] {
+  return payload[key] ?? prev?.[key] ?? [];
+}
+
+function mergePartialLists(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): Pick<EditorialWorkflowState, ListKey> {
+  return {
+    research_findings: carryList(prev, payload, "research_findings"),
+    outline: carryList(prev, payload, "outline"),
+    slide_drafts: carryList(prev, payload, "slide_drafts"),
+  };
+}
+
+function mergePartialCore(
+  projectId: string,
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): Pick<
+  EditorialWorkflowState,
+  | "project_id"
+  | "current_phase"
+  | "phase_status"
+  | "research_findings"
+  | "outline"
+  | "slide_drafts"
+> {
+  return {
+    ...mergePartialLists(prev, payload),
+    project_id: projectId,
+    current_phase:
+      payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
+    phase_status: (payload.phase_status ??
+      prev?.phase_status ??
+      "") as WorkflowPhaseStatus,
   };
 }
 
@@ -224,30 +322,17 @@ export function mergeWorkflowState(
     ...mergeCarriedFields(prev, payload),
   };
 
-  if (isFullWorkflowState(payload, projectId)) {
-    return {
-      ...carried,
-      project_id: payload.project_id ?? projectId,
-      current_phase: payload.current_phase ?? payload.phase ?? "",
-      phase_status: payload.phase_status,
-      research_findings: payload.research_findings,
-      outline: payload.outline,
-      slide_drafts: payload.slide_drafts,
-    };
+  if (!isFullWorkflowState(payload, projectId)) {
+    return { ...carried, ...mergePartialCore(projectId, prev, payload) };
   }
-
   return {
     ...carried,
-    project_id: projectId,
-    current_phase:
-      payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
-    phase_status: (payload.phase_status ??
-      prev?.phase_status ??
-      "") as import("@/modules/editorial/workspace/types-ai").WorkflowPhaseStatus,
-    research_findings:
-      payload.research_findings ?? prev?.research_findings ?? [],
-    outline: payload.outline ?? prev?.outline ?? [],
-    slide_drafts: payload.slide_drafts ?? prev?.slide_drafts ?? [],
+    project_id: payload.project_id ?? projectId,
+    current_phase: payload.current_phase ?? payload.phase ?? "",
+    phase_status: payload.phase_status,
+    research_findings: payload.research_findings,
+    outline: payload.outline,
+    slide_drafts: payload.slide_drafts,
   };
 }
 
@@ -285,47 +370,6 @@ export function isResumeTransportFailure(status: number): boolean {
   );
 }
 
-export function hasPhaseArtifacts(state: EditorialWorkflowState): boolean {
-  switch (state.current_phase) {
-    case EDITORIAL_PHASES.RESEARCH:
-      return state.research_findings.length > 0;
-    case EDITORIAL_PHASES.OUTLINE:
-      return state.outline.length > 0;
-    case EDITORIAL_PHASES.CONTENT: {
-      const draftCount = state.slide_drafts.length;
-      const outlineCount = state.outline.length;
-      return (
-        draftCount > 0 && (outlineCount === 0 || draftCount >= outlineCount)
-      );
-    }
-    case EDITORIAL_PHASES.DESIGN:
-      return state.design_applied === true;
-    case EDITORIAL_PHASES.IMAGES:
-      return (state.image_assets?.length ?? 0) > 0;
-    case EDITORIAL_PHASES.FINAL_REVIEW:
-      return (
-        Boolean(state.caption?.trim()) ||
-        Boolean(state.blog_markdown?.trim()) ||
-        Object.keys(state.rubric_scores ?? {}).length > 0
-      );
-    default:
-      return true;
-  }
-}
-
-export function isWorkflowReady(state: EditorialWorkflowState): boolean {
-  if (
-    state.phase_status === WORKFLOW_PHASE_STATUS.FAILED ||
-    state.phase_status === WORKFLOW_PHASE_STATUS.REJECTED
-  ) {
-    return true;
-  }
-  if (state.phase_status !== WORKFLOW_PHASE_STATUS.AWAITING_HUMAN) {
-    return false;
-  }
-  return hasPhaseArtifacts(state);
-}
-
 export function isResumeAcceptedResponse(
   payload: unknown,
 ): payload is EditorialWorkflowResumeAcceptedResponse {
@@ -340,69 +384,4 @@ export function isResumeAcceptedResponse(
     typeof record.phase_status === "string" &&
     typeof record.lock_version === "number"
   );
-}
-
-async function pollUntilWorkflowReady(
-  refreshState: () => Promise<EditorialWorkflowState | null>,
-  options?: {
-    intervalMs?: number;
-    maxAttempts?: number;
-  },
-): Promise<EditorialWorkflowState | null> {
-  const intervalMs =
-    options?.intervalMs ?? EDITORIAL_WORKFLOW_RESUME_POLL_INTERVAL_MS;
-  const maxAttempts =
-    options?.maxAttempts ?? EDITORIAL_WORKFLOW_RESUME_POLL_MAX_ATTEMPTS;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const workflowState = await refreshState();
-    if (workflowState && isWorkflowReady(workflowState)) {
-      return workflowState;
-    }
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, intervalMs);
-    });
-  }
-
-  const finalState = await refreshState();
-  if (finalState && isWorkflowReady(finalState)) {
-    return finalState;
-  }
-  return finalState;
-}
-
-export async function waitUntilWorkflowReadyWithTransport(
-  getState: () => EditorialWorkflowState | null,
-  refreshState: () => Promise<EditorialWorkflowState | null>,
-  options: {
-    preferSse: boolean;
-    intervalMs?: number;
-    maxAttempts?: number;
-  },
-): Promise<EditorialWorkflowState | null> {
-  const intervalMs =
-    options.intervalMs ?? EDITORIAL_WORKFLOW_RESUME_POLL_INTERVAL_MS;
-  const maxAttempts =
-    options.maxAttempts ?? EDITORIAL_WORKFLOW_RESUME_POLL_MAX_ATTEMPTS;
-
-  if (options.preferSse) {
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const current = getState();
-      if (current && isWorkflowReady(current)) {
-        return current;
-      }
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, intervalMs);
-      });
-    }
-    const final = getState();
-    if (final && isWorkflowReady(final)) {
-      return final;
-    }
-  }
-
-  return pollUntilWorkflowReady(refreshState, {
-    intervalMs: options.intervalMs,
-    maxAttempts: options.maxAttempts,
-  });
 }
