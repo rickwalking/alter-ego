@@ -10,9 +10,10 @@ import {
 import { NeonActivityList } from "@/components/organisms/neon-activity-list";
 import { NEON_RED, TEXT, TEXT_MUTED } from "@/constants/neon";
 import type { NeonBadgeVariant } from "@/schemas/neon-badge";
-import type {
-  EditorialAnalyticsState,
-  EditorialAnalyticsSummary,
+import {
+  qualityScoreStat,
+  type EditorialAnalyticsState,
+  type EditorialAnalyticsSummary,
 } from "@/modules/editorial-operations";
 
 const DOT_TO_BADGE: Record<string, NeonBadgeVariant> = {
@@ -147,7 +148,7 @@ function StatIcon({ children }: Readonly<{ children: React.ReactNode }>) {
 
 function statCardsFor(
   summary: EditorialAnalyticsSummary,
-  tAnalytics: (key: string) => string,
+  tAnalytics: (key: string, values?: { count: number }) => string,
 ): NeonStatsGridProps["cards"] {
   return [
     {
@@ -182,7 +183,7 @@ function statCardsFor(
     },
     {
       label: tAnalytics("qualityScore"),
-      value: `${summary.quality_score_average}%`,
+      ...qualityScoreStat(summary, tAnalytics),
       icon: (
         <StatIcon>
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />

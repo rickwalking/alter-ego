@@ -11,10 +11,11 @@ from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
 
 class EditorialAnalyticsService:
-    """Aggregates content velocity and quality metrics for dashboard."""
+    """Aggregates content velocity and status metrics for the dashboard."""
 
+    @staticmethod
     async def get_summary(
-        self, db: AsyncSession, author_id: str | None = None
+        db: AsyncSession, author_id: str | None = None
     ) -> dict[str, object]:
         """Return editorial analytics summary."""
         base = select(BlogPostModel)
@@ -59,7 +60,6 @@ class EditorialAnalyticsService:
             "average_views": avg_views,
             "pending_review": in_review,
             "draft_count": drafts,
-            "quality_score_average": self._estimate_quality_score(posts),
         }
 
     @staticmethod
@@ -88,24 +88,6 @@ class EditorialAnalyticsService:
                 "published_count": count,
             })
         return buckets
-
-    @staticmethod
-    def _estimate_quality_score(posts: list[BlogPostModel]) -> float:
-        if not posts:
-            return 0.0
-        scores: list[float] = []
-        for post in posts:
-            metadata = post.ai_generation_metadata or {}
-            if isinstance(metadata, dict):
-                score = metadata.get("quality_score")
-                if isinstance(score, (int, float)):
-                    scores.append(float(score))
-        if not scores:
-            published_ratio = sum(1 for p in posts if p.status == "published") / len(
-                posts
-            )
-            return round(published_ratio * 100, 1)
-        return round(sum(scores) / len(scores), 1)
 
 
 __all__ = ["EditorialAnalyticsService"]

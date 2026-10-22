@@ -176,7 +176,8 @@ class AnalyticsSummary:
     average_views: int
     pending_review: int
     draft_count: int
-    quality_score_average: float
+    quality_score_average: float | None
+    quality_score_count: int
 
 
 @dataclass(frozen=True)

@@ -1571,6 +1571,8 @@
       "publishedWeek": "Published This Week",
       "pendingReview": "Pending Review",
       "qualityScore": "Avg Quality Score",
+      "qualityScoreEmpty": "No data",
+      "qualityScoreCount": "{count, plural, one {# evaluation} other {# evaluations}}",
       "velocityTitle": "Publish Velocity (8 weeks)",
       "loadFailed": "Failed to load analytics",
       "disabledTitle": "Editorial analytics is off",

@@ -4057,8 +4057,21 @@
             "type": "integer"
           },
           "quality_score_average": {
-            "title": "Quality Score Average",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average content rubric score (0-100); null without scores.",
+            "title": "Quality Score Average"
+          },
+          "quality_score_count": {
+            "description": "How many content rubric scores the average is built from.",
+            "title": "Quality Score Count",
+            "type": "integer"
           },
           "status_breakdown": {
             "additionalProperties": {
@@ -4081,7 +4094,8 @@
           "average_views",
           "pending_review",
           "draft_count",
-          "quality_score_average"
+          "quality_score_average",
+          "quality_score_count"
         ],
         "title": "EditorialAnalyticsSummary",
         "type": "object"

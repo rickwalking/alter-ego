@@ -22,11 +22,57 @@ trying a fixed list of keys in priority order.
 
 from __future__ import annotations
 
+from uuid import UUID
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.infrastructure.database.models.persona_rubric import (
+    RubricEvaluationScoreModel,
+)
+
+AD_HOC_EVALUATION_CONTENT_ID = str(UUID(int=0))
+QUALITY_SCORE_DECIMALS = 1
 
 _TITLE_SUBTITLE_SEPARATOR = ":"
 _FIRST_PARAGRAPH_MAX_LEN = 200
 _BODY_CONTENT_KEYS = ("markdown", "body")
+
+
+async def content_quality_summary(session: AsyncSession) -> dict[str, object]:
+    """``quality_score_average`` / ``quality_score_count`` of the content scores.
+
+    The average ``overall_score`` of the rubric scores that belong to a piece of
+    content; ad-hoc evaluations of pasted text carry the nil content id and are
+    left out. Without a content score the average is ``None``: the dashboard
+    shows "no data", never a stand-in.
+    """
+    score = RubricEvaluationScoreModel
+    query = select(func.avg(score.overall_score), func.count(score.id)).where(
+        score.content_id != AD_HOC_EVALUATION_CONTENT_ID
+    )
+    average, count = (await session.execute(query)).one()
+    if not count:
+        return {"quality_score_average": None, "quality_score_count": 0}
+    return {
+        "quality_score_average": round(float(average), QUALITY_SCORE_DECIMALS),
+        "quality_score_count": int(count),
+    }
+
+
+def as_number(value: object) -> float:
+    """Narrow a summary value to a number for the typed projection (no ``Any``)."""
+    if isinstance(value, (int, float)):
+        return value
+    return 0.0
+
+
+def as_optional_number(value: object) -> float | None:
+    """Like :func:`as_number`, but an absent value stays ``None``."""
+    if value is None:
+        return None
+    return float(as_number(value))
 
 
 def extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
@@ -93,6 +139,9 @@ def _body_from_row(row: BlogPostModel | None) -> str | None:
 
 
 __all__ = [
+    "as_number",
+    "as_optional_number",
+    "content_quality_summary",
     "extract_first_paragraph",
     "extract_title_and_subtitle",
     "resolve_blog_body",

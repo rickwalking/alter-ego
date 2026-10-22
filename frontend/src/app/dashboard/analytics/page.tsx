@@ -17,7 +17,10 @@ import {
   TEXT,
   TEXT_MUTED,
 } from "@/constants/neon";
-import { useEditorialAnalytics } from "@/modules/editorial-operations";
+import {
+  qualityScoreStat,
+  useEditorialAnalytics,
+} from "@/modules/editorial-operations";
 
 /**
  * Shows a disabled state when the analytics flag is off (404) or the role has
@@ -81,10 +84,7 @@ export default function AnalyticsPage(): React.ReactElement {
     { label: t("totalPosts"), value: summary.total_posts },
     { label: t("publishedWeek"), value: summary.published_this_week },
     { label: t("pendingReview"), value: summary.pending_review },
-    {
-      label: t("qualityScore"),
-      value: `${summary.quality_score_average}%`,
-    },
+    { label: t("qualityScore"), ...qualityScoreStat(summary, t) },
   ];
 
   return (

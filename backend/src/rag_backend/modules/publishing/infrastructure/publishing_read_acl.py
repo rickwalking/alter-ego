@@ -90,6 +90,9 @@ from rag_backend.modules.publishing.infrastructure.public_visibility import (
     public_blog_post_ids,
 )
 from rag_backend.modules.publishing.infrastructure.read_projection_helpers import (
+    as_number,
+    as_optional_number,
+    content_quality_summary,
     extract_first_paragraph,
     extract_title_and_subtitle,
     resolve_blog_body,
@@ -223,14 +226,14 @@ class PublishingReadAcl:
         return BoardProjection(columns=columns)
 
     async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
-        """Project the editorial-analytics summary + weekly velocity.
+        """Project the editorial-analytics summary, content quality score and velocity.
 
-        Byte-identical to the legacy ``EditorialAnalyticsService`` aggregation: the
-        same summary counts, status breakdown, averages, and weekly velocity
-        buckets.
+        Counts and velocity come from ``EditorialAnalyticsService``; the quality score
+        from the content rubric scores (:func:`content_quality_summary`).
         """
         service = EditorialAnalyticsService()
         summary = await service.get_summary(self._session, author_id=query.author_id)
+        summary.update(await content_quality_summary(self._session))
         velocity = await service.get_velocity_by_week(
             self._session, weeks=query.weeks, author_id=query.author_id
         )
@@ -366,15 +369,16 @@ def _to_analytics_summary(summary: dict[str, object]) -> AnalyticsSummary:
         else {}
     )
     return AnalyticsSummary(
-        total_posts=int(_as_number(summary["total_posts"])),
-        published_this_week=int(_as_number(summary["published_this_week"])),
-        published_this_month=int(_as_number(summary["published_this_month"])),
-        content_velocity_per_week=int(_as_number(summary["content_velocity_per_week"])),
+        total_posts=int(as_number(summary["total_posts"])),
+        published_this_week=int(as_number(summary["published_this_week"])),
+        published_this_month=int(as_number(summary["published_this_month"])),
+        content_velocity_per_week=int(as_number(summary["content_velocity_per_week"])),
         status_breakdown=status_breakdown,
-        average_views=int(_as_number(summary["average_views"])),
-        pending_review=int(_as_number(summary["pending_review"])),
-        draft_count=int(_as_number(summary["draft_count"])),
-        quality_score_average=float(_as_number(summary["quality_score_average"])),
+        average_views=int(as_number(summary["average_views"])),
+        pending_review=int(as_number(summary["pending_review"])),
+        draft_count=int(as_number(summary["draft_count"])),
+        quality_score_average=as_optional_number(summary["quality_score_average"]),
+        quality_score_count=int(as_number(summary["quality_score_count"])),
     )
 
 
@@ -382,7 +386,7 @@ def _to_velocity_week(week: dict[str, object]) -> AnalyticsVelocityWeek:
     """Map a legacy weekly-velocity dict bucket to the projection value object."""
     return AnalyticsVelocityWeek(
         week_start=str(week["week_start"]),
-        published_count=int(_as_number(week["published_count"])),
+        published_count=int(as_number(week["published_count"])),
     )
 
 
@@ -391,13 +395,6 @@ def _optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
-
-
-def _as_number(value: object) -> float:
-    """Narrow a summary value to a number for the typed projection (no ``Any``)."""
-    if isinstance(value, (int, float)):
-        return value
-    return 0.0
 
 
 __all__ = ["PublishingReadAcl"]

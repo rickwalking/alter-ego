@@ -218,6 +218,7 @@ async def get_editorial_analytics(
             pending_review=summary.pending_review,
             draft_count=summary.draft_count,
             quality_score_average=summary.quality_score_average,
+            quality_score_count=summary.quality_score_count,
         ),
         velocity_by_week=[
             EditorialVelocityWeek(

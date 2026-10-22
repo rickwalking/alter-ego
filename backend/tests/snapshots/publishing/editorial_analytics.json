@@ -7,7 +7,8 @@
       "pending_review": 0,
       "published_this_month": 0,
       "published_this_week": 0,
-      "quality_score_average": 0.0,
+      "quality_score_average": null,
+      "quality_score_count": 0,
       "status_breakdown": {
         "draft": 1
       },
