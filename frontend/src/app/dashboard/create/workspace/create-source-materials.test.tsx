@@ -83,4 +83,17 @@ describe("CreateSourceMaterials (AE-0446)", () => {
       await screen.findByText("Failed to load sources"),
     ).toBeInTheDocument();
   });
+
+  it("shows a failed key-point extraction", async () => {
+    // Scenario: A failed key-point extraction is shown on the source materials panel
+    authenticatedFetch
+      .mockResolvedValueOnce(ok({ items: [source("s1", "First")] }))
+      .mockResolvedValueOnce(new Response("", { status: 500 }));
+    render(<CreateSourceMaterials projectId="p1" />);
+    await screen.findByText("First");
+
+    fireEvent.click(screen.getByRole("button", { name: "actions.extract" }));
+
+    expect(await screen.findByText("Extraction failed")).toBeInTheDocument();
+  });
 });

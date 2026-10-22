@@ -62,7 +62,13 @@ export function useNotifications() {
 
   const markRead = useCallback(
     async (id: string) => {
-      await postMarkRead(id, t("markReadFailed"));
+      setError(null);
+      try {
+        await postMarkRead(id, t("markReadFailed"));
+      } catch {
+        setError(t("markReadFailed"));
+        return;
+      }
       setNotifications((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, status: "read" } : item,

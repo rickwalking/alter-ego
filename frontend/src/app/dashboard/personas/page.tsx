@@ -5,6 +5,7 @@ import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
+import { useCreateAction } from "@/lib/use-resource-collection";
 import { mapPersonaProfileToCardProps } from "@/modules/editorial-operations";
 import { NeonPersonaCard, usePersonas } from "@/modules/persona";
 import { CreatePersonaCard } from "@/app/dashboard/personas/create-persona-card";
@@ -15,18 +16,18 @@ const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 export default function PersonasPage(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState("");
   const { personas, loading, error, create, refetch } = usePersonas();
+  const { createError, createAndRefresh } = useCreateAction(create, refetch);
 
   const handleCreatePersona = async (): Promise<void> => {
     const name = window.prompt("Persona name");
     if (!name?.trim()) return;
-    await create({
+    await createAndRefresh({
       name: name.trim(),
       expertise_areas: [],
       writing_samples: [],
       forbidden_phrases: [],
       preferred_phrases: [],
     });
-    await refetch();
   };
 
   const filtered = personas.filter((p) =>
@@ -56,6 +57,15 @@ export default function PersonasPage(): React.ReactElement {
           <div className="flex justify-center py-12">
             <NeonSpinner size="lg" />
           </div>
+        )}
+        {createError && (
+          <p
+            role="alert"
+            className="text-center py-4"
+            style={{ color: NEON_RED }}
+          >
+            {createError}
+          </p>
         )}
         {error && !loading && (
           <p className="text-center py-8" style={{ color: NEON_RED }}>

@@ -11,7 +11,8 @@ import { useNotifications } from "@/modules/editorial/workflow/hooks/use-notific
 export function NotificationCenter() {
   const t = useTranslations("workflow.notifications");
   const locale = useLocale();
-  const { notifications, unreadCount, loading, markRead } = useNotifications();
+  const { notifications, unreadCount, loading, error, markRead } =
+    useNotifications();
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,6 +38,11 @@ export function NotificationCenter() {
             {t("title")}
           </div>
           <div className="max-h-80 overflow-y-auto">
+            {error && (
+              <p role="alert" className="p-4 text-sm text-destructive">
+                {error}
+              </p>
+            )}
             {loading && (
               <p className="p-4 text-sm text-muted-foreground">
                 {t("loading")}
