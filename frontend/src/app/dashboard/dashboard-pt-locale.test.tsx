@@ -108,7 +108,7 @@ describe("dashboard in Portuguese", () => {
     const { unmount } = render(
       <>
         <CalendarGrid
-          days={buildCalendarDaysFromApi(new Date(2026, 9, 1), [item])}
+          days={buildCalendarDaysFromApi(new Date(2026, 9, 1), [item], null)}
         />
         <CalendarLegend />
       </>,
@@ -128,10 +128,12 @@ describe("dashboard in Portuguese", () => {
     unmount();
     render(
       <CalendarGrid
-        days={buildCalendarDaysFromApi(new Date(2026, 9, 1), []).map((day) => ({
-          ...day,
-          cur: false,
-        }))}
+        days={buildCalendarDaysFromApi(new Date(2026, 9, 1), [], null).map(
+          (day) => ({
+            ...day,
+            cur: false,
+          }),
+        )}
       />,
     );
     expect(
