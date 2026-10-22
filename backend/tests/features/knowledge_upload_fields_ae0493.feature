@@ -24,3 +24,8 @@ Feature: A knowledge upload keeps the title and tags typed in the form
     Given the upload form sends the scope "everyone"
     When the document is uploaded
     Then the upload is refused with 400
+
+  Scenario: An anonymous upload is refused
+    Given a visitor who is not signed in
+    When they upload a file with a title and tags
+    Then the upload is refused with 401 and nothing is ingested

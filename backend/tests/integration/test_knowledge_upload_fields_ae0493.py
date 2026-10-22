@@ -120,3 +120,17 @@ class TestKnowledgeUploadFields:
 
         assert response.status_code == 400
         assert ingest.await_count == 0
+
+    async def test_anonymous_upload_is_refused(
+        self, kb_env: KnowledgeEnv, ingest: AsyncMock
+    ) -> None:
+        # Scenario: An anonymous upload is refused
+        async with kb_env.anon_client() as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files=FILE_FIELD,
+                data={"title": "Meu currículo", "tags": "cv"},
+            )
+
+        assert response.status_code == 401
+        assert ingest.await_count == 0
