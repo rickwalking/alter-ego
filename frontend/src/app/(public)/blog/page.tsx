@@ -18,9 +18,10 @@ export const dynamic = "force-dynamic";
 const BLOG_LIST_MAX_WIDTH_PX = 1200;
 const BLOG_LIST_LIMIT = 20;
 
-/** Page title for the public blog list. */
-export function generateMetadata(): Promise<Metadata> {
-  return pageMetadata("blog");
+/** Title, description and Open Graph tags of the public blog list. */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("blog");
+  return pageMetadata("blog", t("metaDescription"));
 }
 
 export default async function PublicBlogListPage() {

@@ -6,11 +6,15 @@ vi.mock("next-intl/server", async () => {
   const pt = (await import("@/i18n/locales/pt.json")).default;
   return {
     getTranslations: (namespace: string) => {
-      const titles: Record<string, string> = (locale.value === "pt" ? pt : en)
-        .pageTitles;
-      return Promise.resolve((key: string) =>
-        namespace === "pageTitles" ? (titles[key] ?? key) : key,
-      );
+      const messages = locale.value === "pt" ? pt : en;
+      const byNamespace: Record<string, Record<string, unknown>> = {
+        pageTitles: messages.pageTitles,
+        blog: messages.blog,
+      };
+      return Promise.resolve((key: string) => {
+        const value = byNamespace[namespace]?.[key];
+        return typeof value === "string" ? value : key;
+      });
     },
   };
 });
@@ -33,5 +37,16 @@ describe("pageMetadata", () => {
       "Calendário · Pedro Marins",
     );
     locale.value = "en";
+  });
+
+  // Scenario: Page Open Graph tags keep a type and the page description
+  it("keeps og:type on a page without a description", async () => {
+    locale.value = "en";
+    const metadata = await pageMetadata("calendar");
+    expect(metadata.openGraph).toEqual({
+      title: "Calendar · Pedro Marins",
+      type: "website",
+    });
+    expect(metadata.description).toBeUndefined();
   });
 });
