@@ -134,6 +134,7 @@
   "POST /api/notifications/assign-review",
   "POST /api/notifications/{notification_id}/read",
   "POST /api/palettes",
+  "POST /api/palettes/generate",
   "POST /api/personas",
   "POST /api/personas/{persona_id}/feedback",
   "POST /api/personas/{persona_id}/voice-score",
