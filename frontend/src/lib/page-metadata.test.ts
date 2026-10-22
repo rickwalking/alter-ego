@@ -19,6 +19,7 @@ vi.mock("next-intl/server", async () => {
   };
 });
 
+import { SITE_DESCRIPTION } from "@/constants/site-metadata";
 import { pageMetadata } from "./page-metadata";
 
 describe("pageMetadata", () => {
@@ -39,14 +40,18 @@ describe("pageMetadata", () => {
     locale.value = "en";
   });
 
-  // Scenario: Page Open Graph tags keep a type and the page description
-  it("keeps og:type on a page without a description", async () => {
-    locale.value = "en";
-    const metadata = await pageMetadata("calendar");
-    expect(metadata.openGraph).toEqual({
-      title: "Calendar · Pedro Marins",
-      type: "website",
-    });
-    expect(metadata.description).toBeUndefined();
-  });
+  // Scenario: A page without its own description keeps the site og:description
+  it.each([["login"], ["forbidden"], ["notFound"], ["dashboard"]] as const)(
+    "gives %s og:type and the site og:description",
+    async (key) => {
+      locale.value = "en";
+      const metadata = await pageMetadata(key);
+      expect(metadata.openGraph).toEqual({
+        title: metadata.title,
+        description: SITE_DESCRIPTION,
+        type: "website",
+      });
+      expect(metadata.description).toBeUndefined();
+    },
+  );
 });

@@ -40,6 +40,8 @@ indistinguishable and screen readers announced no page name (WCAG 2.4.2).
 - [x] Dashboard and admin pages: their own titles, localized.
 - [x] Follow-up (#211 review, via AE-0481): a page's `openGraph` replaces the root one in Next.js, so
       `pageMetadata` returns og:type "website" too, and `/blog` sets its own description + og:description (en/pt).
+- [x] Follow-up 2 (#225 review, via AE-0481): pages without their own description (/login, 403, not found,
+      dashboard) keep the site description as og:description (`SITE_DESCRIPTION`, shared with the root layout).
 
 ## Repro Steps
 

@@ -46,12 +46,14 @@ jobs:
               - 'scripts/check_blog_v1_dead_code.py'
               - 'scripts/ci/**'
               - 'scripts/metrics/**'
+              - 'docs/architecture/openapi.json'
               - 'docker-compose.prod.yml'
               - '.github/workflows/deploy.yml'
             frontend:
               - 'frontend/**'
               - 'scripts/check_blog_v1_dead_code.py'
               - 'scripts/ci/**'
+              - 'docs/architecture/openapi.json'
             agent:
               - '.agent/**'
               - 'scripts/agent_tasks/**'

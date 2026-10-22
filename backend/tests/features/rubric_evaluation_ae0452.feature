@@ -41,6 +41,11 @@ Feature: Rubric thresholds and prompt templates evaluate content correctly
     When it is created or updated
     Then the API answers 422 and nothing is stored
 
+  Scenario: An edited legacy rubric saves
+    Given a stored 0-100 rubric whose criterion threshold is 70.0
+    When the rubric is read and its criteria are saved back unchanged
+    Then the save answers 200 and the stored threshold is 0.7
+
   Scenario: The default editorial rubric uses fraction thresholds
     When the default rubric criteria are built
     Then every threshold is between 0 and 1
