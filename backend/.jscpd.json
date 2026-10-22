@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kucherenko/jscpd/master/packages/jscpd/schema.json",
+  "description": "Backend copy-paste gate. Module __init__.py and public.py are the ADR-0009 facade: their import and __all__ re-export blocks mirror each other by design, so they are excluded. The threshold may only ratchet DOWN.",
+  "format": [
+    "python"
+  ],
+  "minTokens": 50,
+  "minLines": 5,
+  "threshold": 0.4,
+  "absolute": false,
+  "gitignore": true,
+  "reporters": [
+    "console"
+  ],
+  "ignore": [
+    "**/.venv/**",
+    "**/tests/**",
+    "**/__pycache__/**",
+    "**/modules/*/__init__.py",
+    "**/modules/*/public.py"
+  ]
+}

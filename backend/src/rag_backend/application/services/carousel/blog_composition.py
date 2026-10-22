@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     LONG_FORM_NOTES_KEY,
     OUTLINE_LEGACY_HEADING_KEY,
-    SLIDE_INDEX_KEY,
+)
+from rag_backend.application.services.carousel.localized_slide_builder import (
+    resolve_slide_index,
 )
 from rag_backend.application.services.carousel.outline_normalize import (
-    OUTLINE_FIELD_SLIDE_INDEX,
     OUTLINE_FIELD_TITLE,
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES
@@ -72,24 +73,11 @@ def _extract_long_form_note(slide: Mapping[str, object]) -> str:
     return ""
 
 
-def _resolve_slide_index(slide: Mapping[str, object], fallback: int) -> int:
-    raw = (
-        slide.get(SLIDE_INDEX_KEY)
-        or slide.get(OUTLINE_FIELD_SLIDE_INDEX)
-        or slide.get("number")
-    )
-    if isinstance(raw, int) and raw > 0:
-        return raw
-    if isinstance(raw, str) and raw.isdigit():
-        return int(raw)
-    return fallback
-
-
 def _resolve_section_heading(
     slide: Mapping[str, object],
     outline_by_index: Mapping[int, Mapping[str, object]],
 ) -> str:
-    slide_index = _resolve_slide_index(slide, 0)
+    slide_index = resolve_slide_index(slide, 0)
     outline_item = outline_by_index.get(slide_index)
     if outline_item is not None:
         title = outline_item.get(OUTLINE_FIELD_TITLE) or outline_item.get("title")
@@ -109,7 +97,7 @@ def _outline_index(
     for index, item in enumerate(outline):
         if not isinstance(item, dict):
             continue
-        slide_index = _resolve_slide_index(item, index + 1)
+        slide_index = resolve_slide_index(item, index + 1)
         indexed[slide_index] = item
     return indexed
 
@@ -179,7 +167,7 @@ def build_blog_markdown_en_from_long_form_notes(
     for index, slide in enumerate(composition.slides[:MAX_SLIDES]):
         if not isinstance(slide, dict):
             continue
-        slide_index = _resolve_slide_index(slide, index + 1)
+        slide_index = resolve_slide_index(slide, index + 1)
         resolved = _resolve_en_slide_content(
             slide, translations_en, (slide_index, outline_by_index)
         )

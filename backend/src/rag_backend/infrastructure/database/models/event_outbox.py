@@ -17,10 +17,11 @@ legacy path produced) so the relay reproduces it byte-identically across dialect
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, func
+from sqlalchemy import Column, DateTime, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSON
 
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import created_at_column
 
 
 class EventOutboxModel(Base):
@@ -44,9 +45,7 @@ class EventOutboxModel(Base):
     payload = Column(JSON, nullable=False, default=dict)
     metadata_json = Column("metadata", JSON, nullable=False, default=dict)
     event_timestamp = Column(String(64), nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
     published_at = Column(DateTime(timezone=True), nullable=True)
     attempts = Column(Integer, nullable=False, server_default="0", default=0)
 

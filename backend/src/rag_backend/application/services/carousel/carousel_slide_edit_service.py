@@ -27,6 +27,9 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.carousel_lock_cas import (
+    take_lock_version_cas,
+)
 from rag_backend.application.services.carousel.carousel_repair_projection import (
     apply_localized_to_slides,
     localized_from_slides,
@@ -50,7 +53,6 @@ from rag_backend.application.services.carousel.presentation_review_pipeline impo
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_conflicts import (
     CONFLICT_CODE_RUN_IN_PROGRESS,
-    CONFLICT_CODE_VERSION_CONFLICT,
 )
 from rag_backend.domain.constants.carousel_repair import AUDIT_AGGREGATE_CAROUSEL
 from rag_backend.domain.constants.carousel_slide_edit import (
@@ -59,7 +61,6 @@ from rag_backend.domain.constants.carousel_slide_edit import (
     SLIDE_EDIT_STATUS_UPDATED,
 )
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
-from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models.carousel_conflict import (
     CarouselConflict,
     CarouselConflictError,
@@ -155,16 +156,7 @@ class CarouselSlideEditService:
 
     async def _take_cas(self, command: SlideEditCommand) -> None:
         """Atomic ``lock_version`` compare-and-swap; a lost race raises 409."""
-        try:
-            await CarouselProjectWriteOwner(self._db).bump_resume_lock_version(
-                command.project_id, command.lock_version
-            )
-        except ValueError as exc:
-            if str(exc) == ERR_VERSION_CONFLICT:
-                raise CarouselConflictError(
-                    CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)
-                ) from None
-            raise
+        await take_lock_version_cas(self._db, command.project_id, command.lock_version)
 
     async def _write_checkpoint(
         self,

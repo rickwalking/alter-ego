@@ -6,14 +6,12 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Column,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
     false,
-    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -22,6 +20,10 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.models import DocumentScope, DocumentStatus
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
+)
 
 
 class DocumentModel(Base):
@@ -49,15 +51,8 @@ class DocumentModel(Base):
         server_default=false(),
         nullable=False,
     )
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
 
     owner = relationship("UserModel")
 

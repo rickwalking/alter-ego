@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
+from rag_backend.domain.constants.carousel_tools import (
+    ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID,
+    ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND,
+)
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols import CarouselRepository
 
 
 @dataclass(frozen=True)
@@ -38,8 +44,27 @@ def verify_carousel_workflow_start_access(
     return None
 
 
+async def load_authorized_project(
+    project_id: str,
+    repository: CarouselRepository,
+    access: CarouselToolAccessContext,
+) -> tuple[UUID, CarouselProject] | str:
+    """Return the parsed id and project, or the tool error string to hand back."""
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        return ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID
+    project = await repository.get_project_by_id(project_uuid)
+    if project is None:
+        return ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND
+    if verify_carousel_tool_access(project, access) is not None:
+        return ERR_CAROUSEL_TOOL_ACCESS_DENIED
+    return project_uuid, project
+
+
 __all__ = [
     "CarouselToolAccessContext",
+    "load_authorized_project",
     "verify_carousel_tool_access",
     "verify_carousel_workflow_start_access",
 ]

@@ -5,12 +5,10 @@ import uuid
 from sqlalchemy import (
     JSON,
     Column,
-    DateTime,
     ForeignKey,
     Index,
     String,
     Text,
-    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -22,6 +20,10 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.models import MessageRole
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import (
+    created_at_column,
+    updated_at_column,
+)
 
 
 class ConversationModel(Base):
@@ -33,15 +35,8 @@ class ConversationModel(Base):
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     title = Column(String(500), nullable=True)
     conv_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = created_at_column()
+    updated_at = updated_at_column()
 
     messages = relationship(
         "MessageModel",
@@ -105,9 +100,7 @@ class MessageModel(Base):
     content = Column(Text, nullable=False)
     msg_metadata = Column("metadata", JSON, default=dict, nullable=False)
     sources = Column(JSON, default=list, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
 
     conversation = relationship("ConversationModel", back_populates="messages")
 

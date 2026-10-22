@@ -162,6 +162,16 @@ gate_backend_pip_audit() {
 
 gate_backend_integrity()  { bash "$SCRIPT_DIR/check-integrity.sh" backend; }
 
+# Source-scoped copy-paste detection for the Python backend. Config and threshold
+# live in backend/.jscpd.json (threshold may only ratchet DOWN; raising it is
+# flagged by check-integrity.sh). Tests and the ADR-0009 facade files
+# (modules/*/__init__.py, modules/*/public.py) are excluded by that config.
+# jscpd is the frontend devDependency, so the binary comes from frontend/node_modules.
+gate_backend_duplication() {
+  require_tool jscpd || return $?
+  cd "$REPO_ROOT/backend" && "$FRONTEND_BIN_DIR/jscpd" src --config .jscpd.json
+}
+
 gate_backend_test() {
   postgres_available || { echo "DATABASE_URL not set — Postgres-dependent gate cannot run locally."; return "$EXIT_SKIP"; }
   cd "$REPO_ROOT/backend" && uv run pytest --cov=rag_backend --cov-report=xml --cov-report=term
@@ -289,6 +299,7 @@ BACKEND_GATES=(
   bandit:gate_backend_bandit
   pip-audit:gate_backend_pip_audit
   integrity:gate_backend_integrity
+  duplication:gate_backend_duplication
   test:gate_backend_test
   diff-cover:gate_backend_diff_cover
   migrations:gate_backend_migrations

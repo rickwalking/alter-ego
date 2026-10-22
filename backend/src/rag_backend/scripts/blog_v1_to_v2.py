@@ -13,7 +13,6 @@ traffic), 2 usage error. Safe to re-run: ``--apply`` skips v2 rows.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
 from collections.abc import Sequence
 
@@ -29,10 +28,11 @@ from rag_backend.infrastructure.database.blog_v2_cutover import (
     CutoverReport,
     SessionMaker,
 )
+from rag_backend.scripts.cli_support import EXIT_USAGE as EXIT_USAGE
+from rag_backend.scripts.cli_support import GuardedCli, run_guarded_cli
 
 EXIT_OK = 0
 EXIT_VERIFY_FAILED = 1
-EXIT_USAGE = 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -90,13 +90,8 @@ async def _main(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse flags, run the cutover, return the process exit code."""
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    error = validate_modes(args)
-    if error is not None:
-        print(f"ERROR: {error}", file=sys.stderr)
-        return EXIT_USAGE
-    return asyncio.run(_main(args))
+    cli = GuardedCli(build_parser(), validate_modes, _main)
+    return run_guarded_cli(cli, argv)
 
 
 if __name__ == "__main__":

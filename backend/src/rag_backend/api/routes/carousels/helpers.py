@@ -19,6 +19,13 @@ from rag_backend.api.routes.carousels.carousel_access import (  # noqa: F401 —
     assert_carousel_public,
     assert_carousel_public_or_editor,
 )
+from rag_backend.api.schemas import (
+    CarouselDesignColors,
+    CarouselDesignImages,
+    CarouselDesignLayout,
+    CarouselDesignResponse,
+    CarouselDesignTypography,
+)
 from rag_backend.application.services.carousel.artifact_path_resolver import (
     resolve_pdf_path,
 )
@@ -59,6 +66,26 @@ def _resolve_pdf_file(project: CarouselProject, lang: str) -> Path | None:
     if not candidate.is_file():
         return None
     return candidate
+
+
+def design_response(
+    tokens: dict[str, object], swipe_text: str, theme_name: str | None
+) -> CarouselDesignResponse:
+    """Build the design response from merged tokens with the swipe text applied."""
+    layout = dict(tokens["layout"])
+    layout["swipe_text"] = swipe_text
+    return CarouselDesignResponse(
+        colors=CarouselDesignColors(**tokens["colors"]),
+        typography=CarouselDesignTypography(**tokens["typography"]),
+        images=CarouselDesignImages(
+            hero=tokens["images"]["hero"],
+            slides=tokens["images"]["slides"],
+            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
+            rendered_slides_en=tokens["images"].get("rendered_slides_en"),
+        ),
+        layout=CarouselDesignLayout(**layout),
+        theme_name=theme_name,
+    )
 
 
 def _extract_first_paragraph(markdown: str) -> str | None:

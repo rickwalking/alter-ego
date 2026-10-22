@@ -22,13 +22,13 @@ from rag_backend.modules.autopilot.infrastructure.collectors.coerce import (
     as_list,
     as_mapping,
     as_str,
-    loads_json,
 )
-from rag_backend.modules.autopilot.infrastructure.collectors.errors import UpstreamError
+from rag_backend.modules.autopilot.infrastructure.collectors.fetch_json import (
+    fetch_json,
+)
 from rag_backend.modules.autopilot.infrastructure.collectors.http_get import (
     HttpGet,
     HttpGetter,
-    is_http_success,
 )
 from rag_backend.modules.autopilot.infrastructure.collectors.timestamps import (
     parse_timestamp,
@@ -58,17 +58,13 @@ class BlueskyTrendsCollector:
     async def collect(self, window: CollectWindow) -> list[Signal]:
         """Return the trend list. ``window`` is accepted to satisfy ``Collector``."""
         del window
-        response = await self._http.get(
+        parsed = await fetch_json(
+            self._http,
             HttpGet(
                 url=BSKY_TRENDS_URL,
                 params=((BSKY_PARAM_LIMIT, BSKY_TREND_LIMIT),),
-            )
+            ),
         )
-        if not is_http_success(response.status_code):
-            raise UpstreamError
-        parsed = loads_json(response.text)
-        if parsed is None:
-            raise UpstreamError
         return signals_from_bluesky(parsed)
 
 

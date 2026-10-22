@@ -21,6 +21,10 @@ from rag_backend.application.services.carousel.outline_normalize import (
     OUTLINE_FIELD_KEY_POINTS,
     OUTLINE_FIELD_TITLE,
 )
+from rag_backend.application.services.carousel.state_values import (
+    mappings_at,
+    strings_of,
+)
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_OUTLINE,
     STATE_FIELD_RESEARCH_FINDINGS,
@@ -56,32 +60,18 @@ class StandaloneMaterial:
     source_urls: tuple[str, ...] = ()
 
 
-def _strings(value: object) -> tuple[str, ...]:
-    if not isinstance(value, list):
-        return ()
-    return tuple(
-        item.strip() for item in value if isinstance(item, str) and item.strip()
-    )
-
-
-def _dicts(state: Mapping[str, object] | None, key: str) -> list[Mapping[str, object]]:
-    raw = state.get(key) if state is not None else None
-    if not isinstance(raw, list):
-        return []
-    return [item for item in raw if isinstance(item, Mapping)]
-
-
 def _finding_text(finding: Mapping[str, object]) -> str:
     summary = finding.get(_FINDING_SUMMARY)
     parts = [summary.strip()] if isinstance(summary, str) and summary.strip() else []
-    parts.extend(_strings(finding.get(_FINDING_KEY_POINTS)))
+    parts.extend(strings_of(finding.get(_FINDING_KEY_POINTS)))
     return _KEY_POINT_JOIN.join(parts)
 
 
 def research_material(state: Mapping[str, object] | None) -> tuple[str, ...]:
     """One text per research source (summary + key points), blanks dropped."""
     texts = (
-        _finding_text(item) for item in _dicts(state, STATE_FIELD_RESEARCH_FINDINGS)
+        _finding_text(item)
+        for item in mappings_at(state, STATE_FIELD_RESEARCH_FINDINGS)
     )
     return tuple(dict.fromkeys(text for text in texts if text))
 
@@ -91,9 +81,9 @@ def outline_material(state: Mapping[str, object] | None) -> tuple[OutlinePoint, 
     points = (
         OutlinePoint(
             title=str(item.get(OUTLINE_FIELD_TITLE) or "").strip(),
-            key_points=_strings(item.get(OUTLINE_FIELD_KEY_POINTS)),
+            key_points=strings_of(item.get(OUTLINE_FIELD_KEY_POINTS)),
         )
-        for item in _dicts(state, STATE_FIELD_OUTLINE)
+        for item in mappings_at(state, STATE_FIELD_OUTLINE)
     )
     return tuple(point for point in points if point.title)
 

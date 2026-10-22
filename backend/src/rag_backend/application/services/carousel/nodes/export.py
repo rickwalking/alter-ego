@@ -10,7 +10,7 @@ both languages.  Relative paths are rewritten so that standard exports
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from rag_backend.application.services.carousel.carousel_export_assets import (
@@ -139,19 +139,7 @@ async def run_bilingual_export(
     config: BilingualExportConfig,
 ) -> None:
     """Render PT slides, then EN slides when translations exist."""
-    pt_config = BilingualExportConfig(
-        project=config.project,
-        slides_data=config.slides_data,
-        pt_html=config.pt_html,
-        output_dir=config.output_dir,
-        export=config.export,
-        pdf_builder=config.pdf_builder,
-        template=config.template,
-        strategy_registry=config.strategy_registry,
-        strategy_name=config.strategy_name,
-        language=LANGUAGE_PT,
-        html_content=config.pt_html,
-    )
+    pt_config = replace(config, language=LANGUAGE_PT, html_content=config.pt_html)
     await render_language(pt_config)
 
     en_available = any(s.translation_en for s in config.slides_data)
@@ -167,17 +155,5 @@ async def run_bilingual_export(
         strategy_registry=config.strategy_registry,
         strategy_name=config.strategy_name,
     )
-    en_config = BilingualExportConfig(
-        project=config.project,
-        slides_data=config.slides_data,
-        pt_html=config.pt_html,
-        output_dir=config.output_dir,
-        export=config.export,
-        pdf_builder=config.pdf_builder,
-        template=config.template,
-        strategy_registry=config.strategy_registry,
-        strategy_name=config.strategy_name,
-        language=LANGUAGE_EN,
-        html_content=en_html,
-    )
+    en_config = replace(config, language=LANGUAGE_EN, html_content=en_html)
     await render_language(en_config)

@@ -36,11 +36,7 @@ from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselBlogI18nResponse,
-    CarouselDesignColors,
-    CarouselDesignImages,
-    CarouselDesignLayout,
     CarouselDesignResponse,
-    CarouselDesignTypography,
 )
 from rag_backend.domain.constants import (
     HD_SUBDIR_NAME,
@@ -62,6 +58,7 @@ from .helpers import (
     _extract_title_and_subtitle,
     _resolve_image_file,
     assert_carousel_project_access,
+    design_response,
 )
 
 router = APIRouter()
@@ -204,21 +201,7 @@ async def preview_carousel_design(
         raise HTTPException(status_code=404, detail=ERR_DESIGN_NOT_GENERATED)
 
     tokens = handlers.merge_design_tokens(project)
-    layout = dict(tokens["layout"])
-    layout["swipe_text"] = _swipe_text_for_language(lang)
-
-    return CarouselDesignResponse(
-        colors=CarouselDesignColors(**tokens["colors"]),
-        typography=CarouselDesignTypography(**tokens["typography"]),
-        images=CarouselDesignImages(
-            hero=tokens["images"]["hero"],
-            slides=tokens["images"]["slides"],
-            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
-            rendered_slides_en=tokens["images"].get("rendered_slides_en"),
-        ),
-        layout=CarouselDesignLayout(**layout),
-        theme_name=project.theme,
-    )
+    return design_response(tokens, _swipe_text_for_language(lang), project.theme)
 
 
 @router.get(

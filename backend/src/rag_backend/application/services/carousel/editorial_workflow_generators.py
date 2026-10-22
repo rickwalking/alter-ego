@@ -201,21 +201,12 @@ class _SlideDraftRunner:
         return slide_policy_context(self.mode, self.outline[index])
 
     async def draft_at(self, index: int) -> dict[str, object]:
-        slide = self.outline[index]
-        slide_index = int(slide.get(_SLIDE_INDEX_KEY, 0))
-        draft = await self.content_agent.draft_slide(
-            slide_index=slide_index,
-            title=str(slide.get(_TITLE_KEY, "")),
-            key_points=self._key_points(slide),
-            persona=self.persona,
-            persona_context=self.persona_context,
-            locale=LANGUAGE_PT,
-            revision_notes=self.revision_notes,
-            sibling_context=_build_sibling_context(self.outline, index),
-            previous_draft=_previous_draft_body(self.previous_drafts, slide_index),
-            policy=self._policy_at(index),
+        slide_index = int(self.outline[index].get(_SLIDE_INDEX_KEY, 0))
+        return await self._draft(
+            index,
+            self.revision_notes,
+            _previous_draft_body(self.previous_drafts, slide_index),
         )
-        return normalize_slide_draft({**slide, **draft})
 
     async def redraft_at(self, index: int, prior_body: str) -> dict[str, object]:
         """One bounded re-draft of a near-duplicate slide.
@@ -223,9 +214,14 @@ class _SlideDraftRunner:
         Feeds the too-similar body back as the previous draft plus an intensified
         distinctness note (kept alongside any active reviewer notes).
         """
+        notes = f"{DISTINCTNESS_REDRAFT_NOTE}\n{self.revision_notes}".strip()
+        return await self._draft(index, notes, prior_body)
+
+    async def _draft(
+        self, index: int, revision_notes: str, previous_draft: str
+    ) -> dict[str, object]:
         slide = self.outline[index]
         slide_index = int(slide.get(_SLIDE_INDEX_KEY, 0))
-        notes = f"{DISTINCTNESS_REDRAFT_NOTE}\n{self.revision_notes}".strip()
         draft = await self.content_agent.draft_slide(
             slide_index=slide_index,
             title=str(slide.get(_TITLE_KEY, "")),
@@ -233,9 +229,9 @@ class _SlideDraftRunner:
             persona=self.persona,
             persona_context=self.persona_context,
             locale=LANGUAGE_PT,
-            revision_notes=notes,
+            revision_notes=revision_notes,
             sibling_context=_build_sibling_context(self.outline, index),
-            previous_draft=prior_body,
+            previous_draft=previous_draft,
             policy=self._policy_at(index),
         )
         return normalize_slide_draft({**slide, **draft})

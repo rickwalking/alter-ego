@@ -31,13 +31,13 @@ from rag_backend.modules.autopilot.infrastructure.collectors.coerce import (
     as_list,
     as_mapping,
     as_str,
-    loads_json,
 )
-from rag_backend.modules.autopilot.infrastructure.collectors.errors import UpstreamError
+from rag_backend.modules.autopilot.infrastructure.collectors.fetch_json import (
+    fetch_json,
+)
 from rag_backend.modules.autopilot.infrastructure.collectors.http_get import (
     HttpGet,
     HttpGetter,
-    is_http_success,
 )
 from rag_backend.modules.autopilot.infrastructure.collectors.timestamps import (
     parse_timestamp,
@@ -79,15 +79,10 @@ class HackerNewsCollector:
         return signals_from_hn(payload, window)
 
     async def _payload(self, keyword: str, window: CollectWindow) -> object:
-        response = await self._http.get(
+        return await fetch_json(
+            self._http,
             HttpGet(url=HN_SEARCH_URL, params=_params(keyword, window)),
         )
-        if not is_http_success(response.status_code):
-            raise UpstreamError
-        parsed = loads_json(response.text)
-        if parsed is None:
-            raise UpstreamError
-        return parsed
 
 
 def signals_from_hn(payload: object, window: CollectWindow) -> list[Signal]:

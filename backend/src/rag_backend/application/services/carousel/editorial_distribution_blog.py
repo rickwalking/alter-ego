@@ -24,19 +24,21 @@ class BlogBuildContext:
     translations_en: dict[int, dict[str, object]] | None = None
 
 
+def _composition_input(ctx: BlogBuildContext) -> BlogCompositionInput:
+    return BlogCompositionInput(
+        slides=tuple(slide for slide in ctx.slide_drafts if isinstance(slide, dict)),
+        title=ctx.title,
+        research_summary=ctx.research_summary,
+        outline=tuple(item for item in ctx.outline or [] if isinstance(item, dict)),
+    )
+
+
 def build_blog_markdown_en_from_translations(ctx: BlogBuildContext) -> str:
     """Build English blog markdown from EN long-form notes."""
     if ctx.translations_en is None:
         raise ValueError(ERR_TRANSLATIONS_REQUIRED)
     return build_blog_markdown_en_from_long_form_notes(
-        BlogCompositionInput(
-            slides=tuple(
-                slide for slide in ctx.slide_drafts if isinstance(slide, dict)
-            ),
-            title=ctx.title,
-            research_summary=ctx.research_summary,
-            outline=tuple(item for item in ctx.outline or [] if isinstance(item, dict)),
-        ),
+        _composition_input(ctx),
         ctx.translations_en,
     )
 
@@ -44,14 +46,7 @@ def build_blog_markdown_en_from_translations(ctx: BlogBuildContext) -> str:
 def build_blog_markdown_from_drafts(ctx: BlogBuildContext) -> str:
     """Build public blog markdown from long-form notes instead of slide bodies."""
     return build_blog_markdown_from_long_form_notes(
-        BlogCompositionInput(
-            slides=tuple(
-                slide for slide in ctx.slide_drafts if isinstance(slide, dict)
-            ),
-            title=ctx.title,
-            research_summary=ctx.research_summary,
-            outline=tuple(item for item in ctx.outline or [] if isinstance(item, dict)),
-        ),
+        _composition_input(ctx),
     )
 
 

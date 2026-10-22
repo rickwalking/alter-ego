@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.constants import DEFAULT_CONFIDENCE
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.domain.similarity import cosine_similarity
 from rag_backend.infrastructure.database.persona_correction_repository import (
     PersonaCorrectionRecord,
     PersonaCorrectionRepository,
@@ -78,14 +79,7 @@ class FeedbackLearningLoop:
         return [row.corrected_text for row in rows]
 
     def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-        norm_a = sum(x * x for x in a) ** 0.5
-        norm_b = sum(x * x for x in b) ** 0.5
-
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-
-        return float(dot_product / (norm_a * norm_b))
+        return cosine_similarity(a, b)
 
     async def classify_correction(
         self,

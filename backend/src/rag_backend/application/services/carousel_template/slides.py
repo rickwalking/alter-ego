@@ -52,13 +52,10 @@ def _render_intro_slide(
   </div>"""
 
 
-def _render_summary_slide(
-    slide: SlideDict,
-    _theme: dict[str, str],
-    total_slides: int = 6,
-    watermark_html: str = "",
+def _render_hero_bg_slide(
+    slide: SlideDict, total_slides: int, watermark_html: str
 ) -> str:
-    """Render summary slide with hero-bg layout."""
+    """Hero-bg layout shared by the summary, content and closing slides."""
     heading = _render_inline(str(slide["heading"]))
     counter = format_slide_counter(str(slide["number"]), total_slides)
     body_raw = str(slide.get("body") or "").strip()
@@ -78,6 +75,16 @@ def _render_summary_slide(
     </div>
     {watermark_html}
   </div>"""
+
+
+def _render_summary_slide(
+    slide: SlideDict,
+    _theme: dict[str, str],
+    total_slides: int = 6,
+    watermark_html: str = "",
+) -> str:
+    """Render summary slide with hero-bg layout."""
+    return _render_hero_bg_slide(slide, total_slides, watermark_html)
 
 
 def _render_content_slide(
@@ -87,25 +94,7 @@ def _render_content_slide(
     watermark_html: str = "",
 ) -> str:
     """Render content slide with hero-bg layout."""
-    heading = _render_inline(str(slide["heading"]))
-    counter = format_slide_counter(str(slide["number"]), total_slides)
-    body_raw = str(slide.get("body") or "").strip()
-    body_html = (
-        f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>' if body_raw else ""
-    )
-    return f"""\
-  <div class="slide-hero-bg-img">
-    <img src="images/slide_{slide["number"]}.jpg" alt="" />
-  </div>
-  <div class="slide-hero-bg-gradient"></div>
-  <div class="slide-hero-content">
-    <div class="slide-hero-main">
-      <div class="slide-hero-number">{counter}</div>
-      <h2 class="slide-hero-heading">{heading}</h2>
-      {body_html}
-    </div>
-    {watermark_html}
-  </div>"""
+    return _render_hero_bg_slide(slide, total_slides, watermark_html)
 
 
 def _render_closing_slide(
@@ -115,25 +104,7 @@ def _render_closing_slide(
     watermark_html: str = "",
 ) -> str:
     """Render closing slide with hero-bg layout."""
-    heading = _render_inline(str(slide["heading"]))
-    counter = format_slide_counter(str(slide["number"]), total_slides)
-    body_raw = str(slide.get("body") or "").strip()
-    body_html = (
-        f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>' if body_raw else ""
-    )
-    return f"""\
-  <div class="slide-hero-bg-img">
-    <img src="images/slide_{slide["number"]}.jpg" alt="" />
-  </div>
-  <div class="slide-hero-bg-gradient"></div>
-  <div class="slide-hero-content">
-    <div class="slide-hero-main">
-      <div class="slide-hero-number">{counter}</div>
-      <h2 class="slide-hero-heading">{heading}</h2>
-      {body_html}
-    </div>
-    {watermark_html}
-  </div>"""
+    return _render_hero_bg_slide(slide, total_slides, watermark_html)
 
 
 def _render_cta_slide(

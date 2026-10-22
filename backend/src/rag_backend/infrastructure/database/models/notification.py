@@ -2,10 +2,11 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Index, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSON
 
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.columns import created_at_column
 
 
 class NotificationModel(Base):
@@ -25,9 +26,7 @@ class NotificationModel(Base):
     email_sent = Column(Boolean, nullable=False, default=False)
     deadline_at = Column(DateTime(timezone=True), nullable=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = created_at_column()
 
     __table_args__ = (
         Index("idx_notifications_user_status", "user_id", "status"),

@@ -7,15 +7,12 @@ from typing_extensions import override
 from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS
 from rag_backend.application.services.carousel_template.helpers import (
     _render_inline,
-    slide_body_html,
-)
-from rag_backend.application.services.carousel_template.lower_third_shell import (
-    LowerThirdConfig,
-    artwork_enabled,
-    render_lower_third_shell,
 )
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
+)
+from rag_backend.application.services.carousel_template.strategies.hero_stack import (
+    render_hero_stack,
 )
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
@@ -40,29 +37,14 @@ class StatCardGridStrategy:
         *,
         options: _RenderOptions | None = None,
     ) -> str:
-        opts = options or {}
-        total_slides: int = opts.get("total_slides", 0)  # type: ignore[assignment]
         stats = slide.get("stats")
         if not stats or not isinstance(stats, list) or not stats:
             return _FALLBACK.render(slide, project, theme, options=options)
 
-        heading = _render_inline(str(slide.get("heading") or ""))
-        body_html = slide_body_html(slide, "body-p")
-        slide_number = str(slide["number"])
-
-        cards_html = _build_stat_cards(stats)
-        copy_inner = (
-            f'<h2 class="slide-hero-heading">{heading}</h2>\n'
-            f"      {body_html}\n"
-            f'      <div class="stat-row">{cards_html}</div>'
-        )
-        return render_lower_third_shell(
-            LowerThirdConfig(
-                slide_number=slide_number,
-                total_slides=total_slides,
-                copy_inner_html=copy_inner,
-                show_artwork=artwork_enabled(options),
-            )
+        return render_hero_stack(
+            slide,
+            options,
+            f'<div class="stat-row">{_build_stat_cards(stats)}</div>',
         )
 
 

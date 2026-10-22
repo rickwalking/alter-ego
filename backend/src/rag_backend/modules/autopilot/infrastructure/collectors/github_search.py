@@ -33,13 +33,13 @@ from rag_backend.modules.autopilot.infrastructure.collectors.coerce import (
     as_list,
     as_mapping,
     as_str,
-    loads_json,
 )
-from rag_backend.modules.autopilot.infrastructure.collectors.errors import UpstreamError
+from rag_backend.modules.autopilot.infrastructure.collectors.fetch_json import (
+    fetch_json,
+)
 from rag_backend.modules.autopilot.infrastructure.collectors.http_get import (
     HttpGet,
     HttpGetter,
-    is_http_success,
 )
 from rag_backend.modules.autopilot.infrastructure.collectors.timestamps import (
     parse_timestamp,
@@ -76,12 +76,7 @@ class GitHubSearchCollector:
 
     async def collect(self, window: CollectWindow) -> list[Signal]:
         """Return the first page of matching repositories."""
-        response = await self._config.http.get(self._request(window))
-        if not is_http_success(response.status_code):
-            raise UpstreamError
-        parsed = loads_json(response.text)
-        if parsed is None:
-            raise UpstreamError
+        parsed = await fetch_json(self._config.http, self._request(window))
         return signals_from_github(parsed)
 
     def _request(self, window: CollectWindow) -> HttpGet:

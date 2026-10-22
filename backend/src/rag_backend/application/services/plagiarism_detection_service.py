@@ -19,6 +19,7 @@ from rag_backend.domain.constants.plagiarism import (
     SEVERITY_PASS,
     SEVERITY_WARN,
 )
+from rag_backend.domain.similarity import cosine_similarity
 
 
 class EmbeddingServiceProtocol(Protocol):
@@ -120,12 +121,7 @@ class PlagiarismDetectionService:
 
     @staticmethod
     def _cosine_similarity(a: list[float], b: list[float]) -> float:
-        dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-        norm_a = sum(x * x for x in a) ** 0.5
-        norm_b = sum(x * x for x in b) ** 0.5
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return float(dot_product / (norm_a * norm_b))
+        return cosine_similarity(a, b)
 
 
 __all__ = ["PlagiarismDetectionService"]

@@ -49,11 +49,7 @@ from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselBlogI18nResponse,
     CarouselBlogResponse,
-    CarouselDesignColors,
-    CarouselDesignImages,
-    CarouselDesignLayout,
     CarouselDesignResponse,
-    CarouselDesignTypography,
     CarouselSlideResponse,
 )
 from rag_backend.application.services.carousel.artifact_path_resolver import (
@@ -76,6 +72,7 @@ from .helpers import (
     _resolve_pdf_file,
     _safe_relative_file_path,
     assert_carousel_public,
+    design_response,
 )
 
 router = APIRouter()
@@ -280,21 +277,7 @@ async def get_carousel_design(
     else:
         tokens = defaults
 
-    layout = dict(tokens["layout"])
-    layout["swipe_text"] = SWIPE_TEXT_EN
-
-    return CarouselDesignResponse(
-        colors=CarouselDesignColors(**tokens["colors"]),
-        typography=CarouselDesignTypography(**tokens["typography"]),
-        images=CarouselDesignImages(
-            hero=tokens["images"]["hero"],
-            slides=tokens["images"]["slides"],
-            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
-            rendered_slides_en=tokens["images"].get("rendered_slides_en"),
-        ),
-        layout=CarouselDesignLayout(**layout),
-        theme_name=theme_name,
-    )
+    return design_response(tokens, SWIPE_TEXT_EN, theme_name)
 
 
 @router.get(

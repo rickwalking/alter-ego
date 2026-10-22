@@ -33,6 +33,7 @@ from rag_backend.application.services.carousel.owner_autofix_fill import (
 from rag_backend.application.services.carousel.owner_autofix_paths import (
     complete_items,
 )
+from rag_backend.application.services.carousel.state_values import strings_of
 from rag_backend.domain.constants.carousel import (
     SLIDE_TYPE_CLOSING,
     SLIDE_TYPE_CONTENT,
@@ -79,14 +80,6 @@ class SlideRef:
     slide_type: str
 
 
-def _strings(value: object) -> tuple[str, ...]:
-    if not isinstance(value, list):
-        return ()
-    return tuple(
-        item.strip() for item in value if isinstance(item, str) and item.strip()
-    )
-
-
 def outline_from_state(state: Mapping[str, object] | None) -> dict[int, SlideOutline]:
     """The workflow state's outline by slide index (position when unnumbered)."""
     raw = state.get(STATE_FIELD_OUTLINE) if state is not None else None
@@ -100,7 +93,7 @@ def outline_from_state(state: Mapping[str, object] | None) -> dict[int, SlideOut
         index = item.get(STATE_FIELD_SLIDE_INDEX)
         outline[index if isinstance(index, int) else position] = SlideOutline(
             title=str(item.get(_TITLE) or "").strip(),
-            key_points=_strings(item.get(_KEY_POINTS)),
+            key_points=strings_of(item.get(_KEY_POINTS)),
             slide_type=str(item.get(STATE_FIELD_SLIDE_TYPE) or ""),
         )
     return outline

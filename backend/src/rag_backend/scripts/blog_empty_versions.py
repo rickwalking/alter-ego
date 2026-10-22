@@ -19,7 +19,6 @@ entries, renumbers the rest 1..N and writes once per changed row.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -38,12 +37,13 @@ from rag_backend.application.services.blog.blog_version_history import (
 )
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.scripts.cli_support import EXIT_USAGE as EXIT_USAGE
+from rag_backend.scripts.cli_support import GuardedCli, run_guarded_cli
 
 logger = structlog.get_logger(__name__)
 
 EXIT_OK = 0
 EXIT_VERIFY_FAILED = 1
-EXIT_USAGE = 2
 
 BATCH_SIZE = 100
 ADVISORY_LOCK_KEY = 4_380_438
@@ -238,13 +238,8 @@ async def _main(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse flags, run the repair, return the process exit code."""
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    error = validate_modes(args)
-    if error is not None:
-        print(f"ERROR: {error}", file=sys.stderr)
-        return EXIT_USAGE
-    return asyncio.run(_main(args))
+    cli = GuardedCli(build_parser(), validate_modes, _main)
+    return run_guarded_cli(cli, argv)
 
 
 if __name__ == "__main__":
