@@ -5217,17 +5217,21 @@
         "type": "object"
       },
       "InstagramPublishRequest": {
+        "description": "Optional echo of the caption the page shows.\n\nThe publish always sends the saved caption; a ``caption`` that differs from\nit is refused with 409 ``caption_not_saved`` instead of being published.",
         "properties": {
           "caption": {
-            "maxLength": 2200,
-            "minLength": 1,
-            "title": "Caption",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 2200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
           }
         },
-        "required": [
-          "caption"
-        ],
         "title": "InstagramPublishRequest",
         "type": "object"
       },
@@ -13415,7 +13419,7 @@
     },
     "/api/carousels/{project_id}/publish/instagram": {
       "post": {
-        "description": "Publish the carousel's slides to Instagram with the provided caption.\n\nReturns 409 when an autopilot run owns the carousel or a publish is running.",
+        "description": "Publish the carousel's slides to Instagram with the saved caption.\n\nReturns 409 when an autopilot run owns the carousel, a publish is running,\nthe saved caption is empty, or the request carries a caption that differs\nfrom the saved one (``caption_not_saved``).",
         "operationId": "publish_to_instagram_api_carousels__project_id__publish_instagram_post",
         "parameters": [
           {
@@ -13460,7 +13464,7 @@
             "description": "Not found"
           },
           "409": {
-            "description": "Carousel not completed"
+            "description": "Carousel not completed, the caption is not saved or empty, or a publish is already running"
           },
           "422": {
             "content": {
