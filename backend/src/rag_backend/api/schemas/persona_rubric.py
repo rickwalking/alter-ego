@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from rag_backend.domain.rubric_scoring import normalize_threshold
+from rag_backend.domain.rubric_scoring import normalize_stored_criterion
 
 
 class ToneAttributes(BaseModel):
@@ -91,14 +91,6 @@ class RubricCriterion(BaseModel):
     scoring_scale: str
     prompt_template: str
 
-    @field_validator("min_threshold", mode="before")
-    @classmethod
-    def _legacy_percent_is_a_fraction(cls, value: object) -> object:
-        """A stored legacy percentage (e.g. 70.0) reads as its fraction (0.7)."""
-        if isinstance(value, int | float) and not isinstance(value, bool):
-            return normalize_threshold(float(value))
-        return value
-
 
 class QualityRubricCreate(BaseModel):
     """Schema for creating a quality rubric."""
@@ -134,6 +126,17 @@ class QualityRubricResponse(BaseModel):
     version: int
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("criteria", mode="before")
+    @classmethod
+    def _stored_thresholds_read_as_fractions(cls, value: object) -> object:
+        """A stored legacy threshold (70.0 on 0-100) reads as its fraction (0.7)."""
+        if not isinstance(value, list):
+            return value
+        return [
+            normalize_stored_criterion(item) if isinstance(item, dict) else item
+            for item in value
+        ]
 
 
 class QualityRubricListResponse(BaseModel):

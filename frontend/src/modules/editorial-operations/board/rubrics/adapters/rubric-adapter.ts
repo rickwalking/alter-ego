@@ -34,6 +34,15 @@ const CONTENT_TYPE_BADGE: Record<
 };
 
 const DEFAULT_BADGE = { badge: "Rubric", color: "teal" as const };
+const PERCENT = 100;
+
+/** A criterion threshold (a 0-1 fraction of its scale) as "≥ 70% (0-100)". */
+export function thresholdLabel(
+  minThreshold: number,
+  scoringScale: string,
+): string {
+  return `≥ ${Math.round(minThreshold * PERCENT)}% (${scoringScale})`;
+}
 
 export function mapQualityRubricToPanelData(rubric: QualityRubric): RubricData {
   const contentType = rubric.applicable_content_types[0] ?? "general";
@@ -48,7 +57,10 @@ export function mapQualityRubricToPanelData(rubric: QualityRubric): RubricData {
     criteria: rubric.criteria.map((criterion) => ({
       name: criterion.name,
       description: criterion.description,
-      excellent: `≥ ${criterion.min_threshold} (${criterion.scoring_scale})`,
+      excellent: thresholdLabel(
+        criterion.min_threshold,
+        criterion.scoring_scale,
+      ),
       good: "Meets threshold",
       poor: "Below threshold",
     })),

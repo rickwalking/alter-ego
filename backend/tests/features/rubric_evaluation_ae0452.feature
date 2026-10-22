@@ -3,7 +3,8 @@
 Feature: Rubric thresholds and prompt templates evaluate content correctly
   A criterion threshold is a fraction of the criterion's score scale (0.0-1.0,
   as the rubric API accepts it). Scores are compared on that same scale, and a
-  stored legacy percentage threshold (e.g. 70.0) is read as 0.70.
+  stored legacy threshold (70.0 on 0-100, 7.0 on 1-10) is read as 0.70. Only
+  reads normalise: create and update reject a threshold above 1.0.
 
   Scenario: A score below the threshold fails the criterion
     Given a 0-100 criterion with threshold 0.7
@@ -24,6 +25,21 @@ Feature: Rubric thresholds and prompt templates evaluate content correctly
     Given a stored rubric whose criterion threshold is 70.0
     When the rubrics are listed
     Then the listing succeeds and the threshold reads 0.7
+
+  Scenario: A legacy threshold on a 1-10 criterion is read on its own scale
+    Given a stored 1-10 criterion whose threshold is 7.0
+    When the threshold is normalised
+    Then it reads 0.7
+
+  Scenario: A legacy threshold above the scale maximum is read as a percentage
+    Given a stored 1-10 criterion whose threshold is 70.0, or a 0-100 one whose threshold is 150.0
+    When the threshold is normalised
+    Then it reads 0.7, and never more than 1.0
+
+  Scenario: Creating or updating a rubric with a threshold above 1.0 is rejected
+    Given a rubric payload whose criterion threshold is 1.5, 7 or 70
+    When it is created or updated
+    Then the API answers 422 and nothing is stored
 
   Scenario: The default editorial rubric uses fraction thresholds
     When the default rubric criteria are built

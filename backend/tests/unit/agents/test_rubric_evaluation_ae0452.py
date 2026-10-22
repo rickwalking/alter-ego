@@ -8,8 +8,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 from rag_backend.agents.quality_agent import QualityAgent
+from rag_backend.api.schemas.persona_rubric import QualityRubricResponse
 from rag_backend.api.schemas.persona_rubric import RubricCriterion as CriterionSchema
 from rag_backend.application.services.phase5_migration_service import (
     _default_rubric_criteria,
@@ -106,10 +108,26 @@ async def test_legacy_percentage_threshold_still_compares(
 
 
 # Scenario: A legacy percentage threshold is read as a fraction
-def test_schema_reads_legacy_percentage_as_fraction() -> None:
-    criterion = CriterionSchema.model_validate({**_criterion(70.0)})
+def test_response_reads_legacy_percentage_as_fraction() -> None:
+    response = QualityRubricResponse.model_validate({
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "Seeded",
+        "criteria": [{**_criterion(70.0)}],
+        "applicable_content_types": ["carousel"],
+        "is_default": True,
+        "created_at": "2026-10-22T00:00:00Z",
+        "updated_at": "2026-10-22T00:00:00Z",
+        "version": 1,
+    })
 
-    assert criterion.min_threshold == pytest.approx(0.7)
+    assert response.criteria[0].min_threshold == pytest.approx(0.7)
+
+
+# Scenario: Creating or updating a rubric with a threshold above 1.0 is rejected
+@pytest.mark.parametrize("threshold", [1.5, 7.0, 70.0])
+def test_input_schema_rejects_a_threshold_above_one(threshold: float) -> None:
+    with pytest.raises(ValidationError):
+        CriterionSchema.model_validate({**_criterion(threshold)})
 
 
 # Scenario: The default editorial rubric uses fraction thresholds

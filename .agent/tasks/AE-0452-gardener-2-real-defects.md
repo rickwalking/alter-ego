@@ -111,6 +111,7 @@ Full file: `backend/tests/features/public_carousel_list_redaction_ae0452.feature
 | Frontend effect cleanup | Workflow polling fallback kept polling `workflow/state` after the workspace unmounted (late poll answer re-armed the timer; no cleanup without `EventSource`) | #182 |
 | Public SEO surface | `sitemap.xml` on `your-domain.com` with `/chat` + `/dashboard/knowledge` and no content; `robots.txt` and carousel OG images on `alterego.app` (`SITE_URL` default) | #183 |
 | Swallowed async failures | Notification mark-as-read, key-point extraction and persona/rubric create rejected into `void` click handlers (no UI feedback); `useResourceCollection.refetch` never cleared a stale error | #184 |
+| Rubric threshold input (#212 review) | The legacy >1.0 normaliser sat on the shared input `RubricCriterion`, so create/update rescaled out-of-range thresholds (1.5 → 0.015, 70 → 0.7) instead of a 422; legacy reads divided by 100 for every scale (1-10 stored 7 → 0.07); the board showed "≥ 0.7 (0-100)". Now: strict input (422 above 1.0), normalisation on read only and on the criterion's own scale, board shows "≥ 70% (0-100)" | this PR |
 
 ## QA Checklist
 
