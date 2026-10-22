@@ -7,6 +7,7 @@ import { NeonBlogPostCard } from "@/modules/publishing";
 import { BG_DEEP, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { buildPublicBlogCards } from "@/lib/public-blog-cards";
+import { BlogEmptyState } from "./blog-empty-state";
 import {
   fetchCompletedProjects,
   fetchPublicBlogPosts,
@@ -96,7 +97,10 @@ export default async function PublicBlogListPage() {
             textAlign: "center",
           }}
         >
-          <p style={{ fontSize: "16px", color: TEXT_MUTED }}>{t("noPosts")}</p>
+          <BlogEmptyState
+            message={t("noPosts")}
+            linkLabel={t("browseCarousels")}
+          />
         </div>
       ) : (
         <div
