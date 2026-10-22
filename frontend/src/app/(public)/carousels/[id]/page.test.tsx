@@ -62,6 +62,7 @@ beforeEach(() => {
 
 describe("Public carousel viewer page metadata (AE-0444)", () => {
   it("uses the English title, subtitle and cover", async () => {
+    // Scenario: A carousel share image uses the production domain
     mockFetch.mockResolvedValueOnce(carousel());
 
     const metadata = await generateMetadata(props("meta-en", "en"));
@@ -70,7 +71,7 @@ describe("Public carousel viewer page metadata (AE-0444)", () => {
     expect(metadata.description).toBe("Subtitle EN");
     expect(metadata.openGraph).toMatchObject({
       type: "article",
-      images: ["https://alterego.app/pt-1.jpg"],
+      images: ["https://marinssolutions.com/pt-1.jpg"],
     });
   });
 

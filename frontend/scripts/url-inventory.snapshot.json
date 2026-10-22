@@ -182,7 +182,9 @@
       "url": "/sitemap.xml",
       "kind": "metadata",
       "file": "src/app/sitemap.ts",
-      "segmentConfig": {}
+      "segmentConfig": {
+        "dynamic": "\"force-dynamic\""
+      }
     }
   ]
 }
