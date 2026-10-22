@@ -53,6 +53,9 @@ source "$REPO_ROOT/scripts/lib/require_tool.sh"
 # turns a SKIP there into a FAIL, so the guard cannot hide a missing run).
 # shellcheck source=scripts/lib/mutation_ci_only.sh
 source "$REPO_ROOT/scripts/lib/mutation_ci_only.sh"
+# fetch_base_main: fetch origin/main without making a full local clone shallow.
+# shellcheck source=scripts/lib/diff_base.sh
+source "$REPO_ROOT/scripts/lib/diff_base.sh"
 
 # Gates skipped by --changed-only: need a service (DB) or are slow / whole-repo.
 CHANGED_ONLY_SKIP=" test diff-cover migrations schema-drift mutation build "
@@ -103,7 +106,7 @@ gate_backend_lint()     { cd "$REPO_ROOT/backend" && uv run ruff check src/; }
 
 gate_backend_lint_diff() {
   cd "$REPO_ROOT"
-  git fetch origin main --depth=1 2>/dev/null || {
+  fetch_base_main || {
     echo "origin/main unavailable — skipping ruff diff check."; return "$EXIT_SKIP"; }
   mapfile -t CHANGED < <(git diff --name-only "${BASE_REF}"...HEAD -- 'backend/**/*.py' 2>/dev/null | sed 's|^backend/||')
   ((${#CHANGED[@]} == 0)) && { echo "No changed Python files."; return "$EXIT_PASS"; }
@@ -170,10 +173,10 @@ gate_backend_test() {
 gate_backend_diff_cover() {
   postgres_available || { echo "DATABASE_URL not set — diff-cover needs coverage.xml from the test gate."; return "$EXIT_SKIP"; }
   cd "$REPO_ROOT"
-  git fetch origin main --depth=1 2>/dev/null || { echo "origin/main unavailable."; return "$EXIT_SKIP"; }
+  fetch_base_main || { echo "origin/main unavailable."; return "$EXIT_SKIP"; }
   [[ -f "$REPO_ROOT/backend/coverage.xml" ]] || { echo "coverage.xml absent — run the 'test' gate first."; return "$EXIT_SKIP"; }
   # diff-cover compares `${BASE_REF}...HEAD` (merge-base). On a branch based on an
-  # OLDER main, the shallow `--depth=1` fetch above may not contain the merge-base,
+  # OLDER main, a shallow (CI) clone may not contain the merge-base,
   # which makes diff-cover crash on its internal `git diff` rather than report. Try
   # to deepen so the merge-base is present; if it still cannot be computed (truly
   # disjoint history), SKIP (inconclusive) instead of crashing. (See AE-0157.)
