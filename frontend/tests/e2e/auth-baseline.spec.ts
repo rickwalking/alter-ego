@@ -217,3 +217,36 @@ test.describe("auth baseline safety net", () => {
     await expect(page).toHaveURL(new RegExp("/403$"));
   });
 });
+
+test.describe("login before hydration", () => {
+  test.use({ javaScriptEnabled: false });
+
+  // Scenario: A login form submitted without JavaScript never puts credentials in the URL
+  test("a login submitted without JavaScript posts and never puts credentials in a URL", async ({
+    page,
+  }) => {
+    const email = "owner@baseline.test";
+    const password = "pre-hydration-Secret1";
+    const visited: string[] = [];
+    const formPosts: string[] = [];
+    page.on("request", (request) => {
+      visited.push(request.url());
+      if (request.isNavigationRequest() && request.method() === "POST") {
+        formPosts.push(new URL(request.url()).pathname);
+      }
+    });
+
+    await page.goto(LOGIN_PATH);
+    await page.locator("#email").fill(email);
+    await page.locator("#password").fill(password);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL(/\/login\?error=invalid_credentials/);
+
+    expect(formPosts).toEqual(["/auth/login"]);
+    for (const url of visited) {
+      expect(url).not.toContain(password);
+      expect(url).not.toContain("password=");
+      expect(url).not.toContain(encodeURIComponent(email));
+    }
+  });
+});

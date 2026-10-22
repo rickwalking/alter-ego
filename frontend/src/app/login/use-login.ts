@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import {
+  AUTH_LOGIN_REDIRECT_PARAM,
+  LOGIN_ERROR_INVALID_CREDENTIALS,
+  LOGIN_ERROR_PARAM,
+  LOGIN_ERROR_SESSION_EXPIRED,
+} from "@/constants/auth";
 import { sanitizeLoginRedirect } from "@/modules/identity";
 import { responseErrorDetail } from "@/lib/response-error";
 
@@ -22,8 +27,12 @@ function useSessionExpiredNotice(setError: (message: string) => void) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "session_expired") {
+    const notice = params.get(LOGIN_ERROR_PARAM);
+    if (notice === LOGIN_ERROR_SESSION_EXPIRED) {
       setError(t("sessionExpired"));
+    }
+    if (notice === LOGIN_ERROR_INVALID_CREDENTIALS) {
+      setError(t("loginError"));
     }
   }, [setError, t]);
 }
