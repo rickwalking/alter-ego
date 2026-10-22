@@ -6,8 +6,14 @@ raw retriever, so agent retrieval goes through the same search path as
 ``/api/search``. Result formatting is unchanged.
 """
 
+from dataclasses import dataclass
+
 from langchain_core.tools import BaseTool, tool
 
+from rag_backend.domain.constants.chat_stream import (
+    SEARCH_BUDGET_EXHAUSTED,
+    SEARCH_NO_RESULTS,
+)
 from rag_backend.infrastructure.logging import get_logger
 from rag_backend.modules.knowledge import KnowledgeSearchPort, SearchQuery
 
@@ -29,11 +35,23 @@ async def search_documents(query: str) -> str:
     )
 
 
+@dataclass(frozen=True)
+class SearchToolOptions:
+    """How a bound search tool searches.
+
+    ``max_calls`` caps the searches over the tool's lifetime (one chat turn);
+    past it the tool answers ``SEARCH_BUDGET_EXHAUSTED`` without searching, so
+    the agent stops rephrasing and answers. ``None`` means unlimited.
+    """
+
+    top_k: int = 5
+    namespace_prefix: str | None = None
+    max_calls: int | None = None
+
+
 def build_search_documents_tool(
     search: KnowledgeSearchPort,
-    *,
-    top_k: int = 5,
-    namespace_prefix: str | None = None,
+    options: SearchToolOptions | None = None,
 ) -> "BaseTool":
     """Return a bound search_documents tool closure.
 
@@ -43,9 +61,13 @@ def build_search_documents_tool(
 
     Args:
         search: Knowledge search facade (the public search port)
-        top_k: Number of results to return
-        namespace_prefix: Optional namespace filter for scoped search
+        options: Result count, namespace filter and search budget
     """
+    opts = options or SearchToolOptions()
+    top_k = opts.top_k
+    namespace_prefix = opts.namespace_prefix
+    max_calls = opts.max_calls
+    calls_made = 0
 
     @tool
     async def _search_documents(query: str) -> str:
@@ -57,6 +79,11 @@ def build_search_documents_tool(
         Args:
             query: The search query string
         """
+        nonlocal calls_made
+        if max_calls is not None and calls_made >= max_calls:
+            logger.info("search_documents_budget_exhausted", query=query)
+            return SEARCH_BUDGET_EXHAUSTED
+        calls_made += 1
         search_query = SearchQuery(
             query=query,
             top_k=top_k,
@@ -71,7 +98,7 @@ def build_search_documents_tool(
         results = await search.search(search_query)
         if not results:
             logger.info("search_documents_no_results", query=query)
-            return "No relevant documents found."
+            return SEARCH_NO_RESULTS
 
         logger.info("search_documents_found", query=query, count=len(results))
 

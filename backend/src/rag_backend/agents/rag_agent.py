@@ -146,7 +146,7 @@ class RAGAgent:
                     ResearcherSubagentConfig(
                         research=self._research_tool,
                         search_documents=build_search_documents_tool(
-                            self._knowledge_search, top_k=5
+                            self._knowledge_search
                         ),
                         model=self._llm,
                     )
@@ -162,7 +162,7 @@ class RAGAgent:
         on orchestration while tools live in their own domain modules.
         """
         tools: list[BaseTool] = [
-            build_search_documents_tool(self._knowledge_search, top_k=5),
+            build_search_documents_tool(self._knowledge_search),
             build_list_documents_tool(self._document_repository),
         ]
 
