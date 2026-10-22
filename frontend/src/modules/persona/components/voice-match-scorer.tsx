@@ -36,11 +36,11 @@ export function VoiceMatchScorer({
         },
       );
       if (!response.ok) {
-        throw new Error("Voice scoring failed");
+        throw new Error(t("voiceScoreFailed"));
       }
       setResult((await response.json()) as VoiceScoreResult);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Voice scoring failed");
+      setError(err instanceof Error ? err.message : t("voiceScoreFailed"));
     } finally {
       setLoading(false);
     }

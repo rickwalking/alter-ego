@@ -35,7 +35,7 @@ export function UploadProgressBar({
 }>): React.ReactElement {
   const t = useTranslations("knowledge.upload");
   return (
-    <div className="space-y-2" role="status" aria-label="Upload progress">
+    <div className="space-y-2" role="status" aria-label={t("progress")}>
       <div className="flex items-center justify-between text-sm">
         <span className="text-[var(--color-muted-foreground)]">
           {t("uploading")}

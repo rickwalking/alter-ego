@@ -60,7 +60,7 @@ export default function AnalyticsPage(): React.ReactElement {
       <div className="flex-1">
         <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
         <p className="text-center py-8" style={{ color: NEON_RED }}>
-          {error ?? t("loadFailed")}
+          {t("loadFailed")}
         </p>
       </div>
     );

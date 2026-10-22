@@ -20,7 +20,9 @@
       "calendar": "Calendário",
       "analytics": "Analytics",
       "admin": "Admin",
-      "carousels": "Carrosséis"
+      "carousels": "Carrosséis",
+      "openMenu": "Abrir menu",
+      "closeMenu": "Fechar menu"
     },
     "sidebar": {
       "sectionMain": "Principal",
@@ -164,7 +166,8 @@
         "titlePlaceholder": "Título do documento",
         "tags": "Tags (separadas por vírgula)",
         "tagsPlaceholder": "ex: pesquisa, notas, projetos"
-      }
+      },
+      "progress": "Progresso do envio"
     },
     "form": {
       "createTitle": "Criar Novo Documento",
@@ -536,7 +539,8 @@
         "aiSuggest": "Sugestão IA",
         "showHelp": "Mostrar esta ajuda"
       }
-    }
+    },
+    "voiceScoreFailed": "Falha ao pontuar a voz"
   },
   "editorialWorkflow": {
     "title": "Fluxo Editorial",
