@@ -20,3 +20,7 @@ Feature: Every page has its own localized title
     When a page sets its own title
     Then its Open Graph tags still carry og:type "website"
     And "/blog" also carries its own description as description and og:description
+
+  Scenario: A page without its own description keeps the site og:description
+    When I open "/login", "/403", an unknown URL or the dashboard
+    Then its Open Graph tags carry og:type "website" and the site description as og:description

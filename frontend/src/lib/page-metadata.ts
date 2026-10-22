@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
+import { SITE_DESCRIPTION } from "@/constants/site-metadata";
 
 const PAGE_TITLES_NAMESPACE = "pageTitles";
 const SITE_SUFFIX_KEY = "suffix";
@@ -28,7 +29,8 @@ export type PageTitleKey =
 /**
  * "<Page> · Pedro Marins" in the interface language, as title and og:title.
  * Next.js replaces the parent's whole `openGraph` with the page's, so this one
- * is complete: og:type, and og:description when the page has a description.
+ * is complete: og:type, and og:description (the page's description, or the
+ * site description the root layout sets).
  */
 export async function pageMetadata(
   key: PageTitleKey,
@@ -37,7 +39,14 @@ export async function pageMetadata(
   const t = await getTranslations(PAGE_TITLES_NAMESPACE);
   const title = `${t(key)}${TITLE_SEPARATOR}${t(SITE_SUFFIX_KEY)}`;
   if (!description) {
-    return { title, openGraph: { title, type: OG_TYPE_WEBSITE } };
+    return {
+      title,
+      openGraph: {
+        title,
+        description: SITE_DESCRIPTION,
+        type: OG_TYPE_WEBSITE,
+      },
+    };
   }
   return {
     title,
