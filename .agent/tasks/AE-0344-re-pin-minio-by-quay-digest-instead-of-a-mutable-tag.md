@@ -1,6 +1,6 @@
 # AE-0344 — re-pin MinIO by quay digest instead of a mutable tag
 
-Status: Ready
+Status: Cancelled
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -11,6 +11,11 @@ Branch: TBD
 Kanban Card: TBD
 Created: 2026-09-15
 Updated: 2026-09-15
+
+## Superseded
+
+Superseded by AE-0480: the quay.io MinIO image was withdrawn (401 since 2026-10-13), so there is no quay digest to
+pin; AE-0480 pins `docker.io/pgsty/minio` by digest instead (deployed 2026-10-22).
 
 ## Goal
 

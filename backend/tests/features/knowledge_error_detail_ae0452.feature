@@ -29,3 +29,12 @@ Feature: Knowledge failures are logged, not echoed to the client
     Then the log names the user, the sizes and the scope
     And it never contains the query text or the document content
 
+
+  Scenario: a failed parameterized statement omits the values
+    Given the app engine
+    When a statement with a parameter fails
+    Then the error text names the statement but not the parameter value
+
+  Scenario: every engine in the backend hides parameters
+    Given every create_engine and create_async_engine call under src, scripts and alembic
+    Then each one passes hide_parameters=True

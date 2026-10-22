@@ -130,7 +130,7 @@ async def _main() -> None:
     )
     args = parser.parse_args()
 
-    engine = create_async_engine(os.environ["DATABASE_URL"])
+    engine = create_async_engine(os.environ["DATABASE_URL"], hide_parameters=True)
     try:
         async with engine.begin() as conn:
             repairs = await repair_image_provider_rows(conn, dry_run=args.dry_run)
