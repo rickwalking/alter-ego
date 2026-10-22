@@ -145,7 +145,16 @@
     "document": {
       "delete": "Delete document: {title}",
       "removeFile": "Remove selected file",
-      "chunks": "{count} chunks"
+      "chunks": "{count} chunks",
+      "status": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "completed": "Completed",
+        "failed": "Failed"
+      },
+      "stale": "Processing did not finish.",
+      "retry": "Retry",
+      "retrying": "Retrying…"
     },
     "upload": {
       "title": "Upload Document",

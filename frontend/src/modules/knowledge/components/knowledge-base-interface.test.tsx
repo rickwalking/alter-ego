@@ -25,6 +25,7 @@ const knowledgeMocks = vi.hoisted(() => ({
   ],
   createDocument: vi.fn(),
   deleteDocument: vi.fn(),
+  reprocessDocument: vi.fn(),
 }));
 
 vi.mock("../hooks/use-documents", () => ({
@@ -37,6 +38,11 @@ vi.mock("../hooks/use-documents", () => ({
   }),
   useDeleteDocument: () => ({
     mutate: knowledgeMocks.deleteDocument,
+  }),
+  useReprocessDocument: () => ({
+    mutate: knowledgeMocks.reprocessDocument,
+    isPending: false,
+    variables: undefined,
   }),
 }));
 
@@ -74,10 +80,12 @@ vi.mock("./document-list", () => ({
     documents,
     onCreateNew,
     onUploadNew,
+    onRetryDocument,
   }: {
     documents: unknown[];
     onCreateNew: () => void;
     onUploadNew: () => void;
+    onRetryDocument?: (id: string) => void;
   }) => (
     <div data-testid="document-list">
       <div data-testid="document-count">{documents.length}</div>
@@ -86,6 +94,12 @@ vi.mock("./document-list", () => ({
       </button>
       <button data-testid="upload-new-btn" onClick={onUploadNew}>
         Upload New
+      </button>
+      <button
+        data-testid="retry-btn"
+        onClick={() => onRetryDocument?.("doc-1")}
+      >
+        Retry
       </button>
     </div>
   ),
@@ -150,8 +164,11 @@ describe("KnowledgeBaseInterface Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     knowledgeMocks.createDocument.mockImplementation(
-      (_data: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.();
+      (
+        _data: unknown,
+        options?: { onSuccess?: (created: { id: string }) => void },
+      ) => {
+        options?.onSuccess?.({ id: "created-1" });
       },
     );
   });
@@ -308,5 +325,26 @@ describe("KnowledgeBaseInterface Component", () => {
         expect(screen.getByTestId("container")).toHaveClass("py-8");
       });
     });
+  });
+
+  // Scenario: A new document is processed right after it is created
+  it("starts processing a document right after it is created", async () => {
+    knowledgeMocks.createDocument.mockImplementation(
+      (_data: unknown, options: { onSuccess: (doc: { id: string }) => void }) =>
+        options.onSuccess({ id: "created-1" }),
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeBaseInterface />);
+    await user.click(screen.getByTestId("create-new-btn"));
+    await user.click(screen.getByTestId("form-submit"));
+    expect(knowledgeMocks.reprocessDocument).toHaveBeenCalledWith("created-1");
+  });
+
+  // Scenario: A failed document shows its reason and a Retry button
+  it("reprocesses a document when its Retry is clicked", async () => {
+    const user = userEvent.setup();
+    render(<KnowledgeBaseInterface />);
+    await user.click(screen.getByTestId("retry-btn"));
+    expect(knowledgeMocks.reprocessDocument).toHaveBeenCalledWith("doc-1");
   });
 });

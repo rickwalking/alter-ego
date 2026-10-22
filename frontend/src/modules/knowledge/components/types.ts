@@ -12,6 +12,22 @@ import { type Document, type CreateDocumentRequest } from "@/schemas/knowledge";
 export interface DocumentCardProps {
   document: Document;
   onDelete?: () => void;
+  /** Reprocess a failed or stuck document. */
+  onRetry?: () => void;
+  /** A retry of this document is in flight. */
+  retrying?: boolean;
+}
+
+export interface DocumentStateRowProps {
+  document: Document;
+  /** Render-time clock (ms) the stale check compares against. */
+  now: number;
+  badgeClassName: string;
+}
+
+export interface DocumentRetryButtonProps {
+  onRetry: () => void;
+  retrying: boolean;
 }
 
 export interface DocumentListProps {
@@ -19,6 +35,8 @@ export interface DocumentListProps {
   onCreateNew: () => void;
   onUploadNew: () => void;
   onDeleteDocument: (id: string) => void;
+  onRetryDocument?: (id: string) => void;
+  retryingId?: string | null;
 }
 
 /**
@@ -30,6 +48,8 @@ export interface DocumentListSectionProps {
   onCreateNew: () => void;
   onUploadNew: () => void;
   onDeleteDocument: (id: string) => void;
+  onRetryDocument: (id: string) => void;
+  retryingId: string | null;
 }
 
 export interface DocumentFormProps {

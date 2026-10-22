@@ -14,6 +14,13 @@ PIPELINE_FAILURE_LOGGED = "document pipeline failure already logged as pipeline_
 logger = get_logger()
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
+_MAX_FAILURE_REASON_CHARS = 300
+
+
+def _failure_reason(error: Exception) -> str:
+    """A short, typed reason for a failed processing run (stored on the row)."""
+    reason = f"{type(error).__name__}: {error}"
+    return reason[:_MAX_FAILURE_REASON_CHARS]
 
 
 class DocumentProcessingPipeline:
@@ -39,12 +46,19 @@ class DocumentProcessingPipeline:
     async def process_document(self, document: Document) -> Document:
         """Process a document through the complete pipeline.
 
+        A failure marks the document failed and re-raises, so an ingest's Unit
+        of Work rolls back and nothing partial is persisted.
+
         Args:
             document: The document to process
 
         Returns:
             The processed document with updated status
         """
+        return await self._run(document, record_failure=False)
+
+    async def _run(self, document: Document, *, record_failure: bool) -> Document:
+        """Chunk, embed and upsert; on error mark failed, then raise or return."""
         logger.info(
             "pipeline_process_start",
             document_id=str(document.id),
@@ -89,9 +103,10 @@ class DocumentProcessingPipeline:
                 document_id=str(document.id),
             )
             e.add_note(PIPELINE_FAILURE_LOGGED)
-            document.mark_failed(str(e))
+            document.mark_failed(_failure_reason(e))
             await self._document_repository.update(document)
-            raise
+            if not record_failure:
+                raise
 
         return document
 
@@ -105,7 +120,9 @@ class DocumentProcessingPipeline:
             The reprocessed document
 
         Existing chunks are deleted from the current scope's namespace before
-        reprocessing.
+        reprocessing. A processing failure is recorded on the document (status
+        failed + reason) and returned instead of raised, so the caller's Unit
+        of Work commits it and the document never stays pending.
         """
         from uuid import UUID
 
@@ -122,7 +139,7 @@ class DocumentProcessingPipeline:
         document.chunk_count = 0
         await self._document_repository.update(document)
 
-        return await self.process_document(document)
+        return await self._run(document, record_failure=True)
 
     async def delete_document(self, document_id: str) -> bool:
         """Delete a document and its vectors.

@@ -14,6 +14,7 @@ import {
   useDocuments,
   useCreateDocument,
   useDeleteDocument,
+  useReprocessDocument,
 } from "../hooks/use-documents";
 import { DocumentList } from "./document-list";
 import { DocumentListSkeleton } from "./document-list-skeleton";
@@ -41,6 +42,8 @@ function DocumentListSection({
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
+  onRetryDocument,
+  retryingId,
 }: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
@@ -60,6 +63,8 @@ function DocumentListSection({
       onCreateNew={onCreateNew}
       onUploadNew={onUploadNew}
       onDeleteDocument={onDeleteDocument}
+      onRetryDocument={onRetryDocument}
+      retryingId={retryingId}
     />
   );
 }
@@ -70,6 +75,7 @@ export function KnowledgeBaseInterface() {
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
   const isClient = useIsClient();
+  const reprocessDocument = useReprocessDocument();
 
   const handleCreateNew = useCallback(() => {
     setViewMode("create");
@@ -82,12 +88,13 @@ export function KnowledgeBaseInterface() {
   const handleSubmit = useCallback(
     (data: CreateDocumentRequest) => {
       createDocument.mutate(data, {
-        onSuccess: () => {
+        onSuccess: (created) => {
           setViewMode("list");
+          reprocessDocument.mutate(created.id);
         },
       });
     },
-    [createDocument],
+    [createDocument, reprocessDocument],
   );
 
   const handleUploadComplete = useCallback(() => {
@@ -116,6 +123,10 @@ export function KnowledgeBaseInterface() {
             onCreateNew={handleCreateNew}
             onUploadNew={handleUploadNew}
             onDeleteDocument={handleDelete}
+            onRetryDocument={(id) => reprocessDocument.mutate(id)}
+            retryingId={
+              reprocessDocument.isPending ? reprocessDocument.variables : null
+            }
           />
         </Suspense>
       );

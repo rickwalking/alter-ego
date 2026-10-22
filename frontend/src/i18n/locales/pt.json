@@ -145,7 +145,16 @@
     "document": {
       "delete": "Excluir documento: {title}",
       "removeFile": "Remover arquivo selecionado",
-      "chunks": "{count} fragmentos"
+      "chunks": "{count} fragmentos",
+      "status": {
+        "pending": "Pendente",
+        "processing": "Processando",
+        "completed": "Concluído",
+        "failed": "Falhou"
+      },
+      "stale": "O processamento não terminou.",
+      "retry": "Tentar de novo",
+      "retrying": "Tentando…"
     },
     "upload": {
       "title": "Enviar Documento",

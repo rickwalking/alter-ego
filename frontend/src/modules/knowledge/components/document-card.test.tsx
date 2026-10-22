@@ -145,7 +145,7 @@ describe("DocumentCard Component", () => {
     describe("When the document status is displayed", () => {
       it("Then the status badge should be visible", () => {
         render(<DocumentCard document={mockDocument} />);
-        expect(screen.getByText("completed")).toBeInTheDocument();
+        expect(screen.getByText("Completed")).toBeInTheDocument();
       });
     });
   });

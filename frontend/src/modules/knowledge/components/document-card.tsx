@@ -7,16 +7,77 @@ import {
 } from "@/components/molecules/neon-card";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
-import { FileText, Trash2 } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useState } from "react";
+import { FileText, RotateCcw, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { formatDate } from "@/lib/utils";
-import { type DocumentCardProps } from "./types";
+import {
+  type DocumentCardProps,
+  type DocumentRetryButtonProps,
+  type DocumentStateRowProps,
+} from "./types";
+import { isKnownStatus, isStaleDocument, needsRetry } from "./document-state";
+
+/** Status badge, failure reason and the stale notice of a document. */
+function DocumentStateRow({
+  document,
+  now,
+  badgeClassName,
+}: Readonly<DocumentStateRowProps>): React.ReactElement {
+  const t = useTranslations("knowledge.document");
+  const statusLabel = isKnownStatus(document.status)
+    ? t(`status.${document.status}`)
+    : document.status;
+  return (
+    <>
+      <NeonBadge variant="secondary" className={`text-xs ${badgeClassName}`}>
+        {statusLabel}
+      </NeonBadge>
+      {document.error_message && (
+        <span
+          className="text-xs text-[var(--color-destructive)] truncate"
+          title={document.error_message}
+        >
+          {document.error_message}
+        </span>
+      )}
+      {isStaleDocument(document, now) && (
+        <span className="text-xs text-[var(--color-destructive)]">
+          {t("stale")}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Reprocess a failed or stuck document. */
+function DocumentRetryButton({
+  onRetry,
+  retrying,
+}: Readonly<DocumentRetryButtonProps>): React.ReactElement {
+  const t = useTranslations("knowledge.document");
+  return (
+    <button
+      type="button"
+      onClick={onRetry}
+      disabled={retrying}
+      className="mb-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
+    >
+      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+      {retrying ? t("retrying") : t("retry")}
+    </button>
+  );
+}
 
 export function DocumentCard({
   document,
   onDelete,
+  onRetry,
+  retrying = false,
 }: Readonly<DocumentCardProps>) {
   const locale = useLocale();
+  const t = useTranslations("knowledge.document");
+  const [now] = useState(Date.now);
   const meta = document.metadata as Record<string, unknown> | undefined;
   const tags = (meta?.tags as string[] | undefined) ?? [];
   const statusColors: Record<string, string> = {
@@ -43,7 +104,7 @@ export function DocumentCard({
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] mt-1">
                 <span>{formatDate(document.created_at, locale)}</span>
                 <span>·</span>
-                <span>{document.chunk_count} chunks</span>
+                <span>{t("chunks", { count: document.chunk_count })}</span>
               </div>
             </div>
           </div>
@@ -55,7 +116,7 @@ export function DocumentCard({
                 onDelete();
               }}
               className="shrink-0 rounded-md p-1.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-destructive)]/10 hover:text-[var(--color-destructive)] transition-colors"
-              aria-label={`Delete document: ${document.title}`}
+              aria-label={t("delete", { title: document.title })}
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -64,18 +125,15 @@ export function DocumentCard({
       </NeonCardHeader>
       <NeonCardContent>
         <div className="flex items-center gap-2 mb-3">
-          <NeonBadge
-            variant="secondary"
-            className={`text-xs ${statusColors[document.status] ?? ""}`}
-          >
-            {document.status}
-          </NeonBadge>
-          {document.error_message && (
-            <span className="text-xs text-[var(--color-destructive)] truncate">
-              {document.error_message}
-            </span>
-          )}
+          <DocumentStateRow
+            document={document}
+            now={now}
+            badgeClassName={statusColors[document.status] ?? ""}
+          />
         </div>
+        {onRetry && needsRetry(document, now) && (
+          <DocumentRetryButton onRetry={onRetry} retrying={retrying} />
+        )}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag) => (

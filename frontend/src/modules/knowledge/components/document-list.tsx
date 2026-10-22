@@ -13,6 +13,8 @@ export function DocumentList({
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
+  onRetryDocument,
+  retryingId = null,
 }: Readonly<DocumentListProps>) {
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,6 +69,10 @@ export function DocumentList({
               key={document.id}
               document={document}
               onDelete={() => onDeleteDocument(document.id)}
+              onRetry={
+                onRetryDocument ? () => onRetryDocument(document.id) : undefined
+              }
+              retrying={retryingId === document.id}
             />
           ))}
         </div>
