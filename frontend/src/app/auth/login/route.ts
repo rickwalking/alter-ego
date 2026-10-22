@@ -6,25 +6,28 @@ import {
   resolveBackendUrl,
 } from "@/constants/api";
 import {
-  AUTH_LOGIN_REDIRECT_PARAM,
+  DEFAULT_LOGIN_REDIRECT,
   HTTP_HEADER_HOST,
   LOGIN_ERROR_INVALID_CREDENTIALS,
   LOGIN_ERROR_PARAM,
 } from "@/constants/auth";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
-import {
-  sanitizeLoginRedirect,
-  setAccessTokenCookie,
-} from "@/modules/identity";
+import { setAccessTokenCookie } from "@/modules/identity";
 
 const HTTP_SEE_OTHER = 303;
 const HTTP_FORBIDDEN = 403;
 const HEADER_ORIGIN = "origin";
-const HEADER_REFERER = "referer";
 const HEADER_SEC_FETCH_SITE = "sec-fetch-site";
-const CROSS_SITE = "cross-site";
+const SAME_ORIGIN_FETCH_SITES: ReadonlySet<string> = new Set([
+  "same-origin",
+  "none",
+]);
+const OPAQUE_ORIGIN = "null";
 const FIELD_EMAIL = "email";
 const FIELD_PASSWORD = "password";
+const FAILED_LOGIN_PATH = `${PUBLIC_ROUTE_PATHS.LOGIN}?${new URLSearchParams({
+  [LOGIN_ERROR_PARAM]: LOGIN_ERROR_INVALID_CREDENTIALS,
+}).toString()}`;
 
 interface TokenPayload {
   access_token?: string;
@@ -38,38 +41,23 @@ function seeOther(path: string): NextResponse {
   });
 }
 
-/** A browser form post from another site (login CSRF) is refused. */
-function isCrossSite(request: NextRequest): boolean {
-  if (request.headers.get(HEADER_SEC_FETCH_SITE) === CROSS_SITE) return true;
+/**
+ * Whether the post came from this site's own page (no login CSRF). The site's
+ * `no-referrer` policy makes browsers send `Origin: null` on this post, so the
+ * Fetch Metadata header decides when present; otherwise a real `Origin` must
+ * name this host, and an opaque or missing one is refused.
+ */
+function isSameOriginPost(request: NextRequest): boolean {
+  const fetchSite = request.headers.get(HEADER_SEC_FETCH_SITE);
+  if (fetchSite) return SAME_ORIGIN_FETCH_SITES.has(fetchSite);
   const origin = request.headers.get(HEADER_ORIGIN);
   const host = request.headers.get(HTTP_HEADER_HOST);
-  if (!origin || !host) return false;
+  if (!origin || origin === OPAQUE_ORIGIN || !host) return false;
   try {
-    return new URL(origin).host !== host;
+    return new URL(origin).host === host;
   } catch {
-    return true;
+    return false;
   }
-}
-
-/** The `?redirect=` of the login page the form was posted from. */
-function returnPathOf(request: NextRequest): string | null {
-  const referer = request.headers.get(HEADER_REFERER);
-  if (!referer) return null;
-  try {
-    return new URL(referer).searchParams.get(AUTH_LOGIN_REDIRECT_PARAM);
-  } catch {
-    return null;
-  }
-}
-
-function failedLogin(returnPath: string | null): NextResponse {
-  const params = new URLSearchParams({
-    [LOGIN_ERROR_PARAM]: LOGIN_ERROR_INVALID_CREDENTIALS,
-  });
-  if (returnPath) {
-    params.set(AUTH_LOGIN_REDIRECT_PARAM, sanitizeLoginRedirect(returnPath));
-  }
-  return seeOther(`${PUBLIC_ROUTE_PATHS.LOGIN}?${params.toString()}`);
 }
 
 async function accessTokenFor(
@@ -93,26 +81,26 @@ async function accessTokenFor(
 /**
  * Sign-in for a login form submitted before (or without) JavaScript: the form
  * posts here instead of falling back to a GET that would put the email and
- * password in the URL. Success sets the session cookie and 303s to the safe
- * return path; failure 303s back to the login page with an error code only.
+ * password in the URL. Success sets the session cookie and 303s to the default
+ * landing page (the site's `no-referrer` policy hides the login page's return
+ * path); failure 303s back to the login page with an error code only.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (isCrossSite(request)) {
+  if (!isSameOriginPost(request)) {
     return new NextResponse(null, { status: HTTP_FORBIDDEN });
   }
-  const returnPath = returnPathOf(request);
   const form = await request.formData().catch(() => null);
   const email = form?.get(FIELD_EMAIL);
   const password = form?.get(FIELD_PASSWORD);
   if (typeof email !== "string" || typeof password !== "string") {
-    return failedLogin(returnPath);
+    return seeOther(FAILED_LOGIN_PATH);
   }
-  if (!email || !password) return failedLogin(returnPath);
+  if (!email || !password) return seeOther(FAILED_LOGIN_PATH);
 
   const token = await accessTokenFor(email, password).catch(() => null);
-  if (!token) return failedLogin(returnPath);
+  if (!token) return seeOther(FAILED_LOGIN_PATH);
 
-  const response = seeOther(sanitizeLoginRedirect(returnPath));
+  const response = seeOther(DEFAULT_LOGIN_REDIRECT);
   setAccessTokenCookie(response, token, request);
   return response;
 }

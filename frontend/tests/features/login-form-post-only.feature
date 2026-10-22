@@ -10,9 +10,9 @@ Feature: Credentials never go into a URL
     Then its form posts to "/auth/login"
 
   Scenario: A login form submitted without JavaScript signs in by POST
-    Given valid credentials and a login page opened with a safe return path
-    When the form is posted to "/auth/login"
-    Then the session cookie is set and I am sent to the return path
+    Given valid credentials
+    When this site's login page posts the form to "/auth/login"
+    Then the session cookie is set and I land on the dashboard
 
   Scenario: A failed sign-in without JavaScript returns an error code only
     Given the backend rejects the credentials, is unreachable, or a field is missing
@@ -21,7 +21,7 @@ Feature: Credentials never go into a URL
     And the URL carries neither the email nor the password
 
   Scenario: A sign-in posted from another site is refused
-    When another site posts a login form to "/auth/login"
+    When another site (or a request without same-origin proof) posts a login form to "/auth/login"
     Then the answer is 403 and the backend is not called
 
   Scenario: Every form with a password field posts

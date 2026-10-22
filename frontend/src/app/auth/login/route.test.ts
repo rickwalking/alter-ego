@@ -10,27 +10,23 @@ import { POST } from "./route";
 
 const EMAIL = "owner@example.test";
 const PASSWORD = "s3cret-Passw0rd";
-const RETURN_PATH = "/dashboard/create/abc?step=content";
+const LANDING_PATH = "/dashboard/chat";
+const FAILED_LOGIN_LOCATION = "/login?error=invalid_credentials";
 
 interface PostOptions {
-  referer?: string;
   origin?: string;
   fetchSite?: string;
   fields?: Record<string, string>;
 }
 
 function postLogin({
-  referer = "http://app.test/login",
-  origin = "http://app.test",
+  origin = "null",
   fetchSite = "same-origin",
   fields = { email: EMAIL, password: PASSWORD },
 }: PostOptions = {}): Promise<Response> {
-  const headers = new Headers({
-    host: "app.test",
-    origin,
-    referer,
-    "sec-fetch-site": fetchSite,
-  });
+  const headers = new Headers({ host: "app.test" });
+  if (origin) headers.set("origin", origin);
+  if (fetchSite) headers.set("sec-fetch-site", fetchSite);
   return POST(
     new NextRequest("http://app.test/auth/login", {
       method: "POST",
@@ -67,14 +63,12 @@ afterEach(() => {
 
 describe("POST /auth/login", () => {
   // Scenario: A login form submitted without JavaScript signs in by POST
-  it("signs in, sets the session cookie and returns to the safe path", async () => {
+  it("signs in, sets the session cookie and lands on the dashboard", async () => {
     const fetchMock = mockBackend(tokenResponse);
-    const response = await postLogin({
-      referer: `http://app.test/login?redirect=${encodeURIComponent(RETURN_PATH)}`,
-    });
+    const response = await postLogin();
 
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(RETURN_PATH);
+    expect(response.headers.get("location")).toBe(LANDING_PATH);
     expect(
       response.headers
         .getSetCookie()
@@ -109,15 +103,11 @@ describe("POST /auth/login", () => {
     ],
   ])("returns to login with an error when %s", async (_case, backend) => {
     mockBackend(backend);
-    const response = await postLogin({
-      referer: `http://app.test/login?redirect=${encodeURIComponent(RETURN_PATH)}`,
-    });
+    const response = await postLogin();
 
     const location = response.headers.get("location") ?? "";
     expect(response.status).toBe(303);
-    expect(location).toBe(
-      `/login?error=invalid_credentials&redirect=${encodeURIComponent(RETURN_PATH)}`,
-    );
+    expect(location).toBe(FAILED_LOGIN_LOCATION);
     expectNoCredentialsIn(location);
     expect(response.headers.getSetCookie()).toEqual([]);
   });
@@ -132,27 +122,30 @@ describe("POST /auth/login", () => {
     const response = await postLogin({ fields });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toBe(
-      "/login?error=invalid_credentials",
-    );
+    expect(response.headers.get("location")).toBe(FAILED_LOGIN_LOCATION);
   });
 
   // Scenario: A login form submitted without JavaScript signs in by POST
-  it("drops an unsafe return path", async () => {
+  it.each([
+    [{ origin: "null", fetchSite: "same-origin" }],
+    [{ origin: "", fetchSite: "none" }],
+    [{ origin: "http://app.test", fetchSite: "" }],
+  ])("accepts this site's own post %j", async (options) => {
     mockBackend(tokenResponse);
-    const response = await postLogin({
-      referer: "http://app.test/login?redirect=//evil.example",
-    });
+    const response = await postLogin(options);
 
-    expect(response.headers.get("location")).toBe("/dashboard/chat");
+    expect(response.headers.get("location")).toBe(LANDING_PATH);
   });
 
   // Scenario: A sign-in posted from another site is refused
   it.each([
     [{ fetchSite: "cross-site" }],
-    [{ origin: "https://evil.example" }],
-    [{ origin: "not a url" }],
-  ])("refuses a cross-site post %j", async (options) => {
+    [{ fetchSite: "same-site" }],
+    [{ origin: "https://evil.example", fetchSite: "" }],
+    [{ origin: "not a url", fetchSite: "" }],
+    [{ origin: "null", fetchSite: "" }],
+    [{ origin: "", fetchSite: "" }],
+  ])("refuses a post that is not from this site %j", async (options) => {
     const fetchMock = mockBackend(tokenResponse);
     const response = await postLogin(options);
 
