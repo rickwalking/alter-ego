@@ -32,9 +32,9 @@ state with the reason, and a daily scan recovers stuck work. No new paid service
 ## Plan
 
 Architecture plan: `.agent/reports/AE-0517.arch-plan.md`. Decision: `docs/decisions/0026-carousel-generation-queue.md`
-(proposed): Postgres `generation_jobs` table (SKIP LOCKED claim, lease + heartbeat, attempts, backoff with jitter,
-dead letter) consumed by a separate `generation-worker` container (same image) with cgroup CPU/memory limits and a
-global export lock. Phased P0-P5 (see plan §5); each phase is its own ticket and PR.
+(proposed): PgQueuer (MIT Postgres job queue: SKIP LOCKED dequeue, concurrency limit, retries with backoff, held
+failures as dead letter, heartbeats, cron) consumed by a separate `generation-worker` container (same image) with
+cgroup CPU/memory limits and a global export lock; our own `generation_runs` table stays the source of truth. Phased P0-P5 (see plan §5); each phase is its own ticket and PR.
 
 ## Acceptance Criteria
 
@@ -72,3 +72,5 @@ global export lock. Phased P0-P5 (see plan §5); each phase is its own ticket an
   plan §2.
 - 2026-10-22: Pedro decided concurrency 1, over-cap roll-over + manual trigger from the dashboard, scan 04:00 BRT,
   strict FIFO (no priority ordering).
+- 2026-10-22: Pedro chose PgQueuer over the in-house job table (easier to manage queues). Guards: deploy one-shot
+  for its tables, pinned version, our own attempt counter (poison guard), our generation_runs table for UI/Telegram.

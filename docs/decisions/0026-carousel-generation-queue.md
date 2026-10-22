@@ -6,7 +6,7 @@ consulted: architecture review (AE-0517)
 informed: delivery team
 ---
 
-# ADR-0026: Run carousel generation through a Postgres-backed job queue in a separate, resource-capped worker
+# ADR-0026: Run carousel generation through PgQueuer (Postgres job queue) in a separate, resource-capped worker
 
 ## Context and Problem Statement
 
@@ -51,27 +51,38 @@ keep the website fast, without new paid services or heavy infrastructure?
 
 ## Decision Outcome
 
-Chosen option: **1, an in-house `generation_jobs` table consumed by a separate `generation-worker` container**,
-because it reuses the existing CAS/outbox/fencing patterns and the autopilot state machine, deploys with
-`create_all` (one new table, no new columns), adds no dependency, and keeps the queue semantics (lease, attempts,
-backoff, dead letter) in ~300 lines we test like any domain code. Option 2 (PgQueuer) is the fallback if the
-in-house lease/retry code proves fragile: its tables would need a deploy one-shot (`pgq upgrade`) and its
-stale-heartbeat attempt accounting is undocumented, which is why it is not the first choice.
+Chosen option (Pedro, 2026-10-22): **2, PgQueuer**, consumed by a separate `generation-worker` container (same image,
+`pgq run …`), because it gives us a maintained, MIT-licensed, asyncpg-native queue with what we would otherwise build:
+FIFO dequeue with `SKIP LOCKED`, a database-enforced concurrency limit, retries with exponential backoff, failed jobs
+held aside (our dead letter), heartbeat-based requeue of jobs from dead workers, cron schedules for the daily recovery
+scan, and a CLI to inspect and requeue jobs — so queue management is simpler to operate. It needs no new service
+(Postgres is already there) and no new subscription.
 
-Rejected: 3 adds a second Postgres driver; 4 makes Redis a second source of truth (RDB/AOF loss windows, arq in
-maintenance); 5 is heavy and has no native async tasks; 6 needs a paid LangSmith license; 7 keeps generation on
-the web event loop and loses runs on every deploy.
+Guards we add around it:
+
+- PgQueuer installs its own tables (`pgq install` / `pgq upgrade`). Prod does not run migrations, so an idempotent
+  deploy one-shot installs/upgrades them (palette_timestamptz pattern). The version is pinned.
+- PgQueuer's docs do not say whether a stale-heartbeat requeue counts as an attempt, so our handler keeps its own attempt
+  counter in `generation_runs` and dead-letters a run that exceeds it (poison/OOM-loop guard).
+- Our `generation_runs` table stays the source of truth for the dashboard, Telegram, idempotency (dedupe key) and the
+  autopilot state machine; PgQueuer job events are mirrored into it. The dashboard never reads PgQueuer's tables.
+- `heartbeat_timeout` 300 s and CPU-heavy steps off the event loop (`asyncio.to_thread`), so heartbeats are never starved.
+
+Not chosen: 1 (in-house table) — more code to own; it stays the fallback if PgQueuer is ever abandoned, behind the same
+entrypoints. 3 adds a second Postgres driver; 4 makes Redis a second source of truth (RDB/AOF loss windows, arq in
+maintenance); 5 is heavy and has no native async tasks; 6 needs a paid LangSmith license; 7 keeps generation on the
+web event loop and loses runs on every deploy.
 
 ### Consequences
 
-- Good: the website no longer shares an event loop or memory budget with generation; deploys of the web
-  backend no longer kill runs; transient failures retry with backoff; poison runs stop in `dead_letter` with the
-  reason; a daily scan re-queues stuck work; Pedro sees and controls the queue.
-- Good: concurrency becomes a setting (`GENERATION_WORKER_CONCURRENCY`, default 1) plus a global export
-  semaphore of 1, so throughput can rise later without code changes.
-- Bad: one more container (~150-300 MB RSS idle, capped) and ~300 lines of queue code we own.
-- Bad: at-least-once semantics: every graph node and external call must be idempotent (keyed by run id + step);
-  the LangGraph Postgres checkpointer already gives node-level resume.
+- Good: the website no longer shares an event loop or memory budget with generation; deploys of the web backend no
+  longer kill runs; transient failures retry with backoff; poison runs stop in a dead-letter state with the reason; a
+  daily scan re-queues stuck work; Pedro sees and controls the queue; queue operations (list, requeue) come built in.
+- Good: concurrency is a setting (`GENERATION_WORKER_CONCURRENCY`, Pedro: 1) plus a global export lock of 1.
+- Bad: a third-party dependency with its own tables and a deploy one-shot to install/upgrade them; one more container
+  (~150-300 MB RSS idle, capped).
+- Bad: at-least-once semantics: every graph node and external call must be idempotent (keyed by run id + step); the
+  LangGraph Postgres checkpointer already gives node-level resume.
 - Neutral: Redis stays for what it does today; the in-process loop keeps only light periodic steps.
 
 ## Validation
