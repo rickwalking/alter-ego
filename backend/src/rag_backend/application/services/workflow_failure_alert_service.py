@@ -71,6 +71,28 @@ class WorkflowFailureAlertService:
         result = await db.execute(query.limit(1))
         return result.scalar_one_or_none() is not None
 
+    @staticmethod
+    async def _alerted_in_episode(
+        db: AsyncSession, project: CarouselProjectModel
+    ) -> bool:
+        """Whether this project's current stuck episode was already alerted.
+
+        An episode starts at the project's last update (a phase or status
+        change bumps ``updated_at``), so a workflow-failure notification for the
+        project created since then means the admins already know.
+        """
+        result = await db.execute(
+            select(NotificationModel.id)
+            .where(
+                NotificationModel.notification_type
+                == NOTIFICATION_TYPE_WORKFLOW_FAILURE,
+                NotificationModel.content_id == str(project.id),
+                NotificationModel.created_at >= project.updated_at,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
     async def _alert_failed_carousels(self, db: AsyncSession) -> int:
         window_start = datetime.now(UTC) - timedelta(hours=ALERT_FAILURE_WINDOW_HOURS)
         result = await db.execute(
@@ -139,6 +161,8 @@ class WorkflowFailureAlertService:
         admin_ids = await self._admin_user_ids(db)
         count = 0
         for project in stuck:
+            if await self._alerted_in_episode(db, project):
+                continue
             project_id = str(project.id)
             logger.warning(
                 ALERT_LOG_EVENT,
@@ -148,12 +172,6 @@ class WorkflowFailureAlertService:
                 phase_status=project.phase_status,
                 hours_stuck=ALERT_STUCK_WORKFLOW_HOURS,
             )
-            if await self._has_recent_notification(
-                db,
-                content_id=project_id,
-                notification_type=NOTIFICATION_TYPE_WORKFLOW_FAILURE,
-            ):
-                continue
             for admin_id in admin_ids:
                 db.add(
                     NotificationModel(
