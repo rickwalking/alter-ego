@@ -18,7 +18,7 @@ export const BG_SIDEBAR = "#080c18";
 
 export const TEXT = "rgba(255,255,255,0.88)";
 export const TEXT_MUTED = "rgba(255,255,255,0.55)";
-export const TEXT_DIM = "rgba(255,255,255,0.3)";
+export const TEXT_DIM = "rgba(255,255,255,0.5)";
 
 export const CYAN_GRADIENT =
   "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)";

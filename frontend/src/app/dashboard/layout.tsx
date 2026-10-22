@@ -10,6 +10,8 @@ import { NeonIcon } from "@/components/atoms/neon-icon";
 import { DASHBOARD_SIDEBAR_SECTIONS } from "@/components/organisms/constants";
 import { BG_CARD, NEON_BORDER_SUBTLE, NEON_CYAN, TEXT } from "@/constants/neon";
 import { useOffCanvas } from "@/lib/use-off-canvas";
+import { SkipLink } from "@/components/atoms/skip-link";
+import { MAIN_CONTENT_ID } from "@/constants/a11y";
 
 const SIDEBAR_ID = "dashboard-sidebar";
 const ICON_HAMBURGER = "M3 6h18M3 12h18M3 18h18";
@@ -34,6 +36,7 @@ export default function DashboardLayout({
 
   return (
     <>
+      <SkipLink />
       <NeonGridBackground />
       <NeonScanlineOverlay />
 
@@ -81,7 +84,13 @@ export default function DashboardLayout({
       >
         <div className="flex min-h-screen">
           <div className="flex min-w-0 flex-1 flex-col min-h-screen lg:ml-[240px]">
-            <main className="flex-1 flex flex-col">{children}</main>
+            <main
+              id={MAIN_CONTENT_ID}
+              tabIndex={-1}
+              className="flex-1 flex flex-col"
+            >
+              {children}
+            </main>
           </div>
         </div>
       </div>

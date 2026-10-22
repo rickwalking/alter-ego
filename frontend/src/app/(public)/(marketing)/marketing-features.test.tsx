@@ -49,15 +49,15 @@ describe("MarketingFeatures", () => {
   it("turns every capability card into a link to its public route", () => {
     render(<MarketingFeatures t={t} />);
 
-    expect(screen.getByRole("link", { name: "Blog Posts" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Blog Posts/ })).toHaveAttribute(
       "href",
       "/blog",
     );
     expect(
-      screen.getByRole("link", { name: "Visual Carousels" }),
+      screen.getByRole("link", { name: /^Visual Carousels/ }),
     ).toHaveAttribute("href", "/carousels");
     expect(
-      screen.getByRole("link", { name: "Chat with My Alter-Ego" }),
+      screen.getByRole("link", { name: /Chat with My Alter-Ego/ }),
     ).toHaveAttribute("href", "/chat");
   });
 
@@ -65,7 +65,7 @@ describe("MarketingFeatures", () => {
   it("wraps the whole card content in the link", () => {
     render(<MarketingFeatures t={t} />);
 
-    const link = screen.getByRole("link", { name: "Blog Posts" });
+    const link = screen.getByRole("link", { name: /^Blog Posts/ });
     expect(within(link).getByText("Blog Posts")).toBeInTheDocument();
     expect(
       within(link).getByText(/Read long-form articles/),
@@ -77,12 +77,26 @@ describe("MarketingFeatures", () => {
     render(<MarketingFeatures t={t} />);
 
     const links = [
-      screen.getByRole("link", { name: "Blog Posts" }),
-      screen.getByRole("link", { name: "Visual Carousels" }),
-      screen.getByRole("link", { name: "Chat with My Alter-Ego" }),
+      screen.getByRole("link", { name: /^Blog Posts/ }),
+      screen.getByRole("link", { name: /^Visual Carousels/ }),
+      screen.getByRole("link", { name: /Chat with My Alter-Ego/ }),
     ];
     for (const link of links) {
       expect(link.className).toContain("focus-visible:ring-2");
     }
+  });
+});
+
+describe("MarketingFeatures accessible names", () => {
+  // Scenario: Links are named by their visible text
+  it("names each card by its visible text instead of a shorter aria-label", () => {
+    render(<MarketingFeatures t={t} />);
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).not.toHaveAttribute("aria-label");
+      expect(link).not.toHaveAttribute("aria-labelledby");
+    }
+    expect(
+      screen.getByRole("link", { name: /^Blog Posts Read long-form articles/ }),
+    ).toHaveAttribute("href", "/blog");
   });
 });

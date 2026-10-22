@@ -74,12 +74,12 @@ export function DashboardHome(): React.ReactElement {
                       {action.icon}
                     </svg>
                   </div>
-                  <h4
+                  <h3
                     className="text-sm font-semibold mb-1"
                     style={{ color: TEXT }}
                   >
                     {action.title}
-                  </h4>
+                  </h3>
                   <p className="text-xs text-text-dim">{action.description}</p>
                 </NeonCard>
               </Link>

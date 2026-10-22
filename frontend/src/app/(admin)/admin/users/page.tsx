@@ -65,14 +65,14 @@ export default function UsersPage() {
         </div>
         <button
           onClick={() => setIsCreateOpen(true)}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-600"
+          className="rounded-md bg-primary-700 px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-800"
         >
           {t("createUser")}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800">
           {error}
         </div>
       )}

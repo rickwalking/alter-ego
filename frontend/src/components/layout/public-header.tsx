@@ -5,6 +5,8 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NeonLogoMark } from "@/components/atoms/neon-logo-mark";
 import { BG_DEEP, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
+import { SkipLink } from "@/components/atoms/skip-link";
+import { MAIN_CONTENT_ID } from "@/constants/a11y";
 
 const PUBLIC_HEADER_MAX_WIDTH_PX = 1200;
 const PUBLIC_HEADER_BRAND = "Pedro Marins";
@@ -55,6 +57,33 @@ export function PublicHeaderNav({
   );
 }
 
+/**
+ * Home link with the monogram (decorative) and the brand name. The name is
+ * visually hidden on small screens but always in the link text, so the
+ * accessible name matches what sighted users read.
+ */
+export function PublicHeaderBrand(): React.ReactElement {
+  return (
+    <Link
+      href={PUBLIC_ROUTE_PATHS.HOME}
+      className="flex shrink-0 items-center gap-3"
+      style={{
+        fontSize: "20px",
+        fontWeight: 800,
+        color: TEXT,
+        textDecoration: "none",
+        letterSpacing: "-0.02em",
+      }}
+    >
+      <NeonLogoMark
+        boxShadow="0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)"
+        decorative
+      />
+      <span className="sr-only sm:not-sr-only">{PUBLIC_HEADER_BRAND}</span>
+    </Link>
+  );
+}
+
 export async function PublicHeader(): Promise<React.ReactElement> {
   const tc = await getTranslations("common");
   const locale = await getRequestLocale();
@@ -74,24 +103,7 @@ export async function PublicHeader(): Promise<React.ReactElement> {
         className="mx-auto flex min-w-0 items-center justify-between gap-3 px-4 sm:px-6"
         style={{ maxWidth: `${PUBLIC_HEADER_MAX_WIDTH_PX}px` }}
       >
-        <Link
-          href={PUBLIC_ROUTE_PATHS.HOME}
-          aria-label={PUBLIC_HEADER_BRAND}
-          className="flex shrink-0 items-center gap-3"
-          style={{
-            fontSize: "20px",
-            fontWeight: 800,
-            color: TEXT,
-            textDecoration: "none",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          <NeonLogoMark
-            boxShadow="0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)"
-            decorative
-          />
-          <span className="hidden sm:inline">{PUBLIC_HEADER_BRAND}</span>
-        </Link>
+        <PublicHeaderBrand />
         <PublicHeaderNav t={tc} locale={locale} />
       </div>
     </header>
@@ -109,8 +121,11 @@ export function PublicShellFrame({
       className="flex min-h-screen flex-col"
       style={{ background: BG_DEEP, position: "relative", zIndex: 1 }}
     >
+      <SkipLink />
       <PublicHeader />
-      <main className="flex-1">{children}</main>
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1">
+        {children}
+      </main>
     </div>,
   );
 }
