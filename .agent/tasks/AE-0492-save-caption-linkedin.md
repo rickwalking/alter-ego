@@ -1,6 +1,6 @@
 # AE-0492 — Save the Instagram caption and LinkedIn post (PT/EN) edits
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bug
@@ -108,7 +108,7 @@ gate except the main-wide `frontend:security` advisory. Details: `.agent/reports
 
 ## QA Report
 
-Pending.
+External QA: WARN (CI-decided gates only), see `.agent/reports/AE-0492.qa.md`.
 
 ## Blockers
 
