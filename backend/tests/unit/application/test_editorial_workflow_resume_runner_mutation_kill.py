@@ -18,8 +18,8 @@ from rag_backend.application.services.carousel.editorial_workflow_resume_runner 
     _execute_owned_run,
     _mark_background_resume_failed,
     _MarkFailedParams,
-    _run_background_resume,
     _revert_background_resume_stuck,
+    _run_background_resume,
     cancel_background_resume_task,
 )
 from rag_backend.domain.constants.carousel_run import (

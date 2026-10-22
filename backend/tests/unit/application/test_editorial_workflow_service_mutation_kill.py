@@ -255,4 +255,3 @@ class TestStartWorkflowEventsAndSse:
         assert ctx.project_id == _PROJECT_ID
         assert ctx.user_id == _USER_ID
         sse.assert_awaited_once_with(_PROJECT_ID, started)
-
