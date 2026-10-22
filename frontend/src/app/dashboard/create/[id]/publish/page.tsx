@@ -22,6 +22,7 @@ import {
   panelStyle,
 } from "./publish-page-sections";
 import { PublishArtifactTools } from "./publish-artifact-tools";
+import { useCopySave } from "./use-copy-save";
 
 function PublishPageLoading(): React.ReactElement {
   return (
@@ -54,6 +55,11 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const { projectId, projectQuery, workflowState } = data;
   const site = usePublishToSite(projectId, data.refreshAll);
   const instagram = useInstagramPublish(projectId);
+  const saveCopy = useCopySave(
+    projectId,
+    workflowState?.lock_version,
+    data.refreshAll,
+  );
   const project = projectQuery.data;
 
   if (projectQuery.isLoading || (project && !data.workflowLoaded)) {
@@ -119,6 +125,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
                 publishResult={instagram.publishResult}
                 cacheBustToken={data.rebuiltVersion ?? undefined}
                 slideNumbers={localizedSlides.map((slide) => slide.slide_index)}
+                onSaveCopy={saveCopy}
               />
             </div>
             <PublishArtifactTools

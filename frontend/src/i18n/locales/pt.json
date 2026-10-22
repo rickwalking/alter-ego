@@ -1152,6 +1152,24 @@
       "privateWarning": "Este carrossel é privado: o post dá 404 no site até o carrossel ficar público.",
       "exists": "Este carrossel já tem um post, então nenhum novo foi criado.",
       "openExisting": "Abrir o post existente"
+    },
+    "copy": {
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "saved": "Salvo.",
+      "unsaved": "Alterações não salvas. Salve para copiar ou publicar.",
+      "errors": {
+        "save": "Não foi possível salvar. Tente de novo.",
+        "stale": "Este carrossel mudou desde que a página abriu. A página já tem a versão mais recente: confira seu texto e salve de novo.",
+        "captionPublished": "A legenda já foi publicada no Instagram e não pode mais ser alterada.",
+        "runInProgress": "Uma etapa do fluxo está em andamento. Salve quando ela terminar."
+      },
+      "leave": {
+        "title": "Sair sem salvar?",
+        "body": "Você tem alterações não salvas na legenda ou no post do LinkedIn. Se sair agora, elas serão perdidas.",
+        "confirm": "Descartar e sair",
+        "cancel": "Continuar editando"
+      }
     }
   },
   "auth": {

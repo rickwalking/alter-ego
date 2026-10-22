@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies import require_editor_or_admin
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser, UserModel
+from rag_backend.application.services.carousel.carousel_copy_edit_service import (
+    CarouselCopyEditDeps,
+    CarouselCopyEditService,
+)
 from rag_backend.application.services.carousel.carousel_repair_service import (
     CarouselRepairDeps,
     CarouselRepairService,
@@ -23,6 +28,8 @@ from rag_backend.application.services.carousel.refinement_service import (
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
+from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
+from rag_backend.domain.models import User
 from rag_backend.domain.protocols import (
     CarouselRefinementService,
     CarouselRepository,
@@ -159,4 +166,31 @@ def get_carousel_slide_edit_service(
             repo=PostgresCarouselRepository(session),
             events=workflow.events,
         )
+    )
+
+
+@dataclass(frozen=True)
+class CarouselCopyEditRouteDeps:
+    """Caller, repository and copy-edit service sharing one request session."""
+
+    db: AsyncSession
+    user: User
+    repo: CarouselRepository
+    service: CarouselCopyEditService
+    if_match: int | None
+
+
+def get_carousel_copy_edit_route_deps(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
+) -> CarouselCopyEditRouteDeps:
+    """Bundle the caller, ``If-Match``, a repository and the service on one session."""
+    repo = PostgresCarouselRepository(session)
+    return CarouselCopyEditRouteDeps(
+        db=session,
+        user=user,
+        if_match=if_match,
+        repo=repo,
+        service=CarouselCopyEditService(CarouselCopyEditDeps(db=session, repo=repo)),
     )

@@ -122,6 +122,11 @@ export {
 } from "./distribution/hooks/use-edit-carousel-slides";
 
 export { PublishPanel } from "./distribution/components/publish-panel";
+export {
+  useSaveCarouselCopy,
+  type CarouselCopyResponse,
+} from "./distribution/hooks/use-save-carousel-copy";
+export type { CarouselCopyTexts } from "./distribution/hooks/types";
 export { HorizontalCarouselViewer } from "./distribution/components/horizontal-carousel-viewer";
 export {
   CaptionEditor,

@@ -10,6 +10,11 @@ import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
+import type {
+  CopySaveStatus,
+  LeaveGuard,
+  SaveCopy,
+} from "@/modules/publishing/distribution/hooks/types";
 
 export interface CaptionEditorProps {
   value: string;
@@ -31,13 +36,6 @@ export interface PublishFailedNoticeProps {
   workspaceHref: string;
 }
 
-export interface EditorState {
-  seed: string;
-  caption: string;
-  linkedinPt: string;
-  linkedinEn: string;
-}
-
 export interface PublishPanelProps {
   project: CarouselProjectResponse;
   onPublishInstagram?: (caption: string) => Promise<void>;
@@ -51,6 +49,22 @@ export interface PublishPanelProps {
   cacheBustToken?: string;
   /** 1-based numbers of the real slides; the viewer counts these. */
   slideNumbers?: readonly number[];
+  /** Saves caption / LinkedIn edits; without it the texts are not saved. */
+  onSaveCopy?: SaveCopy;
+}
+
+/** Save button + state line of one publish-panel text. */
+export interface CopySaveBarProps {
+  dirty: boolean;
+  status: CopySaveStatus;
+  /** The text breaks a platform limit, so it cannot be saved. */
+  invalid: boolean;
+  onSave: () => Promise<void>;
+}
+
+/** The publish panel's unsaved-edits dialog. */
+export interface LeaveGuardDialogProps {
+  guard: LeaveGuard;
 }
 
 /** One slide-1 cover option (library photo or GrokBot offer). */
@@ -141,6 +155,13 @@ export interface SlideEditStatusProps {
   done: boolean;
 }
 
+/** Copy-to-clipboard button of a publish-panel text. */
+export interface CopyTextButtonProps {
+  text: string;
+  label: string;
+  disabled: boolean;
+}
+
 /** PT / EN tab strip of the publish panel. */
 export interface LanguageTabsProps {
   language: ViewerLanguage;
@@ -157,6 +178,8 @@ export interface InstagramTabProps extends Pick<
   caption: string;
   onCaptionChange: (caption: string) => void;
   language: ViewerLanguage;
+  /** Present when saving is wired: the save bar of the caption. */
+  save?: Omit<CopySaveBarProps, "invalid">;
 }
 
 /** LinkedIn tab of the publish panel. */
@@ -166,4 +189,6 @@ export interface LinkedInTabProps {
   language: ViewerLanguage;
   setLanguage: (language: ViewerLanguage) => void;
   pdfHref: string;
+  /** Present when saving is wired: the save bar of the LinkedIn posts. */
+  save?: Omit<CopySaveBarProps, "invalid">;
 }

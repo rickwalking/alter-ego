@@ -22,6 +22,71 @@ export interface InstagramPublishPayload {
   caption: string;
 }
 
+/** One editable text of the publish page. */
+export type CopyField = "caption" | "linkedinPt" | "linkedinEn";
+
+/** The three editable texts, as the editor holds them. */
+export type CopyTextsState = Readonly<Record<CopyField, string>>;
+
+/** The caption / LinkedIn texts one save sends (snake_case API fields). */
+export interface CarouselCopyTexts {
+  caption?: string;
+  linkedin_post_pt?: string;
+  linkedin_post_en?: string;
+}
+
+/** One caption / LinkedIn save at the loaded lock version. */
+export interface CarouselCopySaveInput {
+  projectId: string;
+  lockVersion: number;
+  texts: CarouselCopyTexts;
+}
+
+/** Saves the given texts; rejects with the API error when refused. */
+export type SaveCopy = (texts: CarouselCopyTexts) => Promise<void>;
+
+/** Where the caption / LinkedIn save stands. */
+export type CopySaveStatus =
+  | { kind: "idle" }
+  | { kind: "saving" }
+  | { kind: "saved" }
+  | { kind: "error"; errorKey: string };
+
+/** The publish-page editor of the caption and the LinkedIn posts. */
+export interface CopyEditorState {
+  /** The project's texts as last rendered (a change means a refetch). */
+  seen: CopyTextsState;
+  saved: CopyTextsState;
+  draft: CopyTextsState;
+  status: CopySaveStatus;
+}
+
+/** One save of the copy editor: its state, setter, save call and fields. */
+export interface SaveDirtyFieldsInput {
+  state: CopyEditorState;
+  setState: Dispatch<SetStateAction<CopyEditorState>>;
+  onSaveCopy: SaveCopy | undefined;
+  fields: readonly CopyField[];
+}
+
+/** What ``useCopyEditor`` hands the publish panel. */
+export interface CopyEditor {
+  draft: CopyTextsState;
+  status: CopySaveStatus;
+  /** False when the page wired no save (read-only preview). */
+  canSave: boolean;
+  isDirty: (fields: readonly CopyField[]) => boolean;
+  setText: (field: CopyField, text: string) => void;
+  save: (fields: readonly CopyField[]) => Promise<void>;
+}
+
+/** What ``useLeaveGuard`` hands the page: the open dialog and its answers. */
+export interface LeaveGuard {
+  asking: boolean;
+  stay: () => void;
+  leave: () => Promise<void>;
+}
+
 /** One slide-1 cover pick at the workflow lock version read. */
 export interface CoverPickInput {
   projectId: string;

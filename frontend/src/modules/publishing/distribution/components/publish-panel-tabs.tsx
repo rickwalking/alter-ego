@@ -2,71 +2,24 @@
 
 import { useTranslations } from "next-intl";
 import { CaptionEditor, countHashtags } from "./caption-editor";
-import type {
-  InstagramTabProps,
-  LanguageTabsProps,
-  LinkedInTabProps,
-  PublishPanelProps,
-} from "./types";
-import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
+import { CopySaveBar } from "./copy-save-bar";
+import {
+  CopyTextButton,
+  LanguageTabs,
+  PublishResultLine,
+} from "./publish-panel-parts";
+import type { InstagramTabProps, LinkedInTabProps } from "./types";
 
 const IG_MAX_CHARS = 2200;
 const IG_MAX_HASHTAGS = 30;
 const LINKEDIN_MAX_CHARS = 3000;
 const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
-const VIEWER_LANGUAGES: readonly ViewerLanguage[] = ["pt", "en"];
 
-/**
- * The clipboard rejects in insecure contexts; the rejection is swallowed so the
- * caller still succeeds.
- */
-async function copyToClipboard(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {}
-}
-
-/** PT / EN switch (the viewer and the LinkedIn post share the language). */
-export function LanguageTabs({
-  language,
-  onChange,
-  ariaLabel,
-  className,
-}: Readonly<LanguageTabsProps>): React.ReactElement {
+/** The caption breaks an Instagram limit (length or hashtag count). */
+function captionInvalid(caption: string): boolean {
   return (
-    <div role="tablist" aria-label={ariaLabel} className={className}>
-      {VIEWER_LANGUAGES.map((lang) => (
-        <button
-          key={lang}
-          type="button"
-          role="tab"
-          aria-selected={language === lang}
-          onClick={() => onChange(lang)}
-          className={`rounded-md border px-3 py-1 text-xs uppercase ${
-            language === lang
-              ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-              : "border-[var(--color-border)] text-[var(--color-text-muted)]"
-          }`}
-        >
-          {lang}
-        </button>
-      ))}
-    </div>
+    caption.length > IG_MAX_CHARS || countHashtags(caption) > IG_MAX_HASHTAGS
   );
-}
-
-function PublishResultLine({
-  result,
-}: Readonly<{
-  result: PublishPanelProps["publishResult"];
-}>): React.ReactElement | null {
-  if (result?.status === "success") {
-    return <p className="text-success text-sm">{result.message}</p>;
-  }
-  if (result?.status === "error") {
-    return <p className="text-destructive text-sm">{result.message}</p>;
-  }
-  return null;
 }
 
 /**
@@ -83,10 +36,17 @@ export function InstagramTab({
   onPublishInstagram,
   isPublishingInstagram,
   publishResult,
+  save,
 }: Readonly<InstagramTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   const hashtagCount = countHashtags(caption);
   const hashtagsOver = hashtagCount > IG_MAX_HASHTAGS;
+  const unsaved = save?.dirty === true;
+  const publishBlocked =
+    isPublishingInstagram === true ||
+    unsaved ||
+    caption.length === 0 ||
+    captionInvalid(caption);
   return (
     <div className="space-y-3">
       {language === "en" && (
@@ -111,28 +71,20 @@ export function InstagramTab({
       {hashtagsOver && (
         <p className="text-destructive text-xs">{t("instagram.hashtagOver")}</p>
       )}
+      {save && <CopySaveBar {...save} invalid={captionInvalid(caption)} />}
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            void copyToClipboard(caption);
-          }}
-          className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
-        >
-          {t("instagram.copyCaption")}
-        </button>
+        <CopyTextButton
+          text={caption}
+          label={t("instagram.copyCaption")}
+          disabled={unsaved}
+        />
         {onPublishInstagram && (
           <button
             type="button"
             onClick={() => {
               void onPublishInstagram(caption);
             }}
-            disabled={
-              isPublishingInstagram === true ||
-              caption.length === 0 ||
-              caption.length > IG_MAX_CHARS ||
-              hashtagsOver
-            }
+            disabled={publishBlocked}
             className="rounded-md bg-[var(--color-primary)] px-4 py-1.5 font-medium text-sm text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPublishingInstagram
@@ -153,6 +105,7 @@ export function LinkedInTab({
   language,
   setLanguage,
   pdfHref,
+  save,
 }: Readonly<LinkedInTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   return (
@@ -173,16 +126,15 @@ export function LinkedInTab({
         })}
         helpText={t("linkedin.help")}
       />
+      {save && (
+        <CopySaveBar {...save} invalid={text.length > LINKEDIN_MAX_CHARS} />
+      )}
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            void copyToClipboard(text);
-          }}
-          className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
-        >
-          {t("linkedin.copyPost")}
-        </button>
+        <CopyTextButton
+          text={text}
+          label={t("linkedin.copyPost")}
+          disabled={save?.dirty === true}
+        />
         <a
           href={pdfHref}
           target="_blank"

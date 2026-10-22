@@ -18,6 +18,7 @@ const m = vi.hoisted(() => ({
   workflowState: null as EditorialWorkflowState | null,
   fetch: vi.fn<(...args: unknown[]) => unknown>(),
   publishInstagram: vi.fn(),
+  saveCopy: vi.fn(() => Promise.resolve({ lock_version: 8 })),
   republish: vi.fn(),
   ready: true,
   coverPicker: false,
@@ -75,6 +76,7 @@ vi.mock("@/modules/publishing", () => ({
     isPending: false,
   }),
   useRepublishCarousel: () => ({ mutate: m.republish }),
+  useSaveCarouselCopy: () => ({ mutateAsync: m.saveCopy }),
   useCarouselPublicPostHref: () => ({
     href: m.blogHref,
     refetch: m.refetchBlogHref,
@@ -84,8 +86,10 @@ vi.mock("@/modules/publishing", () => ({
     publishResult,
     cacheBustToken,
     slideNumbers,
+    onSaveCopy,
   }: {
     onPublishInstagram?: (caption: string) => Promise<void>;
+    onSaveCopy?: (texts: { caption: string }) => Promise<void>;
     publishResult: { status: string; message?: string };
     cacheBustToken?: string;
     slideNumbers: number[];
@@ -96,6 +100,11 @@ vi.mock("@/modules/publishing", () => ({
       </span>
       <span>bust:{cacheBustToken ?? "none"}</span>
       <span>slides:{slideNumbers.join(",")}</span>
+      {onSaveCopy ? (
+        <button type="button" onClick={() => void onSaveCopy({ caption: "c" })}>
+          save-copy
+        </button>
+      ) : null}
       {onPublishInstagram ? (
         <button type="button" onClick={() => void onPublishInstagram("cap")}>
           publish-instagram
@@ -357,6 +366,19 @@ describe("DashboardCreatePublishPage", () => {
     expect(screen.getByText("cover-picker")).toBeInTheDocument();
     expect(screen.getByText("regenerate-strategy")).toBeInTheDocument();
     expect(screen.getByText("slide-edit:true:true")).toBeInTheDocument();
+  });
+
+  // Scenario: Saving the edited caption sends it with the loaded lock version
+  it("saves the panel texts at the workflow lock version", async () => {
+    m.workflowState = state({ lock_version: 7 });
+    await renderLoaded();
+    fireEvent.click(screen.getByRole("button", { name: "save-copy" }));
+    await waitFor(() => expect(m.refreshState).toHaveBeenCalledTimes(2));
+    expect(m.saveCopy).toHaveBeenCalledWith({
+      projectId: "p1",
+      lockVersion: 7,
+      texts: { caption: "c" },
+    });
   });
 
   it("hides the workflow-bound sections without workflow state", async () => {

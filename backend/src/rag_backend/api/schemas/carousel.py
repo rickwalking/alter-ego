@@ -217,7 +217,13 @@ class CarouselRepublishResponse(BaseModel):
 
 
 class InstagramPublishRequest(BaseModel):
-    caption: str = Field(..., min_length=1, max_length=2200)
+    """Optional echo of the caption the page shows.
+
+    The publish always sends the saved caption; a ``caption`` that differs from
+    it is refused with 409 ``caption_not_saved`` instead of being published.
+    """
+
+    caption: str | None = Field(default=None, max_length=2200)
 
 
 class InstagramPublishResponse(BaseModel):
