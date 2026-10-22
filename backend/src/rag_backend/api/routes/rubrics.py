@@ -23,6 +23,7 @@ from rag_backend.application.services.quality_evaluation_service import (
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.rubric import QualityRubric
+from rag_backend.domain.rubric_scoring import normalize_criteria
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.models import (
     QualityRubricModel,
@@ -39,7 +40,7 @@ def _to_domain_rubric(model: QualityRubricModel) -> QualityRubric:
         id=UUID(str(model.id)),
         name=model.name,
         description=model.description or "",
-        criteria=model.criteria or [],
+        criteria=normalize_criteria(model.criteria or []),
         applicable_content_types=model.applicable_content_types or [],
         is_default=model.is_default,
     )

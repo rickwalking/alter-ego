@@ -17,6 +17,11 @@ from rag_backend.domain.models.rubric import (
     QualityRubric,
     RubricCriterion,
 )
+from rag_backend.domain.rubric_scoring import (
+    criterion_passes,
+    render_criterion_prompt,
+    threshold_percent,
+)
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 _EVALUATE_PROMPT_FALLBACK = (
@@ -126,7 +131,7 @@ class QualityAgent:
         sources: list[str],
     ) -> float:
         """AI-only evaluation of a criterion."""
-        prompt = criterion["prompt_template"].format(content=content, sources=sources)
+        prompt = render_criterion_prompt(criterion["prompt_template"], content, sources)
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
         response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
@@ -149,14 +154,14 @@ class QualityAgent:
     ) -> list[str]:
         """Generate actionable improvement suggestions for a criterion."""
         content = sanitize_llm_input(content)
-        if score >= criterion["min_threshold"]:
+        if criterion_passes(criterion, score):
             return []
 
         variables: dict[str, object] = {
             "criterion_name": criterion["name"],
             "criterion_description": criterion["description"],
             "score": score,
-            "threshold": criterion["min_threshold"],
+            "threshold": threshold_percent(criterion),
             "content": content,
         }
         try:
