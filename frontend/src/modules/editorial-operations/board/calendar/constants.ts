@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
-import type { CalendarContentType, CalendarStatusType } from "./types";
+import type {
+  CalendarContentType,
+  CalendarStatusType,
+  CalendarView,
+} from "./types";
 
 export const CALENDAR_COLORS = {
   cyan: "#00d4ff",
@@ -69,7 +73,38 @@ export const CALENDAR_LEGEND = [
   { key: "published", c: CALENDAR_COLORS.green },
 ] as const;
 
-export const CALENDAR_VIEW_MODES = ["Month", "Week", "Day"] as const;
+/** Calendar views in toolbar order; the first one is the default. */
+export const CALENDAR_VIEWS: readonly CalendarView[] = ["month", "week", "day"];
+
+export const CALENDAR_DEFAULT_VIEW: CalendarView = "month";
+
+/** URL search params that hold the toolbar state (`?view=week&date=2026-10-21`). */
+export const CALENDAR_VIEW_PARAM = "view";
+export const CALENDAR_DATE_PARAM = "date";
+
+/** Intl format of the week-view title range (en "Oct 18 – 24, 2026"). */
+export const CALENDAR_WEEK_TITLE_FORMAT: Intl.DateTimeFormatOptions = {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+};
+
+/** Intl format of the day-view title (en "Wednesday, October 21, 2026"). */
+export const CALENDAR_DAY_TITLE_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+};
+
+/** Intl format of a week-view column date (pt "21 de out.", en "Oct 21"). */
+export const CALENDAR_COLUMN_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  day: "numeric",
+  month: "short",
+};
+
+/** Matches a date-only `yyyy-MM-dd` value (no time of day, no offset). */
+export const CALENDAR_DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Grid week starts on Sunday (the weekday headers start there too). */
 export const CALENDAR_WEEK_STARTS_ON = 0 as const;

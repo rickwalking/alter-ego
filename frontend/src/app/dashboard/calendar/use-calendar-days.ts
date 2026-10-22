@@ -3,11 +3,10 @@
 import { useMemo } from "react";
 import { addDays, subDays } from "date-fns";
 import {
-  buildCalendarDaysFromApi,
-  buildEmptyCalendarDays,
-  calendarGridRange,
+  buildCalendarViewDays,
+  calendarViewRange,
 } from "@/modules/editorial-operations";
-import type { CalendarDay } from "@/modules/editorial-operations";
+import type { CalendarDay, CalendarView } from "@/modules/editorial-operations";
 import { useContentCalendar } from "@/modules/editorial";
 
 interface UseCalendarDaysResult {
@@ -17,33 +16,33 @@ interface UseCalendarDaysResult {
 }
 
 /**
- * Loads the content calendar for the month anchored at `anchor` and derives the
- * month-grid days. The fetch is scoped to the visible grid window (passed as
- * `start`/`end` to `/api/content-calendar`), and items are placed on their true
- * date by `buildCalendarDaysFromApi`.
+ * Loads the content calendar for the days the view shows (the month grid, the
+ * week or the day containing `focus`) and derives its cells. The fetch is
+ * scoped to that window (passed as `start`/`end` to `/api/content-calendar`),
+ * and items are placed on their local date by `buildCalendarViewDays`.
  *
- * The grid cells are LOCAL dates but the backend window is UTC: a naive
+ * The cells are LOCAL dates but the backend window is UTC: a naive
  * toISOString() of the local boundaries shifts by the viewer's offset and could
  * drop an edge-cell event. The window is padded by one day on each side so every
  * visible local cell is covered for any timezone; placement stays exact because
- * buildCalendarDaysFromApi matches each item to a cell by its yyyy-MM-dd prefix.
- * Nothing is fetched and no day is built until the anchor (the viewer's local
- * month) is known.
+ * each item is matched to a cell by its local `yyyy-MM-dd`. Nothing is fetched
+ * and no day is built until the focus (known only on the client) exists.
  */
 export function useCalendarDays(
-  anchor: Date | null,
+  view: CalendarView,
+  focus: Date | null,
   today: Date | null,
 ): UseCalendarDaysResult {
   const window = useMemo(() => {
-    if (!anchor) {
+    if (!focus) {
       return null;
     }
-    const range = calendarGridRange(anchor);
+    const range = calendarViewRange(view, focus);
     return {
       start: subDays(range.start, 1).toISOString(),
       end: addDays(range.end, 1).toISOString(),
     };
-  }, [anchor]);
+  }, [view, focus]);
 
   const { calendar, loading, error } = useContentCalendar(
     window?.start,
@@ -51,14 +50,13 @@ export function useCalendarDays(
     window !== null,
   );
 
-  const days = useMemo(() => {
-    if (!anchor) {
-      return [];
-    }
-    return calendar && calendar.items.length > 0
-      ? buildCalendarDaysFromApi(anchor, calendar.items, today)
-      : buildEmptyCalendarDays(anchor, today);
-  }, [anchor, calendar, today]);
+  const days = useMemo(
+    () =>
+      focus
+        ? buildCalendarViewDays({ view, focus, today }, calendar?.items ?? [])
+        : [],
+    [view, focus, today, calendar],
+  );
 
   return { days, loading, error };
 }

@@ -27,6 +27,7 @@ export * from "./board/blog-posts/adapters/blog-post-adapter";
 export * from "./board/calendar/types";
 export * from "./board/calendar/constants";
 export * from "./board/calendar/helpers";
+export * from "./board/calendar/view-helpers";
 export * from "./board/calendar/components/svg-icon";
 export * from "./board/calendar/adapters/calendar-adapter";
 
