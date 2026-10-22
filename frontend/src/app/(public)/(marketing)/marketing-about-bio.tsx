@@ -38,7 +38,7 @@ function AboutSocialLinks({
     },
   ];
   return (
-    <div style={{ display: "flex", gap: "12px" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
       {links.map((link) => (
         <a
           key={link.label}
