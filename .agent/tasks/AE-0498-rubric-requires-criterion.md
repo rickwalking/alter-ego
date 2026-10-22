@@ -1,6 +1,6 @@
 # AE-0498 — Rubric must have at least one criterion
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Bug
@@ -77,7 +77,7 @@ Red first on both sides, green after; backend capture and frontend gates green. 
 
 ## QA Report
 
-Pending.
+External QA: WARN (CI-decided gates only), see `.agent/reports/AE-0498.qa.md`.
 
 ## Blockers
 

@@ -227,7 +227,9 @@ describe("RubricsPage", () => {
     await user.click(screen.getByRole("button", { name: "Create rubric" }));
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(2));
     expect(screen.queryByText("Add at least one criterion.")).toBeNull();
-    expect(sentBody(1).criteria).toHaveLength(1);
+    expect(sentBody(1).criteria).toEqual([
+      expect.objectContaining({ name: "Clarity" }),
+    ]);
   });
 
   it("shows the API's refusal in the form and keeps the values", async () => {
