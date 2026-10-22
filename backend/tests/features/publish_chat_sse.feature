@@ -38,7 +38,8 @@ Feature: Publish Page Carousel Agent Streaming
     Given I am authenticated as user "bob"
     And the conversation belongs to user "alice"
     When I POST to "/api/conversations/{conv-id}/publish-chat/stream"
-    Then the response status is 403
+    Then the response status is 404
+    And the response contains "Conversation not found"
 
   # Edge case — conversation has no project_id metadata
   Scenario: Publish chat for non-carousel conversation

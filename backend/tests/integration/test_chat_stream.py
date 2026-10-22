@@ -193,10 +193,10 @@ class TestAlterEgoChatStream:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_nonexistent_conversation_returns_error_event(
+    async def test_nonexistent_conversation_returns_404(
         self, client, mock_agent, monkeypatch
     ):
-        """Given invalid conversation id, when POST /chat/stream, then returns error SSE event."""
+        """Given an unknown conversation id, when POST /chat/stream, then 404 before streaming."""
         # Scenario: Chat for non-existent conversation
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
@@ -211,9 +211,9 @@ class TestAlterEgoChatStream:
             json={"content": "Hello"},
         )
 
-        assert response.status_code == 200
-        events = _parse_sse_events(response.text)
-        assert any("not found" in str(e.get("content", "")).lower() for e in events)
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Conversation not found"
+        assert "text/event-stream" not in response.headers["content-type"]
 
 
 class TestPublishChatStream:
