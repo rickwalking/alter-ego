@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock
 
 from rag_backend.api.dependencies.knowledge import get_knowledge_service
 from rag_backend.api.schemas.documents import DocumentUploadResponse
