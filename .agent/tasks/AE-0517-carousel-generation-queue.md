@@ -56,12 +56,13 @@ global export lock. Phased P0-P5 (see plan §5); each phase is its own ticket an
 - AC8 Given `GENERATION_QUEUE_ENABLED=false`, When the system runs, Then the current in-process path is unchanged
   (rollback by flag; new table only, no schema rollback).
 
-## Open Questions (for Pedro, before P2)
+## Pedro's decisions (2026-10-22)
 
-- Concurrency default 1 (recommended) or 2.
-- Over-cap themes roll to the next day's slot (recommended) or are discarded.
-- Recovery scan time 04:00 BRT (recommended).
-- Interactive dashboard runs jump ahead of autopilot runs (recommended: yes).
+- Concurrency: 1 carousel generating at a time (`GENERATION_WORKER_CONCURRENCY=1`).
+- Over-cap themes roll to the next day's slot AND are listed in the dashboard where Pedro can trigger any of them
+  manually (enqueue now, outside the daily cap).
+- Daily recovery scan at 04:00 BRT.
+- Strict FIFO: dashboard-started runs do not jump ahead of queued autopilot runs.
 
 ## Decision Log
 
@@ -69,3 +70,5 @@ global export lock. Phased P0-P5 (see plan §5); each phase is its own ticket an
   Postgres job table + separate capped worker over PgQueuer (fallback), Procrastinate, Redis/arq, Celery, LangGraph
   Agent Server (paid license) and keeping the in-process loop. Evidence: capacity profile and run-model map in the
   plan §2.
+- 2026-10-22: Pedro decided concurrency 1, over-cap roll-over + manual trigger from the dashboard, scan 04:00 BRT,
+  strict FIFO (no priority ordering).
