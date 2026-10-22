@@ -67,7 +67,13 @@ describe("calendar grid accessibility", () => {
 
   // Scenario: The calendar page has a level-1 heading
   it("makes the header title the page heading", () => {
-    render(<CalendarHeader loading={false} onSchedule={() => undefined} />);
+    render(
+      <CalendarHeader
+        loading={false}
+        onSchedule={() => undefined}
+        sync={{ syncing: false, syncedAt: null, onSync: () => undefined }}
+      />,
+    );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Calendar",
     );

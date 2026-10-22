@@ -87,6 +87,14 @@ Review fixes: conflicts come from the content calendar for the chosen time ±1 h
 no schedule times), so carousels count too; drafts and posts under review are listed disabled with
 "approve it first"; NeonModal traps focus (moves in on open, Tab stays inside, focus returns on close).
 
+### 2026-10-22 (PR 3 — Sync)
+
+Pedro: Sync = refresh now. The header's Sync button re-fetches the visible range (`useContentCalendar`
+refetch), is busy/disabled while running, then shows "Synced at HH:MM" (hidden while a load error is
+shown). pt/en labels. Scenarios: `calendar-sync.feature`. Review fix: `useContentCalendar.refetch` now
+resolves true only when its response was stored, and Sync records the time only then (try/finally for the
+busy state), so a failed or aborted sync never shows a new "Synced at".
+
 ## Files Touched
 
 - frontend/src/app/dashboard/calendar/* (toolbar, page, view body, week/day views, agenda event, hooks, tests)

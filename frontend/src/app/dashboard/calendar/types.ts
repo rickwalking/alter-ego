@@ -84,4 +84,18 @@ export interface CalendarHeaderProps {
   loading: boolean;
   /** Opens the Schedule Post dialog. */
   onSchedule: () => void;
+  sync: CalendarSyncButtonProps;
+}
+
+export interface CalendarSyncButtonProps {
+  syncing: boolean;
+  /** When the last successful sync finished; null hides the label. */
+  syncedAt: Date | null;
+  onSync: () => void;
+}
+
+export interface UseCalendarSyncResult {
+  syncing: boolean;
+  syncedAt: Date | null;
+  sync: () => Promise<void>;
 }

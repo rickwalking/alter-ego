@@ -1266,6 +1266,11 @@
         },
         "approveFirst": "{title} — approve it first",
         "untitled": "Untitled"
+      },
+      "sync": {
+        "button": "Sync",
+        "syncing": "Syncing…",
+        "syncedAt": "Synced at {time}"
       }
     },
     "kanban": {
