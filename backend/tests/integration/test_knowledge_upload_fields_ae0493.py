@@ -13,7 +13,12 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.api.dependencies.knowledge import get_knowledge_service
-from rag_backend.api.schemas.documents import DocumentUploadResponse
+from rag_backend.api.schemas.documents import (
+    DOCUMENT_SCOPE_MAX_LENGTH,
+    DOCUMENT_TAGS_MAX_LENGTH,
+    DOCUMENT_TITLE_MAX_LENGTH,
+    DocumentUploadResponse,
+)
 from rag_backend.domain.models import DocumentScope
 from rag_backend.modules.knowledge.domain.commands import IngestDocumentCommand
 from tests.integration.test_knowledge_safety_net import (
@@ -133,4 +138,60 @@ class TestKnowledgeUploadFields:
             )
 
         assert response.status_code == 401
+        assert ingest.await_count == 0
+
+    async def test_overlong_title_is_refused(
+        self, kb_env: KnowledgeEnv, ingest: AsyncMock
+    ) -> None:
+        # Scenario: A title longer than 500 characters is refused
+        async with kb_env.client_for(kb_env.owner) as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files=FILE_FIELD,
+                data={"title": "t" * (DOCUMENT_TITLE_MAX_LENGTH + 1)},
+            )
+
+        assert response.status_code == 422
+        assert ingest.await_count == 0
+
+    async def test_scope_at_the_limit_reaches_scope_validation(
+        self, kb_env: KnowledgeEnv, ingest: AsyncMock
+    ) -> None:
+        # Scenario: A scope longer than 20 characters is refused
+        async with kb_env.client_for(kb_env.owner) as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files=FILE_FIELD,
+                data={"scope": "s" * DOCUMENT_SCOPE_MAX_LENGTH},
+            )
+
+        assert response.status_code == 400
+        assert ingest.await_count == 0
+
+    async def test_overlong_scope_is_refused(
+        self, kb_env: KnowledgeEnv, ingest: AsyncMock
+    ) -> None:
+        # Scenario: A scope longer than 20 characters is refused
+        async with kb_env.client_for(kb_env.owner) as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files=FILE_FIELD,
+                data={"scope": "s" * (DOCUMENT_SCOPE_MAX_LENGTH + 1)},
+            )
+
+        assert response.status_code == 422
+        assert ingest.await_count == 0
+
+    async def test_overlong_tags_are_refused(
+        self, kb_env: KnowledgeEnv, ingest: AsyncMock
+    ) -> None:
+        # Scenario: Over-long tags are refused
+        async with kb_env.client_for(kb_env.owner) as client:
+            response = await client.post(
+                "/api/documents/upload",
+                files=FILE_FIELD,
+                data={"tags": "t" * (DOCUMENT_TAGS_MAX_LENGTH + 1)},
+            )
+
+        assert response.status_code == 422
         assert ingest.await_count == 0

@@ -1345,12 +1345,14 @@
           },
           "scope": {
             "default": "personal",
+            "maxLength": 20,
             "title": "Scope",
             "type": "string"
           },
           "tags": {
             "anyOf": [
               {
+                "maxLength": 1000,
                 "type": "string"
               },
               {
@@ -1362,6 +1364,8 @@
           "title": {
             "anyOf": [
               {
+                "maxLength": 500,
+                "minLength": 1,
                 "type": "string"
               },
               {

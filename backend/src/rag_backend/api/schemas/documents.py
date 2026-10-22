@@ -5,23 +5,27 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+DOCUMENT_TITLE_MAX_LENGTH = 500
+DOCUMENT_SCOPE_MAX_LENGTH = 20
+DOCUMENT_TAGS_MAX_LENGTH = 1000
+
 
 class DocumentBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=500)
+    title: str = Field(..., min_length=1, max_length=DOCUMENT_TITLE_MAX_LENGTH)
     content: str = Field(..., min_length=1)
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class DocumentCreate(DocumentBase):
-    scope: str = Field(default="personal", max_length=20)
+    scope: str = Field(default="personal", max_length=DOCUMENT_SCOPE_MAX_LENGTH)
     is_public: bool = False
 
 
 class DocumentUpdate(BaseModel):
-    title: str | None = Field(None, min_length=1, max_length=500)
+    title: str | None = Field(None, min_length=1, max_length=DOCUMENT_TITLE_MAX_LENGTH)
     content: str | None = Field(None, min_length=1)
     metadata: dict[str, object] | None = None
-    scope: str | None = Field(None, max_length=20)
+    scope: str | None = Field(None, max_length=DOCUMENT_SCOPE_MAX_LENGTH)
     is_public: bool | None = None
 
 

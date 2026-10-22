@@ -29,3 +29,19 @@ Feature: A knowledge upload keeps the title and tags typed in the form
     Given a visitor who is not signed in
     When they upload a file with a title and tags
     Then the upload is refused with 401 and nothing is ingested
+
+  Scenario: A title longer than 500 characters is refused
+    Given the upload form sends a title of 501 characters
+    When the document is uploaded
+    Then the upload is refused with 422 and nothing is ingested
+
+  Scenario: A scope longer than 20 characters is refused
+    Given the upload form sends a scope of 21 characters
+    When the document is uploaded
+    Then the upload is refused with 422 and nothing is ingested
+    But a scope of 20 characters passes the length check and reaches the scope validation
+
+  Scenario: Over-long tags are refused
+    Given the upload form sends tags longer than 1000 characters
+    When the document is uploaded
+    Then the upload is refused with 422 and nothing is ingested

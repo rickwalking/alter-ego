@@ -43,6 +43,11 @@ from rag_backend.api.schemas import (
     DocumentUploadResponse,
     ErrorResponse,
 )
+from rag_backend.api.schemas.documents import (
+    DOCUMENT_SCOPE_MAX_LENGTH,
+    DOCUMENT_TAGS_MAX_LENGTH,
+    DOCUMENT_TITLE_MAX_LENGTH,
+)
 from rag_backend.application.services.document_pipeline import (
     PIPELINE_FAILURE_LOGGED,
 )
@@ -99,9 +104,13 @@ async def upload_document(
     service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
     user: Annotated[User, Depends(require_editor_or_admin)],
     settings: Annotated[Settings, Depends(get_settings)],
-    title: Annotated[str | None, Form()] = None,
-    tags: Annotated[str | None, Form()] = None,
-    scope: Annotated[str, Form()] = DocumentScope.PERSONAL.value,
+    title: Annotated[
+        str | None, Form(min_length=1, max_length=DOCUMENT_TITLE_MAX_LENGTH)
+    ] = None,
+    tags: Annotated[str | None, Form(max_length=DOCUMENT_TAGS_MAX_LENGTH)] = None,
+    scope: Annotated[
+        str, Form(max_length=DOCUMENT_SCOPE_MAX_LENGTH)
+    ] = DocumentScope.PERSONAL.value,
     is_public: Annotated[bool, Form()] = False,
 ):
     """Upload a document file and process it immediately.
