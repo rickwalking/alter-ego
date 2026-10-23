@@ -1,10 +1,13 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { DocumentUploadResponse } from "@/schemas/knowledge";
+import type { DocumentScopeChoice } from "@/constants/knowledge";
 /** Input of the document upload mutation. */
 export interface UploadDocumentInput {
   file: File;
   title?: string;
   tags?: string;
+  /** Pessoal (default) or Público. */
+  scope?: DocumentScopeChoice;
   onProgress?: (progress: number) => void;
 }
 
@@ -16,6 +19,8 @@ export interface FileUploadForm {
   setTitle: (value: string) => void;
   tags: string;
   setTags: (value: string) => void;
+  scope: DocumentScopeChoice;
+  setScope: (value: DocumentScopeChoice) => void;
   progress: number;
   clearFile: () => void;
   dropZone: {
@@ -42,3 +47,24 @@ export interface DocumentRetries {
   retryFailedIds: ReadonlySet<string>;
   retry: (id: string) => void;
 }
+
+/** Input of the document scope-change mutation. */
+export interface ChangeDocumentScopeInput {
+  id: string;
+  scope: DocumentScopeChoice;
+}
+
+/** Scope-change state of the knowledge list. */
+export interface DocumentScopeChange {
+  changeScope: (id: string, scope: DocumentScopeChoice) => void;
+  /** Ids whose scope change is in flight. */
+  changingScopeIds: ReadonlySet<string>;
+  /** Ids whose last scope change failed. */
+  scopeChangeFailedIds: ReadonlySet<string>;
+}
+
+/** The typed fields of the upload form and their reset. */
+export type UploadFields = Pick<
+  FileUploadForm,
+  "title" | "setTitle" | "tags" | "setTags" | "scope" | "setScope"
+> & { reset: () => void };

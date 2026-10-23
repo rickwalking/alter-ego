@@ -43,6 +43,7 @@ from rag_backend.api.routes import (
     chat_stream,
     content_calendar,
     conversations,
+    document_scope,
     documents,
     notifications,
     palettes,
@@ -273,6 +274,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(admin.router, prefix="/api")
     app.include_router(admin_migration.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
+    app.include_router(document_scope.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")

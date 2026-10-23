@@ -92,6 +92,14 @@ class DeleteDocumentCommand:
 
 
 @dataclass(frozen=True)
+class ChangeDocumentScopeCommand:
+    """Move a knowledge document to another scope and re-index it there."""
+
+    document_id: UUID
+    scope: DocumentScope
+
+
+@dataclass(frozen=True)
 class ReprocessDocumentCommand:
     """Re-run the pipeline for an existing knowledge document."""
 
@@ -110,6 +118,7 @@ class SearchQuery:
 
 
 __all__ = [
+    "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
     "DocumentStatusQuery",

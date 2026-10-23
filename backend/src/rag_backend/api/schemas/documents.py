@@ -72,3 +72,9 @@ class DocumentUploadResponse(BaseModel):
     error_message: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class DocumentScopeChange(BaseModel):
+    """The scope a document moves to (``personal`` or ``public``)."""
+
+    scope: str = Field(..., min_length=1, max_length=DOCUMENT_SCOPE_MAX_LENGTH)

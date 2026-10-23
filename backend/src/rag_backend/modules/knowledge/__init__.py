@@ -23,6 +23,7 @@ Cross-module consumers SHALL import from the facade only, e.g.::
 """
 
 from rag_backend.modules.knowledge.public import (
+    ChangeDocumentScopeCommand,
     CreateDocumentCommand,
     DeleteDocumentCommand,
     DocumentStatusQuery,
@@ -44,6 +45,7 @@ from rag_backend.modules.knowledge.public import (
 )
 
 __all__ = [
+    "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
     "DocumentStatusQuery",

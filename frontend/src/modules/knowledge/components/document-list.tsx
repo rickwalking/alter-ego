@@ -5,7 +5,10 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Search, Plus, Upload } from "lucide-react";
+import { SCOPE_FILTER_ALL, type ScopeFilterValue } from "@/constants/knowledge";
 import { DocumentCard } from "./document-card";
+import { scopeChoiceOf } from "./document-scope";
+import { ScopeFilter } from "./scope-parts";
 import { type DocumentListProps } from "./types";
 
 const NO_IDS: ReadonlySet<string> = new Set();
@@ -18,11 +21,20 @@ export function DocumentList({
   onRetryDocument,
   retryingIds = NO_IDS,
   retryFailedIds = NO_IDS,
+  onChangeScope,
+  changingScopeIds = NO_IDS,
+  scopeChangeFailedIds = NO_IDS,
 }: Readonly<DocumentListProps>) {
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
+  const [scopeFilter, setScopeFilter] =
+    useState<ScopeFilterValue>(SCOPE_FILTER_ALL);
 
-  const filteredDocuments = documents.filter((doc) => {
+  const inScope = (doc: DocumentListProps["documents"][number]): boolean =>
+    scopeFilter === SCOPE_FILTER_ALL ||
+    scopeChoiceOf(doc.scope) === scopeFilter;
+
+  const filteredDocuments = documents.filter(inScope).filter((doc) => {
     const meta = doc.metadata as Record<string, unknown> | undefined;
     const tags = (meta?.tags as string[] | undefined) ?? [];
     return (
@@ -34,8 +46,8 @@ export function DocumentList({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative min-w-[12rem] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
           <NeonInput
             placeholder={t("search")}
@@ -44,6 +56,7 @@ export function DocumentList({
             className="pl-10"
           />
         </div>
+        <ScopeFilter value={scopeFilter} onChange={setScopeFilter} />
         <NeonButton onClick={onUploadNew} variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
           {t("uploadButton")}
@@ -56,7 +69,7 @@ export function DocumentList({
 
       {filteredDocuments.length === 0 ? (
         <div className="text-center py-12 text-[var(--color-muted-foreground)]">
-          {searchQuery ? (
+          {searchQuery || scopeFilter !== SCOPE_FILTER_ALL ? (
             <p>{t("noResults")}</p>
           ) : (
             <div className="space-y-2">
@@ -77,6 +90,13 @@ export function DocumentList({
               }
               retrying={retryingIds.has(document.id)}
               retryFailed={retryFailedIds.has(document.id)}
+              onChangeScope={
+                onChangeScope
+                  ? (scope) => onChangeScope(document.id, scope)
+                  : undefined
+              }
+              changingScope={changingScopeIds.has(document.id)}
+              scopeChangeFailed={scopeChangeFailedIds.has(document.id)}
             />
           ))}
         </div>

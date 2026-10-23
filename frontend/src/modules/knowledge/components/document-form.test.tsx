@@ -96,6 +96,8 @@ describe("DocumentForm Component", () => {
           title: "Test Title",
           content: "Test Content",
           metadata: { tags: [] },
+          scope: "personal",
+          is_public: false,
         });
       });
 
@@ -115,6 +117,8 @@ describe("DocumentForm Component", () => {
           title: "Test Title",
           content: "Test Content",
           metadata: { tags: [] },
+          scope: "personal",
+          is_public: false,
         });
       });
     });

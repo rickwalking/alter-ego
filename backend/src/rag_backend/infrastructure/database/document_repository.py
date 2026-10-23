@@ -40,6 +40,16 @@ class PostgresDocumentRepository:
         db_document = result.scalar_one_or_none()
         return db_document.to_entity() if db_document else None
 
+    async def get_by_id_for_update(self, document_id: UUID) -> Document | None:
+        """Get a document by its ID and lock its row until the transaction ends."""
+        result = await self._session.execute(
+            select(DocumentModel)
+            .where(DocumentModel.id == str(document_id))
+            .with_for_update()
+        )
+        db_document = result.scalar_one_or_none()
+        return db_document.to_entity() if db_document else None
+
     async def get_all(
         self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[Document]:

@@ -2,19 +2,8 @@
 
 import { useCallback, useState } from "react";
 import type { DocumentRetries } from "./types";
+import { NO_IDS, withId, withoutId } from "./id-sets";
 import { useReprocessDocument } from "./use-documents";
-
-const NO_IDS: ReadonlySet<string> = new Set();
-
-function withId(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
-  return new Set(ids).add(id);
-}
-
-function withoutId(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
-  const next = new Set(ids);
-  next.delete(id);
-  return next;
-}
 
 /**
  * Reprocesses documents and tracks each one on its own: retrying A then B

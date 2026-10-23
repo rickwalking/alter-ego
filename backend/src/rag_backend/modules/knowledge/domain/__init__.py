@@ -8,6 +8,7 @@ convenience for the application/infrastructure/api layers.
 """
 
 from rag_backend.modules.knowledge.domain.commands import (
+    ChangeDocumentScopeCommand,
     CreateDocumentCommand,
     DeleteDocumentCommand,
     DocumentStatusQuery,
@@ -37,6 +38,7 @@ from rag_backend.modules.knowledge.domain.ports import (
 )
 
 __all__ = [
+    "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
     "Document",

@@ -122,6 +122,9 @@ class FakeDocumentRepository:
         found = self._store.get(document_id)
         return self._clone(found) if found else None
 
+    async def get_by_id_for_update(self, document_id: UUID) -> Document | None:
+        return await self.get_by_id(document_id)
+
     async def get_all(
         self,
         status: DocumentStatus | None = None,

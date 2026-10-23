@@ -16,6 +16,7 @@ import {
   useDeleteDocument,
 } from "../hooks/use-documents";
 import { useDocumentRetries } from "../hooks/use-document-retries";
+import { useDocumentScopeChange } from "../hooks/use-document-scope-change";
 import { DocumentList } from "./document-list";
 import { DocumentListSkeleton } from "./document-list-skeleton";
 import { DocumentForm } from "./document-form";
@@ -45,6 +46,9 @@ function DocumentListSection({
   onRetryDocument,
   retryingIds,
   retryFailedIds,
+  onChangeScope,
+  changingScopeIds,
+  scopeChangeFailedIds,
 }: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
@@ -67,6 +71,9 @@ function DocumentListSection({
       onRetryDocument={onRetryDocument}
       retryingIds={retryingIds}
       retryFailedIds={retryFailedIds}
+      onChangeScope={onChangeScope}
+      changingScopeIds={changingScopeIds}
+      scopeChangeFailedIds={scopeChangeFailedIds}
     />
   );
 }
@@ -78,6 +85,8 @@ export function KnowledgeBaseInterface() {
   const deleteDocument = useDeleteDocument();
   const isClient = useIsClient();
   const { retry, retryingIds, retryFailedIds } = useDocumentRetries();
+  const { changeScope, changingScopeIds, scopeChangeFailedIds } =
+    useDocumentScopeChange();
 
   const handleCreateNew = useCallback(() => {
     setViewMode("create");
@@ -128,6 +137,9 @@ export function KnowledgeBaseInterface() {
             onRetryDocument={retry}
             retryingIds={retryingIds}
             retryFailedIds={retryFailedIds}
+            onChangeScope={changeScope}
+            changingScopeIds={changingScopeIds}
+            scopeChangeFailedIds={scopeChangeFailedIds}
           />
         </Suspense>
       );

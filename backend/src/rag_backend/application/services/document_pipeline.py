@@ -6,7 +6,7 @@ from rag_backend.domain.constants.documents import (
     FAILURE_PROCESSING_ERROR,
     FAILURE_VECTOR_STORE_UNAVAILABLE,
 )
-from rag_backend.domain.models import Document, DocumentStatus
+from rag_backend.domain.models import Document, DocumentScope, DocumentStatus
 from rag_backend.domain.protocols import (
     DocumentProcessor,
     DocumentRepository,
@@ -134,16 +134,48 @@ class DocumentProcessingPipeline:
         failed + reason) and returned instead of raised, so the caller's Unit
         of Work commits it and the document never stays pending.
         """
+        document = await self._load(document_id)
+        await self._vector_store.delete_by_document(
+            document.id, namespace=document.scope.value
+        )
+        return await self._restart(document)
+
+    async def rescope_document(
+        self, document_id: str, scope: DocumentScope
+    ) -> Document:
+        """Move a document to another scope and re-index it there.
+
+        The chunks are deleted from the old scope's namespace, the document
+        takes the new scope (public only for the public scope) and is processed
+        again into the new namespace. A failure is recorded like a reprocess.
+        """
+        document = await self._load(document_id)
+        await self._vector_store.delete_by_document(
+            document.id, namespace=document.scope.value
+        )
+        document.scope = scope
+        document.is_public = scope is DocumentScope.PUBLIC
+        return await self._restart(document)
+
+    async def drop_chunks(self, document_id: str, scope: DocumentScope) -> None:
+        """Delete the document's chunks from the namespace of ``scope``."""
+        from uuid import UUID
+
+        await self._vector_store.delete_by_document(
+            UUID(document_id), namespace=scope.value
+        )
+
+    async def _load(self, document_id: str) -> Document:
+        """The stored document, or ``ValueError`` when it does not exist."""
         from uuid import UUID
 
         document = await self._document_repository.get_by_id(UUID(document_id))
         if not document:
             raise ValueError(_ERR_DOCUMENT_NOT_FOUND.format(document_id))
+        return document
 
-        await self._vector_store.delete_by_document(
-            document.id, namespace=document.scope.value
-        )
-
+    async def _restart(self, document: Document) -> Document:
+        """Reset the document to pending and run the pipeline, recording a failure."""
         document.update_status(DocumentStatus.PENDING)
         document.error_message = None
         document.chunk_count = 0

@@ -126,6 +126,11 @@ class KnowledgeEnv:
         """The app under test (for dependency overrides)."""
         return self._app
 
+    @property
+    def container(self) -> Container:
+        """The DI container (for provider overrides)."""
+        return self._container
+
     def client_for(self, user: User) -> AsyncClient:
         transport = ASGITransport(app=self._app)
         return AsyncClient(

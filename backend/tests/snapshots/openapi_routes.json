@@ -76,6 +76,7 @@
   "PATCH /api/blog-posts/{post_id}/sections/{section_id}/image",
   "PATCH /api/carousels/{project_id}/copy",
   "PATCH /api/carousels/{project_id}/slides",
+  "PATCH /api/documents/{document_id}/scope",
   "PATCH /api/palettes/{ref}",
   "POST /api/admin/carousels/refresh-design-tokens",
   "POST /api/admin/carousels/render-slides",

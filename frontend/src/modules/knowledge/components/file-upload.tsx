@@ -38,6 +38,8 @@ export function FileUpload({
           onTitleChange={form.setTitle}
           tags={form.tags}
           onTagsChange={form.setTags}
+          scope={form.scope}
+          onScopeChange={form.setScope}
           disabled={upload.isPending}
         />
       )}
