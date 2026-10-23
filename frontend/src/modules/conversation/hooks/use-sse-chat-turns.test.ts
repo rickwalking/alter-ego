@@ -416,13 +416,19 @@ describe("useSseChat turns", () => {
       await Promise.resolve();
     });
     setHistory([
-      { id: "u", role: "user", content: "story", sources: [], created_at: "t" },
+      {
+        id: "u",
+        role: "user",
+        content: "story",
+        sources: [],
+        created_at: new Date().toISOString(),
+      },
       {
         id: "a",
         role: "assistant",
         content: "Once upon a time.",
         sources: [],
-        created_at: "t",
+        created_at: new Date().toISOString(),
       },
     ]);
     rerender();
@@ -477,13 +483,19 @@ describe("useSseChat turns", () => {
     act(() => result.current.stopStreaming());
 
     setHistory([
-      { id: "u", role: "user", content: "story", sources: [], created_at: "t" },
+      {
+        id: "u",
+        role: "user",
+        content: "story",
+        sources: [],
+        created_at: new Date().toISOString(),
+      },
       {
         id: "a",
         role: "assistant",
         content: "Once upon a time.",
         sources: [],
-        created_at: "t",
+        created_at: new Date().toISOString(),
       },
     ]);
     rerender();

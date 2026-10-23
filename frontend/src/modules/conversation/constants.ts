@@ -43,3 +43,9 @@ export const REPLY_POLL_INTERVAL_MS = 2000;
 
 /** How long after the user's message a missing reply is still awaited. */
 export const REPLY_POLL_WINDOW_MS = 180_000;
+
+/**
+ * Clock difference allowed between the browser and the server when deciding
+ * which saved rows belong to the turn just sent.
+ */
+export const TURN_CLOCK_SKEW_MS = 60_000;

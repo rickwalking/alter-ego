@@ -117,10 +117,11 @@ the announcer stays a `role="status"` sibling of the log; the composer stays loc
 
 ### 2026-10-23 19:30
 
-Final external review (WARN) fixed: a turn remembers the history length when it starts, and only rows saved since
-then can de-duplicate its bubbles or stand in for its reply, so the same question asked again is never hidden or
-bound to its older answer (`use-turn-messages.ts`, tests); the dashboard test now also checks Stop is not offered
-while a reply is only awaited. Before/after screenshots re-taken on this build: `docs/pr-assets/ae-0535/`.
+Final external review fixed: only history rows saved since the turn's question was sent (60 s clock-skew
+allowance) can de-duplicate its bubbles or stand in for its reply, so the same question asked again is never
+hidden or bound to its older answer; anchoring on the question's time (not a history index) stays right across a
+conversation switch and a send made before the history loaded (`merge-messages.ts`, tests); the dashboard test
+now also checks Stop is not offered while a reply is only awaited. Before/after screenshots re-taken on this build: `docs/pr-assets/ae-0535/`.
 
 ## Files Touched
 

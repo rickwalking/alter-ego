@@ -16,8 +16,7 @@ import {
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
 import { classifyChatError, type ChatFailure } from "../chat-errors";
-import { optimisticAtTurnStart } from "./merge-messages";
-import { useTurnMessages } from "./use-turn-messages";
+import { mergeMessages, optimisticAtTurnStart } from "./merge-messages";
 import { useRefreshHistory, useStopStreaming } from "./use-stop-streaming";
 import { useAwaitingReply } from "./use-awaiting-reply";
 import {
@@ -341,7 +340,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
   );
   const startNewChat = useStartNewChat(stream, turnRef, setError);
   const stopStreaming = useStopStreaming(stream, loadHistory);
-  const { sendMessage: sendTurn, isBusy } = useSendChatMessage({
+  const { sendMessage, isBusy } = useSendChatMessage({
     stream,
     conversationId,
     setError,
@@ -350,13 +349,10 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     finalizeStream,
     loadHistory,
   });
-  const { messages, sendMessage } = useTurnMessages({
-    historyMessages,
-    optimisticMessages,
-    isStreaming,
-    sendTurn,
-    isBusy,
-  });
+  const messages = useMemo(
+    () => mergeMessages(historyMessages, optimisticMessages, !isStreaming),
+    [historyMessages, optimisticMessages, isStreaming],
+  );
   return {
     conversationId,
     messages,

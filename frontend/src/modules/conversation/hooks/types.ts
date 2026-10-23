@@ -103,12 +103,3 @@ export interface StreamTurnRequest {
   content: string;
   signal: AbortSignal;
 }
-
-/** What `useTurnMessages` merges, and the send it wraps. */
-export interface TurnMessagesInput {
-  historyMessages: Message[];
-  optimisticMessages: Message[];
-  isStreaming: boolean;
-  sendTurn: UseSseChatReturn["sendMessage"];
-  isBusy: () => boolean;
-}
