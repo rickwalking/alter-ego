@@ -2,8 +2,11 @@
 
 A thread is eligible when its carousel project is finished (completed or
 failed), was last updated before the cutoff, is not running, has no pending
-republish, and was rejected or published. Threads without a carousel project are
-never eligible: they may belong to another graph.
+republish, has no autopilot run that is not settled (queued, generating, waiting
+for the owner, reworking, scheduled, publishing, or held after a failure), and
+was rejected or published. Threads without a carousel project are never
+eligible: they may belong to another graph. Each pruned thread keeps its latest
+checkpoint, so a run that resumes it later still has its node-level state.
 
 ``find_candidates`` only reads. ``apply_prune`` locks the eligible projects,
 refuses when a signed-off thread is no longer eligible, writes every prunable row
@@ -18,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 import structlog
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, column, exists, literal, or_, select, table
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from rag_backend.domain.carousel_checkpoint_thread import checkpoint_thread_id
@@ -27,6 +30,8 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_REJECTED,
 )
 from rag_backend.domain.constants.checkpoint_prune import (
+    AUTOPILOT_RUNS_TABLE,
+    AUTOPILOT_SETTLED_STATES,
     ERR_BACKUP_MISMATCH,
     ERR_NO_THREADS,
     ERR_NOOP,
@@ -49,6 +54,9 @@ logger = structlog.get_logger(__name__)
 
 FINISHED_STATUSES = (CarouselStatus.COMPLETED.value, CarouselStatus.FAILED.value)
 _BACKUP_LINE = '{{"table": "{table}", "row": {row}}}\n'
+_autopilot_runs = table(
+    AUTOPILOT_RUNS_TABLE, column("carousel_project_id"), column("state")
+)
 
 
 class PruneRefusedError(Exception):
@@ -82,6 +90,14 @@ class PruneRequest:
 ProjectRow = tuple[str, str, str | None, str, bool, datetime | None, datetime]
 
 
+def _unsettled_autopilot_run() -> Select[tuple[int]]:
+    runs = _autopilot_runs.c
+    return select(literal(1)).where(
+        runs.carousel_project_id == CarouselProjectModel.id,
+        runs.state.not_in(AUTOPILOT_SETTLED_STATES),
+    )
+
+
 def _eligible_projects(cutoff: datetime) -> Select[ProjectRow]:
     model = CarouselProjectModel
     return select(
@@ -101,6 +117,7 @@ def _eligible_projects(cutoff: datetime) -> Select[ProjectRow]:
             model.phase_status != PHASE_STATUS_IN_PROGRESS,
         ),
         or_(model.phase_status == PHASE_STATUS_REJECTED, model.is_public.is_(True)),
+        ~exists(_unsettled_autopilot_run()),
     )
 
 

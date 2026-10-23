@@ -21,7 +21,7 @@ import pytest
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import interrupt
+from langgraph.types import Command, interrupt
 from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -34,6 +34,11 @@ from rag_backend.infrastructure.database.checkpoint_prune import (
 )
 from rag_backend.infrastructure.database.checkpoint_prune_sql import TableCounts
 from rag_backend.infrastructure.database.models import CarouselProjectModel
+from rag_backend.modules.autopilot.infrastructure.models import (
+    AutopilotRunModel,
+    TopicCandidateModel,
+)
+from rag_backend.modules.autopilot.public import AutopilotRunState
 from tests.integration.pg_schema_support import (
     PG_URL,
     isolated_schema,
@@ -46,11 +51,25 @@ _TABLES = (
     "quality_rubrics",
     "carousel_creator_assets",
     "carousel_projects",
+    "topic_candidates",
+    "autopilot_runs",
 )
 _OLD = datetime.now(UTC) - timedelta(days=90)
 _RECENT = datetime.now(UTC) - timedelta(days=2)
 _CUTOFF = datetime.now(UTC) - timedelta(days=30)
 _STEPS = ("research", "outline", "content")
+_UNSETTLED = (
+    AutopilotRunState.QUEUED,
+    AutopilotRunState.GENERATING,
+    AutopilotRunState.AWAITING_OWNER,
+    AutopilotRunState.REWORKING,
+    AutopilotRunState.SCHEDULED,
+    AutopilotRunState.PUBLISHING,
+    AutopilotRunState.FAILED,
+    AutopilotRunState.ESCALATED,
+    AutopilotRunState.PUBLISH_FAILED,
+    AutopilotRunState.AWAITING_THESIS,
+)
 _TABLES_BY_ORDER = (
     checkpoint_prune_sql.checkpoints,
     checkpoint_prune_sql.checkpoint_writes,
@@ -136,6 +155,35 @@ async def _carousel(db: _Db, **columns: object) -> str:
     return project_id
 
 
+async def _autopilot_run(db: _Db, project_id: str, state: AutopilotRunState) -> None:
+    topic_id = uuid4()
+    async with db.engine.begin() as conn:
+        await conn.execute(
+            insert(TopicCandidateModel).values(
+                id=topic_id,
+                title="t",
+                angle="a",
+                why_viral="w",
+                audience="a",
+                niche="tech",
+                brief="b",
+                sources=[],
+                score=1,
+                signal_hash=topic_id.hex,
+                status="used",
+            )
+        )
+        await conn.execute(
+            insert(AutopilotRunModel).values(
+                id=uuid4(),
+                carousel_project_id=project_id,
+                topic_candidate_id=topic_id,
+                state=state.value,
+                telegram_message_ids=[],
+            )
+        )
+
+
 async def _rows(db: _Db, thread_id: str) -> tuple[int, int, int]:
     async with db.engine.connect() as conn:
         counts = [
@@ -187,6 +235,18 @@ async def test_only_finished_rejected_or_published_past_ttl_match() -> None:
 
 
 @requires_postgres
+async def test_a_carousel_with_an_unsettled_autopilot_run_is_never_matched() -> None:
+    """Scenario: A carousel whose autopilot run is queued, running or held is never matched"""
+    async with _database() as db:
+        for state in _UNSETTLED:
+            await _autopilot_run(db, await _carousel(db), state)
+        settled = await _carousel(db)
+        await _autopilot_run(db, settled, AutopilotRunState.PUBLISHED)
+        found = await find_candidates(db.engine, _CUTOFF)
+        assert [c.thread_id for c in found] == [settled]
+
+
+@requires_postgres
 async def test_prune_deletes_only_signed_off_threads_and_keeps_a_backup(
     tmp_path: Path,
 ) -> None:
@@ -231,23 +291,45 @@ async def test_a_pruned_thread_keeps_its_workflow_state(tmp_path: Path) -> None:
 
 
 @requires_postgres
+async def test_a_pruned_thread_parked_at_a_gate_resumes_to_the_end(
+    tmp_path: Path,
+) -> None:
+    """Scenario: A pruned thread parked at a human gate resumes to the end"""
+    async with _database() as db:
+        thread = await _carousel(db)
+        deleted = await apply_prune(
+            db.engine, _request((thread,), tmp_path / "b.jsonl")
+        )
+        assert deleted.checkpoints > 0
+        final = await db.graph.ainvoke(Command(resume="ok"), config=_config(thread))
+        assert final == {"log": list(_STEPS), "answer": "ok"}
+        state = await db.graph.aget_state(_config(thread))
+        assert state.next == ()
+
+
+@requires_postgres
 async def test_a_signed_off_thread_no_longer_eligible_stops_the_prune(
     tmp_path: Path,
 ) -> None:
     """Scenario: A signed-off thread that is no longer eligible stops the prune"""
     async with _database() as db:
         resumed = await _carousel(db)
+        queued = await _carousel(db)
         still = await _carousel(db)
-        before = {t: await _rows(db, t) for t in (resumed, still)}
+        before = {t: await _rows(db, t) for t in (resumed, queued, still)}
         async with db.engine.begin() as conn:
             await conn.execute(
                 update(CarouselProjectModel)
                 .where(CarouselProjectModel.id == resumed)
                 .values(phase_status="in_progress")
             )
+        await _autopilot_run(db, queued, AutopilotRunState.QUEUED)
         backup = tmp_path / "b.jsonl"
-        with pytest.raises(PruneRefusedError, match=resumed):
-            await apply_prune(db.engine, _request((resumed, still), backup))
+        with pytest.raises(PruneRefusedError) as refused:
+            await apply_prune(db.engine, _request((resumed, queued, still), backup))
+        assert resumed in str(refused.value)
+        assert queued in str(refused.value)
+        assert still not in str(refused.value)
         assert {t: await _rows(db, t) for t in before} == before
         assert not backup.exists()
 

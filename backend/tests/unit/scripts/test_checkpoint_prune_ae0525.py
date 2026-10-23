@@ -14,12 +14,18 @@ import pytest
 
 from rag_backend.agents.carousel_workflow_engine import CarouselWorkflowEngine
 from rag_backend.domain.carousel_checkpoint_thread import checkpoint_thread_id
+from rag_backend.domain.constants.checkpoint_prune import (
+    AUTOPILOT_RUNS_TABLE,
+    AUTOPILOT_SETTLED_STATES,
+)
 from rag_backend.infrastructure.database.checkpoint_prune import (
     PruneCandidate,
     PruneRefusedError,
     PruneRequest,
 )
 from rag_backend.infrastructure.database.checkpoint_prune_sql import TableCounts
+from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+from rag_backend.modules.autopilot.public import AutopilotRunState
 from rag_backend.scripts import checkpoint_prune as cli
 
 _THREAD = "0c9a1f0e-5b7e-4a43-9d0e-3f1f6f0d7a11"
@@ -142,3 +148,13 @@ def test_engine_and_prune_agree_on_the_thread_id() -> None:
     configurable = engine._run_config(_THREAD)["configurable"]
     assert isinstance(configurable, dict)
     assert configurable["thread_id"] == checkpoint_thread_id(_THREAD) == _THREAD
+
+
+def test_only_finished_autopilot_states_count_as_settled() -> None:
+    """Scenario: A carousel whose autopilot run is queued, running or held is never matched"""
+    assert AutopilotRunModel.__tablename__ == AUTOPILOT_RUNS_TABLE
+    assert set(AUTOPILOT_SETTLED_STATES) == {
+        AutopilotRunState.PUBLISHED.value,
+        AutopilotRunState.REJECTED.value,
+        AutopilotRunState.EXPIRED.value,
+    }

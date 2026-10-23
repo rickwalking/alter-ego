@@ -7,6 +7,9 @@ CHECKPOINT_WRITES_TABLE = "checkpoint_writes"
 CHECKPOINT_BLOBS_TABLE = "checkpoint_blobs"
 CHANNEL_VERSIONS_KEY = "channel_versions"
 
+AUTOPILOT_RUNS_TABLE = "autopilot_runs"
+AUTOPILOT_SETTLED_STATES = ("published", "rejected", "expired")
+
 LOG_PRUNE_CANDIDATES = "checkpoint_prune_candidates"
 LOG_PRUNE_DONE = "checkpoint_prune_done"
 LOG_PRUNE_REFUSED = "checkpoint_prune_refused"

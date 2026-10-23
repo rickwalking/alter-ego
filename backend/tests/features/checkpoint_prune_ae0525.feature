@@ -16,6 +16,12 @@ Feature: Old carousel checkpoints are pruned safely, with Pedro's sign-off
     When the prune runs without --apply
     Then none of them is listed
 
+  Scenario: A carousel whose autopilot run is queued, running or held is never matched
+    Given published carousels past the TTL whose autopilot runs are queued, generating, waiting for the owner, reworking, scheduled, publishing, failed or escalated
+    And a published carousel past the TTL whose autopilot run is published
+    When the prune runs without --apply
+    Then only the carousel with the published autopilot run is listed
+
   Scenario: The prune deletes only the signed-off threads and keeps a backup
     Given two matched threads and a sign-off file naming one of them
     When the prune runs with --apply and a backup file
@@ -28,8 +34,13 @@ Feature: Old carousel checkpoints are pruned safely, with Pedro's sign-off
     When it is pruned
     Then its state values, next node and pending interrupt are the same as before
 
+  Scenario: A pruned thread parked at a human gate resumes to the end
+    Given a thread parked at a human gate after several steps
+    When it is pruned and the gate is answered
+    Then the run resumes from the gate and finishes with every earlier step's state
+
   Scenario: A signed-off thread that is no longer eligible stops the prune
-    Given a sign-off file naming a thread whose carousel was resumed after the dry run
+    Given a sign-off file naming a thread whose carousel was resumed or queued for an autopilot run after the dry run
     When the prune runs with --apply
     Then it refuses and deletes nothing
 

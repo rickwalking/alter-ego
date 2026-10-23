@@ -34,7 +34,9 @@ AE-0523, AE-0524, AE-0525, AE-0526.
   parent, and the blobs it references; everything older goes. The workflow state API reads only the latest
   checkpoint, so a pruned carousel still opens; a full thread delete would 404 its workflow view.
 - Eligible projects: finished (`completed`/`failed`), last updated before the TTL (`carousel_checkpoint_ttl_days`),
-  not running, no pending republish, and rejected or published. Threads without a carousel project are never touched
+  not running, no pending republish, no autopilot run that is not settled (only `published`, `rejected` and `expired`
+  runs are settled; queued, generating, owner-wait, rework, scheduled, publishing and held/failed runs protect the
+  thread), and rejected or published. Threads without a carousel project are never touched
   (they may belong to another graph).
 
 ## Non-Goals
@@ -49,11 +51,13 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 - [ ] AC2 Given Pedro's sign-off and a backup, When the prune runs, Then only the signed-off threads are pruned and the
   checkpoint tables shrink accordingly; the backup holds every deleted row.
 - [ ] AC3 Given a pruned thread, Then its workflow state (values, next node, pending interrupt) is the same as before.
-- [ ] AC4 Given a signed-off thread that is no longer eligible (resumed, republish pending, too recent, not a carousel),
-  Then the prune refuses and deletes nothing.
+- [ ] AC4 Given a signed-off thread that is no longer eligible (resumed, republish pending, an autopilot run queued,
+  too recent, not a carousel), Then the prune refuses and deletes nothing.
 - [ ] AC5 Given signed-off threads with removable rows, When nothing is deleted, Then the run exits non-zero (no silent
   no-op), and the log reports deleted counts per table.
 - [ ] AC6 The workflow engine and the prune build the thread id with the same function.
+- [ ] AC7 Given a carousel whose autopilot run is queued, running or held, Then it is never matched; and a pruned
+  thread parked at a human gate still resumes from that gate to the end.
 
 ## Gherkin Scenarios
 
@@ -64,3 +68,6 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 - 2026-10-22: Created from the AE-0517 plan after three skeptical review rounds (Pedro's cap).
 - 2026-10-23: keep-latest instead of a full thread delete, so the workflow view of a pruned carousel keeps working;
   orphan threads are excluded; the prune is a manual, signed-off CLI, not a scheduled job.
+- 2026-10-23: a project with an autopilot run that is not settled (published, rejected, expired) is never eligible,
+  so a queued, running or held run keeps its full checkpoint history. The `generation_runs` table of the queue
+  (AE-0522) is not on `main` yet; once it lands, its queued/running/dead-letter runs must join this guard.
