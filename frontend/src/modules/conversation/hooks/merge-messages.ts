@@ -95,13 +95,43 @@ function noEarlierTurns(): Message[] {
   return [];
 }
 
+function keepEverything(prev: Message[]): Message[] {
+  return prev;
+}
+
 /**
  * How a new turn trims the optimistic messages: with history on it starts
- * empty (a stopped or failed turn's copies are in the history); without it,
- * only a failed turn's unanswered question is dropped.
+ * empty (an earlier turn's copies are in the history); without it, a stopped
+ * turn stays on screen as it was, and only a failed turn's unanswered
+ * question is dropped.
  */
 export function optimisticAtTurnStart(
   loadHistory: boolean,
+  previousTurnStopped: boolean,
 ): (prev: Message[]) => Message[] {
-  return loadHistory ? noEarlierTurns : dropUnansweredUserTurn;
+  if (loadHistory) return noEarlierTurns;
+  return previousTurnStopped ? keepEverything : dropUnansweredUserTurn;
+}
+
+/**
+ * Whether the turn on screen still waits for its saved reply: its question is
+ * not in the history yet, or no reply was saved after it.
+ */
+export function turnStillOpen(
+  historyMessages: readonly Message[],
+  optimisticMessages: readonly Message[],
+): boolean {
+  const question = optimisticMessages.findLast(
+    (message) => message.role === USER_ROLE,
+  );
+  if (!question) return false;
+  const turnHistory = rowsOfThisTurn(historyMessages, question);
+  const asked = turnHistory.findLastIndex(
+    (message) =>
+      message.role === USER_ROLE && message.content === question.content,
+  );
+  if (asked === -1) return true;
+  return !turnHistory
+    .slice(asked + 1)
+    .some((message) => message.role === ASSISTANT_ROLE);
 }

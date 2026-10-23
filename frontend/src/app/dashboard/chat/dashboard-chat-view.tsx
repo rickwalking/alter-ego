@@ -53,6 +53,7 @@ export function DashboardChatView(): React.ReactElement {
     isBusy,
     startNewChat,
     stopStreaming,
+    canStop,
   } = useSseChat({ conversationId: effectiveConvId });
   useRecheckSessionOnNotFound(sseError, refetchConversations);
 
@@ -154,7 +155,7 @@ export function DashboardChatView(): React.ReactElement {
             onChange={setInput}
             onSend={() => void handleSend()}
             busy={replyPending}
-            onStop={isStreaming ? stopStreaming : undefined}
+            onStop={canStop ? stopStreaming : undefined}
           />
         </div>
       </div>

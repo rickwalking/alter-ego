@@ -23,8 +23,12 @@ export const CHAT_ERROR_KIND = {
   LIMIT: "limit",
   NOT_FOUND: "notFound",
   SESSION_EXPIRED: "sessionExpired",
+  BUSY: "busy",
   GENERIC: "generic",
 } as const;
+
+/** The server's error-event code for "a reply to this chat is still being written". */
+export const CHAT_TURN_IN_FLIGHT_CODE = "turn_in_flight";
 
 export type ChatErrorKind =
   (typeof CHAT_ERROR_KIND)[keyof typeof CHAT_ERROR_KIND];

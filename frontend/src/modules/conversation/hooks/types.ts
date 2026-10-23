@@ -51,6 +51,8 @@ export interface UseSseChatReturn {
   startNewChat: () => void;
   /** Stop the reply in flight; the text that already arrived stays. */
   stopStreaming: () => void;
+  /** Stop can act now: a reply is streaming and its stream has opened. */
+  canStop: boolean;
 }
 
 /** The shared optimistic-message stream state (``useChatStream``). */
@@ -70,6 +72,10 @@ export interface SendChatDeps {
    * an earlier stopped or failed turn left behind.
    */
   loadHistory: boolean;
+  /** Called by a turn when its answer stream opens. */
+  markOpen: () => void;
+  /** Called when a turn starts; says whether the previous turn was stopped. */
+  beginTurn: () => boolean;
 }
 
 /** The stable callbacks one streamed chat turn drives. */
@@ -80,6 +86,8 @@ export type ChatTurnCallbacks = Pick<
   Pick<SendChatDeps, "finalizeStream"> & {
     /** Show the failure, end the stream and mark the turn as failed. */
     fail: (failure: ChatFailure) => void;
+    /** The answer stream opened (Stop is offered from then on). */
+    opened: () => void;
   };
 
 /** What running one turn needs (the conversation id arrives with the turn). */
@@ -103,3 +111,22 @@ export interface StreamTurnRequest {
   content: string;
   signal: AbortSignal;
 }
+
+/** The Stop control of a chat: when Stop can act, and what a stop left behind. */
+export interface StopControl {
+  stopStreaming: () => void;
+  /** The answer stream has opened (Stop is offered only from then on). */
+  streamOpen: boolean;
+  /** The last turn was stopped; the server may still be saving its reply. */
+  stopped: boolean;
+  /** Called by a turn when its stream opens. */
+  markOpen: () => void;
+  /** Called when a turn starts or New chat; says whether the last turn was stopped. */
+  beginTurn: () => boolean;
+}
+
+/** What New chat needs: the stream, the turn counter and the error to clear. */
+export type NewChatDeps = Pick<
+  SendChatDeps,
+  "stream" | "turnRef" | "setError" | "beginTurn"
+>;

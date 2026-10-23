@@ -45,7 +45,8 @@ function useAutoGrow(value: string): AutoGrow {
     if (!textarea) return;
     const previous = textarea.style.height;
     textarea.style.height = "auto";
-    const measured = textarea.scrollHeight;
+    const border = textarea.offsetHeight - textarea.clientHeight;
+    const measured = textarea.scrollHeight + border;
     textarea.style.height = previous;
     setContentHeight(measured);
   }, [value, viewportWidth]);

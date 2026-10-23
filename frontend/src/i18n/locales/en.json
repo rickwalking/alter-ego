@@ -150,6 +150,7 @@
       "limit": "Too many messages for now, or this chat is full. Wait a minute or start a new chat.",
       "notFound": "This conversation is no longer available. Start a new chat.",
       "sessionExpired": "Your session expired. Sign in again to keep chatting.",
+      "busy": "Still finishing the previous reply. Try again in a moment.",
       "generic": "Something went wrong. Please try again.",
       "retry": "Try again",
       "signIn": "Sign in",

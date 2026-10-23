@@ -17,13 +17,16 @@ export interface ChatMessageListProps {
 /** Longest stretch of a finished reply read out by the live region. */
 const ANNOUNCED_REPLY_MAX_CHARS = 280;
 const MARKDOWN_MARKERS = /[*_#`>[\]()~|]+/g;
-/** A markdown link or image: only its text is read, never the address. */
-const MARKDOWN_LINK = /!?\[([^\]]{0,200})\]\([^)\s]{0,500}\)/g;
+/** A markdown link or image (title included): only its text is read. */
+const MARKDOWN_LINK = /!?\[([^\]]{0,200})\]\([^)]{0,500}\)/g;
+/** An autolink or a bare web address: not read at all. */
+const WEB_ADDRESS = /<?https?:\/\/[^\s>]{1,500}>?/g;
 
 /** The reply as a screen reader should hear it: no markdown, kept short. */
 function speakable(text: string): string {
   const plain = text
     .replace(MARKDOWN_LINK, "$1")
+    .replace(WEB_ADDRESS, "")
     .replace(MARKDOWN_MARKERS, "")
     .replace(/\s+/g, " ")
     .trim();

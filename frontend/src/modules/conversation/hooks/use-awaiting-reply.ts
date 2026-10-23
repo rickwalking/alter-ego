@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { Message } from "@/schemas/chat";
+import { turnStillOpen } from "./merge-messages";
+import type { ChatStreamState } from "./types";
 import { REPLY_POLL_INTERVAL_MS } from "../constants";
 import { isAwaitingReply } from "../reply-wait";
 
@@ -35,4 +37,26 @@ export function useAwaitingReply(
     };
   }, [asked, lastId]);
   return asked && isAwaitingReply(history, now);
+}
+
+/**
+ * Whether a reply is still being written somewhere: after a refresh (the
+ * history ends with a recent question) or after a stop, until the reply the
+ * server saves for the stopped turn is in the history.
+ */
+export function useReplyPending(
+  historyMessages: Message[],
+  stream: Pick<ChatStreamState, "optimisticMessages" | "isStreaming">,
+  stoppedWithHistory: boolean,
+): boolean {
+  const { optimisticMessages, isStreaming } = stream;
+  const stoppedTurn = stoppedWithHistory && !isStreaming;
+  const afterRefresh = useAwaitingReply(
+    historyMessages,
+    !isStreaming && (optimisticMessages.length === 0 || stoppedTurn),
+  );
+  return (
+    afterRefresh ||
+    (stoppedTurn && turnStillOpen(historyMessages, optimisticMessages))
+  );
 }

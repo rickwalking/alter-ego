@@ -22,6 +22,7 @@ describe("ChatErrorBanner", () => {
   it.each([
     ["offline", /you seem to be offline/i],
     ["generic", /something went wrong/i],
+    ["busy", /still finishing the previous reply/i],
   ] as const)("explains %s in plain words with a Retry", (kind, text) => {
     const { onRetry } = renderBanner({ kind, canRetry: true });
 

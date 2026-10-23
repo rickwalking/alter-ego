@@ -51,3 +51,18 @@ Feature: Chat polish
   Scenario: A failed reply is re-read from the history
     Given a signed-in user's reply failed
     Then the conversation is re-read, so the saved question and apology replace the on-screen copies
+
+  Scenario: Stop is offered once the reply has started
+    Given my message is still being sent (the chat is being created or the server has not answered)
+    Then no Stop is offered, so a stop cannot lose the message
+    And Stop appears as soon as the reply starts
+
+  Scenario: After a stop, the chat waits for the saved reply
+    Given I stopped a reply in a chat with history
+    Then the chat shows the reply is still being written and Send stays off
+    Until the reply the server saved for my question arrives and replaces the stopped part
+    And in a chat without history, the stopped question and text stay when I send the next message
+
+  Scenario: A message sent while the previous reply is still being saved
+    When the server answers that the previous reply is still being written
+    Then I see "Still finishing the previous reply" in my language, with Try again

@@ -106,6 +106,30 @@ describe("chat polish", () => {
   });
 
   /** Scenario: The message box grows with multi-line text */
+  it("adds the border to the measured text height", () => {
+    const { rerender } = render(
+      <ChatComposer value="" onChange={vi.fn()} onSend={vi.fn()} />,
+    );
+    const textarea = screen.getByRole("textbox");
+    Object.defineProperty(textarea, "scrollHeight", {
+      configurable: true,
+      get: () => 96,
+    });
+    Object.defineProperty(textarea, "offsetHeight", {
+      configurable: true,
+      get: () => 46,
+    });
+    Object.defineProperty(textarea, "clientHeight", {
+      configurable: true,
+      get: () => 44,
+    });
+    rerender(
+      <ChatComposer value={"a\nb\nc\nd"} onChange={vi.fn()} onSend={vi.fn()} />,
+    );
+    expect(textarea.style.height).toBe("98px");
+  });
+
+  /** Scenario: The message box grows with multi-line text */
   it("measures the message box again when the window is resized", () => {
     render(<ChatComposer value="abc" onChange={vi.fn()} onSend={vi.fn()} />);
     const textarea = screen.getByRole("textbox");

@@ -15,12 +15,19 @@ import {
 } from "@/lib/sse-event-data";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
-import { classifyChatError, type ChatFailure } from "../chat-errors";
-import { mergeMessages, optimisticAtTurnStart } from "./merge-messages";
-import { useRefreshHistory, useStopStreaming } from "./use-stop-streaming";
-import { useAwaitingReply } from "./use-awaiting-reply";
 import {
-  CHAT_ERROR_KIND,
+  classifyChatError,
+  classifyStreamErrorEvent,
+  type ChatFailure,
+} from "../chat-errors";
+import { mergeMessages, optimisticAtTurnStart } from "./merge-messages";
+import {
+  useRefreshHistory,
+  useStartNewChat,
+  useStopControl,
+} from "./use-stop-streaming";
+import { useReplyPending } from "./use-awaiting-reply";
+import {
   CHAT_FAILURE_STAGE,
   CHAT_SEND_RESULT,
   type ChatFailureStage,
@@ -31,6 +38,7 @@ import type {
   ChatTurnCallbacks,
   ConversationTarget,
   SendChatDeps,
+  StopControl,
   StreamTurnRequest,
   TurnCallbackDeps,
   TurnOutcome,
@@ -148,8 +156,8 @@ function chatTurnHandlers(
         withAssistantSources(prev, streamedSources(data)),
       ),
     [SSE_EVENT_TYPE.COMPLETE]: () => turn.finalizeStream(convId),
-    [SSE_EVENT_TYPE.ERROR]: () =>
-      turn.fail({ kind: CHAT_ERROR_KIND.GENERIC, retryable: false }),
+    [SSE_EVENT_TYPE.ERROR]: (data) =>
+      turn.fail(classifyStreamErrorEvent(data.code)),
   };
 }
 
@@ -163,7 +171,10 @@ async function resolveConversationId(
 
 /** The callbacks of one turn; ``fail`` records the failure on ``outcome``. */
 function turnCallbacks(
-  deps: TurnCallbackDeps,
+  deps: Pick<
+    TurnCallbackDeps,
+    "stream" | "setError" | "finalizeStream" | "markOpen"
+  >,
   outcome: TurnOutcome,
 ): ChatTurnCallbacks {
   const { stream, setError, finalizeStream } = deps;
@@ -177,6 +188,7 @@ function turnCallbacks(
       stream.setIsStreaming(false);
       stream.resetStreamingRefs();
     },
+    opened: deps.markOpen,
   };
 }
 
@@ -203,6 +215,7 @@ async function streamTurn({
     signal,
     onOpen: () => {
       stage = CHAT_FAILURE_STAGE.STREAMING;
+      turn.opened();
     },
     onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
     onError: (err) => turn.fail(classifyChatError(err, stage)),
@@ -215,26 +228,19 @@ function useRunChatTurn(
   deps: TurnCallbackDeps,
 ): (run: TurnRun) => Promise<ChatSendResult> {
   const { stream, setError, finalizedRef, turnRef, finalizeStream } = deps;
-  const { loadHistory } = deps;
+  const { loadHistory, markOpen, beginTurn } = deps;
   const { startUserTurn, setOptimisticMessages } = stream;
   return useCallback(
     async ({ content, target }: TurnRun) => {
       const outcome: TurnOutcome = { failed: false };
       const turn = turnCallbacks(
-        {
-          stream,
-          setError,
-          finalizedRef,
-          turnRef,
-          finalizeStream,
-          loadHistory,
-        },
+        { stream, setError, finalizeStream, markOpen },
         outcome,
       );
       turnRef.current += 1;
       finalizedRef.current = false;
       setError(null);
-      setOptimisticMessages(optimisticAtTurnStart(loadHistory));
+      setOptimisticMessages(optimisticAtTurnStart(loadHistory, beginTurn()));
       const signal = startUserTurn(content);
       let convId: string;
       try {
@@ -257,6 +263,8 @@ function useRunChatTurn(
       setOptimisticMessages,
       finalizeStream,
       loadHistory,
+      markOpen,
+      beginTurn,
     ],
   );
 }
@@ -295,29 +303,39 @@ function useSendChatMessage(
   return { sendMessage, isBusy };
 }
 
-/** Abort the turn in flight and clear the chat (stale refetches see a new turn). */
-function useStartNewChat(
-  stream: ChatStreamState,
-  turnRef: RefObject<number>,
-  setError: SendChatDeps["setError"],
-): () => void {
-  const { abortRef, setOptimisticMessages, setIsStreaming } = stream;
-  const { resetStreamingRefs } = stream;
-  return useCallback(() => {
-    turnRef.current += 1;
-    abortRef.current?.abort();
-    setOptimisticMessages([]);
-    setIsStreaming(false);
-    setError(null);
-    resetStreamingRefs();
-  }, [
+/**
+ * Send, New chat and Stop for one chat, sharing the stop state: Stop is
+ * offered once the answer stream has opened, and a stopped turn (history on)
+ * still counts as being answered until its saved reply arrives.
+ */
+function useTurnControls(
+  deps: Omit<SendChatDeps, "markOpen" | "beginTurn">,
+): Pick<
+  UseSseChatReturn,
+  "sendMessage" | "isBusy" | "startNewChat" | "stopStreaming" | "canStop"
+> & { stoppedWithHistory: boolean } {
+  const { stream, turnRef, setError, loadHistory } = deps;
+  const stop: StopControl = useStopControl(stream, loadHistory);
+  const { markOpen, beginTurn } = stop;
+  const startNewChat = useStartNewChat({
+    stream,
     turnRef,
-    abortRef,
-    setOptimisticMessages,
-    setIsStreaming,
     setError,
-    resetStreamingRefs,
-  ]);
+    beginTurn,
+  });
+  const { sendMessage, isBusy } = useSendChatMessage({
+    ...deps,
+    markOpen,
+    beginTurn,
+  });
+  return {
+    sendMessage,
+    isBusy,
+    startNewChat,
+    stopStreaming: stop.stopStreaming,
+    canStop: stream.isStreaming && stop.streamOpen,
+    stoppedWithHistory: loadHistory && stop.stopped,
+  };
 }
 
 export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
@@ -334,13 +352,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     loadHistory,
   );
   const historyMessages = useHistory(loadHistory, conversationId, isStreaming);
-  const awaitingReply = useAwaitingReply(
-    historyMessages,
-    !isStreaming && optimisticMessages.length === 0,
-  );
-  const startNewChat = useStartNewChat(stream, turnRef, setError);
-  const stopStreaming = useStopStreaming(stream, loadHistory);
-  const { sendMessage, isBusy } = useSendChatMessage({
+  const controls = useTurnControls({
     stream,
     conversationId,
     setError,
@@ -349,6 +361,11 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     finalizeStream,
     loadHistory,
   });
+  const awaitingReply = useReplyPending(
+    historyMessages,
+    stream,
+    controls.stoppedWithHistory,
+  );
   const messages = useMemo(
     () => mergeMessages(historyMessages, optimisticMessages, !isStreaming),
     [historyMessages, optimisticMessages, isStreaming],
@@ -360,9 +377,10 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     error: failure?.kind ?? null,
     canRetry: failure?.retryable ?? false,
     awaitingReply,
-    sendMessage,
-    isBusy,
-    startNewChat,
-    stopStreaming,
+    sendMessage: controls.sendMessage,
+    isBusy: controls.isBusy,
+    startNewChat: controls.startNewChat,
+    stopStreaming: controls.stopStreaming,
+    canStop: controls.canStop,
   };
 }

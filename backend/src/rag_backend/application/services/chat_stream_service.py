@@ -26,6 +26,7 @@ from rag_backend.application.services.conversation_service import ConversationSe
 from rag_backend.domain.constants.chat_stream import (
     CHAT_FAILED_REPLY,
     CHAT_TURN_IN_FLIGHT,
+    CHAT_TURN_IN_FLIGHT_CODE,
     ERR_EMPTY_MESSAGE,
     SSE_EVENT_COMPLETE,
     SSE_EVENT_ERROR,
@@ -116,9 +117,13 @@ async def _keep_alive_task(
 async def _yield_error(  # noqa: RUF029 — async generator needed for async for callers
     event_id: int,
     message: str,
+    code: str | None = None,
 ) -> AsyncIterator[str]:
-    """Yield a single SSE error event."""
-    yield _format_sse_event(event_id, {"type": SSE_EVENT_ERROR, "content": message})
+    """Yield a single SSE error event (with a machine-readable ``code`` if given)."""
+    event: dict[str, object] = {"type": SSE_EVENT_ERROR, "content": message}
+    if code is not None:
+        event["code"] = code
+    yield _format_sse_event(event_id, event)
 
 
 class _StreamState:
@@ -334,7 +339,8 @@ async def stream_chat_response(
     """
     refusal = _refusal(config)
     if refusal is not None:
-        async for event in _yield_error(0, refusal):
+        code = CHAT_TURN_IN_FLIGHT_CODE if refusal == CHAT_TURN_IN_FLIGHT else None
+        async for event in _yield_error(0, refusal, code):
             yield event
         return
     BUSY_CONVERSATIONS.add(config.conversation_id)

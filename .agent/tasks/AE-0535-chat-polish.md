@@ -4,7 +4,7 @@ Status: Review
 Tier: T1
 Priority: Low
 Type: Improvement
-Area: Frontend
+Area: Full-stack
 Owner: Claude — /chat QA (AE-0486 follow-up), CHAT-21, CHAT-22
 Branch: fix/ae-0535-chat-polish
 Created: 2026-10-22
@@ -55,7 +55,7 @@ streaming reply can be stopped.
 
 ## Affected Areas
 
-- [ ] Backend
+- [x] Backend
 - [x] Frontend
 - [x] Tests
 
@@ -123,12 +123,26 @@ hidden or bound to its older answer; anchoring on the question's time (not a his
 conversation switch and a send made before the history loaded (`merge-messages.ts`, tests); the dashboard test
 now also checks Stop is not offered while a reply is only awaited. Before/after screenshots re-taken on this build: `docs/pr-assets/ae-0535/`.
 
+### 2026-10-23 21:00
+
+PR review round (Pedro wants it merged):
+1. After a Stop (history on) the turn still counts as being answered (typing shown, Send off) until the reply the
+   server saves for that question is in the history; without history, the next send keeps the stopped turn on
+   screen. A 409, or the server's in-flight error event (now carrying `code: "turn_in_flight"`), shows
+   "Still finishing the previous reply" (en/pt) with Try again.
+2. Stop is offered only once the answer stream has opened, so a stop can no longer lose a message that is still
+   being sent (or leave an empty conversation behind).
+3. The auto-growing composer adds the border (offsetHeight - clientHeight) to the measured height.
+Also: the announcer drops bare and autolinked web addresses and reads titled links by their text.
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-empty-state.tsx (new), chat-composer-actions.tsx (new), chat-composer.tsx,
   chat-message-list.tsx, use-chat-send.ts, types.ts, dashboard-chat-view.tsx, chat-polish.test.tsx (new),
   chat-shell.test.tsx, chat-a11y.test.tsx; app/(public)/chat/public-chat-view.tsx
 - docs/pr-assets/ae-0535/ (before/after screenshots)
+- frontend: hooks/use-sse-chat-stop.test.ts (new), chat-errors.ts + test, constants.ts, en/pt chat.errors.busy
+- backend: chat_stream_service.py (error-event code), domain/constants/chat_stream.py, test_chat_stream_disconnect.py
 - frontend/src/modules/conversation/hooks/use-sse-chat.ts, merge-messages.ts (new) + test, use-stop-streaming.ts (new), types.ts,
   use-sse-chat-turns.test.ts; queries.ts; app/dashboard/chat/use-chat-send-suggestion.test.ts (new),
   chat-pt-locale.test.tsx; app/(public)/chat/public-chat-view.test.tsx

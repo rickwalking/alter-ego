@@ -32,6 +32,7 @@ export function PublicChatView(): React.ReactElement {
     isBusy,
     startNewChat,
     stopStreaming,
+    canStop,
   } = useSseChat({
     conversationId: activeConv,
     enableHistory: false,
@@ -100,7 +101,7 @@ export function PublicChatView(): React.ReactElement {
           onChange={setInput}
           onSend={() => void handleSend()}
           busy={isStreaming}
-          onStop={stopStreaming}
+          onStop={canStop ? stopStreaming : undefined}
         />
       </main>
     </div>

@@ -84,6 +84,15 @@ describe("chat accessibility", () => {
   });
 
   /** Scenario: A long reply is announced as plain text, cut short */
+  it("never reads web addresses: bare, autolinked or in a titled link", () => {
+    expect(
+      announcedReply(
+        'See https://evil.test/x, <https://a.test/y> and [docs](https://b.test "Docs")',
+      ),
+    ).toBe("Alter-Ego replied: See and docs");
+  });
+
+  /** Scenario: A long reply is announced as plain text, cut short */
   it("reads a reply of exactly 280 characters in full", () => {
     expect(announcedReply("a".repeat(280))).toBe(
       `Alter-Ego replied: ${"a".repeat(280)}`,
