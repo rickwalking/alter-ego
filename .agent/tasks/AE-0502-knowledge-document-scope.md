@@ -8,7 +8,7 @@ Area: Cross-cutting
 Owner: Claude Code (claude-opus-5-5)
 Branch: feat/ae-0502-knowledge-document-scope
 Created: 2026-10-22
-Updated: 2026-10-22
+Updated: 2026-10-23
 
 ## Goal
 
@@ -60,6 +60,17 @@ must not claim that a Pessoal document is hidden from the chat.
       `is_public`, and the card shows the new badge.
 - [x] Given the PATCH, When the scope is not `personal`/`public` Then 400; an unknown document 404; a
       non-owner non-admin 403; anonymous 401; the same scope is a no-op that does not re-index.
+- [x] Given two documents in one namespace, When one is deleted, reprocessed or rescoped, Then the other's
+      vectors stay: the store deletes by the `document_id` metadata filter, never `delete_all` on a shared
+      namespace.
+- [x] Given a scope change, When anything fails after the re-index (the commit included), Then the chunks
+      written to the new namespace are deleted again.
+- [x] Given a scope change or a reprocess, Then the document row is locked (`SELECT ... FOR UPDATE`) for the
+      whole run, so a concurrent request cannot land chunks in the namespace being left.
+- [x] Given a document in a system scope (carousel, internal), Then the PATCH answers 409, and the card shows
+      a "Sistema" badge with no scope switch; such a document is listed only under "Todos".
+- [x] Given two scope changes in flight, Then each card stays busy until its own request settles and a
+      failure marks only its document.
 
 ## Gherkin Scenarios
 
@@ -88,10 +99,23 @@ must not claim that a Pessoal document is hidden from the chat.
 Ticket written from the dashboard triage and Pedro's answer (per-document scope, Pessoal default,
 badge + filter, changeable later). Confirmed in the code that both namespaces feed the visitor chat.
 
+### 2026-10-23
+
+Review of the PR applied. Blocker: `PineconeVectorStore.delete_by_document` cleared the whole namespace
+(`delete_all=True`), so deleting, reprocessing or rescoping one document wiped every other document of the
+same scope; it now deletes by the `document_id` metadata filter, covered by tests over an in-memory index
+that really holds vectors. Also: compensation delete of the new namespace's chunks when a scope change
+fails after the re-index, a row lock for scope change and reprocess, 409 for system-scope documents (badge
+"Sistema", no switch in the UI), per-document in-flight state for the scope switch, and no ticket id in
+test emails or docstrings.
+
 ## Files Touched
 
 - backend: `api/routes/document_scope.py` (new), `api/routes/__init__.py`, `bootstrap/app_factory.py`,
-  `api/schemas/documents.py`, `application/services/document_pipeline.py`, `modules/knowledge/*`
+  `api/schemas/documents.py`, `application/services/document_pipeline.py`,
+  `infrastructure/external/pinecone_store.py` (delete by document filter),
+  `infrastructure/database/document_repository.py` + `domain/protocols/repositories.py` (row lock),
+  `tests/pinecone_index_fakes.py` (new), `modules/knowledge/*`
   (command, facade, exports), tests (`test_knowledge_document_scope_ae0502.py`,
   `test_change_document_scope_ae0502.py`, `test_knowledge_safety_net.py` container accessor), feature,
   route snapshot, `docs/architecture/openapi.json`.
