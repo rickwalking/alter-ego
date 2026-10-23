@@ -227,6 +227,30 @@
       "makePersonal": "Make personal",
       "changing": "Changing…",
       "changeFailed": "Could not change the scope. Try again."
+    },
+    "tabs": {
+      "documents": "Documents",
+      "carouselSources": "Carousel sources"
+    },
+    "carouselSources": {
+      "list": "Carousel sources",
+      "filter": "Carousel",
+      "allCarousels": "All carousels",
+      "empty": "No carousel sources yet.",
+      "emptyHint": "Sources you add to a carousel show up here.",
+      "error": "Could not load the carousel sources.",
+      "loading": "Loading sources…",
+      "openCarousel": "Open carousel: {title}",
+      "range": "{from}–{to} of {total}",
+      "previous": "Previous",
+      "next": "Next",
+      "types": {
+        "url": "Link",
+        "document": "Document",
+        "note": "Note",
+        "interview": "Interview",
+        "data": "Data"
+      }
     }
   },
   "blog": {

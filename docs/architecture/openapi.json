@@ -3070,6 +3070,124 @@
         "title": "CarouselSlideResponse",
         "type": "object"
       },
+      "CarouselSourceFacet": {
+        "description": "A carousel that has sources, for the carousel filter.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "title",
+          "count"
+        ],
+        "title": "CarouselSourceFacet",
+        "type": "object"
+      },
+      "CarouselSourceItem": {
+        "description": "One content source of a carousel, without its body.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "project_title": {
+            "title": "Project Title",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source_type",
+          "project_id",
+          "project_title",
+          "created_at"
+        ],
+        "title": "CarouselSourceItem",
+        "type": "object"
+      },
+      "CarouselSourceListResponse": {
+        "description": "A page of carousel sources, its total and the carousels behind them.",
+        "properties": {
+          "carousels": {
+            "items": {
+              "$ref": "#/components/schemas/CarouselSourceFacet"
+            },
+            "title": "Carousels",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CarouselSourceItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "carousels"
+        ],
+        "title": "CarouselSourceListResponse",
+        "type": "object"
+      },
       "CarouselStatus": {
         "description": "Status values for carousel workflow lifecycle.",
         "enum": [
@@ -16385,6 +16503,85 @@
         "summary": "Get Instagram Insights",
         "tags": [
           "instagram"
+        ]
+      }
+    },
+    "/api/knowledge/carousel-sources": {
+      "get": {
+        "description": "A page of content sources across the caller's carousels, newest first.\n\nAn admin sees every owner's carousels; ``project_id`` narrows the page to\none carousel, and ``carousels`` lists each carousel with sources for the\nfilter.",
+        "operationId": "list_carousel_sources_api_knowledge_carousel_sources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselSourceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the content sources of the caller's carousels",
+        "tags": [
+          "content_sources"
         ]
       }
     },

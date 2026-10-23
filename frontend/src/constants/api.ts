@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   DOCUMENT_REPROCESS: (id: string) => `/api/documents/${id}/reprocess`,
   DOCUMENT_SCOPE: (id: string) => `/api/documents/${id}/scope`,
   DOCUMENT_UPLOAD: "/api/documents/upload",
+  KNOWLEDGE_CAROUSEL_SOURCES: "/api/knowledge/carousel-sources",
   CONVERSATIONS: "/api/conversations/",
   CONVERSATIONS_ALTER_EGO: "/api/conversations/?origin=alter_ego",
   CONVERSATION_BY_ID: (id: string) => `/api/conversations/${id}`,

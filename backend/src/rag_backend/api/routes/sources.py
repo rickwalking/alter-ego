@@ -1,17 +1,20 @@
 """API routes for content source management."""
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
 from rag_backend.api.dependencies.carousel_access import (
+    CarouselSourceQuery,
     ProjectSourceLookup,
     get_carousel_project_for_user,
     get_project_source_for_user,
+    list_carousel_sources_for_user,
 )
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
@@ -20,6 +23,11 @@ from rag_backend.api.schemas.blog_post import (
     ContentSourceCreate,
     ContentSourceListResponse,
     ContentSourceResponse,
+)
+from rag_backend.api.schemas.knowledge_sources import (
+    CAROUSEL_SOURCES_DEFAULT_LIMIT,
+    CAROUSEL_SOURCES_MAX_LIMIT,
+    CarouselSourceListResponse,
 )
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
@@ -47,6 +55,53 @@ async def list_sources_for_project(
     result = await db.execute(query)
     sources = result.scalars().all()
     return ContentSourceListResponse(items=list(sources), total=len(sources))
+
+
+@dataclass(frozen=True)
+class CarouselSourcePage:
+    """The paging and carousel filter of the carousel-sources listing."""
+
+    limit: int
+    offset: int
+    project_id: UUID | None
+
+
+def get_carousel_source_page(
+    limit: Annotated[
+        int, Query(ge=1, le=CAROUSEL_SOURCES_MAX_LIMIT)
+    ] = CAROUSEL_SOURCES_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    project_id: Annotated[UUID | None, Query()] = None,
+) -> CarouselSourcePage:
+    """Parse the listing's query parameters."""
+    return CarouselSourcePage(limit=limit, offset=offset, project_id=project_id)
+
+
+@router.get(
+    "/knowledge/carousel-sources",
+    response_model=CarouselSourceListResponse,
+    summary="List the content sources of the caller's carousels",
+)
+async def list_carousel_sources(
+    page: Annotated[CarouselSourcePage, Depends(get_carousel_source_page)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: EditorUser,
+) -> CarouselSourceListResponse:
+    """A page of content sources across the caller's carousels, newest first.
+
+    An admin sees every owner's carousels; ``project_id`` narrows the page to
+    one carousel, and ``carousels`` lists each carousel with sources for the
+    filter.
+    """
+    return await list_carousel_sources_for_user(
+        db,
+        CarouselSourceQuery(
+            user=current_user,
+            limit=page.limit,
+            offset=page.offset,
+            project_id=page.project_id,
+        ),
+    )
 
 
 @router.post(

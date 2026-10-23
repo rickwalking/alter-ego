@@ -227,6 +227,30 @@
       "makePersonal": "Tornar pessoal",
       "changing": "Alterando…",
       "changeFailed": "Não foi possível alterar o escopo. Tente outra vez."
+    },
+    "tabs": {
+      "documents": "Documentos",
+      "carouselSources": "Fontes dos carrosséis"
+    },
+    "carouselSources": {
+      "list": "Fontes dos carrosséis",
+      "filter": "Carrossel",
+      "allCarousels": "Todos os carrosséis",
+      "empty": "Nenhuma fonte de carrossel ainda.",
+      "emptyHint": "As fontes que você adiciona a um carrossel aparecem aqui.",
+      "error": "Não foi possível carregar as fontes dos carrosséis.",
+      "loading": "Carregando fontes…",
+      "openCarousel": "Abrir carrossel: {title}",
+      "range": "{from}–{to} de {total}",
+      "previous": "Anterior",
+      "next": "Próxima",
+      "types": {
+        "url": "Link",
+        "document": "Documento",
+        "note": "Nota",
+        "interview": "Entrevista",
+        "data": "Dados"
+      }
     }
   },
   "blog": {

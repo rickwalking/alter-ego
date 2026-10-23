@@ -21,6 +21,14 @@ import { DocumentList } from "./document-list";
 import { DocumentListSkeleton } from "./document-list-skeleton";
 import { DocumentForm } from "./document-form";
 import { FileUpload } from "./file-upload";
+import { CarouselSourcesPanel } from "./carousel-sources-panel";
+import {
+  NeonTabList,
+  NeonTabPanel,
+  NeonTabTrigger,
+  NeonTabs,
+} from "@/components/molecules/neon-tab";
+import { KNOWLEDGE_TABS } from "@/constants/knowledge-sources";
 import { type Document, type CreateDocumentRequest } from "@/schemas/knowledge";
 import { type DocumentListSectionProps } from "./types";
 
@@ -129,19 +137,34 @@ export function KnowledgeBaseInterface() {
     }
     if (viewMode === "list") {
       return (
-        <Suspense fallback={<DocumentListSkeleton />}>
-          <DocumentListSection
-            onCreateNew={handleCreateNew}
-            onUploadNew={handleUploadNew}
-            onDeleteDocument={handleDelete}
-            onRetryDocument={retry}
-            retryingIds={retryingIds}
-            retryFailedIds={retryFailedIds}
-            onChangeScope={changeScope}
-            changingScopeIds={changingScopeIds}
-            scopeChangeFailedIds={scopeChangeFailedIds}
-          />
-        </Suspense>
+        <NeonTabs defaultValue={KNOWLEDGE_TABS.DOCUMENTS}>
+          <NeonTabList>
+            <NeonTabTrigger value={KNOWLEDGE_TABS.DOCUMENTS}>
+              {t("tabs.documents")}
+            </NeonTabTrigger>
+            <NeonTabTrigger value={KNOWLEDGE_TABS.CAROUSEL_SOURCES}>
+              {t("tabs.carouselSources")}
+            </NeonTabTrigger>
+          </NeonTabList>
+          <NeonTabPanel value={KNOWLEDGE_TABS.DOCUMENTS}>
+            <Suspense fallback={<DocumentListSkeleton />}>
+              <DocumentListSection
+                onCreateNew={handleCreateNew}
+                onUploadNew={handleUploadNew}
+                onDeleteDocument={handleDelete}
+                onRetryDocument={retry}
+                retryingIds={retryingIds}
+                retryFailedIds={retryFailedIds}
+                onChangeScope={changeScope}
+                changingScopeIds={changingScopeIds}
+                scopeChangeFailedIds={scopeChangeFailedIds}
+              />
+            </Suspense>
+          </NeonTabPanel>
+          <NeonTabPanel value={KNOWLEDGE_TABS.CAROUSEL_SOURCES}>
+            <CarouselSourcesPanel />
+          </NeonTabPanel>
+        </NeonTabs>
       );
     }
     if (viewMode === "create") {

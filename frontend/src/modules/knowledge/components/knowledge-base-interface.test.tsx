@@ -115,6 +115,10 @@ vi.mock("./document-list", () => ({
   ),
 }));
 
+vi.mock("./carousel-sources-panel", () => ({
+  CarouselSourcesPanel: () => <div data-testid="carousel-sources-panel" />,
+}));
+
 vi.mock("./document-form", () => ({
   DocumentForm: ({
     document,
@@ -368,5 +372,26 @@ describe("KnowledgeBaseInterface Component", () => {
       id: "doc-1",
       scope: "public",
     });
+  });
+
+  /** Scenario: The Documents tab is the default and is unchanged */
+  it("opens on the Documents tab", () => {
+    render(<KnowledgeBaseInterface />);
+    expect(
+      screen.getByRole("tab", { name: "Documents", selected: true }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("document-list")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("carousel-sources-panel"),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Scenario: The carousel sources tab lists each source with its carousel */
+  it("switches to the carousel sources tab", async () => {
+    const user = userEvent.setup();
+    render(<KnowledgeBaseInterface />);
+    await user.click(screen.getByRole("tab", { name: "Carousel sources" }));
+    expect(screen.getByTestId("carousel-sources-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("document-list")).not.toBeInTheDocument();
   });
 });
