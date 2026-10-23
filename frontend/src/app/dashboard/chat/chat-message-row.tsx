@@ -10,6 +10,7 @@ import {
   DASHBOARD_CHAT_TEXT_DIM,
   DASHBOARD_CHAT_TEXT_MUTED,
 } from "@/modules/editorial-operations";
+import { ChatMarkdown } from "./chat-markdown";
 import type { DashboardChatMessage } from "@/modules/editorial-operations";
 
 const AVATAR_BASE_STYLE: React.CSSProperties = {
@@ -69,20 +70,21 @@ export function ChatMessageRow({
       style={{
         display: "flex",
         gap: "10px",
-        maxWidth: "720px",
+        maxWidth: "min(720px, 100%)",
         flexDirection: user ? "row-reverse" : "row",
         alignSelf: user ? "flex-end" : "flex-start",
       }}
     >
       <ChatAvatar assistant={assistant} />
-      <div>
+      <div style={{ minWidth: 0 }}>
         <div
           style={{
             padding: "10px 16px",
             borderRadius: "10px",
             fontSize: "13px",
             lineHeight: 1.65,
-            whiteSpace: "pre-wrap",
+            whiteSpace: assistant ? "normal" : "pre-wrap",
+            overflowWrap: "anywhere",
             background: assistant
               ? DASHBOARD_CHAT_BG_CARD
               : DASHBOARD_CHAT_CYAN_DIM,
@@ -92,7 +94,7 @@ export function ChatMessageRow({
             color: assistant ? DASHBOARD_CHAT_TEXT_MUTED : DASHBOARD_CHAT_TEXT,
           }}
         >
-          {msg.text}
+          {assistant ? <ChatMarkdown text={msg.text} /> : msg.text}
         </div>
         <div
           style={{
