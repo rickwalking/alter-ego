@@ -136,6 +136,9 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
     needs_republish_since: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     creator_name = Column(String(100), nullable=True)
     creator_handle = Column(String(100), nullable=True)
@@ -175,6 +178,7 @@ class CarouselProjectModel(CarouselContentModeColumns, Base):
             "phase_status",
             "current_phase",
         ),
+        Index("idx_carousel_projects_archived_at", "archived_at"),
     )
 
     def to_entity(self) -> CarouselProjectEntity:

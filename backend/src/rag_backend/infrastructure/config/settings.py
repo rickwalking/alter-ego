@@ -16,6 +16,9 @@ from rag_backend.domain.constants.blog_generation import (
     DEFAULT_BLOG_IMAGE_CONCURRENCY,
     DEFAULT_BLOG_IMAGE_WAVE_TIMEOUT_SECONDS,
 )
+from rag_backend.domain.constants.carousel_archive import (
+    CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS,
+)
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.infrastructure.config.autopilot_autofix_settings import (
     AutopilotAutofixSettings,
@@ -111,6 +114,8 @@ class Settings(AutopilotAutofixSettings):
     - ``redis_password`` is required (fail-closed) in production-like environments;
       see ``redis_clients.factory``.
     - ``workflow_stuck_timeout_hours`` drives the auto-reject of stuck workflows.
+    - ``carousel_auto_archive_days``: a carousel idle for more than this many days
+      is archived by the workflow worker (``0`` turns auto-archive off).
     - Run heartbeat + stale-run reaper: the resume task heartbeats every
       ``heartbeat_seconds``; a heartbeat older than ``heartbeat_stale_seconds`` is
       one stale observation; the reaper flips a run only after
@@ -304,6 +309,9 @@ class Settings(AutopilotAutofixSettings):
     workflow_worker_interval_seconds: int = 60
     workflow_auto_reject_enabled: bool = True
     workflow_stuck_timeout_hours: int = 72
+    carousel_auto_archive_days: int = Field(
+        default=CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS, ge=0
+    )
     workflow_run_heartbeat_seconds: int = 60
     workflow_run_heartbeat_stale_seconds: int = 180
     workflow_run_reap_observations: int = 3

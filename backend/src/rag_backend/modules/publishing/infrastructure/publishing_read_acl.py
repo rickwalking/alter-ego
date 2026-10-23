@@ -210,7 +210,7 @@ class PublishingReadAcl:
 
         A rejected project sits in the Rejected column.
         """
-        projects = await self._board_projects(query.author_id)
+        projects = await self._board_projects(query)
         cards_by_column: dict[str, list[BoardCard]] = {
             column: [] for column in BOARD_COLUMNS
         }
@@ -304,19 +304,18 @@ class PublishingReadAcl:
         subtitle = translated_subtitle or project.subtitle
         return title, subtitle
 
-    async def _board_projects(
-        self,
-        author_id: str | None,
-    ) -> list[CarouselProjectModel]:
-        """Load the board's carousel rows (legacy admin/owner-or-reviewer scope)."""
+    async def _board_projects(self, board: BoardQuery) -> list[CarouselProjectModel]:
+        """The board's rows (owner-or-reviewer scope), active or archived only."""
+        archived = CarouselProjectModel.archived_at
         query = select(CarouselProjectModel).where(
             CarouselProjectModel.phase_status != PHASE_STATUS_PENDING,
+            archived.is_not(None) if board.archived else archived.is_(None),
         )
-        if author_id is not None:
+        if board.author_id is not None:
             query = query.where(
                 or_(
-                    CarouselProjectModel.owner_id == author_id,
-                    CarouselProjectModel.assigned_reviewer_id == author_id,
+                    CarouselProjectModel.owner_id == board.author_id,
+                    CarouselProjectModel.assigned_reviewer_id == board.author_id,
                 )
             )
         result = await self._session.execute(query)

@@ -45,10 +45,12 @@ class BoardQuery:
 
     ``author_id`` is ``None`` for an admin caller (all projects) and the caller's
     id otherwise; the board scopes a non-admin to projects they own OR review —
-    exactly the legacy route filter.
+    exactly the legacy route filter. ``archived`` picks the archived carousels
+    (the "Arquivados" view) instead of the active ones.
     """
 
     author_id: str | None = None
+    archived: bool = False
 
 
 @dataclass(frozen=True)
