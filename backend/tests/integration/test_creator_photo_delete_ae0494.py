@@ -5,6 +5,7 @@ Gherkin: tests/features/creator_photo_delete_ae0494.feature
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,16 @@ from tests.integration.hook_photo_support import png, upload_photo
 
 _LIBRARY = "/api/carousels/creator-assets"
 _UNKNOWN = "00000000-0000-4000-8000-000000000009"
+
+
+@pytest.fixture(autouse=True)
+def _fresh_limiter() -> Iterator[None]:
+    """The in-memory limiter is process-wide; these tests upload a lot."""
+    from rag_backend.api.middleware.rate_limiting import limiter
+
+    limiter.reset()
+    yield
+    limiter.reset()
 
 
 def _pov(photo_id: object) -> dict[str, object]:
