@@ -18,6 +18,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
     get_initial_carousel_state,
 )
+from rag_backend.domain.carousel_checkpoint_thread import checkpoint_thread_id
 from rag_backend.domain.constants.carousel_workflow import (
     CAROUSEL_GRAPH_RECURSION_LIMIT,
     ERR_NOTHING_TO_REDRIVE,
@@ -72,7 +73,9 @@ class CarouselWorkflowEngine:
 
         The recursion limit bounds any self-routing loop to seconds.
         """
-        configurable: dict[str, object] = {"thread_id": project_id}
+        configurable: dict[str, object] = {
+            "thread_id": checkpoint_thread_id(project_id)
+        }
         if self._artifact_runner is not None:
             configurable[_CONFIG_ARTIFACT_RUNNER] = self._artifact_runner
         return {

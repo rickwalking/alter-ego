@@ -1,16 +1,16 @@
 # AE-0525 — P3b — safe LangGraph checkpoint pruning (AE-0342 fix)
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Bug
 Area: Backend
 Owner: Claude Code (claude-opus-5-5)
 Agent Lane: developer → qa → release
-Branch: TBD
+Branch: fix/ae-0525-checkpoint-pruning
 Kanban Card: TBD
 Created: 2026-10-22
-Updated: 2026-10-22
+Updated: 2026-10-23
 
 ## Goal
 
@@ -25,17 +25,42 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 
 ## Scope
 
-- Root-cause the never-matching prefix (AE-0342); dry-run count of matched threads; Pedro signs off on the matched set; backup the checkpoint tables; then delete; never touch projects that may need republish/rework.
+- Root cause (AE-0342): `backend/scripts/cleanup_carousel_checkpoints.py` targets `carousel-{id}` thread ids while the
+  workflow keys checkpoints by the bare project id, so it never matched a row; it was also never scheduled. Replace it
+  with one shared `checkpoint_thread_id()` used by the workflow engine and the prune.
+- New guarded CLI `python -m rag_backend.scripts.checkpoint_prune`: dry run by default; `--apply` needs Pedro's
+  signed-off thread list and a backup file, re-checks eligibility under a row lock, and deletes in one transaction.
+- Keep-latest pruning: each thread keeps its latest checkpoint (per namespace), the writes of that checkpoint and of its
+  parent, and the blobs it references; everything older goes. The workflow state API reads only the latest
+  checkpoint, so a pruned carousel still opens; a full thread delete would 404 its workflow view.
+- Eligible projects: finished (`completed`/`failed`), last updated before the TTL (`carousel_checkpoint_ttl_days`),
+  not running, no pending republish, and rejected or published. Threads without a carousel project are never touched
+  (they may belong to another graph).
 
 ## Non-Goals
 
-- Any change to the queue or the daily scan.
+- Any change to the queue or the daily scan. Scheduling the prune (each run needs Pedro's sign-off). The runaway-thread
+  size alarm of AE-0342.
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given a dry run, Then it lists the matched thread ids and their projects' states and deletes nothing.
-- [ ] AC2 Given Pedro's sign-off and a backup, When the prune runs, Then only the signed-off threads are deleted and the checkpoint table shrinks accordingly.
+- [ ] AC1 Given a dry run, Then it lists the matched thread ids with their projects' states and the rows each table
+  would lose, and deletes nothing.
+- [ ] AC2 Given Pedro's sign-off and a backup, When the prune runs, Then only the signed-off threads are pruned and the
+  checkpoint tables shrink accordingly; the backup holds every deleted row.
+- [ ] AC3 Given a pruned thread, Then its workflow state (values, next node, pending interrupt) is the same as before.
+- [ ] AC4 Given a signed-off thread that is no longer eligible (resumed, republish pending, too recent, not a carousel),
+  Then the prune refuses and deletes nothing.
+- [ ] AC5 Given signed-off threads with removable rows, When nothing is deleted, Then the run exits non-zero (no silent
+  no-op), and the log reports deleted counts per table.
+- [ ] AC6 The workflow engine and the prune build the thread id with the same function.
+
+## Gherkin Scenarios
+
+`backend/tests/features/checkpoint_prune_ae0525.feature`.
 
 ## Decision Log
 
 - 2026-10-22: Created from the AE-0517 plan after three skeptical review rounds (Pedro's cap).
+- 2026-10-23: keep-latest instead of a full thread delete, so the workflow view of a pruned carousel keeps working;
+  orphan threads are excluded; the prune is a manual, signed-off CLI, not a scheduled job.
