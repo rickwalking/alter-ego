@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCarouselProject } from "@/modules/editorial";
 import {
+  COPY_FIELDS,
   mergePublishProjectWithWorkflow,
   useCopyEditor,
   useCopySave,
@@ -56,4 +58,33 @@ export function useFinalReviewCopy(
       void refetchProject();
     },
   };
+}
+
+/** A caption / LinkedIn edit is unsaved, or a save is still running. */
+export function copyBusy(copy: FinalReviewCopy): boolean {
+  const editor = copy.editor;
+  if (!editor) {
+    return false;
+  }
+  return editor.isDirty(COPY_FIELDS) || editor.status.kind === "saving";
+}
+
+/**
+ * Tell the workflow panel whether the review's texts are busy (unsaved or
+ * saving), so approve and send back wait; leaving the step reports idle.
+ */
+export function useReportCopyBusy(
+  copy: FinalReviewCopy,
+  onCopyBusyChange: ((busy: boolean) => void) | undefined,
+): void {
+  const busy = copyBusy(copy);
+  useEffect(() => {
+    onCopyBusyChange?.(busy);
+  }, [busy, onCopyBusyChange]);
+  useEffect(
+    () => () => {
+      onCopyBusyChange?.(false);
+    },
+    [onCopyBusyChange],
+  );
 }

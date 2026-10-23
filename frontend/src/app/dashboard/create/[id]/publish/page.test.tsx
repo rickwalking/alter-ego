@@ -306,7 +306,20 @@ describe("DashboardCreatePublishPage", () => {
     await waitFor(() =>
       expect(screen.getByText(/Not approved yet/)).toBeInTheDocument(),
     );
-    /** Scenario: A failed site publish shows no link */
+  });
+
+  /** Scenario: A failed site publish shows no link */
+  it("shows no published link after a failed site publish", async () => {
+    m.workflowState = approved();
+    m.fetch.mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ detail: "Not approved yet" }),
+    });
+    await renderLoaded();
+    fireEvent.click(screen.getByText("publishToSite"));
+    await waitFor(() =>
+      expect(screen.getByText(/Not approved yet/)).toBeInTheDocument(),
+    );
     expect(screen.queryByText("sitePublishedLink")).not.toBeInTheDocument();
   });
 

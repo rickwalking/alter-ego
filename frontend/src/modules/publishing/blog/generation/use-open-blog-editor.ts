@@ -9,8 +9,8 @@ import type { UseOpenBlogEditorResult } from "./types";
 
 /**
  * Open the carousel's blog post in the blog editor. The carousel's existing
- * post opens directly; a carousel without one gets its draft written first
- * (ADR-0025), then the editor opens on it.
+ * post opens directly; a carousel without one gets its draft written first by
+ * the blog writer (an LLM generation), then the editor opens on it.
  */
 export function useOpenBlogEditor(projectId: string): UseOpenBlogEditorResult {
   const router = useRouter();

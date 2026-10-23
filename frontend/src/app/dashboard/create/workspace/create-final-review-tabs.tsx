@@ -18,6 +18,7 @@ import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-revie
 import { FinalReviewBlogTab } from "./phase-review/final-review-blog-tab";
 import {
   useFinalReviewCopy,
+  useReportCopyBusy,
   type FinalReviewCopy,
 } from "./phase-review/use-final-review-copy";
 import {
@@ -30,6 +31,8 @@ interface FinalReviewTabsProps {
   state: EditorialWorkflowState;
   /** Refetch the workflow state after a caption / LinkedIn save. */
   onCopySaved: () => Promise<unknown>;
+  /** Told whether a caption / LinkedIn edit is unsaved or saving. */
+  onCopyBusyChange?: (busy: boolean) => void;
 }
 
 const MUTED = "text-[var(--color-text-muted)]";
@@ -121,12 +124,14 @@ export function CreateFinalReviewTabs({
   projectId,
   state,
   onCopySaved,
+  onCopyBusyChange,
 }: Readonly<FinalReviewTabsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.review.finalReview");
   const [activeTab, setActiveTab] = useState<FinalReviewTab>(
     FINAL_REVIEW_TABS.CAROUSEL,
   );
   const copy = useFinalReviewCopy(projectId, state, onCopySaved);
+  useReportCopyBusy(copy, onCopyBusyChange);
 
   const tabs: { id: FinalReviewTab; label: string }[] = [
     { id: FINAL_REVIEW_TABS.CAROUSEL, label: t("tabs.carousel") },

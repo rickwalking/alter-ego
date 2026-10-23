@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { useCopySave } from "./use-copy-save";
@@ -143,5 +143,50 @@ describe("useCopySave (AE-0492)", () => {
       { wrapper: wrapper() },
     );
     expect(result.current).toBeUndefined();
+  });
+
+  /** Scenario: A save refreshes the workflow state and the project */
+  it("resolves only once the page refetch is done", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okResponse(4)));
+    let finishRefresh: () => void = () => undefined;
+    const refreshAll = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    const { result } = renderHook(
+      () => useCopySave(PROJECT_ID, 3, refreshAll),
+      { wrapper: wrapper() },
+    );
+    let done = false;
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current!({ caption: "Saved" }).then(() => {
+        done = true;
+      });
+    });
+    await waitFor(() => expect(refreshAll).toHaveBeenCalledTimes(1));
+    expect(done).toBe(false);
+    await act(async () => {
+      finishRefresh();
+      await pending;
+    });
+    expect(done).toBe(true);
+  });
+
+  /** Scenario: A save refreshes the workflow state and the project */
+  it("still counts the save as done when the refetch fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okResponse(4)));
+    const refreshAll = vi.fn().mockRejectedValue(new Error("offline"));
+    const { result } = renderHook(
+      () => useCopySave(PROJECT_ID, 3, refreshAll),
+      { wrapper: wrapper() },
+    );
+    await act(async () => {
+      await expect(
+        result.current!({ caption: "Saved" }),
+      ).resolves.toBeUndefined();
+    });
   });
 });

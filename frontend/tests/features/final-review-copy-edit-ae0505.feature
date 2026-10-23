@@ -30,6 +30,12 @@ Feature: The reviewer edits the caption and the LinkedIn posts in the final revi
   Scenario: A save refreshes the workflow state and the project
     When the reviewer saves the caption
     Then the workflow state and the project are refetched
+    And the save stays "saving" until the refetch is done, so an approve right after it sends the new lock version
+
+  Scenario: Approve and send back wait for unsaved or saving texts
+    Given the reviewer edited the caption without saving, or a save is still running
+    Then "Aprovar" and "Pedir mudanças" are disabled with a hint to save or discard the edit first
+    And once the text is saved they are enabled again
 
   Scenario: A stale save explains itself and refetches
     Given the carousel changed after the review was loaded
@@ -62,7 +68,9 @@ Feature: The reviewer edits the caption and the LinkedIn posts in the final revi
   Scenario: The blog body is edited in the blog editor
     When the reviewer opens "Blog"
     Then the blog preview is shown with "Abrir no editor do blog"
-    And clicking it, when the carousel already has a blog post, opens that post's blog editor
+    And clicking it asks first, saying a draft is generated with AI when the carousel has no post yet
+    And confirming, when the carousel already has a blog post, opens that post's blog editor
+    And cancelling opens nothing
 
   Scenario: The blog editor waits for unsaved caption or LinkedIn edits
     Given the reviewer edited the caption without saving

@@ -722,6 +722,7 @@
         "copyLoading": "Carregando os textos salvos…",
         "copyLoadFailed": "Não foi possível carregar os textos salvos.",
         "copyRetry": "Tentar de novo",
+        "copyBlocked": "Salve ou descarte a edição da legenda ou do LinkedIn antes de aprovar ou pedir mudanças.",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
       },
       "hookPicker": {
@@ -1147,11 +1148,17 @@
       "body": "O PDF, as imagens dos slides e as ações de publicação aparecem quando o carrossel chega à revisão final. Continue a revisão na área de trabalho."
     },
     "blogEditorLink": {
-      "body": "O corpo do blog é editado no editor do blog. Abre o post deste carrossel (o rascunho é criado se ainda não existir).",
+      "body": "O corpo do blog é editado no editor do blog.",
       "open": "Abrir no editor do blog",
       "opening": "Abrindo…",
       "failed": "Não foi possível abrir o editor do blog. Tente de novo.",
-      "blocked": "Salve ou descarte a edição da legenda ou do LinkedIn antes de abrir o editor do blog."
+      "blocked": "Salve ou descarte a edição da legenda ou do LinkedIn antes de abrir o editor do blog.",
+      "confirm": {
+        "title": "Abrir o post do blog?",
+        "body": "Se este carrossel já tem um post, ele abre no editor do blog. Se ainda não tem, um rascunho é gerado com IA a partir do carrossel (leva alguns minutos) e abre no editor.",
+        "confirm": "Abrir ou gerar o post",
+        "cancel": "Cancelar"
+      }
     },
     "blogFromCarousel": {
       "title": "Post do blog",

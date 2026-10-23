@@ -73,8 +73,12 @@ function savedProject(
   };
 }
 
-function renderTabs(onCopySaved = vi.fn(() => Promise.resolve())): {
+function renderTabs(
+  onCopySaved = vi.fn(() => Promise.resolve()),
+  onCopyBusyChange = vi.fn(),
+): {
   onCopySaved: typeof onCopySaved;
+  onCopyBusyChange: typeof onCopyBusyChange;
 } {
   const client = new QueryClient();
   const ui: ReactElement = (
@@ -83,11 +87,12 @@ function renderTabs(onCopySaved = vi.fn(() => Promise.resolve())): {
         projectId={PROJECT_ID}
         state={workflowState()}
         onCopySaved={onCopySaved}
+        onCopyBusyChange={onCopyBusyChange}
       />
     </QueryClientProvider>
   );
   render(ui);
-  return { onCopySaved };
+  return { onCopySaved, onCopyBusyChange };
 }
 
 async function openTab(name: string): Promise<void> {
@@ -234,6 +239,9 @@ describe("CreateFinalReviewTabs copy editing (AE-0505)", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Open in the blog editor" }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Open or generate the post" }));
     await waitFor(() =>
       expect(m.push).toHaveBeenCalledWith("/dashboard/blog-posts/post-9/edit"),
     );
@@ -311,5 +319,30 @@ describe("CreateFinalReviewTabs copy editing (AE-0505)", () => {
     await userEvent.setup().click(link);
     expect(screen.getByText("Leave without saving?")).toBeInTheDocument();
     link.remove();
+  });
+
+  /** Scenario: Approve and send back wait for unsaved or saving texts */
+  it("reports the texts busy while unsaved or saving, idle once saved", async () => {
+    let finishRefresh: () => void = () => undefined;
+    const onCopySaved = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    const { onCopyBusyChange } = renderTabs(onCopySaved);
+    expect(onCopyBusyChange).toHaveBeenLastCalledWith(false);
+    await openTab("Caption");
+    await replaceText(CAPTION_LABEL, "Nova");
+    expect(onCopyBusyChange).toHaveBeenLastCalledWith(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onCopySaved).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(onCopyBusyChange).toHaveBeenLastCalledWith(true);
+    finishRefresh();
+    await waitFor(() =>
+      expect(onCopyBusyChange).toHaveBeenLastCalledWith(false),
+    );
+    expect(screen.getByText("Saved.")).toBeInTheDocument();
   });
 });

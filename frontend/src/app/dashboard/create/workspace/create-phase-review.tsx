@@ -33,6 +33,8 @@ interface EditorialPhaseReviewProps {
   actionsLocked?: boolean;
   /** Refetch the workflow state after a final-review caption / LinkedIn save. */
   onCopySaved?: () => Promise<unknown>;
+  /** Told whether a final-review caption / LinkedIn edit is unsaved or saving. */
+  onCopyBusyChange?: (busy: boolean) => void;
 }
 
 export function CreatePhaseReview({
@@ -46,6 +48,7 @@ export function CreatePhaseReview({
   onRepaired,
   actionsLocked = false,
   onCopySaved,
+  onCopyBusyChange,
 }: Readonly<EditorialPhaseReviewProps>): React.JSX.Element | null {
   const phase = state.current_phase;
   const autoRepair = actionsLocked ? null : (
@@ -85,6 +88,7 @@ export function CreatePhaseReview({
           projectId={projectId}
           state={state}
           onCopySaved={onCopySaved}
+          onCopyBusyChange={onCopyBusyChange}
         />
       );
     default:
