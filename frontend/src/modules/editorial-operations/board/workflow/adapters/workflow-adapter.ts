@@ -5,6 +5,13 @@ import type {
   WorkflowKanban,
 } from "@/modules/editorial";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
+import {
+  ARCHIVE_REFUSAL,
+  WORKFLOW_PHASE_STATUS,
+  type ArchiveRefusal,
+} from "@/constants/workflow";
+
+const PUBLISHED_PHASE = "published";
 
 function formatPhaseLabel(phase: string): string {
   return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -61,6 +68,15 @@ export function mapWorkflowToKanbanColumns(
   }));
 }
 
+/** Why the card cannot be archived, or `null` when it can. */
+export function archiveRefusalOf(card: ApiKanbanCard): ArchiveRefusal | null {
+  if (card.current_phase === PUBLISHED_PHASE) return ARCHIVE_REFUSAL.PUBLISHED;
+  if (card.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS) {
+    return ARCHIVE_REFUSAL.IN_PROGRESS;
+  }
+  return null;
+}
+
 export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
   return {
     phase: column.phase,
@@ -72,6 +88,7 @@ export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
       description: card.topic,
       phase: card.current_phase,
       phaseStatus: card.workflow_status ?? card.phase_status,
+      archiveRefusal: archiveRefusalOf(card),
     })),
   };
 }

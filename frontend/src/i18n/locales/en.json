@@ -1433,6 +1433,19 @@
       "loadNotificationsFailed": "Failed to load notifications",
       "markReadFailed": "Failed to mark notification read",
       "unknown": "Unknown error"
+    },
+    "archive": {
+      "archive": "Archive",
+      "confirm": "Archive this carousel?",
+      "confirmYes": "Archive",
+      "cancel": "Cancel",
+      "restore": "Restore",
+      "inProgress": "It cannot be archived while its phase is in progress.",
+      "archiveFailed": "Could not archive. Try again.",
+      "restoreFailed": "Could not restore. Try again.",
+      "showArchived": "Archived",
+      "showActive": "Active",
+      "emptyArchived": "No archived carousels."
     }
   },
   "dashboard": {

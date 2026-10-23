@@ -2,6 +2,9 @@
 
 export const WORKFLOW_API = {
   WORKFLOW_BOARD: "/api/workflow-board",
+  WORKFLOW_BOARD_ARCHIVED: "/api/workflow-board?archived=true",
+  CAROUSEL_ARCHIVE: (id: string) => `/api/carousels/${id}/archive`,
+  CAROUSEL_RESTORE: (id: string) => `/api/carousels/${id}/restore`,
   NOTIFICATIONS: "/api/notifications",
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read`,
   ASSIGN_REVIEW: "/api/notifications/assign-review",
@@ -33,6 +36,16 @@ export const WORKFLOW_PHASE_STATUS = {
 } as const;
 
 export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;
+
+/** Why a board card cannot be archived (mirrors the archive route's 409s). */
+export const ARCHIVE_REFUSAL = {
+  PUBLISHED: "published",
+  IN_PROGRESS: "in_progress",
+} as const;
+
+/** A reason a card cannot be archived. */
+export type ArchiveRefusal =
+  (typeof ARCHIVE_REFUSAL)[keyof typeof ARCHIVE_REFUSAL];
 
 export const LOCK_CONTENT_TYPE_BLOG = "blog_post";
 

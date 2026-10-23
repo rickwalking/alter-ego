@@ -47,7 +47,7 @@ function makeApiCard(overrides: Partial<KanbanCard> = {}): KanbanCard {
 }
 
 describe("mapWorkflowColumnDataToKanban", () => {
-  // Scenario: Kanban renders column status labels
+  /** Scenario: Kanban renders column status labels */
   it("maps every column and card field with index based ids", () => {
     expect(mapWorkflowColumnDataToKanban([DASHBOARD_COLUMN])).toEqual([
       {
@@ -78,7 +78,7 @@ describe("mapWorkflowColumnDataToKanban", () => {
 });
 
 describe("mapWorkflowToKanbanColumns", () => {
-  // Scenario: Kanban renders card titles
+  /** Scenario: Kanban renders card titles */
   it("copies every column and card field", () => {
     const card = {
       id: "uuid-1",
@@ -125,6 +125,7 @@ describe("mapApiKanbanColumn", () => {
         description: "AI",
         phase: "final_review",
         phaseStatus: "awaiting_human",
+        archiveRefusal: null,
       },
     ]);
   });

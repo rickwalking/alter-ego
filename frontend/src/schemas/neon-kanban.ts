@@ -7,6 +7,7 @@ export const kanbanCardSchema = z.object({
   phase: z.string(),
   phaseStatus: z.string(),
   assignee: z.string().optional(),
+  archiveRefusal: z.enum(["published", "in_progress"]).nullable().optional(),
 });
 
 export const kanbanColumnSchema = z.object({
