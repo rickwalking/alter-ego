@@ -54,14 +54,10 @@ class PostgresCreatorAssetRepository:
         return await self._save(model)
 
     async def _save(self, model: CarouselCreatorAssetModel) -> CarouselCreatorAsset:
-        """Commit and reload ``model`` (create and tag updates)."""
-        await self._commit()
+        """The single commit point of this adapter (create and tag updates)."""
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
-
-    async def _commit(self) -> None:
-        """The single commit point of this adapter (create, tags, delete)."""
-        await self._session.commit()
 
     async def projects_using(self, asset_id: UUID) -> list[CreatorAssetUsage]:
         """The carousels that use the asset: creator asset, hook photo or cover."""
@@ -85,13 +81,13 @@ class PostgresCreatorAssetRepository:
         ]
 
     async def delete(self, asset: CarouselCreatorAsset) -> int:
-        """Delete the row; how many rows still point at the same bytes."""
+        """Delete the row (flush, the caller commits); rows left with the same bytes."""
         await self._session.execute(
             delete(CarouselCreatorAssetModel).where(
                 CarouselCreatorAssetModel.id == str(asset.id)
             )
         )
-        await self._commit()
+        await self._session.flush()
         remaining = await self._session.scalar(
             select(func.count(CarouselCreatorAssetModel.id)).where(
                 CarouselCreatorAssetModel.content_sha256 == asset.content_sha256

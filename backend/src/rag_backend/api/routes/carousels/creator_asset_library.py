@@ -22,6 +22,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
     ERR_CAROUSEL_NOT_FOUND,
@@ -64,6 +65,7 @@ from .creator_assets import (
     default_output_root,
     get_creator_asset_context,
     get_creator_asset_service,
+    get_creator_asset_session,
     load_owned_project,
     map_validation_error,
     normalize_upload_mime,
@@ -81,17 +83,19 @@ _RESPONSES: dict[int | str, dict[str, object]] = {
 
 @dataclass(frozen=True)
 class _Library:
-    """The caller's context and the creator-asset service."""
+    """The caller's context, the creator-asset service and its request session."""
 
     context: CreatorAssetContext
     service: CreatorAssetService
+    session: AsyncSession
 
 
 def _library(
     context: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
     service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+    session: Annotated[AsyncSession, Depends(get_creator_asset_session)],
 ) -> _Library:
-    return _Library(context=context, service=service)
+    return _Library(context=context, service=service, session=session)
 
 
 @dataclass(frozen=True)
@@ -212,9 +216,14 @@ async def delete_library_photo(
     """Delete one of the owner's photos and its file; 409 while a carousel uses it."""
     del request
     try:
-        await library.service.delete_library_photo(library.context.user, asset_id)
+        stale = await library.service.delete_library_photo(
+            library.context.user, asset_id
+        )
     except CreatorAssetValidationError as error:
         raise _library_error(error) from error
+    await library.session.commit()
+    if stale is not None:
+        stale.unlink(missing_ok=True)
 
 
 @router.put(

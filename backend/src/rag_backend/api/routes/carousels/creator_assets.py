@@ -78,6 +78,13 @@ def get_creator_asset_service(
     )
 
 
+def get_creator_asset_session(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> AsyncSession:
+    """The request session the creator-asset service writes through."""
+    return session
+
+
 @dataclass(frozen=True)
 class CreatorAssetContext:
     user: User

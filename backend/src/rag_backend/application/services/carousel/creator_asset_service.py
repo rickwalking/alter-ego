@@ -194,13 +194,15 @@ class CreatorAssetService:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
         return path
 
-    async def delete_library_photo(self, user: User, asset_id: UUID) -> None:
-        """Delete one of the caller's photos and its file (owner only).
+    async def delete_library_photo(self, user: User, asset_id: UUID) -> Path | None:
+        """Delete one of the caller's photos (owner only); the file to remove.
 
         Raises not-found for an unknown id, forbidden for anyone but the owner
         (admins included: the library is the owner's personal data) and
         :class:`CreatorAssetInUseError` while any carousel uses the photo. The
-        stored WebP goes once no other row points at the same bytes.
+        row delete is flushed, not committed: the caller commits, then removes
+        the returned WebP (None while another row points at the same bytes or
+        when it is already gone).
         """
         asset = await self._asset_repo.get_by_id(asset_id)
         if asset is None:
@@ -212,8 +214,7 @@ class CreatorAssetService:
             raise CreatorAssetInUseError(usages)
         path = self.stored_file(asset)
         remaining = await self._asset_repo.delete(asset)
-        if path is not None and remaining == 0:
-            path.unlink(missing_ok=True)
+        return path if remaining == 0 else None
 
     def has_stored_file(self, asset: CarouselCreatorAsset) -> bool:
         """True when the asset's canonical WebP exists (PR #106 review)."""
