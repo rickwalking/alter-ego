@@ -1,6 +1,6 @@
 # `carousel_rubric/` prompt domain
 
-The quality rubric a carousel is generated and scored against (AE-0504, Pedro's Q12 decision).
+The quality rubric a carousel is generated and scored against (Pedro's decision: chosen per carousel, criteria in the prompt, scores shown, no automatic rewrite).
 
 ## v1
 
