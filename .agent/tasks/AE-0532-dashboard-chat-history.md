@@ -79,6 +79,15 @@ Re-applied on current main (after #248 merged): `useSseChat` returns both the re
 the dashboard view takes `useTranslations` itself. The `// Scenario:` lines in the touched tests became JSDoc.
 Targeted vitest (164) and pytest (chat stream + titles, 78) pass; backend mypy clean.
 
+### 2026-10-23 02:50
+
+External QA (WARN) findings fixed: the reply's double re-read (history + sidebar list) is asserted exactly (scenario
+"The sidebar shows a new conversation's title after its first reply"); the history polling wiring is tested with fake
+timers (`use-conversation-messages-poll.test.ts`); the /chat redirect moved into `redirect-signed-in.ts` and is tested
+for a live session, no cookie and an expired session (the React compiler keeps the page itself from being called
+outside render); a blank search has its own scenario; backend tests cover a whitespace-only title and the space before
+the ellipsis. Frontend 96 and backend title 10 tests pass.
+
 ## Files Touched
 
 - backend/src/rag_backend/domain/models/conversation.py, domain/constants/conversation.py,
@@ -87,7 +96,8 @@ Targeted vitest (164) and pytest (chat stream + titles, 78) pass; backend mypy c
 - frontend/src/modules/conversation/reply-wait.ts (new) + test, hooks/use-awaiting-reply.ts (new) + test,
   constants.ts, hooks/use-chat.ts, hooks/types.ts,
   hooks/use-sse-chat.ts + tests
-- frontend/src/modules/identity/lib/live-session.ts (new) + test, index.ts; app/(public)/chat/page.tsx
+- frontend/src/modules/identity/lib/live-session.ts (new) + test, index.ts; app/(public)/chat/page.tsx, redirect-signed-in.ts (new) + test,
+  hooks/use-conversation-messages-poll.test.ts (new)
 - frontend/src/app/dashboard/chat/chat-sidebar.tsx + chat-sidebar-search.test.tsx (new), dashboard-chat-view.tsx
 - frontend/src/modules/editorial-operations/board/chat/adapters/chat-adapter.ts + test, types.ts
 - frontend/src/i18n/locales/en.json, pt.json; frontend/tests/features/dashboard-chat.feature (new)

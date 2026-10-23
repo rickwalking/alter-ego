@@ -17,6 +17,11 @@ describe("chat sidebar", () => {
     expect(filterConversations(conversations, "MICROSSERVICOS")).toEqual([
       conversations[1],
     ]);
+  });
+
+  /** Scenario: An empty search shows every conversation */
+  it("lists every conversation for an empty or blank query", () => {
+    expect(filterConversations(conversations, "")).toEqual(conversations);
     expect(filterConversations(conversations, "  ")).toEqual(conversations);
   });
 

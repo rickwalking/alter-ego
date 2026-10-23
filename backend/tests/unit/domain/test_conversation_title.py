@@ -36,6 +36,10 @@ def test_first_message_titles_an_untitled_conversation() -> None:
         ("x" * 80, "x" * (CONVERSATION_TITLE_MAX_LENGTH - 1) + "…"),
         ("First line\nsecond line", "First line"),
         ("y" * CONVERSATION_TITLE_MAX_LENGTH, "y" * CONVERSATION_TITLE_MAX_LENGTH),
+        (
+            "z" * (CONVERSATION_TITLE_MAX_LENGTH - 2) + " tail of the question",
+            "z" * (CONVERSATION_TITLE_MAX_LENGTH - 2) + "…",
+        ),
     ],
 )
 def test_title_is_one_short_line(message: str, expected: str) -> None:
@@ -60,6 +64,17 @@ def test_existing_title_or_blank_message_changes_nothing(title: str | None) -> N
 
     assert conversation.ensure_title_from(message) is False
     assert conversation.title == title
+
+
+def test_whitespace_title_counts_as_untitled() -> None:
+    """A title of only spaces is replaced by the first message.
+
+    Scenario: The first message titles an untitled conversation
+    """
+    conversation = Conversation(title="   ")
+
+    assert conversation.ensure_title_from("Hello there") is True
+    assert conversation.title == "Hello there"
 
 
 @pytest.mark.asyncio

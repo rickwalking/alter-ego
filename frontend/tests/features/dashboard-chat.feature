@@ -17,10 +17,18 @@ Feature: Dashboard chat history
     Then each conversation shows its title (or "New conversation" before the first message) and its time
     And no AE/KB/WF avatars or fake unread dots are shown
 
+  Scenario: The sidebar shows a new conversation's title after its first reply
+    When a reply finishes
+    Then the conversation list and the history are each re-read once
+
   Scenario: Searching conversations filters the list
     When I type part of a title in "Search conversations", ignoring case and accents
     Then only matching conversations are listed
     And a "no matches" note shows when none match
+
+  Scenario: An empty search shows every conversation
+    When the search box is empty or only spaces
+    Then every conversation is listed
 
   Scenario: A signed-in user opening /chat lands on the dashboard chat
     Given I am signed in
