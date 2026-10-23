@@ -16,6 +16,8 @@
       {
         "cards": [
           {
+            "archive_refusal": null,
+            "can_archive": true,
             "current_phase": "content",
             "id": "<uuid>",
             "phase_status": "approved_for_publish",

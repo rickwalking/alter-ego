@@ -1,11 +1,11 @@
-"""Carousel archive and restore routes (Pedro's decision).
+"""Carousel archive and restore routes.
 
 Thin HTTP adapter: the owner (or an admin) archives a carousel they gave up on,
 which takes it off the workflow board and out of the workflow alerts, and can
 restore it later. Archiving only sets ``archived_at``; the phase and status are
-kept, so a restore puts the carousel back where it was. A published carousel or
-one whose phase is in progress cannot be archived (409). Both routes are
-idempotent.
+kept, so a restore puts the carousel back where it was. A published carousel,
+one with a live run (a phase stuck with a stale heartbeat is allowed) or one an
+autopilot run still needs cannot be archived (409). Both routes are idempotent.
 """
 
 from __future__ import annotations
@@ -18,17 +18,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.carousel_access import (
+    archive_carousel_project,
     get_carousel_project_for_user,
 )
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.schemas import ErrorResponse
 from rag_backend.api.schemas.carousel_archive import CarouselArchiveResponse
-from rag_backend.domain.carousel_archive import archive_refusal
 from rag_backend.domain.clock import utc_now
 from rag_backend.domain.constants.carousel_archive import (
+    ARCHIVE_REFUSED_AUTOPILOT,
     ARCHIVE_REFUSED_IN_PROGRESS,
     ARCHIVE_REFUSED_PUBLISHED,
+    ERR_ARCHIVE_AUTOPILOT,
     ERR_ARCHIVE_IN_PROGRESS,
     ERR_ARCHIVE_PUBLISHED,
 )
@@ -38,6 +40,7 @@ router = APIRouter(tags=["carousels-archive"])
 _REFUSAL_DETAIL = {
     ARCHIVE_REFUSED_IN_PROGRESS: ERR_ARCHIVE_IN_PROGRESS,
     ARCHIVE_REFUSED_PUBLISHED: ERR_ARCHIVE_PUBLISHED,
+    ARCHIVE_REFUSED_AUTOPILOT: ERR_ARCHIVE_AUTOPILOT,
 }
 _RESPONSES: dict[int | str, dict[str, object]] = {
     401: {"model": ErrorResponse, "description": "Not authenticated"},
@@ -59,7 +62,10 @@ def _aware(moment: datetime | None) -> datetime | None:
     summary="Archive a carousel (off the board, no alerts)",
     responses={
         **_RESPONSES,
-        409: {"model": ErrorResponse, "description": "Published or in progress"},
+        409: {
+            "model": ErrorResponse,
+            "description": "Published, running or needed by an autopilot run",
+        },
     },
 )
 async def archive_carousel(
@@ -67,19 +73,21 @@ async def archive_carousel(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> CarouselArchiveResponse:
-    """Archive the carousel; an archived one keeps its first archive time."""
+    """Archive the carousel; an archived one keeps its first archive time.
+
+    The archive is one conditional UPDATE under the archive rules, so a run or
+    an autopilot publish that starts after the access check is never archived:
+    the rules are re-checked by the write itself.
+    """
     project = await get_carousel_project_for_user(db, project_id, current_user)
-    refusal = archive_refusal(project.current_phase, project.phase_status)
-    if refusal is not None:
+    outcome = await archive_carousel_project(db, project, utc_now())
+    if outcome.refusal is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=_REFUSAL_DETAIL[refusal],
+            detail=_REFUSAL_DETAIL.get(outcome.refusal, ERR_ARCHIVE_IN_PROGRESS),
         )
-    if project.archived_at is None:
-        project.archived_at = utc_now()
-        await db.commit()
     return CarouselArchiveResponse(
-        id=str(project.id), archived=True, archived_at=_aware(project.archived_at)
+        id=str(project.id), archived=True, archived_at=_aware(outcome.archived_at)
     )
 
 

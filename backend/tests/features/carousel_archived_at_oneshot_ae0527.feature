@@ -1,4 +1,4 @@
-Feature: The carousel archived_at column reaches prod with the deploy (Pedro's decision)
+Feature: The carousel archived_at column reaches prod with the deploy
   Prod does not run Alembic and create_all never adds a column to an existing
   table, so the deploy runs an idempotent one-shot that adds
   carousel_projects.archived_at and its index. No manual ALTER on prod.

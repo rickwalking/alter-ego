@@ -1,4 +1,4 @@
-"""Add ``carousel_projects.archived_at`` on prod (Pedro's decision).
+"""Add ``carousel_projects.archived_at`` on prod.
 
 Prod does not run Alembic on deploy and bootstraps with ``create_all``, which
 never adds a column to an existing table. So the column that revision

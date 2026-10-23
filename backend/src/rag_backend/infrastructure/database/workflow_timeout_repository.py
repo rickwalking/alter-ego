@@ -85,6 +85,7 @@ class WorkflowTimeoutRepository:
                 CarouselProjectModel.phase_status.in_(
                     _AUTO_REJECT_ELIGIBLE_PHASE_STATUSES
                 ),
+                CarouselProjectModel.archived_at.is_(None),
                 CarouselProjectModel.updated_at <= cutoff,
             )
         )

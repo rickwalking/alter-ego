@@ -1,4 +1,4 @@
-"""One-shot: add ``carousel_projects.archived_at`` on prod (Pedro's decision).
+"""One-shot: add ``carousel_projects.archived_at`` on prod.
 
 Usage (in the freshly built backend image, Postgres up, app stack down):
     python -m rag_backend.scripts.carousel_archived_at --apply --verify

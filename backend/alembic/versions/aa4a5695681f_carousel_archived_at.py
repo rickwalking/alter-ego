@@ -5,8 +5,8 @@ Revises: c7d8e9f0a1b3
 Create Date: 2026-10-23
 
 ``carousel_projects.archived_at`` (nullable, timezone-aware) marks a carousel the
-owner archived, or that the workflow worker archived after it sat idle (Pedro's
-decision): archived carousels leave the workflow board and raise no alerts. A
+owner archived, or that the workflow worker archived after it sat idle:
+archived carousels leave the workflow board and raise no alerts. A
 restore sets it back to NULL. Indexed, since the board and the alert queries
 filter on it. Not a LangGraph checkpoint table: the checkpoint-drain rule does
 not apply. Both steps are skipped when already present (a ``create_all``

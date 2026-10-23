@@ -1,7 +1,4 @@
-"""Archived carousels raise no alerts; idle carousels archive themselves.
-
-Gherkin: tests/features/carousel_archive_ae0527.feature
-"""
+"""Archived carousels raise no alerts; idle carousels archive themselves."""
 
 from __future__ import annotations
 
@@ -22,11 +19,8 @@ from rag_backend.application.workers.workflow_workers import (
     _auto_archive,
     _TickCollaborators,
 )
-from rag_backend.domain.carousel_archive import archive_refusal
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_FAILED
 from rag_backend.domain.constants.carousel_archive import (
-    ARCHIVE_REFUSED_IN_PROGRESS,
-    ARCHIVE_REFUSED_PUBLISHED,
     CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS,
 )
 from rag_backend.domain.constants.carousel_workflow import (
@@ -44,6 +38,7 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.user import UserModel
 
+STALE_SECONDS = 180
 _NOW = datetime.now(UTC)
 _IDLE = _NOW - timedelta(days=CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS + 1)
 
@@ -79,6 +74,7 @@ def _project(
     phase_status: str | None = PHASE_STATUS_AWAITING_HUMAN,
     archived_at: datetime | None = None,
     status: str = "draft",
+    run_heartbeat_at: datetime | None = None,
 ) -> CarouselProjectModel:
     return CarouselProjectModel(
         id=str(uuid.uuid4()),
@@ -89,6 +85,7 @@ def _project(
         current_phase=phase,
         phase_status=phase_status,
         archived_at=archived_at,
+        run_heartbeat_at=run_heartbeat_at,
         updated_at=updated_at,
         created_at=updated_at,
     )
@@ -156,7 +153,7 @@ class TestCarouselIdleArchiver:
         session.add_all([idle, no_phase])
         await session.commit()
 
-        archived = await CarouselIdleArchiver().archive_idle(
+        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
         await session.commit()
@@ -175,11 +172,13 @@ class TestCarouselIdleArchiver:
         """Scenario: Active, published and in-progress carousels are not auto-archived"""
         recent = _project(_NOW - timedelta(days=CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS - 1))
         published = _project(_IDLE, phase=PHASE_PUBLISHED)
-        running = _project(_IDLE, phase_status=PHASE_STATUS_IN_PROGRESS)
+        running = _project(
+            _IDLE, phase_status=PHASE_STATUS_IN_PROGRESS, run_heartbeat_at=_NOW
+        )
         session.add_all([recent, published, running])
         await session.commit()
 
-        archived = await CarouselIdleArchiver().archive_idle(
+        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
 
@@ -194,7 +193,7 @@ class TestCarouselIdleArchiver:
         session.add(_project(_IDLE, archived_at=_IDLE))
         await session.commit()
 
-        archived = await CarouselIdleArchiver().archive_idle(
+        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
 
@@ -251,14 +250,3 @@ class TestWorkerAutoArchive:
 def test_the_default_window_is_30_days() -> None:
     """Scenario: An idle carousel is archived automatically"""
     assert Settings().carousel_auto_archive_days == 30
-
-
-def test_published_and_in_progress_carousels_cannot_be_archived() -> None:
-    """Scenario: A carousel in progress cannot be archived"""
-    assert archive_refusal(PHASE_PUBLISHED, None) == ARCHIVE_REFUSED_PUBLISHED
-    assert (
-        archive_refusal(PHASE_RESEARCH, PHASE_STATUS_IN_PROGRESS)
-        == ARCHIVE_REFUSED_IN_PROGRESS
-    )
-    assert archive_refusal(PHASE_RESEARCH, PHASE_STATUS_AWAITING_HUMAN) is None
-    assert archive_refusal(None, None) is None

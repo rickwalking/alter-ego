@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +12,8 @@ import pytest_asyncio
 from httpx import AsyncClient
 
 from rag_backend.domain.constants.carousel_archive import (
+    ARCHIVE_REFUSED_AUTOPILOT,
+    ERR_ARCHIVE_AUTOPILOT,
     ERR_ARCHIVE_IN_PROGRESS,
     ERR_ARCHIVE_PUBLISHED,
 )
@@ -156,3 +159,82 @@ async def test_unknown_carousel_is_not_found(env: CopyEnv) -> None:
 
     assert archive.status_code == 404
     assert restore.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_live_run_is_refused_but_a_stale_one_is_archived(env: CopyEnv) -> None:
+    """Scenario: A carousel in progress cannot be archived
+
+    Scenario: A phase stuck with a stale heartbeat can be archived
+    """
+    live = await env.seed_carousel()
+    stale = await env.seed_carousel()
+    await env.set_project(live, {"phase_status": PHASE_STATUS_IN_PROGRESS})
+    await env.set_project(stale, {"phase_status": PHASE_STATUS_IN_PROGRESS})
+    await env.set_project(
+        stale, {"run_heartbeat_at": datetime.now(UTC) - timedelta(hours=1)}
+    )
+    async with env.client_for(env.owner) as client:
+        refused = await client.post(_archive(live))
+        archived = await client.post(_archive(stale))
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == ERR_ARCHIVE_IN_PROGRESS
+    assert archived.status_code == 200
+    assert archived.json()["archived"] is True
+
+
+@pytest.mark.asyncio
+async def test_an_autopilot_run_still_going_is_refused(env: CopyEnv) -> None:
+    """Scenario: A carousel an autopilot run still needs cannot be archived"""
+    project_id = await env.seed_carousel()
+    await _add_autopilot_run(project_id, "scheduled")
+    async with env.client_for(env.owner) as client:
+        response = await client.post(_archive(project_id))
+        board = await client.get(_BOARD)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == ERR_ARCHIVE_AUTOPILOT
+    cards = [card for column in board.json()["columns"] for card in column["cards"]]
+    assert [card["archive_refusal"] for card in cards] == [ARCHIVE_REFUSED_AUTOPILOT]
+
+
+@pytest.mark.asyncio
+async def test_the_board_says_who_may_archive_a_card(env: CopyEnv) -> None:
+    """Scenario: The board says who may archive a card and why not"""
+    project_id = await env.seed_carousel()
+    await env.set_project(project_id, {"assigned_reviewer_id": str(env.other.id)})
+
+    async def _card(user: object) -> dict[str, object]:
+        async with env.client_for(user) as client:
+            board = await client.get(_BOARD)
+        cards = [card for column in board.json()["columns"] for card in column["cards"]]
+        return next(card for card in cards if card["id"] == project_id)
+
+    owner = await _card(env.owner)
+    reviewer = await _card(env.other)
+    admin = await _card(env.admin)
+
+    assert (owner["can_archive"], owner["archive_refusal"]) == (True, None)
+    assert reviewer["can_archive"] is False
+    assert admin["can_archive"] is True
+
+
+async def _add_autopilot_run(project_id: str, state: str) -> None:
+    from sqlalchemy import insert
+
+    from rag_backend.infrastructure.database.config import Base, get_session_maker
+
+    runs = Base.metadata.tables["autopilot_runs"]
+    async with get_session_maker()() as session:
+        await session.execute(
+            insert(runs).values(
+                id=uuid4(),
+                carousel_project_id=project_id,
+                topic_candidate_id=uuid4(),
+                state=state,
+                telegram_message_ids={},
+                created_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()

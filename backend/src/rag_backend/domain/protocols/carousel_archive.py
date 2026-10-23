@@ -1,4 +1,4 @@
-"""Port of the carousel auto-archive (Pedro's decision)."""
+"""Port of the carousel auto-archive."""
 
 from __future__ import annotations
 

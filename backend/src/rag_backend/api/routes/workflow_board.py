@@ -73,6 +73,8 @@ class KanbanCardResponse(BaseModel):
     phase_status: str
     workflow_status: str | None = None
     updated_at: str | None = None
+    can_archive: bool = False
+    archive_refusal: str | None = None
 
 
 class KanbanColumnResponse(BaseModel):
@@ -101,6 +103,8 @@ def _to_column_response(column: BoardColumn) -> KanbanColumnResponse:
                 phase_status=card.phase_status,
                 workflow_status=card.workflow_status,
                 updated_at=card.updated_at,
+                can_archive=card.can_archive,
+                archive_refusal=card.archive_refusal,
             )
             for card in column.cards
         ],

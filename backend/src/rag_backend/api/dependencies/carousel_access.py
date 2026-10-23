@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TypeVar
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from rag_backend.domain.constants.access_control import (
     ERR_INVALID_REQUEST,
     ERR_SOURCE_NOT_FOUND,
 )
+from rag_backend.domain.constants.carousel_archive import ARCHIVE_REFUSED_IN_PROGRESS
 from rag_backend.domain.constants.conversation import (
     CONVERSATION_METADATA_PROJECT_ID,
     ERR_ANONYMOUS_CAROUSEL_CONVERSATION,
@@ -29,7 +31,13 @@ from rag_backend.domain.constants.conversation import (
 )
 from rag_backend.domain.models import Conversation, User
 from rag_backend.domain.models.user import UserRole
-from rag_backend.infrastructure.database.models import UserModel
+from rag_backend.infrastructure.database.models import (
+    UserModel,
+    archivable,
+    archive_refusal_of,
+    archive_where,
+    heartbeat_stale_seconds,
+)
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.source_comment import ContentSourceModel
 
@@ -301,3 +309,35 @@ async def list_carousel_sources_for_user(
         offset=query.offset,
         carousels=await _carousel_facets(db, query),
     )
+
+
+async def archive_carousel_project(
+    db: AsyncSession, project: CarouselProjectModel, now: datetime
+) -> CarouselArchiveOutcome:
+    """Archive ``project`` under the archive rules in one conditional UPDATE.
+
+    The rules are checked by the write itself, so a run or an autopilot publish
+    that started after the caller's access check is never archived. Nothing is
+    committed when the archive is refused.
+    """
+    stale_seconds = heartbeat_stale_seconds()
+    predicates = [
+        CarouselProjectModel.id == str(project.id),
+        *archivable(now, stale_seconds),
+    ]
+    if await archive_where(db, predicates, now):
+        await db.commit()
+        return CarouselArchiveOutcome(archived_at=now)
+    await db.refresh(project)
+    if project.archived_at is not None:
+        return CarouselArchiveOutcome(archived_at=project.archived_at)
+    refusal = await archive_refusal_of(db, str(project.id), (now, stale_seconds))
+    return CarouselArchiveOutcome(refusal=refusal or ARCHIVE_REFUSED_IN_PROGRESS)
+
+
+@dataclass(frozen=True)
+class CarouselArchiveOutcome:
+    """The archive time of an archived carousel, or why it was refused."""
+
+    archived_at: datetime | None = None
+    refusal: str | None = None

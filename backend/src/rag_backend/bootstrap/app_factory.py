@@ -174,7 +174,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
                     blog_generation_reaper=build_blog_generation_reaper(settings),
-                    carousel_auto_archiver=CarouselIdleArchiver(),
+                    carousel_auto_archiver=CarouselIdleArchiver(
+                        settings.workflow_run_heartbeat_stale_seconds
+                    ),
                     instagram_publish=autopilot.instagram_publish,
                     credential_refresh=autopilot.credential_refresh,
                     autopilot_runner=autopilot.autopilot_runner,

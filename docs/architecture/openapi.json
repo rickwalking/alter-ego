@@ -5711,6 +5711,22 @@
       "KanbanCardResponse": {
         "description": "Single project card on the Kanban board.",
         "properties": {
+          "archive_refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive Refusal"
+          },
+          "can_archive": {
+            "default": false,
+            "title": "Can Archive",
+            "type": "boolean"
+          },
           "current_phase": {
             "title": "Current Phase",
             "type": "string"
@@ -12731,7 +12747,7 @@
     },
     "/api/carousels/{project_id}/archive": {
       "post": {
-        "description": "Archive the carousel; an archived one keeps its first archive time.",
+        "description": "Archive the carousel; an archived one keeps its first archive time.\n\nThe archive is one conditional UPDATE under the archive rules, so a run or\nan autopilot publish that starts after the access check is never archived:\nthe rules are re-checked by the write itself.",
         "operationId": "archive_carousel_api_carousels__project_id__archive_post",
         "parameters": [
           {
@@ -12794,7 +12810,7 @@
                 }
               }
             },
-            "description": "Published or in progress"
+            "description": "Published, running or needed by an autopilot run"
           },
           "422": {
             "content": {

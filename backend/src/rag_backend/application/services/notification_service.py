@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, column, exists, not_, select, table
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.notifications import (
@@ -25,6 +25,7 @@ from rag_backend.domain.constants.notifications import (
 )
 from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
+    CONTENT_TYPE_CAROUSEL,
     METADATA_KEY_ORIGINAL_NOTIFICATION_ID,
     METADATA_KEY_REMINDER_SENT,
     NOTIFICATION_BODY_DEADLINE_REMINDER,
@@ -34,6 +35,19 @@ from rag_backend.domain.constants.workflow_validation import (
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.user import UserModel
 from rag_backend.infrastructure.logging import get_logger
+
+_CAROUSELS = table("carousel_projects", column("id"), column("archived_at"))
+
+
+def _is_archived_carousel() -> ColumnElement[bool]:
+    """The notification is about a carousel that is archived."""
+    return (NotificationModel.content_type == CONTENT_TYPE_CAROUSEL) & exists(
+        select(_CAROUSELS.c.id).where(
+            _CAROUSELS.c.id == NotificationModel.content_id,
+            _CAROUSELS.c.archived_at.is_not(None),
+        )
+    )
+
 
 logger = get_logger()
 
@@ -185,7 +199,10 @@ class NotificationService:
         return notification
 
     async def send_deadline_reminders(self, db: AsyncSession) -> int:
-        """Send reminders for overdue review notifications (NOTIF-002)."""
+        """Send reminders for overdue review notifications (NOTIF-002).
+
+        A review request about an archived carousel gets no reminder.
+        """
         now = datetime.now(UTC)
         result = await db.execute(
             select(NotificationModel).where(
@@ -193,6 +210,7 @@ class NotificationService:
                 NotificationModel.status == NOTIFICATION_STATUS_UNREAD,
                 NotificationModel.deadline_at.isnot(None),
                 NotificationModel.deadline_at <= now,
+                not_(_is_archived_carousel()),
             )
         )
         pending = list(result.scalars().all())
