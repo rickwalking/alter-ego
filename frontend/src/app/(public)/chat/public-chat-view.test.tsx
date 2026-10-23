@@ -55,7 +55,7 @@ describe("PublicChatView", () => {
     mocks.error = null;
   });
 
-  // Scenario: Public chat does not list conversation history
+  /** Scenario: Public chat does not list conversation history */
   it("does not render conversation history sidebar", () => {
     render(<PublicChatView />);
     expect(
@@ -71,7 +71,7 @@ describe("PublicChatView", () => {
     expect(screen.getByText(/not saved after refresh/i)).toBeInTheDocument();
   });
 
-  // Scenario: The message shows as pending while the conversation is created
+  /** Scenario: The message shows as pending while the conversation is created */
   it("hands the hook a creator instead of waiting for the conversation", async () => {
     render(<PublicChatView />);
     typeAndSend("hello");
@@ -86,7 +86,7 @@ describe("PublicChatView", () => {
     expect(mocks.createConversation).toHaveBeenCalledOnce();
   });
 
-  // Scenario: A failed send keeps the bubble and gives the text back
+  /** Scenario: A failed send keeps the bubble and gives the text back */
   it("gives the typed text back when the send fails", async () => {
     mocks.sendMessage.mockResolvedValue("failed");
     render(<PublicChatView />);
@@ -101,5 +101,13 @@ describe("PublicChatView", () => {
 
     await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalled());
     expect(composer().value).toBe("");
+  });
+
+  /** Scenario: The public chat has a main landmark and a skip link */
+  it("puts the conversation in the main landmark", () => {
+    render(<PublicChatView />);
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main-content");
+    expect(main).toContainElement(composer());
   });
 });

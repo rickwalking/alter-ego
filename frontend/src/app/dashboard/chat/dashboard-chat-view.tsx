@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRecheckSessionOnNotFound } from "@/app/dashboard/chat/use-recheck-session";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useConversations, useSseChat } from "@/modules/conversation";
 import {
   mapConversationToDashboard,
@@ -26,6 +26,7 @@ const CHAT_CONVERSATIONS_ID = "chat-conversations";
 export function DashboardChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const locale = useLocale();
+  const t = useTranslations("chat");
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
 
@@ -122,7 +123,7 @@ export function DashboardChatView(): React.ReactElement {
         {convDrawer.open && (
           <button
             type="button"
-            aria-label="Close conversations"
+            aria-label={t("closeConversations")}
             tabIndex={-1}
             onClick={convDrawer.close}
             className="fixed inset-0 z-30 bg-black/60 md:hidden"
@@ -149,7 +150,7 @@ export function DashboardChatView(): React.ReactElement {
             value={input}
             onChange={setInput}
             onSend={() => void handleSend()}
-            disabled={isStreaming}
+            busy={isStreaming}
           />
         </div>
       </div>

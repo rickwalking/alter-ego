@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { MAIN_CONTENT_ID } from "@/constants/a11y";
 import { useSseChat } from "@/modules/conversation";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { mapMessageToDashboard } from "@/modules/editorial-operations";
@@ -20,6 +21,7 @@ import { ChatErrorBanner } from "@/app/dashboard/chat/chat-error-banner";
 export function PublicChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const locale = useLocale();
+  const t = useTranslations("chat");
 
   const {
     messages: sseMessages,
@@ -68,7 +70,9 @@ export function PublicChatView(): React.ReactElement {
           onNewChat={handleNewChat}
         />
       )}
-      <div
+      <main
+        id={MAIN_CONTENT_ID}
+        tabIndex={-1}
         className="flex min-h-0 flex-1 flex-col"
         style={{ background: DASHBOARD_CHAT_BG_OVERLAY_LIGHT }}
       >
@@ -76,23 +80,22 @@ export function PublicChatView(): React.ReactElement {
           className="shrink-0 px-6 py-2 text-xs"
           style={{ color: DASHBOARD_CHAT_TEXT_MUTED }}
         >
-          Messages are not saved after refresh.{" "}
+          {t("hintNotSaved")}{" "}
           <Link
             href={PUBLIC_ROUTE_PATHS.LOGIN}
             style={{ color: "inherit", textDecoration: "underline" }}
           >
-            Sign in
-          </Link>{" "}
-          to keep chat history.
+            {t("hintSignIn")}
+          </Link>
         </p>
         <ChatMessageList messages={displayMessages} isStreaming={isStreaming} />
         <ChatComposer
           value={input}
           onChange={setInput}
           onSend={() => void handleSend()}
-          disabled={isStreaming}
+          busy={isStreaming}
         />
-      </div>
+      </main>
     </div>
   );
 }

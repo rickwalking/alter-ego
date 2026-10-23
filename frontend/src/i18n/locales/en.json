@@ -112,10 +112,11 @@
   "chat": {
     "title": "Chat",
     "input": {
-      "placeholder": "Type your message...",
+      "placeholder": "Ask the Alter-Ego anything…",
       "send": "Send message",
-      "newChat": "New Chat",
-      "counter": "{count} of {max} characters"
+      "newChat": "New chat",
+      "counter": "{count} of {max} characters",
+      "label": "Message to the Alter-Ego"
     },
     "you": "You",
     "assistant": "Assistant",
@@ -140,7 +141,16 @@
       "retry": "Try again",
       "signIn": "Sign in",
       "newChat": "Start a new chat"
-    }
+    },
+    "subtitle": "Alter-Ego assistant",
+    "typing": "Alter-Ego is typing…",
+    "logLabel": "Conversation",
+    "notifications": "Notifications",
+    "replyAnnounced": "Alter-Ego replied: {text}",
+    "hintNotSaved": "Messages are not saved after refresh.",
+    "hintSignIn": "Sign in to keep your chat history.",
+    "openConversations": "Open conversations",
+    "closeConversations": "Close conversations"
   },
   "knowledge": {
     "title": "Knowledge Base",

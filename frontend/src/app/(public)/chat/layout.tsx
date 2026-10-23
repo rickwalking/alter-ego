@@ -1,3 +1,5 @@
+import { SkipLink } from "@/components/atoms/skip-link";
+
 export default function PublicChatLayout({
   children,
 }: Readonly<{
@@ -8,6 +10,7 @@ export default function PublicChatLayout({
       className="flex h-screen flex-col overflow-hidden"
       style={{ position: "relative", zIndex: 1 }}
     >
+      <SkipLink />
       {children}
     </div>
   );
