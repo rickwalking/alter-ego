@@ -81,13 +81,13 @@ class TestPhotoLibrary:
         del asset_dirs
 
     @pytest.mark.asyncio
-    async def test_unknown_image_is_400(
+    async def test_unknown_image_is_404(
         self, client: AsyncClient, asset_dirs: Path
     ) -> None:
         response = await client.get(
             "/api/carousels/creator-assets/00000000-0000-0000-0000-000000000001/image"
         )
-        assert response.status_code == 400
+        assert response.status_code == 404
         assert response.json()["detail"] == "creator_asset_not_found"
         del asset_dirs
 

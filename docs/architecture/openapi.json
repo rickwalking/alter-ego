@@ -3761,6 +3761,49 @@
         "title": "CreateUserResponse",
         "type": "object"
       },
+      "CreatorAssetInUseDetail": {
+        "description": "The 409 ``detail`` of deleting a photo a carousel or autopilot cover uses.",
+        "properties": {
+          "carousels": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorAssetUsageResponse"
+            },
+            "title": "Carousels",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorAssetTopicUsageResponse"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "carousels",
+          "topics"
+        ],
+        "title": "CreatorAssetInUseDetail",
+        "type": "object"
+      },
+      "CreatorAssetInUseResponse": {
+        "description": "The 409 body of deleting a photo a carousel still uses.",
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/CreatorAssetInUseDetail"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "CreatorAssetInUseResponse",
+        "type": "object"
+      },
       "CreatorAssetListResponse": {
         "description": "The caller's photo library.",
         "properties": {
@@ -3874,6 +3917,67 @@
           "creator_asset_id"
         ],
         "title": "CreatorAssetSelectRequest",
+        "type": "object"
+      },
+      "CreatorAssetTopicUsageResponse": {
+        "description": "An autopilot cover that uses a photo; ``id`` is None until a topic claims it.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "CreatorAssetTopicUsageResponse",
+        "type": "object"
+      },
+      "CreatorAssetUsageResponse": {
+        "description": "A carousel that still uses a photo.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "CreatorAssetUsageResponse",
         "type": "object"
       },
       "CustomPaletteResponse": {
@@ -12143,9 +12247,70 @@
         ]
       }
     },
+    "/api/carousels/creator-assets/{asset_id}": {
+      "delete": {
+        "description": "Delete one of the owner's photos and its file; 409 while a carousel uses it.",
+        "operationId": "delete_library_photo_api_carousels_creator_assets__asset_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "creator_asset_not_found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorAssetInUseResponse"
+                }
+              }
+            },
+            "description": "creator_asset_in_use"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Library Photo",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
     "/api/carousels/creator-assets/{asset_id}/image": {
       "get": {
-        "description": "One of the caller's photos (owner or admin only).",
+        "description": "One of the caller's photos (owner or admin only); 404 once it is gone.",
         "operationId": "creator_asset_image_api_carousels_creator_assets__asset_id__image_get",
         "parameters": [
           {
@@ -12173,6 +12338,9 @@
           },
           "403": {
             "description": "Forbidden"
+          },
+          "404": {
+            "description": "creator_asset_not_found"
           },
           "422": {
             "content": {

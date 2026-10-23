@@ -6,6 +6,9 @@ import { usePovPhoto } from "./use-pov-photo";
 const state = {
   photos: [] as { id: string; created_at: string }[],
   upload: vi.fn(),
+  remove: vi.fn(),
+  reset: vi.fn(),
+  removeError: null as unknown,
 };
 
 vi.mock("@/modules/editorial", () => ({
@@ -15,12 +18,26 @@ vi.mock("@/modules/editorial", () => ({
     isPending: false,
     isError: false,
   }),
+  useDeleteCreatorPhoto: () => ({
+    mutate: state.remove,
+    reset: state.reset,
+    isPending: false,
+    isError: state.removeError !== null,
+    error: state.removeError,
+  }),
+  photoInUse: (error: unknown) =>
+    error === "in-use"
+      ? { carousels: [{ id: "c-1", title: "T" }], topics: [] }
+      : null,
 }));
 
 describe("usePovPhoto", () => {
   beforeEach(() => {
     state.photos = [];
     state.upload.mockReset();
+    state.remove.mockReset();
+    state.reset.mockReset();
+    state.removeError = null;
   });
 
   it("preselects the newest photo once", () => {
@@ -56,5 +73,78 @@ describe("usePovPhoto", () => {
     };
     onSuccess({ id: "uploaded" });
     expect(onSelect).toHaveBeenCalledWith("uploaded");
+  });
+
+  /** Scenario: Deleting the selected photo selects the newest remaining one */
+  it("selects the newest remaining photo after deleting the selected one", () => {
+    const onSelect = vi.fn();
+    state.photos = [
+      { id: "newest", created_at: "2" },
+      { id: "older", created_at: "1" },
+    ];
+    const { result } = renderHook(() => usePovPhoto("newest", onSelect));
+    act(() => result.current.section.onDelete("newest"));
+    expect(state.remove).toHaveBeenCalledWith(
+      "newest",
+      expect.objectContaining({ onSuccess: expect.any(Function) as unknown }),
+    );
+    const { onSuccess } = state.remove.mock.calls[0]![1] as {
+      onSuccess: () => void;
+    };
+    onSuccess();
+    expect(onSelect).toHaveBeenCalledWith("older");
+  });
+
+  /** Scenario: Deleting the selected photo selects the newest remaining one */
+  it("clears the selection when the last photo is deleted", () => {
+    const onSelect = vi.fn();
+    state.photos = [{ id: "only", created_at: "1" }];
+    const { result } = renderHook(() => usePovPhoto("only", onSelect));
+    act(() => result.current.section.onDelete("only"));
+    const { onSuccess } = state.remove.mock.calls[0]![1] as {
+      onSuccess: () => void;
+    };
+    onSuccess();
+    expect(onSelect).toHaveBeenCalledWith("");
+  });
+
+  /** Scenario: Deleting an unused photo after confirming */
+  it("keeps the selection when another photo is deleted", () => {
+    const onSelect = vi.fn();
+    state.photos = [
+      { id: "kept", created_at: "2" },
+      { id: "other", created_at: "1" },
+    ];
+    const { result } = renderHook(() => usePovPhoto("kept", onSelect));
+    act(() => result.current.section.onDelete("other"));
+    const { onSuccess } = state.remove.mock.calls[0]![1] as {
+      onSuccess: () => void;
+    };
+    onSuccess();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: A photo in use lists the carousels that use it */
+  it("passes the blocking carousels to the section", () => {
+    state.removeError = "in-use";
+    const { result } = renderHook(() => usePovPhoto("x", vi.fn()));
+    expect(result.current.section.deleteBlockedBy).toEqual({
+      carousels: [{ id: "c-1", title: "T" }],
+      topics: [],
+    });
+    expect(result.current.section.deleteFailed).toBe(true);
+  });
+
+  /** Scenario: Choosing another photo clears the in-use list */
+  it("clears the last delete outcome when the selection changes", () => {
+    const { rerender } = renderHook(
+      ({ selected }) => usePovPhoto(selected, vi.fn()),
+      { initialProps: { selected: "x" } },
+    );
+    state.reset.mockClear();
+    rerender({ selected: "x" });
+    expect(state.reset).not.toHaveBeenCalled();
+    rerender({ selected: "y" });
+    expect(state.reset).toHaveBeenCalledTimes(1);
   });
 });

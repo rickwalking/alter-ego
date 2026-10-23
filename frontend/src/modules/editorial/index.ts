@@ -50,9 +50,12 @@ export {
 } from "./workspace/hooks/use-editorial-workflow";
 export {
   creatorPhotoKeys,
+  photoInUse,
   useCreatorPhotos,
+  useDeleteCreatorPhoto,
   useUploadCreatorPhoto,
   type CreatorPhoto,
+  type PhotoInUse,
 } from "./workspace/hooks/use-creator-photos";
 export {
   useSaveCarouselHook,

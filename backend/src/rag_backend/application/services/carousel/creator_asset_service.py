@@ -15,7 +15,9 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
 )
 from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_ROLE_COVER,
+    ERR_CREATOR_ASSET_COVER_MANAGED,
     ERR_CREATOR_ASSET_FORBIDDEN,
+    ERR_CREATOR_ASSET_IN_USE,
     ERR_CREATOR_ASSET_NOT_FOUND,
     build_creator_asset_filename,
 )
@@ -24,11 +26,30 @@ from rag_backend.domain.models.carousel_creator_asset import (
     CarouselCreatorAsset,
     CreatorAssetLibraryQuery,
     CreatorAssetTags,
+    CreatorAssetTopicUsage,
+    CreatorAssetUsage,
 )
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.creator_asset_repository import (
     PostgresCreatorAssetRepository,
 )
+
+
+@dataclass(frozen=True)
+class CreatorAssetUses:
+    """The carousels and autopilot cover topics that use a photo."""
+
+    carousels: list[CreatorAssetUsage]
+    topics: tuple[CreatorAssetTopicUsage, ...]
+
+
+class CreatorAssetInUseError(CreatorAssetValidationError):
+    """The photo is still in use (nothing was deleted)."""
+
+    def __init__(self, uses: CreatorAssetUses) -> None:
+        super().__init__(ERR_CREATOR_ASSET_IN_USE)
+        self.usages = uses.carousels
+        self.topics = uses.topics
 
 
 @dataclass(frozen=True)
@@ -184,6 +205,34 @@ class CreatorAssetService:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
         return path
 
+    async def delete_library_photo(self, user: User, asset_id: UUID) -> Path | None:
+        """Delete one of the caller's photos (owner only); the file to remove.
+
+        The asset row is locked first, so a carousel cannot start using it
+        between the in-use check and the delete. Raises not-found for an unknown
+        id and for anyone but the owner (admins included: the library is the
+        owner's personal data, and another owner's id is not revealed), the
+        cover-managed error for a GrokBot cover, and
+        :class:`CreatorAssetInUseError` while a carousel or an autopilot cover
+        uses the photo. The row delete is flushed, not committed: the caller
+        commits, then removes the returned WebP (None while another row points
+        at the same bytes or when it is already gone).
+        """
+        asset = await self._asset_repo.get_for_update(asset_id)
+        if asset is None or asset.owner_id != str(user.id):
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
+        if asset.role == CREATOR_ASSET_ROLE_COVER:
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_COVER_MANAGED)
+        uses = CreatorAssetUses(
+            carousels=await self._asset_repo.projects_using(asset_id),
+            topics=await self._asset_repo.topics_using(asset_id),
+        )
+        if uses.carousels or uses.topics:
+            raise CreatorAssetInUseError(uses)
+        path = self.stored_file(asset)
+        remaining = await self._asset_repo.delete(asset)
+        return path if remaining == 0 else None
+
     def has_stored_file(self, asset: CarouselCreatorAsset) -> bool:
         """True when the asset's canonical WebP exists (PR #106 review)."""
         try:
@@ -313,9 +362,11 @@ class CreatorAssetService:
 
 
 __all__ = [
+    "CreatorAssetInUseError",
     "CreatorAssetSelectCommand",
     "CreatorAssetService",
     "CreatorAssetUploadCommand",
+    "CreatorAssetUses",
     "StageCreatorAssetCommand",
     "StagedCreatorAssetPaths",
 ]

@@ -1,17 +1,69 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CREATOR_PHOTO_ROLES } from "@/constants/create";
-import { useCreatorPhotos, useUploadCreatorPhoto } from "@/modules/editorial";
+import {
+  photoInUse,
+  useCreatorPhotos,
+  useDeleteCreatorPhoto,
+  useUploadCreatorPhoto,
+} from "@/modules/editorial";
 import type { CreatePhotoSectionProps } from "@/app/dashboard/create/workspace/create-photo-section";
 
 export interface PovPhotoState {
   section: CreatePhotoSectionProps;
 }
 
+interface PhotoDeleteDeps {
+  selectedId: string;
+  items: readonly { id: string }[];
+  onSelect: (id: string) => void;
+}
+
+type PhotoDeleteFields = Pick<
+  CreatePhotoSectionProps,
+  "onDelete" | "deleting" | "deleteBlockedBy" | "deleteFailed"
+>;
+
+/**
+ * Delete a library photo; deleting the selected one selects the newest left.
+ * A new selection clears the previous delete's outcome (its in-use list).
+ */
+function usePhotoDelete({
+  selectedId,
+  items,
+  onSelect,
+}: Readonly<PhotoDeleteDeps>): PhotoDeleteFields {
+  const remove = useDeleteCreatorPhoto();
+  const { reset } = remove;
+  useEffect(() => {
+    reset();
+  }, [selectedId, reset]);
+  const onDelete = useCallback(
+    (photoId: string) =>
+      remove.mutate(photoId, {
+        onSuccess: () => {
+          if (photoId !== selectedId) return;
+          const next = items.find((photo) => photo.id !== photoId);
+          onSelect(next?.id ?? "");
+        },
+      }),
+    [remove, selectedId, items, onSelect],
+  );
+
+  return {
+    onDelete,
+    deleting: remove.isPending,
+    deleteBlockedBy: photoInUse(remove.error),
+    deleteFailed: remove.isError,
+  };
+}
+
 /**
  * The wizard's "Foto do slide 1": the owner's hook photos (newest
  * first, preselected once) and upload. PR #106 review: the chosen photo is
  * sent as `hook_asset_id` in the create request (required for POV), so the
- * backend binds it before the project exists without its photo.
+ * backend binds it before the project exists without its photo. Deleting the
+ * selected photo selects the newest remaining one; a 409 carries the carousels
+ * that still use the photo.
  */
 export function usePovPhoto(
   selectedId: string,
@@ -43,6 +95,8 @@ export function usePovPhoto(
     [upload, role, onSelect],
   );
 
+  const deletion = usePhotoDelete({ selectedId, items, onSelect });
+
   return {
     section: {
       photos: items,
@@ -51,6 +105,7 @@ export function usePovPhoto(
       onUpload,
       uploading: upload.isPending,
       uploadFailed: upload.isError,
+      ...deletion,
     },
   };
 }

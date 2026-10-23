@@ -453,7 +453,19 @@
       "photoLabel": "Foto",
       "upload": "Enviar uma foto nova",
       "uploading": "Enviando…",
-      "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB)."
+      "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB).",
+      "delete": {
+        "action": "Excluir foto selecionada",
+        "confirm": "Excluir esta foto da biblioteca? Ela é apagada do servidor.",
+        "cancel": "Cancelar",
+        "confirmAction": "Excluir",
+        "deleting": "Excluindo…",
+        "inUse": "Esta foto está em uso e não pode ser excluída. Troque a foto destes carrosséis e tópicos do autopilot antes:",
+        "untitled": "Carrossel sem título",
+        "topic": "Tópico do autopilot: {title}",
+        "pendingTopic": "capa aguardando um tópico",
+        "failed": "Não foi possível excluir a foto. Tente de novo."
+      }
     },
     "phases": {
       "brief": "Brief",

@@ -42,3 +42,19 @@ class CreatorAssetTags:
     asset_id: UUID
     role: str | None = None
     pose_tag: str | None = None
+
+
+@dataclass(frozen=True)
+class CreatorAssetUsage:
+    """A carousel that uses a creator asset (blocks deleting the asset)."""
+
+    project_id: UUID
+    title: str | None
+
+
+@dataclass(frozen=True)
+class CreatorAssetTopicUsage:
+    """A GrokBot cover on the asset; ``topic_id`` is None until a topic claims it."""
+
+    topic_id: UUID | None
+    title: str | None

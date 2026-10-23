@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { API_ENDPOINTS } from "@/constants/api";
 import { BG_CARD, NEON_AMBER, NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import { firstNonBlank } from "@/lib/utils";
+import type { PhotoInUse } from "@/modules/editorial";
+import { CreatePhotoDelete } from "./create-photo-delete";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
 export interface PhotoOption {
@@ -19,13 +21,18 @@ export interface CreatePhotoSectionProps {
   onUpload: (file: File) => void;
   uploading: boolean;
   uploadFailed: boolean;
+  onDelete: (photoId: string) => void;
+  deleting: boolean;
+  deleteBlockedBy: PhotoInUse | null;
+  deleteFailed: boolean;
 }
 
 const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
 
 /**
  * "Foto do slide 1" for Ponto de Vista decks. Pick a cut-out photo
- * from the library (newest first, the default) or upload a new one.
+ * from the library (newest first, the default), delete the selected one, or
+ * upload a new one.
  */
 export function CreatePhotoSection({
   photos,
@@ -34,6 +41,10 @@ export function CreatePhotoSection({
   onUpload,
   uploading,
   uploadFailed,
+  onDelete,
+  deleting,
+  deleteBlockedBy,
+  deleteFailed,
 }: Readonly<CreatePhotoSectionProps>): React.ReactElement {
   const t = useTranslations("create.photo");
   return (
@@ -86,6 +97,13 @@ export function CreatePhotoSection({
           ))}
         </div>
       )}
+      <CreatePhotoDelete
+        selectedId={photos.some((p) => p.id === selectedId) ? selectedId : ""}
+        onDelete={onDelete}
+        deleting={deleting}
+        blockedBy={deleteBlockedBy}
+        failed={deleteFailed}
+      />
       <label
         style={{
           display: "block",

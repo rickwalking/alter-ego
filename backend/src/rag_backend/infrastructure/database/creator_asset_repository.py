@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import String, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.creator_asset import CREATOR_ASSET_ROLE_COVER
@@ -12,7 +12,10 @@ from rag_backend.domain.models.carousel_creator_asset import (
     CarouselCreatorAsset,
     CreatorAssetLibraryQuery,
     CreatorAssetTags,
+    CreatorAssetTopicUsage,
+    CreatorAssetUsage,
 )
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
 )
@@ -31,6 +34,27 @@ class PostgresCreatorAssetRepository:
         if model is None:
             return None
         return model.to_entity()
+
+    async def get_for_update(self, asset_id: UUID) -> CarouselCreatorAsset | None:
+        """The asset with its row locked until commit.
+
+        A carousel that starts referencing the asset takes a key-share lock on
+        the row, so it waits for this transaction instead of losing the
+        reference to the delete.
+        """
+        stmt = (
+            select(CarouselCreatorAssetModel)
+            .where(CarouselCreatorAssetModel.id == str(asset_id))
+            .with_for_update()
+        )
+        model = (await self._session.execute(stmt)).scalar_one_or_none()
+        return model.to_entity() if model is not None else None
+
+    async def topics_using(self, asset_id: UUID) -> tuple[CreatorAssetTopicUsage, ...]:
+        """The autopilot cover rows that use the asset (pending topics included)."""
+        from rag_backend.modules.autopilot.public import cover_topics_using
+
+        return await cover_topics_using(self._session, asset_id)
 
     async def get_by_owner_and_content_sha256(
         self,
@@ -56,6 +80,42 @@ class PostgresCreatorAssetRepository:
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
+
+    async def projects_using(self, asset_id: UUID) -> list[CreatorAssetUsage]:
+        """The carousels that use the asset: creator asset, hook photo or cover."""
+        key = str(asset_id)
+        project = CarouselProjectModel
+        stmt = (
+            select(project.id, project.title)
+            .where(
+                or_(
+                    project.creator_asset_id == key,
+                    project.hook_asset_id == key,
+                    cast(project.slide_cover, String).contains(key),
+                )
+            )
+            .order_by(project.created_at.desc())
+        )
+        rows = (await self._session.execute(stmt)).all()
+        return [
+            CreatorAssetUsage(project_id=UUID(str(row.id)), title=row.title)
+            for row in rows
+        ]
+
+    async def delete(self, asset: CarouselCreatorAsset) -> int:
+        """Delete the row (flush, the caller commits); rows left with the same bytes."""
+        await self._session.execute(
+            delete(CarouselCreatorAssetModel).where(
+                CarouselCreatorAssetModel.id == str(asset.id)
+            )
+        )
+        await self._session.flush()
+        remaining = await self._session.scalar(
+            select(func.count(CarouselCreatorAssetModel.id)).where(
+                CarouselCreatorAssetModel.content_sha256 == asset.content_sha256
+            )
+        )
+        return int(remaining or 0)
 
     async def list_for_owner(
         self, query: CreatorAssetLibraryQuery

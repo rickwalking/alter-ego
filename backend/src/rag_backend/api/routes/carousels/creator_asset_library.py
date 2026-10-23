@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
+import structlog
 from fastapi import (
     APIRouter,
     Depends,
@@ -22,6 +23,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
     ERR_CAROUSEL_NOT_FOUND,
@@ -31,12 +33,17 @@ from rag_backend.api.constants import (
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.carousel_creator_asset import (
+    CreatorAssetInUseDetail,
+    CreatorAssetInUseResponse,
     CreatorAssetListResponse,
     CreatorAssetResponse,
     CreatorAssetSelectRequest,
+    CreatorAssetTopicUsageResponse,
+    CreatorAssetUsageResponse,
     HookPhotoResponse,
 )
 from rag_backend.application.services.carousel.creator_asset_service import (
+    CreatorAssetInUseError,
     CreatorAssetService,
     HookPhotoCommand,
     LibraryUploadCommand,
@@ -49,7 +56,11 @@ from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
     CREATOR_ASSET_POSE_TAG_MAX_CHARS,
     CREATOR_ASSET_ROLE_PATTERN,
+    ERR_CREATOR_ASSET_COVER_MANAGED,
+    ERR_CREATOR_ASSET_IN_USE,
+    ERR_CREATOR_ASSET_NOT_FOUND,
     ERR_CREATOR_ASSET_TOO_LARGE,
+    LOG_STALE_PHOTO_UNLINK_FAILED,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import User
@@ -59,6 +70,7 @@ from .creator_assets import (
     default_output_root,
     get_creator_asset_context,
     get_creator_asset_service,
+    get_creator_asset_session,
     load_owned_project,
     map_validation_error,
     normalize_upload_mime,
@@ -66,6 +78,7 @@ from .creator_assets import (
 )
 
 router = APIRouter()
+logger = structlog.get_logger(__name__)
 
 _LIBRARY_PATH = "/creator-assets"
 _RESPONSES: dict[int | str, dict[str, object]] = {
@@ -76,17 +89,19 @@ _RESPONSES: dict[int | str, dict[str, object]] = {
 
 @dataclass(frozen=True)
 class _Library:
-    """The caller's context and the creator-asset service."""
+    """The caller's context, the creator-asset service and its request session."""
 
     context: CreatorAssetContext
     service: CreatorAssetService
+    session: AsyncSession
 
 
 def _library(
     context: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
     service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+    session: Annotated[AsyncSession, Depends(get_creator_asset_session)],
 ) -> _Library:
-    return _Library(context=context, service=service)
+    return _Library(context=context, service=service, session=session)
 
 
 @dataclass(frozen=True)
@@ -106,6 +121,31 @@ def _photo_form(
     ] = None,
 ) -> _PhotoForm:
     return _PhotoForm(file=file, role=role, pose_tag=(pose_tag or "").strip() or None)
+
+
+def _library_error(error: CreatorAssetValidationError) -> HTTPException:
+    """404 unknown, 409 in use (with its users) or a GrokBot cover, else shared."""
+    if isinstance(error, CreatorAssetInUseError):
+        detail = CreatorAssetInUseDetail(
+            code=error.code,
+            carousels=[
+                CreatorAssetUsageResponse(id=usage.project_id, title=usage.title)
+                for usage in error.usages
+            ],
+            topics=[
+                CreatorAssetTopicUsageResponse(id=topic.topic_id, title=topic.title)
+                for topic in error.topics
+            ],
+        )
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail.model_dump(mode="json"),
+        )
+    if error.code == ERR_CREATOR_ASSET_COVER_MANAGED:
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.code)
+    if error.code == ERR_CREATOR_ASSET_NOT_FOUND:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.code)
+    return map_validation_error(error)
 
 
 @router.get(_LIBRARY_PATH, responses=_RESPONSES)
@@ -151,18 +191,56 @@ async def upload_library_photo(
     return to_creator_asset_response(asset)
 
 
-@router.get(f"{_LIBRARY_PATH}/{{asset_id}}/image", responses=_RESPONSES)
+@router.get(
+    f"{_LIBRARY_PATH}/{{asset_id}}/image",
+    responses={**_RESPONSES, 404: {"description": ERR_CREATOR_ASSET_NOT_FOUND}},
+)
 async def creator_asset_image(
     asset_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
     service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
 ) -> FileResponse:
-    """One of the caller's photos (owner or admin only)."""
+    """One of the caller's photos (owner or admin only); 404 once it is gone."""
     try:
         path = await service.library_image_path(user, asset_id)
     except CreatorAssetValidationError as error:
-        raise map_validation_error(error) from error
+        raise _library_error(error) from error
     return FileResponse(path, media_type=CREATOR_ASSET_MEDIA_TYPE_WEBP)
+
+
+@router.delete(
+    f"{_LIBRARY_PATH}/{{asset_id}}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **_RESPONSES,
+        404: {"description": ERR_CREATOR_ASSET_NOT_FOUND},
+        409: {
+            "description": ERR_CREATOR_ASSET_IN_USE,
+            "model": CreatorAssetInUseResponse,
+        },
+    },
+)
+@limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
+async def delete_library_photo(
+    request: Request,
+    asset_id: UUID,
+    library: Annotated[_Library, Depends(_library)],
+) -> None:
+    """Delete one of the owner's photos and its file; 409 while a carousel uses it."""
+    del request
+    try:
+        stale = await library.service.delete_library_photo(
+            library.context.user, asset_id
+        )
+    except CreatorAssetValidationError as error:
+        raise _library_error(error) from error
+    await library.session.commit()
+    if stale is None:
+        return
+    try:
+        stale.unlink(missing_ok=True)
+    except OSError:
+        logger.warning(LOG_STALE_PHOTO_UNLINK_FAILED, asset_id=str(asset_id))
 
 
 @router.put(

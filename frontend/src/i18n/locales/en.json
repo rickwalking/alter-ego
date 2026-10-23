@@ -453,7 +453,19 @@
       "photoLabel": "Photo",
       "upload": "Upload a new photo",
       "uploading": "Uploading…",
-      "uploadFailed": "The photo could not be uploaded (PNG, WebP or JPEG up to 5 MB)."
+      "uploadFailed": "The photo could not be uploaded (PNG, WebP or JPEG up to 5 MB).",
+      "delete": {
+        "action": "Delete selected photo",
+        "confirm": "Delete this photo from the library? It is removed from the server.",
+        "cancel": "Cancel",
+        "confirmAction": "Delete",
+        "deleting": "Deleting…",
+        "inUse": "This photo is in use and cannot be deleted. Change the photo of these carousels and autopilot topics first:",
+        "untitled": "Untitled carousel",
+        "topic": "Autopilot topic: {title}",
+        "pendingTopic": "cover waiting for a topic",
+        "failed": "Could not delete the photo. Try again."
+      }
     },
     "phases": {
       "brief": "Brief",
