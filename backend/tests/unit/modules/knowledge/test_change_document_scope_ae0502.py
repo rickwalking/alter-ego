@@ -1,7 +1,4 @@
-"""Moving a knowledge document between scopes (service + pipeline).
-
-Gherkin: tests/features/knowledge_document_scope_ae0502.feature
-"""
+"""Moving a knowledge document between scopes (service + pipeline)."""
 
 from __future__ import annotations
 
@@ -21,7 +18,10 @@ from rag_backend.domain.models import (
     DocumentScope,
     DocumentStatus,
 )
-from rag_backend.modules.knowledge import ChangeDocumentScopeCommand
+from rag_backend.modules.knowledge import (
+    ChangeDocumentScopeCommand,
+    ReprocessDocumentCommand,
+)
 from rag_backend.modules.knowledge.application.service import (
     KnowledgeService,
     KnowledgeServiceDeps,
@@ -29,10 +29,13 @@ from rag_backend.modules.knowledge.application.service import (
 
 
 class _UnitOfWork:
-    def __init__(self) -> None:
+    def __init__(self, commit_error: Exception | None = None) -> None:
         self.commits = 0
+        self._commit_error = commit_error
 
     async def commit(self) -> None:
+        if self._commit_error is not None:
+            raise self._commit_error
         self.commits += 1
 
     async def rollback(self) -> None:
@@ -55,8 +58,13 @@ class _Repository:
     def __init__(self, document: Document | None) -> None:
         self.document = document
         self.updates: list[tuple[DocumentScope, DocumentStatus]] = []
+        self.locked: list[UUID] = []
 
     async def get_by_id(self, document_id: UUID) -> Document | None:
+        return self.document
+
+    async def get_by_id_for_update(self, document_id: UUID) -> Document | None:
+        self.locked.append(document_id)
         return self.document
 
     async def update(self, document: Document) -> Document:
@@ -95,9 +103,11 @@ def _processor(error: Exception | None = None) -> MagicMock:
 
 
 def _service(
-    repository: _Repository, pipeline: AsyncMock
+    repository: _Repository,
+    pipeline: AsyncMock,
+    unit_of_work: _UnitOfWork | None = None,
 ) -> tuple[KnowledgeService, _UnitOfWork]:
-    unit_of_work = _UnitOfWork()
+    unit_of_work = unit_of_work or _UnitOfWork()
     service = KnowledgeService(
         repository=repository,
         pipeline=pipeline,
@@ -128,6 +138,98 @@ async def test_service_moves_the_document_and_commits_once() -> None:
         str(command.document_id), DocumentScope.PUBLIC
     )
     assert unit_of_work.commits == 1
+    pipeline.drop_chunks.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_failed_commit_drops_the_chunks_of_the_new_scope() -> None:
+    """Scenario: A failed save after the re-index removes the new chunks again"""
+    pipeline = AsyncMock()
+    pipeline.rescope_document = AsyncMock(return_value=_document(DocumentScope.PUBLIC))
+    service, unit_of_work = _service(
+        _Repository(_document()), pipeline, _UnitOfWork(RuntimeError("db down"))
+    )
+    command = _command(DocumentScope.PUBLIC)
+
+    with pytest.raises(RuntimeError, match="db down"):
+        await service.change_scope(command)
+
+    assert unit_of_work.commits == 0
+    pipeline.drop_chunks.assert_awaited_once_with(
+        str(command.document_id), DocumentScope.PUBLIC
+    )
+
+
+@pytest.mark.asyncio
+async def test_failed_rescope_drops_the_chunks_of_the_new_scope() -> None:
+    """Scenario: A failed save after the re-index removes the new chunks again"""
+    pipeline = AsyncMock()
+    pipeline.rescope_document = AsyncMock(side_effect=RuntimeError("flush failed"))
+    service, _ = _service(_Repository(_document()), pipeline)
+    command = _command(DocumentScope.PUBLIC)
+
+    with pytest.raises(RuntimeError, match="flush failed"):
+        await service.change_scope(command)
+
+    pipeline.drop_chunks.assert_awaited_once_with(
+        str(command.document_id), DocumentScope.PUBLIC
+    )
+
+
+@pytest.mark.asyncio
+async def test_failed_commit_on_the_same_scope_drops_nothing() -> None:
+    """Scenario: The same scope changes nothing"""
+    pipeline = AsyncMock()
+    service, _ = _service(
+        _Repository(_document()), pipeline, _UnitOfWork(RuntimeError("db down"))
+    )
+
+    with pytest.raises(RuntimeError, match="db down"):
+        await service.change_scope(_command(DocumentScope.PERSONAL))
+
+    pipeline.drop_chunks.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_scope_change_locks_the_document_row() -> None:
+    """Scenario: A scope change and a reprocess lock the document row"""
+    pipeline = AsyncMock()
+    pipeline.rescope_document = AsyncMock(return_value=_document(DocumentScope.PUBLIC))
+    repository = _Repository(_document())
+    service, _ = _service(repository, pipeline)
+    command = _command(DocumentScope.PUBLIC)
+
+    await service.change_scope(command)
+
+    assert repository.locked == [command.document_id]
+
+
+@pytest.mark.asyncio
+async def test_reprocess_locks_the_document_row() -> None:
+    """Scenario: A scope change and a reprocess lock the document row"""
+    pipeline = AsyncMock()
+    pipeline.reprocess_document = AsyncMock(return_value=_document())
+    repository = _Repository(_document())
+    service, unit_of_work = _service(repository, pipeline)
+    document_id = uuid4()
+
+    await service.reprocess(ReprocessDocumentCommand(document_id=document_id))
+
+    assert repository.locked == [document_id]
+    pipeline.reprocess_document.assert_awaited_once_with(str(document_id))
+    assert unit_of_work.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_pipeline_drop_chunks_deletes_from_the_scope_namespace() -> None:
+    """Scenario: A failed save after the re-index removes the new chunks again"""
+    store = _store()
+    pipeline = DocumentProcessingPipeline(_Repository(None), _processor(), store)
+    document_id = uuid4()
+
+    await pipeline.drop_chunks(str(document_id), DocumentScope.PUBLIC)
+
+    store.delete_by_document.assert_awaited_once_with(document_id, namespace="public")
 
 
 @pytest.mark.asyncio

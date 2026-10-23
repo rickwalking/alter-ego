@@ -73,6 +73,8 @@ class DocumentPipelinePort(Protocol):
         self, document_id: str, scope: DocumentScope
     ) -> KnowledgeDocument: ...
 
+    async def drop_chunks(self, document_id: str, scope: DocumentScope) -> None: ...
+
     async def delete_document(self, document_id: str) -> bool: ...
 
     def estimate_processing_time(
@@ -238,8 +240,13 @@ class KnowledgeService:
     async def reprocess(
         self, command: ReprocessDocumentCommand
     ) -> KnowledgeDocumentView:
-        """Re-run the pipeline for an existing document (committed once)."""
+        """Re-run the pipeline for an existing document (committed once).
+
+        The document row is locked first, so a concurrent scope change waits
+        instead of indexing the chunks into a namespace this run is leaving.
+        """
         async with self._unit_of_work:
+            await self._repository.get_by_id_for_update(command.document_id)
             document = await self._pipeline.reprocess_document(str(command.document_id))
             view = self._to_view(document)
         return view
@@ -250,18 +257,32 @@ class KnowledgeService:
         """Move a document to ``command.scope`` (committed once), or ``None`` if absent.
 
         A document already in that scope is returned as it is, without
-        re-indexing.
+        re-indexing. The row is locked for the whole move. When anything fails
+        after the re-index (the commit included), the chunks written to the new
+        scope's namespace are deleted again, so a rolled-back move never leaves
+        the document searchable under the scope it did not get.
         """
-        async with self._unit_of_work:
-            document = await self._repository.get_by_id(command.document_id)
-            if document is None:
-                return None
-            if document.scope is command.scope:
-                return self._to_view(document)
-            moved = await self._pipeline.rescope_document(
-                str(command.document_id), command.scope
-            )
-            view = self._to_view(moved)
+        reindexed = False
+        try:
+            async with self._unit_of_work:
+                document = await self._repository.get_by_id_for_update(
+                    command.document_id
+                )
+                if document is None:
+                    return None
+                if document.scope is command.scope:
+                    return self._to_view(document)
+                reindexed = True
+                moved = await self._pipeline.rescope_document(
+                    str(command.document_id), command.scope
+                )
+                view = self._to_view(moved)
+        except Exception:
+            if reindexed:
+                await self._pipeline.drop_chunks(
+                    str(command.document_id), command.scope
+                )
+            raise
         return view
 
     async def search(self, query: SearchQuery) -> list[SearchResultView]:

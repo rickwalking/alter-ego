@@ -15672,7 +15672,7 @@
     },
     "/api/documents/{document_id}/scope": {
       "patch": {
-        "description": "Move a document to ``personal`` or ``public`` and re-index it there.\n\nThe same scope returns the document unchanged; any other scope is 400, a\nmissing document 404, and a document of someone else 403 (admins excepted).",
+        "description": "Move a document to ``personal`` or ``public`` and re-index it there.\n\nThe same scope returns the document unchanged; any other scope is 400, a\nmissing document 404, a document of someone else 403 (admins excepted) and\na document in a system scope (carousel, internal) 409.",
         "operationId": "change_document_scope_api_documents__document_id__scope_patch",
         "parameters": [
           {
@@ -15746,6 +15746,16 @@
               }
             },
             "description": "Document not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Document in a system scope"
           },
           "422": {
             "content": {

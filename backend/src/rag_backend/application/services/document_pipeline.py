@@ -157,6 +157,14 @@ class DocumentProcessingPipeline:
         document.is_public = scope is DocumentScope.PUBLIC
         return await self._restart(document)
 
+    async def drop_chunks(self, document_id: str, scope: DocumentScope) -> None:
+        """Delete the document's chunks from the namespace of ``scope``."""
+        from uuid import UUID
+
+        await self._vector_store.delete_by_document(
+            UUID(document_id), namespace=scope.value
+        )
+
     async def _load(self, document_id: str) -> Document:
         """The stored document, or ``ValueError`` when it does not exist."""
         from uuid import UUID

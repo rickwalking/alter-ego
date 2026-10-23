@@ -12,6 +12,9 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
+_DOCUMENT_ID_KEY = "document_id"
+_EQ_OPERATOR = "$eq"
+
 
 class PineconeVectorStore:
     """Pinecone implementation of VectorStore protocol with hybrid search support."""
@@ -125,7 +128,11 @@ class PineconeVectorStore:
     async def delete_by_document(
         self, document_id: UUID, namespace: str | None = None
     ) -> None:
-        """Delete all chunks belonging to a document.
+        """Delete the chunks of one document, leaving the namespace's other documents.
+
+        The scope namespaces are shared by every document of that scope, so the
+        delete filters on the chunk's ``document_id`` metadata instead of
+        clearing the namespace.
 
         Args:
             document_id: Parent document ID
@@ -133,10 +140,11 @@ class PineconeVectorStore:
         """
         index = await self._get_index()
         ns = namespace if namespace is not None else str(document_id)
+        document_filter = {_DOCUMENT_ID_KEY: {_EQ_OPERATOR: str(document_id)}}
 
         for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
             with attempt:
-                index.delete(delete_all=True, namespace=ns)
+                index.delete(filter=document_filter, namespace=ns)
 
     async def hybrid_search(
         self,

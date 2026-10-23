@@ -57,6 +57,10 @@ class DocumentRepository(Protocol):
 
     async def get_by_id(self, document_id: UUID) -> Document | None: ...
 
+    async def get_by_id_for_update(self, document_id: UUID) -> Document | None:
+        """The document, with its row locked until the transaction ends."""
+        ...
+
     async def get_all(
         self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[Document]: ...

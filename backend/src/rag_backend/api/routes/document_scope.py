@@ -35,6 +35,7 @@ SELECTABLE_SCOPES: tuple[DocumentScope, ...] = (
 
 _DETAIL_NOT_FOUND = "Document with id {document_id} not found"
 _DETAIL_INVALID_SCOPE = "Invalid scope: {scope}. Must be one of: {choices}"
+_DETAIL_SYSTEM_SCOPE = "Document in the {scope} scope cannot be moved"
 
 
 def _selectable_scope(scope: str) -> DocumentScope:
@@ -48,6 +49,16 @@ def _selectable_scope(scope: str) -> DocumentScope:
             scope=scope,
             choices=", ".join(choice.value for choice in SELECTABLE_SCOPES),
         ),
+    )
+
+
+def _assert_movable(current_scope: str) -> None:
+    """409 when the document sits in a system scope an owner may not leave."""
+    if any(choice.value == current_scope for choice in SELECTABLE_SCOPES):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=_DETAIL_SYSTEM_SCOPE.format(scope=current_scope),
     )
 
 
@@ -84,6 +95,7 @@ def get_document_scope_ctx(
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
         403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Document not found"},
+        409: {"model": ErrorResponse, "description": "Document in a system scope"},
     },
 )
 async def change_document_scope(
@@ -94,13 +106,15 @@ async def change_document_scope(
     """Move a document to ``personal`` or ``public`` and re-index it there.
 
     The same scope returns the document unchanged; any other scope is 400, a
-    missing document 404, and a document of someone else 403 (admins excepted).
+    missing document 404, a document of someone else 403 (admins excepted) and
+    a document in a system scope (carousel, internal) 409.
     """
     scope = _selectable_scope(request.scope)
     document = await ctx.service.get(GetDocumentQuery(document_id=document_id))
     if document is None:
         raise _not_found(document_id)
     assert_domain_owner_or_admin(document.owner_id, ctx.user)
+    _assert_movable(document.scope)
     moved = await ctx.service.change_scope(
         ChangeDocumentScopeCommand(document_id=document_id, scope=scope)
     )

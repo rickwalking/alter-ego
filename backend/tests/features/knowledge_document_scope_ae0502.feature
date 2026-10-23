@@ -51,3 +51,30 @@ Feature: The owner changes a knowledge document's scope
     And the embedding service is unavailable
     When I change its scope to "public"
     Then the document keeps the scope "public" and is saved as failed with the reason
+
+  Scenario: Rescoping one document leaves the other documents of its namespace
+    Given two completed personal documents of mine indexed in the "personal" namespace
+    When I change the scope of the first one to "public"
+    Then the second document's chunks are still in the "personal" namespace
+    And only the first document's chunks are in the "public" namespace
+
+  Scenario: Deleting one document leaves the other documents of its namespace
+    Given two completed personal documents of mine indexed in the "personal" namespace
+    When I delete the first one
+    Then the second document's chunks are still in the "personal" namespace
+
+  Scenario: A failed save after the re-index removes the new chunks again
+    Given a completed personal document of mine
+    When I change its scope to "public" and saving the change fails
+    Then the change is not saved
+    And the document has no chunks left in the "public" namespace
+
+  Scenario: A system document cannot be rescoped
+    Given a completed document of mine in the "carousel" scope
+    When I change its scope to "public"
+    Then the change is refused with 409 and nothing is re-indexed
+
+  Scenario: A scope change and a reprocess lock the document row
+    Given a completed personal document of mine
+    When I change its scope or reprocess it
+    Then the document row is read for update before its chunks are touched
