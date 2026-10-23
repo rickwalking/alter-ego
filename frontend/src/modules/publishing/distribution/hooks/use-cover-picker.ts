@@ -13,13 +13,14 @@ import type { CoverPickInput } from "./types";
 
 /**
  * The slide-1 cover picker of a Ponto de Vista carousel on the
- * publish step. The options are the owner's library photos and, when the
- * autopilot run has one, the GrokBot cover offer; a pick re-renders the
+ * publish step. The options are the owner's library photos, the covers Grok
+ * generated from them for this carousel and, when the autopilot run has one,
+ * the GrokBot cover offer; a pick re-renders the
  * slides + PDFs server-side and returns the fresh artifact version.
  */
 const coverOptionSchema = z.object({
   asset_id: z.string(),
-  source: z.enum(["library", "offer"]),
+  source: z.enum(["library", "generated", "offer"]),
   kind: z.string().optional(),
 });
 

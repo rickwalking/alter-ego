@@ -157,3 +157,10 @@ export interface CopyHistory {
   hasMore: boolean;
   loadMore: () => void;
 }
+
+/** The photos to send and the owner's direction (confirmed in the dialog). */
+export interface CoverGenerationInput {
+  projectId: string;
+  photoIds: readonly string[];
+  prompt: string;
+}

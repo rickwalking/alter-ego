@@ -64,6 +64,9 @@ export const API_ENDPOINTS = {
   /** The POV slide-1 cover picker on the publish step. */
   CAROUSEL_COVER_OPTIONS: (id: string) => `/api/carousels/${id}/cover-options`,
   CAROUSEL_COVER: (id: string) => `/api/carousels/${id}/cover`,
+  /** Grok covers generated from the owner's library photos. */
+  CAROUSEL_COVER_GENERATIONS: (id: string) =>
+    `/api/carousels/${id}/cover-generations`,
   CAROUSEL_STRATEGIES: "/api/carousels/strategies",
   CAROUSEL_STRATEGY_APPLY: (id: string) => `/api/carousels/${id}/strategy`,
   /** The owner's slide-1 hook pick at the outline gate. */
