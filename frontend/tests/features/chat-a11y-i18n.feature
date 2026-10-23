@@ -9,6 +9,15 @@ Feature: Chat accessibility and localization
     Then a polite live region says the Alter-Ego is typing
     And when it finishes the live region reads the reply once
 
+  Scenario: Loading a conversation's history announces nothing
+    Given I open a conversation that already has replies
+    Then the live region stays silent
+
+  Scenario: A long reply is announced as plain text, cut short
+    When a reply with markdown and more than 280 characters finishes
+    Then the live region reads it without markdown markers or extra spaces
+    And it stops at 280 characters followed by an ellipsis
+
   Scenario: The message box has a label and a visible focus ring
     Then the message box has an accessible name
     And it shows a focus outline instead of removing it
@@ -25,3 +34,4 @@ Feature: Chat accessibility and localization
   Scenario: The chat UI speaks the visitor's language
     Then every chat label comes from the translations
     And each English chat string has a Portuguese translation
+    And with the Portuguese locale the header, message box and typing label are in Portuguese

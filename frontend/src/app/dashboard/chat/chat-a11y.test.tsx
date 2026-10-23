@@ -17,6 +17,22 @@ function keyPaths(node: unknown, prefix = ""): string[] {
   );
 }
 
+/** What the live region says once a streamed reply with ``text`` finishes. */
+function announcedReply(text: string): string | null {
+  const question = { role: "user" as const, text: "hi", time: "10:00" };
+  const { rerender, unmount } = render(
+    <ChatMessageList messages={[question]} isStreaming />,
+  );
+  rerender(
+    <ChatMessageList
+      messages={[question, { role: "assistant", text, time: "10:00" }]}
+    />,
+  );
+  const said = document.querySelector('[aria-live="polite"]')!.textContent;
+  unmount();
+  return said;
+}
+
 describe("chat accessibility", () => {
   /** Scenario: Replies are announced to screen readers once */
   it("is a labelled log that announces typing, then the finished reply", () => {
@@ -39,7 +55,7 @@ describe("chat accessibility", () => {
     expect(live).toHaveTextContent("Alter-Ego replied: Hello there");
   });
 
-  /** Scenario: Replies are announced to screen readers once */
+  /** Scenario: Loading a conversation's history announces nothing */
   it("announces nothing when another conversation's history loads", () => {
     const { rerender } = render(<ChatMessageList messages={[]} />);
     rerender(
@@ -51,28 +67,30 @@ describe("chat accessibility", () => {
     expect(live).toBeEmptyDOMElement();
   });
 
-  /** Scenario: Replies are announced to screen readers once */
+  /** Scenario: A long reply is announced as plain text, cut short */
   it("reads a finished reply without markdown and cut short", () => {
-    const question = { role: "user" as const, text: "hi", time: "10:00" };
-    const { rerender } = render(
-      <ChatMessageList messages={[question]} isStreaming />,
+    expect(
+      announcedReply(
+        `## **Bold** [link](u) _x_ ~y~ |z| > \`c\`\n\n  ${"a".repeat(400)}`,
+      ),
+    ).toBe(`Alter-Ego replied: Bold linku x y z c ${"a".repeat(261)}…`);
+  });
+
+  /** Scenario: A long reply is announced as plain text, cut short */
+  it("reads a reply of exactly 280 characters in full", () => {
+    expect(announcedReply("a".repeat(280))).toBe(
+      `Alter-Ego replied: ${"a".repeat(280)}`,
     );
-    rerender(
-      <ChatMessageList
-        messages={[
-          question,
-          {
-            role: "assistant",
-            text: `## **Bold** ${"x".repeat(400)}`,
-            time: "10:00",
-          },
-        ]}
-      />,
+    expect(announcedReply("a".repeat(281))).toBe(
+      `Alter-Ego replied: ${"a".repeat(280)}…`,
     );
-    const text = document.querySelector('[aria-live="polite"]')!.textContent;
-    expect(text).not.toMatch(/[#*]/);
-    expect(text.endsWith("…")).toBe(true);
-    expect(text.length).toBeLessThan(330);
+  });
+
+  /** Scenario: A long reply is announced as plain text, cut short */
+  it("drops the space before the ellipsis", () => {
+    expect(announcedReply(`${"a".repeat(279)} ${"b".repeat(10)}`)).toBe(
+      `Alter-Ego replied: ${"a".repeat(279)}…`,
+    );
   });
 
   /** Scenario: The message box has a label and a visible focus ring */
@@ -98,6 +116,29 @@ describe("chat accessibility", () => {
     expect(onSend).toHaveBeenCalledOnce();
     expect(textarea).toBeEnabled();
     expect(textarea).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
+  /** Scenario: Focus stays in the message box after sending */
+  it("sends with Enter, keeps a new line with Shift+Enter", () => {
+    const onSend = vi.fn();
+    render(<ChatComposer value="hello" onChange={vi.fn()} onSend={onSend} />);
+    const textarea = screen.getByRole("textbox");
+    textarea.focus();
+
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
+    expect(onSend).not.toHaveBeenCalled();
+    fireEvent.keyDown(textarea, { key: "Enter" });
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(textarea).toHaveFocus();
+  });
+
+  /** Scenario: Focus stays in the message box after sending */
+  it("keeps Send off while a reply streams, even with text typed", () => {
+    render(
+      <ChatComposer value="next" onChange={vi.fn()} onSend={vi.fn()} busy />,
+    );
+    expect(screen.getByRole("textbox")).toBeEnabled();
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
   });
 });

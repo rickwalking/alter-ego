@@ -75,10 +75,17 @@ tests' JSDoc (comment rule, Pedro 2026-10-22).
 Re-applied on current main (after #248 merged) without the markdown change, so the message row keeps plain text
 here; branch fix/ae-0531-chat-a11y-i18n. Chat, public chat and i18n tests pass (52).
 
+### 2026-10-23 02:10
+
+External QA (WARN) findings fixed: two scenarios added to the feature (history load stays silent; long replies are
+read as plain text cut at 280 characters) with exact-text tests at the 280/281 boundary and the space before the
+ellipsis; Enter / Shift+Enter and "Send stays off while busy with text" tests; a Portuguese-locale render test
+(`chat-pt-locale.test.tsx`). Chat and public chat tests: 46 passed.
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-header.tsx, chat-composer.tsx, chat-message-list.tsx, chat-message-row.tsx (new, split out), dashboard-chat-view.tsx,
-  chat-a11y.test.tsx (new)
+  chat-a11y.test.tsx (new), chat-pt-locale.test.tsx (new)
 - frontend/src/app/(public)/chat/public-chat-view.tsx + test, layout.tsx + layout.test.tsx (new)
 - frontend/src/modules/editorial-operations/board/chat/constants.ts
 - frontend/src/i18n/locales/en.json, pt.json
