@@ -1735,6 +1735,105 @@
         "title": "CarouselCopyUpdateRequest",
         "type": "object"
       },
+      "CarouselCopyVersionResponse": {
+        "description": "One stored version of the caption or a LinkedIn post.\n\n``author_id`` / ``author_name`` are null for the generated text kept on the\nfirst edit; ``restored_from`` names the version a restore brought back.",
+        "properties": {
+          "author_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Id"
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "restored_from": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restored From"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version_number",
+          "field",
+          "text",
+          "author_id",
+          "author_name",
+          "created_at"
+        ],
+        "title": "CarouselCopyVersionResponse",
+        "type": "object"
+      },
+      "CarouselCopyVersionsResponse": {
+        "description": "One page of the carousel's caption / LinkedIn versions, newest first.\n\n``next_before`` is the ``before`` of the next (older) page, or null when this\npage is the last.",
+        "properties": {
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/CarouselCopyVersionResponse"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "versions"
+        ],
+        "title": "CarouselCopyVersionsResponse",
+        "type": "object"
+      },
       "CarouselDesignColors": {
         "properties": {
           "accent": {
@@ -12476,6 +12575,201 @@
           }
         ],
         "summary": "Save the Instagram caption and the LinkedIn posts of a carousel",
+        "tags": [
+          "carousels",
+          "carousels-copy"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/copy/versions": {
+      "get": {
+        "description": "One page of stored versions, newest first, with who saved it and when.",
+        "operationId": "list_carousel_copy_versions_api_carousels__project_id__copy_versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselCopyVersionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not the owner or an admin"
+          },
+          "404": {
+            "description": "Carousel project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the caption and LinkedIn post versions of a carousel",
+        "tags": [
+          "carousels",
+          "carousels-copy"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/copy/versions/{version_number}/restore": {
+      "post": {
+        "description": "Save the version's text; the restore is recorded as a new version.\n\nA version that names no caption / LinkedIn field is not restorable (404). A\nversion whose text is already the current one changes nothing: no lock is\ntaken, no version recorded, and the sent lock version comes back.",
+        "operationId": "restore_carousel_copy_version_api_carousels__project_id__copy_versions__version_number__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": {
+              "title": "Version Number",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselCopyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not the owner or an admin"
+          },
+          "404": {
+            "description": "Carousel or version not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "A workflow run is active, the lock version is stale, or the caption is already published on Instagram."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "428": {
+            "description": "If-Match missing"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore a caption or LinkedIn post version of a carousel",
         "tags": [
           "carousels",
           "carousels-copy"

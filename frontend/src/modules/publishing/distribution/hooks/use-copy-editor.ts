@@ -92,6 +92,7 @@ export function useCopyEditor(
 
   return {
     draft: state.draft,
+    saved: state.saved,
     status: state.status,
     canSave: onSaveCopy !== undefined,
     isDirty: (fields) =>

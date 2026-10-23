@@ -41,7 +41,7 @@ _TYPE_SQL = text(
 )
 
 
-def test_revision_is_the_single_head_on_top_of_the_cover() -> None:
+def test_revision_sits_on_top_of_the_cover_below_the_single_head() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     assert list(script.get_heads()) == [ALEMBIC_HEAD]

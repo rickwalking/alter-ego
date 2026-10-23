@@ -28,6 +28,7 @@ from rag_backend.application.services.carousel.refinement_service import (
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
+from rag_backend.bootstrap.carousel_copy_versions import build_copy_version_store
 from rag_backend.domain.constants.optimistic_locking import HTTP_HEADER_IF_MATCH
 from rag_backend.domain.models import User
 from rag_backend.domain.protocols import (
@@ -192,5 +193,11 @@ def get_carousel_copy_edit_route_deps(
         user=user,
         if_match=if_match,
         repo=repo,
-        service=CarouselCopyEditService(CarouselCopyEditDeps(db=session, repo=repo)),
+        service=CarouselCopyEditService(
+            CarouselCopyEditDeps(
+                db=session,
+                repo=repo,
+                versions=build_copy_version_store(session),
+            )
+        ),
     )

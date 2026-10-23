@@ -44,6 +44,9 @@ export const API_ENDPOINTS = {
   },
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
   CAROUSEL_COPY: (id: string) => `/api/carousels/${id}/copy`,
+  CAROUSEL_COPY_VERSIONS: (id: string) => `/api/carousels/${id}/copy/versions`,
+  CAROUSEL_COPY_VERSION_RESTORE: (id: string, versionNumber: number) =>
+    `/api/carousels/${id}/copy/versions/${versionNumber}/restore`,
   CAROUSEL_PUBLIC: (id: string) => `/api/carousels/${id}/public`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,

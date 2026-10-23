@@ -127,9 +127,14 @@ export {
   useSaveCarouselCopy,
   type CarouselCopyResponse,
 } from "./distribution/hooks/use-save-carousel-copy";
-export type { CarouselCopyTexts, CopySource } from "./distribution/hooks/types";
+export type {
+  CarouselCopyTexts,
+  CopyHistory,
+  CopySource,
+} from "./distribution/hooks/types";
 export { COPY_FIELDS } from "./distribution/lib/copy-editor-state";
 export { useCopySave } from "./distribution/hooks/use-copy-save";
+export { useCopyHistory } from "./distribution/hooks/use-copy-history";
 export { useCopyEditor } from "./distribution/hooks/use-copy-editor";
 export {
   ReviewCaptionEditor,

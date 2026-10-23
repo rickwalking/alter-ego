@@ -98,7 +98,8 @@ class ContentVersionModel(Base):
         Index("idx_content_versions_content_id", "content_id"),
         Index("idx_content_versions_type", "content_type"),
         Index(
-            "idx_content_versions_version",
+            "uq_content_versions_content_version",
+            "content_id",
             "content_type",
             "version_number",
             unique=True,

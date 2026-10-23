@@ -109,9 +109,9 @@ function CopyTab({ copy, tab }: CopyTabProps): React.JSX.Element {
     return <CopyPending copy={copy} />;
   }
   return tab === FINAL_REVIEW_TABS.CAPTION ? (
-    <ReviewCaptionEditor editor={copy.editor} />
+    <ReviewCaptionEditor editor={copy.editor} history={copy.history} />
   ) : (
-    <ReviewLinkedInEditor editor={copy.editor} />
+    <ReviewLinkedInEditor editor={copy.editor} history={copy.history} />
   );
 }
 

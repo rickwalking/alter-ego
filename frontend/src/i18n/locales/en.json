@@ -1193,6 +1193,19 @@
         "captionPublished": "The caption is already published on Instagram and can no longer be changed.",
         "runInProgress": "A workflow step is running. Save when it finishes."
       },
+      "history": {
+        "title": "History",
+        "loading": "Loading the history…",
+        "empty": "No saved versions yet.",
+        "version": "Version {number}",
+        "previous": "Previous text",
+        "loadMore": "Show older versions",
+        "restoredFrom": "restored from version {number}",
+        "restore": "Restore",
+        "restoring": "Restoring…",
+        "restoreVersion": "Restore version {number}",
+        "blocked": "Save or discard the edit before restoring a version."
+      },
       "leave": {
         "title": "Leave without saving?",
         "body": "You have unsaved changes to the caption or the LinkedIn post. If you leave now, they will be lost.",

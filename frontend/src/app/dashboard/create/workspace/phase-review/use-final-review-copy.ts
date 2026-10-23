@@ -6,7 +6,9 @@ import {
   COPY_FIELDS,
   mergePublishProjectWithWorkflow,
   useCopyEditor,
+  useCopyHistory,
   useCopySave,
+  type CopyHistory,
   type CopySource,
   type EditorialWorkflowState,
 } from "@/modules/publishing";
@@ -20,6 +22,7 @@ export interface FinalReviewCopy {
   /** The project could not be loaded; ``retry`` asks again. */
   loadFailed: boolean;
   retry: () => void;
+  history: CopyHistory;
 }
 
 const NO_TEXTS: CopySource = {
@@ -33,8 +36,9 @@ const NO_TEXTS: CopySource = {
  * texts first, the workflow checkpoint's only where the project has none (the
  * publish page's rule, so both pages show the same text). A save sends the
  * workflow lock version and refetches the workflow state and the project, so
- * the approve that follows sends the new lock version. No editor is offered
- * until the project loads (a failed load can be retried).
+ * the approve that follows sends the new lock version; a restore from the
+ * history does the same. No editor is offered until the project loads (a
+ * failed load can be retried).
  */
 export function useFinalReviewCopy(
   projectId: string,
@@ -44,9 +48,10 @@ export function useFinalReviewCopy(
   const projectQuery = useCarouselProject(projectId);
   const project = projectQuery.data;
   const refetchProject = projectQuery.refetch;
-  const saveCopy = useCopySave(projectId, state.lock_version, () =>
-    Promise.all([onCopySaved(), refetchProject()]),
-  );
+  const refreshAll = (): Promise<unknown> =>
+    Promise.all([onCopySaved(), refetchProject()]);
+  const saveCopy = useCopySave(projectId, state.lock_version, refreshAll);
+  const history = useCopyHistory(projectId, state.lock_version, refreshAll);
   const editor = useCopyEditor(
     project ? mergePublishProjectWithWorkflow(project, state) : NO_TEXTS,
     saveCopy,
@@ -57,16 +62,21 @@ export function useFinalReviewCopy(
     retry: () => {
       void refetchProject();
     },
+    history,
   };
 }
 
-/** A caption / LinkedIn edit is unsaved, or a save is still running. */
+/** A caption / LinkedIn edit is unsaved, or a save or restore is running. */
 export function copyBusy(copy: FinalReviewCopy): boolean {
   const editor = copy.editor;
   if (!editor) {
     return false;
   }
-  return editor.isDirty(COPY_FIELDS) || editor.status.kind === "saving";
+  return (
+    editor.isDirty(COPY_FIELDS) ||
+    editor.status.kind === "saving" ||
+    copy.history.status.kind === "restoring"
+  );
 }
 
 /**

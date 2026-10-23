@@ -5,9 +5,13 @@ The publish page edits the caption and the PT/EN LinkedIn posts. A save:
 1. Refuses while a workflow run is active (the run writes the same row).
 2. Takes the ``lock_version`` compare-and-swap with the version the page loaded,
    so a save prepared against an older state gets the typed ``version_conflict``.
-3. Writes the texts through the carousel repository, whose ``update_project``
-   lands them in the canonical ``blog_posts.distribution`` home and its embedded
-   mirror (ADR-011) in the same transaction.
+3. Stages one version per changed text in ``content_versions`` (who, when,
+   which text, the text), then writes the texts through the carousel repository,
+   whose ``update_project`` lands them in the canonical ``blog_posts.distribution``
+   home and its embedded mirror and commits the versions with them.
+
+A restore saves a stored version's text through the same path, so it is itself
+recorded as a new version.
 """
 
 from __future__ import annotations
@@ -17,6 +21,11 @@ from dataclasses import dataclass
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.carousel_copy_history import (
+    CopyChange,
+    copy_texts,
+    versions_for_change,
+)
 from rag_backend.application.services.carousel.carousel_lock_cas import (
     take_lock_version_cas,
 )
@@ -30,6 +39,8 @@ from rag_backend.domain.models.carousel_conflict import (
     CarouselConflict,
     CarouselConflictError,
 )
+from rag_backend.domain.models.carousel_copy_version import CopyVersion, VersionPage
+from rag_backend.domain.protocols.content_versions import CopyVersionStore
 from rag_backend.domain.protocols.repositories import CarouselRepository
 
 logger = structlog.get_logger(__name__)
@@ -46,11 +57,16 @@ class CopyEdits:
 
 @dataclass(frozen=True)
 class CopyEditCommand:
-    """One save of ``edits`` on ``project`` against the loaded ``lock_version``."""
+    """One save of ``edits`` on ``project`` against the loaded ``lock_version``.
+
+    ``author_id`` is who saves; ``restored_from`` the version a restore brings back.
+    """
 
     project: CarouselProject
     lock_version: int
     edits: CopyEdits
+    author_id: str | None = None
+    restored_from: int | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +83,7 @@ class CarouselCopyEditDeps:
 
     db: AsyncSession
     repo: CarouselRepository
+    versions: CopyVersionStore
 
 
 class CarouselCopyEditService:
@@ -75,6 +92,15 @@ class CarouselCopyEditService:
     def __init__(self, deps: CarouselCopyEditDeps) -> None:
         self._db = deps.db
         self._repo = deps.repo
+        self._versions = deps.versions
+
+    async def versions(self, project_id: str, page: VersionPage) -> list[CopyVersion]:
+        """One page of the carousel's caption / LinkedIn versions, newest first."""
+        return await self._versions.list_versions(project_id, page)
+
+    async def version(self, project_id: str, number: int) -> CopyVersion | None:
+        """Version ``number`` of the carousel, or ``None``."""
+        return await self._versions.get_version(project_id, number)
 
     async def save(self, command: CopyEditCommand) -> CopyEditResult:
         """Check the run guard and the lock, apply the edits and commit."""
@@ -84,16 +110,35 @@ class CarouselCopyEditService:
                 CarouselConflict.for_code(CONFLICT_CODE_RUN_IN_PROGRESS)
             )
         await take_lock_version_cas(self._db, str(project.id), command.lock_version)
+        before = copy_texts(project)
         _apply(project, command.edits)
+        recorded = await self._record_versions(command, before)
         saved = await self._repo.update_project(project)
         logger.info(
             LOG_EVENT_COPY_SAVED,
             project_id=str(project.id),
+            versions_recorded=recorded,
             caption=command.edits.caption is not None,
             linkedin_post_pt=command.edits.linkedin_post_pt is not None,
             linkedin_post_en=command.edits.linkedin_post_en is not None,
         )
         return CopyEditResult(project=saved, lock_version=command.lock_version + 1)
+
+    async def _record_versions(
+        self, command: CopyEditCommand, before: dict[str, str | None]
+    ) -> int:
+        """Stage the versions of the texts this save changes (no commit); how many."""
+        project_id = str(command.project.id)
+        latest = await self._versions.latest_texts(project_id)
+        change = CopyChange(
+            before=before,
+            after=copy_texts(command.project),
+            author_id=command.author_id,
+            restored_from=command.restored_from,
+        )
+        new_versions = versions_for_change(change, latest)
+        await self._versions.add(project_id, new_versions)
+        return len(new_versions)
 
 
 def _apply(project: CarouselProject, edits: CopyEdits) -> None:

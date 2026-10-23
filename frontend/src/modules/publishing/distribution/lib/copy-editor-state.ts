@@ -12,10 +12,18 @@ export const COPY_FIELDS: readonly CopyField[] = [
   "linkedinEn",
 ];
 
-const API_FIELD: Readonly<Record<CopyField, keyof CarouselCopyTexts>> = {
-  caption: "caption",
-  linkedinPt: "linkedin_post_pt",
-  linkedinEn: "linkedin_post_en",
+/** The API field names of the caption and the LinkedIn posts. */
+export const DISTRIBUTION_FIELDS = {
+  CAPTION: "caption",
+  LINKEDIN_PT: "linkedin_post_pt",
+  LINKEDIN_EN: "linkedin_post_en",
+} as const satisfies Record<string, keyof CarouselCopyTexts>;
+
+/** The API field name of each editor field. */
+export const API_FIELD: Readonly<Record<CopyField, keyof CarouselCopyTexts>> = {
+  caption: DISTRIBUTION_FIELDS.CAPTION,
+  linkedinPt: DISTRIBUTION_FIELDS.LINKEDIN_PT,
+  linkedinEn: DISTRIBUTION_FIELDS.LINKEDIN_EN,
 };
 
 const ERROR_KEY_BY_DETAIL: Readonly<Record<string, string>> = {
@@ -72,6 +80,15 @@ export function toCopyPayload(
     payload[API_FIELD[field]] = draft[field];
   }
   return payload;
+}
+
+/** The texts keyed by API field name (what the version history compares). */
+export function apiTexts(texts: CopyTextsState): Record<string, string> {
+  return {
+    [DISTRIBUTION_FIELDS.CAPTION]: texts.caption,
+    [DISTRIBUTION_FIELDS.LINKEDIN_PT]: texts.linkedinPt,
+    [DISTRIBUTION_FIELDS.LINKEDIN_EN]: texts.linkedinEn,
+  };
 }
 
 /** The ``publish`` i18n key explaining why a save was refused. */

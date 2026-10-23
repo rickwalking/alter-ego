@@ -15,7 +15,7 @@ import type { CarouselCopySaveInput } from "./types";
  * request carries the loaded ``lock_version`` as ``If-Match``; the response
  * returns the saved texts and the version the next save must send.
  */
-const carouselCopyResponseSchema = z.object({
+export const carouselCopyResponseSchema = z.object({
   project_id: z.string(),
   caption: z.string().nullable(),
   linkedin_post_pt: z.string().nullable(),

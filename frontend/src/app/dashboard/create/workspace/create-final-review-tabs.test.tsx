@@ -29,6 +29,10 @@ vi.mock(
     useSaveCarouselCopy: () => ({ mutateAsync: m.saveCopy }),
   }),
 );
+vi.mock("@/modules/publishing/distribution/hooks/use-copy-versions", () => ({
+  useCarouselCopyVersions: () => ({ data: undefined, isLoading: false }),
+  useRestoreCopyVersion: () => ({ mutateAsync: vi.fn() }),
+}));
 vi.mock("@/modules/editorial", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/editorial")>()),
   useCarouselProject: () => ({
