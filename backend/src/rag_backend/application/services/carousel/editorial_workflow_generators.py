@@ -12,7 +12,7 @@ from functools import partial
 
 import structlog
 
-from rag_backend.agents.content_draft_agent import ContentDraftAgent, agent_for_rubric
+from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
 from rag_backend.application.services.carousel.bounded_gather import gather_bounded
@@ -45,7 +45,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     SOURCE_TYPE_DOCUMENT,
 )
 from rag_backend.domain.content_mode import is_pov_news
-from rag_backend.domain.models.carousel_rubric import CarouselRubric
+from rag_backend.domain.models.carousel_rubric import CarouselRubric, agent_for_rubric
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 from rag_backend.domain.news_quote_cards import place_quote_cards

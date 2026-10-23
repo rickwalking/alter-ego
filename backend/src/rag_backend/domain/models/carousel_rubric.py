@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol, Self, TypeVar
 
 from rag_backend.domain.models.rubric import RubricCriterion
 
@@ -91,10 +92,29 @@ class JudgedCriterion:
     feedback: str = ""
 
 
+class RubricScopedAgent(Protocol):
+    """An agent that can draft against a carousel's quality rubric."""
+
+    def with_rubric(self, rubric: CarouselRubric | None) -> Self:
+        """This agent drafting against ``rubric``."""
+        ...
+
+
+AgentT = TypeVar("AgentT", bound=RubricScopedAgent)
+
+
+def agent_for_rubric(agent: AgentT, rubric: CarouselRubric | None) -> AgentT:
+    """``agent`` drafting against ``rubric``; no rubric leaves it untouched."""
+    return agent if rubric is None else agent.with_rubric(rubric)
+
+
 __all__ = [
+    "AgentT",
     "CarouselRubric",
     "CarouselRubricEvaluation",
     "CriterionScore",
     "JudgedCriterion",
     "RubricJudgeRequest",
+    "RubricScopedAgent",
+    "agent_for_rubric",
 ]

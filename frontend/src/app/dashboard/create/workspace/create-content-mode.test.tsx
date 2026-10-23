@@ -64,7 +64,7 @@ describe("CreateModeSection", () => {
     });
   });
 
-  /** Scenario: The owner picks "POV: News" (AE-0406) */
+  /** Scenario: The owner picks "POV: News" */
   it("switches to POV: News with the POV preset", () => {
     const onChange = vi.fn();
     render(

@@ -114,13 +114,6 @@ def _render_content_prompt(
     )
 
 
-def agent_for_rubric(
-    agent: ContentDraftAgent, rubric: CarouselRubric | None
-) -> ContentDraftAgent:
-    """``agent`` drafting against ``rubric``; no rubric leaves it untouched."""
-    return agent if rubric is None else agent.with_rubric(rubric)
-
-
 class ContentDraftAgent:
     """Drafts carousel slide copy with optional persona enforcement."""
 
@@ -327,4 +320,4 @@ class ContentDraftAgent:
         )
 
 
-__all__ = ["ContentDraftAgent", "agent_for_rubric"]
+__all__ = ["ContentDraftAgent"]
