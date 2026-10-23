@@ -21,6 +21,21 @@ logger = get_logger()
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
 
+SELECTABLE_NAMESPACES: tuple[DocumentScope, ...] = (
+    DocumentScope.PERSONAL,
+    DocumentScope.PUBLIC,
+)
+"""The scopes a document can be moved between, so chunks may linger in either."""
+
+
+def _namespaces_of(scope: DocumentScope) -> list[str]:
+    """The namespaces a document of ``scope`` may have chunks in, its own first."""
+    namespaces = [scope.value]
+    for selectable in SELECTABLE_NAMESPACES:
+        if selectable.value not in namespaces:
+            namespaces.append(selectable.value)
+    return namespaces
+
 
 class DocumentProcessingPipeline:
     """Pipeline for processing documents end-to-end.
@@ -129,15 +144,15 @@ class DocumentProcessingPipeline:
         Returns:
             The reprocessed document
 
-        Existing chunks are deleted from the current scope's namespace before
-        reprocessing. A processing failure is recorded on the document (status
-        failed + reason) and returned instead of raised, so the caller's Unit
-        of Work commits it and the document never stays pending.
+        Existing chunks are deleted from the current scope's namespace and from
+        the personal and public namespaces before reprocessing, so a Retry also
+        clears chunks a failed scope change left in the other scope. A
+        processing failure is recorded on the document (status failed +
+        reason) and returned instead of raised, so the caller's Unit of Work
+        commits it and the document never stays pending.
         """
         document = await self._load(document_id)
-        await self._vector_store.delete_by_document(
-            document.id, namespace=document.scope.value
-        )
+        await self._clear_chunks(document)
         return await self._restart(document)
 
     async def rescope_document(
@@ -145,14 +160,13 @@ class DocumentProcessingPipeline:
     ) -> Document:
         """Move a document to another scope and re-index it there.
 
-        The chunks are deleted from the old scope's namespace, the document
-        takes the new scope (public only for the public scope) and is processed
-        again into the new namespace. A failure is recorded like a reprocess.
+        The chunks are deleted from the old scope's namespace (and from the
+        personal and public ones), the document takes the new scope (public only
+        for the public scope) and is processed again into the new namespace. A
+        failure is recorded like a reprocess.
         """
         document = await self._load(document_id)
-        await self._vector_store.delete_by_document(
-            document.id, namespace=document.scope.value
-        )
+        await self._clear_chunks(document)
         document.scope = scope
         document.is_public = scope is DocumentScope.PUBLIC
         return await self._restart(document)
@@ -164,6 +178,13 @@ class DocumentProcessingPipeline:
         await self._vector_store.delete_by_document(
             UUID(document_id), namespace=scope.value
         )
+
+    async def _clear_chunks(self, document: Document) -> None:
+        """Delete the document's chunks from its scope and the selectable ones."""
+        for namespace in _namespaces_of(document.scope):
+            await self._vector_store.delete_by_document(
+                document.id, namespace=namespace
+            )
 
     async def _load(self, document_id: str) -> Document:
         """The stored document, or ``ValueError`` when it does not exist."""
@@ -192,16 +213,19 @@ class DocumentProcessingPipeline:
         Returns:
             True if deleted successfully
 
-        The vector-store chunks are deleted before the database row.
+        The vector-store chunks are deleted before the database row, from the
+        document's scope and from the personal and public namespaces, so no
+        chunk a failed scope change left behind outlives the document.
         """
         from uuid import UUID
 
         doc_id = UUID(document_id)
 
         document = await self._document_repository.get_by_id(doc_id)
-        namespace = document.scope.value if document else None
-
-        await self._vector_store.delete_by_document(doc_id, namespace=namespace)
+        if document is None:
+            await self._vector_store.delete_by_document(doc_id, namespace=None)
+        else:
+            await self._clear_chunks(document)
 
         return await self._document_repository.delete(doc_id)
 

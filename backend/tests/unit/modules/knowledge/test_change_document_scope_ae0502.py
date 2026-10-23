@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 from uuid import UUID, uuid4
 
 import pytest
@@ -266,7 +266,10 @@ async def test_pipeline_moves_chunks_to_the_public_namespace() -> None:
 
     result = await pipeline.rescope_document(str(document.id), DocumentScope.PUBLIC)
 
-    store.delete_by_document.assert_awaited_once_with(document.id, namespace="personal")
+    assert store.delete_by_document.await_args_list == [
+        call(document.id, namespace="personal"),
+        call(document.id, namespace="public"),
+    ]
     assert store.upsert_chunks.await_args.kwargs["namespace"] == "public"
     assert result.scope is DocumentScope.PUBLIC
     assert result.is_public is True
@@ -284,7 +287,10 @@ async def test_pipeline_moves_chunks_to_the_personal_namespace() -> None:
 
     result = await pipeline.rescope_document(str(document.id), DocumentScope.PERSONAL)
 
-    store.delete_by_document.assert_awaited_once_with(document.id, namespace="public")
+    assert store.delete_by_document.await_args_list == [
+        call(document.id, namespace="public"),
+        call(document.id, namespace="personal"),
+    ]
     assert store.upsert_chunks.await_args.kwargs["namespace"] == "personal"
     assert result.is_public is False
 
