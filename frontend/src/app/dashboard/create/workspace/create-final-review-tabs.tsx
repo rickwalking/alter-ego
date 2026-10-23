@@ -1,140 +1,148 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 import { cn } from "@/lib/utils";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import {
   FINAL_REVIEW_TABS,
   type FinalReviewTab,
 } from "@/constants/editorial-workflow";
-import type { EditorialWorkflowState } from "@/modules/publishing";
+import {
+  ReviewCaptionEditor,
+  ReviewCopyLeaveGuard,
+  ReviewLinkedInEditor,
+  COPY_FIELDS,
+  type EditorialWorkflowState,
+} from "@/modules/publishing";
 import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
+import { FinalReviewBlogTab } from "./phase-review/final-review-blog-tab";
+import {
+  useFinalReviewCopy,
+  useReportCopyBusy,
+  type FinalReviewCopy,
+} from "./phase-review/use-final-review-copy";
 import {
   resolveBlogMarkdown,
-  resolveCaption,
   resolveRubricScores,
 } from "./create-phase-review-helpers";
 
 interface FinalReviewTabsProps {
   projectId: string;
   state: EditorialWorkflowState;
+  /** Refetch the workflow state after a caption / LinkedIn save. */
+  onCopySaved: () => Promise<unknown>;
+  /** Told whether a caption / LinkedIn edit is unsaved or saving. */
+  onCopyBusyChange?: (busy: boolean) => void;
 }
 
-interface PreviewBlogResponse {
-  markdown?: string;
+const MUTED = "text-[var(--color-text-muted)]";
+
+/** The caption or a LinkedIn post has edits that are not saved yet. */
+function copyUnsaved(copy: FinalReviewCopy): boolean {
+  return copy.editor?.isDirty(COPY_FIELDS) === true;
 }
 
-interface BlogPreview {
-  previewMarkdown: string | null;
-  previewLoading: boolean;
-  previewError: string | null;
+interface QualityTabProps {
+  readonly state: EditorialWorkflowState;
+  readonly emptyText: string;
 }
 
-/** Load the rendered blog preview each time the blog tab is opened. */
-function useBlogPreview(
-  projectId: string,
-  active: boolean,
-  errorMessage: string,
-): BlogPreview {
-  const [previewMarkdown, setPreviewMarkdown] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-
-  const loadBlogPreview = useCallback(async () => {
-    setPreviewLoading(true);
-    setPreviewError(null);
-    try {
-      const response = await authenticatedFetch(
-        API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG(projectId, DEFAULT_BLOG_LANGUAGE),
-      );
-      if (!response.ok) {
-        setPreviewError(errorMessage);
-        return;
-      }
-      const payload = (await response.json()) as PreviewBlogResponse;
-      setPreviewMarkdown(payload.markdown ?? "");
-    } catch {
-      setPreviewError(errorMessage);
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, [projectId, errorMessage]);
-
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-    void loadBlogPreview();
-  }, [active, loadBlogPreview]);
-
-  return { previewMarkdown, previewLoading, previewError };
-}
-
-interface BlogPreviewPanelProps {
-  readonly loading: boolean;
-  readonly error: string | null;
-  readonly markdown: string;
-  readonly loadingText: string;
-  readonly placeholderText: string;
-}
-
-function blogPreviewContent({
-  loading,
-  error,
-  markdown,
-  loadingText,
-  placeholderText,
-}: BlogPreviewPanelProps): React.JSX.Element {
-  const muted = "text-[var(--color-text-muted)]";
-  if (loading) {
-    return <p className={muted}>{loadingText}</p>;
-  }
-  if (error) {
-    return <p className={muted}>{error}</p>;
-  }
-  if (!markdown) {
-    return <p className={muted}>{placeholderText}</p>;
+/** The final review rubric scores, or the empty note. */
+function QualityTab({ state, emptyText }: QualityTabProps): React.JSX.Element {
+  const scoreEntries = Object.entries(resolveRubricScores(state));
+  if (scoreEntries.length === 0) {
+    return <p className={MUTED}>{emptyText}</p>;
   }
   return (
-    <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-[var(--color-surface)] p-3 text-[var(--color-text-muted)] text-xs">
-      {markdown}
-    </pre>
+    <ul className="space-y-1">
+      {scoreEntries.map(([name, value]) => (
+        <li
+          key={name}
+          className={cn("flex items-center justify-between gap-2", MUTED)}
+        >
+          <span className="font-medium capitalize">
+            {name.replaceAll("_", " ")}
+          </span>
+          <span>
+            {typeof value === "string" ? value : JSON.stringify(value)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/** Loading, error, the rendered markdown, or the empty placeholder. */
-function BlogPreviewPanel(props: BlogPreviewPanelProps): React.JSX.Element {
-  return <div className="space-y-2">{blogPreviewContent(props)}</div>;
+interface CopyTabProps {
+  readonly copy: FinalReviewCopy;
+  readonly tab: FinalReviewTab;
 }
 
+interface CopyPendingProps {
+  readonly copy: FinalReviewCopy;
+}
+
+/** Why there is no editor yet: still loading, or a failed load with a retry. */
+function CopyPending({ copy }: CopyPendingProps): React.JSX.Element {
+  const t = useTranslations("editorialWorkflow.review.finalReview");
+  if (!copy.loadFailed) {
+    return <p className={MUTED}>{t("copyLoading")}</p>;
+  }
+  return (
+    <div className="space-y-2">
+      <p role="alert" className="text-destructive">
+        {t("copyLoadFailed")}
+      </p>
+      <button
+        type="button"
+        onClick={copy.retry}
+        className="rounded-md border border-[var(--color-border)] px-3 py-1 text-xs"
+      >
+        {t("copyRetry")}
+      </button>
+    </div>
+  );
+}
+
+/** The caption or LinkedIn editor, once the saved project texts loaded. */
+function CopyTab({ copy, tab }: CopyTabProps): React.JSX.Element {
+  if (!copy.editor) {
+    return <CopyPending copy={copy} />;
+  }
+  return tab === FINAL_REVIEW_TABS.CAPTION ? (
+    <ReviewCaptionEditor editor={copy.editor} />
+  ) : (
+    <ReviewLinkedInEditor editor={copy.editor} />
+  );
+}
+
+/**
+ * The final review: carousel, blog preview (edited in the blog editor),
+ * the editable caption and LinkedIn posts, and the quality scores. The text
+ * editor lives here, above the tab switch, so drafts survive a tab change.
+ */
 export function CreateFinalReviewTabs({
   projectId,
   state,
+  onCopySaved,
+  onCopyBusyChange,
 }: Readonly<FinalReviewTabsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.review.finalReview");
   const [activeTab, setActiveTab] = useState<FinalReviewTab>(
     FINAL_REVIEW_TABS.CAROUSEL,
   );
-  const caption = resolveCaption(state);
-  const blogMarkdown = resolveBlogMarkdown(state);
-  const rubricScores = resolveRubricScores(state);
-  const scoreEntries = Object.entries(rubricScores);
-  const { previewMarkdown, previewLoading, previewError } = useBlogPreview(
-    projectId,
-    activeTab === FINAL_REVIEW_TABS.BLOG,
-    t("blogPreviewError"),
-  );
-
-  const displayedBlogMarkdown = previewMarkdown ?? blogMarkdown;
+  const copy = useFinalReviewCopy(projectId, state, onCopySaved);
+  useReportCopyBusy(copy, onCopyBusyChange);
 
   const tabs: { id: FinalReviewTab; label: string }[] = [
     { id: FINAL_REVIEW_TABS.CAROUSEL, label: t("tabs.carousel") },
     { id: FINAL_REVIEW_TABS.BLOG, label: t("tabs.blog") },
     { id: FINAL_REVIEW_TABS.CAPTION, label: t("tabs.caption") },
+    { id: FINAL_REVIEW_TABS.LINKEDIN, label: t("tabs.linkedin") },
     { id: FINAL_REVIEW_TABS.QUALITY, label: t("tabs.quality") },
   ];
+  const copyTab =
+    activeTab === FINAL_REVIEW_TABS.CAPTION ||
+    activeTab === FINAL_REVIEW_TABS.LINKEDIN;
 
   return (
     <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
@@ -150,7 +158,7 @@ export function CreateFinalReviewTabs({
               "rounded-md border px-3 py-1 text-xs transition-colors",
               activeTab === tab.id
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                : "border-[var(--color-border)] text-[var(--color-text-muted)]",
+                : cn("border-[var(--color-border)]", MUTED),
             )}
             onClick={() => setActiveTab(tab.id)}
           >
@@ -163,55 +171,18 @@ export function CreateFinalReviewTabs({
           <ContentPhaseReview state={state} editable={false} />
         )}
         {activeTab === FINAL_REVIEW_TABS.BLOG && (
-          <BlogPreviewPanel
-            loading={previewLoading}
-            error={previewError}
-            markdown={displayedBlogMarkdown}
-            loadingText={t("blogPreviewLoading")}
-            placeholderText={t("blogPlaceholder")}
+          <FinalReviewBlogTab
+            projectId={projectId}
+            fallbackMarkdown={resolveBlogMarkdown(state)}
+            copyUnsaved={copyUnsaved(copy)}
           />
         )}
-        {activeTab === FINAL_REVIEW_TABS.CAPTION && (
-          <div className="space-y-2">
-            {caption ? (
-              <p className="whitespace-pre-wrap text-[var(--color-text-muted)]">
-                {caption}
-              </p>
-            ) : (
-              <p className="text-[var(--color-text-muted)]">
-                {t("captionEmpty")}
-              </p>
-            )}
-          </div>
-        )}
+        {copyTab && <CopyTab copy={copy} tab={activeTab} />}
         {activeTab === FINAL_REVIEW_TABS.QUALITY && (
-          <div className="space-y-2">
-            {scoreEntries.length > 0 ? (
-              <ul className="space-y-1">
-                {scoreEntries.map(([name, value]) => (
-                  <li
-                    key={name}
-                    className="flex items-center justify-between gap-2 text-[var(--color-text-muted)]"
-                  >
-                    <span className="font-medium capitalize">
-                      {name.replaceAll("_", " ")}
-                    </span>
-                    <span>
-                      {typeof value === "string"
-                        ? value
-                        : JSON.stringify(value)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-[var(--color-text-muted)]">
-                {t("qualityEmpty")}
-              </p>
-            )}
-          </div>
+          <QualityTab state={state} emptyText={t("qualityEmpty")} />
         )}
       </div>
+      {copy.editor && <ReviewCopyLeaveGuard editor={copy.editor} />}
     </div>
   );
 }

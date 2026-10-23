@@ -1,8 +1,8 @@
 import { ApiError } from "@/lib/api-client";
-import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type {
   CarouselCopyTexts,
   CopyField,
+  CopySource,
   CopyTextsState,
 } from "@/modules/publishing/distribution/hooks/types";
 
@@ -27,9 +27,7 @@ const ERROR_KEY_BY_DETAIL: Readonly<Record<string, string>> = {
 const ERROR_KEY_FALLBACK = "copy.errors.save";
 
 /** The saved texts of a project (a missing text is an empty one). */
-export function savedCopyTexts(
-  project: CarouselProjectResponse,
-): CopyTextsState {
+export function savedCopyTexts(project: CopySource): CopyTextsState {
   return {
     caption: project.caption ?? "",
     linkedinPt: project.linkedin_post_pt ?? "",

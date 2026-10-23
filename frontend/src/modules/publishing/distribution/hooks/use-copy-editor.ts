@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { CarouselProjectResponse } from "@/schemas/carousel";
 import {
   copySaveErrorKey,
   dirtyFields,
@@ -13,6 +12,7 @@ import type {
   CopyEditor,
   CopyEditorState,
   CopyField,
+  CopySource,
   CopyTextsState,
   SaveCopy,
   SaveDirtyFieldsInput,
@@ -62,7 +62,7 @@ async function saveDirtyFields({
  * ``save`` sends the dirty fields among those asked and marks them saved.
  */
 export function useCopyEditor(
-  project: CarouselProjectResponse,
+  project: CopySource,
   onSaveCopy: SaveCopy | undefined,
 ): CopyEditor {
   const incoming = savedCopyTexts(project);

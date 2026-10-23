@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api-client";
 import { EDITORIAL_WORKFLOW_CONFLICT_CODES } from "@/constants/editorial-workflow";
-import {
-  useSaveCarouselCopy,
-  type CarouselCopyTexts,
-} from "@/modules/publishing";
+import { useSaveCarouselCopy } from "./use-save-carousel-copy";
+import type { CarouselCopyTexts } from "./types";
 
 /** A save refused because the page's lock version is stale. */
 function isVersionConflict(error: unknown): boolean {
@@ -17,9 +15,11 @@ function isVersionConflict(error: unknown): boolean {
 }
 
 /**
- * The publish page's caption / LinkedIn save. Each save sends the newest lock
- * version the page knows (the loaded workflow state's, or the one the last
- * save returned, whichever is higher) and refreshes the page afterwards.
+ * The caption / LinkedIn save of the publish page and the final review. Each
+ * save sends the newest lock version the page knows (the loaded workflow state's, or the one the last
+ * save returned, whichever is higher) and refreshes the page's data before it
+ * resolves, so the editor stays "saving" until the page holds the new lock
+ * version (an approve right after a save never sends the old one).
  * Without a loaded lock version there is nothing safe to send, so no save.
  * A save refused as ``version_conflict`` refetches the page so the next save
  * sends the current lock version; the drafts stay in the editor.
@@ -43,10 +43,10 @@ export function useCopySave(
         texts,
       });
       setSavedLockVersion(saved.lock_version);
-      void refreshAll();
+      await Promise.allSettled([refreshAll()]);
     } catch (error) {
       if (isVersionConflict(error)) {
-        void refreshAll();
+        await Promise.allSettled([refreshAll()]);
       }
       throw error;
     }

@@ -712,13 +712,17 @@
           "carousel": "Carousel",
           "blog": "Blog",
           "caption": "Caption",
+          "linkedin": "LinkedIn",
           "quality": "Quality"
         },
         "carouselEmpty": "No slide content is available yet.",
         "blogPlaceholder": "Blog markdown will appear here once generated.",
         "blogPreviewLoading": "Loading draft blog preview…",
         "blogPreviewError": "Could not load draft blog preview.",
-        "captionEmpty": "No caption has been generated yet.",
+        "copyLoading": "Loading the saved texts…",
+        "copyLoadFailed": "Could not load the saved texts.",
+        "copyRetry": "Try again",
+        "copyBlocked": "Save or discard the caption or LinkedIn edit before approving or requesting changes.",
         "qualityEmpty": "Quality scores are not available yet."
       },
       "hookPicker": {
@@ -1142,6 +1146,19 @@
     "notReady": {
       "title": "Not ready to publish yet",
       "body": "The PDF, the slide images and the publishing actions appear once the carousel reaches the final review. Continue the review in the workspace."
+    },
+    "blogEditorLink": {
+      "body": "The blog body is edited in the blog editor.",
+      "open": "Open in the blog editor",
+      "opening": "Opening…",
+      "failed": "Could not open the blog editor. Try again.",
+      "blocked": "Save or discard the caption or LinkedIn edit before opening the blog editor.",
+      "confirm": {
+        "title": "Open the blog post?",
+        "body": "If this carousel already has a post, it opens in the blog editor. If not, a draft is generated with AI from the carousel (takes a few minutes) and opens in the editor.",
+        "confirm": "Open or generate the post",
+        "cancel": "Cancel"
+      }
     },
     "blogFromCarousel": {
       "title": "Blog post",

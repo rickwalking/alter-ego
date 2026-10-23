@@ -28,4 +28,9 @@ export interface CreateWorkflowControlsProps extends WorkflowFeedback {
   /** Plain revise is a no-op while the design step is blocking. */
   designReviseBlocked: boolean;
   showPublishLink: boolean;
+  /**
+   * Final review: a caption / LinkedIn edit is unsaved or still saving, so
+   * approve and send back wait (they would drop it or send a stale lock).
+   */
+  copyBlocked?: boolean;
 }

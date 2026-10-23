@@ -20,6 +20,46 @@ function approveOptionsFor(
     : undefined;
 }
 
+type BlockFlags = Pick<
+  CreateWorkflowControlsProps,
+  | "personaApproveBlocked"
+  | "presentationApproveBlocked"
+  | "editBudgetBlocked"
+  | "designReviseBlocked"
+  | "copyBlocked"
+>;
+
+/** Which of approve / revise are blocked, and by what. */
+function blockedActions(flags: BlockFlags): {
+  approveBlocked: boolean;
+  reviseBlocked: boolean;
+} {
+  const copyBlocked = flags.copyBlocked === true;
+  return {
+    approveBlocked:
+      flags.personaApproveBlocked ||
+      flags.presentationApproveBlocked ||
+      flags.editBudgetBlocked ||
+      copyBlocked,
+    reviseBlocked: flags.designReviseBlocked || copyBlocked,
+  };
+}
+
+/** The final review's "save or discard the caption / LinkedIn edit" note. */
+function CopyBlockedNotice({
+  shown,
+}: Readonly<{ shown: boolean }>): React.JSX.Element | null {
+  const t = useTranslations("editorialWorkflow");
+  if (!shown) {
+    return null;
+  }
+  return (
+    <p className="text-[var(--color-text-muted)] text-xs">
+      {t("review.finalReview.copyBlocked")}
+    </p>
+  );
+}
+
 export function CreateWorkflowControls({
   state,
   showLiveControls,
@@ -40,12 +80,18 @@ export function CreateWorkflowControls({
   editBudgetBlocked,
   designReviseBlocked,
   showPublishLink,
+  copyBlocked,
 }: Readonly<CreateWorkflowControlsProps>): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const isFinalReviewGate =
     state?.current_phase === EDITORIAL_PHASES.FINAL_REVIEW;
-  const approveBlocked =
-    personaApproveBlocked || presentationApproveBlocked || editBudgetBlocked;
+  const { approveBlocked, reviseBlocked } = blockedActions({
+    personaApproveBlocked,
+    presentationApproveBlocked,
+    editBudgetBlocked,
+    designReviseBlocked,
+    copyBlocked,
+  });
 
   return (
     <div className="space-y-2 text-sm">
@@ -83,12 +129,13 @@ export function CreateWorkflowControls({
           <NeonButton
             size="sm"
             variant="outline"
-            disabled={loading || !showLiveControls || designReviseBlocked}
+            disabled={loading || !showLiveControls || reviseBlocked}
             onClick={handleRevise}
           >
             {t("actions.requestRevision")}
           </NeonButton>
         </div>
+        <CopyBlockedNotice shown={copyBlocked === true} />
         <ControlNotices
           designReviseBlocked={designReviseBlocked}
           personaApproveBlocked={personaApproveBlocked}

@@ -7,6 +7,7 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import {
   PublishPanel,
   mergePublishProjectWithWorkflow,
+  useCopySave,
 } from "@/modules/publishing";
 import { isPublishReady } from "@/app/dashboard/create/[id]/publish/publish-readiness";
 import {
@@ -22,7 +23,6 @@ import {
   panelStyle,
 } from "./publish-page-sections";
 import { PublishArtifactTools } from "./publish-artifact-tools";
-import { useCopySave } from "./use-copy-save";
 
 function PublishPageLoading(): React.ReactElement {
   return (

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase-review";
 import { CreateWorkflowProgress } from "@/app/dashboard/create/workspace/create-workflow-progress";
@@ -57,6 +59,7 @@ export function CreateWorkflowPanel({
     onPublished,
   );
   const content = useContentEdits(state);
+  const [copyBusy, setCopyBusy] = useState(false);
   const feedback = useWorkflowFeedback(state, revise);
   const persona = usePersonaShortfallDetail(state);
   const gates = approvalGates(state, content);
@@ -107,6 +110,8 @@ export function CreateWorkflowPanel({
           contentManualFixes={contentManualFixes}
           designRecovery={designRecovery}
           onRepaired={() => void refreshState()}
+          onCopySaved={refreshState}
+          onCopyBusyChange={setCopyBusy}
           actionsLocked={actionsLocked}
         />
       )}
@@ -121,6 +126,7 @@ export function CreateWorkflowPanel({
             void workflow.approve(options);
           }}
           contentHasEdits={content.contentHasEdits}
+          copyBlocked={copyBusy}
           contentSlides={content.contentSlides}
           {...persona}
           {...gates}

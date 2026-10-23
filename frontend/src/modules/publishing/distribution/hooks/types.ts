@@ -9,6 +9,7 @@ import type { ChatStream } from "@/lib/use-chat-stream";
  */
 
 import type { Message } from "@/schemas/chat";
+import type { CarouselProjectResponse } from "@/schemas/carousel";
 
 export interface UsePublishChatReturn {
   conversationId: string | null;
@@ -24,6 +25,12 @@ export interface InstagramPublishPayload {
 
 /** One editable text of the publish page. */
 export type CopyField = "caption" | "linkedinPt" | "linkedinEn";
+
+/** Where the editor reads the saved texts from (a project, or its merge). */
+export type CopySource = Pick<
+  CarouselProjectResponse,
+  "caption" | "linkedin_post_pt" | "linkedin_post_en"
+>;
 
 /** The three editable texts, as the editor holds them. */
 export type CopyTextsState = Readonly<Record<CopyField, string>>;
