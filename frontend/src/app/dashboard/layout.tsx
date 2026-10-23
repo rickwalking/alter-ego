@@ -6,6 +6,7 @@ import {
 } from "@/components/organisms";
 import { useTranslations } from "next-intl";
 import { NeonSidebar } from "@/components/organisms/neon-sidebar";
+import { DASHBOARD_MENU_BUTTON_ATTRIBUTE } from "@/constants/a11y";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 import { DASHBOARD_SIDEBAR_SECTIONS } from "@/components/organisms/constants";
 import { BG_CARD, NEON_BORDER_SUBTLE, NEON_CYAN, TEXT } from "@/constants/neon";
@@ -42,6 +43,7 @@ export default function DashboardLayout({
 
       <button
         type="button"
+        {...{ [DASHBOARD_MENU_BUTTON_ATTRIBUTE]: "" }}
         onClick={toggle}
         aria-label={open ? t("closeMenu") : t("openMenu")}
         aria-expanded={open}

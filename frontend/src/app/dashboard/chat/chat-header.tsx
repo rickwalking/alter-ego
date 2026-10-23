@@ -1,9 +1,9 @@
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import {
   DASHBOARD_CHAT_BG_HEADER,
   DASHBOARD_CHAT_BORDER_SUBTLE,
   DASHBOARD_CHAT_BORDER_LIGHT,
-  DASHBOARD_CHAT_MAGENTA,
   DASHBOARD_CHAT_MONO_FONT,
   DASHBOARD_CHAT_TEXT_DIM,
   DASHBOARD_CHAT_TEXT_MUTED,
@@ -15,6 +15,12 @@ export interface ChatHeaderProps {
   onToggleConversations?: () => void;
   conversationsOpen?: boolean;
   conversationsId?: string;
+  /**
+   * In the public shell there is no dashboard menu button to clear, so the bar
+   * drops the left gutter the dashboard needs for it, and it is a plain `div`:
+   * the site header above it is the page's only banner landmark.
+   */
+  publicShell?: boolean;
 }
 
 /**
@@ -28,11 +34,16 @@ export function ChatHeader({
   onToggleConversations,
   conversationsOpen,
   conversationsId,
+  publicShell = false,
 }: Readonly<ChatHeaderProps>): React.ReactElement {
   const t = useTranslations("chat");
+  const Bar = publicShell ? "div" : "header";
   return (
-    <header
-      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-16 md:pr-8 lg:pl-8"
+    <Bar
+      className={cn(
+        "sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 md:pr-8",
+        publicShell ? "pl-4 md:pl-8" : "pl-16 lg:pl-8",
+      )}
       style={{
         borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_HEADER,
@@ -91,6 +102,7 @@ export function ChatHeader({
           <button
             type="button"
             onClick={onNewChat}
+            className="min-h-11 whitespace-nowrap"
             style={{
               padding: "6px 12px",
               borderRadius: "6px",
@@ -105,47 +117,7 @@ export function ChatHeader({
             {t("input.newChat")}
           </button>
         )}
-        <button
-          type="button"
-          aria-label={t("notifications")}
-          style={{
-            position: "relative",
-            width: "32px",
-            height: "32px",
-            borderRadius: "6px",
-            background: "transparent",
-            border: `1px solid ${DASHBOARD_CHAT_BORDER_LIGHT}`,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: DASHBOARD_CHAT_TEXT_MUTED,
-          }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          <span
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "8px",
-              width: "5px",
-              height: "5px",
-              borderRadius: "50%",
-              background: DASHBOARD_CHAT_MAGENTA,
-            }}
-          />
-        </button>
       </div>
-    </header>
+    </Bar>
   );
 }

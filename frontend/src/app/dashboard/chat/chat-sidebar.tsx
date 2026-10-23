@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { CHAT_DRAWER_MEDIA_QUERY } from "./use-menu-button-hidden";
 import {
   DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
   DASHBOARD_CHAT_BG_INPUT_DARK,
-  DASHBOARD_CHAT_BG_OVERLAY,
+  DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_CYAN_DIM,
   DASHBOARD_CHAT_MONO_FONT,
@@ -45,7 +46,7 @@ export function ChatSidebar({
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === true;
-  const isDrawer = useMediaQuery("(max-width: 767px)");
+  const isDrawer = useMediaQuery(CHAT_DRAWER_MEDIA_QUERY);
   const drawerActive = isOpen && isDrawer;
 
   useFocusTrap(ref, drawerActive);
@@ -63,7 +64,7 @@ export function ChatSidebar({
       )}
       style={{
         borderRight: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
-        background: DASHBOARD_CHAT_BG_OVERLAY,
+        background: DASHBOARD_CHAT_BG_DEEP,
       }}
     >
       <div

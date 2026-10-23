@@ -61,7 +61,7 @@ export function PublicChatView(): React.ReactElement {
       className="flex h-full min-h-0 flex-col"
       style={{ background: DASHBOARD_CHAT_BG_DEEP }}
     >
-      <ChatHeader onNewChat={handleNewChat} />
+      <ChatHeader onNewChat={handleNewChat} publicShell />
       {sseError && (
         <ChatErrorBanner
           kind={sseError}
