@@ -49,8 +49,13 @@ from rag_backend.modules.knowledge.domain.commands import (
     SearchQuery,
 )
 from rag_backend.modules.knowledge.domain.models import KnowledgeDocument
+from rag_backend.modules.knowledge.domain.scopes import (
+    SELECTABLE_SCOPES,
+    SystemScopeError,
+)
 
 __all__ = [
+    "SELECTABLE_SCOPES",
     "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
@@ -69,5 +74,6 @@ __all__ = [
     "RetrieverSearchAdapter",
     "SearchQuery",
     "SearchResultView",
+    "SystemScopeError",
     "bootstrap_module",
 ]

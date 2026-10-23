@@ -23,6 +23,7 @@ Cross-module consumers SHALL import from the facade only, e.g.::
 """
 
 from rag_backend.modules.knowledge.public import (
+    SELECTABLE_SCOPES,
     ChangeDocumentScopeCommand,
     CreateDocumentCommand,
     DeleteDocumentCommand,
@@ -41,10 +42,12 @@ from rag_backend.modules.knowledge.public import (
     RetrieverSearchAdapter,
     SearchQuery,
     SearchResultView,
+    SystemScopeError,
     bootstrap_module,
 )
 
 __all__ = [
+    "SELECTABLE_SCOPES",
     "ChangeDocumentScopeCommand",
     "CreateDocumentCommand",
     "DeleteDocumentCommand",
@@ -63,5 +66,6 @@ __all__ = [
     "RetrieverSearchAdapter",
     "SearchQuery",
     "SearchResultView",
+    "SystemScopeError",
     "bootstrap_module",
 ]
