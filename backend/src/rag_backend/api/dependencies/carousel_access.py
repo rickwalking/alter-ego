@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeVar
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
+from rag_backend.api.schemas.knowledge_sources import (
+    CarouselSourceFacet,
+    CarouselSourceItem,
+    CarouselSourceListResponse,
+)
 from rag_backend.domain.constants.access_control import (
     ERR_CAROUSEL_TOOL_ACCESS_DENIED,
     ERR_INVALID_REQUEST,
@@ -190,3 +197,107 @@ __all__ = [
     "get_project_source_for_user",
     "validate_carousel_conversation_metadata",
 ]
+
+
+_Row = TypeVar("_Row", bound=tuple[object, ...])
+
+SOURCE_TYPE_URL = "url"
+"""The content-source type whose body is the source's URL."""
+
+_URL_PREFIXES = ("http://", "https://")
+
+
+@dataclass(frozen=True)
+class CarouselSourceQuery:
+    """A page of the caller's carousel sources, optionally of one carousel."""
+
+    user: UserModel
+    limit: int
+    offset: int
+    project_id: UUID | None = None
+
+
+def _for_owner(statement: Select[_Row], user: UserModel) -> Select[_Row]:
+    """Join the statement's sources to their carousel and keep the caller's own."""
+    joined = statement.join(
+        CarouselProjectModel,
+        CarouselProjectModel.id == ContentSourceModel.project_id,
+    )
+    if _user_is_admin(user):
+        return joined
+    return joined.where(CarouselProjectModel.owner_id == user.id)
+
+
+def _source_url(source: ContentSourceModel) -> str | None:
+    """The URL of a URL source (its body), or ``None`` for any other source."""
+    content = str(source.content or "").strip()
+    if source.source_type != SOURCE_TYPE_URL or not content.startswith(_URL_PREFIXES):
+        return None
+    return content
+
+
+def _to_item(
+    source: ContentSourceModel, project_title: str | None
+) -> CarouselSourceItem:
+    """The listing row of one source."""
+    return CarouselSourceItem(
+        id=UUID(str(source.id)),
+        title=str(source.title),
+        source_type=str(source.source_type),
+        url=_source_url(source),
+        project_id=UUID(str(source.project_id)),
+        project_title=project_title or "",
+        created_at=source.created_at,
+    )
+
+
+async def _carousel_facets(
+    db: AsyncSession, query: CarouselSourceQuery
+) -> list[CarouselSourceFacet]:
+    """Every carousel of the caller that has sources, with its source count."""
+    statement = (
+        _for_owner(
+            select(
+                CarouselProjectModel.id,
+                CarouselProjectModel.title,
+                func.count(ContentSourceModel.id),
+            ),
+            query.user,
+        )
+        .group_by(CarouselProjectModel.id, CarouselProjectModel.title)
+        .order_by(CarouselProjectModel.title)
+    )
+    rows = (await db.execute(statement)).all()
+    return [
+        CarouselSourceFacet(
+            project_id=UUID(str(project_id)), title=title or "", count=int(count)
+        )
+        for project_id, title, count in rows
+    ]
+
+
+async def list_carousel_sources_for_user(
+    db: AsyncSession, query: CarouselSourceQuery
+) -> CarouselSourceListResponse:
+    """A page of the caller's carousel sources, newest first; an admin sees all."""
+    statement = _for_owner(
+        select(ContentSourceModel, CarouselProjectModel.title), query.user
+    )
+    if query.project_id is not None:
+        statement = statement.where(
+            ContentSourceModel.project_id == str(query.project_id)
+        )
+    total = await db.scalar(select(func.count()).select_from(statement.subquery()))
+    page = await db.execute(
+        statement
+        .order_by(ContentSourceModel.created_at.desc(), ContentSourceModel.id)
+        .limit(query.limit)
+        .offset(query.offset)
+    )
+    return CarouselSourceListResponse(
+        items=[_to_item(source, title) for source, title in page.all()],
+        total=int(total or 0),
+        limit=query.limit,
+        offset=query.offset,
+        carousels=await _carousel_facets(db, query),
+    )
