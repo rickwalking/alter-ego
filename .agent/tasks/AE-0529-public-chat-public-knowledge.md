@@ -27,8 +27,9 @@ Público.
 ## Scope
 
 - `agents/chat_knowledge.py`: two scopes, owner (search `personal` + `public`, list both) and public
-  (search and list `public` only), and `knowledge_scope_for(owner_id, site_owner_id)`. It returns the owner
-  scope only when the conversation owner stored on the server is the configured site owner.
+  (search and list `public` only), and `knowledge_scope_for(KnowledgeAudience(owner_id, caller_id),
+  site_owner_id)`. It returns the owner scope only when the caller and the conversation owner stored on the
+  server are both the configured site owner.
 - The site owner is the existing `AUTOPILOT_OWNER_USER_ID` setting, already in the prod secrets and already
   used as "the owner" for cover assets. Unset or invalid fails closed to public only.
 - The Alter-Ego agent (stream and messages routes), the carousel (RAG) agent and `/api/search` take their
@@ -49,6 +50,8 @@ Público.
 - [x] Given a conversation of the configured site owner, Then the search covers `personal` + `public` and the
       list tool lists both.
 - [x] Given a conversation of an editor or of another admin, Then public only.
+- [x] Given an admin posting in the site owner's conversation, or the site owner posting in someone else's
+      conversation, Then public only (the caller must be the site owner too).
 - [x] Given no (or an invalid) `AUTOPILOT_OWNER_USER_ID`, Then every conversation, the owner's included, is
       public only.
 - [x] Given an agent built without a scope, Then public only.
@@ -124,6 +127,9 @@ Pending.
 - 2026-10-23 — The site owner is identified by the existing `AUTOPILOT_OWNER_USER_ID` (already Pedro's user
   id in prod, already used as the owner of cover assets) instead of a new setting; unset fails closed to
   public only.
+- 2026-10-23 — Pedro chose "only me": personal + public only when the CALLER, the stored conversation owner
+  and `AUTOPILOT_OWNER_USER_ID` are the same user. An admin posting in Pedro's conversation, and Pedro posting
+  in someone else's conversation, read public only.
 - 2026-10-23 — A retrieval with no namespace prefix reads `public` only (fail closed). `/api/search` and the
   carousel chat, which named no prefix, now pass the owner's scope so Pedro keeps personal + public there.
 
