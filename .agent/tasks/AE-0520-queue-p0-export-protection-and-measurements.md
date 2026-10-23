@@ -46,5 +46,6 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 ## Decision Log
 
 - 2026-10-22: Created from the AE-0517 plan after three skeptical review rounds (Pedro's cap).
-- 2026-10-22: AC1–AC4 in PR #247. AC5: `.agent/reports/AE-0520.measurements.md` answers criteria 2–6; criterion 1
-  (run RSS with/without HD) is blocked until the next real run (no generation ran in the sampling window).
+- 2026-10-22: AC1–AC4 in PR #247. AC5 stays open: `.agent/reports/AE-0520.measurements.md` answers criteria 3–6;
+  criterion 1 (run RSS with/without HD) and the box budget (criterion 2) wait for the run peak of the next real
+  run, and the HD and budget decisions stay with Pedro.
