@@ -28,3 +28,9 @@ Feature: Chat shell and mobile fit
   Scenario: Visitors' messages do not carry the owner's initials
     When a visitor sends a message
     Then their message shows a neutral person icon, not "PM"
+
+  Scenario: The conversation drawer slides away when closed and is a fixed column on wider screens
+    Given the dashboard chat on a phone
+    When the conversations drawer is closed
+    Then it sits off-screen
+    And from tablet width up the conversations list is an ordinary column, not a drawer

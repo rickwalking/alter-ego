@@ -82,8 +82,25 @@ describe("chat shell", () => {
     );
     const drawer = document.getElementById("drawer")!;
     expect(zIndexOf(drawer.className)).toBeGreaterThan(MENU_BUTTON_Z_INDEX);
+    expect(zIndexOf(drawer.className)).toBeGreaterThan(DRAWER_SCRIM_Z_INDEX);
     expect(drawer.style.background).toBe(toCssColor(DASHBOARD_CHAT_BG_DEEP));
     expect(drawer.style.background).not.toMatch(/rgba\(.*0\.\d+\)/);
+  });
+
+  /** Scenario: The conversation drawer slides away when closed and is a fixed column on wider screens */
+  it("hides the closed drawer off-screen and keeps it as a column from md up", () => {
+    render(
+      <ChatSidebar
+        conversations={[]}
+        activeConv=""
+        onSelectConversation={vi.fn()}
+        open={false}
+        id="drawer"
+      />,
+    );
+    const drawer = document.getElementById("drawer")!;
+    expect(drawer).toHaveClass("-translate-x-full", "fixed");
+    expect(drawer).toHaveClass("md:static", "md:translate-x-0", "md:z-auto");
   });
 
   /** Scenario: Visitors' messages do not carry the owner's initials */
@@ -106,6 +123,9 @@ describe("chat shell", () => {
 
 /** The dashboard menu button is `z-50` (dashboard layout). */
 const MENU_BUTTON_Z_INDEX = 50;
+
+/** The dimmed backdrop behind the open drawer is `z-[55]` (dashboard chat view). */
+const DRAWER_SCRIM_Z_INDEX = 55;
 
 /** The z-index a Tailwind `z-N` or `z-[N]` class sets. */
 function zIndexOf(className: string): number {

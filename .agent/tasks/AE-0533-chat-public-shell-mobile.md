@@ -85,6 +85,11 @@ the conversations button's 44px size, the drawer's z-index against the menu butt
 the 44px textarea, the full viewport and frame values, and the assistant marker. The /chat `<main>` landmark and
 skip link come from the a11y/i18n PR (AE-0531). Chat and public chat tests: 41 passed.
 
+### 2026-10-23 05:10
+
+Confirmation round follow-ups: the drawer test also requires it to clear the `z-[55]` scrim; new scenario "The
+conversation drawer slides away when closed and is a fixed column on wider screens" with its test.
+
 ## Files Touched
 
 - frontend/src/app/(public)/chat/layout.tsx, chat-shell-style.ts (new) + test, public-chat-view.tsx
