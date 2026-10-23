@@ -20,22 +20,17 @@ from rag_backend.api.schemas import DocumentResponse, ErrorResponse
 from rag_backend.api.schemas.documents import DocumentScopeChange
 from rag_backend.domain.models import DocumentScope, User
 from rag_backend.modules.knowledge import (
+    SELECTABLE_SCOPES,
     ChangeDocumentScopeCommand,
     GetDocumentQuery,
     KnowledgeService,
+    SystemScopeError,
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-SELECTABLE_SCOPES: tuple[DocumentScope, ...] = (
-    DocumentScope.PERSONAL,
-    DocumentScope.PUBLIC,
-)
-"""The scopes an owner may choose for a document (the others are system scopes)."""
-
 _DETAIL_NOT_FOUND = "Document with id {document_id} not found"
 _DETAIL_INVALID_SCOPE = "Invalid scope: {scope}. Must be one of: {choices}"
-_DETAIL_SYSTEM_SCOPE = "Document in the {scope} scope cannot be moved"
 
 
 def _selectable_scope(scope: str) -> DocumentScope:
@@ -49,16 +44,6 @@ def _selectable_scope(scope: str) -> DocumentScope:
             scope=scope,
             choices=", ".join(choice.value for choice in SELECTABLE_SCOPES),
         ),
-    )
-
-
-def _assert_movable(current_scope: str) -> None:
-    """409 when the document sits in a system scope an owner may not leave."""
-    if any(choice.value == current_scope for choice in SELECTABLE_SCOPES):
-        return
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=_DETAIL_SYSTEM_SCOPE.format(scope=current_scope),
     )
 
 
@@ -114,10 +99,14 @@ async def change_document_scope(
     if document is None:
         raise _not_found(document_id)
     assert_domain_owner_or_admin(document.owner_id, ctx.user)
-    _assert_movable(document.scope)
-    moved = await ctx.service.change_scope(
-        ChangeDocumentScopeCommand(document_id=document_id, scope=scope)
-    )
+    try:
+        moved = await ctx.service.change_scope(
+            ChangeDocumentScopeCommand(document_id=document_id, scope=scope)
+        )
+    except SystemScopeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(error)
+        ) from error
     if moved is None:
         raise _not_found(document_id)
     return DocumentResponse.model_validate(moved)

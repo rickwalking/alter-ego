@@ -28,6 +28,9 @@ from rag_backend.modules.knowledge.api.views import (
     KnowledgeDocumentView,
     SearchResultView,
 )
+from rag_backend.modules.knowledge.application.reindex_recovery import (
+    ReindexRecovery,
+)
 from rag_backend.modules.knowledge.domain.commands import (
     ChangeDocumentScopeCommand,
     CreateDocumentCommand,
@@ -48,6 +51,10 @@ from rag_backend.modules.knowledge.domain.models import (
 from rag_backend.modules.knowledge.domain.ports import (
     DocumentRepository,
     OwnerDocumentQuery,
+)
+from rag_backend.modules.knowledge.domain.scopes import (
+    SELECTABLE_SCOPES,
+    SystemScopeError,
 )
 from rag_backend.platform.database import UnitOfWork
 
@@ -126,6 +133,7 @@ class KnowledgeService:
         self._pipeline = pipeline
         self._retriever = deps.retriever
         self._unit_of_work = deps.unit_of_work
+        self._recovery = ReindexRecovery(repository, pipeline, deps.unit_of_work)
 
     async def create(self, command: CreateDocumentCommand) -> KnowledgeDocumentView:
         """Create a document without immediate processing (committed once)."""
@@ -244,11 +252,19 @@ class KnowledgeService:
 
         The document row is locked first, so a concurrent scope change waits
         instead of indexing the chunks into a namespace this run is leaving.
+        When the run fails, the document is saved as failed so Retry shows,
+        and the run's own error is raised.
         """
-        async with self._unit_of_work:
-            await self._repository.get_by_id_for_update(command.document_id)
-            document = await self._pipeline.reprocess_document(str(command.document_id))
-            view = self._to_view(document)
+        try:
+            async with self._unit_of_work:
+                await self._repository.get_by_id_for_update(command.document_id)
+                document = await self._pipeline.reprocess_document(
+                    str(command.document_id)
+                )
+                view = self._to_view(document)
+        except Exception:
+            await self._recovery.after_failed_reprocess(command.document_id)
+            raise
         return view
 
     async def change_scope(
@@ -257,12 +273,13 @@ class KnowledgeService:
         """Move a document to ``command.scope`` (committed once), or ``None`` if absent.
 
         A document already in that scope is returned as it is, without
-        re-indexing. The row is locked for the whole move. When anything fails
-        after the re-index (the commit included), the chunks written to the new
-        scope's namespace are deleted again, so a rolled-back move never leaves
-        the document searchable under the scope it did not get.
+        re-indexing. The row is locked for the whole move, and a document in a
+        system scope raises ``SystemScopeError`` once the lock is held. When
+        anything fails after the re-index starts (the commit included), the
+        chunks written to the new scope's namespace are deleted again and the
+        document is saved as failed, then the original error is raised.
         """
-        reindexed = False
+        reindexing = False
         try:
             async with self._unit_of_work:
                 document = await self._repository.get_by_id_for_update(
@@ -272,15 +289,16 @@ class KnowledgeService:
                     return None
                 if document.scope is command.scope:
                     return self._to_view(document)
-                reindexed = True
+                _ensure_movable(document.scope)
+                reindexing = True
                 moved = await self._pipeline.rescope_document(
                     str(command.document_id), command.scope
                 )
                 view = self._to_view(moved)
         except Exception:
-            if reindexed:
-                await self._pipeline.drop_chunks(
-                    str(command.document_id), command.scope
+            if reindexing:
+                await self._recovery.after_failed_rescope(
+                    command.document_id, command.scope
                 )
             raise
         return view
@@ -318,6 +336,12 @@ class KnowledgeService:
             error_message=document.error_message,
             metadata=dict(document.metadata),
         )
+
+
+def _ensure_movable(scope: DocumentScope) -> None:
+    """Raise ``SystemScopeError`` for a scope the owner may not leave."""
+    if scope not in SELECTABLE_SCOPES:
+        raise SystemScopeError(scope)
 
 
 def to_retrieval_query(query: SearchQuery) -> RetrievalQuery:
