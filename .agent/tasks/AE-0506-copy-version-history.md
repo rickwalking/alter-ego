@@ -1,6 +1,6 @@
 # AE-0506 — Version history for the caption and the LinkedIn posts
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -103,6 +103,9 @@ Failing first: the 9 route tests answered 404 before the routes existed. Full ba
 and frontend gate captures green; mutation in CI. See the dev summary.
 
 ## QA Report
+
+External QA: round 1 WARN (0 blockers), fixed; two confirmation rounds, the last PASS. See
+`.agent/reports/AE-0506.qa.md`.
 
 ## Blockers
 
