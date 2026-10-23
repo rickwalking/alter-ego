@@ -149,9 +149,10 @@ describe("CopyVersionList (AE-0506)", () => {
     expect(
       screen.getByRole("button", { name: "Restore version 1" }),
     ).toHaveTextContent("Restoring…");
-    expect(
-      screen.getByRole("button", { name: "Restore version 2" }),
-    ).toBeDisabled();
+    const other = screen.getByRole("button", { name: "Restore version 2" });
+    expect(other).toBeDisabled();
+    expect(other).toHaveTextContent("Restore");
+    expect(other).not.toHaveTextContent("Restoring…");
   });
 
   /** Scenario: The history lists the versions of the text under its editor */

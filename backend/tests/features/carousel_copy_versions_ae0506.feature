@@ -16,6 +16,10 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     When the owner saves another caption
     Then one more version is stored, with the next number
 
+  Scenario: One save of several texts stores a version of each
+    When the owner saves a new caption and a new Portuguese LinkedIn post in one save
+    Then the versions are, in order, the generated caption, the new caption, the generated post and the new post
+
   Scenario: A text that did not change stores no version
     When the owner saves the caption with the text it already has
     Then no version is stored
@@ -29,6 +33,11 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     When another editor asks for the versions
     Then the request is refused with 403
     And an admin gets the versions
+
+  Scenario: Only the owner or an admin restores a version
+    When another editor restores a version
+    Then the request is refused with 403
+    And an admin can restore it
 
   Scenario: Restoring a version saves its text as a new version
     Given the owner saved a caption edit
@@ -44,6 +53,12 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     Then the request is refused with 404
     When the carousel's caption is already published on Instagram
     Then restoring a caption version is refused with 409 "caption_published"
+    When a workflow run is active
+    Then the restore is refused with 409 "resume_already_in_progress"
+    When the restore has no If-Match
+    Then the request is refused with 428
+    When the carousel or the version's field is unknown
+    Then the request is refused with 404
 
   Scenario: The deploy fixes the content versions unique index once
     Given a Postgres database whose content_versions unique index is global

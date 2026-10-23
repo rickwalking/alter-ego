@@ -71,3 +71,29 @@ def test_a_restore_is_recorded_as_a_restore() -> None:
             restored_from=1,
         ),
     ]
+
+
+def test_an_empty_replaced_text_keeps_no_original() -> None:
+    """Scenario: Saving a changed caption stores the original and the new text as versions."""
+    change = CopyChange(
+        before={**TEXTS, "caption": ""},
+        after={**TEXTS, "caption": "c1"},
+        author_id=AUTHOR,
+    )
+    assert versions_for_change(change, set()) == [
+        NewCopyVersion(field="caption", text="c1", author_id=AUTHOR, summary="edit"),
+    ]
+
+
+def test_several_texts_are_recorded_in_field_order() -> None:
+    """Scenario: One save of several texts stores a version of each."""
+    before = {"caption": "c0", "linkedin_post_pt": "p0", "linkedin_post_en": "e0"}
+    after = {"caption": "c1", "linkedin_post_pt": "p0", "linkedin_post_en": "e1"}
+    change = CopyChange(before=before, after=after, author_id=AUTHOR)
+    assert [
+        (v.field, v.text) for v in versions_for_change(change, {"linkedin_post_en"})
+    ] == [
+        ("caption", "c0"),
+        ("caption", "c1"),
+        ("linkedin_post_en", "e1"),
+    ]

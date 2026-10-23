@@ -21,6 +21,10 @@ class CopyVersionStore(Protocol):
         """The carousel's versions, newest first."""
         ...
 
+    async def get_version(self, project_id: str, number: int) -> CopyVersion | None:
+        """Version ``number`` of the carousel, or ``None``."""
+        ...
+
     async def add(self, project_id: str, versions: list[NewCopyVersion]) -> None:
         """Stage ``versions`` with the next numbers, in order."""
         ...

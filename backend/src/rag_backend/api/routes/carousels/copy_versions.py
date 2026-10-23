@@ -39,6 +39,7 @@ from rag_backend.domain.constants.carousel_copy_versions import (
 )
 from rag_backend.domain.constants.distribution import (
     DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_KEYS,
     DISTRIBUTION_LINKEDIN_POST_EN_KEY,
     DISTRIBUTION_LINKEDIN_POST_PT_KEY,
 )
@@ -122,11 +123,14 @@ async def list_carousel_copy_versions(
 async def restore_carousel_copy_version(
     project_id: UUID, version_number: int, deps: CopyDeps
 ) -> CarouselCopyResponse:
-    """Save the version's text; the restore is recorded as a new version."""
+    """Save the version's text; the restore is recorded as a new version.
+
+    A version that names no caption / LinkedIn field is not restorable (404).
+    """
     project = await _owned_project(deps, project_id)
     lock_version = require_if_match(deps.if_match)
     version = await deps.service.version(str(project_id), version_number)
-    if version is None:
+    if version is None or version.field not in DISTRIBUTION_KEYS:
         raise HTTPException(status_code=404, detail=ERR_COPY_VERSION_NOT_FOUND)
     if version.field == DISTRIBUTION_CAPTION_KEY:
         await reject_published_caption(deps, project_id)

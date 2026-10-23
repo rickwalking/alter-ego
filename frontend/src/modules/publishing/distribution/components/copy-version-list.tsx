@@ -2,12 +2,13 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { formatLocaleDateTime } from "@/lib/locale-format";
+import { DISTRIBUTION_FIELDS } from "@/modules/publishing/distribution/lib/copy-editor-state";
 import type { CopyVersionView } from "@/modules/publishing/distribution/hooks/types";
 import type { CopyVersionEntriesProps, CopyVersionListProps } from "./types";
 
 const LANGUAGE_BY_FIELD: Readonly<Record<string, string>> = {
-  linkedin_post_pt: "PT",
-  linkedin_post_en: "EN",
+  [DISTRIBUTION_FIELDS.LINKEDIN_PT]: "PT",
+  [DISTRIBUTION_FIELDS.LINKEDIN_EN]: "EN",
 };
 
 /** The newest version of each field: it is the current text, nothing to restore. */

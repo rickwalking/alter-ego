@@ -33,6 +33,9 @@ from rag_backend.domain.constants.carousel_conflicts import (
     CONFLICT_CODE_RUN_IN_PROGRESS,
 )
 from rag_backend.domain.constants.carousel_copy_edit import LOG_EVENT_COPY_SAVED
+from rag_backend.domain.constants.carousel_copy_versions import (
+    LOG_EVENT_COPY_VERSIONS_RECORDED,
+)
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_conflict import (
@@ -100,8 +103,7 @@ class CarouselCopyEditService:
 
     async def version(self, project_id: str, number: int) -> CopyVersion | None:
         """Version ``number`` of the carousel, or ``None``."""
-        found = await self._versions.list_versions(project_id)
-        return next((v for v in found if v.version_number == number), None)
+        return await self._versions.get_version(project_id, number)
 
     async def save(self, command: CopyEditCommand) -> CopyEditResult:
         """Check the run guard and the lock, apply the edits and commit."""
@@ -138,6 +140,11 @@ class CarouselCopyEditService:
         )
         new_versions = versions_for_change(change, {v.field for v in existing})
         await self._versions.add(project_id, new_versions)
+        logger.info(
+            LOG_EVENT_COPY_VERSIONS_RECORDED,
+            project_id=project_id,
+            versions=len(new_versions),
+        )
 
 
 def _apply(project: CarouselProject, edits: CopyEdits) -> None:

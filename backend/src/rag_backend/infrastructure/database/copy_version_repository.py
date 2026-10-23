@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Row, func, select
+from sqlalchemy import Row, Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_copy_versions import (
@@ -70,9 +70,10 @@ class PostgresCopyVersionStore:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def list_versions(self, project_id: str) -> list[CopyVersion]:
-        """The carousel's versions, newest first, with the author's name."""
-        stmt = (
+    @staticmethod
+    def _select(project_id: str) -> Select[tuple[object, ...]]:
+        """The version rows of the carousel, with the author's name."""
+        return (
             select(
                 ContentVersionModel.version_number,
                 ContentVersionModel.snapshot,
@@ -85,10 +86,23 @@ class PostgresCopyVersionStore:
                 ContentVersionModel.content_id == project_id,
                 ContentVersionModel.content_type == CONTENT_TYPE_CAROUSEL_COPY,
             )
-            .order_by(ContentVersionModel.version_number.desc())
+        )
+
+    async def list_versions(self, project_id: str) -> list[CopyVersion]:
+        """The carousel's versions, newest first, with the author's name."""
+        stmt = self._select(project_id).order_by(
+            ContentVersionModel.version_number.desc()
         )
         rows = (await self._session.execute(stmt)).all()
         return [_to_version(row) for row in rows]
+
+    async def get_version(self, project_id: str, number: int) -> CopyVersion | None:
+        """Version ``number`` of the carousel, or ``None``."""
+        stmt = self._select(project_id).where(
+            ContentVersionModel.version_number == number
+        )
+        row = (await self._session.execute(stmt)).one_or_none()
+        return _to_version(row) if row is not None else None
 
     async def add(self, project_id: str, versions: list[NewCopyVersion]) -> None:
         """Stage the versions after the carousel's highest number (no commit)."""

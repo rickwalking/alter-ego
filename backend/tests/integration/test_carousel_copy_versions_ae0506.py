@@ -7,13 +7,17 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Final
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 
+from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from tests.integration.carousel_copy_support import (
     EDITED_CAPTION,
+    EDITED_LINKEDIN_PT,
     GENERATED_CAPTION,
+    GENERATED_LINKEDIN_PT,
     INITIAL_LOCK_VERSION,
     CopyEnv,
     copy_env_context,
@@ -43,12 +47,32 @@ async def _versions(client: AsyncClient, project_id: str) -> Response:
 
 
 async def _restore(
-    client: AsyncClient, project_id: str, number: int, lock_version: int
+    client: AsyncClient, project_id: str, number: int, lock_version: int | None
 ) -> Response:
+    headers = {} if lock_version is None else {IF_MATCH: str(lock_version)}
     return await client.post(
         f"/api/carousels/{project_id}/copy/versions/{number}/restore",
-        headers={IF_MATCH: str(lock_version)},
+        headers=headers,
     )
+
+
+async def _add_foreign_version(project_id: str) -> None:
+    """A ``carousel_copy`` row whose snapshot names no copy field."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.source_comment import (
+        ContentVersionModel,
+    )
+
+    async with get_session_maker()() as session:
+        session.add(
+            ContentVersionModel(
+                content_id=project_id,
+                content_type="carousel_copy",
+                version_number=7,
+                snapshot={"field": "caption_en", "text": "x"},
+            )
+        )
+        await session.commit()
 
 
 async def _owner_versions(env: CopyEnv, project_id: str) -> list[dict[str, object]]:
@@ -201,7 +225,7 @@ async def test_restoring_a_published_caption_is_refused(copy_env: CopyEnv) -> No
 
 @pytest.mark.asyncio
 async def test_someone_else_cannot_restore(copy_env: CopyEnv) -> None:
-    """Scenario: Only the owner or an admin sees the versions."""
+    """Scenario: Only the owner or an admin restores a version."""
     project_id = await copy_env.seed_carousel()
     async with copy_env.client_for(copy_env.owner) as client:
         await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
@@ -209,3 +233,62 @@ async def test_someone_else_cannot_restore(copy_env: CopyEnv) -> None:
         refused = await _restore(client, project_id, 1, INITIAL_LOCK_VERSION + 1)
 
     assert refused.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_one_save_of_several_texts_versions_each(copy_env: CopyEnv) -> None:
+    """Scenario: One save of several texts stores a version of each."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        saved = await patch_copy(
+            client,
+            project_id,
+            {"caption": EDITED_CAPTION, "linkedin_post_pt": EDITED_LINKEDIN_PT},
+        )
+    assert saved.status_code == 200
+
+    versions = await _owner_versions(copy_env, project_id)
+
+    assert [(v["version_number"], v["field"], v["text"]) for v in versions] == [
+        (4, "linkedin_post_pt", EDITED_LINKEDIN_PT),
+        (3, "linkedin_post_pt", GENERATED_LINKEDIN_PT),
+        (2, FIELD_CAPTION, EDITED_CAPTION),
+        (1, FIELD_CAPTION, GENERATED_CAPTION),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_an_admin_can_restore(copy_env: CopyEnv) -> None:
+    """Scenario: Only the owner or an admin restores a version."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+    async with copy_env.client_for(copy_env.admin) as client:
+        restored = await _restore(client, project_id, 1, INITIAL_LOCK_VERSION + 1)
+
+    assert restored.status_code == 200
+    newest = (await _owner_versions(copy_env, project_id))[0]
+    assert newest["author_id"] == str(copy_env.admin.id)
+
+
+@pytest.mark.asyncio
+async def test_restore_guards_of_the_save(copy_env: CopyEnv) -> None:
+    """Scenario: A restore is refused when it cannot be applied."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+        without_if_match = await _restore(client, project_id, 1, None)
+        unknown_carousel = await _restore(client, str(uuid4()), 1, 1)
+    await _add_foreign_version(project_id)
+    async with copy_env.client_for(copy_env.owner) as client:
+        foreign = await _restore(client, project_id, 7, INITIAL_LOCK_VERSION + 1)
+    await copy_env.set_project(project_id, {"phase_status": PHASE_STATUS_IN_PROGRESS})
+    async with copy_env.client_for(copy_env.owner) as client:
+        running = await _restore(client, project_id, 1, INITIAL_LOCK_VERSION + 1)
+
+    assert without_if_match.status_code == 428
+    assert unknown_carousel.status_code == 404
+    assert foreign.status_code == 404
+    assert running.status_code == 409
+    assert running.json()["detail"] == "resume_already_in_progress"
+    assert (await saved_project(copy_env, project_id))["caption"] == EDITED_CAPTION
