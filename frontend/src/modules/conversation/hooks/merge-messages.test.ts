@@ -16,6 +16,9 @@ function message(role: Message["role"], content: string): Message {
   };
 }
 
+const STOPPED = { stopped: true, turnStart: 0 };
+const STREAMING = { stopped: false, turnStart: 0 };
+
 const contents = (messages: Message[]): string[] =>
   messages.map((m) => m.content);
 
@@ -31,7 +34,7 @@ describe("mergeMessages", () => {
       message("assistant", "Once upon"),
     ];
 
-    expect(contents(mergeMessages(history, optimistic, true))).toEqual([
+    expect(contents(mergeMessages(history, optimistic, STOPPED))).toEqual([
       "story",
       "Once upon a time.",
     ]);
@@ -49,7 +52,7 @@ describe("mergeMessages", () => {
       message("assistant", "I"),
     ];
 
-    expect(contents(mergeMessages(history, optimistic, true))).toEqual([
+    expect(contents(mergeMessages(history, optimistic, STOPPED))).toEqual([
       "what do you do?",
       "I work on RAG systems.",
       "and before?",
@@ -68,7 +71,7 @@ describe("mergeMessages", () => {
       message("assistant", "Once upon"),
     ];
 
-    expect(contents(mergeMessages(history, optimistic, true))).toEqual([
+    expect(contents(mergeMessages(history, optimistic, STOPPED))).toEqual([
       "story",
       "xx Once upon a time",
       "Once upon",
@@ -84,7 +87,7 @@ describe("mergeMessages", () => {
     ];
     const optimistic = [message("user", "story"), message("assistant", "O")];
 
-    expect(contents(mergeMessages(history, optimistic, true))).toEqual(
+    expect(contents(mergeMessages(history, optimistic, STOPPED))).toEqual(
       contents(history),
     );
   });
@@ -94,7 +97,7 @@ describe("mergeMessages", () => {
     const history = [message("assistant", "Once upon a time.")];
     const optimistic = [message("user", "story"), message("assistant", "Once")];
 
-    expect(contents(mergeMessages(history, optimistic, true))).toEqual([
+    expect(contents(mergeMessages(history, optimistic, STOPPED))).toEqual([
       "Once upon a time.",
       "story",
       "Once",
@@ -109,10 +112,48 @@ describe("mergeMessages", () => {
     ];
     const optimistic = [message("user", "story"), message("assistant", "Once")];
 
-    expect(contents(mergeMessages(history, optimistic, false))).toEqual([
+    expect(contents(mergeMessages(history, optimistic, STREAMING))).toEqual([
       "story",
       "Once upon a time.",
       "Once",
     ]);
+  });
+
+  /** Scenario: A stopped reply is replaced by the reply saved for the same question */
+  it("never binds a repeated question to its older copy in the history", () => {
+    const history = [
+      message("user", "story"),
+      message("assistant", "Once upon a time, long ago."),
+    ];
+    const optimistic = [
+      { ...message("user", "story"), id: "user-2" },
+      message("assistant", "Once"),
+    ];
+
+    expect(
+      contents(
+        mergeMessages(history, optimistic, { stopped: true, turnStart: 2 }),
+      ),
+    ).toEqual(["story", "Once upon a time, long ago.", "story", "Once"]);
+  });
+
+  /** Scenario: A stopped reply is replaced by the reply saved for the same question */
+  it("matches the repeated question once its new copy is saved", () => {
+    const history = [
+      message("user", "story"),
+      message("assistant", "Once upon a time, long ago."),
+      { ...message("user", "story"), id: "u2" },
+      message("assistant", "Once more, a new tale."),
+    ];
+    const optimistic = [
+      { ...message("user", "story"), id: "user-2" },
+      message("assistant", "Once more"),
+    ];
+
+    expect(
+      contents(
+        mergeMessages(history, optimistic, { stopped: true, turnStart: 2 }),
+      ),
+    ).toEqual(contents(history));
   });
 });

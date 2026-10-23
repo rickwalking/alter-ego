@@ -115,6 +115,13 @@ of this branch is dropped (the dashboard-history PR saves every reply in a detac
 question unanswered); Send and Stop put focus back in the message box only if it had focus (the a11y PR's rule);
 the announcer stays a `role="status"` sibling of the log; the composer stays locked while a reply is awaited.
 
+### 2026-10-23 19:30
+
+Final external review (WARN) fixed: a turn remembers the history length when it starts, and only rows saved since
+then can de-duplicate its bubbles or stand in for its reply, so the same question asked again is never hidden or
+bound to its older answer (`use-turn-messages.ts`, tests); the dashboard test now also checks Stop is not offered
+while a reply is only awaited. Before/after screenshots re-taken on this build: `docs/pr-assets/ae-0535/`.
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-empty-state.tsx (new), chat-composer-actions.tsx (new), chat-composer.tsx,

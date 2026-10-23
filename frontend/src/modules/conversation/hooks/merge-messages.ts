@@ -3,25 +3,33 @@ import type { Message } from "@/schemas/chat";
 const USER_ROLE: Message["role"] = "user";
 const ASSISTANT_ROLE: Message["role"] = "assistant";
 
+/** How the turn on screen relates to the persisted history. */
+export interface TurnMerge {
+  /** Streaming is over, so a stopped part may give way to the saved reply. */
+  stopped: boolean;
+  /** History length when this turn started: older rows never match it. */
+  turnStart: number;
+}
+
 /**
- * The saved replies to this turn: the assistant messages after the last saved
- * copy of the turn's own question. Older answers never count, so a short
- * partial that happens to start an earlier answer stays on screen.
+ * The saved replies to this turn: the assistant messages after the saved copy
+ * of the turn's own question (looked up only among rows saved since the turn
+ * began). Older answers never count, even to the same question asked again.
  */
 function repliesToThisTurn(
-  historyMessages: readonly Message[],
+  turnHistory: readonly Message[],
   optimisticMessages: readonly Message[],
 ): string[] {
   const question = optimisticMessages.findLast(
     (message) => message.role === USER_ROLE,
   );
   if (!question) return [];
-  const asked = historyMessages.findLastIndex(
+  const asked = turnHistory.findLastIndex(
     (message) =>
       message.role === USER_ROLE && message.content === question.content,
   );
   if (asked === -1) return [];
-  return historyMessages
+  return turnHistory
     .slice(asked + 1)
     .filter((message) => message.role === ASSISTANT_ROLE)
     .map((message) => message.content);
@@ -41,23 +49,25 @@ function isStoppedPartOf(message: Message, savedReplies: string[]): boolean {
 
 /**
  * The persisted history followed by the optimistic messages of the turn in
- * flight, minus those the history already holds. A stopped part is dropped
- * only once streaming is over (``stopped``): a reply still being written is
- * never hidden behind an earlier answer to the same question.
+ * flight, minus those the history saved since the turn began (an older row
+ * with the same text, such as the same question asked earlier, never hides
+ * one). A stopped part is dropped only once streaming is over: a reply still
+ * being written is never hidden.
  */
 export function mergeMessages(
   historyMessages: Message[],
   optimisticMessages: Message[],
-  stopped: boolean,
+  turn: TurnMerge,
 ): Message[] {
   if (optimisticMessages.length === 0) {
     return historyMessages;
   }
+  const turnHistory = historyMessages.slice(turn.turnStart);
   const seen = new Set(
-    historyMessages.map((message) => `${message.role}:${message.content}`),
+    turnHistory.map((message) => `${message.role}:${message.content}`),
   );
-  const savedReplies = stopped
-    ? repliesToThisTurn(historyMessages, optimisticMessages)
+  const savedReplies = turn.stopped
+    ? repliesToThisTurn(turnHistory, optimisticMessages)
     : [];
   const uniqueOptimistic = optimisticMessages.filter(
     (message) =>

@@ -22,8 +22,9 @@ export function useRefreshHistory(loadHistory: boolean): () => void {
  */
 export function useStopStreaming(
   stream: ChatStreamState,
-  refreshHistory: () => void,
+  loadHistory: boolean,
 ): () => void {
+  const refreshHistory = useRefreshHistory(loadHistory);
   const { abortRef, setIsStreaming, resetStreamingRefs } = stream;
   return useCallback(() => {
     abortRef.current?.abort();
