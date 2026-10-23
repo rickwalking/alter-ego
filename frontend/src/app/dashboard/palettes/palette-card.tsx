@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
@@ -40,6 +40,7 @@ export function PaletteCard({
 }: Readonly<PaletteCardProps>): React.ReactElement {
   const t = useTranslations("palettes");
   const [confirmingArchive, setConfirmingArchive] = useState(false);
+  const confirmId = useId();
 
   return (
     <NeonCard padding="md" className="flex flex-col gap-3">
@@ -78,13 +79,17 @@ export function PaletteCard({
         </ul>
       )}
 
-      {!isRoot && (
-        <div className="mt-auto flex items-center justify-end gap-2 pt-1">
-          {confirmingArchive ? (
-            <>
-              <span className="mr-auto text-xs text-text-muted">
-                {t("archive.confirm")}
-              </span>
+      {!isRoot &&
+        (confirmingArchive ? (
+          <div
+            role="group"
+            aria-labelledby={confirmId}
+            className="mt-auto flex flex-col gap-2 pt-1"
+          >
+            <p id={confirmId} className="text-xs text-text-muted">
+              {t("archive.confirm")}
+            </p>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <NeonButton
                 variant="ghost"
                 size="sm"
@@ -100,23 +105,22 @@ export function PaletteCard({
               >
                 {t("archive.action")}
               </NeonButton>
-            </>
-          ) : (
-            <>
-              <NeonButton variant="ghost" size="sm" onClick={onEdit}>
-                {t("action.edit")}
-              </NeonButton>
-              <NeonButton
-                variant="secondary"
-                size="sm"
-                onClick={() => setConfirmingArchive(true)}
-              >
-                {t("archive.action")}
-              </NeonButton>
-            </>
-          )}
-        </div>
-      )}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-auto flex flex-wrap items-center justify-end gap-2 pt-1">
+            <NeonButton variant="ghost" size="sm" onClick={onEdit}>
+              {t("action.edit")}
+            </NeonButton>
+            <NeonButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmingArchive(true)}
+            >
+              {t("archive.action")}
+            </NeonButton>
+          </div>
+        ))}
     </NeonCard>
   );
 }
