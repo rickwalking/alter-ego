@@ -56,7 +56,7 @@ export function ChatSidebar({
       ref={ref}
       id={id}
       className={cn(
-        "fixed inset-y-0 left-0 z-[60] flex w-[280px] shrink-0 flex-col",
+        "fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col",
         "transition-transform duration-200 ease-out",
         "md:static md:z-auto md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",

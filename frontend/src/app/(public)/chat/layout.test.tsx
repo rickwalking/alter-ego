@@ -37,8 +37,10 @@ describe("PublicChatLayout", () => {
   /** Scenario: The chat fits the mobile viewport above the browser bars and home indicator */
   it("fills the dynamic viewport and opts into safe-area insets", () => {
     const { container } = renderLayout();
-    expect(container.firstElementChild).toHaveClass("h-dvh");
-    expect(container.firstElementChild).not.toHaveClass("h-screen");
+    expect(container.firstElementChild).toHaveClass(
+      "h-screen",
+      "supports-[height:100dvh]:h-dvh",
+    );
     expect(viewport).toEqual({
       width: "device-width",
       initialScale: 1,
@@ -46,6 +48,7 @@ describe("PublicChatLayout", () => {
     });
     expect(PUBLIC_CHAT_SHELL_STYLE.position).toBe("relative");
     expect(PUBLIC_CHAT_SHELL_STYLE.zIndex).toBe(1);
+    expect(PUBLIC_CHAT_SHELL_STYLE.paddingTop).toBe("env(safe-area-inset-top)");
     expect(PUBLIC_CHAT_SHELL_STYLE.paddingLeft).toBe(
       "env(safe-area-inset-left)",
     );

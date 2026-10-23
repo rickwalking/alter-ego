@@ -90,10 +90,21 @@ skip link come from the a11y/i18n PR (AE-0531). Chat and public chat tests: 41 p
 Confirmation round follow-ups: the drawer test also requires it to clear the `z-[55]` scrim; new scenario "The
 conversation drawer slides away when closed and is a fixed column on wider screens" with its test.
 
+### 2026-10-23 12:20
+
+Rebased onto the a11y PR (AE-0531: the row lives in `chat-message-row.tsx`, which now uses `chat-avatar.tsx`; the
+skip link and the single `<main>` come from there). PR review fixes: z-index could not lift the drawer above the menu
+button (the dashboard content sits in its own `position: relative; z-index: 1` context), so while the drawer is open
+the menu button is now hidden and `inert` (`use-menu-button-hidden.ts`, marked by `data-dashboard-menu-button` in
+the dashboard layout), with tests on the real outcome; drawer/scrim z-index back to their original values. `h-dvh`
+has an `h-screen` fallback; the frame pads the top safe-area inset; the composer no longer mixes `padding` with
+`paddingBottom`.
+
 ## Files Touched
 
 - frontend/src/app/(public)/chat/layout.tsx, chat-shell-style.ts (new) + test, public-chat-view.tsx
-- frontend/src/app/dashboard/chat/chat-header.tsx, chat-composer.tsx, chat-sidebar.tsx, chat-message-list.tsx, chat-avatar.tsx (new),
+- frontend/src/app/dashboard/chat/chat-header.tsx, chat-composer.tsx, chat-sidebar.tsx, chat-message-list.tsx, chat-avatar.tsx (new), use-menu-button-hidden.ts (new) + test, app/dashboard/layout.tsx +
+  layout-menu-button.test.tsx (new), constants/a11y.ts,
   dashboard-chat-view.tsx, chat-shell.test.tsx (new)
 - frontend/tests/features/chat-shell-mobile.feature (new)
 

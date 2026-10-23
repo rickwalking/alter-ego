@@ -20,6 +20,7 @@ import { useChatSend } from "@/app/dashboard/chat/use-chat-send";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { ChatErrorBanner } from "@/app/dashboard/chat/chat-error-banner";
 import { useOffCanvas } from "@/lib/use-off-canvas";
+import { useMenuButtonHidden } from "@/app/dashboard/chat/use-menu-button-hidden";
 
 const CHAT_CONVERSATIONS_ID = "chat-conversations";
 
@@ -29,6 +30,7 @@ export function DashboardChatView(): React.ReactElement {
   const t = useTranslations("chat");
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
+  useMenuButtonHidden(convDrawer.open);
 
   const { data: conversations = [], refetch: refetchConversations } =
     useConversations();
@@ -126,7 +128,7 @@ export function DashboardChatView(): React.ReactElement {
             aria-label={t("closeConversations")}
             tabIndex={-1}
             onClick={convDrawer.close}
-            className="fixed inset-0 z-[55] bg-black/60 md:hidden"
+            className="fixed inset-0 z-30 bg-black/60 md:hidden"
           />
         )}
         <ChatSidebar

@@ -73,7 +73,8 @@ export function ChatComposer({
   return (
     <div
       style={{
-        padding: "16px 24px",
+        paddingTop: "16px",
+        paddingInline: "24px",
         paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         borderTop: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_INPUT_BAR,

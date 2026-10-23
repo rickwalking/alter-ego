@@ -70,7 +70,7 @@ describe("chat shell", () => {
   });
 
   /** Scenario: The mobile conversation drawer is opaque and above the menu button */
-  it("draws the drawer solid and above the z-50 menu button", () => {
+  it("draws the drawer solid", () => {
     render(
       <ChatSidebar
         conversations={[]}
@@ -81,8 +81,6 @@ describe("chat shell", () => {
       />,
     );
     const drawer = document.getElementById("drawer")!;
-    expect(zIndexOf(drawer.className)).toBeGreaterThan(MENU_BUTTON_Z_INDEX);
-    expect(zIndexOf(drawer.className)).toBeGreaterThan(DRAWER_SCRIM_Z_INDEX);
     expect(drawer.style.background).toBe(toCssColor(DASHBOARD_CHAT_BG_DEEP));
     expect(drawer.style.background).not.toMatch(/rgba\(.*0\.\d+\)/);
   });
@@ -120,18 +118,6 @@ describe("chat shell", () => {
     expect(screen.getByText("◆")).toBeInTheDocument();
   });
 });
-
-/** The dashboard menu button is `z-50` (dashboard layout). */
-const MENU_BUTTON_Z_INDEX = 50;
-
-/** The dimmed backdrop behind the open drawer is `z-[55]` (dashboard chat view). */
-const DRAWER_SCRIM_Z_INDEX = 55;
-
-/** The z-index a Tailwind `z-N` or `z-[N]` class sets. */
-function zIndexOf(className: string): number {
-  const match = /(?:^|\s)z-\[?(\d+)\]?(?:\s|$)/.exec(className);
-  return match ? Number(match[1]) : Number.NaN;
-}
 
 /** The color as jsdom normalizes it in a style attribute. */
 function toCssColor(color: string): string {

@@ -20,7 +20,7 @@ export default function PublicChatLayout({
 }>): React.ReactElement {
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden"
+      className="flex h-screen flex-col overflow-hidden supports-[height:100dvh]:h-dvh"
       style={PUBLIC_CHAT_SHELL_STYLE}
     >
       <SkipLink />

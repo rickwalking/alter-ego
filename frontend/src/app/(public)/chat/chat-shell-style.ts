@@ -7,10 +7,11 @@ export const PUBLIC_CHAT_VIEWPORT: Viewport = {
   viewportFit: "cover",
 };
 
-/** The page frame: above the grid background, clear of a landscape notch. */
+/** The page frame: above the grid background, clear of the notch and status bar. */
 export const PUBLIC_CHAT_SHELL_STYLE: React.CSSProperties = {
   position: "relative",
   zIndex: 1,
+  paddingTop: "env(safe-area-inset-top)",
   paddingLeft: "env(safe-area-inset-left)",
   paddingRight: "env(safe-area-inset-right)",
 };

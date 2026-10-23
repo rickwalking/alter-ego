@@ -20,7 +20,7 @@ Feature: Chat shell and mobile fit
   Scenario: The mobile conversation drawer is opaque and above the menu button
     When I open the conversations drawer on a phone
     Then its background is solid
-    And it sits above the dashboard menu button
+    And the dashboard menu button is hidden and out of keyboard and pointer reach until the drawer closes
 
   Scenario: No fake notifications
     Then the chat header has no notifications bell or unread dot
