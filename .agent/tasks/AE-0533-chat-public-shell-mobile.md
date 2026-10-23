@@ -77,9 +77,17 @@ in `chat-message-list.tsx` here, the header keeps its current strings, and the l
 scenarios. `ChatAvatar` moved to `chat-avatar.tsx` to keep the list under the 200-line lint cap. Chat and public
 chat tests pass (41).
 
+### 2026-10-23 03:05
+
+External QA (WARN) findings fixed: the layout no longer exports anything but `default` and `viewport` (the shell
+style and viewport values moved to `chat-shell-style.ts`, so Next's layout type check accepts it); tests now cover
+the conversations button's 44px size, the drawer's z-index against the menu button's, the public bar's own gutter,
+the 44px textarea, the full viewport and frame values, and the assistant marker. The /chat `<main>` landmark and
+skip link come from the a11y/i18n PR (AE-0531). Chat and public chat tests: 41 passed.
+
 ## Files Touched
 
-- frontend/src/app/(public)/chat/layout.tsx + test, public-chat-view.tsx
+- frontend/src/app/(public)/chat/layout.tsx, chat-shell-style.ts (new) + test, public-chat-view.tsx
 - frontend/src/app/dashboard/chat/chat-header.tsx, chat-composer.tsx, chat-sidebar.tsx, chat-message-list.tsx, chat-avatar.tsx (new),
   dashboard-chat-view.tsx, chat-shell.test.tsx (new)
 - frontend/tests/features/chat-shell-mobile.feature (new)

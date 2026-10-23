@@ -18,6 +18,7 @@ describe("chat shell", () => {
     );
     const bar = container.firstElementChild!;
     expect(bar).not.toHaveClass("pl-16");
+    expect(bar).toHaveClass("pl-4");
     expect(screen.queryByRole("banner")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New chat" })).toHaveClass(
       "whitespace-nowrap",
@@ -44,15 +45,16 @@ describe("chat shell", () => {
       <ChatComposer value="" onChange={vi.fn()} onSend={vi.fn()} />,
     );
     expect(screen.getByRole("textbox").style.fontSize).toBe("16px");
+    expect(screen.getByRole("textbox").style.minHeight).toBe("44px");
     const bar = container.firstElementChild as HTMLElement;
     expect(bar.getAttribute("style")).toContain("safe-area-inset-bottom");
   });
 
   /** Scenario: Touch targets are at least 44 pixels */
-  it("makes Send and New chat at least 44px", () => {
+  it("makes Send, New chat and the conversations button at least 44px", () => {
     render(
       <>
-        <ChatHeader onNewChat={vi.fn()} publicShell />
+        <ChatHeader onNewChat={vi.fn()} onToggleConversations={vi.fn()} />
         <ChatComposer value="hi" onChange={vi.fn()} onSend={vi.fn()} />
       </>,
     );
@@ -62,6 +64,9 @@ describe("chat shell", () => {
     expect(screen.getByRole("button", { name: "New chat" })).toHaveClass(
       "min-h-11",
     );
+    expect(
+      screen.getByRole("button", { name: "Open conversations" }),
+    ).toHaveClass("h-11", "w-11");
   });
 
   /** Scenario: The mobile conversation drawer is opaque and above the menu button */
@@ -76,7 +81,7 @@ describe("chat shell", () => {
       />,
     );
     const drawer = document.getElementById("drawer")!;
-    expect(drawer).toHaveClass("z-[60]");
+    expect(zIndexOf(drawer.className)).toBeGreaterThan(MENU_BUTTON_Z_INDEX);
     expect(drawer.style.background).toBe(toCssColor(DASHBOARD_CHAT_BG_DEEP));
     expect(drawer.style.background).not.toMatch(/rgba\(.*0\.\d+\)/);
   });
@@ -85,13 +90,28 @@ describe("chat shell", () => {
   it("shows a neutral icon, not PM, on the visitor's messages", () => {
     render(
       <ChatMessageList
-        messages={[{ role: "user", text: "hi", time: "10:00" }]}
+        messages={[
+          { role: "user", text: "hi", time: "10:00" },
+          { role: "assistant", text: "hello", time: "10:00" },
+        ]}
       />,
     );
     expect(screen.queryByText("PM")).not.toBeInTheDocument();
-    expect(screen.getByTestId("chat-user-avatar")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("chat-user-avatar").querySelector("svg"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("◆")).toBeInTheDocument();
   });
 });
+
+/** The dashboard menu button is `z-50` (dashboard layout). */
+const MENU_BUTTON_Z_INDEX = 50;
+
+/** The z-index a Tailwind `z-N` or `z-[N]` class sets. */
+function zIndexOf(className: string): number {
+  const match = /(?:^|\s)z-\[?(\d+)\]?(?:\s|$)/.exec(className);
+  return match ? Number(match[1]) : Number.NaN;
+}
 
 /** The color as jsdom normalizes it in a style attribute. */
 function toCssColor(color: string): string {
