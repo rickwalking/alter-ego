@@ -95,7 +95,12 @@ class OptimisticLockService:
         db: AsyncSession,
         params: CarouselVersionBumpParams,
     ) -> int:
-        """Validate and increment carousel project lock_version."""
+        """Validate and increment carousel project lock_version.
+
+        The same CAS UPDATE clears ``archived_at``: a run or an edit claimed on
+        an archived carousel brings it back to the board atomically, also when
+        an automatic archive committed after the row was loaded.
+        """
         from sqlalchemy import update
 
         from rag_backend.infrastructure.database.models.carousel import (
@@ -114,7 +119,7 @@ class OptimisticLockService:
                 CarouselProjectModel.id == params.project_id,
                 CarouselProjectModel.lock_version == current_version,
             )
-            .values(lock_version=new_version)
+            .values(lock_version=new_version, archived_at=None)
         )
         if result.rowcount != 1:
             raise ValueError(ERR_VERSION_CONFLICT)
