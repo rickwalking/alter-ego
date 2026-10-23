@@ -57,7 +57,7 @@ Público.
 - Backend: `agents/alter_ego_agent.py`, new `agents/alter_ego_knowledge.py`,
   `application/tools/knowledge_base/list_documents.py`, `api/dependencies/agents.py`,
   `api/routes/chat_stream.py`.
-- Frontend: none (the Knowledge Base hint text changes with AE-0502).
+- Frontend: the Knowledge Base scope hint says the public chat reads only Público knowledge (pt, en).
 - Database: none.
 - API: none.
 - Tests: backend unit + integration.
@@ -88,6 +88,7 @@ personal documents do not crowd the public ones out of an anonymous listing.
   `api/routes/chat_stream.py`; tests (`test_alter_ego_knowledge_scope_ae0529.py`,
   `test_public_chat_knowledge_scope_ae0529.py`, builder seams in the chat / conversation tests),
   feature, `docs/architecture/openapi.json` (stream route description).
+- frontend: `i18n/locales/{pt,en}.json` (`knowledge.scope.hint`), `document-scope-forms.test.tsx`.
 
 ## Test Evidence
 
