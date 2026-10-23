@@ -1,4 +1,4 @@
-"""The quality rubric a new carousel is created with (Pedro, Q12).
+"""The quality rubric a new carousel is created with.
 
 ``rubric_id`` left out of the request takes the default carousel rubric (or
 none when there is no default); an explicit ``null`` is the presentation policy

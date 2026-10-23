@@ -44,12 +44,16 @@ function criterion(raw: unknown): RubricCriterionScore | null {
 
 /**
  * The rubric evaluation in ``rubric_scores`` (rubric name, overall score and a
- * ``criteria`` list), or ``null`` for any other shape.
+ * ``criteria`` list), or ``null`` for any other shape. Without a numeric
+ * overall score there is no evaluation to show (never a made-up 0/100).
  */
 export function rubricScoresView(
   scores: Record<string, unknown>,
 ): RubricScoresView | null {
-  if (!Array.isArray(scores.criteria)) {
+  if (
+    !Array.isArray(scores.criteria) ||
+    typeof scores.overall_score !== "number"
+  ) {
     return null;
   }
   const criteria = scores.criteria
@@ -57,7 +61,7 @@ export function rubricScoresView(
     .filter((row): row is RubricCriterionScore => row !== null);
   return {
     rubricName: text(scores.rubric_name),
-    overallScore: numberOr(scores.overall_score, 0),
+    overallScore: scores.overall_score,
     passed: scores.passed === true,
     feedback: text(scores.feedback),
     criteria,

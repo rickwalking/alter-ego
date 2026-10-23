@@ -15,11 +15,16 @@ class CarouselRubric:
     id: str
     name: str
     criteria: tuple[RubricCriterion, ...]
+    version: int = 1
 
 
 @dataclass(frozen=True)
 class CriterionScore:
-    """One criterion's 0-100 score against its 0-100 threshold."""
+    """One criterion's 0-100 score against its 0-100 threshold.
+
+    ``description``, ``scale`` and ``weight`` are the criterion as it was when it
+    was scored, so a later rubric edit never re-reads an old score.
+    """
 
     criterion_id: str
     name: str
@@ -27,11 +32,17 @@ class CriterionScore:
     threshold: int
     passed: bool
     feedback: str = ""
+    description: str = ""
+    scale: str = ""
+    weight: float = 1.0
 
 
 @dataclass(frozen=True)
 class CarouselRubricEvaluation:
-    """Every criterion's score, the weighted 0-100 overall and the verdict."""
+    """Every criterion's score, the weighted 0-100 overall and the verdict.
+
+    ``rubric_version`` is the version of the rubric the scores were given under.
+    """
 
     rubric_id: str
     rubric_name: str
@@ -39,12 +50,14 @@ class CarouselRubricEvaluation:
     passed: bool
     criteria: tuple[CriterionScore, ...]
     feedback: str = ""
+    rubric_version: int = 1
 
     def to_state(self) -> dict[str, object]:
         """The ``rubric_scores`` shape the final review renders."""
         return {
             "rubric_id": self.rubric_id,
             "rubric_name": self.rubric_name,
+            "rubric_version": self.rubric_version,
             "overall_score": self.overall_score,
             "passed": self.passed,
             "feedback": self.feedback,
@@ -56,19 +69,29 @@ class CarouselRubricEvaluation:
                     "threshold": c.threshold,
                     "passed": c.passed,
                     "feedback": c.feedback,
+                    "description": c.description,
+                    "scale": c.scale,
+                    "weight": c.weight,
                 }
                 for c in self.criteria
             ],
         }
 
     def criterion_rows(self) -> dict[str, dict[str, object]]:
-        """Per-criterion scores keyed by id, for ``rubric_evaluation_scores.scores``."""
+        """Per-criterion scores keyed by id, for ``rubric_evaluation_scores.scores``.
+
+        Each row carries the criterion as scored and the rubric version.
+        """
         return {
             c.criterion_id: {
                 "name": c.name,
                 "score": c.score,
                 "threshold": c.threshold,
                 "passed": c.passed,
+                "description": c.description,
+                "scale": c.scale,
+                "weight": c.weight,
+                "rubric_version": self.rubric_version,
             }
             for c in self.criteria
         }

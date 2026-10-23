@@ -71,6 +71,7 @@ export function CreateModeSection({
     ...personas.map((p) => ({ value: p.id, label: p.name })),
   ];
   const rubricOptions = [
+    { value: "", label: t("rubricServerDefault") },
     ...rubrics.map((r) => ({
       value: r.id,
       label: r.isDefault ? t("rubricDefault", { name: r.name }) : r.name,
@@ -130,7 +131,7 @@ export function CreateModeSection({
       />
       <LabeledSelect
         label={t("rubricLabel")}
-        value={form.rubricId || RUBRIC_POLICY_ONLY}
+        value={form.rubricId}
         options={rubricOptions}
         onChange={(rubricId) => onChange({ rubricId })}
       />

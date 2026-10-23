@@ -45,6 +45,9 @@ def _criterion_score(
         threshold=threshold,
         passed=score >= threshold,
         feedback=answer.feedback if answer else "",
+        description=str(criterion.get("description", "")),
+        scale=str(criterion.get("scoring_scale", "")),
+        weight=_weight(criterion),
     )
 
 
@@ -70,6 +73,7 @@ def build_rubric_evaluation(
         passed=bool(scores) and all(s.passed for s in scores),
         criteria=scores,
         feedback=feedback,
+        rubric_version=rubric.version,
     )
 
 

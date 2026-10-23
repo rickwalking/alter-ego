@@ -6951,8 +6951,9 @@
           },
           "criteria": {
             "items": {
-              "$ref": "#/components/schemas/RubricCriterion"
+              "$ref": "#/components/schemas/RubricCriterionInput"
             },
+            "maxItems": 12,
             "minItems": 1,
             "title": "Criteria",
             "type": "array"
@@ -7099,8 +7100,9 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/RubricCriterion"
+                  "$ref": "#/components/schemas/RubricCriterionInput"
                 },
+                "maxItems": 12,
                 "minItems": 1,
                 "type": "array"
               },
@@ -7616,6 +7618,63 @@
           "prompt_template"
         ],
         "title": "RubricCriterion",
+        "type": "object"
+      },
+      "RubricCriterionInput": {
+        "description": "A criterion as created or updated: bounded text (it reaches LLM prompts).\n\nReads keep the plain ``RubricCriterion`` so rubrics stored before the bounds\nstill load.",
+        "properties": {
+          "description": {
+            "maxLength": 1000,
+            "title": "Description",
+            "type": "string"
+          },
+          "evaluation_method": {
+            "title": "Evaluation Method",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "min_threshold": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Threshold",
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "prompt_template": {
+            "maxLength": 1000,
+            "title": "Prompt Template",
+            "type": "string"
+          },
+          "scoring_scale": {
+            "title": "Scoring Scale",
+            "type": "string"
+          },
+          "weight": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "weight",
+          "evaluation_method",
+          "min_threshold",
+          "scoring_scale",
+          "prompt_template"
+        ],
+        "title": "RubricCriterionInput",
         "type": "object"
       },
       "RubricEvaluationRequest": {
@@ -17539,7 +17598,7 @@
     },
     "/api/rubrics/{rubric_id}": {
       "delete": {
-        "description": "Delete a quality rubric.\n\nA rubric that carousels were created with cannot be deleted (409 naming them),\nso no carousel points at a missing rubric.",
+        "description": "Delete a quality rubric.\n\nA rubric that carousels were created with cannot be deleted (409), so no\ncarousel points at a missing rubric. The 409 names the caller's own carousels\nand counts the others (an admin sees them all).",
         "operationId": "delete_rubric_api_rubrics__rubric_id__delete",
         "parameters": [
           {
@@ -17626,7 +17685,7 @@
         ]
       },
       "put": {
-        "description": "Update a quality rubric.",
+        "description": "Update a quality rubric; any change bumps its version.\n\nCarousel scores record the version they were given under, so an edited\nrubric never re-reads an old score.",
         "operationId": "update_rubric_api_rubrics__rubric_id__put",
         "parameters": [
           {

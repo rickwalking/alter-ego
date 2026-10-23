@@ -25,11 +25,16 @@ describe("CreateModeSection rubric select (AE-0504)", () => {
     expect(select).toHaveValue("r-house");
     expect(
       Array.from((select as HTMLSelectElement).options).map((o) => o.text),
-    ).toEqual(["Casa (default)", "QA", "Default policy (no rubric)"]);
+    ).toEqual([
+      "Default rubric",
+      "Casa (default)",
+      "QA",
+      "No rubric (presentation policy only)",
+    ]);
   });
 
   /** Scenario: The chosen rubric is sent with the carousel */
-  it("reports the owner's choice and shows the policy alone before one", () => {
+  it("shows the server's default before a choice and reports the owner's choice", () => {
     const onChange = vi.fn();
     render(
       <CreateModeSection
@@ -40,8 +45,13 @@ describe("CreateModeSection rubric select (AE-0504)", () => {
       />,
     );
     const select = screen.getByLabelText("Quality rubric");
-    expect(select).toHaveValue("none");
+    expect(select).toHaveValue("");
+    expect((select as HTMLSelectElement).selectedOptions[0]?.text).toBe(
+      "Default rubric",
+    );
     fireEvent.change(select, { target: { value: "r-qa" } });
     expect(onChange).toHaveBeenCalledWith({ rubricId: "r-qa" });
+    fireEvent.change(select, { target: { value: "none" } });
+    expect(onChange).toHaveBeenCalledWith({ rubricId: "none" });
   });
 });

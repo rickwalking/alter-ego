@@ -411,7 +411,8 @@
       "personaNone": "Sem persona",
       "rubricLabel": "Rubrica de qualidade",
       "rubricDefault": "{name} (padrão)",
-      "rubricNone": "Política padrão (sem rubrica)"
+      "rubricServerDefault": "Rubrica padrão",
+      "rubricNone": "Sem rubrica (só a política de apresentação)"
     },
     "pov": {
       "title": "Seu ponto de vista",

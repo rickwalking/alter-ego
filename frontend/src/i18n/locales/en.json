@@ -411,7 +411,8 @@
       "personaNone": "No persona",
       "rubricLabel": "Quality rubric",
       "rubricDefault": "{name} (default)",
-      "rubricNone": "Default policy (no rubric)"
+      "rubricServerDefault": "Default rubric",
+      "rubricNone": "No rubric (presentation policy only)"
     },
     "pov": {
       "title": "Your point of view",

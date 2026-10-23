@@ -2,7 +2,7 @@
 
 ``render_rubric_criteria`` is the block every content-draft prompt ends with;
 ``CarouselRubricJudge`` scores the drafted slides against the same criteria in
-one structured-JSON call (re-rolled and repaired by ``ainvoke_json``).
+one structured-JSON call on one model (no re-roll, repair or fallback).
 A criterion's ``prompt_template`` is shown as guidance with its ``{content}`` /
 ``{sources}`` placeholders dropped.
 """
@@ -12,12 +12,14 @@ from __future__ import annotations
 import re
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 
-from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.carousel_rubric_scoring import build_rubric_evaluation
 from rag_backend.domain.constants.carousel_rubric import (
     ERR_RUBRIC_SCORES_INVALID,
+    RUBRIC_MAX_CRITERIA,
     RUBRIC_PROMPT_CRITERIA,
     RUBRIC_PROMPT_DOMAIN,
     RUBRIC_PROMPT_EVALUATE,
@@ -30,28 +32,32 @@ from rag_backend.domain.models.carousel_rubric import (
     RubricJudgeRequest,
 )
 from rag_backend.domain.rubric_scoring import threshold_percent
+from rag_backend.infrastructure.external.routed_chat_model import RoutedChatModel
 from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 _PLACEHOLDER = re.compile(r"\{(content|sources)\}")
-_JUDGE_AGENT = "carousel_rubric_judge"
-_JUDGE_MODEL_ID = "carousel-rubric-judge"
 _RUN_DETAIL = "rubric scores"
 
 
 def rubric_prompt_rows(rubric: CarouselRubric) -> list[dict[str, object]]:
-    """The criteria as the prompt templates read them."""
+    """The criteria as the prompt templates read them, hardened like any user text.
+
+    Name, description and guidance go through ``sanitize_llm_input`` (injection
+    phrases and markup stripped, length capped), at most ``RUBRIC_MAX_CRITERIA``.
+    """
     return [
         {
-            "id": criterion["id"],
-            "name": criterion["name"],
-            "description": criterion.get("description", ""),
+            "id": sanitize_llm_input(str(criterion["id"])),
+            "name": sanitize_llm_input(str(criterion["name"])),
+            "description": sanitize_llm_input(str(criterion.get("description", ""))),
             "scale": str(criterion.get("scoring_scale", "")),
             "threshold": round(threshold_percent(criterion)),
-            "guidance": _PLACEHOLDER.sub(
-                "", str(criterion.get("prompt_template", ""))
-            ).strip(),
+            "guidance": sanitize_llm_input(
+                _PLACEHOLDER.sub("", str(criterion.get("prompt_template", "")))
+            ),
         }
-        for criterion in rubric.criteria
+        for criterion in rubric.criteria[:RUBRIC_MAX_CRITERIA]
     ]
 
 
@@ -88,35 +94,39 @@ def parse_judge_answer(raw: str) -> tuple[list[JudgedCriterion], str]:
     return answers, str(payload.get("feedback", ""))
 
 
+def single_attempt_model(llm: BaseChatModel) -> BaseChatModel:
+    """The judge's model: a routed role's primary alone (no retries, no fallback)."""
+    return llm.primary if isinstance(llm, RoutedChatModel) else llm
+
+
 class CarouselRubricJudge:
-    """Scores a carousel's drafted slides against its rubric (0-100)."""
+    """Scores a carousel's drafted slides against its rubric (0-100).
+
+    One attempt on one model: no re-roll, no repair round-trip, no fallback, so
+    a scoring costs exactly one call. The caller bounds it with a timeout.
+    """
 
     def __init__(self, llm: BaseChatModel) -> None:
-        self._llm = llm
+        self._llm = single_attempt_model(llm)
 
     async def score(self, request: RubricJudgeRequest) -> CarouselRubricEvaluation:
-        """One judge call; raises ``ValueError`` when the answer never parses."""
+        """One judge call; raises on a provider error or an unusable answer."""
         rubric = request.rubric
         prompt, _config = render_prompt(
             RUBRIC_PROMPT_DOMAIN,
             RUBRIC_PROMPT_EVALUATE,
             variables={
-                "rubric_name": rubric.name,
+                "rubric_name": sanitize_llm_input(rubric.name),
                 "criteria": rubric_prompt_rows(rubric),
                 "content": request.content,
             },
             version=RUBRIC_PROMPT_VERSION,
         )
-        (answers, feedback), _raw = await ainvoke_json(
-            self._llm,
-            prompt,
-            JsonRetryPolicy(
-                parse=parse_judge_answer,
-                agent=_JUDGE_AGENT,
-                model_id=_JUDGE_MODEL_ID,
-                run_detail=_RUN_DETAIL,
-            ),
+        response = await self._llm.ainvoke(
+            [HumanMessage(content=prompt)],
+            get_langfuse_runnable_config(_RUN_DETAIL),
         )
+        answers, feedback = parse_judge_answer(str(response.content))
         return build_rubric_evaluation(rubric, answers, feedback)
 
 
@@ -125,4 +135,5 @@ __all__ = [
     "parse_judge_answer",
     "render_rubric_criteria",
     "rubric_prompt_rows",
+    "single_attempt_model",
 ]

@@ -137,8 +137,12 @@ class ContentDraftAgent:
         return scoped
 
     def _full_prompt(self, instruction: str, prompt_text: str) -> str:
-        """The instruction, the content prompt and the rubric block (when set)."""
-        parts = [instruction, prompt_text, self._rubric_block]
+        """The instruction, the rubric block (when set) and the content prompt.
+
+        The rubric is reference data, so it sits before the content prompt and
+        its final output instructions, never after them.
+        """
+        parts = [instruction, self._rubric_block, prompt_text]
         return "\n\n".join(part for part in parts if part)
 
     async def draft_slide(

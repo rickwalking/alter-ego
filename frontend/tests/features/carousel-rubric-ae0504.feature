@@ -6,8 +6,8 @@ Feature: The owner picks the quality rubric of a carousel and sees its scores
   Scenario: The wizard preselects the default carousel rubric
     Given rubrics for carousels, one of them the default, and a rubric for blog posts only
     When the owner opens the create wizard
-    Then "Rubrica de qualidade" lists the carousel rubrics and "Política padrão (sem rubrica)"
-    And the default rubric is preselected and marked as the default
+    Then "Rubrica de qualidade" offers "Rubrica padrão" (the server's default), the carousel rubrics and "Sem rubrica"
+    And once the list loads the default rubric is preselected and marked as the default
 
   Scenario: The chosen rubric is sent with the carousel
     When the owner picks a rubric and creates the carousel
@@ -24,6 +24,6 @@ Feature: The owner picks the quality rubric of a carousel and sees its scores
     And a criterion below its minimum is flagged
 
   Scenario: Final review without rubric scores
-    Given the carousel has no rubric scores
+    Given the carousel has no rubric scores, or scores without an overall score
     When the owner opens "Qualidade"
     Then the empty note is shown

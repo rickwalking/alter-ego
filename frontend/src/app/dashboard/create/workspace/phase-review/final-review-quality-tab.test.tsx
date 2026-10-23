@@ -96,4 +96,13 @@ describe("QualityTab (AE-0504)", () => {
     expect(screen.getByText("82")).toBeInTheDocument();
     expect(screen.getByText('{"a":1}')).toBeInTheDocument();
   });
+
+  /** Scenario: Final review without rubric scores */
+  it("shows the empty note, never 0/100, when the overall score is missing", () => {
+    const withoutOverall: Record<string, unknown> = { ...SCORED };
+    delete withoutOverall.overall_score;
+    render(<QualityTab state={state(withoutOverall)} emptyText="empty" />);
+    expect(screen.queryByText(/overall score/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0\/100/)).not.toBeInTheDocument();
+  });
 });

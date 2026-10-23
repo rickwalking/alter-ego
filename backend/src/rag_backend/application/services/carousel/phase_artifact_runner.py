@@ -446,7 +446,7 @@ class PhaseArtifactRunner:
                     rubric=regen.rubric,
                     slide_drafts=slide_drafts,
                     regenerated=regenerated,
-                    has_scores=bool(state.get(STATE_KEY_RUBRIC_SCORES)),
+                    previous_scores=state.get(STATE_KEY_RUBRIC_SCORES),
                 )
             )
         )

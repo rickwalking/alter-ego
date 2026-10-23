@@ -5,6 +5,7 @@ Feature: backend/tests/features/carousel_rubric_ae0504.feature
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
@@ -17,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from rag_backend.application.services.carousel.carousel_rubric_step import (
     CarouselRubricStep,
     RubricScoreInput,
+    content_hash,
     slides_text,
 )
 from rag_backend.domain.carousel_rubric_scoring import build_rubric_evaluation
@@ -35,7 +37,11 @@ from rag_backend.infrastructure.database.models.persona_rubric import (
     QualityRubricModel,
     RubricEvaluationScoreModel,
 )
-from rag_backend.modules.editorial.public import CarouselRubricAcl, RubricChoiceError
+from rag_backend.modules.editorial.public import (
+    CarouselRubricAcl,
+    RubricChoiceError,
+    RubricUser,
+)
 from rag_backend.modules.publishing import AnalyticsQuery
 from rag_backend.modules.publishing.infrastructure.publishing_read_acl import (
     PublishingReadAcl,
@@ -51,6 +57,7 @@ CRITERION = {
     "scoring_scale": "0-100",
     "prompt_template": "Avalie {content}",
 }
+STALE_SCORES = {"overall_score": 85}
 DRAFTS = [
     {"slide_index": 1, "draft_text": "Gancho forte"},
     {"slide_index": 2, "draft_text": ""},
@@ -180,7 +187,9 @@ async def test_project_rubric_and_carousels_using(db_session: AsyncSession) -> N
     assert (rubric.id, rubric.name) == (rubric_id, "QA")
     assert [c["id"] for c in rubric.criteria] == ["clarity"]
     assert await acl.project_rubric(without) is None
-    assert await acl.carousels_using(rubric_id) == [(with_rubric, "Topic owner-1")]
+    assert await acl.carousels_using(rubric_id) == [
+        RubricUser(project_id=with_rubric, topic="Topic owner-1", owner_id="owner-1")
+    ]
 
 
 async def test_scoring_stores_and_replaces_the_carousel_row(
@@ -198,7 +207,7 @@ async def test_scoring_stores_and_replaces_the_carousel_row(
             rubric=rubric,
             slide_drafts=DRAFTS,
             regenerated=True,
-            has_scores=False,
+            previous_scores=None,
         )
     )
     second = await CarouselRubricStep(db=db_session, judge=_Judge(40)).score(
@@ -207,7 +216,7 @@ async def test_scoring_stores_and_replaces_the_carousel_row(
             rubric=rubric,
             slide_drafts=DRAFTS,
             regenerated=True,
-            has_scores=True,
+            previous_scores=STALE_SCORES,
         )
     )
 
@@ -231,7 +240,7 @@ async def test_scoring_is_skipped_when_nothing_to_score(
                 rubric=None,
                 slide_drafts=DRAFTS,
                 regenerated=True,
-                has_scores=False,
+                previous_scores=None,
             )
         )
         == {}
@@ -243,7 +252,7 @@ async def test_scoring_is_skipped_when_nothing_to_score(
                 rubric=rubric,
                 slide_drafts=DRAFTS,
                 regenerated=False,
-                has_scores=True,
+                previous_scores=STALE_SCORES,
             )
         )
         == {}
@@ -255,7 +264,7 @@ async def test_scoring_is_skipped_when_nothing_to_score(
                 rubric=rubric,
                 slide_drafts=[],
                 regenerated=True,
-                has_scores=False,
+                previous_scores=None,
             )
         )
         == {}
@@ -267,7 +276,7 @@ async def test_scoring_is_skipped_when_nothing_to_score(
                 rubric=rubric,
                 slide_drafts=DRAFTS,
                 regenerated=True,
-                has_scores=False,
+                previous_scores=None,
             )
         )
         == {}
@@ -291,7 +300,7 @@ async def test_a_judge_failure_leaves_no_scores(db_session: AsyncSession) -> Non
                 rubric=rubric,
                 slide_drafts=DRAFTS,
                 regenerated=True,
-                has_scores=False,
+                previous_scores=None,
             )
         )
         == {}
@@ -347,7 +356,7 @@ async def test_a_wrong_shape_answer_also_leaves_no_scores(
             rubric=rubric,
             slide_drafts=DRAFTS,
             regenerated=True,
-            has_scores=False,
+            previous_scores=None,
         )
     )
 
@@ -370,7 +379,7 @@ async def test_a_failed_re_score_drops_the_stale_scores(
             rubric=rubric,
             slide_drafts=DRAFTS,
             regenerated=True,
-            has_scores=False,
+            previous_scores=None,
         )
     )
 
@@ -380,7 +389,7 @@ async def test_a_failed_re_score_drops_the_stale_scores(
             rubric=rubric,
             slide_drafts=DRAFTS,
             regenerated=True,
-            has_scores=True,
+            previous_scores=STALE_SCORES,
         )
     )
 
@@ -435,3 +444,154 @@ async def test_a_post_authors_own_scores_count_and_nothing_reads_as_no_data(
         None,
         0,
     )
+
+
+class _SlowJudge:
+    """A judge that never answers within the timeout."""
+
+    async def score(self, request: RubricJudgeRequest) -> CarouselRubricEvaluation:
+        await asyncio.sleep(1)
+        raise AssertionError(request.project_id)
+
+
+class _ProviderDownError(Exception):
+    """Stands in for a provider error (rate limit, API timeout)."""
+
+
+async def _scored_carousel(db_session: AsyncSession) -> tuple[str, CarouselRubric]:
+    rubric_id = await _rubric(db_session, "QA")
+    project_id = await _carousel(db_session, rubric_id)
+    rubric = await CarouselRubricStep(db=db_session, judge=None).project_rubric(
+        project_id
+    )
+    assert rubric is not None
+    return project_id, rubric
+
+
+async def test_a_provider_error_keeps_the_drafts_and_the_run(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: A judge failure leaves the run going without scores."""
+    project_id, rubric = await _scored_carousel(db_session)
+    step = CarouselRubricStep(db=db_session, judge=_Judge(None, _ProviderDownError))
+
+    update = await step.score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+        )
+    )
+
+    assert update == {}
+    assert await _score_rows(db_session, project_id) == []
+
+
+async def test_a_judge_past_the_timeout_is_given_up(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Scenario: A judge failure leaves the run going without scores."""
+    from rag_backend.application.services.carousel import carousel_rubric_step
+
+    monkeypatch.setattr(carousel_rubric_step, "RUBRIC_JUDGE_TIMEOUT_SECONDS", 0.01)
+    project_id, rubric = await _scored_carousel(db_session)
+
+    update = await CarouselRubricStep(db=db_session, judge=_SlowJudge()).score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+        )
+    )
+
+    assert update == {}
+
+
+async def test_unchanged_drafts_are_not_scored_again(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: A regeneration replaces the scores, an unchanged draft keeps them."""
+    project_id, rubric = await _scored_carousel(db_session)
+    first = await CarouselRubricStep(db=db_session, judge=_Judge(85)).score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+        )
+    )
+    judge = _Judge(10)
+    step = CarouselRubricStep(db=db_session, judge=judge)
+
+    same = await step.score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+            previous_scores=first["rubric_scores"],
+        )
+    )
+    newer_rubric = CarouselRubric(
+        id=rubric.id, name=rubric.name, criteria=rubric.criteria, version=2
+    )
+    changed = await step.score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=newer_rubric,
+            slide_drafts=[{"slide_index": 1, "draft_text": "Outro gancho"}],
+            regenerated=True,
+            previous_scores=first["rubric_scores"],
+        )
+    )
+
+    assert _state(first)["content_hash"] == content_hash(rubric, slides_text(DRAFTS))
+    assert same == {}
+    assert len(judge.requests) == 1
+    assert _state(changed)["overall_score"] == 10
+    assert _state(changed)["rubric_version"] == 2
+
+
+async def test_score_rows_are_flushed_for_the_run_to_commit(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: The drafted carousel is scored on 0-100 per criterion."""
+    project_id, rubric = await _scored_carousel(db_session)
+    await CarouselRubricStep(db=db_session, judge=_Judge(85)).score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+        )
+    )
+    assert await _score_rows(db_session, project_id) == [85]
+
+    await db_session.rollback()
+
+    assert await _score_rows(db_session, project_id) == []
+
+
+async def test_an_unattended_carousel_gets_the_default_rubric(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: Autopilot and chat carousels get the default carousel rubric."""
+    from rag_backend.modules.editorial.public import CarouselAutomationAcl
+
+    default = await _rubric(db_session, "Casa", default=True)
+    acl = CarouselAutomationAcl(db_session)
+    project = CarouselProject(
+        topic="Autopilot",
+        audience="Devs",
+        niche="IA",
+        theme=CarouselTheme.AI_COMPETITION,
+        owner_id="autopilot",
+    )
+
+    project_id = await acl.create_project(project)
+
+    rubric = await CarouselRubricAcl(db_session).project_rubric(project_id)
+    assert rubric is not None
+    assert rubric.id == default

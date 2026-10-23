@@ -118,6 +118,7 @@ class TestRubricDeleteGuard:
         assert refused.json()["detail"] == {
             "code": "rubric_in_use",
             "carousels": [{"id": carousel["id"], "topic": _BASE["topic"]}],
+            "other_carousels": 0,
         }
         assert (await client.get(f"/api/rubrics/{qa}")).status_code == 200
 
@@ -145,3 +146,146 @@ class TestRubricDeleteGuard:
         assert refused.json()["detail"]["carousels"] == [
             {"id": carousel["id"], "topic": _BASE["topic"]}
         ]
+
+
+async def _carousel_of_someone_else(rubric_id: str) -> str:
+    from rag_backend.domain.models import CarouselProject, CarouselTheme
+    from rag_backend.infrastructure.database.carousel_repository import (
+        PostgresCarouselRepository,
+    )
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    async with get_session_maker()() as session:
+        created = await PostgresCarouselRepository(session).create_project(
+            CarouselProject(
+                topic="Segredo de outra pessoa",
+                audience="Devs",
+                niche="IA",
+                theme=CarouselTheme.AI_COMPETITION,
+                owner_id="someone-else",
+                rubric_id=rubric_id,
+            )
+        )
+        await session.commit()
+        return str(created.id)
+
+
+@pytest.mark.integration
+class TestRubricDeleteScoping:
+    @pytest.mark.asyncio
+    async def test_an_editor_sees_only_own_carousels_and_a_count(
+        self, client: AsyncClient
+    ) -> None:
+        """Scenario: A rubric used by a carousel cannot be deleted."""
+        qa = await _rubric("QA")
+        mine = await _create(client, {**_BASE, "rubric_id": qa})
+        await _carousel_of_someone_else(qa)
+
+        refused = await client.delete(f"/api/rubrics/{qa}")
+
+        detail = refused.json()["detail"]
+        assert refused.status_code == 409
+        assert detail["carousels"] == [{"id": mine["id"], "topic": _BASE["topic"]}]
+        assert detail["other_carousels"] == 1
+        assert "Segredo de outra pessoa" not in refused.text
+
+    @pytest.mark.asyncio
+    async def test_an_admin_sees_every_carousel(self, client: AsyncClient) -> None:
+        """Scenario: A rubric used by a carousel cannot be deleted."""
+        from rag_backend.domain.models import UserRole
+        from tests.integration.conftest import auth_headers_for, create_test_user
+
+        qa = await _rubric("QA")
+        await _create(client, {**_BASE, "rubric_id": qa})
+        await _carousel_of_someone_else(qa)
+        admin = await create_test_user("admin@integration.test", UserRole.ADMIN)
+
+        refused = await client.delete(
+            f"/api/rubrics/{qa}", headers=auth_headers_for(admin)
+        )
+
+        detail = refused.json()["detail"]
+        assert len(detail["carousels"]) == 2
+        assert detail["other_carousels"] == 0
+
+
+def _criterion(**changes: object) -> dict[str, object]:
+    criterion: dict[str, object] = {
+        "id": "clarity",
+        "name": "Clareza",
+        "description": "Uma ideia por slide",
+        "weight": 1.0,
+        "evaluation_method": "ai_auto",
+        "min_threshold": 0.7,
+        "scoring_scale": "0-100",
+        "prompt_template": "",
+    }
+    criterion.update(changes)
+    return criterion
+
+
+@pytest.mark.integration
+class TestRubricInputBounds:
+    @pytest.mark.asyncio
+    async def test_criterion_text_and_count_are_bounded(
+        self, client: AsyncClient
+    ) -> None:
+        """Scenario: A rubric's criteria are bounded before they reach a prompt."""
+        long_text = "x" * 1001
+        too_long = await client.post(
+            "/api/rubrics",
+            json={"name": "Longa", "criteria": [_criterion(description=long_text)]},
+        )
+        too_long_prompt = await client.post(
+            "/api/rubrics",
+            json={"name": "Longa", "criteria": [_criterion(prompt_template=long_text)]},
+        )
+        too_many = await client.post(
+            "/api/rubrics",
+            json={
+                "name": "Muitas",
+                "criteria": [_criterion(id=f"c{i}") for i in range(13)],
+            },
+        )
+        at_the_limit = await client.post(
+            "/api/rubrics",
+            json={
+                "name": "No limite",
+                "criteria": [
+                    _criterion(id=f"c{i}", description="x" * 1000) for i in range(12)
+                ],
+            },
+        )
+
+        assert too_long.status_code == 422
+        assert too_long_prompt.status_code == 422
+        assert too_many.status_code == 422
+        assert at_the_limit.status_code == 201, at_the_limit.text
+
+    @pytest.mark.asyncio
+    async def test_an_edit_bumps_the_version_and_old_long_text_still_reads(
+        self, client: AsyncClient
+    ) -> None:
+        """Scenario: Stored scores keep the rubric version they were given under."""
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.models.persona_rubric import (
+            QualityRubricModel,
+        )
+
+        rubric_id = await _rubric("Antiga")
+        async with get_session_maker()() as session:
+            model = await session.get(QualityRubricModel, rubric_id)
+            assert model is not None
+            model.criteria = [_criterion(description="y" * 1500)]
+            await session.commit()
+
+        read = await client.get(f"/api/rubrics/{rubric_id}")
+        edited = await client.put(f"/api/rubrics/{rubric_id}", json={"name": "Nova"})
+
+        assert read.status_code == 200
+        assert len(read.json()["criteria"][0]["description"]) == 1500
+        assert edited.status_code == 200
+        async with get_session_maker()() as session:
+            model = await session.get(QualityRubricModel, rubric_id)
+            assert model is not None
+            assert model.version == 2

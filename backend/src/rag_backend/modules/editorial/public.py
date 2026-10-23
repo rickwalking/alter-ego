@@ -160,6 +160,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner i
 from rag_backend.modules.editorial.infrastructure.carousel_rubric_acl import (
     CarouselRubricAcl,
     RubricChoiceError,
+    RubricUser,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
     read_project_owner_id,
@@ -281,6 +282,7 @@ __all__ = [
     "ReviewWorkflowEngine",
     "ReviewerAssignmentPort",
     "RubricChoiceError",
+    "RubricUser",
     "RunHeartbeat",
     "SlideFixAttemptReport",
     "SlideFixModelFactory",

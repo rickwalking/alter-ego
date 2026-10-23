@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -13,13 +14,20 @@ from rag_backend.domain.constants.carousel_tools import (
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
 
+DefaultRubricLookup = Callable[[], Awaitable[str | None]]
+
 
 @dataclass(frozen=True)
 class CarouselToolAccessContext:
-    """Caller identity scoped to a carousel chat conversation."""
+    """Caller identity scoped to a carousel chat conversation.
+
+    ``default_rubric_id`` resolves the default carousel rubric a chat-created
+    carousel gets (none when unset).
+    """
 
     owner_user_id: str
     bound_project_id: str | None = None
+    default_rubric_id: DefaultRubricLookup | None = None
 
 
 def verify_carousel_tool_access(

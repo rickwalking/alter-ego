@@ -2,15 +2,19 @@
 
 The rubric is read from the project row (like the content mode), so manual,
 autopilot and resumed runs draft against the same criteria. Once the drafts
-exist, the judge scores them (0-100 per criterion); the evaluation goes into the
-workflow state's ``rubric_scores`` and replaces the carousel's score row. Drafts
-that were not regenerated keep their scores. A judge that never answers usable
-JSON (malformed or the wrong shape) or times out leaves the run going without
-scores, and clears the scores of the drafts it replaced; no rewrite pass.
+exist, the judge scores them (0-100 per criterion) in one attempt under a hard
+timeout; the evaluation goes into the workflow state's ``rubric_scores`` (with
+the hash of the scored text) and replaces the carousel's score row. Drafts
+whose text did not change are not scored again. Any judge failure (provider
+error, timeout, unusable answer) is logged and the run goes on without scores,
+clearing the scores of the drafts it replaced; no rewrite pass. The score rows
+are only flushed: the phase's run commits its session.
 """
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 from dataclasses import dataclass
 
 import structlog
@@ -19,6 +23,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.carousel_rubric import (
     LOG_EVENT_RUBRIC_SCORED,
     LOG_EVENT_RUBRIC_SCORING_FAILED,
+    LOG_EVENT_RUBRIC_SCORING_SKIPPED,
+    RUBRIC_JUDGE_TIMEOUT_SECONDS,
+    STATE_KEY_CONTENT_HASH,
     STATE_KEY_RUBRIC_SCORES,
 )
 from rag_backend.domain.models.carousel_rubric import (
@@ -42,7 +49,7 @@ class RubricScoreInput:
     rubric: CarouselRubric | None
     slide_drafts: object
     regenerated: bool
-    has_scores: bool
+    previous_scores: object = None
 
 
 def slides_text(slide_drafts: object) -> str:
@@ -58,6 +65,16 @@ def slides_text(slide_drafts: object) -> str:
             number = slide.get(_SLIDE_INDEX_KEY, position)
             lines.append(f"Slide {number}: {text}")
     return "\n\n".join(lines)
+
+
+def content_hash(rubric: CarouselRubric, content: str) -> str:
+    """What a score is for: the slides' text and the rubric version it used."""
+    key = f"{rubric.id}:{rubric.version}\n{content}"
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def _previous(scores: object) -> dict[str, object]:
+    return scores if isinstance(scores, dict) else {}
 
 
 @dataclass(frozen=True)
@@ -78,26 +95,47 @@ class CarouselRubricStep:
         rubric = request.rubric
         if rubric is None or self.judge is None or self.db is None:
             return {}
-        if request.has_scores and not request.regenerated:
+        previous = _previous(request.previous_scores)
+        if previous and not request.regenerated:
             return {}
         content = slides_text(request.slide_drafts)
         if not content:
             return {}
+        scored_for = content_hash(rubric, content)
+        if previous.get(STATE_KEY_CONTENT_HASH) == scored_for:
+            logger.info(LOG_EVENT_RUBRIC_SCORING_SKIPPED, project_id=request.project_id)
+            return {}
+        return await self._judge(request, rubric, (content, scored_for))
+
+    async def _judge(
+        self,
+        request: RubricScoreInput,
+        rubric: CarouselRubric,
+        scored: tuple[str, str],
+    ) -> dict[str, object]:
+        """One judge call under the hard timeout; a failure keeps the run going."""
+        content, scored_for = scored
+        judge, db = self.judge, self.db
+        if judge is None or db is None:
+            return {}
         try:
-            evaluation = await self.judge.score(
-                RubricJudgeRequest(
-                    rubric=rubric, content=content, project_id=request.project_id
-                )
+            evaluation = await asyncio.wait_for(
+                judge.score(
+                    RubricJudgeRequest(
+                        rubric=rubric, content=content, project_id=request.project_id
+                    )
+                ),
+                timeout=RUBRIC_JUDGE_TIMEOUT_SECONDS,
             )
-        except (ValueError, TypeError, TimeoutError) as exc:
+        except Exception as exc:
             logger.warning(
                 LOG_EVENT_RUBRIC_SCORING_FAILED,
                 project_id=request.project_id,
                 rubric_id=rubric.id,
-                error=str(exc),
+                error=type(exc).__name__,
             )
             return await self._drop_stale_scores(request)
-        await CarouselRubricAcl(self.db).replace_scores(request.project_id, evaluation)
+        await CarouselRubricAcl(db).replace_scores(request.project_id, evaluation)
         logger.info(
             LOG_EVENT_RUBRIC_SCORED,
             project_id=request.project_id,
@@ -105,14 +143,19 @@ class CarouselRubricStep:
             overall_score=evaluation.overall_score,
             passed=evaluation.passed,
         )
-        return {STATE_KEY_RUBRIC_SCORES: evaluation.to_state()}
+        return {
+            STATE_KEY_RUBRIC_SCORES: {
+                **evaluation.to_state(),
+                STATE_KEY_CONTENT_HASH: scored_for,
+            }
+        }
 
     async def _drop_stale_scores(self, request: RubricScoreInput) -> dict[str, object]:
         """After a failed re-score, the old scores belong to copy that is gone."""
-        if self.db is None or not request.has_scores:
+        if self.db is None or not _previous(request.previous_scores):
             return {}
         await CarouselRubricAcl(self.db).clear_scores(request.project_id)
         return {STATE_KEY_RUBRIC_SCORES: {}}
 
 
-__all__ = ["CarouselRubricStep", "RubricScoreInput", "slides_text"]
+__all__ = ["CarouselRubricStep", "RubricScoreInput", "content_hash", "slides_text"]

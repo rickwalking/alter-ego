@@ -61,6 +61,9 @@ def test_scores_thresholds_and_weighted_overall() -> None:
             "threshold": 70,
             "passed": True,
             "feedback": "clear",
+            "description": "clarity description",
+            "scale": "0-100",
+            "weight": 2.0,
         },
         {
             "id": "hook",
@@ -69,13 +72,21 @@ def test_scores_thresholds_and_weighted_overall() -> None:
             "threshold": 60,
             "passed": True,
             "feedback": "",
+            "description": "hook description",
+            "scale": "0-100",
+            "weight": 1.0,
         },
     ]
+    assert evaluation.to_state()["rubric_version"] == 1
     assert evaluation.criterion_rows()["hook"] == {
         "name": "Hook",
         "score": 65,
         "threshold": 60,
         "passed": True,
+        "description": "hook description",
+        "scale": "0-100",
+        "weight": 1.0,
+        "rubric_version": 1,
     }
 
 
