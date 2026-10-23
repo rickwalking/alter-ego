@@ -99,6 +99,14 @@ describe("ChatMarkdown", () => {
   });
 
   /** Scenario: Links are clickable and safe */
+  it("shows the target of a safe link whose text is only spaces", () => {
+    renderMarkdown("[ ![logo](https://cdn.test/l.png) ](https://python.org)");
+    expect(
+      screen.getByRole("link", { name: "https://python.org" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: Links are clickable and safe */
   it("keeps the text of a link that mixes an image and words", () => {
     renderMarkdown(
       "[![logo](https://cdn.test/l.png) Python](https://python.org)",
