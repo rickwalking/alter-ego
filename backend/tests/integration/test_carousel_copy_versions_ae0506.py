@@ -12,6 +12,12 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 
+from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_RUN_IN_PROGRESS,
+)
+from rag_backend.domain.constants.carousel_copy_versions import (
+    CONTENT_TYPE_CAROUSEL_COPY,
+)
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from tests.integration.carousel_copy_support import (
     EDITED_CAPTION,
@@ -67,7 +73,7 @@ async def _add_foreign_version(project_id: str) -> None:
         session.add(
             ContentVersionModel(
                 content_id=project_id,
-                content_type="carousel_copy",
+                content_type=CONTENT_TYPE_CAROUSEL_COPY,
                 version_number=7,
                 snapshot={"field": "caption_en", "text": "x"},
             )
@@ -290,5 +296,5 @@ async def test_restore_guards_of_the_save(copy_env: CopyEnv) -> None:
     assert unknown_carousel.status_code == 404
     assert foreign.status_code == 404
     assert running.status_code == 409
-    assert running.json()["detail"] == "resume_already_in_progress"
+    assert running.json()["detail"] == CONFLICT_CODE_RUN_IN_PROGRESS
     assert (await saved_project(copy_env, project_id))["caption"] == EDITED_CAPTION

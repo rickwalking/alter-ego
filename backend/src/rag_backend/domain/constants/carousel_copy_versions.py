@@ -24,12 +24,9 @@ SUMMARY_RESTORE: Final = "restore"
 
 ERR_COPY_VERSION_NOT_FOUND: Final = "copy_version_not_found"
 
-LOG_EVENT_COPY_VERSIONS_RECORDED: Final = "carousel_copy_versions_recorded"
-
 __all__ = [
     "CONTENT_TYPE_CAROUSEL_COPY",
     "ERR_COPY_VERSION_NOT_FOUND",
-    "LOG_EVENT_COPY_VERSIONS_RECORDED",
     "SNAPSHOT_FIELD_KEY",
     "SNAPSHOT_RESTORED_FROM_KEY",
     "SNAPSHOT_TEXT_KEY",

@@ -33,9 +33,6 @@ from rag_backend.domain.constants.carousel_conflicts import (
     CONFLICT_CODE_RUN_IN_PROGRESS,
 )
 from rag_backend.domain.constants.carousel_copy_edit import LOG_EVENT_COPY_SAVED
-from rag_backend.domain.constants.carousel_copy_versions import (
-    LOG_EVENT_COPY_VERSIONS_RECORDED,
-)
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_conflict import (
@@ -115,11 +112,12 @@ class CarouselCopyEditService:
         await take_lock_version_cas(self._db, str(project.id), command.lock_version)
         before = copy_texts(project)
         _apply(project, command.edits)
-        await self._record_versions(command, before)
+        recorded = await self._record_versions(command, before)
         saved = await self._repo.update_project(project)
         logger.info(
             LOG_EVENT_COPY_SAVED,
             project_id=str(project.id),
+            versions_recorded=recorded,
             caption=command.edits.caption is not None,
             linkedin_post_pt=command.edits.linkedin_post_pt is not None,
             linkedin_post_en=command.edits.linkedin_post_en is not None,
@@ -128,8 +126,8 @@ class CarouselCopyEditService:
 
     async def _record_versions(
         self, command: CopyEditCommand, before: dict[str, str | None]
-    ) -> None:
-        """Stage the versions of the texts this save changes (no commit)."""
+    ) -> int:
+        """Stage the versions of the texts this save changes (no commit); how many."""
         project_id = str(command.project.id)
         existing = await self._versions.list_versions(project_id)
         change = CopyChange(
@@ -140,11 +138,7 @@ class CarouselCopyEditService:
         )
         new_versions = versions_for_change(change, {v.field for v in existing})
         await self._versions.add(project_id, new_versions)
-        logger.info(
-            LOG_EVENT_COPY_VERSIONS_RECORDED,
-            project_id=project_id,
-            versions=len(new_versions),
-        )
+        return len(new_versions)
 
 
 def _apply(project: CarouselProject, edits: CopyEdits) -> None:
