@@ -1,6 +1,6 @@
 # AE-0519 — Palette archive confirm reads on one or two lines
 
-Status: In Progress
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Bug
@@ -33,10 +33,10 @@ the buttons keep their width and squeeze the text to its longest word.
 
 ## Acceptance Criteria
 
-- [ ] Given Archive on a card at 1440 and 390 px, When the confirm step shows, Then "Arquivar esta paleta?"
+- [x] Given Archive on a card at 1440 and 390 px, When the confirm step shows, Then "Arquivar esta paleta?"
       reads on one or two lines above the "Cancelar" / "Arquivar" buttons (its own full-width line, not a
       flex item squeezed beside them).
-- [ ] Given the confirm step, Then the question and both buttons form a group named by the question, and
+- [x] Given the confirm step, Then the question and both buttons form a group named by the question, and
       Cancel returns to the resting card while Arquivar still calls the archive action once.
 
 ## Gherkin Scenarios
