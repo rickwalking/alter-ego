@@ -16,6 +16,8 @@ import {
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
 import { classifyChatError, type ChatFailure } from "../chat-errors";
+import { mergeMessages, optimisticAtTurnStart } from "./merge-messages";
+import { useRefreshHistory, useStopStreaming } from "./use-stop-streaming";
 import { useAwaitingReply } from "./use-awaiting-reply";
 import {
   CHAT_ERROR_KIND,
@@ -38,7 +40,6 @@ import type {
 } from "./types";
 
 const SSE_CHAT_USER_ID_PREFIX = "user-";
-const USER_ROLE: Message["role"] = "user";
 const STREAM_MESSAGE_ID_PREFIX = "stream-";
 
 export type {
@@ -46,24 +47,6 @@ export type {
   UseSseChatOptions,
   UseSseChatReturn,
 } from "./types";
-
-function mergeMessages(
-  historyMessages: Message[],
-  optimisticMessages: Message[],
-): Message[] {
-  if (optimisticMessages.length === 0) {
-    return historyMessages;
-  }
-
-  const seen = new Set(
-    historyMessages.map((message) => `${message.role}:${message.content}`),
-  );
-  const uniqueOptimistic = optimisticMessages.filter(
-    (message) => !seen.has(`${message.role}:${message.content}`),
-  );
-
-  return [...historyMessages, ...uniqueOptimistic];
-}
 
 /** Attach the streamed sources to the trailing assistant message. */
 function withAssistantSources(
@@ -170,11 +153,6 @@ function chatTurnHandlers(
   };
 }
 
-/** Drop a trailing user message that never got a reply (a failed turn). */
-function dropUnansweredUserTurn(prev: Message[]): Message[] {
-  return prev.at(-1)?.role === USER_ROLE ? prev.slice(0, -1) : prev;
-}
-
 /** The conversation id, creating the conversation first when needed. */
 async function resolveConversationId(
   target: ConversationTarget,
@@ -237,18 +215,26 @@ function useRunChatTurn(
   deps: TurnCallbackDeps,
 ): (run: TurnRun) => Promise<ChatSendResult> {
   const { stream, setError, finalizedRef, turnRef, finalizeStream } = deps;
+  const { loadHistory } = deps;
   const { startUserTurn, setOptimisticMessages } = stream;
   return useCallback(
     async ({ content, target }: TurnRun) => {
       const outcome: TurnOutcome = { failed: false };
       const turn = turnCallbacks(
-        { stream, setError, finalizedRef, turnRef, finalizeStream },
+        {
+          stream,
+          setError,
+          finalizedRef,
+          turnRef,
+          finalizeStream,
+          loadHistory,
+        },
         outcome,
       );
       turnRef.current += 1;
       finalizedRef.current = false;
       setError(null);
-      setOptimisticMessages(dropUnansweredUserTurn);
+      setOptimisticMessages(optimisticAtTurnStart(loadHistory));
       const signal = startUserTurn(content);
       let convId: string;
       try {
@@ -270,6 +256,7 @@ function useRunChatTurn(
       startUserTurn,
       setOptimisticMessages,
       finalizeStream,
+      loadHistory,
     ],
   );
 }
@@ -285,6 +272,7 @@ function useSendChatMessage(
   const { conversationId } = deps;
   const inFlightRef = useRef(false);
   const runTurn = useRunChatTurn(deps);
+  const refreshHistory = useRefreshHistory(deps.loadHistory);
   const isBusy = useCallback(() => inFlightRef.current, []);
   const sendMessage = useCallback(
     async (content: string, target?: ConversationTarget | null) => {
@@ -295,12 +283,14 @@ function useSendChatMessage(
       }
       inFlightRef.current = true;
       try {
-        return await runTurn({ content: trimmed, target: resolved });
+        const result = await runTurn({ content: trimmed, target: resolved });
+        if (result === CHAT_SEND_RESULT.FAILED) refreshHistory();
+        return result;
       } finally {
         inFlightRef.current = false;
       }
     },
-    [conversationId, runTurn],
+    [conversationId, runTurn, refreshHistory],
   );
   return { sendMessage, isBusy };
 }
@@ -350,6 +340,10 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
   );
 
   const startNewChat = useStartNewChat(stream, turnRef, setError);
+  const stopStreaming = useStopStreaming(
+    stream,
+    useRefreshHistory(loadHistory),
+  );
 
   const { sendMessage, isBusy } = useSendChatMessage({
     stream,
@@ -358,11 +352,12 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     finalizedRef,
     turnRef,
     finalizeStream,
+    loadHistory,
   });
 
   const messages = useMemo(
-    () => mergeMessages(historyMessages, optimisticMessages),
-    [historyMessages, optimisticMessages],
+    () => mergeMessages(historyMessages, optimisticMessages, !isStreaming),
+    [historyMessages, optimisticMessages, isStreaming],
   );
 
   return {
@@ -375,5 +370,6 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     sendMessage,
     isBusy,
     startNewChat,
+    stopStreaming,
   };
 }

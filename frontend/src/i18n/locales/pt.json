@@ -112,11 +112,12 @@
   "chat": {
     "title": "Chat",
     "input": {
-      "placeholder": "Pergunte qualquer coisa ao Alter-Ego…",
+      "placeholder": "Pergunte ao Alter-Ego…",
       "send": "Enviar mensagem",
       "newChat": "Novo chat",
       "counter": "{count} de {max} caracteres",
-      "label": "Mensagem para o Alter-Ego"
+      "label": "Mensagem para o Alter-Ego",
+      "stop": "Parar a resposta"
     },
     "you": "Você",
     "assistant": "Assistente",
@@ -124,7 +125,15 @@
     "errorTitle": "Algo deu errado",
     "errorDescription": "Encontramos um erro ao carregar a interface de chat. Tente novamente.",
     "tryAgain": "Tentar Novamente",
-    "empty": "Inicie uma conversa digitando uma mensagem abaixo.",
+    "empty": {
+      "title": "Pergunte sobre o meu trabalho",
+      "intro": "Sou o Alter-Ego do Pedro. Respondo a partir dos projetos, textos e carreira dele, em português ou inglês.",
+      "suggestionsLabel": "Experimente uma destas",
+      "s1": "No que você trabalha hoje em dia?",
+      "s2": "Como você constrói com LLMs?",
+      "s3": "O que você acha de microsserviços?",
+      "s4": "Sobre o que você escreveu recentemente?"
+    },
     "sidebar": {
       "label": "Conversas",
       "empty": "Nenhuma conversa ainda",

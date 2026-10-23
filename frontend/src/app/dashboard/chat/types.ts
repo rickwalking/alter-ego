@@ -25,6 +25,8 @@ export interface UseChatSendReturn {
   retry: () => Promise<void>;
   /** Forget the failed message (New chat). */
   forgetFailed: () => void;
+  /** Send ``text`` right away (a suggested question), leaving the composer alone. */
+  sendNow: (text: string) => Promise<void>;
 }
 
 export interface ChatErrorBannerProps {

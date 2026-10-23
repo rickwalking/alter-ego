@@ -1,5 +1,5 @@
 /**
- * Gherkin: tests/features/chat-a11y-i18n.feature
+ * Gherkin: tests/features/chat-a11y-i18n.feature, tests/features/chat-polish.feature
  */
 import { render as renderBare, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -57,5 +57,18 @@ describe("chat in Portuguese", () => {
       screen.getByRole("button", { name: pt.chat.input.send }),
     ).toBeInTheDocument();
     expect(screen.getAllByText(pt.chat.typing).length).toBeGreaterThan(0);
+  });
+
+  /** Scenario: An empty chat introduces the Alter-Ego and suggests questions */
+  it("introduces the Alter-Ego and suggests questions in Portuguese", () => {
+    render(<ChatMessageList messages={[]} onSuggestion={vi.fn()} />);
+    expect(
+      screen.getByRole("heading", { name: pt.chat.empty.title }),
+    ).toBeInTheDocument();
+    for (const key of ["s1", "s2", "s3", "s4"] as const) {
+      expect(
+        screen.getByRole("button", { name: pt.chat.empty[key] }),
+      ).toBeInTheDocument();
+    }
   });
 });

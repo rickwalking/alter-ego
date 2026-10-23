@@ -71,6 +71,17 @@ describe("PublicChatView", () => {
     expect(screen.getByText(/not saved after refresh/i)).toBeInTheDocument();
   });
 
+  /** Scenario: The conversation and the message box share one readable column */
+  it("lines the not-saved note up with the conversation column", () => {
+    render(<PublicChatView />);
+    expect(screen.getByText(/not saved after refresh/i)).toHaveClass(
+      "mx-auto",
+      "w-full",
+      "max-w-[calc(48rem+3rem)]",
+      "px-6",
+    );
+  });
+
   /** Scenario: The message shows as pending while the conversation is created */
   it("hands the hook a creator instead of waiting for the conversation", async () => {
     render(<PublicChatView />);

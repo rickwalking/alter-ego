@@ -31,18 +31,20 @@ export function PublicChatView(): React.ReactElement {
     sendMessage,
     isBusy,
     startNewChat,
+    stopStreaming,
   } = useSseChat({
     conversationId: activeConv,
     enableHistory: false,
   });
 
-  const { input, setInput, handleSend, retry, forgetFailed } = useChatSend({
-    conversationId: activeConv,
-    isStreaming,
-    sendMessage,
-    isBusy,
-    onConversationCreated: setActiveConv,
-  });
+  const { input, setInput, handleSend, retry, forgetFailed, sendNow } =
+    useChatSend({
+      conversationId: activeConv,
+      isStreaming,
+      sendMessage,
+      isBusy,
+      onConversationCreated: setActiveConv,
+    });
 
   const displayMessages = useMemo(
     () => sseMessages.map((message) => mapMessageToDashboard(message, locale)),
@@ -77,7 +79,7 @@ export function PublicChatView(): React.ReactElement {
         style={{ background: DASHBOARD_CHAT_BG_OVERLAY_LIGHT }}
       >
         <p
-          className="shrink-0 px-6 py-2 text-xs"
+          className="mx-auto w-full max-w-[calc(48rem+3rem)] shrink-0 px-6 py-2 text-xs"
           style={{ color: DASHBOARD_CHAT_TEXT_MUTED }}
         >
           {t("hintNotSaved")}{" "}
@@ -88,12 +90,17 @@ export function PublicChatView(): React.ReactElement {
             {t("hintSignIn")}
           </Link>
         </p>
-        <ChatMessageList messages={displayMessages} isStreaming={isStreaming} />
+        <ChatMessageList
+          messages={displayMessages}
+          isStreaming={isStreaming}
+          onSuggestion={(text) => void sendNow(text)}
+        />
         <ChatComposer
           value={input}
           onChange={setInput}
           onSend={() => void handleSend()}
           busy={isStreaming}
+          onStop={stopStreaming}
         />
       </main>
     </div>

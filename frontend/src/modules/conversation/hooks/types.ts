@@ -49,6 +49,8 @@ export interface UseSseChatReturn {
   /** Whether a turn is in flight right now (``sendMessage`` would ignore a send). */
   isBusy: () => boolean;
   startNewChat: () => void;
+  /** Stop the reply in flight; the text that already arrived stays. */
+  stopStreaming: () => void;
 }
 
 /** The shared optimistic-message stream state (``useChatStream``). */
@@ -63,6 +65,11 @@ export interface SendChatDeps {
   /** Bumped by every new turn and by New chat; stale refetches compare it. */
   turnRef: RefObject<number>;
   finalizeStream: (convId: string) => void;
+  /**
+   * History is on: a new turn starts from it, dropping the optimistic copies
+   * an earlier stopped or failed turn left behind.
+   */
+  loadHistory: boolean;
 }
 
 /** The stable callbacks one streamed chat turn drives. */

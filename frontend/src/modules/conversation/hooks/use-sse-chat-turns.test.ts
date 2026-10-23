@@ -324,4 +324,173 @@ describe("useSseChat turns", () => {
     const { result } = renderChat({ conversationId: CONV_ID });
     expect(result.current.awaitingReply).toBe(false);
   });
+
+  /** Scenario: A streaming reply can be stopped */
+  it("stops a streaming reply and keeps the text that arrived", async () => {
+    const stream = controllableStream();
+    const { result } = renderChat({
+      conversationId: CONV_ID,
+      enableHistory: false,
+    });
+    await act(async () => {
+      void result.current.sendMessage("tell me a long story");
+      await Promise.resolve();
+    });
+    stream.emit("token", { content: "Once upon" });
+
+    act(() => result.current.stopStreaming());
+
+    expect(stream.last()!.opts.signal!.aborted).toBe(true);
+    expect(result.current.isStreaming).toBe(false);
+    expect(result.current.messages.at(-1)?.content).toBe("Once upon");
+  });
+
+  /** Scenario: Stopping re-reads the history so the saved reply shows */
+  it("re-reads the history and the list after a stop when history is on", async () => {
+    const stream = controllableStream();
+    const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
+    await act(async () => {
+      void result.current.sendMessage("story");
+      await Promise.resolve();
+    });
+
+    act(() => result.current.stopStreaming());
+
+    expect(stream.last()!.opts.signal!.aborted).toBe(true);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["messages"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["conversations"],
+    });
+  });
+
+  /** Scenario: Stopping re-reads the history so the saved reply shows */
+  it("re-reads nothing after a stop on the public chat", async () => {
+    controllableStream();
+    const { result, invalidateSpy } = renderChat({
+      conversationId: CONV_ID,
+      enableHistory: false,
+    });
+    await act(async () => {
+      void result.current.sendMessage("story");
+      await Promise.resolve();
+    });
+
+    act(() => result.current.stopStreaming());
+
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: A failed reply is re-read from the history */
+  it("re-reads the history after a failed reply when history is on", async () => {
+    const stream = controllableStream();
+    const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
+    let outcome: Promise<string> = Promise.resolve("");
+    await act(async () => {
+      outcome = result.current.sendMessage("story");
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      stream.last()!.opts.onOpen?.();
+      stream.last()!.opts.onEvent({ event: "error", data: {} });
+      stream.last()!.resolve();
+      await outcome;
+    });
+
+    expect(await outcome).toBe("failed");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["messages"] });
+  });
+
+  /** Scenario: After a stop the next message is sent */
+  it("does not bring the stopped part back with the next message", async () => {
+    const stream = controllableStream();
+    const { result, rerender } = renderChat({ conversationId: CONV_ID });
+    await act(async () => {
+      void result.current.sendMessage("story");
+      await Promise.resolve();
+    });
+    stream.emit("token", { content: "Once upon" });
+    act(() => result.current.stopStreaming());
+    await act(async () => {
+      stream.last()!.resolve();
+      await Promise.resolve();
+    });
+    setHistory([
+      { id: "u", role: "user", content: "story", sources: [], created_at: "t" },
+      {
+        id: "a",
+        role: "assistant",
+        content: "Once upon a time.",
+        sources: [],
+        created_at: "t",
+      },
+    ]);
+    rerender();
+
+    await act(async () => {
+      void result.current.sendMessage("next");
+      await Promise.resolve();
+    });
+
+    expect(result.current.messages.map((m) => m.content)).toEqual([
+      "story",
+      "Once upon a time.",
+      "next",
+    ]);
+  });
+
+  /** Scenario: After a stop the next message is sent */
+  it("sends the next message after a stop", async () => {
+    const stream = controllableStream();
+    const { result } = renderChat({
+      conversationId: CONV_ID,
+      enableHistory: false,
+    });
+    await act(async () => {
+      void result.current.sendMessage("first");
+      await Promise.resolve();
+    });
+    act(() => result.current.stopStreaming());
+    await act(async () => {
+      stream.last()!.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      void result.current.sendMessage("second");
+      await Promise.resolve();
+    });
+
+    expect(stream.count).toBe(2);
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  /** Scenario: A streaming reply can be stopped */
+  it("shows the saved reply once, not next to the stopped part", async () => {
+    const stream = controllableStream();
+    const { result, rerender } = renderChat({ conversationId: CONV_ID });
+    await act(async () => {
+      void result.current.sendMessage("story");
+      await Promise.resolve();
+    });
+    stream.emit("token", { content: "Once upon" });
+    act(() => result.current.stopStreaming());
+
+    setHistory([
+      { id: "u", role: "user", content: "story", sources: [], created_at: "t" },
+      {
+        id: "a",
+        role: "assistant",
+        content: "Once upon a time.",
+        sources: [],
+        created_at: "t",
+      },
+    ]);
+    rerender();
+
+    expect(result.current.messages.map((m) => m.content)).toEqual([
+      "story",
+      "Once upon a time.",
+    ]);
+  });
 });

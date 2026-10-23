@@ -52,6 +52,7 @@ export function DashboardChatView(): React.ReactElement {
     sendMessage,
     isBusy,
     startNewChat,
+    stopStreaming,
   } = useSseChat({ conversationId: effectiveConvId });
   useRecheckSessionOnNotFound(sseError, refetchConversations);
 
@@ -65,13 +66,14 @@ export function DashboardChatView(): React.ReactElement {
     setIsComposingNew(false);
   }, []);
   const replyPending = isStreaming || awaitingReply;
-  const { input, setInput, handleSend, retry, forgetFailed } = useChatSend({
-    conversationId: effectiveConvId,
-    isStreaming: replyPending,
-    sendMessage,
-    isBusy,
-    onConversationCreated: openCreatedConversation,
-  });
+  const { input, setInput, handleSend, retry, forgetFailed, sendNow } =
+    useChatSend({
+      conversationId: effectiveConvId,
+      isStreaming: replyPending,
+      sendMessage,
+      isBusy,
+      onConversationCreated: openCreatedConversation,
+    });
 
   const handleNewChat = useCallback(() => {
     setActiveConv(null);
@@ -143,12 +145,16 @@ export function DashboardChatView(): React.ReactElement {
           <ChatMessageList
             messages={displayMessages}
             isStreaming={replyPending}
+            onSuggestion={
+              effectiveConvId ? undefined : (text) => void sendNow(text)
+            }
           />
           <ChatComposer
             value={input}
             onChange={setInput}
             onSend={() => void handleSend()}
             busy={replyPending}
+            onStop={isStreaming ? stopStreaming : undefined}
           />
         </div>
       </div>

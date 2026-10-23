@@ -21,6 +21,7 @@ export const chatKeys = {
   conversations: () => ["conversations"] as const,
   conversation: (conversationId: string | null) =>
     ["conversation", conversationId] as const,
+  allMessages: () => ["messages"] as const,
   messages: (conversationId: string | null) =>
     ["messages", conversationId] as const,
 };

@@ -73,7 +73,14 @@ describe("chat accessibility", () => {
       announcedReply(
         `## **Bold** [link](u) _x_ ~y~ |z| > \`c\`\n\n  ${"a".repeat(400)}`,
       ),
-    ).toBe(`Alter-Ego replied: Bold linku x y z c ${"a".repeat(261)}…`);
+    ).toBe(`Alter-Ego replied: Bold link x y z c ${"a".repeat(262)}…`);
+  });
+
+  /** Scenario: A long reply is announced as plain text, cut short */
+  it("reads a link's or image's text, never its address", () => {
+    expect(
+      announcedReply("See [my blog](https://x.test/blog) ![chart](c.png) now"),
+    ).toBe("Alter-Ego replied: See my blog chart now");
   });
 
   /** Scenario: A long reply is announced as plain text, cut short */
