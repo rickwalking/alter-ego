@@ -115,10 +115,11 @@ class ConversationHandlers:
                 offset=query.offset,
                 user_id=query.user_id,
                 origin=query.origin,
+                search=query.search,
             ),
         )
         total = await self._service.count_conversations_for_user(
-            query.user_id, origin=query.origin
+            query.user_id, origin=query.origin, search=query.search
         )
         return ConversationPage(items=conversations, total=total)
 

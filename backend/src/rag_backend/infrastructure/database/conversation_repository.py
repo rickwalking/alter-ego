@@ -18,6 +18,8 @@ from rag_backend.infrastructure.database.models import (
 )
 
 _ERR_CONVERSATION_NOT_FOUND = "Conversation with id {} not found"
+TITLE_SEARCH_ESCAPE = "\\"
+_LIKE_SPECIAL = frozenset({"%", "_", TITLE_SEARCH_ESCAPE})
 
 _SelectRow = TypeVar("_SelectRow", bound=tuple[object, ...])
 
@@ -29,6 +31,20 @@ class _UserQuery(TypedDict, total=False):
     limit: int
     offset: int
     origin: str | None
+    search: str | None
+
+
+def title_search_pattern(search: str) -> str:
+    """An ``ILIKE`` pattern matching ``search`` anywhere in a title.
+
+    ``%``, ``_`` and the escape character itself are escaped, so a search for
+    ``50%`` or ``a_b`` matches those characters literally.
+    """
+    escaped = "".join(
+        f"{TITLE_SEARCH_ESCAPE}{char}" if char in _LIKE_SPECIAL else char
+        for char in search
+    )
+    return f"%{escaped}%"
 
 
 class PostgresConversationRepository:
@@ -65,6 +81,19 @@ class PostgresConversationRepository:
         return [conv.to_entity() for conv in result.scalars().all()]
 
     @staticmethod
+    def _apply_search_filter(
+        stmt: Select[_SelectRow], search: str | None
+    ) -> Select[_SelectRow]:
+        term = (search or "").strip()
+        if not term:
+            return stmt
+        return stmt.where(
+            ConversationModel.title.ilike(
+                title_search_pattern(term), escape=TITLE_SEARCH_ESCAPE
+            )
+        )
+
+    @staticmethod
     def _apply_origin_filter(
         stmt: Select[_SelectRow], origin: str | None
     ) -> Select[_SelectRow]:
@@ -88,6 +117,7 @@ class PostgresConversationRepository:
         limit = query.get("limit", 100)
         offset = query.get("offset", 0)
         origin = query.get("origin")
+        search = query.get("search")
         stmt = (
             select(ConversationModel)
             .where(ConversationModel.owner_id == str(user_id))
@@ -96,10 +126,13 @@ class PostgresConversationRepository:
             .limit(limit)
         )
         stmt = self._apply_origin_filter(stmt, origin)
+        stmt = self._apply_search_filter(stmt, search)
         result = await self._session.execute(stmt)
         return [conv.to_entity() for conv in result.scalars().all()]
 
-    async def count_by_user_id(self, user_id: UUID, origin: str | None = None) -> int:
+    async def count_by_user_id(
+        self, user_id: UUID, origin: str | None = None, search: str | None = None
+    ) -> int:
         """Count conversations owned by a user."""
         stmt = (
             select(func.count())
@@ -107,6 +140,7 @@ class PostgresConversationRepository:
             .where(ConversationModel.owner_id == str(user_id))
         )
         stmt = self._apply_origin_filter(stmt, origin)
+        stmt = self._apply_search_filter(stmt, search)
         result = await self._session.execute(stmt)
         return result.scalar() or 0
 

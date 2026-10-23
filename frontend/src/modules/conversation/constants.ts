@@ -43,7 +43,3 @@ export const REPLY_POLL_INTERVAL_MS = 2000;
 
 /** How long after the user's message a missing reply is still awaited. */
 export const REPLY_POLL_WINDOW_MS = 180_000;
-
-/** Upper bound on history re-reads for one awaited reply (window / interval). */
-export const REPLY_POLL_MAX_REFETCHES =
-  REPLY_POLL_WINDOW_MS / REPLY_POLL_INTERVAL_MS;

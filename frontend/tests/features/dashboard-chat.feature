@@ -9,6 +9,11 @@ Feature: Dashboard chat history
     Then the typing indicator shows and the history is re-read every 2 seconds
     And the reply appears as soon as the server saves it, without another refresh
 
+  Scenario: Sending waits for the reply the server is still writing
+    Given the conversation reloaded with my message but no reply yet
+    When I type another message
+    Then Send and Enter stay off until the reply arrives, so the turns stay in order
+
   Scenario: Polling stops when nothing is awaited
     When the last message is a reply, or my message is older than 3 minutes
     Then the history is not re-read
@@ -35,3 +40,12 @@ Feature: Dashboard chat history
     When I open /chat
     Then I am taken to /dashboard/chat with my history
     And a visitor or an expired session still gets the public chat
+
+  Scenario: Older conversations load a page at a time
+    Given I have more than 20 conversations
+    Then the list shows the newest 20 and "Show more" loads the next ones
+
+  Scenario: Searching conversations finds older ones too
+    When I search while older conversations are not loaded yet
+    Then the server's matches from every page are listed after the loaded ones, without repeats
+    And "No conversations match" shows only once the server found nothing

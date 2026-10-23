@@ -1,9 +1,5 @@
 import type { Message } from "@/schemas/chat";
-import {
-  REPLY_POLL_INTERVAL_MS,
-  REPLY_POLL_MAX_REFETCHES,
-  REPLY_POLL_WINDOW_MS,
-} from "./constants";
+import { REPLY_POLL_INTERVAL_MS, REPLY_POLL_WINDOW_MS } from "./constants";
 
 const USER_ROLE: Message["role"] = "user";
 
@@ -26,14 +22,11 @@ export function isAwaitingReply(
 }
 
 /**
- * ``refetchInterval`` for the history: poll only while a reply is awaited,
- * and never more than ``REPLY_POLL_MAX_REFETCHES`` times.
+ * ``refetchInterval`` for the history: poll only while a reply is awaited.
+ * The waiting window bounds it, so no separate re-read cap is needed.
  */
 export function replyPollInterval(
   history: readonly Message[] | undefined,
-  refetchCount = 0,
 ): number | false {
-  const keepPolling =
-    refetchCount < REPLY_POLL_MAX_REFETCHES && isAwaitingReply(history);
-  return keepPolling ? REPLY_POLL_INTERVAL_MS : false;
+  return isAwaitingReply(history) ? REPLY_POLL_INTERVAL_MS : false;
 }

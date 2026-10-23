@@ -185,7 +185,27 @@ class TestReadHandlersDelegate:
         assert page.items == conversations
         assert page.total == 5
         service.count_conversations_for_user.assert_awaited_once_with(
-            user_id, origin="alter_ego"
+            user_id, origin="alter_ego", search=None
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_for_owner_passes_the_search_to_list_and_count(self) -> None:
+        """Scenario: Searching conversations finds older ones too."""
+        service = MagicMock()
+        service.list_conversations = AsyncMock(return_value=[])
+        service.count_conversations_for_user = AsyncMock(return_value=0)
+        handlers = _make_handlers(service, MagicMock(), _TrackingUnitOfWork())
+        user_id = uuid4()
+
+        await handlers.list_for_owner(
+            ListConversationsQuery(
+                user_id=user_id, limit=100, offset=0, origin=None, search="pauta"
+            )
+        )
+
+        assert service.list_conversations.await_args.kwargs["query"].search == "pauta"
+        service.count_conversations_for_user.assert_awaited_once_with(
+            user_id, origin=None, search="pauta"
         )
 
     @pytest.mark.asyncio

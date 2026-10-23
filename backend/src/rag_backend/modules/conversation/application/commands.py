@@ -42,6 +42,7 @@ class ListConversationsQuery:
     limit: int
     offset: int
     origin: str | None
+    search: str | None = None
 
 
 @dataclass(frozen=True)

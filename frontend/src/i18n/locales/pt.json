@@ -132,7 +132,8 @@
       "searchPlaceholder": "Buscar conversas...",
       "untitled": "Nova conversa",
       "searchLabel": "Buscar conversas",
-      "noMatches": "Nenhuma conversa encontrada"
+      "noMatches": "Nenhuma conversa encontrada",
+      "showMore": "Mostrar mais"
     },
     "errors": {
       "offline": "Parece que você está sem conexão. Verifique a internet e tente de novo.",

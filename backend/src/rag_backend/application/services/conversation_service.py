@@ -20,6 +20,7 @@ class _ListQuery:
     offset: int = 0
     user_id: UUID | None = None
     origin: str | None = None
+    search: str | None = None
 
 
 class ConversationService:
@@ -107,6 +108,7 @@ class ConversationService:
                     limit=query.limit,
                     offset=query.offset,
                     origin=query.origin,
+                    search=query.search,
                 ),
             )
         return await self._conversation_repository.get_all(
@@ -114,11 +116,11 @@ class ConversationService:
         )
 
     async def count_conversations_for_user(
-        self, user_id: UUID, origin: str | None = None
+        self, user_id: UUID, origin: str | None = None, search: str | None = None
     ) -> int:
-        """Count conversations owned by a user."""
+        """Count conversations owned by a user (matching ``search`` when given)."""
         return await self._conversation_repository.count_by_user_id(
-            user_id, origin=origin
+            user_id, origin=origin, search=search
         )
 
     async def generate_title(

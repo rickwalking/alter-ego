@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
@@ -8,9 +8,7 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { CHAT_DRAWER_MEDIA_QUERY } from "./use-menu-button-hidden";
 import {
-  DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
-  DASHBOARD_CHAT_BG_INPUT_DARK,
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_CYAN_DIM,
@@ -28,25 +26,22 @@ export interface ChatSidebarProps {
   open?: boolean;
   /** DOM id so the chat header toggle can wire `aria-controls`. */
   id?: string;
+  /** The search box text; the conversations passed in already match it. */
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  /** The server is still looking for older matches. */
+  searching?: boolean;
+  /** More conversations can be loaded. */
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-/** Case- and accent-insensitive form used to match a search query. */
-function searchable(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLocaleLowerCase();
-}
-
-/** The conversations whose title contains the query (all when it is blank). */
-export function filterConversations(
-  conversations: DashboardConversation[],
-  query: string,
-): DashboardConversation[] {
-  const needle = searchable(query.trim());
-  if (!needle) return conversations;
-  return conversations.filter((conv) => searchable(conv.name).includes(needle));
-}
+export { filterConversations } from "./chat-sidebar-filter";
+import {
+  ChatSidebarMore,
+  ChatSidebarNoMatches,
+  ChatSidebarSearch,
+} from "./chat-sidebar-parts";
 
 /**
  * Below md the list is an off-canvas drawer; at md+ it is a persistent 280px
@@ -60,17 +55,17 @@ export function ChatSidebar({
   onSelectConversation,
   open,
   id,
+  query = "",
+  onQueryChange,
+  searching = false,
+  hasMore = false,
+  onLoadMore,
 }: Readonly<ChatSidebarProps>): React.ReactElement {
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === true;
   const isDrawer = useMediaQuery(CHAT_DRAWER_MEDIA_QUERY);
   const drawerActive = isOpen && isDrawer;
-  const [query, setQuery] = useState("");
-  const visible = useMemo(
-    () => filterConversations(conversations, query),
-    [conversations, query],
-  );
 
   useFocusTrap(ref, drawerActive);
   useScrollLock(drawerActive);
@@ -90,44 +85,18 @@ export function ChatSidebar({
         background: DASHBOARD_CHAT_BG_DEEP,
       }}
     >
-      <div
-        style={{
-          padding: "16px",
-          borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
-        }}
-      >
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label={t("searchLabel")}
-          placeholder={t("searchPlaceholder")}
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            border: `1px solid ${DASHBOARD_CHAT_BORDER_LIGHT}`,
-            background: DASHBOARD_CHAT_BG_INPUT_DARK,
-            color: DASHBOARD_CHAT_TEXT,
-            fontSize: "13px",
-            fontFamily: "inherit",
-            outline: "none",
-          }}
-        />
-      </div>
+      <ChatSidebarSearch
+        query={query}
+        onQueryChange={onQueryChange}
+        label={t("searchLabel")}
+        placeholder={t("searchPlaceholder")}
+      />
       <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-        {visible.length === 0 && query.trim() !== "" && (
-          <p
-            style={{
-              padding: "10px 12px",
-              fontSize: "12px",
-              color: DASHBOARD_CHAT_TEXT_DIM,
-            }}
-          >
-            {t("noMatches")}
-          </p>
-        )}
-        {visible.map((conv) => (
+        <ChatSidebarNoMatches
+          show={conversations.length === 0 && query.trim() !== "" && !searching}
+          label={t("noMatches")}
+        />
+        {conversations.map((conv) => (
           <div
             key={conv.id}
             role="button"
@@ -178,6 +147,10 @@ export function ChatSidebar({
             </div>
           </div>
         ))}
+        <ChatSidebarMore
+          onLoadMore={hasMore ? onLoadMore : undefined}
+          label={t("showMore")}
+        />
       </div>
     </div>
   );

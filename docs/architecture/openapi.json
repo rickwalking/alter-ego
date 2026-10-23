@@ -15484,6 +15484,25 @@
               "description": "Filter by agent origin (e.g. alter_ego)",
               "title": "Origin"
             }
+          },
+          {
+            "description": "Only conversations whose title contains this text",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only conversations whose title contains this text",
+              "title": "Search"
+            }
           }
         ],
         "responses": {

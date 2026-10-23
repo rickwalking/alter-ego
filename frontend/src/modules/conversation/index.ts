@@ -15,6 +15,8 @@ export {
   conversationsOptions,
   conversationOptions,
   conversationMessagesOptions,
+  CONVERSATION_PAGE_SIZE,
+  CONVERSATION_SEARCH_LIMIT,
   createConversation,
   sendConversationMessage,
 } from "./queries";
@@ -22,6 +24,8 @@ export {
 export {
   MESSAGES_KEY,
   useConversations,
+  useConversationPages,
+  useConversationSearch,
   useConversation,
   useConversationMessages,
   useCreateConversation,

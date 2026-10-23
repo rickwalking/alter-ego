@@ -15,6 +15,7 @@ import {
 import {
   QueryClient,
   QueryClientProvider,
+  infiniteQueryOptions,
   queryOptions,
   skipToken,
 } from "@tanstack/react-query";
@@ -51,6 +52,13 @@ vi.mock("@/modules/conversation/queries", async (importOriginal) => ({
   createConversation: mocks.create,
   conversationsOptions: () =>
     queryOptions({ queryKey: ["conversations"], queryFn: () => [] }),
+  conversationPagesOptions: () =>
+    infiniteQueryOptions({
+      queryKey: ["conversations", "pages"],
+      initialPageParam: 0,
+      queryFn: () => ({ items: [], total: 0, limit: 20, offset: 0 }),
+      getNextPageParam: () => undefined,
+    }),
   conversationMessagesOptions: (conversationId: string | null) =>
     queryOptions({
       queryKey: ["messages", conversationId],

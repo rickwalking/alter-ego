@@ -88,6 +88,20 @@ for a live session, no cookie and an expired session (the React compiler keeps t
 outside render); a blank search has its own scenario; backend tests cover a whitespace-only title and the space before
 the ellipsis. Frontend 96 and backend title 10 tests pass.
 
+### 2026-10-23 13:30
+
+Rebased onto the a11y PR (AE-0531). PR review fixes:
+- After a refresh mid-reply, Send and Enter stay off while the reply is still awaited (no out-of-order turns).
+- The server writes and saves each reply in a detached task with its own session, so a client disconnect (Starlette
+  cancels the response) no longer drops the reply or leaves the question unanswered; a failure after the disconnect
+  saves the apology turn. Tests cancel through an anyio task group like Starlette.
+- Search covers every conversation: a `search` parameter on `GET /api/conversations/` (owner-scoped, case-insensitive
+  `ILIKE`, `%`/`_`/`\` escaped, at most 100 characters, limit still capped at 100); the sidebar loads 20 at a time
+  with "Show more", and while a query is typed it lists the loaded matches (accents ignored) plus the server's
+  matches from every page; "No conversations match" shows only once the server found nothing.
+- The history poll has no re-read cap (the 3-minute window bounds it); the awaiting clock is re-read as soon as the
+  last message changes.
+
 ## Files Touched
 
 - backend/src/rag_backend/domain/models/conversation.py, domain/constants/conversation.py,
@@ -98,7 +112,14 @@ the ellipsis. Frontend 96 and backend title 10 tests pass.
   hooks/use-sse-chat.ts + tests
 - frontend/src/modules/identity/lib/live-session.ts (new) + test, index.ts; app/(public)/chat/page.tsx, redirect-signed-in.ts (new) + test,
   hooks/use-conversation-messages-poll.test.ts (new)
-- frontend/src/app/dashboard/chat/chat-sidebar.tsx + chat-sidebar-search.test.tsx (new), dashboard-chat-view.tsx
+- frontend/src/app/dashboard/chat/chat-sidebar.tsx + chat-sidebar-search.test.tsx (new), dashboard-chat-view.tsx,
+  chat-sidebar-filter.ts, chat-sidebar-parts.tsx, use-sidebar-conversations.ts + test (new),
+  dashboard-chat-view.awaiting.test.tsx (new); modules/conversation/queries.ts, index.ts
+- backend: chat_stream_service.py (detached turn), modules/conversation/infrastructure/stream_runner.py, conversation
+  search (api/routes/conversations.py, handlers/commands, conversation_service.py, conversation_repository.py,
+  domain/protocols/repositories.py, domain/constants/conversation.py), docs/architecture/openapi.json; tests
+  test_chat_stream_disconnect.py, test_stream_runner_session.py, test_conversation_search.py (new); features
+  chat_disconnect_reply.feature, conversation_search.feature (new)
 - frontend/src/modules/editorial-operations/board/chat/adapters/chat-adapter.ts + test, types.ts
 - frontend/src/i18n/locales/en.json, pt.json; frontend/tests/features/dashboard-chat.feature (new)
 

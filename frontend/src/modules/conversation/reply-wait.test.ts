@@ -38,12 +38,19 @@ describe("reply wait", () => {
   });
 
   /** Scenario: Polling stops when nothing is awaited */
-  it("ignores clock skew beyond the window and caps the number of re-reads", () => {
+  it("ignores clock skew beyond the window", () => {
     expect(
       isAwaitingReply([message("user", -REPLY_POLL_WINDOW_MS - 1)], NOW),
     ).toBe(false);
+  });
+
+  /** Scenario: A reply that was still streaming appears after a refresh */
+  it("keeps polling for as long as the reply is awaited, however many re-reads", () => {
     const justNow = NOW - Date.now();
-    expect(replyPollInterval([message("user", justNow)], 90)).toBe(false);
+    const history = [message("user", justNow)];
+    for (let reread = 0; reread < 200; reread += 1) {
+      expect(replyPollInterval(history)).toBe(REPLY_POLL_INTERVAL_MS);
+    }
   });
 
   /** Scenario: A reply that was still streaming appears after a refresh */

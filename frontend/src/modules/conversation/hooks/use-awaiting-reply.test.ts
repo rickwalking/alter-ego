@@ -43,4 +43,31 @@ describe("useAwaitingReply", () => {
     const { result } = renderHook(() => useAwaitingReply([question], false));
     expect(result.current).toBe(false);
   });
+
+  /** Scenario: A reply that was still streaming appears after a refresh */
+  it("judges a new question by the current time, not the last wait", () => {
+    const answered: Message[] = [
+      question,
+      { ...question, id: "a1", role: "assistant", content: "Done" },
+    ];
+    const { result, rerender } = renderHook(
+      ({ history }) => useAwaitingReply(history, true),
+      { initialProps: { history: answered } },
+    );
+    expect(result.current).toBe(false);
+
+    const later = SENT + 10 * REPLY_POLL_WINDOW_MS;
+    vi.setSystemTime(later);
+    const newQuestion: Message = {
+      ...question,
+      id: "m2",
+      created_at: new Date(later).toISOString(),
+    };
+    rerender({ history: [...answered, newQuestion] });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+
+    expect(result.current).toBe(true);
+  });
 });
