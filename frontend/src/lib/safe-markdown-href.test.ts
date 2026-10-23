@@ -22,4 +22,11 @@ describe("isSafeMarkdownHref", () => {
     expect(isSafeMarkdownHref("")).toBe(false);
     expect(isSafeMarkdownHref(undefined)).toBe(false);
   });
+
+  /** Scenario: Links are clickable and safe */
+  it("rejects protocol-relative links that leave the site", () => {
+    expect(isSafeMarkdownHref("//evil.test/path")).toBe(false);
+    expect(isSafeMarkdownHref("/\\evil.test")).toBe(false);
+    expect(isSafeMarkdownHref("/blog/post")).toBe(true);
+  });
 });
