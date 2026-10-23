@@ -41,6 +41,7 @@ from rag_backend.infrastructure.database.models.user import UserModel
 STALE_SECONDS = 180
 _NOW = datetime.now(UTC)
 _IDLE = _NOW - timedelta(days=CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS + 1)
+_ARCHIVER = CarouselIdleArchiver(STALE_SECONDS, clock=lambda: _NOW)
 
 
 @pytest.fixture
@@ -153,7 +154,7 @@ class TestCarouselIdleArchiver:
         session.add_all([idle, no_phase])
         await session.commit()
 
-        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
+        archived = await _ARCHIVER.archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
         await session.commit()
@@ -178,7 +179,7 @@ class TestCarouselIdleArchiver:
         session.add_all([recent, published, running])
         await session.commit()
 
-        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
+        archived = await _ARCHIVER.archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
 
@@ -193,7 +194,7 @@ class TestCarouselIdleArchiver:
         session.add(_project(_IDLE, archived_at=_IDLE))
         await session.commit()
 
-        archived = await CarouselIdleArchiver(STALE_SECONDS).archive_idle(
+        archived = await _ARCHIVER.archive_idle(
             session, CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS
         )
 
