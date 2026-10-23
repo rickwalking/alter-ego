@@ -30,7 +30,6 @@ from rag_backend.domain.models import UserRole
 from rag_backend.domain.models.cover_generation import CoverEditJob
 from rag_backend.modules.editorial.infrastructure import carousel_owner_autofix
 from rag_backend.modules.editorial.public import CoverRunWiring
-from rag_backend.modules.image_bridge import ImageBridgeConfigError
 from tests.integration.conftest import auth_headers_for, create_test_user
 from tests.integration.hook_photo_support import upload_photo
 
@@ -434,12 +433,10 @@ class TestFailures:
         self, client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Scenario: The bridge is not configured."""
+        from rag_backend.infrastructure.config.settings import get_settings
 
-        def _missing(render_prompt: object) -> CoverRunWiring:
-            del render_prompt
-            raise ImageBridgeConfigError("the image bridge needs a URL")
-
-        monkeypatch.setattr(route, "cover_run_wiring", _missing)
+        monkeypatch.setenv("GROKBOT_IMAGE_WEBHOOK_URL", "")
+        get_settings.cache_clear()
         photo = await upload_photo(client, _RED)
         project_id = await _project(client, photo["id"])
 
