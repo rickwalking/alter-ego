@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -200,5 +201,66 @@ async def test_every_call_is_logged_without_the_prompt(
         assert entry["prompt_sha256"] == rows[0]["prompt_sha256"]
         assert entry["model"] == "gpt-image-2"
         assert entry["cost_usd"] == 0.0
+        assert entry["photo_count"] == 1
         assert PROMPT not in str(entry)
     assert len(str(rows[0]["prompt_sha256"])) == 64
+
+
+@pytest.mark.integration
+class TestPayload:
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"photo_ids": [], "prompt": PROMPT, "confirmed": True},
+            {
+                "photo_ids": [str(uuid4()) for _ in range(4)],
+                "prompt": PROMPT,
+                "confirmed": True,
+            },
+            {"photo_ids": [str(uuid4())], "prompt": "   a  ", "confirmed": True},
+            {"photo_ids": [str(uuid4())], "prompt": "x" * 501, "confirmed": True},
+            {
+                "photo_ids": [str(uuid4())],
+                "prompt": PROMPT,
+                "confirmed": True,
+                "extra": 1,
+            },
+            {"photo_ids": [str(uuid4())], "prompt": PROMPT},
+        ],
+    )
+    async def test_invalid_payloads_are_422_and_record_nothing(
+        self,
+        client: AsyncClient,
+        asset_dirs: Path,
+        editor: FakeEditor,
+        payload: dict[str, object],
+    ) -> None:
+        """Scenario: An invalid request is refused before anything is recorded."""
+        photo = await upload_photo(client, RED)
+        project_id = await project(client, photo["id"])
+
+        response = await client.post(
+            f"/api/carousels/{project_id}/cover-generations", json=payload
+        )
+
+        assert response.status_code == 422
+        assert await generation_rows() == []
+        assert editor.jobs == []
+
+    async def test_a_stale_pending_row_is_reaped_on_start(
+        self, client: AsyncClient, asset_dirs: Path, editor: FakeEditor
+    ) -> None:
+        """Scenario: A run lost to a restart is reported as interrupted."""
+        photo = await upload_photo(client, RED)
+        project_id = await project(client, photo["id"])
+        await insert_rows(
+            project_id, [("pending", datetime.now(UTC) - timedelta(hours=1))]
+        )
+
+        started = await generate(client, project_id, [photo["id"]])
+
+        assert started["status"] == "pending"
+        statuses = sorted(
+            str(row["error_code"]) for row in await generation_rows(project_id)
+        )
+        assert statuses == ["None", "cover_generation_interrupted"]

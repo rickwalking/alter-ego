@@ -67,6 +67,8 @@ class TestGenerate:
         started = await generate(client, project_id, [first["id"], second["id"]])
 
         assert started["status"] == "pending"
+        rows = await generation_rows(project_id)
+        assert [row["photo_count"] for row in rows] == [2]
         job = editor.jobs[0]
         assert job.prompt == f"direction: {PROMPT}"
         assert job.project_id == project_id

@@ -191,6 +191,7 @@ class TestStart:
         assert generation.cost_usd == 0.05
         assert generation.created_at == _NOW
         assert run.photo_ids == (_PHOTO,)
+        assert generation.photo_count == 1
         assert run.prompt == "no parque"
 
     @pytest.mark.parametrize(
@@ -220,6 +221,8 @@ class TestStart:
             await service.start(_start(user_id=user_id))
         with pytest.raises(CoverGenerationForbiddenError):
             await service.start(_start(project=_project(owner_id=None)))
+        with pytest.raises(CoverGenerationForbiddenError):
+            await service.start(_start(project=_project(owner_id=""), user_id=""))
 
     @pytest.mark.parametrize(
         ("rows", "month", "code"),
@@ -360,12 +363,39 @@ class TestRunner:
         status = await _runner(store, _Photos(), results, _Editor()).run(_run())
         assert status is CoverGenerationStatus.FAILED
         assert results.discarded == results.stored
+        assert store.commits == 1
 
 
 def test_month_start_and_digest() -> None:
     """Scenario: Every call is logged for the budget."""
     assert month_start(_NOW) == datetime(2026, 10, 1, tzinfo=UTC)
+    late = datetime(2026, 10, 31, 23, 59, 58, 789_000, tzinfo=UTC)
+    assert month_start(late) == datetime(2026, 10, 1, tzinfo=UTC)
     assert len(prompt_digest("x")) == 64
     assert prompt_digest("x") != prompt_digest("y")
     assert _generation(CoverGenerationStatus.FAILED).counts_against_caps is False
     assert _generation(CoverGenerationStatus.SUCCEEDED).counts_against_caps is True
+
+
+def test_config_reaps_after_the_bridge_timeout_plus_grace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Scenario: A run lost to a restart is reported as interrupted."""
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.modules.editorial.infrastructure import (
+        carousel_cover_generation as wiring,
+    )
+    from rag_backend.modules.editorial.public import cover_generation_service
+
+    monkeypatch.setenv("IMAGE_BRIDGE_TIMEOUT_SECONDS", "300")
+    monkeypatch.setenv("GROK_COVER_COST_USD", "0.25")
+    get_settings.cache_clear()
+    try:
+        config = wiring.cover_generation_config()
+    finally:
+        get_settings.cache_clear()
+
+    assert config.stale_after_seconds == 300 + 120
+    assert config.cost_usd == 0.25
+    assert config.model == "gpt-image-2"
+    assert callable(cover_generation_service)

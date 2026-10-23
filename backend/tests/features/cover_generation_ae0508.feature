@@ -32,6 +32,11 @@ Feature: Generate a slide-1 cover from library photos with Grok
     When an admin who does not own the carousel asks for a cover
     Then the API answers 403 with cover_generation_not_owner
 
+  Scenario: An invalid request is refused before anything is recorded
+    When the owner sends no photo, four photos, a blank or over-long prompt, an unknown field or no confirmation
+    Then the API answers 422
+    And nothing is recorded and nothing is sent to the Grok Bot
+
   Scenario: Another owner's photo cannot be sent
     When the owner asks for a cover from a photo that is not theirs
     Then the API answers 422 with cover_generation_photo_not_allowed

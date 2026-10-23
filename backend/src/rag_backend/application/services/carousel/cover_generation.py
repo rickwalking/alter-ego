@@ -36,6 +36,7 @@ from rag_backend.domain.constants.cover_generation import (
     ERR_COVER_GENERATION_PHOTO_NOT_ALLOWED,
     FAILURE_BRIDGE,
     FAILURE_INVALID_IMAGE,
+    FAILURE_NOT_PENDING,
     FAILURE_PHOTO_UNREADABLE,
     FAILURE_UNEXPECTED,
     LOG_COVER_GENERATION,
@@ -338,7 +339,9 @@ class CoverGenerationRunner:
         if not await self._deps.store.settle(outcome):
             await self._deps.results.discard(asset_id)
             await self._deps.store.commit()
-            _log(generation, LOG_COVER_GENERATION_FAILED, error_code="not_pending")
+            _log(
+                generation, LOG_COVER_GENERATION_FAILED, error_code=FAILURE_NOT_PENDING
+            )
             return CoverGenerationStatus.FAILED
         await self._deps.store.commit()
         _log(generation, LOG_COVER_GENERATION_SUCCEEDED, asset_id=str(asset_id))

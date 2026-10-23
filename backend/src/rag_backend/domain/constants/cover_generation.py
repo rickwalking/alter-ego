@@ -51,6 +51,7 @@ FAILURE_INVALID_IMAGE = "cover_generation_invalid_image"
 FAILURE_INTERRUPTED = "cover_generation_interrupted"
 FAILURE_PHOTO_UNREADABLE = "cover_generation_photo_unreadable"
 FAILURE_UNEXPECTED = "cover_generation_failed"
+FAILURE_NOT_PENDING = "cover_generation_not_pending"
 
 LOG_COVER_GENERATION = "cover_generation"
 LOG_COVER_GENERATION_STARTED = "started"
@@ -82,6 +83,7 @@ __all__ = [
     "FAILURE_BRIDGE",
     "FAILURE_INTERRUPTED",
     "FAILURE_INVALID_IMAGE",
+    "FAILURE_NOT_PENDING",
     "FAILURE_PHOTO_UNREADABLE",
     "FAILURE_UNEXPECTED",
     "INDEX_COVER_GENERATIONS_OWNER_CREATED",

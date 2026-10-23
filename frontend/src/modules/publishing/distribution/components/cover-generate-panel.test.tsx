@@ -6,6 +6,8 @@ import { createElement, type ReactNode } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { CoverGeneratePanel } from "./cover-generate-panel";
 import { CoverPromptField, generationErrorKey } from "./cover-generate-parts";
+import en from "@/i18n/locales/en.json";
+import pt from "@/i18n/locales/pt.json";
 
 /**
  * Gherkin: frontend/tests/features/cover-generation-ae0508.feature (backend
@@ -300,6 +302,19 @@ describe("CoverGeneratePanel", () => {
     renderPanel([]);
     expect(screen.queryByRole("button", { name: "action" })).toBeNull();
     expect(mockApiCall).not.toHaveBeenCalled();
+  });
+});
+
+describe("cover generation copy", () => {
+  /** Scenario: The owner generates a cover after confirming */
+  it.each([
+    ["pt", pt],
+    ["en", en],
+  ])("the %s confirmation names xAI and the caps", (_lang, messages) => {
+    const body = messages.publish.coverPicker.generate.confirm.body;
+    expect(body).toContain("xAI");
+    expect(body).toContain("{carouselCap}");
+    expect(body).toContain("{monthCap}");
   });
 });
 

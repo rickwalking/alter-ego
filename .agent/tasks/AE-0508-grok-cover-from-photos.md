@@ -97,17 +97,17 @@ photos.
 
 ## Acceptance Criteria
 
-- [ ] Given a POV carousel's cover picker, When the owner selects 1-3 library photos, writes a prompt,
+- [x] Given a POV carousel's cover picker, When the owner selects 1-3 library photos, writes a prompt,
       clicks "Gerar capa" and confirms, Then a Grok job runs with progress, the photos' bytes are sent in
       the webhook (no URL), and the result lands in the private library with role `cover`.
-- [ ] Given results, When the owner picks one, Then `PUT /api/carousels/{id}/cover` uses it and the
+- [x] Given results, When the owner picks one, Then `PUT /api/carousels/{id}/cover` uses it and the
       default slide 1 (library photo) is still offered.
-- [ ] Given the GrokBot bridge fails or times out, Then the generation shows a failure with "Tentar de
+- [x] Given the GrokBot bridge fails or times out, Then the generation shows a failure with "Tentar de
       novo" and no asset is stored.
-- [ ] Given 4 generations on the carousel or 40 in the month, Then the action is disabled with the reason
+- [x] Given 4 generations on the carousel or 40 in the month, Then the action is disabled with the reason
       and the API refuses with 409.
-- [ ] Every call is logged (time, carousel, prompt hash, cost).
-- [ ] Only the carousel owner can generate; confirmation is required.
+- [x] Every call is logged (time, carousel, prompt hash, cost).
+- [x] Only the carousel owner can generate; confirmation is required.
 
 ## Gherkin Scenarios
 
@@ -116,13 +116,13 @@ See `backend/tests/features/cover_generation_ae0508.feature` and
 
 ## Affected Areas
 
-- [ ] Backend (`modules/image_bridge`, cover generation service/repository, `cover_pick.py`, new route)
-- [ ] Frontend (`cover-picker-section.tsx`, new generate panel + hook, i18n)
-- [ ] API (OpenAPI artifact: `GET/POST /api/carousels/{id}/cover-generations`)
-- [ ] Database: new table `carousel_cover_generations` (alembic revision; prod's `create_all` bootstrap
+- [x] Backend (`modules/image_bridge`, cover generation service/repository, `cover_pick.py`, new route)
+- [x] Frontend (`cover-picker-section.tsx`, new generate panel + hook, i18n)
+- [x] API (OpenAPI artifact: `GET/POST /api/carousels/{id}/cover-generations`)
+- [x] Database: new table `carousel_cover_generations` (alembic revision; prod's `create_all` bootstrap
       creates a missing table with its indexes, so no deploy one-shot is needed)
-- [ ] Docs: bridge contract §2.4, ADR-0027
-- [ ] Tests
+- [x] Docs: bridge contract §2.4, ADR-0027
+- [x] Tests
 
 ## Dependencies
 
@@ -133,7 +133,12 @@ to confirm. If it does not, a generation is text-only on the bot side; nothing e
 
 ### 2026-10-23
 
-Ticket written from Pedro's decision; failing tests first.
+Ticket written from Pedro's decision; failing tests first. Pedro: no Grok Bot side change, the existing
+bridge endpoint (sidecar) takes the job, so the photos ride it as `reference_images`. Backend, frontend,
+docs (contract §2.4, ADR-0027). Independent review round: transaction released before the bridge wait,
+unexpected errors settle failed, one shared bridge editor, the budget log survives a carousel delete,
+1024 px reference photos, no dead button when the list fails. The prompt field takes a children slot for
+the AE-0509 suggestions.
 
 ## Files Touched
 

@@ -86,7 +86,10 @@ class EditorialOwnerPhotos:
         )
         if path is None:
             raise CoverAssetError(ERR_COVER_ASSET_TYPE_UNSUPPORTED)
-        content = await asyncio.to_thread(Path.read_bytes, path)
+        try:
+            content = await asyncio.to_thread(Path.read_bytes, path)
+        except OSError:
+            raise CoverAssetError(ERR_COVER_ASSET_TYPE_UNSUPPORTED) from None
         return await asyncio.to_thread(reference_photo, content)
 
 
