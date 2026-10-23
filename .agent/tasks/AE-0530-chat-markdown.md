@@ -1,6 +1,6 @@
 # AE-0530 — Chat: assistant replies render markdown safely
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -78,6 +78,10 @@ External QA (WARN) findings fixed: an unsafe link whose only content was an imag
 and padded `javascript:` and empty targets; tests for same-site and mailto links, a mixed image+text label, every
 heading level, and the visitor's line breaks. Markdown tests: 16 passed.
 
+### 2026-10-23 05:20
+
+Confirmation round follow-up: test for a safe link whose label is only spaces (it shows the target).
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-markdown.tsx (new) + test, chat-message-list.tsx
@@ -86,11 +90,12 @@ heading level, and the visitor's line breaks. Markdown tests: 16 passed.
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0530.dev-summary.md`: targeted tests pass and `gates.sh --changed-only` is green (0 FAIL) on
+591449245; the full suites, build and mutation run in CI on the PR.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0530.qa.md` (external, round 1 WARN, findings fixed, confirmation round).
 
 ## Blockers
 
