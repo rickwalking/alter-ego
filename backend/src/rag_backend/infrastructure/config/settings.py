@@ -93,7 +93,9 @@ class Settings(AutopilotAutofixSettings):
       ``telegram_webhook_secret`` rejects the webhook with HTTP 401.
     - The worker calls the in-process runner only when ``autopilot_enabled``.
       ``autopilot_owner_user_id`` is an existing user owning the created carousels
-      (reviewer_id stays unset).
+      (reviewer_id stays unset). It is the site owner: only conversations and
+      knowledge searches of this user read personal knowledge; unset, every chat
+      and search reads public knowledge only.
     - ``autopilot_default_publish``: ``now`` offers publish-now or a schedule on
       Approve; ``next_slot`` schedules the next good slot directly.
     - ``autopilot_start_spacing_minutes``: minimum minutes between two autopilot

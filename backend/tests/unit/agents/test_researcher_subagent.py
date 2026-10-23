@@ -89,8 +89,8 @@ def _config(
     )
 
 
-# Scenario: The scrape_url adapter delegates to the service via the Protocol
 async def test_scrape_url_adapter_delegates() -> None:
+    """Scenario: The scrape_url adapter delegates to the service via the Protocol"""
     research = _StubResearch(page="PAGE BODY")
     adapter = build_scrape_url_tool(research)
     result = await adapter.ainvoke({"url": "https://example.com"})
@@ -98,8 +98,8 @@ async def test_scrape_url_adapter_delegates() -> None:
     assert research.scrape_calls == ["https://example.com"]
 
 
-# Scenario: A scrape failure degrades gracefully
 async def test_scrape_url_adapter_degrades_on_failure() -> None:
+    """Scenario: A scrape failure degrades gracefully"""
     research = _StubResearch(scrape_error=ConnectionError("boom"))
     adapter = build_scrape_url_tool(research)
     result = await adapter.ainvoke({"url": "https://down.example"})
@@ -108,7 +108,6 @@ async def test_scrape_url_adapter_degrades_on_failure() -> None:
     assert "boom" in result
 
 
-# Scenario: The scrape_url adapter blocks SSRF targets before delegating (QA F-1)
 @pytest.mark.parametrize(
     "unsafe_url",
     [
@@ -122,7 +121,10 @@ async def test_scrape_url_adapter_degrades_on_failure() -> None:
     ],
 )
 async def test_scrape_url_adapter_blocks_unsafe_targets(unsafe_url: str) -> None:
-    """The guard must short-circuit before the service is ever invoked."""
+    """The guard must short-circuit before the service is ever invoked.
+
+    Scenario: The scrape_url adapter blocks SSRF targets before delegating (QA F-1)
+    """
     research = _StubResearch(page="SECRET")
     adapter = build_scrape_url_tool(research)
     result = await adapter.ainvoke({"url": unsafe_url})
@@ -130,8 +132,8 @@ async def test_scrape_url_adapter_blocks_unsafe_targets(unsafe_url: str) -> None
     assert research.scrape_calls == []
 
 
-# Scenario: A safe public http(s) URL is still delegated after the guard
 async def test_scrape_url_adapter_allows_public_url() -> None:
+    """Scenario: A safe public http(s) URL is still delegated after the guard"""
     research = _StubResearch(page="PAGE BODY")
     adapter = build_scrape_url_tool(research)
     result = await adapter.ainvoke({"url": "https://example.com/article"})
@@ -139,8 +141,8 @@ async def test_scrape_url_adapter_allows_public_url() -> None:
     assert research.scrape_calls == ["https://example.com/article"]
 
 
-# Scenario: The search_web adapter delegates to the service via the Protocol
 async def test_search_web_adapter_formats_sources() -> None:
+    """Scenario: The search_web adapter delegates to the service via the Protocol"""
     research = _StubResearch(
         results=[
             {"title": "T1", "url": "https://a", "snippet": "S1"},
@@ -161,9 +163,11 @@ async def test_search_web_adapter_empty() -> None:
     assert "No web results found." in result
 
 
-# Scenario: Subagent specs use the DeepAgents tools/prompt/model fields
 def test_researcher_spec_uses_deepagents_fields() -> None:
-    """There is no bespoke skills key, only DeepAgents-standard fields."""
+    """There is no bespoke skills key, only DeepAgents-standard fields.
+
+    Scenario: Subagent specs use the DeepAgents tools/prompt/model fields
+    """
     research = _StubResearch()
     stub_model = cast("BaseChatModel", object())
     spec = build_researcher_subagent(_config(research, model=stub_model))
@@ -186,10 +190,11 @@ def test_researcher_spec_grants_three_tools() -> None:
     assert SPEC_FIELD_MODEL not in spec
 
 
-# Scenario: Deterministic phases stay LangGraph nodes
 def test_deterministic_phases_are_langgraph_nodes_not_subagents() -> None:
     """Phase subagent specs carry no runnable, task or tools: they are deterministic
     nodes, not tool-wielding delegated subagents.
+
+    Scenario: Deterministic phases stay LangGraph nodes
     """
     compiled = build_carousel_workflow_graph().compile()
     node_names = set(compiled.get_graph().nodes)
@@ -202,10 +207,11 @@ def test_deterministic_phases_are_langgraph_nodes_not_subagents() -> None:
         assert phase_spec[SPEC_FIELD_TOOLS] == []
 
 
-# Scenario: Researcher subagent is registered in the chat pipeline
 def test_rag_agent_registers_researcher_subagent() -> None:
+    """Scenario: Researcher subagent is registered in the chat pipeline"""
     from unittest.mock import MagicMock
 
+    from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE
     from rag_backend.agents.rag_agent import RAGAgent
     from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
 
@@ -214,6 +220,7 @@ def test_rag_agent_registers_researcher_subagent() -> None:
     agent._research_tool = MagicMock()
     agent._carousel_tool_access = MagicMock()
     agent._knowledge_search = MagicMock()
+    agent._scope = PUBLIC_KNOWLEDGE
     agent._llm = MagicMock()
 
     specs = agent._build_subagents()
@@ -223,10 +230,11 @@ def test_rag_agent_registers_researcher_subagent() -> None:
     assert RESEARCHER_SUBAGENT_NAME in names
 
 
-# Scenario: Researcher subagent is registered in the chat pipeline (negative half)
 def test_rag_agent_skips_researcher_without_tool_access() -> None:
+    """Scenario: Researcher subagent is registered in the chat pipeline (negative half)"""
     from unittest.mock import MagicMock
 
+    from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE
     from rag_backend.agents.rag_agent import RAGAgent
     from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
 
@@ -235,6 +243,7 @@ def test_rag_agent_skips_researcher_without_tool_access() -> None:
     agent._research_tool = MagicMock()
     agent._carousel_tool_access = None
     agent._knowledge_search = MagicMock()
+    agent._scope = PUBLIC_KNOWLEDGE
     agent._llm = MagicMock()
 
     specs = agent._build_subagents()
@@ -242,10 +251,11 @@ def test_rag_agent_skips_researcher_without_tool_access() -> None:
     assert RESEARCHER_SUBAGENT_NAME not in [spec["name"] for spec in specs]
 
 
-# Scenario: Researcher subagent is registered in the chat pipeline
 def test_rag_agent_skips_researcher_without_research_tool() -> None:
+    """Scenario: Researcher subagent is registered in the chat pipeline"""
     from unittest.mock import MagicMock
 
+    from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE
     from rag_backend.agents.rag_agent import RAGAgent
     from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
 
@@ -254,6 +264,7 @@ def test_rag_agent_skips_researcher_without_research_tool() -> None:
     agent._research_tool = None
     agent._carousel_tool_access = MagicMock()
     agent._knowledge_search = MagicMock()
+    agent._scope = PUBLIC_KNOWLEDGE
     agent._llm = MagicMock()
 
     specs = agent._build_subagents()

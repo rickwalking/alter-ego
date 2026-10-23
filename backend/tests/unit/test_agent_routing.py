@@ -10,7 +10,7 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.alter_ego_knowledge import PUBLIC_KNOWLEDGE
+from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE
 from rag_backend.api.dependencies.agents import (
     RagAgentBuildContext,
     build_agent_for_conversation,

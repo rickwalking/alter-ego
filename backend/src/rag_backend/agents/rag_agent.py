@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
+from rag_backend.agents.chat_knowledge import ChatKnowledge
 from rag_backend.agents.chat_streaming import (
     chat_event_from_stream,
     is_token_event,
@@ -24,6 +25,7 @@ from rag_backend.agents.subagents import (
 )
 from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools import (
+    SearchToolOptions,
     build_list_documents_tool,
     build_refine_carousel_copy_tool,
     build_refine_carousel_design_tool,
@@ -90,7 +92,7 @@ class RAGAgent:
         editorial_subagent: dict[str, object] | None = None,
         start_editorial_workflow: object | None = None,
         carousel_tool_access: CarouselToolAccessContext | None = None,
-        knowledge_search: KnowledgeSearchPort | None = None,
+        knowledge: ChatKnowledge | None = None,
         research_tool: ResearchTool | None = None,
     ) -> None:
         """Build the RAG chat agent on the shared deep-agent harness.
@@ -99,7 +101,10 @@ class RAGAgent:
         checkpointer: a second durable write path would dual-write. The harness builder
         routes this chat config through that guard, and the summarization middleware
         caps context-window growth without touching message_repository persistence.
+        Without ``knowledge`` the agent reads public knowledge only.
         """
+        knowledge = knowledge if knowledge is not None else ChatKnowledge()
+        self._scope = knowledge.scope
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
@@ -111,8 +116,8 @@ class RAGAgent:
         self._carousel_tool_access = carousel_tool_access
         self._research_tool = research_tool
         self._knowledge_search: KnowledgeSearchPort = (
-            knowledge_search
-            if knowledge_search is not None
+            knowledge.search
+            if knowledge.search is not None
             else RetrieverSearchAdapter(retriever)
         )
 
@@ -145,9 +150,7 @@ class RAGAgent:
                 build_researcher_subagent(
                     ResearcherSubagentConfig(
                         research=self._research_tool,
-                        search_documents=build_search_documents_tool(
-                            self._knowledge_search
-                        ),
+                        search_documents=self._search_tool(),
                         model=self._llm,
                     )
                 )
@@ -162,8 +165,11 @@ class RAGAgent:
         on orchestration while tools live in their own domain modules.
         """
         tools: list[BaseTool] = [
-            build_search_documents_tool(self._knowledge_search),
-            build_list_documents_tool(self._document_repository),
+            self._search_tool(),
+            build_list_documents_tool(
+                self._document_repository,
+                scope_filter=self._scope.document_scopes,
+            ),
         ]
 
         if self._carousel_refinement is None or self._carousel_repository is None:
@@ -327,6 +333,19 @@ class RAGAgent:
 
         yield {"type": "complete", "content": response}
 
+    def _search_tool(self) -> BaseTool:
+        """The knowledge search tool, limited to the agent's knowledge scope."""
+        return build_search_documents_tool(
+            self._knowledge_search,
+            SearchToolOptions(namespace_prefix=self._scope.namespace_prefix),
+        )
+
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
-        """Search for relevant documents."""
-        return await self._retriever.retrieve(RetrievalQuery(query=query, top_k=top_k))
+        """Search for relevant documents within the agent's knowledge scope."""
+        return await self._retriever.retrieve(
+            RetrievalQuery(
+                query=query,
+                top_k=top_k,
+                namespace_prefix=self._scope.namespace_prefix,
+            )
+        )

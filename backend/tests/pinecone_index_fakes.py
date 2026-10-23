@@ -1,14 +1,16 @@
 """An in-memory stand-in for a Pinecone index that really holds vectors per namespace.
 
-It accepts the ``upsert`` and ``delete`` calls ``PineconeVectorStore`` makes and
-applies them to its namespaces, so a test can assert which documents' vectors
-are left after a delete, not only which namespace a call named.
+It accepts the ``upsert``, ``delete`` and ``query`` calls ``PineconeVectorStore``
+makes and applies them to its namespaces, so a test can assert which documents'
+vectors are left after a delete, and which chunks a search can reach, not only
+which namespace a call named.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from uuid import UUID
+from dataclasses import dataclass, field
+from uuid import UUID, uuid4
 
 from pydantic import SecretStr
 
@@ -32,6 +34,22 @@ def _matches(metadata: Mapping[str, object], metadata_filter: MetadataFilter) ->
         if metadata.get(key) != expected:
             return False
     return True
+
+
+@dataclass(frozen=True)
+class FakeMatch:
+    """One query match, shaped like a Pinecone match."""
+
+    id: str
+    score: float
+    metadata: dict[str, object]
+
+
+@dataclass(frozen=True)
+class FakeQueryResponse:
+    """A query answer, shaped like a Pinecone query response."""
+
+    matches: list[FakeMatch] = field(default_factory=list)
 
 
 class FakePineconeIndex:
@@ -63,6 +81,32 @@ class FakePineconeIndex:
             metadata = vector["metadata"]
             if isinstance(metadata, Mapping) and _matches(metadata, metadata_filter):
                 del stored[vector_id]
+
+    def query(self, *, namespace: str = "", **_params: object) -> FakeQueryResponse:
+        """Every vector of ``namespace``, in insertion order, as matches."""
+        stored = self.namespaces.get(namespace, {})
+        return FakeQueryResponse(
+            matches=[
+                FakeMatch(id=vector_id, score=1.0, metadata=dict(vector["metadata"]))
+                for vector_id, vector in stored.items()
+                if isinstance(vector["metadata"], Mapping)
+            ]
+        )
+
+    def seed_chunk(self, document_id: UUID, namespace: str, content: str) -> UUID:
+        """Index one searchable chunk of ``document_id`` in ``namespace``."""
+        chunk_id = uuid4()
+        self.upsert(
+            [
+                {
+                    "id": str(chunk_id),
+                    "values": [0.0],
+                    "metadata": {_DOCUMENT_ID: str(document_id), "content": content},
+                }
+            ],
+            namespace=namespace,
+        )
+        return chunk_id
 
     def documents_in(self, namespace: str) -> set[UUID]:
         """The ids of the documents that still have a vector in ``namespace``."""

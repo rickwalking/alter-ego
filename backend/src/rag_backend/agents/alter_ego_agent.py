@@ -15,8 +15,8 @@ from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.errors import GraphRecursionError
 
-from rag_backend.agents.alter_ego_knowledge import AlterEgoKnowledge
 from rag_backend.agents.chat_fallback import no_knowledge_reply
+from rag_backend.agents.chat_knowledge import ChatKnowledge
 from rag_backend.agents.chat_streaming import (
     chat_event_from_stream,
     is_token_event,
@@ -90,7 +90,7 @@ class AlterEgoAgent:
         retriever: Retriever,
         message_repository: MessageRepository,
         document_repository: DocumentRepository,
-        knowledge: AlterEgoKnowledge | None = None,
+        knowledge: ChatKnowledge | None = None,
     ) -> None:
         """Build the chat agent on the shared deep-agent harness.
 
@@ -101,7 +101,7 @@ class AlterEgoAgent:
         subagents are registered: chat never delegates to the carousel pipeline.
         Without ``knowledge`` the agent reads public knowledge only.
         """
-        knowledge = knowledge if knowledge is not None else AlterEgoKnowledge()
+        knowledge = knowledge if knowledge is not None else ChatKnowledge()
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository

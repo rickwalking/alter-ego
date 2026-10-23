@@ -175,6 +175,7 @@ class TestChatAgentFactoryDelegationAndRouting:
         settings.anthropic_api_key = "test"
         settings.anthropic_model = "claude-test"
         settings.llm_provider = "anthropic"
+        settings.autopilot_owner_user_id = ""
 
         container = MagicMock()
         container.settings.return_value = settings

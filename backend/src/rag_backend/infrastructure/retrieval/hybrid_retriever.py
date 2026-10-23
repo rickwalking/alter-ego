@@ -5,6 +5,7 @@ from rag_backend.domain.constants.namespaces import (
     NAMESPACE_CAROUSEL,
     NAMESPACE_INTERNAL,
     NAMESPACE_PERSONAL,
+    NAMESPACE_PUBLIC,
 )
 from rag_backend.domain.models import HybridSearchParams, RetrievalQuery, SearchResult
 from rag_backend.domain.protocols import EmbeddingService, VectorStore
@@ -63,13 +64,13 @@ class HybridRetrieverWithRRF:
     def _resolve_namespaces(namespace_prefix: str | None) -> list[str]:
         """Resolve a namespace prefix into concrete Pinecone namespace names.
 
-        The Alter-Ego agent searches both ``personal`` and ``public``
-        namespaces so visitors can ask about Pedro's career *and* read
-        published blog posts.  The Carousel agent does not search any
-        of these namespaces — it uses its own data sources.
+        The ``personal`` prefix reads the ``personal`` and ``public``
+        namespaces; only a chat of the site owner asks for it. A missing prefix
+        reads ``public`` alone, so a caller that does not choose never reads
+        personal knowledge.
         """
         if namespace_prefix is None:
-            return DEFAULT_KB_NAMESPACES
+            return [NAMESPACE_PUBLIC]
         if namespace_prefix == NAMESPACE_PERSONAL:
             return DEFAULT_KB_NAMESPACES
         if namespace_prefix == NAMESPACE_CAROUSEL:

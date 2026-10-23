@@ -9,10 +9,10 @@ import pytest
 from langchain_core.tools import BaseTool
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.alter_ego_knowledge import (
+from rag_backend.agents.chat_knowledge import (
     OWNER_KNOWLEDGE,
     PUBLIC_KNOWLEDGE,
-    AlterEgoKnowledge,
+    ChatKnowledge,
     KnowledgeScope,
     knowledge_scope_for,
 )
@@ -70,7 +70,7 @@ def _repository() -> AsyncMock:
 def _agent(scope: KnowledgeScope | None) -> tuple[AlterEgoAgent, MagicMock]:
     search = MagicMock()
     search.search = AsyncMock(return_value=[])
-    knowledge = None if scope is None else AlterEgoKnowledge(search=search, scope=scope)
+    knowledge = None if scope is None else ChatKnowledge(search=search, scope=scope)
     agent = AlterEgoAgent(
         settings=_settings(),
         retriever=AsyncMock(),
@@ -90,10 +90,43 @@ async def _searched_prefix(agent: AlterEgoAgent, search: MagicMock) -> str | Non
     return search.search.await_args.args[0].namespace_prefix
 
 
-def test_anonymous_conversation_gets_the_public_scope() -> None:
-    """Scenario: Both chat routes pick the scope from the conversation owner"""
-    assert knowledge_scope_for(None) is PUBLIC_KNOWLEDGE
-    assert knowledge_scope_for(uuid4()) is OWNER_KNOWLEDGE
+_SITE_OWNER = uuid4()
+
+
+@pytest.mark.parametrize(
+    ("owner_id", "site_owner", "expected"),
+    [
+        (_SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
+        (str(_SITE_OWNER).upper(), f" {_SITE_OWNER} ", OWNER_KNOWLEDGE),
+        (uuid4(), str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, "", PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, "not-a-uuid", PUBLIC_KNOWLEDGE),
+        ("not-a-uuid", str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+    ],
+    ids=[
+        "site-owner",
+        "site-owner-spelled-differently",
+        "editor-or-other-admin",
+        "anonymous",
+        "setting-unset",
+        "setting-invalid",
+        "owner-id-invalid",
+    ],
+)
+def test_only_the_site_owner_gets_the_owner_scope(
+    owner_id: UUID | str | None, site_owner: str, expected: KnowledgeScope
+) -> None:
+    """Scenario: An editor's or another admin's chat reads public knowledge only
+
+    Scenario: Without a configured site owner every chat reads public knowledge only
+    """
+    assert knowledge_scope_for(owner_id, site_owner) is expected
+
+
+def test_a_setting_that_is_not_text_fails_closed() -> None:
+    """Scenario: Without a configured site owner every chat reads public knowledge only"""
+    assert knowledge_scope_for(_SITE_OWNER, MagicMock()) is PUBLIC_KNOWLEDGE
 
 
 def test_scopes_name_the_namespaces_they_read() -> None:
@@ -175,19 +208,36 @@ async def test_owner_agent_direct_search_uses_its_scope() -> None:
     assert query.namespace_prefix == NAMESPACE_PERSONAL
 
 
+def _container(site_owner: str) -> MagicMock:
+    container = MagicMock()
+    container.settings.return_value = Settings(autopilot_owner_user_id=site_owner)
+    return container
+
+
 @pytest.mark.parametrize(
-    ("user_id", "expected"),
-    [(None, PUBLIC_KNOWLEDGE), (uuid4(), OWNER_KNOWLEDGE)],
+    ("user_id", "site_owner", "expected"),
+    [
+        (None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (uuid4(), str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
+        (_SITE_OWNER, "", PUBLIC_KNOWLEDGE),
+    ],
+    ids=["anonymous", "editor-or-other-admin", "site-owner", "setting-unset"],
 )
 def test_messages_route_builder_picks_the_scope_from_the_owner(
-    user_id: UUID | None, expected: KnowledgeScope
+    user_id: UUID | None, site_owner: str, expected: KnowledgeScope
 ) -> None:
     """Scenario: Both chat routes pick the scope from the conversation owner"""
     conversation = Conversation(id=uuid4(), user_id=user_id, metadata={})
     db = AsyncMock()
-    container = MagicMock()
+    container = _container(site_owner)
 
     with patch(_BUILDER) as build_alter_ego:
         build_agent_for_conversation(conversation, db, container)
 
     build_alter_ego.assert_called_once_with(db, container, expected)
+
+
+def test_a_search_without_a_namespace_reads_public_only() -> None:
+    """Scenario: A search without a namespace reads public knowledge only"""
+    assert HybridRetrieverWithRRF._resolve_namespaces(None) == [NAMESPACE_PUBLIC]

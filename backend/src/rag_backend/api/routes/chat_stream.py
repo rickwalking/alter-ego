@@ -34,7 +34,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.alter_ego_knowledge import KnowledgeScope, knowledge_scope_for
+from rag_backend.agents.chat_knowledge import KnowledgeScope
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.api.constants import (
     ERR_NOT_AUTHENTICATED,
@@ -49,6 +49,7 @@ from rag_backend.api.dependencies.agents import (
     RagAgentBuildContext,
     build_alter_ego_agent,
     build_rag_agent,
+    conversation_knowledge_scope,
 )
 from rag_backend.api.dependencies.carousel_access import (
     assert_carousel_conversation_chat_access,
@@ -94,8 +95,8 @@ class _AlterEgoAgentBuilder:
     construction through THIS module's ``build_alter_ego_agent`` name so the
     safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM — the knowledge-facade wiring stays identical.
-    The knowledge scope comes from the conversation: public knowledge only for an
-    anonymous one.
+    The knowledge scope comes from the conversation owner: personal knowledge
+    only for the site owner's conversations.
     """
 
     def __init__(self, factory: LegacyChatAgentFactory, scope: KnowledgeScope) -> None:
@@ -187,10 +188,10 @@ async def chat_stream(
     """Send a message to the Alter-Ego agent and stream the response via SSE.
 
     Anonymous visitors chat in the anonymous conversation their ``anon_token``
-    cookie was issued for, and the agent reads public knowledge only. A
-    conversation owned by a signed-in user accepts messages only from its owner
-    or an admin, and reads personal and public knowledge. Anyone else, like an
-    unknown id, gets 404 before the stream starts.
+    cookie was issued for. A conversation owned by a signed-in user accepts
+    messages only from its owner or an admin. Anyone else, like an unknown id,
+    gets 404 before the stream starts. Only a conversation of the site owner
+    reads personal knowledge; every other one reads public knowledge only.
     """
     if db is None or handler is None or agent_factory is None:
         raise HTTPException(
@@ -207,7 +208,8 @@ async def chat_stream(
         last_event_id=_parse_last_event_id(request),
     )
     agent_builder = _AlterEgoAgentBuilder(
-        agent_factory, knowledge_scope_for(conversation.user_id)
+        agent_factory,
+        conversation_knowledge_scope(conversation.user_id, agent_factory.container),
     )
 
     async def event_generator() -> AsyncIterator[str]:

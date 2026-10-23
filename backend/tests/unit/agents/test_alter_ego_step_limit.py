@@ -15,8 +15,8 @@ from langgraph.errors import GraphRecursionError
 from structlog.testing import capture_logs
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.alter_ego_knowledge import AlterEgoKnowledge
 from rag_backend.agents.chat_fallback import looks_portuguese, no_knowledge_reply
+from rag_backend.agents.chat_knowledge import ChatKnowledge
 from rag_backend.application.tools.knowledge_base import (
     SearchToolOptions,
     build_search_documents_tool,
@@ -216,7 +216,7 @@ async def test_real_harness_fits_the_search_budget_within_the_step_limit(
         retriever=AsyncMock(),
         message_repository=AsyncMock(),
         document_repository=AsyncMock(),
-        knowledge=AlterEgoKnowledge(search=search),
+        knowledge=ChatKnowledge(search=search),
     )
 
     with capture_logs() as logs:

@@ -17,8 +17,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.alter_ego_knowledge import (
-    AlterEgoKnowledge,
+from rag_backend.agents.chat_knowledge import (
+    ChatKnowledge,
     KnowledgeScope,
     knowledge_scope_for,
 )
@@ -53,7 +53,7 @@ from rag_backend.domain.constants.carousel_tools import (
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import CarouselProject, Conversation
-from rag_backend.infrastructure.container import Container
+from rag_backend.infrastructure.container import Container, get_container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
@@ -112,10 +112,10 @@ def build_agent_for_conversation(
 
     Conversations with ``project_id`` metadata get the full RAGAgent
     (carousel tools + subagent). All others get the AlterEgoAgent
-    (knowledge base only): public knowledge for an anonymous conversation,
-    personal and public knowledge for a signed-in user's.
+    (knowledge base only). Both read personal knowledge only when the
+    conversation belongs to the site owner (see ``conversation_knowledge_scope``).
     """
-    scope = knowledge_scope_for(conversation.user_id)
+    scope = conversation_knowledge_scope(conversation.user_id, container)
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
         return build_alter_ego_agent(db, container, scope)
     if conversation.user_id is None:
@@ -152,6 +152,21 @@ def _build_knowledge_search(db: AsyncSession, container: Container) -> Knowledge
     return bootstrap_module(platform=container, adapters=adapters)
 
 
+def conversation_knowledge_scope(
+    owner_id: UUID | str | None, container: Container
+) -> KnowledgeScope:
+    """What a conversation of ``owner_id`` may read: personal and public only for
+    the configured site owner (``AUTOPILOT_OWNER_USER_ID``), public for anyone
+    else, and public for everyone while the setting is unset.
+    """
+    return knowledge_scope_for(owner_id, container.settings().autopilot_owner_user_id)
+
+
+def user_knowledge_scope(user_id: UUID | str) -> KnowledgeScope:
+    """What a knowledge search of ``user_id`` may read, using the app container."""
+    return conversation_knowledge_scope(user_id, get_container())
+
+
 def build_alter_ego_agent(
     db: AsyncSession, container: Container, scope: KnowledgeScope
 ) -> AlterEgoAgent:
@@ -165,7 +180,7 @@ def build_alter_ego_agent(
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
-        knowledge=AlterEgoKnowledge(
+        knowledge=ChatKnowledge(
             search=_build_knowledge_search(db, container), scope=scope
         ),
     )
@@ -365,7 +380,10 @@ def build_rag_agent(
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
-        knowledge_search=_build_knowledge_search(db, container),
+        knowledge=ChatKnowledge(
+            search=_build_knowledge_search(db, container),
+            scope=conversation_knowledge_scope(build_context.owner_user_id, container),
+        ),
         carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repo,
         editorial_subagent=editorial_subagent,
