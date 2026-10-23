@@ -1,6 +1,6 @@
 # AE-0535 — Chat polish: intro and suggested questions, auto-growing composer, Stop control
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Low
 Type: Improvement

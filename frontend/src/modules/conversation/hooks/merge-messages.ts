@@ -55,10 +55,11 @@ function isStoppedPartOf(message: Message, savedReplies: string[]): boolean {
 
 /**
  * The persisted history followed by the optimistic messages of the turn in
- * flight, minus those the history saved since the turn's question (an older row
- * with the same text, such as the same question asked earlier, never hides
- * one). A stopped part is dropped only once streaming is over: a reply still
- * being written is never hidden.
+ * flight, minus those the history saved since the turn's question (an older
+ * row with the same text, such as the same question asked more than a minute
+ * earlier, never hides one; within the clock-skew minute a repeat can be
+ * hidden until the history is re-read, never lost). A stopped part is dropped
+ * only once streaming is over: a reply still being written is never hidden.
  */
 export function mergeMessages(
   historyMessages: Message[],
