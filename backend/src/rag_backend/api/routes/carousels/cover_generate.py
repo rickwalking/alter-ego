@@ -44,7 +44,7 @@ from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_COVER_GENERATE,
     RATE_LIMIT_USER_STATE,
 )
-from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models import CarouselProject, User
 from rag_backend.domain.models.cover_generation import CoverGeneration
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
@@ -68,14 +68,18 @@ class CoverGenerationContext:
     service: CoverGenerationService
 
 
+def rate_limited_editor(request: Request, current_user: EditorUser) -> User:
+    """The caller, recorded on the request so the rate limit keys on them."""
+    setattr(request.state, RATE_LIMIT_USER_STATE, str(current_user.id))
+    return current_user.to_entity()
+
+
 async def get_cover_generation_context(
-    request: Request,
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: EditorUser,
+    current_user: Annotated[User, Depends(rate_limited_editor)],
 ) -> CoverGenerationContext:
-    """404 for an unknown carousel; the rate limit keys on the caller."""
-    setattr(request.state, RATE_LIMIT_USER_STATE, str(current_user.id))
+    """404 for an unknown carousel."""
     project = await CarouselAutomationAcl(db).load_project(str(project_id))
     if project is None:
         raise HTTPException(
@@ -177,4 +181,4 @@ async def start_cover_generation(
     return _generation(run.generation)
 
 
-__all__ = ["get_cover_generation_context", "router"]
+__all__ = ["get_cover_generation_context", "rate_limited_editor", "router"]
