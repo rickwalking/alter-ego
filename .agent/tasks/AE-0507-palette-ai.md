@@ -1,6 +1,6 @@
 # AE-0507 — Create a palette with AI
 
-Status: In Progress
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -8,7 +8,7 @@ Area: Backend + Frontend
 Owner: Claude Code (claude-opus-5-5)
 Branch: feat/ae-0507-palette-ai
 Created: 2026-10-22
-Updated: 2026-10-22
+Updated: 2026-10-23
 
 ## Goal
 
@@ -47,16 +47,16 @@ candidates; picking one pre-fills the form; nothing is saved until Criar.
 
 ## Acceptance Criteria
 
-- [ ] Given "Nova paleta", When the owner describes a palette and clicks "Gerar", Then
+- [x] Given "Nova paleta", When the owner describes a palette and clicks "Gerar", Then
       `POST /api/palettes/generate` returns up to 3 candidates with name, primary, accent, background,
       mode and keywords, each validated server-side (schema, hex, name, keywords).
-- [ ] Given a candidate, Then the slide ink/background, accent/background and primary/background pairs
+- [x] Given a candidate, Then the slide ink/background, accent/background and primary/background pairs
       reach WCAG AA 4.5:1; a failing colour is repaired server-side and a candidate that cannot be repaired
       is never returned.
-- [ ] Given candidates, When the owner clicks "Usar" on one, Then the manual form is pre-filled and nothing
+- [x] Given candidates, When the owner clicks "Usar" on one, Then the manual form is pre-filled and nothing
       is saved until "Criar paleta".
-- [ ] Given an LLM error/timeout/invalid answer, Then the API returns 503 and the modal shows a retryable
-      error while manual creation still works; the endpoint is rate-limited (5/minute) and requires login.
+- [x] Given an LLM error/timeout/invalid answer, Then the API returns 503 and the modal shows a retryable
+      error while manual creation still works; the endpoint is rate-limited (5/minute per user) and requires login.
 
 ## Gherkin Scenarios
 
@@ -80,6 +80,10 @@ None.
 ### 2026-10-22
 
 Ticket written from Pedro's decision; failing tests first.
+
+### 2026-10-23
+
+Rebased on main; the generator's rate limit keys on the user (AC: rate-limited per user). Dev Complete.
 
 ## Files Touched
 
