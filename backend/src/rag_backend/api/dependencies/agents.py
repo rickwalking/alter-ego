@@ -17,6 +17,11 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+from rag_backend.agents.alter_ego_knowledge import (
+    AlterEgoKnowledge,
+    KnowledgeScope,
+    knowledge_scope_for,
+)
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.carousel.editorial_subagent import (
@@ -107,12 +112,14 @@ def build_agent_for_conversation(
 
     Conversations with ``project_id`` metadata get the full RAGAgent
     (carousel tools + subagent). All others get the AlterEgoAgent
-    (personal knowledge base only).
+    (knowledge base only): public knowledge for an anonymous conversation,
+    personal and public knowledge for a signed-in user's.
     """
+    scope = knowledge_scope_for(conversation.user_id)
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
-        return build_alter_ego_agent(db, container)
+        return build_alter_ego_agent(db, container, scope)
     if conversation.user_id is None:
-        return build_alter_ego_agent(db, container)
+        return build_alter_ego_agent(db, container, scope)
     return build_rag_agent(
         db,
         container,
@@ -145,10 +152,12 @@ def _build_knowledge_search(db: AsyncSession, container: Container) -> Knowledge
     return bootstrap_module(platform=container, adapters=adapters)
 
 
-def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
+def build_alter_ego_agent(
+    db: AsyncSession, container: Container, scope: KnowledgeScope
+) -> AlterEgoAgent:
     """Build an AlterEgoAgent bound to the given per-request session.
 
-    This agent is scoped to personal knowledge base search ONLY.
+    This agent searches and lists the knowledge base within ``scope`` ONLY.
     It has ZERO carousel tools and cannot create or edit content.
     """
     return AlterEgoAgent(
@@ -156,7 +165,9 @@ def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAge
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
-        knowledge_search=_build_knowledge_search(db, container),
+        knowledge=AlterEgoKnowledge(
+            search=_build_knowledge_search(db, container), scope=scope
+        ),
     )
 
 

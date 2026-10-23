@@ -149,14 +149,16 @@ class TestAlterEgoChatStream:
     async def test_anonymous_user_streams_chat(
         self, client, test_conversation, mock_agent, monkeypatch
     ):
-        """Given no auth, when POST /chat/stream, then returns SSE token events."""
-        # Scenario: Anonymous user streams chat without any auth
+        """Given no auth, when POST /chat/stream, then returns SSE token events.
+
+        Scenario: Anonymous user streams chat without any auth
+        """
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
             chat_stream_module,
             "build_alter_ego_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, _scope: mock_agent,
         )
 
         response = await client.post(
@@ -175,14 +177,16 @@ class TestAlterEgoChatStream:
     async def test_empty_message_returns_error_event(
         self, client, test_conversation, mock_agent, monkeypatch
     ):
-        """Given empty content, when POST /chat/stream, then returns error SSE event."""
-        # Scenario: User sends empty message
+        """Given empty content, when POST /chat/stream, then returns error SSE event.
+
+        Scenario: User sends empty message
+        """
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
             chat_stream_module,
             "build_alter_ego_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, _scope: mock_agent,
         )
 
         response = await client.post(
@@ -196,14 +200,16 @@ class TestAlterEgoChatStream:
     async def test_nonexistent_conversation_returns_404(
         self, client, mock_agent, monkeypatch
     ):
-        """Given an unknown conversation id, when POST /chat/stream, then 404 before streaming."""
-        # Scenario: Chat for non-existent conversation
+        """Given an unknown conversation id, when POST /chat/stream, then 404 before streaming.
+
+        Scenario: Chat for non-existent conversation
+        """
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
             chat_stream_module,
             "build_alter_ego_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, _scope: mock_agent,
         )
 
         response = await client.post(
@@ -221,8 +227,10 @@ class TestPublishChatStream:
 
     @pytest.mark.asyncio
     async def test_anonymous_user_denied(self, client, test_conversation):
-        """Given no auth, when POST /publish-chat/stream, then returns 401."""
-        # Scenario: Anonymous user attempts publish chat
+        """Given no auth, when POST /publish-chat/stream, then returns 401.
+
+        Scenario: Anonymous user attempts publish chat
+        """
         response = await client.post(
             f"/api/conversations/{test_conversation}/publish-chat/stream",
             json={"content": "Hello"},
@@ -233,8 +241,10 @@ class TestPublishChatStream:
     async def test_non_carousel_conversation_returns_400(
         self, client, mock_agent, monkeypatch, test_user
     ):
-        """Given conversation without project_id, when POST /publish-chat/stream, then returns 400."""
-        # Scenario: Publish chat for non-carousel conversation
+        """Given conversation without project_id, when POST /publish-chat/stream, then returns 400.
+
+        Scenario: Publish chat for non-carousel conversation
+        """
         from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(

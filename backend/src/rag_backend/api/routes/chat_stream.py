@@ -34,6 +34,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+from rag_backend.agents.alter_ego_knowledge import KnowledgeScope, knowledge_scope_for
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.api.constants import (
     ERR_NOT_AUTHENTICATED,
@@ -93,14 +94,17 @@ class _AlterEgoAgentBuilder:
     construction through THIS module's ``build_alter_ego_agent`` name so the
     safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM — the knowledge-facade wiring stays identical.
+    The knowledge scope comes from the conversation: public knowledge only for an
+    anonymous one.
     """
 
-    def __init__(self, factory: LegacyChatAgentFactory) -> None:
+    def __init__(self, factory: LegacyChatAgentFactory, scope: KnowledgeScope) -> None:
         self._db = factory.session
         self._container = factory.container
+        self._scope = scope
 
     def build(self) -> AlterEgoAgent | RAGAgent:
-        return build_alter_ego_agent(self._db, self._container)
+        return build_alter_ego_agent(self._db, self._container, self._scope)
 
 
 class _RagAgentBuilder:
@@ -183,9 +187,10 @@ async def chat_stream(
     """Send a message to the Alter-Ego agent and stream the response via SSE.
 
     Anonymous visitors chat in the anonymous conversation their ``anon_token``
-    cookie was issued for. A conversation owned by a signed-in user accepts
-    messages only from its owner or an admin. Anyone else, like an unknown id,
-    gets 404 before the stream starts.
+    cookie was issued for, and the agent reads public knowledge only. A
+    conversation owned by a signed-in user accepts messages only from its owner
+    or an admin, and reads personal and public knowledge. Anyone else, like an
+    unknown id, gets 404 before the stream starts.
     """
     if db is None or handler is None or agent_factory is None:
         raise HTTPException(
@@ -193,7 +198,7 @@ async def chat_stream(
             detail="Database session not resolved",
         )
 
-    await _load_writable_conversation(db, conversation_id, caller)
+    conversation = await _load_writable_conversation(db, conversation_id, caller)
     await _enforce_message_cap(db, conversation_id)
 
     command = StreamChatCommand(
@@ -201,7 +206,9 @@ async def chat_stream(
         content=body.content,
         last_event_id=_parse_last_event_id(request),
     )
-    agent_builder = _AlterEgoAgentBuilder(agent_factory)
+    agent_builder = _AlterEgoAgentBuilder(
+        agent_factory, knowledge_scope_for(conversation.user_id)
+    )
 
     async def event_generator() -> AsyncIterator[str]:
         async for event in handler.stream(command, agent_builder):

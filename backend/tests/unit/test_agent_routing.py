@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+from rag_backend.agents.alter_ego_knowledge import PUBLIC_KNOWLEDGE
 from rag_backend.api.dependencies.agents import (
     RagAgentBuildContext,
     build_agent_for_conversation,
@@ -91,7 +92,7 @@ class TestMetadataRoutingDecision:
 
             agent = build_agent_for_conversation(conversation, db, container)
 
-            mock_build_alter.assert_called_once_with(db, container)
+            mock_build_alter.assert_called_once_with(db, container, PUBLIC_KNOWLEDGE)
             mock_build_rag.assert_not_called()
             assert agent == mock_build_alter.return_value
 
@@ -117,7 +118,7 @@ class TestMetadataRoutingDecision:
 
             agent = build_agent_for_conversation(conversation, db, container)
 
-            mock_build_alter.assert_called_once_with(db, container)
+            mock_build_alter.assert_called_once_with(db, container, PUBLIC_KNOWLEDGE)
             mock_build_rag.assert_not_called()
             assert agent == mock_build_alter.return_value
 

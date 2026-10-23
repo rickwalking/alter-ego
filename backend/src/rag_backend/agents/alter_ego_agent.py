@@ -1,8 +1,10 @@
 """LangChain Deep Agent implementation for the Alter-Ego public chat agent.
 
 This agent is intentionally stripped of ALL carousel/content-creation tools.
-It can only search the personal knowledge base (Pedro's CV, skills, blog posts)
-and answer questions about Pedro Marins' professional identity.
+It can only search the knowledge base (Pedro's CV, skills, blog posts) and
+answer questions about Pedro Marins' professional identity. What it may read
+depends on its ``KnowledgeScope``: public knowledge only for an anonymous
+visitor, personal and public knowledge for a signed-in user.
 """
 
 from collections.abc import AsyncIterator
@@ -13,6 +15,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.errors import GraphRecursionError
 
+from rag_backend.agents.alter_ego_knowledge import AlterEgoKnowledge
 from rag_backend.agents.chat_fallback import no_knowledge_reply
 from rag_backend.agents.chat_streaming import (
     chat_event_from_stream,
@@ -36,7 +39,6 @@ from rag_backend.domain.constants.chat_stream import (
     ALTER_EGO_SEARCH_BUDGET,
     SSE_EVENT_TOKEN,
 )
-from rag_backend.domain.constants.namespaces import NAMESPACE_PERSONAL
 from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import (
     Message,
@@ -77,9 +79,9 @@ class AlterEgoAgent:
     """Deep Agent for public-facing Alter-Ego chat.
 
     Security-critical: this agent has ZERO carousel tools. It can only
-    search the personal knowledge base. Anonymous visitors, editors, and
-    admins all interact with the same agent for chat — the difference is
-    in what routes they can access, not in the agent's toolset.
+    search and list the knowledge base, limited to its knowledge scope:
+    anonymous visitors get public knowledge only, signed-in users personal
+    and public knowledge.
     """
 
     def __init__(
@@ -88,7 +90,7 @@ class AlterEgoAgent:
         retriever: Retriever,
         message_repository: MessageRepository,
         document_repository: DocumentRepository,
-        knowledge_search: KnowledgeSearchPort | None = None,
+        knowledge: AlterEgoKnowledge | None = None,
     ) -> None:
         """Build the chat agent on the shared deep-agent harness.
 
@@ -97,14 +99,17 @@ class AlterEgoAgent:
         routes this chat config through that guard, and the summarization middleware
         caps context-window growth without touching message_repository persistence. No
         subagents are registered: chat never delegates to the carousel pipeline.
+        Without ``knowledge`` the agent reads public knowledge only.
         """
+        knowledge = knowledge if knowledge is not None else AlterEgoKnowledge()
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
         self._document_repository = document_repository
+        self._scope = knowledge.scope
         self._knowledge_search: KnowledgeSearchPort = (
-            knowledge_search
-            if knowledge_search is not None
+            knowledge.search
+            if knowledge.search is not None
             else RetrieverSearchAdapter(retriever)
         )
 
@@ -132,19 +137,19 @@ class AlterEgoAgent:
             return _ALTER_EGO_FALLBACK_PROMPT
 
     def _build_tools(self) -> list[BaseTool]:
-        """Assemble Alter-Ego tools — personal docs ONLY."""
+        """Assemble Alter-Ego tools, limited to the agent's knowledge scope."""
         return [
             build_search_documents_tool(
                 self._knowledge_search,
                 SearchToolOptions(
                     top_k=10,
-                    namespace_prefix="personal",
+                    namespace_prefix=self._scope.namespace_prefix,
                     max_calls=ALTER_EGO_SEARCH_BUDGET,
                 ),
             ),
             build_list_documents_tool(
                 self._document_repository,
-                scope_filter=NAMESPACE_PERSONAL,
+                scope_filter=self._scope.document_scopes,
             ),
         ]
 
@@ -282,7 +287,11 @@ class AlterEgoAgent:
         yield {"type": "complete", "content": response}
 
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
-        """Search for relevant documents (scoped to personal + public)."""
+        """Search for relevant documents within the agent's knowledge scope."""
         return await self._retriever.retrieve(
-            RetrievalQuery(query=query, top_k=top_k, namespace_prefix="personal")
+            RetrievalQuery(
+                query=query,
+                top_k=top_k,
+                namespace_prefix=self._scope.namespace_prefix,
+            )
         )
