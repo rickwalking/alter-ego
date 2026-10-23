@@ -15,11 +15,12 @@ import {
 } from "@/lib/sse-event-data";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
-import { classifyChatError } from "../chat-errors";
+import { classifyChatError, type ChatFailure } from "../chat-errors";
 import {
   CHAT_ERROR_KIND,
+  CHAT_FAILURE_STAGE,
   CHAT_SEND_RESULT,
-  type ChatErrorKind,
+  type ChatFailureStage,
   type ChatSendResult,
 } from "../constants";
 import type {
@@ -27,6 +28,7 @@ import type {
   ChatTurnCallbacks,
   ConversationTarget,
   SendChatDeps,
+  StreamTurnRequest,
   TurnCallbackDeps,
   TurnOutcome,
   TurnRun,
@@ -154,7 +156,8 @@ function chatTurnHandlers(
         withAssistantSources(prev, streamedSources(data)),
       ),
     [SSE_EVENT_TYPE.COMPLETE]: () => turn.finalizeStream(convId),
-    [SSE_EVENT_TYPE.ERROR]: () => turn.fail(CHAT_ERROR_KIND.GENERIC),
+    [SSE_EVENT_TYPE.ERROR]: () =>
+      turn.fail({ kind: CHAT_ERROR_KIND.GENERIC, retryable: false }),
   };
 }
 
@@ -181,9 +184,9 @@ function turnCallbacks(
     appendToken: stream.appendToken,
     setOptimisticMessages: stream.setOptimisticMessages,
     finalizeStream,
-    fail: (kind) => {
+    fail: (failure) => {
       outcome.failed = true;
-      setError(kind);
+      setError(failure);
       stream.setIsStreaming(false);
       stream.resetStreamingRefs();
     },
@@ -194,6 +197,30 @@ function turnResult(outcome: TurnOutcome, signal: AbortSignal): ChatSendResult {
   if (outcome.failed) return CHAT_SEND_RESULT.FAILED;
   if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
   return CHAT_SEND_RESULT.SENT;
+}
+
+/**
+ * Request the answer stream and fold its events in. A failure counts as
+ * "requesting" until the server answered 200, then as "streaming".
+ */
+async function streamTurn({
+  turn,
+  convId,
+  content,
+  signal,
+}: StreamTurnRequest): Promise<void> {
+  let stage: ChatFailureStage = CHAT_FAILURE_STAGE.REQUESTING;
+  await streamSseEvents({
+    url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
+    body: { content },
+    signal,
+    onOpen: () => {
+      stage = CHAT_FAILURE_STAGE.STREAMING;
+    },
+    onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
+    onError: (err) => turn.fail(classifyChatError(err, stage)),
+    onComplete: () => turn.finalizeStream(convId),
+  });
 }
 
 /** Stream one user turn into the conversation, folding each SSE event in. */
@@ -218,18 +245,12 @@ function useRunChatTurn(
       try {
         convId = await resolveConversationId(target, signal);
       } catch (error) {
-        turn.fail(classifyChatError(error));
+        if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
+        turn.fail(classifyChatError(error, CHAT_FAILURE_STAGE.CREATING));
         return CHAT_SEND_RESULT.FAILED;
       }
       if (signal.aborted) return CHAT_SEND_RESULT.IGNORED;
-      await streamSseEvents({
-        url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
-        body: { content },
-        signal,
-        onEvent: dispatchSseEvent(chatTurnHandlers(turn, convId)),
-        onError: (err) => turn.fail(classifyChatError(err)),
-        onComplete: () => finalizeStream(convId),
-      });
+      await streamTurn({ turn, convId, content, signal });
       return turnResult(outcome, signal);
     },
     [
@@ -306,7 +327,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     STREAM_MESSAGE_ID_PREFIX,
   );
   const { optimisticMessages, isStreaming } = stream;
-  const [error, setError] = useState<ChatErrorKind | null>(null);
+  const [failure, setError] = useState<ChatFailure | null>(null);
   const conversationId = options.conversationId ?? null;
   const loadHistory = options.enableHistory !== false;
   const { finalizedRef, turnRef, finalizeStream } = useFinalizeStream(
@@ -335,7 +356,8 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     conversationId,
     messages,
     isStreaming,
-    error,
+    error: failure?.kind ?? null,
+    canRetry: failure?.retryable ?? false,
     sendMessage,
     isBusy,
     startNewChat,

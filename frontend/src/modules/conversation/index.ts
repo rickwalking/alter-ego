@@ -38,10 +38,11 @@ export {
 
 export {
   CHAT_ERROR_KIND,
+  CHAT_FAILURE_STAGE,
   CHAT_LENGTH_COUNTER_RATIO,
   CHAT_MESSAGE_MAX_LENGTH,
   CHAT_SEND_RESULT,
   type ChatErrorKind,
   type ChatSendResult,
 } from "./constants";
-export { classifyChatError } from "./chat-errors";
+export { classifyChatError, type ChatFailure } from "./chat-errors";

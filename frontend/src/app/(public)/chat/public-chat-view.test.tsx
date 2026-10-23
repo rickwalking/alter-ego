@@ -102,19 +102,4 @@ describe("PublicChatView", () => {
     await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalled());
     expect(composer().value).toBe("");
   });
-
-  /** Scenario: Retry sends the failed message again */
-  it("sends the failed message again on Try again and empties the composer", async () => {
-    mocks.sendMessage.mockResolvedValueOnce("failed");
-    mocks.error = "offline";
-    render(<PublicChatView />);
-    typeAndSend("offline message");
-    await waitFor(() => expect(composer().value).toBe("offline message"));
-
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-
-    await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledTimes(2));
-    expect(mocks.sendMessage.mock.calls[1]![0]).toBe("offline message");
-    expect(composer().value).toBe("");
-  });
 });

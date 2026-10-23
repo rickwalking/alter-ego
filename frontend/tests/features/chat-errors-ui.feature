@@ -36,3 +36,17 @@ Feature: Chat errors and message limits in the UI
     When my send is rejected because the conversation is not found
     Then the chat says "This conversation is no longer available. Start a new chat."
     And a "Start a new chat" button opens a fresh conversation
+
+  Scenario: A full conversation offers a new chat instead of a retry
+    When the server answers 429 (this chat is full or too many messages)
+    Then the chat offers "Start a new chat" and no "Try again"
+
+  Scenario: Retry is offered only when nothing was saved yet
+    When a send fails before the server answered (offline, or a 5xx before the stream)
+    Then "Try again" is offered and sends the message once more
+    When a send fails after the answer had started
+    Then only "Start a new chat" is offered, so the question is never stored twice
+
+  Scenario: A double click sends the message once
+    When I press Send twice quickly
+    Then one message is sent and the composer is not restored with already-sent text

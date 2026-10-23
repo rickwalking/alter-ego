@@ -25,6 +25,7 @@ export function PublicChatView(): React.ReactElement {
     messages: sseMessages,
     isStreaming,
     error: sseError,
+    canRetry,
     sendMessage,
     isBusy,
     startNewChat,
@@ -33,7 +34,7 @@ export function PublicChatView(): React.ReactElement {
     enableHistory: false,
   });
 
-  const { input, setInput, handleSend, retry } = useChatSend({
+  const { input, setInput, handleSend, retry, forgetFailed } = useChatSend({
     conversationId: activeConv,
     isStreaming,
     sendMessage,
@@ -49,8 +50,9 @@ export function PublicChatView(): React.ReactElement {
   const handleNewChat = useCallback(() => {
     setActiveConv(null);
     setInput("");
+    forgetFailed();
     startNewChat();
-  }, [startNewChat, setInput]);
+  }, [startNewChat, setInput, forgetFailed]);
 
   return (
     <div
@@ -61,6 +63,7 @@ export function PublicChatView(): React.ReactElement {
       {sseError && (
         <ChatErrorBanner
           kind={sseError}
+          canRetry={canRetry}
           onRetry={() => void retry()}
           onNewChat={handleNewChat}
         />

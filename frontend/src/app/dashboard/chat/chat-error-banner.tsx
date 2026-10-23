@@ -9,21 +9,16 @@ import {
 } from "@/modules/conversation";
 import type { ChatErrorBannerProps } from "./types";
 
-const NO_RETRY: ReadonlySet<string> = new Set([
-  CHAT_ERROR_KIND.TOO_LONG,
-  CHAT_ERROR_KIND.NOT_FOUND,
-  CHAT_ERROR_KIND.SESSION_EXPIRED,
-]);
-
 /**
- * The failed turn, in plain localized words, with the one action that helps:
- * Retry, or Sign in when the session expired. Technical detail stays in logs.
- * (A dashboard 404 also re-checks the session: an expired one redirects to the
- * login page, see the dashboard chat view.)
+ * The failed turn, in plain localized words, with the actions that can help:
+ * Try again only when nothing was saved yet (``canRetry``), Sign in when the
+ * session expired, and Start a new chat whenever the view offers one (the way
+ * out of a full or gone conversation). Technical detail stays in logs.
  */
 export function ChatErrorBanner({
   kind,
   loginRedirect,
+  canRetry = false,
   onRetry,
   onNewChat,
 }: Readonly<ChatErrorBannerProps>): React.ReactElement {
@@ -42,14 +37,14 @@ export function ChatErrorBanner({
           {t("signIn")}
         </Link>
       )}
-      {kind === CHAT_ERROR_KIND.NOT_FOUND && onNewChat && (
-        <button type="button" onClick={onNewChat} className="underline">
-          {t("newChat")}
-        </button>
-      )}
-      {!NO_RETRY.has(kind) && (
+      {canRetry && (
         <button type="button" onClick={onRetry} className="underline">
           {t("retry")}
+        </button>
+      )}
+      {onNewChat && (
+        <button type="button" onClick={onNewChat} className="underline">
+          {t("newChat")}
         </button>
       )}
     </div>

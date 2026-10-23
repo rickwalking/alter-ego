@@ -7,6 +7,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act } from "@testing-library/react";
 
+import { SseHttpError } from "@/lib/sse-http-error";
+
 vi.mock("@/modules/conversation/hooks/use-chat", () => ({
   useConversationMessages: vi.fn(),
 }));
@@ -248,5 +250,56 @@ describe("useSseChat turns", () => {
       await Promise.resolve();
     });
     expect(result.current.isBusy()).toBe(false);
+  });
+
+  /** Scenario: Retry is offered only when nothing was saved yet */
+  it("ignores a conversation creation that fails after New chat", async () => {
+    controllableStream();
+    let rejectCreation: ((error: Error) => void) | undefined;
+    const creation = new Promise<string>((_resolve, reject) => {
+      rejectCreation = reject;
+    });
+    const { result } = renderChat({ conversationId: null });
+
+    let outcome: Promise<string> = Promise.resolve("");
+    act(() => {
+      outcome = result.current.sendMessage("hi", () => creation);
+    });
+    act(() => result.current.startNewChat());
+    await act(async () => {
+      rejectCreation?.(new TypeError("Failed to fetch"));
+      await outcome;
+    });
+
+    expect(await outcome).toBe("ignored");
+    expect(result.current.error).toBeNull();
+  });
+
+  /** Scenario: Retry is offered only when nothing was saved yet */
+  it("allows a retry only for a failure before the stream opened", async () => {
+    const stream = controllableStream();
+    const { result } = renderChat({ conversationId: CONV_ID });
+
+    await act(async () => {
+      void result.current.sendMessage("before");
+      await Promise.resolve();
+    });
+    act(() => stream.last()!.opts.onError?.(new SseHttpError(503)));
+    expect(result.current.canRetry).toBe(true);
+    await act(async () => {
+      stream.last()!.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      void result.current.sendMessage("after");
+      await Promise.resolve();
+    });
+    act(() => {
+      stream.last()!.opts.onOpen?.();
+      stream.last()!.opts.onError?.(new TypeError("network error"));
+    });
+    expect(result.current.error).toBe("generic");
+    expect(result.current.canRetry).toBe(false);
   });
 });

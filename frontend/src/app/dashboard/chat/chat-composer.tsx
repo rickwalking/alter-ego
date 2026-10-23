@@ -31,7 +31,6 @@ function LengthCounter({
   return (
     <p
       id={id}
-      aria-live="polite"
       style={{
         margin: "6px 0 0",
         fontSize: "12px",

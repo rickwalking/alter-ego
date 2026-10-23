@@ -70,6 +70,8 @@ interface SseStreamOptions {
   onEvent: (event: SseEvent) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
+  /** Called once the server answered 200 with an event stream (before any event). */
+  onOpen?: () => void;
 }
 
 /**
@@ -381,6 +383,7 @@ export async function streamSseEvents(
 ): Promise<void> {
   try {
     const reader = await openSseStream(options);
+    options.onOpen?.();
     await pumpSseEvents(reader, options.onEvent);
     options.onComplete?.();
   } catch (error) {

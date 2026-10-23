@@ -21,10 +21,9 @@ describe("ChatErrorBanner", () => {
   /** Scenario: Each failure shows a plain, localized message */
   it.each([
     ["offline", /you seem to be offline/i],
-    ["limit", /too many messages/i],
     ["generic", /something went wrong/i],
   ] as const)("explains %s in plain words with a Retry", (kind, text) => {
-    const { onRetry } = renderBanner({ kind });
+    const { onRetry } = renderBanner({ kind, canRetry: true });
 
     expect(screen.getByRole("alert")).toHaveTextContent(text);
     expect(screen.getByRole("alert")).not.toHaveTextContent(/HTTP|fetch/);
@@ -72,5 +71,28 @@ describe("ChatErrorBanner", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Start a new chat" }));
     expect(onNewChat).toHaveBeenCalledOnce();
+  });
+
+  /** Scenario: A full conversation offers a new chat instead of a retry */
+  it("offers a new chat, not a retry, when the conversation is full", () => {
+    const onNewChat = vi.fn();
+    renderBanner({ kind: "limit", onNewChat });
+    expect(screen.getByRole("alert")).toHaveTextContent(/too many messages/i);
+    expect(
+      screen.queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start a new chat" }));
+    expect(onNewChat).toHaveBeenCalledOnce();
+  });
+
+  /** Scenario: Retry is offered only when nothing was saved yet */
+  it("offers only a new chat after a failure once the answer had started", () => {
+    renderBanner({ kind: "generic", canRetry: false, onNewChat: vi.fn() });
+    expect(
+      screen.queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Start a new chat" }),
+    ).toBeInTheDocument();
   });
 });

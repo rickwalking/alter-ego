@@ -42,6 +42,7 @@ export function DashboardChatView(): React.ReactElement {
     messages: sseMessages,
     isStreaming,
     error: sseError,
+    canRetry,
     sendMessage,
     isBusy,
     startNewChat,
@@ -65,7 +66,7 @@ export function DashboardChatView(): React.ReactElement {
     setActiveConv(id);
     setIsComposingNew(false);
   }, []);
-  const { input, setInput, handleSend, retry } = useChatSend({
+  const { input, setInput, handleSend, retry, forgetFailed } = useChatSend({
     conversationId: effectiveConvId,
     isStreaming,
     sendMessage,
@@ -77,8 +78,9 @@ export function DashboardChatView(): React.ReactElement {
     setActiveConv(null);
     setIsComposingNew(true);
     setInput("");
+    forgetFailed();
     startNewChat();
-  }, [startNewChat, setInput]);
+  }, [startNewChat, setInput, forgetFailed]);
 
   const handleSelectConversation = useCallback(
     (id: string) => {
@@ -105,6 +107,7 @@ export function DashboardChatView(): React.ReactElement {
         <ChatErrorBanner
           kind={sseError}
           loginRedirect={DASHBOARD_ROUTES.CHAT}
+          canRetry={canRetry}
           onRetry={() => void retry()}
           onNewChat={handleNewChat}
         />

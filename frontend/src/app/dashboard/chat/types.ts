@@ -23,13 +23,17 @@ export interface UseChatSendReturn {
   handleSend: () => Promise<void>;
   /** Send the last failed message again. */
   retry: () => Promise<void>;
+  /** Forget the failed message (New chat). */
+  forgetFailed: () => void;
 }
 
 export interface ChatErrorBannerProps {
   kind: ChatErrorKind;
   /** Where to come back to after signing in again. */
   loginRedirect?: string;
+  /** Nothing was saved yet, so Try again is offered. */
+  canRetry?: boolean;
   onRetry: () => void;
-  /** Offered when the conversation is gone (expired visitor token, deleted). */
+  /** Always offered when given: the way out of a full or gone conversation. */
   onNewChat?: () => void;
 }

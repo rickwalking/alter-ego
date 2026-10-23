@@ -28,3 +28,13 @@ export const CHAT_ERROR_KIND = {
 
 export type ChatErrorKind =
   (typeof CHAT_ERROR_KIND)[keyof typeof CHAT_ERROR_KIND];
+
+/** Where a chat turn failed, which decides whether a retry is safe. */
+export const CHAT_FAILURE_STAGE = {
+  CREATING: "creating",
+  REQUESTING: "requesting",
+  STREAMING: "streaming",
+} as const;
+
+export type ChatFailureStage =
+  (typeof CHAT_FAILURE_STAGE)[keyof typeof CHAT_FAILURE_STAGE];

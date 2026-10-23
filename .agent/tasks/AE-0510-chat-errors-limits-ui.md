@@ -42,6 +42,17 @@ Found by the /chat QA:
 - Composer `maxLength=2000` and an "n of 2000 characters" counter from 1600 characters (`aria-describedby`);
   `chatRequestSchema` max is 2000 (`CHAT_MESSAGE_MAX_LENGTH`).
 
+- Review of #248 (Pedro, 2026-10-22):
+  - "Start a new chat" is offered with every error whenever the view has a new chat; a full conversation (429)
+    offers it instead of Try again.
+  - Try again only when nothing was saved yet: a failure creating the conversation or before the stream answered
+    (offline, or a 5xx before the 200). Once the answer stream had started the server already stored the question
+    (and closes the turn itself), so only a new chat is offered (`ChatFailure.retryable`, SSE client `onOpen`).
+  - A `TypeError` is offline only when the browser is offline or fetch failed before any response.
+  - 422 means tooLong only for the stream request.
+  - New chat forgets the failed message, and a conversation creation that fails after New chat is ignored.
+  - The length counter is no longer a live region (the textarea's `aria-describedby` announces it).
+
 ## Non-Goals
 
 - Localizing the rest of the chat UI (separate a11y + i18n PR).
