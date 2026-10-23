@@ -1,17 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { Message } from "@/schemas/chat";
 import { mergeMessages } from "./merge-messages";
-import type { UseSseChatReturn } from "./types";
-
-interface TurnMessagesInput {
-  historyMessages: Message[];
-  optimisticMessages: Message[];
-  isStreaming: boolean;
-  sendTurn: UseSseChatReturn["sendMessage"];
-  isBusy: () => boolean;
-}
+import type { TurnMessagesInput, UseSseChatReturn } from "./types";
 
 /**
  * The messages on screen, and a send that remembers where in the history its
