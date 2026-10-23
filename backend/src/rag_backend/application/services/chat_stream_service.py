@@ -123,7 +123,7 @@ async def _setup_message_repos(
     conversation_id: UUID,
     content: str,
 ) -> tuple[PostgresMessageRepository, object | None]:
-    """Set up repos, validate conversation, persist user message."""
+    """Set up repos, validate conversation, title it if new, persist user message."""
     conv_repo = PostgresConversationRepository(db)
     msg_repo = PostgresMessageRepository(db)
     conversation_service = ConversationService(
@@ -133,6 +133,8 @@ async def _setup_message_repos(
     conversation = await conversation_service.get_conversation(conversation_id)
     if conversation is None:
         return msg_repo, None
+    if conversation.ensure_title_from(content):
+        await conv_repo.update(conversation)
     user_message = Message(
         role=MessageRole.USER,
         content=content.strip(),

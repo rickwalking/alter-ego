@@ -48,7 +48,7 @@ describe("useSseChat turns", () => {
       return { promise, resolve, reject };
     }
 
-    // Scenario: A double send while the conversation is being created sends one message
+    /** Scenario: A double send while the conversation is being created sends one message */
     it("creates one conversation and streams once on a double send", async () => {
       const stream = controllableStream();
       const creation = deferred();
@@ -76,7 +76,7 @@ describe("useSseChat turns", () => {
       expect(await first).toBe("sent");
     });
 
-    // Scenario: The message shows as pending while the conversation is created
+    /** Scenario: The message shows as pending while the conversation is created */
     it("shows the user bubble and streaming state before the conversation exists", () => {
       const stream = controllableStream();
       const creation = deferred();
@@ -93,7 +93,7 @@ describe("useSseChat turns", () => {
       ]);
     });
 
-    // Scenario: A failed send keeps the bubble and gives the text back
+    /** Scenario: A failed send keeps the bubble and gives the text back */
     it("keeps the bubble and reports failure when creating the conversation fails", async () => {
       controllableStream();
       const { result } = renderChat({ conversationId: null });
@@ -113,7 +113,7 @@ describe("useSseChat turns", () => {
       ]);
     });
 
-    // Scenario: A failed send keeps the bubble and gives the text back
+    /** Scenario: A failed send keeps the bubble and gives the text back */
     it("reports failure when the stream errors", async () => {
       const stream = controllableStream();
       const { result } = renderChat({ conversationId: CONV_ID });
@@ -132,7 +132,7 @@ describe("useSseChat turns", () => {
       ]);
     });
 
-    // Scenario: Resending after a failure replaces the failed bubble
+    /** Scenario: Resending after a failure replaces the failed bubble */
     it("replaces the unanswered bubble when the user sends again", async () => {
       const stream = controllableStream();
       const { result } = renderChat({
@@ -181,7 +181,7 @@ describe("useSseChat turns", () => {
     });
   });
 
-  // Scenario: A double send while the conversation is being created sends one message
+  /** Scenario: A double send while the conversation is being created sends one message */
   it("hands the creator the turn's signal, aborted by New chat", async () => {
     controllableStream();
     const create = vi.fn(
@@ -201,7 +201,7 @@ describe("useSseChat turns", () => {
     expect(signal.aborted).toBe(true);
   });
 
-  // Scenario: Tokens that arrive in one batch render once, in order
+  /** Scenario: Tokens that arrive in one batch render once, in order */
   it("keeps a newer turn's bubble when the previous turn's refetch lands", async () => {
     const stream = controllableStream();
     const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
@@ -233,7 +233,7 @@ describe("useSseChat turns", () => {
     expect(result.current.messages.map((m) => m.content)).toContain("second");
   });
 
-  // Scenario: A double send while the conversation is being created sends one message
+  /** Scenario: A double send while the conversation is being created sends one message */
   it("reports busy synchronously while a turn is in flight", async () => {
     const stream = controllableStream();
     const { result } = renderChat({ conversationId: CONV_ID });
@@ -301,5 +301,27 @@ describe("useSseChat turns", () => {
     });
     expect(result.current.error).toBe("generic");
     expect(result.current.canRetry).toBe(false);
+  });
+
+  /** Scenario: A reply that was still streaming appears after a refresh */
+  it("reports a reply the server is still writing after a refresh", () => {
+    setHistory([
+      {
+        id: "m1",
+        role: "user",
+        content: "QA test",
+        sources: [],
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    const { result } = renderChat({ conversationId: CONV_ID });
+    expect(result.current.awaitingReply).toBe(true);
+    expect(result.current.isStreaming).toBe(false);
+  });
+
+  /** Scenario: Polling stops when nothing is awaited */
+  it("does not wait without history", () => {
+    const { result } = renderChat({ conversationId: CONV_ID });
+    expect(result.current.awaitingReply).toBe(false);
   });
 });

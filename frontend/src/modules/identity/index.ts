@@ -24,6 +24,7 @@
 export type { AccessTokenPayload, AuthUser, UseAuthResult } from "./types";
 
 export { verifyAccessToken, decodeJwtPayloadUnsafe } from "./lib/jwt-auth";
+export { isLiveSession } from "./lib/live-session";
 
 export {
   setAccessTokenCookie,

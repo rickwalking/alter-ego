@@ -29,25 +29,32 @@ describe("chat adapter times (AE-0417)", () => {
     vi.useRealTimers();
   });
 
-  // Scenario: Chat conversations show relative times in the active locale
+  /** Scenario: Chat conversations show relative times in the active locale */
   it("shows a conversation's last update relative to now, per locale", () => {
     const conversation = makeConversation({});
-    expect(mapConversationToDashboard(conversation, 0, "pt").time).toBe(
-      "há 3 h",
-    );
-    expect(mapConversationToDashboard(conversation, 0, "en").time).toBe(
-      "3h ago",
-    );
+    expect(
+      mapConversationToDashboard(conversation, "pt", "Nova conversa").time,
+    ).toBe("há 3 h");
+    expect(
+      mapConversationToDashboard(conversation, "en", "New conversation").time,
+    ).toBe("3h ago");
   });
 
-  it("keeps the palette rotation and title fallback", () => {
-    const mapped = mapConversationToDashboard(
+  /** Scenario: Conversations show their real titles and no invented avatars */
+  it("uses the title, falls back to the untitled label, and has no avatar", () => {
+    const untitled = mapConversationToDashboard(
       makeConversation({ title: "  " }),
-      4,
       "pt",
+      "Nova conversa",
     );
-    expect(mapped.name).toBe("New conversation");
-    expect(mapped.avatar).toBe("KB");
+    expect(untitled).toEqual({
+      id: "conv-1",
+      name: "Nova conversa",
+      time: "há 3 h",
+    });
+    expect(
+      mapConversationToDashboard(makeConversation({}), "pt", "x").name,
+    ).toBe("Pauta de outubro");
   });
 
   it("shows a message's clock time per locale", () => {

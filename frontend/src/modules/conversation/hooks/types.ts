@@ -31,6 +31,8 @@ export interface UseSseChatReturn {
   conversationId: string | null;
   messages: Message[];
   isStreaming: boolean;
+  /** The history ends with a message whose reply the server is still writing. */
+  awaitingReply: boolean;
   /** What went wrong with the last turn, or null. */
   error: ChatErrorKind | null;
   /** Whether Try again can help: nothing was saved yet (no answer had started). */

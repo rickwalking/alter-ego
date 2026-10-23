@@ -28,6 +28,7 @@ export function DashboardChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const locale = useLocale();
   const t = useTranslations("chat");
+  const untitled = t("sidebar.untitled");
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
   useMenuButtonHidden(convDrawer.open);
@@ -44,6 +45,7 @@ export function DashboardChatView(): React.ReactElement {
   const {
     messages: sseMessages,
     isStreaming,
+    awaitingReply,
     error: sseError,
     canRetry,
     sendMessage,
@@ -54,10 +56,10 @@ export function DashboardChatView(): React.ReactElement {
 
   const sidebarConversations = useMemo(
     () =>
-      conversations.map((conversation, index) =>
-        mapConversationToDashboard(conversation, index, locale),
+      conversations.map((conversation) =>
+        mapConversationToDashboard(conversation, locale, untitled),
       ),
-    [conversations, locale],
+    [conversations, locale, untitled],
   );
 
   const displayMessages = useMemo(
@@ -146,7 +148,7 @@ export function DashboardChatView(): React.ReactElement {
         >
           <ChatMessageList
             messages={displayMessages}
-            isStreaming={isStreaming}
+            isStreaming={isStreaming || awaitingReply}
           />
           <ChatComposer
             value={input}

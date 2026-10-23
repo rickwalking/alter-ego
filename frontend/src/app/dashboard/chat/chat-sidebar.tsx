@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
@@ -30,6 +30,24 @@ export interface ChatSidebarProps {
   id?: string;
 }
 
+/** Case- and accent-insensitive form used to match a search query. */
+function searchable(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase();
+}
+
+/** The conversations whose title contains the query (all when it is blank). */
+export function filterConversations(
+  conversations: DashboardConversation[],
+  query: string,
+): DashboardConversation[] {
+  const needle = searchable(query.trim());
+  if (!needle) return conversations;
+  return conversations.filter((conv) => searchable(conv.name).includes(needle));
+}
+
 /**
  * Below md the list is an off-canvas drawer; at md+ it is a persistent 280px
  * pane, so the focus trap and scroll lock never engage there even if `open` is
@@ -48,6 +66,11 @@ export function ChatSidebar({
   const isOpen = open === true;
   const isDrawer = useMediaQuery(CHAT_DRAWER_MEDIA_QUERY);
   const drawerActive = isOpen && isDrawer;
+  const [query, setQuery] = useState("");
+  const visible = useMemo(
+    () => filterConversations(conversations, query),
+    [conversations, query],
+  );
 
   useFocusTrap(ref, drawerActive);
   useScrollLock(drawerActive);
@@ -75,6 +98,9 @@ export function ChatSidebar({
       >
         <input
           type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label={t("searchLabel")}
           placeholder={t("searchPlaceholder")}
           style={{
             width: "100%",
@@ -90,7 +116,18 @@ export function ChatSidebar({
         />
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-        {conversations.map((conv) => (
+        {visible.length === 0 && query.trim() !== "" && (
+          <p
+            style={{
+              padding: "10px 12px",
+              fontSize: "12px",
+              color: DASHBOARD_CHAT_TEXT_DIM,
+            }}
+          >
+            {t("noMatches")}
+          </p>
+        )}
+        {visible.map((conv) => (
           <div
             key={conv.id}
             role="button"
@@ -115,24 +152,6 @@ export function ChatSidebar({
               transition: "background 0.2s",
             }}
           >
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: DASHBOARD_CHAT_MONO_FONT,
-                fontSize: "12px",
-                fontWeight: 700,
-                flexShrink: 0,
-                background: conv.bg,
-                color: conv.color,
-              }}
-            >
-              {conv.avatar}
-            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
@@ -146,18 +165,6 @@ export function ChatSidebar({
               >
                 {conv.name}
               </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: DASHBOARD_CHAT_TEXT_DIM,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  marginTop: "2px",
-                }}
-              >
-                {conv.preview}
-              </div>
             </div>
             <div
               style={{
@@ -169,17 +176,6 @@ export function ChatSidebar({
             >
               {conv.time}
             </div>
-            {conv.unread && (
-              <div
-                style={{
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  background: DASHBOARD_CHAT_CYAN,
-                  flexShrink: 0,
-                }}
-              />
-            )}
           </div>
         ))}
       </div>

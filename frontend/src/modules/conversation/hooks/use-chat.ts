@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { type Conversation } from "@/schemas/chat";
+import { replyPollInterval } from "@/modules/conversation/reply-wait";
 import {
   chatKeys,
   conversationMessagesOptions,
@@ -21,8 +22,22 @@ export function useConversation(conversationId: string | null) {
   return useQuery(conversationOptions(conversationId));
 }
 
-export function useConversationMessages(conversationId: string | null) {
-  return useQuery(conversationMessagesOptions(conversationId));
+/**
+ * The conversation's persisted messages. With ``pollUntilReply`` the history
+ * is re-read every few seconds while it ends with an unanswered user message
+ * (a reply the server is still writing, e.g. after a refresh mid-stream).
+ */
+export function useConversationMessages(
+  conversationId: string | null,
+  pollUntilReply = false,
+) {
+  return useQuery({
+    ...conversationMessagesOptions(conversationId),
+    refetchInterval: pollUntilReply
+      ? (query) =>
+          replyPollInterval(query.state.data, query.state.dataUpdateCount)
+      : false,
+  });
 }
 
 export function useCreateConversation() {

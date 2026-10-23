@@ -157,7 +157,10 @@ describe("useSseChat", () => {
     stream.complete();
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
-    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    const historyRefetches = invalidateSpy.mock.calls.filter(
+      ([filters]) => filters?.queryKey?.[0] === "messages",
+    );
+    expect(historyRefetches).toHaveLength(1);
   });
 
   it("startNewChat aborts the in-flight stream and resets state", async () => {
