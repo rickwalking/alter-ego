@@ -1,6 +1,6 @@
 # AE-0504 — Select a rubric for carousel generation and show its scores
 
-Status: Dev Complete
+Status: Review
 Tier: T3
 Priority: Medium
 Type: Feature
@@ -115,6 +115,8 @@ Full backend (with Postgres) and frontend gate captures green; mutation in CI. T
 Pedro's go-ahead. See the dev summary.
 
 ## QA Report
+
+External QA: round 1 WARN (0 blockers), fixed; confirmation PASS. See `.agent/reports/AE-0504.qa.md`.
 
 ## Blockers
 
