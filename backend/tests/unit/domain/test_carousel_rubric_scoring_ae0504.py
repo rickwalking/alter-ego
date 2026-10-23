@@ -119,3 +119,16 @@ def test_a_rubric_without_criteria_never_passes() -> None:
         CarouselRubric(id="empty", name="Empty", criteria=()), []
     )
     assert (evaluation.overall_score, evaluation.passed) == (0, False)
+
+
+def test_a_negative_weight_counts_as_one() -> None:
+    """Scenario: The drafted carousel is scored on 0-100 per criterion."""
+    rubric = CarouselRubric(
+        id="w",
+        name="W",
+        criteria=(_criterion("clarity", 0.5, -3.0), _criterion("hook", 0.5)),
+    )
+    evaluation = build_rubric_evaluation(
+        rubric, [JudgedCriterion("clarity", 100), JudgedCriterion("hook", 0)]
+    )
+    assert evaluation.overall_score == 50

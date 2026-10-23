@@ -21,6 +21,8 @@ Feature: A carousel is drafted and scored against the quality rubric chosen for 
     Then the request is refused with 404
     When the owner creates a carousel with a rubric that only applies to blog posts
     Then the request is refused with 422
+    When the rubric id is not a UUID
+    Then the request is refused with 422
 
   Scenario: Every content prompt carries the rubric's criteria
     Given a carousel with the QA rubric
@@ -47,17 +49,25 @@ Feature: A carousel is drafted and scored against the quality rubric chosen for 
     Then no judge call is made
 
   Scenario: A judge failure leaves the run going without scores
-    When the judge never answers usable JSON
+    When the judge never answers usable JSON, or answers JSON of the wrong shape
     Then the content phase has no rubric_scores and the workflow goes on
+
+  Scenario: A failed re-score of regenerated drafts drops the old scores
+    Given a carousel already scored
+    When its content is regenerated and the judge fails
+    Then rubric_scores is emptied and the carousel's score row is removed
 
   Scenario: A rubric used by a carousel cannot be deleted
     Given a carousel created with the QA rubric
     When the owner deletes the QA rubric
     Then the request is refused with 409 naming the carousel
     And the rubric still exists
+    And a default rubric in use also answers 409 naming its carousels
 
   Scenario: The quality average counts only the caller's own content
     Given scores of a carousel owned by the editor and of one owned by someone else
     When the editor reads the analytics summary
     Then the quality average counts only the editor's carousel
     And an admin's average counts both
+    And a blog post's score counts for its author
+    And a caller with no scored content reads "no data"

@@ -5,7 +5,8 @@ autopilot and resumed runs draft against the same criteria. Once the drafts
 exist, the judge scores them (0-100 per criterion); the evaluation goes into the
 workflow state's ``rubric_scores`` and replaces the carousel's score row. Drafts
 that were not regenerated keep their scores. A judge that never answers usable
-JSON (or times out) leaves the run going without scores; no rewrite pass.
+JSON (malformed or the wrong shape) or times out leaves the run going without
+scores, and clears the scores of the drafts it replaced; no rewrite pass.
 """
 
 from __future__ import annotations
@@ -88,14 +89,14 @@ class CarouselRubricStep:
                     rubric=rubric, content=content, project_id=request.project_id
                 )
             )
-        except (ValueError, TimeoutError) as exc:
+        except (ValueError, TypeError, TimeoutError) as exc:
             logger.warning(
                 LOG_EVENT_RUBRIC_SCORING_FAILED,
                 project_id=request.project_id,
                 rubric_id=rubric.id,
                 error=str(exc),
             )
-            return {}
+            return await self._drop_stale_scores(request)
         await CarouselRubricAcl(self.db).replace_scores(request.project_id, evaluation)
         logger.info(
             LOG_EVENT_RUBRIC_SCORED,
@@ -105,6 +106,13 @@ class CarouselRubricStep:
             passed=evaluation.passed,
         )
         return {STATE_KEY_RUBRIC_SCORES: evaluation.to_state()}
+
+    async def _drop_stale_scores(self, request: RubricScoreInput) -> dict[str, object]:
+        """After a failed re-score, the old scores belong to copy that is gone."""
+        if self.db is None or not request.has_scores:
+            return {}
+        await CarouselRubricAcl(self.db).clear_scores(request.project_id)
+        return {STATE_KEY_RUBRIC_SCORES: {}}
 
 
 __all__ = ["CarouselRubricStep", "RubricScoreInput", "slides_text"]

@@ -172,11 +172,6 @@ async def delete_rubric(
             detail=f"Rubric not found: {rubric_id}",
         )
 
-    if rubric.is_default:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete default rubric. Create a new one first.",
-        )
     using = await CarouselRubricAcl(db).carousels_using(str(rubric_id))
     if using:
         raise HTTPException(
@@ -185,6 +180,12 @@ async def delete_rubric(
                 "code": ERR_RUBRIC_IN_USE,
                 "carousels": [{"id": pid, "topic": topic} for pid, topic in using],
             },
+        )
+
+    if rubric.is_default:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete default rubric. Create a new one first.",
         )
 
     await db.delete(rubric)

@@ -5,7 +5,7 @@
   (the oldest when several are flagged) is used, or none.
 - ``project_rubric``: the carousel's rubric for drafting and scoring.
 - ``replace_scores``: the carousel's single ``rubric_evaluation_scores`` row
-  (a regeneration replaces it), committed.
+  (a regeneration replaces it), committed; ``clear_scores`` removes it.
 - ``carousels_using``: the carousels that reference a rubric (its delete guard).
 
 The ORM models are imported lazily (the editorial facade loads while the ORM
@@ -113,6 +113,21 @@ class CarouselRubricAcl:
         return CarouselRubric(
             id=str(rubric_id), name=str(name), criteria=_criteria(criteria)
         )
+
+    async def clear_scores(self, project_id: str) -> None:
+        """Remove the carousel's score row and commit."""
+        from rag_backend.infrastructure.database.models.persona_rubric import (
+            RubricEvaluationScoreModel,
+        )
+
+        await self._session.execute(
+            delete(RubricEvaluationScoreModel).where(
+                RubricEvaluationScoreModel.content_id == project_id,
+                RubricEvaluationScoreModel.content_type
+                == RUBRIC_CONTENT_TYPE_CAROUSEL,
+            )
+        )
+        await self._session.commit()
 
     async def replace_scores(
         self, project_id: str, evaluation: CarouselRubricEvaluation

@@ -91,6 +91,11 @@ class TestCreateWithRubric:
             "/api/carousels", json={**_BASE, "rubric_id": blog_only}
         )
 
+        not_a_uuid = await client.post(
+            "/api/carousels", json={**_BASE, "rubric_id": "not-a-uuid"}
+        )
+
+        assert not_a_uuid.status_code == 422
         assert unknown.status_code == 404
         assert unknown.json()["detail"] == "rubric_not_found"
         assert wrong.status_code == 422
@@ -125,3 +130,18 @@ class TestRubricDeleteGuard:
 
         assert deleted.status_code == 204
         assert (await client.get(f"/api/rubrics/{spare}")).status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_a_default_rubric_in_use_names_its_carousels(
+        self, client: AsyncClient
+    ) -> None:
+        """Scenario: A rubric used by a carousel cannot be deleted."""
+        default = await _rubric("Política da casa", default=True)
+        carousel = await _create(client, dict(_BASE))
+
+        refused = await client.delete(f"/api/rubrics/{default}")
+
+        assert refused.status_code == 409
+        assert refused.json()["detail"]["carousels"] == [
+            {"id": carousel["id"], "topic": _BASE["topic"]}
+        ]

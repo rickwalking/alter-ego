@@ -110,14 +110,17 @@ async def _carousel(
 class _Judge:
     """Answers a fixed score, or fails like a judge that never parses."""
 
-    def __init__(self, score: float | None) -> None:
+    def __init__(
+        self, score: float | None, failure: type[Exception] = ValueError
+    ) -> None:
         self.score_value = score
+        self.failure = failure
         self.requests: list[RubricJudgeRequest] = []
 
     async def score(self, request: RubricJudgeRequest) -> CarouselRubricEvaluation:
         self.requests.append(request)
         if self.score_value is None:
-            raise ValueError("invalid_json")
+            raise self.failure("invalid_json")
         return build_rubric_evaluation(
             request.rubric, [JudgedCriterion("clarity", self.score_value)], "ok"
         )
@@ -327,3 +330,108 @@ async def test_the_quality_average_counts_only_own_content(
     )
     assert everyone.summary.quality_score_count == 2
     assert everyone.summary.quality_score_average == 70.0
+
+
+async def test_a_wrong_shape_answer_also_leaves_no_scores(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: A judge failure leaves the run going without scores."""
+    rubric_id = await _rubric(db_session, "QA")
+    project_id = await _carousel(db_session, rubric_id)
+    step = CarouselRubricStep(db=db_session, judge=_Judge(None, TypeError))
+    rubric = await step.project_rubric(project_id)
+
+    update = await step.score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+            has_scores=False,
+        )
+    )
+
+    assert update == {}
+    assert await _score_rows(db_session, project_id) == []
+
+
+async def test_a_failed_re_score_drops_the_stale_scores(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: A failed re-score of regenerated drafts drops the old scores."""
+    rubric_id = await _rubric(db_session, "QA")
+    project_id = await _carousel(db_session, rubric_id)
+    rubric = await CarouselRubricStep(db=db_session, judge=None).project_rubric(
+        project_id
+    )
+    await CarouselRubricStep(db=db_session, judge=_Judge(85)).score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+            has_scores=False,
+        )
+    )
+
+    update = await CarouselRubricStep(db=db_session, judge=_Judge(None)).score(
+        RubricScoreInput(
+            project_id=project_id,
+            rubric=rubric,
+            slide_drafts=DRAFTS,
+            regenerated=True,
+            has_scores=True,
+        )
+    )
+
+    assert update == {"rubric_scores": {}}
+    assert await _score_rows(db_session, project_id) == []
+
+
+async def test_a_post_authors_own_scores_count_and_nothing_reads_as_no_data(
+    db_session: AsyncSession,
+) -> None:
+    """Scenario: The quality average counts only the caller's own content."""
+    from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+
+    rubric_id = await _rubric(db_session, "QA")
+    post = BlogPostModel.from_entity({
+        "title": "Post",
+        "slug": "post-own",
+        "status": "draft",
+        "content": {},
+        "author_id": "writer-1",
+    })
+    db_session.add(post)
+    await db_session.flush()
+    db_session.add(
+        RubricEvaluationScoreModel(
+            rubric_id=rubric_id,
+            content_id=str(post.id),
+            content_type="blog_post",
+            scores={},
+            overall_score=72,
+            passed=True,
+            feedback=[],
+        )
+    )
+    await db_session.commit()
+    acl = PublishingReadAcl(db_session)
+
+    writer = await acl.project_analytics(AnalyticsQuery(author_id="writer-1"))
+    nobody = await acl.project_analytics(AnalyticsQuery(author_id="nobody"))
+
+    assert (
+        writer.summary.quality_score_average,
+        writer.summary.quality_score_count,
+    ) == (
+        72.0,
+        1,
+    )
+    assert (
+        nobody.summary.quality_score_average,
+        nobody.summary.quality_score_count,
+    ) == (
+        None,
+        0,
+    )
