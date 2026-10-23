@@ -1,9 +1,10 @@
-"""What a chat may read from the knowledge base, by conversation owner.
+"""What a chat may read from the knowledge base, by owner and caller.
 
-Pedro's decision: personal knowledge is searchable only in conversations owned
-by the site owner (the user id in ``AUTOPILOT_OWNER_USER_ID``). Every other
-conversation, whether anonymous or of another signed-in user (an editor or
-another admin), reads public knowledge only. An unset or unreadable owner id
+Personal knowledge is searchable only when the site owner (the user id in
+``AUTOPILOT_OWNER_USER_ID``) chats in a conversation the site owner owns. Any
+other caller, whether anonymous, an editor or another admin (even one posting
+in the site owner's conversation), and the site owner in someone else's
+conversation, reads public knowledge only. An unset or unreadable owner id
 fails closed to public only, and the public scope is also the default, so a
 builder that does not choose never widens what a chat can read.
 """
@@ -57,18 +58,29 @@ def _as_uuid(value: object) -> UUID | None:
         return None
 
 
-def knowledge_scope_for(
-    owner_id: UUID | str | None, site_owner_id: str
-) -> KnowledgeScope:
-    """The owner scope only when the conversation owner is the site owner.
+@dataclass(frozen=True)
+class KnowledgeAudience:
+    """Who owns the conversation (stored on the server) and who is calling.
 
-    ``owner_id`` is the conversation owner stored on the server (``None`` for
-    an anonymous conversation); ``site_owner_id`` is the configured site owner.
-    Anything else, including an empty or invalid ``site_owner_id``, is public.
+    ``None`` stands for an anonymous conversation or an anonymous caller.
+    """
+
+    owner_id: UUID | str | None = None
+    caller_id: UUID | str | None = None
+
+
+def knowledge_scope_for(
+    audience: KnowledgeAudience, site_owner_id: str
+) -> KnowledgeScope:
+    """The owner scope only when caller, conversation owner and site owner match.
+
+    ``site_owner_id`` is the configured site owner. Anything else, including an
+    empty or invalid ``site_owner_id``, is public.
     """
     site_owner = _as_uuid(site_owner_id)
-    owner = _as_uuid(owner_id)
-    if site_owner is None or owner is None or owner != site_owner:
+    owner = _as_uuid(audience.owner_id)
+    caller = _as_uuid(audience.caller_id)
+    if site_owner is None or owner != site_owner or caller != site_owner:
         return PUBLIC_KNOWLEDGE
     return OWNER_KNOWLEDGE
 

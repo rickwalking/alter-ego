@@ -15284,7 +15284,7 @@
     },
     "/api/conversations/{conversation_id}/chat/stream": {
       "post": {
-        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in the anonymous conversation their ``anon_token``\ncookie was issued for. A conversation owned by a signed-in user accepts\nmessages only from its owner or an admin. Anyone else, like an unknown id,\ngets 404 before the stream starts. Only a conversation of the site owner\nreads personal knowledge; every other one reads public knowledge only.",
+        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in the anonymous conversation their ``anon_token``\ncookie was issued for. A conversation owned by a signed-in user accepts\nmessages only from its owner or an admin. Anyone else, like an unknown id,\ngets 404 before the stream starts. Personal knowledge is read only when the\nsite owner chats in the site owner's own conversation; everything else\nreads public knowledge only.",
         "operationId": "chat_stream_api_conversations__conversation_id__chat_stream_post",
         "parameters": [
           {

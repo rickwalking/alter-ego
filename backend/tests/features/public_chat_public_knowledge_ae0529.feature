@@ -1,6 +1,6 @@
-Feature: Only the site owner's conversations read personal knowledge
+Feature: Only the site owner, in the site owner's conversations, reads personal knowledge
   As the site owner
-  I want my personal knowledge to stay in my own conversations
+  I want my personal knowledge to stay in my own conversations, read only by me
   So that visitors, editors and other admins only ever get what I marked public
 
   Scenario: An anonymous visitor's chat searches public knowledge only
@@ -33,10 +33,20 @@ Feature: Only the site owner's conversations read personal knowledge
     Given a chat agent built without a knowledge scope
     Then it searches the "public" namespace and lists public documents only
 
+  Scenario: An admin posting in the site owner's conversation reads public knowledge only
+    Given a conversation of the site owner
+    When another admin posts in it
+    Then the knowledge search runs on the "public" namespace only
+
+  Scenario: The site owner posting in someone else's conversation reads public knowledge only
+    Given the site owner is an admin and an editor's conversation
+    When the site owner posts in the editor's conversation
+    Then the knowledge search runs on the "public" namespace only
+
   Scenario: Both chat routes pick the scope from the conversation owner
     Given conversations of the site owner, an editor, another admin and an anonymous visitor
     When each one chats on the streaming route or the messages route
-    Then only the site owner's conversation gets the owner scope
+    Then only the site owner calling in the site owner's conversation gets the owner scope
 
   Scenario: The public scope returns only public knowledge from the index
     Given an index holding one personal chunk and one public chunk

@@ -156,3 +156,46 @@ async def test_without_a_site_owner_the_owner_reads_public_knowledge_only(
 
     assert response.status_code == 200
     assert recorder.scopes == [PUBLIC_KNOWLEDGE]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", [STREAM, CHAT])
+async def test_admin_posting_in_the_site_owner_conversation_reads_public_only(
+    env: OwnershipEnv, recorder: _Recorder, site_owner: _SiteOwner, endpoint: str
+) -> None:
+    """Scenario: An admin posting in the site owner's conversation reads public knowledge only"""
+    site_owner.set(str(env.users[CALLER_OWNER].id))
+    async with env.client(CALLER_ADMIN) as admin:
+        response = await call_endpoint(admin, endpoint, env.owner_conversation_id)
+
+    assert response.status_code == 200
+    assert recorder.scopes == [PUBLIC_KNOWLEDGE]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", [STREAM, CHAT])
+async def test_site_owner_posting_in_an_editor_conversation_reads_public_only(
+    env: OwnershipEnv, recorder: _Recorder, site_owner: _SiteOwner, endpoint: str
+) -> None:
+    """Scenario: The site owner posting in someone else's conversation reads public knowledge only"""
+    site_owner.set(str(env.users[CALLER_ADMIN].id))
+    async with env.client(CALLER_ADMIN) as pedro:
+        response = await call_endpoint(pedro, endpoint, env.owner_conversation_id)
+
+    assert response.status_code == 200
+    assert recorder.scopes == [PUBLIC_KNOWLEDGE]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", [STREAM, CHAT])
+async def test_site_owner_admin_in_own_conversation_reads_personal_knowledge(
+    env: OwnershipEnv, recorder: _Recorder, site_owner: _SiteOwner, endpoint: str
+) -> None:
+    """Scenario: The owner's chat reads personal and public knowledge"""
+    site_owner.set(str(env.users[CALLER_ADMIN].id))
+    async with env.client(CALLER_ADMIN) as pedro:
+        conversation_id = await _own_conversation(pedro)
+        response = await call_endpoint(pedro, endpoint, conversation_id)
+
+    assert response.status_code == 200
+    assert recorder.scopes == [OWNER_KNOWLEDGE]

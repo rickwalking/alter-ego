@@ -21,6 +21,7 @@ import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.rag_agent import RAGAgent
+from rag_backend.api.dependencies.agents import ChatAgentDeps
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.modules.conversation import (
     ChatAgentFactory,
@@ -144,7 +145,9 @@ class TestChatAgentFactoryDelegationAndRouting:
         with patch(_AGENT_FACTORY_BUILDER, return_value=rag_agent) as mock_build:
             agent = factory.build_for_conversation(conversation)
 
-        mock_build.assert_called_once_with(conversation, db, container)
+        mock_build.assert_called_once_with(
+            conversation, db, ChatAgentDeps(container=container)
+        )
         assert agent is rag_agent
 
     def test_builds_alter_ego_agent_when_metadata_empty(self) -> None:
@@ -157,7 +160,9 @@ class TestChatAgentFactoryDelegationAndRouting:
         with patch(_AGENT_FACTORY_BUILDER, return_value=alter_agent) as mock_build:
             agent = factory.build_for_conversation(conversation)
 
-        mock_build.assert_called_once_with(conversation, db, container)
+        mock_build.assert_called_once_with(
+            conversation, db, ChatAgentDeps(container=container)
+        )
         assert agent is alter_agent
 
     def test_routing_matches_legacy_real_construction(self) -> None:

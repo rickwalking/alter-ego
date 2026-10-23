@@ -12,6 +12,7 @@ from rag_backend.agents.chat_knowledge import (
     OWNER_KNOWLEDGE,
     PUBLIC_KNOWLEDGE,
     ChatKnowledge,
+    KnowledgeAudience,
     KnowledgeScope,
 )
 from rag_backend.agents.rag_agent import RAGAgent
@@ -99,17 +100,31 @@ async def test_rag_agent_without_a_scope_reads_public_only() -> None:
     assert query.namespace_prefix == NAMESPACE_PUBLIC
 
 
+_EDITOR = str(uuid4())
+
+
 @pytest.mark.parametrize(
-    ("owner_user_id", "expected"),
+    ("audience", "expected"),
     [
-        (_SITE_OWNER, OWNER_KNOWLEDGE),
-        (str(uuid4()), PUBLIC_KNOWLEDGE),
-        (None, PUBLIC_KNOWLEDGE),
+        (
+            KnowledgeAudience(owner_id=_SITE_OWNER, caller_id=_SITE_OWNER),
+            OWNER_KNOWLEDGE,
+        ),
+        (KnowledgeAudience(owner_id=_EDITOR, caller_id=_EDITOR), PUBLIC_KNOWLEDGE),
+        (KnowledgeAudience(owner_id=_SITE_OWNER, caller_id=_EDITOR), PUBLIC_KNOWLEDGE),
+        (KnowledgeAudience(owner_id=_EDITOR, caller_id=_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (KnowledgeAudience(), PUBLIC_KNOWLEDGE),
     ],
-    ids=["site-owner", "editor", "no-owner"],
+    ids=[
+        "site-owner",
+        "editor",
+        "admin-in-site-owner-conversation",
+        "site-owner-in-editor-conversation",
+        "no-audience",
+    ],
 )
-def test_build_rag_agent_picks_the_scope_from_the_owner(
-    owner_user_id: str | None, expected: KnowledgeScope
+def test_build_rag_agent_picks_the_scope_from_owner_and_caller(
+    audience: KnowledgeAudience, expected: KnowledgeScope
 ) -> None:
     """Scenario: The carousel chat reads personal knowledge only for the site owner"""
     container = MagicMock()
@@ -117,7 +132,11 @@ def test_build_rag_agent_picks_the_scope_from_the_owner(
 
     with patch("rag_backend.api.dependencies.agents.RAGAgent") as rag_agent:
         build_rag_agent(
-            AsyncMock(), container, RagAgentBuildContext(owner_user_id=owner_user_id)
+            AsyncMock(),
+            container,
+            RagAgentBuildContext(
+                owner_user_id=str(audience.caller_id), knowledge_audience=audience
+            ),
         )
 
     assert rag_agent.call_args.kwargs["knowledge"].scope is expected

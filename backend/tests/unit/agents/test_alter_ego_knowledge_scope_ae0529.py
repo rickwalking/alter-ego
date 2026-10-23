@@ -13,10 +13,14 @@ from rag_backend.agents.chat_knowledge import (
     OWNER_KNOWLEDGE,
     PUBLIC_KNOWLEDGE,
     ChatKnowledge,
+    KnowledgeAudience,
     KnowledgeScope,
     knowledge_scope_for,
 )
-from rag_backend.api.dependencies.agents import build_agent_for_conversation
+from rag_backend.api.dependencies.agents import (
+    ChatAgentDeps,
+    build_agent_for_conversation,
+)
 from rag_backend.domain.constants.namespaces import (
     NAMESPACE_PERSONAL,
     NAMESPACE_PUBLIC,
@@ -93,40 +97,58 @@ async def _searched_prefix(agent: AlterEgoAgent, search: MagicMock) -> str | Non
 _SITE_OWNER = uuid4()
 
 
+_OTHER = uuid4()
+
+
 @pytest.mark.parametrize(
-    ("owner_id", "site_owner", "expected"),
+    ("owner_id", "caller_id", "site_owner", "expected"),
     [
-        (_SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
-        (str(_SITE_OWNER).upper(), f" {_SITE_OWNER} ", OWNER_KNOWLEDGE),
-        (uuid4(), str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
-        (None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
-        (_SITE_OWNER, "", PUBLIC_KNOWLEDGE),
-        (_SITE_OWNER, "not-a-uuid", PUBLIC_KNOWLEDGE),
-        ("not-a-uuid", str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
+        (str(_SITE_OWNER).upper(), _SITE_OWNER, f" {_SITE_OWNER} ", OWNER_KNOWLEDGE),
+        (_OTHER, _OTHER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _OTHER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_OTHER, _SITE_OWNER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (None, None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _SITE_OWNER, "", PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _SITE_OWNER, "not-a-uuid", PUBLIC_KNOWLEDGE),
+        ("not-a-uuid", "not-a-uuid", str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
     ],
     ids=[
-        "site-owner",
+        "site-owner-in-own-conversation",
         "site-owner-spelled-differently",
-        "editor-or-other-admin",
+        "editor-or-other-admin-in-own-conversation",
+        "admin-in-site-owner-conversation",
+        "site-owner-in-someone-elses-conversation",
         "anonymous",
+        "anonymous-caller-in-site-owner-conversation",
         "setting-unset",
         "setting-invalid",
-        "owner-id-invalid",
+        "ids-invalid",
     ],
 )
-def test_only_the_site_owner_gets_the_owner_scope(
-    owner_id: UUID | str | None, site_owner: str, expected: KnowledgeScope
+def test_only_the_site_owner_in_own_conversation_gets_the_owner_scope(
+    owner_id: UUID | str | None,
+    caller_id: UUID | str | None,
+    site_owner: str,
+    expected: KnowledgeScope,
 ) -> None:
     """Scenario: An editor's or another admin's chat reads public knowledge only
 
+    Scenario: An admin posting in the site owner's conversation reads public knowledge only
+
+    Scenario: The site owner posting in someone else's conversation reads public knowledge only
+
     Scenario: Without a configured site owner every chat reads public knowledge only
     """
-    assert knowledge_scope_for(owner_id, site_owner) is expected
+    audience = KnowledgeAudience(owner_id=owner_id, caller_id=caller_id)
+    assert knowledge_scope_for(audience, site_owner) is expected
 
 
 def test_a_setting_that_is_not_text_fails_closed() -> None:
     """Scenario: Without a configured site owner every chat reads public knowledge only"""
-    assert knowledge_scope_for(_SITE_OWNER, MagicMock()) is PUBLIC_KNOWLEDGE
+    audience = KnowledgeAudience(owner_id=_SITE_OWNER, caller_id=_SITE_OWNER)
+    assert knowledge_scope_for(audience, MagicMock()) is PUBLIC_KNOWLEDGE
 
 
 def test_scopes_name_the_namespaces_they_read() -> None:
@@ -215,17 +237,29 @@ def _container(site_owner: str) -> MagicMock:
 
 
 @pytest.mark.parametrize(
-    ("user_id", "site_owner", "expected"),
+    ("user_id", "caller_id", "site_owner", "expected"),
     [
-        (None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
-        (uuid4(), str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
-        (_SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
-        (_SITE_OWNER, "", PUBLIC_KNOWLEDGE),
+        (None, None, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_OTHER, _OTHER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _SITE_OWNER, str(_SITE_OWNER), OWNER_KNOWLEDGE),
+        (_SITE_OWNER, _OTHER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_OTHER, _SITE_OWNER, str(_SITE_OWNER), PUBLIC_KNOWLEDGE),
+        (_SITE_OWNER, _SITE_OWNER, "", PUBLIC_KNOWLEDGE),
     ],
-    ids=["anonymous", "editor-or-other-admin", "site-owner", "setting-unset"],
+    ids=[
+        "anonymous",
+        "editor-or-other-admin",
+        "site-owner",
+        "admin-in-site-owner-conversation",
+        "site-owner-in-editor-conversation",
+        "setting-unset",
+    ],
 )
-def test_messages_route_builder_picks_the_scope_from_the_owner(
-    user_id: UUID | None, site_owner: str, expected: KnowledgeScope
+def test_messages_route_builder_picks_the_scope_from_owner_and_caller(
+    user_id: UUID | None,
+    caller_id: UUID | None,
+    site_owner: str,
+    expected: KnowledgeScope,
 ) -> None:
     """Scenario: Both chat routes pick the scope from the conversation owner"""
     conversation = Conversation(id=uuid4(), user_id=user_id, metadata={})
@@ -233,7 +267,9 @@ def test_messages_route_builder_picks_the_scope_from_the_owner(
     container = _container(site_owner)
 
     with patch(_BUILDER) as build_alter_ego:
-        build_agent_for_conversation(conversation, db, container)
+        build_agent_for_conversation(
+            conversation, db, ChatAgentDeps(container=container, caller_id=caller_id)
+        )
 
     build_alter_ego.assert_called_once_with(db, container, expected)
 

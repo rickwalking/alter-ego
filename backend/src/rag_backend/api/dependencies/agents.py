@@ -11,7 +11,7 @@ retriever, external services) from the container.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.chat_knowledge import (
     ChatKnowledge,
+    KnowledgeAudience,
     KnowledgeScope,
     knowledge_scope_for,
 )
@@ -84,6 +85,7 @@ class RagAgentBuildContext:
 
     owner_user_id: str | None = None
     bound_project_id: str | None = None
+    knowledge_audience: KnowledgeAudience = field(default_factory=KnowledgeAudience)
 
 
 @dataclass(frozen=True)
@@ -103,19 +105,32 @@ class WorkflowContext:
     db: AsyncSession
 
 
+@dataclass(frozen=True)
+class ChatAgentDeps:
+    """The DI container and the calling user's id (``None`` when anonymous)."""
+
+    container: Container
+    caller_id: UUID | str | None = None
+
+
 def build_agent_for_conversation(
     conversation: Conversation,
     db: AsyncSession,
-    container: Container,
+    deps: ChatAgentDeps,
 ) -> AlterEgoAgent | RAGAgent:
     """Route to the appropriate agent based on conversation metadata.
 
     Conversations with ``project_id`` metadata get the full RAGAgent
     (carousel tools + subagent). All others get the AlterEgoAgent
-    (knowledge base only). Both read personal knowledge only when the
-    conversation belongs to the site owner (see ``conversation_knowledge_scope``).
+    (knowledge base only). Both read personal knowledge only when the caller
+    is the site owner in the site owner's conversation (see
+    ``conversation_knowledge_scope``).
     """
-    scope = conversation_knowledge_scope(conversation.user_id, container)
+    container = deps.container
+    audience = KnowledgeAudience(
+        owner_id=conversation.user_id, caller_id=deps.caller_id
+    )
+    scope = conversation_knowledge_scope(audience, container)
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
         return build_alter_ego_agent(db, container, scope)
     if conversation.user_id is None:
@@ -128,6 +143,7 @@ def build_agent_for_conversation(
             bound_project_id=str(
                 conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
             ),
+            knowledge_audience=audience,
         ),
     )
 
@@ -153,18 +169,20 @@ def _build_knowledge_search(db: AsyncSession, container: Container) -> Knowledge
 
 
 def conversation_knowledge_scope(
-    owner_id: UUID | str | None, container: Container
+    audience: KnowledgeAudience, container: Container
 ) -> KnowledgeScope:
-    """What a conversation of ``owner_id`` may read: personal and public only for
-    the configured site owner (``AUTOPILOT_OWNER_USER_ID``), public for anyone
-    else, and public for everyone while the setting is unset.
+    """What a chat of ``audience`` may read: personal and public only when the
+    caller and the conversation owner are both the configured site owner
+    (``AUTOPILOT_OWNER_USER_ID``), public otherwise, and public for everyone
+    while the setting is unset.
     """
-    return knowledge_scope_for(owner_id, container.settings().autopilot_owner_user_id)
+    return knowledge_scope_for(audience, container.settings().autopilot_owner_user_id)
 
 
 def user_knowledge_scope(user_id: UUID | str) -> KnowledgeScope:
     """What a knowledge search of ``user_id`` may read, using the app container."""
-    return conversation_knowledge_scope(user_id, get_container())
+    audience = KnowledgeAudience(owner_id=user_id, caller_id=user_id)
+    return conversation_knowledge_scope(audience, get_container())
 
 
 def build_alter_ego_agent(
@@ -382,7 +400,9 @@ def build_rag_agent(
         document_repository=PostgresDocumentRepository(db),
         knowledge=ChatKnowledge(
             search=_build_knowledge_search(db, container),
-            scope=conversation_knowledge_scope(build_context.owner_user_id, container),
+            scope=conversation_knowledge_scope(
+                build_context.knowledge_audience, container
+            ),
         ),
         carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repo,

@@ -3,8 +3,9 @@
 This agent is intentionally stripped of ALL carousel/content-creation tools.
 It can only search the knowledge base (Pedro's CV, skills, blog posts) and
 answer questions about Pedro Marins' professional identity. What it may read
-depends on its ``KnowledgeScope``: public knowledge only for an anonymous
-visitor, personal and public knowledge for a signed-in user.
+depends on its ``KnowledgeScope``: personal and public knowledge only when
+the site owner chats in the site owner's own conversation, public knowledge
+only for everyone else (anonymous visitors, editors, other admins).
 """
 
 from collections.abc import AsyncIterator
@@ -80,8 +81,8 @@ class AlterEgoAgent:
 
     Security-critical: this agent has ZERO carousel tools. It can only
     search and list the knowledge base, limited to its knowledge scope:
-    anonymous visitors get public knowledge only, signed-in users personal
-    and public knowledge.
+    the site owner in the site owner's own conversation gets personal and
+    public knowledge; every other caller gets public knowledge only.
     """
 
     def __init__(

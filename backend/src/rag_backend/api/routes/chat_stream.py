@@ -34,7 +34,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.chat_knowledge import KnowledgeScope
+from rag_backend.agents.chat_knowledge import KnowledgeAudience, KnowledgeScope
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.api.constants import (
     ERR_NOT_AUTHENTICATED,
@@ -95,8 +95,8 @@ class _AlterEgoAgentBuilder:
     construction through THIS module's ``build_alter_ego_agent`` name so the
     safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM — the knowledge-facade wiring stays identical.
-    The knowledge scope comes from the conversation owner: personal knowledge
-    only for the site owner's conversations.
+    The knowledge scope comes from the conversation owner and the caller:
+    personal knowledge only for the site owner in the site owner's conversation.
     """
 
     def __init__(self, factory: LegacyChatAgentFactory, scope: KnowledgeScope) -> None:
@@ -190,8 +190,9 @@ async def chat_stream(
     Anonymous visitors chat in the anonymous conversation their ``anon_token``
     cookie was issued for. A conversation owned by a signed-in user accepts
     messages only from its owner or an admin. Anyone else, like an unknown id,
-    gets 404 before the stream starts. Only a conversation of the site owner
-    reads personal knowledge; every other one reads public knowledge only.
+    gets 404 before the stream starts. Personal knowledge is read only when the
+    site owner chats in the site owner's own conversation; everything else
+    reads public knowledge only.
     """
     if db is None or handler is None or agent_factory is None:
         raise HTTPException(
@@ -209,7 +210,13 @@ async def chat_stream(
     )
     agent_builder = _AlterEgoAgentBuilder(
         agent_factory,
-        conversation_knowledge_scope(conversation.user_id, agent_factory.container),
+        conversation_knowledge_scope(
+            KnowledgeAudience(
+                owner_id=conversation.user_id,
+                caller_id=caller.user.id if caller.user is not None else None,
+            ),
+            agent_factory.container,
+        ),
     )
 
     async def event_generator() -> AsyncIterator[str]:
@@ -272,6 +279,9 @@ async def publish_chat_stream(
             owner_user_id=str(user.id),
             bound_project_id=str(
                 conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
+            ),
+            knowledge_audience=KnowledgeAudience(
+                owner_id=conversation.user_id, caller_id=user.id
             ),
         ),
     )

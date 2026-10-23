@@ -10,8 +10,9 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE
+from rag_backend.agents.chat_knowledge import PUBLIC_KNOWLEDGE, KnowledgeAudience
 from rag_backend.api.dependencies.agents import (
+    ChatAgentDeps,
     RagAgentBuildContext,
     build_agent_for_conversation,
 )
@@ -57,7 +58,9 @@ class TestMetadataRoutingDecision:
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()
 
-            agent = build_agent_for_conversation(conversation, db, container)
+            agent = build_agent_for_conversation(
+                conversation, db, ChatAgentDeps(container=container)
+            )
 
             mock_build_rag.assert_called_once_with(
                 db,
@@ -65,6 +68,7 @@ class TestMetadataRoutingDecision:
                 RagAgentBuildContext(
                     owner_user_id=str(conversation.user_id),
                     bound_project_id="abc-123",
+                    knowledge_audience=KnowledgeAudience(owner_id=conversation.user_id),
                 ),
             )
             mock_build_alter.assert_not_called()
@@ -90,7 +94,9 @@ class TestMetadataRoutingDecision:
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()
 
-            agent = build_agent_for_conversation(conversation, db, container)
+            agent = build_agent_for_conversation(
+                conversation, db, ChatAgentDeps(container=container)
+            )
 
             mock_build_alter.assert_called_once_with(db, container, PUBLIC_KNOWLEDGE)
             mock_build_rag.assert_not_called()
@@ -116,7 +122,9 @@ class TestMetadataRoutingDecision:
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()
 
-            agent = build_agent_for_conversation(conversation, db, container)
+            agent = build_agent_for_conversation(
+                conversation, db, ChatAgentDeps(container=container)
+            )
 
             mock_build_alter.assert_called_once_with(db, container, PUBLIC_KNOWLEDGE)
             mock_build_rag.assert_not_called()
