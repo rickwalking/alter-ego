@@ -95,7 +95,7 @@ class TestChangeDocumentScope:
         assert body["scope"] == _PUBLIC
         assert body["is_public"] is True
         assert body["status"] == DocumentStatus.COMPLETED.value
-        assert index.deleted_from() == [_PERSONAL]
+        assert index.deleted_from() == [_PERSONAL, _PUBLIC]
         assert index.indexed_in() == [_PUBLIC]
         async with kb_env.client_for(kb_env.owner) as client:
             stored = (await client.get(f"/api/documents/{document.id}")).json()
@@ -117,7 +117,7 @@ class TestChangeDocumentScope:
         assert response.status_code == 200
         assert response.json()["scope"] == _PERSONAL
         assert response.json()["is_public"] is False
-        assert index.deleted_from() == [_PUBLIC]
+        assert index.deleted_from() == [_PUBLIC, _PERSONAL]
         assert index.indexed_in() == [_PERSONAL]
 
     async def test_same_scope_changes_nothing(

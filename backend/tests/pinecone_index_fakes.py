@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
+from pinecone.exceptions import NotFoundException
 from pydantic import SecretStr
 
 from rag_backend.infrastructure.config.settings import Settings
@@ -23,6 +24,7 @@ _DELETE_ALL = "delete_all"
 _IDS = "ids"
 _FILTER = "filter"
 _ERR_NO_SELECTOR = "delete needs ids, a filter or delete_all"
+_NAMESPACE_NOT_FOUND = "Namespace not found"
 
 Vector = dict[str, object]
 MetadataFilter = Mapping[str, Mapping[str, str] | str]
@@ -53,10 +55,15 @@ class FakeQueryResponse:
 
 
 class FakePineconeIndex:
-    """Vectors kept by namespace, then by vector id."""
+    """Vectors kept by namespace, then by vector id.
+
+    Like Pinecone, a delete in a namespace that does not exist yet (nothing was
+    ever upserted there) raises ``NotFoundException`` (HTTP 404).
+    """
 
     def __init__(self) -> None:
         self.namespaces: dict[str, dict[str, Vector]] = {}
+        self.delete_calls: list[str] = []
 
     def upsert(self, vectors: list[Vector], namespace: str) -> None:
         stored = self.namespaces.setdefault(namespace, {})
@@ -65,7 +72,10 @@ class FakePineconeIndex:
 
     def delete(self, *, namespace: str, **selector: object) -> None:
         """Apply a Pinecone delete: ``delete_all``, ``ids`` or a metadata ``filter``."""
-        stored = self.namespaces.setdefault(namespace, {})
+        self.delete_calls.append(namespace)
+        if namespace not in self.namespaces:
+            raise NotFoundException(status=404, reason=_NAMESPACE_NOT_FOUND)
+        stored = self.namespaces[namespace]
         if selector.get(_DELETE_ALL):
             stored.clear()
             return

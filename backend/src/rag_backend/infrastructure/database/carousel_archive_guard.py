@@ -1,11 +1,13 @@
 """Working on an archived carousel brings it back to the active board.
 
-A ``before_update`` listener on :class:`CarouselProjectModel` clears
-``archived_at`` in the same flush when an archived carousel starts a phase run
-(``phase_status`` becomes ``in_progress``) or gets an owner edit (its content
-or ``lock_version`` changes), for example through a direct link to an archived
-carousel. Bookkeeping writes (run heartbeat, a failed or rejected phase) keep it
-archived, and a flush that sets ``archived_at`` itself is left alone.
+A ``before_update`` listener on :class:`CarouselProjectModel` writes
+``archived_at = NULL`` in the same flush UPDATE when the carousel starts a phase
+run (``phase_status`` becomes ``in_progress``) or gets an owner edit (its
+content or ``lock_version`` changes through the ORM), for example through a
+direct link to an archived carousel. Bookkeeping writes (run heartbeat, a failed
+or rejected phase) keep it archived, and a flush that sets ``archived_at``
+itself is left alone. The raw ``lock_version`` CAS of
+``OptimisticLockService.bump_carousel_version`` clears it in its own UPDATE.
 
 Self-registers on import, like the run guard; the models package imports it.
 """
@@ -15,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlalchemy import event
-from sqlalchemy.orm.attributes import get_history
+from sqlalchemy.orm.attributes import flag_modified, get_history
 
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -71,13 +73,19 @@ def _unarchive_on_activity(
     _connection: Connection,
     target: CarouselProjectModel,
 ) -> None:
-    """Clear ``archived_at`` when an archived carousel is worked on."""
-    if target.archived_at is None or _changed(target, _ARCHIVED_AT):
+    """Write ``archived_at = NULL`` when the carousel is worked on.
+
+    The loaded ``archived_at`` may be stale (an automatic archive can commit
+    after the row was read), so the column is always written, not only when
+    the loaded value says archived.
+    """
+    if _changed(target, _ARCHIVED_AT):
         return
     if _starts_a_run(target) or any(
         _changed(target, name) for name in OWNER_ACTIVITY_COLUMNS
     ):
         target.archived_at = None
+        flag_modified(target, _ARCHIVED_AT)
 
 
 class _GuardRegistry:
