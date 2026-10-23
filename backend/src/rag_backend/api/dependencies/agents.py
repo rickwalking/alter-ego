@@ -59,6 +59,7 @@ from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.editorial.public import CarouselRubricAcl
 from rag_backend.modules.knowledge import (
     KnowledgeAdapters,
     KnowledgeService,
@@ -260,6 +261,7 @@ def build_rag_agent(
         CarouselToolAccessContext(
             owner_user_id=workflow_user_id,
             bound_project_id=build_context.bound_project_id,
+            default_rubric_id=lambda: CarouselRubricAcl(db).rubric_for_create(None),
         )
         if build_context.owner_user_id is not None
         else None

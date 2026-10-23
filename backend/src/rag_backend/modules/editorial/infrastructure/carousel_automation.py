@@ -37,6 +37,9 @@ from rag_backend.modules.editorial.domain.ports import CarouselRepository
 from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     stage_slide_cover,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_rubric_acl import (
+    CarouselRubricAcl,
+)
 from rag_backend.modules.editorial.infrastructure.pov_inputs import PovInputsAcl
 
 if TYPE_CHECKING:
@@ -233,10 +236,15 @@ class CarouselAutomationAcl:
     async def create_project(self, project: CarouselProject) -> str:
         """Insert the project, stage its slide-1 photo, and return its id.
 
-        A chosen GrokBot cover is staged too; a cover whose file is
-        gone is dropped (slide 1 falls back to the default) rather than left
-        to fail the render.
+        An unattended carousel gets the default carousel rubric (when one
+        exists), like a wizard carousel created without a choice. A chosen
+        GrokBot cover is staged too; a cover whose file is gone is dropped
+        (slide 1 falls back to the default) rather than left to fail the render.
         """
+        if project.rubric_id is None:
+            project.rubric_id = await CarouselRubricAcl(
+                self._session
+            ).rubric_for_create(None)
         created = await self._repo.create_project(project)
         await PovInputsAcl(self._session).stage_hook_photo(created)
         if created.slide_cover is not None and not await stage_slide_cover(

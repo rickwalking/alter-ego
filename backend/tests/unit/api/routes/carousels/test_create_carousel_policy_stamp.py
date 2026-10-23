@@ -48,6 +48,10 @@ class _NoopSession:
     async def get(self, model: object, key: object) -> None:
         return None
 
+    async def execute(self, statement: object) -> list[object]:
+        """No rows: no default rubric to stamp."""
+        return []
+
     async def commit(self) -> None:
         return None
 

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.rubric_usage import rubric_in_use_detail
 from rag_backend.api.schemas.persona_rubric import (
     QualityRubricCreate,
     QualityRubricListResponse,
@@ -22,6 +23,7 @@ from rag_backend.application.services.quality_evaluation_service import (
     QualityEvaluationService,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
+from rag_backend.domain.models import UserRole
 from rag_backend.domain.models.rubric import QualityRubric
 from rag_backend.domain.rubric_scoring import normalize_criteria
 from rag_backend.infrastructure.container import get_container
@@ -29,6 +31,7 @@ from rag_backend.infrastructure.database.models import (
     QualityRubricModel,
     RubricEvaluationScoreModel,
 )
+from rag_backend.modules.editorial.public import CarouselRubricAcl
 
 MIN_PASSING_SCORE = 70.0
 
@@ -131,7 +134,11 @@ async def update_rubric(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> QualityRubricResponse:
-    """Update a quality rubric."""
+    """Update a quality rubric; any change bumps its version.
+
+    Carousel scores record the version they were given under, so an edited
+    rubric never re-reads an old score.
+    """
     rubric = await db.get(QualityRubricModel, str(rubric_id))
     if not rubric:
         raise HTTPException(
@@ -142,6 +149,8 @@ async def update_rubric(
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(rubric, key, value)
+    if update_data:
+        rubric.version = (rubric.version or 1) + 1
 
     await db.commit()
     await db.refresh(rubric)
@@ -158,12 +167,28 @@ async def delete_rubric(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
 ) -> None:
-    """Delete a quality rubric."""
+    """Delete a quality rubric.
+
+    A rubric that carousels were created with cannot be deleted (409), so no
+    carousel points at a missing rubric. The 409 names the caller's own carousels
+    and counts the others (an admin sees them all).
+    """
     rubric = await db.get(QualityRubricModel, str(rubric_id))
     if not rubric:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Rubric not found: {rubric_id}",
+        )
+
+    using = await CarouselRubricAcl(db).carousels_using(str(rubric_id))
+    if using:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=rubric_in_use_detail(
+                using,
+                str(current_user.id),
+                current_user.role == UserRole.ADMIN.value,
+            ),
         )
 
     if rubric.is_default:

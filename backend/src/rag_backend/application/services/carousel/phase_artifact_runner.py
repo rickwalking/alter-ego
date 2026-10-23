@@ -59,6 +59,7 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
+from rag_backend.domain.constants.carousel_rubric import STATE_KEY_RUBRIC_SCORES
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     DESIGN_VALIDATION_RECOVERY_HINT,
@@ -84,10 +85,12 @@ from rag_backend.domain.constants.workflow_state_fields import (
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.persona_score import on_hundred_scale_entry
+from rag_backend.domain.protocols.carousel_rubric import RubricJudge
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
 
+from .carousel_rubric_step import CarouselRubricStep, RubricScoreInput
 from .content_mode_brief import ContentModeBrief, load_content_mode_brief
 from .editorial_distribution_pack import (
     DistributionBuildContext,
@@ -116,7 +119,8 @@ class PhaseArtifactRunnerConfig:
     bounds how many slides are drafted and persona-scored at once. ``gate_repairer``
     rewrites only the fields a blocked content gate names; when unset,
     ``gate_repair_tracing`` turns on the fast-model repairer built from ``llm``, and
-    with neither it is off.
+    with neither it is off. ``rubric_judge`` scores the drafts against the
+    carousel's quality rubric (no judge: no scores).
     """
 
     outline_agent: OutlineAgent
@@ -129,6 +133,7 @@ class PhaseArtifactRunnerConfig:
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
     gate_repairer: GateFieldRepairer | None = None
     gate_repair_tracing: Callable[[], RunnableConfig] | None = None
+    rubric_judge: RubricJudge | None = None
 
 
 _TRANSLATIONS_EN_KEY = "translations_en"
@@ -236,6 +241,8 @@ class PhaseArtifactRunner:
         self._draft_concurrency = config.draft_concurrency
         self._gate_repair_tracing = config.gate_repair_tracing
         self._gate_repairer = config.gate_repairer or _llm_gate_repairer(config)
+        self._rubric_judge = config.rubric_judge
+        self._rubric = CarouselRubricStep(db=config.db, judge=config.rubric_judge)
 
     def with_context(
         self,
@@ -256,6 +263,7 @@ class PhaseArtifactRunner:
                 draft_concurrency=self._draft_concurrency,
                 gate_repairer=self._gate_repairer,
                 gate_repair_tracing=self._gate_repair_tracing,
+                rubric_judge=self._rubric_judge,
             )
         )
 
@@ -314,6 +322,7 @@ class PhaseArtifactRunner:
             previous_drafts=prior_drafts,
             mode=await self._mode_brief(state),
             scope=revision_scope(state, notes) if notes else None,
+            rubric=await self._rubric.project_rubric(str(state.get("project_id", ""))),
         )
 
     async def _mode_brief(
@@ -430,6 +439,17 @@ class PhaseArtifactRunner:
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
+        updates.update(
+            await self._rubric.score(
+                RubricScoreInput(
+                    project_id=str(state.get("project_id", "")),
+                    rubric=regen.rubric,
+                    slide_drafts=slide_drafts,
+                    regenerated=regenerated,
+                    previous_scores=state.get(STATE_KEY_RUBRIC_SCORES),
+                )
+            )
+        )
         distribution = await self._build_distribution_if_needed(
             state, outline, (slide_drafts, updates)
         )
@@ -529,6 +549,7 @@ class PhaseArtifactRunner:
                 persona=resolved.persona,
                 revision_notes=(regen.revision_notes or None) if regen else None,
                 mode=regen.mode if regen else None,
+                rubric=regen.rubric if regen else None,
             ),
         )
 
@@ -581,6 +602,7 @@ class PhaseArtifactRunner:
                     mode=regen.mode,
                     concurrency=self._draft_concurrency,
                     only_slides=regen.scope,
+                    rubric=regen.rubric,
                 ),
             )
         except ValueError as exc:

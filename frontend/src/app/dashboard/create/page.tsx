@@ -13,6 +13,10 @@ import { CreateSidebar } from "@/app/dashboard/create/create-sidebar";
 import { CreateModeSection } from "@/app/dashboard/create/workspace/create-mode-section";
 import { CreatePovSection } from "@/app/dashboard/create/workspace/create-pov-section";
 import { useDefaultPersona } from "@/app/dashboard/create/use-default-persona";
+import {
+  carouselRubrics,
+  useDefaultRubric,
+} from "@/app/dashboard/create/use-default-rubric";
 import { CreatePhotoSection } from "@/app/dashboard/create/workspace/create-photo-section";
 import { usePovPhoto } from "@/app/dashboard/create/use-pov-photo";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
@@ -28,6 +32,7 @@ import {
 import { useCreateCarousel } from "@/modules/editorial";
 import { usePaletteCatalog } from "@/modules/palette";
 import { usePersonas } from "@/modules/persona";
+import { useRubrics } from "@/modules/quality";
 import { buildThemeOptions } from "@/app/dashboard/create/theme-options";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
@@ -62,6 +67,13 @@ export default function CreateCarouselPage(): React.ReactElement {
     [handleChange],
   );
   useDefaultPersona(personas, selectPersona);
+  const { rubrics: allRubrics } = useRubrics();
+  const rubrics = useMemo(() => carouselRubrics(allRubrics), [allRubrics]);
+  const selectRubric = useCallback(
+    (rubricId: string) => handleChange({ rubricId }),
+    [handleChange],
+  );
+  useDefaultRubric(rubrics, selectRubric);
   const selectPhoto = useCallback(
     (hookAssetId: string) => handleChange({ hookAssetId }),
     [handleChange],
@@ -100,6 +112,7 @@ export default function CreateCarouselPage(): React.ReactElement {
               form={form}
               onChange={handleChange}
               personas={personas}
+              rubrics={rubrics}
             />
             <CreateTopicSection form={form} onChange={handleChange} />
             {isPovForm(form) && (

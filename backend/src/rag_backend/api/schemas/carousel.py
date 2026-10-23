@@ -28,7 +28,8 @@ class CarouselProjectCreate(ContentModeRequestFields):
     """Request body that creates a carousel project.
 
     theme is a root key, "auto" or a custom-palette UUID (36 chars), stored as a string
-    reference in a varchar(64) column.
+    reference in a varchar(64) column. rubric_id is the quality rubric (left out: the
+    default carousel rubric; null: none).
     """
 
     topic: str = Field(..., min_length=1, max_length=500)
@@ -44,6 +45,7 @@ class CarouselProjectCreate(ContentModeRequestFields):
     image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
     custom_visual_details: str | None = Field(None, max_length=500)
     strategy: str | None = Field(None, max_length=50)
+    rubric_id: UUID | None = None
 
     @field_validator("theme")
     @classmethod
@@ -155,6 +157,7 @@ class CarouselProjectResponse(ContentModeResponseFields):
     creator_avatar_url: str | None = None
     template_version: str | None = None
     slide_layout_strategy: str | None = None
+    rubric_id: str | None = None
     is_public: bool = False
     current_phase: str | None = None
     phase_status: str | None = None

@@ -187,6 +187,11 @@ export const DEFAULT_CTA_GOAL: CtaGoal = "follow";
 /** Persona preselected in the wizard when it exists (growth plan 16.3 G). */
 export const DEFAULT_PERSONA_NAME = "Pedro";
 
+/** Wizard rubric choice meaning "no rubric: the presentation policy alone". */
+export const RUBRIC_POLICY_ONLY = "none";
+/** The rubric content type the create wizard offers. */
+export const RUBRIC_CONTENT_TYPE_CAROUSEL = "carousel";
+
 /**
  * POV formats (growth plan 16.3 B). `format` is the backend `pov_format`;
  * `strategy` is the layout preferred for the point slides. Labels live in

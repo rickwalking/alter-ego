@@ -6,6 +6,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from rag_backend.domain.constants.carousel_rubric import (
+    RUBRIC_CRITERION_NAME_MAX_CHARS,
+    RUBRIC_CRITERION_TEXT_MAX_CHARS,
+    RUBRIC_MAX_CRITERIA,
+)
 from rag_backend.domain.rubric_scoring import normalize_stored_criterion
 
 
@@ -92,12 +97,26 @@ class RubricCriterion(BaseModel):
     prompt_template: str
 
 
+class RubricCriterionInput(RubricCriterion):
+    """A criterion as created or updated: bounded text (it reaches LLM prompts).
+
+    Reads keep the plain ``RubricCriterion`` so rubrics stored before the bounds
+    still load.
+    """
+
+    name: str = Field(..., min_length=1, max_length=RUBRIC_CRITERION_NAME_MAX_CHARS)
+    description: str = Field(..., max_length=RUBRIC_CRITERION_TEXT_MAX_CHARS)
+    prompt_template: str = Field(..., max_length=RUBRIC_CRITERION_TEXT_MAX_CHARS)
+
+
 class QualityRubricCreate(BaseModel):
     """Schema for creating a quality rubric."""
 
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
-    criteria: list[RubricCriterion] = Field(..., min_length=1)
+    criteria: list[RubricCriterionInput] = Field(
+        ..., min_length=1, max_length=RUBRIC_MAX_CRITERIA
+    )
     applicable_content_types: list[str] = Field(default_factory=lambda: ["carousel"])
     is_default: bool = False
 
@@ -107,7 +126,13 @@ class QualityRubricUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
-    criteria: Annotated[list[RubricCriterion], Field(min_length=1)] | None = None
+    criteria: (
+        Annotated[
+            list[RubricCriterionInput],
+            Field(min_length=1, max_length=RUBRIC_MAX_CRITERIA),
+        ]
+        | None
+    ) = None
     applicable_content_types: list[str] | None = None
     is_default: bool | None = None
 

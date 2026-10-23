@@ -229,11 +229,12 @@ class PublishingReadAcl:
         """Project the editorial-analytics summary, content quality score and velocity.
 
         Counts and velocity come from ``EditorialAnalyticsService``; the quality score
-        from the content rubric scores (:func:`content_quality_summary`).
+        from the content rubric scores (:func:`content_quality_summary`), limited to
+        the author's own content when the query names one.
         """
         service = EditorialAnalyticsService()
         summary = await service.get_summary(self._session, author_id=query.author_id)
-        summary.update(await content_quality_summary(self._session))
+        summary.update(await content_quality_summary(self._session, query.author_id))
         velocity = await service.get_velocity_by_week(
             self._session, weeks=query.weeks, author_id=query.author_id
         )

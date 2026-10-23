@@ -86,6 +86,7 @@ export const carouselProjectResponseSchema = z.object({
   hook_text: z.string().nullable().optional(),
   hook_asset_id: z.string().nullable().optional(),
   persona_id: z.string().nullable().optional(),
+  rubric_id: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -172,6 +173,7 @@ export const carouselCreateRequestSchema = z
     slide_count: z.number().int().min(7).max(10).optional(),
     cta_goal: z.enum(["follow", "send", "comment"]).optional(),
     persona_id: z.string().uuid().nullable().optional(),
+    rubric_id: z.string().uuid().nullable().optional(),
     /** Required by the API when content_mode is "pov" or "pov_news". */
     hook_asset_id: z.string().uuid().optional(),
   })

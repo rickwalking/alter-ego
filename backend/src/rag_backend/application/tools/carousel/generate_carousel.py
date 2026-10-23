@@ -32,6 +32,13 @@ WorkflowStartResult = str
 WorkflowStarter = Callable[..., Awaitable[WorkflowStartResult]]
 
 
+async def _default_rubric(access: CarouselToolAccessContext) -> str | None:
+    """The default carousel rubric for a chat-created carousel, or none."""
+    if access.default_rubric_id is None:
+        return None
+    return await access.default_rubric_id()
+
+
 def build_generate_carousel_tool(
     carousel_repository: CarouselRepository,
     access: CarouselToolAccessContext,
@@ -66,6 +73,7 @@ def build_generate_carousel_tool(
             language=language,
             owner_id=access.owner_user_id,
             presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
+            rubric_id=await _default_rubric(access),
         )
 
         created = await carousel_repository.create_project(project)

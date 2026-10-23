@@ -45,6 +45,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     SOURCE_TYPE_DOCUMENT,
 )
 from rag_backend.domain.content_mode import is_pov_news
+from rag_backend.domain.models.carousel_rubric import CarouselRubric, agent_for_rubric
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 from rag_backend.domain.news_quote_cards import place_quote_cards
@@ -89,20 +90,22 @@ class SlideDraftGenerationParams:
     mode: ContentModeBrief | None = None
     concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
     only_slides: frozenset[int] | None = None
+    rubric: CarouselRubric | None = None
 
 
 @dataclass(frozen=True)
 class ContentRegenInputs:
     """Revision notes + prior drafts bundled for one content regeneration.
 
-    mode is the project's content mode for this regeneration; scope is the slides a
-    scoped revision may change (None: the whole deck).
+    mode is the project's content mode and rubric its quality rubric; scope is the
+    slides a scoped revision may change (None: the whole deck).
     """
 
     revision_notes: list[str]
     previous_drafts: list[dict[str, object]] = field(default_factory=list)
     mode: ContentModeBrief | None = None
     scope: frozenset[int] | None = None
+    rubric: CarouselRubric | None = None
 
 
 async def synthesize_research(
@@ -288,7 +291,7 @@ async def generate_slide_drafts(
     sibling's fresh draft; near-duplicates are caught and re-drafted after.
     """
     runner = _SlideDraftRunner(
-        content_agent=content_agent,
+        content_agent=agent_for_rubric(content_agent, params.rubric),
         outline=params.outline,
         persona=params.persona,
         persona_context=_learned_persona_context(params),
@@ -325,7 +328,7 @@ def build_slide_draft_retry(
     normalized draft or ``None`` when the index is unknown.
     """
     runner = _SlideDraftRunner(
-        content_agent=content_agent,
+        content_agent=agent_for_rubric(content_agent, params.rubric),
         outline=params.outline,
         persona=params.persona,
         persona_context=_learned_persona_context(params),

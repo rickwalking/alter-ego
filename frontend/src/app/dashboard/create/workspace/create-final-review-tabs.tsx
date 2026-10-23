@@ -21,10 +21,8 @@ import {
   useReportCopyBusy,
   type FinalReviewCopy,
 } from "./phase-review/use-final-review-copy";
-import {
-  resolveBlogMarkdown,
-  resolveRubricScores,
-} from "./create-phase-review-helpers";
+import { resolveBlogMarkdown } from "./create-phase-review-helpers";
+import { QualityTab } from "./phase-review/final-review-quality-tab";
 
 interface FinalReviewTabsProps {
   projectId: string;
@@ -40,36 +38,6 @@ const MUTED = "text-[var(--color-text-muted)]";
 /** The caption or a LinkedIn post has edits that are not saved yet. */
 function copyUnsaved(copy: FinalReviewCopy): boolean {
   return copy.editor?.isDirty(COPY_FIELDS) === true;
-}
-
-interface QualityTabProps {
-  readonly state: EditorialWorkflowState;
-  readonly emptyText: string;
-}
-
-/** The final review rubric scores, or the empty note. */
-function QualityTab({ state, emptyText }: QualityTabProps): React.JSX.Element {
-  const scoreEntries = Object.entries(resolveRubricScores(state));
-  if (scoreEntries.length === 0) {
-    return <p className={MUTED}>{emptyText}</p>;
-  }
-  return (
-    <ul className="space-y-1">
-      {scoreEntries.map(([name, value]) => (
-        <li
-          key={name}
-          className={cn("flex items-center justify-between gap-2", MUTED)}
-        >
-          <span className="font-medium capitalize">
-            {name.replaceAll("_", " ")}
-          </span>
-          <span>
-            {typeof value === "string" ? value : JSON.stringify(value)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 interface CopyTabProps {

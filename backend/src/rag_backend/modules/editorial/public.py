@@ -157,6 +157,11 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_rubric_acl import (
+    CarouselRubricAcl,
+    RubricChoiceError,
+    RubricUser,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
     read_project_owner_id,
     read_run_fence,
@@ -245,6 +250,7 @@ __all__ = [
     "CarouselProjectWriteOwner",
     "CarouselRepository",
     "CarouselReviewRow",
+    "CarouselRubricAcl",
     "CarouselSlide",
     "CarouselStatus",
     "CarouselTheme",
@@ -275,6 +281,8 @@ __all__ = [
     "ReviewDecisionPort",
     "ReviewWorkflowEngine",
     "ReviewerAssignmentPort",
+    "RubricChoiceError",
+    "RubricUser",
     "RunHeartbeat",
     "SlideFixAttemptReport",
     "SlideFixModelFactory",

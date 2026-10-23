@@ -31,6 +31,8 @@ export interface CreateCarouselFormState {
   personaId: string;
   /** POV slide-1 photo (creator asset id), or "" for none. */
   hookAssetId: string;
+  /** Quality rubric id, "none" for the policy alone, "" for the server default. */
+  rubricId: string;
 }
 
 export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
@@ -48,6 +50,7 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   ctaGoal: DEFAULT_CTA_GOAL,
   personaId: "",
   hookAssetId: "",
+  rubricId: "",
 };
 
 /** The POV family (thesis, slide-1 photo, 8-10 slides). */

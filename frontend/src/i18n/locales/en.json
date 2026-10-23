@@ -432,7 +432,11 @@
         "desc": "The news through your read: facts, why it matters to developers, then your take, with your photo on slide 1"
       },
       "personaLabel": "Persona (voice)",
-      "personaNone": "No persona"
+      "personaNone": "No persona",
+      "rubricLabel": "Quality rubric",
+      "rubricDefault": "{name} (default)",
+      "rubricServerDefault": "Default rubric",
+      "rubricNone": "No rubric (presentation policy only)"
     },
     "pov": {
       "title": "Your point of view",
@@ -784,7 +788,14 @@
         "copyLoadFailed": "Could not load the saved texts.",
         "copyRetry": "Try again",
         "copyBlocked": "Save or discard the caption or LinkedIn edit before approving or requesting changes.",
-        "qualityEmpty": "Quality scores are not available yet."
+        "qualityEmpty": "Quality scores are not available yet.",
+        "rubric": {
+          "summary": "Rubric {name}: overall score {score}/100",
+          "passed": "Every criterion reached its minimum.",
+          "failed": "Some criteria are below their minimum.",
+          "score": "{score}/100 (minimum {threshold})",
+          "belowThreshold": "Below the minimum"
+        }
       },
       "hookPicker": {
         "title": "Slide 1 hook: pick one or edit it",

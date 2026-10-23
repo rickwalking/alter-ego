@@ -16,6 +16,7 @@ describe("CreateModeSection", () => {
         form={INITIAL_CREATE_FORM_STATE}
         onChange={vi.fn()}
         personas={PERSONAS}
+        rubrics={[]}
       />,
     );
     expect(screen.getByRole("radio", { name: /Radar IA/ })).toHaveAttribute(
@@ -34,6 +35,7 @@ describe("CreateModeSection", () => {
         form={{ ...INITIAL_CREATE_FORM_STATE, selectedTemplate: 4 }}
         onChange={onChange}
         personas={PERSONAS}
+        rubrics={[]}
       />,
     );
     fireEvent.click(screen.getByRole("radio", { name: /Ponto de Vista/ }));
@@ -51,6 +53,7 @@ describe("CreateModeSection", () => {
         form={POV_FORM}
         onChange={onChange}
         personas={PERSONAS}
+        rubrics={[]}
       />,
     );
     fireEvent.click(screen.getByRole("radio", { name: /Radar IA/ }));
@@ -61,7 +64,7 @@ describe("CreateModeSection", () => {
     });
   });
 
-  // Scenario: The owner picks "POV: News" (AE-0406)
+  /** Scenario: The owner picks "POV: News" */
   it("switches to POV: News with the POV preset", () => {
     const onChange = vi.fn();
     render(
@@ -69,6 +72,7 @@ describe("CreateModeSection", () => {
         form={INITIAL_CREATE_FORM_STATE}
         onChange={onChange}
         personas={PERSONAS}
+        rubrics={[]}
       />,
     );
     fireEvent.click(screen.getByRole("radio", { name: /POV: News/ }));
@@ -86,6 +90,7 @@ describe("CreateModeSection", () => {
         form={INITIAL_CREATE_FORM_STATE}
         onChange={onChange}
         personas={PERSONAS}
+        rubrics={[]}
       />,
     );
     const select = screen.getByLabelText(/Persona/);

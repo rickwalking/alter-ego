@@ -1,0 +1,57 @@
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@/test/utils";
+import { INITIAL_CREATE_FORM_STATE } from "@/app/dashboard/create/types";
+import { CreateModeSection } from "./create-mode-section";
+
+/** Gherkin: tests/features/carousel-rubric-ae0504.feature. */
+
+const RUBRICS = [
+  { id: "r-house", name: "Casa", isDefault: true },
+  { id: "r-qa", name: "QA", isDefault: false },
+];
+
+describe("CreateModeSection rubric select (AE-0504)", () => {
+  /** Scenario: The wizard preselects the default carousel rubric */
+  it("lists the carousel rubrics, marks the default and offers the policy alone", () => {
+    render(
+      <CreateModeSection
+        form={{ ...INITIAL_CREATE_FORM_STATE, rubricId: "r-house" }}
+        onChange={vi.fn()}
+        personas={[]}
+        rubrics={RUBRICS}
+      />,
+    );
+    const select = screen.getByLabelText("Quality rubric");
+    expect(select).toHaveValue("r-house");
+    expect(
+      Array.from((select as HTMLSelectElement).options).map((o) => o.text),
+    ).toEqual([
+      "Default rubric",
+      "Casa (default)",
+      "QA",
+      "No rubric (presentation policy only)",
+    ]);
+  });
+
+  /** Scenario: The chosen rubric is sent with the carousel */
+  it("shows the server's default before a choice and reports the owner's choice", () => {
+    const onChange = vi.fn();
+    render(
+      <CreateModeSection
+        form={INITIAL_CREATE_FORM_STATE}
+        onChange={onChange}
+        personas={[]}
+        rubrics={RUBRICS}
+      />,
+    );
+    const select = screen.getByLabelText("Quality rubric");
+    expect(select).toHaveValue("");
+    expect((select as HTMLSelectElement).selectedOptions[0]?.text).toBe(
+      "Default rubric",
+    );
+    fireEvent.change(select, { target: { value: "r-qa" } });
+    expect(onChange).toHaveBeenCalledWith({ rubricId: "r-qa" });
+    fireEvent.change(select, { target: { value: "none" } });
+    expect(onChange).toHaveBeenCalledWith({ rubricId: "none" });
+  });
+});
