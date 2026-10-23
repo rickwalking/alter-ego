@@ -1,4 +1,4 @@
-# AE-0529 — The public chat reads public knowledge only
+# AE-0529 — Only the site owner's conversations read personal knowledge
 
 Status: In Development
 Tier: T2
@@ -12,8 +12,8 @@ Updated: 2026-10-23
 
 ## Goal
 
-An anonymous visitor's chat answers only from the owner's public knowledge, while the owner's own chat
-(a conversation of a signed-in user) keeps reading personal and public knowledge.
+Personal knowledge is searchable only in conversations owned by the site owner (Pedro). Every other
+conversation, whether of an anonymous visitor, an editor or another admin, reads public knowledge only.
 
 ## Problem
 
@@ -26,27 +26,37 @@ Público.
 
 ## Scope
 
-- The chat agent gets a knowledge scope: public (search the `public` namespace, list `public` documents) or
-  owner (search `personal` + `public`, list `personal` + `public` documents).
-- An anonymous conversation (`user_id` null) gets the public scope, on the streaming route and on the
-  non-streaming conversation messages route; a conversation of a signed-in user gets the owner scope.
-- The agent's default is the public scope, so a builder that forgets to choose never widens access.
+- `agents/chat_knowledge.py`: two scopes, owner (search `personal` + `public`, list both) and public
+  (search and list `public` only), and `knowledge_scope_for(owner_id, site_owner_id)`. It returns the owner
+  scope only when the conversation owner stored on the server is the configured site owner.
+- The site owner is the existing `AUTOPILOT_OWNER_USER_ID` setting, already in the prod secrets and already
+  used as "the owner" for cover assets. Unset or invalid fails closed to public only.
+- The Alter-Ego agent (stream and messages routes), the carousel (RAG) agent and `/api/search` take their
+  scope from the owner; an agent built without a scope reads public only.
+- `HybridRetrieverWithRRF` resolves a missing namespace prefix to `public` alone, so a future caller that
+  names no namespace fails closed.
+- The Knowledge Base scope hint says the public chat reads only Público knowledge.
 
 ## Non-Goals
 
-- The carousel (RAG) agent and `/api/search` (signed-in only) are unchanged.
-- No change to the hybrid retriever's namespace resolution.
 - No database or API contract change.
+- No change to the `personal` prefix (still `personal` + `public`) or to the carousel/internal namespaces.
 
 ## Acceptance Criteria
 
-- [x] Given an anonymous conversation, When the visitor chats, Then the knowledge search runs on the `public`
-      namespace only and the `list_documents` tool lists only public documents.
-- [x] Given a conversation of a signed-in user, When the owner chats, Then the search covers `personal` and
-      `public` and the list tool lists personal and public documents.
-- [x] Given an AlterEgoAgent built without a scope, Then it reads public knowledge only.
-- [x] Given the streaming route and the non-streaming messages route, Then both pick the scope from the
-      conversation's owner (anonymous → public).
+- [x] Given an anonymous conversation, Then the search runs on `public` only and the list tool lists public
+      documents only.
+- [x] Given a conversation of the configured site owner, Then the search covers `personal` + `public` and the
+      list tool lists both.
+- [x] Given a conversation of an editor or of another admin, Then public only.
+- [x] Given no (or an invalid) `AUTOPILOT_OWNER_USER_ID`, Then every conversation, the owner's included, is
+      public only.
+- [x] Given an agent built without a scope, Then public only.
+- [x] Given the stream and messages routes, Then both pick the scope from the conversation owner.
+- [x] Given the real retriever over an index with one personal and one public chunk, When the public agent
+      searches and lists, Then only the public chunk and document come back.
+- [x] Given a retrieval with no namespace prefix, Then only `public` is read.
+- [x] Given `/api/search` and the carousel (RAG) chat, Then personal knowledge only for the site owner.
 
 ## Gherkin Scenarios
 
@@ -54,13 +64,13 @@ Público.
 
 ## Affected Areas
 
-- Backend: `agents/alter_ego_agent.py`, new `agents/alter_ego_knowledge.py`,
+- Backend: `agents/chat_knowledge.py` (new), `agents/alter_ego_agent.py`, `agents/rag_agent.py`,
   `application/tools/knowledge_base/list_documents.py`, `api/dependencies/agents.py`,
-  `api/routes/chat_stream.py`.
-- Frontend: the Knowledge Base scope hint says the public chat reads only Público knowledge (pt, en).
-- Database: none.
-- API: none.
-- Tests: backend unit + integration.
+  `api/routes/chat_stream.py`, `api/routes/search.py`, `infrastructure/retrieval/hybrid_retriever.py`,
+  `infrastructure/config/settings.py` (docstring).
+- Frontend: the Knowledge Base scope hint (pt, en).
+- Database: none. API: none (same routes, narrower results for non-owners).
+- Tests: backend unit + integration, frontend hint test.
 
 ## Dependencies
 
@@ -81,23 +91,41 @@ Implemented: `agents/alter_ego_knowledge.py` holds the two scopes (public, owner
 list tool filters by a set of scopes and reads up to 100 recent completed documents before listing 20, so
 personal documents do not crowd the public ones out of an anonymous listing.
 
+### 2026-10-23 (review)
+
+Review of the PR applied: the owner scope now needs the conversation owner to be the configured site owner
+(editors and other admins read public only, unset fails closed), a proof test over the real retriever and
+an in-memory index, a missing prefix resolves to `public` only, and `/api/search` and the carousel chat take
+the owner's scope.
+
 ## Files Touched
 
-- backend: `agents/alter_ego_knowledge.py` (new), `agents/alter_ego_agent.py`,
-  `application/tools/knowledge_base/list_documents.py`, `api/dependencies/agents.py`,
-  `api/routes/chat_stream.py`; tests (`test_alter_ego_knowledge_scope_ae0529.py`,
-  `test_public_chat_knowledge_scope_ae0529.py`, builder seams in the chat / conversation tests),
-  feature, `docs/architecture/openapi.json` (stream route description).
+- backend: see Affected Areas; tests `test_alter_ego_knowledge_scope_ae0529.py`,
+  `test_public_knowledge_proof_ae0529.py`, `test_rag_agent_knowledge_scope_ae0529.py`,
+  `test_public_chat_knowledge_scope_ae0529.py`, `test_knowledge_search_owner_scope_ae0529.py`, builder seams
+  in the chat / conversation tests, `tests/pinecone_index_fakes.py` (query support), feature,
+  `docs/architecture/openapi.json`.
 - frontend: `i18n/locales/{pt,en}.json` (`knowledge.scope.hint`), `document-scope-forms.test.tsx`.
 
 ## Test Evidence
 
-New unit (10) and integration (4) tests green; the 14 test files that build or patch the chat agent
-(245 tests) green. Gates: `.agent/reports/AE-0529.dev-summary.md`.
+Backend: scope unit (21 incl. parametrized), proof over the real retriever (3), RAG agent scope (6),
+stream + messages route integration (10), `/api/search` integration (4); the chat/agent/search test files
+green. Gates: `.agent/reports/AE-0529.dev-summary.md`.
 
 ## QA Report
 
 Pending.
+
+## Decision Log
+
+- 2026-10-23 — Pedro: personal knowledge is searchable ONLY in conversations owned by Pedro, the site owner.
+  Every other signed-in user (editors, other admins) and every anonymous visitor gets public knowledge only.
+- 2026-10-23 — The site owner is identified by the existing `AUTOPILOT_OWNER_USER_ID` (already Pedro's user
+  id in prod, already used as the owner of cover assets) instead of a new setting; unset fails closed to
+  public only.
+- 2026-10-23 — A retrieval with no namespace prefix reads `public` only (fail closed). `/api/search` and the
+  carousel chat, which named no prefix, now pass the owner's scope so Pedro keeps personal + public there.
 
 ## Blockers
 
