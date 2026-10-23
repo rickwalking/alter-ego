@@ -100,6 +100,11 @@ the dashboard layout), with tests on the real outcome; drawer/scrim z-index back
 has an `h-screen` fallback; the frame pads the top safe-area inset; the composer no longer mixes `padding` with
 `paddingBottom`.
 
+### 2026-10-23 18:20
+
+Review should-fix: the menu button is hidden only while the drawer is open on a narrow screen (the sidebar's
+`(max-width: 767px)` query, now one shared constant); rotating a phone to 768px+ gives it back. Tests for both.
+
 ## Files Touched
 
 - frontend/src/app/(public)/chat/layout.tsx, chat-shell-style.ts (new) + test, public-chat-view.tsx
