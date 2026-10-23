@@ -42,3 +42,11 @@ class CreatorAssetTags:
     asset_id: UUID
     role: str | None = None
     pose_tag: str | None = None
+
+
+@dataclass(frozen=True)
+class CreatorAssetUsage:
+    """A carousel that uses a creator asset (blocks deleting the asset)."""
+
+    project_id: UUID
+    title: str | None

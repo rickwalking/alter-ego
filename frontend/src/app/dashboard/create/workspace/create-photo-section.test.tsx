@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@/test/utils";
+import { fireEvent, render, screen, within } from "@/test/utils";
 import { CreatePhotoSection } from "./create-photo-section";
 
 /** Gherkin: backend/tests/features/carousel_pov_layouts.feature. */
@@ -18,6 +18,10 @@ function renderSection(
     onUpload: vi.fn(),
     uploading: false,
     uploadFailed: false,
+    onDelete: vi.fn(),
+    deleting: false,
+    deleteBlockedBy: null,
+    deleteFailed: false,
     ...overrides,
   };
   render(<CreatePhotoSection {...props} />);
@@ -65,5 +69,74 @@ describe("CreatePhotoSection", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       /could not be uploaded/,
     );
+  });
+
+  /** Scenario: Deleting an unused photo after confirming */
+  it("deletes the selected photo only after the confirm", () => {
+    const props = renderSection();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete selected photo" }),
+    );
+    expect(props.onDelete).not.toHaveBeenCalled();
+    const group = screen.getByRole("group", {
+      name: "Delete this photo from the library? It is removed from the server.",
+    });
+    fireEvent.click(within(group).getByRole("button", { name: "Delete" }));
+    expect(props.onDelete).toHaveBeenCalledWith("a1");
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+
+  /** Scenario: Cancelling the delete keeps the photo */
+  it("cancels the delete without calling it", () => {
+    const props = renderSection();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete selected photo" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Delete selected photo" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: A photo in use lists the carousels that use it */
+  it("lists the carousels that block the delete with links", () => {
+    renderSection({
+      deleteFailed: true,
+      deleteBlockedBy: [
+        { id: "c-1", title: "Agentes no trabalho" },
+        { id: "c-2", title: null },
+      ],
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("This photo is in use");
+    expect(
+      within(alert).getByRole("link", { name: "Agentes no trabalho" }),
+    ).toHaveAttribute("href", "/dashboard/create/c-1");
+    expect(
+      within(alert).getByRole("link", { name: "Untitled carousel" }),
+    ).toHaveAttribute("href", "/dashboard/create/c-2");
+    expect(
+      screen.queryByText("Could not delete the photo. Try again."),
+    ).toBeNull();
+  });
+
+  /** Scenario: Deleting an unused photo after confirming */
+  it("shows a generic failure and the deleting state", () => {
+    renderSection({ deleteFailed: true, deleting: true });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not delete the photo. Try again.",
+    );
+    expect(
+      screen.getByRole("button", { name: /Deleting/ }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: Cancelling the delete keeps the photo */
+  it("offers no delete without a selected library photo", () => {
+    renderSection({ selectedId: "gone" });
+    expect(
+      screen.queryByRole("button", { name: "Delete selected photo" }),
+    ).toBeNull();
   });
 });

@@ -31,12 +31,15 @@ from rag_backend.api.constants import (
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.carousel_creator_asset import (
+    CreatorAssetInUseDetail,
+    CreatorAssetInUseResponse,
     CreatorAssetListResponse,
     CreatorAssetResponse,
     CreatorAssetSelectRequest,
     HookPhotoResponse,
 )
 from rag_backend.application.services.carousel.creator_asset_service import (
+    CreatorAssetInUseError,
     CreatorAssetService,
     HookPhotoCommand,
     LibraryUploadCommand,
@@ -49,6 +52,8 @@ from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
     CREATOR_ASSET_POSE_TAG_MAX_CHARS,
     CREATOR_ASSET_ROLE_PATTERN,
+    ERR_CREATOR_ASSET_IN_USE,
+    ERR_CREATOR_ASSET_NOT_FOUND,
     ERR_CREATOR_ASSET_TOO_LARGE,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
@@ -108,6 +113,24 @@ def _photo_form(
     return _PhotoForm(file=file, role=role, pose_tag=(pose_tag or "").strip() or None)
 
 
+def _library_error(error: CreatorAssetValidationError) -> HTTPException:
+    """404 unknown, 409 in use (with the carousels), else the shared mapping."""
+    if isinstance(error, CreatorAssetInUseError):
+        detail = CreatorAssetInUseDetail.model_validate({
+            "code": error.code,
+            "carousels": [
+                {"id": usage.project_id, "title": usage.title} for usage in error.usages
+            ],
+        })
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail.model_dump(mode="json"),
+        )
+    if error.code == ERR_CREATOR_ASSET_NOT_FOUND:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.code)
+    return map_validation_error(error)
+
+
 @router.get(_LIBRARY_PATH, responses=_RESPONSES)
 async def list_creator_assets(
     user: Annotated[User, Depends(require_authenticated_user)],
@@ -151,18 +174,47 @@ async def upload_library_photo(
     return to_creator_asset_response(asset)
 
 
-@router.get(f"{_LIBRARY_PATH}/{{asset_id}}/image", responses=_RESPONSES)
+@router.get(
+    f"{_LIBRARY_PATH}/{{asset_id}}/image",
+    responses={**_RESPONSES, 404: {"description": ERR_CREATOR_ASSET_NOT_FOUND}},
+)
 async def creator_asset_image(
     asset_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
     service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
 ) -> FileResponse:
-    """One of the caller's photos (owner or admin only)."""
+    """One of the caller's photos (owner or admin only); 404 once it is gone."""
     try:
         path = await service.library_image_path(user, asset_id)
     except CreatorAssetValidationError as error:
-        raise map_validation_error(error) from error
+        raise _library_error(error) from error
     return FileResponse(path, media_type=CREATOR_ASSET_MEDIA_TYPE_WEBP)
+
+
+@router.delete(
+    f"{_LIBRARY_PATH}/{{asset_id}}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        **_RESPONSES,
+        404: {"description": ERR_CREATOR_ASSET_NOT_FOUND},
+        409: {
+            "description": ERR_CREATOR_ASSET_IN_USE,
+            "model": CreatorAssetInUseResponse,
+        },
+    },
+)
+@limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
+async def delete_library_photo(
+    request: Request,
+    asset_id: UUID,
+    library: Annotated[_Library, Depends(_library)],
+) -> None:
+    """Delete one of the owner's photos and its file; 409 while a carousel uses it."""
+    del request
+    try:
+        await library.service.delete_library_photo(library.context.user, asset_id)
+    except CreatorAssetValidationError as error:
+        raise _library_error(error) from error
 
 
 @router.put(

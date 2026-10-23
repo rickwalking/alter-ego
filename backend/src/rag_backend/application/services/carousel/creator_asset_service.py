@@ -16,6 +16,7 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
 from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_ROLE_COVER,
     ERR_CREATOR_ASSET_FORBIDDEN,
+    ERR_CREATOR_ASSET_IN_USE,
     ERR_CREATOR_ASSET_NOT_FOUND,
     build_creator_asset_filename,
 )
@@ -24,11 +25,20 @@ from rag_backend.domain.models.carousel_creator_asset import (
     CarouselCreatorAsset,
     CreatorAssetLibraryQuery,
     CreatorAssetTags,
+    CreatorAssetUsage,
 )
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.creator_asset_repository import (
     PostgresCreatorAssetRepository,
 )
+
+
+class CreatorAssetInUseError(CreatorAssetValidationError):
+    """The photo is still used by ``usages`` (nothing was deleted)."""
+
+    def __init__(self, usages: list[CreatorAssetUsage]) -> None:
+        super().__init__(ERR_CREATOR_ASSET_IN_USE)
+        self.usages = usages
 
 
 @dataclass(frozen=True)
@@ -184,6 +194,27 @@ class CreatorAssetService:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
         return path
 
+    async def delete_library_photo(self, user: User, asset_id: UUID) -> None:
+        """Delete one of the caller's photos and its file (owner only).
+
+        Raises not-found for an unknown id, forbidden for anyone but the owner
+        (admins included: the library is the owner's personal data) and
+        :class:`CreatorAssetInUseError` while any carousel uses the photo. The
+        stored WebP goes once no other row points at the same bytes.
+        """
+        asset = await self._asset_repo.get_by_id(asset_id)
+        if asset is None:
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
+        if asset.owner_id != str(user.id):
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_FORBIDDEN)
+        usages = await self._asset_repo.projects_using(asset_id)
+        if usages:
+            raise CreatorAssetInUseError(usages)
+        path = self.stored_file(asset)
+        remaining = await self._asset_repo.delete(asset)
+        if path is not None and remaining == 0:
+            path.unlink(missing_ok=True)
+
     def has_stored_file(self, asset: CarouselCreatorAsset) -> bool:
         """True when the asset's canonical WebP exists (PR #106 review)."""
         try:
@@ -313,6 +344,7 @@ class CreatorAssetService:
 
 
 __all__ = [
+    "CreatorAssetInUseError",
     "CreatorAssetSelectCommand",
     "CreatorAssetService",
     "CreatorAssetUploadCommand",

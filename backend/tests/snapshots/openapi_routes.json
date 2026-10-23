@@ -4,6 +4,7 @@
   "DELETE /api/blog-posts/{post_id}/cover/image",
   "DELETE /api/blog-posts/{post_id}/schedule",
   "DELETE /api/blog-posts/{post_id}/sections/{section_id}/image",
+  "DELETE /api/carousels/creator-assets/{asset_id}",
   "DELETE /api/carousels/{project_id}",
   "DELETE /api/content/{content_id}/lock",
   "DELETE /api/conversations/{conversation_id}",

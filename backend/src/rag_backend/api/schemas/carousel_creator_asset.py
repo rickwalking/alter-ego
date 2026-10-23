@@ -44,3 +44,23 @@ __all__ = [
     "CreatorAssetSelectRequest",
     "HookPhotoResponse",
 ]
+
+
+class CreatorAssetUsageResponse(BaseModel):
+    """A carousel that still uses a photo."""
+
+    id: UUID
+    title: str | None
+
+
+class CreatorAssetInUseDetail(BaseModel):
+    """The 409 ``detail`` of deleting a photo a carousel still uses."""
+
+    code: str
+    carousels: list[CreatorAssetUsageResponse]
+
+
+class CreatorAssetInUseResponse(BaseModel):
+    """The 409 body of deleting a photo a carousel still uses."""
+
+    detail: CreatorAssetInUseDetail
