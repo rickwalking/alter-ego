@@ -52,3 +52,33 @@ export type CreateDocumentRequest = z.infer<typeof createDocumentRequestSchema>;
 export type DocumentUploadResponse = z.infer<
   typeof documentUploadResponseSchema
 >;
+
+export const carouselSourceItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  source_type: z.string(),
+  url: z.string().nullable().optional(),
+  project_id: z.string(),
+  project_title: z.string(),
+  created_at: z.string(),
+});
+
+export const carouselSourceFacetSchema = z.object({
+  project_id: z.string(),
+  title: z.string(),
+  count: z.number(),
+});
+
+export const carouselSourceListResponseSchema = z.object({
+  items: z.array(carouselSourceItemSchema),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+  carousels: z.array(carouselSourceFacetSchema),
+});
+
+export type CarouselSourceItem = z.infer<typeof carouselSourceItemSchema>;
+export type CarouselSourceFacet = z.infer<typeof carouselSourceFacetSchema>;
+export type CarouselSourceListResponse = z.infer<
+  typeof carouselSourceListResponseSchema
+>;

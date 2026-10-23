@@ -7,7 +7,12 @@ import type { FileUploadForm } from "../hooks/types";
  * live here rather than inline in the `.tsx` files.
  */
 
-import { type Document, type CreateDocumentRequest } from "@/schemas/knowledge";
+import {
+  type CarouselSourceFacet,
+  type CarouselSourceItem,
+  type CreateDocumentRequest,
+  type Document,
+} from "@/schemas/knowledge";
 import type {
   DocumentScopeChoice,
   ScopeFilterValue,
@@ -143,4 +148,24 @@ export interface ScopeSwitchProps {
 export interface DropZoneProps {
   form: FileUploadForm;
   typeValid: boolean;
+}
+
+/** One row of the carousel-sources tab. */
+export interface CarouselSourceRowProps {
+  source: CarouselSourceItem;
+}
+
+/** The carousel filter of the carousel-sources tab. */
+export interface CarouselFilterProps {
+  carousels: CarouselSourceFacet[];
+  value: string;
+  onChange: (projectId: string) => void;
+}
+
+/** Range and previous / next of the carousel-sources tab. */
+export interface SourcesPagerProps {
+  offset: number;
+  shown: number;
+  total: number;
+  onOffsetChange: (offset: number) => void;
 }
