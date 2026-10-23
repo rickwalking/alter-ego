@@ -19,6 +19,7 @@ from rag_backend.domain.constants.blog_generation import (
 from rag_backend.domain.constants.carousel_archive import (
     CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS,
 )
+from rag_backend.domain.constants.cover_generation import DEFAULT_GROK_COVER_COST_USD
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.infrastructure.config.autopilot_autofix_settings import (
     AutopilotAutofixSettings,
@@ -109,6 +110,7 @@ class Settings(AutopilotAutofixSettings):
       with OpenAI as fallback (ADR-0022). Off by default (dev/tests make no webhook
       calls); prod deploy turns it on. Enabled without the webhook or public base
       URL, startup logs ``image_bridge_misconfigured`` and keeps plain OpenAI.
+      ``grok_cover_cost_usd`` is the budget cost logged per Grok cover generation.
     - ``blog_image_cost_cap`` is the per-post image spend ceiling (cover + sections,
       regenerations included) of ADR-0025. ``blog_image_concurrency`` bounds the
       image step; the image stage budget is the per-wave budget x
@@ -296,6 +298,7 @@ class Settings(AutopilotAutofixSettings):
     grokbot_image_webhook_url: SecretStr = SecretStr("")
     grokbot_image_webhook_auth_header: str = "Authorization"
     grokbot_image_webhook_auth_value: SecretStr = SecretStr("")
+    grok_cover_cost_usd: float = Field(default=DEFAULT_GROK_COVER_COST_USD, ge=0)
 
     cdn_base_url: str = ""
     cdn_enabled: bool = False

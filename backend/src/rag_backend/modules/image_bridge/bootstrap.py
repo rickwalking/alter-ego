@@ -8,7 +8,7 @@ the OpenAI fallback when it is on.
 
 from __future__ import annotations
 
-from rag_backend.domain.protocols import ImageGenerationService
+from rag_backend.domain.protocols import CoverImageEditor, ImageGenerationService
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.logging import get_logger
@@ -104,6 +104,19 @@ def build_grokbot_image_service(settings: Settings) -> ImageGenerationService:
     Ignores the flag so the smoke test can also run with the bridge off;
     raises ``ImageBridgeConfigError`` when a URL is missing.
     """
+    return _configured_service(settings)
+
+
+def build_grokbot_cover_editor(settings: Settings) -> CoverImageEditor:
+    """The bridge's image-edit path for a cover generated from the owner's photos.
+
+    No OpenAI fallback (the photos go to the Grok Bot only); raises
+    ``ImageBridgeConfigError`` when a URL is missing.
+    """
+    return _configured_service(settings)
+
+
+def _configured_service(settings: Settings) -> GrokBotImageService:
     missing = missing_image_bridge_settings(settings)
     if missing:
         raise ImageBridgeConfigError(

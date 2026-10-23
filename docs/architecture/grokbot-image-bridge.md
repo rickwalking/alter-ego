@@ -121,6 +121,37 @@ instead of our callback:
 - **Still to verify:** routine runs are queued, so parallelism and start latency are not
   guaranteed. The bridge timeout (600 s) and the fallback cover this.
 
+## 2.4 Image-edit jobs: a cover from the owner's photos (AE-0508)
+
+Same endpoint, same auth header, same callback. A slide-1 cover generated from the owner's
+library photos (publish step, "Gerar capa com Grok") adds two keys to the §2.1 body; a
+text-only job never sends them.
+
+```json
+{
+  "job_id": "…",
+  "model": "gpt-image-2",
+  "prompt": "<cover instruction with the owner's direction inside>",
+  "size": "1080x1350",
+  "task": "image_edit",
+  "reference_images": [
+    { "b64_json": "<base64 PNG>", "mime_type": "image/png" }
+  ],
+  "metadata": { "project_id": "…", "content_type": "carousel_cover" },
+  "…": "the other §2.1 fields"
+}
+```
+
+- `reference_images`: 1–3 of the owner's library photos, chosen per generation. Re-encoded by
+  the backend as PNG, at most 1536 px a side, every metadata block (EXIF, GPS, XMP) dropped.
+  Bytes only: no URL to the photo ever leaves the app. A body is about 2–6 MB.
+- The Grok Bot runs image-to-image with those photos as the reference (the person must stay
+  recognisable) and answers through the §2.2 callback exactly as for a text job.
+- The backend fits the answer to 1080×1350, applies the `ai_image` cover rules (ADR-0024) and
+  stores it as a private creator asset with role `cover`. No OpenAI fallback for these jobs.
+- Each generation follows an explicit confirmation by the owner, at most 4 per carousel and 40
+  per calendar month (failures do not count); see [ADR-0027](../decisions/0027-grok-cover-from-library-photos.md).
+
 ## 3. Backend design
 
 ### 3.1 Module

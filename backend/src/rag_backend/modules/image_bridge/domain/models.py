@@ -15,18 +15,22 @@ from uuid import UUID
 from rag_backend.modules.image_bridge.constants import (
     CONTENT_TYPE_CAROUSEL,
     ERR_INVALID_SIZE,
+    FIELD_B64_JSON,
     FIELD_CALLBACK_TOKEN,
     FIELD_CALLBACK_URL,
     FIELD_CONTENT_TYPE,
     FIELD_EXPIRES_AT,
     FIELD_JOB_ID,
     FIELD_METADATA,
+    FIELD_MIME_TYPE,
     FIELD_MODEL,
     FIELD_N,
     FIELD_PROJECT_ID,
     FIELD_PROMPT,
+    FIELD_REFERENCE_IMAGES,
     FIELD_RESPONSE_FORMAT,
     FIELD_SIZE,
+    FIELD_TASK,
     IMAGE_COUNT,
     RESPONSE_FORMAT_B64_JSON,
     SIZE_SEPARATOR,
@@ -92,8 +96,24 @@ class JobDeadline:
 
 
 @dataclass(frozen=True)
+class WebhookReference:
+    """One reference image of an image-edit job (contract section 2.4)."""
+
+    b64_json: str
+    mime_type: str
+
+    def payload(self) -> dict[str, str]:
+        """The JSON object of one entry of ``reference_images``."""
+        return {FIELD_B64_JSON: self.b64_json, FIELD_MIME_TYPE: self.mime_type}
+
+
+@dataclass(frozen=True)
 class WebhookRequest:
-    """The outbound webhook body of contract section 2.1."""
+    """The outbound webhook body of contract section 2.1.
+
+    An image-edit job (section 2.4) also carries ``task`` and its
+    ``reference_images``; a text-only job sends neither key.
+    """
 
     job_id: UUID
     model: str
@@ -103,9 +123,21 @@ class WebhookRequest:
     callback_token: str
     expires_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
+    task: str = ""
+    reference_images: tuple[WebhookReference, ...] = ()
 
     def payload(self) -> dict[str, object]:
         """JSON body sent to the Grok Bot webhook."""
+        body = self._base_payload()
+        if self.task:
+            body[FIELD_TASK] = self.task
+        if self.reference_images:
+            body[FIELD_REFERENCE_IMAGES] = [
+                reference.payload() for reference in self.reference_images
+            ]
+        return body
+
+    def _base_payload(self) -> dict[str, object]:
         return {
             FIELD_JOB_ID: str(self.job_id),
             FIELD_MODEL: self.model,
@@ -120,9 +152,11 @@ class WebhookRequest:
         }
 
 
-def job_metadata(project_id: str | None) -> dict[str, str]:
+def job_metadata(
+    project_id: str | None, content_type: str = CONTENT_TYPE_CAROUSEL
+) -> dict[str, str]:
     """Webhook metadata: the content type, plus the project when known."""
-    metadata = {FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL}
+    metadata = {FIELD_CONTENT_TYPE: content_type}
     if project_id:
         metadata[FIELD_PROJECT_ID] = project_id
     return metadata

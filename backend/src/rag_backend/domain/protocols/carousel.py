@@ -6,6 +6,7 @@ from typing import Protocol, TypedDict
 from uuid import UUID
 
 from rag_backend.domain.models import CarouselProject, ResearchSourceType
+from rag_backend.domain.models.cover_generation import CoverEditJob
 
 
 class StrategyNotFoundError(LookupError):
@@ -45,6 +46,16 @@ class ImageGenerationService(Protocol):
         prompt: str,
         output_path: str,
     ) -> str: ...
+
+
+class CoverImageEditor(Protocol):
+    """Generate a slide-1 cover from the owner's reference photos (image-to-image).
+
+    Returns the cover as PNG bytes (1080x1350); raises ``RuntimeError`` on any
+    failure or timeout.
+    """
+
+    async def edit_image(self, job: CoverEditJob) -> bytes: ...
 
 
 class ImageStyleStrategy(Protocol):

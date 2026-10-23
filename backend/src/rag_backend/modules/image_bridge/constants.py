@@ -48,6 +48,11 @@ FIELD_EXPIRES_AT = "expires_at"
 FIELD_METADATA = "metadata"
 FIELD_PROJECT_ID = "project_id"
 FIELD_CONTENT_TYPE = "content_type"
+FIELD_TASK = "task"
+FIELD_REFERENCE_IMAGES = "reference_images"
+FIELD_MIME_TYPE = "mime_type"
+TASK_IMAGE_EDIT = "image_edit"
+CONTENT_TYPE_COVER = "carousel_cover"
 
 
 FIELD_DATA = "data"
