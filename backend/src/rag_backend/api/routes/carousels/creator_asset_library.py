@@ -49,6 +49,8 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
     CreatorAssetValidationError,
 )
 from rag_backend.domain.constants.creator_asset import (
+    CREATOR_ASSET_IN_USE_KEY_CAROUSELS,
+    CREATOR_ASSET_IN_USE_KEY_CODE,
     CREATOR_ASSET_MAX_BYTES,
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
     CREATOR_ASSET_POSE_TAG_MAX_CHARS,
@@ -121,8 +123,8 @@ def _library_error(error: CreatorAssetValidationError) -> HTTPException:
     """404 unknown, 409 in use (with the carousels), else the shared mapping."""
     if isinstance(error, CreatorAssetInUseError):
         detail = CreatorAssetInUseDetail.model_validate({
-            "code": error.code,
-            "carousels": [
+            CREATOR_ASSET_IN_USE_KEY_CODE: error.code,
+            CREATOR_ASSET_IN_USE_KEY_CAROUSELS: [
                 {"id": usage.project_id, "title": usage.title} for usage in error.usages
             ],
         })
