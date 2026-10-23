@@ -53,8 +53,9 @@ cgroup CPU/memory limits and a global export lock; our own `generation_runs` tab
   or stuck in-progress projects without a live lease, Then it re-enqueues them and sends Pedro one summary message.
 - AC7 Given the same confirmation arrives twice (double tap or webhook retry), When it is processed, Then exactly one
   job exists (dedupe key).
-- AC8 Given `GENERATION_QUEUE_ENABLED=false`, When the system runs, Then the current in-process path is unchanged
-  (rollback by flag; new table only, no schema rollback).
+- AC8 Given the P1 merge is reverted, When the reverted stack runs, Then the in-process path drives generation as
+  before, queued autopilot runs are picked up by the in-process runner, an in-flight run is parked by the stale-run
+  reaper and stays retryable, and the new tables stay in place (rollback by revert; no schema rollback).
 
 ## Pedro's decisions (2026-10-22)
 
@@ -81,3 +82,7 @@ cgroup CPU/memory limits and a global export lock; our own `generation_runs` tab
 - 2026-10-22: Skeptical review round 3 (GLM 5.3, final per Pedro's 3-round cap): WARN — 1 BLOCKER (validation droplet would
   hold prod credentials) + 6 WARN + 3 INFO; all resolved; blocker fix not re-reviewed (cap reached). ADR-0026 provisional
   until P0 exit criteria 1-3; P1 merge gated on the run_stale root cause. Phase tickets AE-0520..AE-0526 created.
+- 2026-10-23: Pedro decided there is no feature flag for the queue: the worker goes live when P1 merges. The
+  disposable-droplet validation (load test, worker killed mid-phase, deploy mid-run, no duplicate artifacts or Telegram
+  messages) runs before the merge, and rollback = revert. The flag hand-over findings of the skeptical review rounds
+  are moot (the review stays as a historical record).

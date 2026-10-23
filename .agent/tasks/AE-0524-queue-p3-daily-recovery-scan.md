@@ -20,8 +20,8 @@ A once-a-day scan at 04:00 BRT (PgQueuer schedule) that re-queues stuck or idle 
 
 Phase of AE-0517 (carousel generation queue). Plan: `.agent/reports/AE-0517.arch-plan.md`; decision:
 `docs/decisions/0026-carousel-generation-queue.md` (provisional until the AE-0520 exit criteria hold); skeptical review:
-`.agent/reports/AE-0517.skeptical-review.md`. Order: AE-0520 → AE-0521 → AE-0522 (flag off) → validation → flag on →
-AE-0523, AE-0524, AE-0525, AE-0526.
+`.agent/reports/AE-0517.skeptical-review.md`. Order: AE-0520 → AE-0521 → validation on the
+disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE-0526.
 
 ## Scope
 
