@@ -1,6 +1,6 @@
 # AE-0533 — Chat: site header on /chat, mobile fit (dvh, safe area, 16px, 44px), opaque drawer, no fake bell or "PM"
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -99,11 +99,12 @@ conversation drawer slides away when closed and is a fixed column on wider scree
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0533.dev-summary.md`: targeted tests pass and `gates.sh --changed-only` is green (0 FAIL) on
+7a8497b68; the full suites, build and mutation run in CI on the PR.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0533.qa.md` (external, round 1 WARN, findings fixed, confirmation round).
 
 ## Blockers
 
