@@ -1,6 +1,6 @@
 # AE-0506 — Version history for the caption and the LinkedIn posts
 
-Status: In Progress
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -53,20 +53,20 @@ that index.
 
 ## Acceptance Criteria
 
-- [ ] Given a save that changes the caption, Then one `carousel_copy` version with the field, the new
+- [x] Given a save that changes the caption, Then one `carousel_copy` version with the field, the new
       text, the author and the time is stored with the save (same transaction); the first edit of a
       text also stores the replaced text as the original version.
-- [ ] Given a save that changes nothing in a text, Then no version is written for it.
-- [ ] Given two carousels, Then each numbers its versions from 1 (the unique index is per content).
-- [ ] Given the versions route, Then the owner or an admin gets them newest first with who/when/field/
+- [x] Given a save that changes nothing in a text, Then no version is written for it.
+- [x] Given two carousels, Then each numbers its versions from 1 (the unique index is per content).
+- [x] Given the versions route, Then the owner or an admin gets them newest first with who/when/field/
       text; anyone else gets 403.
-- [ ] Given a restore of version n with the current lock version, Then the text becomes version n's,
+- [x] Given a restore of version n with the current lock version, Then the text becomes version n's,
       a new version "restored from version n" is stored, and the lock version advances; a stale lock is
       409 `version_conflict`; an unknown version is 404; a published caption is 409.
-- [ ] Given prod, Then the deploy runs `python -m rag_backend.scripts.content_versions_index --apply
+- [x] Given prod, Then the deploy runs `python -m rag_backend.scripts.content_versions_index --apply
       --verify` after the blog cutover; re-running it changes nothing; `--verify` fails while the old
       global index is present or the per-content one is missing.
-- [ ] Given the publish page or Revisão final, Then the "Histórico" of the caption and of the LinkedIn
+- [x] Given the publish page or Revisão final, Then the "Histórico" of the caption and of the LinkedIn
       posts lists the versions and "Restaurar" restores one (then the texts and lock version refresh).
 
 ## Gherkin Scenarios
@@ -76,11 +76,11 @@ See `backend/tests/features/carousel_copy_versions_ae0506.feature` and
 
 ## Affected Areas
 
-- [ ] Backend (copy edit service, new copy history service + version store, routes, schemas, constants)
-- [ ] Database (`content_versions` unique index: model, Alembic, deploy one-shot + deploy.yml step)
-- [ ] Frontend (history list, hooks, publish page and final review wiring, i18n)
-- [ ] API (two new routes; OpenAPI artifact, route snapshot)
-- [ ] Tests
+- [x] Backend (copy edit service, new copy history service + version store, routes, schemas, constants)
+- [x] Database (`content_versions` unique index: model, Alembic, deploy one-shot + deploy.yml step)
+- [x] Frontend (history list, hooks, publish page and final review wiring, i18n)
+- [x] API (two new routes; OpenAPI artifact, route snapshot)
+- [x] Tests
 
 ## Dependencies
 
@@ -95,7 +95,12 @@ Ticket written from the dashboard QA triage; Pedro's Q8/Q9 answers applied. Prod
 
 ## Files Touched
 
+See `.agent/reports/AE-0506.dev-summary.md`.
+
 ## Test Evidence
+
+Failing first: the 9 route tests answered 404 before the routes existed. Full backend (with Postgres)
+and frontend gate captures green; mutation in CI. See the dev summary.
 
 ## QA Report
 
