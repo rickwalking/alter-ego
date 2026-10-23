@@ -8,10 +8,15 @@ import sys
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
 
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+from rag_backend.infrastructure.config.settings import get_settings
+
 EXIT_USAGE = 2
 
 ModeValidator = Callable[[argparse.Namespace], str | None]
 ScriptRunner = Callable[[argparse.Namespace], Coroutine[object, object, int]]
+EngineRunner = Callable[[AsyncEngine], Coroutine[object, object, int]]
 
 
 @dataclass(frozen=True)
@@ -31,3 +36,14 @@ def run_guarded_cli(cli: GuardedCli, argv: Sequence[str] | None = None) -> int:
         print(f"ERROR: {error}", file=sys.stderr)
         return EXIT_USAGE
     return asyncio.run(cli.run(args))
+
+
+async def run_on_own_engine(run: EngineRunner) -> int:
+    """Run ``run`` on a dedicated engine (no ``create_all``) and dispose of it."""
+    engine = create_async_engine(
+        get_settings().database_url, pool_pre_ping=True, hide_parameters=True
+    )
+    try:
+        return await run(engine)
+    finally:
+        await engine.dispose()
