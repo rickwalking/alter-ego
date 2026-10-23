@@ -11,8 +11,20 @@ Feature: The owner archives and restores carousels on the workflow board
     And cancelling archives nothing
 
   Scenario: A card in progress cannot be archived
-    Given an active card whose phase is in progress
+    Given an active card whose phase run is live
     Then "Arquivar" is disabled and the reason is shown
+
+  Scenario: A card an autopilot run still needs cannot be archived
+    Given an active card with a scheduled autopilot publish
+    Then "Arquivar" is disabled and the reason is shown
+
+  Scenario: A phase stuck with a stale heartbeat can be archived
+    Given an active card whose phase is in progress but its heartbeat is stale
+    Then "Arquivar" is offered
+
+  Scenario: A reviewer sees no archive control
+    Given a card I review but do not own
+    Then no "Arquivar" or "Restaurar" control is shown
 
   Scenario: A published card has no archive control
     Given a published card

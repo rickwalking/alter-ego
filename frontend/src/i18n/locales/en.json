@@ -1445,7 +1445,8 @@
       "restoreFailed": "Could not restore. Try again.",
       "showArchived": "Archived",
       "showActive": "Active",
-      "emptyArchived": "No archived carousels."
+      "emptyArchived": "No archived carousels.",
+      "autopilot": "It cannot be archived while an autopilot run still needs it (for example a scheduled publish)."
     }
   },
   "dashboard": {

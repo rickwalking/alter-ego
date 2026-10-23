@@ -5,13 +5,7 @@ import type {
   WorkflowKanban,
 } from "@/modules/editorial";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
-import {
-  ARCHIVE_REFUSAL,
-  WORKFLOW_PHASE_STATUS,
-  type ArchiveRefusal,
-} from "@/constants/workflow";
-
-const PUBLISHED_PHASE = "published";
+import { ARCHIVE_REFUSAL, type ArchiveRefusal } from "@/constants/workflow";
 
 function formatPhaseLabel(phase: string): string {
   return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -68,13 +62,13 @@ export function mapWorkflowToKanbanColumns(
   }));
 }
 
-/** Why the card cannot be archived, or `null` when it can. */
+const ARCHIVE_REFUSALS: readonly string[] = Object.values(ARCHIVE_REFUSAL);
+
+/** The board API's archive refusal for the card, or `null` when it can be archived. */
 export function archiveRefusalOf(card: ApiKanbanCard): ArchiveRefusal | null {
-  if (card.current_phase === PUBLISHED_PHASE) return ARCHIVE_REFUSAL.PUBLISHED;
-  if (card.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS) {
-    return ARCHIVE_REFUSAL.IN_PROGRESS;
-  }
-  return null;
+  const refusal = card.archive_refusal ?? null;
+  if (refusal === null || !ARCHIVE_REFUSALS.includes(refusal)) return null;
+  return refusal as ArchiveRefusal;
 }
 
 export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
@@ -89,6 +83,7 @@ export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
       phase: card.current_phase,
       phaseStatus: card.workflow_status ?? card.phase_status,
       archiveRefusal: archiveRefusalOf(card),
+      canArchive: card.can_archive ?? false,
     })),
   };
 }

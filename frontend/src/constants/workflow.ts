@@ -37,10 +37,11 @@ export const WORKFLOW_PHASE_STATUS = {
 
 export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;
 
-/** Why a board card cannot be archived (mirrors the archive route's 409s). */
+/** Why a board card cannot be archived, as the board API reports it (the archive route's 409s). */
 export const ARCHIVE_REFUSAL = {
   PUBLISHED: "published",
   IN_PROGRESS: "in_progress",
+  AUTOPILOT: "autopilot",
 } as const;
 
 /** A reason a card cannot be archived. */

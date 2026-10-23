@@ -24,7 +24,7 @@ const ARCHIVED_TITLE = "Archived carousel";
 
 function board(
   titles: string[],
-  phaseStatus = "awaiting_human",
+  archiveRefusal: string | null = null,
 ): WorkflowKanban {
   return {
     columns: [
@@ -35,8 +35,10 @@ function board(
           title,
           topic: "AI",
           current_phase: "content",
-          phase_status: phaseStatus,
+          phase_status: "awaiting_human",
           updated_at: null,
+          can_archive: true,
+          archive_refusal: archiveRefusal,
         })),
       },
     ],

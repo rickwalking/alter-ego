@@ -25,6 +25,7 @@ function card(overrides: Partial<KanbanCard> = {}): KanbanCard {
     phase: "content",
     phaseStatus: "awaiting_human",
     archiveRefusal: null,
+    canArchive: true,
     ...overrides,
   };
 }
@@ -103,6 +104,27 @@ describe("CardArchiveAction", () => {
     const button = screen.getByRole("button", { name: labels.archive });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription(labels.inProgress);
+  });
+
+  /** Scenario: A reviewer sees no archive control */
+  it("shows no control to a caller who may not archive the card", () => {
+    renderAction({ canArchive: false });
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: A reviewer sees no archive control */
+  it("shows no restore to a caller who may not archive the card", () => {
+    renderAction({ canArchive: false }, true);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: A card an autopilot run still needs cannot be archived */
+  it("disables archive with the reason while an autopilot run needs the card", () => {
+    renderAction({ archiveRefusal: "autopilot" });
+
+    const button = screen.getByRole("button", { name: labels.archive });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(labels.autopilot);
   });
 
   /** Scenario: A published card has no archive control */

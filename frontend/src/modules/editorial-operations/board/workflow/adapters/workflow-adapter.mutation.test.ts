@@ -126,6 +126,7 @@ describe("mapApiKanbanColumn", () => {
         phase: "final_review",
         phaseStatus: "awaiting_human",
         archiveRefusal: null,
+        canArchive: false,
       },
     ]);
   });

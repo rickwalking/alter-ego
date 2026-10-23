@@ -10,10 +10,16 @@ import type { CardArchiveActionProps } from "./types";
 
 const NO_MESSAGE = "";
 
+const REFUSAL_REASON = {
+  [ARCHIVE_REFUSAL.IN_PROGRESS]: "inProgress",
+  [ARCHIVE_REFUSAL.AUTOPILOT]: "autopilot",
+} as const;
+
 /**
  * "Arquivar" (with a confirmation) on an active card, "Restaurar" on an
- * archived one. A published card has no control; a card whose phase is in
- * progress shows a disabled "Arquivar" with the reason. Only a failure is
+ * archived one, shown only when the caller may archive it (its owner or an
+ * admin). A published card has no control; a card with a running phase or an
+ * autopilot run still going shows a disabled "Arquivar" with the reason. Only a failure is
  * shown: a success takes the card off this board.
  */
 export function CardArchiveAction({
@@ -33,6 +39,7 @@ export function CardArchiveAction({
     onChanged,
   );
 
+  if (!card.canArchive) return null;
   if (archived) {
     return (
       <div className="flex flex-wrap items-center gap-2 px-1">
@@ -55,7 +62,7 @@ export function CardArchiveAction({
     );
   }
   if (card.archiveRefusal === ARCHIVE_REFUSAL.PUBLISHED) return null;
-  if (card.archiveRefusal === ARCHIVE_REFUSAL.IN_PROGRESS) {
+  if (card.archiveRefusal) {
     return (
       <div className="flex flex-wrap items-center gap-2 px-1">
         <NeonButton
@@ -67,7 +74,7 @@ export function CardArchiveAction({
           {t("archive")}
         </NeonButton>
         <p id={reasonId} className="text-[11px]" style={{ color: TEXT_DIM }}>
-          {t("inProgress")}
+          {t(REFUSAL_REASON[card.archiveRefusal])}
         </p>
       </div>
     );
