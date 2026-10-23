@@ -14,7 +14,13 @@ Feature: Chat replies render markdown safely
   Scenario: Links are clickable and safe
     When the reply contains a markdown link
     Then an http(s) link opens in a new tab with rel "noopener noreferrer nofollow"
+    And same-site and mailto links are clickable too
     And a javascript: link is shown as plain text
+
+  Scenario: Unsafe or empty links stay readable text
+    When the reply contains a javascript: link in any case, a link with no target, or an unsafe link around an image
+    Then none of them is clickable
+    And the link text, or the target when only an image was inside, is shown as plain text
 
   Scenario: Raw HTML and images are never rendered
     When the reply contains raw HTML or a markdown image

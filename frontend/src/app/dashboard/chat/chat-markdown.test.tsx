@@ -61,6 +61,68 @@ describe("ChatMarkdown", () => {
     ).toBeInTheDocument();
   });
 
+  /** Scenario: Links are clickable and safe */
+  it("makes same-site and email links clickable", () => {
+    renderMarkdown("Read [the post](/blog/post) or [write](mailto:a@b.test).");
+    expect(screen.getByRole("link", { name: "the post" })).toHaveAttribute(
+      "href",
+      "/blog/post",
+    );
+    expect(screen.getByRole("link", { name: "write" })).toHaveAttribute(
+      "href",
+      "mailto:a@b.test",
+    );
+  });
+
+  /** Scenario: Unsafe or empty links stay readable text */
+  it("keeps upper-case or padded javascript: links as text", () => {
+    renderMarkdown("[one](JAVASCRIPT:alert(1)) [two](<  javascript:alert(1)>)");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("one")).toBeInTheDocument();
+    expect(screen.getByText("two")).toBeInTheDocument();
+  });
+
+  /** Scenario: Unsafe or empty links stay readable text */
+  it("keeps a link with an empty target as text", () => {
+    renderMarkdown("[nowhere]()");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("nowhere")).toBeInTheDocument();
+  });
+
+  /** Scenario: Unsafe or empty links stay readable text */
+  it("shows the target of an unsafe link whose only content was an image", () => {
+    const container = renderMarkdown(
+      "[![logo](https://cdn.test/l.png)](//evil.test)",
+    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(container.textContent).toBe("//evil.test");
+  });
+
+  /** Scenario: Links are clickable and safe */
+  it("keeps the text of a link that mixes an image and words", () => {
+    renderMarkdown(
+      "[![logo](https://cdn.test/l.png) Python](https://python.org)",
+    );
+    expect(screen.getByRole("link", { name: "Python" })).toBeInTheDocument();
+  });
+
+  /** Scenario: Assistant replies render markdown formatting */
+  it("renders every heading level as a bold heading line", () => {
+    const container = renderMarkdown(
+      "# a\n\n### b\n\n#### c\n\n##### d\n\n###### e",
+    );
+    const lines = Array.from(container.querySelectorAll("p"));
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+    ]);
+    lines.forEach((line) => expect(line.style.fontWeight).toBe("700"));
+    expect(container.textContent).not.toContain("#");
+  });
+
   /** Scenario: Code blocks keep their text in a preformatted block */
   it("lets a long reply shrink to the screen so code scrolls inside its block", () => {
     const { container } = render(
@@ -99,5 +161,17 @@ describe("ChatMessageList markdown", () => {
     );
     expect(screen.getByText("**not bold**")).toBeInTheDocument();
     expect(screen.getByText("bold").tagName).toBe("STRONG");
+  });
+
+  /** Scenario: Visitor messages stay plain text */
+  it("keeps the line breaks of the visitor's message", () => {
+    render(
+      <ChatMessageList
+        messages={[{ role: "user", text: "line one\nline two", time: "10:00" }]}
+      />,
+    );
+    const bubble = screen.getByText(/line one/);
+    expect(bubble.textContent).toBe("line one\nline two");
+    expect(bubble.style.whiteSpace).toBe("pre-wrap");
   });
 });

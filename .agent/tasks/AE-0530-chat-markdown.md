@@ -71,6 +71,13 @@ tests' JSDoc (comment rule, Pedro 2026-10-22).
 Re-applied on current main after #248 merged; branch fix/ae-0530-chat-markdown. The protocol-relative link test fails
 on main's `isSafeMarkdownHref` and passes with the fix; chat and blog public-post tests pass.
 
+### 2026-10-23 02:30
+
+External QA (WARN) findings fixed: an unsafe link whose only content was an image now shows its target as text
+(the test failed before the fix); new scenario "Unsafe or empty links stay readable text" with tests for upper-case
+and padded `javascript:` and empty targets; tests for same-site and mailto links, a mixed image+text label, every
+heading level, and the visitor's line breaks. Markdown tests: 16 passed.
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-markdown.tsx (new) + test, chat-message-list.tsx

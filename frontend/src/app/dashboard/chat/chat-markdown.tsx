@@ -111,10 +111,10 @@ const CHAT_MARKDOWN_COMPONENTS: Components = {
     </code>
   ),
   a: ({ children, href }) => {
-    if (!isSafeMarkdownHref(href)) {
-      return <span>{children}</span>;
-    }
     const label = hasText(children) ? children : href;
+    if (!isSafeMarkdownHref(href)) {
+      return <span>{label}</span>;
+    }
     return (
       <a
         href={href}
