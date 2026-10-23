@@ -85,6 +85,15 @@ Ticket written from Pedro's decision; failing tests first.
 
 Rebased on main; the generator's rate limit keys on the user (AC: rate-limited per user). Dev Complete.
 
+Review round 1: the token cap (2000) and temperature (0.8) are bound on the fast chat model itself
+(`PaletteCompletion`, `.bind`), because `AnthropicLLMService.generate` passes them through
+`with_config()`, where they never reach the model. Fewer than three valid candidates → one more call,
+and the modal says "Mostrando N de 3" when still short. Missing or malformed keywords are an empty list.
+The server drops candidates that repeat a name or a colour set. No ticket ids in the prompt files.
+
+Known gap (accepted by Pedro): the per-user limit lives in slowapi's in-memory storage, so it is per
+process. Prod runs one backend process, so it holds there; more workers would each get their own 5/minute.
+
 ## Files Touched
 
 See `.agent/reports/AE-0507.dev-summary.md`.
