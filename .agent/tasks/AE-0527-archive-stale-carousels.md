@@ -61,6 +61,17 @@ activity (N configurable, 30 by default). Pedro picks which of the 15 to archive
       worker ticks, Then it is archived; a published, in-progress or recently active carousel is not; 0
       turns auto-archive off.
 - [x] Given another user's carousel, Then a non-admin cannot archive or restore it (403); unknown 404.
+- [x] Given an idle carousel with an autopilot run still going (scheduled, publishing, waiting for the owner,
+      or any state but published/rejected/expired/failed), a live run heartbeat or a generating status, Then
+      the worker does not archive it; a manual archive is refused with 409 for a live run or such a run.
+- [x] Given a phase stuck `in_progress` with a stale heartbeat, Then it can be archived.
+- [x] Given an archive (manual or automatic), Then it is one conditional UPDATE under the rules, so a run or a
+      schedule that starts meanwhile is never archived; `updated_at` is kept.
+- [x] Given an archived carousel, Then the stuck-workflow auto-reject and the review deadline reminders skip it.
+- [x] Given an archived carousel that starts a phase run or gets an owner edit, Then it is restored
+      automatically; a failed or reaped run alone keeps it archived.
+- [x] Given the board, Then each card says whether the caller may archive it (owner or admin, not a reviewer)
+      and why the rules refuse it now; the UI shows the control only when allowed.
 - [x] Given the prod database, Then the deploy one-shot adds `archived_at` (and its index) once and is a
       no-op when re-run; `--verify` fails when the column is missing.
 
@@ -94,8 +105,21 @@ into the shared one-shot failure check), the failure-rate alert leaves archived 
 one-shot and deploy-order tests added, and the board UI built: "Arquivar" with a confirmation, disabled with
 the reason while the phase runs, absent on published cards, an "Arquivados" toggle with "Restaurar".
 
+### 2026-10-23 (review)
+
+Review of the PR applied: the archive rules (no autopilot run still going, no live heartbeat, not generating
+for the worker) as one conditional UPDATE for both the worker and the route, archived carousels skipped by
+the auto-reject and the deadline reminders, working on an archived carousel restores it, the board exposes
+`can_archive` and `archive_refusal`, a stale in-progress phase can be archived, and no "Pedro's decision" in
+module docstrings.
+
 ## Files Touched
 
+- backend (review): `infrastructure/database/models/carousel_archive.py` (rules + atomic UPDATE),
+  `infrastructure/database/carousel_archive_guard.py` (restore on activity), `api/dependencies/carousel_access.py`
+  (`archive_carousel_project`), `modules/publishing/infrastructure/board_rows.py`,
+  `infrastructure/database/workflow_timeout_repository.py`, `application/services/notification_service.py`;
+  `domain/carousel_archive.py` removed.
 - backend: `models/carousel.py` (`archived_at` + index), `alembic/versions/aa4a5695681f_carousel_archived_at.py`,
   `infrastructure/database/carousel_archived_at.py` + `scripts/carousel_archived_at.py` (deploy one-shot),
   `api/routes/carousels/{archive.py,router.py}`, `api/schemas/carousel_archive.py`,
@@ -120,6 +144,15 @@ Frontend: workflow page, card action, adapter and board tests (125) green. Gates
 ## QA Report
 
 Pending.
+
+## Decision Log
+
+- 2026-10-22 — Pedro: both an owner "Arquivar" action (restorable, hidden from the board and alerts) and an
+  automatic archive after N days without activity (N configurable, 30 by default).
+- 2026-10-23 — Working on an archived carousel restores it (a run starts, or an owner edit changes its
+  content or `lock_version`) instead of refusing the work with 409.
+- 2026-10-23 — The first deploy archives every carousel idle for more than 30 days that the rules allow;
+  accepted (Pedro decided auto after 30 days, and Restore exists).
 
 ## Blockers
 
