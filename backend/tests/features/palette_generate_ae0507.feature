@@ -49,3 +49,8 @@ Feature: Generate palette candidates from a description
     Given the owner generated palettes five times in the last minute
     When the owner posts a description to the palette generator again
     Then the response is 429 and the LLM is not called
+
+  Scenario: The generator is rate limited per user
+    Given one user generated palettes five times in the last minute
+    When another user posts a description to the palette generator
+    Then that user still gets candidates

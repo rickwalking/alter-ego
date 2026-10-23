@@ -32,7 +32,7 @@ from rag_backend.api.dependencies.feature_flags import RequirePaletteCatalog
 from rag_backend.api.dependencies.palette_generation import (
     get_palette_generation_service,
 )
-from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.middleware.rate_limiting import limiter, user_or_address_key
 from rag_backend.api.schemas.palette import (
     CustomPaletteResponse,
     PaletteCandidateResponse,
@@ -70,6 +70,7 @@ from rag_backend.domain.constants.palette_types import PaletteKind
 from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_PALETTE_GENERATE,
     RATE_LIMIT_PALETTE_WRITE,
+    RATE_LIMIT_USER_STATE,
 )
 from rag_backend.domain.models import User
 from rag_backend.domain.models.palette import CustomPalette
@@ -181,12 +182,14 @@ class PaletteGenerateCtx:
 
 
 def get_palette_generate_ctx(
+    request: Request,
     user: Annotated[User, Depends(require_authenticated_user)],
     service: Annotated[
         PaletteGenerationService, Depends(get_palette_generation_service)
     ],
 ) -> PaletteGenerateCtx:
-    """Resolve the authenticated generation context."""
+    """Resolve the authenticated generation context; the rate limit keys on the user."""
+    setattr(request.state, RATE_LIMIT_USER_STATE, str(user.id))
     return PaletteGenerateCtx(user=user, service=service)
 
 
@@ -282,7 +285,7 @@ async def create_palette(
         503: {"description": ERR_PALETTE_GENERATION_UNAVAILABLE},
     },
 )
-@limiter.limit(RATE_LIMIT_PALETTE_GENERATE)
+@limiter.limit(RATE_LIMIT_PALETTE_GENERATE, key_func=user_or_address_key)
 async def generate_palettes(
     request: Request,
     body: PaletteGenerateRequest,

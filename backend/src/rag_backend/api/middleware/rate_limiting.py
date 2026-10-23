@@ -1,16 +1,29 @@
 """Rate limiting middleware using slowapi."""
 
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+from rag_backend.domain.constants.rate_limits import (
+    RATE_LIMIT_USER_KEY_PREFIX,
+    RATE_LIMIT_USER_STATE,
+)
 from rag_backend.infrastructure.config.settings import Settings
 
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["120/minute"],
 )
+
+
+def user_or_address_key(request: Request) -> str:
+    """The user id a route dependency recorded on the request, else the address."""
+    user_id = getattr(request.state, RATE_LIMIT_USER_STATE, None)
+    if not user_id:
+        return get_remote_address(request)
+    return f"{RATE_LIMIT_USER_KEY_PREFIX}{user_id}"
 
 
 def setup_rate_limiting(app, _settings: Settings) -> None:

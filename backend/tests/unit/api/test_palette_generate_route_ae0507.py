@@ -14,7 +14,7 @@ from contextlib import AbstractContextManager, contextmanager
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -23,7 +23,7 @@ from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.dependencies.palette_generation import (
     get_palette_generation_service,
 )
-from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.middleware.rate_limiting import limiter, user_or_address_key
 from rag_backend.application.services.carousel.palette_generation_service import (
     PaletteGenerationPorts,
     PaletteGenerationService,
@@ -229,3 +229,32 @@ class TestRateLimit:
         ]
         assert statuses == [200, 200, 200, 200, 200, 429]
         assert llm.calls == 5
+
+    @pytest.mark.asyncio
+    async def test_each_user_has_their_own_limit(self, app: FastAPI) -> None:
+        """Scenario: The generator is rate limited per user."""
+        llm = _CannedLLM(json.dumps({"candidates": _CANDIDATES}))
+        _use_llm(app, llm)
+        for _ in range(5):
+            await _post(app, {"description": "noite azul"})
+        other = User(
+            email="other@test.dev",
+            full_name="Other",
+            hashed_password="x",
+            role=UserRole.EDITOR,
+        )
+        app.dependency_overrides[require_authenticated_user] = lambda: other
+
+        status, _ = await _post(app, {"description": "noite azul"})
+
+        assert status == 200
+        assert llm.calls == 6
+
+
+class TestRateLimitKey:
+    def test_the_recorded_user_is_the_key(self) -> None:
+        """Scenario: The generator is rate limited per user."""
+        request = Request({"type": "http", "client": ("10.0.0.1", 1), "headers": []})
+        assert user_or_address_key(request) == "10.0.0.1"
+        request.state.rate_limit_user_id = "u-1"
+        assert user_or_address_key(request) == "user:u-1"
