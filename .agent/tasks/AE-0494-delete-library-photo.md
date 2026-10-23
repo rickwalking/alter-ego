@@ -1,6 +1,6 @@
 # AE-0494 — Owner can delete a photo from the photo library
 
-Status: In Progress
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -8,7 +8,7 @@ Area: Backend + Frontend
 Owner: Claude Code (claude-opus-5-5)
 Branch: feat/ae-0494-delete-library-photo
 Created: 2026-10-22
-Updated: 2026-10-22
+Updated: 2026-10-23
 
 ## Goal
 
@@ -48,12 +48,12 @@ show which carousels use it.
 
 ## Acceptance Criteria
 
-- [ ] Given the owner's photo library in the wizard, When they delete a photo no carousel uses and confirm,
+- [x] Given the owner's photo library in the wizard, When they delete a photo no carousel uses and confirm,
       Then `DELETE /api/carousels/creator-assets/{id}` removes the row and the private file, the image URL
       returns 404 and the photo leaves the list.
-- [ ] Given another user (or an admin who is not the owner), Then the DELETE returns 403 and nothing is
+- [x] Given another user (or an admin who is not the owner), Then the DELETE returns 403 and nothing is
       deleted; an unknown id returns 404; no login returns 401.
-- [ ] Given a photo used by any carousel (creator asset, hook photo or slide-1 cover), When the owner deletes
+- [x] Given a photo used by any carousel (creator asset, hook photo or slide-1 cover), When the owner deletes
       it, Then the API returns 409 with the carousels that use it, nothing is deleted, and the wizard shows
       those carousels.
 
@@ -79,6 +79,10 @@ None.
 ### 2026-10-22
 
 Ticket written from Pedro's decision; failing tests first.
+
+### 2026-10-23
+
+Rebased on main; the delete tests reset the rate limiter; the 409 body keys use the constants. Dev Complete.
 
 ## Files Touched
 
