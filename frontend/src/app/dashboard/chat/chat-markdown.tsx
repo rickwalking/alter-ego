@@ -1,10 +1,12 @@
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
+import { memo } from "react";
+import { ChatMarkdownBoundary } from "./chat-markdown-boundary";
+import { isRenderableMarkdown } from "./chat-markdown-guard";
+import { ChatMarkdownLink } from "./chat-markdown-link";
 import {
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_BORDER_SUBTLE,
-  DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_MONO_FONT,
   DASHBOARD_CHAT_TEXT,
 } from "@/modules/editorial-operations";
@@ -31,8 +33,7 @@ export const CHAT_MARKDOWN_ALLOWED_ELEMENTS = [
   "br",
 ];
 
-/** Links leave the site in a new tab and pass no referrer or ranking. */
-export const CHAT_LINK_REL = "noopener noreferrer nofollow";
+export { CHAT_LINK_REL } from "./chat-markdown-link";
 
 const HEADING_STYLE: React.CSSProperties = {
   margin: "12px 0 6px",
@@ -43,17 +44,6 @@ const HEADING_STYLE: React.CSSProperties = {
 
 function Heading({ children }: Readonly<{ children?: React.ReactNode }>) {
   return <p style={HEADING_STYLE}>{children}</p>;
-}
-
-/** Whether a link still has visible content (an image inside it is dropped). */
-function hasText(children: React.ReactNode): boolean {
-  if (children === null || children === undefined || children === false) {
-    return false;
-  }
-  if (Array.isArray(children)) {
-    return children.some((child: React.ReactNode) => hasText(child));
-  }
-  return typeof children !== "string" || children.trim().length > 0;
 }
 
 const CHAT_MARKDOWN_COMPONENTS: Components = {
@@ -110,42 +100,39 @@ const CHAT_MARKDOWN_COMPONENTS: Components = {
       {children}
     </code>
   ),
-  a: ({ children, href }) => {
-    const label = hasText(children) ? children : href;
-    if (!isSafeMarkdownHref(href)) {
-      return <span>{label}</span>;
-    }
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel={CHAT_LINK_REL}
-        style={{ color: DASHBOARD_CHAT_CYAN, textDecoration: "underline" }}
-      >
-        {label}
-      </a>
-    );
-  },
+  a: ChatMarkdownLink,
 };
+
+const PLAIN_TEXT_STYLE: React.CSSProperties = { whiteSpace: "pre-wrap" };
+
+/** The reply exactly as written, for text the markdown renderer must not take. */
+function PlainReply({ text }: Readonly<{ text: string }>): React.ReactElement {
+  return <div style={PLAIN_TEXT_STYLE}>{text}</div>;
+}
 
 /**
  * An assistant reply rendered as markdown, safely: raw HTML is dropped, only
  * text-formatting elements are allowed (no images), and only http(s), mailto
- * and same-site links become clickable.
+ * and same-site links become clickable. A reply too long or too deeply nested
+ * for the renderer, or one that still fails to render, shows as plain text.
+ * Memoized on the text, so a streamed token re-renders only the reply it extends.
  */
-export function ChatMarkdown({
+export const ChatMarkdown = memo(function ChatMarkdown({
   text,
 }: Readonly<{ text: string }>): React.ReactElement {
+  if (!isRenderableMarkdown(text)) return <PlainReply text={text} />;
   return (
-    <div className="chat-markdown">
-      <ReactMarkdown
-        skipHtml
-        allowedElements={CHAT_MARKDOWN_ALLOWED_ELEMENTS}
-        unwrapDisallowed
-        components={CHAT_MARKDOWN_COMPONENTS}
-      >
-        {text}
-      </ReactMarkdown>
-    </div>
+    <ChatMarkdownBoundary fallback={<PlainReply text={text} />}>
+      <div className="chat-markdown">
+        <ReactMarkdown
+          skipHtml
+          allowedElements={CHAT_MARKDOWN_ALLOWED_ELEMENTS}
+          unwrapDisallowed
+          components={CHAT_MARKDOWN_COMPONENTS}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    </ChatMarkdownBoundary>
   );
-}
+});

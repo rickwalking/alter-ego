@@ -13,12 +13,14 @@ Feature: Chat replies render markdown safely
 
   Scenario: Links are clickable and safe
     When the reply contains a markdown link
-    Then an http(s) link opens in a new tab with rel "noopener noreferrer nofollow"
-    And same-site and mailto links are clickable too
+    Then an http(s) or mailto link opens in a new tab with rel "noopener noreferrer nofollow"
+    And a web link shows its host next to it, unless its text already names the host
+    And same-site links and anchors are clickable and stay in the same tab
     And a javascript: link is shown as plain text
 
   Scenario: Unsafe or empty links stay readable text
-    When the reply contains a javascript: link in any case, a link with no target, or an unsafe link around an image
+    When the reply contains a javascript:, data: or vbscript: link in any case or entity-encoded, an autolink or a
+      reference-style link to one, a link with no target, or an unsafe link around an image
     Then none of them is clickable
     And the link text, or the target when only an image was inside, is shown as plain text
 
@@ -29,3 +31,12 @@ Feature: Chat replies render markdown safely
   Scenario: Visitor messages stay plain text
     When I type markdown in my own message
     Then my message shows exactly as I typed it
+
+  Scenario: A reply the renderer cannot take shows as plain text
+    When a reply is nested deeper than 20 list or quote levels, is longer than 20000 characters, or fails to render
+    Then it shows as plain text and the rest of the chat keeps working
+
+  Scenario: A streamed token re-renders only the reply it extends
+    Given earlier replies are on screen
+    When a new reply streams in
+    Then the earlier replies are not parsed again

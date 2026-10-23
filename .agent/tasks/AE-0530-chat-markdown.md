@@ -82,9 +82,20 @@ heading level, and the visitor's line breaks. Markdown tests: 16 passed.
 
 Confirmation round follow-up: test for a safe link whose label is only spaces (it shows the target).
 
+### 2026-10-23 11:40
+
+Re-applied on top of the a11y PR (the renderer now sits in `chat-message-row.tsx`). PR review fixes: a crafted
+deeply nested reply (`- `x900, `>`x3000) crashed the page with a stack overflow; replies over 20 nesting levels or
+20000 characters now render as plain text, and an error boundary falls back to plain text if rendering still throws.
+`ChatMarkdown` is memoized on the text. Hrefs are read as a browser reads them (tabs/newlines dropped, controls
+trimmed) before the safety check. Only external http(s)/mailto links open a new tab; web links show their host.
+Regression tests for data:/vbscript: (mixed case), entity-encoded javascript:, autolinks, reference-style links, the
+tab-split `//` link, and the nesting cases.
+
 ## Files Touched
 
-- frontend/src/app/dashboard/chat/chat-markdown.tsx (new) + test, chat-message-list.tsx
+- frontend/src/app/dashboard/chat/chat-markdown.tsx (new) + tests, chat-markdown-guard.ts, chat-markdown-boundary.tsx,
+  chat-markdown-link.tsx (new), chat-markdown-safety.test.tsx, chat-markdown-memo.test.tsx (new), chat-message-row.tsx
 - frontend/src/lib/safe-markdown-href.ts + test
 - frontend/tests/features/chat-markdown.feature (new)
 

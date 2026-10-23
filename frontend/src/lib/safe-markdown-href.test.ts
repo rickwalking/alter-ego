@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isSafeMarkdownHref } from "./safe-markdown-href";
+import {
+  isSafeMarkdownHref,
+  normalizeMarkdownHref,
+} from "./safe-markdown-href";
 
 describe("isSafeMarkdownHref", () => {
   it("allows http and https links", () => {
@@ -28,5 +31,16 @@ describe("isSafeMarkdownHref", () => {
     expect(isSafeMarkdownHref("//evil.test/path")).toBe(false);
     expect(isSafeMarkdownHref("/\\evil.test")).toBe(false);
     expect(isSafeMarkdownHref("/blog/post")).toBe(true);
+  });
+
+  /** Scenario: Unsafe or empty links stay readable text */
+  it("reads the href as a browser does before deciding", () => {
+    expect(normalizeMarkdownHref("/\t/evil.test")).toBe("//evil.test");
+    expect(normalizeMarkdownHref("\u0001 https://a.test/\n ")).toBe(
+      "https://a.test/",
+    );
+    expect(isSafeMarkdownHref("/\t/evil.test")).toBe(false);
+    expect(isSafeMarkdownHref("/\n\\evil.test")).toBe(false);
+    expect(isSafeMarkdownHref("/blog/\tpost")).toBe(true);
   });
 });
