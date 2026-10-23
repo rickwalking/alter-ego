@@ -1,6 +1,6 @@
 # AE-0532 — Dashboard chat: reply survives a refresh, real titles, working search, signed-in /chat goes to history
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -104,11 +104,12 @@ the ellipsis. Frontend 96 and backend title 10 tests pass.
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0532.dev-summary.md`: targeted tests pass and `gates.sh --changed-only` is green (0 FAIL) on
+e8abe4607; the full suites, build and mutation run in CI on the PR.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0532.qa.md` (external, round 1 WARN, findings fixed, confirmation round).
 
 ## Blockers
 
