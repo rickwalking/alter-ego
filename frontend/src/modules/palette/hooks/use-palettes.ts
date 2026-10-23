@@ -3,8 +3,11 @@ import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { apiCall, apiCallNoContent } from "@/lib/api-client";
 import {
   customPaletteSchema,
+  paletteGenerateResponseSchema,
   type CustomPalette,
   type PaletteCreateRequest,
+  type PaletteGenerateRequest,
+  type PaletteGenerateResponse,
   type PaletteUpdateRequest,
 } from "@/schemas/palette";
 import { paletteCatalogOptions, paletteKeys } from "@/modules/palette/queries";
@@ -54,5 +57,17 @@ export function useArchivePalette() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: paletteKeys.catalog() });
     },
+  });
+}
+
+/** Ask the AI for palette candidates; nothing is saved (`POST /palettes/generate`). */
+export function useGeneratePalettes() {
+  return useMutation({
+    mutationFn: (data: PaletteGenerateRequest) =>
+      apiCall<PaletteGenerateResponse>(
+        API_ENDPOINTS.PALETTE_GENERATE,
+        paletteGenerateResponseSchema,
+        { method: HTTP_METHODS.POST, body: JSON.stringify(data) },
+      ),
   });
 }

@@ -8,6 +8,9 @@
 - ``RATE_LIMIT_AUTOPILOT_ASSETS`` gives ``POST /api/autopilot/assets`` its own
   bucket, so a run that uploads several covers never starves ``/signals`` or
   ``/topics``.
+- ``RATE_LIMIT_PALETTE_GENERATE`` caps the paid "create a palette with AI" call,
+  per user: the route's dependency records the user id on the request state
+  under ``RATE_LIMIT_USER_STATE`` and the limit keys on it.
 """
 
 RATE_LIMIT_AI_ENDPOINTS = "10/minute"
@@ -16,9 +19,12 @@ RATE_LIMIT_WORKFLOW_ENDPOINTS = "60/minute"
 RATE_LIMIT_CAROUSEL_PUBLISH = "20/minute"
 RATE_LIMIT_ADMIN_MIGRATION = "2/minute"
 RATE_LIMIT_PALETTE_WRITE = "10/minute"
+RATE_LIMIT_PALETTE_GENERATE = "5/minute"
 RATE_LIMIT_PUBLIC_BLOG_READ = "120/minute"
 RATE_LIMIT_AUTOPILOT = "10/minute"
 RATE_LIMIT_AUTOPILOT_ASSETS = "30/minute"
+RATE_LIMIT_USER_STATE = "rate_limit_user_id"
+RATE_LIMIT_USER_KEY_PREFIX = "user:"
 
 __all__ = [
     "RATE_LIMIT_ADMIN_MIGRATION",
@@ -26,8 +32,11 @@ __all__ = [
     "RATE_LIMIT_AUTOPILOT",
     "RATE_LIMIT_AUTOPILOT_ASSETS",
     "RATE_LIMIT_CAROUSEL_PUBLISH",
+    "RATE_LIMIT_PALETTE_GENERATE",
     "RATE_LIMIT_PALETTE_WRITE",
     "RATE_LIMIT_PUBLIC_BLOG_READ",
     "RATE_LIMIT_SSE_STREAM",
+    "RATE_LIMIT_USER_KEY_PREFIX",
+    "RATE_LIMIT_USER_STATE",
     "RATE_LIMIT_WORKFLOW_ENDPOINTS",
 ]

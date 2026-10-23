@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     `/api/conversations/${id}/publish-chat/stream`,
   SEARCH: "/api/search",
   PALETTES: "/api/palettes",
+  PALETTE_GENERATE: "/api/palettes/generate",
   PALETTE_BY_ID: (id: string) => `/api/palettes/${id}`,
   CAROUSELS: "/api/carousels",
   CAROUSEL_BY_ID: (id: string) => `/api/carousels/${id}`,

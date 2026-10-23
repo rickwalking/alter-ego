@@ -33,6 +33,11 @@ from rag_backend.domain.constants.palette_catalog import (
     NAME_MAX_LEN,
     NAME_MIN_LEN,
 )
+from rag_backend.domain.constants.palette_generation import (
+    DESCRIPTION_MAX_LEN,
+    DESCRIPTION_MIN_LEN,
+    ERR_DESCRIPTION_TOO_SHORT,
+)
 from rag_backend.domain.constants.palette_types import PaletteMode
 
 _ROOT_BRAND_KEYWORDS: frozenset[str] = frozenset(
@@ -164,10 +169,58 @@ class PaletteCatalogResponse(BaseModel):
     custom: list[CustomPaletteResponse]
 
 
+class PaletteGenerateRequest(BaseModel):
+    """The owner's description of the palette to generate (never stored)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    description: str = Field(
+        ..., min_length=DESCRIPTION_MIN_LEN, max_length=DESCRIPTION_MAX_LEN
+    )
+
+    @field_validator("description")
+    @classmethod
+    def _check_description(cls, value: str) -> str:
+        stripped = value.strip()
+        if len(stripped) < DESCRIPTION_MIN_LEN:
+            raise ValueError(ERR_DESCRIPTION_TOO_SHORT)
+        return stripped
+
+
+class PaletteContrastResponse(BaseModel):
+    """WCAG contrast ratios against the background (each at least 4.5)."""
+
+    text: float
+    primary: float
+    accent: float
+
+
+class PaletteCandidateResponse(BaseModel):
+    """One AA-checked candidate that pre-fills the create form."""
+
+    name: str
+    primary: str
+    accent: str
+    background: str
+    mode: PaletteMode
+    keywords: list[str]
+    contrast: PaletteContrastResponse
+
+
+class PaletteGenerateResponse(BaseModel):
+    """Up to three candidates from one generation."""
+
+    candidates: list[PaletteCandidateResponse]
+
+
 __all__ = [
     "CustomPaletteResponse",
+    "PaletteCandidateResponse",
     "PaletteCatalogResponse",
+    "PaletteContrastResponse",
     "PaletteCreateRequest",
+    "PaletteGenerateRequest",
+    "PaletteGenerateResponse",
     "PaletteUpdateRequest",
     "RootPaletteResponse",
     "normalise_hex",

@@ -64,6 +64,34 @@ export const paletteUpdateRequestSchema = z.object({
   keywords: z.array(z.string()).optional(),
 });
 
+/** `POST /palettes/generate` — the owner's description (3-300 chars, never stored). */
+export const paletteGenerateRequestSchema = z.object({
+  description: z.string().trim().min(3).max(300),
+});
+
+/** WCAG contrast ratios of a candidate against its background (each >= 4.5). */
+export const paletteContrastSchema = z.object({
+  text: z.number(),
+  primary: z.number(),
+  accent: z.number(),
+});
+
+/** One AA-checked AI candidate that pre-fills the create form. */
+export const paletteCandidateSchema = z.object({
+  name: z.string(),
+  primary: hexColour,
+  accent: hexColour,
+  background: hexColour,
+  mode: paletteModeSchema,
+  keywords: z.array(z.string()),
+  contrast: paletteContrastSchema,
+});
+
+/** Up to three candidates from one generation. */
+export const paletteGenerateResponseSchema = z.object({
+  candidates: z.array(paletteCandidateSchema),
+});
+
 export type PaletteMode = z.infer<typeof paletteModeSchema>;
 export type RootPalette = z.infer<typeof rootPaletteSchema>;
 export type CustomPalette = z.infer<typeof customPaletteSchema>;
@@ -72,3 +100,10 @@ export type PaletteCatalogResponse = z.infer<
 >;
 export type PaletteCreateRequest = z.infer<typeof paletteCreateRequestSchema>;
 export type PaletteUpdateRequest = z.infer<typeof paletteUpdateRequestSchema>;
+export type PaletteGenerateRequest = z.infer<
+  typeof paletteGenerateRequestSchema
+>;
+export type PaletteCandidate = z.infer<typeof paletteCandidateSchema>;
+export type PaletteGenerateResponse = z.infer<
+  typeof paletteGenerateResponseSchema
+>;

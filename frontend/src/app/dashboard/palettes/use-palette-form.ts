@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   HEX_COLOUR_REGEX,
   PALETTE_MODES,
   type CustomPalette,
+  type PaletteCandidate,
   type PaletteCreateRequest,
   type PaletteMode,
 } from "@/schemas/palette";
@@ -86,8 +93,56 @@ export interface UsePaletteFormResult {
   ) => void;
   addKeywords: (raw: string) => void;
   removeKeyword: (keyword: string) => void;
+  /** Replace every field with an AI candidate's values (nothing is saved). */
+  applyCandidate: (candidate: PaletteCandidate) => void;
   /** The full field set — valid as both a create and a (full) update payload. */
   toRequest: () => PaletteCreateRequest;
+}
+
+/** The form state an AI candidate pre-fills (keywords capped like manual entry). */
+function candidateState(candidate: PaletteCandidate): PaletteFormState {
+  return {
+    name: candidate.name,
+    primary: candidate.primary,
+    accent: candidate.accent,
+    background: candidate.background,
+    mode: candidate.mode,
+    keywords: candidate.keywords.slice(0, KEYWORD_MAX_COUNT),
+  };
+}
+
+/** Add (comma-separated, deduped, capped) and remove keyword chips. */
+function useKeywordActions(
+  setState: Dispatch<SetStateAction<PaletteFormState>>,
+): Pick<UsePaletteFormResult, "addKeywords" | "removeKeyword"> {
+  const addKeywords = useCallback(
+    (raw: string) => {
+      const additions = raw.split(",").map(cleanKeyword).filter(Boolean);
+      if (additions.length === 0) return;
+      setState((prev) => {
+        const next = [...prev.keywords];
+        for (const keyword of additions) {
+          if (!next.includes(keyword) && next.length < KEYWORD_MAX_COUNT) {
+            next.push(keyword);
+          }
+        }
+        return { ...prev, keywords: next };
+      });
+    },
+    [setState],
+  );
+
+  const removeKeyword = useCallback(
+    (keyword: string) => {
+      setState((prev) => ({
+        ...prev,
+        keywords: prev.keywords.filter((item) => item !== keyword),
+      }));
+    },
+    [setState],
+  );
+
+  return { addKeywords, removeKeyword };
 }
 
 /** Local form state + client-side validation for the palette create/edit modal. */
@@ -103,26 +158,12 @@ export function usePaletteForm(palette?: CustomPalette): UsePaletteFormResult {
     [],
   );
 
-  const addKeywords = useCallback((raw: string) => {
-    const additions = raw.split(",").map(cleanKeyword).filter(Boolean);
-    if (additions.length === 0) return;
-    setState((prev) => {
-      const next = [...prev.keywords];
-      for (const keyword of additions) {
-        if (!next.includes(keyword) && next.length < KEYWORD_MAX_COUNT) {
-          next.push(keyword);
-        }
-      }
-      return { ...prev, keywords: next };
-    });
-  }, []);
+  const { addKeywords, removeKeyword } = useKeywordActions(setState);
 
-  const removeKeyword = useCallback((keyword: string) => {
-    setState((prev) => ({
-      ...prev,
-      keywords: prev.keywords.filter((item) => item !== keyword),
-    }));
-  }, []);
+  const applyCandidate = useCallback(
+    (candidate: PaletteCandidate) => setState(candidateState(candidate)),
+    [],
+  );
 
   const toRequest = useCallback(
     (): PaletteCreateRequest => ({
@@ -143,6 +184,7 @@ export function usePaletteForm(palette?: CustomPalette): UsePaletteFormResult {
     setField,
     addKeywords,
     removeKeyword,
+    applyCandidate,
     toRequest,
   };
 }
