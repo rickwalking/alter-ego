@@ -61,10 +61,10 @@ export interface DocumentListProps {
   retryFailedIds?: ReadonlySet<string>;
   /** Move a document to the given scope. */
   onChangeScope?: (id: string, scope: DocumentScopeChoice) => void;
-  /** Id of the document whose scope change is in flight. */
-  changingScopeId?: string | null;
-  /** Id of the document whose last scope change failed. */
-  scopeChangeFailedId?: string | null;
+  /** Ids of the documents whose scope change is in flight. */
+  changingScopeIds?: ReadonlySet<string>;
+  /** Ids of the documents whose last scope change failed. */
+  scopeChangeFailedIds?: ReadonlySet<string>;
 }
 
 /**
@@ -80,8 +80,8 @@ export interface DocumentListSectionProps {
   retryingIds: ReadonlySet<string>;
   retryFailedIds: ReadonlySet<string>;
   onChangeScope: (id: string, scope: DocumentScopeChoice) => void;
-  changingScopeId: string | null;
-  scopeChangeFailedId: string | null;
+  changingScopeIds: ReadonlySet<string>;
+  scopeChangeFailedIds: ReadonlySet<string>;
 }
 
 export interface DocumentFormProps {
@@ -133,7 +133,7 @@ export interface ScopeFilterProps {
 
 /** The scope switch of a document card. */
 export interface ScopeSwitchProps {
-  scope: string;
+  scope: DocumentScopeChoice;
   onSwitch: () => void;
   changing: boolean;
   failed: boolean;

@@ -1,6 +1,5 @@
 /**
  * The scope-change mutation of the Knowledge Base.
- * Gherkin: tests/features/knowledge-document-scope-ae0502.feature
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";

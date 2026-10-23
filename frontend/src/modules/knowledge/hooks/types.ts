@@ -57,10 +57,10 @@ export interface ChangeDocumentScopeInput {
 /** Scope-change state of the knowledge list. */
 export interface DocumentScopeChange {
   changeScope: (id: string, scope: DocumentScopeChoice) => void;
-  /** Id of the document whose scope change is in flight. */
-  changingScopeId: string | null;
-  /** Id of the document whose last scope change failed. */
-  scopeChangeFailedId: string | null;
+  /** Ids whose scope change is in flight. */
+  changingScopeIds: ReadonlySet<string>;
+  /** Ids whose last scope change failed. */
+  scopeChangeFailedIds: ReadonlySet<string>;
 }
 
 /** The typed fields of the upload form and their reset. */

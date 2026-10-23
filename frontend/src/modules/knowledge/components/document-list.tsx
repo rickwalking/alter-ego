@@ -22,8 +22,8 @@ export function DocumentList({
   retryingIds = NO_IDS,
   retryFailedIds = NO_IDS,
   onChangeScope,
-  changingScopeId = null,
-  scopeChangeFailedId = null,
+  changingScopeIds = NO_IDS,
+  scopeChangeFailedIds = NO_IDS,
 }: Readonly<DocumentListProps>) {
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,8 +95,8 @@ export function DocumentList({
                   ? (scope) => onChangeScope(document.id, scope)
                   : undefined
               }
-              changingScope={changingScopeId === document.id}
-              scopeChangeFailed={scopeChangeFailedId === document.id}
+              changingScope={changingScopeIds.has(document.id)}
+              scopeChangeFailed={scopeChangeFailedIds.has(document.id)}
             />
           ))}
         </div>

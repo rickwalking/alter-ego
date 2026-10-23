@@ -1,6 +1,5 @@
 /**
  * The upload and new-document forms carry the chosen scope.
- * Gherkin: tests/features/knowledge-document-scope-ae0502.feature
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";

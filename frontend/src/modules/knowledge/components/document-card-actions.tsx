@@ -52,6 +52,7 @@ export function DocumentCardActions({
   changingScope = false,
   scopeChangeFailed = false,
 }: Readonly<DocumentCardActionsProps>): React.ReactElement {
+  const choice = scopeChoiceOf(document.scope);
   return (
     <>
       {onRetry && needsRetry(document, now) && (
@@ -61,12 +62,10 @@ export function DocumentCardActions({
           retryFailed={retryFailed}
         />
       )}
-      {onChangeScope && (
+      {onChangeScope && choice !== null && (
         <ScopeSwitch
-          scope={document.scope}
-          onSwitch={() =>
-            onChangeScope(otherScope(scopeChoiceOf(document.scope)))
-          }
+          scope={choice}
+          onSwitch={() => onChangeScope(otherScope(choice))}
           changing={changingScope}
           failed={scopeChangeFailed}
         />

@@ -219,6 +219,7 @@
       "label": "Escopo",
       "personal": "Pessoal",
       "public": "Público",
+      "system": "Sistema",
       "all": "Todos",
       "filter": "Filtrar por escopo",
       "hint": "O chat consulta os dois. Use Público para o que pode ser mostrado publicamente.",

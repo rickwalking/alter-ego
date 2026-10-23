@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { Globe, Lock } from "lucide-react";
+import { Cog, Globe, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { NeonBadge } from "@/components/atoms/neon-badge";
@@ -24,13 +24,20 @@ const SCOPE_CHOICES: readonly DocumentScopeChoice[] = [
   DOCUMENT_SCOPE.PUBLIC,
 ];
 
-/** "Pessoal" or "Público" for a document's scope. */
+const SYSTEM_SCOPE_LABEL = "system";
+
+const SCOPE_ICONS = {
+  [DOCUMENT_SCOPE.PERSONAL]: Lock,
+  [DOCUMENT_SCOPE.PUBLIC]: Globe,
+} as const;
+
+/** "Pessoal", "Público" or "Sistema" for a document's scope. */
 export function ScopeBadge({
   scope,
 }: Readonly<ScopeBadgeProps>): React.ReactElement {
   const t = useTranslations("knowledge.scope");
   const choice = scopeChoiceOf(scope);
-  const Icon = choice === DOCUMENT_SCOPE.PUBLIC ? Globe : Lock;
+  const Icon = choice === null ? Cog : SCOPE_ICONS[choice];
   return (
     <NeonBadge
       variant="secondary"
@@ -38,7 +45,7 @@ export function ScopeBadge({
       data-testid="document-scope"
     >
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {t(choice)}
+      {t(choice ?? SYSTEM_SCOPE_LABEL)}
     </NeonBadge>
   );
 }
@@ -115,7 +122,7 @@ export function ScopeSwitch({
   failed,
 }: Readonly<ScopeSwitchProps>): React.ReactElement {
   const t = useTranslations("knowledge.scope");
-  const toPublic = scopeChoiceOf(scope) !== DOCUMENT_SCOPE.PUBLIC;
+  const toPublic = scope !== DOCUMENT_SCOPE.PUBLIC;
   const label = toPublic ? t("makePublic") : t("makePersonal");
   return (
     <>

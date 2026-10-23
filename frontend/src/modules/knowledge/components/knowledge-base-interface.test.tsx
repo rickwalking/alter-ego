@@ -26,7 +26,7 @@ const knowledgeMocks = vi.hoisted(() => ({
   createDocument: vi.fn(),
   deleteDocument: vi.fn(),
   reprocessDocument: vi.fn(),
-  changeScope: vi.fn(),
+  changeScope: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("../hooks/use-documents", () => ({
@@ -44,10 +44,7 @@ vi.mock("../hooks/use-documents", () => ({
     mutateAsync: knowledgeMocks.reprocessDocument,
   }),
   useChangeDocumentScope: () => ({
-    mutate: knowledgeMocks.changeScope,
-    isPending: false,
-    isError: false,
-    variables: undefined,
+    mutateAsync: knowledgeMocks.changeScope,
   }),
 }));
 

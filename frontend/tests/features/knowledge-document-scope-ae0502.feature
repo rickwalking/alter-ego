@@ -38,3 +38,20 @@ Feature: Knowledge documents show and set their scope
     When I choose "Tornar público" on its card
     Then the document's scope change is requested as "public"
     And the card shows the new scope once the server answers
+
+  Scenario: Switching two documents keeps each one busy until its own change ends
+    Given two personal documents
+    When I switch the scope of the first and then of the second
+    Then both switches are disabled
+    And the first stays disabled after the second change ends, until its own change ends
+
+  Scenario: A failed scope change says so on its document only
+    Given two personal documents whose scope changes are in flight
+    When the change of the first fails
+    Then only the first card says the change failed
+
+  Scenario: A system document shows its scope without a switch
+    Given a document in a system scope such as "internal"
+    Then its card shows the badge "Sistema"
+    And it has no scope switch
+    And it is listed only under "Todos"

@@ -1,6 +1,6 @@
 /**
  * Document scope in the Knowledge Base: badge, scope filter and the card's
- * scope switch. Gherkin: tests/features/knowledge-document-scope-ae0502.feature
+ * scope switch.
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -167,11 +167,65 @@ describe("Document scope", () => {
     ).not.toBeInTheDocument();
   });
 
-  /** Scenario: Each document shows its scope */
-  it("treats a system scope as personal", () => {
-    render(<DocumentCard document={doc({ scope: "internal" })} />);
-    expect(screen.getByTestId("document-scope")).toHaveTextContent(
-      en.knowledge.scope.personal,
+  /** Scenario: A system document shows its scope without a switch */
+  it("shows a system badge and no switch for a system scope", () => {
+    render(
+      <DocumentCard
+        document={doc({ scope: "internal" })}
+        onChangeScope={vi.fn()}
+      />,
     );
+    expect(screen.getByTestId("document-scope")).toHaveTextContent(
+      en.knowledge.scope.system,
+    );
+    expect(pt.knowledge.scope.system).toBe("Sistema");
+    expect(
+      screen.queryByRole("button", { name: en.knowledge.scope.makePublic }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en.knowledge.scope.makePersonal }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Scenario: A system document shows its scope without a switch */
+  it("lists a system document only under All", () => {
+    const system = doc({
+      id: "s1",
+      title: "Carousel source",
+      scope: "carousel",
+    });
+    renderList([PERSONAL, PUBLIC, system]);
+    filterBy(en.knowledge.scope.personal);
+    expect(listedTitles()).toEqual(["Private notes"]);
+    filterBy(en.knowledge.scope.public);
+    expect(listedTitles()).toEqual(["Public bio"]);
+    filterBy(en.knowledge.scope.all);
+    expect(listedTitles()).toEqual([
+      "Private notes",
+      "Public bio",
+      "Carousel source",
+    ]);
+  });
+
+  /** Scenario: A failed scope change says so on its document only */
+  it("marks only the cards whose ids are changing or failed", () => {
+    render(
+      <DocumentList
+        documents={[PERSONAL, PUBLIC]}
+        onCreateNew={vi.fn()}
+        onUploadNew={vi.fn()}
+        onDeleteDocument={vi.fn()}
+        onChangeScope={vi.fn()}
+        changingScopeIds={new Set(["q1"])}
+        scopeChangeFailedIds={new Set(["p1"])}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: en.knowledge.scope.makePublic }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: en.knowledge.scope.changing }),
+    ).toBeDisabled();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 });

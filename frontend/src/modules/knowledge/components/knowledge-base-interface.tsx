@@ -47,8 +47,8 @@ function DocumentListSection({
   retryingIds,
   retryFailedIds,
   onChangeScope,
-  changingScopeId,
-  scopeChangeFailedId,
+  changingScopeIds,
+  scopeChangeFailedIds,
 }: Readonly<DocumentListSectionProps>) {
   const { data: documents } = useDocuments();
 
@@ -72,8 +72,8 @@ function DocumentListSection({
       retryingIds={retryingIds}
       retryFailedIds={retryFailedIds}
       onChangeScope={onChangeScope}
-      changingScopeId={changingScopeId}
-      scopeChangeFailedId={scopeChangeFailedId}
+      changingScopeIds={changingScopeIds}
+      scopeChangeFailedIds={scopeChangeFailedIds}
     />
   );
 }
@@ -85,7 +85,7 @@ export function KnowledgeBaseInterface() {
   const deleteDocument = useDeleteDocument();
   const isClient = useIsClient();
   const { retry, retryingIds, retryFailedIds } = useDocumentRetries();
-  const { changeScope, changingScopeId, scopeChangeFailedId } =
+  const { changeScope, changingScopeIds, scopeChangeFailedIds } =
     useDocumentScopeChange();
 
   const handleCreateNew = useCallback(() => {
@@ -138,8 +138,8 @@ export function KnowledgeBaseInterface() {
             retryingIds={retryingIds}
             retryFailedIds={retryFailedIds}
             onChangeScope={changeScope}
-            changingScopeId={changingScopeId}
-            scopeChangeFailedId={scopeChangeFailedId}
+            changingScopeIds={changingScopeIds}
+            scopeChangeFailedIds={scopeChangeFailedIds}
           />
         </Suspense>
       );
