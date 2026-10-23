@@ -45,6 +45,9 @@ Review follow-ups to AE-0534 (#259) and AE-0527 (#258).
       owner retries it, Then none of its chunks are left in `public` and it is indexed again in `personal`.
 - [x] Given a document with chunks left in both namespaces, When it is deleted, Then none remain; other
       documents' chunks stay.
+- [x] Given a fresh Pinecone index (no namespace yet), When a document is deleted, retried or moved, Then the
+      404 for the missing namespace is treated as nothing to delete (not retried) and the operation succeeds.
+- [x] Given a document in a system scope (carousel, internal), Then only its own namespace is cleared.
 - [x] Given a carousel archived after a request loaded it, When the request claims a run through the
       `lock_version` CAS, Then the carousel is no longer archived.
 - [x] Given a carousel archived after a request loaded it, When the request saves an edit through the ORM,
@@ -76,10 +79,19 @@ Ticket written from the reviews of #259 and #258. Implemented: the pipeline clea
 the lock_version CAS clears `archived_at`; the guard writes `archived_at = NULL` unconditionally on activity.
 The old code fails the new knowledge integration tests (2 of 2) and the race tests (2 of 2).
 
+### 2026-10-23 (review)
+
+Review of the PR: on a fresh prod index `index.delete(filter=..., namespace=X)` raises `NotFoundException` when
+X does not exist yet, so the first Retry or delete would fail (also on main for a never-indexed document).
+`PineconeVectorStore.delete_by_document` now treats it as nothing to delete; the fake index raises it like
+Pinecone; system-scope documents clear only their own namespace.
+
 ## Files Touched
 
 - backend: `application/services/document_pipeline.py`, `application/services/optimistic_lock_service.py`,
-  `infrastructure/database/carousel_archive_guard.py`; tests
+  `infrastructure/database/carousel_archive_guard.py`, `infrastructure/external/pinecone_store.py`; tests
+  `tests/unit/infrastructure/test_pinecone_missing_namespace_ae0536.py`, `tests/pinecone_index_fakes.py` (404 on a
+  missing namespace),
   `tests/integration/test_knowledge_clear_other_namespace_ae0536.py`,
   `tests/unit/application/test_carousel_archive_quiet_ae0527.py` (race tests; the ORM lock_version test is
   renamed), updated namespace expectations in the AE-0502 scope tests; features.
