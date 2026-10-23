@@ -1,6 +1,6 @@
 # AE-0539 — Frontend: clear the new npm audit advisories (zod, vitest, storybook)
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: High
 Type: Bug
