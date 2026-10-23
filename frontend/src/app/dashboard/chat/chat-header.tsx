@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   DASHBOARD_CHAT_BG_HEADER,
   DASHBOARD_CHAT_BORDER_SUBTLE,
@@ -28,6 +29,7 @@ export function ChatHeader({
   conversationsOpen,
   conversationsId,
 }: Readonly<ChatHeaderProps>): React.ReactElement {
+  const t = useTranslations("chat");
   return (
     <header
       className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-16 md:pr-8 lg:pl-8"
@@ -44,7 +46,9 @@ export function ChatHeader({
             type="button"
             onClick={onToggleConversations}
             aria-label={
-              conversationsOpen ? "Close conversations" : "Open conversations"
+              conversationsOpen
+                ? t("closeConversations")
+                : t("openConversations")
             }
             aria-expanded={conversationsOpen}
             aria-controls={conversationsId}
@@ -71,7 +75,7 @@ export function ChatHeader({
             </svg>
           </button>
         )}
-        <h1 style={{ fontSize: "16px", fontWeight: 700 }}>Chat</h1>
+        <h1 style={{ fontSize: "16px", fontWeight: 700 }}>{t("title")}</h1>
         <span
           style={{
             fontFamily: DASHBOARD_CHAT_MONO_FONT,
@@ -79,7 +83,7 @@ export function ChatHeader({
             color: DASHBOARD_CHAT_TEXT_DIM,
           }}
         >
-          / <span>Alter-Ego assistant</span>
+          / <span>{t("subtitle")}</span>
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -98,7 +102,7 @@ export function ChatHeader({
               cursor: "pointer",
             }}
           >
-            New chat
+            {t("input.newChat")}
           </button>
         )}
         <button

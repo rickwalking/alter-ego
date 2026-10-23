@@ -112,10 +112,11 @@
   "chat": {
     "title": "Chat",
     "input": {
-      "placeholder": "Digite sua mensagem...",
+      "placeholder": "Pergunte qualquer coisa ao Alter-Ego…",
       "send": "Enviar mensagem",
-      "newChat": "Novo Chat",
-      "counter": "{count} de {max} caracteres"
+      "newChat": "Novo chat",
+      "counter": "{count} de {max} caracteres",
+      "label": "Mensagem para o Alter-Ego"
     },
     "you": "Você",
     "assistant": "Assistente",
@@ -140,7 +141,15 @@
       "retry": "Tentar de novo",
       "signIn": "Entrar",
       "newChat": "Começar um novo chat"
-    }
+    },
+    "subtitle": "Assistente Alter-Ego",
+    "typing": "O Alter-Ego está digitando…",
+    "logLabel": "Conversa",
+    "replyAnnounced": "O Alter-Ego respondeu: {text}",
+    "hintNotSaved": "As mensagens não ficam salvas depois de recarregar a página.",
+    "hintSignIn": "Entre para guardar o histórico das conversas.",
+    "openConversations": "Abrir conversas",
+    "closeConversations": "Fechar conversas"
   },
   "knowledge": {
     "title": "Base de Conhecimento",

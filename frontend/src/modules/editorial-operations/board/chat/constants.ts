@@ -56,5 +56,3 @@ export {
 
 export const DASHBOARD_CHAT_MONO_FONT =
   "'JetBrains Mono', ui-monospace, monospace";
-
-export const DASHBOARD_CHAT_TYPING_LABEL = "Analyzing tone alignment...";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   CHAT_LENGTH_COUNTER_RATIO,
@@ -47,16 +47,23 @@ export interface ChatComposerProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
-  disabled?: boolean;
+  /** A reply is streaming: Send is off, but the textarea keeps focus. */
+  busy?: boolean;
 }
 
 export function ChatComposer({
   value,
   onChange,
   onSend,
-  disabled = false,
+  busy = false,
 }: Readonly<ChatComposerProps>): React.ReactElement {
+  const t = useTranslations("chat.input");
   const counterId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sendAndKeepFocus = (): void => {
+    onSend();
+    textareaRef.current?.focus();
+  };
   const showCounter = value.length >= COUNTER_FROM;
   return (
     <div
@@ -68,6 +75,9 @@ export function ChatComposer({
     >
       <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
         <textarea
+          ref={textareaRef}
+          aria-label={t("label")}
+          className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
@@ -76,11 +86,10 @@ export function ChatComposer({
               onSend();
             }
           }}
-          placeholder="Ask the Alter-Ego anything..."
+          placeholder={t("placeholder")}
           rows={1}
           maxLength={CHAT_MESSAGE_MAX_LENGTH}
           aria-describedby={showCounter ? counterId : undefined}
-          disabled={disabled}
           style={{
             flex: 1,
             padding: "10px 16px",
@@ -94,14 +103,13 @@ export function ChatComposer({
             resize: "none",
             minHeight: "42px",
             maxHeight: "120px",
-            outline: "none",
           }}
         />
         <button
           type="button"
-          aria-label="Send message"
-          onClick={onSend}
-          disabled={disabled || !value.trim()}
+          aria-label={t("send")}
+          onClick={sendAndKeepFocus}
+          disabled={busy || !value.trim()}
           style={{
             width: "42px",
             height: "42px",

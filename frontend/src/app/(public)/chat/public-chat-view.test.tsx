@@ -102,4 +102,12 @@ describe("PublicChatView", () => {
     await waitFor(() => expect(mocks.sendMessage).toHaveBeenCalled());
     expect(composer().value).toBe("");
   });
+
+  /** Scenario: The public chat has a main landmark and a skip link */
+  it("puts the conversation in the main landmark", () => {
+    render(<PublicChatView />);
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main-content");
+    expect(main).toContainElement(composer());
+  });
 });
