@@ -25,7 +25,7 @@ const slideEditResponseSchema = z.object({
       blocking: z.boolean().optional(),
       violations: z.array(z.unknown()).optional(),
     })
-    .passthrough(),
+    .loose(),
   needs_republish: z.boolean().optional(),
   updated_slides: z.array(z.number()).optional(),
   field_violations: z.array(slideFieldViolationSchema).optional(),

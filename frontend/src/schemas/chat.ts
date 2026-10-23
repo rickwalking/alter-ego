@@ -21,7 +21,7 @@ export const messageSchema = z.object({
 export const conversationSchema = z.object({
   id: z.string(),
   title: z.string().nullable(),
-  metadata: z.unknown(),
+  metadata: z.unknown().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

@@ -6,7 +6,7 @@ export const documentSchema = z.object({
   status: z.string(),
   scope: z.string(),
   is_public: z.boolean(),
-  metadata: z.unknown(),
+  metadata: z.unknown().optional(),
   chunk_count: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -25,7 +25,7 @@ export const createDocumentRequestSchema = z.object({
   content: z.string().min(1),
   scope: z.string().optional(),
   is_public: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -39,7 +39,7 @@ export const documentUploadResponseSchema = z.object({
   status: z.string(),
   scope: z.string(),
   is_public: z.boolean(),
-  metadata: z.unknown(),
+  metadata: z.unknown().optional(),
   chunk_count: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
