@@ -5,6 +5,11 @@ Feature: Create a palette with AI in the New palette modal
     When the owner types "Descreva a paleta" text and presses "Gerar"
     Then three candidate cards with a swatch, a name and the contrast are shown
 
+  Scenario: Fewer than three candidates say how many are shown
+    Given the generator returns fewer than three candidates
+    When the owner presses "Gerar"
+    Then the cards are shown with a "Mostrando N de 3" note
+
   Scenario: Using a candidate pre-fills the form without saving
     Given the generator shows candidates
     When the owner presses "Usar" on one candidate

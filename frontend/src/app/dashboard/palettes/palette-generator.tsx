@@ -14,6 +14,8 @@ const DESCRIPTION_MIN = 3;
 /** Longest description the API accepts (mirrors the backend limit). */
 const DESCRIPTION_MAX = 300;
 const DESCRIPTION_ID = "palette-description";
+/** Candidates one generation asks for (mirrors the backend count). */
+const CANDIDATE_TOTAL = 3;
 
 interface PaletteGeneratorProps {
   onUse: (candidate: PaletteCandidate) => void;
@@ -72,6 +74,12 @@ export function PaletteGenerator({
         <NeonBadge variant="red" outline>
           <span role="alert">{t("error")}</span>
         </NeonBadge>
+      )}
+
+      {candidates.length > 0 && candidates.length < CANDIDATE_TOTAL && (
+        <p role="status" className="text-[11px] text-text-muted">
+          {t("partial", { count: candidates.length, total: CANDIDATE_TOTAL })}
+        </p>
       )}
 
       {candidates.length > 0 && (

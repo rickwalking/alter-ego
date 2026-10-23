@@ -75,12 +75,7 @@ class _CannedLLM:
         self.answer = answer
         self.calls = 0
 
-    async def generate(
-        self,
-        messages: list[dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
-    ) -> str:
+    async def complete(self, prompt: str) -> str:
         self.calls += 1
         if isinstance(self.answer, Exception):
             raise self.answer

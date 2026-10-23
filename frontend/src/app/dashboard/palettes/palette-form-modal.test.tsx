@@ -120,6 +120,29 @@ describe("PaletteFormModal generator", () => {
     ).toBeInTheDocument();
   });
 
+  /** Scenario: Fewer than three candidates say how many are shown */
+  it("says how many of three candidates are shown", async () => {
+    authenticatedFetch.mockResolvedValueOnce(
+      json({ candidates: CANDIDATES.slice(0, 2) }),
+    );
+    const { user } = renderCreate();
+    await generate(user);
+    const list = await screen.findByRole("list", { name: "AI suggestions" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Showing 2 of 3 suggestions",
+    );
+  });
+
+  /** Scenario: Generating shows three candidates to pick from */
+  it("has no count note when all three candidates are shown", async () => {
+    authenticatedFetch.mockResolvedValueOnce(json({ candidates: CANDIDATES }));
+    const { user } = renderCreate();
+    await generate(user);
+    await screen.findByRole("list", { name: "AI suggestions" });
+    expect(screen.queryByText(/Showing \d of 3/)).toBeNull();
+  });
+
   /** Scenario: Using a candidate pre-fills the form without saving */
   it("pre-fills the form from a candidate and saves only on Create", async () => {
     authenticatedFetch.mockResolvedValueOnce(json({ candidates: CANDIDATES }));

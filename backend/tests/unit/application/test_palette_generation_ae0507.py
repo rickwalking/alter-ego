@@ -53,22 +53,18 @@ _FOREST = {
 
 
 class _FakeLLM:
-    """Answers one canned text (or raises) and records the prompts it got."""
+    """Gives its canned answers in turn (the last one repeats); records the prompts."""
 
-    def __init__(self, answer: str | Exception) -> None:
-        self.answer = answer
+    def __init__(self, *answers: str | Exception) -> None:
+        self.answers = list(answers)
         self.prompts: list[str] = []
 
-    async def generate(
-        self,
-        messages: list[dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
-    ) -> str:
-        self.prompts.append(messages[-1]["content"])
-        if isinstance(self.answer, Exception):
-            raise self.answer
-        return self.answer
+    async def complete(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        answer = self.answers[min(len(self.prompts), len(self.answers)) - 1]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
 
 
 class _TraceRecorder:
@@ -86,8 +82,10 @@ class _TraceRecorder:
         return scope()
 
 
-def _service(answer: str | Exception) -> tuple[PaletteGenerationService, _FakeLLM]:
-    llm = _FakeLLM(answer)
+def _service(
+    *answers: str | Exception,
+) -> tuple[PaletteGenerationService, _FakeLLM]:
+    llm = _FakeLLM(*answers)
     ports = PaletteGenerationPorts(
         llm=llm,
         render_prompt=lambda description: f"PROMPT[{description}]",
@@ -125,8 +123,9 @@ class TestCandidates:
     @pytest.mark.asyncio
     async def test_a_bare_list_answer_is_accepted(self) -> None:
         """Scenario: A description returns three validated candidates."""
-        service, _ = _service(json.dumps([_DARK]))
+        service, llm = _service(json.dumps([_DARK]))
         assert [c.name for c in await service.generate(_REQUEST)] == ["Noite Azul"]
+        assert len(llm.prompts) == 2
 
     @pytest.mark.asyncio
     async def test_the_generation_is_traced_for_the_user(self) -> None:
@@ -211,7 +210,6 @@ class TestInvalidCandidates:
             {**_DARK, "name": "   "},
             {**_DARK, "name": 7},
             {key: value for key, value in _DARK.items() if key != "accent"},
-            {**_DARK, "keywords": "night"},
             "not an object",
         ],
     )
@@ -245,12 +243,87 @@ class TestInvalidCandidates:
         assert len(candidate.keywords) == 10
         assert all(len(keyword) <= 30 for keyword in candidate.keywords)
 
+    @pytest.mark.parametrize("keywords", [None, "night", {"a": 1}])
+    @pytest.mark.asyncio
+    async def test_missing_or_malformed_keywords_are_empty(
+        self, keywords: object
+    ) -> None:
+        """Scenario: Missing or malformed keywords are an empty list."""
+        service, _ = _service(_answer({**_DARK, "keywords": keywords}))
+        [candidate] = await service.generate(_REQUEST)
+        assert candidate.keywords == ()
+
+    @pytest.mark.asyncio
+    async def test_absent_keywords_are_empty(self) -> None:
+        """Scenario: Missing or malformed keywords are an empty list."""
+        bare = {key: value for key, value in _DARK.items() if key != "keywords"}
+        service, _ = _service(_answer(bare))
+        [candidate] = await service.generate(_REQUEST)
+        assert candidate.keywords == ()
+
     @pytest.mark.asyncio
     async def test_non_text_keywords_are_ignored(self) -> None:
         """Scenario: Brand keywords are dropped from a candidate."""
         service, _ = _service(_answer({**_DARK, "keywords": [3, "night"]}))
         [candidate] = await service.generate(_REQUEST)
         assert candidate.keywords == ("night",)
+
+
+class TestShortAnswers:
+    @pytest.mark.asyncio
+    async def test_a_short_answer_is_completed_by_a_second_call(self) -> None:
+        """Scenario: A short answer is completed by one more call."""
+        service, llm = _service(_answer(_DARK), _answer(_DARK, _LIGHT, _FOREST))
+        candidates = await service.generate(_REQUEST)
+        assert [c.name for c in candidates] == ["Noite Azul", "Areia", "Floresta"]
+        assert len(llm.prompts) == 2
+
+    @pytest.mark.asyncio
+    async def test_still_short_after_the_second_call(self) -> None:
+        """Scenario: A short answer is completed by one more call."""
+        service, llm = _service(_answer(_DARK), "not json", _answer(_FOREST))
+        assert [c.name for c in await service.generate(_REQUEST)] == ["Noite Azul"]
+        assert len(llm.prompts) == 2
+
+    @pytest.mark.asyncio
+    async def test_an_invalid_first_answer_is_retried(self) -> None:
+        """Scenario: A short answer is completed by one more call."""
+        service, _ = _service("not json", _answer(_LIGHT, _FOREST))
+        assert [c.name for c in await service.generate(_REQUEST)] == [
+            "Areia",
+            "Floresta",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_failing_second_call_keeps_the_first_candidates(self) -> None:
+        """Scenario: A short answer is completed by one more call."""
+        service, _ = _service(_answer(_DARK, _LIGHT), RuntimeError("down"))
+        assert [c.name for c in await service.generate(_REQUEST)] == [
+            "Noite Azul",
+            "Areia",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_full_answer_makes_one_call(self) -> None:
+        """Scenario: A description returns three validated candidates."""
+        service, llm = _service(_answer(_DARK, _LIGHT, _FOREST))
+        await service.generate(_REQUEST)
+        assert len(llm.prompts) == 1
+
+
+class TestDistinctCandidates:
+    @pytest.mark.asyncio
+    async def test_repeated_names_and_colours_are_dropped(self) -> None:
+        """Scenario: Repeated candidates are dropped."""
+        same_name = {**_FOREST, "name": "noite azul"}
+        same_colours = {**_DARK, "name": "Outra Noite"}
+        service, _ = _service(
+            _answer(_DARK, same_name, same_colours, _LIGHT), _answer(_DARK)
+        )
+        assert [c.name for c in await service.generate(_REQUEST)] == [
+            "Noite Azul",
+            "Areia",
+        ]
 
 
 class TestUnavailable:
@@ -268,6 +341,7 @@ class TestUnavailable:
     @pytest.mark.asyncio
     async def test_no_usable_answer_raises(self, answer: str | Exception) -> None:
         """Scenario: The generator is unavailable when the LLM fails."""
-        service, _ = _service(answer)
+        service, llm = _service(answer)
         with pytest.raises(PaletteGenerationError):
             await service.generate(_REQUEST)
+        assert len(llm.prompts) == (1 if isinstance(answer, Exception) else 2)

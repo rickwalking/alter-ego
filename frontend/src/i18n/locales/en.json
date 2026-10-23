@@ -989,6 +989,7 @@
       "regenerate": "Generate again",
       "use": "Use",
       "candidates": "AI suggestions",
+      "partial": "Showing {count} of {total} suggestions: only these passed validation.",
       "contrast": "Contrast {ratio}:1",
       "error": "Could not generate palettes right now. Try again or create one by hand."
     }

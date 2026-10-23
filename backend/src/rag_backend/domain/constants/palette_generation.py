@@ -1,7 +1,8 @@
 """Limits and contract strings of "create a palette with AI".
 
-One fast-queue LLM call turns the owner's description into up to
-``PALETTE_CANDIDATE_COUNT`` candidates. ``WCAG_AA_TEXT_CONTRAST`` is the AA
+A fast-queue LLM call turns the owner's description into up to
+``PALETTE_CANDIDATE_COUNT`` candidates; ``GENERATION_ATTEMPTS`` allows a second
+call when the first answer has fewer valid ones. ``WCAG_AA_TEXT_CONTRAST`` is the AA
 ratio for normal text; the slide ink colours are the template's own (dark ink on
 a light background, white on a dark one), so the check matches what renders.
 A failing colour is mixed towards black or white in ``CONTRAST_REPAIR_STEP``
@@ -25,6 +26,7 @@ MIX_TARGET_WHITE: str = "#ffffff"
 GENERATION_TEMPERATURE: float = 0.8
 GENERATION_MAX_TOKENS: int = 2000
 GENERATION_TIMEOUT_SECONDS: float = 90.0
+GENERATION_ATTEMPTS: int = 2
 
 KEY_CANDIDATES: str = "candidates"
 KEY_NAME: str = "name"
@@ -49,6 +51,7 @@ __all__ = [
     "DESCRIPTION_MIN_LEN",
     "ERR_DESCRIPTION_TOO_SHORT",
     "ERR_PALETTE_GENERATION_UNAVAILABLE",
+    "GENERATION_ATTEMPTS",
     "GENERATION_MAX_TOKENS",
     "GENERATION_TEMPERATURE",
     "GENERATION_TIMEOUT_SECONDS",

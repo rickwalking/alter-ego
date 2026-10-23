@@ -1,14 +1,18 @@
-"""Create a palette with AI: one fast-queue LLM call, up to three candidates.
+"""Create a palette with AI: a fast-queue LLM call, up to three candidates.
 
 The owner's description goes to the versioned prompt (injected
 ``render_prompt``, ``agents/prompts/palette/v1/generate.yaml``) and the fast LLM
-answers JSON. Every candidate is re-validated here, never trusted: strict hex,
+answers JSON through the injected completion, which carries the token cap and
+temperature. Every candidate is re-validated here, never trusted: strict hex,
 the palette name rules (trimmed, no angle brackets, cut to the column length),
-keywords lower-cased, de-duplicated, capped and without root brand keywords. The
-mode follows the background luminance, and every colour pair is brought to
-WCAG AA by :mod:`palette_contrast`. Nothing is stored: the candidates only
-pre-fill the create form. Any LLM failure, or an answer without one valid
-candidate, raises :class:`PaletteGenerationError`.
+keywords lower-cased, de-duplicated, capped and without root brand keywords (a
+missing or malformed keyword list is empty). The mode follows the background
+luminance, and every colour pair is brought to WCAG AA by
+:mod:`palette_contrast`. Candidates repeating a name or a colour set are
+dropped. When fewer than three are valid the model is asked once more and the
+new ones are added. Nothing is stored: the candidates only pre-fill the create
+form. Any LLM failure, or no valid candidate after both answers, raises
+:class:`PaletteGenerationError`.
 """
 
 from __future__ import annotations
@@ -41,8 +45,7 @@ from rag_backend.domain.constants.palette_catalog import (
 from rag_backend.domain.constants.palette_generation import (
     CONTRAST_DECIMALS,
     ERR_PALETTE_GENERATION_UNAVAILABLE,
-    GENERATION_MAX_TOKENS,
-    GENERATION_TEMPERATURE,
+    GENERATION_ATTEMPTS,
     GENERATION_TIMEOUT_SECONDS,
     KEY_ACCENT,
     KEY_BACKGROUND,
@@ -54,21 +57,15 @@ from rag_backend.domain.constants.palette_generation import (
 )
 from rag_backend.domain.constants.palette_types import PaletteMode
 
-_ROLE_USER = "user"
 _BRAND_KEYWORDS: frozenset[str] = frozenset(
     keyword.lower() for keywords in BRAND_KEYWORDS.values() for keyword in keywords
 )
 
 
 class PaletteGenerationLLM(Protocol):
-    """The text-generation port (the container's fast LLM service)."""
+    """The completion port: the fast chat model with the cap and temperature bound."""
 
-    async def generate(
-        self,
-        messages: list[dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
-    ) -> str: ...
+    async def complete(self, prompt: str) -> str: ...
 
 
 PromptRenderer = Callable[[str], str]
@@ -137,9 +134,9 @@ def _name(value: object) -> str | None:
     return name
 
 
-def _keywords(value: object) -> tuple[str, ...] | None:
+def _keywords(value: object) -> tuple[str, ...]:
     if not isinstance(value, list):
-        return None
+        return ()
     cleaned: list[str] = []
     for raw in value:
         keyword = raw.strip().lower() if isinstance(raw, str) else ""
@@ -160,7 +157,7 @@ def _candidate(raw: object) -> PaletteCandidate | None:
     colours = [_hex(raw.get(key)) for key in (KEY_PRIMARY, KEY_ACCENT, KEY_BACKGROUND)]
     keywords = _keywords(raw.get(KEY_KEYWORDS, []))
     primary, accent, background = colours
-    if name is None or keywords is None or not (primary and accent and background):
+    if name is None or not (primary and accent and background):
         return None
     background = repair_background(background)
     primary = repair_against(primary, background)
@@ -192,13 +189,32 @@ def _raw_candidates(answer: str) -> list[object]:
     return items
 
 
+def _colours(candidate: PaletteCandidate) -> tuple[str, str, str]:
+    return candidate.primary, candidate.accent, candidate.background
+
+
+def _merge(
+    kept: list[PaletteCandidate], new: list[PaletteCandidate]
+) -> list[PaletteCandidate]:
+    """``kept`` plus the new candidates whose name and colours are not taken yet."""
+    merged = list(kept)
+    for candidate in new:
+        names = {other.name.casefold() for other in merged}
+        colours = {_colours(other) for other in merged}
+        if candidate.name.casefold() in names or _colours(candidate) in colours:
+            continue
+        merged.append(candidate)
+    return merged[:PALETTE_CANDIDATE_COUNT]
+
+
 def parse_candidates(answer: str) -> list[PaletteCandidate]:
-    """The valid, repaired candidates of an LLM answer (at most three)."""
-    parsed = (_candidate(item) for item in _raw_candidates(answer))
-    valid = [candidate for candidate in parsed if candidate is not None]
-    if not valid:
-        raise PaletteGenerationError
-    return valid[:PALETTE_CANDIDATE_COUNT]
+    """The valid, repaired, distinct candidates of an LLM answer (at most three)."""
+    try:
+        items = _raw_candidates(answer)
+    except PaletteGenerationError:
+        return []
+    parsed = (_candidate(item) for item in items)
+    return _merge([], [candidate for candidate in parsed if candidate is not None])
 
 
 class PaletteGenerationService:
@@ -210,21 +226,36 @@ class PaletteGenerationService:
     async def generate(
         self, request: PaletteGenerationRequest
     ) -> list[PaletteCandidate]:
-        """Up to three candidates; raises :class:`PaletteGenerationError`."""
+        """Up to three distinct candidates; raises :class:`PaletteGenerationError`.
+
+        Fewer than three valid candidates in the first answer → one more call;
+        a failing second call keeps the first call's candidates.
+        """
         prompt = self._ports.render_prompt(request.description)
+        candidates: list[PaletteCandidate] = []
         with self._ports.trace(request.user_id):
-            try:
-                answer = await asyncio.wait_for(
-                    self._ports.llm.generate(
-                        messages=[{"role": _ROLE_USER, "content": prompt}],
-                        temperature=GENERATION_TEMPERATURE,
-                        max_tokens=GENERATION_MAX_TOKENS,
-                    ),
-                    timeout=GENERATION_TIMEOUT_SECONDS,
-                )
-            except Exception as exc:
-                raise PaletteGenerationError from exc
-        return parse_candidates(answer or "")
+            for _ in range(GENERATION_ATTEMPTS):
+                try:
+                    answer = await self._complete(prompt)
+                except PaletteGenerationError:
+                    if candidates:
+                        break
+                    raise
+                candidates = _merge(candidates, parse_candidates(answer))
+                if len(candidates) == PALETTE_CANDIDATE_COUNT:
+                    break
+        if not candidates:
+            raise PaletteGenerationError
+        return candidates
+
+    async def _complete(self, prompt: str) -> str:
+        try:
+            answer = await asyncio.wait_for(
+                self._ports.llm.complete(prompt), timeout=GENERATION_TIMEOUT_SECONDS
+            )
+        except Exception as exc:
+            raise PaletteGenerationError from exc
+        return answer or ""
 
 
 __all__ = [

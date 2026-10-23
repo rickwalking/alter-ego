@@ -1,4 +1,4 @@
-# Palette prompts v1 (AE-0507)
+# Palette prompts v1
 
 Loaded through `agents.prompts.registry`.
 

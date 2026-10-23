@@ -54,3 +54,24 @@ Feature: Generate palette candidates from a description
     Given one user generated palettes five times in the last minute
     When another user posts a description to the palette generator
     Then that user still gets candidates
+
+  Scenario: Missing or malformed keywords are an empty list
+    Given the fast LLM answers a palette whose keywords are missing, null or not a list
+    When the owner posts a description to the palette generator
+    Then the candidate is returned with no keywords
+
+  Scenario: A short answer is completed by one more call
+    Given the fast LLM's first answer has fewer than three valid candidates
+    When the owner posts a description to the palette generator
+    Then the LLM is asked once more and its new candidates are added, up to three
+    And a failing second call keeps the first answer's candidates
+
+  Scenario: Repeated candidates are dropped
+    Given the fast LLM answers two candidates with the same name or the same colours
+    When the owner posts a description to the palette generator
+    Then only the first of them is returned
+
+  Scenario: The model call carries the token cap and temperature
+    Given the fast chat model of the palette generator
+    When it answers a palette prompt
+    Then the call to the model carries the generation's max tokens and temperature

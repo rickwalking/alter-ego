@@ -1,7 +1,7 @@
 ---
 name: generate
 version: "1.0.0"
-description: "Three palette candidates from the owner's description (AE-0507)"
+description: "Three palette candidates from the owner's description"
 
 template: |
   You design colour palettes for Instagram carousel slides. Each palette has a

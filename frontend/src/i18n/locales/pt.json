@@ -989,6 +989,7 @@
       "regenerate": "Gerar de novo",
       "use": "Usar",
       "candidates": "Sugestões da IA",
+      "partial": "Mostrando {count} de {total} sugestões: só estas passaram na validação.",
       "contrast": "Contraste {ratio}:1",
       "error": "Não foi possível gerar paletas agora. Tente de novo ou crie manualmente."
     }
