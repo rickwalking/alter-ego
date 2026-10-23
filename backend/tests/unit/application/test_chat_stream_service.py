@@ -120,7 +120,7 @@ class TestStreamChatResponse:
                 conversation_id=uuid4(),
                 content="",
                 db=mock_db,
-                agent_builder=lambda: MockAgent(),
+                agent_builder=lambda _db: MockAgent(),
             ),
         ):
             events.append(event)
@@ -140,7 +140,7 @@ class TestStreamChatResponse:
                 conversation_id=uuid4(),
                 content="   ",
                 db=mock_db,
-                agent_builder=lambda: MockAgent(),
+                agent_builder=lambda _db: MockAgent(),
             ),
         ):
             events.append(event)
@@ -175,7 +175,7 @@ class TestStreamChatResponse:
                     conversation_id=conv_id,
                     content="Hello",
                     db=mock_db,
-                    agent_builder=lambda: MockAgent(),
+                    agent_builder=lambda _db: MockAgent(),
                 ),
             ):
                 events.append(event)
@@ -226,7 +226,7 @@ class TestStreamChatResponse:
                     conversation_id=conv_id,
                     content="Hi",
                     db=mock_db,
-                    agent_builder=lambda: agent,
+                    agent_builder=lambda _db: agent,
                 ),
             ):
                 if not event.startswith(": ping"):
@@ -278,7 +278,7 @@ class TestStreamChatResponse:
                     conversation_id=mock_conversation.id,
                     content="Hi",
                     db=mock_db,
-                    agent_builder=lambda: agent,
+                    agent_builder=lambda _db: agent,
                 ),
             ):
                 if not event.startswith(": ping"):
@@ -333,7 +333,7 @@ class TestStreamChatResponse:
                     conversation_id=mock_conversation.id,
                     content="Run tool",
                     db=mock_db,
-                    agent_builder=lambda: agent,
+                    agent_builder=lambda _db: agent,
                 ),
             ):
                 if not event.startswith(": ping"):

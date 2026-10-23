@@ -9,15 +9,23 @@ import json
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
+from functools import partial
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.chat_turns import (
+    BUSY_CONVERSATIONS,
+    DETACHED_TURNS,
+    conversation_turn_in_flight,
+    stream_while_running,
+)
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.constants.chat_stream import (
     CHAT_FAILED_REPLY,
+    CHAT_TURN_IN_FLIGHT,
     ERR_EMPTY_MESSAGE,
     SSE_EVENT_COMPLETE,
     SSE_EVENT_ERROR,
@@ -61,7 +69,7 @@ class _StreamConfig:
     conversation_id: UUID
     content: str
     db: AsyncSession
-    agent_builder: Callable[[], _ChatAgent]
+    agent_builder: Callable[[AsyncSession], _ChatAgent]
     last_event_id: int | None = None
     session_factory: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = (
         None
@@ -147,12 +155,6 @@ async def _setup_message_repos(
     await msg_repo.create(user_message)
     await db.commit()
     return msg_repo, conversation
-
-
-async def _drain_queue(queue: asyncio.Queue[str]) -> AsyncIterator[str]:
-    """Drain remaining events from the queue."""
-    while not queue.empty():
-        yield await queue.get()
 
 
 def _build_streaming_context(
@@ -256,10 +258,6 @@ async def _run_stream(
     return ctx.event_id, ctx.full_response
 
 
-_DETACHED_TURNS: set[asyncio.Task[None]] = set()
-"""Turns still being written; kept referenced so a disconnect cannot drop them."""
-
-
 @asynccontextmanager
 async def _request_session(db: AsyncSession) -> AsyncIterator[AsyncSession]:
     """The request's own session, for callers that pass no session factory."""
@@ -273,16 +271,21 @@ async def _answer_turn(
 ) -> None:
     """Write the reply and save it, or save an apology turn when it fails.
 
-    Runs as its own task in its own session, so a client that disconnects
-    (Starlette then cancels the response) does not stop the reply from being
-    written and saved: the question never dangles, and a refresh finds it.
+    Runs as its own task in its own session (the agent is built on it too),
+    so a client that disconnects (Starlette then cancels the response) does not
+    stop the reply from being written and saved: the question never dangles,
+    and a refresh finds it. A turn cancelled at shutdown saves the apology.
     """
     factory = config.session_factory or (lambda: _request_session(config.db))
     async with factory() as db:
         msg_repo = PostgresMessageRepository(db)
         try:
-            await _run_stream((config.agent_builder, config.content), stream_ctx, queue)
+            build_agent = partial(config.agent_builder, db)
+            await _run_stream((build_agent, config.content), stream_ctx, queue)
             await _persist_assistant_response((msg_repo, db), stream_ctx, queue)
+        except asyncio.CancelledError:
+            await _close_failed_turn((msg_repo, db), config.conversation_id)
+            raise
         except Exception as exc:
             logger.exception(
                 "chat_stream_failed",
@@ -297,6 +300,15 @@ async def _answer_turn(
                     {"type": SSE_EVENT_ERROR, "content": CHAT_FAILED_REPLY},
                 )
             )
+
+
+def _refusal(config: _StreamConfig) -> str | None:
+    """Why the turn cannot start (empty message, or a reply still being written)."""
+    if not config.content or not config.content.strip():
+        return ERR_EMPTY_MESSAGE
+    if conversation_turn_in_flight(config.conversation_id):
+        return CHAT_TURN_IN_FLIGHT
+    return None
 
 
 async def stream_chat_response(
@@ -314,25 +326,39 @@ async def stream_chat_response(
     5. Persist the assistant message and commit AFTER the stream ends.
     6. On any exception, log it, save an apology assistant turn, and yield a
        generic error event (never the exception text) before exiting cleanly.
-    7. Steps 3-6 run as a detached task in their own session: when the client
-       disconnects and the response is cancelled, the reply is still written
-       and saved.
+    7. Steps 3-6 run as a detached task in their own session, and its events
+       reach the client as they happen: when the client disconnects and the
+       response is cancelled, the reply is still written and saved.
+    8. One turn per conversation at a time: while a reply is being written, a
+       new message for the same conversation gets an error event instead.
     """
-    if not config.content or not config.content.strip():
-        async for event in _yield_error(0, ERR_EMPTY_MESSAGE):
+    refusal = _refusal(config)
+    if refusal is not None:
+        async for event in _yield_error(0, refusal):
             yield event
         return
-
-    _, conversation = await _setup_message_repos(
-        config.db, config.conversation_id, config.content
-    )
-    if conversation is None:
-        async for event in _yield_error(
-            0, f"Conversation {config.conversation_id} not found"
-        ):
+    BUSY_CONVERSATIONS.add(config.conversation_id)
+    handed_off = False
+    try:
+        _, conversation = await _setup_message_repos(
+            config.db, config.conversation_id, config.content
+        )
+        if conversation is None:
+            async for event in _yield_error(
+                0, f"Conversation {config.conversation_id} not found"
+            ):
+                yield event
+            return
+        handed_off = True
+        async for event in _run_detached_turn(config):
             yield event
-        return
+    finally:
+        if not handed_off:
+            BUSY_CONVERSATIONS.discard(config.conversation_id)
 
+
+async def _run_detached_turn(config: _StreamConfig) -> AsyncIterator[str]:
+    """Start the turn as a detached task and stream its events while it runs."""
     queue: asyncio.Queue[str] = asyncio.Queue()
     stop_event = asyncio.Event()
     stream_ctx = _StreamState(config.conversation_id)
@@ -340,17 +366,13 @@ async def stream_chat_response(
     stream_ctx.event_id = (
         config.last_event_id if config.last_event_id is not None else 0
     )
-
     turn = asyncio.create_task(_answer_turn(config, stream_ctx, queue))
-    _DETACHED_TURNS.add(turn)
-    turn.add_done_callback(_DETACHED_TURNS.discard)
+    DETACHED_TURNS.add(turn)
+    turn.add_done_callback(DETACHED_TURNS.discard)
+    turn.add_done_callback(lambda _: BUSY_CONVERSATIONS.discard(config.conversation_id))
     try:
-        await asyncio.shield(turn)
+        async for event in stream_while_running(queue, turn):
+            yield event
     finally:
         _stop_keep_alive(stop_event, keep_alive)
         await asyncio.gather(keep_alive, return_exceptions=True)
-        async for event in _drain_queue(queue):
-            yield event
-
-    async for event in _drain_queue(queue):
-        yield event

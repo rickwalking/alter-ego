@@ -102,6 +102,17 @@ Rebased onto the a11y PR (AE-0531). PR review fixes:
 - The history poll has no re-read cap (the 3-minute window bounds it); the awaiting clock is re-read as soon as the
   last message changes.
 
+### 2026-10-23 18:00
+
+Second review round on the detached reply:
+- One turn per conversation: while a reply is written, the stream route answers 409 before any stream starts, and
+  the service refuses a racing second turn with an error event (`chat_turns.py` keeps the registry).
+- Shutdown drains the turns being written (20 s), then cancels the rest; a cancelled turn saves the apology turn.
+- The agent is built on the turn's own session (`ChatAgentBuilder.build(session)`; the application layer sees an
+  opaque `TurnSession`, the edge casts it), never on the request's.
+- Live streaming: events reach the client as the turn produces them (the earlier code awaited the whole turn and
+  only then sent everything); a test proves the first token arrives before the turn completes.
+
 ## Files Touched
 
 - backend/src/rag_backend/domain/models/conversation.py, domain/constants/conversation.py,
@@ -115,7 +126,8 @@ Rebased onto the a11y PR (AE-0531). PR review fixes:
 - frontend/src/app/dashboard/chat/chat-sidebar.tsx + chat-sidebar-search.test.tsx (new), dashboard-chat-view.tsx,
   chat-sidebar-filter.ts, chat-sidebar-parts.tsx, use-sidebar-conversations.ts + test (new),
   dashboard-chat-view.awaiting.test.tsx (new); modules/conversation/queries.ts, index.ts
-- backend: chat_stream_service.py (detached turn), modules/conversation/infrastructure/stream_runner.py, conversation
+- backend: chat_stream_service.py (detached turn), chat_turns.py (new), bootstrap/app_factory.py,
+  api/routes/chat_stream.py, modules/conversation application/streaming.py + public.py + __init__.py, modules/conversation/infrastructure/stream_runner.py, conversation
   search (api/routes/conversations.py, handlers/commands, conversation_service.py, conversation_repository.py,
   domain/protocols/repositories.py, domain/constants/conversation.py), docs/architecture/openapi.json; tests
   test_chat_stream_disconnect.py, test_stream_runner_session.py, test_conversation_search.py (new); features

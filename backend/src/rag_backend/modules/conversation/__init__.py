@@ -53,7 +53,9 @@ from rag_backend.modules.conversation.public import (
     MessageRole,
     StreamChatCommand,
     StreamChatRunner,
+    TurnSession,
     bootstrap_module,
+    conversation_reply_in_flight,
 )
 
 __all__ = [
@@ -85,5 +87,7 @@ __all__ = [
     "MessageRole",
     "StreamChatCommand",
     "StreamChatRunner",
+    "TurnSession",
     "bootstrap_module",
+    "conversation_reply_in_flight",
 ]

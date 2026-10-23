@@ -49,6 +49,14 @@ class StreamChatCommand:
     last_event_id: int | None = None
 
 
+class TurnSession(Protocol):
+    """The database session a chat turn runs on, opaque to this layer.
+
+    The edge builds the turn's agent on it; only the infrastructure adapter
+    knows its concrete type.
+    """
+
+
 class ChatAgentBuilder(Protocol):
     """Boundary-safe builder for the conversation's chat agent.
 
@@ -59,7 +67,9 @@ class ChatAgentBuilder(Protocol):
     framework or container reference.
     """
 
-    def build(self) -> AlterEgoAgent | RAGAgent: ...
+    def build(self, session: TurnSession) -> AlterEgoAgent | RAGAgent:
+        """The agent, bound to ``session`` (the turn's own session)."""
+        ...
 
 
 class StreamChatRunner(Protocol):
