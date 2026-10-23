@@ -98,6 +98,7 @@ class WorkflowFailureAlertService:
         result = await db.execute(
             select(CarouselProjectModel).where(
                 CarouselProjectModel.status == CAROUSEL_STATUS_FAILED,
+                CarouselProjectModel.archived_at.is_(None),
                 CarouselProjectModel.updated_at >= window_start,
             )
         )
@@ -144,6 +145,7 @@ class WorkflowFailureAlertService:
                 CarouselProjectModel.current_phase != PHASE_PUBLISHED,
                 CarouselProjectModel.phase_status != PHASE_STATUS_REJECTED,
                 CarouselProjectModel.phase_status != PHASE_STATUS_IN_PROGRESS,
+                CarouselProjectModel.archived_at.is_(None),
                 CarouselProjectModel.updated_at <= cutoff,
             )
         )
@@ -154,6 +156,7 @@ class WorkflowFailureAlertService:
         stale_result = await db.execute(
             select(CarouselProjectModel).where(
                 CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
+                CarouselProjectModel.archived_at.is_(None),
                 CarouselProjectModel.updated_at <= stale_cutoff,
             )
         )
@@ -201,13 +204,17 @@ class WorkflowFailureAlertService:
         total_result = await db.execute(
             select(func.count())
             .select_from(CarouselProjectModel)
-            .where(CarouselProjectModel.updated_at >= window_start)
+            .where(
+                CarouselProjectModel.archived_at.is_(None),
+                CarouselProjectModel.updated_at >= window_start,
+            )
         )
         failed_result = await db.execute(
             select(func.count())
             .select_from(CarouselProjectModel)
             .where(
                 CarouselProjectModel.status == CAROUSEL_STATUS_FAILED,
+                CarouselProjectModel.archived_at.is_(None),
                 CarouselProjectModel.updated_at >= window_start,
             )
         )

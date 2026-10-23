@@ -45,10 +45,12 @@ class BoardQuery:
 
     ``author_id`` is ``None`` for an admin caller (all projects) and the caller's
     id otherwise; the board scopes a non-admin to projects they own OR review —
-    exactly the legacy route filter.
+    exactly the legacy route filter. ``archived`` picks the archived carousels
+    (the "Arquivados" view) instead of the active ones.
     """
 
     author_id: str | None = None
+    archived: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,6 +140,8 @@ class BoardCard:
     """A single workflow-board (Kanban) project card.
 
     Mirrors ``KanbanCardResponse`` so the route maps it field-for-field.
+    ``can_archive``: the caller may archive or restore it (owner or admin).
+    ``archive_refusal``: why the archive rules refuse it now, if they do.
     """
 
     id: str
@@ -147,6 +151,8 @@ class BoardCard:
     phase_status: str
     workflow_status: str | None = None
     updated_at: str | None = None
+    can_archive: bool = False
+    archive_refusal: str | None = None
 
 
 @dataclass(frozen=True)

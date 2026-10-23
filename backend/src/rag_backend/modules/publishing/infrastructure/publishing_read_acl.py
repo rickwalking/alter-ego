@@ -39,7 +39,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.content_calendar_service import (
@@ -85,6 +85,10 @@ from rag_backend.modules.publishing.domain.projections import (
     CalendarQuery,
     CarouselBlogI18nProjection,
     CarouselBlogProjection,
+)
+from rag_backend.modules.publishing.infrastructure.board_rows import (
+    BoardArchiveFields,
+    board_projects,
 )
 from rag_backend.modules.publishing.infrastructure.public_visibility import (
     public_blog_post_ids,
@@ -208,14 +212,17 @@ class PublishingReadAcl:
     async def project_board(self, query: BoardQuery) -> BoardProjection:
         """Project the workflow-board phase columns (legacy board route).
 
-        A rejected project sits in the Rejected column.
+        A rejected project sits in the Rejected column. Each card carries its
+        archive fields (see ``board_rows``).
         """
-        projects = await self._board_projects(query.author_id)
+        projects = await board_projects(self._session, query)
+        archive = await BoardArchiveFields.load(self._session, query, projects)
         cards_by_column: dict[str, list[BoardCard]] = {
             column: [] for column in BOARD_COLUMNS
         }
         for project in projects:
             _, card = _to_board_card(project)
+            card = archive.apply(card, project)
             rejected = card.phase_status == PHASE_STATUS_REJECTED
             column = BOARD_COLUMN_REJECTED if rejected else card.current_phase
             cards_by_column.setdefault(column, []).append(card)
@@ -303,24 +310,6 @@ class PublishingReadAcl:
         title = translated_title or project.title or project.topic
         subtitle = translated_subtitle or project.subtitle
         return title, subtitle
-
-    async def _board_projects(
-        self,
-        author_id: str | None,
-    ) -> list[CarouselProjectModel]:
-        """Load the board's carousel rows (legacy admin/owner-or-reviewer scope)."""
-        query = select(CarouselProjectModel).where(
-            CarouselProjectModel.phase_status != PHASE_STATUS_PENDING,
-        )
-        if author_id is not None:
-            query = query.where(
-                or_(
-                    CarouselProjectModel.owner_id == author_id,
-                    CarouselProjectModel.assigned_reviewer_id == author_id,
-                )
-            )
-        result = await self._session.execute(query)
-        return list(result.scalars().all())
 
 
 def _to_calendar_item(item: dict[str, object]) -> CalendarItem:

@@ -79,6 +79,9 @@ from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.domain.clock import utc_now
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
+from rag_backend.infrastructure.database.carousel_auto_archiver import (
+    CarouselIdleArchiver,
+)
 from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.database.workflow_timeout_repository import (
     WorkflowTimeoutRepository,
@@ -171,6 +174,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
                     blog_generation_reaper=build_blog_generation_reaper(settings),
+                    carousel_auto_archiver=CarouselIdleArchiver(
+                        settings.workflow_run_heartbeat_stale_seconds
+                    ),
                     instagram_publish=autopilot.instagram_publish,
                     credential_refresh=autopilot.credential_refresh,
                     autopilot_runner=autopilot.autopilot_runner,

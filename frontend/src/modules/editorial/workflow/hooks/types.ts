@@ -32,6 +32,10 @@ export interface KanbanCard {
   phase_status: string;
   workflow_status?: string | null;
   updated_at: string | null;
+  /** The caller may archive or restore it (owner or admin, not a reviewer). */
+  can_archive?: boolean;
+  /** Why the archive rules refuse it now, if they do. */
+  archive_refusal?: string | null;
 }
 
 export interface KanbanColumn {

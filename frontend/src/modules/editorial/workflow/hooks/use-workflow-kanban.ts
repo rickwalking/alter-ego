@@ -13,8 +13,11 @@ import {
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { WorkflowKanban } from "./types";
 
-async function requestBoard(failedText: string): Promise<WorkflowKanban> {
-  const response = await authenticatedFetch(WORKFLOW_API.WORKFLOW_BOARD);
+async function requestBoard(
+  url: string,
+  failedText: string,
+): Promise<WorkflowKanban> {
+  const response = await authenticatedFetch(url);
   if (!response.ok) {
     throw new Error(failedText);
   }
@@ -27,8 +30,9 @@ async function requestBoard(failedText: string): Promise<WorkflowKanban> {
  * mounted board (and the page scroll) survives every poll. An error stays
  * until a refresh succeeds (no flicker between failed polls), and only the
  * newest request may update the board, so a late older answer is dropped.
+ * With `archived` it loads only the archived carousels.
  */
-export function useWorkflowKanban() {
+export function useWorkflowKanban(archived = false) {
   const t = useTranslations("workflow.errors");
   const [board, setBoard] = useState<WorkflowKanban | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +47,12 @@ export function useWorkflowKanban() {
       setLoading(true);
     }
     try {
-      const data = await requestBoard(t("loadBoardFailed"));
+      const data = await requestBoard(
+        archived
+          ? WORKFLOW_API.WORKFLOW_BOARD_ARCHIVED
+          : WORKFLOW_API.WORKFLOW_BOARD,
+        t("loadBoardFailed"),
+      );
       if (requestId !== latestRequestRef.current) return;
       hasBoardRef.current = true;
       setBoard(data);
@@ -54,7 +63,7 @@ export function useWorkflowKanban() {
     } finally {
       if (requestId === latestRequestRef.current) setLoading(false);
     }
-  }, [t]);
+  }, [t, archived]);
 
   useEffect(() => {
     void fetchBoard();

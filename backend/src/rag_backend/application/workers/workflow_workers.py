@@ -24,6 +24,7 @@ from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
 )
 from rag_backend.domain.protocols.blog_generation import BlogGenerationReaper
+from rag_backend.domain.protocols.carousel_archive import CarouselAutoArchiver
 from rag_backend.domain.protocols.carousel_run import (
     CarouselDriftReconciler,
     CarouselRepublishSweeper,
@@ -91,7 +92,8 @@ class WorkflowWorkerServices:
     and are built by the composition root (``bootstrap/app_factory``).
 
     ``blog_generation_reaper`` fails blog generation runs killed by a restart (stale
-    heartbeat).
+    heartbeat). ``carousel_auto_archiver`` archives carousels idle for
+    ``carousel_auto_archive_days``.
     """
 
     auto_rejector_factory: AutoRejectorFactory
@@ -103,6 +105,7 @@ class WorkflowWorkerServices:
     telegram_notify: TelegramNotifyTick | None = None
     credential_refresh: CredentialRefreshTick | None = None
     blog_generation_reaper: BlogGenerationReaper | None = None
+    carousel_auto_archiver: CarouselAutoArchiver | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +123,7 @@ class _TickCollaborators:
     telegram_notify: TelegramNotifyTick | None = None
     credential_refresh: CredentialRefreshTick | None = None
     blog_generation_reaper: BlogGenerationReaper | None = None
+    carousel_auto_archiver: CarouselAutoArchiver | None = None
 
 
 async def _run_tick(
@@ -185,7 +189,20 @@ async def _core_steps(
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
+        "auto_archived": await _auto_archive(settings, db, services),
     }
+
+
+async def _auto_archive(
+    settings: Settings,
+    db: AsyncSession,
+    services: _TickCollaborators,
+) -> int:
+    """Archive idle carousels when an archiver is wired and the window is not 0."""
+    archiver = services.carousel_auto_archiver
+    if archiver is None or settings.carousel_auto_archive_days <= 0:
+        return 0
+    return await archiver.archive_idle(db, settings.carousel_auto_archive_days)
 
 
 async def _autopilot_steps(
@@ -247,6 +264,7 @@ async def run_workflow_workers(
         telegram_notify=services.telegram_notify,
         credential_refresh=services.credential_refresh,
         blog_generation_reaper=services.blog_generation_reaper,
+        carousel_auto_archiver=services.carousel_auto_archiver,
     )
     interval = settings.workflow_worker_interval_seconds
 

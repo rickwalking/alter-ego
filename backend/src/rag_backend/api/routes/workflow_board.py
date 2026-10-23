@@ -13,7 +13,7 @@ symbol keeps resolving; the publishing module owns the column ordering.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,6 +51,18 @@ def _get_publishing_module(
     )
 
 
+def get_board_query(
+    current_user: EditorUser,
+    *,
+    archived: Annotated[bool, Query()] = False,
+) -> BoardQuery:
+    """The board scope of the caller: all projects for an admin, else their own."""
+    author_filter = (
+        None if current_user.role == UserRole.ADMIN.value else current_user.id
+    )
+    return BoardQuery(author_id=author_filter, archived=archived)
+
+
 class KanbanCardResponse(BaseModel):
     """Single project card on the Kanban board."""
 
@@ -61,6 +73,8 @@ class KanbanCardResponse(BaseModel):
     phase_status: str
     workflow_status: str | None = None
     updated_at: str | None = None
+    can_archive: bool = False
+    archive_refusal: str | None = None
 
 
 class KanbanColumnResponse(BaseModel):
@@ -89,6 +103,8 @@ def _to_column_response(column: BoardColumn) -> KanbanColumnResponse:
                 phase_status=card.phase_status,
                 workflow_status=card.workflow_status,
                 updated_at=card.updated_at,
+                can_archive=card.can_archive,
+                archive_refusal=card.archive_refusal,
             )
             for card in column.cards
         ],
@@ -103,16 +119,14 @@ def _to_column_response(column: BoardColumn) -> KanbanColumnResponse:
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def get_workflow_kanban(
     request: Request,
-    current_user: EditorUser,
+    board: Annotated[BoardQuery, Depends(get_board_query)],
     publishing: Annotated[PublishingModule, Depends(_get_publishing_module)],
 ) -> WorkflowKanbanResponse:
-    """Return projects grouped by workflow phase (UI-018)."""
-    author_filter = (
-        None if current_user.role == UserRole.ADMIN.value else current_user.id
-    )
-    projection = await publishing.service.project_board(
-        BoardQuery(author_id=author_filter),
-    )
+    """Return projects grouped by workflow phase (UI-018).
+
+    Archived carousels are left out; ``archived=true`` lists only them.
+    """
+    projection = await publishing.service.project_board(board)
     return WorkflowKanbanResponse(
         columns=[_to_column_response(column) for column in projection.columns],
     )

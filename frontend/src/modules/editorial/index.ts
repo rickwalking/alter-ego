@@ -200,6 +200,7 @@ export type { ReviewAssignmentPayload, ContentLock } from "./workflow/types";
 
 export { useContentCalendar } from "./workflow/hooks/use-content-calendar";
 export { useWorkflowKanban } from "./workflow/hooks/use-workflow-kanban";
+export { useWorkflowPostAction } from "./workflow/hooks/use-workflow-post-action";
 export type {
   CalendarItem,
   ContentCalendar,

@@ -1455,6 +1455,20 @@
       "loadNotificationsFailed": "Falha ao carregar notificações",
       "markReadFailed": "Falha ao marcar notificação como lida",
       "unknown": "Erro desconhecido"
+    },
+    "archive": {
+      "archive": "Arquivar",
+      "confirm": "Arquivar este carrossel?",
+      "confirmYes": "Arquivar",
+      "cancel": "Cancelar",
+      "restore": "Restaurar",
+      "inProgress": "Não dá para arquivar enquanto a fase está em andamento.",
+      "archiveFailed": "Não foi possível arquivar. Tente outra vez.",
+      "restoreFailed": "Não foi possível restaurar. Tente outra vez.",
+      "showArchived": "Arquivados",
+      "showActive": "Ativos",
+      "emptyArchived": "Nenhum carrossel arquivado.",
+      "autopilot": "Não dá para arquivar enquanto o piloto automático precisa dele (por exemplo, uma publicação agendada)."
     }
   },
   "dashboard": {

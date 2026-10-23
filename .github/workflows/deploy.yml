@@ -318,6 +318,15 @@ jobs:
               echo "::error::content_versions index exited $CONTENT_VERSIONS_INDEX_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.carousel_archived_at --apply --verify
+            ARCHIVED_AT_EXIT=$?
+            set -e
+            if [ "$ARCHIVED_AT_EXIT" -ne 0 ]; then
+              echo "::error::carousel archived_at exited $ARCHIVED_AT_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -380,6 +389,10 @@ jobs:
             fi
             if [ "$CONTENT_VERSIONS_INDEX_EXIT" -ne 0 ]; then
               echo "::error::content_versions index failed (exit $CONTENT_VERSIONS_INDEX_EXIT): run 'python -m rag_backend.scripts.content_versions_index --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$ARCHIVED_AT_EXIT" -ne 0 ]; then
+              echo "::error::carousel archived_at failed (exit $ARCHIVED_AT_EXIT): run 'python -m rag_backend.scripts.carousel_archived_at --apply --verify' on the droplet"
               ONE_SHOT_FAILED=1
             fi
             if [ "$ONE_SHOT_FAILED" -ne 0 ]; then

@@ -7,6 +7,7 @@ read as "/{project_id}".
 from fastapi import APIRouter
 
 from .admin import router as admin_router
+from .archive import router as archive_router
 from .copy_edit import router as copy_edit_router
 from .copy_versions import router as copy_versions_router
 from .cover_pick import router as cover_pick_router
@@ -35,6 +36,7 @@ router.include_router(crud_router, prefix=PREFIX)
 router.include_router(creator_assets_router, prefix=PREFIX)
 router.include_router(copy_edit_router, prefix=PREFIX)
 router.include_router(copy_versions_router, prefix=PREFIX)
+router.include_router(archive_router, prefix=PREFIX)
 router.include_router(cover_pick_router, prefix=PREFIX)
 router.include_router(hook_router, prefix=PREFIX)
 router.include_router(media_router, prefix=PREFIX)
