@@ -1,5 +1,8 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const STORYBOOK_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   stories: [
@@ -18,7 +21,7 @@ const config: StorybookConfig = {
     if (config.resolve) {
       config.resolve.alias = {
         ...config.resolve.alias,
-        "@": path.resolve(__dirname, "../src"),
+        "@": path.resolve(STORYBOOK_DIR, "../src"),
       };
     }
     return config;

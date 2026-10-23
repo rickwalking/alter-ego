@@ -6,7 +6,7 @@ import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 export const apiResponseSchema = z.object({
   success: z.boolean(),
-  data: z.unknown(),
+  data: z.unknown().optional(),
   message: z.string().optional(),
 });
 
@@ -115,7 +115,7 @@ async function throwIfErrorResponse(response: Response): Promise<void> {
 }
 
 /** Validate API data against the caller's schema (500 on a contract break). */
-function parseApiData<T>(schema: z.ZodSchema<T>, data: unknown): T {
+function parseApiData<T>(schema: z.ZodType<T>, data: unknown): T {
   const dataResult = schema.safeParse(data);
   if (!dataResult.success) {
     console.error("Data validation failed:", dataResult.error.issues);
@@ -143,7 +143,7 @@ function envelopeError(json: unknown): ApiError {
 /** Accepts both the wrapped {success, data} envelope and direct responses. */
 export async function apiCall<T>(
   url: string,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
   options?: RequestInit,
 ): Promise<T> {
   const response = await fetchWithCredentials(url, options);
@@ -184,7 +184,7 @@ export async function apiCallNoContent(
  */
 export async function apiUpload<T>(
   url: string,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
   form: FormData,
 ): Promise<T> {
   const response = await fetch(url, {

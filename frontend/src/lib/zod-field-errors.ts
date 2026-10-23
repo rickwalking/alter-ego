@@ -1,4 +1,4 @@
-import type { ZodIssue } from "zod";
+import type { z } from "zod";
 
 const PATH_SEPARATOR = ".";
 
@@ -7,7 +7,7 @@ const PATH_SEPARATOR = ".";
  * ``keyOf`` maps an issue path to its message key; unmapped paths get ``fallback``.
  */
 export function fieldErrorsOf(
-  issues: readonly ZodIssue[],
+  issues: readonly z.core.$ZodIssue[],
   keyOf: (path: readonly PropertyKey[]) => string | undefined,
   fallback: string,
 ): Record<string, string> {

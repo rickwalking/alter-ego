@@ -172,10 +172,10 @@ export const carouselCreateRequestSchema = z
       .optional(),
     slide_count: z.number().int().min(7).max(10).optional(),
     cta_goal: z.enum(["follow", "send", "comment"]).optional(),
-    persona_id: z.string().uuid().nullable().optional(),
-    rubric_id: z.string().uuid().nullable().optional(),
+    persona_id: z.uuid().nullable().optional(),
+    rubric_id: z.uuid().nullable().optional(),
     /** Required by the API when content_mode is "pov" or "pov_news". */
-    hook_asset_id: z.string().uuid().optional(),
+    hook_asset_id: z.uuid().optional(),
   })
   .refine(
     (data) =>

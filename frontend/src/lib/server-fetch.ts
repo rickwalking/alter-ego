@@ -53,7 +53,7 @@ function toFetchInit(
 /** Parse an OK response against the schema; null (logged) on a contract break. */
 async function parseValidated<T>(
   res: Response,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
 ): Promise<T | null> {
   const json: unknown = await res.json();
   const result = schema.safeParse(json);
@@ -67,7 +67,7 @@ async function parseValidated<T>(
 /** Server-side fetch: null on network error, non-OK status or invalid data. */
 async function validatedFetch<T>(
   url: string,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
   options?: ServerFetchOptions,
 ): Promise<T | null> {
   try {
