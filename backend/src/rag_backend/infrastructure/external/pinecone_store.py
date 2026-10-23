@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from pinecone import Pinecone, ServerlessSpec
+from pinecone.exceptions import NotFoundException
 
 from rag_backend.domain.constants.retry import PINECONE_MAX_ATTEMPTS
 from rag_backend.domain.models import DocumentChunk, HybridSearchParams, SearchResult
@@ -132,7 +133,9 @@ class PineconeVectorStore:
 
         The scope namespaces are shared by every document of that scope, so the
         delete filters on the chunk's ``document_id`` metadata instead of
-        clearing the namespace.
+        clearing the namespace. Pinecone answers 404 for a namespace that does
+        not exist yet (nothing was ever indexed there); that means there is
+        nothing to delete, so it is logged and not raised (and not retried).
 
         Args:
             document_id: Parent document ID
@@ -142,9 +145,16 @@ class PineconeVectorStore:
         ns = namespace if namespace is not None else str(document_id)
         document_filter = {_DOCUMENT_ID_KEY: {_EQ_OPERATOR: str(document_id)}}
 
-        for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
-            with attempt:
-                index.delete(filter=document_filter, namespace=ns)
+        try:
+            for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+                with attempt:
+                    index.delete(filter=document_filter, namespace=ns)
+        except NotFoundException:
+            logger.info(
+                "pinecone_delete_namespace_missing",
+                document_id=str(document_id),
+                namespace=ns,
+            )
 
     async def hybrid_search(
         self,

@@ -101,3 +101,18 @@ class TestClearOtherNamespace:
         assert response.status_code == 204
         assert pinecone.documents_in(_PERSONAL) == set()
         assert pinecone.documents_in(_PUBLIC) == {other.id}
+
+    async def test_delete_and_retry_work_on_a_fresh_index(
+        self, kb_env: KnowledgeEnv, index: _Index, pinecone: FakePineconeIndex
+    ) -> None:
+        """Scenario: A delete in a namespace that does not exist yet deletes nothing"""
+        retried = await kb_env.seed_document(kb_env.owner.id)
+        deleted = await kb_env.seed_document(kb_env.owner.id)
+        async with kb_env.client_for(kb_env.owner) as client:
+            retry = await client.post(f"/api/documents/{retried.id}/reprocess")
+            delete = await client.delete(f"/api/documents/{deleted.id}")
+
+        assert retry.status_code == 200
+        assert retry.json()["status"] == DocumentStatus.COMPLETED.value
+        assert pinecone.documents_in(_PERSONAL) == {retried.id}
+        assert delete.status_code == 204

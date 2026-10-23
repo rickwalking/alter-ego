@@ -29,8 +29,14 @@ SELECTABLE_NAMESPACES: tuple[DocumentScope, ...] = (
 
 
 def _namespaces_of(scope: DocumentScope) -> list[str]:
-    """The namespaces a document of ``scope`` may have chunks in, its own first."""
+    """The namespaces a document of ``scope`` may have chunks in, its own first.
+
+    A document in a system scope (carousel, internal) is never moved, so only its
+    own namespace is cleared.
+    """
     namespaces = [scope.value]
+    if scope not in SELECTABLE_NAMESPACES:
+        return namespaces
     for selectable in SELECTABLE_NAMESPACES:
         if selectable.value not in namespaces:
             namespaces.append(selectable.value)
