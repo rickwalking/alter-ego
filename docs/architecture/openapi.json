@@ -3663,7 +3663,7 @@
         "type": "object"
       },
       "CreatorAssetInUseDetail": {
-        "description": "The 409 ``detail`` of deleting a photo a carousel still uses.",
+        "description": "The 409 ``detail`` of deleting a photo a carousel or autopilot cover uses.",
         "properties": {
           "carousels": {
             "items": {
@@ -3675,11 +3675,19 @@
           "code": {
             "title": "Code",
             "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorAssetTopicUsageResponse"
+            },
+            "title": "Topics",
+            "type": "array"
           }
         },
         "required": [
           "code",
-          "carousels"
+          "carousels",
+          "topics"
         ],
         "title": "CreatorAssetInUseDetail",
         "type": "object"
@@ -3810,6 +3818,40 @@
           "creator_asset_id"
         ],
         "title": "CreatorAssetSelectRequest",
+        "type": "object"
+      },
+      "CreatorAssetTopicUsageResponse": {
+        "description": "An autopilot cover that uses a photo; ``id`` is None until a topic claims it.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "CreatorAssetTopicUsageResponse",
         "type": "object"
       },
       "CreatorAssetUsageResponse": {

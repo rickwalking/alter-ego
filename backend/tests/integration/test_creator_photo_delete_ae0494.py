@@ -6,14 +6,24 @@ Gherkin: tests/features/creator_photo_delete_ae0494.feature
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
+from structlog.testing import capture_logs
 
 from rag_backend.domain.models import UserRole
+from rag_backend.modules.autopilot.domain.cover import CoverAsset
+from rag_backend.modules.autopilot.domain.cover_ports import CoverClaim
+from rag_backend.modules.autopilot.domain.models import TopicCandidate
+from rag_backend.modules.autopilot.infrastructure.cover_store import SqlCoverAssetStore
+from rag_backend.modules.autopilot.infrastructure.repository import (
+    SqlAlchemyAutopilotRepository,
+)
 from tests.integration.conftest import auth_headers_for, create_test_user
-from tests.integration.hook_photo_support import png, upload_photo
+from tests.integration.hook_photo_support import upload_photo
 
 _LIBRARY = "/api/carousels/creator-assets"
 _UNKNOWN = "00000000-0000-4000-8000-000000000009"
@@ -60,6 +70,63 @@ async def _set_project_column(project_id: str, column: str, value: object) -> No
         assert model is not None
         setattr(model, column, value)
         await session.commit()
+
+
+async def _set_asset_role(photo_id: object, role: str) -> None:
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.carousel_creator_asset import (
+        CarouselCreatorAssetModel,
+    )
+
+    async with get_session_maker()() as session:
+        model = await session.get(CarouselCreatorAssetModel, str(photo_id))
+        assert model is not None
+        model.role = role
+        await session.commit()
+
+
+def _topic(title: str) -> TopicCandidate:
+    return TopicCandidate(
+        candidate_id=uuid4(),
+        title=title,
+        angle="a",
+        why_viral="w",
+        audience="devs",
+        niche="ai",
+        brief="b",
+        sources=("https://example.com/a",),
+        score=80,
+        signal_hash=uuid4().hex,
+        status="pending",
+        content_mode="pov",
+    )
+
+
+async def _autopilot_cover(photo_id: object, topic_title: str | None) -> UUID | None:
+    """A GrokBot cover row on the photo, claimed by a new topic when titled."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    cover = CoverAsset(
+        asset_id=uuid4(),
+        creator_asset_id=UUID(str(photo_id)),
+        kind="photo",
+        source_url=None,
+        width=1080,
+        height=1350,
+        created_at=datetime(2026, 10, 23, tzinfo=UTC),
+    )
+    async with get_session_maker()() as session:
+        store = SqlCoverAssetStore(session)
+        await store.add_cover(cover)
+        topic_id = None
+        if topic_title is not None:
+            topic = _topic(topic_title)
+            await SqlAlchemyAutopilotRepository(session).add_topic(topic)
+            topic_id = topic.candidate_id
+            claim = CoverClaim(asset_id=cover.asset_id, topic_candidate_id=topic_id)
+            assert await store.claim_cover(claim)
+        await store.commit()
+    return topic_id
 
 
 async def _plain_project(client: AsyncClient) -> str:
@@ -166,6 +233,80 @@ class TestDeletePhotoInUse:
 
 
 @pytest.mark.integration
+class TestDeleteAutopilotCover:
+    @pytest.mark.asyncio
+    async def test_a_photo_a_pending_topic_uses_as_cover_is_kept(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        """Scenario: A photo an autopilot topic uses as its cover cannot be deleted."""
+        photo = await upload_photo(client, (5, 1, 5, 0))
+        topic_id = await _autopilot_cover(photo["id"], "Agentes no trabalho")
+        await _autopilot_cover(photo["id"], None)
+
+        response = await client.delete(f"{_LIBRARY}/{photo['id']}")
+
+        assert response.status_code == 409
+        detail = response.json()["detail"]
+        assert detail["carousels"] == []
+        topics = {(topic["id"], topic["title"]) for topic in detail["topics"]}
+        assert topics == {(str(topic_id), "Agentes no trabalho"), (None, None)}
+        assert await _listed_ids(client) == [photo["id"]]
+        assert (await _stored_file(asset_dirs, photo)).is_file()
+
+    @pytest.mark.asyncio
+    async def test_a_grokbot_cover_asset_is_refused(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        """Scenario: A GrokBot cover is not deleted from the photo library."""
+        photo = await upload_photo(client, (6, 1, 6, 0))
+        await _set_asset_role(photo["id"], "cover")
+
+        response = await client.delete(f"{_LIBRARY}/{photo['id']}")
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == "creator_asset_cover_managed"
+        assert (await _stored_file(asset_dirs, photo)).is_file()
+
+
+@pytest.mark.integration
+class TestDeleteFileError:
+    @pytest.mark.asyncio
+    async def test_a_file_that_cannot_be_removed_still_deletes_the_photo(
+        self,
+        client: AsyncClient,
+        asset_dirs: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Scenario: A stored file that cannot be removed is logged, not an error."""
+        photo = await upload_photo(client, (9, 1, 9, 0))
+        stored = await _stored_file(asset_dirs, photo)
+
+        def _refuse(self: Path, missing_ok: bool = False) -> None:
+            raise PermissionError(13, "denied", str(self))
+
+        monkeypatch.setattr(Path, "unlink", _refuse)
+        with capture_logs() as logs:
+            response = await client.delete(f"{_LIBRARY}/{photo['id']}")
+        monkeypatch.undo()
+
+        assert response.status_code == 204
+        assert await _listed_ids(client) == []
+        assert stored.is_file()
+        failures = [
+            log
+            for log in logs
+            if log["event"] == "creator_asset_stale_file_unlink_failed"
+        ]
+        assert failures == [
+            {
+                "event": "creator_asset_stale_file_unlink_failed",
+                "asset_id": photo["id"],
+                "log_level": "warning",
+            }
+        ]
+
+
+@pytest.mark.integration
 class TestDeleteAccess:
     @pytest.mark.parametrize("role", [UserRole.EDITOR, UserRole.ADMIN])
     @pytest.mark.asyncio
@@ -180,7 +321,8 @@ class TestDeleteAccess:
             f"{_LIBRARY}/{photo['id']}", headers=auth_headers_for(intruder)
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 404
+        assert response.json()["detail"] == "creator_asset_not_found"
         assert await _listed_ids(client) == [photo["id"]]
         del asset_dirs
 
@@ -192,5 +334,4 @@ class TestDeleteAccess:
         response = await client.delete(f"{_LIBRARY}/{_UNKNOWN}")
         assert response.status_code == 404
         assert response.json()["detail"] == "creator_asset_not_found"
-        assert png((1, 1, 1, 1))
         del asset_dirs

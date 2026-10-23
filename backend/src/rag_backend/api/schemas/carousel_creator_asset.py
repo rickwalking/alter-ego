@@ -53,11 +53,19 @@ class CreatorAssetUsageResponse(BaseModel):
     title: str | None
 
 
+class CreatorAssetTopicUsageResponse(BaseModel):
+    """An autopilot cover that uses a photo; ``id`` is None until a topic claims it."""
+
+    id: UUID | None
+    title: str | None
+
+
 class CreatorAssetInUseDetail(BaseModel):
-    """The 409 ``detail`` of deleting a photo a carousel still uses."""
+    """The 409 ``detail`` of deleting a photo a carousel or autopilot cover uses."""
 
     code: str
     carousels: list[CreatorAssetUsageResponse]
+    topics: list[CreatorAssetTopicUsageResponse]
 
 
 class CreatorAssetInUseResponse(BaseModel):

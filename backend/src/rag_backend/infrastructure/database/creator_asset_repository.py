@@ -12,6 +12,7 @@ from rag_backend.domain.models.carousel_creator_asset import (
     CarouselCreatorAsset,
     CreatorAssetLibraryQuery,
     CreatorAssetTags,
+    CreatorAssetTopicUsage,
     CreatorAssetUsage,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -33,6 +34,27 @@ class PostgresCreatorAssetRepository:
         if model is None:
             return None
         return model.to_entity()
+
+    async def get_for_update(self, asset_id: UUID) -> CarouselCreatorAsset | None:
+        """The asset with its row locked until commit.
+
+        A carousel that starts referencing the asset takes a key-share lock on
+        the row, so it waits for this transaction instead of losing the
+        reference to the delete.
+        """
+        stmt = (
+            select(CarouselCreatorAssetModel)
+            .where(CarouselCreatorAssetModel.id == str(asset_id))
+            .with_for_update()
+        )
+        model = (await self._session.execute(stmt)).scalar_one_or_none()
+        return model.to_entity() if model is not None else None
+
+    async def topics_using(self, asset_id: UUID) -> tuple[CreatorAssetTopicUsage, ...]:
+        """The autopilot cover rows that use the asset (pending topics included)."""
+        from rag_backend.modules.autopilot.public import cover_topics_using
+
+        return await cover_topics_using(self._session, asset_id)
 
     async def get_by_owner_and_content_sha256(
         self,

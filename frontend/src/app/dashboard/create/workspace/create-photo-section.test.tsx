@@ -103,10 +103,13 @@ describe("CreatePhotoSection", () => {
   it("lists the carousels that block the delete with links", () => {
     renderSection({
       deleteFailed: true,
-      deleteBlockedBy: [
-        { id: "c-1", title: "Agentes no trabalho" },
-        { id: "c-2", title: null },
-      ],
+      deleteBlockedBy: {
+        carousels: [
+          { id: "c-1", title: "Agentes no trabalho" },
+          { id: "c-2", title: null },
+        ],
+        topics: [],
+      },
     });
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("This photo is in use");
@@ -119,6 +122,26 @@ describe("CreatePhotoSection", () => {
     expect(
       screen.queryByText("Could not delete the photo. Try again."),
     ).toBeNull();
+  });
+
+  /** Scenario: A photo an autopilot topic uses as its cover lists the topic */
+  it("lists the autopilot topics that block the delete", () => {
+    renderSection({
+      deleteFailed: true,
+      deleteBlockedBy: {
+        carousels: [],
+        topics: [
+          { id: "t-1", title: "Agentes no trabalho" },
+          { id: null, title: null },
+        ],
+      },
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Autopilot topic: Agentes no trabalho");
+    expect(alert).toHaveTextContent(
+      "Autopilot topic: cover waiting for a topic",
+    );
+    expect(within(alert).queryByRole("link")).toBeNull();
   });
 
   /** Scenario: Deleting an unused photo after confirming */

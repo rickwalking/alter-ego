@@ -7,6 +7,7 @@ const state = {
   photos: [] as { id: string; created_at: string }[],
   upload: vi.fn(),
   remove: vi.fn(),
+  reset: vi.fn(),
   removeError: null as unknown,
 };
 
@@ -19,12 +20,15 @@ vi.mock("@/modules/editorial", () => ({
   }),
   useDeleteCreatorPhoto: () => ({
     mutate: state.remove,
+    reset: state.reset,
     isPending: false,
     isError: state.removeError !== null,
     error: state.removeError,
   }),
-  photoInUseCarousels: (error: unknown) =>
-    error === "in-use" ? [{ id: "c-1", title: "T" }] : null,
+  photoInUse: (error: unknown) =>
+    error === "in-use"
+      ? { carousels: [{ id: "c-1", title: "T" }], topics: [] }
+      : null,
 }));
 
 describe("usePovPhoto", () => {
@@ -32,6 +36,7 @@ describe("usePovPhoto", () => {
     state.photos = [];
     state.upload.mockReset();
     state.remove.mockReset();
+    state.reset.mockReset();
     state.removeError = null;
   });
 
@@ -123,9 +128,23 @@ describe("usePovPhoto", () => {
   it("passes the blocking carousels to the section", () => {
     state.removeError = "in-use";
     const { result } = renderHook(() => usePovPhoto("x", vi.fn()));
-    expect(result.current.section.deleteBlockedBy).toEqual([
-      { id: "c-1", title: "T" },
-    ]);
+    expect(result.current.section.deleteBlockedBy).toEqual({
+      carousels: [{ id: "c-1", title: "T" }],
+      topics: [],
+    });
     expect(result.current.section.deleteFailed).toBe(true);
+  });
+
+  /** Scenario: Choosing another photo clears the in-use list */
+  it("clears the last delete outcome when the selection changes", () => {
+    const { rerender } = renderHook(
+      ({ selected }) => usePovPhoto(selected, vi.fn()),
+      { initialProps: { selected: "x" } },
+    );
+    state.reset.mockClear();
+    rerender({ selected: "x" });
+    expect(state.reset).not.toHaveBeenCalled();
+    rerender({ selected: "y" });
+    expect(state.reset).toHaveBeenCalledTimes(1);
   });
 });

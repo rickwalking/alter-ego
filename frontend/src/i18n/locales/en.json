@@ -447,8 +447,10 @@
         "cancel": "Cancel",
         "confirmAction": "Delete",
         "deleting": "Deleting…",
-        "inUse": "This photo is in use and cannot be deleted. Change the photo of these carousels first:",
+        "inUse": "This photo is in use and cannot be deleted. Change the photo of these carousels and autopilot topics first:",
         "untitled": "Untitled carousel",
+        "topic": "Autopilot topic: {title}",
+        "pendingTopic": "cover waiting for a topic",
         "failed": "Could not delete the photo. Try again."
       }
     },

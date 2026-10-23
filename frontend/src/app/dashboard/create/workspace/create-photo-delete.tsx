@@ -5,19 +5,20 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import type { PhotoInUseCarousel } from "@/modules/editorial";
+import type { PhotoInUse } from "@/modules/editorial";
 
 export interface CreatePhotoDeleteProps {
   selectedId: string;
   onDelete: (photoId: string) => void;
   deleting: boolean;
-  blockedBy: readonly PhotoInUseCarousel[] | null;
+  blockedBy: PhotoInUse | null;
   failed: boolean;
 }
 
 /**
- * "Excluir foto selecionada" with an inline confirm. A photo a carousel still
- * uses is not deleted: the carousels are listed, each linking to its workspace.
+ * "Excluir foto selecionada" with an inline confirm. A photo still in use is not
+ * deleted: the carousels are listed, each linking to its workspace, and so are
+ * the autopilot topics that use it as their cover.
  */
 export function CreatePhotoDelete({
   selectedId,
@@ -75,7 +76,7 @@ export function CreatePhotoDelete({
         <div role="alert" className="text-xs text-amber-300">
           <p>{t("inUse")}</p>
           <ul className="mt-1 list-disc pl-4">
-            {blockedBy.map((carousel) => (
+            {blockedBy.carousels.map((carousel) => (
               <li key={carousel.id}>
                 <Link
                   href={DASHBOARD_ROUTES.CREATE_WORKSPACE(carousel.id)}
@@ -83,6 +84,11 @@ export function CreatePhotoDelete({
                 >
                   {carousel.title ?? t("untitled")}
                 </Link>
+              </li>
+            ))}
+            {blockedBy.topics.map((topic, index) => (
+              <li key={topic.id ?? `pending-${index}`}>
+                {t("topic", { title: topic.title ?? t("pendingTopic") })}
               </li>
             ))}
           </ul>

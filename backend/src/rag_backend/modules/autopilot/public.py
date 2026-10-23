@@ -52,8 +52,13 @@ from rag_backend.modules.autopilot.domain.models import (
 from rag_backend.modules.autopilot.domain.publish import ManualPublishOutcome
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from rag_backend.domain.models.carousel_creator_asset import (
+        CreatorAssetTopicUsage,
+    )
     from rag_backend.modules.autopilot.infrastructure.cover_offers import (
         ProjectCoverOffer,
     )
@@ -83,6 +88,7 @@ __all__ = [
     "build_instagram_publish_tick",
     "build_stored_instagram_token_provider",
     "build_telegram_notify_tick",
+    "cover_topics_using",
     "credential_tick_config",
     "encryption_key_usable",
     "manual_instagram_publish",
@@ -100,6 +106,17 @@ def project_cover_offer(session: AsyncSession) -> ProjectCoverOffer:
     )
 
     return ProjectCoverOffer(session)
+
+
+async def cover_topics_using(
+    session: AsyncSession, creator_asset_id: UUID
+) -> tuple[CreatorAssetTopicUsage, ...]:
+    """The GrokBot cover rows (and their topics) that use a creator asset."""
+    from rag_backend.modules.autopilot.infrastructure.cover_store import (
+        SqlCoverAssetStore,
+    )
+
+    return await SqlCoverAssetStore(session).topics_using(creator_asset_id)
 
 
 def register_persistence_models() -> tuple[str, ...]:

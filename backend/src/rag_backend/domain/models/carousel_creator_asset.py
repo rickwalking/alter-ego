@@ -50,3 +50,11 @@ class CreatorAssetUsage:
 
     project_id: UUID
     title: str | None
+
+
+@dataclass(frozen=True)
+class CreatorAssetTopicUsage:
+    """A GrokBot cover on the asset; ``topic_id`` is None until a topic claims it."""
+
+    topic_id: UUID | None
+    title: str | None

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { API_ENDPOINTS } from "@/constants/api";
 import { BG_CARD, NEON_AMBER, NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import { firstNonBlank } from "@/lib/utils";
-import type { PhotoInUseCarousel } from "@/modules/editorial";
+import type { PhotoInUse } from "@/modules/editorial";
 import { CreatePhotoDelete } from "./create-photo-delete";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
@@ -23,7 +23,7 @@ export interface CreatePhotoSectionProps {
   uploadFailed: boolean;
   onDelete: (photoId: string) => void;
   deleting: boolean;
-  deleteBlockedBy: readonly PhotoInUseCarousel[] | null;
+  deleteBlockedBy: PhotoInUse | null;
   deleteFailed: boolean;
 }
 

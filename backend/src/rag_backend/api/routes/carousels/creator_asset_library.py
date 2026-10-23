@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
+import structlog
 from fastapi import (
     APIRouter,
     Depends,
@@ -37,6 +38,8 @@ from rag_backend.api.schemas.carousel_creator_asset import (
     CreatorAssetListResponse,
     CreatorAssetResponse,
     CreatorAssetSelectRequest,
+    CreatorAssetTopicUsageResponse,
+    CreatorAssetUsageResponse,
     HookPhotoResponse,
 )
 from rag_backend.application.services.carousel.creator_asset_service import (
@@ -49,15 +52,15 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
     CreatorAssetValidationError,
 )
 from rag_backend.domain.constants.creator_asset import (
-    CREATOR_ASSET_IN_USE_KEY_CAROUSELS,
-    CREATOR_ASSET_IN_USE_KEY_CODE,
     CREATOR_ASSET_MAX_BYTES,
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
     CREATOR_ASSET_POSE_TAG_MAX_CHARS,
     CREATOR_ASSET_ROLE_PATTERN,
+    ERR_CREATOR_ASSET_COVER_MANAGED,
     ERR_CREATOR_ASSET_IN_USE,
     ERR_CREATOR_ASSET_NOT_FOUND,
     ERR_CREATOR_ASSET_TOO_LARGE,
+    LOG_STALE_PHOTO_UNLINK_FAILED,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import User
@@ -75,6 +78,7 @@ from .creator_assets import (
 )
 
 router = APIRouter()
+logger = structlog.get_logger(__name__)
 
 _LIBRARY_PATH = "/creator-assets"
 _RESPONSES: dict[int | str, dict[str, object]] = {
@@ -120,18 +124,25 @@ def _photo_form(
 
 
 def _library_error(error: CreatorAssetValidationError) -> HTTPException:
-    """404 unknown, 409 in use (with the carousels), else the shared mapping."""
+    """404 unknown, 409 in use (with its users) or a GrokBot cover, else shared."""
     if isinstance(error, CreatorAssetInUseError):
-        detail = CreatorAssetInUseDetail.model_validate({
-            CREATOR_ASSET_IN_USE_KEY_CODE: error.code,
-            CREATOR_ASSET_IN_USE_KEY_CAROUSELS: [
-                {"id": usage.project_id, "title": usage.title} for usage in error.usages
+        detail = CreatorAssetInUseDetail(
+            code=error.code,
+            carousels=[
+                CreatorAssetUsageResponse(id=usage.project_id, title=usage.title)
+                for usage in error.usages
             ],
-        })
+            topics=[
+                CreatorAssetTopicUsageResponse(id=topic.topic_id, title=topic.title)
+                for topic in error.topics
+            ],
+        )
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=detail.model_dump(mode="json"),
         )
+    if error.code == ERR_CREATOR_ASSET_COVER_MANAGED:
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error.code)
     if error.code == ERR_CREATOR_ASSET_NOT_FOUND:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error.code)
     return map_validation_error(error)
@@ -224,8 +235,12 @@ async def delete_library_photo(
     except CreatorAssetValidationError as error:
         raise _library_error(error) from error
     await library.session.commit()
-    if stale is not None:
+    if stale is None:
+        return
+    try:
         stale.unlink(missing_ok=True)
+    except OSError:
+        logger.warning(LOG_STALE_PHOTO_UNLINK_FAILED, asset_id=str(asset_id))
 
 
 @router.put(

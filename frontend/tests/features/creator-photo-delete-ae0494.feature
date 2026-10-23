@@ -20,3 +20,14 @@ Feature: Delete a photo from the slide-1 photo library in the wizard
     Given the deleted photo was the selected slide-1 photo
     When the delete succeeds
     Then the newest remaining photo is selected
+
+  Scenario: A photo an autopilot topic uses as its cover lists the topic
+    Given an autopilot topic uses the photo as its cover
+    When the owner confirms the delete
+    Then the section names that topic, or a cover still waiting for a topic
+    And the photo stays in the library
+
+  Scenario: Choosing another photo clears the in-use list
+    Given the section lists what blocks deleting the selected photo
+    When the owner selects another photo
+    Then the list from the last delete is gone

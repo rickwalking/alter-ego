@@ -20,32 +20,36 @@ const creatorPhotoListSchema = z.object({ items: z.array(creatorPhotoSchema) });
 
 export type CreatorPhoto = z.infer<typeof creatorPhotoSchema>;
 
-/** The 409 `detail` of deleting a photo a carousel still uses. */
+/** The 409 `detail` of deleting a photo a carousel or autopilot cover uses. */
 const photoInUseSchema = z.object({
   code: z.string(),
   carousels: z.array(
     z.object({ id: z.string(), title: z.string().nullable() }),
   ),
+  topics: z.array(
+    z.object({ id: z.string().nullable(), title: z.string().nullable() }),
+  ),
 });
 
-export type PhotoInUseCarousel = z.infer<
-  typeof photoInUseSchema
->["carousels"][number];
+/** What still uses a photo: carousels and autopilot cover topics. */
+export type PhotoInUse = Pick<
+  z.infer<typeof photoInUseSchema>,
+  "carousels" | "topics"
+>;
 
 export const creatorPhotoKeys = {
   all: ["creator-photos"] as const,
   list: (role: string) => ["creator-photos", role] as const,
 };
 
-/** The carousels that block a delete, or null when `error` is not that 409. */
-export function photoInUseCarousels(
-  error: unknown,
-): PhotoInUseCarousel[] | null {
+/** What blocks a delete, or null when `error` is not the in-use 409. */
+export function photoInUse(error: unknown): PhotoInUse | null {
   if (!(error instanceof ApiError) || error.status !== HTTP_STATUS.CONFLICT) {
     return null;
   }
   const parsed = photoInUseSchema.safeParse(error.detail);
-  return parsed.success ? parsed.data.carousels : null;
+  if (!parsed.success) return null;
+  return { carousels: parsed.data.carousels, topics: parsed.data.topics };
 }
 
 /** The owner's photos for a role, newest first (the first is the last used). */

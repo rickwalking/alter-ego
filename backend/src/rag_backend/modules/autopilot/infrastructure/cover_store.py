@@ -13,6 +13,7 @@ from uuid import UUID
 from sqlalchemy import CursorResult, Select, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.models.carousel_creator_asset import CreatorAssetTopicUsage
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
 )
@@ -24,6 +25,7 @@ from rag_backend.modules.autopilot.domain.cover_ports import (
 from rag_backend.modules.autopilot.infrastructure.cover_models import (
     AutopilotCoverAssetModel,
 )
+from rag_backend.modules.autopilot.infrastructure.models import TopicCandidateModel
 from rag_backend.modules.autopilot.infrastructure.run_mapping import aware
 
 _Row = tuple[AutopilotCoverAssetModel, str | None]
@@ -109,6 +111,25 @@ class SqlCoverAssetStore:
             .distinct()
         )
         return frozenset(UUID(value) for value in result.all())
+
+    async def topics_using(
+        self, creator_asset_id: UUID
+    ) -> tuple[CreatorAssetTopicUsage, ...]:
+        """Every cover row on the creator asset, with its topic's title once claimed."""
+        cover = AutopilotCoverAssetModel
+        result = await self._session.execute(
+            select(cover.topic_candidate_id, TopicCandidateModel.title)
+            .outerjoin(
+                TopicCandidateModel,
+                TopicCandidateModel.id == cover.topic_candidate_id,
+            )
+            .where(cover.creator_asset_id == str(creator_asset_id))
+            .order_by(cover.created_at.desc())
+        )
+        return tuple(
+            CreatorAssetTopicUsage(topic_id=row[0], title=row[1])
+            for row in result.all()
+        )
 
     async def commit(self) -> None:
         """Commit the unit of work."""

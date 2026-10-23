@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api-client";
 import {
   creatorPhotoKeys,
-  photoInUseCarousels,
+  photoInUse,
   useDeleteCreatorPhoto,
 } from "./use-creator-photos";
 
@@ -27,22 +27,42 @@ function conflict(detail: unknown): ApiError {
   return error;
 }
 
-describe("photoInUseCarousels", () => {
+describe("photoInUse", () => {
   /** Scenario: A photo in use lists the carousels that use it */
   it("reads the carousels of an in-use conflict", () => {
     const error = conflict({
       code: "creator_asset_in_use",
       carousels: [{ id: "c-1", title: null }],
+      topics: [],
     });
-    expect(photoInUseCarousels(error)).toEqual([{ id: "c-1", title: null }]);
+    expect(photoInUse(error)).toEqual({
+      carousels: [{ id: "c-1", title: null }],
+      topics: [],
+    });
+  });
+
+  /** Scenario: A photo an autopilot topic uses as its cover lists the topic */
+  it("reads the autopilot topics of an in-use conflict", () => {
+    const error = conflict({
+      code: "creator_asset_in_use",
+      carousels: [],
+      topics: [
+        { id: "t-1", title: "Agentes" },
+        { id: null, title: null },
+      ],
+    });
+    expect(photoInUse(error)?.topics).toEqual([
+      { id: "t-1", title: "Agentes" },
+      { id: null, title: null },
+    ]);
   });
 
   /** Scenario: A photo in use lists the carousels that use it */
   it("is null for any other failure", () => {
-    expect(photoInUseCarousels(null)).toBeNull();
-    expect(photoInUseCarousels(new Error("x"))).toBeNull();
-    expect(photoInUseCarousels(new ApiError(403, "no"))).toBeNull();
-    expect(photoInUseCarousels(conflict("creator_asset_in_use"))).toBeNull();
+    expect(photoInUse(null)).toBeNull();
+    expect(photoInUse(new Error("x"))).toBeNull();
+    expect(photoInUse(new ApiError(403, "no"))).toBeNull();
+    expect(photoInUse(conflict("creator_asset_in_use"))).toBeNull();
   });
 });
 

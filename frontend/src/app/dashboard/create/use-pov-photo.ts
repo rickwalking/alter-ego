@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CREATOR_PHOTO_ROLES } from "@/constants/create";
 import {
-  photoInUseCarousels,
+  photoInUse,
   useCreatorPhotos,
   useDeleteCreatorPhoto,
   useUploadCreatorPhoto,
@@ -23,13 +23,20 @@ type PhotoDeleteFields = Pick<
   "onDelete" | "deleting" | "deleteBlockedBy" | "deleteFailed"
 >;
 
-/** Delete a library photo; deleting the selected one selects the newest left. */
+/**
+ * Delete a library photo; deleting the selected one selects the newest left.
+ * A new selection clears the previous delete's outcome (its in-use list).
+ */
 function usePhotoDelete({
   selectedId,
   items,
   onSelect,
 }: Readonly<PhotoDeleteDeps>): PhotoDeleteFields {
   const remove = useDeleteCreatorPhoto();
+  const { reset } = remove;
+  useEffect(() => {
+    reset();
+  }, [selectedId, reset]);
   const onDelete = useCallback(
     (photoId: string) =>
       remove.mutate(photoId, {
@@ -45,7 +52,7 @@ function usePhotoDelete({
   return {
     onDelete,
     deleting: remove.isPending,
-    deleteBlockedBy: photoInUseCarousels(remove.error),
+    deleteBlockedBy: photoInUse(remove.error),
     deleteFailed: remove.isError,
   };
 }
