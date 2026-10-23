@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CHAT_MESSAGE_MAX_LENGTH } from "@/constants/chat";
+
 /** @public Read by name by scripts/check-schema-drift.mjs (OpenAPI drift gate). */
 export const messageSourceSchema = z.object({
   document_id: z.string(),
@@ -38,7 +40,7 @@ export const messageListResponseSchema = z.object({
 
 /** @public Read by name by scripts/check-schema-drift.mjs (OpenAPI drift gate). */
 export const chatRequestSchema = z.object({
-  content: z.string().min(1).max(10000),
+  content: z.string().min(1).max(CHAT_MESSAGE_MAX_LENGTH),
 });
 
 export const chatResponseSchema = z.object({

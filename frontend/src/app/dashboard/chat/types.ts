@@ -4,7 +4,7 @@
  */
 
 import type { Dispatch, SetStateAction } from "react";
-import type { UseSseChatReturn } from "@/modules/conversation";
+import type { ChatErrorKind, UseSseChatReturn } from "@/modules/conversation";
 
 export interface UseChatSendOptions {
   /** The open conversation, or null to create one on the first send. */
@@ -21,4 +21,19 @@ export interface UseChatSendReturn {
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   handleSend: () => Promise<void>;
+  /** Send the last failed message again. */
+  retry: () => Promise<void>;
+  /** Forget the failed message (New chat). */
+  forgetFailed: () => void;
+}
+
+export interface ChatErrorBannerProps {
+  kind: ChatErrorKind;
+  /** Where to come back to after signing in again. */
+  loginRedirect?: string;
+  /** Nothing was saved yet, so Try again is offered. */
+  canRetry?: boolean;
+  onRetry: () => void;
+  /** Always offered when given: the way out of a full or gone conversation. */
+  onNewChat?: () => void;
 }

@@ -1,5 +1,11 @@
 "use client";
 
+import { useId } from "react";
+import { useTranslations } from "next-intl";
+import {
+  CHAT_LENGTH_COUNTER_RATIO,
+  CHAT_MESSAGE_MAX_LENGTH,
+} from "@/modules/conversation";
 import {
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_BG_INPUT_BAR,
@@ -8,7 +14,34 @@ import {
   DASHBOARD_CHAT_BORDER_SUBTLE,
   DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_TEXT,
+  DASHBOARD_CHAT_TEXT_DIM,
 } from "@/modules/editorial-operations";
+
+const COUNTER_FROM = Math.floor(
+  CHAT_MESSAGE_MAX_LENGTH * CHAT_LENGTH_COUNTER_RATIO,
+);
+
+/** "n of 2000 characters", shown once the text nears the limit. */
+function LengthCounter({
+  id,
+  count,
+}: Readonly<{ id: string; count: number }>): React.ReactElement | null {
+  const t = useTranslations("chat.input");
+  if (count < COUNTER_FROM) return null;
+  return (
+    <p
+      id={id}
+      style={{
+        margin: "6px 0 0",
+        fontSize: "12px",
+        textAlign: "right",
+        color: DASHBOARD_CHAT_TEXT_DIM,
+      }}
+    >
+      {t("counter", { count, max: CHAT_MESSAGE_MAX_LENGTH })}
+    </p>
+  );
+}
 
 export interface ChatComposerProps {
   value: string;
@@ -23,6 +56,8 @@ export function ChatComposer({
   onSend,
   disabled = false,
 }: Readonly<ChatComposerProps>): React.ReactElement {
+  const counterId = useId();
+  const showCounter = value.length >= COUNTER_FROM;
   return (
     <div
       style={{
@@ -43,6 +78,8 @@ export function ChatComposer({
           }}
           placeholder="Ask the Alter-Ego anything..."
           rows={1}
+          maxLength={CHAT_MESSAGE_MAX_LENGTH}
+          aria-describedby={showCounter ? counterId : undefined}
           disabled={disabled}
           style={{
             flex: 1,
@@ -95,6 +132,7 @@ export function ChatComposer({
           </svg>
         </button>
       </div>
+      <LengthCounter id={counterId} count={value.length} />
     </div>
   );
 }

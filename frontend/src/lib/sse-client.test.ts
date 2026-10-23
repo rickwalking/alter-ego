@@ -4,7 +4,7 @@ import { streamSseEvents } from "./sse-client";
 import { createSseResponse } from "./sse-client.test-utils";
 import type { SseEvent } from "./sse-client";
 
-// Scenario: Parse single token event from stream
+/** Scenario: Parse single token event from stream */
 describe("streamSseEvents", () => {
   let onEvent: Mock<(event: SseEvent) => void>;
   let onError: Mock<(error: Error) => void>;
@@ -26,8 +26,9 @@ describe("streamSseEvents", () => {
    * When streamSseEvents is called
    * Then onEvent is called with the token event
    * And onComplete is called
+   *
+   * Scenario: Stream yields a single token event
    */
-  // Scenario: Stream yields a single token event
   it("dispatches a single token event and calls onComplete", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -58,8 +59,9 @@ describe("streamSseEvents", () => {
    * Given a streaming SSE response with multiple token events
    * When streamSseEvents is called
    * Then onEvent is called for each token
+   *
+   * Scenario: Stream yields multiple token events
    */
-  // Scenario: Stream yields multiple token events
   it("dispatches multiple token events incrementally", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -98,8 +100,9 @@ describe("streamSseEvents", () => {
    * Given a streaming response where SSE events span across chunk boundaries
    * When streamSseEvents is called
    * Then all events are still parsed correctly
+   *
+   * Scenario: Chunks arrive split at arbitrary boundaries
    */
-  // Scenario: Chunks arrive split at arbitrary boundaries
   it("handles chunk boundaries that split SSE events", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -131,8 +134,9 @@ describe("streamSseEvents", () => {
    * Given a streaming response with keep-alive ping comments
    * When streamSseEvents is called
    * Then comment lines are ignored and events are still dispatched
+   *
+   * Scenario: Keep-alive comment lines are ignored
    */
-  // Scenario: Keep-alive comment lines are ignored
   it("ignores keep-alive comment lines", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -161,12 +165,47 @@ describe("streamSseEvents", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 
+  /** Scenario: Stream yields a single token event */
+  it("calls onOpen once the stream opens, before any event", async () => {
+    const order: string[] = [];
+    vi.mocked(fetch).mockResolvedValue(
+      createSseResponse(['id: 1\ndata: {"type":"token","content":"Hi"}\n\n']),
+    );
+
+    await streamSseEvents({
+      url: "/api/conversations/abc/chat/stream",
+      body: { content: "Hi" },
+      onOpen: () => order.push("open"),
+      onEvent: () => order.push("event"),
+    });
+
+    expect(order).toEqual(["open", "event"]);
+  });
+
+  /** Scenario: HTTP error returns an error */
+  it("does not call onOpen when the server answers an error status", async () => {
+    const onOpen = vi.fn();
+    vi.mocked(fetch).mockResolvedValue(createSseResponse([], 503));
+
+    await streamSseEvents({
+      url: "/api/conversations/abc/chat/stream",
+      body: { content: "Hi" },
+      onOpen,
+      onEvent,
+      onError,
+    });
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
   /**
    * Given a non-200 HTTP response
    * When streamSseEvents is called
    * Then onError is called with the HTTP status code (no statusText leakage)
+   *
+   * Scenario: HTTP error returns an error
    */
-  // Scenario: HTTP error returns an error
   it("calls onError on HTTP error with sanitized message", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(createSseResponse([], 500));
@@ -190,8 +229,9 @@ describe("streamSseEvents", () => {
    * Given a response with incorrect content type
    * When streamSseEvents is called
    * Then onError is called with the content type error
+   *
+   * Scenario: Wrong content type returns an error
    */
-  // Scenario: Wrong content type returns an error
   it("calls onError on unexpected content type", async () => {
     const mockFetch = vi.mocked(fetch);
     const response = createSseResponse(["data: {}\n\n"]);
@@ -217,8 +257,9 @@ describe("streamSseEvents", () => {
    * Given an AbortController that is aborted
    * When streamSseEvents is called with the abort signal
    * Then no callbacks are called (abort is silent)
+   *
+   * Scenario: Abort signal prevents request
    */
-  // Scenario: Abort signal prevents request
   it("silently handles AbortError without calling onError", async () => {
     const abortController = new AbortController();
     const mockFetch = vi.mocked(fetch);
@@ -242,8 +283,9 @@ describe("streamSseEvents", () => {
    * Given a network failure
    * When streamSseEvents is called
    * Then onError is called with the error
+   *
+   * Scenario: Network error calls onError
    */
-  // Scenario: Network error calls onError
   it("calls onError on network error", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
@@ -266,8 +308,9 @@ describe("streamSseEvents", () => {
    * Given a streaming response with an error event followed by stream end
    * When streamSseEvents is called
    * Then onEvent is called with the error event AND onComplete is called
+   *
+   * Scenario: Error event dispatched via onComplete + onEvent
    */
-  // Scenario: Error event dispatched via onComplete + onEvent
   it("dispatches error event via onEvent and then calls onComplete", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -298,8 +341,9 @@ describe("streamSseEvents", () => {
    * Given a lastEventId option
    * When streamSseEvents is called
    * Then the Last-Event-ID header is included in the request
+   *
+   * Scenario: Last-Event-ID header is sent when provided
    */
-  // Scenario: Last-Event-ID header is sent when provided
   it("includes Last-Event-ID header when provided", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
@@ -329,8 +373,9 @@ describe("streamSseEvents", () => {
    * Given a response with a null body
    * When streamSseEvents is called
    * Then onError is called
+   *
+   * Scenario: Response body is null
    */
-  // Scenario: Response body is null
   it("calls onError when response body is null", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
@@ -358,8 +403,9 @@ describe("streamSseEvents", () => {
    * Given a stream that ends without a trailing blank line after the last event
    * When streamSseEvents is called
    * Then the last event is still dispatched
+   *
+   * Scenario: SSE event without trailing blank line
    */
-  // Scenario: SSE event without trailing blank line
   it("dispatches last event even without trailing blank line", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(

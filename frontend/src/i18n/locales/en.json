@@ -114,7 +114,8 @@
     "input": {
       "placeholder": "Type your message...",
       "send": "Send message",
-      "newChat": "New Chat"
+      "newChat": "New Chat",
+      "counter": "{count} of {max} characters"
     },
     "you": "You",
     "assistant": "Assistant",
@@ -128,6 +129,17 @@
       "empty": "No conversations yet",
       "loading": "Loading conversations",
       "searchPlaceholder": "Search conversations..."
+    },
+    "errors": {
+      "offline": "You seem to be offline. Check your connection and try again.",
+      "tooLong": "That message is too long. Keep it under {max} characters.",
+      "limit": "Too many messages for now, or this chat is full. Wait a minute or start a new chat.",
+      "notFound": "This conversation is no longer available. Start a new chat.",
+      "sessionExpired": "Your session expired. Sign in again to keep chatting.",
+      "generic": "Something went wrong. Please try again.",
+      "retry": "Try again",
+      "signIn": "Sign in",
+      "newChat": "Start a new chat"
     }
   },
   "knowledge": {

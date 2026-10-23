@@ -1,5 +1,7 @@
 "use client";
 
+import { SseHttpError } from "./sse-http-error";
+
 /**
  * SSE event types from the backend.
  */
@@ -68,6 +70,8 @@ interface SseStreamOptions {
   onEvent: (event: SseEvent) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
+  /** Called once the server answered 200 with an event stream (before any event). */
+  onOpen?: () => void;
 }
 
 /**
@@ -311,7 +315,7 @@ async function openSseStream({
     signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    throw new SseHttpError(response.status);
   }
   const contentType = response.headers.get(HEADER_CONTENT_TYPE) ?? "";
   if (!contentType.includes(MIME_TEXT_EVENT_STREAM)) {
@@ -379,6 +383,7 @@ export async function streamSseEvents(
 ): Promise<void> {
   try {
     const reader = await openSseStream(options);
+    options.onOpen?.();
     await pumpSseEvents(reader, options.onEvent);
     options.onComplete?.();
   } catch (error) {

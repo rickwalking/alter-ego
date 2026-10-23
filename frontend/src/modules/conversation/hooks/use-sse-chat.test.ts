@@ -85,7 +85,7 @@ describe("useSseChat", () => {
     await act(() => Promise.resolve(void result.current.sendMessage("hi")));
     stream.emit("error", { content: "model exploded" });
 
-    expect(result.current.error).toBe("model exploded");
+    expect(result.current.error).toBe("generic");
     expect(result.current.isStreaming).toBe(false);
   });
 

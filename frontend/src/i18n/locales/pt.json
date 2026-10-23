@@ -114,7 +114,8 @@
     "input": {
       "placeholder": "Digite sua mensagem...",
       "send": "Enviar mensagem",
-      "newChat": "Novo Chat"
+      "newChat": "Novo Chat",
+      "counter": "{count} de {max} caracteres"
     },
     "you": "Você",
     "assistant": "Assistente",
@@ -128,6 +129,17 @@
       "empty": "Nenhuma conversa ainda",
       "loading": "Carregando conversas",
       "searchPlaceholder": "Buscar conversas..."
+    },
+    "errors": {
+      "offline": "Parece que você está sem conexão. Verifique a internet e tente de novo.",
+      "tooLong": "Essa mensagem é longa demais. Use até {max} caracteres.",
+      "limit": "Muitas mensagens por agora, ou este chat está cheio. Espere um minuto ou comece um novo chat.",
+      "notFound": "Esta conversa não está mais disponível. Comece um novo chat.",
+      "sessionExpired": "Sua sessão expirou. Entre de novo para continuar conversando.",
+      "generic": "Algo deu errado. Tente de novo.",
+      "retry": "Tentar de novo",
+      "signIn": "Entrar",
+      "newChat": "Começar um novo chat"
     }
   },
   "knowledge": {
