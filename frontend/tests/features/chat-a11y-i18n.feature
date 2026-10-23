@@ -23,8 +23,12 @@ Feature: Chat accessibility and localization
     And it shows a focus outline instead of removing it
 
   Scenario: Focus stays in the message box after sending
-    When I send a message with Enter or the Send button
+    When I send a message with Enter, or with the Send button while I was typing in the message box
     Then the message box stays enabled and focused while the reply streams
+    And a tap on Send when the message box was not focused does not focus it (no keyboard pops up on a phone)
+
+  Scenario: The log and the announcer are separate
+    Then the polite status announcer sits next to the conversation log, not inside it
 
   Scenario: The public chat has a main landmark and a skip link
     When I open /chat

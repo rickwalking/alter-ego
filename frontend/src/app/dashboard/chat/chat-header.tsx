@@ -107,7 +107,7 @@ export function ChatHeader({
         )}
         <button
           type="button"
-          aria-label="Notifications"
+          aria-label={t("notifications")}
           style={{
             position: "relative",
             width: "32px",

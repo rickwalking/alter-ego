@@ -82,6 +82,13 @@ read as plain text cut at 280 characters) with exact-text tests at the 280/281 b
 ellipsis; Enter / Shift+Enter and "Send stays off while busy with text" tests; a Portuguese-locale render test
 (`chat-pt-locale.test.tsx`). Chat and public chat tests: 46 passed.
 
+### 2026-10-23 10:30
+
+PR review fixes: Send puts focus back in the message box only if it had focus when Send was pressed (a tap on a
+phone no longer reopens the keyboard); the announcer is a `role="status"` sibling of the log, not inside it, and the
+tests query it by role; the notifications button label comes from `chat.notifications` (en/pt); the class-name
+focus-ring assertion is gone (the ring is the site-wide one).
+
 ## Files Touched
 
 - frontend/src/app/dashboard/chat/chat-header.tsx, chat-composer.tsx, chat-message-list.tsx, chat-message-row.tsx (new, split out), dashboard-chat-view.tsx,

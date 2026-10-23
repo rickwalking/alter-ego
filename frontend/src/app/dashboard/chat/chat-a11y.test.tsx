@@ -28,7 +28,7 @@ function announcedReply(text: string): string | null {
       messages={[question, { role: "assistant", text, time: "10:00" }]}
     />,
   );
-  const said = document.querySelector('[aria-live="polite"]')!.textContent;
+  const said = screen.getByRole("status").textContent;
   unmount();
   return said;
 }
@@ -41,7 +41,7 @@ describe("chat accessibility", () => {
       <ChatMessageList messages={[question]} isStreaming />,
     );
     expect(screen.getByRole("log", { name: "Conversation" })).toBeVisible();
-    const live = document.querySelector('[aria-live="polite"]');
+    const live = screen.getByRole("status");
     expect(live).toHaveTextContent("Alter-Ego is typing…");
 
     rerender(
@@ -63,7 +63,7 @@ describe("chat accessibility", () => {
         messages={[{ role: "assistant", text: "Old reply", time: "09:00" }]}
       />,
     );
-    const live = document.querySelector('[aria-live="polite"]');
+    const live = screen.getByRole("status");
     expect(live).toBeEmptyDOMElement();
   });
 
@@ -100,7 +100,6 @@ describe("chat accessibility", () => {
       name: "Message to the Alter-Ego",
     });
     expect(textarea.style.outline).toBe("");
-    expect(textarea.className).toContain("focus-visible:outline");
   });
 
   /** Scenario: Focus stays in the message box after sending */
@@ -109,14 +108,42 @@ describe("chat accessibility", () => {
     const { rerender } = render(
       <ChatComposer value="hello" onChange={vi.fn()} onSend={onSend} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    const textarea = screen.getByRole("textbox");
+    textarea.focus();
+    const send = screen.getByRole("button", { name: "Send message" });
+    fireEvent.pointerDown(send);
+    send.focus();
+    fireEvent.click(send);
     rerender(<ChatComposer value="" onChange={vi.fn()} onSend={onSend} busy />);
 
-    const textarea = screen.getByRole("textbox");
     expect(onSend).toHaveBeenCalledOnce();
     expect(textarea).toBeEnabled();
     expect(textarea).toHaveFocus();
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
+  /** Scenario: Focus stays in the message box after sending */
+  it("does not pull focus into the message box when it did not have it", () => {
+    render(<ChatComposer value="hello" onChange={vi.fn()} onSend={vi.fn()} />);
+    const send = screen.getByRole("button", { name: "Send message" });
+    send.focus();
+    fireEvent.pointerDown(send);
+    fireEvent.click(send);
+
+    expect(screen.getByRole("textbox")).not.toHaveFocus();
+    expect(send).toHaveFocus();
+  });
+
+  /** Scenario: The log and the announcer are separate */
+  it("keeps the announcer outside the conversation log", () => {
+    render(
+      <ChatMessageList
+        messages={[{ role: "user", text: "hi", time: "10:00" }]}
+      />,
+    );
+    const status = screen.getByRole("status");
+    expect(screen.getByRole("log")).not.toContainElement(status);
+    expect(status).toHaveAttribute("aria-live", "polite");
   });
 
   /** Scenario: Focus stays in the message box after sending */

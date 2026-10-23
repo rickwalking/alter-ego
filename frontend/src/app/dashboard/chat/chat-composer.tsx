@@ -60,9 +60,14 @@ export function ChatComposer({
   const t = useTranslations("chat.input");
   const counterId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hadFocusRef = useRef(false);
+  const noteFocusBeforeSend = (): void => {
+    hadFocusRef.current = document.activeElement === textareaRef.current;
+  };
   const sendAndKeepFocus = (): void => {
     onSend();
-    textareaRef.current?.focus();
+    if (hadFocusRef.current) textareaRef.current?.focus();
+    hadFocusRef.current = false;
   };
   const showCounter = value.length >= COUNTER_FROM;
   return (
@@ -108,6 +113,7 @@ export function ChatComposer({
         <button
           type="button"
           aria-label={t("send")}
+          onPointerDown={noteFocusBeforeSend}
           onClick={sendAndKeepFocus}
           disabled={busy || !value.trim()}
           style={{

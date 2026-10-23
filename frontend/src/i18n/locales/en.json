@@ -145,6 +145,7 @@
     "subtitle": "Alter-Ego assistant",
     "typing": "Alter-Ego is typing…",
     "logLabel": "Conversation",
+    "notifications": "Notifications",
     "replyAnnounced": "Alter-Ego replied: {text}",
     "hintNotSaved": "Messages are not saved after refresh.",
     "hintSignIn": "Sign in to keep your chat history.",

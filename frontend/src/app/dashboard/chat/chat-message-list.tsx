@@ -66,29 +66,27 @@ export function ChatMessageList({
   );
   const announcement = useReplyAnnouncement(messages, isStreaming);
   return (
-    <div
-      ref={listRef}
-      data-testid="chat-message-list"
-      role="log"
-      aria-label={t("logLabel")}
-      aria-live="off"
-      style={{
-        flex: 1,
-        overflowY: "auto",
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-      }}
-    >
-      {messages.map((msg, index) => (
-        <ChatMessageRow key={`${msg.role}-${index}`} msg={msg} />
-      ))}
-      {isStreaming && <TypingIndicator label={t("typing")} />}
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {announcement}
-      </p>
-      <style>{`
+    <>
+      <div
+        ref={listRef}
+        data-testid="chat-message-list"
+        role="log"
+        aria-label={t("logLabel")}
+        aria-live="off"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        {messages.map((msg, index) => (
+          <ChatMessageRow key={`${msg.role}-${index}`} msg={msg} />
+        ))}
+        {isStreaming && <TypingIndicator label={t("typing")} />}
+        <style>{`
         @keyframes chat-pulse-dot {
           0%, 100% { opacity: 0.35; transform: scale(0.85); }
           50% { opacity: 1; transform: scale(1.15); }
@@ -97,6 +95,15 @@ export function ChatMessageList({
           animation: chat-pulse-dot 1.2s ease-in-out infinite;
         }
       `}</style>
-    </div>
+      </div>
+      <p
+        role="status"
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {announcement}
+      </p>
+    </>
   );
 }
