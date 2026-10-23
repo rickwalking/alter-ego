@@ -1,6 +1,6 @@
 # AE-0504 — Select a rubric for carousel generation and show its scores
 
-Status: In Progress
+Status: Dev Complete
 Tier: T3
 Priority: Medium
 Type: Feature
@@ -54,22 +54,22 @@ rewrite)
 
 ## Acceptance Criteria
 
-- [ ] Given the create wizard, Then a "Rubrica" selector lists the rubrics applicable to carousels with the
+- [x] Given the create wizard, Then a "Rubrica" selector lists the rubrics applicable to carousels with the
       default preselected, and "Política padrão" (no rubric) as an option; the choice is sent as
       `rubric_id`.
-- [ ] Given `POST /api/carousels` without `rubric_id`, Then the default carousel rubric is stored; with an
+- [x] Given `POST /api/carousels` without `rubric_id`, Then the default carousel rubric is stored; with an
       unknown id 404; with a rubric not applicable to carousels 422.
-- [ ] Given a carousel with a rubric, When content is drafted, Then every content prompt variant carries
+- [x] Given a carousel with a rubric, When content is drafted, Then every content prompt variant carries
       the rubric's criteria (name, description, prompt, scale, threshold) — unit test on the rendered
       prompt; a Langfuse trace from the evidence run in the PR.
-- [ ] Given drafted content, Then each criterion is scored on 0-100, the scores are in `rubric_scores`
+- [x] Given drafted content, Then each criterion is scored on 0-100, the scores are in `rubric_scores`
       and in one `rubric_evaluation_scores` row for the carousel (rubric id, rounded `overall_score`);
       a regeneration replaces that row; a scoring failure leaves the workflow running with no scores.
-- [ ] Given Revisão final, Then "Qualidade" shows each criterion's score vs threshold and flags those
+- [x] Given Revisão final, Then "Qualidade" shows each criterion's score vs threshold and flags those
       below it.
-- [ ] Given a rubric used by a carousel, When it is deleted, Then 409 names the carousels and nothing is
+- [x] Given a rubric used by a carousel, When it is deleted, Then 409 names the carousels and nothing is
       deleted.
-- [ ] Given a non-admin, Then the quality average counts only their own carousels' scores; an admin's
+- [x] Given a non-admin, Then the quality average counts only their own carousels' scores; an admin's
       counts all.
 - [ ] Evidence for Pedro: one generated carousel scored against the QA rubric (needs Pedro's go-ahead for
       the paid run).
@@ -81,11 +81,11 @@ See `backend/tests/features/carousel_rubric_ae0504.feature` and
 
 ## Affected Areas
 
-- [ ] Backend (carousel create schema/route, content draft agent, rubric scoring service + prompt, phase
+- [x] Backend (carousel create schema/route, content draft agent, rubric scoring service + prompt, phase
       artifact runner, rubrics delete route, analytics projection)
-- [ ] Frontend (create wizard selector, final review quality tab, i18n)
-- [ ] API (`rubric_id` on create/response; OpenAPI artifact)
-- [ ] Tests
+- [x] Frontend (create wizard selector, final review quality tab, i18n)
+- [x] API (`rubric_id` on create/response; OpenAPI artifact)
+- [x] Tests
 - Database: no change (`carousel_projects.rubric_id` exists).
 
 ## Dependencies
@@ -107,7 +107,12 @@ Ticket written from the dashboard QA triage and the code map. Prod checked read-
 
 ## Files Touched
 
+See `.agent/reports/AE-0504.dev-summary.md`.
+
 ## Test Evidence
+
+Full backend (with Postgres) and frontend gate captures green; mutation in CI. The evidence run waits for
+Pedro's go-ahead. See the dev summary.
 
 ## QA Report
 
