@@ -38,3 +38,8 @@ export const CHAT_FAILURE_STAGE = {
 
 export type ChatFailureStage =
   (typeof CHAT_FAILURE_STAGE)[keyof typeof CHAT_FAILURE_STAGE];
+/** How often the history is re-read while a reply is still being written. */
+export const REPLY_POLL_INTERVAL_MS = 2000;
+
+/** How long after the user's message a missing reply is still awaited. */
+export const REPLY_POLL_WINDOW_MS = 180_000;

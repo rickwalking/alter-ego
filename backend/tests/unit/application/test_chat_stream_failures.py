@@ -57,7 +57,7 @@ async def _run_failing_turn(
                     conversation_id=conversation.id,
                     content="Who are you?",
                     db=db,
-                    agent_builder=_FailingAgent,
+                    agent_builder=lambda _db: _FailingAgent(),
                 )
             )
             if not frame.startswith(": ping")

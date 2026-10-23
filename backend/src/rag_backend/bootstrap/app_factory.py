@@ -59,6 +59,7 @@ from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.application.services.blog.blog_generation_runner import (
     cancel_blog_generation_tasks,
 )
+from rag_backend.application.services.chat_turns import drain_detached_turns
 from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
@@ -77,6 +78,7 @@ from rag_backend.bootstrap.carousel_republish_sweeper_factory import (
 from rag_backend.bootstrap.carousel_run_reaper_factory import build_stale_run_reaper
 from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.domain.clock import utc_now
+from rag_backend.domain.constants.chat_stream import DETACHED_TURN_DRAIN_SECONDS
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.carousel_auto_archiver import (
@@ -194,6 +196,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await cancel_blog_generation_tasks()
 
     logger.info("application_shutdown")
+    await drain_detached_turns(DETACHED_TURN_DRAIN_SECONDS)
     await close_db()
 
 

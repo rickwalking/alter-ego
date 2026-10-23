@@ -1,10 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { type Conversation } from "@/schemas/chat";
+import { replyPollInterval } from "@/modules/conversation/reply-wait";
 import {
   chatKeys,
   conversationMessagesOptions,
+  conversationPagesOptions,
+  conversationSearchOptions,
   conversationOptions,
   conversationsOptions,
   createConversation,
@@ -17,12 +25,35 @@ export function useConversations() {
   return useQuery(conversationsOptions());
 }
 
+/** The owner's conversations a page at a time, newest first. */
+export function useConversationPages() {
+  return useInfiniteQuery(conversationPagesOptions());
+}
+
+/** The owner's conversations whose title contains ``term`` (none when blank). */
+export function useConversationSearch(term: string) {
+  return useQuery(conversationSearchOptions(term));
+}
+
 export function useConversation(conversationId: string | null) {
   return useQuery(conversationOptions(conversationId));
 }
 
-export function useConversationMessages(conversationId: string | null) {
-  return useQuery(conversationMessagesOptions(conversationId));
+/**
+ * The conversation's persisted messages. With ``pollUntilReply`` the history
+ * is re-read every few seconds while it ends with an unanswered user message
+ * (a reply the server is still writing, e.g. after a refresh mid-stream).
+ */
+export function useConversationMessages(
+  conversationId: string | null,
+  pollUntilReply = false,
+) {
+  return useQuery({
+    ...conversationMessagesOptions(conversationId),
+    refetchInterval: pollUntilReply
+      ? (query) => replyPollInterval(query.state.data)
+      : false,
+  });
 }
 
 export function useCreateConversation() {

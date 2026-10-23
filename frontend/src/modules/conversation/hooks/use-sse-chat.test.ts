@@ -1,6 +1,6 @@
 /**
  * Gherkin: tests/features/conversation-sse-chat.feature,
- * tests/features/chat-stream-state.feature
+ * tests/features/chat-stream-state.feature, tests/features/dashboard-chat.feature
  *
  * Race/lifecycle-focused tests for useSseChat using a CONTROLLABLE fake SSE
  * stream (events are driven by the test, not auto-fired) and a REAL QueryClient
@@ -25,6 +25,7 @@ vi.mock("@/lib/sse-client", () => ({
   },
 }));
 
+import { chatKeys } from "@/modules/conversation/queries";
 import {
   CONV_ID,
   controllableStream,
@@ -148,6 +149,7 @@ describe("useSseChat", () => {
     });
   });
 
+  /** Scenario: The sidebar shows a new conversation's title after its first reply */
   it("finalizes exactly once when COMPLETE and onComplete both fire (idempotent)", async () => {
     const stream = controllableStream();
     const { result, invalidateSpy } = renderChat({ conversationId: CONV_ID });
@@ -157,7 +159,13 @@ describe("useSseChat", () => {
     stream.complete();
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
-    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledTimes(2);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: chatKeys.messages(CONV_ID),
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: chatKeys.conversations(),
+    });
   });
 
   it("startNewChat aborts the in-flight stream and resets state", async () => {

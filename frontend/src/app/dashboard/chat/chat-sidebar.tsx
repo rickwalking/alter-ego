@@ -8,11 +8,8 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { CHAT_DRAWER_MEDIA_QUERY } from "./use-menu-button-hidden";
 import {
-  DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
-  DASHBOARD_CHAT_BG_INPUT_DARK,
   DASHBOARD_CHAT_BG_DEEP,
-  DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_CYAN_DIM,
   DASHBOARD_CHAT_MONO_FONT,
   DASHBOARD_CHAT_TEXT,
@@ -28,7 +25,22 @@ export interface ChatSidebarProps {
   open?: boolean;
   /** DOM id so the chat header toggle can wire `aria-controls`. */
   id?: string;
+  /** The search box text; the conversations passed in already match it. */
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  /** The server is still looking for older matches. */
+  searching?: boolean;
+  /** More conversations can be loaded. */
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
+
+export { filterConversations } from "./chat-sidebar-filter";
+import {
+  ChatSidebarMore,
+  ChatSidebarNoMatches,
+  ChatSidebarSearch,
+} from "./chat-sidebar-parts";
 
 /**
  * Below md the list is an off-canvas drawer; at md+ it is a persistent 280px
@@ -42,6 +54,11 @@ export function ChatSidebar({
   onSelectConversation,
   open,
   id,
+  query = "",
+  onQueryChange,
+  searching = false,
+  hasMore = false,
+  onLoadMore,
 }: Readonly<ChatSidebarProps>): React.ReactElement {
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
@@ -67,29 +84,17 @@ export function ChatSidebar({
         background: DASHBOARD_CHAT_BG_DEEP,
       }}
     >
-      <div
-        style={{
-          padding: "16px",
-          borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
-        }}
-      >
-        <input
-          type="search"
-          placeholder={t("searchPlaceholder")}
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            border: `1px solid ${DASHBOARD_CHAT_BORDER_LIGHT}`,
-            background: DASHBOARD_CHAT_BG_INPUT_DARK,
-            color: DASHBOARD_CHAT_TEXT,
-            fontSize: "13px",
-            fontFamily: "inherit",
-            outline: "none",
-          }}
-        />
-      </div>
+      <ChatSidebarSearch
+        query={query}
+        onQueryChange={onQueryChange}
+        label={t("searchLabel")}
+        placeholder={t("searchPlaceholder")}
+      />
       <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+        <ChatSidebarNoMatches
+          show={conversations.length === 0 && query.trim() !== "" && !searching}
+          label={t("noMatches")}
+        />
         {conversations.map((conv) => (
           <div
             key={conv.id}
@@ -115,24 +120,6 @@ export function ChatSidebar({
               transition: "background 0.2s",
             }}
           >
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: DASHBOARD_CHAT_MONO_FONT,
-                fontSize: "12px",
-                fontWeight: 700,
-                flexShrink: 0,
-                background: conv.bg,
-                color: conv.color,
-              }}
-            >
-              {conv.avatar}
-            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
@@ -146,18 +133,6 @@ export function ChatSidebar({
               >
                 {conv.name}
               </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: DASHBOARD_CHAT_TEXT_DIM,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  marginTop: "2px",
-                }}
-              >
-                {conv.preview}
-              </div>
             </div>
             <div
               style={{
@@ -169,19 +144,12 @@ export function ChatSidebar({
             >
               {conv.time}
             </div>
-            {conv.unread && (
-              <div
-                style={{
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  background: DASHBOARD_CHAT_CYAN,
-                  flexShrink: 0,
-                }}
-              />
-            )}
           </div>
         ))}
+        <ChatSidebarMore
+          onLoadMore={hasMore ? onLoadMore : undefined}
+          label={t("showMore")}
+        />
       </div>
     </div>
   );

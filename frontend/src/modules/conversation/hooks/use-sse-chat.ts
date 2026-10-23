@@ -16,6 +16,7 @@ import {
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
 import { classifyChatError, type ChatFailure } from "../chat-errors";
+import { useAwaitingReply } from "./use-awaiting-reply";
 import {
   CHAT_ERROR_KIND,
   CHAT_FAILURE_STAGE,
@@ -81,13 +82,18 @@ function streamedSources(data: SseEventData): Message["sources"] {
   return data.sources ?? data.content;
 }
 
-/** The persisted history when enabled (an empty list otherwise). */
+/**
+ * The persisted history when enabled (an empty list otherwise). Outside a
+ * live stream it keeps polling while the last message still awaits its reply.
+ */
 function useHistory(
   loadHistory: boolean,
   conversationId: string | null,
+  isStreaming: boolean,
 ): Message[] {
   const { data: fetchedHistory = [] } = useConversationMessages(
     loadHistory ? conversationId : null,
+    !isStreaming,
   );
   return useMemo(
     () => (loadHistory ? fetchedHistory : []),
@@ -124,6 +130,9 @@ function useFinalizeStream(
         return;
       }
       const finishedTurn = turnRef.current;
+      void queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
       void queryClient
         .invalidateQueries({ queryKey: chatKeys.messages(convId) })
         .then(() => {
@@ -334,7 +343,11 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     stream,
     loadHistory,
   );
-  const historyMessages = useHistory(loadHistory, conversationId);
+  const historyMessages = useHistory(loadHistory, conversationId, isStreaming);
+  const awaitingReply = useAwaitingReply(
+    historyMessages,
+    !isStreaming && optimisticMessages.length === 0,
+  );
 
   const startNewChat = useStartNewChat(stream, turnRef, setError);
 
@@ -358,6 +371,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     isStreaming,
     error: failure?.kind ?? null,
     canRetry: failure?.retryable ?? false,
+    awaitingReply,
     sendMessage,
     isBusy,
     startNewChat,

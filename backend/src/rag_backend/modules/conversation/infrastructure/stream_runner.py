@@ -27,18 +27,38 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
 from typing import cast
+from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.application.services.chat_stream_service import (
     _ChatAgent,
     _StreamConfig,
     stream_chat_response,
 )
+from rag_backend.application.services.chat_turns import conversation_turn_in_flight
+from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.modules.conversation.application.streaming import (
     ChatAgentBuilder,
     StreamChatCommand,
 )
+
+
+def _reply_session_factory() -> async_sessionmaker[AsyncSession] | None:
+    """Where a reply's own session comes from, so it is saved after a disconnect.
+
+    ``None`` (the reply then uses the request session) only when the database
+    engine was never initialised, as in tests that override the session.
+    """
+    try:
+        return get_session_maker()
+    except RuntimeError:
+        return None
+
+
+def conversation_reply_in_flight(conversation_id: UUID) -> bool:
+    """Whether a reply for ``conversation_id`` is still being written."""
+    return conversation_turn_in_flight(conversation_id)
 
 
 class LegacyStreamChatRunner:
@@ -62,17 +82,19 @@ class LegacyStreamChatRunner:
         records that at this infrastructure boundary so the strict-typed
         application layer stays free of the legacy protocol's shape.
         """
-        builder = cast("Callable[[], _ChatAgent]", agent_builder.build)
+        builder = cast("Callable[[AsyncSession], _ChatAgent]", agent_builder.build)
         config = _StreamConfig(
             conversation_id=command.conversation_id,
             content=command.content,
             db=self._db,
             agent_builder=builder,
             last_event_id=command.last_event_id,
+            session_factory=_reply_session_factory(),
         )
         return stream_chat_response(config)
 
 
 __all__ = [
     "LegacyStreamChatRunner",
+    "conversation_reply_in_flight",
 ]

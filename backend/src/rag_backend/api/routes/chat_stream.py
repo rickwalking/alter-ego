@@ -26,7 +26,7 @@ without a live LLM/Pinecone.
 """
 
 from collections.abc import AsyncIterator
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -69,6 +69,7 @@ from rag_backend.api.dependencies.resource_access import (
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import ChatRequest, ErrorResponse
 from rag_backend.application.services.conversation_service import ConversationService
+from rag_backend.domain.constants.chat_stream import CHAT_TURN_IN_FLIGHT
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.database.config import get_session
@@ -81,6 +82,8 @@ from rag_backend.modules.conversation import (
     ConversationStreamHandler,
     LegacyChatAgentFactory,
     StreamChatCommand,
+    TurnSession,
+    conversation_reply_in_flight,
 )
 
 router = APIRouter(prefix="/conversations", tags=["chat-stream"])
@@ -91,7 +94,8 @@ _MAX_MESSAGES_PER_CONVERSATION = 20
 class _AlterEgoAgentBuilder:
     """Route-local ``ChatAgentBuilder`` for the public Alter-Ego stream.
 
-    Reuses the DI-built factory's bound session + container and routes
+    Reuses the DI-built factory's container and builds the agent on the session
+    the turn hands it (the turn's own session, not the request's), routing
     construction through THIS module's ``build_alter_ego_agent`` name so the
     safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM — the knowledge-facade wiring stays identical.
@@ -100,12 +104,12 @@ class _AlterEgoAgentBuilder:
     """
 
     def __init__(self, factory: LegacyChatAgentFactory, scope: KnowledgeScope) -> None:
-        self._db = factory.session
         self._container = factory.container
         self._scope = scope
 
-    def build(self) -> AlterEgoAgent | RAGAgent:
-        return build_alter_ego_agent(self._db, self._container, self._scope)
+    def build(self, session: TurnSession) -> AlterEgoAgent | RAGAgent:
+        db = cast("AsyncSession", session)
+        return build_alter_ego_agent(db, self._container, self._scope)
 
 
 class _RagAgentBuilder:
@@ -120,12 +124,12 @@ class _RagAgentBuilder:
     def __init__(
         self, factory: LegacyChatAgentFactory, context: RagAgentBuildContext
     ) -> None:
-        self._db = factory.session
         self._container = factory.container
         self._context = context
 
-    def build(self) -> AlterEgoAgent | RAGAgent:
-        return build_rag_agent(self._db, self._container, self._context)
+    def build(self, session: TurnSession) -> AlterEgoAgent | RAGAgent:
+        db = cast("AsyncSession", session)
+        return build_rag_agent(db, self._container, self._context)
 
 
 def _check_conversation_limit(message_count: int) -> None:
@@ -153,6 +157,14 @@ def _parse_last_event_id(request: Request) -> int | None:
         return int(raw)
     except ValueError:
         return None
+
+
+def _refuse_while_reply_in_flight(conversation_id: UUID) -> None:
+    """409 while a reply for this conversation is still being written."""
+    if conversation_reply_in_flight(conversation_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=CHAT_TURN_IN_FLIGHT
+        )
 
 
 async def _enforce_message_cap(db: AsyncSession, conversation_id: UUID) -> None:
@@ -201,6 +213,7 @@ async def chat_stream(
         )
 
     conversation = await _load_writable_conversation(db, conversation_id, caller)
+    _refuse_while_reply_in_flight(conversation_id)
     await _enforce_message_cap(db, conversation_id)
 
     command = StreamChatCommand(

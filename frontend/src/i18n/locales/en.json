@@ -129,7 +129,11 @@
       "label": "Conversations",
       "empty": "No conversations yet",
       "loading": "Loading conversations",
-      "searchPlaceholder": "Search conversations..."
+      "searchPlaceholder": "Search conversations...",
+      "untitled": "New conversation",
+      "searchLabel": "Search conversations",
+      "noMatches": "No conversations match your search",
+      "showMore": "Show more"
     },
     "errors": {
       "offline": "You seem to be offline. Check your connection and try again.",

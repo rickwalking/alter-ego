@@ -3,11 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRecheckSessionOnNotFound } from "@/app/dashboard/chat/use-recheck-session";
 import { useLocale, useTranslations } from "next-intl";
-import { useConversations, useSseChat } from "@/modules/conversation";
-import {
-  mapConversationToDashboard,
-  mapMessageToDashboard,
-} from "@/modules/editorial-operations";
+import { useSseChat } from "@/modules/conversation";
+import { mapMessageToDashboard } from "@/modules/editorial-operations";
 import {
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_BG_OVERLAY_LIGHT,
@@ -21,6 +18,7 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { ChatErrorBanner } from "@/app/dashboard/chat/chat-error-banner";
 import { useOffCanvas } from "@/lib/use-off-canvas";
 import { useMenuButtonHidden } from "@/app/dashboard/chat/use-menu-button-hidden";
+import { useSidebarConversations } from "@/app/dashboard/chat/use-sidebar-conversations";
 
 const CHAT_CONVERSATIONS_ID = "chat-conversations";
 
@@ -28,12 +26,16 @@ export function DashboardChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const locale = useLocale();
   const t = useTranslations("chat");
+  const untitled = t("sidebar.untitled");
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
   useMenuButtonHidden(convDrawer.open);
 
-  const { data: conversations = [], refetch: refetchConversations } =
-    useConversations();
+  const {
+    loaded: conversations,
+    refetch: refetchConversations,
+    sidebar,
+  } = useSidebarConversations(locale, untitled);
 
   const effectiveConvId = useMemo(
     () =>
@@ -44,6 +46,7 @@ export function DashboardChatView(): React.ReactElement {
   const {
     messages: sseMessages,
     isStreaming,
+    awaitingReply,
     error: sseError,
     canRetry,
     sendMessage,
@@ -51,14 +54,6 @@ export function DashboardChatView(): React.ReactElement {
     startNewChat,
   } = useSseChat({ conversationId: effectiveConvId });
   useRecheckSessionOnNotFound(sseError, refetchConversations);
-
-  const sidebarConversations = useMemo(
-    () =>
-      conversations.map((conversation, index) =>
-        mapConversationToDashboard(conversation, index, locale),
-      ),
-    [conversations, locale],
-  );
 
   const displayMessages = useMemo(
     () => sseMessages.map((message) => mapMessageToDashboard(message, locale)),
@@ -69,9 +64,10 @@ export function DashboardChatView(): React.ReactElement {
     setActiveConv(id);
     setIsComposingNew(false);
   }, []);
+  const replyPending = isStreaming || awaitingReply;
   const { input, setInput, handleSend, retry, forgetFailed } = useChatSend({
     conversationId: effectiveConvId,
-    isStreaming,
+    isStreaming: replyPending,
     sendMessage,
     isBusy,
     onConversationCreated: openCreatedConversation,
@@ -132,7 +128,7 @@ export function DashboardChatView(): React.ReactElement {
           />
         )}
         <ChatSidebar
-          conversations={sidebarConversations}
+          {...sidebar}
           activeConv={effectiveConvId ?? ""}
           onSelectConversation={handleSelectConversation}
           open={convDrawer.open}
@@ -146,13 +142,13 @@ export function DashboardChatView(): React.ReactElement {
         >
           <ChatMessageList
             messages={displayMessages}
-            isStreaming={isStreaming}
+            isStreaming={replyPending}
           />
           <ChatComposer
             value={input}
             onChange={setInput}
             onSend={() => void handleSend()}
-            busy={isStreaming}
+            busy={replyPending}
           />
         </div>
       </div>

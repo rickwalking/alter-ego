@@ -85,6 +85,7 @@ class _UserQuery(TypedDict, total=False):
     limit: int
     offset: int
     origin: str | None
+    search: str | None
 
 
 class ConversationRepository(Protocol):
@@ -105,7 +106,9 @@ class ConversationRepository(Protocol):
         """Return conversations owned by the given user."""
         ...
 
-    async def count_by_user_id(self, user_id: UUID) -> int:
+    async def count_by_user_id(
+        self, user_id: UUID, origin: str | None = None, search: str | None = None
+    ) -> int:
         """Return the number of conversations owned by the given user."""
         ...
 

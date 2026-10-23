@@ -62,6 +62,7 @@ from rag_backend.api.schemas import (
     MessageSource,
 )
 from rag_backend.domain.constants import COOKIE_ANON_TOKEN
+from rag_backend.domain.constants.conversation import CONVERSATION_SEARCH_MAX_LENGTH
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.auth import create_anonymous_token
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -231,11 +232,18 @@ async def list_conversations(
         str | None,
         Query(description="Filter by agent origin (e.g. alter_ego)"),
     ] = None,
+    search: Annotated[
+        str | None,
+        Query(
+            max_length=CONVERSATION_SEARCH_MAX_LENGTH,
+            description="Only conversations whose title contains this text",
+        ),
+    ] = None,
 ):
     """List conversations owned by the authenticated user."""
     page = await handlers.list_for_owner(
         ListConversationsQuery(
-            user_id=user.id, limit=limit, offset=offset, origin=origin
+            user_id=user.id, limit=limit, offset=offset, origin=origin, search=search
         )
     )
     return {

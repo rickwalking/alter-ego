@@ -52,6 +52,7 @@ from rag_backend.modules.conversation.application.streaming import (
     ConversationStreamHandler,
     StreamChatCommand,
     StreamChatRunner,
+    TurnSession,
 )
 from rag_backend.modules.conversation.bootstrap import (
     ConversationAdapters,
@@ -72,6 +73,7 @@ from rag_backend.modules.conversation.infrastructure.chat_agent_factory import (
 )
 from rag_backend.modules.conversation.infrastructure.stream_runner import (
     LegacyStreamChatRunner,
+    conversation_reply_in_flight,
 )
 
 __all__ = [
@@ -103,5 +105,7 @@ __all__ = [
     "MessageRole",
     "StreamChatCommand",
     "StreamChatRunner",
+    "TurnSession",
     "bootstrap_module",
+    "conversation_reply_in_flight",
 ]
