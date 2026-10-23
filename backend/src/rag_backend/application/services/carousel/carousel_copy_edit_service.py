@@ -39,7 +39,7 @@ from rag_backend.domain.models.carousel_conflict import (
     CarouselConflict,
     CarouselConflictError,
 )
-from rag_backend.domain.models.carousel_copy_version import CopyVersion
+from rag_backend.domain.models.carousel_copy_version import CopyVersion, VersionPage
 from rag_backend.domain.protocols.content_versions import CopyVersionStore
 from rag_backend.domain.protocols.repositories import CarouselRepository
 
@@ -94,9 +94,9 @@ class CarouselCopyEditService:
         self._repo = deps.repo
         self._versions = deps.versions
 
-    async def versions(self, project_id: str) -> list[CopyVersion]:
-        """The carousel's caption / LinkedIn versions, newest first."""
-        return await self._versions.list_versions(project_id)
+    async def versions(self, project_id: str, page: VersionPage) -> list[CopyVersion]:
+        """One page of the carousel's caption / LinkedIn versions, newest first."""
+        return await self._versions.list_versions(project_id, page)
 
     async def version(self, project_id: str, number: int) -> CopyVersion | None:
         """Version ``number`` of the carousel, or ``None``."""
@@ -129,14 +129,14 @@ class CarouselCopyEditService:
     ) -> int:
         """Stage the versions of the texts this save changes (no commit); how many."""
         project_id = str(command.project.id)
-        existing = await self._versions.list_versions(project_id)
+        latest = await self._versions.latest_texts(project_id)
         change = CopyChange(
             before=before,
             after=copy_texts(command.project),
             author_id=command.author_id,
             restored_from=command.restored_from,
         )
-        new_versions = versions_for_change(change, {v.field for v in existing})
+        new_versions = versions_for_change(change, latest)
         await self._versions.add(project_id, new_versions)
         return len(new_versions)
 

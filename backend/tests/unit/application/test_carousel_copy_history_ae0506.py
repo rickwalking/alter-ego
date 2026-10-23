@@ -20,8 +20,8 @@ def test_first_change_keeps_the_replaced_text_first() -> None:
     change = CopyChange(
         before=TEXTS, after={**TEXTS, "caption": "c1"}, author_id=AUTHOR
     )
-    assert versions_for_change(change, set()) == [
-        NewCopyVersion(field="caption", text="c0", author_id=None, summary="original"),
+    assert versions_for_change(change, {}) == [
+        NewCopyVersion(field="caption", text="c0", author_id=None, summary="previous"),
         NewCopyVersion(field="caption", text="c1", author_id=AUTHOR, summary="edit"),
     ]
 
@@ -31,7 +31,7 @@ def test_a_versioned_text_records_only_the_new_text() -> None:
     change = CopyChange(
         before=TEXTS, after={**TEXTS, "caption": "c2"}, author_id=AUTHOR
     )
-    assert versions_for_change(change, {"caption"}) == [
+    assert versions_for_change(change, {"caption": "c0"}) == [
         NewCopyVersion(field="caption", text="c2", author_id=AUTHOR, summary="edit"),
     ]
 
@@ -41,7 +41,7 @@ def test_an_empty_replaced_text_is_not_kept() -> None:
     change = CopyChange(
         before=TEXTS, after={**TEXTS, "linkedin_post_en": "e1"}, author_id=AUTHOR
     )
-    assert versions_for_change(change, set()) == [
+    assert versions_for_change(change, {}) == [
         NewCopyVersion(
             field="linkedin_post_en", text="e1", author_id=AUTHOR, summary="edit"
         ),
@@ -51,7 +51,7 @@ def test_an_empty_replaced_text_is_not_kept() -> None:
 def test_unchanged_texts_record_nothing() -> None:
     """Scenario: A text that did not change stores no version."""
     change = CopyChange(before=TEXTS, after=dict(TEXTS), author_id=AUTHOR)
-    assert versions_for_change(change, set()) == []
+    assert versions_for_change(change, {}) == []
 
 
 def test_a_restore_is_recorded_as_a_restore() -> None:
@@ -62,7 +62,7 @@ def test_a_restore_is_recorded_as_a_restore() -> None:
         author_id=AUTHOR,
         restored_from=1,
     )
-    assert versions_for_change(change, {"linkedin_post_pt"}) == [
+    assert versions_for_change(change, {"linkedin_post_pt": "p0"}) == [
         NewCopyVersion(
             field="linkedin_post_pt",
             text="p-old",
@@ -80,7 +80,7 @@ def test_an_empty_replaced_text_keeps_no_original() -> None:
         after={**TEXTS, "caption": "c1"},
         author_id=AUTHOR,
     )
-    assert versions_for_change(change, set()) == [
+    assert versions_for_change(change, {}) == [
         NewCopyVersion(field="caption", text="c1", author_id=AUTHOR, summary="edit"),
     ]
 
@@ -91,9 +91,25 @@ def test_several_texts_are_recorded_in_field_order() -> None:
     after = {"caption": "c1", "linkedin_post_pt": "p0", "linkedin_post_en": "e1"}
     change = CopyChange(before=before, after=after, author_id=AUTHOR)
     assert [
-        (v.field, v.text) for v in versions_for_change(change, {"linkedin_post_en"})
+        (v.field, v.text)
+        for v in versions_for_change(change, {"linkedin_post_en": "e0"})
     ] == [
         ("caption", "c0"),
         ("caption", "c1"),
         ("linkedin_post_en", "e1"),
+    ]
+
+
+def test_a_text_left_by_another_writer_is_kept_before_the_edit() -> None:
+    """Scenario: A text changed outside the editor is kept before the next edit."""
+    change = CopyChange(
+        before={**TEXTS, "caption": "refined"},
+        after={**TEXTS, "caption": "c2"},
+        author_id=AUTHOR,
+    )
+    assert versions_for_change(change, {"caption": "c1"}) == [
+        NewCopyVersion(
+            field="caption", text="refined", author_id=None, summary="previous"
+        ),
+        NewCopyVersion(field="caption", text="c2", author_id=AUTHOR, summary="edit"),
     ]

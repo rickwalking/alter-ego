@@ -185,6 +185,8 @@ export interface InstagramTabProps extends Pick<
   /** Present when saving is wired: the save bar of the caption. */
   save?: Omit<CopySaveBarProps, "invalid">;
   history?: CopyHistory;
+  /** The saved texts by API field (the history hides Restore on equal ones). */
+  savedTexts?: Readonly<Record<string, string>>;
 }
 
 /** LinkedIn tab of the publish panel. */
@@ -197,6 +199,8 @@ export interface LinkedInTabProps {
   /** Present when saving is wired: the save bar of the LinkedIn posts. */
   save?: Omit<CopySaveBarProps, "invalid">;
   history?: CopyHistory;
+  /** The saved texts by API field (the history hides Restore on equal ones). */
+  savedTexts?: Readonly<Record<string, string>>;
 }
 
 /** A review-step editor (or its leave guard) over the shared copy editor. */
@@ -213,9 +217,12 @@ export interface CopyVersionListProps {
   fields: readonly string[];
   /** The text has unsaved edits: a restore would drop them, so it waits. */
   blocked: boolean;
+  /** The saved text per API field: a version equal to it is not restorable. */
+  current?: Readonly<Record<string, string>>;
 }
 
 /** The version list once there is a history to show. */
 export interface CopyVersionEntriesProps extends CopyVersionListProps {
   history: CopyHistory;
+  current: Readonly<Record<string, string>>;
 }

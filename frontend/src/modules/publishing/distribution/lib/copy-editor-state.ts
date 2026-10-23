@@ -82,6 +82,15 @@ export function toCopyPayload(
   return payload;
 }
 
+/** The texts keyed by API field name (what the version history compares). */
+export function apiTexts(texts: CopyTextsState): Record<string, string> {
+  return {
+    [DISTRIBUTION_FIELDS.CAPTION]: texts.caption,
+    [DISTRIBUTION_FIELDS.LINKEDIN_PT]: texts.linkedinPt,
+    [DISTRIBUTION_FIELDS.LINKEDIN_EN]: texts.linkedinEn,
+  };
+}
+
 /** The ``publish`` i18n key explaining why a save was refused. */
 export function copySaveErrorKey(error: unknown): string {
   if (error instanceof ApiError && typeof error.detail === "string") {

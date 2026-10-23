@@ -1801,8 +1801,19 @@
         "type": "object"
       },
       "CarouselCopyVersionsResponse": {
-        "description": "The carousel's caption / LinkedIn versions, newest first.",
+        "description": "One page of the carousel's caption / LinkedIn versions, newest first.\n\n``next_before`` is the ``before`` of the next (older) page, or null when this\npage is the last.",
         "properties": {
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before"
+          },
           "project_id": {
             "format": "uuid",
             "title": "Project Id",
@@ -12572,7 +12583,7 @@
     },
     "/api/carousels/{project_id}/copy/versions": {
       "get": {
-        "description": "Every stored version, newest first, with who saved it and when.",
+        "description": "One page of stored versions, newest first, with who saved it and when.",
         "operationId": "list_carousel_copy_versions_api_carousels__project_id__copy_versions_get",
         "parameters": [
           {
@@ -12583,6 +12594,35 @@
               "format": "uuid",
               "title": "Project Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
             }
           },
           {
@@ -12644,7 +12684,7 @@
     },
     "/api/carousels/{project_id}/copy/versions/{version_number}/restore": {
       "post": {
-        "description": "Save the version's text; the restore is recorded as a new version.\n\nA version that names no caption / LinkedIn field is not restorable (404).",
+        "description": "Save the version's text; the restore is recorded as a new version.\n\nA version that names no caption / LinkedIn field is not restorable (404). A\nversion whose text is already the current one changes nothing: no lock is\ntaken, no version recorded, and the sent lock version comes back.",
         "operationId": "restore_carousel_copy_version_api_carousels__project_id__copy_versions__version_number__restore_post",
         "parameters": [
           {

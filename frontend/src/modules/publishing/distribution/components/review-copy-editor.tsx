@@ -13,6 +13,7 @@ import { useLeaveGuard } from "@/modules/publishing/distribution/hooks/use-leave
 import {
   API_FIELD,
   COPY_FIELDS,
+  apiTexts,
 } from "@/modules/publishing/distribution/lib/copy-editor-state";
 import {
   IG_MAX_CHARS,
@@ -67,6 +68,7 @@ export function ReviewCaptionEditor({
         history={history}
         fields={CAPTION_API_FIELDS}
         blocked={editor.isDirty(CAPTION_ONLY)}
+        current={apiTexts(editor.saved)}
       />
     </div>
   );
@@ -111,6 +113,7 @@ export function ReviewLinkedInEditor({
         history={history}
         fields={LINKEDIN_API_FIELDS}
         blocked={editor.isDirty(LINKEDIN_POSTS)}
+        current={apiTexts(editor.saved)}
       />
     </div>
   );

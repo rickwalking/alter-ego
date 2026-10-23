@@ -10,6 +10,7 @@ function copy(
   return {
     editor: {
       draft: { caption: "", linkedinPt: "", linkedinEn: "" },
+      saved: { caption: "", linkedinPt: "", linkedinEn: "" },
       status: overrides.saving ? { kind: "saving" } : { kind: "idle" },
       canSave: true,
       isDirty: () => overrides.dirty === true,
@@ -24,6 +25,8 @@ function copy(
       status: overrides.restoring
         ? { kind: "restoring", versionNumber: 1 }
         : { kind: "idle" },
+      hasMore: false,
+      loadMore: vi.fn(),
     },
   };
 }

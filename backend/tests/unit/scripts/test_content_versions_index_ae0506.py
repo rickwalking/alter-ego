@@ -65,3 +65,12 @@ def test_cli_without_a_mode_is_a_usage_error(
     """Scenario: The deploy fixes the content versions unique index once."""
     assert cli.main([]) == cli.EXIT_USAGE
     assert "choose --apply and/or --verify" in capsys.readouterr().err
+
+
+def test_a_missing_table_reads_as_fixed() -> None:
+    """Scenario: The deploy fixes the content versions unique index once."""
+    report = content_versions_index.IndexReport(supported=True, table_present=False)
+    assert content_versions_index.is_fixed(report)
+    assert content_versions_index.format_report(report) == [
+        "content_versions index: no content_versions table, nothing to do"
+    ]

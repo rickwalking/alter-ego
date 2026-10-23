@@ -110,3 +110,18 @@ async def test_verify_fails_while_the_global_index_is_present() -> None:
     assert report.global_present
     assert not report.per_content_present
     assert content_versions_index.GLOBAL_INDEX in names
+
+
+@requires_postgres
+async def test_a_database_without_the_table_is_left_alone() -> None:
+    """Scenario: The deploy fixes the content versions unique index once."""
+    async with isolated_schema([]) as engine:
+        code = await run_modes(engine, _modes(apply=True, verify=True))
+        applied = await content_versions_index.apply(engine)
+        names = await _index_names(engine)
+
+    assert code == EXIT_OK
+    assert applied == content_versions_index.IndexReport(
+        supported=True, table_present=False
+    )
+    assert names == set()

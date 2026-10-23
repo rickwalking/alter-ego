@@ -3,40 +3,29 @@
 import { useLocale, useTranslations } from "next-intl";
 import { formatLocaleDateTime } from "@/lib/locale-format";
 import { DISTRIBUTION_FIELDS } from "@/modules/publishing/distribution/lib/copy-editor-state";
-import type { CopyVersionView } from "@/modules/publishing/distribution/hooks/types";
 import type { CopyVersionEntriesProps, CopyVersionListProps } from "./types";
+
+const NO_TEXTS: Readonly<Record<string, string>> = {};
 
 const LANGUAGE_BY_FIELD: Readonly<Record<string, string>> = {
   [DISTRIBUTION_FIELDS.LINKEDIN_PT]: "PT",
   [DISTRIBUTION_FIELDS.LINKEDIN_EN]: "EN",
 };
 
-/** The newest version of each field: it is the current text, nothing to restore. */
-function currentVersionNumbers(
-  versions: readonly CopyVersionView[],
-): Set<number> {
-  const seen = new Set<string>();
-  const current = new Set<number>();
-  for (const version of versions) {
-    if (!seen.has(version.field)) {
-      seen.add(version.field);
-      current.add(version.version_number);
-    }
-  }
-  return current;
-}
-
 /**
  * "Histórico" under a caption / LinkedIn editor: every version of its texts,
- * newest first, with who wrote it and when, and "Restaurar" on older ones.
+ * newest first (a page at a time), with who wrote it and when, and "Restaurar"
+ * on every version whose text is not the current saved one.
  * A restore waits while the text has unsaved edits. Without a history (a
  * read-only panel) nothing is shown.
  */
 export function CopyVersionList(
   props: Readonly<CopyVersionListProps>,
 ): React.ReactElement | null {
-  const { history } = props;
-  return history ? <CopyVersionEntries {...props} history={history} /> : null;
+  const { history, current = NO_TEXTS } = props;
+  return history ? (
+    <CopyVersionEntries {...props} history={history} current={current} />
+  ) : null;
 }
 
 /** The list itself, once there is a history to show. */
@@ -44,12 +33,12 @@ function CopyVersionEntries({
   history,
   fields,
   blocked,
+  current,
 }: Readonly<CopyVersionEntriesProps>): React.ReactElement {
   const t = useTranslations("publish.copy.history");
   const tPublish = useTranslations("publish");
   const locale = useLocale();
   const versions = history.versions.filter((v) => fields.includes(v.field));
-  const current = currentVersionNumbers(versions);
   const { status, restore } = history;
   return (
     <section aria-label={t("title")} className="space-y-2">
@@ -80,7 +69,7 @@ function CopyVersionEntries({
                 {LANGUAGE_BY_FIELD[version.field] && (
                   <span>{LANGUAGE_BY_FIELD[version.field]}</span>
                 )}
-                <span>{version.author_name ?? t("generated")}</span>
+                <span>{version.author_name ?? t("previous")}</span>
                 <time dateTime={version.created_at}>
                   {formatLocaleDateTime(version.created_at, locale)}
                 </time>
@@ -91,7 +80,7 @@ function CopyVersionEntries({
                 ) : null}
               </div>
               <p className="line-clamp-3 whitespace-pre-wrap">{version.text}</p>
-              {restore && !current.has(version.version_number) && (
+              {restore && current[version.field] !== version.text && (
                 <button
                   type="button"
                   disabled={blocked || status.kind === "restoring"}
@@ -112,6 +101,15 @@ function CopyVersionEntries({
             </li>
           ))}
         </ol>
+      )}
+      {history.hasMore && (
+        <button
+          type="button"
+          onClick={history.loadMore}
+          className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs"
+        >
+          {t("loadMore")}
+        </button>
       )}
     </section>
   );

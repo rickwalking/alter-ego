@@ -9,7 +9,7 @@ Feature: The owner sees and restores versions of the caption and the LinkedIn po
   Scenario: The history lists the versions of the text under its editor
     When the owner opens the caption editor on the publish page or in Revisão final
     Then "Histórico" lists the caption versions, newest first
-    And each shows its number, who wrote it (or "Texto gerado"), when, and the text
+    And each shows its number, who wrote it (or "Texto anterior" for a text kept without an author), when, and the text
 
   Scenario: The LinkedIn history shows the versions of both languages
     When the owner opens the LinkedIn editor
@@ -32,3 +32,12 @@ Feature: The owner sees and restores versions of the caption and the LinkedIn po
   Scenario: A refused restore explains why
     When the restore is refused as stale or as an already published caption
     Then the history shows the matching message
+
+  Scenario: A text changed outside the editor is kept before the next edit
+    Given the chat refine rewrote the caption after the last saved version
+    Then "Restaurar" is offered on every version whose text is not the current saved caption, the newest included
+
+  Scenario: The history is read a page at a time
+    Given more versions than one page
+    Then "Mostrar versões anteriores" loads the older ones
+    And it is gone once every version is loaded

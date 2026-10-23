@@ -51,9 +51,13 @@ function history(overrides: Partial<CopyHistory> = {}): CopyHistory {
     loading: false,
     status: { kind: "idle" },
     restore: vi.fn(() => Promise.resolve()),
+    hasMore: false,
+    loadMore: vi.fn(),
     ...overrides,
   };
 }
+
+const CURRENT = { caption: "Legenda restaurada", linkedin_post_en: "EN post" };
 
 describe("CopyVersionList (AE-0506)", () => {
   /** Scenario: The history lists the versions of the text under its editor */
@@ -63,6 +67,7 @@ describe("CopyVersionList (AE-0506)", () => {
         history={history()}
         fields={["caption"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     const items = screen.getAllByRole("listitem");
@@ -70,7 +75,7 @@ describe("CopyVersionList (AE-0506)", () => {
     expect(items[0]).toHaveTextContent("Version 3");
     expect(items[0]).toHaveTextContent("Pedro");
     expect(items[0]).toHaveTextContent("restored from version 1");
-    expect(items[2]).toHaveTextContent("Generated text");
+    expect(items[2]).toHaveTextContent("Previous text");
     expect(items[2]).toHaveTextContent("Legenda gerada");
     expect(screen.getAllByRole("time")[0]).toHaveAttribute(
       "datetime",
@@ -88,6 +93,7 @@ describe("CopyVersionList (AE-0506)", () => {
         history={history()}
         fields={["linkedin_post_pt", "linkedin_post_en"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
@@ -102,6 +108,7 @@ describe("CopyVersionList (AE-0506)", () => {
         history={current}
         fields={["caption"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Restore version 1" }));
@@ -111,7 +118,12 @@ describe("CopyVersionList (AE-0506)", () => {
   /** Scenario: A text with unsaved edits cannot be restored */
   it("waits for unsaved edits before a restore", () => {
     render(
-      <CopyVersionList history={history()} fields={["caption"]} blocked />,
+      <CopyVersionList
+        history={history()}
+        fields={["caption"]}
+        blocked
+        current={CURRENT}
+      />,
     );
     expect(
       screen.getByRole("button", { name: "Restore version 1" }),
@@ -130,6 +142,7 @@ describe("CopyVersionList (AE-0506)", () => {
         })}
         fields={["caption"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -144,6 +157,7 @@ describe("CopyVersionList (AE-0506)", () => {
         history={history({ status: { kind: "restoring", versionNumber: 1 } })}
         fields={["caption"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     expect(
@@ -162,6 +176,7 @@ describe("CopyVersionList (AE-0506)", () => {
         history={history({ versions: [], restore: undefined })}
         fields={["caption"]}
         blocked
+        current={CURRENT}
       />,
     );
     expect(screen.getByText("No saved versions yet.")).toBeInTheDocument();
@@ -170,8 +185,52 @@ describe("CopyVersionList (AE-0506)", () => {
         history={history({ versions: [], loading: true })}
         fields={["caption"]}
         blocked={false}
+        current={CURRENT}
       />,
     );
     expect(screen.getByText("Loading the history…")).toBeInTheDocument();
+  });
+
+  /** Scenario: A text changed outside the editor is kept before the next edit */
+  it("offers a restore on the newest version when the current text differs", () => {
+    render(
+      <CopyVersionList
+        history={history()}
+        fields={["caption"]}
+        blocked={false}
+        current={{ caption: "Texto do refine" }}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Restore version 3" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: The history is read a page at a time */
+  it("loads older versions on demand", () => {
+    const loadMore = vi.fn();
+    const { rerender } = render(
+      <CopyVersionList
+        history={history({ hasMore: true, loadMore })}
+        fields={["caption"]}
+        blocked={false}
+        current={CURRENT}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show older versions" }),
+    );
+    expect(loadMore).toHaveBeenCalledTimes(1);
+    rerender(
+      <CopyVersionList
+        history={history({ hasMore: false })}
+        fields={["caption"]}
+        blocked={false}
+        current={CURRENT}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Show older versions" }),
+    ).not.toBeInTheDocument();
   });
 });

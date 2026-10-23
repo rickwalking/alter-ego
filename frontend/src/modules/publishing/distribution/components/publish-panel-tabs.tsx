@@ -42,6 +42,7 @@ export function InstagramTab({
   publishResult,
   save,
   history,
+  savedTexts,
 }: Readonly<InstagramTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   const hashtagCount = countHashtags(caption);
@@ -103,6 +104,7 @@ export function InstagramTab({
         history={history}
         fields={CAPTION_FIELDS}
         blocked={unsaved}
+        current={savedTexts}
       />
     </div>
   );
@@ -117,6 +119,7 @@ export function LinkedInTab({
   pdfHref,
   save,
   history,
+  savedTexts,
 }: Readonly<LinkedInTabProps>): React.ReactElement {
   const t = useTranslations("publish");
   return (
@@ -168,6 +171,7 @@ export function LinkedInTab({
         history={history}
         fields={LINKEDIN_FIELDS}
         blocked={save?.dirty === true}
+        current={savedTexts}
       />
     </div>
   );

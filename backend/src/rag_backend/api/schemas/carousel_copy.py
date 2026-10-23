@@ -12,6 +12,10 @@ from rag_backend.domain.constants.carousel_copy_edit import (
     INSTAGRAM_CAPTION_MAX_CHARS,
     LINKEDIN_POST_MAX_CHARS,
 )
+from rag_backend.domain.constants.carousel_copy_versions import (
+    VERSIONS_PAGE_DEFAULT,
+    VERSIONS_PAGE_MAX,
+)
 
 
 class CarouselCopyUpdateRequest(BaseModel):
@@ -61,7 +65,19 @@ class CarouselCopyVersionResponse(BaseModel):
 
 
 class CarouselCopyVersionsResponse(BaseModel):
-    """The carousel's caption / LinkedIn versions, newest first."""
+    """One page of the carousel's caption / LinkedIn versions, newest first.
+
+    ``next_before`` is the ``before`` of the next (older) page, or null when this
+    page is the last.
+    """
 
     project_id: UUID
     versions: list[CarouselCopyVersionResponse]
+    next_before: int | None = None
+
+
+class VersionPageQuery(BaseModel):
+    """``limit`` versions (default 50, at most 200), older than ``before``."""
+
+    limit: int = Field(VERSIONS_PAGE_DEFAULT, ge=1, le=VERSIONS_PAGE_MAX)
+    before: int | None = Field(None, ge=1)

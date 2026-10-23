@@ -1,9 +1,10 @@
 import {
+  useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryResult,
   type UseMutationResult,
-  type UseQueryResult,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
@@ -28,6 +29,7 @@ const copyVersionSchema = z.object({
 const copyVersionsResponseSchema = z.object({
   project_id: z.string(),
   versions: z.array(copyVersionSchema),
+  next_before: z.number().nullable().optional(),
 });
 
 export type CopyVersionsResponse = z.infer<typeof copyVersionsResponseSchema>;
@@ -37,18 +39,22 @@ type CopyRestoreResponse = z.infer<typeof carouselCopyResponseSchema>;
 export const copyVersionsKey = (projectId: string) =>
   [...carouselKeys.detail(projectId), COPY_VERSIONS_KEY] as const;
 
-/** The carousel's caption / LinkedIn versions, newest first. */
+/** The carousel's caption / LinkedIn versions, newest first, a page at a time. */
 export function useCarouselCopyVersions(
   projectId: string,
-): UseQueryResult<CopyVersionsResponse> {
-  return useQuery({
+): UseInfiniteQueryResult<InfiniteData<CopyVersionsResponse>> {
+  return useInfiniteQuery({
     queryKey: copyVersionsKey(projectId),
-    queryFn: () =>
-      apiCall(
-        API_ENDPOINTS.CAROUSEL_COPY_VERSIONS(projectId),
-        copyVersionsResponseSchema,
-      ),
+    initialPageParam: undefined as number | undefined,
+    queryFn: ({ pageParam }) =>
+      apiCall(versionsUrl(projectId, pageParam), copyVersionsResponseSchema),
+    getNextPageParam: (last) => last.next_before ?? undefined,
   });
+}
+
+function versionsUrl(projectId: string, before: number | undefined): string {
+  const base = API_ENDPOINTS.CAROUSEL_COPY_VERSIONS(projectId);
+  return before === undefined ? base : `${base}?before=${before}`;
 }
 
 /**

@@ -20,6 +20,19 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     When the owner saves a new caption and a new Portuguese LinkedIn post in one save
     Then the versions are, in order, the generated caption, the new caption, the generated post and the new post
 
+  Scenario: A text changed outside the editor is kept before the next edit
+    Given the owner saved one caption edit
+    And the chat refine then rewrote the caption
+    When the owner saves another caption
+    Then the refined caption is stored as a previous text before the new caption
+    And it can be restored
+
+  Scenario: The history is read a page at a time
+    Given a carousel with more versions than one page
+    When the owner asks for the versions with a limit
+    Then the newest versions up to the limit come back with the cursor of the next page
+    And the next page holds the older versions and no cursor
+
   Scenario: A text that did not change stores no version
     When the owner saves the caption with the text it already has
     Then no version is stored
@@ -46,6 +59,11 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     And a new version records the restore of version 1
     And the response carries the next lock version
 
+  Scenario: Restoring the current text changes nothing
+    When the owner restores a version whose text is the current text
+    Then the response carries the current text and the sent lock version
+    And no version is stored and the lock version does not move
+
   Scenario: A restore is refused when it cannot be applied
     When the owner restores a version with a stale lock version
     Then the request is refused with 409 "version_conflict"
@@ -66,3 +84,4 @@ Feature: Every saved caption and LinkedIn post edit is kept as a version
     Then the global index is dropped and the per-content unique index exists
     And running it again changes nothing
     And --verify fails while the global index is present
+    And a database without the content_versions table is left alone and passes --verify

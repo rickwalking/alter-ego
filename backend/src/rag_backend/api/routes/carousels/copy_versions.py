@@ -29,9 +29,11 @@ from rag_backend.api.schemas.carousel_copy import (
     CarouselCopyResponse,
     CarouselCopyVersionResponse,
     CarouselCopyVersionsResponse,
+    VersionPageQuery,
 )
 from rag_backend.application.services.carousel.carousel_copy_edit_service import (
     CopyEditCommand,
+    CopyEditResult,
     CopyEdits,
 )
 from rag_backend.domain.constants.carousel_copy_versions import (
@@ -44,9 +46,10 @@ from rag_backend.domain.constants.distribution import (
     DISTRIBUTION_LINKEDIN_POST_PT_KEY,
 )
 from rag_backend.domain.models import CarouselProject
-from rag_backend.domain.models.carousel_copy_version import CopyVersion
+from rag_backend.domain.models.carousel_copy_version import CopyVersion, VersionPage
 
 router = APIRouter(tags=["carousels-copy"])
+
 
 CopyDeps = Annotated[
     CarouselCopyEditRouteDeps, Depends(get_carousel_copy_edit_route_deps)
@@ -89,17 +92,23 @@ def _edits_for(version: CopyVersion) -> CopyEdits:
     },
 )
 async def list_carousel_copy_versions(
-    project_id: UUID, deps: CopyDeps
+    project_id: UUID,
+    deps: CopyDeps,
+    page: Annotated[VersionPageQuery, Depends()],
 ) -> CarouselCopyVersionsResponse:
-    """Every stored version, newest first, with who saved it and when."""
+    """One page of stored versions, newest first, with who saved it and when."""
     await _owned_project(deps, project_id)
-    versions = await deps.service.versions(str(project_id))
+    versions = await deps.service.versions(
+        str(project_id), VersionPage(limit=page.limit, before=page.before)
+    )
+    full = len(versions) == page.limit
     return CarouselCopyVersionsResponse(
         project_id=project_id,
         versions=[
             CarouselCopyVersionResponse.model_validate(v, from_attributes=True)
             for v in versions
         ],
+        next_before=versions[-1].version_number if full and versions else None,
     )
 
 
@@ -125,13 +134,19 @@ async def restore_carousel_copy_version(
 ) -> CarouselCopyResponse:
     """Save the version's text; the restore is recorded as a new version.
 
-    A version that names no caption / LinkedIn field is not restorable (404).
+    A version that names no caption / LinkedIn field is not restorable (404). A
+    version whose text is already the current one changes nothing: no lock is
+    taken, no version recorded, and the sent lock version comes back.
     """
     project = await _owned_project(deps, project_id)
     lock_version = require_if_match(deps.if_match)
     version = await deps.service.version(str(project_id), version_number)
     if version is None or version.field not in DISTRIBUTION_KEYS:
         raise HTTPException(status_code=404, detail=ERR_COPY_VERSION_NOT_FOUND)
+    if getattr(project, version.field) == version.text:
+        return copy_response(
+            project_id, CopyEditResult(project=project, lock_version=lock_version)
+        )
     if version.field == DISTRIBUTION_CAPTION_KEY:
         await reject_published_caption(deps, project_id)
     result = await deps.service.save(

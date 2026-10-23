@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from httpx import AsyncClient, Response
 
 SECOND_CAPTION: Final = "Segunda legenda editada"
+REFINED_CAPTION: Final = "Legenda refinada pelo chat"
 IF_MATCH: Final = "If-Match"
 FIELD_CAPTION: Final = "caption"
 
@@ -298,3 +299,108 @@ async def test_restore_guards_of_the_save(copy_env: CopyEnv) -> None:
     assert running.status_code == 409
     assert running.json()["detail"] == CONFLICT_CODE_RUN_IN_PROGRESS
     assert (await saved_project(copy_env, project_id))["caption"] == EDITED_CAPTION
+
+
+async def _refine_caption(project_id: str, text: str) -> None:
+    """Rewrite the caption the way the chat refine does (repository write)."""
+    from uuid import UUID
+
+    from rag_backend.infrastructure.database.carousel_repository import (
+        PostgresCarouselRepository,
+    )
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    async with get_session_maker()() as session:
+        repo = PostgresCarouselRepository(session)
+        project = await repo.get_project_by_id(UUID(project_id))
+        assert project is not None
+        project.caption = text
+        await repo.update_project(project)
+
+
+@pytest.mark.asyncio
+async def test_a_refined_caption_is_kept_before_the_next_edit(
+    copy_env: CopyEnv,
+) -> None:
+    """Scenario: A text changed outside the editor is kept before the next edit."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+    await _refine_caption(project_id, REFINED_CAPTION)
+    async with copy_env.client_for(copy_env.owner) as client:
+        saved = await patch_copy(
+            client,
+            project_id,
+            {"caption": SECOND_CAPTION},
+            lock_version=INITIAL_LOCK_VERSION + 1,
+        )
+        assert saved.status_code == 200, saved.text
+        versions = await _owner_versions(copy_env, project_id)
+        restored = await _restore(client, project_id, 3, INITIAL_LOCK_VERSION + 2)
+
+    assert [(v["version_number"], v["text"], v["author_id"]) for v in versions] == [
+        (4, SECOND_CAPTION, str(copy_env.owner.id)),
+        (3, REFINED_CAPTION, None),
+        (2, EDITED_CAPTION, str(copy_env.owner.id)),
+        (1, GENERATED_CAPTION, None),
+    ]
+    assert restored.status_code == 200
+    assert restored.json()["caption"] == REFINED_CAPTION
+
+
+@pytest.mark.asyncio
+async def test_the_history_is_read_a_page_at_a_time(copy_env: CopyEnv) -> None:
+    """Scenario: The history is read a page at a time."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+        await patch_copy(
+            client,
+            project_id,
+            {"caption": SECOND_CAPTION},
+            lock_version=INITIAL_LOCK_VERSION + 1,
+        )
+        first = await client.get(
+            f"/api/carousels/{project_id}/copy/versions", params={"limit": 2}
+        )
+        cursor = first.json()["next_before"]
+        second = await client.get(
+            f"/api/carousels/{project_id}/copy/versions",
+            params={"limit": 2, "before": cursor},
+        )
+        too_big = await client.get(
+            f"/api/carousels/{project_id}/copy/versions", params={"limit": 201}
+        )
+
+    assert [v["version_number"] for v in first.json()["versions"]] == [3, 2]
+    assert cursor == 2
+    assert [v["version_number"] for v in second.json()["versions"]] == [1]
+    assert second.json()["next_before"] is None
+    assert too_big.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_restoring_the_current_text_changes_nothing(copy_env: CopyEnv) -> None:
+    """Scenario: Restoring the current text changes nothing."""
+    project_id = await copy_env.seed_carousel()
+    async with copy_env.client_for(copy_env.owner) as client:
+        await patch_copy(client, project_id, {"caption": EDITED_CAPTION})
+        same = await _restore(client, project_id, 2, INITIAL_LOCK_VERSION + 1)
+        after = await patch_copy(
+            client,
+            project_id,
+            {"caption": SECOND_CAPTION},
+            lock_version=INITIAL_LOCK_VERSION + 1,
+        )
+
+    assert same.status_code == 200
+    assert same.json()["caption"] == EDITED_CAPTION
+    assert same.json()["lock_version"] == INITIAL_LOCK_VERSION + 1
+    assert after.status_code == 200
+    assert [
+        v["version_number"] for v in await _owner_versions(copy_env, project_id)
+    ] == [
+        3,
+        2,
+        1,
+    ]

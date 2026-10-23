@@ -34,4 +34,12 @@ class NewCopyVersion:
     restored_from: int | None = None
 
 
-__all__ = ["CopyVersion", "NewCopyVersion"]
+@dataclass(frozen=True)
+class VersionPage:
+    """At most ``limit`` versions, older than ``before`` when set (newest first)."""
+
+    limit: int
+    before: int | None = None
+
+
+__all__ = ["CopyVersion", "NewCopyVersion", "VersionPage"]

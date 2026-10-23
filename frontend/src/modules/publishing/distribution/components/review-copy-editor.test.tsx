@@ -12,6 +12,7 @@ import {
 function editor(overrides: Partial<CopyEditor> = {}): CopyEditor {
   return {
     draft: { caption: "c", linkedinPt: "pt", linkedinEn: "en" },
+    saved: { caption: "c", linkedinPt: "pt", linkedinEn: "en" },
     status: { kind: "idle" },
     canSave: true,
     isDirty: () => true,

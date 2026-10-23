@@ -17,6 +17,7 @@ from rag_backend.domain.constants.carousel_copy_versions import (
 from rag_backend.domain.models.carousel_copy_version import (
     CopyVersion,
     NewCopyVersion,
+    VersionPage,
 )
 from rag_backend.infrastructure.database.models.source_comment import (
     ContentVersionModel,
@@ -88,13 +89,44 @@ class PostgresCopyVersionStore:
             )
         )
 
-    async def list_versions(self, project_id: str) -> list[CopyVersion]:
-        """The carousel's versions, newest first, with the author's name."""
-        stmt = self._select(project_id).order_by(
-            ContentVersionModel.version_number.desc()
+    async def list_versions(
+        self, project_id: str, page: VersionPage
+    ) -> list[CopyVersion]:
+        """One page of the carousel's versions, newest first, with the author's name."""
+        stmt = self._select(project_id)
+        if page.before is not None:
+            stmt = stmt.where(ContentVersionModel.version_number < page.before)
+        stmt = stmt.order_by(ContentVersionModel.version_number.desc()).limit(
+            page.limit
         )
         rows = (await self._session.execute(stmt)).all()
         return [_to_version(row) for row in rows]
+
+    async def latest_texts(self, project_id: str) -> dict[str, str]:
+        """The newest stored text per field: one row per field, no author join."""
+        field = ContentVersionModel.snapshot[SNAPSHOT_FIELD_KEY].as_string()
+        newest = (
+            select(func.max(ContentVersionModel.version_number))
+            .where(
+                ContentVersionModel.content_id == project_id,
+                ContentVersionModel.content_type == CONTENT_TYPE_CAROUSEL_COPY,
+            )
+            .group_by(field)
+        )
+        rows = await self._session.execute(
+            select(ContentVersionModel.snapshot).where(
+                ContentVersionModel.content_id == project_id,
+                ContentVersionModel.content_type == CONTENT_TYPE_CAROUSEL_COPY,
+                ContentVersionModel.version_number.in_(newest),
+            )
+        )
+        texts: dict[str, str] = {}
+        for (raw,) in rows:
+            snapshot: dict[str, object] = dict(raw) if isinstance(raw, dict) else {}
+            texts[str(snapshot.get(SNAPSHOT_FIELD_KEY, ""))] = str(
+                snapshot.get(SNAPSHOT_TEXT_KEY, "")
+            )
+        return texts
 
     async def get_version(self, project_id: str, number: int) -> CopyVersion | None:
         """Version ``number`` of the carousel, or ``None``."""

@@ -36,9 +36,13 @@ export function useCopyHistory(
   const restoreVersion = useRestoreCopyVersion();
   const [status, setStatus] = useState<CopyRestoreStatus>(IDLE);
   const base = {
-    versions: versions.data?.versions ?? [],
+    versions: versions.data?.pages.flatMap((page) => page.versions) ?? [],
     loading: versions.isLoading,
     status,
+    hasMore: versions.hasNextPage,
+    loadMore: () => {
+      void versions.fetchNextPage();
+    },
   };
   if (loadedLockVersion === undefined) {
     return base;

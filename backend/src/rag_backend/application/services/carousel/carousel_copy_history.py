@@ -1,9 +1,10 @@
 """Which versions one caption / LinkedIn save records.
 
-A save records, per text it changed, the new text by its author. When that text
-has no version yet, the text it replaced (the generated one) is recorded first,
-without an author, so it can be restored. A text the save did not change records
-nothing.
+A save records, per text it changed, the new text by its author. When the text
+it replaced is not the newest stored version of that field (the generated text,
+or one another writer such as the chat refine or a distribution regeneration
+left), that text is recorded first, without an author, so it can be restored. A
+text the save did not change records nothing.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from dataclasses import dataclass
 
 from rag_backend.domain.constants.carousel_copy_versions import (
     SUMMARY_EDIT,
-    SUMMARY_ORIGINAL,
+    SUMMARY_PREVIOUS,
     SUMMARY_RESTORE,
 )
 from rag_backend.domain.constants.distribution import DISTRIBUTION_KEYS
@@ -47,23 +48,26 @@ def _edit(change: CopyChange, field: str, text: str) -> NewCopyVersion:
     )
 
 
-def _original(field: str, text: str) -> NewCopyVersion:
+def _previous(field: str, text: str) -> NewCopyVersion:
     return NewCopyVersion(
-        field=field, text=text, author_id=None, summary=SUMMARY_ORIGINAL
+        field=field, text=text, author_id=None, summary=SUMMARY_PREVIOUS
     )
 
 
 def versions_for_change(
-    change: CopyChange, versioned_fields: set[str]
+    change: CopyChange, latest: Mapping[str, str]
 ) -> list[NewCopyVersion]:
-    """The versions to record, oldest first, for the texts ``change`` changed."""
+    """The versions to record, oldest first, for the texts ``change`` changed.
+
+    ``latest`` is the newest stored text of each field that has versions.
+    """
     versions: list[NewCopyVersion] = []
     for field in DISTRIBUTION_KEYS:
         old, new = change.before.get(field), change.after.get(field)
         if new is None or new == old:
             continue
-        if field not in versioned_fields and old:
-            versions.append(_original(field, old))
+        if old and latest.get(field) != old:
+            versions.append(_previous(field, old))
         versions.append(_edit(change, field, new))
     return versions
 

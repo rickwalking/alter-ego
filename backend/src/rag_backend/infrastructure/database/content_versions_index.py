@@ -11,7 +11,8 @@ timestamptz pattern).
 
 The old index is dropped if present and the new one created if absent, in one
 transaction. The old index was stricter, so no existing rows can break the new
-one. A database that is not Postgres (SQLite in tests) is a no-op.
+one. A database that is not Postgres (SQLite in tests), or one without the
+``content_versions`` table, is a no-op.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ GLOBAL_INDEX = "idx_content_versions_version"
 PER_CONTENT_INDEX = "uq_content_versions_content_version"
 POSTGRES_DIALECT = "postgresql"
 
+_TABLE_SQL = text("SELECT to_regclass(:table) IS NOT NULL")
 _INDEXES_SQL = text(
     "SELECT indexname FROM pg_indexes"
     " WHERE schemaname = current_schema() AND tablename = :table"
@@ -45,6 +47,7 @@ class IndexReport:
     """What one run found and did."""
 
     supported: bool
+    table_present: bool = True
     dropped_global: bool = False
     created_per_content: bool = False
     global_present: bool = False
@@ -54,6 +57,11 @@ class IndexReport:
 def is_supported(engine: AsyncEngine) -> bool:
     """Only Postgres carries the prod schema to fix."""
     return engine.dialect.name == POSTGRES_DIALECT
+
+
+async def _table_present(conn: AsyncConnection) -> bool:
+    present = await conn.scalar(_TABLE_SQL, {"table": CONTENT_VERSIONS_TABLE})
+    return bool(present)
 
 
 async def _indexes(conn: AsyncConnection) -> set[str]:
@@ -67,6 +75,9 @@ async def apply(engine: AsyncEngine) -> IndexReport:
         logger.info("content_versions_index_skipped", dialect=engine.dialect.name)
         return IndexReport(supported=False)
     async with engine.begin() as conn:
+        if not await _table_present(conn):
+            logger.info("content_versions_index_no_table")
+            return IndexReport(supported=True, table_present=False)
         before = await _indexes(conn)
         await conn.execute(_DROP_GLOBAL_SQL)
         await conn.execute(_CREATE_PER_CONTENT_SQL)
@@ -89,6 +100,9 @@ async def verify(engine: AsyncEngine) -> IndexReport:
         logger.info("content_versions_index_skipped", dialect=engine.dialect.name)
         return IndexReport(supported=False)
     async with engine.connect() as conn:
+        if not await _table_present(conn):
+            logger.info("content_versions_index_no_table")
+            return IndexReport(supported=True, table_present=False)
         present = await _indexes(conn)
     report = IndexReport(
         supported=True,
@@ -104,7 +118,9 @@ async def verify(engine: AsyncEngine) -> IndexReport:
 
 
 def is_fixed(report: IndexReport) -> bool:
-    """A verified schema with the per-content index and no global one."""
+    """A verified schema with the per-content index and no global one (or no table)."""
+    if not report.table_present:
+        return True
     return report.per_content_present and not report.global_present
 
 
@@ -112,6 +128,8 @@ def format_report(report: IndexReport) -> list[str]:
     """Human-readable lines for the deploy log."""
     if not report.supported:
         return ["content_versions index: not Postgres, nothing to do"]
+    if not report.table_present:
+        return ["content_versions index: no content_versions table, nothing to do"]
     return [
         f"content_versions index: dropped global {report.dropped_global},"
         f" created per-content {report.created_per_content},"

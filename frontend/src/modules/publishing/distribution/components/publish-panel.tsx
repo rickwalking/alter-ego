@@ -14,6 +14,7 @@ import { LanguageTabs } from "./publish-panel-parts";
 import { LeaveGuardDialog } from "./leave-guard-dialog";
 import type { PublishPanelProps } from "./types";
 import { useCopyEditor } from "@/modules/publishing/distribution/hooks/use-copy-editor";
+import { apiTexts } from "@/modules/publishing/distribution/lib/copy-editor-state";
 import { useLeaveGuard } from "@/modules/publishing/distribution/hooks/use-leave-guard";
 import type { CopyField } from "@/modules/publishing/distribution/hooks/types";
 import {
@@ -162,6 +163,7 @@ export function PublishPanel({
             isPublishingInstagram={isPublishingInstagram}
             publishResult={publishResult}
             history={copyHistory}
+            savedTexts={apiTexts(editor.saved)}
           />
         )}
         {activeTab === "linkedin" && (
@@ -173,6 +175,7 @@ export function PublishPanel({
             setLanguage={setLanguage}
             pdfHref={pdfUrl(project, language, cacheBustToken)}
             history={copyHistory}
+            savedTexts={apiTexts(editor.saved)}
           />
         )}
       </section>

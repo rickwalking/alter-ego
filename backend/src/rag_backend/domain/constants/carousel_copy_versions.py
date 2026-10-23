@@ -3,9 +3,10 @@
 Each saved change of the Instagram caption or a LinkedIn post (PT/EN) is a row
 in ``content_versions`` with ``content_type = "carousel_copy"``, the carousel id
 as ``content_id`` and ``snapshot = {field, text[, restored_from]}``. Versions are
-numbered per carousel (the per-content unique index). The first change of a text
-also keeps the text it replaced, with no author, so the generated text can be
-restored.
+numbered per carousel (the per-content unique index). A save also keeps the text
+it replaced, with no author, whenever that text is not the newest stored one
+(the generated text, or one another writer such as the chat refine left), so it
+can be restored.
 """
 
 from __future__ import annotations
@@ -19,8 +20,11 @@ SNAPSHOT_TEXT_KEY: Final = "text"
 SNAPSHOT_RESTORED_FROM_KEY: Final = "restored_from"
 
 SUMMARY_EDIT: Final = "edit"
-SUMMARY_ORIGINAL: Final = "original"
+SUMMARY_PREVIOUS: Final = "previous"
 SUMMARY_RESTORE: Final = "restore"
+
+VERSIONS_PAGE_DEFAULT: Final = 50
+VERSIONS_PAGE_MAX: Final = 200
 
 ERR_COPY_VERSION_NOT_FOUND: Final = "copy_version_not_found"
 
@@ -31,6 +35,8 @@ __all__ = [
     "SNAPSHOT_RESTORED_FROM_KEY",
     "SNAPSHOT_TEXT_KEY",
     "SUMMARY_EDIT",
-    "SUMMARY_ORIGINAL",
+    "SUMMARY_PREVIOUS",
     "SUMMARY_RESTORE",
+    "VERSIONS_PAGE_DEFAULT",
+    "VERSIONS_PAGE_MAX",
 ]
