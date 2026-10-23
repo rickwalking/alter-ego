@@ -23,10 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.cover_generation import (
     COVER_GENERATION_GRACE_SECONDS,
+    FAILURE_PHOTO_UNREADABLE,
 )
 from rag_backend.domain.constants.slide_cover import (
     COVER_KIND_AI_IMAGE,
-    ERR_COVER_ASSET_TYPE_UNSUPPORTED,
 )
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.cover_generation import (
@@ -85,11 +85,11 @@ class EditorialOwnerPhotos:
             else None
         )
         if path is None:
-            raise CoverAssetError(ERR_COVER_ASSET_TYPE_UNSUPPORTED)
+            raise CoverAssetError(FAILURE_PHOTO_UNREADABLE)
         try:
             content = await asyncio.to_thread(Path.read_bytes, path)
         except OSError:
-            raise CoverAssetError(ERR_COVER_ASSET_TYPE_UNSUPPORTED) from None
+            raise CoverAssetError(FAILURE_PHOTO_UNREADABLE) from None
         return await asyncio.to_thread(reference_photo, content)
 
 

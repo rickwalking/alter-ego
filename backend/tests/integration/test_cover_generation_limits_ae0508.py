@@ -10,7 +10,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -209,23 +208,15 @@ async def test_every_call_is_logged_without_the_prompt(
 @pytest.mark.integration
 class TestPayload:
     @pytest.mark.parametrize(
-        "payload",
+        ("photos", "changes"),
         [
-            {"photo_ids": [], "prompt": PROMPT, "confirmed": True},
-            {
-                "photo_ids": [str(uuid4()) for _ in range(4)],
-                "prompt": PROMPT,
-                "confirmed": True,
-            },
-            {"photo_ids": [str(uuid4())], "prompt": "   a  ", "confirmed": True},
-            {"photo_ids": [str(uuid4())], "prompt": "x" * 501, "confirmed": True},
-            {
-                "photo_ids": [str(uuid4())],
-                "prompt": PROMPT,
-                "confirmed": True,
-                "extra": 1,
-            },
-            {"photo_ids": [str(uuid4())], "prompt": PROMPT},
+            (0, {}),
+            (4, {}),
+            (1, {"prompt": "   "}),
+            (1, {"prompt": "\t\n a \n"}),
+            (1, {"prompt": "x" * 501}),
+            (1, {"extra": 1}),
+            (1, {"confirmed": None}),
         ],
     )
     async def test_invalid_payloads_are_422_and_record_nothing(
@@ -233,18 +224,51 @@ class TestPayload:
         client: AsyncClient,
         asset_dirs: Path,
         editor: FakeEditor,
-        payload: dict[str, object],
+        photos: int,
+        changes: dict[str, object],
     ) -> None:
         """Scenario: An invalid request is refused before anything is recorded."""
         photo = await upload_photo(client, RED)
         project_id = await project(client, photo["id"])
+        payload: dict[str, object] = {
+            "photo_ids": [photo["id"]] * photos,
+            "prompt": PROMPT,
+            "confirmed": True,
+        }
+        payload.update(changes)
+        payload = {k: v for k, v in payload.items() if v is not None}
 
         response = await client.post(
             f"/api/carousels/{project_id}/cover-generations", json=payload
         )
 
         assert response.status_code == 422
+        assert isinstance(response.json()["detail"], list)
         assert await generation_rows() == []
+        assert editor.jobs == []
+
+    async def test_a_photo_file_gone_mid_read_is_unreadable(
+        self,
+        client: AsyncClient,
+        asset_dirs: Path,
+        editor: FakeEditor,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Scenario: A bridge failure leaves no asset and can be retried."""
+        photo = await upload_photo(client, RED)
+        project_id = await project(client, photo["id"])
+
+        def _gone(_path: Path) -> bytes:
+            raise FileNotFoundError
+
+        monkeypatch.setattr(Path, "read_bytes", _gone)
+        await generate(client, project_id, [photo["id"]])
+        monkeypatch.undo()
+
+        rows = await generation_rows(project_id)
+        assert [row["error_code"] for row in rows] == [
+            "cover_generation_photo_unreadable"
+        ]
         assert editor.jobs == []
 
     async def test_a_stale_pending_row_is_reaped_on_start(
@@ -260,7 +284,7 @@ class TestPayload:
         started = await generate(client, project_id, [photo["id"]])
 
         assert started["status"] == "pending"
-        statuses = sorted(
-            str(row["error_code"]) for row in await generation_rows(project_id)
-        )
-        assert statuses == ["None", "cover_generation_interrupted"]
+        rows = await generation_rows(project_id)
+        assert sorted(str(row["status"]) for row in rows) == ["failed", "succeeded"]
+        failed = [row for row in rows if row["status"] == "failed"]
+        assert failed[0]["error_code"] == "cover_generation_interrupted"
