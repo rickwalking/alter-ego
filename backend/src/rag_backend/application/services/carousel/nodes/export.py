@@ -10,6 +10,7 @@ both languages.  Relative paths are rewritten so that standard exports
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -80,12 +81,14 @@ async def render_language(
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`.
 
     HD slides (2160x2700, for archive and retina) are exported too, non-blocking: if HD
-    fails the standard slides are still available.
+    fails the standard slides are still available. The standard and HD exports run
+    one after the other, and the PIL asset preparation and the img2pdf build run in a
+    worker thread so the event loop keeps serving requests.
     """
     lang_dir = config.output_dir / config.language
     lang_dir.mkdir(parents=True, exist_ok=True)
     if config.language == LANGUAGE_PT:
-        prepare_carousel_export_assets(config.output_dir)
+        await asyncio.to_thread(prepare_carousel_export_assets, config.output_dir)
 
     standard_html = rewrite_asset_paths(config.html_content, _UP_ONE)
     hd_html = rewrite_asset_paths(config.html_content, _UP_TWO)
@@ -117,7 +120,8 @@ async def render_language(
     if config.pdf_builder is None or not slide_paths:
         return
     try:
-        pdf_path = config.pdf_builder.build(
+        pdf_path = await asyncio.to_thread(
+            config.pdf_builder.build,
             slide_paths=slide_paths,
             output_dir=str(lang_dir),
         )

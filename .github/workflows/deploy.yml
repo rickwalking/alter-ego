@@ -300,6 +300,15 @@ jobs:
               echo "::error::palette timestamptz exited $PALETTE_TZ_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.carousel_phase_index --apply --verify
+            PHASE_INDEX_EXIT=$?
+            set -e
+            if [ "$PHASE_INDEX_EXIT" -ne 0 ]; then
+              echo "::error::carousel phase index exited $PHASE_INDEX_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -351,9 +360,15 @@ jobs:
               exit 1
             fi
 
-            # AE-0446 (Pedro's decision): surface a failed palette timestamptz step only now,
-            # with the stack up (palette writes may 500 until it is re-run).
+            ONE_SHOT_FAILED=0
             if [ "$PALETTE_TZ_EXIT" -ne 0 ]; then
               echo "::error::palette timestamptz failed (exit $PALETTE_TZ_EXIT): run 'python -m rag_backend.scripts.palette_timestamptz --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$PHASE_INDEX_EXIT" -ne 0 ]; then
+              echo "::error::carousel phase index failed (exit $PHASE_INDEX_EXIT): run 'python -m rag_backend.scripts.carousel_phase_index --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$ONE_SHOT_FAILED" -ne 0 ]; then
               exit 1
             fi

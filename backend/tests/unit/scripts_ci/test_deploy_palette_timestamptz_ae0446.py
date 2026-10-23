@@ -13,6 +13,7 @@ DEPLOY = REPO_ROOT / ".github" / "workflows" / "deploy.yml"
 COMPOSE = "docker compose -f docker-compose.prod.yml"
 BLOG_CUTOVER = "python -m rag_backend.scripts.blog_v1_to_v2 --apply --verify"
 STEP = "python -m rag_backend.scripts.palette_timestamptz --apply --verify"
+ONE_SHOT_EXIT = 'if [ "$ONE_SHOT_FAILED" -ne 0 ]'
 FINAL_CHECK = 'if [ "$PALETTE_TZ_EXIT" -ne 0 ]'
 
 
@@ -59,5 +60,8 @@ def test_step_failure_fails_the_job_after_the_stack_is_up() -> None:
     stack_up = _index(text, f"{COMPOSE} up -d\n")
     final_check = text.rfind(FINAL_CHECK)
     assert final_check > stack_up
-    assert "exit 1" in text[final_check : text.find("fi", final_check)]
+    assert "ONE_SHOT_FAILED=1" in text[final_check : text.find("fi", final_check)]
+    single_exit = text.find(ONE_SHOT_EXIT, final_check)
+    assert single_exit > final_check
+    assert "exit 1" in text[single_exit : text.find("fi", single_exit)]
     assert f"{COMPOSE} down" not in text[final_check:]
