@@ -107,5 +107,9 @@ class SqlCoverGenerationRepository:
         """Commit the session."""
         await self._session.commit()
 
+    async def rollback(self) -> None:
+        """End the session's transaction without writing (releases the connection)."""
+        await self._session.rollback()
+
 
 __all__ = ["SqlCoverGenerationRepository"]

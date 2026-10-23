@@ -1249,6 +1249,7 @@
           "cancel": "Cancel"
         },
         "errors": {
+          "loadFailed": "The cover generations could not be loaded. Reload the page.",
           "failed": "The cover could not be generated.",
           "bridge": "Grok did not return the cover (failure or timeout). No image was kept.",
           "invalidImage": "Grok's image cannot be used as a cover (size or format). No image was kept.",

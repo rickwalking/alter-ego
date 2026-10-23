@@ -14,6 +14,7 @@ import type {
   CoverGenerationInput,
   CoverGenerations,
 } from "@/modules/publishing/distribution/hooks/use-cover-generation";
+import type { CapReason } from "@/modules/publishing/distribution/hooks/types";
 import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type {
@@ -109,6 +110,18 @@ export interface CoverPromptFieldProps {
 /** The caps in use (null until loaded). */
 export interface CoverUsageLineProps {
   usage: CoverGenerations | null;
+}
+
+/** The generate button and the cap reason. */
+export interface CoverGenerateActionProps {
+  enabled: boolean;
+  blocked: CapReason;
+  onAsk: () => void;
+}
+
+/** Why the generate form is not shown. */
+export interface CoverGenerateUnavailableProps {
+  error: Error;
 }
 
 /** The confirmation of one generation. */

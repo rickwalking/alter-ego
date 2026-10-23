@@ -283,10 +283,23 @@ describe("CoverGeneratePanel", () => {
   });
 
   /** Scenario: The action needs a photo and a prompt */
-  it("renders nothing without library photos", () => {
+  it.each([
+    [new ApiError(403, "forbidden"), "errors.notOwner"],
+    [new ApiError(500, "boom"), "errors.loadFailed"],
+  ])("hides the form when the list cannot be read (%s)", async (error, key) => {
+    mockApiCall.mockRejectedValue(error);
+    renderPanel();
+
+    expect(await screen.findByRole("note")).toHaveProperty("textContent", key);
+    expect(screen.queryByRole("button", { name: "action" })).toBeNull();
+  });
+
+  /** Scenario: The action needs a photo and a prompt */
+  it("renders nothing and reads nothing without library photos", () => {
     routeApi([list()]);
     renderPanel([]);
     expect(screen.queryByRole("button", { name: "action" })).toBeNull();
+    expect(mockApiCall).not.toHaveBeenCalled();
   });
 });
 

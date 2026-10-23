@@ -59,7 +59,7 @@ Chosen: **option 1**. Contract: [GrokBot Image Bridge §2.4](../architecture/gro
 - Good, because nothing new is integrated: one endpoint, one callback, one job table.
 - Good, because no URL to a personal photo exists; the bytes are re-encoded without metadata.
 - Bad, because the photos are processed by a third party (accepted by Pedro).
-- Bad, because a 2–6 MB webhook body is larger than a text job's; the bridge timeout and the
+- Bad, because a 1–5 MB webhook body is larger than a text job's; the bridge timeout and the
   failure path contain a slow or refused job.
 - Neutral, because a new table reaches prod through the `create_all` bootstrap (no one-shot).
 

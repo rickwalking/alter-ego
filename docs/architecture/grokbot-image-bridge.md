@@ -143,8 +143,9 @@ text-only job never sends them.
 ```
 
 - `reference_images`: 1–3 of the owner's library photos, chosen per generation. Re-encoded by
-  the backend as PNG, at most 1536 px a side, every metadata block (EXIF, GPS, XMP) dropped.
-  Bytes only: no URL to the photo ever leaves the app. A body is about 2–6 MB.
+  the backend as PNG, at most 1024 px a side, every metadata block (EXIF, GPS, XMP) dropped.
+  Bytes only: no URL to the photo ever leaves the app. A body is about 1–5 MB (up to three
+  photos of about 1–1.5 MB each, base64-encoded).
 - The Grok Bot runs image-to-image with those photos as the reference (the person must stay
   recognisable) and answers through the §2.2 callback exactly as for a text job.
 - The backend fits the answer to 1080×1350, applies the `ai_image` cover rules (ADR-0024) and

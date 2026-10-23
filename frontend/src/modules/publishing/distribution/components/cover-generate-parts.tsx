@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from "@/constants/api";
 import { BG_CARD, NEON_CYAN, TEXT_DIM } from "@/constants/neon";
 import { GENERATION_STATUS } from "@/modules/publishing/distribution/hooks/use-cover-generation";
 import type {
+  CoverGenerateActionProps,
   CoverGenerationStatusProps,
   CoverPhotoChecklistProps,
   CoverPromptFieldProps,
@@ -180,5 +181,31 @@ export function CoverUsageLine({
         monthCap: usage.month_cap,
       })}
     </p>
+  );
+}
+
+/** "Gerar capa", and why it is disabled when a cap is reached. */
+export function CoverGenerateAction({
+  enabled,
+  blocked,
+  onAsk,
+}: Readonly<CoverGenerateActionProps>): React.ReactElement {
+  const t = useTranslations("publish.coverPicker.generate");
+  return (
+    <>
+      <button
+        type="button"
+        disabled={!enabled}
+        onClick={onAsk}
+        className="rounded border border-white/20 px-3 py-1 text-xs disabled:opacity-50"
+      >
+        {t("action")}
+      </button>
+      {blocked && (
+        <p role="note" className="mt-2 text-xs text-amber-300">
+          {t(`blocked.${blocked}`)}
+        </p>
+      )}
+    </>
   );
 }

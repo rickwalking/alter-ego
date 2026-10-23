@@ -37,7 +37,9 @@ from rag_backend.domain.constants.cover_generation import (
     FAILURE_BRIDGE,
     FAILURE_INVALID_IMAGE,
     FAILURE_PHOTO_UNREADABLE,
+    FAILURE_UNEXPECTED,
     LOG_COVER_GENERATION,
+    LOG_COVER_GENERATION_CRASHED,
     LOG_COVER_GENERATION_FAILED,
     LOG_COVER_GENERATION_STARTED,
     LOG_COVER_GENERATION_SUCCEEDED,
@@ -89,6 +91,8 @@ class CoverGenerationStore(Protocol):
     async def fail_stale(self, created_before: datetime, at: datetime) -> int: ...
 
     async def commit(self) -> None: ...
+
+    async def rollback(self) -> None: ...
 
 
 class OwnerPhotos(Protocol):
@@ -289,12 +293,27 @@ class CoverGenerationRunner:
         self._deps = deps
 
     async def run(self, run: CoverGenerationRun) -> CoverGenerationStatus:
-        """Send, store and settle; the final status."""
+        """Send, store and settle; the final status.
+
+        Any unexpected error (a file gone mid-read, a database error) is rolled
+        back and settles the row ``failed`` too, so it never stays pending.
+        """
+        try:
+            return await self._attempt(run)
+        except Exception:
+            logger.exception(
+                LOG_COVER_GENERATION_CRASHED, generation_id=str(run.generation.id)
+            )
+            await self._deps.store.rollback()
+            return await self._fail(run.generation, FAILURE_UNEXPECTED)
+
+    async def _attempt(self, run: CoverGenerationRun) -> CoverGenerationStatus:
         generation = run.generation
         try:
             photos = await self._deps.photos.load(run.photo_ids)
         except CoverAssetError:
             return await self._fail(generation, FAILURE_PHOTO_UNREADABLE)
+        await self._deps.store.rollback()
         job = CoverEditJob(
             prompt=self._deps.render_prompt(run.prompt),
             photos=photos,

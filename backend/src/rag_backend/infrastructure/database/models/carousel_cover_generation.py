@@ -28,8 +28,9 @@ from rag_backend.infrastructure.database.config import Base
 class CarouselCoverGenerationModel(Base):
     """One generation: the budget log row and its outcome.
 
-    The result asset is kept with ``SET NULL`` so deleting the image never
-    erases the spend record; deleting the carousel or the owner removes it.
+    The carousel and the result asset are kept with ``SET NULL``, so deleting
+    either never erases the spend record (the monthly cap still counts it);
+    deleting the owner removes it.
     """
 
     __tablename__ = TABLE_COVER_GENERATIONS
@@ -37,10 +38,10 @@ class CarouselCoverGenerationModel(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[str | None] = mapped_column(
         String(36),
-        ForeignKey("carousel_projects.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("carousel_projects.id", ondelete="SET NULL"),
+        nullable=True,
     )
     owner_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
@@ -76,7 +77,7 @@ class CarouselCoverGenerationModel(Base):
         """The domain row."""
         return CoverGeneration(
             id=uuid.UUID(self.id),
-            project_id=self.project_id,
+            project_id=self.project_id or "",
             owner_id=self.owner_id,
             status=CoverGenerationStatus(self.status),
             prompt_sha256=self.prompt_sha256,

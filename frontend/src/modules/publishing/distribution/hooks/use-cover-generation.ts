@@ -63,9 +63,21 @@ function hasPending(data: CoverGenerations | undefined): boolean {
   );
 }
 
-/** The generations, polled while one runs; the cover options refresh when it settles. */
+function newestSucceeded(data: CoverGenerations | undefined): string | null {
+  return (
+    data?.generations.find((g) => g.status === GENERATION_STATUS.SUCCEEDED)
+      ?.id ?? null
+  );
+}
+
+/**
+ * The generations (only while ``enabled``), polled while one runs. The cover
+ * options refresh whenever the newest succeeded generation changes, so a fast
+ * job or one that finished while polling was paused still shows up.
+ */
 export function useCoverGenerations(
   projectId: string,
+  enabled: boolean,
 ): UseQueryResult<CoverGenerations> {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -75,19 +87,25 @@ export function useCoverGenerations(
         API_ENDPOINTS.CAROUSEL_COVER_GENERATIONS(projectId),
         coverGenerationsSchema,
       ),
+    enabled,
+    retry: false,
     refetchInterval: (current) =>
       hasPending(current.state.data) ? POLL_INTERVAL_MS : false,
   });
-  const running = hasPending(query.data);
-  const wasRunning = useRef(running);
+  const loaded = query.data !== undefined;
+  const newest = newestSucceeded(query.data);
+  const seen = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (wasRunning.current && !running) {
+    if (!loaded) {
+      return;
+    }
+    if (seen.current !== undefined && seen.current !== newest) {
       void queryClient.invalidateQueries({
         queryKey: coverOptionKeys.detail(projectId),
       });
     }
-    wasRunning.current = running;
-  }, [running, projectId, queryClient]);
+    seen.current = newest;
+  }, [loaded, newest, projectId, queryClient]);
   return query;
 }
 

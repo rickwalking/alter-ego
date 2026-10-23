@@ -1,6 +1,6 @@
 # AE-0508 — Generate new cover images from library photos with Grok
 
-Status: In Progress
+Status: In Development
 Tier: T2
 Priority: High
 Type: Feature
@@ -32,8 +32,10 @@ photos.
 
 - Image bridge webhook (contract §2.1) gains two optional fields, sent only for a cover generation:
   `task: "image_edit"` and `reference_images: [{"b64_json", "mime_type"}]` (1-3 photos, re-encoded to PNG,
-  at most 1536 px a side, no metadata). `model` is `GROK_COVER_MODEL`, `size` is `1080x1350`. The callback
-  contract is unchanged. Text-only jobs send exactly the old body.
+  at most 1024 px a side, no metadata) on the same endpoint and callback as the text path (Pedro: the
+  Grok Bot side already takes image requests through its sidecar, so no bot-side change). `model` is the
+  bridge's model, `size` is `1080x1350`, `metadata.content_type` is `carousel_cover`. No OpenAI fallback
+  for these jobs. Text-only jobs send exactly the old body.
 - `GET /api/carousels/{id}/cover-generations` (owner only): the caps in use and the carousel's generations
   (status, error code, result asset).
 - `POST /api/carousels/{id}/cover-generations` `{photo_ids: [1-3], prompt: 3-500 chars, confirmed: true}`
@@ -51,7 +53,8 @@ photos.
 - Caps: succeeded and pending generations count; failed ones do not (retry is free). 4 per carousel,
   40 per calendar month (UTC) per owner.
 - Every call is logged: one row per generation (`carousel_cover_generations`: time, carousel, owner,
-  prompt SHA-256, photo count, model, cost, status, error code) and a structured log line
+  prompt SHA-256, photo count, model, cost from `GROK_COVER_COST_USD` (default 0: the Grok Bot runs on a
+  subscription), status, error code) and a structured log line
   `cover_generation` with the same fields (no prompt text, no image bytes).
 - Cover options list the carousel's generated covers (`source: "generated"`, kind `ai_image`); picking one
   goes through `PUT /api/carousels/{id}/cover` and stores it as `slide_cover` (full-bleed, like the
@@ -74,11 +77,12 @@ photos.
 - **Personal data egress.** The owner's photos leave the app to the Grok Bot and xAI. Mitigations: owner
   only (not admins), an explicit `confirmed: true` per generation backed by a dialog that names xAI; only
   the photos the owner ticked are sent, re-encoded (EXIF/GPS and every metadata block dropped) and capped
-  at 1536 px; bytes travel inside the authenticated webhook body, never as a URL, so nothing is publicly
+  at 1024 px; bytes travel inside the authenticated webhook body, never as a URL, so nothing is publicly
   fetchable. Photos never enter fixtures; tests use generated images.
 - **Spend abuse.** Caps 4/carousel and 40/month enforced server-side, one pending generation per carousel,
-  rate limit on the POST, failures do not count. The cap check and the insert run in one transaction under
-  a per-owner advisory lock, so two clicks cannot both pass the last slot.
+  rate limit on the POST (5/minute per user), failures do not count. The cap check and the insert run in
+  one transaction after locking the owner's user row (`SELECT ... FOR UPDATE`), so two clicks cannot both
+  pass the last slot.
 - **Untrusted output.** The bridge callback is already token-authenticated and size-bounded; the result is
   decoded with the pixel budget, re-encoded and stored as a private creator asset. No URL from the bot is
   ever fetched (no SSRF).
@@ -117,14 +121,13 @@ See `backend/tests/features/cover_generation_ae0508.feature` and
 - [ ] API (OpenAPI artifact: `GET/POST /api/carousels/{id}/cover-generations`)
 - [ ] Database: new table `carousel_cover_generations` (alembic revision; prod's `create_all` bootstrap
       creates a missing table with its indexes, so no deploy one-shot is needed)
-- [ ] Docs: bridge contract §2.4, ADR-0026
+- [ ] Docs: bridge contract §2.4, ADR-0027
 - [ ] Tests
 
 ## Dependencies
 
-GrokBot routine must accept `task: "image_edit"` + `reference_images` (contract §2.4) and the Grok image
-model id must be set in `GROK_COVER_MODEL` before the feature produces images in prod; until then a
-generation fails cleanly (bot answers with an error or the job times out) and nothing is stored.
+None in this repo. The Grok Bot sidecar must read `reference_images` (contract §2.4); asked of Pedro
+to confirm. If it does not, a generation is text-only on the bot side; nothing else breaks.
 
 ## Progress Log
 
@@ -146,4 +149,4 @@ See `.agent/reports/AE-0508.qa.md`.
 
 ## Blockers
 
-GrokBot side contract change (asked of Pedro).
+None.

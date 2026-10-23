@@ -200,3 +200,23 @@ def test_cover_editor_is_the_bridge_service_when_configured() -> None:
         "image_bridge_public_base_url": _BASE_URL,
     })
     assert isinstance(build_grokbot_cover_editor(settings), GrokBotImageService)
+
+
+def test_cover_jobs_share_one_editor(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.modules.editorial.public import cover_run_wiring
+
+    monkeypatch.setenv("GROKBOT_IMAGE_WEBHOOK_URL", "https://hooks.example/x")
+    monkeypatch.setenv("IMAGE_BRIDGE_PUBLIC_BASE_URL", _BASE_URL)
+    get_settings.cache_clear()
+    try:
+        first = cover_run_wiring(str).editor
+        second = cover_run_wiring(str).editor
+        get_settings.cache_clear()
+        third = cover_run_wiring(str).editor
+    finally:
+        get_settings.cache_clear()
+
+    assert first is second
+    assert third is not first

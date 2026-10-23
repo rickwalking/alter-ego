@@ -1249,6 +1249,7 @@
           "cancel": "Cancelar"
         },
         "errors": {
+          "loadFailed": "Não foi possível carregar as gerações de capa. Recarregue a página.",
           "failed": "Não foi possível gerar a capa.",
           "bridge": "O Grok não devolveu a capa (falha ou tempo esgotado). Nenhuma imagem foi guardada.",
           "invalidImage": "A imagem do Grok não serve como capa (tamanho ou formato). Nenhuma imagem foi guardada.",

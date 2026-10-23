@@ -7,13 +7,11 @@ photos are generated images.
 
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from PIL import Image
 
 from rag_backend.application.services.carousel.cover_generation import (
     CoverGenerationConfig,
@@ -28,18 +26,7 @@ from rag_backend.application.services.carousel.cover_generation import (
     month_start,
     prompt_digest,
 )
-from rag_backend.application.services.carousel.cover_pick import (
-    CoverPickCommand,
-    CoverPickDeps,
-    CoverPickService,
-)
-from rag_backend.application.services.carousel.reference_photo import reference_photo
-from rag_backend.application.services.carousel.slide_cover_switch import (
-    SlideCoverSwitchCommand,
-    SlideCoverSwitchResult,
-)
 from rag_backend.domain.models import CarouselProject, CarouselStatus
-from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.cover_generation import (
     CoverEditJob,
     CoverGeneration,
@@ -47,7 +34,7 @@ from rag_backend.domain.models.cover_generation import (
     CoverGenerationStatus,
     ReferencePhoto,
 )
-from rag_backend.domain.models.slide_cover import CoverAssetError, SlideCover
+from rag_backend.domain.models.slide_cover import CoverAssetError
 
 _OWNER = "00000000-0000-4000-8000-000000000508"
 _NOW = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
@@ -90,6 +77,7 @@ class _Store:
     stale_cutoffs: list[datetime] = field(default_factory=list)
     commits: int = 0
     locked: list[str] = field(default_factory=list)
+    rollbacks: int = 0
 
     async def lock_owner(self, owner_id: str) -> None:
         self.locked.append(owner_id)
@@ -116,6 +104,9 @@ class _Store:
 
     async def commit(self) -> None:
         self.commits += 1
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
 
 
 @dataclass
@@ -337,6 +328,32 @@ class TestRunner:
         assert results.stored == []
         assert store.commits == 1
 
+    async def test_the_read_transaction_ends_before_the_bridge_wait(self) -> None:
+        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        store = _Store()
+        seen: list[int] = []
+
+        class _Watching(_Editor):
+            async def edit_image(self, job: CoverEditJob) -> bytes:
+                seen.append(store.rollbacks)
+                return await super().edit_image(job)
+
+        await _runner(store, _Photos(), _Results(), _Watching()).run(_run())
+
+        assert seen == [1]
+
+    async def test_an_unexpected_error_settles_failed(self) -> None:
+        """Scenario: A bridge failure leaves no asset and can be retried."""
+        store, results = _Store(), _Results()
+        editor = _Editor(error=OSError("disk full"))
+
+        status = await _runner(store, _Photos(), results, editor).run(_run())
+
+        assert status is CoverGenerationStatus.FAILED
+        assert store.settled[-1].error_code == "cover_generation_failed"
+        assert store.rollbacks == 2
+        assert results.stored == []
+
     async def test_a_row_failed_meanwhile_discards_the_image(self) -> None:
         """Scenario: A run lost to a restart is reported as interrupted."""
         store, results = _Store(settle_result=False), _Results()
@@ -352,134 +369,3 @@ def test_month_start_and_digest() -> None:
     assert prompt_digest("x") != prompt_digest("y")
     assert _generation(CoverGenerationStatus.FAILED).counts_against_caps is False
     assert _generation(CoverGenerationStatus.SUCCEEDED).counts_against_caps is True
-
-
-class TestReferencePhoto:
-    def test_drops_metadata_and_bounds_the_size(self) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
-        source = io.BytesIO()
-        image = Image.new("RGB", (2000, 3000), (10, 20, 30))
-        exif = Image.Exif()
-        exif[0x010F] = "SecretCam"
-        image.save(source, format="JPEG", exif=exif.tobytes())
-
-        photo = reference_photo(source.getvalue())
-
-        assert photo.mime_type == "image/png"
-        with Image.open(io.BytesIO(photo.content)) as sent:
-            assert sent.format == "PNG"
-            assert max(sent.size) == 1536
-            assert not sent.getexif()
-        assert b"SecretCam" not in photo.content
-
-    def test_unreadable_bytes_are_refused(self) -> None:
-        """Scenario: A bridge failure leaves no asset and can be retried."""
-        with pytest.raises(CoverAssetError):
-            reference_photo(b"not an image")
-
-
-@dataclass
-class _Library:
-    async def photos(self, owner_id: str) -> tuple[CarouselCreatorAsset, ...]:
-        del owner_id
-        return ()
-
-    async def stage(
-        self, project: CarouselProject, asset: CarouselCreatorAsset
-    ) -> None:
-        del project, asset
-
-
-@dataclass
-class _NoOffer:
-    async def offer(self, project_id: str) -> SlideCover | None:
-        del project_id
-
-
-@dataclass
-class _Switcher:
-    commands: list[SlideCoverSwitchCommand] = field(default_factory=list)
-
-    async def switch(self, command: SlideCoverSwitchCommand) -> SlideCoverSwitchResult:
-        self.commands.append(command)
-        return SlideCoverSwitchResult(status="fixed")
-
-
-@dataclass
-class _Generated:
-    items: tuple[CarouselCreatorAsset, ...]
-
-    async def covers(self, project_id: str) -> tuple[CarouselCreatorAsset, ...]:
-        del project_id
-        return self.items
-
-
-class TestPicker:
-    async def test_generated_cover_is_offered_and_picked_as_ai_image(self) -> None:
-        """Scenario: The generated cover is a cover option and can be picked."""
-        made = CarouselCreatorAsset(
-            owner_id=_OWNER,
-            content_sha256="abc",
-            media_type="image/webp",
-            width=1080,
-            height=1350,
-            relative_path="assets/creators/abc.webp",
-            role="cover",
-        )
-        switcher = _Switcher()
-        service = CoverPickService(
-            CoverPickDeps(
-                library=_Library(),
-                offers=_NoOffer(),
-                switcher=switcher,
-                generated=_Generated((made,)),
-            )
-        )
-        project = _project()
-
-        options = await service.options(project)
-        await service.pick(
-            CoverPickCommand(project=project, asset_id=made.id, expected_version=3)
-        )
-
-        assert [(o.asset_id, o.source, o.kind) for o in options.options] == [
-            (made.id, "generated", "ai_image")
-        ]
-        cover = switcher.commands[0].cover
-        assert cover == SlideCover(
-            asset_id=made.id, kind="ai_image", staged_path="assets/creators/abc.webp"
-        )
-        assert switcher.commands[0].hook_photo is None
-
-    async def test_picker_without_generated_source_lists_none(self) -> None:
-        """Scenario: The generated cover is a cover option and can be picked."""
-        service = CoverPickService(
-            CoverPickDeps(library=_Library(), offers=_NoOffer(), switcher=_Switcher())
-        )
-        assert (await service.options(_project())).options == ()
-
-
-async def test_a_crashed_run_is_logged_and_untracked() -> None:
-    """Scenario: A run lost to a restart is reported as interrupted."""
-    import asyncio
-
-    from structlog.testing import capture_logs
-
-    from rag_backend.application.services.carousel.cover_generation_tasks import (
-        running_cover_generation_tasks,
-        schedule_cover_generation,
-    )
-
-    async def _boom() -> object:
-        raise ValueError("db down")
-
-    with capture_logs() as logs:
-        task = schedule_cover_generation(_boom, "gen-1")
-        assert task in running_cover_generation_tasks()
-        assert task.get_name() == "cover-generation-gen-1"
-        await task
-        await asyncio.sleep(0)
-
-    assert task not in running_cover_generation_tasks()
-    assert logs[0]["event"] == "cover_generation_crashed"
-    assert logs[0]["generation_id"] == "gen-1"

@@ -10,6 +10,7 @@ import type { ChatStream } from "@/lib/use-chat-stream";
 
 import type { Message } from "@/schemas/chat";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import type { CoverGenerations as CoverGenerationsView } from "./use-cover-generation";
 
 export interface UsePublishChatReturn {
   conversationId: string | null;
@@ -163,4 +164,33 @@ export interface CoverGenerationInput {
   projectId: string;
   photoIds: readonly string[];
   prompt: string;
+}
+
+/** Why a new generation is not allowed now (a cap), or null. */
+export type CapReason = "carouselCap" | "monthlyCap" | null;
+
+/** The "Gerar capa com Grok" form state and actions. */
+export interface CoverGenerateForm {
+  data: CoverGenerationsView | undefined;
+  loadError: Error | null;
+  latest: CoverGenerationsView["generations"][number] | null;
+  running: boolean;
+  blocked: CapReason;
+  canGenerate: boolean;
+  selected: readonly string[];
+  toggle: (assetId: string) => void;
+  prompt: string;
+  setPrompt: (prompt: string) => void;
+  asking: CoverGenerationInput | null;
+  cancel: () => void;
+  ask: () => void;
+  confirm: (describe: (code: string | null) => string) => Promise<void>;
+}
+
+/** What decides whether "Gerar capa" is enabled. */
+export interface GenerateGate {
+  loaded: boolean;
+  formReady: boolean;
+  running: boolean;
+  blocked: CapReason;
 }

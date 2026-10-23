@@ -192,19 +192,34 @@ def cover_generation_service(session: AsyncSession) -> CoverGenerationService:
     )
 
 
+_shared_editor: list[tuple[object, CoverImageEditor]] = []
+
+
+def _cover_editor() -> CoverImageEditor:
+    """One bridge editor per settings object, so every cover job shares its slots.
+
+    Raises ``ImageBridgeConfigError`` when the bridge is not configured (never
+    cached, so configuring it takes effect on the next request).
+    """
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.modules.image_bridge import build_grokbot_cover_editor
+
+    settings = get_settings()
+    if _shared_editor and _shared_editor[0][0] is settings:
+        return _shared_editor[0][1]
+    editor = build_grokbot_cover_editor(settings)
+    _shared_editor[:] = [(settings, editor)]
+    return editor
+
+
 def cover_run_wiring(render_prompt: Callable[[str], str]) -> CoverRunWiring:
     """The bridge editor (no OpenAI fallback), the prompt and the clock.
 
     Raises ``ImageBridgeConfigError`` when the bridge is not configured, so the
     caller refuses before anything is recorded.
     """
-    from rag_backend.infrastructure.config.settings import get_settings
-    from rag_backend.modules.image_bridge import build_grokbot_cover_editor
-
     return CoverRunWiring(
-        editor=build_grokbot_cover_editor(get_settings()),
-        render_prompt=render_prompt,
-        now=utc_now,
+        editor=_cover_editor(), render_prompt=render_prompt, now=utc_now
     )
 
 
