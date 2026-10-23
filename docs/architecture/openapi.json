@@ -12644,7 +12644,7 @@
     },
     "/api/carousels/{project_id}/copy/versions/{version_number}/restore": {
       "post": {
-        "description": "Save the version's text; the restore is recorded as a new version.",
+        "description": "Save the version's text; the restore is recorded as a new version.\n\nA version that names no caption / LinkedIn field is not restorable (404).",
         "operationId": "restore_carousel_copy_version_api_carousels__project_id__copy_versions__version_number__restore_post",
         "parameters": [
           {
