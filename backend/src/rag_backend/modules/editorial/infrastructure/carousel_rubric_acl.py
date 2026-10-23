@@ -123,8 +123,7 @@ class CarouselRubricAcl:
         await self._session.execute(
             delete(RubricEvaluationScoreModel).where(
                 RubricEvaluationScoreModel.content_id == project_id,
-                RubricEvaluationScoreModel.content_type
-                == RUBRIC_CONTENT_TYPE_CAROUSEL,
+                RubricEvaluationScoreModel.content_type == RUBRIC_CONTENT_TYPE_CAROUSEL,
             )
         )
         await self._session.commit()
