@@ -6,11 +6,13 @@ from rag_backend.application.tools.carousel import (
     build_regenerate_slide_image_tool,
 )
 from rag_backend.application.tools.knowledge_base import (
+    SearchToolOptions,
     build_list_documents_tool,
     build_search_documents_tool,
 )
 
 __all__ = [
+    "SearchToolOptions",
     "build_list_documents_tool",
     "build_refine_carousel_copy_tool",
     "build_refine_carousel_design_tool",

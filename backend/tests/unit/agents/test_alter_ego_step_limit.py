@@ -16,6 +16,7 @@ from structlog.testing import capture_logs
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.chat_fallback import looks_portuguese, no_knowledge_reply
+from rag_backend.agents.chat_knowledge import ChatKnowledge
 from rag_backend.application.tools.knowledge_base import (
     SearchToolOptions,
     build_search_documents_tool,
@@ -78,8 +79,10 @@ async def _stream(agent: AlterEgoAgent, message: str) -> list[dict[str, object]]
 
 @pytest.mark.asyncio
 async def test_step_limit_becomes_an_honest_reply() -> None:
-    """Running out of steps yields the fallback reply and a server warning."""
-    # Scenario: A question the knowledge base cannot answer gets an honest reply
+    """Running out of steps yields the fallback reply and a server warning.
+
+    Scenario: A question the knowledge base cannot answer gets an honest reply
+    """
     graph = _LoopingGraph([])
     with capture_logs() as logs:
         events = await _stream(_agent(graph), "Give me a link to your blog")
@@ -94,8 +97,10 @@ async def test_step_limit_becomes_an_honest_reply() -> None:
 
 @pytest.mark.asyncio
 async def test_fallback_follows_partial_text_on_a_new_paragraph() -> None:
-    """Text streamed before the limit is kept; the fallback starts a new paragraph."""
-    # Scenario: A question the knowledge base cannot answer gets an honest reply
+    """Text streamed before the limit is kept; the fallback starts a new paragraph.
+
+    Scenario: A question the knowledge base cannot answer gets an honest reply
+    """
     events = await _stream(_agent(_LoopingGraph(["Hmm, "])), "Oi, tudo bem?")
 
     assert events[-1] == {
@@ -117,8 +122,10 @@ async def test_fallback_follows_partial_text_on_a_new_paragraph() -> None:
     ],
 )
 def test_reply_language_follows_the_visitor(message: str, portuguese: bool) -> None:
-    """Portuguese questions get the Portuguese reply, others the English one."""
-    # Scenario: The honest reply is in the visitor's language
+    """Portuguese questions get the Portuguese reply, others the English one.
+
+    Scenario: The honest reply is in the visitor's language
+    """
     assert looks_portuguese(message) is portuguese
     expected = NO_KNOWLEDGE_REPLY_PT if portuguese else NO_KNOWLEDGE_REPLY_EN
     assert no_knowledge_reply(message) == expected
@@ -126,8 +133,10 @@ def test_reply_language_follows_the_visitor(message: str, portuguese: bool) -> N
 
 @pytest.mark.asyncio
 async def test_search_tool_stops_after_its_budget() -> None:
-    """The 4th search of a 3-search budget never reaches the knowledge base."""
-    # Scenario: The search tool stops after its budget
+    """The 4th search of a 3-search budget never reaches the knowledge base.
+
+    Scenario: The search tool stops after its budget
+    """
     search = MagicMock()
     search.search = AsyncMock(return_value=[])
     tool = build_search_documents_tool(search, SearchToolOptions(max_calls=3))
@@ -140,8 +149,10 @@ async def test_search_tool_stops_after_its_budget() -> None:
 
 @pytest.mark.asyncio
 async def test_search_tool_without_budget_keeps_searching() -> None:
-    """The default tool (the carousel chat's) has no budget."""
-    # Scenario: The search tool stops after its budget
+    """The default tool (the carousel chat's) has no budget.
+
+    Scenario: The search tool stops after its budget
+    """
     search = MagicMock()
     search.search = AsyncMock(return_value=[])
     tool = build_search_documents_tool(search)
@@ -188,8 +199,10 @@ def _search_call(index: int) -> AIMessage:
 async def test_real_harness_fits_the_search_budget_within_the_step_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """On the real deep-agent graph, 4 searches (one refused) and an answer fit the limit."""
-    # Scenario: The search tool stops after its budget
+    """On the real deep-agent graph, 4 searches (one refused) and an answer fit the limit.
+
+    Scenario: The search tool stops after its budget
+    """
     from rag_backend.agents import alter_ego_agent as agent_module
 
     model = _ScriptedToolModel(
@@ -203,7 +216,7 @@ async def test_real_harness_fits_the_search_budget_within_the_step_limit(
         retriever=AsyncMock(),
         message_repository=AsyncMock(),
         document_repository=AsyncMock(),
-        knowledge_search=search,
+        knowledge=ChatKnowledge(search=search),
     )
 
     with capture_logs() as logs:
@@ -217,8 +230,10 @@ async def test_real_harness_fits_the_search_budget_within_the_step_limit(
 
 @pytest.mark.asyncio
 async def test_search_logs_never_carry_the_visitor_text() -> None:
-    """Search logs carry the query's length and hash, never its words."""
-    # Scenario: Search logs never contain the visitor's words
+    """Search logs carry the query's length and hash, never its words.
+
+    Scenario: Search logs never contain the visitor's words
+    """
     search = MagicMock()
     search.search = AsyncMock(return_value=[])
     tool = build_search_documents_tool(search, SearchToolOptions(max_calls=1))

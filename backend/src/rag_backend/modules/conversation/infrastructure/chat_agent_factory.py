@@ -29,7 +29,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.rag_agent import RAGAgent
-from rag_backend.api.dependencies.agents import build_agent_for_conversation
+from rag_backend.api.dependencies.agents import (
+    ChatAgentDeps,
+    build_agent_for_conversation,
+)
 from rag_backend.infrastructure.container import Container
 from rag_backend.modules.conversation.domain.models import Conversation
 
@@ -38,7 +41,8 @@ class LegacyChatAgentFactory:
     """Adapt the legacy agent builders to the ``ChatAgentFactory`` port.
 
     Binds the request-scoped session and the container, then delegates each
-    ``build_for_conversation`` call to ``build_agent_for_conversation`` so the
+    ``build_for_conversation`` call to ``build_agent_for_conversation`` (with no
+    caller, so the agent reads public knowledge only) so the
     routing and knowledge-facade wiring are byte-identical to the legacy path.
     """
 
@@ -64,7 +68,9 @@ class LegacyChatAgentFactory:
     def build_for_conversation(
         self, conversation: Conversation
     ) -> AlterEgoAgent | RAGAgent:
-        return build_agent_for_conversation(conversation, self._db, self._container)
+        return build_agent_for_conversation(
+            conversation, self._db, ChatAgentDeps(container=self._container)
+        )
 
 
 __all__ = [

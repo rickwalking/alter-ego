@@ -222,7 +222,7 @@
       "system": "System",
       "all": "All",
       "filter": "Filter by scope",
-      "hint": "The chat reads both. Use Public for knowledge that can be shown publicly.",
+      "hint": "The public chat reads only Public knowledge; your dashboard chat reads both.",
       "makePublic": "Make public",
       "makePersonal": "Make personal",
       "changing": "Changing…",

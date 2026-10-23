@@ -223,7 +223,9 @@ def _patch_agents(monkeypatch: pytest.MonkeyPatch) -> None:
     from rag_backend.api.routes import conversations as conv_module
 
     agent = _mock_agent()
-    monkeypatch.setattr(stream_module, "build_alter_ego_agent", lambda _db, _c: agent)
+    monkeypatch.setattr(
+        stream_module, "build_alter_ego_agent", lambda _db, _c, _scope: agent
+    )
     monkeypatch.setattr(
         conv_module, "build_agent_for_conversation", lambda _conv, _db, _c: agent
     )

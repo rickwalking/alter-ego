@@ -11,12 +11,18 @@ retriever, external services) from the container.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+from rag_backend.agents.chat_knowledge import (
+    ChatKnowledge,
+    KnowledgeAudience,
+    KnowledgeScope,
+    knowledge_scope_for,
+)
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.carousel.editorial_subagent import (
@@ -48,7 +54,7 @@ from rag_backend.domain.constants.carousel_tools import (
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import CarouselProject, Conversation
-from rag_backend.infrastructure.container import Container
+from rag_backend.infrastructure.container import Container, get_container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
@@ -80,6 +86,7 @@ class RagAgentBuildContext:
 
     owner_user_id: str | None = None
     bound_project_id: str | None = None
+    knowledge_audience: KnowledgeAudience = field(default_factory=KnowledgeAudience)
 
 
 @dataclass(frozen=True)
@@ -99,21 +106,36 @@ class WorkflowContext:
     db: AsyncSession
 
 
+@dataclass(frozen=True)
+class ChatAgentDeps:
+    """The DI container and the calling user's id (``None`` when anonymous)."""
+
+    container: Container
+    caller_id: UUID | str | None = None
+
+
 def build_agent_for_conversation(
     conversation: Conversation,
     db: AsyncSession,
-    container: Container,
+    deps: ChatAgentDeps,
 ) -> AlterEgoAgent | RAGAgent:
     """Route to the appropriate agent based on conversation metadata.
 
     Conversations with ``project_id`` metadata get the full RAGAgent
     (carousel tools + subagent). All others get the AlterEgoAgent
-    (personal knowledge base only).
+    (knowledge base only). Both read personal knowledge only when the caller
+    is the site owner in the site owner's conversation (see
+    ``conversation_knowledge_scope``).
     """
+    container = deps.container
+    audience = KnowledgeAudience(
+        owner_id=conversation.user_id, caller_id=deps.caller_id
+    )
+    scope = conversation_knowledge_scope(audience, container)
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
-        return build_alter_ego_agent(db, container)
+        return build_alter_ego_agent(db, container, scope)
     if conversation.user_id is None:
-        return build_alter_ego_agent(db, container)
+        return build_alter_ego_agent(db, container, scope)
     return build_rag_agent(
         db,
         container,
@@ -122,6 +144,7 @@ def build_agent_for_conversation(
             bound_project_id=str(
                 conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
             ),
+            knowledge_audience=audience,
         ),
     )
 
@@ -146,10 +169,29 @@ def _build_knowledge_search(db: AsyncSession, container: Container) -> Knowledge
     return bootstrap_module(platform=container, adapters=adapters)
 
 
-def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
+def conversation_knowledge_scope(
+    audience: KnowledgeAudience, container: Container
+) -> KnowledgeScope:
+    """What a chat of ``audience`` may read: personal and public only when the
+    caller and the conversation owner are both the configured site owner
+    (``AUTOPILOT_OWNER_USER_ID``), public otherwise, and public for everyone
+    while the setting is unset.
+    """
+    return knowledge_scope_for(audience, container.settings().autopilot_owner_user_id)
+
+
+def user_knowledge_scope(user_id: UUID | str) -> KnowledgeScope:
+    """What a knowledge search of ``user_id`` may read, using the app container."""
+    audience = KnowledgeAudience(owner_id=user_id, caller_id=user_id)
+    return conversation_knowledge_scope(audience, get_container())
+
+
+def build_alter_ego_agent(
+    db: AsyncSession, container: Container, scope: KnowledgeScope
+) -> AlterEgoAgent:
     """Build an AlterEgoAgent bound to the given per-request session.
 
-    This agent is scoped to personal knowledge base search ONLY.
+    This agent searches and lists the knowledge base within ``scope`` ONLY.
     It has ZERO carousel tools and cannot create or edit content.
     """
     return AlterEgoAgent(
@@ -157,7 +199,9 @@ def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAge
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
-        knowledge_search=_build_knowledge_search(db, container),
+        knowledge=ChatKnowledge(
+            search=_build_knowledge_search(db, container), scope=scope
+        ),
     )
 
 
@@ -356,7 +400,12 @@ def build_rag_agent(
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
-        knowledge_search=_build_knowledge_search(db, container),
+        knowledge=ChatKnowledge(
+            search=_build_knowledge_search(db, container),
+            scope=conversation_knowledge_scope(
+                build_context.knowledge_audience, container
+            ),
+        ),
         carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repo,
         editorial_subagent=editorial_subagent,

@@ -27,7 +27,10 @@ from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
 )
-from rag_backend.api.dependencies.agents import build_agent_for_conversation
+from rag_backend.api.dependencies.agents import (
+    ChatAgentDeps,
+    build_agent_for_conversation,
+)
 from rag_backend.api.dependencies.carousel_access import (
     assert_carousel_conversation_chat_access,
     validate_carousel_conversation_metadata,
@@ -96,16 +99,17 @@ class _RouteChatAgentFactory:
     safety net (which monkeypatches it) keeps overriding agent
     construction without a live LLM, while reusing the request session +
     container from the DI-built factory — routing + wiring stay byte-identical.
+    It carries the caller's id so the agent's knowledge scope can check it.
     """
 
-    def __init__(self, factory: LegacyChatAgentFactory) -> None:
+    def __init__(self, factory: LegacyChatAgentFactory, caller_id: UUID | None) -> None:
         self._db = factory.session
-        self._container = factory.container
+        self._deps = ChatAgentDeps(container=factory.container, caller_id=caller_id)
 
     def build_for_conversation(
         self, conversation: Conversation
     ) -> AlterEgoAgent | RAGAgent:
-        return build_agent_for_conversation(conversation, self._db, self._container)
+        return build_agent_for_conversation(conversation, self._db, self._deps)
 
 
 def _anon_cookie_path(request: Request, conversation_id: UUID) -> str:
@@ -367,7 +371,9 @@ async def chat(
 
     handlers = ConversationHandlers(
         service=module.service,
-        agent_factory=_RouteChatAgentFactory(agent_factory),
+        agent_factory=_RouteChatAgentFactory(
+            agent_factory, caller.user.id if caller.user is not None else None
+        ),
         unit_of_work=module.unit_of_work,
     )
 

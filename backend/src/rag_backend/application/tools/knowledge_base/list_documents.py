@@ -5,6 +5,10 @@ from langchain_core.tools import tool
 from rag_backend.domain.models import DocumentStatus
 from rag_backend.domain.protocols import DocumentRepository
 
+_LIST_LIMIT = 20
+_SCOPED_READ_LIMIT = 100
+_NO_DOCUMENTS = "No documents found in the knowledge base."
+
 
 @tool
 async def list_documents() -> str:
@@ -19,7 +23,7 @@ async def list_documents() -> str:
 
 def build_list_documents_tool(
     document_repository: DocumentRepository,
-    scope_filter: str | None = None,
+    scope_filter: frozenset[str] | None = None,
 ) -> ...:
     """Return a bound list_documents tool closure.
 
@@ -28,7 +32,11 @@ def build_list_documents_tool(
 
     Args:
         document_repository: Document repository instance
-        scope_filter: Optional scope to filter documents by
+        scope_filter: Optional scopes the listed documents must belong to
+
+    With a scope filter the tool reads up to 100 recent completed documents
+    and lists the first 20 in those scopes, so recent documents of other
+    scopes do not crowd the allowed ones out of the list.
     """
 
     @tool
@@ -38,13 +46,13 @@ def build_list_documents_tool(
         Use this to see what information is available.
         """
         docs = await document_repository.get_all(
-            status=DocumentStatus.COMPLETED, limit=20
+            status=DocumentStatus.COMPLETED,
+            limit=_LIST_LIMIT if scope_filter is None else _SCOPED_READ_LIMIT,
         )
-        if not docs:
-            return "No documents found in the knowledge base."
-
         if scope_filter is not None:
-            docs = [d for d in docs if d.scope.value == scope_filter]
+            docs = [d for d in docs if d.scope.value in scope_filter][:_LIST_LIMIT]
+        if not docs:
+            return _NO_DOCUMENTS
 
         formatted_docs = [f"- {doc.title} ({doc.chunk_count} chunks)" for doc in docs]
 

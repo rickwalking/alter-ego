@@ -15484,7 +15484,7 @@
     },
     "/api/conversations/{conversation_id}/chat/stream": {
       "post": {
-        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in the anonymous conversation their ``anon_token``\ncookie was issued for. A conversation owned by a signed-in user accepts\nmessages only from its owner or an admin. Anyone else, like an unknown id,\ngets 404 before the stream starts.",
+        "description": "Send a message to the Alter-Ego agent and stream the response via SSE.\n\nAnonymous visitors chat in the anonymous conversation their ``anon_token``\ncookie was issued for. A conversation owned by a signed-in user accepts\nmessages only from its owner or an admin. Anyone else, like an unknown id,\ngets 404 before the stream starts. Personal knowledge is read only when the\nsite owner chats in the site owner's own conversation; everything else\nreads public knowledge only.",
         "operationId": "chat_stream_api_conversations__conversation_id__chat_stream_post",
         "parameters": [
           {
@@ -18098,7 +18098,7 @@
         ]
       },
       "post": {
-        "description": "Search for relevant documents using hybrid search.\n\nThis endpoint performs a hybrid search combining semantic (dense vector)\nand keyword (BM25) search with Reciprocal Rank Fusion.\n\nArgs:\n    request: Search request with query and parameters\n\nReturns:\n    List of search results ranked by relevance",
+        "description": "Search for relevant documents using hybrid search.\n\nThis endpoint performs a hybrid search combining semantic (dense vector)\nand keyword (BM25) search with Reciprocal Rank Fusion. Only the site owner\nsearches personal knowledge; any other signed-in user gets public only.\n\nArgs:\n    request: Search request with query and parameters\n\nReturns:\n    List of search results ranked by relevance",
         "operationId": "search_documents_api_search_post",
         "requestBody": {
           "content": {

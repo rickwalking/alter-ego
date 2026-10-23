@@ -222,7 +222,7 @@
       "system": "Sistema",
       "all": "Todos",
       "filter": "Filtrar por escopo",
-      "hint": "O chat consulta os dois. Use Público para o que pode ser mostrado publicamente.",
+      "hint": "O chat público lê só o que é Público; o seu chat no painel lê os dois.",
       "makePublic": "Tornar público",
       "makePersonal": "Tornar pessoal",
       "changing": "Alterando…",

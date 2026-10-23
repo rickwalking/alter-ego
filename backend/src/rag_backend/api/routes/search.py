@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED, ERR_SEARCH_FAILED
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.agents import user_knowledge_scope
 from rag_backend.api.dependencies.knowledge import get_knowledge_service
 from rag_backend.api.schemas import (
     ErrorResponse,
@@ -54,6 +55,11 @@ def _to_result_response(result: SearchResultView) -> SearchResultResponse:
     )
 
 
+def _namespace_prefix_for(user: User) -> str:
+    """Personal and public knowledge for the site owner, public for anyone else."""
+    return user_knowledge_scope(user.id).namespace_prefix
+
+
 @router.post(
     "",
     response_model=SearchResponse,
@@ -71,7 +77,8 @@ async def search_documents(
     """Search for relevant documents using hybrid search.
 
     This endpoint performs a hybrid search combining semantic (dense vector)
-    and keyword (BM25) search with Reciprocal Rank Fusion.
+    and keyword (BM25) search with Reciprocal Rank Fusion. Only the site owner
+    searches personal knowledge; any other signed-in user gets public only.
 
     Args:
         request: Search request with query and parameters
@@ -85,6 +92,7 @@ async def search_documents(
                 query=request.query,
                 top_k=request.top_k,
                 alpha=request.alpha,
+                namespace_prefix=_namespace_prefix_for(user),
             )
         )
     except Exception as e:

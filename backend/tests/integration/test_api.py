@@ -348,7 +348,7 @@ class TestAgentRoutingByMetadata:
 
         monkeypatch.setattr(
             "rag_backend.api.dependencies.agents.build_alter_ego_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, _scope: mock_agent,
         )
 
         create_resp = await client.post(
@@ -383,7 +383,7 @@ class TestAgentRoutingByMetadata:
 
         monkeypatch.setattr(
             "rag_backend.api.dependencies.agents.build_alter_ego_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, _scope: mock_agent,
         )
 
         create_resp = await client.post(

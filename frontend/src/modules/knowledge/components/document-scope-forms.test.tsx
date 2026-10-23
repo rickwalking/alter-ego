@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "@/i18n/locales/en.json";
+import pt from "@/i18n/locales/pt.json";
 import { uploadFormData } from "../hooks/use-upload";
 import { DocumentForm } from "./document-form";
 import { FileUpload } from "./file-upload";
@@ -79,6 +80,9 @@ describe("Scope at upload", () => {
     render(<FileUpload />);
     pickFile();
     expect(screen.getByText(en.knowledge.scope.hint)).toBeInTheDocument();
+    expect(pt.knowledge.scope.hint).toContain(
+      "O chat público lê só o que é Público",
+    );
   });
 });
 
