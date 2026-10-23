@@ -45,6 +45,9 @@ EXIT_OK = 0
 EXIT_REFUSED = 1
 _ERR_APPLY_NEEDS_FILES = "--apply needs --threads and --backup"
 _ERR_FILES_NEED_APPLY = "--threads and --backup only go with --apply"
+_ERR_TTL_DAYS = "--ttl-days must be at least 1"
+_ERR_NO_THREADS_FILE = "the --threads file does not exist"
+_ERR_BACKUP_EXISTS = "the --backup file already exists"
 _HEADER = (
     "thread_id\tstatus\tphase_status\tworkflow_status\tpublic\tarchived\tupdated_at"
     "\tcheckpoints\twrites\tblobs"
@@ -68,12 +71,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _apply_files_error(args: argparse.Namespace) -> str | None:
+    """The usage error for the sign-off and backup files of ``--apply``."""
+    if args.threads is None or args.backup is None:
+        return _ERR_APPLY_NEEDS_FILES
+    if not args.threads.is_file():
+        return _ERR_NO_THREADS_FILE
+    if args.backup.exists():
+        return _ERR_BACKUP_EXISTS
+    return None
+
+
 def _mode_error(args: argparse.Namespace) -> str | None:
     """The usage error for an incomplete or contradictory mode."""
-    files = args.threads is not None, args.backup is not None
-    if args.apply and not all(files):
-        return _ERR_APPLY_NEEDS_FILES
-    if not args.apply and any(files):
+    if args.ttl_days is not None and args.ttl_days < 1:
+        return _ERR_TTL_DAYS
+    if args.apply:
+        return _apply_files_error(args)
+    if args.threads is not None or args.backup is not None:
         return _ERR_FILES_NEED_APPLY
     return None
 

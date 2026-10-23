@@ -51,9 +51,13 @@ docker compose -f docker-compose.prod.yml cp \
 ```
 
 The run re-checks every signed-off thread under a row lock and refuses (exit 1, nothing deleted) if one is no
-longer eligible. It writes every row it deletes to the backup file (which must not exist yet) and checks the count
-before deleting, all in one transaction. A run that deletes nothing, or fewer rows than expected, exits 1 and rolls
-back. Exit 2 is a usage error.
+longer eligible. It writes every row it deletes to the backup file (owner-only, which must not exist yet) and checks
+the count before deleting, all in one transaction. A run that deletes nothing, or fewer rows than expected, exits 1
+and rolls back; its backup file then lists rows that are still in the tables, so delete it before the next run.
+Exit 2 is a usage error (missing or existing files, `--ttl-days` below 1).
+
+Keep-latest is safe only while no carousel state uses a LangGraph `DeltaChannel` (its value is rebuilt from older
+checkpoints). A unit test fails the day one is added; do not run the prune on a build where it fails.
 
 ## Step 5 — Reclaim the space
 

@@ -5,6 +5,10 @@ For each (thread, namespace) the latest checkpoint is the highest
 writes of that checkpoint and of its parent (the saver reads the parent's pending
 sends) and the blobs its ``channel_versions`` point at. Every other row of the
 thread is prunable. Queries are SQLAlchemy Core; thread ids are bound parameters.
+
+Keep-latest is only safe while no graph state uses a ``DeltaChannel``: the saver
+rebuilds those values from older checkpoints and writes, which this prune deletes.
+A unit test fails the day the carousel graph adds one.
 """
 
 from __future__ import annotations

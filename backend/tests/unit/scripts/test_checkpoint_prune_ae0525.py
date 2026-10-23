@@ -11,8 +11,10 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from langgraph.channels import DeltaChannel
 
 from rag_backend.agents.carousel_workflow_engine import CarouselWorkflowEngine
+from rag_backend.agents.carousel_workflow_graph import build_carousel_workflow_graph
 from rag_backend.domain.carousel_checkpoint_thread import checkpoint_thread_id
 from rag_backend.domain.constants.checkpoint_prune import (
     AUTOPILOT_RUNS_TABLE,
@@ -74,6 +76,49 @@ def test_apply_without_sign_off_or_backup_is_a_usage_error(argv: list[str]) -> N
     with patch.object(cli, "_run_on_own_engine", runner):
         assert cli.main(argv) == cli.EXIT_USAGE
     runner.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("ttl", "threads_exist", "backup_exists", "error"),
+    [
+        ("0", True, False, "--ttl-days must be at least 1"),
+        ("-5", True, False, "--ttl-days must be at least 1"),
+        ("30", False, False, "the --threads file does not exist"),
+        ("30", True, True, "the --backup file already exists"),
+    ],
+)
+def test_a_bad_ttl_or_file_is_a_usage_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    ttl: str,
+    threads_exist: bool,
+    backup_exists: bool,
+    error: str,
+) -> None:
+    """Scenario: Apply without a sign-off file or a backup file is a usage error"""
+    threads = tmp_path / "threads.txt"
+    backup = tmp_path / "b.jsonl"
+    if threads_exist:
+        threads.write_text(f"{_THREAD}\n")
+    if backup_exists:
+        backup.write_text("kept\n")
+    argv = ["--apply", "--ttl-days", ttl, "--threads", str(threads)]
+    runner = AsyncMock()
+    with patch.object(cli, "_run_on_own_engine", runner):
+        assert cli.main([*argv, "--backup", str(backup)]) == cli.EXIT_USAGE
+    runner.assert_not_called()
+    assert error in capsys.readouterr().err
+    assert not backup_exists or backup.read_text() == "kept\n"
+
+
+def test_the_carousel_graph_has_no_delta_channel() -> None:
+    """Scenario: Keep-latest pruning is refused for history-dependent state"""
+    graph = build_carousel_workflow_graph().compile()
+    delta = [
+        name for name, ch in graph.channels.items() if isinstance(ch, DeltaChannel)
+    ]
+    assert graph.channels
+    assert delta == []
 
 
 async def test_dry_run_prints_states_and_saves_thread_ids(

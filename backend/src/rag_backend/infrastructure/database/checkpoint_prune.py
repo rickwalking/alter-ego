@@ -10,7 +10,9 @@ checkpoint, so a run that resumes it later still has its node-level state.
 
 ``find_candidates`` only reads. ``apply_prune`` locks the eligible projects,
 refuses when a signed-off thread is no longer eligible, writes every prunable row
-to the backup file and checks it, then deletes in the same transaction.
+to the backup file (created owner-only, never overwritten) and checks it, then
+deletes in the same transaction. If the delete then rolls back, the backup lists
+rows that are still in the tables.
 """
 
 from __future__ import annotations
@@ -53,6 +55,8 @@ from rag_backend.infrastructure.database.models import CarouselProjectModel
 logger = structlog.get_logger(__name__)
 
 FINISHED_STATUSES = (CarouselStatus.COMPLETED.value, CarouselStatus.FAILED.value)
+_BACKUP_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+_BACKUP_MODE = 0o600
 _BACKUP_LINE = '{{"table": "{table}", "row": {row}}}\n'
 _autopilot_runs = table(
     AUTOPILOT_RUNS_TABLE, column("carousel_project_id"), column("state")
@@ -170,7 +174,8 @@ async def find_candidates(
 
 
 def _write_backup(path: Path, rows: list[tuple[str, str]]) -> int:
-    with path.open("x", encoding="utf-8") as backup:
+    descriptor = os.open(path, _BACKUP_FLAGS, _BACKUP_MODE)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as backup:
         for table, row in rows:
             backup.write(_BACKUP_LINE.format(table=table, row=row))
         backup.flush()

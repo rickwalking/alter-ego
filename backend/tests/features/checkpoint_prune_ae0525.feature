@@ -51,8 +51,12 @@ Feature: Old carousel checkpoints are pruned safely, with Pedro's sign-off
     Then it exits non-zero with an explicit error
 
   Scenario: Apply without a sign-off file or a backup file is a usage error
-    When the prune runs with --apply but without --threads or --backup
+    When the prune runs with --apply but without --threads or --backup, with a missing --threads file, an existing --backup file or a TTL below one day
     Then it exits with the usage error code and touches nothing
+
+  Scenario: Keep-latest pruning is refused for history-dependent state
+    Given the carousel workflow graph
+    Then none of its state channels is rebuilt from older checkpoints (no DeltaChannel)
 
   Scenario: The workflow engine and the prune agree on the thread id
     Given a carousel project id

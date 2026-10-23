@@ -265,6 +265,7 @@ async def test_prune_deletes_only_signed_off_threads_and_keeps_a_backup(
         assert deleted.blobs > 0
         assert deleted.total == sum(before) - sum(after)
         assert await _rows(db, other) == other_before
+        assert backup.stat().st_mode & 0o777 == 0o600
         lines = [json.loads(line) for line in backup.read_text().splitlines()]
         assert len(lines) == deleted.total
         assert {line["row"]["thread_id"] for line in lines} == {signed}

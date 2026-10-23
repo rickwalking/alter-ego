@@ -71,3 +71,7 @@ AE-0523, AE-0524, AE-0525, AE-0526.
 - 2026-10-23: a project with an autopilot run that is not settled (published, rejected, expired) is never eligible,
   so a queued, running or held run keeps its full checkpoint history. The `generation_runs` table of the queue
   (AE-0522) is not on `main` yet; once it lands, its queued/running/dead-letter runs must join this guard.
+- 2026-10-23: independent QA (PASS) follow-ups: `--ttl-days` below 1, a missing sign-off file and an existing backup
+  file are usage errors before any database access; the backup is created owner-only; a unit test fails if the
+  carousel graph adopts a `DeltaChannel` (keep-latest would cut the history it is rebuilt from). Runbook:
+  `docs/deployment/checkpoint-prune-runbook.md`.
