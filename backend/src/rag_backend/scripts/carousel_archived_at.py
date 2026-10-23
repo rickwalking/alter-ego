@@ -12,18 +12,24 @@ a database that is not Postgres is a no-op.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
 from collections.abc import Sequence
 
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database import carousel_archived_at
+from rag_backend.scripts.cli_support import (
+    EXIT_USAGE,
+    GuardedCli,
+    run_guarded_cli,
+    run_on_own_engine,
+)
 
 EXIT_OK = 0
 EXIT_VERIFY_FAILED = 1
-EXIT_USAGE = 2
+_ERR_NO_MODE = "choose --apply and/or --verify"
+
+__all__ = ["EXIT_OK", "EXIT_USAGE", "EXIT_VERIFY_FAILED", "main", "run_modes"]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,26 +56,24 @@ async def run_modes(engine: AsyncEngine, args: argparse.Namespace) -> int:
     return EXIT_VERIFY_FAILED if report.missing else EXIT_OK
 
 
-async def _main(args: argparse.Namespace) -> int:
-    """Uses its own engine and no ``create_all``: only the archived_at column and
-    its index are added.
-    """
-    engine = create_async_engine(
-        get_settings().database_url, pool_pre_ping=True, hide_parameters=True
-    )
-    try:
-        return await run_modes(engine, args)
-    finally:
-        await engine.dispose()
+def _mode_error(args: argparse.Namespace) -> str | None:
+    """The usage error when neither mode is chosen."""
+    if args.apply or args.verify:
+        return None
+    return _ERR_NO_MODE
+
+
+async def _run_on_own_engine(args: argparse.Namespace) -> int:
+    """Run the modes on a dedicated engine; only the column and index change."""
+    return await run_on_own_engine(lambda engine: run_modes(engine, args))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse flags, run, return the process exit code."""
-    args = build_parser().parse_args(argv)
-    if not (args.apply or args.verify):
-        print("ERROR: choose --apply and/or --verify", file=sys.stderr)
-        return EXIT_USAGE
-    return asyncio.run(_main(args))
+    return run_guarded_cli(
+        GuardedCli(parser=build_parser(), validate=_mode_error, run=_run_on_own_engine),
+        argv,
+    )
 
 
 if __name__ == "__main__":
