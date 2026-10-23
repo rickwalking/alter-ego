@@ -10,7 +10,7 @@ import {
   DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
   DASHBOARD_CHAT_BG_INPUT_DARK,
-  DASHBOARD_CHAT_BG_OVERLAY,
+  DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_CYAN_DIM,
   DASHBOARD_CHAT_MONO_FONT,
@@ -56,14 +56,14 @@ export function ChatSidebar({
       ref={ref}
       id={id}
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col",
+        "fixed inset-y-0 left-0 z-[60] flex w-[280px] shrink-0 flex-col",
         "transition-transform duration-200 ease-out",
         "md:static md:z-auto md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
       )}
       style={{
         borderRight: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
-        background: DASHBOARD_CHAT_BG_OVERLAY,
+        background: DASHBOARD_CHAT_BG_DEEP,
       }}
     >
       <div

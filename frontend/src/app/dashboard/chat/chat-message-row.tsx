@@ -10,54 +10,11 @@ import {
   DASHBOARD_CHAT_TEXT_DIM,
   DASHBOARD_CHAT_TEXT_MUTED,
 } from "@/modules/editorial-operations";
+import { ChatAvatar } from "./chat-avatar";
 import { ChatMarkdown } from "./chat-markdown";
 import type { DashboardChatMessage } from "@/modules/editorial-operations";
 
-const AVATAR_BASE_STYLE: React.CSSProperties = {
-  width: "32px",
-  height: "32px",
-  borderRadius: "50%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontFamily: DASHBOARD_CHAT_MONO_FONT,
-  fontWeight: 700,
-  flexShrink: 0,
-};
-
-/** The assistant's ◆ or the owner's initials. */
-function ChatAvatar({
-  assistant,
-}: Readonly<{ assistant: boolean }>): React.ReactElement {
-  if (assistant) {
-    return (
-      <div
-        style={{
-          ...AVATAR_BASE_STYLE,
-          fontSize: "14px",
-          background: DASHBOARD_CHAT_CYAN_DIM,
-          color: DASHBOARD_CHAT_CYAN,
-        }}
-      >
-        ◆
-      </div>
-    );
-  }
-  return (
-    <div
-      style={{
-        ...AVATAR_BASE_STYLE,
-        fontSize: "11px",
-        background: DASHBOARD_CHAT_BG_ELEVATED,
-        color: DASHBOARD_CHAT_TEXT_MUTED,
-      }}
-    >
-      PM
-    </div>
-  );
-}
-
-/** One message: avatar, bubble and time, mirrored for the owner. */
+/** One message: avatar, bubble and time, mirrored for the person chatting. */
 export function ChatMessageRow({
   msg,
 }: Readonly<{

@@ -74,6 +74,7 @@ export function ChatComposer({
     <div
       style={{
         padding: "16px 24px",
+        paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         borderTop: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_INPUT_BAR,
       }}
@@ -102,11 +103,11 @@ export function ChatComposer({
             border: `1px solid ${DASHBOARD_CHAT_BORDER_MEDIUM}`,
             background: DASHBOARD_CHAT_BG_INPUT_DARKER,
             color: DASHBOARD_CHAT_TEXT,
-            fontSize: "13px",
+            fontSize: "16px",
             fontFamily: "inherit",
             lineHeight: 1.5,
             resize: "none",
-            minHeight: "42px",
+            minHeight: "44px",
             maxHeight: "120px",
           }}
         />
@@ -117,8 +118,8 @@ export function ChatComposer({
           onClick={sendAndKeepFocus}
           disabled={busy || !value.trim()}
           style={{
-            width: "42px",
-            height: "42px",
+            width: "44px",
+            height: "44px",
             borderRadius: "8px",
             border: "none",
             background: DASHBOARD_CHAT_CYAN,

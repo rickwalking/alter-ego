@@ -126,7 +126,7 @@ export function DashboardChatView(): React.ReactElement {
             aria-label={t("closeConversations")}
             tabIndex={-1}
             onClick={convDrawer.close}
-            className="fixed inset-0 z-30 bg-black/60 md:hidden"
+            className="fixed inset-0 z-[55] bg-black/60 md:hidden"
           />
         )}
         <ChatSidebar
