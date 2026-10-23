@@ -29,11 +29,18 @@ show which carousels use it.
 - `DELETE /api/carousels/creator-assets/{asset_id}` (owner only):
   - 204: the row is deleted and its stored WebP is removed (unless another row still points at the same
     bytes); the image URL then returns 404.
-  - 409 `{"code": "creator_asset_in_use", "carousels": [{"id", "title"}]}` when a carousel uses the
-    photo: as its creator asset, its slide-1 hook photo or its slide-1 cover (`slide_cover`). Nothing is
-    deleted.
-  - 403 for another user's photo (admins included: it is the owner's personal data), 404 for an unknown id,
-    401 without login.
+  - 409 `{"code": "creator_asset_in_use", "carousels": [{"id", "title"}], "topics": [{"id", "title"}]}`
+    when a carousel uses the photo (as its creator asset, its slide-1 hook photo or its slide-1 cover,
+    `slide_cover`) or a GrokBot cover row points at it (a pending topic's cover, or a cover no topic has
+    claimed yet). Nothing is deleted.
+  - 409 `creator_asset_cover_managed` for a GrokBot cover asset (role `cover`): covers are not deleted from
+    the photo library.
+  - The asset row is locked (`SELECT ... FOR UPDATE`) before the in-use check, so a carousel that starts
+    using the photo meanwhile waits instead of losing it to the delete.
+  - 404 for another user's photo (admins included: it is the owner's personal data; the id's existence is
+    not revealed) and for an unknown id, 401 without login.
+  - A stored file that cannot be removed after the commit is logged with the asset id; the delete still
+    answers 204.
 - Wizard "Foto do slide 1": each photo has "Excluir foto" with an inline confirm; on 409 the section lists
   the carousels (title, link to the carousel) that use it; after a delete the library refreshes and a
   deleted selection moves to the newest remaining photo.
@@ -51,11 +58,12 @@ show which carousels use it.
 - [x] Given the owner's photo library in the wizard, When they delete a photo no carousel uses and confirm,
       Then `DELETE /api/carousels/creator-assets/{id}` removes the row and the private file, the image URL
       returns 404 and the photo leaves the list.
-- [x] Given another user (or an admin who is not the owner), Then the DELETE returns 403 and nothing is
-      deleted; an unknown id returns 404; no login returns 401.
-- [x] Given a photo used by any carousel (creator asset, hook photo or slide-1 cover), When the owner deletes
-      it, Then the API returns 409 with the carousels that use it, nothing is deleted, and the wizard shows
-      those carousels.
+- [x] Given another user (or an admin who is not the owner), Then the DELETE returns 404 like an unknown
+      id and nothing is deleted; no login returns 401.
+- [x] Given a photo used by any carousel (creator asset, hook photo or slide-1 cover) or by an autopilot
+      cover, When the owner deletes it, Then the API returns 409 with the carousels and topics that use it,
+      nothing is deleted, and the wizard shows them; choosing another photo clears that list.
+- [x] Given a GrokBot cover asset, Then the DELETE returns 409 `creator_asset_cover_managed`.
 
 ## Gherkin Scenarios
 
@@ -82,7 +90,9 @@ Ticket written from Pedro's decision; failing tests first.
 
 ### 2026-10-23
 
-Rebased on main; the delete tests reset the rate limiter; the 409 body keys use the constants. Dev Complete.
+Rebased on main; the delete tests reset the rate limiter. Review fixes: row lock before the in-use
+check, autopilot cover rows count as uses and cover assets are refused, 404 for another owner, an unlink
+failure is logged and still 204, the wizard clears the in-use list when the selection changes. Dev Complete.
 
 ## Files Touched
 
