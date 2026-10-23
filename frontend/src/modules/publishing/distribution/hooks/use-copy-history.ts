@@ -24,7 +24,8 @@ function isVersionConflict(error: unknown): boolean {
  * The caption / LinkedIn history of a carousel and its restore. A restore
  * sends the page's loaded lock version and refreshes the page's data, whether
  * it worked or was refused as stale (so the next try sends the current lock
- * version). Without a loaded lock version nothing can be restored.
+ * version); it stays "restoring" until that refetch is done. Without a loaded
+ * lock version nothing can be restored.
  */
 export function useCopyHistory(
   projectId: string,
@@ -50,13 +51,13 @@ export function useCopyHistory(
         lockVersion: loadedLockVersion,
         versionNumber,
       });
+      await Promise.allSettled([refreshAll()]);
       setStatus(IDLE);
-      void refreshAll();
     } catch (error) {
-      setStatus({ kind: "error", errorKey: copySaveErrorKey(error) });
       if (isVersionConflict(error)) {
-        void refreshAll();
+        await Promise.allSettled([refreshAll()]);
       }
+      setStatus({ kind: "error", errorKey: copySaveErrorKey(error) });
     }
   };
   return { ...base, restore };

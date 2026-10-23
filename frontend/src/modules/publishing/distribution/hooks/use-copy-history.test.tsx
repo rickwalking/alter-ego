@@ -126,4 +126,34 @@ describe("useCopyHistory (AE-0506)", () => {
     );
     expect(result.current.restore).toBeUndefined();
   });
+
+  /** Scenario: Restoring a version sends it with the current lock version */
+  it("stays restoring until the page refetch is done", async () => {
+    mockFetch(json(RESTORED));
+    let finishRefresh: () => void = () => undefined;
+    const refreshAll = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+    const { result } = renderHook(
+      () => useCopyHistory(PROJECT_ID, 5, refreshAll),
+      { wrapper: wrapper() },
+    );
+    let pending: Promise<void> | undefined;
+    act(() => {
+      pending = result.current.restore?.(1);
+    });
+    await waitFor(() => expect(refreshAll).toHaveBeenCalledTimes(1));
+    expect(result.current.status).toEqual({
+      kind: "restoring",
+      versionNumber: 1,
+    });
+    await act(async () => {
+      finishRefresh();
+      await pending;
+    });
+    expect(result.current.status).toEqual({ kind: "idle" });
+  });
 });

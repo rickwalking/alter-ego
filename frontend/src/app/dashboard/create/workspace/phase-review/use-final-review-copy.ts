@@ -66,13 +66,17 @@ export function useFinalReviewCopy(
   };
 }
 
-/** A caption / LinkedIn edit is unsaved, or a save is still running. */
+/** A caption / LinkedIn edit is unsaved, or a save or restore is running. */
 export function copyBusy(copy: FinalReviewCopy): boolean {
   const editor = copy.editor;
   if (!editor) {
     return false;
   }
-  return editor.isDirty(COPY_FIELDS) || editor.status.kind === "saving";
+  return (
+    editor.isDirty(COPY_FIELDS) ||
+    editor.status.kind === "saving" ||
+    copy.history.status.kind === "restoring"
+  );
 }
 
 /**

@@ -19,6 +19,11 @@ Feature: The owner sees and restores versions of the caption and the LinkedIn po
     When the owner clicks "Restaurar" on version 1
     Then POST /api/carousels/{id}/copy/versions/1/restore is sent with If-Match the current lock version
     And the texts, the history and the lock version are refetched
+    And the restore stays "Restaurando…" until that refetch is done
+
+  Scenario: Approve and send back wait while a restore runs
+    Given the reviewer clicked "Restaurar" in Revisão final
+    Then "Aprovar" and "Pedir mudanças" stay disabled until the restore and its refetch are done
 
   Scenario: A text with unsaved edits cannot be restored
     Given the owner edited the caption without saving

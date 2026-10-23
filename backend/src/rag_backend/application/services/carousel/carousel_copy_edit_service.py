@@ -8,7 +8,7 @@ The publish page edits the caption and the PT/EN LinkedIn posts. A save:
 3. Stages one version per changed text in ``content_versions`` (who, when,
    which text, the text), then writes the texts through the carousel repository,
    whose ``update_project`` lands them in the canonical ``blog_posts.distribution``
-   home and its embedded mirror (ADR-011) and commits the versions with them.
+   home and its embedded mirror and commits the versions with them.
 
 A restore saves a stored version's text through the same path, so it is itself
 recorded as a new version.
