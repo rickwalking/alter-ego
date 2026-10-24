@@ -3817,8 +3817,16 @@
         "type": "object"
       },
       "CoverGenerationsResponse": {
-        "description": "The caps in use and the carousel's generations, newest first.",
+        "description": "The caps in use and the carousel's generations, newest first.\n\n``*_used`` count pending and succeeded generations; ``*_attempts`` count\nevery attempt, failures included, against the hard attempt ceiling.",
         "properties": {
+          "carousel_attempt_cap": {
+            "title": "Carousel Attempt Cap",
+            "type": "integer"
+          },
+          "carousel_attempts": {
+            "title": "Carousel Attempts",
+            "type": "integer"
+          },
           "carousel_cap": {
             "title": "Carousel Cap",
             "type": "integer"
@@ -3834,6 +3842,14 @@
             "title": "Generations",
             "type": "array"
           },
+          "month_attempt_cap": {
+            "title": "Month Attempt Cap",
+            "type": "integer"
+          },
+          "month_attempts": {
+            "title": "Month Attempts",
+            "type": "integer"
+          },
           "month_cap": {
             "title": "Month Cap",
             "type": "integer"
@@ -3848,6 +3864,10 @@
           "carousel_cap",
           "month_used",
           "month_cap",
+          "carousel_attempts",
+          "carousel_attempt_cap",
+          "month_attempts",
+          "month_attempt_cap",
           "generations"
         ],
         "title": "CoverGenerationsResponse",

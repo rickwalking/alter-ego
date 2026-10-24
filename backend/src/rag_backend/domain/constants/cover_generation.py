@@ -1,10 +1,11 @@
 """Constants for generating a slide-1 cover from library photos with Grok.
 
-Pedro's decision (2026-10-22): the owner of a Ponto de Vista carousel sends
-one to three of their library photos to the Grok Bot (image-to-image, the
-bytes inside the webhook, never a URL), after an explicit confirmation, at
-most 4 generations per carousel and 40 per calendar month (UTC). Succeeded
-and pending generations count; failed ones do not, so a retry is free.
+The owner of a Ponto de Vista carousel sends one to three of their library
+photos to the Grok Bot (image-to-image, the bytes inside the webhook, never a
+URL), after an explicit confirmation, at most 4 generations per carousel and
+40 per calendar month (UTC). Succeeded and pending generations count; failed
+ones do not, so a retry is free, up to a hard ceiling of 3x the caps that
+counts every attempt (12 per carousel, 120 per month).
 
 The error codes are the public API contract. The result is a creator asset
 with role ``cover`` and kind ``ai_image`` (full-bleed slide 1).
@@ -18,6 +19,13 @@ INDEX_COVER_GENERATIONS_OWNER_CREATED = "idx_carousel_cover_generations_owner_cr
 
 COVER_GENERATION_PER_CAROUSEL_CAP = 4
 COVER_GENERATION_MONTHLY_CAP = 40
+COVER_GENERATION_ATTEMPT_FACTOR = 3
+COVER_GENERATION_PER_CAROUSEL_ATTEMPTS = (
+    COVER_GENERATION_ATTEMPT_FACTOR * COVER_GENERATION_PER_CAROUSEL_CAP
+)
+COVER_GENERATION_MONTHLY_ATTEMPTS = (
+    COVER_GENERATION_ATTEMPT_FACTOR * COVER_GENERATION_MONTHLY_CAP
+)
 COVER_GENERATION_MIN_PHOTOS = 1
 COVER_GENERATION_MAX_PHOTOS = 3
 COVER_GENERATION_PROMPT_MIN_LEN = 3
@@ -43,6 +51,8 @@ ERR_COVER_GENERATION_PHOTO_NOT_ALLOWED = "cover_generation_photo_not_allowed"
 ERR_COVER_GENERATION_IN_PROGRESS = "cover_generation_in_progress"
 ERR_COVER_GENERATION_CAROUSEL_CAP = "cover_generation_carousel_cap"
 ERR_COVER_GENERATION_MONTHLY_CAP = "cover_generation_monthly_cap"
+ERR_COVER_GENERATION_CAROUSEL_ATTEMPTS = "cover_generation_carousel_attempts"
+ERR_COVER_GENERATION_MONTHLY_ATTEMPTS = "cover_generation_monthly_attempts"
 ERR_COVER_GENERATION_UNAVAILABLE = "cover_generation_unavailable"
 ERR_COVER_GENERATION_PROMPT = "prompt must have at least 3 non-blank characters"
 
@@ -57,14 +67,18 @@ LOG_COVER_GENERATION = "cover_generation"
 LOG_COVER_GENERATION_STARTED = "started"
 LOG_COVER_GENERATION_SUCCEEDED = "succeeded"
 LOG_COVER_GENERATION_FAILED = "failed"
+LOG_COVER_GENERATION_CANCELLED = "cancelled"
 LOG_COVER_GENERATION_CRASHED = "cover_generation_crashed"
 TASK_NAME_PREFIX = "cover-generation-"
 
 __all__ = [
+    "COVER_GENERATION_ATTEMPT_FACTOR",
     "COVER_GENERATION_GRACE_SECONDS",
     "COVER_GENERATION_MAX_PHOTOS",
     "COVER_GENERATION_MIN_PHOTOS",
+    "COVER_GENERATION_MONTHLY_ATTEMPTS",
     "COVER_GENERATION_MONTHLY_CAP",
+    "COVER_GENERATION_PER_CAROUSEL_ATTEMPTS",
     "COVER_GENERATION_PER_CAROUSEL_CAP",
     "COVER_GENERATION_PROMPT_MAX_LEN",
     "COVER_GENERATION_PROMPT_MIN_LEN",
@@ -72,8 +86,10 @@ __all__ = [
     "COVER_SOURCE_GENERATED",
     "DEFAULT_GROK_COVER_COST_USD",
     "ERROR_CODE_LENGTH",
+    "ERR_COVER_GENERATION_CAROUSEL_ATTEMPTS",
     "ERR_COVER_GENERATION_CAROUSEL_CAP",
     "ERR_COVER_GENERATION_IN_PROGRESS",
+    "ERR_COVER_GENERATION_MONTHLY_ATTEMPTS",
     "ERR_COVER_GENERATION_MONTHLY_CAP",
     "ERR_COVER_GENERATION_NOT_CONFIRMED",
     "ERR_COVER_GENERATION_NOT_OWNER",
@@ -89,6 +105,7 @@ __all__ = [
     "INDEX_COVER_GENERATIONS_OWNER_CREATED",
     "INDEX_COVER_GENERATIONS_PROJECT",
     "LOG_COVER_GENERATION",
+    "LOG_COVER_GENERATION_CANCELLED",
     "LOG_COVER_GENERATION_CRASHED",
     "LOG_COVER_GENERATION_FAILED",
     "LOG_COVER_GENERATION_STARTED",

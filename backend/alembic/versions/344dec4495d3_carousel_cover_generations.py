@@ -6,7 +6,8 @@ Create Date: 2026-10-23
 
 ADDITIVE. One new table, ``carousel_cover_generations``: one row per slide-1
 cover the Grok Bot generates from the owner's library photos (status, prompt
-SHA-256, photo count, model, cost, result asset, error code, times). It is
+SHA-256, photo count, model, cost, result asset, error code, created/started/
+completed times; ``started_at`` is set when the job gets its bridge slot). It is
 the budget log behind the caps (4 per carousel, 40 per month): deleting the
 carousel or the result image sets its reference to NULL and keeps the row. No existing
 table or column is altered or dropped. ``downgrade`` drops the table and its
@@ -87,6 +88,7 @@ def upgrade() -> None:
                 server_default=sa.func.now(),
                 nullable=False,
             ),
+            sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )

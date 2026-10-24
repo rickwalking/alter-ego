@@ -6,11 +6,11 @@ lock, the caps (4 per carousel, 40 per calendar month, one pending per
 carousel), records a ``pending`` generation and commits. The route hands the
 run to a tracked background task (a Grok Bot job takes minutes).
 
-``CoverGenerationRunner.run`` sends the photos, validates and stores the image
-as a private creator asset with role ``cover``, and settles the row. Every
-failure settles it ``failed`` with a code and leaves no asset behind. Each
-step is logged with the carousel, prompt hash, model and cost, never the
-prompt text or the image bytes.
+Failed, timed-out and interrupted attempts use no success slot, but a hard
+attempt ceiling of 3x the caps (12 per carousel, 120 per month) counts every
+attempt. The background run lives in ``cover_generation_runner``. Each step is
+logged with the carousel, prompt hash, model and cost, never the prompt text
+or the image bytes.
 """
 
 from __future__ import annotations
@@ -26,36 +26,29 @@ import structlog
 
 from rag_backend.domain.constants.carousel_cover_pick import ERR_COVER_PICK_NOT_POV
 from rag_backend.domain.constants.cover_generation import (
+    COVER_GENERATION_MONTHLY_ATTEMPTS,
     COVER_GENERATION_MONTHLY_CAP,
+    COVER_GENERATION_PER_CAROUSEL_ATTEMPTS,
     COVER_GENERATION_PER_CAROUSEL_CAP,
+    ERR_COVER_GENERATION_CAROUSEL_ATTEMPTS,
     ERR_COVER_GENERATION_CAROUSEL_CAP,
     ERR_COVER_GENERATION_IN_PROGRESS,
+    ERR_COVER_GENERATION_MONTHLY_ATTEMPTS,
     ERR_COVER_GENERATION_MONTHLY_CAP,
     ERR_COVER_GENERATION_NOT_CONFIRMED,
     ERR_COVER_GENERATION_NOT_OWNER,
     ERR_COVER_GENERATION_PHOTO_NOT_ALLOWED,
-    FAILURE_BRIDGE,
-    FAILURE_INVALID_IMAGE,
-    FAILURE_NOT_PENDING,
-    FAILURE_PHOTO_UNREADABLE,
-    FAILURE_UNEXPECTED,
     LOG_COVER_GENERATION,
-    LOG_COVER_GENERATION_CRASHED,
-    LOG_COVER_GENERATION_FAILED,
     LOG_COVER_GENERATION_STARTED,
-    LOG_COVER_GENERATION_SUCCEEDED,
 )
 from rag_backend.domain.content_mode import is_pov_family
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.cover_generation import (
-    CoverEditJob,
     CoverGeneration,
     CoverGenerationOutcome,
     CoverGenerationStatus,
     ReferencePhoto,
 )
-from rag_backend.domain.models.slide_cover import CoverAssetError
-from rag_backend.domain.protocols import CoverImageEditor
 
 logger = structlog.get_logger(__name__)
 
@@ -87,9 +80,15 @@ class CoverGenerationStore(Protocol):
 
     async def count_owner_since(self, owner_id: str, since: datetime) -> int: ...
 
+    async def count_owner_attempts_since(
+        self, owner_id: str, since: datetime
+    ) -> int: ...
+
+    async def mark_started(self, generation_id: UUID, at: datetime) -> bool: ...
+
     async def settle(self, outcome: CoverGenerationOutcome) -> bool: ...
 
-    async def fail_stale(self, created_before: datetime, at: datetime) -> int: ...
+    async def fail_stale(self, cutoff: datetime, at: datetime) -> int: ...
 
     async def commit(self) -> None: ...
 
@@ -113,7 +112,13 @@ class CoverResults(Protocol):
         """The asset id; raises ``CoverAssetError`` for an unusable image."""
         ...
 
-    async def discard(self, asset_id: UUID) -> None: ...
+    async def discard(self, asset_id: UUID) -> None:
+        """Delete a stored result (row and file) no generation will reference."""
+        ...
+
+    async def forget(self, asset_id: UUID) -> None:
+        """Remove the file written for a result whose row was rolled back."""
+        ...
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -143,9 +148,17 @@ class CoverGenerationUsage:
 
     carousel_used: int
     month_used: int
+    month_attempts: int
     generations: tuple[CoverGeneration, ...]
     carousel_cap: int = COVER_GENERATION_PER_CAROUSEL_CAP
     month_cap: int = COVER_GENERATION_MONTHLY_CAP
+    carousel_attempt_cap: int = COVER_GENERATION_PER_CAROUSEL_ATTEMPTS
+    month_attempt_cap: int = COVER_GENERATION_MONTHLY_ATTEMPTS
+
+    @property
+    def carousel_attempts(self) -> int:
+        """Every generation of the carousel, failures included."""
+        return len(self.generations)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -167,7 +180,7 @@ def month_start(moment: datetime) -> datetime:
     return moment.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-def _log(generation: CoverGeneration, outcome: str, **fields: object) -> None:
+def log_generation(generation: CoverGeneration, outcome: str, **fields: object) -> None:
     logger.info(
         LOG_COVER_GENERATION,
         outcome=outcome,
@@ -221,7 +234,7 @@ class CoverGenerationService:
         generation = self._new(command)
         await self._store.create(generation)
         await self._store.commit()
-        _log(generation, LOG_COVER_GENERATION_STARTED)
+        log_generation(generation, LOG_COVER_GENERATION_STARTED)
         return CoverGenerationRun(
             generation=generation, photo_ids=command.photo_ids, prompt=command.prompt
         )
@@ -247,6 +260,9 @@ class CoverGenerationService:
         return CoverGenerationUsage(
             carousel_used=sum(1 for g in generations if g.counts_against_caps),
             month_used=await self._store.count_owner_since(owner_id, since),
+            month_attempts=await self._store.count_owner_attempts_since(
+                owner_id, since
+            ),
             generations=generations,
         )
 
@@ -273,90 +289,10 @@ def _assert_slot(usage: CoverGenerationUsage) -> None:
         raise CoverGenerationRefusedError(ERR_COVER_GENERATION_CAROUSEL_CAP)
     if usage.month_used >= usage.month_cap:
         raise CoverGenerationRefusedError(ERR_COVER_GENERATION_MONTHLY_CAP)
-
-
-@dataclass(frozen=True, kw_only=True)
-class CoverRunDeps:
-    """The ports of one background run (its own session)."""
-
-    store: CoverGenerationStore
-    photos: OwnerPhotos
-    results: CoverResults
-    editor: CoverImageEditor
-    render_prompt: Callable[[str], str]
-    now: Callable[[], datetime]
-
-
-class CoverGenerationRunner:
-    """Run one pending generation to ``succeeded`` or ``failed``."""
-
-    def __init__(self, deps: CoverRunDeps) -> None:
-        self._deps = deps
-
-    async def run(self, run: CoverGenerationRun) -> CoverGenerationStatus:
-        """Send, store and settle; the final status.
-
-        Any unexpected error (a file gone mid-read, a database error) is rolled
-        back and settles the row ``failed`` too, so it never stays pending.
-        """
-        try:
-            return await self._attempt(run)
-        except Exception:
-            logger.exception(
-                LOG_COVER_GENERATION_CRASHED, generation_id=str(run.generation.id)
-            )
-            await self._deps.store.rollback()
-            return await self._fail(run.generation, FAILURE_UNEXPECTED)
-
-    async def _attempt(self, run: CoverGenerationRun) -> CoverGenerationStatus:
-        generation = run.generation
-        try:
-            photos = await self._deps.photos.load(run.photo_ids)
-        except CoverAssetError:
-            return await self._fail(generation, FAILURE_PHOTO_UNREADABLE)
-        await self._deps.store.rollback()
-        job = CoverEditJob(
-            prompt=self._deps.render_prompt(run.prompt),
-            photos=photos,
-            project_id=generation.project_id,
-        )
-        try:
-            image = await self._deps.editor.edit_image(job)
-        except RuntimeError:
-            return await self._fail(generation, FAILURE_BRIDGE)
-        try:
-            asset_id = await self._deps.results.store(generation.owner_id, image)
-        except CoverAssetError:
-            return await self._fail(generation, FAILURE_INVALID_IMAGE)
-        return await self._succeed(generation, asset_id)
-
-    async def _succeed(
-        self, generation: CoverGeneration, asset_id: UUID
-    ) -> CoverGenerationStatus:
-        outcome = CoverGenerationOutcome(
-            generation_id=generation.id, at=self._deps.now(), result_asset_id=asset_id
-        )
-        if not await self._deps.store.settle(outcome):
-            await self._deps.results.discard(asset_id)
-            await self._deps.store.commit()
-            _log(
-                generation, LOG_COVER_GENERATION_FAILED, error_code=FAILURE_NOT_PENDING
-            )
-            return CoverGenerationStatus.FAILED
-        await self._deps.store.commit()
-        _log(generation, LOG_COVER_GENERATION_SUCCEEDED, asset_id=str(asset_id))
-        return CoverGenerationStatus.SUCCEEDED
-
-    async def _fail(
-        self, generation: CoverGeneration, code: str
-    ) -> CoverGenerationStatus:
-        outcome = CoverGenerationOutcome(
-            generation_id=generation.id, at=self._deps.now(), error_code=code
-        )
-        await self._deps.store.settle(outcome)
-        await self._deps.store.commit()
-        _log(generation, LOG_COVER_GENERATION_FAILED, error_code=code)
-        return CoverGenerationStatus.FAILED
+    if usage.carousel_attempts >= usage.carousel_attempt_cap:
+        raise CoverGenerationRefusedError(ERR_COVER_GENERATION_CAROUSEL_ATTEMPTS)
+    if usage.month_attempts >= usage.month_attempt_cap:
+        raise CoverGenerationRefusedError(ERR_COVER_GENERATION_MONTHLY_ATTEMPTS)
 
 
 __all__ = [
@@ -365,14 +301,13 @@ __all__ = [
     "CoverGenerationForbiddenError",
     "CoverGenerationRefusedError",
     "CoverGenerationRun",
-    "CoverGenerationRunner",
     "CoverGenerationService",
     "CoverGenerationStore",
     "CoverGenerationUsage",
     "CoverResults",
-    "CoverRunDeps",
     "OwnerPhotos",
     "StartCoverGeneration",
+    "log_generation",
     "month_start",
     "prompt_digest",
 ]

@@ -58,6 +58,10 @@ const GENERATIONS = {
   carousel_cap: 4,
   month_used: 0,
   month_cap: 40,
+  carousel_attempts: 0,
+  carousel_attempt_cap: 12,
+  month_attempts: 0,
+  month_attempt_cap: 120,
   generations: [],
 };
 

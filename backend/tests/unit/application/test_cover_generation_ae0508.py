@@ -19,12 +19,14 @@ from rag_backend.application.services.carousel.cover_generation import (
     CoverGenerationForbiddenError,
     CoverGenerationRefusedError,
     CoverGenerationRun,
-    CoverGenerationRunner,
     CoverGenerationService,
-    CoverRunDeps,
     StartCoverGeneration,
     month_start,
     prompt_digest,
+)
+from rag_backend.application.services.carousel.cover_generation_runner import (
+    CoverGenerationRunner,
+    CoverRunDeps,
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 from rag_backend.domain.models.cover_generation import (
@@ -32,6 +34,7 @@ from rag_backend.domain.models.cover_generation import (
     CoverGeneration,
     CoverGenerationOutcome,
     CoverGenerationStatus,
+    CoverJobCancelledError,
     ReferencePhoto,
 )
 from rag_backend.domain.models.slide_cover import CoverAssetError
@@ -78,6 +81,10 @@ class _Store:
     commits: int = 0
     locked: list[str] = field(default_factory=list)
     rollbacks: int = 0
+    month_attempts: int = 0
+    started: list[datetime] = field(default_factory=list)
+    claimable: bool = True
+    settle_error: Exception | None = None
 
     async def lock_owner(self, owner_id: str) -> None:
         self.locked.append(owner_id)
@@ -93,7 +100,18 @@ class _Store:
         del owner_id, since
         return self.month
 
+    async def count_owner_attempts_since(self, owner_id: str, since: datetime) -> int:
+        del owner_id, since
+        return self.month_attempts
+
+    async def mark_started(self, generation_id: UUID, at: datetime) -> bool:
+        del generation_id
+        self.started.append(at)
+        return self.claimable
+
     async def settle(self, outcome: CoverGenerationOutcome) -> bool:
+        if self.settle_error is not None and outcome.result_asset_id is not None:
+            raise self.settle_error
         self.settled.append(outcome)
         return self.settle_result
 
@@ -130,6 +148,7 @@ class _Photos:
 class _Results:
     stored: list[UUID] = field(default_factory=list)
     discarded: list[UUID] = field(default_factory=list)
+    forgotten: list[UUID] = field(default_factory=list)
     invalid: bool = False
 
     async def store(self, owner_id: str, image: bytes) -> UUID:
@@ -143,6 +162,9 @@ class _Results:
     async def discard(self, asset_id: UUID) -> None:
         self.discarded.append(asset_id)
 
+    async def forget(self, asset_id: UUID) -> None:
+        self.forgotten.append(asset_id)
+
 
 @dataclass
 class _Editor:
@@ -150,6 +172,8 @@ class _Editor:
     error: Exception | None = None
 
     async def edit_image(self, job: CoverEditJob) -> bytes:
+        if job.claim is not None and not await job.claim():
+            raise CoverJobCancelledError("cancelled")
         self.jobs.append(job)
         if self.error is not None:
             raise self.error
@@ -260,7 +284,33 @@ class TestStart:
         )
         assert (usage.carousel_used, usage.carousel_cap) == (1, 4)
         assert (usage.month_used, usage.month_cap) == (7, 40)
+        assert (usage.carousel_attempts, usage.carousel_attempt_cap) == (2, 12)
+        assert usage.month_attempt_cap == 120
         assert store.commits == 1
+
+    @pytest.mark.parametrize(
+        ("failed", "month_attempts", "code"),
+        [
+            (12, 12, "cover_generation_carousel_attempts"),
+            (2, 120, "cover_generation_monthly_attempts"),
+        ],
+    )
+    async def test_attempt_ceiling_counts_failures(
+        self, failed: int, month_attempts: int, code: str
+    ) -> None:
+        """Scenario: Failed attempts are free up to a hard attempt ceiling."""
+        rows = [_generation(CoverGenerationStatus.FAILED) for _ in range(failed)]
+        store = _Store(rows=rows, month=0, month_attempts=month_attempts)
+        with pytest.raises(CoverGenerationRefusedError) as raised:
+            await CoverGenerationService(store, _Photos(), _config()).start(_start())
+        assert raised.value.code == code
+
+    async def test_below_the_attempt_ceiling_starts(self) -> None:
+        """Scenario: Failed attempts are free up to a hard attempt ceiling."""
+        rows = [_generation(CoverGenerationStatus.FAILED) for _ in range(11)]
+        store = _Store(rows=rows, month=0, month_attempts=119)
+        run = await CoverGenerationService(store, _Photos(), _config()).start(_start())
+        assert run.generation.status is CoverGenerationStatus.PENDING
 
 
 def _runner(
@@ -285,6 +335,48 @@ def _run() -> CoverGenerationRun:
 
 
 class TestRunner:
+    async def test_a_reaped_row_is_never_sent(self) -> None:
+        """Scenario: A queued job whose row was failed meanwhile sends nothing."""
+        store, results, editor = _Store(claimable=False), _Results(), _Editor()
+
+        status = await _runner(store, _Photos(), results, editor).run(_run())
+
+        assert status is CoverGenerationStatus.FAILED
+        assert store.started == [_NOW]
+        assert editor.jobs == []
+        assert results.stored == []
+        assert store.settled == []
+
+    async def test_the_claim_records_the_start_and_commits(self) -> None:
+        """Scenario: A queued job whose row was failed meanwhile sends nothing."""
+        store = _Store()
+        seen: list[int] = []
+
+        class _Watching(_Editor):
+            async def edit_image(self, job: CoverEditJob) -> bytes:
+                assert job.claim is not None
+                assert await job.claim()
+                seen.append(store.commits)
+                return b"cover"
+
+        status = await _runner(store, _Photos(), _Results(), _Watching()).run(_run())
+
+        assert status is CoverGenerationStatus.SUCCEEDED
+        assert store.started == [_NOW]
+        assert seen == [1]
+
+    async def test_a_failed_settle_removes_the_result_file(self) -> None:
+        """Scenario: A bridge failure leaves no asset and can be retried."""
+        store = _Store(settle_error=RuntimeError("db gone"))
+        results = _Results()
+
+        status = await _runner(store, _Photos(), results, _Editor()).run(_run())
+
+        assert status is CoverGenerationStatus.FAILED
+        assert results.forgotten == results.stored
+        assert len(results.stored) == 1
+        assert store.settled[-1].error_code == "cover_generation_failed"
+
     async def test_success_stores_and_settles(self) -> None:
         """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
         store, results, editor = _Store(), _Results(), _Editor()
@@ -294,7 +386,7 @@ class TestRunner:
         assert editor.jobs[0].project_id == "p"
         assert store.settled[0].result_asset_id == results.stored[0]
         assert store.settled[0].error_code is None
-        assert store.commits == 1
+        assert store.commits == 2
 
     @pytest.mark.parametrize(
         ("photos", "results", "editor", "code"),
@@ -329,7 +421,7 @@ class TestRunner:
         assert store.settled[0].error_code == code
         assert store.settled[0].result_asset_id is None
         assert results.stored == []
-        assert store.commits == 1
+        assert store.commits == (1 if code.endswith("photo_unreadable") else 2)
 
     async def test_the_read_transaction_ends_before_the_bridge_wait(self) -> None:
         """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
@@ -363,7 +455,7 @@ class TestRunner:
         status = await _runner(store, _Photos(), results, _Editor()).run(_run())
         assert status is CoverGenerationStatus.FAILED
         assert results.discarded == results.stored
-        assert store.commits == 1
+        assert store.commits == 2
 
 
 def test_month_start_and_digest() -> None:

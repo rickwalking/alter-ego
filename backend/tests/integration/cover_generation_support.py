@@ -23,7 +23,10 @@ from rag_backend.api.routes.carousels import cover_pick as cover_pick_route
 from rag_backend.application.services.carousel.cover_generation_tasks import (
     running_cover_generation_tasks,
 )
-from rag_backend.domain.models.cover_generation import CoverEditJob
+from rag_backend.domain.models.cover_generation import (
+    CoverEditJob,
+    CoverJobCancelledError,
+)
 from rag_backend.modules.editorial.infrastructure import carousel_owner_autofix
 from rag_backend.modules.editorial.public import CoverRunWiring
 
@@ -48,6 +51,8 @@ class FakeEditor:
     jobs: list[CoverEditJob] = field(default_factory=list)
 
     async def edit_image(self, job: CoverEditJob) -> bytes:
+        if job.claim is not None and not await job.claim():
+            raise CoverJobCancelledError("cancelled")
         self.jobs.append(job)
         if self.error is not None:
             raise self.error
@@ -157,7 +162,12 @@ async def generation_rows(project_id: str | None = None) -> list[dict[str, objec
         ]
 
 
-async def insert_rows(project_id: str, rows: list[tuple[str, datetime]]) -> None:
+async def insert_rows(
+    project_id: str,
+    rows: list[tuple[str, datetime]],
+    started_at: datetime | None = None,
+) -> list[str]:
+    """Insert generation rows (status, created_at); their ids."""
     from rag_backend.infrastructure.database.config import get_session_maker
     from rag_backend.infrastructure.database.models import (
         CarouselCoverGenerationModel as Row,
@@ -169,10 +179,12 @@ async def insert_rows(project_id: str, rows: list[tuple[str, datetime]]) -> None
     async with get_session_maker()() as session:
         project = await session.get(CarouselProjectModel, project_id)
         assert project is not None
+        ids: list[str] = []
         for status, created_at in rows:
+            ids.append(str(uuid4()))
             session.add(
                 Row(
-                    id=str(uuid4()),
+                    id=ids[-1],
                     project_id=project_id,
                     owner_id=project.owner_id,
                     status=status,
@@ -181,9 +193,11 @@ async def insert_rows(project_id: str, rows: list[tuple[str, datetime]]) -> None
                     model="m",
                     cost_usd=0.0,
                     created_at=created_at,
+                    started_at=started_at,
                 )
             )
         await session.commit()
+        return ids
 
 
 async def role_cover_assets() -> list[str]:

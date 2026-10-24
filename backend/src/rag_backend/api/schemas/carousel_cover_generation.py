@@ -59,12 +59,20 @@ class CoverGenerationResponse(BaseModel):
 
 
 class CoverGenerationsResponse(BaseModel):
-    """The caps in use and the carousel's generations, newest first."""
+    """The caps in use and the carousel's generations, newest first.
+
+    ``*_used`` count pending and succeeded generations; ``*_attempts`` count
+    every attempt, failures included, against the hard attempt ceiling.
+    """
 
     carousel_used: int
     carousel_cap: int
     month_used: int
     month_cap: int
+    carousel_attempts: int
+    carousel_attempt_cap: int
+    month_attempts: int
+    month_attempt_cap: int
     generations: list[CoverGenerationResponse]
 
 

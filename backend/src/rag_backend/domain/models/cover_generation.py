@@ -8,6 +8,7 @@ hash, model and cost.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -36,6 +37,7 @@ class CoverGeneration:
     cost_usd: float
     created_at: datetime
     completed_at: datetime | None = None
+    started_at: datetime | None = None
     result_asset_id: UUID | None = None
     error_code: str | None = None
 
@@ -63,13 +65,23 @@ class ReferencePhoto:
     mime_type: str
 
 
+class CoverJobCancelledError(RuntimeError):
+    """The generation stopped being pending before its job could be sent."""
+
+
 @dataclass(frozen=True, kw_only=True)
 class CoverEditJob:
-    """What the Grok Bot receives: the instruction, the photos, the carousel."""
+    """What the Grok Bot receives: the instruction, the photos, the carousel.
+
+    ``claim``, when set, runs once a bridge slot is free, right before anything is sent:
+    ``False`` (the generation was failed meanwhile) cancels the job with
+    :class:`CoverJobCancelledError`, so no photo leaves and nothing is billed.
+    """
 
     prompt: str
     photos: tuple[ReferencePhoto, ...]
     project_id: str
+    claim: Callable[[], Awaitable[bool]] | None = None
 
 
 __all__ = [
@@ -77,5 +89,6 @@ __all__ = [
     "CoverGeneration",
     "CoverGenerationOutcome",
     "CoverGenerationStatus",
+    "CoverJobCancelledError",
     "ReferencePhoto",
 ]

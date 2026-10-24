@@ -25,7 +25,15 @@ function capReason(data: CoverGenerations | undefined): CapReason {
   if (data.carousel_used >= data.carousel_cap) {
     return "carouselCap";
   }
-  return data.month_used >= data.month_cap ? "monthlyCap" : null;
+  if (data.month_used >= data.month_cap) {
+    return "monthlyCap";
+  }
+  if (data.carousel_attempts >= data.carousel_attempt_cap) {
+    return "carouselAttempts";
+  }
+  return data.month_attempts >= data.month_attempt_cap
+    ? "monthlyAttempts"
+    : null;
 }
 
 export function apiErrorCode(err: unknown): string | null {

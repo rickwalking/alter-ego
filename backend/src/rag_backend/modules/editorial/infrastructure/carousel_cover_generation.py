@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.cover_generation import (
@@ -52,8 +52,10 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.cover_generation import (
         CoverGenerationConfig,
         CoverGenerationRun,
-        CoverGenerationRunner,
         CoverGenerationService,
+    )
+    from rag_backend.application.services.carousel.cover_generation_runner import (
+        CoverGenerationRunner,
     )
 
 
@@ -98,6 +100,7 @@ class EditorialCoverResults:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._written: dict[UUID, tuple[Path, str]] = {}
 
     async def store(self, owner_id: str, image: bytes) -> UUID:
         """Validate (``ai_image`` rules), re-encode and store; the asset id."""
@@ -109,11 +112,44 @@ class EditorialCoverResults:
                 kind=COVER_KIND_AI_IMAGE,
             )
         )
+        asset = await creator_assets(self._session).get_by_id(stored.creator_asset_id)
+        path = (
+            creator_asset_service(self._session).stored_file(asset)
+            if asset is not None
+            else None
+        )
+        if asset is not None and path is not None:
+            self._written[asset.id] = (path, asset.content_sha256)
         return stored.creator_asset_id
 
     async def discard(self, asset_id: UUID) -> None:
-        """Delete a stored result no generation will reference."""
+        """Delete a stored result (row and file) no generation will reference."""
         await delete_cover_images(self._session, (asset_id,))
+
+    async def forget(self, asset_id: UUID) -> None:
+        """Remove the file written for a result whose row was rolled back.
+
+        Kept when another creator asset still points at the same bytes.
+        """
+        written = self._written.pop(asset_id, None)
+        if written is None:
+            return
+        path, content_sha256 = written
+        if await _bytes_in_use(self._session, content_sha256):
+            return
+        path.unlink(missing_ok=True)
+
+
+async def _bytes_in_use(session: AsyncSession, content_sha256: str) -> bool:
+    """True while any creator asset row still points at these bytes."""
+    from rag_backend.infrastructure.database.models import CarouselCreatorAssetModel
+
+    count = await session.scalar(
+        select(func.count(CarouselCreatorAssetModel.id)).where(
+            CarouselCreatorAssetModel.content_sha256 == content_sha256
+        )
+    )
+    return bool(count)
 
 
 class EditorialGeneratedCovers:
@@ -230,7 +266,7 @@ def cover_generation_runner(
     session: AsyncSession, wiring: CoverRunWiring
 ) -> CoverGenerationRunner:
     """One background run on the given session."""
-    from rag_backend.application.services.carousel.cover_generation import (
+    from rag_backend.application.services.carousel.cover_generation_runner import (
         CoverGenerationRunner,
         CoverRunDeps,
     )

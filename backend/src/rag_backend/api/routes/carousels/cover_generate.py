@@ -119,6 +119,10 @@ def _usage(usage: CoverGenerationUsage) -> CoverGenerationsResponse:
         carousel_cap=usage.carousel_cap,
         month_used=usage.month_used,
         month_cap=usage.month_cap,
+        carousel_attempts=usage.carousel_attempts,
+        carousel_attempt_cap=usage.carousel_attempt_cap,
+        month_attempts=usage.month_attempts,
+        month_attempt_cap=usage.month_attempt_cap,
         generations=[_generation(g) for g in usage.generations],
     )
 

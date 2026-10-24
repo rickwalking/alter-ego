@@ -7,13 +7,15 @@ the configured size as PNG. Every failure raises ``ImageBridgeJobError``, a
 
 ``edit_image`` runs the same job with the owner's reference photos inside the
 webhook body (contract section 2.4, a slide-1 cover) and returns the image
-fitted to the cover size as PNG.
+fitted to the cover size as PNG. Its ``claim`` runs once a slot is free and
+can cancel the job before anything is sent.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
@@ -23,7 +25,10 @@ import structlog
 
 from rag_backend.domain.constants.cover_generation import COVER_GENERATION_SIZE
 from rag_backend.domain.models.carousel_run import current_run_context
-from rag_backend.domain.models.cover_generation import CoverEditJob
+from rag_backend.domain.models.cover_generation import (
+    CoverEditJob,
+    CoverJobCancelledError,
+)
 from rag_backend.domain.protocols import ImageGenerationService
 from rag_backend.modules.image_bridge.constants import (
     CALLBACK_URL_TEMPLATE,
@@ -33,6 +38,7 @@ from rag_backend.modules.image_bridge.constants import (
     DEFAULT_IMAGE_SIZE,
     DEFAULT_MAX_CONCURRENCY,
     DEFAULT_TIMEOUT_SECONDS,
+    ERR_JOB_CANCELLED,
     ERR_JOB_EXPIRED,
     ERR_JOB_FAILED,
     ERR_JOB_MISSING,
@@ -108,6 +114,7 @@ class _JobSpec:
     content_type: str = CONTENT_TYPE_CAROUSEL
     task: str = ""
     references: tuple[WebhookReference, ...] = field(default_factory=tuple)
+    claim: Callable[[], Awaitable[bool]] | None = None
 
 
 @dataclass(frozen=True)
@@ -158,6 +165,7 @@ class GrokBotImageService(ImageGenerationService):
                 content_type=CONTENT_TYPE_COVER,
                 task=TASK_IMAGE_EDIT,
                 references=references,
+                claim=job.claim,
             )
         )
         size = ImageSize.parse(COVER_GENERATION_SIZE)
@@ -168,7 +176,10 @@ class GrokBotImageService(ImageGenerationService):
             raise ImageBridgeJobError(str(exc)) from exc
 
     async def _run(self, spec: _JobSpec) -> bytes:
+        """One job under a concurrency slot; ``spec.claim`` may cancel it first."""
         async with self._slots:
+            if spec.claim is not None and not await spec.claim():
+                raise CoverJobCancelledError(ERR_JOB_CANCELLED)
             job = await self._start(spec)
             return await self._wait(job)
 

@@ -220,3 +220,45 @@ def test_cover_jobs_share_one_editor(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert first is second
     assert third is not first
+
+
+async def test_a_refused_claim_sends_nothing() -> None:
+    """Scenario: A queued job whose row was failed meanwhile sends nothing."""
+    from dataclasses import replace
+
+    from rag_backend.domain.models.cover_generation import CoverJobCancelledError
+
+    asked: list[bool] = []
+
+    async def _refuse() -> bool:
+        asked.append(True)
+        return False
+
+    webhook, clock = FakeWebhook(), FakeClock()
+    async with sqlite_repository() as repo:
+        service = _service(repo, (webhook, clock))
+        with pytest.raises(CoverJobCancelledError):
+            await service.edit_image(replace(_job(), claim=_refuse))
+
+    assert asked == [True]
+    assert webhook.requests == []
+
+
+async def test_the_claim_runs_inside_the_slot_before_the_webhook() -> None:
+    """Scenario: A queued job is timed from its bridge slot, not its creation."""
+    from dataclasses import replace
+
+    webhook, clock = FakeWebhook(), FakeClock()
+    order: list[str] = []
+    async with sqlite_repository() as repo:
+        service = _service(repo, (webhook, clock))
+
+        async def _claim() -> bool:
+            order.append(f"claim:{service._slots._value}:{len(webhook.requests)}")
+            return True
+
+        clock.on_sleep = _answer(repo, webhook, clock)
+        await service.edit_image(replace(_job(), claim=_claim))
+
+    assert order == ["claim:1:0"]
+    assert len(webhook.requests) == 1

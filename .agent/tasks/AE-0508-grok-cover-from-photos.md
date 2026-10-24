@@ -51,7 +51,12 @@ photos.
   generation still `pending` after the bridge timeout plus a grace period (process restart) is failed as
   `cover_generation_interrupted` when read.
 - Caps: succeeded and pending generations count; failed ones do not (retry is free). 4 per carousel,
-  40 per calendar month (UTC) per owner.
+  40 per calendar month (UTC; resets at 21:00 BRT on the last day of the month) per owner. Hard attempt
+  ceiling of 3x the caps (12 per carousel, 120 per month) counting every attempt, failures and timeouts
+  included (409 `cover_generation_carousel_attempts` / `cover_generation_monthly_attempts`).
+- A queued job claims its row once it has a bridge slot, right before the webhook; a row failed
+  meanwhile cancels the job (nothing sent, nothing billed). The stale reaper times started jobs from
+  that claim (`started_at`).
 - Every call is logged: one row per generation (`carousel_cover_generations`: time, carousel, owner,
   prompt SHA-256, photo count, model, cost from `GROK_COVER_COST_USD` (default 0: the Grok Bot runs on a
   subscription), status, error code) and a structured log line
@@ -138,7 +143,10 @@ bridge endpoint (sidecar) takes the job, so the photos ride it as `reference_ima
 docs (contract §2.4, ADR-0027). Independent review round: transaction released before the bridge wait,
 unexpected errors settle failed, one shared bridge editor, the budget log survives a carousel delete,
 1024 px reference photos, no dead button when the list fails. The prompt field takes a children slot for
-the AE-0509 suggestions.
+the AE-0509 suggestions. PR review: the job claims its row once it holds a bridge slot (a reaped
+queued job sends nothing), Postgres race tests for the last slot, a hard attempt ceiling of 12 per
+carousel / 120 per month counting failures, the result file removed when settling fails, and the
+21:00 BRT reset shown in the usage line.
 
 ## Files Touched
 

@@ -48,8 +48,14 @@ Chosen: **option 1**. Contract: [GrokBot Image Bridge §2.4](../architecture/gro
   stored as an `ai_image` `slide_cover`. Library photos stay options (the default slide 1).
 - `carousel_cover_generations` is the budget log: time, carousel, owner, prompt SHA-256, photo
   count, model, cost (`GROK_COVER_COST_USD`, default 0: the Grok Bot runs on a subscription),
-  status, error code. Pending and succeeded rows count against the caps; failed ones do not. The
-  cap check and the insert are serialised per owner by locking the owner's user row.
+  status, error code, created/started/completed times. Pending and succeeded rows count against the
+  caps; failed ones do not, up to a hard ceiling of 3x the caps (12 per carousel, 120 per month)
+  that counts every attempt (decided at review; Pedro can override). The cap check and the insert
+  are serialised per owner by locking the owner's user row (a Postgres race test proves exactly one
+  start passes the last slot).
+- The job claims its row once it has a bridge slot, right before the webhook: a row failed
+  meanwhile cancels the job, so a reaped queued job never sends photos or gets billed; the stale
+  reaper times started jobs from that claim.
 - Any failure (webhook, bridge error, timeout, unusable image) settles the row `failed` and
   stores no asset. A run lost to a restart is failed as interrupted when next read.
 - No feature flag (Pedro): an unconfigured bridge answers 503 and records nothing.

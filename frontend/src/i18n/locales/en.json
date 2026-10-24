@@ -1233,14 +1233,16 @@
         "photoLabel": "Use library photo {number}",
         "promptLabel": "What should the cover look like?",
         "promptPlaceholder": "E.g. me in a café in Lisbon, late afternoon light, looking at the camera",
-        "usage": "{carouselUsed} of {carouselCap} on this carousel · {monthUsed} of {monthCap} this month",
+        "usage": "{carouselUsed} of {carouselCap} on this carousel · {monthUsed} of {monthCap} this month (the monthly limit resets at 21:00 BRT on the last day of the month)",
         "action": "Generate cover",
         "pending": "Generating the cover with Grok… this can take a few minutes.",
         "succeeded": "Cover generated. Pick it above to use it on slide 1.",
         "retry": "Try again",
         "blocked": {
           "carouselCap": "The limit of 4 generated covers on this carousel is reached.",
-          "monthlyCap": "The limit of 40 generated covers this month is reached."
+          "monthlyCap": "The limit of 40 generated covers this month is reached. It resets at 21:00 BRT on the last day of the month.",
+          "carouselAttempts": "The limit of 12 attempts on this carousel is reached (failures and timeouts count).",
+          "monthlyAttempts": "The limit of 120 attempts this month is reached (failures and timeouts count). It resets at 21:00 BRT on the last day of the month."
         },
         "confirm": {
           "title": "Send your photos to Grok?",
@@ -1257,7 +1259,9 @@
           "photoUnreadable": "One of the photos could not be read. Pick another one.",
           "inProgress": "A cover is already being generated for this carousel.",
           "carouselCap": "The limit of 4 generated covers on this carousel is reached.",
-          "monthlyCap": "The limit of 40 generated covers this month is reached.",
+          "monthlyCap": "The limit of 40 generated covers this month is reached. It resets at 21:00 BRT on the last day of the month.",
+          "carouselAttempts": "The limit of 12 attempts on this carousel is reached (failures and timeouts count).",
+          "monthlyAttempts": "The limit of 120 attempts this month is reached (failures and timeouts count). It resets at 21:00 BRT on the last day of the month.",
           "unavailable": "Generating with Grok is not available right now.",
           "photoNotAllowed": "Only photos from your library can be sent.",
           "notOwner": "Only the carousel's owner can generate covers."

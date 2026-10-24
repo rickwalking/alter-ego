@@ -72,6 +72,27 @@ Feature: Generate a slide-1 cover from library photos with Grok
     When the owner asks for a cover
     Then the API answers 409 with cover_generation_monthly_cap
 
+  Scenario: A queued job is timed from its bridge slot, not its creation
+    Given a generation that waited for a free bridge slot and then started
+    When the owner lists the generations within the bridge timeout of its start
+    Then it is still pending
+
+  Scenario: A queued job whose row was failed meanwhile sends nothing
+    Given a generation still queued for a bridge slot was failed as interrupted
+    When its bridge slot frees up
+    Then its claim is refused and no photo is sent to the Grok Bot
+    And nothing is billed or stored
+
+  Scenario: Failed attempts are free up to a hard attempt ceiling
+    Given 12 attempts on the carousel or 120 attempts by the owner this month, failures and timeouts included
+    When the owner asks for another cover
+    Then the API answers 409 with cover_generation_carousel_attempts or cover_generation_monthly_attempts
+
+  Scenario: Two simultaneous starts at the last slot let exactly one through
+    Given 3 of 4 generations on the carousel, or 39 of 40 this month
+    When two starts arrive at the same time
+    Then exactly one is recorded as pending and the other is refused
+
   Scenario: A run lost to a restart is reported as interrupted
     Given a pending generation older than the bridge timeout
     When the owner lists the generations

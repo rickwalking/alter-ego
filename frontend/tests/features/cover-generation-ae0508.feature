@@ -38,6 +38,13 @@ Feature: Generate a slide-1 cover from library photos with Grok on the publish s
     Given the month used 40 of 40 generations
     Then "Gerar capa" is disabled and the reason names the monthly cap
 
+  Scenario: The attempt ceiling disables the action with the reason
+    Given the carousel used 12 attempts or the month used 120 attempts, failures included
+    Then "Gerar capa" is disabled and the reason names the attempt ceiling
+
+  Scenario: The usage line says when the monthly limit resets
+    Then the usage line says the monthly limit resets at 21:00 BRT on the last day of the month
+
   Scenario: At most three photos can be sent
     Given three photos are ticked
     Then the other photos cannot be ticked

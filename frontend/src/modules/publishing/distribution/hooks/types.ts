@@ -167,7 +167,12 @@ export interface CoverGenerationInput {
 }
 
 /** Why a new generation is not allowed now (a cap), or null. */
-export type CapReason = "carouselCap" | "monthlyCap" | null;
+export type CapReason =
+  | "carouselCap"
+  | "monthlyCap"
+  | "carouselAttempts"
+  | "monthlyAttempts"
+  | null;
 
 /** The "Gerar capa com Grok" form state and actions. */
 export interface CoverGenerateForm {

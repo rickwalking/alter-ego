@@ -64,6 +64,9 @@ class CarouselCoverGenerationModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -86,6 +89,7 @@ class CarouselCoverGenerationModel(Base):
             cost_usd=self.cost_usd,
             created_at=self.created_at,
             completed_at=self.completed_at,
+            started_at=self.started_at,
             result_asset_id=(
                 uuid.UUID(self.result_asset_id) if self.result_asset_id else None
             ),
@@ -106,6 +110,7 @@ class CarouselCoverGenerationModel(Base):
             cost_usd=entity.cost_usd,
             created_at=entity.created_at,
             completed_at=entity.completed_at,
+            started_at=entity.started_at,
             result_asset_id=(
                 str(entity.result_asset_id) if entity.result_asset_id else None
             ),

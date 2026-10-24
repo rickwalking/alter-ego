@@ -150,8 +150,15 @@ text-only job never sends them.
   recognisable) and answers through the §2.2 callback exactly as for a text job.
 - The backend fits the answer to 1080×1350, applies the `ai_image` cover rules (ADR-0024) and
   stores it as a private creator asset with role `cover`. No OpenAI fallback for these jobs.
+- A cover job waits for one of the bridge's concurrency slots like any job. Once it has a slot,
+  and before the webhook is posted, the backend claims the generation (sets `started_at` only while
+  it is still pending). A generation failed meanwhile (for example reaped as interrupted while it
+  queued) cancels the job, so no photo is sent and nothing is billed. The stale reaper times a
+  started job from `started_at`, not from its creation.
 - Each generation follows an explicit confirmation by the owner, at most 4 per carousel and 40
-  per calendar month (failures do not count); see [ADR-0027](../decisions/0027-grok-cover-from-library-photos.md).
+  per calendar month (UTC, which resets at 21:00 BRT on the last day of the month; failures do not
+  count), with a hard ceiling of 12 attempts per carousel and 120 per month that counts every
+  attempt, failures and timeouts included; see [ADR-0027](../decisions/0027-grok-cover-from-library-photos.md).
 
 ## 3. Backend design
 

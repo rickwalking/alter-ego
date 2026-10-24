@@ -43,6 +43,10 @@ interface ListShape {
   carousel_cap: number;
   month_used: number;
   month_cap: number;
+  carousel_attempts: number;
+  carousel_attempt_cap: number;
+  month_attempts: number;
+  month_attempt_cap: number;
   generations: Record<string, unknown>[];
 }
 
@@ -52,6 +56,10 @@ function list(overrides: Partial<ListShape> = {}): ListShape {
     carousel_cap: 4,
     month_used: 3,
     month_cap: 40,
+    carousel_attempts: 1,
+    carousel_attempt_cap: 12,
+    month_attempts: 3,
+    month_attempt_cap: 120,
     generations: [],
     ...overrides,
   };
@@ -247,9 +255,12 @@ describe("CoverGeneratePanel", () => {
   });
 
   /** Scenario: A reached cap disables the action with the reason */
+  /** Scenario: The attempt ceiling disables the action with the reason */
   it.each([
     [{ carousel_used: 4 }, "blocked.carouselCap"],
     [{ month_used: 40 }, "blocked.monthlyCap"],
+    [{ carousel_attempts: 12 }, "blocked.carouselAttempts"],
+    [{ month_attempts: 120 }, "blocked.monthlyAttempts"],
   ])("disables the action at a cap (%o)", async (usage, reason) => {
     routeApi([list(usage)]);
     const { user } = renderPanel();
@@ -307,15 +318,24 @@ describe("CoverGeneratePanel", () => {
 
 describe("cover generation copy", () => {
   /** Scenario: The owner generates a cover after confirming */
+  /** Scenario: The usage line says when the monthly limit resets */
   it.each([
     ["pt", pt],
     ["en", en],
-  ])("the %s confirmation names xAI and the caps", (_lang, messages) => {
-    const body = messages.publish.coverPicker.generate.confirm.body;
-    expect(body).toContain("xAI");
-    expect(body).toContain("{carouselCap}");
-    expect(body).toContain("{monthCap}");
-  });
+  ])(
+    "the %s copy names xAI, the caps and the 21:00 BRT reset",
+    (_lang, messages) => {
+      const generate = messages.publish.coverPicker.generate;
+      const body = generate.confirm.body;
+      expect(generate.usage).toContain("21:00");
+      expect(generate.blocked.monthlyCap).toContain("21:00");
+      expect(generate.blocked.monthlyAttempts).toContain("120");
+      expect(generate.blocked.carouselAttempts).toContain("12");
+      expect(body).toContain("xAI");
+      expect(body).toContain("{carouselCap}");
+      expect(body).toContain("{monthCap}");
+    },
+  );
 });
 
 describe("cover generation parts", () => {

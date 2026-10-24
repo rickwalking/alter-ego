@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import CursorResult, func, select, update
+from sqlalchemy import CursorResult, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.cover_generation import FAILURE_INTERRUPTED
@@ -72,6 +72,28 @@ class SqlCoverGenerationRepository:
         )
         return int(count or 0)
 
+    async def count_owner_attempts_since(self, owner_id: str, since: datetime) -> int:
+        """Every generation the owner started since ``since``, failures included."""
+        count = await self._session.scalar(
+            select(func.count())
+            .select_from(_Row)
+            .where(_Row.owner_id == owner_id, _Row.created_at >= since)
+        )
+        return int(count or 0)
+
+    async def mark_started(self, generation_id: UUID, at: datetime) -> bool:
+        """Record that the job got its bridge slot; False when no longer pending."""
+        result = await self._session.execute(
+            update(_Row)
+            .where(
+                _Row.id == str(generation_id),
+                _Row.status == _PENDING,
+                _Row.started_at.is_(None),
+            )
+            .values(started_at=at)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
     async def settle(self, outcome: CoverGenerationOutcome) -> bool:
         """Mark a pending generation succeeded or failed; False when not pending."""
         status = _FAILED if outcome.error_code else _SUCCEEDED
@@ -89,11 +111,22 @@ class SqlCoverGenerationRepository:
         )
         return cast(CursorResult[object], result).rowcount == 1
 
-    async def fail_stale(self, created_before: datetime, at: datetime) -> int:
-        """Fail pending generations created before the cutoff (a lost run)."""
+    async def fail_stale(self, cutoff: datetime, at: datetime) -> int:
+        """Fail pending generations whose clock passed the cutoff (a lost run).
+
+        The clock starts when the job got its bridge slot (``started_at``); a
+        job still queued for a slot is timed from its creation, and a queued
+        job failed here is cancelled by its claim before anything is sent.
+        """
         result = await self._session.execute(
             update(_Row)
-            .where(_Row.status == _PENDING, _Row.created_at < created_before)
+            .where(
+                _Row.status == _PENDING,
+                or_(
+                    _Row.started_at < cutoff,
+                    and_(_Row.started_at.is_(None), _Row.created_at < cutoff),
+                ),
+            )
             .values(status=_FAILED, completed_at=at, error_code=FAILURE_INTERRUPTED)
         )
         return int(cast(CursorResult[object], result).rowcount or 0)

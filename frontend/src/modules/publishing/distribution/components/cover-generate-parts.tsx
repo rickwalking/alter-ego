@@ -27,6 +27,8 @@ export const GENERATION_ERROR_KEYS: Readonly<Record<string, string>> = {
   cover_generation_in_progress: "errors.inProgress",
   cover_generation_carousel_cap: "errors.carouselCap",
   cover_generation_monthly_cap: "errors.monthlyCap",
+  cover_generation_carousel_attempts: "errors.carouselAttempts",
+  cover_generation_monthly_attempts: "errors.monthlyAttempts",
   cover_generation_unavailable: "errors.unavailable",
   cover_generation_photo_not_allowed: "errors.photoNotAllowed",
   cover_generation_not_owner: "errors.notOwner",

@@ -45,6 +45,10 @@ const coverGenerationsSchema = z.object({
   carousel_cap: z.number(),
   month_used: z.number(),
   month_cap: z.number(),
+  carousel_attempts: z.number(),
+  carousel_attempt_cap: z.number(),
+  month_attempts: z.number(),
+  month_attempt_cap: z.number(),
   generations: z.array(coverGenerationSchema),
 });
 
