@@ -71,6 +71,7 @@ def _status(
             engine_status=engine_status,
             row=row,
             grace_seconds=_GRACE,
+            node_pending=False,
         )
     )
 

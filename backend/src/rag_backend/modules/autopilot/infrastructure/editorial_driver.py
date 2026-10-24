@@ -64,7 +64,6 @@ from rag_backend.modules.autopilot.domain.gate import (
     StartStatus,
 )
 from rag_backend.modules.autopilot.domain.parked import (
-    GateStatus,
     GateStatusInput,
     RowRun,
     reconcile_gate_status,
@@ -183,7 +182,15 @@ class InProcessEditorialDriver:
         state = _state_of(view)
         lock_version = view.lock_version if view is not None else 1
         beat = await self._acl.heartbeat(project_id)
-        gate = self._gate_status(state, beat)
+        gate = reconcile_gate_status(
+            GateStatusInput(
+                engine_phase=str(state.get(FIELD_CURRENT_PHASE, "")),
+                engine_status=str(state.get(FIELD_PHASE_STATUS, "")),
+                row=self._row_run(beat),
+                grace_seconds=PARKED_GRACE_SECONDS,
+                node_pending=await engine.is_parked_before_node(project_id),
+            )
+        )
         state[FIELD_PHASE_STATUS] = gate.phase_status
         return assemble_snapshot(
             SnapshotParts(
@@ -253,18 +260,6 @@ class InProcessEditorialDriver:
                 await self._config.session.rollback()
             return ResumeResult(status=status)
         return ResumeResult(status=ResumeStatus.APPLIED)
-
-    def _gate_status(
-        self, state: dict[str, object], beat: RunHeartbeat | None
-    ) -> GateStatus:
-        return reconcile_gate_status(
-            GateStatusInput(
-                engine_phase=str(state.get(FIELD_CURRENT_PHASE, "")),
-                engine_status=str(state.get(FIELD_PHASE_STATUS, "")),
-                row=self._row_run(beat),
-                grace_seconds=PARKED_GRACE_SECONDS,
-            )
-        )
 
     def _row_run(self, beat: RunHeartbeat | None) -> RowRun | None:
         if beat is None:
