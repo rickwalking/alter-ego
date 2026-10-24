@@ -3,15 +3,10 @@
 import { useTranslations } from "next-intl";
 
 import {
-  fieldDomId,
-  fieldErrorKey,
   INSIGHT_QUOTE_EXTRA_KEY,
   parsePresentationInsightQuote,
   PresentationIconPreview,
   resolveExtraBudget,
-  resolveItemBudget,
-  structuredItemFieldPath,
-  type SlideFieldErrors,
 } from "@/modules/editorial";
 
 import { ContentCopyField } from "./content-phase-copy-field";
@@ -22,12 +17,13 @@ import {
   AddItemButton,
 } from "./content-phase-item-buttons";
 import type { StructuredEditContext } from "./content-phase-item-buttons";
+import {
+  asText,
+  fieldProps,
+  ItemTextFields,
+} from "./content-phase-item-text-fields";
 
-/** Content-review DOM ids (``slide-{n}-{locale}-{field}``). */
-export const CONTENT_REVIEW_ID_PREFIX = "slide";
-
-/** Item fields the reviewer edits (``icon_name`` stays as generated). */
-const ITEM_TEXT_FIELDS = ["title", "body"] as const;
+export { CONTENT_REVIEW_ID_PREFIX } from "./content-phase-item-text-fields";
 
 /** Text fields of an object extra (``insight``) the reviewer can edit. */
 const EXTRA_TEXT_FIELDS = ["title", "body", "quote", "attribution"] as const;
@@ -54,28 +50,9 @@ export function isEditableExtra(extraKey: string, value: unknown): boolean {
   return EXTRA_TEXT_FIELDS.some((field) => typeof record[field] === "string");
 }
 
-function asText(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function fieldProps(
-  context: StructuredEditContext,
-  fieldPath: string,
-): { id: string; violations: ReturnType<SlideFieldErrors["get"]> } {
-  const key = fieldErrorKey(
-    context.slide.slide_index,
-    context.localeKey,
-    fieldPath,
-  );
-  return {
-    id: fieldDomId(CONTENT_REVIEW_ID_PREFIX, key),
-    violations: context.fieldErrors.get(key),
-  };
-}
-
 /**
  * Every item of a structured list (summary points, features,
- * closing actions) with an editable title and body, addressed by the same
+ * closing actions) with its displayed text editable, addressed by the same
  * ``list[i].field`` path the validator flags. Items can be added
  * (also to an empty list) and removed.
  */
@@ -116,34 +93,12 @@ export function EditableStructuredItems({
                 itemIndex={itemIndex}
               />
             </div>
-            {ITEM_TEXT_FIELDS.map((field) => (
-              <ContentCopyField
-                key={field}
-                {...fieldProps(
-                  context,
-                  structuredItemFieldPath(listKey, itemIndex, field),
-                )}
-                label={tCopy(field === "title" ? "itemTitle" : "itemBody")}
-                value={asText(item[field])}
-                rows={field === "title" ? 1 : 2}
-                localeKey={context.localeKey}
-                budget={resolveItemBudget(
-                  listKey,
-                  field,
-                  context.policyVersion,
-                )}
-                onChange={(value) =>
-                  context.onItemChange({
-                    slideIndex: context.slide.slide_index,
-                    locale: context.localeKey,
-                    listKey,
-                    itemIndex,
-                    field,
-                    value,
-                  })
-                }
-              />
-            ))}
+            <ItemTextFields
+              context={context}
+              listKey={listKey}
+              itemIndex={itemIndex}
+              item={item}
+            />
           </li>
         ))}
       </ul>

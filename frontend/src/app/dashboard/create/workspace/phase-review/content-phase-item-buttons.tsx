@@ -30,6 +30,14 @@ export interface StructuredEditContext {
   onListChange?: (edit: SlideStructuredListEdit) => void;
 }
 
+/** One structured item's text fields at content review. */
+export interface ItemTextFieldsProps {
+  context: StructuredEditContext;
+  listKey: string;
+  itemIndex: number;
+  item: Record<string, unknown>;
+}
+
 export function listLabel(
   tCopy: ReturnType<typeof useTranslations>,
   listKey: string,
