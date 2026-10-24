@@ -70,6 +70,16 @@ describe("buildCatalogueIdeas", () => {
   });
 
   /** Scenario: The Slide 1 photo shows curated suggestions for the topic and palette */
+  it("cuts a topic without spaces at exactly 80 characters", () => {
+    const topic = "d".repeat(85);
+
+    const [first] = buildCatalogueIdeas(t, { topic, palette: PALETTE });
+
+    expect(first).toContain(`“${"d".repeat(80)}…”`);
+    expect(first).not.toContain("d".repeat(81));
+  });
+
+  /** Scenario: The Slide 1 photo shows curated suggestions for the topic and palette */
   it("keeps a topic of exactly 80 characters whole", () => {
     const topic = "c".repeat(80);
 

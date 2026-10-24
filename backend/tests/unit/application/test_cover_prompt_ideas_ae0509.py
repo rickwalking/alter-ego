@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 
 import pytest
+from structlog.testing import capture_logs
 
 import rag_backend.application.services.carousel.cover_prompt_ideas_service as svc
 from rag_backend.application.services.carousel.cover_prompt_ideas_service import (
@@ -150,10 +151,18 @@ class TestSuggest:
         """Scenario: A short answer is asked once more."""
         llm = _ScriptedLLM(RuntimeError("down"), _answer(_IDEAS[:3]))
 
-        ideas = await _service(llm, _Recorder()).suggest(_request())
+        with capture_logs() as logs:
+            ideas = await _service(llm, _Recorder()).suggest(_request())
 
         assert ideas == _IDEAS[:3]
         assert llm.calls == 2
+        assert logs == [
+            {
+                "event": "cover_prompt_ideas_call_failed",
+                "error": "RuntimeError",
+                "log_level": "warning",
+            }
+        ]
 
 
 class TestUnavailable:
