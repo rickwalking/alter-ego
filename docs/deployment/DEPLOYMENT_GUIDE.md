@@ -34,7 +34,12 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `ANTHROPIC_API_KEY` | Anthropic API key                                                                                                                                     |
 | `SECRET_KEY`        | JWT signing key (`openssl rand -hex 32`)                                                                                                              |
 | `ANON_SECRET_KEY`   | Anonymous token key (`openssl rand -hex 32`)                                                                                                          |
-| `REDIS_PASSWORD`    | Redis auth (AE-0302, `openssl rand -hex 32`) — required; Redis and the backend fail closed without it; shared by backend + Langfuse + langfuse-worker |
+| `REDIS_PASSWORD`    | Redis auth (AE-0302, `openssl rand -hex 32`) — required; Redis and the backend fail closed without it |
+| `LANGFUSE_CLOUD_PUBLIC_KEY` | Langfuse Cloud project public key (`pk-lf-…`), optional: tracing is off without it (AE-0545) |
+| `LANGFUSE_CLOUD_SECRET_KEY` | Langfuse Cloud project secret key (`sk-lf-…`), optional: tracing is off without it (AE-0545) |
+
+Repository variable `LANGFUSE_CLOUD_HOST` (optional): the Langfuse Cloud region, `https://cloud.langfuse.com` (EU,
+default) or `https://us.cloud.langfuse.com` (US).
 
 ---
 

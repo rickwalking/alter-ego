@@ -9,21 +9,14 @@ import re
 from pathlib import Path
 
 import yaml
-from defusedxml import ElementTree
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 COMPOSE = REPO_ROOT / "docker-compose.prod.yml"
-CLICKHOUSE_CONFIG = REPO_ROOT / "clickhouse-config" / "low-memory.xml"
 ONE_SHOT = "no"
 MEMORY_VALUE = re.compile(r"^(?P<amount>\d+)(?P<unit>[kKmMgG])$")
 UNIT_MIB = {"k": 1 / 1024, "m": 1, "g": 1024}
 MEASURED_HD_RUN_PEAK_MIB = 1011
 HEADROOM = 1.3
-LANGFUSE_LIMIT_MIB = 768
-CLICKHOUSE_LIMIT_MIB = 640
-CLICKHOUSE_MAX_RATIO = 0.75
-NODE_HEAP_FLAG = re.compile(r"--max-old-space-size=(?P<mib>\d+)")
-NODE_NATIVE_OVERHEAD_MIB = 256
 
 Service = dict[str, object]
 
@@ -109,27 +102,3 @@ def test_the_backend_limit_covers_the_measured_hd_export_peak() -> None:
     assert limit is not None
     assert limit >= MEASURED_HD_RUN_PEAK_MIB * HEADROOM
     assert _memory(backend, "reservations") is not None
-
-
-def test_langfuse_web_keeps_its_node_heap_below_its_container_limit() -> None:
-    """Scenario: Langfuse web keeps its Node heap below its container limit"""
-    langfuse = _services()["langfuse"]
-    assert _limit(langfuse) == LANGFUSE_LIMIT_MIB
-    environment = langfuse["environment"]
-    assert isinstance(environment, dict)
-    heap = NODE_HEAP_FLAG.search(str(environment.get("NODE_OPTIONS", "")))
-    assert heap, "langfuse has no --max-old-space-size"
-    assert int(heap.group("mib")) + NODE_NATIVE_OVERHEAD_MIB <= LANGFUSE_LIMIT_MIB
-
-
-def test_clickhouse_caps_its_server_memory_below_its_container_limit() -> None:
-    """Scenario: ClickHouse caps its server memory below its container limit"""
-    assert _limit(_services()["clickhouse"]) == CLICKHOUSE_LIMIT_MIB
-    ratio = (
-        ElementTree
-        .parse(CLICKHOUSE_CONFIG)
-        .getroot()
-        .findtext("max_server_memory_usage_to_ram_ratio")
-    )
-    assert ratio is not None
-    assert float(ratio) <= CLICKHOUSE_MAX_RATIO
