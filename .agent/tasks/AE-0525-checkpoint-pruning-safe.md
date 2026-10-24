@@ -1,16 +1,16 @@
 # AE-0525 — P3b — safe LangGraph checkpoint pruning (AE-0342 fix)
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Bug
 Area: Backend
 Owner: Claude Code (claude-opus-5-5)
 Agent Lane: developer → qa → release
-Branch: TBD
+Branch: fix/ae-0525-checkpoint-pruning
 Kanban Card: TBD
 Created: 2026-10-22
-Updated: 2026-10-22
+Updated: 2026-10-23
 
 ## Goal
 
@@ -25,17 +25,68 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
 
 ## Scope
 
-- Root-cause the never-matching prefix (AE-0342); dry-run count of matched threads; Pedro signs off on the matched set; backup the checkpoint tables; then delete; never touch projects that may need republish/rework.
+- Root cause (AE-0342): `backend/scripts/cleanup_carousel_checkpoints.py` targets `carousel-{id}` thread ids while the
+  workflow keys checkpoints by the bare project id, so it never matched a row; it was also never scheduled. Replace it
+  with one shared `checkpoint_thread_id()` used by the workflow engine and the prune.
+- New guarded CLI `python -m rag_backend.scripts.checkpoint_prune`: dry run by default; `--apply` needs Pedro's
+  signed-off thread list and a `pg_dump -Fc` archive (`--pg-dump`) that `pg_restore --list` reads with the data of
+  the three checkpoint tables; it refuses while the carousel graph (or a subgraph) keeps a `DeltaChannel`; it
+  re-checks eligibility under a row lock, writes a JSONL backup (default: a new file in
+  `/app/output/checkpoint-prune/`, the mounted output volume), and deletes in one transaction. `--restore` inserts a
+  JSONL backup back. The backend image gains `postgresql-client` (Debian 13: 17, matching prod's Postgres 17).
+- Keep-latest pruning: each thread keeps its latest checkpoint (per namespace), the writes of that checkpoint and of its
+  parent, and the blobs it references; everything older goes. The workflow state API reads only the latest
+  checkpoint, so a pruned carousel still opens; a full thread delete would 404 its workflow view.
+- Eligible projects: finished (`completed`/`failed`), last updated before the TTL (`carousel_checkpoint_ttl_days`),
+  not running, no pending republish, no autopilot run that is not settled (only `published`, `rejected` and `expired`
+  runs are settled; queued, generating, owner-wait, rework, scheduled, publishing and held/failed runs protect the
+  thread), and rejected or published. Threads without a carousel project are never touched
+  (they may belong to another graph).
 
 ## Non-Goals
 
-- Any change to the queue or the daily scan.
+- Any change to the queue or the daily scan. Scheduling the prune (each run needs Pedro's sign-off). The runaway-thread
+  size alarm of AE-0342.
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given a dry run, Then it lists the matched thread ids and their projects' states and deletes nothing.
-- [ ] AC2 Given Pedro's sign-off and a backup, When the prune runs, Then only the signed-off threads are deleted and the checkpoint table shrinks accordingly.
+- [ ] AC1 Given a dry run, Then it lists the matched thread ids with their projects' states and the rows each table
+  would lose, and deletes nothing.
+- [ ] AC2 Given Pedro's sign-off and a backup, When the prune runs, Then only the signed-off threads are pruned and the
+  checkpoint tables shrink accordingly; the backup holds every deleted row.
+- [ ] AC3 Given a pruned thread, Then its workflow state (values, next node, pending interrupt) is the same as before.
+- [ ] AC4 Given a signed-off thread that is no longer eligible (resumed, republish pending, an autopilot run queued,
+  too recent, not a carousel), Then the prune refuses and deletes nothing.
+- [ ] AC5 Given signed-off threads with removable rows, When nothing is deleted, Then the run exits non-zero (no silent
+  no-op), and the log reports deleted counts per table.
+- [ ] AC6 The workflow engine and the prune build the thread id with the same function.
+- [ ] AC7 Given a carousel whose autopilot run is queued, running or held, Then it is never matched; and a pruned
+  thread parked at a human gate still resumes from that gate to the end.
+- [ ] AC8 Given a pruned thread and its JSONL backup, When the backup is restored, Then every deleted row is back
+  exactly as before.
+- [ ] AC9 Given a missing/unreadable `--pg-dump`, one lacking a checkpoint table, or a carousel graph with a
+  `DeltaChannel`, When `--apply` runs, Then it refuses before deleting anything.
+- [ ] AC10 Given a subgraph namespace, Then it keeps its own latest checkpoint and the run resumes like an unpruned
+  twin; a partial delete or a short backup refuses and rolls back.
+
+## Gherkin Scenarios
+
+`backend/tests/features/checkpoint_prune_ae0525.feature`.
 
 ## Decision Log
 
 - 2026-10-22: Created from the AE-0517 plan after three skeptical review rounds (Pedro's cap).
+- 2026-10-23: keep-latest instead of a full thread delete, so the workflow view of a pruned carousel keeps working;
+  orphan threads are excluded; the prune is a manual, signed-off CLI, not a scheduled job.
+- 2026-10-23: a project with an autopilot run that is not settled (published, rejected, expired) is never eligible,
+  so a queued, running or held run keeps its full checkpoint history. The `generation_runs` table of the queue
+  (AE-0522) is not on `main` yet; once it lands, its queued/running/dead-letter runs must join this guard.
+- 2026-10-24: review round (Pedro): the backup is proven by a real JSONL restore round trip; `--pg-dump` is required
+  and verified with `pg_restore --list` before deleting; the default JSONL path is on the mounted output volume;
+  the DeltaChannel guard is a runtime refusal; settled autopilot states come from `AutopilotRunState`; tests for a
+  subgraph namespace, a partial delete and a short backup. The `generation_runs` guard is AE-0541 (blocked by
+  AE-0522).
+- 2026-10-23: independent QA (PASS) follow-ups: `--ttl-days` below 1, a missing sign-off file and an existing backup
+  file are usage errors before any database access; the backup is created owner-only; a unit test fails if the
+  carousel graph adopts a `DeltaChannel` (keep-latest would cut the history it is rebuilt from). Runbook:
+  `docs/deployment/checkpoint-prune-runbook.md`.
