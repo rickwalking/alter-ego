@@ -1,6 +1,6 @@
 """The publish route answers a release that keeps losing its version race with 409.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0546.feature
 """
 
 from __future__ import annotations

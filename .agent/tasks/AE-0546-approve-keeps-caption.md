@@ -1,4 +1,4 @@
-# AE-0545 — Approving a carousel for publishing wipes its caption; the autopilot posts captionless
+# AE-0546 — Approving a carousel for publishing wipes its caption; the autopilot posts captionless
 
 Status: In Development
 Tier: T1
@@ -27,7 +27,7 @@ Pedro's text survives in `content_versions` (`carousel_copy`, version 2, field `
 autopilot posts.
 
 Root cause (reproduced by `test_publish_now_keeps_the_saved_caption_and_posts_it`, which fails on `main`; prod
-evidence query: `.agent/reports/AE-0545.prod-evidence.sql`):
+evidence query: `.agent/reports/AE-0546.prod-evidence.sql`):
 
 1. `create_generation_draft` (blog "from carousel", ADR-0025) creates the carousel's `origin='carousel'` blog row
    with `distribution={}`. That row is the carousel's canonical distribution home (ADR-0011).
@@ -79,7 +79,7 @@ Second issue: a workflow whose run died after the images gate, before `final_rev
 
 ## Gherkin Scenarios
 
-`backend/tests/features/approve_keeps_caption_ae0545.feature`.
+`backend/tests/features/approve_keeps_caption_ae0546.feature`.
 
 ## Affected Areas
 
@@ -103,7 +103,7 @@ Second issue: a workflow whose run died after the images gate, before `final_rev
 - 2026-10-24: an empty caption is a permanent pre-check failure with retry offered (the owner can fix the caption and
   retry).
 
-- 2026-10-24: renumbered from AE-0542 (PR #274 holds that id).
+- 2026-10-24: renumbered from AE-0542 (PR #274 holds that id), then from AE-0545 (PR #279 opened first with it).
 - 2026-10-24: the release does not bump `lock_version`; bumping it would fail the workflow resume CAS that follows
   an approval. The CAS still refuses a write when a concurrent writer bumped the version.
 

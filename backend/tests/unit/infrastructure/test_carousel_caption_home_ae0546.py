@@ -1,6 +1,6 @@
 """A saved caption survives an empty home, a carousel draft and the public release.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0546.feature
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Publish now from Telegram keeps the saved caption and posts it.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0546.feature
 
 Drives the real owner action (``ap:pubnow``), the in-process editorial approve of
 final review, the public release and the Instagram publish job against SQLite,
