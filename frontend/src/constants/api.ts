@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   PALETTE_GENERATE: "/api/palettes/generate",
   PALETTE_BY_ID: (id: string) => `/api/palettes/${id}`,
   CAROUSELS: "/api/carousels",
+  COVER_PROMPT_IDEAS: "/api/carousels/cover-prompt-ideas",
   CAROUSEL_BY_ID: (id: string) => `/api/carousels/${id}`,
   CAROUSEL_BLOG: (id: string) => `/api/carousels/${id}/blog`,
   CAROUSEL_PREVIEW_BLOG: (id: string, lang: string) =>

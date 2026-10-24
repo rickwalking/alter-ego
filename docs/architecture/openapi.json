@@ -3721,6 +3721,42 @@
         "title": "CoverAssetResponse",
         "type": "object"
       },
+      "CoverIdeasPaletteRequest": {
+        "additionalProperties": false,
+        "description": "The slide palette the ideas should suit.",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "background": {
+            "title": "Background",
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PaletteMode"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "mode",
+          "background",
+          "primary",
+          "accent"
+        ],
+        "title": "CoverIdeasPaletteRequest",
+        "type": "object"
+      },
       "CoverOptionResponse": {
         "description": "One image slide 1 may show: a library photo or the GrokBot offer.",
         "properties": {
@@ -3845,6 +3881,54 @@
           "current_asset_id"
         ],
         "title": "CoverPickResponse",
+        "type": "object"
+      },
+      "CoverPromptIdeasRequest": {
+        "additionalProperties": false,
+        "description": "The carousel topic, its palette (none for \"auto\") and the UI language.",
+        "properties": {
+          "locale": {
+            "$ref": "#/components/schemas/IdeaLocale",
+            "default": "pt"
+          },
+          "palette": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverIdeasPaletteRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topic": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "CoverPromptIdeasRequest",
+        "type": "object"
+      },
+      "CoverPromptIdeasResponse": {
+        "description": "Three to six prompt ideas for a new cover photo (nothing is stored).",
+        "properties": {
+          "ideas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ideas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ideas"
+        ],
+        "title": "CoverPromptIdeasResponse",
         "type": "object"
       },
       "CoverReference": {
@@ -5397,6 +5481,15 @@
         ],
         "title": "HookSelectResponse",
         "type": "object"
+      },
+      "IdeaLocale": {
+        "description": "The language the ideas are written in (the dashboard's locale).",
+        "enum": [
+          "pt",
+          "en"
+        ],
+        "title": "IdeaLocale",
+        "type": "string"
       },
       "InstagramInsightsResponse": {
         "description": "Rows (newest first) and the KPI ratios over the posts that report them.",
@@ -12481,6 +12574,63 @@
         "summary": "Create Carousel",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/cover-prompt-ideas": {
+      "post": {
+        "description": "Three to six prompt ideas for a new cover photo; nothing is stored.",
+        "operationId": "suggest_cover_prompt_ideas_api_carousels_cover_prompt_ideas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverPromptIdeasRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverPromptIdeasResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "cover_prompt_ideas_unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suggest Cover Prompt Ideas",
+        "tags": [
+          "carousels",
+          "carousels-cover-prompt-ideas"
         ]
       }
     },

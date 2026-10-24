@@ -162,4 +162,15 @@ describe("CreatePhotoSection", () => {
       screen.queryByRole("button", { name: "Delete selected photo" }),
     ).toBeNull();
   });
+
+  /** Scenario: The Slide 1 photo shows curated suggestions for the topic and palette */
+  it("renders the cover prompt field under the library", () => {
+    renderSection({ promptField: <p>cover prompt slot</p> });
+    expect(screen.getByText("cover prompt slot")).toBeInTheDocument();
+  });
+
+  it("renders no prompt slot when none is given", () => {
+    renderSection();
+    expect(screen.queryByText("cover prompt slot")).toBeNull();
+  });
 });

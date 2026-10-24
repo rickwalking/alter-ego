@@ -29,13 +29,18 @@ import {
   showsFormatPicker,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
-import { useCreateCarousel } from "@/modules/editorial";
+import { CoverPromptField, useCreateCarousel } from "@/modules/editorial";
 import { usePaletteCatalog } from "@/modules/palette";
 import { usePersonas } from "@/modules/persona";
 import { useRubrics } from "@/modules/quality";
-import { buildThemeOptions } from "@/app/dashboard/create/theme-options";
+import {
+  buildThemeOptions,
+  findThemePalette,
+} from "@/app/dashboard/create/theme-options";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
+
+const COVER_PROMPT_FIELD_ID = "create-cover-prompt";
 
 /** Any form change clears the error: an error about the previous input is stale. */
 export default function CreateCarouselPage(): React.ReactElement {
@@ -53,6 +58,11 @@ export default function CreateCarouselPage(): React.ReactElement {
     imagePreset: DEFAULT_IMAGE_PRESET,
   });
   const [error, setError] = useState<string | null>(null);
+  const [coverPrompt, setCoverPrompt] = useState("");
+  const coverPalette = useMemo(
+    () => findThemePalette(catalog, form.theme, locale),
+    [catalog, form.theme, locale],
+  );
 
   const handleChange = useCallback(
     (patch: Partial<CreateCarouselFormState>): void => {
@@ -118,7 +128,20 @@ export default function CreateCarouselPage(): React.ReactElement {
             {isPovForm(form) && (
               <CreatePovSection form={form} onChange={handleChange} />
             )}
-            {isPovForm(form) && <CreatePhotoSection {...povPhoto.section} />}
+            {isPovForm(form) && (
+              <CreatePhotoSection
+                {...povPhoto.section}
+                promptField={
+                  <CoverPromptField
+                    id={COVER_PROMPT_FIELD_ID}
+                    topic={form.topic}
+                    palette={coverPalette}
+                    value={coverPrompt}
+                    onChange={setCoverPrompt}
+                  />
+                }
+              />
+            )}
             {showsFormatPicker(form) && (
               <CreateTemplateSection form={form} onChange={handleChange} />
             )}

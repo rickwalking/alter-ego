@@ -112,6 +112,7 @@
   "POST /api/blog-posts/{post_id}/translations/en",
   "POST /api/blog-posts/{post_id}/unpublish",
   "POST /api/carousels",
+  "POST /api/carousels/cover-prompt-ideas",
   "POST /api/carousels/creator-assets",
   "POST /api/carousels/{project_id}/archive",
   "POST /api/carousels/{project_id}/caption",

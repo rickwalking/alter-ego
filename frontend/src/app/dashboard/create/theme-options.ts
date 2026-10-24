@@ -1,4 +1,5 @@
 import type { PaletteCatalogResponse, PaletteMode } from "@/schemas/palette";
+import type { CoverIdeasPalette } from "@/schemas/cover-prompt-ideas";
 
 /** The FE-only "let the backend auto-detect" theme value. */
 export const AUTO_THEME_VALUE = "auto";
@@ -51,4 +52,27 @@ export function findThemeMode(
   value: string,
 ): PaletteMode | null {
   return options.find((option) => option.value === value)?.mode ?? null;
+}
+
+/**
+ * The palette behind a theme value (root key or custom id) as the cover ideas
+ * need it: name, mode and colours. Null for "auto", an unknown value or no catalog.
+ */
+export function findThemePalette(
+  catalog: PaletteCatalogResponse | undefined,
+  value: string,
+  locale: string,
+): CoverIdeasPalette | null {
+  const root = catalog?.roots.find((palette) => palette.key === value);
+  if (root) {
+    const name = locale === LOCALE_PT ? root.label_pt : root.label_en;
+    return pickColours({ ...root, name });
+  }
+  const custom = catalog?.custom.find((palette) => palette.id === value);
+  return custom ? pickColours(custom) : null;
+}
+
+function pickColours(palette: Readonly<CoverIdeasPalette>): CoverIdeasPalette {
+  const { name, mode, background, primary, accent } = palette;
+  return { name, mode, background, primary, accent };
 }

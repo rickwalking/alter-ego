@@ -72,6 +72,7 @@ export {
 } from "./workspace/hooks/use-repair-carousel";
 
 export { AutoRepairButton } from "./workspace/components/auto-repair-button";
+export { CoverPromptField } from "./workspace/components/cover-prompt-field";
 export { HookPicker } from "./workspace/components/hook-picker";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
