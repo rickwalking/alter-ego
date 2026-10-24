@@ -18,7 +18,7 @@ from rag_backend.domain.protocols.carousel import _RenderOptions
 SAVE_CHECKLIST_STRATEGY = "save_checklist"
 SAVE_CHECKLIST_MAX_ITEMS = 5
 _LAYOUT = "pov-save"
-CHECKLIST_ITEM_KEYS = ("summary_points", "actions", "features")
+_ITEM_KEYS = ("summary_points", "actions", "features")
 _CHECK_ICON = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -29,7 +29,7 @@ _FALLBACK = StatementStrategy()
 
 def checklist_items(slide: Mapping[str, object]) -> list[str]:
     """Item texts from the slide's structured list (title, else body), max 5."""
-    for key in CHECKLIST_ITEM_KEYS:
+    for key in _ITEM_KEYS:
         raw = slide.get(key)
         if not isinstance(raw, list):
             continue
@@ -85,7 +85,6 @@ class SaveChecklistStrategy:
 
 
 __all__ = [
-    "CHECKLIST_ITEM_KEYS",
     "SAVE_CHECKLIST_MAX_ITEMS",
     "SAVE_CHECKLIST_STRATEGY",
     "SaveChecklistStrategy",
