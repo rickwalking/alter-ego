@@ -70,6 +70,7 @@
   "GET /api/rubrics",
   "GET /api/rubrics/{rubric_id}",
   "GET /api/search",
+  "GET /api/v1/image-bridge/jobs/{job_id:uuid}/inputs/{index:int}",
   "GET /api/workflow-audit/{aggregate_type}/{aggregate_id}",
   "GET /api/workflow-board",
   "GET /health",

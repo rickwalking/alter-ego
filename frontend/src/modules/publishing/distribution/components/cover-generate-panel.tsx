@@ -34,7 +34,7 @@ function CoverGenerateUnavailable({
   );
 }
 
-/** The explicit per-generation consent: names xAI, the photo count and the caps. */
+/** The explicit per-generation consent: names OpenAI (ChatGPT), the photo count and the caps. */
 function CoverGenerateConfirm({
   asking,
   usage,
@@ -64,7 +64,7 @@ function CoverGenerateConfirm({
 /**
  * "Gerar capa com Grok" in the publish-step cover picker. The owner ticks up
  * to three library photos and writes a direction in ``CoverPromptField``;
- * each generation asks for an explicit confirmation that names xAI and the
+ * each generation asks for an explicit confirmation that names OpenAI (ChatGPT) and the
  * caps, because the photos leave the app. Progress and failures (with a retry)
  * come from the generation list, polled while one runs; a finished cover
  * appears among the cover options. Renders nothing without library photos.

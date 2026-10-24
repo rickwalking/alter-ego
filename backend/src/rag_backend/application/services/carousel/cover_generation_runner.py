@@ -1,7 +1,8 @@
 """Run one pending Grok cover generation to ``succeeded`` or ``failed``.
 
-The run loads the photos, ends its read transaction, and hands the job to the
-bridge. Once a bridge slot is free the job's claim records ``started_at``
+The run checks the photos can be read and re-encoded, ends its read
+transaction, and hands the job to the bridge, whose body links to them (the
+Grok Bot fetches each one with the callback token while the job is pending). Once a bridge slot is free the job's claim records ``started_at``
 only if the row is still pending (the stale reaper times started rows from
 there); a row failed meanwhile cancels the job before any photo is sent. The
 image is then validated and stored as a private ``cover`` creator asset and
@@ -102,8 +103,9 @@ class CoverGenerationRunner:
             return await self._fail(generation, FAILURE_PHOTO_UNREADABLE)
         await self._deps.store.rollback()
         job = CoverEditJob(
+            job_id=generation.id,
             prompt=self._deps.render_prompt(run.prompt),
-            photos=photos,
+            photo_count=len(photos),
             project_id=generation.project_id,
             claim=self._claim(generation),
         )

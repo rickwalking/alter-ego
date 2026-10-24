@@ -11,7 +11,7 @@ Feature: Generate a slide-1 cover from library photos with Grok
   Scenario: A confirmed generation sends the photo bytes and stores a private cover
     When the owner asks for a cover from one photo with a prompt and confirms
     Then the API answers 202 with a pending generation
-    And the Grok Bot webhook receives an images.edit body with the photos as data URLs and no other URL
+    And the Grok Bot webhook receives an images.edit body, callback fields first, with links to the photos
     And the generated image is stored as a creator asset with role cover
     And the generation is succeeded with that asset
 
@@ -22,6 +22,13 @@ Feature: Generate a slide-1 cover from library photos with Grok
     And the owner's library photos are still offered
     When the owner picks the generated cover
     Then slide 1 shows it as an ai_image cover
+
+  Scenario: The linked photos are served only to the job's own token
+    Given a pending image-edit job with two linked photos
+    When the Grok Bot fetches a link with the job's callback token
+    Then it gets the re-encoded PNG, never cached and without CORS headers
+    When the token is missing or wrong, the job is unknown, settled or expired, or the index is out of range
+    Then the answer is 404
 
   Scenario: Generation needs an explicit confirmation
     When the owner asks for a cover without confirming

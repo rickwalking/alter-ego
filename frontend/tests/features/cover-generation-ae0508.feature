@@ -9,7 +9,7 @@ Feature: Generate a slide-1 cover from library photos with Grok on the publish s
 
   Scenario: The owner generates a cover after confirming
     When the owner ticks a photo, writes a prompt and clicks "Gerar capa"
-    Then a confirmation names xAI, the number of photos and the caps
+    Then a confirmation names OpenAI (ChatGPT), the number of photos and the caps
     When the owner confirms
     Then the generation is requested with the photos, the prompt and confirmed true
     And a progress line says the cover is being generated

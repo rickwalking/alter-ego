@@ -247,6 +247,7 @@ class CoverGenerationService:
             status=CoverGenerationStatus.PENDING,
             prompt_sha256=prompt_digest(command.prompt),
             photo_count=len(command.photo_ids),
+            photo_ids=command.photo_ids,
             model=self._config.model,
             cost_usd=self._config.cost_usd,
             created_at=self._config.now(),

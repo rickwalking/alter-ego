@@ -125,6 +125,36 @@ class EditorialCoverResults:
         await delete_cover_images(self._session, (asset_id,))
 
 
+async def cover_generation_input(
+    session: AsyncSession, generation_id: UUID, index: int
+) -> bytes | None:
+    """Photo ``index`` of a pending generation, re-encoded on each request.
+
+    None when the generation is unknown or settled, the index is out of range,
+    or the photo (one of the owner's own library photos) is gone or unreadable.
+    No copy is stored; the bytes are the same metadata-free PNG the run checked.
+    """
+    from rag_backend.modules.editorial.infrastructure.cover_generations import (
+        SqlCoverGenerationRepository,
+    )
+
+    generation = await SqlCoverGenerationRepository(session).get(generation_id)
+    if generation is None or generation.status is not CoverGenerationStatus.PENDING:
+        return None
+    if not 0 <= index < len(generation.photo_ids):
+        return None
+    asset_id = generation.photo_ids[index]
+    if asset_id not in await EditorialOwnerPhotos(session).photo_ids(
+        generation.owner_id
+    ):
+        return None
+    try:
+        (photo,) = await EditorialOwnerPhotos(session).load((asset_id,))
+    except CoverAssetError:
+        return None
+    return photo.content
+
+
 class EditorialGeneratedCovers:
     """``GeneratedCoverSource``: succeeded generations whose image still exists."""
 
@@ -278,6 +308,7 @@ __all__ = [
     "EditorialGeneratedCovers",
     "EditorialOwnerPhotos",
     "cover_generation_config",
+    "cover_generation_input",
     "cover_generation_runner",
     "cover_generation_service",
     "cover_generation_task",

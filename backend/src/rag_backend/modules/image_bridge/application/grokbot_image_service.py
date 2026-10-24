@@ -6,9 +6,10 @@ the configured size as PNG. Every failure raises ``ImageBridgeJobError``, a
 ``RuntimeError``, the same contract as ``OpenAIImageService``.
 
 ``edit_image`` runs the same job as an OpenAI ``images.edit``-shaped body
-with the owner's photos as ``data:`` URLs (contract section 2.4, a slide-1
-cover) and returns the image fitted to the cover size as PNG. Its ``claim``
-runs once a slot is free and can cancel the job before anything is sent.
+whose ``image`` are links to the owner's photos (contract section 2.4, a
+slide-1 cover; the Grok Bot fetches them with the callback token) and returns
+the image fitted to the cover size as PNG. Its ``claim`` runs once a slot is
+free and can cancel the job before anything is sent.
 """
 
 from __future__ import annotations
@@ -44,6 +45,7 @@ from rag_backend.modules.image_bridge.constants import (
     ERR_JOB_MISSING,
     ERR_JOB_NO_IMAGE,
     ERROR_CODE_WEBHOOK_FAILED,
+    INPUT_URL_TEMPLATE,
     LOG_JOB_STARTED,
     LOG_JOB_SUCCEEDED,
     LOG_WEBHOOK_FAILED,
@@ -62,7 +64,6 @@ from rag_backend.modules.image_bridge.domain.models import (
     JobDeadline,
     JobFailure,
     WebhookRequest,
-    data_url,
     job_metadata,
 )
 from rag_backend.modules.image_bridge.domain.ports import (
@@ -112,6 +113,7 @@ class _JobSpec:
     project_id: str | None
     content_type: str = CONTENT_TYPE_CAROUSEL
     images: tuple[str, ...] = field(default_factory=tuple)
+    job_id: UUID | None = None
     claim: Callable[[], Awaitable[bool]] | None = None
 
 
@@ -147,6 +149,7 @@ class GrokBotImageService(ImageGenerationService):
 
     async def edit_image(self, job: CoverEditJob) -> bytes:
         """Run one image-edit job with the reference photos; the cover as PNG."""
+        base = self._config.callback_base_url.rstrip(URL_TRAILING_SLASH)
         image = await self._run(
             _JobSpec(
                 prompt=job.prompt,
@@ -155,8 +158,10 @@ class GrokBotImageService(ImageGenerationService):
                 project_id=job.project_id,
                 content_type=CONTENT_TYPE_COVER,
                 images=tuple(
-                    data_url(photo.content, photo.mime_type) for photo in job.photos
+                    INPUT_URL_TEMPLATE.format(base=base, job_id=job.job_id, index=index)
+                    for index in range(job.photo_count)
                 ),
+                job_id=job.job_id,
                 claim=job.claim,
             )
         )
@@ -178,7 +183,7 @@ class GrokBotImageService(ImageGenerationService):
     async def _start(self, spec: _JobSpec) -> ImageBridgeJob:
         now = self._deps.clock.now()
         await self._deps.repository.sweep(now)
-        started = self._new_job(spec.size)
+        started = self._new_job(spec)
         await self._deps.repository.create(started.job)
         try:
             await self._deps.webhook.deliver(self._webhook_request(started, spec))
@@ -188,13 +193,13 @@ class GrokBotImageService(ImageGenerationService):
         logger.info(LOG_JOB_STARTED, bridge_job_id=str(started.job.id))
         return started.job
 
-    def _new_job(self, size: str) -> _StartedJob:
+    def _new_job(self, spec: _JobSpec) -> _StartedJob:
         now = self._deps.clock.now()
         token = new_callback_token()
         job = ImageBridgeJob(
-            id=uuid4(),
+            id=spec.job_id or uuid4(),
             status=ImageBridgeJobStatus.PENDING,
-            size=size,
+            size=spec.size,
             token_sha256=token_digest(token),
             created_at=now,
             expires_at=now + timedelta(seconds=self._config.timeout_seconds),

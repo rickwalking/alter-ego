@@ -21,19 +21,24 @@ to a personal photo, or uncontrolled spend?
 
 ## Decision Drivers
 
-- Pedro's decision (2026-10-22): the selected photo's bytes go to the Grok Bot (no URL leaves the
-  app), image-to-image, with an explicit confirmation before each generation, caps of 4 per
-  carousel and 40 per month, owner only. Pedro accepts xAI processing his photos.
+- Pedro's decision (2026-10-22): the selected photos go to the Grok Bot, image-to-image, with an
+  explicit confirmation before each generation, caps of 4 per carousel and 40 per month, owner
+  only. The engine on the Grok Bot side is OpenAI (ChatGPT/Codex) (Pedro, 2026-10-24); Pedro
+  accepts it processing his photos.
+- The Cursor automation receives the webhook body as text, so multi-MB embedded images arrive
+  truncated (Grok Bot side, 2026-10-24).
 - Reuse the existing bridge endpoint and callback (no new integration).
 - Results are personal data: private storage, authenticated URLs only.
 - A Grok Bot job takes minutes; an HTTP request cannot wait for it.
 
 ## Considered Options
 
-1. **Send an OpenAI `images.edit`-shaped body (`operation: "images.edit"`, `image` as PNG
-   `data:` URLs) on the same bridge webhook, run the job in a tracked background task, log each
+1. **Send an OpenAI `images.edit`-shaped body (`operation: "images.edit"`, callback fields
+   first) on the same bridge webhook whose `image` are links to a token-gated route serving the
+   re-encoded photos while the job is pending; run the job in a tracked background task, log each
    generation in a new table.**
-2. Upload the photos to a signed URL the Grok Bot downloads.
+2. Embed the photos as `data:` URLs in the webhook body (built first; the automation receives
+   the body as text and multi-MB bodies arrive truncated).
 3. Text-only Grok scenes composited with the existing photo in the template.
 
 ## Decision Outcome
@@ -65,9 +70,11 @@ Chosen: **option 1**. Contract: [GrokBot Image Bridge §2.4](../architecture/gro
 
 - Good, because nothing new is integrated: one endpoint, one callback, one job table; the edit body
   mirrors the OpenAI `images.edit` parameters the Grok Bot already speaks (Pedro, 2026-10-24).
-- Good, because no URL to a personal photo exists; the bytes are re-encoded without metadata.
-- Bad, because the photos are processed by a third party (accepted by Pedro).
-- Bad, because the webhook body (typically 2–5 MB, at most about 12.5 MB) is larger than a text job's; the bridge timeout and the
+- Good, because a photo link works only with that job's one-time callback token and only while the
+  job is pending (404 otherwise, no cache, no CORS); the photo is re-encoded without metadata on
+  each request and never stored as a copy.
+- Bad, because the photos are processed by a third party, OpenAI (accepted by Pedro).
+- Neutral, because the webhook body stays a few KB (links, not bytes); the bridge timeout and the
   failure path contain a slow or refused job.
 - Neutral, because a new table reaches prod through the `create_all` bootstrap (no one-shot).
 

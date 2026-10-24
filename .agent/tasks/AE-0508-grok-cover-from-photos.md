@@ -27,11 +27,13 @@ step cover picker only lists library photos and the passive autopilot GrokBot of
 
 Pedro's decision (2026-10-22): extend the bridge to carry the selected photos' bytes (no URL leaves the
 app), image-to-image with the same Grok model as the autopilot cover flow; an explicit confirmation before
-each generation; caps of 4 per carousel and 40 per month; owner only. Pedro accepts xAI processing his
+each generation; caps of 4 per carousel and 40 per month; owner only. Pedro accepts OpenAI (ChatGPT, the Grok Bot's engine) processing his
 photos.
 
 - Image bridge webhook (contract §2.1) gains two optional fields, sent only for a cover generation:
-  `operation: "images.edit"` and `image: ["data:image/png;base64,…"]` (OpenAI `images.edit` shape; 1-3
+  `operation: "images.edit"` and `image: ["https://…/api/v1/image-bridge/jobs/{job_id}/inputs/{n}"]`
+  (OpenAI `images.edit` shape, callback fields first; the Grok Bot fetches each photo with the
+  callback token while the job is pending; 1-3
   photos, re-encoded to PNG, at most 3 MB each,
   at most 1024 px a side, no metadata) on the same endpoint and callback as the text path (Pedro: the
   Grok Bot side already takes image requests through its sidecar, so no bot-side change). `model` is the
@@ -66,7 +68,7 @@ photos.
   goes through `PUT /api/carousels/{id}/cover` and stores it as `slide_cover` (full-bleed, like the
   GrokBot `ai_image`). Library photos stay options, so the default slide 1 is always one tap away.
 - Publish step: a "Gerar capa com Grok" panel in the cover picker: photo checkboxes, prompt, usage
-  ("1 de 4 neste carrossel · 3 de 40 no mês"), "Gerar capa" → confirmation dialog (names xAI, the photo
+  ("1 de 4 neste carrossel · 3 de 40 no mês"), "Gerar capa" → confirmation dialog (names OpenAI (ChatGPT), the photo
   count and the caps) → progress line while pending → the result appears in the grid; a failure shows
   the reason and "Tentar de novo". A reached cap disables the button and says why.
 
@@ -80,11 +82,14 @@ photos.
 
 ## Threat notes (risk high: personal data to a third party, paid calls)
 
-- **Personal data egress.** The owner's photos leave the app to the Grok Bot and xAI. Mitigations: owner
-  only (not admins), an explicit `confirmed: true` per generation backed by a dialog that names xAI; only
-  the photos the owner ticked are sent, re-encoded (EXIF/GPS and every metadata block dropped) and capped
-  at 1024 px; bytes travel inside the authenticated webhook body, never as a URL, so nothing is publicly
-  fetchable. Photos never enter fixtures; tests use generated images.
+- **Personal data egress.** The owner's photos leave the app to the Grok Bot and OpenAI (ChatGPT).
+  Mitigations: owner only (not admins), an explicit `confirmed: true` per generation backed by a dialog
+  that names OpenAI (ChatGPT); only the photos the owner ticked are linked, re-encoded on request
+  (EXIF/GPS and every metadata block dropped), capped at 1024 px and 3 MB. The links
+  (`/jobs/{job_id}/inputs/{n}`) serve only with that job's one-time callback token (constant-time
+  compare), only while the job is pending and before its deadline; everything else is 404 (no existence
+  leak), `Cache-Control: no-store, private`, no CORS headers, no copy stored, no token in a URL or log.
+  Photos never enter fixtures; tests use generated images.
 - **Spend abuse.** Caps 4/carousel and 40/month enforced server-side, one pending generation per carousel,
   rate limit on the POST (5/minute per user), failures do not count. The cap check and the insert run in
   one transaction after locking the owner's user row (`SELECT ... FOR UPDATE`), so two clicks cannot both

@@ -138,6 +138,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
+    cover_generation_input,
     cover_generation_runner,
     cover_generation_service,
     cover_generation_task,
@@ -310,6 +311,7 @@ __all__ = [
     "carousel_project_lock",
     "carousel_project_lock_key",
     "content_approve_blocker",
+    "cover_generation_input",
     "cover_generation_runner",
     "cover_generation_service",
     "cover_generation_task",

@@ -38,6 +38,7 @@ class CoverGeneration:
     created_at: datetime
     completed_at: datetime | None = None
     started_at: datetime | None = None
+    photo_ids: tuple[UUID, ...] = ()
     result_asset_id: UUID | None = None
     error_code: str | None = None
     error_detail: str | None = None
@@ -73,15 +74,19 @@ class CoverJobCancelledError(RuntimeError):
 
 @dataclass(frozen=True, kw_only=True)
 class CoverEditJob:
-    """What the Grok Bot receives: the instruction, the photos, the carousel.
+    """What the Grok Bot receives: the instruction, how many photos, the carousel.
+
+    ``job_id`` is the generation's id, used as the bridge job id, so the photo
+    links (``/jobs/{job_id}/inputs/{n}``) resolve to this generation's photos.
 
     ``claim``, when set, runs once a bridge slot is free, right before anything is sent:
     ``False`` (the generation was failed meanwhile) cancels the job with
     :class:`CoverJobCancelledError`, so no photo leaves and nothing is billed.
     """
 
+    job_id: UUID
     prompt: str
-    photos: tuple[ReferencePhoto, ...]
+    photo_count: int
     project_id: str
     claim: Callable[[], Awaitable[bool]] | None = None
 

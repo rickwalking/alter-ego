@@ -344,7 +344,7 @@ describe("cover generation copy", () => {
     ["pt", pt],
     ["en", en],
   ])(
-    "the %s copy names xAI, the caps and the 21:00 BRT reset",
+    "the %s copy names OpenAI (ChatGPT), the caps and the 21:00 BRT reset",
     (_lang, messages) => {
       const generate = messages.publish.coverPicker.generate;
       const body = generate.confirm.body;
@@ -352,7 +352,9 @@ describe("cover generation copy", () => {
       expect(generate.blocked.monthlyCap).toContain("21:00");
       expect(generate.blocked.monthlyAttempts).toContain("120");
       expect(generate.blocked.carouselAttempts).toContain("12");
-      expect(body).toContain("xAI");
+      expect(body).toContain("OpenAI (ChatGPT)");
+      expect(generate.confirm.title).toContain("OpenAI (ChatGPT)");
+      expect(body).not.toContain("xAI");
       expect(body).toContain("{carouselCap}");
       expect(body).toContain("{monthCap}");
     },

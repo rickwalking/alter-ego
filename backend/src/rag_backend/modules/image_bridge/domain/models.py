@@ -7,7 +7,6 @@ error (``failed``), or until the waiter gives up (``expired``).
 
 from __future__ import annotations
 
-import base64
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -15,7 +14,6 @@ from uuid import UUID
 
 from rag_backend.modules.image_bridge.constants import (
     CONTENT_TYPE_CAROUSEL,
-    DATA_URL_TEMPLATE,
     ERR_INVALID_SIZE,
     FIELD_CALLBACK_TOKEN,
     FIELD_CALLBACK_URL,
@@ -100,10 +98,12 @@ class JobDeadline:
 class WebhookRequest:
     """The outbound webhook body of contract section 2.1.
 
-    A text-only job mirrors OpenAI ``images.generate``. A job with photos
-    mirrors ``images.edit`` (contract section 2.4): it adds ``operation:
-    "images.edit"`` and ``image``, the photos as ``data:`` URLs; a text-only
-    job sends neither key.
+    A text-only job mirrors OpenAI ``images.generate`` (its body never
+    changes). A job with photos mirrors ``images.edit`` (contract section
+    2.4): ``operation: "images.edit"`` and ``image``, links to the photos the
+    Grok Bot fetches with the callback token. Its fields are ordered so the
+    callback fields come first and ``prompt`` and ``image`` last: a body cut
+    off in transit still has the callback.
     """
 
     job_id: UUID
@@ -118,11 +118,25 @@ class WebhookRequest:
 
     def payload(self) -> dict[str, object]:
         """JSON body sent to the Grok Bot webhook."""
-        body = self._base_payload()
         if self.images:
-            body[FIELD_OPERATION] = OPERATION_IMAGES_EDIT
-            body[FIELD_IMAGE] = list(self.images)
-        return body
+            return self._edit_payload()
+        return self._base_payload()
+
+    def _edit_payload(self) -> dict[str, object]:
+        return {
+            FIELD_JOB_ID: str(self.job_id),
+            FIELD_CALLBACK_URL: self.callback_url,
+            FIELD_CALLBACK_TOKEN: self.callback_token,
+            FIELD_EXPIRES_AT: _iso_utc(self.expires_at),
+            FIELD_OPERATION: OPERATION_IMAGES_EDIT,
+            FIELD_MODEL: self.model,
+            FIELD_N: IMAGE_COUNT,
+            FIELD_SIZE: self.size,
+            FIELD_RESPONSE_FORMAT: RESPONSE_FORMAT_B64_JSON,
+            FIELD_METADATA: dict(self.metadata),
+            FIELD_PROMPT: self.prompt,
+            FIELD_IMAGE: list(self.images),
+        }
 
     def _base_payload(self) -> dict[str, object]:
         return {
@@ -167,9 +181,3 @@ class ImageSize:
         if not sep or not width.isdigit() or not height.isdigit():
             raise ValueError(ERR_INVALID_SIZE.format(size=text))
         return cls(width=int(width), height=int(height))
-
-
-def data_url(content: bytes, mime_type: str) -> str:
-    """``content`` as a ``data:<mime>;base64,...`` URL (contract section 2.4)."""
-    encoded = base64.b64encode(content).decode("ascii")
-    return DATA_URL_TEMPLATE.format(mime_type=mime_type, b64=encoded)

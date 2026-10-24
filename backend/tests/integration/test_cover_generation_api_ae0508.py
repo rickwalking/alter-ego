@@ -72,8 +72,9 @@ class TestGenerate:
         job = editor.jobs[0]
         assert job.prompt == f"direction: {PROMPT}"
         assert job.project_id == project_id
-        assert [p.mime_type for p in job.photos] == ["image/png", "image/png"]
-        assert all(p.content.startswith(b"\x89PNG") for p in job.photos)
+        assert job.photo_count == 2
+        assert str(job.job_id) == started["id"]
+        assert rows[0]["photo_ids"] == [first["id"], second["id"]]
         listed = await client.get(f"/api/carousels/{project_id}/cover-generations")
         body = listed.json()
         assert body["carousel_used"] == 1

@@ -1282,8 +1282,8 @@
           "monthlyAttempts": "The limit of 120 attempts this month is reached (failures and timeouts count). It resets at 21:00 BRT on the last day of the month."
         },
         "confirm": {
-          "title": "Send your photos to Grok?",
-          "body": "{count, plural, one {Your photo will be sent} other {Your # photos will be sent}} to the Grok Bot and processed by xAI to generate the cover. This generation counts towards the limit: {carouselUsed} of {carouselCap} on this carousel and {monthUsed} of {monthCap} this month. Failures do not count.",
+          "title": "Send your photos to OpenAI (ChatGPT)?",
+          "body": "{count, plural, one {Your photo will be sent} other {Your # photos will be sent}} to the Grok Bot and processed by OpenAI (ChatGPT) to generate this cover. This generation counts towards the limit: {carouselUsed} of {carouselCap} on this carousel and {monthUsed} of {monthCap} this month. Failures do not count.",
           "action": "Send and generate",
           "cancel": "Cancel"
         },

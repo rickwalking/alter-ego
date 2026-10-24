@@ -74,6 +74,7 @@ def upgrade() -> None:
             sa.Column("status", sa.String(_STATUS_LENGTH), nullable=False),
             sa.Column("prompt_sha256", sa.String(_SHA256_LENGTH), nullable=False),
             sa.Column("photo_count", sa.Integer(), nullable=False),
+            sa.Column("photo_ids", sa.JSON(), nullable=False),
             sa.Column("model", sa.String(_MODEL_LENGTH), nullable=False),
             sa.Column("cost_usd", sa.Float(), nullable=False),
             sa.Column(

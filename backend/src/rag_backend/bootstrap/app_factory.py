@@ -22,6 +22,7 @@ from rag_backend.api.middleware.carousel_conflict_handler import (
     add_carousel_conflict_handler,
 )
 from rag_backend.api.middleware.error_handlers import add_error_handlers
+from rag_backend.api.middleware.no_cors_job_inputs import NoCorsOnJobInputsMiddleware
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
 from rag_backend.api.middleware.security_headers import SecurityHeadersMiddleware
@@ -45,6 +46,7 @@ from rag_backend.api.routes import (
     conversations,
     document_scope,
     documents,
+    image_bridge_inputs,
     notifications,
     palettes,
     personas,
@@ -271,6 +273,7 @@ def _setup_middleware(app: FastAPI, settings: Settings) -> None:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
+    app.add_middleware(NoCorsOnJobInputsMiddleware)
     setup_rate_limiting(app, settings)
 
 
@@ -311,6 +314,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(telegram_webhook_router, prefix="/api")
     app.include_router(image_bridge_router, prefix="/api")
+    app.include_router(image_bridge_inputs.router, prefix="/api")
 
 
 def create_app() -> FastAPI:

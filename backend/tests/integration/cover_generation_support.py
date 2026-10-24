@@ -157,6 +157,7 @@ async def generation_rows(project_id: str | None = None) -> list[dict[str, objec
                 "prompt_sha256": row.prompt_sha256,
                 "owner_id": row.owner_id,
                 "photo_count": row.photo_count,
+                "photo_ids": list(row.photo_ids),
             }
             for row in rows
         ]

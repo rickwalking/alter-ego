@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -52,6 +52,7 @@ class CarouselCoverGenerationModel(Base):
         String(PROMPT_SHA256_LENGTH), nullable=False
     )
     photo_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    photo_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     model: Mapped[str] = mapped_column(String(MODEL_LENGTH), nullable=False)
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False)
     result_asset_id: Mapped[str | None] = mapped_column(
@@ -89,6 +90,7 @@ class CarouselCoverGenerationModel(Base):
             status=CoverGenerationStatus(self.status),
             prompt_sha256=self.prompt_sha256,
             photo_count=self.photo_count,
+            photo_ids=tuple(uuid.UUID(value) for value in self.photo_ids or []),
             model=self.model,
             cost_usd=self.cost_usd,
             created_at=self.created_at,
@@ -111,6 +113,7 @@ class CarouselCoverGenerationModel(Base):
             status=entity.status.value,
             prompt_sha256=entity.prompt_sha256,
             photo_count=entity.photo_count,
+            photo_ids=[str(value) for value in entity.photo_ids],
             model=entity.model,
             cost_usd=entity.cost_usd,
             created_at=entity.created_at,

@@ -7,15 +7,15 @@ and callback as the text path; reference photos ride inside the body.
 
 from __future__ import annotations
 
-import base64
 import io
+import json
 from uuid import UUID
 
 import pytest
 from PIL import Image
 from pydantic import SecretStr
 
-from rag_backend.domain.models.cover_generation import CoverEditJob, ReferencePhoto
+from rag_backend.domain.models.cover_generation import CoverEditJob
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.modules.image_bridge import (
     IMAGE_BRIDGE_MODEL,
@@ -33,7 +33,6 @@ from rag_backend.modules.image_bridge.domain.exceptions import (
 from rag_backend.modules.image_bridge.domain.models import (
     JobSuccess,
     WebhookRequest,
-    data_url,
 )
 from rag_backend.modules.image_bridge.domain.ports import NormalizeRequest
 from rag_backend.modules.image_bridge.infrastructure.pillow_codec import (
@@ -89,18 +88,19 @@ def _answer(repo: SqlImageBridgeJobRepository, webhook: FakeWebhook, clock: Fake
     return answer
 
 
+_JOB_ID = UUID("6f1c2a9e-4c1b-4f7e-9a51-2d8f0c7b3e10")
+
+
 def _job() -> CoverEditJob:
     return CoverEditJob(
+        job_id=_JOB_ID,
         prompt="direction: café",
-        photos=(
-            ReferencePhoto(content=_PHOTO, mime_type="image/png"),
-            ReferencePhoto(content=b"second", mime_type="image/png"),
-        ),
+        photo_count=2,
         project_id="proj-9",
     )
 
 
-async def test_edit_job_carries_the_photo_bytes_and_returns_a_cover_png() -> None:
+async def test_edit_job_links_the_photos_and_returns_a_cover_png() -> None:
     """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
     webhook, clock = FakeWebhook(), FakeClock()
     async with sqlite_repository() as repo:
@@ -109,11 +109,24 @@ async def test_edit_job_carries_the_photo_bytes_and_returns_a_cover_png() -> Non
         job = await repo.get(webhook.requests[0].job_id)
 
     body = webhook.requests[0].payload()
-    assert body["operation"] == "images.edit"
-    assert body["image"] == [
-        "data:image/png;base64," + base64.b64encode(_PHOTO).decode("ascii"),
-        "data:image/png;base64," + base64.b64encode(b"second").decode("ascii"),
+    inputs = f"{_BASE_URL}/api/v1/image-bridge/jobs/{_JOB_ID}/inputs"
+    assert list(body) == [
+        "job_id",
+        "callback_url",
+        "callback_token",
+        "expires_at",
+        "operation",
+        "model",
+        "n",
+        "size",
+        "response_format",
+        "metadata",
+        "prompt",
+        "image",
     ]
+    assert body["job_id"] == str(_JOB_ID)
+    assert body["operation"] == "images.edit"
+    assert body["image"] == [f"{inputs}/0", f"{inputs}/1"]
     assert body["prompt"] == "direction: café"
     assert body["model"] == IMAGE_BRIDGE_MODEL
     assert body["size"] == "1024x1536"
@@ -123,20 +136,8 @@ async def test_edit_job_carries_the_photo_bytes_and_returns_a_cover_png() -> Non
         "content_type": "carousel_cover",
         "project_id": "proj-9",
     }
-    assert sorted(body) == [
-        "callback_token",
-        "callback_url",
-        "expires_at",
-        "image",
-        "job_id",
-        "metadata",
-        "model",
-        "n",
-        "operation",
-        "prompt",
-        "response_format",
-        "size",
-    ]
+    assert "base64" not in json.dumps(body)
+    assert len(json.dumps(body)) < 4096
     assert job is not None
     assert job.size == "1024x1536"
     with Image.open(io.BytesIO(image)) as cover:
@@ -170,6 +171,18 @@ def test_text_only_body_has_no_edit_keys() -> None:
 
     assert "operation" not in body
     assert "image" not in body
+    assert list(body) == [
+        "job_id",
+        "model",
+        "prompt",
+        "size",
+        "n",
+        "response_format",
+        "callback_url",
+        "callback_token",
+        "expires_at",
+        "metadata",
+    ]
     assert sorted(body) == [
         "callback_token",
         "callback_url",
@@ -182,11 +195,6 @@ def test_text_only_body_has_no_edit_keys() -> None:
         "response_format",
         "size",
     ]
-
-
-def test_data_url_shape() -> None:
-    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
-    assert data_url(b"ABC", "image/png") == "data:image/png;base64,QUJD"
 
 
 def test_cover_editor_needs_the_bridge_urls() -> None:

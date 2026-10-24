@@ -25,6 +25,7 @@ from rag_backend.modules.image_bridge.application.grokbot_image_service import (
     GrokBotImageDeps,
     GrokBotImageService,
 )
+from rag_backend.modules.image_bridge.application.job_inputs import JobInputGate
 from rag_backend.modules.image_bridge.constants import (
     CONFIG_NAMES_SEPARATOR,
     ENV_PUBLIC_BASE_URL,
@@ -123,6 +124,11 @@ def _configured_service(settings: Settings) -> GrokBotImageService:
             ERR_CONFIG_MISSING.format(names=CONFIG_NAMES_SEPARATOR.join(missing))
         )
     return GrokBotImageService(_waiter_deps(settings), _waiter_config(settings))
+
+
+def build_job_input_gate() -> JobInputGate:
+    """Who may fetch a job's photos, over the shared Postgres session maker."""
+    return JobInputGate(SqlImageBridgeJobRepository(get_session_maker), SystemClock())
 
 
 def build_callback_service() -> ImageBridgeCallbackService:

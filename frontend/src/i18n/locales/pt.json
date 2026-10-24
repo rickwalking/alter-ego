@@ -1282,8 +1282,8 @@
           "monthlyAttempts": "Limite de 120 tentativas neste mês atingido (falhas e tempos esgotados contam). Renova às 21:00, horário de Brasília, do último dia do mês."
         },
         "confirm": {
-          "title": "Enviar suas fotos para o Grok?",
-          "body": "{count, plural, one {Sua foto será enviada} other {Suas # fotos serão enviadas}} ao Grok Bot e processadas pela xAI para gerar a capa. Esta geração conta no limite: {carouselUsed} de {carouselCap} neste carrossel e {monthUsed} de {monthCap} no mês. Falhas não contam.",
+          "title": "Enviar suas fotos para a OpenAI (ChatGPT)?",
+          "body": "{count, plural, one {Sua foto será enviada} other {Suas # fotos serão enviadas}} ao Grok Bot e processadas pela OpenAI (ChatGPT) para gerar esta capa. Esta geração conta no limite: {carouselUsed} de {carouselCap} neste carrossel e {monthUsed} de {monthCap} no mês. Falhas não contam.",
           "action": "Enviar e gerar",
           "cancel": "Cancelar"
         },
