@@ -27,6 +27,9 @@ from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
 )
+from rag_backend.infrastructure.config.generation_queue_settings import (
+    GenerationQueueSettings,
+)
 from rag_backend.infrastructure.config.llm_queue_constants import (
     DEFAULT_BREAKER_COOLDOWN_SECONDS,
     DEFAULT_BREAKER_FAILURES,
@@ -44,7 +47,7 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
 )
 
 
-class Settings(AutopilotAutofixSettings):
+class Settings(AutopilotAutofixSettings, GenerationQueueSettings):
     """Application settings loaded from environment variables.
 
     Field notes:

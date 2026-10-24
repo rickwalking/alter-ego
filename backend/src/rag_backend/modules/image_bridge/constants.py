@@ -8,6 +8,8 @@ longer payload cannot decode to at most ``MAX_IMAGE_BYTES``. Waiter failures are
 ``RuntimeError``, the same contract as ``OpenAIImageService``.
 """
 
+from uuid import UUID
+
 MODULE_NAME = "image_bridge"
 
 
@@ -19,6 +21,7 @@ TOKEN_SHA256_LENGTH = 64
 ERROR_CODE_LENGTH = 128
 ERROR_MESSAGE_MAX_CHARS = 2000
 JOB_RETENTION_DAYS = 7
+JOB_ID_NAMESPACE = UUID("6b0d7e2c-3f1a-4b5e-9c84-1d2e3f4a5b6c")
 
 
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
@@ -117,6 +120,7 @@ PROVIDER_OPENAI_FALLBACK = "openai_fallback"
 PROVIDER_OPENAI = "openai"
 LOG_MISCONFIGURED = "image_bridge_misconfigured"
 LOG_JOB_STARTED = "image_bridge_job_started"
+LOG_JOB_REUSED = "image_bridge_job_reused"
 LOG_JOB_SUCCEEDED = "image_bridge_job_succeeded"
 LOG_WEBHOOK_FAILED = "image_bridge_webhook_failed"
 LOG_IMAGE_GENERATED = "image_bridge_image_generated"

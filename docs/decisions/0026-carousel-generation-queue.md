@@ -105,9 +105,12 @@ web event loop and loses runs on every deploy.
   within 20 % of the idle baseline and no container may be OOM-killed.
 - Chaos: kill the worker mid-phase and run a full deploy mid-run; the job must resume within 6 min of the stack
   returning, without duplicate artifacts or duplicate Telegram messages.
-- There is no feature flag (Pedro, 2026-10-23): the worker goes live when P1 merges, so the load and chaos validation
-  above runs on the disposable droplet BEFORE the merge, and rollback is a revert of the merge (new tables only, no
-  schema rollback).
+- No feature flag (Pedro, 2026-10-23): the worker goes live when its PR merges. The load test and the chaos steps above
+  run on the disposable droplet against the PR branch BEFORE the merge (script: `ops/queue-validation/`), and their
+  results are attached to the PR. Rollback is a revert of the merge, preceded by draining the worker and the
+  `generation_queue_rollback` one-shot (plan §7): the web process takes back the in-process runner, `generation_runs`
+  and PgQueuer rows stay in their tables (new tables only, no schema rollback), and the in-process runner picks up
+  queued autopilot runs from `autopilot_runs` as before.
 
 ## More Information
 

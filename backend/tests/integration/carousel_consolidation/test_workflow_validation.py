@@ -123,7 +123,7 @@ class TestEditorialWorkflowValidation:
             headers=auth_header(assigned),
         )
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         payload = await wait_for_workflow_state(
             client,
             project_id,
@@ -337,7 +337,7 @@ class TestEditorialWorkflowReviseAndFailure:
             headers=auth_header(editor),
         )
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         state_response = await client.get(
             f"/api/carousels/{project_id}/workflow/state",
             headers=auth_header(editor),
@@ -447,7 +447,7 @@ class TestEditorialWorkflowReviseAndFailure:
             headers=auth_header(editor),
         )
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         state_response = await client.get(
             f"/api/carousels/{project_id}/workflow/state",
             headers=auth_header(editor),

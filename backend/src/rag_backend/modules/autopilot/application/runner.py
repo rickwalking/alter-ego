@@ -8,7 +8,7 @@ adapter in ``bootstrap`` opens the session and calls ``tick``.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 
 import structlog
 
@@ -22,7 +22,6 @@ from rag_backend.modules.autopilot.application.gate_repair import (
     GateRepairDependencies,
     GateRepairStep,
 )
-from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.rework_step import (
     ReworkDependencies,
     ReworkStep,
@@ -36,7 +35,7 @@ from rag_backend.modules.autopilot.application.run_spec import (
     spec_refusal,
     with_inputs,
 )
-from rag_backend.modules.autopilot.application.start_spacing import StartSpacing
+from rag_backend.modules.autopilot.application.runner_deps import RunnerDependencies
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_RESEARCH,
@@ -51,18 +50,9 @@ from rag_backend.modules.autopilot.constants import (
     REASON_TOPIC_MISSING,
     RUNS_PER_TICK,
 )
-from rag_backend.modules.autopilot.domain.autofix import (
-    ContentAutofixer,
-    GateRepairer,
-    SlideFixer,
-)
-from rag_backend.modules.autopilot.domain.cover_ports import CoverOffers, CoverSwitcher
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
-    EditorialDriver,
     GateAction,
-    OwnerReadyNotifier,
-    ProjectInputs,
     ProjectSpec,
     RedriveCommand,
     ResumeCommand,
@@ -80,11 +70,8 @@ from rag_backend.modules.autopilot.domain.models import (
 from rag_backend.modules.autopilot.domain.policy import decide
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
-    Clock,
-    TopicCandidateRepository,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
-from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.domain.thesis import needs_thesis
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
@@ -106,32 +93,6 @@ _ACTIVE: tuple[AutopilotRunState, ...] = (
     AutopilotRunState.REWORKING,
     AutopilotRunState.QUEUED,
 )
-
-
-@dataclass(frozen=True, kw_only=True)
-class RunnerDependencies:
-    """Ports for one session. The worker builds a new bundle each tick.
-
-    ``autofix`` runs the owner's queued "Fix issues"; ``gate_repair`` repairs a gate
-    before any revise, then ``slide_fix`` model-fixes what still fails (no revise).
-    ``spacing`` keeps a queued run waiting until the previous start is old enough.
-    """
-
-    runs: AutopilotRunRepository
-    topics: TopicCandidateRepository
-    editorial: EditorialDriver
-    notices: OwnerReadyNotifier
-    recovery: RunRecoveryStore
-    owner_user_id: str
-    inputs: ProjectInputs
-    notifier_configured: bool = True
-    clock: Clock = field(default_factory=SystemClock)
-    autofix: ContentAutofixer | None = None
-    gate_repair: GateRepairer | None = None
-    slide_fix: SlideFixer | None = None
-    covers: CoverOffers | None = None
-    cover_switch: CoverSwitcher | None = None
-    spacing: StartSpacing | None = None
 
 
 _Step = GateRead
@@ -163,20 +124,35 @@ class AutopilotRunner:
         )
 
     async def tick(self) -> int:
-        """Sweep expiries and fixed escalations, then step at most one run.
-
-        An engine error the driver did not classify ends that run with a
-        reason; it never propagates and rolls back the worker tick.
-        """
-        swept = await self._recovery.sweep()
+        """Sweep expiries and fixed escalations, then step at most one run."""
+        swept = await self.sweep()
         run = await _first_run(self._deps.runs)
         if run is None:
             return swept
+        return swept + await self.step(run)
+
+    async def sweep(self) -> int:
+        """Expire stale reviews, close or wake escalations."""
+        return await self._recovery.sweep()
+
+    async def step(self, run: AutopilotRun) -> int:
+        """Advance one run: start, one gate, or hand off to the owner.
+
+        An engine error the driver did not classify ends that run with a reason
+        and never propagates, unless ``retryable`` claims it: then the session is
+        rolled back and the error raised, for the generation queue to retry.
+        """
         try:
-            stepped = await self._step(run)
+            return await self._step(run)
         except Exception as exc:
-            stepped = await self._recovery.contain(run, exc)
-        return swept + stepped
+            if self._deps.retryable(exc):
+                await self._deps.recovery.rollback()
+                raise
+            return await self._recovery.contain(run, exc)
+
+    async def park(self, run: AutopilotRun, reason: str) -> None:
+        """End an active run the way an engine error does, with ``reason``."""
+        await self._recovery.park(run, reason)
 
     async def _step(self, run: AutopilotRun) -> int:
         if run.state is AutopilotRunState.QUEUED:
@@ -395,3 +371,6 @@ async def _first_run(runs: AutopilotRunRepository) -> AutopilotRun | None:
         if found:
             return found[0]
     return None
+
+
+__all__ = ["AutopilotRunner", "RunnerDependencies"]

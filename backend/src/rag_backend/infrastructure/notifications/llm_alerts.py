@@ -102,6 +102,10 @@ class TelegramLlmAlerts:
         self._last_all_down = now
         self._send(ALERT_ALL_DOWN.format(role=role, summary=summary[:600]))
 
+    def send(self, text: str) -> None:
+        """Send any operational alert through the same bot (no-op when off)."""
+        self._send(text)
+
     def _send(self, text: str) -> None:
         if not self.enabled:
             return

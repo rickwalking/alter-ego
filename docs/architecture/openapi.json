@@ -14967,7 +14967,7 @@
     },
     "/api/carousels/{project_id}/workflow/resume": {
       "post": {
-        "description": "Accept human review and resume workflow asynchronously (RW-010).\n\nStructured feedback is validated before the lock is bumped: a 422 after the bump\nwould leave the client on a stale version and reset its edits.",
+        "description": "Accept human review and resume workflow asynchronously (RW-010).\n\nStructured feedback is validated before the lock is bumped: a 422 after the bump\nwould leave the client on a stale version and reset its edits. The resume is\nqueued for the generation worker in the same transaction as the lock bump and\nthe ``in_progress`` flip (ADR-0026): the web process never runs the phase.",
         "operationId": "resume_editorial_workflow_api_carousels__project_id__workflow_resume_post",
         "parameters": [
           {
@@ -15037,7 +15037,7 @@
     },
     "/api/carousels/{project_id}/workflow/start": {
       "post": {
-        "description": "Run AI synthesis, outline, and draft phases then pause at human gates.\n\nOnly the project's persona id is kept, never the row: a held row stays in the\nsession identity map with its server-side updated_at expired after the engine's\nflush, and the ACL re-read would lazy-load it outside the greenlet. The wizard's\npersona applies when the request names none, so the persona gate covers both modes.\n\nEngine errors are logged; a synthesis parse error gets its specific detail and any\nother ValueError keeps the generic one. A provider outage or rate limit during the\nsynchronous start surfaces as a structured retryable error, not a generic 500; other\nerrors re-raise unchanged.",
+        "description": "Run AI synthesis, outline, and draft phases then pause at human gates.\n\nOnly the project's persona id is kept, never the row: a held row stays in the\nsession identity map with its server-side updated_at expired after the engine's\nflush, and the ACL re-read would lazy-load it outside the greenlet. The wizard's\npersona applies when the request names none, so the persona gate covers both modes.\n\nThe start drives the project in this request, so it holds the project's drive\nlock (the generation worker's ownership primitive) and answers 409\n``mutation_in_progress`` while the worker drives it. Engine errors are logged; a synthesis parse error gets its specific detail and any\nother ValueError keeps the generic one. A provider outage or rate limit during the\nsynchronous start surfaces as a structured retryable error, not a generic 500; other\nerrors re-raise unchanged.",
         "operationId": "start_editorial_workflow_api_carousels__project_id__workflow_start_post",
         "parameters": [
           {

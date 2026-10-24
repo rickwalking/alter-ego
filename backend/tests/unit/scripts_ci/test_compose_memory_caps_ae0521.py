@@ -19,6 +19,7 @@ MEMORY_VALUE = re.compile(r"^(?P<amount>\d+)(?P<unit>[kKmMgG])$")
 UNIT_MIB = {"k": 1 / 1024, "m": 1, "g": 1024}
 MEASURED_HD_RUN_PEAK_MIB = 1011
 HEADROOM = 1.3
+BACKEND_LIMIT_MIB = 512
 LANGFUSE_LIMIT_MIB = 768
 CLICKHOUSE_LIMIT_MIB = 640
 CLICKHOUSE_MAX_RATIO = 0.75
@@ -102,12 +103,19 @@ def test_reservations_never_exceed_their_limits() -> None:
         assert reservation < limit, f"{name}: reservation {reservation} >= {limit}"
 
 
-def test_the_backend_limit_covers_the_measured_hd_export_peak() -> None:
-    """Scenario: The backend limit covers the measured HD export peak"""
-    backend = _services()["backend"]
-    limit = _limit(backend)
+def test_the_generation_worker_limit_covers_the_measured_hd_export_peak() -> None:
+    """Scenario: The generation worker limit covers the measured HD export peak"""
+    worker = _services()["generation-worker"]
+    limit = _limit(worker)
     assert limit is not None
     assert limit >= MEASURED_HD_RUN_PEAK_MIB * HEADROOM
+    assert _mib(str(worker["memswap_limit"])) == limit
+
+
+def test_the_backend_is_capped_for_the_website_alone() -> None:
+    """Scenario: The backend is capped for the website alone"""
+    backend = _services()["backend"]
+    assert _limit(backend) == BACKEND_LIMIT_MIB
     assert _memory(backend, "reservations") is not None
 
 

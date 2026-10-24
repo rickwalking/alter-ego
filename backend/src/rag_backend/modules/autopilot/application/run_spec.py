@@ -14,10 +14,14 @@ contract); its spec also carries the topic's verified quotes. Its
 from __future__ import annotations
 
 from dataclasses import replace
+from uuid import UUID, uuid5
 
 from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.domain.content_mode import is_pov_family
-from rag_backend.modules.autopilot.constants import REASON_TOPIC_MISSING
+from rag_backend.modules.autopilot.constants import (
+    AUTOPILOT_PROJECT_NAMESPACE,
+    REASON_TOPIC_MISSING,
+)
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
     DEFAULT_IMAGE_STYLE,
     GuidanceRequest,
@@ -65,7 +69,13 @@ def project_spec(
         pov_format=resolved_pov_format(choice) if pov else None,
         slide_count=resolved_slide_count(choice) if pov else None,
         quotes=topic.quotes,
+        project_id=autopilot_project_id(run.run_id),
     )
+
+
+def autopilot_project_id(run_id: UUID) -> str:
+    """The carousel id of a run: the same on every attempt to start it."""
+    return str(uuid5(AUTOPILOT_PROJECT_NAMESPACE, str(run_id)))
 
 
 def pov_image_style(topic: TopicCandidate) -> str:

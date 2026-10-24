@@ -43,7 +43,7 @@ def test_revision_sits_on_top_of_the_content_versions_index() -> None:
     """Scenario: The column and its index are added once"""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [ALEMBIC_HEAD] == [_REVISION]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT
