@@ -13,6 +13,8 @@
   under ``RATE_LIMIT_USER_STATE`` and the limit keys on it.
 - ``RATE_LIMIT_COVER_GENERATE`` caps starting a Grok cover generation, per user
   the same way (the caps per carousel and per month are enforced in the service).
+- ``RATE_LIMIT_COVER_PROMPT_IDEAS`` caps the paid "Mais ideias" cover-photo prompt
+  call, per user the same way.
 """
 
 RATE_LIMIT_AI_ENDPOINTS = "10/minute"
@@ -23,6 +25,7 @@ RATE_LIMIT_ADMIN_MIGRATION = "2/minute"
 RATE_LIMIT_PALETTE_WRITE = "10/minute"
 RATE_LIMIT_PALETTE_GENERATE = "5/minute"
 RATE_LIMIT_COVER_GENERATE = "5/minute"
+RATE_LIMIT_COVER_PROMPT_IDEAS = "10/minute"
 RATE_LIMIT_PUBLIC_BLOG_READ = "120/minute"
 RATE_LIMIT_AUTOPILOT = "10/minute"
 RATE_LIMIT_AUTOPILOT_ASSETS = "30/minute"
@@ -36,6 +39,7 @@ __all__ = [
     "RATE_LIMIT_AUTOPILOT_ASSETS",
     "RATE_LIMIT_CAROUSEL_PUBLISH",
     "RATE_LIMIT_COVER_GENERATE",
+    "RATE_LIMIT_COVER_PROMPT_IDEAS",
     "RATE_LIMIT_PALETTE_GENERATE",
     "RATE_LIMIT_PALETTE_WRITE",
     "RATE_LIMIT_PUBLIC_BLOG_READ",

@@ -4,6 +4,7 @@ import {
   AUTO_THEME_VALUE,
   buildThemeOptions,
   findThemeMode,
+  findThemePalette,
 } from "./theme-options";
 
 /**
@@ -92,5 +93,41 @@ describe("findThemeMode", () => {
     const options = buildThemeOptions(CATALOG, "en", "Auto");
     expect(findThemeMode(options, "auto")).toBeNull();
     expect(findThemeMode(options, "nope")).toBeNull();
+  });
+});
+
+describe("findThemePalette", () => {
+  /** Scenario: The Slide 1 photo shows curated suggestions for the topic and palette */
+  it("resolves a root palette with its localised name", () => {
+    expect(findThemePalette(CATALOG, "plasma_magenta", "pt")).toEqual({
+      name: "Magenta Plasma",
+      mode: "dark",
+      background: "#0a0a0a",
+      primary: "#ff00ff",
+      accent: "#00ffff",
+    });
+    expect(findThemePalette(CATALOG, "plasma_magenta", "en")?.name).toBe(
+      "Plasma Magenta",
+    );
+  });
+
+  /** Scenario: The Slide 1 photo shows curated suggestions for the topic and palette */
+  it("resolves a custom palette with only its name, mode and colours", () => {
+    expect(
+      findThemePalette(CATALOG, "11111111-1111-1111-1111-111111111111", "pt"),
+    ).toEqual({
+      name: "Aurora",
+      mode: "dark",
+      background: "#708090",
+      primary: "#102030",
+      accent: "#405060",
+    });
+  });
+
+  /** Scenario: Without a palette or a topic the suggestions stay generic */
+  it("is null for auto, an unknown value or no catalog", () => {
+    expect(findThemePalette(CATALOG, AUTO_THEME_VALUE, "pt")).toBeNull();
+    expect(findThemePalette(CATALOG, "missing", "pt")).toBeNull();
+    expect(findThemePalette(undefined, "plasma_magenta", "pt")).toBeNull();
   });
 });

@@ -602,6 +602,33 @@
     "publishStep": {
       "hint": "Final approval and distribution live on the Publish screen.",
       "goToPublish": "Go to Publish"
+    },
+    "coverIdeas": {
+      "label": "Prompt for the new photo",
+      "placeholder": "Describe the angle, background, light and mood of the photo…",
+      "hint": "Use this prompt to shoot or generate your new cover photo. You can edit it; it is not saved.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "catalogueTitle": "Suggestions",
+      "aiTitle": "AI ideas for your topic",
+      "use": "Use the idea: {idea}",
+      "more": "More ideas",
+      "needsTopic": "Write the carousel topic to ask for more ideas.",
+      "moreFailed": "Could not generate ideas right now. Try again; the suggestions are still available.",
+      "topicSuffix": ", with one element that hints at “{topic}”",
+      "fallback": {
+        "palette": "neutral",
+        "background": "neutral",
+        "accent": "accent"
+      },
+      "catalogue": {
+        "frontal": "Half-body portrait facing the camera, slight smile, plain {background} background, soft studio light",
+        "threeQuarter": "Three-quarter portrait looking aside, blurred background in the {palette} palette, strong side light",
+        "lowAngle": "Low-angle shot, confident posture, arms crossed, wide background with details in the {accent} colour",
+        "desk": "Medium shot seated at a work desk with a laptop, blurred office in the {palette} palette, natural window light",
+        "gesture": "Medium shot explaining something with the hands, lively expression, plain {background} background, soft front light",
+        "closeUp": "Face close-up, looking straight at the camera, {background} background, rim light in the {accent} colour"
+      }
     }
   },
   "blogEditorial": {
