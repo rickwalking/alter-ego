@@ -77,12 +77,20 @@ export interface StructuredList {
   items: Record<string, unknown>[];
 }
 
+/** The list a slide shows and the indexes of the items the editor offers. */
+export interface ShownItems {
+  list: StructuredList;
+  itemIndexes: number[];
+}
+
 /** The editable fields of one structured item (what the slide shows). */
 export interface StructuredItemFieldsProps {
   slide: LocalizedSlideReview;
   locale: PresentationLocaleKey;
   list: StructuredList;
   itemIndex: number;
+  /** The item's place among the shown items (its line number minus one). */
+  position: number;
   onChange: (edit: SlideStructuredItemEdit) => void;
   props: SlideCopyEditorProps;
 }

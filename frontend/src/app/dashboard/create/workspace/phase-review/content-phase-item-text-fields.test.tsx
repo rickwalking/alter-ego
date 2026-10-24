@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SlideStructuredItemEdit } from "@/modules/editorial";
 import type { LocalizedSlideReview } from "@/modules/publishing";
 import { ItemTextFields } from "./content-phase-item-text-fields";
+import { editableList } from "./content-phase-locale-extras";
 
 const ITEM = { icon_name: "check", title: "Gerado", body: "Editado" };
 
@@ -58,5 +59,23 @@ describe("ItemTextFields at content review", () => {
     renderItem(false);
     expect(screen.getByLabelText("Item title")).toHaveValue("Gerado");
     expect(screen.getByLabelText("Item body")).toHaveValue("Editado");
+  });
+});
+
+describe("editableList on a checklist slide", () => {
+  // Scenario: The checklist editor offers the lines the slide draws
+  it("edits the list the template draws", () => {
+    const presentation = {
+      summary_points: [{ title: "", body: "" }],
+      actions: [ITEM],
+    };
+    expect(
+      editableList(presentation, { slide_type: "summary", checklist: true })
+        ?.listKey,
+    ).toBe("actions");
+    expect(
+      editableList(presentation, { slide_type: "summary", checklist: false })
+        ?.listKey,
+    ).toBe("summary_points");
   });
 });

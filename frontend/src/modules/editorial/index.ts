@@ -182,6 +182,7 @@ export {
   CHECKLIST_ITEM_FIELD,
   checklistItemEdit,
   checklistItemText,
+  checklistLines,
   DISPLAYED_ITEM_FIELDS,
 } from "./workspace/lib/checklist-items";
 

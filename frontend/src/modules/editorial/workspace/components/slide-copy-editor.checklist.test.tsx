@@ -91,4 +91,34 @@ describe("SlideCopyEditor structured items", () => {
       onStructuredItemChange.mock.calls[0]?.[0].clearFields,
     ).toBeUndefined();
   });
+
+  // Scenario: The checklist editor offers the lines the slide draws
+  it("skips a blank item and still edits the right item", () => {
+    const blank: LocalizedSlideReview = {
+      ...slide(true),
+      presentation_pt: {
+        heading: "Salve",
+        summary_points: [
+          { title: "", body: "" },
+          { title: "Segunda", body: "" },
+        ],
+      },
+    };
+    const onStructuredItemChange =
+      vi.fn<(edit: SlideStructuredItemEdit) => void>();
+    const { container } = render(
+      createElement(SlideCopyEditor, {
+        slides: [blank],
+        idPrefix: "publish-edit",
+        onCopyChange: vi.fn(),
+        onStructuredItemChange,
+      }),
+    );
+    const [first] = fields(container, "checklistItemLabel");
+    expect(first?.value).toBe("Segunda");
+    fireEvent.change(first!, { target: { value: "Nova" } });
+    expect(onStructuredItemChange).toHaveBeenCalledWith(
+      expect.objectContaining({ itemIndex: 1, value: "Nova" }),
+    );
+  });
 });

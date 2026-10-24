@@ -11,6 +11,7 @@ import {
   CHECKLIST_ITEM_FIELD,
   checklistItemEdit,
   checklistItemText,
+  checklistLines,
   DISPLAYED_ITEM_FIELDS,
 } from "@/modules/editorial/workspace/lib/checklist-items";
 import type {
@@ -29,6 +30,7 @@ import type {
 } from "@/modules/editorial/workspace/types-ai";
 import { FlaggableTextarea } from "./slide-field-errors";
 import type {
+  ShownItems,
   SlideCopyEditorProps,
   StructuredItemFieldsProps,
   StructuredList,
@@ -93,6 +95,7 @@ function StructuredItemFields({
   locale,
   list,
   itemIndex,
+  position,
   onChange,
   props,
 }: Readonly<StructuredItemFieldsProps>): React.ReactElement {
@@ -110,7 +113,7 @@ function StructuredItemFields({
     listKey: list.listKey,
     itemIndex,
   };
-  const index = itemIndex + 1;
+  const index = position + 1;
   if (slide.checklist) {
     const key = keyOf(CHECKLIST_ITEM_FIELD);
     return (
@@ -146,8 +149,33 @@ function StructuredItemFields({
 }
 
 /**
- * Every item of the slide's structured list, editing exactly what the slide
- * shows: one line per item on a checklist slide, else title and body.
+ * The list a slide shows and the items of it the editor offers: on a
+ * checklist slide only the lines the template draws (blank items dropped, at
+ * most five), else every item.
+ */
+function shownItems(
+  slide: LocalizedSlideReview,
+  locale: PresentationLocaleKey,
+): ShownItems | null {
+  const presentation = slide[locale];
+  if (!slide.checklist) {
+    const list = resolveStructuredList(presentation);
+    return list && { list, itemIndexes: list.items.map((_item, i) => i) };
+  }
+  const shown = checklistLines(presentation);
+  if (shown === null) {
+    return null;
+  }
+  const items = presentation[shown.listKey] as Record<string, unknown>[];
+  return {
+    list: { listKey: shown.listKey, items },
+    itemIndexes: shown.lines.map((line) => line.itemIndex),
+  };
+}
+
+/**
+ * The slide's structured items, editing exactly what the slide shows: one
+ * line per drawn item on a checklist slide, else title and body.
  */
 export function StructuredItemsEditor({
   slide,
@@ -161,8 +189,8 @@ export function StructuredItemsEditor({
   props: SlideCopyEditorProps;
 }>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
-  const resolved = resolveStructuredList(slide[locale]);
-  if (resolved === null) {
+  const shown = shownItems(slide, locale);
+  if (shown === null) {
     return null;
   }
   return (
@@ -170,13 +198,14 @@ export function StructuredItemsEditor({
       <p className="font-medium text-[var(--color-text-muted)] text-xs">
         {t("structuredItems")}
       </p>
-      {resolved.items.map((_item, itemIndex) => (
+      {shown.itemIndexes.map((itemIndex, position) => (
         <StructuredItemFields
-          key={`${resolved.listKey}-${itemIndex}`}
+          key={`${shown.list.listKey}-${itemIndex}`}
           slide={slide}
           locale={locale}
-          list={resolved}
+          list={shown.list}
           itemIndex={itemIndex}
+          position={position}
           onChange={onChange}
           props={props}
         />
