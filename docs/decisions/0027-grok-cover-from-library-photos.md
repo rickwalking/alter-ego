@@ -30,8 +30,9 @@ to a personal photo, or uncontrolled spend?
 
 ## Considered Options
 
-1. **Extend the bridge body with optional `task` + `reference_images` (base64 PNG), run the job
-   in a tracked background task, log each generation in a new table.**
+1. **Send an OpenAI `images.edit`-shaped body (`operation: "images.edit"`, `image` as PNG
+   `data:` URLs) on the same bridge webhook, run the job in a tracked background task, log each
+   generation in a new table.**
 2. Upload the photos to a signed URL the Grok Bot downloads.
 3. Text-only Grok scenes composited with the existing photo in the template.
 
@@ -62,10 +63,11 @@ Chosen: **option 1**. Contract: [GrokBot Image Bridge §2.4](../architecture/gro
 
 ### Consequences
 
-- Good, because nothing new is integrated: one endpoint, one callback, one job table.
+- Good, because nothing new is integrated: one endpoint, one callback, one job table; the edit body
+  mirrors the OpenAI `images.edit` parameters the Grok Bot already speaks (Pedro, 2026-10-24).
 - Good, because no URL to a personal photo exists; the bytes are re-encoded without metadata.
 - Bad, because the photos are processed by a third party (accepted by Pedro).
-- Bad, because a 1–5 MB webhook body is larger than a text job's; the bridge timeout and the
+- Bad, because the webhook body (typically 2–5 MB, at most about 12.5 MB) is larger than a text job's; the bridge timeout and the
   failure path contain a slow or refused job.
 - Neutral, because a new table reaches prod through the `create_all` bootstrap (no one-shot).
 

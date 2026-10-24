@@ -7,6 +7,7 @@ error (``failed``), or until the waiter gives up (``expired``).
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -14,24 +15,24 @@ from uuid import UUID
 
 from rag_backend.modules.image_bridge.constants import (
     CONTENT_TYPE_CAROUSEL,
+    DATA_URL_TEMPLATE,
     ERR_INVALID_SIZE,
-    FIELD_B64_JSON,
     FIELD_CALLBACK_TOKEN,
     FIELD_CALLBACK_URL,
     FIELD_CONTENT_TYPE,
     FIELD_EXPIRES_AT,
+    FIELD_IMAGE,
     FIELD_JOB_ID,
     FIELD_METADATA,
-    FIELD_MIME_TYPE,
     FIELD_MODEL,
     FIELD_N,
+    FIELD_OPERATION,
     FIELD_PROJECT_ID,
     FIELD_PROMPT,
-    FIELD_REFERENCE_IMAGES,
     FIELD_RESPONSE_FORMAT,
     FIELD_SIZE,
-    FIELD_TASK,
     IMAGE_COUNT,
+    OPERATION_IMAGES_EDIT,
     RESPONSE_FORMAT_B64_JSON,
     SIZE_SEPARATOR,
 )
@@ -96,23 +97,13 @@ class JobDeadline:
 
 
 @dataclass(frozen=True)
-class WebhookReference:
-    """One reference image of an image-edit job (contract section 2.4)."""
-
-    b64_json: str
-    mime_type: str
-
-    def payload(self) -> dict[str, str]:
-        """The JSON object of one entry of ``reference_images``."""
-        return {FIELD_B64_JSON: self.b64_json, FIELD_MIME_TYPE: self.mime_type}
-
-
-@dataclass(frozen=True)
 class WebhookRequest:
     """The outbound webhook body of contract section 2.1.
 
-    An image-edit job (section 2.4) also carries ``task`` and its
-    ``reference_images``; a text-only job sends neither key.
+    A text-only job mirrors OpenAI ``images.generate``. A job with photos
+    mirrors ``images.edit`` (contract section 2.4): it adds ``operation:
+    "images.edit"`` and ``image``, the photos as ``data:`` URLs; a text-only
+    job sends neither key.
     """
 
     job_id: UUID
@@ -123,18 +114,14 @@ class WebhookRequest:
     callback_token: str
     expires_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
-    task: str = ""
-    reference_images: tuple[WebhookReference, ...] = ()
+    images: tuple[str, ...] = ()
 
     def payload(self) -> dict[str, object]:
         """JSON body sent to the Grok Bot webhook."""
         body = self._base_payload()
-        if self.task:
-            body[FIELD_TASK] = self.task
-        if self.reference_images:
-            body[FIELD_REFERENCE_IMAGES] = [
-                reference.payload() for reference in self.reference_images
-            ]
+        if self.images:
+            body[FIELD_OPERATION] = OPERATION_IMAGES_EDIT
+            body[FIELD_IMAGE] = list(self.images)
         return body
 
     def _base_payload(self) -> dict[str, object]:
@@ -180,3 +167,9 @@ class ImageSize:
         if not sep or not width.isdigit() or not height.isdigit():
             raise ValueError(ERR_INVALID_SIZE.format(size=text))
         return cls(width=int(width), height=int(height))
+
+
+def data_url(content: bytes, mime_type: str) -> str:
+    """``content`` as a ``data:<mime>;base64,...`` URL (contract section 2.4)."""
+    encoded = base64.b64encode(content).decode("ascii")
+    return DATA_URL_TEMPLATE.format(mime_type=mime_type, b64=encoded)

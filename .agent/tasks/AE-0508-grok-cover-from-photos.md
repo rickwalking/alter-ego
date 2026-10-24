@@ -31,7 +31,8 @@ each generation; caps of 4 per carousel and 40 per month; owner only. Pedro acce
 photos.
 
 - Image bridge webhook (contract §2.1) gains two optional fields, sent only for a cover generation:
-  `task: "image_edit"` and `reference_images: [{"b64_json", "mime_type"}]` (1-3 photos, re-encoded to PNG,
+  `operation: "images.edit"` and `image: ["data:image/png;base64,…"]` (OpenAI `images.edit` shape; 1-3
+  photos, re-encoded to PNG, at most 3 MB each,
   at most 1024 px a side, no metadata) on the same endpoint and callback as the text path (Pedro: the
   Grok Bot side already takes image requests through its sidecar, so no bot-side change). `model` is the
   bridge's model, `size` is `1080x1350`, `metadata.content_type` is `carousel_cover`. No OpenAI fallback
@@ -131,17 +132,18 @@ See `backend/tests/features/cover_generation_ae0508.feature` and
 
 ## Dependencies
 
-The Grok Bot sidecar must handle `task: "image_edit"` + `reference_images` (contract §2.4). The live
-check on 2026-10-24 (bridge job `7d73695e-9783-46cf-9041-de78a35470f2`, synthetic reference) got no
-callback within 600 s: the sidecar accepts the body but does not answer it. Merge blocker until the
-sidecar side is fixed and the check repeated.
+The Cursor automation behind the bridge webhook must handle `operation: "images.edit"` (contract §2.4,
+Pedro's option (a), 2026-10-24). The first live check (bridge job `7d73695e-9783-46cf-9041-de78a35470f2`,
+the earlier custom `task`/`reference_images` body) got no callback. Merge blocker until Pedro updates the
+automation and one new live check with a synthetic image passes.
 
 ## Progress Log
 
 ### 2026-10-23
 
 Ticket written from Pedro's decision; failing tests first. Pedro: no Grok Bot side change, the existing
-bridge endpoint (sidecar) takes the job, so the photos ride it as `reference_images`. Backend, frontend,
+bridge endpoint (sidecar) takes the job; after the first live check Pedro chose an OpenAI
+`images.edit`-shaped body (`operation`, `image` as data URLs) on the same webhook. Backend, frontend,
 docs (contract §2.4, ADR-0027). Independent review round: transaction released before the bridge wait,
 unexpected errors settle failed, one shared bridge editor, the budget log survives a carousel delete,
 1024 px reference photos, no dead button when the list fails. The prompt field takes a children slot for

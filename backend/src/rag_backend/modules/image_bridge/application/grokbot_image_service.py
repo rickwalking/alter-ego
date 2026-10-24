@@ -5,16 +5,15 @@ callback lands (any worker may receive it), then write the image fitted to
 the configured size as PNG. Every failure raises ``ImageBridgeJobError``, a
 ``RuntimeError``, the same contract as ``OpenAIImageService``.
 
-``edit_image`` runs the same job with the owner's reference photos inside the
-webhook body (contract section 2.4, a slide-1 cover) and returns the image
-fitted to the cover size as PNG. Its ``claim`` runs once a slot is free and
-can cancel the job before anything is sent.
+``edit_image`` runs the same job as an OpenAI ``images.edit``-shaped body
+with the owner's photos as ``data:`` URLs (contract section 2.4, a slide-1
+cover) and returns the image fitted to the cover size as PNG. Its ``claim``
+runs once a slot is free and can cancel the job before anything is sent.
 """
 
 from __future__ import annotations
 
 import asyncio
-import base64
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -38,6 +37,7 @@ from rag_backend.modules.image_bridge.constants import (
     DEFAULT_IMAGE_SIZE,
     DEFAULT_MAX_CONCURRENCY,
     DEFAULT_TIMEOUT_SECONDS,
+    EDIT_REQUEST_SIZE,
     ERR_JOB_CANCELLED,
     ERR_JOB_EXPIRED,
     ERR_JOB_FAILED,
@@ -48,7 +48,6 @@ from rag_backend.modules.image_bridge.constants import (
     LOG_JOB_SUCCEEDED,
     LOG_WEBHOOK_FAILED,
     POLL_INTERVAL_SECONDS,
-    TASK_IMAGE_EDIT,
     URL_TRAILING_SLASH,
 )
 from rag_backend.modules.image_bridge.domain.exceptions import (
@@ -62,8 +61,8 @@ from rag_backend.modules.image_bridge.domain.models import (
     ImageSize,
     JobDeadline,
     JobFailure,
-    WebhookReference,
     WebhookRequest,
+    data_url,
     job_metadata,
 )
 from rag_backend.modules.image_bridge.domain.ports import (
@@ -112,8 +111,7 @@ class _JobSpec:
     size: str
     project_id: str | None
     content_type: str = CONTENT_TYPE_CAROUSEL
-    task: str = ""
-    references: tuple[WebhookReference, ...] = field(default_factory=tuple)
+    images: tuple[str, ...] = field(default_factory=tuple)
     claim: Callable[[], Awaitable[bool]] | None = None
 
 
@@ -149,22 +147,16 @@ class GrokBotImageService(ImageGenerationService):
 
     async def edit_image(self, job: CoverEditJob) -> bytes:
         """Run one image-edit job with the reference photos; the cover as PNG."""
-        references = tuple(
-            WebhookReference(
-                b64_json=base64.b64encode(photo.content).decode("ascii"),
-                mime_type=photo.mime_type,
-            )
-            for photo in job.photos
-        )
         image = await self._run(
             _JobSpec(
                 prompt=job.prompt,
                 model=self._config.model,
-                size=COVER_GENERATION_SIZE,
+                size=EDIT_REQUEST_SIZE,
                 project_id=job.project_id,
                 content_type=CONTENT_TYPE_COVER,
-                task=TASK_IMAGE_EDIT,
-                references=references,
+                images=tuple(
+                    data_url(photo.content, photo.mime_type) for photo in job.photos
+                ),
                 claim=job.claim,
             )
         )
@@ -220,8 +212,7 @@ class GrokBotImageService(ImageGenerationService):
             callback_token=started.token,
             expires_at=started.job.expires_at,
             metadata=job_metadata(spec.project_id, spec.content_type),
-            task=spec.task,
-            reference_images=spec.references,
+            images=spec.images,
         )
 
     async def _fail_delivery(

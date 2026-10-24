@@ -166,3 +166,37 @@ async def test_a_crashed_run_is_logged_and_untracked() -> None:
     assert task not in running_cover_generation_tasks()
     assert logs[0]["event"] == "cover_generation_crashed"
     assert logs[0]["generation_id"] == "gen-1"
+
+
+def test_a_heavy_photo_is_scaled_under_the_byte_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    import os
+
+    from rag_backend.application.services.carousel import reference_photo as module
+
+    noise = Image.frombytes("RGB", (1200, 1200), os.urandom(1200 * 1200 * 3))
+    source = io.BytesIO()
+    noise.save(source, format="PNG")
+    monkeypatch.setattr(module, "REFERENCE_PHOTO_MAX_BYTES", 1_000_000)
+
+    photo = module.reference_photo(source.getvalue())
+
+    assert len(photo.content) <= 1_000_000
+    with Image.open(io.BytesIO(photo.content)) as sent:
+        assert max(sent.size) == 512
+
+
+def test_a_photo_too_heavy_even_small_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Scenario: A bridge failure leaves no asset and can be retried."""
+    from rag_backend.application.services.carousel import reference_photo as module
+
+    source = io.BytesIO()
+    Image.new("RGB", (800, 800), (1, 2, 3)).save(source, format="PNG")
+    monkeypatch.setattr(module, "REFERENCE_PHOTO_MAX_BYTES", 10)
+
+    with pytest.raises(CoverAssetError):
+        module.reference_photo(source.getvalue())

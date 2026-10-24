@@ -11,7 +11,7 @@ Feature: Generate a slide-1 cover from library photos with Grok
   Scenario: A confirmed generation sends the photo bytes and stores a private cover
     When the owner asks for a cover from one photo with a prompt and confirms
     Then the API answers 202 with a pending generation
-    And the Grok Bot webhook receives the photo bytes as reference images and no URL
+    And the Grok Bot webhook receives an images.edit body with the photos as data URLs and no other URL
     And the generated image is stored as a creator asset with role cover
     And the generation is succeeded with that asset
 
@@ -111,4 +111,4 @@ Feature: Generate a slide-1 cover from library photos with Grok
 
   Scenario: Text-only bridge jobs keep the old webhook body
     When the images phase asks the bridge for a slide image
-    Then the webhook body has no task and no reference_images keys
+    Then the webhook body has no operation and no image keys

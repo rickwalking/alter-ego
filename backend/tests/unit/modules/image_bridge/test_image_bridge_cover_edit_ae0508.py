@@ -32,8 +32,8 @@ from rag_backend.modules.image_bridge.domain.exceptions import (
 )
 from rag_backend.modules.image_bridge.domain.models import (
     JobSuccess,
-    WebhookReference,
     WebhookRequest,
+    data_url,
 )
 from rag_backend.modules.image_bridge.domain.ports import NormalizeRequest
 from rag_backend.modules.image_bridge.infrastructure.pillow_codec import (
@@ -109,27 +109,36 @@ async def test_edit_job_carries_the_photo_bytes_and_returns_a_cover_png() -> Non
         job = await repo.get(webhook.requests[0].job_id)
 
     body = webhook.requests[0].payload()
-    assert body["task"] == "image_edit"
-    assert body["reference_images"] == [
-        {
-            "b64_json": base64.b64encode(_PHOTO).decode("ascii"),
-            "mime_type": "image/png",
-        },
-        {
-            "b64_json": base64.b64encode(b"second").decode("ascii"),
-            "mime_type": "image/png",
-        },
+    assert body["operation"] == "images.edit"
+    assert body["image"] == [
+        "data:image/png;base64," + base64.b64encode(_PHOTO).decode("ascii"),
+        "data:image/png;base64," + base64.b64encode(b"second").decode("ascii"),
     ]
     assert body["prompt"] == "direction: café"
     assert body["model"] == IMAGE_BRIDGE_MODEL
-    assert body["size"] == "1080x1350"
+    assert body["size"] == "1024x1536"
+    assert body["n"] == 1
+    assert body["response_format"] == "b64_json"
     assert body["metadata"] == {
         "content_type": "carousel_cover",
         "project_id": "proj-9",
     }
-    assert "http" not in str(body["reference_images"])
+    assert sorted(body) == [
+        "callback_token",
+        "callback_url",
+        "expires_at",
+        "image",
+        "job_id",
+        "metadata",
+        "model",
+        "n",
+        "operation",
+        "prompt",
+        "response_format",
+        "size",
+    ]
     assert job is not None
-    assert job.size == "1080x1350"
+    assert job.size == "1024x1536"
     with Image.open(io.BytesIO(image)) as cover:
         assert cover.format == "PNG"
         assert cover.size == (1080, 1350)
@@ -159,8 +168,8 @@ def test_text_only_body_has_no_edit_keys() -> None:
 
     body = request.payload()
 
-    assert "task" not in body
-    assert "reference_images" not in body
+    assert "operation" not in body
+    assert "image" not in body
     assert sorted(body) == [
         "callback_token",
         "callback_url",
@@ -175,10 +184,9 @@ def test_text_only_body_has_no_edit_keys() -> None:
     ]
 
 
-def test_reference_payload_shape() -> None:
+def test_data_url_shape() -> None:
     """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
-    reference = WebhookReference(b64_json="QUJD", mime_type="image/png")
-    assert reference.payload() == {"b64_json": "QUJD", "mime_type": "image/png"}
+    assert data_url(b"ABC", "image/png") == "data:image/png;base64,QUJD"
 
 
 def test_cover_editor_needs_the_bridge_urls() -> None:
