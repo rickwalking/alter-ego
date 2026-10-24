@@ -5,7 +5,9 @@
   scheduled, published or hidden); hidden bad posts are rebuilt separately.
 * :func:`create_generation_draft` — a ``draft`` row with the bootstrap
   ``blog.v2`` document (zero sections, legal only while in progress) and a
-  fresh lease.
+  fresh lease. A ``from-carousel`` row is the carousel's canonical
+  distribution home, so it starts with the carousel's saved caption and
+  LinkedIn posts rather than an empty ``distribution``.
 * :func:`restart_generation` — the owner's retry on the SAME row: a new lease
   and attempt, ``lock_version`` bumped (so a stale task of the old attempt is
   fenced out); compare-and-set so two concurrent retries cannot both start.
@@ -25,10 +27,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.ai_disclosure import AI_DISCLOSURE_GENERATED
 from rag_backend.domain.constants.blog_document import BLOG_SCHEMA_V2
-from rag_backend.domain.constants.blog_post import BlogPostStatus
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
+from rag_backend.domain.constants.distribution import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+)
 from rag_backend.domain.models.blog_generation import GenerationLease
 from rag_backend.domain.models.blog_generation_state import GenerationStart, started
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 
 def bootstrap_content() -> dict[str, object]:
@@ -72,6 +80,31 @@ async def live_post_id_for_project(db: AsyncSession, project_id: str) -> str | N
     return str(found) if found is not None else None
 
 
+async def _carousel_distribution(
+    db: AsyncSession, spec: GenerationDraftSpec
+) -> dict[str, object]:
+    """The carousel's saved copy for a ``from-carousel`` row; empty otherwise."""
+    if spec.origin != BlogPostOrigin.CAROUSEL.value or spec.project_id is None:
+        return {}
+    row = (
+        await db.execute(
+            select(
+                CarouselProjectModel.caption,
+                CarouselProjectModel.linkedin_post_pt,
+                CarouselProjectModel.linkedin_post_en,
+            ).where(CarouselProjectModel.id == spec.project_id)
+        )
+    ).one_or_none()
+    if row is None:
+        return {}
+    caption, linkedin_pt, linkedin_en = row
+    return {
+        DISTRIBUTION_CAPTION_KEY: caption,
+        DISTRIBUTION_LINKEDIN_POST_PT_KEY: linkedin_pt,
+        DISTRIBUTION_LINKEDIN_POST_EN_KEY: linkedin_en,
+    }
+
+
 async def create_generation_draft(
     db: AsyncSession, spec: GenerationDraftSpec
 ) -> GenerationLease:
@@ -79,6 +112,7 @@ async def create_generation_draft(
 
     A post written by the blog writer is labelled AI-generated.
     """
+    distribution = await _carousel_distribution(db, spec)
     post = BlogPostModel.from_entity({
         "id": str(uuid.uuid4()),
         "project_id": spec.project_id,
@@ -87,6 +121,7 @@ async def create_generation_draft(
         "slug": spec.slug,
         "status": BlogPostStatus.DRAFT.value,
         "content": bootstrap_content(),
+        "distribution": distribution,
         "author_id": spec.author_id,
         "ai_generation_metadata": started({}, spec.start),
         "ai_disclosure_label": AI_DISCLOSURE_GENERATED,

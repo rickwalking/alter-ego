@@ -13,6 +13,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_CAPTION_EMPTY,
     ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
     MAX_INSTAGRAM_CAROUSEL_ITEMS,
     MIN_INSTAGRAM_CAROUSEL_ITEMS,
@@ -65,6 +66,7 @@ class PublishGate:
     status: str
     is_public: bool
     image_count: int
+    has_caption: bool
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -229,6 +231,8 @@ def _workflow_reason(gate: PublishGate) -> str | None:
 
 
 def _media_reason(gate: PublishGate) -> str | None:
+    if not gate.has_caption:
+        return ERR_INSTAGRAM_CAPTION_EMPTY
     too_few = gate.image_count < MIN_INSTAGRAM_CAROUSEL_ITEMS
     too_many = gate.image_count > MAX_INSTAGRAM_CAROUSEL_ITEMS
     if too_few or too_many:

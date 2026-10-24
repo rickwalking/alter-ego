@@ -112,6 +112,7 @@ _OWNER_CHAT = "42"
 _BASE_URL = "https://public.test"
 _NOW = datetime(2026, 10, 15, 10, 0, tzinfo=_SP).astimezone(UTC)
 _SLOT = datetime(2026, 10, 15, 18, 0, tzinfo=_SP).astimezone(UTC)
+_CAPTION = "Agents that ship: the carousel caption."
 
 
 @dataclass
@@ -191,8 +192,8 @@ async def world(
 
 
 async def _awaiting_run(world: _World) -> AutopilotRun:
-    """The carousel is marked completed by hand because in prod the (faked) slide render
-    does it.
+    """The carousel is marked completed and given its caption by hand because in prod
+    the (faked) slide render and distribution pack do it.
     """
     repo = SqlAlchemyAutopilotRepository(world.session)
     topic = TopicCandidate(
@@ -225,7 +226,7 @@ async def _awaiting_run(world: _World) -> AutopilotRun:
     await world.session.execute(
         update(CarouselProjectModel)
         .where(CarouselProjectModel.id == world.project_id)
-        .values(status="completed")
+        .values(status="completed", caption=_CAPTION)
     )
     await world.session.commit()
     return run

@@ -11,6 +11,7 @@
   call Graph for the same carousel at the same time.
 * A post published here also gets its Story, under the same claim
   and the same one-row-per-carousel idempotency as the worker tick.
+* An empty or blank caption is refused before anything else.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_CAPTION_EMPTY,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
 )
@@ -72,6 +74,8 @@ class ManualInstagramPublish:
 
     async def publish(self, command: ManualPublishCommand) -> ManualPublishOutcome:
         """Publish once. Raises ``ManualPublishRefusedError`` before any Graph call."""
+        if not command.caption.strip():
+            raise ManualPublishRefusedError(ERR_INSTAGRAM_CAPTION_EMPTY)
         media = CarouselMedia(caption=command.caption, image_urls=command.image_urls)
         manual = _Manual(command=command, media=media)
         run = await self._deps.runs.find_by_carousel(command.project_id)

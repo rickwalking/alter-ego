@@ -117,8 +117,10 @@ def gate_for(
             status="",
             is_public=False,
             image_count=0,
+            has_caption=False,
         )
     count = len(snapshot.image_urls) if media is None else len(media.image_urls)
+    caption = snapshot.caption if media is None else media.caption
     return PublishGate(
         project_found=True,
         base_url_configured=snapshot.base_url_configured,
@@ -126,6 +128,7 @@ def gate_for(
         status=snapshot.status,
         is_public=snapshot.is_public,
         image_count=count,
+        has_caption=bool(caption.strip()),
     )
 
 
