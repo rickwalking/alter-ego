@@ -23,6 +23,15 @@ export const COVER_IDEA_TOPIC_API_MAX = 500;
 /** Marks a topic cut at {@link COVER_IDEA_TOPIC_MAX}. */
 export const TOPIC_ELLIPSIS = "…";
 
+/** Fewest AI ideas one "Mais ideias" answer carries (mirrors the backend). */
+export const COVER_IDEA_COUNT_MIN = 3;
+
+/** Most AI ideas one "Mais ideias" answer carries (mirrors the backend). */
+export const COVER_IDEA_COUNT_MAX = 6;
+
+/** How long the "Copiado" confirmation stays after a copy, in milliseconds. */
+export const COVER_PROMPT_COPIED_MS = 2000;
+
 /** The dashboard locales the ideas endpoint writes in. */
 export const COVER_IDEA_LOCALES = ["pt", "en"] as const;
 

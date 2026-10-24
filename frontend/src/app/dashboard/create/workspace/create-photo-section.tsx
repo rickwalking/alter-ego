@@ -134,7 +134,7 @@ export function CreatePhotoSection({
           {t("uploadFailed")}
         </p>
       )}
-      {promptField && <div style={{ marginTop: "14px" }}>{promptField}</div>}
+      {promptField && <div className="mt-3.5">{promptField}</div>}
     </div>
   );
 }

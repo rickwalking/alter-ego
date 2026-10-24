@@ -149,3 +149,14 @@ export interface CoverPromptFieldProps {
   value: string;
   onChange: (value: string) => void;
 }
+
+/** The copy button of the cover-photo prompt. */
+export interface CoverPromptCopyProps {
+  text: string;
+}
+
+/** AI ideas of the cover-photo prompt and the topic/palette key they answer. */
+export interface CoverAiIdeas {
+  context: string;
+  ideas: readonly string[];
+}

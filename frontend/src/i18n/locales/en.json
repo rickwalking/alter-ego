@@ -597,6 +597,8 @@
       "label": "Prompt for the new photo",
       "placeholder": "Describe the angle, background, light and mood of the photo…",
       "hint": "Use this prompt to shoot or generate your new cover photo. You can edit it; it is not saved.",
+      "copy": "Copy",
+      "copied": "Copied",
       "catalogueTitle": "Suggestions",
       "aiTitle": "AI ideas for your topic",
       "use": "Use the idea: {idea}",

@@ -1,8 +1,8 @@
 """Prompt ideas for a new cover photo ("Mais ideias"): one fast-queue LLM call.
 
-Pedro's rule: the curated catalogue comes first in the create form; this service
-backs "Mais ideias" with prompts tailored to the carousel topic and the slide
-palette. Only those two reach the model (no personal data beyond the topic). The
+The curated catalogue comes first in the create form; this service backs
+"Mais ideias" with prompts tailored to the carousel topic and the slide palette.
+Only the topic and the palette reach the model. The
 answer is JSON ``{"ideas": [...]}`` and every idea is re-checked here: a string of
 ``IDEA_MIN_LEN``-``IDEA_MAX_LEN`` characters once whitespace is collapsed, without
 markup characters, not repeating another idea. Fewer than ``IDEA_MIN_COUNT`` usable

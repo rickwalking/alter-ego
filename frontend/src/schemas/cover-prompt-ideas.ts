@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  COVER_IDEA_COUNT_MAX,
+  COVER_IDEA_COUNT_MIN,
   COVER_IDEA_LOCALES,
   COVER_IDEA_TOPIC_API_MAX,
   COVER_IDEA_TOPIC_MIN,
@@ -33,7 +35,10 @@ export const coverPromptIdeasRequestSchema = z.object({
 
 /** Three to six AI prompt ideas for a new cover photo. */
 export const coverPromptIdeasResponseSchema = z.object({
-  ideas: z.array(z.string()),
+  ideas: z
+    .array(z.string())
+    .min(COVER_IDEA_COUNT_MIN)
+    .max(COVER_IDEA_COUNT_MAX),
 });
 
 export type CoverIdeasPalette = z.infer<typeof coverIdeasPaletteSchema>;

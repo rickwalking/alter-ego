@@ -2,10 +2,11 @@
 
 The create form shows a curated catalogue of prompts for a new cover photo;
 "Mais ideias" asks the fast LLM queue for ``IDEA_REQUEST_COUNT`` ideas tailored to
-the carousel topic and palette. Pedro's rule: only the topic and the palette reach
-the model, never personal data. An answer with fewer than ``IDEA_MIN_COUNT`` usable
+the carousel topic and palette. Only the topic and the palette reach the model,
+never personal data. An answer with fewer than ``IDEA_MIN_COUNT`` usable
 ideas gets ``IDEA_ATTEMPTS`` tries in all; the response carries at most
 ``IDEA_MAX_COUNT``. ``IDEA_MAX_LEN`` bounds one prompt so it fits the prompt field.
+Each call gets ``IDEAS_TIMEOUT_SECONDS``, so the two attempts stay under half a minute.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ TOPIC_MAX_LEN: int = 500
 
 IDEAS_TEMPERATURE: float = 0.9
 IDEAS_MAX_TOKENS: int = 1500
-IDEAS_TIMEOUT_SECONDS: float = 60.0
+IDEAS_TIMEOUT_SECONDS: float = 12.0
 
 KEY_IDEAS: str = "ideas"
 IDEA_FORBIDDEN_CHARS: tuple[str, ...] = ("<", ">", "{", "}")

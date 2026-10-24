@@ -41,7 +41,7 @@ service). No personal data beyond the carousel topic.
   (topic delimited as data, sanitised; the model is told never to invent personal details). Every idea is
   re-checked: whitespace collapsed, 12-400 characters, no `< > { }`, no repeats (case-insensitive), at
   most six. Fewer than three usable ideas → one more call; still fewer, or the LLM failing / timing out
-  (60 s) both times → 503 `cover_prompt_ideas_unavailable`. Editor or admin only; 10/minute per user.
+  (12 s each, so at most ~24 s) both times → 503 `cover_prompt_ideas_unavailable`. Editor or admin only; 10/minute per user.
   Langfuse trace: phase and agent `cover_prompt_ideas`, user id, content type `carousel`.
 
 ## Non-Goals
@@ -93,6 +93,12 @@ Ticket written from Pedro's decision. The Slide 1 photo field had no prompt fiel
 ### 2026-10-24
 
 Gates captured; Dev Complete for the Slide 1 half.
+
+Review round 1 (#273): each LLM call times out after 12 s (two attempts stay under 25 s); AI ideas only show
+for the topic and palette they answer and stay on screen while "Mais ideias" reloads; a "Copiar" button puts
+the prompt on the clipboard until the AE-0508 follow-up wires the field into the Grok dialog; the request is
+parsed client-side and the response must hold 3-6 ideas; docstrings say "only the topic and palette reach
+the model".
 
 ## Files Touched
 

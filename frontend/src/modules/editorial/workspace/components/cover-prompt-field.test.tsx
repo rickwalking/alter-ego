@@ -35,6 +35,18 @@ function requestUrl(input: RequestInfo | URL): string {
   return input instanceof URL ? input.href : input.url;
 }
 
+/** A response the test settles by hand. */
+function deferred(): {
+  promise: Promise<Response>;
+  resolve: (value: Response) => void;
+} {
+  const settlers: ((value: Response) => void)[] = [];
+  const promise = new Promise<Response>((resolve) => {
+    settlers.push(resolve);
+  });
+  return { promise, resolve: (value) => settlers[0]?.(value) };
+}
+
 function Harness({
   topic,
   palette,
@@ -185,5 +197,119 @@ describe("CoverPromptField", () => {
     );
     expect(suggestions("Suggestions")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "More ideas" })).toBeEnabled();
+  });
+
+  /** Scenario: AI ideas stay on screen while more load */
+  it("keeps the previous AI ideas while more load", async () => {
+    const later = deferred();
+    authenticatedFetch
+      .mockResolvedValueOnce(json({ ideas: AI_IDEAS }))
+      .mockReturnValueOnce(later.promise);
+    const user = renderField();
+    const more = screen.getByRole("button", { name: "More ideas" });
+
+    await user.click(more);
+    await screen.findByRole("region", { name: "AI ideas for your topic" });
+    await user.click(more);
+
+    expect(more).toHaveAttribute("aria-busy", "true");
+    expect(
+      suggestions("AI ideas for your topic").map((b) => b.textContent),
+    ).toEqual(AI_IDEAS);
+    later.resolve(json({ ideas: [...AI_IDEAS].reverse() }));
+    expect(
+      (await screen.findByText(AI_IDEAS[2]!)).closest("li")?.previousSibling,
+    ).toBeNull();
+  });
+
+  /** Scenario: AI ideas give way when the topic or palette changes */
+  it("shows the catalogue again when the topic or palette changes", async () => {
+    authenticatedFetch.mockResolvedValueOnce(json({ ideas: AI_IDEAS }));
+    const { rerender } = render(
+      <Harness topic="AI at work" palette={PALETTE} />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "More ideas" }));
+    await screen.findByRole("region", { name: "AI ideas for your topic" });
+    rerender(<Harness topic="Remote work" palette={PALETTE} />);
+
+    expect(suggestions("Suggestions")[0]).toHaveTextContent("“Remote work”");
+    rerender(
+      <Harness
+        topic="AI at work"
+        palette={{ ...PALETTE, accent: "#ffffff" }}
+      />,
+    );
+    expect(suggestions("Suggestions")[2]).toHaveTextContent("#ffffff");
+    rerender(<Harness topic="AI at work" palette={PALETTE} />);
+    expect(suggestions("AI ideas for your topic")).toHaveLength(3);
+  });
+
+  /** Scenario: The prompt can be copied */
+  it("copies the prompt and confirms it", async () => {
+    const user = renderField();
+    const copy = screen.getByRole("button", { name: "Copy" });
+    expect(copy).toBeDisabled();
+
+    await user.type(
+      screen.getByLabelText("Prompt for the new photo"),
+      "Side light",
+    );
+    await user.click(copy);
+
+    expect(await navigator.clipboard.readText()).toBe("Side light");
+    expect(screen.getByRole("button", { name: "Copied" })).toBeEnabled();
+  });
+
+  /** Scenario: The prompt can be copied */
+  it("stays on Copy when the clipboard refuses", async () => {
+    const user = renderField();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(
+      new Error("denied"),
+    );
+
+    await user.type(screen.getByLabelText("Prompt for the new photo"), "x");
+    await user.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  /** Scenario: A malformed AI answer or request is an error */
+  it("treats fewer than three AI ideas as an error", async () => {
+    authenticatedFetch.mockResolvedValueOnce(
+      json({ ideas: AI_IDEAS.slice(0, 2) }),
+    );
+    const user = renderField();
+
+    await user.click(screen.getByRole("button", { name: "More ideas" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(suggestions("Suggestions")).toHaveLength(6);
+  });
+
+  /** Scenario: A malformed AI answer or request is an error */
+  it("does not send a topic longer than 500 characters", async () => {
+    const user = renderField("t".repeat(501));
+
+    await user.click(screen.getByRole("button", { name: "More ideas" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(authenticatedFetch).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: AI ideas give way when the topic or palette changes */
+  it("drops an error once the topic changes", async () => {
+    authenticatedFetch.mockResolvedValueOnce(json({ detail: "x" }, 503));
+    const { rerender } = render(
+      <Harness topic="AI at work" palette={PALETTE} />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "More ideas" }));
+    await screen.findByRole("alert");
+    rerender(<Harness topic="Remote work" palette={PALETTE} />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

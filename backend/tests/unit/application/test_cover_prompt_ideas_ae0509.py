@@ -24,6 +24,7 @@ from rag_backend.application.services.carousel.cover_prompt_ideas_service import
     parse_ideas,
 )
 from rag_backend.domain.constants.cover_prompt_ideas import (
+    IDEA_ATTEMPTS,
     IDEA_MAX_LEN,
     NO_PALETTE_HINT,
     IdeaLocale,
@@ -214,6 +215,11 @@ class TestUnavailable:
         with pytest.raises(CoverPromptIdeasError):
             await service.suggest(_request())
         assert slow.calls == 2
+
+
+def test_two_timed_out_attempts_end_within_25_seconds() -> None:
+    """Scenario: The ideas answer within half a minute."""
+    assert svc.IDEAS_TIMEOUT_SECONDS * IDEA_ATTEMPTS < 25
 
 
 class TestParseIdeas:

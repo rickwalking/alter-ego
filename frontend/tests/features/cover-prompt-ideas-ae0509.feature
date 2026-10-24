@@ -26,6 +26,27 @@ Feature: Prompt suggestions for a new cover photo
     Given the topic is shorter than three characters
     Then "Mais ideias" is disabled with a hint to write the topic
 
+  Scenario: AI ideas stay on screen while more load
+    Given AI ideas are shown
+    When the owner presses "Mais ideias" again
+    Then the previous AI ideas stay until the new ones arrive
+
+  Scenario: AI ideas give way when the topic or palette changes
+    Given AI ideas are shown for one topic and palette
+    When the owner changes the topic or the palette
+    Then the curated suggestions for the new topic and palette are shown
+
+  Scenario: The prompt can be copied
+    Given the prompt field holds a prompt
+    When the owner presses "Copiar"
+    Then the prompt is on the clipboard and the button says "Copiado"
+    And "Copiar" is disabled while the prompt is blank
+
+  Scenario: A malformed AI answer or request is an error
+    Given the ideas endpoint answers fewer than three ideas, or the topic is longer than 500 characters
+    When the owner presses "Mais ideias"
+    Then a retryable error is shown and the curated suggestions stay
+
   Scenario: A failed AI call keeps the curated suggestions
     Given the ideas request fails
     When the owner presses "Mais ideias"

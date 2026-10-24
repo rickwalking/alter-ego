@@ -37,6 +37,11 @@ Feature: Prompt ideas for a new cover photo
     When the owner asks for cover prompt ideas with a topic and a palette
     Then the API answers 503 cover_prompt_ideas_unavailable
 
+  Scenario: The ideas answer within half a minute
+    Given each LLM call is cut off at its timeout
+    When both attempts time out
+    Then the whole request ends in under 25 seconds
+
   Scenario: Only the topic and the palette are accepted
     Given the owner sends a personal field, a non-hex colour or a palette name with markup
     When the owner asks for cover prompt ideas

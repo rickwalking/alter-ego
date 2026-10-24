@@ -597,6 +597,8 @@
       "label": "Prompt da nova foto",
       "placeholder": "Descreva o ângulo, o fundo, a luz e o clima da foto…",
       "hint": "Use este prompt para fotografar ou gerar sua nova foto da capa. Você pode editá-lo; ele não é salvo.",
+      "copy": "Copiar",
+      "copied": "Copiado",
       "catalogueTitle": "Sugestões",
       "aiTitle": "Ideias da IA para o seu tema",
       "use": "Usar a ideia: {idea}",

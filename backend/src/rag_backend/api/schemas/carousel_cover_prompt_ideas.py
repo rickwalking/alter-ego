@@ -1,7 +1,7 @@
 """Request/response schemas of ``POST /carousels/cover-prompt-ideas``.
 
-Only the carousel topic and the slide palette are accepted (Pedro's rule: no
-personal data beyond the topic reaches the model). The palette colours reuse the
+Only the carousel topic and the slide palette are accepted: only the topic and
+the palette reach the model. The palette colours reuse the
 catalog's strict ``#rrggbb`` allow-list and its name rule, so no free text other
 than the topic and a short palette name reaches the prompt.
 """
