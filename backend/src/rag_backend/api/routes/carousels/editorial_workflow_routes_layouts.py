@@ -1,5 +1,10 @@
 """Which slides' structured items the editor shows as a single checklist line."""
 
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from rag_backend.api.dependencies.carousel_access import reload_carousel_project
 from rag_backend.api.schemas.carousel_workflow import EditorialWorkflowStateResponse
 from rag_backend.application.services.carousel.localized_slide_builder import (
     resolve_slide_index,
@@ -33,4 +38,18 @@ def apply_checklist_slides(
     return response.model_copy(update={"checklist_slide_indexes": sorted(numbers)})
 
 
-__all__ = ["apply_checklist_slides"]
+async def with_checklist_slides(
+    db: AsyncSession,
+    project_id: UUID,
+    response: EditorialWorkflowStateResponse,
+) -> EditorialWorkflowStateResponse:
+    """``apply_checklist_slides`` on the project as stored after the run.
+
+    A response that does not compute the list would hand the client an empty one and
+    wipe the checklist flags the editor holds.
+    """
+    project = await reload_carousel_project(db, project_id)
+    return response if project is None else apply_checklist_slides(response, project)
+
+
+__all__ = ["apply_checklist_slides", "with_checklist_slides"]

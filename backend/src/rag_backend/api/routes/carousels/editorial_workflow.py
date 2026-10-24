@@ -40,6 +40,7 @@ from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.editorial_workflow_routes_layouts import (
     apply_checklist_slides,
+    with_checklist_slides,
 )
 from rag_backend.api.routes.carousels.editorial_workflow_routes_response import (
     RunMetadataInput,
@@ -143,14 +144,12 @@ async def get_editorial_workflow_state(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_INVALID_REQUEST,
         )
-    response = apply_checklist_slides(
-        build_editorial_workflow_state_response(
-            dict(view.state),
-            phase_progress=view.phase_progress,
-            lock_version=view.lock_version,
-        ),
-        project.to_entity(),
+    response = build_editorial_workflow_state_response(
+        dict(view.state),
+        phase_progress=view.phase_progress,
+        lock_version=view.lock_version,
     )
+    response = apply_checklist_slides(response, project.to_entity())
     return apply_run_metadata(
         response,
         RunMetadataInput(
@@ -258,10 +257,14 @@ async def start_editorial_workflow(
             detail=provider_detail,
             headers={"Retry-After": retry_after} if retry_after else None,
         ) from None
-    return build_editorial_workflow_state_response(
-        dict(view.state),
-        phase_progress=view.phase_progress,
-        lock_version=view.lock_version,
+    return await with_checklist_slides(
+        db,
+        project_id,
+        build_editorial_workflow_state_response(
+            dict(view.state),
+            phase_progress=view.phase_progress,
+            lock_version=view.lock_version,
+        ),
     )
 
 

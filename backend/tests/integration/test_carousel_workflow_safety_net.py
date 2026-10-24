@@ -40,6 +40,7 @@ import json
 import os
 from collections.abc import AsyncGenerator, AsyncIterator
 from typing import TYPE_CHECKING, Final
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -149,6 +150,53 @@ def _fixture_state(project_id: str) -> CarouselWorkflowState:
         "phase_feedback": {"content": ["looks good"]},
         "revision_count": {"content": 1},
     }
+    return state
+
+
+POV_SAVE_SLIDE: Final = 8
+_POV_SLIDE_TYPES: Final = (
+    "intro",
+    "content",
+    "content",
+    "content",
+    "content",
+    "content",
+    "content",
+    "summary",
+    "cta",
+)
+
+
+async def _make_pov_deck(project_id: str) -> None:
+    """Turn a seeded project into a 9-slide "Ponto de Vista" deck."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    async with get_session_maker()() as session:
+        project = await session.get(CarouselProjectModel, project_id)
+        assert project is not None
+        project.content_mode = "pov"
+        project.presentation_policy_version = "pov_hook_v1"
+        project.slide_count = len(_POV_SLIDE_TYPES)
+        project.cta_goal = "send"
+        project.creator_handle = "pedromarins.ai"
+        await session.commit()
+
+
+def _pov_state(project_id: str) -> CarouselWorkflowState:
+    """The fixture state with the deck's localized slides."""
+    state = _fixture_state(project_id)
+    state["localized_slides"] = [
+        {
+            "slide_index": number,
+            "slide_type": slide_type,
+            "presentation_pt": {"heading": f"Slide {number}", "body": ""},
+            "presentation_en": {"heading": f"Slide {number}", "body": ""},
+        }
+        for number, slide_type in enumerate(_POV_SLIDE_TYPES, start=1)
+    ]
     return state
 
 
@@ -455,6 +503,35 @@ class TestWorkflowStartBehavior:
             )
         assert resp.status_code == 200
         assert resp.json()["current_phase"] == PHASE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_start_and_state_list_the_checklist_slides(
+        self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: The start response carries the checklist slides.
+
+        Feature file: tests/features/carousel_checklist_wysiwyg.feature
+        """
+        project_id = await wf_env.seed_project(wf_env.editor)
+        await _make_pov_deck(project_id)
+        stub = _patch_service(monkeypatch, project_id, has_state=True)
+        state = _pov_state(project_id)
+        stub._state = state
+        monkeypatch.setattr(stub, "start_workflow", AsyncMock(return_value=dict(state)))
+        async with wf_env.client_for(wf_env.editor) as client:
+            started = await client.post(
+                f"/api/carousels/{project_id}/workflow/start",
+                json={
+                    "topic": "Fixture topic",
+                    "audience": "Fixture audience",
+                    "brief": "Fixture brief",
+                    "sources": [],
+                },
+            )
+            fetched = await client.get(f"/api/carousels/{project_id}/workflow/state")
+        assert started.status_code == 200
+        assert started.json()["checklist_slide_indexes"] == [POV_SAVE_SLIDE]
+        assert fetched.json()["checklist_slide_indexes"] == [POV_SAVE_SLIDE]
 
     @pytest.mark.asyncio
     async def test_start_rejects_self_reviewer(
