@@ -6,7 +6,9 @@ cover offer:
 
 - a library photo is staged, bound as the slide-1 photo (``hook_asset_id``)
   and any GrokBot cover is cleared, so the default POV slide 1 shows it;
-- the GrokBot offer is stored as ``slide_cover`` (the Telegram semantics).
+- the GrokBot offer is stored as ``slide_cover`` (the Telegram semantics);
+- a cover Grok generated from the owner's photos for this carousel is stored
+  as an ``ai_image`` ``slide_cover`` too.
 
 Both write through ``SlideCoverSwitchService``: lock-version CAS under the
 project lock, then the republish (slides + PDFs, hero images reused).
@@ -14,7 +16,7 @@ project lock, then the republish (slides + PDFs, hero images reused).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
@@ -34,6 +36,8 @@ from rag_backend.domain.constants.carousel_cover_pick import (
     ERR_COVER_PICK_NOT_POV,
 )
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
+from rag_backend.domain.constants.cover_generation import COVER_SOURCE_GENERATED
+from rag_backend.domain.constants.slide_cover import COVER_KIND_AI_IMAGE
 from rag_backend.domain.content_mode import is_pov_family
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 from rag_backend.domain.models.carousel_conflict import (
@@ -72,6 +76,22 @@ class CoverOfferSource(Protocol):
     async def offer(self, project_id: str) -> SlideCover | None: ...
 
 
+class GeneratedCoverSource(Protocol):
+    """The covers Grok generated for a carousel (file present), newest first."""
+
+    async def covers(self, project_id: str) -> tuple[CarouselCreatorAsset, ...]: ...
+
+
+class _NoGeneratedCovers:
+    """No generated covers (a picker built without the generation store)."""
+
+    @staticmethod
+    async def covers(project_id: str) -> tuple[CarouselCreatorAsset, ...]:
+        """Always empty."""
+        del project_id
+        return ()
+
+
 class CoverSwitcher(Protocol):
     """Store the choice under the lock-version CAS and re-render."""
 
@@ -87,6 +107,7 @@ class CoverPickDeps:
     library: CoverLibrary
     offers: CoverOfferSource
     switcher: CoverSwitcher
+    generated: GeneratedCoverSource = field(default_factory=_NoGeneratedCovers)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -119,6 +140,7 @@ class CoverPickCommand:
 class _Candidates:
     library: tuple[CarouselCreatorAsset, ...]
     offer: SlideCover | None
+    generated: tuple[CarouselCreatorAsset, ...] = ()
 
 
 def current_cover_asset(project: CarouselProject) -> UUID | None:
@@ -151,12 +173,20 @@ class CoverPickService:
         self._deps = deps
 
     async def options(self, project: CarouselProject) -> CoverOptions:
-        """The library photos, then the GrokBot offer; 422 for non-POV."""
+        """Library photos, generated covers, then the GrokBot offer; 422 for non-POV."""
         _assert_pov(project)
         found = await self._candidates(project)
         library = tuple(
             CoverOption(asset_id=asset.id, source=COVER_SOURCE_LIBRARY)
             for asset in found.library
+        )
+        generated = tuple(
+            CoverOption(
+                asset_id=asset.id,
+                source=COVER_SOURCE_GENERATED,
+                kind=COVER_KIND_AI_IMAGE,
+            )
+            for asset in found.generated
         )
         offer = found.offer
         offered = (
@@ -169,7 +199,8 @@ class CoverPickService:
             else ()
         )
         return CoverOptions(
-            current_asset_id=current_cover_asset(project), options=(*library, *offered)
+            current_asset_id=current_cover_asset(project),
+            options=(*library, *generated, *offered),
         )
 
     async def pick(self, command: CoverPickCommand) -> SlideCoverSwitchResult:
@@ -180,6 +211,14 @@ class CoverPickService:
         offer = found.offer
         if offer is not None and offer.asset_id == command.asset_id:
             return await self._deps.switcher.switch(_switch_command(command, offer))
+        made = next((a for a in found.generated if a.id == command.asset_id), None)
+        if made is not None:
+            cover = SlideCover(
+                asset_id=made.id,
+                kind=COVER_KIND_AI_IMAGE,
+                staged_path=made.relative_path,
+            )
+            return await self._deps.switcher.switch(_switch_command(command, cover))
         photo = next((a for a in found.library if a.id == command.asset_id), None)
         if photo is None:
             raise CoverPickError(ERR_COVER_PICK_ASSET_NOT_ALLOWED)
@@ -191,7 +230,8 @@ class CoverPickService:
         owner_id = project.owner_id or ""
         library = await self._deps.library.photos(owner_id) if owner_id else ()
         offer = await self._deps.offers.offer(str(project.id))
-        return _Candidates(library=library, offer=offer)
+        generated = await self._deps.generated.covers(str(project.id))
+        return _Candidates(library=library, offer=offer, generated=generated)
 
 
 def _switch_command(
@@ -217,5 +257,6 @@ __all__ = [
     "CoverPickError",
     "CoverPickService",
     "CoverSwitcher",
+    "GeneratedCoverSource",
     "current_cover_asset",
 ]

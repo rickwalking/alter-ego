@@ -7,6 +7,7 @@ error (``failed``), or until the waiter gives up (``expired``).
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -14,20 +15,24 @@ from uuid import UUID
 
 from rag_backend.modules.image_bridge.constants import (
     CONTENT_TYPE_CAROUSEL,
+    DATA_URL_TEMPLATE,
     ERR_INVALID_SIZE,
     FIELD_CALLBACK_TOKEN,
     FIELD_CALLBACK_URL,
     FIELD_CONTENT_TYPE,
     FIELD_EXPIRES_AT,
+    FIELD_IMAGE,
     FIELD_JOB_ID,
     FIELD_METADATA,
     FIELD_MODEL,
     FIELD_N,
+    FIELD_OPERATION,
     FIELD_PROJECT_ID,
     FIELD_PROMPT,
     FIELD_RESPONSE_FORMAT,
     FIELD_SIZE,
     IMAGE_COUNT,
+    OPERATION_IMAGES_EDIT,
     RESPONSE_FORMAT_B64_JSON,
     SIZE_SEPARATOR,
 )
@@ -93,7 +98,13 @@ class JobDeadline:
 
 @dataclass(frozen=True)
 class WebhookRequest:
-    """The outbound webhook body of contract section 2.1."""
+    """The outbound webhook body of contract section 2.1.
+
+    A text-only job mirrors OpenAI ``images.generate``. A job with photos
+    mirrors ``images.edit`` (contract section 2.4): it adds ``operation:
+    "images.edit"`` and ``image``, the photos as ``data:`` URLs; a text-only
+    job sends neither key.
+    """
 
     job_id: UUID
     model: str
@@ -103,9 +114,17 @@ class WebhookRequest:
     callback_token: str
     expires_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
+    images: tuple[str, ...] = ()
 
     def payload(self) -> dict[str, object]:
         """JSON body sent to the Grok Bot webhook."""
+        body = self._base_payload()
+        if self.images:
+            body[FIELD_OPERATION] = OPERATION_IMAGES_EDIT
+            body[FIELD_IMAGE] = list(self.images)
+        return body
+
+    def _base_payload(self) -> dict[str, object]:
         return {
             FIELD_JOB_ID: str(self.job_id),
             FIELD_MODEL: self.model,
@@ -120,9 +139,11 @@ class WebhookRequest:
         }
 
 
-def job_metadata(project_id: str | None) -> dict[str, str]:
+def job_metadata(
+    project_id: str | None, content_type: str = CONTENT_TYPE_CAROUSEL
+) -> dict[str, str]:
     """Webhook metadata: the content type, plus the project when known."""
-    metadata = {FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL}
+    metadata = {FIELD_CONTENT_TYPE: content_type}
     if project_id:
         metadata[FIELD_PROJECT_ID] = project_id
     return metadata
@@ -146,3 +167,9 @@ class ImageSize:
         if not sep or not width.isdigit() or not height.isdigit():
             raise ValueError(ERR_INVALID_SIZE.format(size=text))
         return cls(width=int(width), height=int(height))
+
+
+def data_url(content: bytes, mime_type: str) -> str:
+    """``content`` as a ``data:<mime>;base64,...`` URL (contract section 2.4)."""
+    encoded = base64.b64encode(content).decode("ascii")
+    return DATA_URL_TEMPLATE.format(mime_type=mime_type, b64=encoded)

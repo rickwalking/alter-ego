@@ -3721,6 +3721,158 @@
         "title": "CoverAssetResponse",
         "type": "object"
       },
+      "CoverGenerationRequest": {
+        "additionalProperties": false,
+        "description": "The photos to send, the owner's direction and the explicit confirmation.",
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "photo_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Photo Ids",
+            "type": "array"
+          },
+          "prompt": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "photo_ids",
+          "prompt",
+          "confirmed"
+        ],
+        "title": "CoverGenerationRequest",
+        "type": "object"
+      },
+      "CoverGenerationResponse": {
+        "description": "One generation: its status, failure code and resulting cover.",
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "description": "pending | succeeded | failed",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "created_at"
+        ],
+        "title": "CoverGenerationResponse",
+        "type": "object"
+      },
+      "CoverGenerationsResponse": {
+        "description": "The caps in use and the carousel's generations, newest first.\n\n``*_used`` count pending and succeeded generations; ``*_attempts`` count\nevery attempt, failures included, against the hard attempt ceiling.",
+        "properties": {
+          "carousel_attempt_cap": {
+            "title": "Carousel Attempt Cap",
+            "type": "integer"
+          },
+          "carousel_attempts": {
+            "title": "Carousel Attempts",
+            "type": "integer"
+          },
+          "carousel_cap": {
+            "title": "Carousel Cap",
+            "type": "integer"
+          },
+          "carousel_used": {
+            "title": "Carousel Used",
+            "type": "integer"
+          },
+          "generations": {
+            "items": {
+              "$ref": "#/components/schemas/CoverGenerationResponse"
+            },
+            "title": "Generations",
+            "type": "array"
+          },
+          "month_attempt_cap": {
+            "title": "Month Attempt Cap",
+            "type": "integer"
+          },
+          "month_attempts": {
+            "title": "Month Attempts",
+            "type": "integer"
+          },
+          "month_cap": {
+            "title": "Month Cap",
+            "type": "integer"
+          },
+          "month_used": {
+            "title": "Month Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "carousel_used",
+          "carousel_cap",
+          "month_used",
+          "month_cap",
+          "carousel_attempts",
+          "carousel_attempt_cap",
+          "month_attempts",
+          "month_attempt_cap",
+          "generations"
+        ],
+        "title": "CoverGenerationsResponse",
+        "type": "object"
+      },
       "CoverOptionResponse": {
         "description": "One image slide 1 may show: a library photo or the GrokBot offer.",
         "properties": {
@@ -13467,6 +13619,123 @@
         "tags": [
           "carousels",
           "carousels-cover-pick"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/cover-generations": {
+      "get": {
+        "description": "Owner only; a run lost to a restart is reported as interrupted.",
+        "operationId": "list_cover_generations_api_carousels__project_id__cover_generations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverGenerationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The caps in use and the Grok cover generations of a carousel",
+        "tags": [
+          "carousels",
+          "carousels-cover-generation"
+        ]
+      },
+      "post": {
+        "description": "Record a pending generation and run the Grok Bot job in the background.",
+        "operationId": "start_cover_generation_api_carousels__project_id__cover_generations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverGenerationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Only the carousel's owner can generate"
+          },
+          "409": {
+            "description": "A generation is running or a cap is reached"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "cover_generation_unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate a slide-1 cover from library photos with Grok",
+        "tags": [
+          "carousels",
+          "carousels-cover-generation"
         ]
       }
     },

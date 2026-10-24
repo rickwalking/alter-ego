@@ -7,6 +7,7 @@ import { BG_CARD, NEON_CYAN, TEXT_DIM } from "@/constants/neon";
 import type { CoverOptionGridProps, CoverThumbProps } from "./types";
 
 const COVER_SOURCE_OFFER = "offer";
+const COVER_SOURCE_GENERATED = "generated";
 const THUMB_WIDTH = 72;
 const THUMB_HEIGHT = 90;
 const IDLE_BORDER = "1px solid rgba(255,255,255,0.08)";
@@ -43,6 +44,20 @@ export function CoverOptionGrid({
   );
 }
 
+function thumbText(
+  source: CoverThumbProps["option"]["source"],
+  number: number,
+  t: ReturnType<typeof useTranslations>,
+): { label: string; tag: string } {
+  if (source === COVER_SOURCE_OFFER) {
+    return { label: t("offerLabel"), tag: t("offerShort") };
+  }
+  if (source === COVER_SOURCE_GENERATED) {
+    return { label: t("generatedLabel", { number }), tag: t("generatedShort") };
+  }
+  return { label: t("photoLabel", { number }), tag: "" };
+}
+
 function CoverThumb({
   option,
   number,
@@ -51,9 +66,7 @@ function CoverThumb({
   onChoose,
 }: Readonly<CoverThumbProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
-  const offer = option.source === COVER_SOURCE_OFFER;
-  const label = offer ? t("offerLabel") : t("photoLabel", { number });
-  const tag = offer ? t("offerShort") : "";
+  const { label, tag } = thumbText(option.source, number, t);
   const caption = current ? t("current") : tag;
   return (
     <div className="flex flex-col items-center gap-1">

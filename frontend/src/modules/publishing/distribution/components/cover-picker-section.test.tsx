@@ -53,10 +53,25 @@ const OPTIONS = {
   ],
 };
 
+const GENERATIONS = {
+  carousel_used: 0,
+  carousel_cap: 4,
+  month_used: 0,
+  month_cap: 40,
+  carousel_attempts: 0,
+  carousel_attempt_cap: 12,
+  month_attempts: 0,
+  month_attempt_cap: 120,
+  generations: [],
+};
+
 function routeApi(options: unknown, pick?: unknown, lockVersion = 7): void {
   mockApiCall.mockImplementation((url: string) => {
     if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT)) {
       return Promise.resolve({ lock_version: lockVersion });
+    }
+    if (url === API_ENDPOINTS.CAROUSEL_COVER_GENERATIONS(PROJECT)) {
+      return Promise.resolve(GENERATIONS);
     }
     const answer =
       url === API_ENDPOINTS.CAROUSEL_COVER_OPTIONS(PROJECT) ? options : pick;
@@ -87,7 +102,7 @@ beforeEach(() => {
 });
 
 describe("CoverPickerSection", () => {
-  // Scenario: The options are thumbnails with the current photo marked
+  /** Scenario: The options are thumbnails with the current photo marked */
   it("lists the options as radios with the current one checked", async () => {
     routeApi(OPTIONS);
     renderSection();
@@ -109,8 +124,26 @@ describe("CoverPickerSection", () => {
     expect(screen.getByText("GrokBot")).toBeTruthy();
   });
 
-  // Scenario: Choosing another photo switches the cover and refreshes the previews
-  // Scenario: The picker is keyboard accessible
+  /** Scenario: A finished generation appears as a cover option */
+  it("labels a generated cover and offers the library photos to Grok", async () => {
+    routeApi({
+      ...OPTIONS,
+      options: [
+        ...OPTIONS.options,
+        { asset_id: "m", source: "generated", kind: "ai_image" },
+      ],
+    });
+    renderSection();
+
+    expect(
+      await screen.findByRole("radio", { name: "generatedLabel" }),
+    ).toBeTruthy();
+    expect(screen.getByText("generatedShort")).toBeTruthy();
+    expect(await screen.findAllByRole("checkbox")).toHaveLength(2);
+  });
+
+  /** Scenario: Choosing another photo switches the cover and refreshes the previews */
+  /** Scenario: The picker is keyboard accessible */
   it("switches with the lock version, shows progress, then refreshes", async () => {
     let finish: (value: unknown) => void = (_value) => undefined;
     const pending = new Promise((resolve) => {
@@ -157,18 +190,21 @@ describe("CoverPickerSection", () => {
     await waitFor(() => expect(onSwitched).toHaveBeenCalledWith(null));
   });
 
-  // Scenario: Choosing the current photo does nothing
+  /** Scenario: Choosing the current photo does nothing */
   it("ignores a click on the current photo", async () => {
     routeApi(OPTIONS);
     renderSection();
     await userEvent.click(
       await screen.findByRole("radio", { name: "Foto 1 (Atual)" }),
     );
-    expect(mockApiCall).toHaveBeenCalledTimes(1);
+    const urls = mockApiCall.mock.calls.map(([url]) => url);
+    expect(urls).toContain(API_ENDPOINTS.CAROUSEL_COVER_OPTIONS(PROJECT));
+    expect(urls).not.toContain(API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(PROJECT));
+    expect(urls).not.toContain(API_ENDPOINTS.CAROUSEL_COVER(PROJECT));
   });
 
-  // Scenario: A version conflict shows a reload hint
-  // Scenario: The pick sends the server's current version, not page state
+  /** Scenario: A version conflict shows a reload hint */
+  /** Scenario: The pick sends the server's current version, not page state */
   it("reads the current lock version right before the switch", async () => {
     routeApi(
       OPTIONS,
@@ -207,7 +243,7 @@ describe("CoverPickerSection", () => {
     );
   });
 
-  // Scenario: Any other failure is visible
+  /** Scenario: Any other failure is visible */
   it("shows the generic failure otherwise", async () => {
     routeApi(OPTIONS, new ApiError(422, "cover_pick_asset_not_allowed"));
     renderSection();
@@ -217,7 +253,7 @@ describe("CoverPickerSection", () => {
     );
   });
 
-  // Scenario: An empty library explains where to add photos
+  /** Scenario: An empty library explains where to add photos */
   it("explains an empty library", async () => {
     routeApi({ project_id: PROJECT, current_asset_id: null, options: [] });
     renderSection();
@@ -225,7 +261,7 @@ describe("CoverPickerSection", () => {
     expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 
-  // Scenario: The options failing to load is visible
+  /** Scenario: The options failing to load is visible */
   it("shows a load failure", async () => {
     routeApi(new ApiError(422, "cover_pick_not_pov"));
     renderSection();

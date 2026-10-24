@@ -121,6 +121,89 @@ instead of our callback:
 - **Still to verify:** routine runs are queued, so parallelism and start latency are not
   guaranteed. The bridge timeout (600 s) and the fallback cover this.
 
+## 2.4 Edit jobs: a cover from the owner's photos (OpenAI `images.edit` shape, AE-0508)
+
+Same webhook (`GROKBOT_IMAGE_WEBHOOK_URL`), same auth header, same callback as §2.1/§2.2. When a job
+carries photos (a slide-1 cover generated from the owner's library photos, AE-0508), the body mirrors
+the OpenAI **`images.edit`** parameters instead of `images.generate`. A text-only job keeps the exact
+§2.1 body: it never has `operation` or `image`, so a routine that reads no `operation` treats the job
+as `images.generate`.
+
+**How to tell them apart:** `operation` is `"images.edit"` on an edit job and absent otherwise.
+
+#### Request (alter-ego → Grok Bot)
+
+`POST {GROKBOT_IMAGE_WEBHOOK_URL}`, `Content-Type: application/json`, plus the configured auth header.
+
+```json
+{
+  "operation": "images.edit",
+  "job_id": "6f1c2a9e-4c1b-4f7e-9a51-2d8f0c7b3e10",
+  "model": "gpt-image-2",
+  "prompt": "<full cover instruction; the owner's direction is inside it>",
+  "image": [
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA…",
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA…"
+  ],
+  "n": 1,
+  "size": "1024x1536",
+  "response_format": "b64_json",
+  "callback_url": "https://marinssolutions.com/api/v1/image-bridge/jobs/6f1c2a9e-…/result",
+  "callback_token": "<one-time random token, 43 chars url-safe>",
+  "expires_at": "2026-10-24T03:10:00Z",
+  "metadata": { "project_id": "…", "content_type": "carousel_cover" }
+}
+```
+
+| Field | Type | Edit job | Notes |
+|---|---|---|---|
+| `operation` | string | `"images.edit"` | Absent on text-only jobs (`images.generate`). |
+| `job_id` | string (UUID) | yes | Same as §2.1. |
+| `model` | string | yes | The bridge's model, the same value as a text job (today `gpt-image-2`). |
+| `prompt` | string | yes | Up to a few KB. It asks to keep the person in the images recognisable, a 4:5 cover, a calm top third for the title, and no text or logos. |
+| `image` | array of strings, 1–3 items | yes | Each item is a `data:` URL, `data:image/png;base64,<standard base64>`. These are the owner's chosen photos, re-encoded by the backend as PNG (transparency kept, every metadata block dropped), at most 1024 px a side and at most 3 MB each before base64 (shrunk to 768 or 512 px when needed). In OpenAI `images.edit` terms this is the `image` parameter as a list. |
+| `n` | integer | `1` | One image per job. |
+| `size` | string | `"1024x1536"` | A portrait size OpenAI `images.edit` accepts. The backend centre-crops and fits the answer to 1080×1350. |
+| `response_format` | string | `"b64_json"` | `url` answers are not read (no outbound fetch). |
+| `callback_url`, `callback_token`, `expires_at` | string | yes | Same as §2.1. The job expires 600 s after creation (`IMAGE_BRIDGE_TIMEOUT_SECONDS`). |
+| `metadata` | object | yes | `content_type` is `"carousel_cover"` for edit jobs (`"carousel"` for slide images) and `project_id` is the carousel. |
+
+Body size: at most about 12.5 MB (3 photos × 3 MB × 4/3 for base64, plus the prompt); a typical body
+is 2–5 MB. The webhook must accept at least 13 MB. A non-2xx answer, or no answer within 15 s, fails
+the job at once (no retry).
+
+#### Callback (Grok Bot → alter-ego): unchanged from §2.2
+
+`POST {callback_url}` with `Content-Type: application/json` and `X-Image-Bridge-Token: <callback_token>`.
+
+Success: the OpenAI `ImagesResponse`; only `data[0].b64_json` is read.
+
+```json
+{ "created": 1761275400, "data": [ { "b64_json": "<base64 PNG/JPEG/WEBP>" } ] }
+```
+
+Failure (for example the provider refuses, or the photos cannot be used): the OpenAI error body. Send it
+rather than staying silent, so the owner sees the failure at once instead of after the 10-minute timeout.
+
+```json
+{ "error": { "type": "image_generation_error", "code": "content_policy", "message": "…" } }
+```
+
+Limits (unchanged): callback body at most 16 MB; decoded image at most 12 MB; PNG, JPEG or WEBP; each
+side 512–4096 px. Statuses: `202` accepted, `401` bad token or unknown job, `409` no longer pending,
+`413` too large, `422` invalid body or image (the job is then failed).
+
+#### What the backend does with the answer
+
+The image is fitted to 1080×1350, passes the `ai_image` cover rules (ADR-0024) and is stored as a
+private creator asset with role `cover`. There is no OpenAI fallback for edit jobs. Each generation
+follows an explicit confirmation by the owner, with at most 4 per carousel and 40 per calendar month
+(UTC; resets at 21:00 BRT on the last day of the month). Failures don't count toward those, but there
+is a hard ceiling of 12 attempts per carousel and 120 per month that counts every attempt. A queued
+job claims its generation once it has a bridge slot, right before the webhook. A generation failed
+meanwhile cancels the job, so no photo is sent. See
+[ADR-0027](../decisions/0027-grok-cover-from-library-photos.md).
+
 ## 3. Backend design
 
 ### 3.1 Module

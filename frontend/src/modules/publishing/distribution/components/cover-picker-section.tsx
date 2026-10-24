@@ -10,6 +10,7 @@ import {
   useCoverOptions,
   usePickCover,
 } from "@/modules/publishing/distribution/hooks/use-cover-picker";
+import { CoverGeneratePanel } from "./cover-generate-panel";
 import { CoverOptionGrid } from "./cover-option-grid";
 import type {
   CoverPick,
@@ -17,6 +18,8 @@ import type {
   CoverPickerSectionProps,
   PickStatusProps,
 } from "./types";
+
+const SOURCE_LIBRARY = "library";
 
 function failureKey(error: Error | null): "conflict" | "failed" {
   if (error instanceof ApiError && error.status === HTTP_STATUS.CONFLICT) {
@@ -76,9 +79,11 @@ function PickStatus({
 
 /**
  * "Capa (slide 1)" on the publish step of a Ponto de Vista carousel.
- * Lists the owner's library photos (and the GrokBot offer), marks the current
- * one, and swaps slide 1 on a pick: the server re-renders slides + PDFs, then
- * `onSwitched` refreshes the previews with the new artifact version.
+ * Lists the owner's library photos, the covers Grok generated from them (and
+ * the GrokBot offer), marks the current one, and swaps slide 1 on a pick: the
+ * server re-renders slides + PDFs, then `onSwitched` refreshes the previews
+ * with the new artifact version. Below it, "Gerar capa com Grok" makes new
+ * covers from the library photos.
  */
 export function CoverPickerSection({
   projectId,
@@ -94,6 +99,7 @@ export function CoverPickerSection({
   });
 
   const items = options.data?.options ?? [];
+  const libraryPhotos = items.filter((item) => item.source === SOURCE_LIBRARY);
   return (
     <section style={SECTION_CARD_STYLE} aria-labelledby="cover-picker-title">
       <h3 id="cover-picker-title" className="text-sm font-semibold mb-1">
@@ -133,6 +139,7 @@ export function CoverPickerSection({
           {t(failureKey(pick.error))}
         </p>
       )}
+      <CoverGeneratePanel projectId={projectId} photos={libraryPhotos} />
     </section>
   );
 }

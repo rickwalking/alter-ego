@@ -1234,6 +1234,49 @@
       "conflict": "O carrossel mudou desde que você abriu esta página. Recarregue a página e tente de novo.",
       "failed": "Não foi possível trocar a capa.",
       "loadFailed": "Não foi possível carregar as fotos.",
+      "generatedLabel": "Capa gerada {number}",
+      "generatedShort": "Grok",
+      "generate": {
+        "title": "Gerar capa com Grok",
+        "description": "Escolha até 3 fotos suas e descreva a cena. O Grok cria uma capa nova com você; ela fica na sua biblioteca privada e aparece acima para escolher.",
+        "photosLegend": "Fotos de referência (até {max})",
+        "photoLabel": "Usar a foto {number} da biblioteca",
+        "promptLabel": "Como deve ser a capa?",
+        "promptPlaceholder": "Ex.: eu num café em Lisboa, luz de fim de tarde, olhando para a câmera",
+        "usage": "{carouselUsed} de {carouselCap} neste carrossel · {monthUsed} de {monthCap} no mês (o limite do mês renova às 21:00, horário de Brasília, do último dia do mês)",
+        "action": "Gerar capa",
+        "pending": "Gerando a capa com o Grok… pode levar alguns minutos.",
+        "succeeded": "Capa gerada. Escolha-a acima para usar no slide 1.",
+        "retry": "Tentar de novo",
+        "blocked": {
+          "carouselCap": "Limite de 4 capas geradas neste carrossel atingido.",
+          "monthlyCap": "Limite de 40 capas geradas neste mês atingido. Renova às 21:00, horário de Brasília, do último dia do mês.",
+          "carouselAttempts": "Limite de 12 tentativas neste carrossel atingido (falhas e tempos esgotados contam).",
+          "monthlyAttempts": "Limite de 120 tentativas neste mês atingido (falhas e tempos esgotados contam). Renova às 21:00, horário de Brasília, do último dia do mês."
+        },
+        "confirm": {
+          "title": "Enviar suas fotos para o Grok?",
+          "body": "{count, plural, one {Sua foto será enviada} other {Suas # fotos serão enviadas}} ao Grok Bot e processadas pela xAI para gerar a capa. Esta geração conta no limite: {carouselUsed} de {carouselCap} neste carrossel e {monthUsed} de {monthCap} no mês. Falhas não contam.",
+          "action": "Enviar e gerar",
+          "cancel": "Cancelar"
+        },
+        "errors": {
+          "loadFailed": "Não foi possível carregar as gerações de capa. Recarregue a página.",
+          "failed": "Não foi possível gerar a capa.",
+          "bridge": "O Grok não devolveu a capa (falha ou tempo esgotado). Nenhuma imagem foi guardada.",
+          "invalidImage": "A imagem do Grok não serve como capa (tamanho ou formato). Nenhuma imagem foi guardada.",
+          "interrupted": "A geração foi interrompida (o servidor reiniciou). Nenhuma imagem foi guardada.",
+          "photoUnreadable": "Uma das fotos não pôde ser lida. Escolha outra.",
+          "inProgress": "Já há uma capa sendo gerada neste carrossel.",
+          "carouselCap": "Limite de 4 capas geradas neste carrossel atingido.",
+          "monthlyCap": "Limite de 40 capas geradas neste mês atingido. Renova às 21:00, horário de Brasília, do último dia do mês.",
+          "carouselAttempts": "Limite de 12 tentativas neste carrossel atingido (falhas e tempos esgotados contam).",
+          "monthlyAttempts": "Limite de 120 tentativas neste mês atingido (falhas e tempos esgotados contam). Renova às 21:00, horário de Brasília, do último dia do mês.",
+          "unavailable": "A geração com o Grok não está disponível agora.",
+          "photoNotAllowed": "Só fotos da sua biblioteca podem ser enviadas.",
+          "notOwner": "Só o dono do carrossel pode gerar capas."
+        }
+      },
       "empty": "Nenhuma foto na biblioteca. Envie fotos no passo \"Foto do slide 1\" ao criar um carrossel."
     },
     "slideEditor": {

@@ -8,6 +8,13 @@ import type { ViewerLanguage } from "@/modules/publishing/distribution/types";
  */
 
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import type { ReactNode } from "react";
+import type {
+  CoverGeneration,
+  CoverGenerationInput,
+  CoverGenerations,
+} from "@/modules/publishing/distribution/hooks/use-cover-generation";
+import type { CapReason } from "@/modules/publishing/distribution/hooks/types";
 import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type {
@@ -71,11 +78,66 @@ export interface LeaveGuardDialogProps {
   guard: LeaveGuard;
 }
 
-/** One slide-1 cover option (library photo or GrokBot offer). */
+/** One slide-1 cover option (library photo, Grok-generated cover or GrokBot offer). */
 export interface CoverOptionView {
   asset_id: string;
-  source: "library" | "offer";
+  source: "library" | "generated" | "offer";
   kind?: string;
+}
+
+/** "Gerar capa com Grok": the owner's library photos it may send. */
+export interface CoverGeneratePanelProps {
+  projectId: string;
+  photos: readonly CoverOptionView[];
+}
+
+/** The library photos as checkboxes (at most ``max`` ticked). */
+export interface CoverPhotoChecklistProps {
+  photos: readonly CoverOptionView[];
+  selected: readonly string[];
+  max: number;
+  disabled: boolean;
+  onToggle: (assetId: string) => void;
+}
+
+/** The editable direction of a generated cover; ``children`` sit under it. */
+export interface CoverPromptFieldProps {
+  value: string;
+  onChange: (prompt: string) => void;
+  children?: ReactNode;
+}
+
+/** The caps in use (null until loaded). */
+export interface CoverUsageLineProps {
+  usage: CoverGenerations | null;
+}
+
+/** The generate button and the cap reason. */
+export interface CoverGenerateActionProps {
+  enabled: boolean;
+  blocked: CapReason;
+  onAsk: () => void;
+}
+
+/** Why the generate form is not shown. */
+export interface CoverGenerateUnavailableProps {
+  error: Error;
+}
+
+/** The confirmation of one generation. */
+export interface CoverGenerateConfirmProps {
+  asking: CoverGenerationInput;
+  usage: CoverGenerations;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}
+
+/** The running or failed state of the latest generation. */
+export interface CoverGenerationStatusProps {
+  status: CoverGeneration["status"] | null;
+  errorCode: string | null;
+  canRetry: boolean;
+  onRetry: () => void;
 }
 
 export interface CoverOptionGridProps {
