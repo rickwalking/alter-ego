@@ -12,6 +12,8 @@ import type {
   SlideValidationViolation,
 } from "@/modules/editorial/workspace/types-ai";
 import type { NeonTextareaProps } from "@/components/atoms/neon-textarea";
+import type { CoverIdeaSource } from "@/constants/cover-prompt-ideas";
+import type { CoverIdeasPalette } from "@/schemas/cover-prompt-ideas";
 import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { PresentationStructuredItem } from "@/modules/editorial/workspace/lib/presentation-review-utils";
 import type { PresentationInsightQuote } from "@/modules/editorial/workspace/lib/presentation-insight-quote";
@@ -126,4 +128,24 @@ export interface BlockingSlidesNoticeProps {
 export interface RepairOutcome {
   fixed: RepairSlideDiff[];
   remaining: number;
+}
+
+/** The suggestion list of a cover-photo prompt field. */
+export interface CoverPromptIdeasProps {
+  ideas: readonly string[];
+  source: CoverIdeaSource;
+  onPick: (idea: string) => void;
+  onMore: () => void;
+  canAskMore: boolean;
+  loadingMore: boolean;
+  moreFailed: boolean;
+}
+
+/** A cover-photo prompt field with its curated and AI suggestions. */
+export interface CoverPromptFieldProps {
+  id: string;
+  topic: string;
+  palette: CoverIdeasPalette | null;
+  value: string;
+  onChange: (value: string) => void;
 }

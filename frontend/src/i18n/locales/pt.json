@@ -592,6 +592,31 @@
     "publishStep": {
       "hint": "A aprovação final e a distribuição ficam na tela Publicar.",
       "goToPublish": "Ir para Publicar"
+    },
+    "coverIdeas": {
+      "label": "Prompt da nova foto",
+      "placeholder": "Descreva o ângulo, o fundo, a luz e o clima da foto…",
+      "hint": "Use este prompt para fotografar ou gerar sua nova foto da capa. Você pode editá-lo; ele não é salvo.",
+      "catalogueTitle": "Sugestões",
+      "aiTitle": "Ideias da IA para o seu tema",
+      "use": "Usar a ideia: {idea}",
+      "more": "Mais ideias",
+      "needsTopic": "Escreva o tema do carrossel para pedir mais ideias.",
+      "moreFailed": "Não foi possível gerar ideias agora. Tente de novo; as sugestões continuam disponíveis.",
+      "topicSuffix": ", com um elemento que remeta a “{topic}”",
+      "fallback": {
+        "palette": "neutra",
+        "background": "neutro",
+        "accent": "de destaque"
+      },
+      "catalogue": {
+        "frontal": "Retrato de meio corpo, de frente para a câmera, sorriso leve, fundo liso {background}, luz suave de estúdio",
+        "threeQuarter": "Retrato em três quartos, olhar para o lado, fundo desfocado na paleta {palette}, luz lateral marcante",
+        "lowAngle": "Foto de baixo para cima, postura confiante, braços cruzados, fundo amplo com detalhes na cor {accent}",
+        "desk": "Plano médio sentado à mesa de trabalho com notebook, escritório desfocado na paleta {palette}, luz natural de janela",
+        "gesture": "Plano médio explicando algo com as mãos, expressão animada, fundo liso {background}, luz frontal suave",
+        "closeUp": "Close do rosto, olhar direto para a câmera, fundo {background}, luz de recorte na cor {accent}"
+      }
     }
   },
   "blogEditorial": {
