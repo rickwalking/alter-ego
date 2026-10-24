@@ -101,7 +101,7 @@ def _job() -> CoverEditJob:
 
 
 async def test_edit_job_links_the_photos_and_returns_a_cover_png() -> None:
-    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    """Scenario: A confirmed generation links the photos and stores a private cover."""
     webhook, clock = FakeWebhook(), FakeClock()
     async with sqlite_repository() as repo:
         clock.on_sleep = _answer(repo, webhook, clock)
@@ -208,7 +208,7 @@ def test_cover_editor_needs_the_bridge_urls() -> None:
 
 
 def test_cover_editor_is_the_bridge_service_when_configured() -> None:
-    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    """Scenario: A confirmed generation links the photos and stores a private cover."""
     settings = Settings.model_validate({
         "openai_api_key": SecretStr("sk"),
         "carousel_checkpoint_backend": "postgres",
@@ -219,7 +219,7 @@ def test_cover_editor_is_the_bridge_service_when_configured() -> None:
 
 
 def test_cover_jobs_share_one_editor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    """Scenario: A confirmed generation links the photos and stores a private cover."""
     from rag_backend.infrastructure.config.settings import get_settings
     from rag_backend.modules.editorial.public import cover_run_wiring
 

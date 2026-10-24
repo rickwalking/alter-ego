@@ -4,11 +4,13 @@
  * the readiness / failed / awaiting-approval notices, publishing to the site
  * and to Instagram, and the rebuild / republish cache-bust.
  */
+import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
+import type { PaletteCatalogResponse } from "@/schemas/palette";
 import DashboardCreatePublishPage from "./page";
 
 const m = vi.hoisted(() => ({
@@ -22,6 +24,8 @@ const m = vi.hoisted(() => ({
   republish: vi.fn(),
   ready: true,
   coverPicker: false,
+  fillPrompt: vi.fn(),
+  catalog: undefined as PaletteCatalogResponse | undefined,
   radar: false,
   blogHref: null as string | null,
   refetchBlogHref: vi.fn(() => Promise.resolve(undefined)),
@@ -30,6 +34,10 @@ const m = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "p1" }) }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => "pt",
+}));
+vi.mock("@/modules/palette", () => ({
+  usePaletteCatalog: () => ({ data: m.catalog }),
 }));
 vi.mock("@/components/atoms/neon-spinner", () => ({
   NeonSpinner: () => <div>spinner</div>,
@@ -52,6 +60,19 @@ vi.mock("@/modules/editorial", () => ({
     state: m.workflowState,
   }),
   resolveLocalizedSlides: () => [{ slide_index: 1 }, { slide_index: 2 }],
+  CoverPromptSuggestions: ({
+    topic,
+    palette,
+    onPick,
+  }: {
+    topic: string;
+    palette: { name: string } | null;
+    onPick: (prompt: string) => void;
+  }) => (
+    <button type="button" onClick={() => onPick(`ideia sobre ${topic}`)}>
+      {`suggestions:${topic}:${palette?.name ?? "auto"}`}
+    </button>
+  ),
   AutoRepairButton: ({
     onRepaired,
     onRepublishNeeded,
@@ -130,7 +151,16 @@ vi.mock("@/modules/publishing", async () => ({
   PublishFailedNotice: ({ workspaceHref }: { workspaceHref: string }) => (
     <div>failed-notice:{workspaceHref}</div>
   ),
-  CoverPickerSection: () => <div>cover-picker</div>,
+  CoverPickerSection: ({
+    renderPromptSuggestions,
+  }: {
+    renderPromptSuggestions?: (fill: (prompt: string) => void) => ReactNode;
+  }) => (
+    <div>
+      cover-picker
+      {renderPromptSuggestions?.(m.fillPrompt)}
+    </div>
+  ),
   RebuildPdfSection: ({
     onRebuilt,
   }: {
@@ -203,6 +233,7 @@ async function renderLoaded(): Promise<void> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.catalog = undefined;
   m.workflowState = state();
   m.ready = true;
   m.coverPicker = false;
@@ -394,6 +425,48 @@ describe("DashboardCreatePublishPage", () => {
     expect(screen.getByText("cover-picker")).toBeInTheDocument();
     expect(screen.getByText("regenerate-strategy")).toBeInTheDocument();
     expect(screen.getByText("slide-edit:true:true")).toBeInTheDocument();
+  });
+
+  /** Scenario: The cover dialog offers prompt suggestions for the carousel */
+  it("gives the cover picker suggestions for the carousel topic", async () => {
+    m.coverPicker = true;
+    m.workflowState = state({});
+    await renderLoaded();
+
+    const suggestion = screen.getByRole("button", {
+      name: "suggestions:AI topic:auto",
+    });
+    fireEvent.click(suggestion);
+
+    expect(m.fillPrompt).toHaveBeenCalledWith("ideia sobre AI topic");
+  });
+
+  /** Scenario: The cover dialog offers prompt suggestions for the carousel */
+  it("gives the suggestions the carousel palette", async () => {
+    m.coverPicker = true;
+    m.workflowState = state({});
+    m.catalog = {
+      roots: [
+        {
+          key: "plasma_magenta",
+          label_en: "Plasma Magenta",
+          label_pt: "Magenta Plasma",
+          mode: "dark",
+          primary: "#ff00ff",
+          accent: "#00ffff",
+          background: "#0a0a0a",
+        },
+      ],
+      custom: [],
+    };
+    setProject({ ...project, theme: "plasma_magenta" });
+    await renderLoaded();
+
+    expect(
+      screen.getByRole("button", {
+        name: "suggestions:AI topic:Magenta Plasma",
+      }),
+    ).toBeInTheDocument();
   });
 
   /** Scenario: Saving the edited caption sends it with the loaded lock version */

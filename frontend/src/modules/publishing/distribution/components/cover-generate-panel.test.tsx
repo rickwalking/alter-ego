@@ -104,14 +104,22 @@ function wrapper(client: QueryClient) {
   return Wrapper;
 }
 
-function renderPanel(photos = PHOTOS) {
+function renderPanel(
+  photos = PHOTOS,
+  renderPromptSuggestions?: (fill: (prompt: string) => void) => ReactNode,
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const user = userEvent.setup();
-  render(createElement(CoverGeneratePanel, { projectId: PROJECT, photos }), {
-    wrapper: wrapper(client),
-  });
+  render(
+    createElement(CoverGeneratePanel, {
+      projectId: PROJECT,
+      photos,
+      renderPromptSuggestions,
+    }),
+    { wrapper: wrapper(client) },
+  );
   return { user, client };
 }
 
@@ -334,6 +342,46 @@ describe("CoverGeneratePanel", () => {
     renderPanel([]);
     expect(screen.queryByRole("button", { name: "action" })).toBeNull();
     expect(mockApiCall).not.toHaveBeenCalled();
+  });
+});
+
+describe("CoverGeneratePanel prompt suggestions", () => {
+  /** Scenario: The cover dialog offers prompt suggestions for the carousel */
+  /** Scenario: Tapping a suggestion fills the prompt, which stays editable */
+  it("fills the prompt from a suggestion and keeps it editable", async () => {
+    routeApi([list()]);
+    const { user } = renderPanel(PHOTOS, (fill) =>
+      createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            fill("eu numa praia ao pôr do sol");
+          },
+        },
+        "ideia 1",
+      ),
+    );
+    await screen.findByText(/^usage/);
+
+    await user.click(screen.getByRole("button", { name: "ideia 1" }));
+    const prompt = screen.getByRole("textbox");
+    expect(prompt).toHaveProperty("value", "eu numa praia ao pôr do sol");
+    await user.type(prompt, ", sorrindo");
+
+    expect(prompt).toHaveProperty(
+      "value",
+      "eu numa praia ao pôr do sol, sorrindo",
+    );
+  });
+
+  /** Scenario: The cover dialog offers prompt suggestions for the carousel */
+  it("renders no suggestions when the page gives none", async () => {
+    routeApi([list()]);
+    renderPanel();
+    await screen.findByText(/^usage/);
+
+    expect(screen.queryByRole("button", { name: "ideia 1" })).toBeNull();
   });
 });
 

@@ -109,7 +109,7 @@ class TestInputs:
     async def test_the_job_token_fetches_each_photo_as_png(
         self, client: AsyncClient, asset_dirs: Path
     ) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         job_id, _photos = await _live_job(client)
 
         for index in (0, 1):

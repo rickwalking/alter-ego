@@ -85,10 +85,19 @@ export interface CoverOptionView {
   kind?: string;
 }
 
+/**
+ * Prompt suggestions for the cover prompt, composed by the page (the
+ * suggestions live in the editorial module); ``fill`` puts one in the field.
+ */
+export type RenderPromptSuggestions = (
+  fill: (prompt: string) => void,
+) => ReactNode;
+
 /** "Gerar capa com Grok": the owner's library photos it may send. */
 export interface CoverGeneratePanelProps {
   projectId: string;
   photos: readonly CoverOptionView[];
+  renderPromptSuggestions?: RenderPromptSuggestions;
 }
 
 /** The library photos as checkboxes (at most ``max`` ticked). */
@@ -163,6 +172,7 @@ export interface CoverThumbProps {
 export interface CoverPickerSectionProps {
   projectId: string;
   onSwitched: (artifactVersion: string | null) => void;
+  renderPromptSuggestions?: RenderPromptSuggestions;
 }
 
 export interface RebuildPdfSectionProps {

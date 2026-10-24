@@ -47,7 +47,7 @@ def _project() -> CarouselProject:
 
 class TestReferencePhoto:
     def test_drops_metadata_and_bounds_the_size(self) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         source = io.BytesIO()
         image = Image.new("RGB", (2000, 3000), (10, 20, 30))
         exif = Image.Exif()
@@ -171,7 +171,7 @@ async def test_a_crashed_run_is_logged_and_untracked() -> None:
 def test_a_heavy_photo_is_scaled_under_the_byte_cap(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+    """Scenario: A confirmed generation links the photos and stores a private cover."""
     import os
 
     from rag_backend.application.services.carousel import reference_photo as module

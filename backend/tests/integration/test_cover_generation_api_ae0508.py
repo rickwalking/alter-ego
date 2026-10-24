@@ -59,7 +59,7 @@ class TestGenerate:
     async def test_confirmed_generation_stores_a_private_cover(
         self, client: AsyncClient, asset_dirs: Path, editor: FakeEditor
     ) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         first = await upload_photo(client, RED)
         second = await upload_photo(client, BLUE)
         project_id = await project(client, first["id"])

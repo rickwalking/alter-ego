@@ -73,6 +73,7 @@ export {
 
 export { AutoRepairButton } from "./workspace/components/auto-repair-button";
 export { CoverPromptField } from "./workspace/components/cover-prompt-field";
+export { CoverPromptSuggestions } from "./workspace/components/cover-prompt-suggestions";
 export { HookPicker } from "./workspace/components/hook-picker";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";

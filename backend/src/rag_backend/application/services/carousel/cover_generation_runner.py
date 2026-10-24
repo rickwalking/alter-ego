@@ -2,9 +2,10 @@
 
 The run checks the photos can be read and re-encoded, ends its read
 transaction, and hands the job to the bridge, whose body links to them (the
-Grok Bot fetches each one with the callback token while the job is pending). Once a bridge slot is free the job's claim records ``started_at``
-only if the row is still pending (the stale reaper times started rows from
-there); a row failed meanwhile cancels the job before any photo is sent. The
+Grok Bot fetches each one with the callback token while the job is pending).
+Once a bridge slot is free the job's claim records ``started_at`` only if the
+row is still pending (the stale reaper times started rows from there); a row
+failed meanwhile cancels the job before any photo is sent. The
 image is then validated and stored as a private ``cover`` creator asset and
 the row settled. Every failure settles it ``failed`` with a code and leaves no
 asset behind: the stored result is committed by the asset store, so a result

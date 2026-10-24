@@ -1265,7 +1265,7 @@
       "generatedShort": "Grok",
       "generate": {
         "title": "Gerar capa com Grok",
-        "description": "Escolha até 3 fotos suas e descreva a cena. O Grok cria uma capa nova com você; ela fica na sua biblioteca privada e aparece acima para escolher.",
+        "description": "Escolha até 3 fotos suas e descreva a cena. Uma capa nova é criada a partir delas; ela fica na sua biblioteca privada e aparece acima para escolher.",
         "photosLegend": "Fotos de referência (até {max})",
         "photoLabel": "Usar a foto {number} da biblioteca",
         "promptLabel": "Como deve ser a capa?",

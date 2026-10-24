@@ -3,7 +3,6 @@
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { AutoRepairButton } from "@/modules/editorial";
 import {
-  CoverPickerSection,
   CreateBlogFromCarousel,
   RebuildPdfSection,
   RegenerateStrategySection,
@@ -15,6 +14,7 @@ import {
   offersCoverPicker,
   offersRadarTemplates,
 } from "@/app/dashboard/create/[id]/publish/publish-readiness";
+import { PublishCoverPicker } from "./publish-cover-picker";
 import type { LoadedProject, PublishPageData } from "./use-publish-page";
 import { panelStyle } from "./publish-page-sections";
 
@@ -41,8 +41,9 @@ export function PublishArtifactTools({
     <>
       {workflowState && offersCoverPicker(project) && (
         <div style={{ marginTop: "16px" }}>
-          <CoverPickerSection
+          <PublishCoverPicker
             projectId={projectId}
+            project={project}
             onSwitched={handleRebuilt}
           />
         </div>

@@ -195,7 +195,7 @@ def _start(**changes: object) -> StartCoverGeneration:
 
 class TestStart:
     async def test_records_a_pending_row_under_the_owner_lock(self) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         store = _Store()
         service = CoverGenerationService(store, _Photos(), _config())
 
@@ -375,7 +375,7 @@ class TestRunner:
         assert store.settled[-1].error_code == "cover_generation_failed"
 
     async def test_success_stores_and_settles(self) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         store, results, editor = _Store(), _Results(), _Editor()
         status = await _runner(store, _Photos(), results, editor).run(_run())
         assert status is CoverGenerationStatus.SUCCEEDED
@@ -432,7 +432,7 @@ class TestRunner:
         assert store.settled[0].error_detail == "m" * 300
 
     async def test_the_read_transaction_ends_before_the_bridge_wait(self) -> None:
-        """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
+        """Scenario: A confirmed generation links the photos and stores a private cover."""
         store = _Store()
         seen: list[int] = []
 
