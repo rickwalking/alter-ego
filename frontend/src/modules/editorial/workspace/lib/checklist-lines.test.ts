@@ -21,12 +21,12 @@ function item(title: string, body = ""): Record<string, unknown> {
 }
 
 describe("checklistLines", () => {
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("reads the lists in the backend checklist template's order", () => {
     expect([...CHECKLIST_ITEM_LIST_KEYS]).toEqual(templateItemKeys());
   });
 
-  // Scenario: Grid and list slides edit the title and the body
+  /** Scenario: Grid and list slides edit the title and the body */
   it("keeps the grid and list order (features before actions)", () => {
     expect([...PRESENTATION_STRUCTURED_ITEM_LIST_KEYS]).toEqual([
       "summary_points",
@@ -35,7 +35,7 @@ describe("checklistLines", () => {
     ]);
   });
 
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("drops blank items and keeps each line's item index", () => {
     expect(
       checklistLines({
@@ -55,7 +55,7 @@ describe("checklistLines", () => {
     });
   });
 
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("offers at most five lines", () => {
     const items = ["1", "2", "3", "4", "5", "6"].map((text) => item(text));
     const shown = checklistLines({ summary_points: items });
@@ -68,7 +68,7 @@ describe("checklistLines", () => {
     ]);
   });
 
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("reads the lists in the template's order, skipping blank lists", () => {
     expect(
       checklistLines({

@@ -35,8 +35,10 @@ function renderItem(checklist: boolean) {
 }
 
 describe("ItemTextFields at content review", () => {
-  // Scenario: A checklist slide edits one line per item
-  // Scenario: Editing a checklist line writes the displayed field
+  /**
+   * Scenario: A checklist slide edits one line per item
+   * Scenario: Editing a checklist line writes the displayed field
+   */
   it("edits the checklist line the slide shows", () => {
     const onItemChange = renderItem(true);
     const line = screen.getByLabelText(/Checklist line/);
@@ -54,7 +56,7 @@ describe("ItemTextFields at content review", () => {
     });
   });
 
-  // Scenario: Grid and list slides edit the title and the body
+  /** Scenario: Grid and list slides edit the title and the body */
   it("edits title and body on a grid slide", () => {
     renderItem(false);
     expect(screen.getByLabelText("Item title")).toHaveValue("Gerado");
@@ -63,7 +65,7 @@ describe("ItemTextFields at content review", () => {
 });
 
 describe("editableList on a checklist slide", () => {
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("edits the list the template draws", () => {
     const presentation = {
       summary_points: [{ title: "", body: "" }],

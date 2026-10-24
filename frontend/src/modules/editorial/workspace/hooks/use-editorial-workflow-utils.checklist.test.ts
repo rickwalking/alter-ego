@@ -16,7 +16,7 @@ const PREVIOUS: EditorialWorkflowState = {
 };
 
 describe("checklist slides across workflow events", () => {
-  // Scenario: A start response or a live update keeps the checklist slides
+  /** Scenario: A start response or a live update keeps the checklist slides */
   it("keeps them through a partial event", () => {
     const merged = mergeWorkflowState("project-1", PREVIOUS, {
       phase: "content",
@@ -25,7 +25,7 @@ describe("checklist slides across workflow events", () => {
     expect(merged.checklist_slide_indexes).toEqual([8]);
   });
 
-  // Scenario: A start response or a live update keeps the checklist slides
+  /** Scenario: A start response or a live update keeps the checklist slides */
   it("keeps them through a full snapshot that does not carry them", () => {
     const merged = mergeWorkflowState("project-1", PREVIOUS, {
       project_id: "project-1",
@@ -38,7 +38,7 @@ describe("checklist slides across workflow events", () => {
     expect(merged.checklist_slide_indexes).toEqual([8]);
   });
 
-  // Scenario: A start response or a live update keeps the checklist slides
+  /** Scenario: A start response or a live update keeps the checklist slides */
   it("takes them from a response that computes them", () => {
     const merged = mergeWorkflowState("project-1", null, {
       ...PREVIOUS,

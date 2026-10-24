@@ -36,14 +36,14 @@ function state(checklist?: number[]): EditorialWorkflowState {
 }
 
 describe("checklist items", () => {
-  // Scenario: A checklist slide edits one line per item
+  /** Scenario: A checklist slide edits one line per item */
   it("shows the title, else the body, like the slide", () => {
     expect(checklistItemText({ title: "Linha", body: "Oculto" })).toBe("Linha");
     expect(checklistItemText({ title: "", body: "Só corpo" })).toBe("Só corpo");
     expect(checklistItemText({})).toBe("");
   });
 
-  // Scenario: Editing a checklist line writes the displayed field
+  /** Scenario: Editing a checklist line writes the displayed field */
   it.each(["presentation_pt", "presentation_en"] as const)(
     "sets the title and empties the body in %s",
     (locale) => {
@@ -63,13 +63,13 @@ describe("checklist items", () => {
     },
   );
 
-  // Scenario: A checklist slide edits one line per item
+  /** Scenario: A checklist slide edits one line per item */
   it("marks the slides the workflow state lists", () => {
     const resolved = resolveLocalizedSlides(state([8]));
     expect(resolved.map((item) => item.checklist)).toEqual([undefined, true]);
   });
 
-  // Scenario: Slides that are not listed stay title-and-body
+  /** Scenario: Slides that are not listed stay title-and-body */
   it("marks none when the state lists none", () => {
     const resolved = resolveLocalizedSlides(state());
     expect(resolved.some((item) => item.checklist)).toBe(false);

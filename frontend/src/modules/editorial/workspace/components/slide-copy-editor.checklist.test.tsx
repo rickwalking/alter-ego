@@ -52,7 +52,7 @@ function fields(container: HTMLElement, label: string): HTMLTextAreaElement[] {
 }
 
 describe("SlideCopyEditor structured items", () => {
-  // Scenario: A checklist slide edits one line per item
+  /** Scenario: A checklist slide edits one line per item */
   it("shows one line per checklist item, holding the text on the slide", () => {
     const { container } = renderEditor(true);
     expect(fields(container, "checklistItemLabel").map((f) => f.value)).toEqual(
@@ -61,7 +61,7 @@ describe("SlideCopyEditor structured items", () => {
     expect(fields(container, "structuredItemLabel")).toHaveLength(0);
   });
 
-  // Scenario: Editing a checklist line writes the displayed field
+  /** Scenario: Editing a checklist line writes the displayed field */
   it("writes the title and clears the body when a line is edited", () => {
     const { container, onStructuredItemChange } = renderEditor(true);
     const [first] = fields(container, "checklistItemLabel");
@@ -77,7 +77,7 @@ describe("SlideCopyEditor structured items", () => {
     });
   });
 
-  // Scenario: Grid and list slides edit the title and the body
+  /** Scenario: Grid and list slides edit the title and the body */
   it("edits title and body on a grid slide", () => {
     const { container, onStructuredItemChange } = renderEditor(false);
     const titles = fields(container, "structuredItemTitleLabel");
@@ -92,7 +92,7 @@ describe("SlideCopyEditor structured items", () => {
     ).toBeUndefined();
   });
 
-  // Scenario: The checklist editor offers the lines the slide draws
+  /** Scenario: The checklist editor offers the lines the slide draws */
   it("skips a blank item and still edits the right item", () => {
     const blank: LocalizedSlideReview = {
       ...slide(true),
@@ -122,7 +122,7 @@ describe("SlideCopyEditor structured items", () => {
     );
   });
 
-  // Scenario: Grid and list slides edit the title and the body
+  /** Scenario: Grid and list slides edit the title and the body */
   it("edits the features a grid slide renders when it also has actions", () => {
     const grid: LocalizedSlideReview = {
       slide_index: 4,

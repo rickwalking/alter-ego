@@ -94,7 +94,7 @@ function Harness({
 }
 
 describe("checklist edit round trip (editor side)", () => {
-  // Scenario: An edit made in the editor is saved and rendered
+  /** Scenario: An edit made in the editor is saved and rendered */
   it("turns the owner's line edits into the payload the backend renders", () => {
     const slides = servedSlides();
     let latest = slides;
