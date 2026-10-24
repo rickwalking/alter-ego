@@ -1,6 +1,6 @@
 # AE-0547 — Prompt suggestions in the publish cover dialog; AE-0508 follow-up nits
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Low
 Type: Feature
