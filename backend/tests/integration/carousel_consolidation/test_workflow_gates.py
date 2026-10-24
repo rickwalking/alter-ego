@@ -412,5 +412,5 @@ class TestReviseThenApproveOutline:
         )
 
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         mock_resume.assert_awaited_once()

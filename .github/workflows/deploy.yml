@@ -225,7 +225,8 @@ jobs:
             # Build images first so the migration one-shot below uses the freshly
             # built backend image (and the app start that follows is cache-warm).
             docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml down --remove-orphans
+            docker compose -f docker-compose.prod.yml stop -t 300 generation-worker || true
+            docker compose -f docker-compose.prod.yml down -t 120 --remove-orphans
 
             # --- Database migrations (AE-0207) --------------------------------
             # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
@@ -321,6 +322,15 @@ jobs:
               echo "::error::carousel archived_at exited $ARCHIVED_AT_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.generation_queue_schema --apply --verify
+            QUEUE_SCHEMA_EXIT=$?
+            set -e
+            if [ "$QUEUE_SCHEMA_EXIT" -ne 0 ]; then
+              echo "::error::generation queue schema exited $QUEUE_SCHEMA_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -387,6 +397,10 @@ jobs:
             fi
             if [ "$ARCHIVED_AT_EXIT" -ne 0 ]; then
               echo "::error::carousel archived_at failed (exit $ARCHIVED_AT_EXIT): run 'python -m rag_backend.scripts.carousel_archived_at --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$QUEUE_SCHEMA_EXIT" -ne 0 ]; then
+              echo "::error::generation queue schema failed (exit $QUEUE_SCHEMA_EXIT): run 'python -m rag_backend.scripts.generation_queue_schema --apply --verify' on the droplet"
               ONE_SHOT_FAILED=1
             fi
             if [ "$ONE_SHOT_FAILED" -ne 0 ]; then

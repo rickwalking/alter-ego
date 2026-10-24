@@ -87,6 +87,12 @@ def get_workflow_sse_hub() -> WorkflowSseHub:
     return _hub
 
 
+def install_workflow_sse_hub(hub: WorkflowSseHub) -> None:
+    """Use ``hub`` as the process-wide hub (the generation worker relays events)."""
+    global _hub
+    _hub = hub
+
+
 def reset_workflow_sse_hub() -> None:
     """Reset the process-wide hub singleton (test isolation)."""
     global _hub
@@ -98,5 +104,6 @@ __all__ = [
     "WorkflowSseHub",
     "WorkflowSseSubscriberLimitError",
     "get_workflow_sse_hub",
+    "install_workflow_sse_hub",
     "reset_workflow_sse_hub",
 ]

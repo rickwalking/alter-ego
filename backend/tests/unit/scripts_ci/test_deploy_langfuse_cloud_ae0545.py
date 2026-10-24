@@ -81,5 +81,6 @@ def test_the_deploy_wires_the_cloud_keys_without_requiring_them() -> None:
 def test_the_deploy_removes_the_old_langfuse_containers() -> None:
     """Scenario: The deploy removes the old Langfuse containers"""
     text = _deploy()
-    assert "docker compose -f docker-compose.prod.yml down --remove-orphans\n" in text
+    compose = "docker compose -f docker-compose.prod.yml"
+    assert f"{compose} down -t 120 --remove-orphans\n" in text
     assert "docker compose -f docker-compose.prod.yml down\n" not in text

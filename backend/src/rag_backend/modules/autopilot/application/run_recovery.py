@@ -123,6 +123,14 @@ class RunRecovery:
         await self._end(current, target, engine_error_reason(exc))
         return 1
 
+    async def park(self, run: AutopilotRun, reason: str) -> None:
+        """End the run from its current state as ``contain`` does, with ``reason``."""
+        current = await self._deps.runs.get(run.run_id)
+        target = _CONTAINED.get(current.state) if current is not None else None
+        if current is None or target is None:
+            return
+        await self._end(current, target, reason)
+
     async def mark(self, run: AutopilotRun, version: int) -> None:
         """Record the lock version an escalation happened at."""
         await self._deps.recovery.mark_escalated(

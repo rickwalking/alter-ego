@@ -12,9 +12,9 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.bootstrap.autopilot_worker_factory import build_autopilot_worker_steps
+from rag_backend.bootstrap.autopilot_worker_factory import autopilot_tick_config
 from rag_backend.infrastructure.config.settings import Settings
-from rag_backend.modules.autopilot.bootstrap import _runner_deps
+from rag_backend.modules.autopilot.bootstrap import runner_dependencies
 from rag_backend.modules.autopilot.infrastructure.start_history import (
     SqlStartHistory,
 )
@@ -29,13 +29,12 @@ async def test_worker_passes_the_setting_to_the_runner(
     db_session: AsyncSession,
 ) -> None:
     """Scenario: The runner uses the configured start spacing."""
-    steps = build_autopilot_worker_steps(
+    config = autopilot_tick_config(
         _settings(autopilot_start_spacing_minutes=7), MagicMock()
     )
-    config = steps.autopilot_runner._config
     assert config.start_spacing_minutes == 7
 
-    spacing = _runner_deps(db_session, config).spacing
+    spacing = runner_dependencies(db_session, config).spacing
 
     assert spacing is not None
     assert spacing.minimum == timedelta(minutes=7)

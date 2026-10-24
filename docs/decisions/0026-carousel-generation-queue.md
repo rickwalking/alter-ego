@@ -63,8 +63,11 @@ Guards we add around it:
 
 - PgQueuer installs its own tables (`pgq install` / `pgq upgrade`). Prod does not run migrations, so an idempotent
   deploy one-shot installs/upgrades them (palette_timestamptz pattern). The version is pinned.
-- Approvals never call PgQueuer: they write our `generation_runs` row in their own transaction (transactional outbox);
-  a dispatcher in the worker hands queued rows to PgQueuer. A broken PgQueuer install therefore cannot break approvals.
+- Approvals never call PgQueuer. A dashboard resume writes our `generation_runs` row in the route's own transaction
+  (a transactional outbox: the review decision has no other durable record). An autopilot approval writes nothing
+  extra: its compare-and-set on `autopilot_runs` is already durable, and the worker's dispatcher (every 10 s) stages
+  one `generation_runs` row for each active autopilot run, so its pickup lags the tap by up to 10 s. The dispatcher
+  then hands queued rows to PgQueuer. A broken PgQueuer install therefore cannot break approvals.
 - A semantics gate (verified against the pinned source with integration tests) precedes merge; failures switch to the
   in-house fallback.
 - Amends ADR-012 in practice: `generation_runs` ships as an Alembic migration plus the deploy one-shot, not via
@@ -105,9 +108,12 @@ web event loop and loses runs on every deploy.
   within 20 % of the idle baseline and no container may be OOM-killed.
 - Chaos: kill the worker mid-phase and run a full deploy mid-run; the job must resume within 6 min of the stack
   returning, without duplicate artifacts or duplicate Telegram messages.
-- There is no feature flag (Pedro, 2026-10-23): the worker goes live when P1 merges, so the load and chaos validation
-  above runs on the disposable droplet BEFORE the merge, and rollback is a revert of the merge (new tables only, no
-  schema rollback).
+- No feature flag (Pedro, 2026-10-23): the worker goes live when its PR merges. The load test and the chaos steps above
+  run on the disposable droplet against the PR branch BEFORE the merge (script: `ops/queue-validation/`), and their
+  results are attached to the PR. Rollback is a revert of the merge, preceded by draining the worker and the
+  `generation_queue_rollback` one-shot (plan §7): the web process takes back the in-process runner, `generation_runs`
+  and PgQueuer rows stay in their tables (new tables only, no schema rollback), and the in-process runner picks up
+  queued autopilot runs from `autopilot_runs` as before.
 
 ## More Information
 

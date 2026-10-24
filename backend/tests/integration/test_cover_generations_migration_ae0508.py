@@ -16,7 +16,7 @@ def test_revision_is_the_single_head_on_top_of_archived_at() -> None:
     """Scenario: Every call is logged for the budget."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [ALEMBIC_HEAD] == [_REVISION]
+    assert list(script.get_heads()) == [ALEMBIC_HEAD]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

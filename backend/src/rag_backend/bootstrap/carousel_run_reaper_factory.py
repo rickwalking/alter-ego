@@ -41,6 +41,14 @@ def build_stale_run_reaper(
     checkpointer: object | None,
 ) -> CarouselStaleRunReaper:
     """Assemble the reaper from Settings + the app checkpointer."""
+    return build_run_reaper_repository(settings, checkpointer)
+
+
+def build_run_reaper_repository(
+    settings: Settings,
+    checkpointer: object | None,
+) -> CarouselRunReaperRepository:
+    """The concrete reaper; the generation worker also reaps orphans with it."""
     return CarouselRunReaperRepository(
         CarouselRunReaperConfig(
             heartbeat_stale_seconds=settings.workflow_run_heartbeat_stale_seconds,
@@ -51,4 +59,4 @@ def build_stale_run_reaper(
     )
 
 
-__all__ = ["build_stale_run_reaper"]
+__all__ = ["build_run_reaper_repository", "build_stale_run_reaper"]
