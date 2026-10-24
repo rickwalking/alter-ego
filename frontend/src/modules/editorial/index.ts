@@ -179,6 +179,13 @@ export {
 } from "./workspace/lib/presentation-slide-resolution";
 
 export {
+  CHECKLIST_ITEM_FIELD,
+  checklistItemEdit,
+  checklistItemText,
+  DISPLAYED_ITEM_FIELDS,
+} from "./workspace/lib/checklist-items";
+
+export {
   applySlideStructuredListEdit,
   canAddStructuredItem,
   editableStructuredListKey,

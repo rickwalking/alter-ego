@@ -162,6 +162,13 @@ class EditorialWorkflowStateResponse(BaseModel):
     slide_image_prompts: list[SlideImagePrompt] | None = None
     presentation_policy_version: str | None = None
     localized_slides: list[LocalizedSlideReview] = Field(default_factory=list)
+    checklist_slide_indexes: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Slides whose structured items render as one checklist line each "
+            "(the item title); the editor edits exactly that line."
+        ),
+    )
     presentation_validation: SlideValidationReportResponse | None = None
     content_gate_validation: SlideValidationReportResponse | None = None
     design_recovery_hint: str | None = None

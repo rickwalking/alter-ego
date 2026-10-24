@@ -5240,6 +5240,14 @@
             ],
             "title": "Caption"
           },
+          "checklist_slide_indexes": {
+            "description": "Slides whose structured items render as one checklist line each (the item title); the editor edits exactly that line.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Checklist Slide Indexes",
+            "type": "array"
+          },
           "content_gate_validation": {
             "anyOf": [
               {

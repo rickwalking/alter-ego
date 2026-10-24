@@ -80,6 +80,12 @@ export interface LocalizedSlideReview {
   slide_type: string;
   presentation_pt: Record<string, unknown>;
   presentation_en: Record<string, unknown>;
+  /**
+   * The slide shows each structured item as one checklist line (the item
+   * title), so the editor edits only that line. Set from the workflow state's
+   * ``checklist_slide_indexes``; the backend ignores it on edits.
+   */
+  checklist?: boolean;
 }
 
 export interface SlideImagePrompt {
@@ -123,6 +129,8 @@ export interface EditorialWorkflowState {
   error_message?: string;
   presentation_policy_version?: string | null;
   localized_slides?: LocalizedSlideReview[];
+  /** Slides whose structured items render as one checklist line each. */
+  checklist_slide_indexes?: number[];
   presentation_validation?: SlideValidationReport | null;
   /**
    * Fail-closed content-gate report mirrored from the content

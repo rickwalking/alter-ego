@@ -54,6 +54,18 @@ export interface SlideStructuredItemEdit {
   itemIndex: number;
   field: StructuredItemField;
   value: string;
+  /** Fields of the same item emptied by the same edit (a checklist line clears the hidden body). */
+  clearFields?: readonly StructuredItemField[];
+}
+
+function editedItem(
+  item: Record<string, unknown>,
+  edit: SlideStructuredItemEdit,
+): Record<string, unknown> {
+  const cleared = Object.fromEntries(
+    (edit.clearFields ?? []).map((field) => [field, ""]),
+  );
+  return { ...item, ...cleared, [edit.field]: edit.value };
 }
 
 /** The locale payload plus the structure the other locale has. */
@@ -81,7 +93,7 @@ export function applySlideStructuredItemEdit(
     const items: unknown[] = current;
     const nextItems = items.map((item, index) =>
       index === edit.itemIndex && item && typeof item === "object"
-        ? { ...(item as Record<string, unknown>), [edit.field]: edit.value }
+        ? editedItem(item as Record<string, unknown>, edit)
         : item,
     );
     return {
@@ -258,7 +270,8 @@ function slideFromDraft(
  * (structured ``presentation_*`` per locale, else the legacy flat copy). A
  * draft without presentations no longer drops its slide from the editor. A
  * malformed localized slide only yields to a draft that exists; it is still
- * shown (never dropped) when it is the slide's only source.
+ * shown (never dropped) when it is the slide's only source. Slides listed in
+ * ``state.checklist_slide_indexes`` are marked ``checklist``.
  */
 export function resolveLocalizedSlides(
   state: EditorialWorkflowState,
@@ -276,7 +289,10 @@ export function resolveLocalizedSlides(
       bySlide.set(slide.slide_index, slide);
     }
   }
-  return [...bySlide.values()].sort(
-    (left, right) => left.slide_index - right.slide_index,
-  );
+  const checklist = new Set(state.checklist_slide_indexes ?? []);
+  return [...bySlide.values()]
+    .map((slide) =>
+      checklist.has(slide.slide_index) ? { ...slide, checklist: true } : slide,
+    )
+    .sort((left, right) => left.slide_index - right.slide_index);
 }

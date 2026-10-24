@@ -124,6 +124,7 @@ export interface WorkflowEventPayload {
   data?: unknown;
   presentation_policy_version?: string | null;
   localized_slides?: EditorialWorkflowState["localized_slides"];
+  checklist_slide_indexes?: EditorialWorkflowState["checklist_slide_indexes"];
   presentation_validation?: EditorialWorkflowState["presentation_validation"];
   /** Run lifecycle payload field (``run.started`` / ``run.stage_changed`` / ``run.finished``). */
   run_started_at?: string | null;
