@@ -44,6 +44,13 @@ from rag_backend.modules.publishing import (
 )
 
 
+def _result(rowcount: int, row: tuple[int, int] | None = (4, 1)) -> MagicMock:
+    """One mock result for both the version read and the release UPDATE."""
+    result = MagicMock(rowcount=rowcount)
+    result.one_or_none.return_value = row
+    return result
+
+
 def _make_blog_post(status: str) -> BlogPostModel:
     """Build a transient blog ORM row in the given status."""
     return BlogPostModel.from_entity({
@@ -141,8 +148,7 @@ class TestLegacyPublishingAcl:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
         repo = AsyncMock(spec=CarouselRepository)
         session = AsyncMock()
-        session.scalar.return_value = 4
-        session.execute.return_value = MagicMock(rowcount=1)
+        session.execute.return_value = _result(rowcount=1)
         acl = LegacyPublishingAcl(session, repo)
 
         result = await acl.release_public(project, str(project.id))
@@ -155,6 +161,7 @@ class TestLegacyPublishingAcl:
         assert set(statement.compile().params) == {
             "id_1",
             "lock_version_1",
+            "run_epoch_1",
             "is_public",
             "current_phase",
         }
@@ -164,27 +171,26 @@ class TestLegacyPublishingAcl:
     async def test_release_public_absent_model_skips_commit(self) -> None:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
         session = AsyncMock()
-        session.scalar.return_value = None
+        session.execute.return_value = _result(rowcount=0, row=None)
         acl = LegacyPublishingAcl(session, AsyncMock(spec=CarouselRepository))
 
         await acl.release_public(project, str(project.id))
 
-        session.execute.assert_not_awaited()
+        assert session.execute.await_count == 1
         session.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_release_public_conflict_raises_without_commit(self) -> None:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
         session = AsyncMock()
-        session.scalar.return_value = 4
-        session.execute.return_value = MagicMock(rowcount=0)
+        session.execute.return_value = _result(rowcount=0)
         acl = LegacyPublishingAcl(session, AsyncMock(spec=CarouselRepository))
 
         with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
             await acl.release_public(project, str(project.id))
 
         assert project.is_public is False
-        assert session.execute.await_count == 3
+        assert session.execute.await_count == 6
         session.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -302,8 +308,7 @@ class TestBootstrapWiresAclPorts:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
         repo = AsyncMock(spec=CarouselRepository)
         session = AsyncMock()
-        session.scalar.return_value = 1
-        session.execute.return_value = MagicMock(rowcount=1)
+        session.execute.return_value = _result(rowcount=1)
         acl = LegacyPublishingAcl(session, repo)
         adapters = PublishingAdapters(
             carousel_repository=repo,

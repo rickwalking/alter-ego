@@ -55,6 +55,10 @@ from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models.carousel_run import (
+    StaleRunEpochError,
+    current_run_context,
+)
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.publishing.domain.ports import CarouselRepository
@@ -113,19 +117,30 @@ class LegacyPublishingAcl:
         raise ValueError(ERR_VERSION_CONFLICT)
 
     async def _release_row(self, project_id: str) -> bool | None:
-        """One compare-and-set release; None when the carousel row is missing."""
-        seen = await self._session.scalar(
-            select(CarouselProjectModel.lock_version).where(
-                CarouselProjectModel.id == project_id
+        """One compare-and-set release; None when the carousel row is missing.
+
+        A raw UPDATE skips the ORM flush epoch fence, so the fence is applied
+        here (layer c): a run-owned context whose epoch moved on raises
+        ``StaleRunEpochError``, and the UPDATE also matches the ``run_epoch`` it
+        read, so a reap in between fails the compare-and-set.
+        """
+        row = (
+            await self._session.execute(
+                select(
+                    CarouselProjectModel.lock_version, CarouselProjectModel.run_epoch
+                ).where(CarouselProjectModel.id == project_id)
             )
-        )
-        if seen is None:
+        ).one_or_none()
+        if row is None:
             return None
+        seen, epoch = row
+        _ensure_current_epoch(project_id, epoch)
         result = await self._session.execute(
             update(CarouselProjectModel)
             .where(
                 CarouselProjectModel.id == project_id,
                 CarouselProjectModel.lock_version == seen,
+                CarouselProjectModel.run_epoch == epoch,
             )
             .values(is_public=True, current_phase=PHASE_PUBLISHED)
         )
@@ -187,6 +202,13 @@ class LegacyPublishingAcl:
         if self._scheduler is None:
             raise RuntimeError(_ERR_NO_SCHEDULER)
         return self._scheduler
+
+
+def _ensure_current_epoch(project_id: str, epoch: int) -> None:
+    """Reject a run-owned release whose captured epoch is stale (layer c)."""
+    ctx = current_run_context()
+    if ctx is not None and ctx.project_id == project_id and ctx.epoch != epoch:
+        raise StaleRunEpochError(project_id)
 
 
 def _as_blog_post(post: object) -> BlogPostModel:

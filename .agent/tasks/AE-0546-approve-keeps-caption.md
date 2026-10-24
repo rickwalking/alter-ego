@@ -51,7 +51,9 @@ Second issue: a workflow whose run died after the images gate, before `final_rev
   manual HTTP route already refused an empty saved caption (409 `caption_missing`).
 - `LegacyPublishingAcl.release_public`: one targeted `UPDATE carousel_projects SET is_public, current_phase WHERE id
   AND lock_version = seen` (compare-and-set, `version_conflict` when it matches no row) instead of saving the whole
-  carousel loaded earlier, so a caption edit landing between the load and the release is kept.
+  carousel loaded earlier, so a caption edit landing between the load and the release is kept. The UPDATE also
+  matches the `run_epoch` it read and applies the run-epoch fence explicitly (AE-0315 layer c); the site is
+  allowlisted in `check_carousel_raw_updates.py` and listed in the AE-0315 write-site survey (§2 #21).
 - `InstagramPublishJob.publish_claimed` (the owner route on a claimed run, atomic path) re-checks the caption.
 - Parked guard: `GateStatusInput.node_pending` (the engine's `is_parked_before_node`); a never-parked phase is parked
   when the engine still has a node pending with no open review, so the runner re-drives it after the grace period.
@@ -106,6 +108,10 @@ Second issue: a workflow whose run died after the images gate, before `final_rev
 - 2026-10-24: renumbered from AE-0542 (PR #274 holds that id), then from AE-0545 (PR #279 opened first with it).
 - 2026-10-24: the release does not bump `lock_version`; bumping it would fail the workflow resume CAS that follows
   an approval. The CAS still refuses a write when a concurrent writer bumped the version.
+
+- 2026-10-24: the release CAS is a raw UPDATE, which the ORM flush epoch fence cannot see, so it carries the
+  explicit epoch guard the raw-update gate requires and is allowlisted with a survey entry, the gate's documented
+  process (CI caught the missing allowlist entry).
 
 ## Blockers
 
