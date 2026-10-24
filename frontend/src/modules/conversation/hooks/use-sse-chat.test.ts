@@ -111,7 +111,13 @@ describe("useSseChat", () => {
     ).toHaveLength(1);
 
     setHistory([
-      { id: "h1", role: "user", content: "dup", sources: [], created_at: "t" },
+      {
+        id: "h1",
+        role: "user",
+        content: "dup",
+        sources: [],
+        created_at: new Date().toISOString(),
+      },
     ]);
     rerender();
 

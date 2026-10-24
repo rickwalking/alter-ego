@@ -24,6 +24,7 @@ from rag_backend.application.services.chat_turns import drain_detached_turns
 from rag_backend.domain.constants.chat_stream import (
     CHAT_FAILED_REPLY,
     CHAT_TURN_IN_FLIGHT,
+    CHAT_TURN_IN_FLIGHT_CODE,
 )
 from rag_backend.domain.models import Conversation, Message, MessageRole
 
@@ -202,6 +203,7 @@ async def test_second_turn_waits_for_the_reply_being_written() -> None:
 
     assert len(refused) == 1
     assert CHAT_TURN_IN_FLIGHT in refused[0]
+    assert f'"code": "{CHAT_TURN_IN_FLIGHT_CODE}"' in refused[0]
     assert second.agent_sessions == []
     assert not chat_turns.conversation_turn_in_flight(first.conversation_id)
 

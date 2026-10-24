@@ -59,8 +59,7 @@ describe("chat shell", () => {
       </>,
     );
     const send = screen.getByRole("button", { name: "Send message" });
-    expect(send.style.width).toBe("44px");
-    expect(send.style.height).toBe("44px");
+    expect(send).toHaveClass("h-11", "w-11");
     expect(screen.getByRole("button", { name: "New chat" })).toHaveClass(
       "min-h-11",
     );

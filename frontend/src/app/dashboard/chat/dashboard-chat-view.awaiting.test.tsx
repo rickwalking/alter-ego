@@ -90,6 +90,9 @@ describe("DashboardChatView while a reply is still being written", () => {
     fireEvent.change(textarea, { target: { value: "next question" } });
 
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Stop the reply" }),
+    ).not.toBeInTheDocument();
     fireEvent.keyDown(textarea, { key: "Enter" });
     expect(mocks.stream).not.toHaveBeenCalled();
     expect(textarea).toHaveValue("next question");

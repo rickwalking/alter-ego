@@ -11,6 +11,7 @@ SSE_KEEP_ALIVE_INTERVAL_SECONDS = 15
 ERR_EMPTY_MESSAGE = "Message content cannot be empty"
 CHAT_FAILED_REPLY = "Sorry, I couldn't answer that one. Please try again."
 CHAT_TURN_IN_FLIGHT = "A reply to this conversation is still being written."
+CHAT_TURN_IN_FLIGHT_CODE = "turn_in_flight"
 DETACHED_TURN_DRAIN_SECONDS = 20.0
 ALTER_EGO_RECURSION_LIMIT = 25
 ALTER_EGO_SEARCH_BUDGET = 3

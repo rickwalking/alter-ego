@@ -116,7 +116,8 @@
       "send": "Send message",
       "newChat": "New chat",
       "counter": "{count} of {max} characters",
-      "label": "Message to the Alter-Ego"
+      "label": "Message to the Alter-Ego",
+      "stop": "Stop the reply"
     },
     "you": "You",
     "assistant": "Assistant",
@@ -124,7 +125,15 @@
     "errorTitle": "Something went wrong",
     "errorDescription": "We encountered an error loading the chat interface. Please try again.",
     "tryAgain": "Try Again",
-    "empty": "Start a conversation by typing a message below.",
+    "empty": {
+      "title": "Ask me about my work",
+      "intro": "I'm Pedro's Alter-Ego. I answer from his projects, his writing and his career, in English or Portuguese.",
+      "suggestionsLabel": "Try one of these",
+      "s1": "What do you work on these days?",
+      "s2": "How do you build with LLMs?",
+      "s3": "What's your take on microservices?",
+      "s4": "What have you written about lately?"
+    },
     "sidebar": {
       "label": "Conversations",
       "empty": "No conversations yet",
@@ -141,6 +150,7 @@
       "limit": "Too many messages for now, or this chat is full. Wait a minute or start a new chat.",
       "notFound": "This conversation is no longer available. Start a new chat.",
       "sessionExpired": "Your session expired. Sign in again to keep chatting.",
+      "busy": "Still finishing the previous reply. Try again in a moment.",
       "generic": "Something went wrong. Please try again.",
       "retry": "Try again",
       "signIn": "Sign in",
