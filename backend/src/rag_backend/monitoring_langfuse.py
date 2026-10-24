@@ -27,9 +27,10 @@ def init_langfuse(
     secret_key: str,
     host: str,
 ) -> CallbackHandler | None:
+    """Start the Langfuse client and callback handler; both keys are required."""
     global _langfuse_handler, _langfuse_client
 
-    if not secret_key:
+    if not secret_key or not public_key:
         _langfuse_handler = None
         _langfuse_client = None
         return None

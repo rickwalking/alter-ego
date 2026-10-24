@@ -141,6 +141,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     if langfuse_handler:
         logger.info("langfuse_initialized", host=settings.langfuse_host)
+    else:
+        logger.info("langfuse_disabled", reason="langfuse keys not set")
 
     logger.info("application_startup", version=settings.app_version)
 

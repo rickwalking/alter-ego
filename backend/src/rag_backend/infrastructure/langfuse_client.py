@@ -21,10 +21,12 @@ def init_langfuse(
 ) -> Langfuse | None:
     """Initialize LangFuse tracing.
 
-    Returns None if not configured.
+    Tracing needs both keys: with either one missing it stays disabled and
+    returns None, so a half-configured deploy never starts a client whose every
+    export is rejected.
     """
     global LANGFUSE_CLIENT
-    if not public_key and not secret_key:
+    if not public_key or not secret_key:
         LANGFUSE_CLIENT = None
         return None
     try:

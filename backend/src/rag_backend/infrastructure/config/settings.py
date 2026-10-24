@@ -187,7 +187,7 @@ class Settings(AutopilotAutofixSettings):
     langfuse_secret_key: SecretStr | None = None
     langfuse_public_key: str = ""
     langfuse_host: str = Field(
-        default="http://langfuse:3000",
+        default="https://cloud.langfuse.com",
         validation_alias=AliasChoices("langfuse_host", "langfuse_base_url"),
     )
 

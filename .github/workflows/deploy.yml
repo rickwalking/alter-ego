@@ -144,13 +144,9 @@ jobs:
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ANON_SECRET_KEY=${{ secrets.ANON_SECRET_KEY }}
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
-            LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
-            LANGFUSE_SALT=${{ secrets.LANGFUSE_SALT }}
-            LANGFUSE_NEXTAUTH_SECRET=${{ secrets.LANGFUSE_NEXTAUTH_SECRET }}
-            LANGFUSE_ENCRYPTION_KEY=${{ secrets.LANGFUSE_ENCRYPTION_KEY }}
-            LANGFUSE_CLICKHOUSE_PASSWORD=${{ secrets.LANGFUSE_CLICKHOUSE_PASSWORD }}
-            LANGFUSE_MINIO_PASSWORD=${{ secrets.LANGFUSE_MINIO_PASSWORD }}
+            LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_CLOUD_SECRET_KEY }}
+            LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_CLOUD_PUBLIC_KEY }}
+            LANGFUSE_HOST=${{ vars.LANGFUSE_CLOUD_HOST || 'https://cloud.langfuse.com' }}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             WRITING_STYLE_URLS=${{ secrets.WRITING_STYLE_URLS }}
             ALLOWED_ORIGINS=https://marinssolutions.com
@@ -211,12 +207,10 @@ jobs:
               chmod 600 backend/.env
             fi
 
-            # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
-            # invalidates all API keys and encrypted data on container recreate.
-            # REDIS_PASSWORD (AE-0302) must never be blank either: Redis and the
+            # REDIS_PASSWORD (AE-0302) must never be blank: Redis and the
             # backend both fail closed on it, so catch it here BEFORE the stack
             # is taken down.
-            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_MINIO_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY REDIS_PASSWORD; do
+            for var in REDIS_PASSWORD; do
               if ! grep -q "^${var}=..*" .env; then
                 echo "ERROR: ${var} is empty. Set the ${var} GitHub Secret before deploying."
                 exit 1
@@ -231,7 +225,7 @@ jobs:
             # Build images first so the migration one-shot below uses the freshly
             # built backend image (and the app start that follows is cache-warm).
             docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml down --remove-orphans
 
             # --- Database migrations (AE-0207) --------------------------------
             # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
