@@ -23,3 +23,19 @@ Feature: The slide editor edits exactly the text each slide shows
     Given a workflow state that lists no checklist slides
     When the slides are resolved for editing
     Then no slide is marked as a checklist slide
+
+  Scenario: The checklist editor offers the lines the slide draws
+    Given a checklist slide whose lists hold blank items, more than five items, or several lists
+    When the owner opens the slide editor on the publish page
+    Then it offers the first list with a line, in the template's order (summary points, actions, features)
+    And it drops blank items and offers at most five lines, as the slide does
+
+  Scenario: An edit made in the editor is saved and rendered
+    Given the slide the backend serves for generated checklist content
+    When the owner edits a checklist line in Portuguese and in English
+    Then the editor sends the payload the backend saves and renders with the edited lines
+
+  Scenario: A start response or a live update keeps the checklist slides
+    Given the editor holds the checklist slides of the workflow state
+    When a workflow event that does not carry them arrives
+    Then the checklist slides are kept

@@ -1,0 +1,94 @@
+{
+  "served_slide": {
+    "slide_index": 2,
+    "slide_type": "summary",
+    "presentation_pt": {
+      "slide_type": "summary",
+      "heading": "Salve isto",
+      "body": "",
+      "summary_points": [
+        {
+          "icon_name": "check",
+          "title": "Revise o escopo",
+          "body": "Detalhe gerado um"
+        },
+        {
+          "icon_name": "check",
+          "title": "Teste o fluxo",
+          "body": "Detalhe gerado dois"
+        }
+      ]
+    },
+    "presentation_en": {
+      "slide_type": "summary",
+      "heading": "Save this",
+      "body": "",
+      "summary_points": [
+        {
+          "icon_name": "check",
+          "title": "Review the scope",
+          "body": "Generated detail one"
+        },
+        {
+          "icon_name": "check",
+          "title": "Test the flow",
+          "body": "Generated detail two"
+        }
+      ]
+    }
+  },
+  "checklist_slide_indexes": [
+    2
+  ],
+  "edits": [
+    {
+      "locale": "presentation_pt",
+      "item_index": 0,
+      "value": "Revise o contrato antes de assinar"
+    },
+    {
+      "locale": "presentation_en",
+      "item_index": 0,
+      "value": "Review the contract before signing"
+    }
+  ],
+  "patch_slide": {
+    "slide_index": 2,
+    "slide_type": "summary",
+    "presentation_pt": {
+      "slide_type": "summary",
+      "heading": "Salve isto",
+      "body": "",
+      "summary_points": [
+        {
+          "icon_name": "check",
+          "title": "Revise o contrato antes de assinar",
+          "body": ""
+        },
+        {
+          "icon_name": "check",
+          "title": "Teste o fluxo",
+          "body": "Detalhe gerado dois"
+        }
+      ]
+    },
+    "presentation_en": {
+      "slide_type": "summary",
+      "heading": "Save this",
+      "body": "",
+      "summary_points": [
+        {
+          "icon_name": "check",
+          "title": "Review the contract before signing",
+          "body": ""
+        },
+        {
+          "icon_name": "check",
+          "title": "Test the flow",
+          "body": "Generated detail two"
+        }
+      ]
+    },
+    "checklist": true
+  }
+}

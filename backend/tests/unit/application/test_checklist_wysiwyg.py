@@ -17,13 +17,8 @@ from rag_backend.api.schemas.carousel_workflow import (
 from rag_backend.application.services.carousel_template.role_layouts import (
     checklist_slide_numbers,
 )
-from rag_backend.application.services.carousel_template.strategies.save_checklist import (
-    SaveChecklistStrategy,
-)
 from rag_backend.domain.models import CarouselProject
-from rag_backend.domain.protocols.carousel import _RenderOptions
 
-_THEME = {"primary": "#3b82f6", "accent": "#f59e0b", "background": "#0a0e17"}
 _POV_TYPES = {
     1: "intro",
     2: "content",
@@ -112,29 +107,3 @@ def test_workflow_state_lists_the_checklist_slides() -> None:
     marked = apply_checklist_slides(response, _project())
 
     assert marked.checklist_slide_indexes == [8]
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("language", "text"),
-    [("pt", "Revise o contrato antes de assinar"), ("en", "Review the contract first")],
-)
-def test_edited_checklist_item_renders(language: str, text: str) -> None:
-    """The edited line (title, body cleared) is the text the slide shows.
-
-    Scenario: An edited checklist item renders on the slide
-    """
-    points = [
-        {"icon_name": "check", "title": text, "body": ""},
-        {"icon_name": "check", "title": "Second", "body": "hidden detail"},
-    ]
-    html = SaveChecklistStrategy().render(
-        {"number": "8", "heading": "Salve", "summary_points": points},
-        _project(language=language),
-        _THEME,
-        options=_RenderOptions(total_slides=9, language=language),
-    )
-
-    assert text in html
-    assert "Second" in html
-    assert "hidden detail" not in html

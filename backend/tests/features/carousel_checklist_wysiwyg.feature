@@ -13,8 +13,8 @@ Feature: Checklist slide items are edited exactly as they are shown
     Given a checklist item whose displayed line was edited
     Then the slide HTML shows the edited text, in Portuguese and in English
 
-  Scenario: A repair moves hidden checklist text into the displayed line
-    Given a checklist item whose body differs from its displayed title
-    When the repair runs with --apply
-    Then the body becomes the displayed text, the body is cleared, and the carousel is republished
-    And a dry run changes nothing, and a second run finds nothing to change
+  Scenario: The start response carries the checklist slides
+    Given a "Ponto de Vista" deck whose start run returns its localized slides
+    When the workflow is started and its state is read
+    Then both responses list the save slide as a checklist slide
+    And a start response never wipes the checklist slides the editor holds
