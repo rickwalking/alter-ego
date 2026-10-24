@@ -104,8 +104,10 @@ web event loop and loses runs on every deploy.
 - Load test on a disposable droplet of the same size: 3 queued runs while a k6/hey script measures web p95 latency; p95 must stay
   within 20 % of the idle baseline and no container may be OOM-killed.
 - Chaos: kill the worker mid-phase and run a full deploy mid-run; the job must resume within 6 min of the stack
-  returning, without duplicate artifacts or duplicate Telegram messages; flipping the flag off and on mid-run must yield
-  exactly one completed run.
+  returning, without duplicate artifacts or duplicate Telegram messages.
+- There is no feature flag (Pedro, 2026-10-23): the worker goes live when P1 merges, so the load and chaos validation
+  above runs on the disposable droplet BEFORE the merge, and rollback is a revert of the merge (new tables only, no
+  schema rollback).
 
 ## More Information
 

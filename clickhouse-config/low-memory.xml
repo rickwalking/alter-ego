@@ -2,7 +2,7 @@
     <!-- Disable ClickHouse self-instrumentation logs: on this constrained host
          system.text_log alone grew to 10GB / 180M rows in 9 days and caused
          constant merge + memory pressure (inserts and UI queries OOMed against
-         the 1.5G container limit). Langfuse does not need these tables. -->
+         the container limit). Langfuse does not need these tables. -->
     <text_log remove="1"/>
     <metric_log remove="1"/>
     <asynchronous_metric_log remove="1"/>
@@ -20,5 +20,5 @@
     <mark_cache_size>67108864</mark_cache_size>
     <index_mark_cache_size>16777216</index_mark_cache_size>
     <uncompressed_cache_size>0</uncompressed_cache_size>
-    <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
+    <max_server_memory_usage_to_ram_ratio>0.75</max_server_memory_usage_to_ram_ratio>
 </clickhouse>

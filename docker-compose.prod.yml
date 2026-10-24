@@ -8,6 +8,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
     healthcheck:
       test:
         [
@@ -26,6 +30,10 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     # AE-0302: auth required + fail-closed entrypoint. The entrypoint refuses
     # to start an OPEN Redis when REDIS_PASSWORD is empty in a production-like
     # environment, and disables admin verbs (CONFIG/FLUSHALL/FLUSHDB/DEBUG/
@@ -127,6 +135,12 @@ services:
     volumes:
       - carousel_output:/app/output
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1344M
+        reservations:
+          memory: 384M
     logging:
       driver: "json-file"
       options:
@@ -183,6 +197,12 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
     logging:
       driver: "json-file"
       options:
@@ -203,6 +223,12 @@ services:
       - frontend
       - backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 16M
     logging:
       driver: "json-file"
       options:
@@ -216,6 +242,10 @@ services:
       - certbot_www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   langfuse-db-init:
     image: postgres:17-alpine
@@ -251,7 +281,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1536M
+          memory: 640M
           cpus: "1.5"
     logging:
       driver: "json-file"
@@ -330,6 +360,7 @@ services:
       LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       TELEMETRY_ENABLED: "false"
+      NODE_OPTIONS: --max-old-space-size=448
     depends_on:
       postgres:
         condition: service_healthy
@@ -342,6 +373,10 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     logging:
       driver: "json-file"
       options:
