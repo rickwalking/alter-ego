@@ -127,6 +127,25 @@ load_while_active() {
   done
 }
 
+revert_rehearsal() {
+  local base
+  base="$(git -C "$REPO" merge-base origin/main HEAD)"
+  echo "$base" > "$OUT/revert-base.txt"
+  git -C "$REPO" archive --format=tar "$base" | ssh_droplet "mkdir -p /opt/alter-ego-revert && tar -x -C /opt/alter-ego-revert"
+  ssh_droplet "SEED_OFFSET=5 bash /opt/alter-ego/ops/queue-validation/remote.sh seed 2" | tee "$OUT/revert-seeded-runs.json"
+  wait_for running -ge 1 900 || true
+  sleep 60
+  remote revert_rehearsal > "$OUT/revert-rehearsal.txt" 2>&1
+  ssh_droplet "docker compose -p alter-ego -f /opt/alter-ego-revert/docker-compose.prod.yml -f /opt/alter-ego-revert/compose.revert.yml exec -T postgres psql -U rag_user -d rag_db -tAc \"SELECT count(*) FROM autopilot_runs WHERE state IN ('queued','generating','reworking')\"" > "$OUT/revert-active-before.txt"
+  for _ in $(seq 1 "$((RUN_TIMEOUT_SECONDS / 30))"); do
+    local left
+    left="$(ssh_droplet "docker compose -p alter-ego -f /opt/alter-ego-revert/docker-compose.prod.yml -f /opt/alter-ego-revert/compose.revert.yml exec -T postgres psql -U rag_user -d rag_db -tAc \"SELECT count(*) FROM autopilot_runs WHERE state IN ('queued','generating','reworking')\"" | tr -d '[:space:]')"
+    [ "$left" = "0" ] && { echo "revert: no run stranded" | tee "$OUT/revert-verdict.txt"; return 0; }
+    sleep 30
+  done
+  echo "revert: runs still active at the timeout" | tee "$OUT/revert-verdict.txt"
+}
+
 main() {
   provision
   ship_branch
@@ -148,6 +167,7 @@ main() {
   wait_for active -eq 0 "$RUN_TIMEOUT_SECONDS" || echo "runs still active at the timeout" | tee "$OUT/timeout.txt"
   wait "$load_pid" || true
   python3 "$HERE/load_p95.py" --summarize "$OUT/idle-baseline.samples" "$OUT/under-generation.samples" | tee "$OUT/p95-verdict.json"
+  revert_rehearsal
   load "$LOAD_SECONDS" after-runs
   remote report | tee "$OUT/report.tsv"
   ssh_droplet "cat /root/validation-samples.tsv" > "$OUT/memory-samples.tsv"

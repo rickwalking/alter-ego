@@ -130,6 +130,7 @@ def test_the_driver_script_defines_its_inputs_before_using_them() -> None:
     assert script.index('SCOUT_KEY="$(openssl rand') < script.index("remote() {")
     assert main.index("provision") < main.index("remote prepare")
     assert main.index("lock_egress") < main.index("write_env") < main.index("remote up")
+    assert main.index("remote deploy_cycle") < main.index("revert_rehearsal")
     assert "trap teardown EXIT" in script
     assert "trap 'exit 130' INT" in script
     assert "trap 'exit 143' TERM" in script

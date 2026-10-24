@@ -44,7 +44,7 @@ sample_start() {
 
 seed() {
   "${COMPOSE[@]}" cp ops/queue-validation/seed.py backend:/tmp/seed.py
-  "${COMPOSE[@]}" exec -T -e SEED_BASE_URL=http://nginx -e SEED_SCOUT_KEY="$SCOUT_KEY" backend python /tmp/seed.py "${1:-3}"
+  "${COMPOSE[@]}" exec -T -e SEED_OFFSET="${SEED_OFFSET:-0}" backend python /tmp/seed.py "${1:-3}"
 }
 
 running() {
@@ -66,6 +66,23 @@ deploy_cycle() {
   "${COMPOSE[@]}" stop -t 300 generation-worker || true
   "${COMPOSE[@]}" down
   up
+}
+
+revert_rehearsal() {
+  local revert_dir=/opt/alter-ego-revert
+  "${COMPOSE[@]}" stop -t 300 generation-worker
+  "${COMPOSE[@]}" run --rm --no-deps backend python -m rag_backend.scripts.generation_queue_rollback --apply
+  cp .env "$revert_dir/.env"
+  sed '/^  generation-worker:/,/^$/d' ops/queue-validation/compose.validation.yml > "$revert_dir/compose.revert.yml"
+  cp ops/queue-validation/mock_upstream.py "$revert_dir/"
+  cd "$revert_dir"
+  local revert=(docker compose -p alter-ego -f docker-compose.prod.yml -f compose.revert.yml)
+  sed -i 's#./ops/queue-validation:/mock:ro#./:/mock:ro#' compose.revert.yml
+  "${revert[@]}" build
+  "${revert[@]}" down --remove-orphans
+  "${revert[@]}" up -d
+  docker ps -aq --filter name=generation-worker | xargs -r docker rm -f
+  cd "$APP_DIR"
 }
 
 report() {

@@ -13,6 +13,7 @@ even when a step fails (`trap teardown EXIT INT TERM`).
 | Memory | no container `OOMKilled`, no kernel "out of memory" line (`report.tsv`), peaks in `memory-samples.tsv` |
 | Worker killed mid-phase | the job is picked again and the run completes; `generation_runs.attempts` shows the interrupted start |
 | Full deploy mid-run | same deploy sequence as `deploy.yml` (build, drain the worker, `down`, one-shot, `up`); the run resumes and completes |
+| Revert strands nothing | after a drain and `generation_queue_rollback --apply`, the merge base is deployed (no worker); the in-process runner of the reverted code finishes every queued and in-flight autopilot run (`revert-verdict.txt`) |
 | No duplicates | `duplicate_ready_notices` = 0 (one owner notice, so one Telegram message, per run) and `duplicate_builds_of_one_version` = 0 |
 | No production credential | `credential-check.txt`: every value of the droplet `.env` hashed against the production hashes; any match aborts before the stack starts |
 | No production egress | the cloud firewall closes all outbound traffic after the image build; the script fails if the droplet can still reach `api.telegram.org` |
