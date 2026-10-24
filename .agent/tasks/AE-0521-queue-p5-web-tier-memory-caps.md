@@ -54,3 +54,5 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
 - 2026-10-23 (Pedro): open the PR on the off-box measurement, criterion 1 pending, adjust in a follow-up if the real
   peak differs. Worker 1344M and backend 512M once generation leaves the backend (AE-0522); until then the backend
   keeps 1344M because it still runs the HD exports.
+- 2026-10-24: the first prod run sampled (carousel 5350e0ca) peaked at 1181 MiB, so AE-0542 raises the backend cap
+  to 1536M and the P1 worker cap to 1536M.
