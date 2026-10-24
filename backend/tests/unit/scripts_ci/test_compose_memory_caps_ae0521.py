@@ -15,7 +15,7 @@ COMPOSE = REPO_ROOT / "docker-compose.prod.yml"
 ONE_SHOT = "no"
 MEMORY_VALUE = re.compile(r"^(?P<amount>\d+)(?P<unit>[kKmMgG])$")
 UNIT_MIB = {"k": 1 / 1024, "m": 1, "g": 1024}
-MEASURED_HD_RUN_PEAK_MIB = 1011
+MEASURED_HD_RUN_PEAK_MIB = 1222
 HEADROOM = 1.3
 
 Service = dict[str, object]

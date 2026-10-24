@@ -27,7 +27,7 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
 
 - Pinned PgQueuer + deploy one-shot (`pgq install/upgrade`, `generation_runs` DDL generated from the Alembic migration, CI equality test).
 - `generation_runs` table, transactional-outbox enqueue from approvals/resume, dispatcher (enqueue + dead-letter reconciler, 10 s), entrypoints with retry executor, per-(run, phase) attempt budgets, OOM non-retryable.
-- Worker compose service: same image, `pgq run …`, concurrency 1, memory cap 1344M (run peak ≈ 1011 MiB + 30 %, from AE-0521) and, in the same change, the backend cap lowered from 1344M to 512M (web-only peak + 30 %; Pedro), CPU caps, hardening baseline, `--no-sandbox` Chromium with compensating controls, dedicated lock connection, checkpointer must be postgres.
+- Worker compose service: same image, `pgq run …`, concurrency 1, memory cap 1600M (prod run peak 1222 MiB + 30 %, from AE-0542) and, in the same change, the backend cap lowered from 1600M to 512M (web-only peak + 30 %; Pedro), CPU caps, hardening baseline, `--no-sandbox` Chromium with compensating controls, dedicated lock connection, checkpointer must be postgres.
 - Single ownership lock (per-project advisory lock); existing autopilot run statuses keep their meaning so a revert strands no queued run, and the worker keeps writing the carousel heartbeat/phase columns so the reverted stale-run reaper still parks its in-flight run; NOTIFY progress relay with state-on-reconnect; queue metrics + alerts; pre-down drain step in deploy.yml.
 - Gates before merge: PgQueuer semantics matrix (a)-(h) against the pinned source; side-effect inventory all outboxed or CAS-claimed; AE-0520 run_stale root cause known; export green under the exact hardened config.
 
