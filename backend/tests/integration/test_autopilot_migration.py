@@ -28,7 +28,7 @@ _SINGLE_HEAD = "d3e4f5a6b7c8"
 _AUDIENCE_HEAD = "a0e4f0a4b4c4"
 _QUOTES_HEAD = "c4d5e6f7a8b9"
 _COVER_HEAD = "d5e6f7a8b9c0"
-ALEMBIC_HEAD = "aa4a5695681f"
+ALEMBIC_HEAD = "344dec4495d3"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",

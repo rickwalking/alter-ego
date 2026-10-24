@@ -10,7 +10,7 @@ import type { ChatStream } from "@/lib/use-chat-stream";
 
 import type { Message } from "@/schemas/chat";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
-import type { CoverGenerations as CoverGenerationsView } from "./use-cover-generation";
+import type { CoverGenerations as CoverGenerationsView } from "./cover-generation-schema";
 
 export interface UsePublishChatReturn {
   conversationId: string | null;

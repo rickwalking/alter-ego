@@ -6,13 +6,24 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import {
+  GENERATION_STATUS,
+  coverGenerationSchema,
+  coverGenerationsSchema,
+  type CoverGeneration,
+  type CoverGenerations,
+} from "./cover-generation-schema";
 import type { CoverGenerationInput } from "./types";
 import { coverOptionKeys } from "./use-cover-picker";
 
 export type { CoverGenerationInput } from "./types";
+export {
+  GENERATION_STATUS,
+  type CoverGeneration,
+  type CoverGenerations,
+} from "./cover-generation-schema";
 
 /**
  * Grok covers generated from the owner's library photos on the publish step.
@@ -20,40 +31,6 @@ export type { CoverGenerationInput } from "./types";
  * the cover options are refreshed when one settles.
  */
 const POLL_INTERVAL_MS = 4000;
-
-export const GENERATION_STATUS = {
-  PENDING: "pending",
-  SUCCEEDED: "succeeded",
-  FAILED: "failed",
-} as const;
-
-const coverGenerationSchema = z.object({
-  id: z.string(),
-  status: z.enum([
-    GENERATION_STATUS.PENDING,
-    GENERATION_STATUS.SUCCEEDED,
-    GENERATION_STATUS.FAILED,
-  ]),
-  error_code: z.string().nullable().optional(),
-  asset_id: z.string().nullable().optional(),
-  created_at: z.string(),
-  completed_at: z.string().nullable().optional(),
-});
-
-const coverGenerationsSchema = z.object({
-  carousel_used: z.number(),
-  carousel_cap: z.number(),
-  month_used: z.number(),
-  month_cap: z.number(),
-  carousel_attempts: z.number(),
-  carousel_attempt_cap: z.number(),
-  month_attempts: z.number(),
-  month_attempt_cap: z.number(),
-  generations: z.array(coverGenerationSchema),
-});
-
-export type CoverGeneration = z.infer<typeof coverGenerationSchema>;
-export type CoverGenerations = z.infer<typeof coverGenerationsSchema>;
 
 export const coverGenerationKeys = {
   detail: (projectId: string) =>
