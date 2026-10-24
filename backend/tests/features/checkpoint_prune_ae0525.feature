@@ -51,12 +51,35 @@ Feature: Old carousel checkpoints are pruned safely, with Pedro's sign-off
     Then it exits non-zero with an explicit error
 
   Scenario: Apply without a sign-off file or a backup file is a usage error
-    When the prune runs with --apply but without --threads or --backup, with a missing --threads file, an existing --backup file or a TTL below one day
+    When the prune runs with --apply but without --threads or --pg-dump, with a missing --threads or --pg-dump file, an existing --backup file or a TTL below one day
     Then it exits with the usage error code and touches nothing
 
   Scenario: Keep-latest pruning is refused for history-dependent state
-    Given the carousel workflow graph
-    Then none of its state channels is rebuilt from older checkpoints (no DeltaChannel)
+    Given the carousel workflow graph or one of its subgraphs keeps a DeltaChannel
+    When the prune runs with --apply
+    Then it refuses before reading the dump or deleting anything, naming the channel
+
+  Scenario: Apply refuses without a readable pg_dump of the checkpoint tables
+    Given a --pg-dump file that pg_restore cannot read, that lacks one checkpoint table, or no pg_restore at all
+    When the prune runs with --apply
+    Then it refuses and deletes nothing
+
+  Scenario: A JSONL backup restores every pruned row
+    Given a pruned thread and its JSONL backup
+    When the backup is restored
+    Then every checkpoint, write and blob row is back exactly as before, and the workflow state is unchanged
+
+  Scenario: A subgraph namespace keeps its own latest checkpoint
+    Given a thread parked at a gate inside a subgraph
+    When it is pruned
+    Then each namespace keeps exactly its latest checkpoint
+    And the state, the subgraph state and the interrupt are unchanged
+    And resuming it gives the same result as an unpruned twin
+
+  Scenario: A partial delete or a short backup stops the prune
+    Given a signed-off thread with old checkpoint rows
+    When the delete removes fewer rows than were prunable, or the backup holds fewer rows than will be deleted
+    Then the prune refuses and every row is still there
 
   Scenario: The workflow engine and the prune agree on the thread id
     Given a carousel project id

@@ -11,16 +11,13 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from langgraph.channels import DeltaChannel
 
 from rag_backend.agents.carousel_workflow_engine import CarouselWorkflowEngine
 from rag_backend.agents.carousel_workflow_graph import build_carousel_workflow_graph
 from rag_backend.domain.carousel_checkpoint_thread import checkpoint_thread_id
-from rag_backend.domain.constants.checkpoint_prune import (
-    AUTOPILOT_RUNS_TABLE,
-    AUTOPILOT_SETTLED_STATES,
-)
+from rag_backend.domain.constants.checkpoint_prune import AUTOPILOT_RUNS_TABLE
 from rag_backend.infrastructure.database.checkpoint_prune import (
+    AUTOPILOT_SETTLED_STATES,
     PruneCandidate,
     PruneRefusedError,
     PruneRequest,
@@ -39,6 +36,8 @@ def _args(**flags: object) -> argparse.Namespace:
         "apply": False,
         "threads": None,
         "backup": None,
+        "pg_dump": None,
+        "restore": None,
         "write_threads": None,
         "ttl_days": 30,
     }
@@ -65,8 +64,10 @@ def _candidate() -> PruneCandidate:
     [
         ["--apply"],
         ["--apply", "--threads", "t.txt"],
+        ["--apply", "--pg-dump", "d.dump"],
         ["--apply", "--backup", "b.jsonl"],
         ["--threads", "t.txt"],
+        ["--pg-dump", "d.dump"],
         ["--backup", "b.jsonl"],
     ],
 )
@@ -79,30 +80,35 @@ def test_apply_without_sign_off_or_backup_is_a_usage_error(argv: list[str]) -> N
 
 
 @pytest.mark.parametrize(
-    ("ttl", "threads_exist", "backup_exists", "error"),
+    ("ttl", "missing", "error"),
     [
-        ("0", True, False, "--ttl-days must be at least 1"),
-        ("-5", True, False, "--ttl-days must be at least 1"),
-        ("30", False, False, "the --threads file does not exist"),
-        ("30", True, True, "the --backup file already exists"),
+        ("0", "", "--ttl-days must be at least 1"),
+        ("-5", "", "--ttl-days must be at least 1"),
+        ("30", "threads", "the --threads file does not exist"),
+        ("30", "dump", "the --pg-dump file does not exist"),
+        ("30", "backup", "the --backup file already exists"),
     ],
 )
 def test_a_bad_ttl_or_file_is_a_usage_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     ttl: str,
-    threads_exist: bool,
-    backup_exists: bool,
+    missing: str,
     error: str,
 ) -> None:
     """Scenario: Apply without a sign-off file or a backup file is a usage error"""
     threads = tmp_path / "threads.txt"
+    dump = tmp_path / "checkpoints.dump"
     backup = tmp_path / "b.jsonl"
-    if threads_exist:
+    if missing != "threads":
         threads.write_text(f"{_THREAD}\n")
+    if missing != "dump":
+        dump.write_bytes(b"PGDMP")
+    backup_exists = missing == "backup"
     if backup_exists:
         backup.write_text("kept\n")
     argv = ["--apply", "--ttl-days", ttl, "--threads", str(threads)]
+    argv += ["--pg-dump", str(dump)]
     runner = AsyncMock()
     with patch.object(cli, "_run_on_own_engine", runner):
         assert cli.main([*argv, "--backup", str(backup)]) == cli.EXIT_USAGE
@@ -111,14 +117,10 @@ def test_a_bad_ttl_or_file_is_a_usage_error(
     assert not backup_exists or backup.read_text() == "kept\n"
 
 
-def test_the_carousel_graph_has_no_delta_channel() -> None:
+def test_the_carousel_graph_has_no_delta_channel_today() -> None:
     """Scenario: Keep-latest pruning is refused for history-dependent state"""
-    graph = build_carousel_workflow_graph().compile()
-    delta = [
-        name for name, ch in graph.channels.items() if isinstance(ch, DeltaChannel)
-    ]
-    assert graph.channels
-    assert delta == []
+    assert build_carousel_workflow_graph().compile().channels
+    assert cli.delta_channels() == []
 
 
 async def test_dry_run_prints_states_and_saves_thread_ids(
@@ -159,12 +161,18 @@ async def test_apply_prunes_the_signed_off_threads(
     threads = tmp_path / "threads.txt"
     threads.write_text(f"{_THREAD}\n\n  {_THREAD}  \nother\n")
     backup = tmp_path / "backup.jsonl"
+    dump = tmp_path / "checkpoints.dump"
     applier = AsyncMock(return_value=TableCounts(checkpoints=3, writes=4, blobs=5))
-    with patch.object(cli, "apply_prune", applier):
+    verifier = AsyncMock()
+    with (
+        patch.object(cli, "apply_prune", applier),
+        patch.object(cli, "verify_pg_dump", verifier),
+    ):
         code = await cli.run_modes(
-            _ENGINE, _args(apply=True, threads=threads, backup=backup)
+            _ENGINE, _args(apply=True, threads=threads, backup=backup, pg_dump=dump)
         )
     assert code == cli.EXIT_OK
+    verifier.assert_awaited_once_with(dump)
     request: PruneRequest = applier.await_args.args[1]
     assert request.thread_ids == (_THREAD, "other")
     assert request.backup_path == backup
@@ -178,7 +186,10 @@ async def test_a_refused_prune_exits_non_zero(
     threads = tmp_path / "threads.txt"
     threads.write_text(f"{_THREAD}\n")
     applier = AsyncMock(side_effect=PruneRefusedError("no longer eligible"))
-    with patch.object(cli, "apply_prune", applier):
+    with (
+        patch.object(cli, "apply_prune", applier),
+        patch.object(cli, "verify_pg_dump", AsyncMock()),
+    ):
         code = await cli.run_modes(
             _ENGINE,
             _args(apply=True, threads=threads, backup=tmp_path / "b.jsonl"),

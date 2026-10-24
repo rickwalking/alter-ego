@@ -8,7 +8,7 @@ thread is prunable. Queries are SQLAlchemy Core; thread ids are bound parameters
 
 Keep-latest is only safe while no graph state uses a ``DeltaChannel``: the saver
 rebuilds those values from older checkpoints and writes, which this prune deletes.
-A unit test fails the day the carousel graph adds one.
+The prune CLI refuses to apply while the carousel graph has one.
 """
 
 from __future__ import annotations
