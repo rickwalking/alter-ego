@@ -1,6 +1,6 @@
 """Instagram publish refuses an empty caption on every path.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0542.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
 """
 
 from __future__ import annotations
@@ -85,3 +85,21 @@ def test_the_gate_reads_the_override_caption_first() -> None:
     assert gate_reason(gate_for(snapshot, empty)) == ERR_INSTAGRAM_CAPTION_EMPTY
     assert gate_reason(gate_for(snapshot, None)) is None
     assert gate_for(None, None).has_caption is False
+
+
+@pytest.mark.parametrize("resume", [True, False])
+async def test_a_claimed_run_rechecks_the_caption(resume: bool) -> None:
+    """Scenario: The autopilot worker never posts an empty caption"""
+    repo, gateway, notifier = _Repo(), _Gateway(), _Notifier()
+    gateway.resume = resume
+    run = _store(repo, _run())
+    job = _job(repo, gateway, _Source(_snapshot()), _Clock(), notifier)
+
+    await job.publish_claimed(run, CarouselMedia(caption=" ", image_urls=_SEVEN))
+
+    stored = repo.runs[run.run_id]
+    assert stored.state is AutopilotRunState.PUBLISH_FAILED
+    assert stored.state_reason == ERR_INSTAGRAM_CAPTION_EMPTY
+    assert gateway.opens == 0
+    assert gateway.atomics == 0
+    assert [n.error_code for n in notifier.notices] == [ERR_INSTAGRAM_CAPTION_EMPTY]

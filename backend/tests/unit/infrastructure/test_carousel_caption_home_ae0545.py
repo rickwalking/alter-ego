@@ -1,6 +1,6 @@
-"""A saved caption survives an empty distribution home; carousel drafts seed it.
+"""A saved caption survives an empty home, a carousel draft and the public release.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0542.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
 """
 
 from __future__ import annotations
@@ -9,11 +9,12 @@ from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
+from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.blog_generation_state import GenerationStart
 from rag_backend.infrastructure.database.blog_generation_drafts import (
@@ -27,9 +28,11 @@ from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.distribution_home import read_distribution
 from rag_backend.infrastructure.database.models import CarouselProjectModel
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.modules.publishing.public import LegacyPublishingAcl
 
 _CAPTION = "Legenda salva pelo Pedro"
 _LINKEDIN_PT = "Post do LinkedIn"
+_EDITED = "Legenda editada depois do carregamento"
 _START = GenerationStart(
     kind="k", lease_id="lease", now="2026-10-24T03:00:00Z", request={}
 )
@@ -162,3 +165,27 @@ async def test_other_drafts_start_with_an_empty_distribution(
     row = await db.get(BlogPostModel, lease.post_id)
     assert row is not None
     assert row.distribution == {}
+
+
+async def test_the_release_keeps_a_caption_edited_after_the_load(
+    db: AsyncSession,
+) -> None:
+    """Scenario: The public release never overwrites a caption edited after the load"""
+    project_id = await _carousel(db)
+    repo = PostgresCarouselRepository(session=db)
+    loaded = await repo.get_project_by_id(UUID(project_id))
+    assert loaded is not None
+    await db.execute(
+        update(CarouselProjectModel)
+        .where(CarouselProjectModel.id == project_id)
+        .values(caption=_EDITED)
+    )
+
+    released = await LegacyPublishingAcl(db, repo).release_public(loaded, project_id)
+
+    assert released is loaded
+    assert await _saved_caption(db, project_id) == _EDITED
+    row = await db.get(CarouselProjectModel, project_id, populate_existing=True)
+    assert row is not None
+    assert row.is_public is True
+    assert row.current_phase == PHASE_PUBLISHED

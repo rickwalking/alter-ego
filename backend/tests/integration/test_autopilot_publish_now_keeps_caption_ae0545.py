@@ -1,16 +1,17 @@
 """Publish now from Telegram keeps the saved caption and posts it.
 
-Feature: backend/tests/features/approve_keeps_caption_ae0542.feature
+Feature: backend/tests/features/approve_keeps_caption_ae0545.feature
 
 Drives the real owner action (``ap:pubnow``), the in-process editorial approve of
 final review, the public release and the Instagram publish job against SQLite,
-with the carousel's blog draft created by the real draft path (its
-``distribution`` starts empty, as in prod).
+with the carousel's blog row either created by the real draft path or inserted
+with ``distribution={}`` (the shape of the prod rows created before the fix).
 """
 
 from __future__ import annotations
 
-from uuid import uuid4
+from collections.abc import Awaitable, Callable
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import update
@@ -21,8 +22,12 @@ from rag_backend.infrastructure.database.blog_generation_drafts import (
     GenerationDraftSpec,
     create_generation_draft,
 )
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 from rag_backend.infrastructure.database.distribution_home import read_distribution
 from rag_backend.infrastructure.database.models import CarouselProjectModel
+from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.modules.autopilot.application.publish_job import (
     InstagramPublishJob,
     PublishJobDependencies,
@@ -90,12 +95,16 @@ def _publish_job(
     )
 
 
-async def _save_caption_then_draft_blog(world: _World) -> None:
+async def _save_caption(world: _World) -> None:
     await world.session.execute(
         update(CarouselProjectModel)
         .where(CarouselProjectModel.id == world.project_id)
         .values(caption=_CAPTION)
     )
+
+
+async def _draft_blog(world: _World) -> None:
+    await _save_caption(world)
     start = GenerationStart(
         kind="from_carousel",
         lease_id=uuid4().hex,
@@ -114,14 +123,39 @@ async def _save_caption_then_draft_blog(world: _World) -> None:
         ),
     )
     await world.session.commit()
+    home = await read_distribution(world.session, world.project_id)
+    assert home is not None
+    assert home["caption"] == _CAPTION
+
+
+async def _insert_empty_home(world: _World) -> None:
+    await _save_caption(world)
+    world.session.add(
+        BlogPostModel.from_entity({
+            "id": str(uuid4()),
+            "project_id": world.project_id,
+            "origin": BlogPostOrigin.CAROUSEL.value,
+            "title": "Agents that ship",
+            "slug": f"carousel-{world.project_id}",
+            "status": "draft",
+            "content": {},
+            "distribution": {},
+        })
+    )
+    await world.session.commit()
 
 
 @pytest.mark.asyncio
-async def test_publish_now_keeps_the_saved_caption_and_posts_it(world: _World) -> None:
-    """Scenario: Publish now keeps the saved caption and posts it"""
+@pytest.mark.parametrize(
+    "blog_row", [_draft_blog, _insert_empty_home], ids=["draft", "empty_home"]
+)
+async def test_publish_now_keeps_the_saved_caption_and_posts_it(
+    world: _World, blog_row: Callable[[_World], Awaitable[None]]
+) -> None:
+    """Scenario Outline: Publish now keeps the saved caption and posts it"""
     clock = _Clock()
     run = await _awaiting_run(world)
-    await _save_caption_then_draft_blog(world)
+    await blog_row(world)
     service = _owner_service(world, clock)
     await service.handle(
         WebhookUpdate(
@@ -144,9 +178,11 @@ async def test_publish_now_keeps_the_saved_caption_and_posts_it(world: _World) -
     assert project.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
     assert project.is_public is True
     assert project.caption == _CAPTION
-    home = await read_distribution(world.session, world.project_id)
-    assert home is not None
-    assert home["caption"] == _CAPTION
+    loaded = await PostgresCarouselRepository(session=world.session).get_project_by_id(
+        UUID(world.project_id)
+    )
+    assert loaded is not None
+    assert loaded.caption == _CAPTION
 
     gateway = _CaptionGateway()
     assert await _publish_job(world, clock, gateway).tick() == 1

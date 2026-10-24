@@ -5,10 +5,10 @@ release + the standalone blog visibility/scheduling writes behind publishing
 ports + the publishing ACL/owner:
 
 * the release command + service forward to the carousel release port and return
-  the updated entity (the byte-identical ``crud.py`` ``is_public`` write);
-* the ACL/owner is the sole carousel/blog ORM seam and reproduces the legacy
-  field writes exactly (``is_public=True`` / ``current_phase=published`` on the
-  entity + ORM row + the single commit; the blog publish/unpublish status writes;
+  the released entity;
+* the ACL/owner is the sole carousel/blog ORM seam: the release writes only
+  ``is_public=True`` / ``current_phase=published`` in one ``lock_version``-guarded
+  UPDATE + the single commit; the blog publish/unpublish status writes;
   the schedule delegation to the existing scheduled-publish service);
 * the ACL-backed port adapters delegate to the ACL;
 * the service raises a clear error when a write use case has no wired port.
@@ -27,6 +27,7 @@ import pytest
 
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
+from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.modules.publishing import (
@@ -135,40 +136,55 @@ class TestLegacyPublishingAcl:
     """Scenario: the ACL/owner reproduces the legacy writes byte-for-byte."""
 
     @pytest.mark.asyncio
-    async def test_release_public_writes_entity_orm_and_commits(self) -> None:
-        """The entity write mirrors the legacy crud sequence, then the ORM row is written
-        with a single commit.
-        """
+    async def test_release_public_writes_only_the_release_columns(self) -> None:
+        """A targeted, version-guarded UPDATE then a single commit; no entity save."""
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
-        updated = CarouselProject(topic="AI", audience="devs", niche="tech")
         repo = AsyncMock(spec=CarouselRepository)
-        repo.update_project.return_value = updated
-        model = MagicMock()
         session = AsyncMock()
-        session.get.return_value = model
+        session.scalar.return_value = 4
+        session.execute.return_value = MagicMock(rowcount=1)
         acl = LegacyPublishingAcl(session, repo)
 
         result = await acl.release_public(project, str(project.id))
 
+        assert result is project
         assert project.is_public is True
         assert project.current_phase == PHASE_PUBLISHED
-        repo.update_project.assert_awaited_once_with(project)
-        assert model.is_public is True
-        assert model.current_phase == PHASE_PUBLISHED
+        repo.update_project.assert_not_awaited()
+        statement = session.execute.await_args.args[0]
+        assert set(statement.compile().params) == {
+            "id_1",
+            "lock_version_1",
+            "is_public",
+            "current_phase",
+        }
         session.commit.assert_awaited_once()
-        assert result is updated
 
     @pytest.mark.asyncio
     async def test_release_public_absent_model_skips_commit(self) -> None:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
-        repo = AsyncMock(spec=CarouselRepository)
-        repo.update_project.return_value = project
         session = AsyncMock()
-        session.get.return_value = None
-        acl = LegacyPublishingAcl(session, repo)
+        session.scalar.return_value = None
+        acl = LegacyPublishingAcl(session, AsyncMock(spec=CarouselRepository))
 
         await acl.release_public(project, str(project.id))
 
+        session.execute.assert_not_awaited()
+        session.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_release_public_conflict_raises_without_commit(self) -> None:
+        project = CarouselProject(topic="AI", audience="devs", niche="tech")
+        session = AsyncMock()
+        session.scalar.return_value = 4
+        session.execute.return_value = MagicMock(rowcount=0)
+        acl = LegacyPublishingAcl(session, AsyncMock(spec=CarouselRepository))
+
+        with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
+            await acl.release_public(project, str(project.id))
+
+        assert project.is_public is False
+        assert session.execute.await_count == 3
         session.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -284,11 +300,10 @@ class TestBootstrapWiresAclPorts:
     @pytest.mark.asyncio
     async def test_bootstrap_with_acl_routes_release_through_acl(self) -> None:
         project = CarouselProject(topic="AI", audience="devs", niche="tech")
-        updated = CarouselProject(topic="AI", audience="devs", niche="tech")
         repo = AsyncMock(spec=CarouselRepository)
-        repo.update_project.return_value = updated
         session = AsyncMock()
-        session.get.return_value = MagicMock()
+        session.scalar.return_value = 1
+        session.execute.return_value = MagicMock(rowcount=1)
         acl = LegacyPublishingAcl(session, repo)
         adapters = PublishingAdapters(
             carousel_repository=repo,
@@ -301,7 +316,7 @@ class TestBootstrapWiresAclPorts:
             CarouselReleaseCommand(project=project, project_id=str(project.id)),
         )
 
-        assert result is updated
+        assert result is project
         session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio

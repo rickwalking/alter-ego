@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_CAPTION_EMPTY,
     ERR_INSTAGRAM_CONTAINER_FAILED,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
@@ -181,9 +182,11 @@ class InstagramPublishJob:
     async def publish_claimed(
         self, run: AutopilotRun, media: CarouselMedia
     ) -> ManualPublishOutcome:
-        """Owner route on a claimed ``publishing`` run. Reuses its container."""
+        """Owner route on a claimed ``publishing`` run; a blank caption fails it."""
         if can_step(run, self._deps.gateway):
             return await self._execute(run, media)
+        if not media.caption.strip():
+            return await self._fail(run, ERR_INSTAGRAM_CAPTION_EMPTY, None)
         atomic = await self._deps.gateway.publish_atomic(media)
         post_id = atomic.post_id
         if post_id is not None and should_record(run, atomic.status, post_id):

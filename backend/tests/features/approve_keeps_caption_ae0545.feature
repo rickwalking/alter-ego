@@ -4,13 +4,27 @@ Feature: Approving a carousel for publishing never loses its caption
   the carousel had an empty distribution home; loading the carousel overlaid that empty
   caption, and the public release saved it back over the real one.
 
-  Scenario: Publish now keeps the saved caption and posts it
-    Given a carousel at final review with a saved caption and a blog draft created from it
+  Scenario Outline: Publish now keeps the saved caption and posts it
+    Given a carousel at final review with a saved caption and <blog row>
     And its autopilot run is waiting for the owner
     When the owner taps "Publicar agora"
     Then the run is publishing, the carousel is approved for publishing and public
     And the carousel and its distribution home still hold the saved caption
     And the Instagram post carries that caption
+
+    Examples:
+      | blog row                                                     |
+      | a blog draft created from it                                 |
+      | a carousel-origin blog row stored with an empty distribution |
+
+  Scenario: The public release never overwrites a caption edited after the load
+    Given a carousel loaded for release with its saved caption
+    And the owner saves a new caption before the release commits
+    When the carousel is released publicly
+    Then only the public flag and the published phase are written
+    And the new caption is kept
+    And a release that loses a race with a concurrent version bump re-reads the version and tries again
+    And a release that keeps losing is refused: 409 version_conflict on the route, approve failed on Telegram
 
   Scenario: A blog draft with an empty distribution never wipes the caption
     Given a carousel with a saved caption whose blog row has an empty distribution
@@ -28,6 +42,7 @@ Feature: Approving a carousel for publishing never loses its caption
     When the publish worker runs
     Then the run fails with the reason instagram_caption_empty and nothing is sent to Instagram
     And the owner gets a Telegram notice with a retry button
+    And a run already claimed for publishing re-checks the caption before the first Instagram call
 
   Scenario: The manual publish refuses an empty caption
     When the owner publishes a carousel with an empty or blank caption
@@ -39,3 +54,4 @@ Feature: Approving a carousel for publishing never loses its caption
     When the autopilot runner reads the gate
     Then the workflow counts as parked and is re-driven instead of waiting forever
     And an approved carousel held for publishing is still never parked
+    And the runner asks the engine whether a node is still pending
