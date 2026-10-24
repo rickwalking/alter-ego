@@ -150,6 +150,13 @@ export interface CoverPromptFieldProps {
   onChange: (value: string) => void;
 }
 
+/** The suggestions of a cover prompt: the carousel topic and palette, and what a tap fills. */
+export interface CoverPromptSuggestionsProps {
+  topic: string;
+  palette: CoverIdeasPalette | null;
+  onPick: (prompt: string) => void;
+}
+
 /** The copy button of the cover-photo prompt. */
 export interface CoverPromptCopyProps {
   text: string;

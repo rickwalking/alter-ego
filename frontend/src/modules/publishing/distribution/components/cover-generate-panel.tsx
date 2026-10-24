@@ -72,6 +72,7 @@ function CoverGenerateConfirm({
 export function CoverGeneratePanel({
   projectId,
   photos,
+  renderPromptSuggestions,
 }: Readonly<CoverGeneratePanelProps>): React.ReactElement | null {
   const t = useTranslations("publish.coverPicker.generate");
   const form = useCoverGenerateForm(projectId, photos.length > 0);
@@ -94,7 +95,9 @@ export function CoverGeneratePanel({
         disabled={form.running}
         onToggle={form.toggle}
       />
-      <CoverPromptField value={form.prompt} onChange={form.setPrompt} />
+      <CoverPromptField value={form.prompt} onChange={form.setPrompt}>
+        {renderPromptSuggestions?.(form.setPrompt)}
+      </CoverPromptField>
       <CoverUsageLine usage={form.data ?? null} />
       <CoverGenerateAction
         enabled={form.canGenerate}

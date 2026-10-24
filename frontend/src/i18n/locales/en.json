@@ -1265,7 +1265,7 @@
       "generatedShort": "Grok",
       "generate": {
         "title": "Generate a cover with Grok",
-        "description": "Pick up to 3 of your photos and describe the scene. Grok makes a new cover with you; it stays in your private library and shows up above to pick.",
+        "description": "Pick up to 3 of your photos and describe the scene. A new cover is made from them; it stays in your private library and shows up above to pick.",
         "photosLegend": "Reference photos (up to {max})",
         "photoLabel": "Use library photo {number}",
         "promptLabel": "What should the cover look like?",

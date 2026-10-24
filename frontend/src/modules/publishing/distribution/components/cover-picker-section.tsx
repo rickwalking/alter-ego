@@ -88,6 +88,7 @@ function PickStatus({
 export function CoverPickerSection({
   projectId,
   onSwitched,
+  renderPromptSuggestions,
 }: Readonly<CoverPickerSectionProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const options = useCoverOptions(projectId);
@@ -139,7 +140,11 @@ export function CoverPickerSection({
           {t(failureKey(pick.error))}
         </p>
       )}
-      <CoverGeneratePanel projectId={projectId} photos={libraryPhotos} />
+      <CoverGeneratePanel
+        projectId={projectId}
+        photos={libraryPhotos}
+        renderPromptSuggestions={renderPromptSuggestions}
+      />
     </section>
   );
 }

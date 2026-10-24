@@ -8,7 +8,7 @@ Feature: Generate a slide-1 cover from library photos with Grok
     Given a finished Ponto de Vista carousel owned by the owner
     And the owner has library photos
 
-  Scenario: A confirmed generation sends the photo bytes and stores a private cover
+  Scenario: A confirmed generation links the photos and stores a private cover
     When the owner asks for a cover from one photo with a prompt and confirms
     Then the API answers 202 with a pending generation
     And the Grok Bot webhook receives an images.edit body, callback fields first, with links to the photos

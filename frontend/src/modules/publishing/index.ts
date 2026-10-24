@@ -123,6 +123,7 @@ export {
 } from "./distribution/hooks/use-edit-carousel-slides";
 
 export { PublishPanel } from "./distribution/components/publish-panel";
+export type { RenderPromptSuggestions } from "./distribution/components/types";
 export {
   useSaveCarouselCopy,
   type CarouselCopyResponse,
