@@ -29,7 +29,7 @@ from rag_backend.domain.constants.conversation import (
     ERR_CAROUSEL_CONVERSATION_REQUIRES_AUTH,
     ERR_CONVERSATION_OWNERSHIP_DENIED,
 )
-from rag_backend.domain.models import Conversation, User
+from rag_backend.domain.models import CarouselProject, Conversation, User
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models import (
     UserModel,
@@ -164,6 +164,18 @@ async def get_carousel_project_for_user(
     return project
 
 
+async def reload_carousel_project(
+    db: AsyncSession, project_id: UUID
+) -> CarouselProject | None:
+    """The project as stored now, ``None`` when missing (no access check).
+
+    Every column is re-read (``populate_existing``), so a row the session already
+    holds with expired attributes is never lazy-loaded.
+    """
+    row = await db.get(CarouselProjectModel, str(project_id), populate_existing=True)
+    return row.to_entity() if row is not None else None
+
+
 async def get_carousel_project_for_domain_user(
     db: AsyncSession,
     project_id: UUID,
@@ -203,6 +215,7 @@ __all__ = [
     "get_carousel_project_for_user",
     "get_carousel_project_for_workflow_user",
     "get_project_source_for_user",
+    "reload_carousel_project",
     "validate_carousel_conversation_metadata",
 ]
 

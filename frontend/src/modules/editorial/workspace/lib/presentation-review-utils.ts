@@ -39,6 +39,11 @@ export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
   "creator_website",
 ] as const;
 
+/**
+ * Structured item lists, in the order the grid and list layouts read them
+ * (``feature_grid`` and ``numbered_list`` render ``features``). Checklist
+ * slides use ``CHECKLIST_ITEM_LIST_KEYS``.
+ */
 export const PRESENTATION_STRUCTURED_ITEM_LIST_KEYS = [
   "summary_points",
   "features",

@@ -7,20 +7,39 @@ import {
   isBudgetExceeded,
   resolveBodyBudget,
 } from "@/modules/editorial/workspace/lib/presentation-copy-budgets";
+import {
+  CHECKLIST_ITEM_FIELD,
+  checklistItemEdit,
+  checklistItemText,
+  checklistLines,
+  DISPLAYED_ITEM_FIELDS,
+} from "@/modules/editorial/workspace/lib/checklist-items";
 import type {
   PresentationLocaleKey,
   SlideStructuredItemEdit,
+  StructuredItemField,
 } from "@/modules/editorial/workspace/lib/presentation-slide-resolution";
 import {
   fieldDomId,
   fieldErrorKey,
   structuredItemFieldPath,
 } from "@/modules/editorial/workspace/lib/slide-field-errors";
-import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
+import type {
+  LocalizedSlideReview,
+  SlideValidationViolation,
+} from "@/modules/editorial/workspace/types-ai";
 import { FlaggableTextarea } from "./slide-field-errors";
-import type { SlideCopyEditorProps, StructuredList } from "./types";
+import type {
+  ShownItems,
+  SlideCopyEditorProps,
+  StructuredItemFieldsProps,
+  StructuredList,
+} from "./types";
 
-export const ITEM_BODY_FIELD = "body";
+const ITEM_FIELD_LABEL_KEYS: Record<StructuredItemField, string> = {
+  title: "structuredItemTitleLabel",
+  body: "structuredItemLabel",
+};
 
 export function resolveStructuredList(
   presentation: Record<string, unknown>,
@@ -63,6 +82,101 @@ export function BudgetHint({
   );
 }
 
+function itemViolations(
+  props: SlideCopyEditorProps,
+  keys: readonly string[],
+): SlideValidationViolation[] | undefined {
+  const found = keys.flatMap((key) => props.fieldErrors?.get(key) ?? []);
+  return found.length > 0 ? found : undefined;
+}
+
+function StructuredItemFields({
+  slide,
+  locale,
+  list,
+  itemIndex,
+  position,
+  onChange,
+  props,
+}: Readonly<StructuredItemFieldsProps>): React.ReactElement {
+  const t = useTranslations("editorialWorkflow.review");
+  const item = list.items[itemIndex] ?? {};
+  const keyOf = (field: StructuredItemField): string =>
+    fieldErrorKey(
+      slide.slide_index,
+      locale,
+      structuredItemFieldPath(list.listKey, itemIndex, field),
+    );
+  const base = {
+    slideIndex: slide.slide_index,
+    locale,
+    listKey: list.listKey,
+    itemIndex,
+  };
+  const index = position + 1;
+  if (slide.checklist) {
+    const key = keyOf(CHECKLIST_ITEM_FIELD);
+    return (
+      <FlaggableTextarea
+        id={fieldDomId(props.idPrefix, key)}
+        violations={itemViolations(props, DISPLAYED_ITEM_FIELDS.map(keyOf))}
+        aria-label={t("checklistItemLabel", { index })}
+        value={checklistItemText(item)}
+        rows={2}
+        onChange={(event) =>
+          onChange(checklistItemEdit({ ...base, value: event.target.value }))
+        }
+      />
+    );
+  }
+  return (
+    <>
+      {DISPLAYED_ITEM_FIELDS.map((field) => (
+        <FlaggableTextarea
+          key={field}
+          id={fieldDomId(props.idPrefix, keyOf(field))}
+          violations={props.fieldErrors?.get(keyOf(field))}
+          aria-label={t(ITEM_FIELD_LABEL_KEYS[field], { index })}
+          value={typeof item[field] === "string" ? item[field] : ""}
+          rows={field === CHECKLIST_ITEM_FIELD ? 1 : 2}
+          onChange={(event) =>
+            onChange({ ...base, field, value: event.target.value })
+          }
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * The list a slide shows and the items of it the editor offers: on a
+ * checklist slide only the lines the template draws (blank items dropped, at
+ * most five), else every item.
+ */
+function shownItems(
+  slide: LocalizedSlideReview,
+  locale: PresentationLocaleKey,
+): ShownItems | null {
+  const presentation = slide[locale];
+  if (!slide.checklist) {
+    const list = resolveStructuredList(presentation);
+    return list && { list, itemIndexes: list.items.map((_item, i) => i) };
+  }
+  const shown = checklistLines(presentation);
+  if (shown === null) {
+    return null;
+  }
+  const items = presentation[shown.listKey] as Record<string, unknown>[];
+  return {
+    list: { listKey: shown.listKey, items },
+    itemIndexes: shown.lines.map((line) => line.itemIndex),
+  };
+}
+
+/**
+ * The slide's structured items, editing exactly what the slide shows: one
+ * line per drawn item on a checklist slide, else title and body.
+ */
 export function StructuredItemsEditor({
   slide,
   locale,
@@ -75,8 +189,8 @@ export function StructuredItemsEditor({
   props: SlideCopyEditorProps;
 }>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
-  const resolved = resolveStructuredList(slide[locale]);
-  if (resolved === null) {
+  const shown = shownItems(slide, locale);
+  if (shown === null) {
     return null;
   }
   return (
@@ -84,33 +198,18 @@ export function StructuredItemsEditor({
       <p className="font-medium text-[var(--color-text-muted)] text-xs">
         {t("structuredItems")}
       </p>
-      {resolved.items.map((item, itemIndex) => {
-        const key = fieldErrorKey(
-          slide.slide_index,
-          locale,
-          structuredItemFieldPath(resolved.listKey, itemIndex, ITEM_BODY_FIELD),
-        );
-        return (
-          <FlaggableTextarea
-            key={key}
-            id={fieldDomId(props.idPrefix, key)}
-            violations={props.fieldErrors?.get(key)}
-            aria-label={t("structuredItemLabel", { index: itemIndex + 1 })}
-            value={typeof item.body === "string" ? item.body : ""}
-            rows={2}
-            onChange={(event) =>
-              onChange({
-                slideIndex: slide.slide_index,
-                locale,
-                listKey: resolved.listKey,
-                itemIndex,
-                field: ITEM_BODY_FIELD,
-                value: event.target.value,
-              })
-            }
-          />
-        );
-      })}
+      {shown.itemIndexes.map((itemIndex, position) => (
+        <StructuredItemFields
+          key={`${shown.list.listKey}-${itemIndex}`}
+          slide={slide}
+          locale={locale}
+          list={shown.list}
+          itemIndex={itemIndex}
+          position={position}
+          onChange={onChange}
+          props={props}
+        />
+      ))}
     </div>
   );
 }

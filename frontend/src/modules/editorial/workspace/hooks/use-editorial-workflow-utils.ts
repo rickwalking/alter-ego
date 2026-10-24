@@ -240,6 +240,7 @@ const OPTIONAL_CARRIED_KEYS = [
   "workflow_status",
   "presentation_policy_version",
   "localized_slides",
+  "checklist_slide_indexes",
   "lock_version",
   "presentation_validation",
 ] as const satisfies readonly CarryKey[];

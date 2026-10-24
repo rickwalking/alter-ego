@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  checklistLines,
   editableStructuredListKey,
   isPresentationStructuredItemList,
   listPresentationStructuredItems,
@@ -45,13 +46,17 @@ export function structuredList(
 
 /**
  * The list an editable column edits — the slide type's own key (a
- * closing slide edits ``actions``), offered even when empty.
+ * closing slide edits ``actions``), offered even when empty. A checklist
+ * slide edits the list its template draws. Empty slots stay listed: adding a
+ * line starts from one, and the slide skips it until it has text.
  */
 export function editableList(
   presentation: Record<string, unknown>,
-  slideType: string,
+  slide: Pick<LocalizedSlideReview, "slide_type" | "checklist">,
 ): StructuredList | null {
-  const listKey = editableStructuredListKey(presentation, slideType);
+  const drawn = slide.checklist ? checklistLines(presentation) : null;
+  const listKey =
+    drawn?.listKey ?? editableStructuredListKey(presentation, slide.slide_type);
   if (!listKey) {
     return null;
   }
@@ -96,7 +101,7 @@ export function PresentationExtras({
       )
     : props.slide[props.localeKey];
   const list = context
-    ? editableList(presentation, props.slide.slide_type)
+    ? editableList(presentation, props.slide)
     : structuredList(presentation);
   const extras = listStructuredExtras(presentation);
   return (
