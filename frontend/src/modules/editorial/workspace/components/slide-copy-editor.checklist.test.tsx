@@ -121,4 +121,34 @@ describe("SlideCopyEditor structured items", () => {
       expect.objectContaining({ itemIndex: 1, value: "Nova" }),
     );
   });
+
+  // Scenario: Grid and list slides edit the title and the body
+  it("edits the features a grid slide renders when it also has actions", () => {
+    const grid: LocalizedSlideReview = {
+      slide_index: 4,
+      slide_type: "content",
+      presentation_pt: {
+        heading: "Grade",
+        features: [{ title: "Recurso", body: "Detalhe" }],
+        actions: [{ title: "Ação", body: "Fora do slide" }],
+      },
+      presentation_en: { heading: "Grid" },
+    };
+    const onStructuredItemChange =
+      vi.fn<(edit: SlideStructuredItemEdit) => void>();
+    const { container } = render(
+      createElement(SlideCopyEditor, {
+        slides: [grid],
+        idPrefix: "publish-edit",
+        onCopyChange: vi.fn(),
+        onStructuredItemChange,
+      }),
+    );
+    const titles = fields(container, "structuredItemTitleLabel");
+    expect(titles.map((f) => f.value)).toEqual(["Recurso"]);
+    fireEvent.change(titles[0]!, { target: { value: "Novo recurso" } });
+    expect(onStructuredItemChange).toHaveBeenCalledWith(
+      expect.objectContaining({ listKey: "features", itemIndex: 0 }),
+    );
+  });
 });

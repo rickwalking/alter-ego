@@ -2,7 +2,16 @@ import type {
   SlideStructuredItemEdit,
   StructuredItemField,
 } from "./presentation-slide-resolution";
-import { PRESENTATION_STRUCTURED_ITEM_LIST_KEYS } from "./presentation-review-utils";
+
+/**
+ * The lists a checklist slide reads, in its template's order (the backend
+ * ``save_checklist`` item keys): the first list with a line is drawn.
+ */
+export const CHECKLIST_ITEM_LIST_KEYS = [
+  "summary_points",
+  "actions",
+  "features",
+] as const;
 
 /** Lines a checklist slide shows at most (the template's ``SAVE_CHECKLIST_MAX_ITEMS``). */
 export const CHECKLIST_MAX_ITEMS = 5;
@@ -73,7 +82,7 @@ function linesOf(items: unknown[]): ChecklistLine[] {
 export function checklistLines(
   presentation: Record<string, unknown>,
 ): ChecklistLines | null {
-  for (const listKey of PRESENTATION_STRUCTURED_ITEM_LIST_KEYS) {
+  for (const listKey of CHECKLIST_ITEM_LIST_KEYS) {
     const value = presentation[listKey];
     const lines = Array.isArray(value) ? linesOf(value) : [];
     if (lines.length > 0) {

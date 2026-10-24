@@ -40,14 +40,14 @@ export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
 ] as const;
 
 /**
- * Structured item lists, in the order the slide templates read them (the
- * backend checklist template's ``CHECKLIST_ITEM_KEYS``): the first list with
- * items is the one a slide shows.
+ * Structured item lists, in the order the grid and list layouts read them
+ * (``feature_grid`` and ``numbered_list`` render ``features``). Checklist
+ * slides use ``CHECKLIST_ITEM_LIST_KEYS``.
  */
 export const PRESENTATION_STRUCTURED_ITEM_LIST_KEYS = [
   "summary_points",
-  "actions",
   "features",
+  "actions",
 ] as const;
 
 export interface PresentationStructuredItem {

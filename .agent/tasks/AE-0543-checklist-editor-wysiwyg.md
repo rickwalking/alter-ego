@@ -35,8 +35,8 @@ Pedro: WYSIWYG. For checklist items the editor edits exactly the text the slide 
 - Frontend: `resolveLocalizedSlides` marks those slides `checklist`. On a checklist slide, the publish-page editor
   and the content review show one "Checklist line" per item with the displayed text (title, else body); an edit
   writes `title` and empties `body` in the same update. Other slides show the title and the body, both editable.
-- The editor offers what the template draws: list order summary_points, actions, features on both sides; on a
-  checklist slide the publish-page editor offers the first list with a line, blank items dropped, at most five lines;
+- The editor offers what the template draws: on a checklist slide the list order is the checklist template's
+  (summary_points, actions, features; grid and list slides keep summary_points, features, actions), and the publish-page editor offers the first list with a line, blank items dropped, at most five lines;
   the content review edits that list and keeps empty slots (how a line is added).
 - `POST .../workflow/start` computes `checklist_slide_indexes` too, so a start response never wipes the list.
 
@@ -72,6 +72,12 @@ Pedro: WYSIWYG. For checklist items the editor edits exactly the text the slide 
 None.
 
 ## Progress Log
+
+### 2026-10-24 18:30
+
+Review of #276 (should-fix): the list order change is now checklist-only (`CHECKLIST_ITEM_LIST_KEYS`, checked against
+the backend template source); grid and list slides keep summary_points, features, actions, with a test for a grid
+slide that has both features and actions.
 
 ### 2026-10-24 14:00
 
