@@ -85,7 +85,7 @@ class TestAsyncEditorialResume:
         assert payload["accepted"] is True
         assert payload["phase_status"] == PHASE_STATUS_IN_PROGRESS
 
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         state = await wait_for_workflow_state(
             client,
             project_id,
@@ -197,7 +197,7 @@ class TestAsyncEditorialResume:
                 headers=auth_header(editor),
             )
             assert response.status_code == 202
-            await asyncio.wait_for(drain_background_tasks(), timeout=5.0)
+            await asyncio.wait_for(drain_background_tasks(client), timeout=5.0)
             await wait_for_workflow_state(
                 client,
                 project_id,
@@ -247,7 +247,7 @@ class TestAsyncEditorialResume:
                 headers=auth_header(editor),
             )
             assert response.status_code == 202
-            await drain_background_tasks()
+            await drain_background_tasks(client)
 
         events = await collect_hub_events_during(
             project_id,
@@ -300,7 +300,7 @@ class TestAsyncEditorialResume:
                 headers=auth_header(editor),
             )
             assert response.status_code == 202
-            await drain_background_tasks()
+            await drain_background_tasks(client)
 
         events = await collect_hub_events_during(
             project_id,

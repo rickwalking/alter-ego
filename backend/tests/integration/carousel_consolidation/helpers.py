@@ -21,6 +21,7 @@ from rag_backend.domain.models import (
     User,
     UserRole,
 )
+from tests.integration.generation_queue_support import run_queued_generation
 
 TEST_SECRET = "test-secret-for-carousel-consolidation-tests!!"
 
@@ -432,18 +433,9 @@ async def set_project_phase_progress(
             await session.commit()
 
 
-async def drain_background_tasks() -> None:
-    """Allow fire-and-forget workflow resume tasks to finish in tests."""
-    for _ in range(30):
-        pending = [
-            task
-            for task in asyncio.all_tasks()
-            if task.get_name().startswith("workflow-resume-")
-        ]
-        if not pending:
-            return
-        await asyncio.sleep(0.05)
-    await asyncio.sleep(0.1)
+async def drain_background_tasks(client: AsyncClient) -> None:
+    """Run the queued workflow resumes the way the generation worker does."""
+    await run_queued_generation(client.app)
 
 
 async def wait_for_workflow_state(

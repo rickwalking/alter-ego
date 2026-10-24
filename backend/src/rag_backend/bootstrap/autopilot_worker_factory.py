@@ -18,14 +18,12 @@ from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.modules.autopilot import (
-    AutopilotRunnerTickAdapter,
     AutopilotTickConfig,
     CredentialRefreshTickAdapter,
     InstagramPublishTickAdapter,
     InstagramTickConfig,
     TelegramNotifyTickAdapter,
     TelegramTickConfig,
-    build_autopilot_runner_tick,
     build_credential_refresh_tick,
     build_instagram_publish_tick,
     build_telegram_notify_tick,
@@ -42,7 +40,6 @@ class AutopilotWorkerSteps:
 
     instagram_publish: InstagramPublishTickAdapter | None
     credential_refresh: CredentialRefreshTickAdapter | None
-    autopilot_runner: AutopilotRunnerTickAdapter
     telegram_notify: TelegramNotifyTickAdapter
 
 
@@ -78,23 +75,6 @@ def build_autopilot_worker_steps(
     return AutopilotWorkerSteps(
         instagram_publish=instagram_publish_step(settings),
         credential_refresh=credential_refresh_step(settings),
-        autopilot_runner=build_autopilot_runner_tick(
-            AutopilotTickConfig(
-                owner_user_id=settings.autopilot_owner_user_id,
-                persona_id=settings.autopilot_persona_id,
-                autofix_attempts=settings.autopilot_autofix_attempts,
-                autofix_escalation_attempts=(
-                    settings.autopilot_autofix_escalation_attempts
-                ),
-                persona_unscored_max_ticks=(
-                    settings.autopilot_persona_unscored_max_ticks
-                ),
-                engine_factory=engine_factory,
-                stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
-                start_spacing_minutes=settings.autopilot_start_spacing_minutes,
-                notifier_configured=notifier_is_configured(token, chat_id),
-            )
-        ),
         telegram_notify=build_telegram_notify_tick(
             TelegramTickConfig(
                 token=token,
@@ -102,6 +82,26 @@ def build_autopilot_worker_steps(
                 web_base_url=settings.carousel_public_base_url,
                 engine_factory=engine_factory,
             )
+        ),
+    )
+
+
+def autopilot_tick_config(
+    settings: Settings, engine_factory: EngineFactory
+) -> AutopilotTickConfig:
+    """The runner wiring, shared by the web tick and the generation worker."""
+    token = settings.telegram_bot_token.get_secret_value()
+    return AutopilotTickConfig(
+        owner_user_id=settings.autopilot_owner_user_id,
+        persona_id=settings.autopilot_persona_id,
+        autofix_attempts=settings.autopilot_autofix_attempts,
+        autofix_escalation_attempts=settings.autopilot_autofix_escalation_attempts,
+        persona_unscored_max_ticks=settings.autopilot_persona_unscored_max_ticks,
+        engine_factory=engine_factory,
+        stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
+        start_spacing_minutes=settings.autopilot_start_spacing_minutes,
+        notifier_configured=notifier_is_configured(
+            token, settings.telegram_owner_chat_id
         ),
     )
 

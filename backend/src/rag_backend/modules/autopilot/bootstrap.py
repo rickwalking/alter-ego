@@ -279,7 +279,7 @@ class AutopilotRunnerTickAdapter:
 
     async def tick(self, db: AsyncSession) -> int:
         """Advance at most one run. Returns 1 when a run was touched."""
-        return await AutopilotRunner(_runner_deps(db, self._config)).tick()
+        return await AutopilotRunner(runner_dependencies(db, self._config)).tick()
 
 
 def build_autopilot_runner_tick(
@@ -289,10 +289,11 @@ def build_autopilot_runner_tick(
     return AutopilotRunnerTickAdapter(config)
 
 
-def _runner_deps(
+def runner_dependencies(
     session: AsyncSession,
     config: AutopilotTickConfig,
 ) -> RunnerDependencies:
+    """The runner's ports on ``session`` (the worker tick and the queue bridge)."""
     from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
         AutofixerConfig,
         InProcessContentAutofixer,

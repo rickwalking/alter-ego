@@ -21,6 +21,8 @@ Everything else that would otherwise be a magic string lives here.
 - Runner phase ids match the editorial workflow.
 """
 
+from uuid import UUID
+
 MODULE_NAME = "autopilot"
 
 TABLE_AUTOPILOT_RUNS = "autopilot_runs"
@@ -229,6 +231,7 @@ DEFAULT_DAILY_CAP = 1
 NO_QUEUE_SLOTS = 0
 
 REASON_SOURCE_NOT_IN_SIGNALS = "source_not_in_signals"
+AUTOPILOT_PROJECT_NAMESPACE = UUID("0f5c8f62-7a52-4a43-9d3c-2c6a2a1f4e11")
 REASON_DUPLICATE_TOPIC = "duplicate_topic"
 REASON_DAILY_CAP_REACHED = "daily_cap_reached"
 REASON_URL_IN_TEXT = "url_in_text"

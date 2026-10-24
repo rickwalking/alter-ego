@@ -31,6 +31,8 @@ services:
     env_file: ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://rag_user:rag_password@postgres:5432/rag_db
+      CAROUSEL_CHECKPOINT_BACKEND: postgres
+      CAROUSEL_CHECKPOINT_POSTGRES_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-http://localhost:3001}
@@ -47,6 +49,47 @@ services:
         limits:
           memory: 1G
           cpus: "2.0"
+    security_opt:
+      - no-new-privileges:true
+
+  generation-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      - pgq
+      - run
+      - rag_backend.worker.main:create_pgqueuer
+      - --heartbeat-timeout
+      - "300"
+      - --batch-size
+      - "1"
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rag_user:rag_password@postgres:5432/rag_db
+      CAROUSEL_CHECKPOINT_BACKEND: postgres
+      CAROUSEL_CHECKPOINT_POSTGRES_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - carousel_output:/app/output
+    healthcheck:
+      test: ["CMD", "python", "-m", "rag_backend.worker.healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    stop_grace_period: 300s
+    deploy:
+      resources:
+        limits:
+          memory: 1344M
+          cpus: "1.0"
     security_opt:
       - no-new-privileges:true
 

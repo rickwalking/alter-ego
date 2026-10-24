@@ -9,10 +9,11 @@ the configured size as PNG. Every failure raises ``ImageBridgeJobError``, a
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import structlog
 
@@ -29,6 +30,8 @@ from rag_backend.modules.image_bridge.constants import (
     ERR_JOB_MISSING,
     ERR_JOB_NO_IMAGE,
     ERROR_CODE_WEBHOOK_FAILED,
+    JOB_ID_NAMESPACE,
+    LOG_JOB_REUSED,
     LOG_JOB_STARTED,
     LOG_JOB_SUCCEEDED,
     LOG_WEBHOOK_FAILED,
@@ -103,17 +106,28 @@ class GrokBotImageService(ImageGenerationService):
     async def generate_image(self, prompt: str, output_path: str) -> str:
         """Run one bridge job and write its normalized image to ``output_path``."""
         async with self._slots:
-            job = await self._start(prompt)
+            job = await self._start(prompt, output_path)
             image = await self._wait(job)
         request = NormalizeRequest(image, self._size.width, self._size.height)
         png = await asyncio.to_thread(self._deps.codec.normalize, request)
         await asyncio.to_thread(_write_file, output_path, png)
         return output_path
 
-    async def _start(self, prompt: str) -> ImageBridgeJob:
+    async def _start(self, prompt: str, output_path: str) -> ImageBridgeJob:
+        """Start a job, or wait on the one a previous attempt already started.
+
+        The job id is derived from the image's path and prompt, so a phase re-run
+        after its worker died finds the job still pending for the same image and
+        waits for it instead of asking the Grok Bot (or paying the fallback) again.
+        """
         now = self._deps.clock.now()
         await self._deps.repository.sweep(now)
-        started = self._new_job()
+        key = image_job_id(output_path, prompt)
+        existing = await self._deps.repository.get(key)
+        if existing is not None and _still_pending(existing, now):
+            logger.info(LOG_JOB_REUSED, bridge_job_id=str(existing.id))
+            return existing
+        started = self._new_job(key if existing is None else uuid4())
         await self._deps.repository.create(started.job)
         try:
             await self._deps.webhook.deliver(self._webhook_request(started, prompt))
@@ -123,11 +137,11 @@ class GrokBotImageService(ImageGenerationService):
         logger.info(LOG_JOB_STARTED, bridge_job_id=str(started.job.id))
         return started.job
 
-    def _new_job(self) -> _StartedJob:
+    def _new_job(self, job_id: UUID) -> _StartedJob:
         now = self._deps.clock.now()
         token = new_callback_token()
         job = ImageBridgeJob(
-            id=uuid4(),
+            id=job_id,
             status=ImageBridgeJobStatus.PENDING,
             size=self._config.size,
             token_sha256=token_digest(token),
@@ -206,6 +220,16 @@ class GrokBotImageService(ImageGenerationService):
         return ImageBridgeJobError(
             ERR_JOB_EXPIRED.format(job_id=job_id, seconds=self._config.timeout_seconds)
         )
+
+
+def image_job_id(output_path: str, prompt: str) -> UUID:
+    """The same job id for the same image path and prompt."""
+    digest = hashlib.sha256(prompt.encode()).hexdigest()
+    return uuid5(JOB_ID_NAMESPACE, f"{output_path}|{digest}")
+
+
+def _still_pending(job: ImageBridgeJob, now: datetime) -> bool:
+    return job.status is ImageBridgeJobStatus.PENDING and not job.is_overdue(now)
 
 
 def _write_file(output_path: str, data: bytes) -> None:

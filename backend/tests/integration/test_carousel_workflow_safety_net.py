@@ -345,15 +345,6 @@ def _patch_service(
     return stub
 
 
-def _patch_no_background_resume(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stub the fire-and-forget background resume so no real workflow runs."""
-    from rag_backend.api.routes.carousels import editorial_workflow as wf_module
-
-    monkeypatch.setattr(
-        wf_module, "schedule_background_resume", lambda _service, _params: None
-    )
-
-
 def _parse_sse(text: str) -> list[tuple[int | None, str, dict[str, object]]]:
     """Parse raw SSE text into ``(id, event, data)`` triples.
 
@@ -668,7 +659,6 @@ class TestWorkflowResumeBehavior:
         """Scenario: Workflow resume accepts an approve and returns 202."""
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -688,7 +678,6 @@ class TestWorkflowResumeBehavior:
         """Scenario: Workflow resume rejects an unsupported action."""
         project_id = await wf_env.seed_project(wf_env.editor)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -703,7 +692,6 @@ class TestWorkflowResumeBehavior:
         """Scenario: Workflow resume requires feedback for a revise action."""
         project_id = await wf_env.seed_project(wf_env.editor)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -718,7 +706,6 @@ class TestWorkflowResumeBehavior:
         """Scenario: Workflow resume rejects a stale expected version."""
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -740,7 +727,6 @@ class TestWorkflowResumeBehavior:
         """
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             first = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -926,7 +912,6 @@ class TestWorkflowSnapshots:
         """Golden: POST /workflow/resume (202)."""
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",
@@ -944,7 +929,6 @@ class TestWorkflowSnapshots:
         """Golden: POST /workflow/resume (409 stale version)."""
         project_id = await wf_env.seed_project(wf_env.editor, lock_version=1)
         _patch_service(monkeypatch, project_id, has_state=True)
-        _patch_no_background_resume(monkeypatch)
         async with wf_env.client_for(wf_env.editor) as client:
             resp = await client.post(
                 f"/api/carousels/{project_id}/workflow/resume",

@@ -20,11 +20,15 @@ Feature: Every long-running production container has a memory cap (AE-0521)
     When the services with a memory reservation are read
     Then each reservation is smaller than the service limit
 
-  Scenario: The backend limit covers the measured HD export peak
-    Given the backend runs the carousel HD exports in process
+  Scenario: The generation worker limit covers the measured HD export peak
+    Given the generation worker runs the carousel HD exports
     When its memory limit is read
-    Then it is at least the measured HD run peak plus 30 percent
-    And the backend reserves memory for the website
+    Then it is at least the measured HD run peak plus 30 percent, with no swap
+
+  Scenario: The backend is capped for the website alone
+    Given carousel generation runs in the generation worker
+    When the backend memory limit is read
+    Then it is 512 MiB and the backend reserves memory for the website
 
   Scenario: Langfuse web keeps its Node heap below its container limit
     Given the production compose file

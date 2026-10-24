@@ -138,9 +138,102 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1344M
+          memory: 512M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  generation-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command:
+      - pgq
+      - run
+      - rag_backend.worker.main:create_pgqueuer
+      - --heartbeat-timeout
+      - "300"
+      - --batch-size
+      - "1"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@postgres:5432/${POSTGRES_DB:-rag_db}
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      LLM_MODEL_REASONING: ${LLM_MODEL_REASONING:-deepseek-v4-pro}
+      LLM_MODEL_FAST: ${LLM_MODEL_FAST:-deepseek-v4.1-flash}
+      LLM_MODEL_FALLBACK: ${LLM_MODEL_FALLBACK:-qwen3.8-flash}
+      LLM_MODEL_FALLBACK_REASONING: ${LLM_MODEL_FALLBACK_REASONING:-qwen3.8-max}
+      CONTENT_DRAFT_CONCURRENCY: ${CONTENT_DRAFT_CONCURRENCY:-4}
+      SECRET_KEY: generation-worker-signs-no-tokens
+      ANON_SECRET_KEY: generation-worker-signs-no-tokens
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      REDIS_URL: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      DEBUG: "false"
+      CAROUSEL_CHECKPOINT_BACKEND: ${CAROUSEL_CHECKPOINT_BACKEND:-memory}
+      CAROUSEL_CHECKPOINT_POSTGRES_URL: ${CAROUSEL_CHECKPOINT_POSTGRES_URL:-}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
+      CAROUSEL_PUBLIC_BASE_URL: ${CAROUSEL_PUBLIC_BASE_URL:-https://marinssolutions.com}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
+      AUTOPILOT_ENABLED: ${AUTOPILOT_ENABLED:-false}
+      AUTOPILOT_OWNER_USER_ID: ${AUTOPILOT_OWNER_USER_ID:-}
+      AUTOPILOT_PERSONA_ID: ${AUTOPILOT_PERSONA_ID:-}
+      AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS: ${AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS:-2}
+      IMAGE_BRIDGE_ENABLED: ${IMAGE_BRIDGE_ENABLED:-false}
+      IMAGE_BRIDGE_FALLBACK_ENABLED: ${IMAGE_BRIDGE_FALLBACK_ENABLED:-true}
+      IMAGE_BRIDGE_TIMEOUT_SECONDS: ${IMAGE_BRIDGE_TIMEOUT_SECONDS:-600}
+      IMAGE_BRIDGE_MAX_CONCURRENCY: ${IMAGE_BRIDGE_MAX_CONCURRENCY:-1}
+      IMAGE_BRIDGE_PUBLIC_BASE_URL: ${IMAGE_BRIDGE_PUBLIC_BASE_URL:-https://marinssolutions.com}
+      GROKBOT_IMAGE_WEBHOOK_URL: ${GROKBOT_IMAGE_WEBHOOK_URL:-}
+      GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER: ${GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER:-Authorization}
+      GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE: ${GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE:-}
+      LLM_MODEL_QUEUE_FAST: ${LLM_MODEL_QUEUE_FAST:-}
+      LLM_MODEL_QUEUE_REASONING: ${LLM_MODEL_QUEUE_REASONING:-}
+      OPENCODE_SIDECAR_URL: ${OPENCODE_SIDECAR_URL:-}
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
+      TELEGRAM_ALERTS_BOT_TOKEN: ${TELEGRAM_ALERTS_BOT_TOKEN:-}
+      TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
+      GENERATION_WORKER_CONCURRENCY: ${GENERATION_WORKER_CONCURRENCY:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - carousel_output:/app/output
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1001,gid=1001,mode=0700,size=512m
+      - /app/.cache:uid=1001,gid=1001,mode=0700,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1344m
+    memswap_limit: 1344m
+    cpus: 1.0
+    cpu_shares: 256
+    shm_size: 256m
+    pids_limit: 512
+    stop_grace_period: 300s
+    healthcheck:
+      test: ["CMD", "python", "-m", "rag_backend.worker.healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:

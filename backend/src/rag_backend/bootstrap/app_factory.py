@@ -69,13 +69,12 @@ from rag_backend.bootstrap.autopilot_worker_factory import (
     build_autopilot_worker_steps,
 )
 from rag_backend.bootstrap.blog_generation import build_blog_generation_reaper
-from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
-    build_drift_reconciler,
+from rag_backend.bootstrap.generation_queue_web import (
+    check_generation_queue,
+    start_progress_relay,
+    start_queue_monitor,
 )
-from rag_backend.bootstrap.carousel_republish_sweeper_factory import (
-    build_republish_sweeper,
-)
-from rag_backend.bootstrap.carousel_run_reaper_factory import build_stale_run_reaper
+from rag_backend.bootstrap.observability import init_observability
 from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.domain.clock import utc_now
 from rag_backend.domain.constants.chat_stream import DETACHED_TURN_DRAIN_SECONDS
@@ -88,13 +87,8 @@ from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.database.workflow_timeout_repository import (
     WorkflowTimeoutRepository,
 )
-from rag_backend.infrastructure.langfuse_client import init_langfuse
-from rag_backend.infrastructure.logging import get_logger, setup_logging
-from rag_backend.infrastructure.monitoring import init_langsmith
-from rag_backend.infrastructure.telemetry.opentelemetry import (
-    init_opentelemetry,
-    instrument_fastapi,
-)
+from rag_backend.infrastructure.logging import get_logger
+from rag_backend.infrastructure.telemetry.opentelemetry import instrument_fastapi
 from rag_backend.modules.autopilot import prepare_instagram_credentials
 from rag_backend.modules.autopilot.api.insights import (
     router as instagram_insights_router,
@@ -123,24 +117,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     so its DB connection closes on shutdown; ``settings.carousel_checkpoint_backend``
     selects sqlite (dev), postgres (prod), memory (ephemeral) or disabled (no resume).
     On shutdown, in-flight blog runs mark their rows recoverable-failed.
+
+    Carousel generation runs in the generation worker (ADR-0026): this loop keeps
+    only the light steps, and the progress relay brings the worker's SSE events in.
     """
     settings = get_settings()
-    setup_logging(debug=settings.debug)
-    init_langsmith(settings)
-    init_opentelemetry(
-        service_name=settings.otel_service_name,
-        exporter_endpoint=settings.otel_exporter_endpoint,
-        enabled=settings.otel_enabled,
-    )
-    langfuse_handler = init_langfuse(
-        settings.langfuse_public_key,
-        settings.langfuse_secret_key.get_secret_value()
-        if settings.langfuse_secret_key
-        else "",
-        settings.langfuse_host,
-    )
-    if langfuse_handler:
-        logger.info("langfuse_initialized", host=settings.langfuse_host)
+    init_observability(settings)
 
     logger.info("application_startup", version=settings.app_version)
 
@@ -167,25 +149,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 worker_stop,
                 WorkflowWorkerServices(
                     auto_rejector_factory=WorkflowTimeoutRepository,
-                    stale_run_reaper=build_stale_run_reaper(
-                        settings,
-                        app.state.carousel_checkpointer,
-                    ),
-                    drift_reconciler=build_drift_reconciler(
-                        app.state.carousel_checkpointer,
-                    ),
-                    republish_sweeper=build_republish_sweeper(settings),
                     blog_generation_reaper=build_blog_generation_reaper(settings),
                     carousel_auto_archiver=CarouselIdleArchiver(
                         settings.workflow_run_heartbeat_stale_seconds
                     ),
                     instagram_publish=autopilot.instagram_publish,
                     credential_refresh=autopilot.credential_refresh,
-                    autopilot_runner=autopilot.autopilot_runner,
                     telegram_notify=autopilot.telegram_notify,
                 ),
             )
         )
+        relay_task = start_progress_relay(engine_factory, worker_stop)
+        monitor_task = start_queue_monitor(settings, worker_stop)
         app.state.workflow_worker_stop = worker_stop
         app.state.workflow_worker_task = worker_task
 
@@ -193,6 +168,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         worker_stop.set()
         await worker_task
+        await relay_task
+        await monitor_task
         await cancel_blog_generation_tasks()
 
     logger.info("application_shutdown")
@@ -341,6 +318,7 @@ def create_app() -> FastAPI:
     async def readiness_check() -> HealthCheckResponse:
         checks: dict[str, dict[str, str | int]] = {}
         await _check_database(checks)
+        await check_generation_queue(checks)
         _check_pinecone(checks, settings)
         await _check_openai(checks, settings)
 
