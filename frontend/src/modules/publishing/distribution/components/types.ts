@@ -134,8 +134,8 @@ export interface CoverGenerateConfirmProps {
 
 /** The running or failed state of the latest generation. */
 export interface CoverGenerationStatusProps {
-  status: CoverGeneration["status"] | null;
-  errorCode: string | null;
+  /** The newest generation (its status, failure code and the Grok Bot's message), or null. */
+  generation: CoverGeneration | null;
   canRetry: boolean;
   onRetry: () => void;
 }

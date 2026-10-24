@@ -3797,6 +3797,18 @@
             ],
             "title": "Error Code"
           },
+          "error_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Grok Bot's own failure message, when it sent one",
+            "title": "Error Detail"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",

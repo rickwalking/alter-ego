@@ -250,7 +250,9 @@ class GrokBotImageService(ImageGenerationService):
             return await self._take(job.id)
         if job.status is ImageBridgeJobStatus.FAILED:
             raise ImageBridgeJobError(
-                ERR_JOB_FAILED.format(job_id=job.id, code=job.error_code)
+                ERR_JOB_FAILED.format(
+                    job_id=job.id, code=job.error_code, message=job.error_message or ""
+                )
             )
         if job.status is ImageBridgeJobStatus.EXPIRED:
             raise self._expired(job.id)

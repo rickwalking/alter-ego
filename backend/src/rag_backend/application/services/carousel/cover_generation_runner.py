@@ -27,6 +27,7 @@ from rag_backend.application.services.carousel.cover_generation import (
     log_generation,
 )
 from rag_backend.domain.constants.cover_generation import (
+    ERROR_DETAIL_LENGTH,
     FAILURE_BRIDGE,
     FAILURE_INVALID_IMAGE,
     FAILURE_NOT_PENDING,
@@ -111,8 +112,8 @@ class CoverGenerationRunner:
         except CoverJobCancelledError:
             log_generation(generation, LOG_COVER_GENERATION_CANCELLED)
             return CoverGenerationStatus.FAILED
-        except RuntimeError:
-            return await self._fail(generation, FAILURE_BRIDGE)
+        except RuntimeError as exc:
+            return await self._fail(generation, FAILURE_BRIDGE, str(exc))
         try:
             asset_id = await self._deps.results.store(generation.owner_id, image)
         except CoverAssetError:
@@ -146,14 +147,21 @@ class CoverGenerationRunner:
         return CoverGenerationStatus.SUCCEEDED
 
     async def _fail(
-        self, generation: CoverGeneration, code: str
+        self, generation: CoverGeneration, code: str, detail: str = ""
     ) -> CoverGenerationStatus:
+        """Settle ``failed``; ``detail`` is the Grok Bot's own reason, when any."""
+        reason = detail[:ERROR_DETAIL_LENGTH] or None
         outcome = CoverGenerationOutcome(
-            generation_id=generation.id, at=self._deps.now(), error_code=code
+            generation_id=generation.id,
+            at=self._deps.now(),
+            error_code=code,
+            error_detail=reason,
         )
         await self._deps.store.settle(outcome)
         await self._deps.store.commit()
-        log_generation(generation, LOG_COVER_GENERATION_FAILED, error_code=code)
+        log_generation(
+            generation, LOG_COVER_GENERATION_FAILED, error_code=code, reason=reason
+        )
         return CoverGenerationStatus.FAILED
 
 

@@ -107,7 +107,7 @@ ERR_INVALID_SIZE = "size {size!r} is not WIDTHxHEIGHT"
 
 ERR_WEBHOOK_STATUS = "Grok Bot webhook answered HTTP {status}"
 ERR_WEBHOOK_TRANSPORT = "Grok Bot webhook request failed: {reason}"
-ERR_JOB_FAILED = "Grok Bot image job {job_id} failed: {code}"
+ERR_JOB_FAILED = "Grok Bot image job {job_id} failed: {code}: {message}"
 ERR_JOB_CANCELLED = "the cover generation is no longer pending; nothing was sent"
 ERR_JOB_EXPIRED = "Grok Bot image job {job_id} expired after {seconds}s"
 ERR_JOB_MISSING = "Grok Bot image job {job_id} disappeared"

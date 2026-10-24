@@ -239,6 +239,27 @@ describe("CoverGeneratePanel", () => {
     );
   });
 
+  /** Scenario: A failed generation can be retried */
+  it("shows the Grok Bot's own message under the reason", async () => {
+    routeApi([
+      list({
+        generations: [
+          {
+            ...generation("failed", "cover_generation_bridge_failed"),
+            error_detail: "content_policy: photos cannot be edited",
+          },
+        ],
+      }),
+    ]);
+    renderPanel();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("errors.bridge");
+    expect(alert.textContent).toContain(
+      "content_policy: photos cannot be edited",
+    );
+  });
+
   /** Scenario: The action needs a photo and a prompt */
   it("needs a photo and a prompt of three characters", async () => {
     routeApi([list()]);

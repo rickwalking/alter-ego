@@ -53,6 +53,9 @@ class CoverGenerationResponse(BaseModel):
     id: UUID
     status: str = Field(..., description="pending | succeeded | failed")
     error_code: str | None = None
+    error_detail: str | None = Field(
+        None, description="The Grok Bot's own failure message, when it sent one"
+    )
     asset_id: UUID | None = None
     created_at: datetime
     completed_at: datetime | None = None

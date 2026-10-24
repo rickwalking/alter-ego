@@ -18,6 +18,7 @@ export const coverGenerationSchema = z.object({
     GENERATION_STATUS.FAILED,
   ]),
   error_code: z.string().nullable().optional(),
+  error_detail: z.string().nullable().optional(),
   asset_id: z.string().nullable().optional(),
   created_at: z.string(),
   completed_at: z.string().nullable().optional(),

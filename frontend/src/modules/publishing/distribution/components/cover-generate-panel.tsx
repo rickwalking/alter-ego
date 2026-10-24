@@ -103,8 +103,7 @@ export function CoverGeneratePanel({
       />
       <div className="mt-2" aria-live="polite">
         <CoverGenerationStatus
-          status={form.latest?.status ?? null}
-          errorCode={form.latest?.error_code ?? null}
+          generation={form.latest}
           canRetry={form.canGenerate}
           onRetry={form.ask}
         />

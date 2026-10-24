@@ -62,6 +62,9 @@ class TestFailures:
         ).json()
         assert body["generations"][0]["status"] == "failed"
         assert body["generations"][0]["error_code"] == "cover_generation_bridge_failed"
+        assert body["generations"][0]["error_detail"] == (
+            "Grok Bot image job x expired after 600s"
+        )
         assert body["generations"][0]["asset_id"] is None
         assert body["carousel_used"] == 0
         assert body["month_used"] == 0

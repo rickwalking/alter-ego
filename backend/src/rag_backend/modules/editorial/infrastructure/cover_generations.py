@@ -104,6 +104,7 @@ class SqlCoverGenerationRepository:
                 status=status,
                 completed_at=outcome.at,
                 error_code=outcome.error_code,
+                error_detail=outcome.error_detail,
                 result_asset_id=(
                     str(outcome.result_asset_id) if outcome.result_asset_id else None
                 ),

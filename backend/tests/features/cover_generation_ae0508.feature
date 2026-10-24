@@ -49,6 +49,7 @@ Feature: Generate a slide-1 cover from library photos with Grok
     Given the Grok Bot fails the job
     When the owner asks for a cover and confirms
     Then the generation is failed with cover_generation_bridge_failed
+    And the Grok Bot's own error message is kept as the failure detail
     And no cover asset is stored
     And the failed generation does not count against the caps
 

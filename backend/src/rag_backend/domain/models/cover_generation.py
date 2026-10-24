@@ -40,6 +40,7 @@ class CoverGeneration:
     started_at: datetime | None = None
     result_asset_id: UUID | None = None
     error_code: str | None = None
+    error_detail: str | None = None
 
     @property
     def counts_against_caps(self) -> bool:
@@ -55,6 +56,7 @@ class CoverGenerationOutcome:
     at: datetime
     result_asset_id: UUID | None = None
     error_code: str | None = None
+    error_detail: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

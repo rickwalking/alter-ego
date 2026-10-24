@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 
 from rag_backend.domain.constants.cover_generation import (
     ERROR_CODE_LENGTH,
+    ERROR_DETAIL_LENGTH,
     INDEX_COVER_GENERATIONS_OWNER_CREATED,
     INDEX_COVER_GENERATIONS_PROJECT,
     MODEL_LENGTH,
@@ -61,6 +62,9 @@ class CarouselCoverGenerationModel(Base):
     error_code: Mapped[str | None] = mapped_column(
         String(ERROR_CODE_LENGTH), nullable=True
     )
+    error_detail: Mapped[str | None] = mapped_column(
+        String(ERROR_DETAIL_LENGTH), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -94,6 +98,7 @@ class CarouselCoverGenerationModel(Base):
                 uuid.UUID(self.result_asset_id) if self.result_asset_id else None
             ),
             error_code=self.error_code,
+            error_detail=self.error_detail,
         )
 
     @classmethod
@@ -115,4 +120,5 @@ class CarouselCoverGenerationModel(Base):
                 str(entity.result_asset_id) if entity.result_asset_id else None
             ),
             error_code=entity.error_code,
+            error_detail=entity.error_detail,
         )

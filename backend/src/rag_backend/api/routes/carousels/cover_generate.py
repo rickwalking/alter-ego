@@ -107,6 +107,7 @@ def _generation(generation: CoverGeneration) -> CoverGenerationResponse:
         id=generation.id,
         status=generation.status.value,
         error_code=generation.error_code,
+        error_detail=generation.error_detail,
         asset_id=generation.result_asset_id,
         created_at=generation.created_at,
         completed_at=generation.completed_at,

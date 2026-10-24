@@ -38,6 +38,7 @@ _STATUS_LENGTH = 16
 _SHA256_LENGTH = 64
 _MODEL_LENGTH = 64
 _ERROR_CODE_LENGTH = 64
+_ERROR_DETAIL_LENGTH = 300
 
 
 def _inspector() -> sa.engine.reflection.Inspector:
@@ -82,6 +83,7 @@ def upgrade() -> None:
                 nullable=True,
             ),
             sa.Column("error_code", sa.String(_ERROR_CODE_LENGTH), nullable=True),
+            sa.Column("error_detail", sa.String(_ERROR_DETAIL_LENGTH), nullable=True),
             sa.Column(
                 "created_at",
                 sa.DateTime(timezone=True),

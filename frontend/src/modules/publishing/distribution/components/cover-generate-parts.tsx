@@ -103,12 +103,12 @@ export function CoverPhotoChecklist({
 
 /** "Gerando…" while the latest generation runs; its failure with a retry. */
 export function CoverGenerationStatus({
-  status,
-  errorCode,
+  generation,
   canRetry,
   onRetry,
 }: Readonly<CoverGenerationStatusProps>): React.ReactElement | null {
   const t = useTranslations("publish.coverPicker.generate");
+  const status = generation?.status ?? null;
   if (status === GENERATION_STATUS.PENDING) {
     return (
       <p role="status" className="text-xs" style={{ color: NEON_CYAN }}>
@@ -128,11 +128,16 @@ export function CoverGenerationStatus({
   }
   return (
     <div role="alert" className="text-xs text-red-400">
-      <span>{t(generationErrorKey(errorCode))}</span>{" "}
+      <span>{t(generationErrorKey(generation?.error_code))}</span>{" "}
       {canRetry && (
         <button type="button" className="underline" onClick={onRetry}>
           {t("retry")}
         </button>
+      )}
+      {generation?.error_detail && (
+        <span className="mt-1 block break-words opacity-80">
+          {generation.error_detail}
+        </span>
       )}
     </div>
   );

@@ -270,3 +270,26 @@ async def test_the_claim_runs_inside_the_slot_before_the_webhook() -> None:
 
     assert order == ["claim:1:0"]
     assert len(webhook.requests) == 1
+
+
+async def test_a_refusal_carries_the_grok_bot_message() -> None:
+    """Scenario: A bridge failure leaves no asset and can be retried."""
+    from rag_backend.modules.image_bridge.domain.exceptions import ImageBridgeJobError
+    from rag_backend.modules.image_bridge.domain.models import JobFailure
+
+    webhook, clock = FakeWebhook(), FakeClock()
+    async with sqlite_repository() as repo:
+
+        async def refuse() -> None:
+            job_id = webhook.requests[0].job_id
+            await repo.fail(
+                JobFailure(
+                    job_id, "content_policy", "photos cannot be edited", clock.now()
+                )
+            )
+
+        clock.on_sleep = refuse
+        with pytest.raises(ImageBridgeJobError) as raised:
+            await _service(repo, (webhook, clock)).edit_image(_job())
+
+    assert "content_policy: photos cannot be edited" in str(raised.value)

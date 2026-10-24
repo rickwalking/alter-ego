@@ -419,6 +419,17 @@ class TestRunner:
         assert store.settled[0].result_asset_id is None
         assert results.stored == []
         assert store.commits == (1 if code.endswith("photo_unreadable") else 2)
+        expected = "x" if code.endswith("bridge_failed") else None
+        assert store.settled[0].error_detail == expected
+
+    async def test_a_long_grok_bot_message_is_capped(self) -> None:
+        """Scenario: A bridge failure leaves no asset and can be retried."""
+        store = _Store()
+        editor = _Editor(error=RuntimeError("m" * 500))
+
+        await _runner(store, _Photos(), _Results(), editor).run(_run())
+
+        assert store.settled[0].error_detail == "m" * 300
 
     async def test_the_read_transaction_ends_before_the_bridge_wait(self) -> None:
         """Scenario: A confirmed generation sends the photo bytes and stores a private cover."""
