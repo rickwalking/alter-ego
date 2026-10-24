@@ -17,6 +17,7 @@ import type { PresentationStructuredItem } from "@/modules/editorial/workspace/l
 import type { PresentationInsightQuote } from "@/modules/editorial/workspace/lib/presentation-insight-quote";
 import type { RepairSlideDiff } from "@/modules/editorial/workspace/hooks/use-repair-carousel";
 import type {
+  PresentationLocaleKey,
   SlideCopyEdit,
   SlideStructuredItemEdit,
 } from "@/modules/editorial/workspace/lib/presentation-slide-resolution";
@@ -72,6 +73,16 @@ export interface SlideCopyEditorProps {
 export interface StructuredList {
   listKey: string;
   items: Record<string, unknown>[];
+}
+
+/** The editable fields of one structured item (what the slide shows). */
+export interface StructuredItemFieldsProps {
+  slide: LocalizedSlideReview;
+  locale: PresentationLocaleKey;
+  list: StructuredList;
+  itemIndex: number;
+  onChange: (edit: SlideStructuredItemEdit) => void;
+  props: SlideCopyEditorProps;
 }
 
 export interface AutoRepairButtonProps {

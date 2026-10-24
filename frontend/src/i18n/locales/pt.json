@@ -770,6 +770,8 @@
       },
       "structuredItems": "Itens estruturados",
       "structuredItemLabel": "Corpo do item {index}",
+      "structuredItemTitleLabel": "Título do item {index}",
+      "checklistItemLabel": "Linha {index} do checklist",
       "autoRepair": {
         "button": "Corrigir problemas automaticamente",
         "pending": "Corrigindo…",
@@ -900,6 +902,7 @@
         "itemHeading": "{list} {index}",
         "itemTitle": "Título do item",
         "itemBody": "Corpo do item",
+        "checklistLine": "Linha do checklist (como aparece no slide)",
         "addItem": "Adicionar {list}",
         "removeItem": "Remover {list} {index}",
         "itemSlotsHint": "Adicionar ou remover um item muda o PT e o EN juntos.",

@@ -66,6 +66,27 @@ def pov_slide_strategies(project: CarouselProject, total_slides: int) -> dict[in
     }
 
 
+def checklist_slide_numbers(
+    project: CarouselProject, slide_types: Mapping[int, str]
+) -> frozenset[int]:
+    """Slides whose structured items render as one-line checklist entries.
+
+    Those show each item's single line (its title), not title plus body. The
+    preferred layout is picked as the renderer does (the POV role layout, else the
+    deck's chosen layout), and the checklist only renders the slide types it
+    supports. ``slide_types`` maps slide number to slide type.
+    """
+    role_layouts = pov_slide_strategies(project, len(slide_types))
+    checklist = save_checklist.SAVE_CHECKLIST_STRATEGY
+    supported = save_checklist.SaveChecklistStrategy.supported_slide_types
+    return frozenset(
+        number
+        for number, slide_type in slide_types.items()
+        if slide_type in supported
+        and (role_layouts.get(number) or project.slide_layout_strategy) == checklist
+    )
+
+
 def deck_artwork_slides(
     project: CarouselProject, total_slides: int
 ) -> frozenset[int] | None:
@@ -95,6 +116,7 @@ def quote_card_strategy(
 
 __all__ = [
     "POV_ROLE_STRATEGIES",
+    "checklist_slide_numbers",
     "deck_artwork_slides",
     "pov_slide_strategies",
     "quote_card_strategy",
