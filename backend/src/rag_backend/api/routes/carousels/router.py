@@ -1,7 +1,7 @@
 """Aggregated carousel API router.
 
-The creator-asset library router is included before CRUD so "/creator-assets" is not
-read as "/{project_id}".
+The creator-asset library and cover-prompt-ideas routers are included before CRUD so
+"/creator-assets" and "/cover-prompt-ideas" are not read as "/{project_id}".
 """
 
 from fastapi import APIRouter
@@ -11,6 +11,7 @@ from .archive import router as archive_router
 from .copy_edit import router as copy_edit_router
 from .copy_versions import router as copy_versions_router
 from .cover_pick import router as cover_pick_router
+from .cover_prompt_ideas import router as cover_prompt_ideas_router
 from .creator_asset_library import router as creator_asset_library_router
 from .creator_assets import router as creator_assets_router
 from .crud import router as crud_router
@@ -32,6 +33,7 @@ router = APIRouter(tags=["carousels"])
 router.include_router(admin_router, prefix="")
 router.include_router(strategies_router, prefix=PREFIX)
 router.include_router(creator_asset_library_router, prefix=PREFIX)
+router.include_router(cover_prompt_ideas_router, prefix=PREFIX)
 router.include_router(crud_router, prefix=PREFIX)
 router.include_router(creator_assets_router, prefix=PREFIX)
 router.include_router(copy_edit_router, prefix=PREFIX)

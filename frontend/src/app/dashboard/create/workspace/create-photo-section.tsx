@@ -25,6 +25,8 @@ export interface CreatePhotoSectionProps {
   deleting: boolean;
   deleteBlockedBy: PhotoInUse | null;
   deleteFailed: boolean;
+  /** The prompt field for a new cover photo, under the library. */
+  promptField?: React.ReactNode;
 }
 
 const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
@@ -32,7 +34,7 @@ const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
 /**
  * "Foto do slide 1" for Ponto de Vista decks. Pick a cut-out photo
  * from the library (newest first, the default), delete the selected one, or
- * upload a new one.
+ * upload a new one; the prompt field below suggests how to shoot a new one.
  */
 export function CreatePhotoSection({
   photos,
@@ -45,6 +47,7 @@ export function CreatePhotoSection({
   deleting,
   deleteBlockedBy,
   deleteFailed,
+  promptField,
 }: Readonly<CreatePhotoSectionProps>): React.ReactElement {
   const t = useTranslations("create.photo");
   return (
@@ -131,6 +134,7 @@ export function CreatePhotoSection({
           {t("uploadFailed")}
         </p>
       )}
+      {promptField && <div className="mt-3.5">{promptField}</div>}
     </div>
   );
 }
