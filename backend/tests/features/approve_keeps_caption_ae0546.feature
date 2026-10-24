@@ -1,0 +1,57 @@
+Feature: Approving a carousel for publishing never loses its caption
+  On prod, approving a carousel from Telegram ("Publicar agora") emptied its saved
+  caption and the autopilot posted to Instagram without one. A blog draft created from
+  the carousel had an empty distribution home; loading the carousel overlaid that empty
+  caption, and the public release saved it back over the real one.
+
+  Scenario Outline: Publish now keeps the saved caption and posts it
+    Given a carousel at final review with a saved caption and <blog row>
+    And its autopilot run is waiting for the owner
+    When the owner taps "Publicar agora"
+    Then the run is publishing, the carousel is approved for publishing and public
+    And the carousel and its distribution home still hold the saved caption
+    And the Instagram post carries that caption
+
+    Examples:
+      | blog row                                                     |
+      | a blog draft created from it                                 |
+      | a carousel-origin blog row stored with an empty distribution |
+
+  Scenario: The public release never overwrites a caption edited after the load
+    Given a carousel loaded for release with its saved caption
+    And the owner saves a new caption before the release commits
+    When the carousel is released publicly
+    Then only the public flag and the published phase are written
+    And the new caption is kept
+    And a release that loses a race with a concurrent version bump re-reads the version and tries again
+    And a release that keeps losing is refused: 409 version_conflict on the route, approve failed on Telegram
+
+  Scenario: A blog draft with an empty distribution never wipes the caption
+    Given a carousel with a saved caption whose blog row has an empty distribution
+    When the carousel is loaded and saved again
+    Then the saved caption is kept and copied into the distribution home
+    And a caption the owner cleared on purpose stays cleared
+
+  Scenario: A blog draft from a carousel starts with the carousel's saved copy
+    When a blog draft is created from a carousel
+    Then its distribution holds the carousel's caption and LinkedIn posts
+    And a standalone draft or a draft for an unknown carousel starts empty
+
+  Scenario: The autopilot worker never posts an empty caption
+    Given a publishing run whose carousel caption is empty or blank
+    When the publish worker runs
+    Then the run fails with the reason instagram_caption_empty and nothing is sent to Instagram
+    And the owner gets a Telegram notice with a retry button
+    And a run already claimed for publishing re-checks the caption before the first Instagram call
+
+  Scenario: The manual publish refuses an empty caption
+    When the owner publishes a carousel with an empty or blank caption
+    Then the publish is refused with instagram_caption_empty before any Instagram call
+
+  Scenario: A workflow stuck before the final review interrupt is re-driven
+    Given the images gate was approved and the run died before the final review opened its review
+    And nothing has run for longer than the grace period
+    When the autopilot runner reads the gate
+    Then the workflow counts as parked and is re-driven instead of waiting forever
+    And an approved carousel held for publishing is still never parked
+    And the runner asks the engine whether a node is still pending

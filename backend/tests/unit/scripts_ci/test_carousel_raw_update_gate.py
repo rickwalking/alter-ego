@@ -81,7 +81,8 @@ class TestCarouselRawUpdateGate:
 
     def test_allowlist_matches_survey_enumeration(self) -> None:
         """The allowlist must stay in lockstep with the write-site survey §2, plus the
-        phase-drift convergence CAS that mirrors the reaper flip.
+        phase-drift convergence CAS that mirrors the reaper flip and the public
+        release CAS.
         """
         assert (
             frozenset({
@@ -90,6 +91,7 @@ class TestCarouselRawUpdateGate:
                 "infrastructure/database/carousel_drift_reconciler.py",
                 "infrastructure/database/carousel_run_reaper.py",
                 "modules/editorial/infrastructure/carousel_run_progress.py",
+                "modules/publishing/infrastructure/legacy_publishing_acl.py",
             })
             == ALLOWED_RAW_UPDATE_FILES
         )

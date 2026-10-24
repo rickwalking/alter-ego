@@ -20,6 +20,9 @@
   ``DEFAULT_PUBLISHING_QUOTA_TOTAL`` is Meta's documented limit (100 API posts
   per rolling 24 h), used only when ``quota_usage`` comes without
   ``config.quota_total``.
+- ``ERR_INSTAGRAM_CAPTION_EMPTY``: the caption to post is empty or blank. Every
+  publish path refuses it before any Graph call; a captionless post cannot be
+  edited into a good one afterwards.
 - ``TRANSIENT_META_ERROR_CODES`` are rate-limit codes that arrive as HTTP 400
   rather than 429.
 """
@@ -33,6 +36,7 @@ from rag_backend.domain.constants.retry import (
 ERR_INSTAGRAM_API_REQUEST_FAILED = "instagram_api_request_failed"
 ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED = "instagram_credentials_not_configured"
 ERR_INSTAGRAM_IMAGE_COUNT_INVALID = "instagram_image_count_invalid"
+ERR_INSTAGRAM_CAPTION_EMPTY = "instagram_caption_empty"
 ERR_INSTAGRAM_CONTAINER_FAILED = "instagram_container_failed"
 ERR_INSTAGRAM_CONTAINER_TIMEOUT = "instagram_container_timeout"
 ERR_INSTAGRAM_API_NO_ID = "instagram_api_no_id"

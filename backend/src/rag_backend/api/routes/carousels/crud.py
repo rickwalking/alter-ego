@@ -45,6 +45,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
@@ -316,9 +317,16 @@ async def publish_carousel(
                 BLOG_LANG_ENGLISH: blog_en or blog_pt,
             }
             await repo.update_project(project)
-    updated = await publishing.service.release_carousel(
-        CarouselReleaseCommand(project=project, project_id=str(project_id)),
-    )
+    try:
+        updated = await publishing.service.release_carousel(
+            CarouselReleaseCommand(project=project, project_id=str(project_id)),
+        )
+    except ValueError as exc:
+        if str(exc) != ERR_VERSION_CONFLICT:
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=ERR_VERSION_CONFLICT
+        ) from exc
     return CarouselProjectResponse.model_validate(updated)
 
 

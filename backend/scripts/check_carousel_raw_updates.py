@@ -20,6 +20,9 @@ Allowlisted sites and their guards:
 - ``carousel_drift_reconciler.py``: phase-drift convergence, tick-owned CAS on
   ``phase_status=failed`` that bumps ``lock_version`` + ``run_epoch`` like the
   reaper flip it mirrors.
+- ``legacy_publishing_acl.py``: the public release, a targeted
+  ``is_public``/``current_phase`` UPDATE with a ``lock_version`` + ``run_epoch``
+  CAS and the explicit epoch check of a run-owned context.
 
 Run standalone (``python scripts/check_carousel_raw_updates.py``) or through
 the rule-fires unit test (``tests/unit/scripts_ci/test_carousel_raw_update_gate.py``).
@@ -37,6 +40,7 @@ ALLOWED_RAW_UPDATE_FILES: frozenset[str] = frozenset({
     "infrastructure/database/carousel_run_reaper.py",
     "modules/editorial/infrastructure/carousel_run_progress.py",
     "infrastructure/database/carousel_drift_reconciler.py",
+    "modules/publishing/infrastructure/legacy_publishing_acl.py",
 })
 
 _ORM_CORE_UPDATE_RE = re.compile(r"update\(\s*Carousel(Project|Slide)Model\b")

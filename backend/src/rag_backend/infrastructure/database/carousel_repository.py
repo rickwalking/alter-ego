@@ -132,16 +132,25 @@ class PostgresCarouselRepository(CarouselRepository):
         freshly-loaded carousel entity from the canonical
         ``blog_posts.distribution`` home so every reader that consumes a project
         loaded through this repository sources those three fields from the
-        canonical home — the embedded ORM columns are read-dead. When no
-        carousel-origin row exists yet (no canonical home), the entity keeps its
-        ORM-mapped defaults so behavior is byte-identical for un-backfilled rows.
+        canonical home. When no carousel-origin row exists yet (no canonical
+        home), the entity keeps its ORM-mapped values. A field the home has never
+        received (``None``, e.g. a blog draft created with an empty
+        ``distribution``) also keeps the saved column value: overlaying ``None``
+        made the next save of the entity (the public release on approval) wipe a
+        saved caption.
         """
         distribution = await read_distribution(self._session, str(entity.id))
         if distribution is None:
             return
-        entity.caption = distribution[DISTRIBUTION_CAPTION_KEY]
-        entity.linkedin_post_pt = distribution[DISTRIBUTION_LINKEDIN_POST_PT_KEY]
-        entity.linkedin_post_en = distribution[DISTRIBUTION_LINKEDIN_POST_EN_KEY]
+        entity.caption = _canonical_or_saved(
+            distribution[DISTRIBUTION_CAPTION_KEY], entity.caption
+        )
+        entity.linkedin_post_pt = _canonical_or_saved(
+            distribution[DISTRIBUTION_LINKEDIN_POST_PT_KEY], entity.linkedin_post_pt
+        )
+        entity.linkedin_post_en = _canonical_or_saved(
+            distribution[DISTRIBUTION_LINKEDIN_POST_EN_KEY], entity.linkedin_post_en
+        )
 
     async def get_all_projects(
         self,
@@ -321,3 +330,8 @@ class PostgresCarouselRepository(CarouselRepository):
             stmt = stmt.where(CarouselProjectModel.owner_id == owner_id)
         result = await self._session.execute(stmt)
         return result.scalar_one()
+
+
+def _canonical_or_saved(canonical: str | None, saved: str | None) -> str | None:
+    """The canonical home's text, or the saved column when the home has none."""
+    return saved if canonical is None else canonical

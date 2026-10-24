@@ -12,10 +12,11 @@ are consolidated here.
 It backs three publishing domain ports:
 
 * :class:`CarouselReleasePort` — the carousel ``is_public`` public-release write
-  (``crud.py:publish_carousel``). The owner sets ``is_public=True`` /
-  ``current_phase=published`` on the carousel ENTITY (via the carousel repository,
-  the legacy ``repo.update_project`` call) AND on the carousel ORM row, then
-  commits ONCE through the platform Unit of Work — exactly the legacy sequence.
+  (``crud.py:publish_carousel``). The owner writes ONLY ``is_public=True`` /
+  ``current_phase=published`` in one targeted UPDATE guarded by the row's
+  ``lock_version`` (compare-and-set), then commits ONCE through the platform Unit
+  of Work. It never saves the whole carousel loaded earlier, so a caption or copy
+  edit committed in between is kept.
 * :class:`BlogVisibilityPort` — the standalone blog publish/unpublish status
   writes (``blog_post_workflow.py``). Flush only; the route owns the
   status-change event emission and the single commit (unchanged).
@@ -42,7 +43,9 @@ defensive typing seam so the domain ports can stay ORM-free.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.scheduled_publish_service import (
@@ -50,7 +53,12 @@ from rag_backend.application.services.scheduled_publish_service import (
 )
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.domain.constants.carousel_workflow import PHASE_PUBLISHED
+from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models.carousel_run import (
+    StaleRunEpochError,
+    current_run_context,
+)
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.publishing.domain.ports import CarouselRepository
@@ -58,6 +66,7 @@ from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
 _ERR_NOT_CAROUSEL = "release_public expected a CarouselProject entity"
 _ERR_NOT_BLOG_POST = "blog visibility/schedule write expected a BlogPostModel row"
+_RELEASE_ATTEMPTS = 3
 _ERR_NO_SCHEDULER = "blog schedule write invoked without a scheduled-publish service"
 
 
@@ -65,7 +74,7 @@ class LegacyPublishingAcl:
     """Translate legacy carousel/blog persistence to/from publishing writes.
 
     Binds the request-scoped session (the single carousel/blog ORM seam) and the
-    carousel repository (for the legacy ``update_project`` entity write). Wraps the
+    carousel repository the release port is wired with. Wraps the
     same session in the platform Unit of Work so the owner is also the single
     committer for the carousel release write it stages (the blog visibility/schedule
     writes flush only; their route owns the commit, unchanged).
@@ -83,26 +92,59 @@ class LegacyPublishingAcl:
         self._uow = SqlAlchemyUnitOfWork(session)
 
     async def release_public(self, project: object, project_id: str) -> object:
-        """Mark the carousel publicly released; return the updated entity.
+        """Mark the carousel publicly released; return the released entity.
 
-        Byte-identical to the legacy ``crud.py:publish_carousel`` release write:
-        set ``is_public=True`` / ``current_phase=published`` on the entity and
-        persist via the carousel repository (``repo.update_project``), then mirror
-        the same write onto the carousel ORM row and commit ONCE via the UoW. The
-        updated entity ``repo.update_project`` returns is handed back for the
-        route's response serialization.
+        Reads the row's ``lock_version`` and runs ``UPDATE ... SET is_public,
+        current_phase WHERE id AND lock_version = seen``, then commits ONCE via
+        the UoW. A concurrent writer that bumped the version in between makes the
+        UPDATE match no row; the release (which writes only those two columns)
+        re-reads and tries again, and raises ``version_conflict`` after
+        ``_RELEASE_ATTEMPTS``. No other column is written, so a caption edit
+        landing after the route loaded ``project`` is never overwritten. A
+        missing row writes and commits nothing.
         """
         if not isinstance(project, CarouselProject):
             raise TypeError(_ERR_NOT_CAROUSEL)
-        project.is_public = True
-        project.current_phase = PHASE_PUBLISHED
-        updated = await self._carousel_repository.update_project(project)
-        model = await self._session.get(CarouselProjectModel, project_id)
-        if model is not None:
-            model.is_public = True
-            model.current_phase = PHASE_PUBLISHED
-            await self._uow.commit()
-        return updated
+        for _attempt in range(_RELEASE_ATTEMPTS):
+            written = await self._release_row(project_id)
+            if written is None:
+                return project
+            if written:
+                await self._uow.commit()
+                project.is_public = True
+                project.current_phase = PHASE_PUBLISHED
+                return project
+        raise ValueError(ERR_VERSION_CONFLICT)
+
+    async def _release_row(self, project_id: str) -> bool | None:
+        """One compare-and-set release; None when the carousel row is missing.
+
+        A raw UPDATE skips the ORM flush epoch fence, so the fence is applied
+        here (layer c): a run-owned context whose epoch moved on raises
+        ``StaleRunEpochError``, and the UPDATE also matches the ``run_epoch`` it
+        read, so a reap in between fails the compare-and-set.
+        """
+        row = (
+            await self._session.execute(
+                select(
+                    CarouselProjectModel.lock_version, CarouselProjectModel.run_epoch
+                ).where(CarouselProjectModel.id == project_id)
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        seen, epoch = row
+        _ensure_current_epoch(project_id, epoch)
+        result = await self._session.execute(
+            update(CarouselProjectModel)
+            .where(
+                CarouselProjectModel.id == project_id,
+                CarouselProjectModel.lock_version == seen,
+                CarouselProjectModel.run_epoch == epoch,
+            )
+            .values(is_public=True, current_phase=PHASE_PUBLISHED)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
 
     @staticmethod
     async def mark_published(post: object) -> None:
@@ -160,6 +202,13 @@ class LegacyPublishingAcl:
         if self._scheduler is None:
             raise RuntimeError(_ERR_NO_SCHEDULER)
         return self._scheduler
+
+
+def _ensure_current_epoch(project_id: str, epoch: int) -> None:
+    """Reject a run-owned release whose captured epoch is stale (layer c)."""
+    ctx = current_run_context()
+    if ctx is not None and ctx.project_id == project_id and ctx.epoch != epoch:
+        raise StaleRunEpochError(project_id)
 
 
 def _as_blog_post(post: object) -> BlogPostModel:
