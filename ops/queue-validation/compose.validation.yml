@@ -1,0 +1,37 @@
+services:
+  nginx:
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  certbot:
+    profiles: ["disabled"]
+
+  opencode:
+    profiles: ["disabled"]
+
+  llm-mock:
+    image: python:3.11-slim
+    command: ["python", "/mock/mock_upstream.py"]
+    environment:
+      MOCK_LATENCY_SECONDS: ${MOCK_LATENCY_SECONDS:-20}
+      MOCK_IMAGE_SECONDS: ${MOCK_IMAGE_SECONDS:-30}
+      MOCK_LOG: /logs/mock.jsonl
+    volumes:
+      - ./ops/queue-validation:/mock:ro
+      - mock_logs:/logs
+    restart: unless-stopped
+
+  backend:
+    environment:
+      GLM_BASE_URL: http://llm-mock:8080/v1
+      RESEARCH_ENRICHMENT_ENABLED: "false"
+      AUTOPILOT_START_SPACING_MINUTES: "0"
+
+  generation-worker:
+    environment:
+      GLM_BASE_URL: http://llm-mock:8080/v1
+      RESEARCH_ENRICHMENT_ENABLED: "false"
+      AUTOPILOT_START_SPACING_MINUTES: "0"
+
+volumes:
+  mock_logs:

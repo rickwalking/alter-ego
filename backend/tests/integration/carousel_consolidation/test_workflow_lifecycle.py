@@ -108,7 +108,7 @@ class TestEditorialWorkflowLifecycle:
         accepted = response.json()
         assert accepted["accepted"] is True
         assert accepted["phase_status"] == PHASE_STATUS_IN_PROGRESS
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         payload = await wait_for_workflow_state(
             client,
             project_id,
@@ -148,7 +148,7 @@ class TestEditorialWorkflowLifecycle:
         )
 
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         payload = await wait_for_workflow_state(
             client,
             project_id,
@@ -283,7 +283,7 @@ class TestEditorialWorkflowLifecycle:
         )
 
         assert response.status_code == 202
-        await drain_background_tasks()
+        await drain_background_tasks(client)
         mock_resume.assert_awaited_once()
 
         session_maker = get_session_maker()

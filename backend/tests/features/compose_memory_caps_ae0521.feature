@@ -21,7 +21,12 @@ Feature: Every long-running production container has a memory cap (AE-0521)
     Then each reservation is smaller than the service limit
 
   Scenario: The backend limit covers the measured HD export peak
-    Given the backend runs the carousel HD exports in process
+    Given the backend still runs the dashboard exports, finalize and refinement renders
     When its memory limit is read
     Then it is at least the measured HD run peak plus 30 percent
     And the backend reserves memory for the website
+
+  Scenario: The generation worker limit covers the measured HD export peak
+    Given the generation worker runs the carousel HD exports
+    When its memory limit is read
+    Then it is at least the measured HD run peak plus 30 percent, with no swap

@@ -19,21 +19,30 @@ async def init_db(
     database_url: str, pool_size: int = 5, max_overflow: int = 10
 ) -> None:
     """Initialize database engine and create tables; a no-op if already initialized."""
-    global c_engine
     if c_engine is not None:
         return
-    c_engine = create_async_engine(
-        database_url,
-        echo=False,
-        future=True,
-        pool_size=pool_size,
-        max_overflow=max_overflow,
-        pool_pre_ping=True,
-        pool_recycle=3600,
-        hide_parameters=True,
-    )
-    async with c_engine.begin() as conn:
+    engine = attach_db(database_url, pool_size, max_overflow)
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+def attach_db(
+    database_url: str, pool_size: int = 5, max_overflow: int = 10
+) -> AsyncEngine:
+    """Create the process engine without touching the schema (the generation worker)."""
+    global c_engine
+    if c_engine is None:
+        c_engine = create_async_engine(
+            database_url,
+            echo=False,
+            future=True,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            hide_parameters=True,
+        )
+    return c_engine
 
 
 async def close_db() -> None:

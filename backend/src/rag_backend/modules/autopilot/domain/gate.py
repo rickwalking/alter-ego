@@ -172,7 +172,8 @@ class ProjectSpec:
     ``persona_id`` voices and scores the carousel, and ``hook_asset_id`` is the
     slide-1 photo. ``quotes`` are the scout-verified quotes of a ``pov_news`` topic;
     ``cover`` is the GrokBot cover the owner chose for slide 1 (None keeps the
-    default).
+    default). ``project_id`` is derived from the run, so a re-delivered start finds
+    the carousel it already created instead of creating a second one.
     """
 
     topic: str
@@ -191,6 +192,7 @@ class ProjectSpec:
     hook_asset_id: str | None = None
     quotes: tuple[NewsQuote, ...] = ()
     cover: SlideCover | None = None
+    project_id: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

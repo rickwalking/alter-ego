@@ -130,6 +130,18 @@ class CarouselRunReaperRepository:
             return False
         return await self._reap(db, row)
 
+    async def reap_orphan(self, db: AsyncSession, project_id: str) -> bool:
+        """Reap an ``in_progress`` row now, without waiting for stale observations.
+
+        Only for a caller that holds the project's drive lock: no live driver can
+        own the row then, so the run that set ``in_progress`` is dead. The caller
+        commits.
+        """
+        row = await db.get(CarouselProjectModel, project_id, populate_existing=True)
+        if row is None or row.phase_status != PHASE_STATUS_IN_PROGRESS:
+            return False
+        return await self._reap(db, row)
+
     def _alert_if_overdue(self, row: CarouselProjectModel, now: datetime) -> None:
         """Wall-clock overdue alert (never a reap by itself)."""
         if row.run_started_at is None:

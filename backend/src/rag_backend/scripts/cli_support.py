@@ -47,3 +47,39 @@ async def run_on_own_engine(run: EngineRunner) -> int:
         return await run(engine)
     finally:
         await engine.dispose()
+
+
+ModeRunner = Callable[[AsyncEngine, argparse.Namespace], Coroutine[object, object, int]]
+ERR_NO_MODE = "choose --apply and/or --verify"
+
+
+@dataclass(frozen=True)
+class ApplyVerifyScript:
+    """A one-shot whose ``--apply`` and ``--verify`` flags combine."""
+
+    prog: str
+    description: str | None
+    run_modes: ModeRunner
+
+
+def _apply_or_verify(args: argparse.Namespace) -> str | None:
+    """The usage error when neither mode is chosen."""
+    if args.apply or args.verify:
+        return None
+    return ERR_NO_MODE
+
+
+def apply_verify_main(
+    script: ApplyVerifyScript, argv: Sequence[str] | None = None
+) -> int:
+    """Parse ``--apply``/``--verify``, run the modes on an own engine, exit code."""
+    parser = argparse.ArgumentParser(prog=script.prog, description=script.description)
+    parser.add_argument("--apply", action="store_true", help="apply the change")
+    parser.add_argument("--verify", action="store_true", help="check the result")
+
+    async def run(args: argparse.Namespace) -> int:
+        return await run_on_own_engine(lambda engine: script.run_modes(engine, args))
+
+    return run_guarded_cli(
+        GuardedCli(parser=parser, validate=_apply_or_verify, run=run), argv
+    )

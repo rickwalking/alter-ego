@@ -70,10 +70,6 @@ from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStateResponse,
 )
 from rag_backend.application.services.carousel.carousel_run_stage import get_run_stage
-from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
-    BackgroundResumeParams,
-    schedule_background_resume,
-)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowStartInput,
 )
@@ -106,6 +102,11 @@ from rag_backend.domain.constants.workflow_validation import ERR_SELF_REVIEW
 from rag_backend.modules.editorial import (
     EditorialWorkflowHandlers,
     StartWorkflowCommand,
+)
+from rag_backend.modules.generation_queue import (
+    WorkflowResumePayload,
+    hold_project_drive,
+    stage_workflow_resume,
 )
 
 logger = structlog.get_logger(__name__)
@@ -180,7 +181,9 @@ async def start_editorial_workflow(
     flush, and the ACL re-read would lazy-load it outside the greenlet. The wizard's
     persona applies when the request names none, so the persona gate covers both modes.
 
-    Engine errors are logged; a synthesis parse error gets its specific detail and any
+    The start drives the project in this request, so it holds the project's drive
+    lock (the generation worker's ownership primitive) and answers 409
+    ``mutation_in_progress`` while the worker drives it. Engine errors are logged; a synthesis parse error gets its specific detail and any
     other ValueError keeps the generic one. A provider outage or rate limit during the
     synchronous start surfaces as a structured retryable error, not a generic 500; other
     errors re-raise unchanged.
@@ -206,21 +209,22 @@ async def start_editorial_workflow(
         for source in body.sources
     ]
     try:
-        view = await handlers.start(
-            engine,
-            StartWorkflowCommand(
-                project_id=str(project_id),
-                workflow_input=EditorialWorkflowStartInput(
-                    topic=sanitize_llm_input(body.topic),
-                    audience=sanitize_llm_input(body.audience),
-                    brief=sanitize_llm_input(body.brief),
-                    sources=sanitized_sources,
-                    persona=persona,
-                    user_id=current_user.id,
-                    reviewer_id=body.reviewer_id,
+        async with hold_project_drive(db, str(project_id)):
+            view = await handlers.start(
+                engine,
+                StartWorkflowCommand(
+                    project_id=str(project_id),
+                    workflow_input=EditorialWorkflowStartInput(
+                        topic=sanitize_llm_input(body.topic),
+                        audience=sanitize_llm_input(body.audience),
+                        brief=sanitize_llm_input(body.brief),
+                        sources=sanitized_sources,
+                        persona=persona,
+                        user_id=current_user.id,
+                        reviewer_id=body.reviewer_id,
+                    ),
                 ),
-            ),
-        )
+            )
     except ValueError as exc:
         logger.exception(
             "workflow_start_failed",
@@ -298,7 +302,9 @@ async def resume_editorial_workflow(
     """Accept human review and resume workflow asynchronously (RW-010).
 
     Structured feedback is validated before the lock is bumped: a 422 after the bump
-    would leave the client on a stale version and reset its edits.
+    would leave the client on a stale version and reset its edits. The resume is
+    queued for the generation worker in the same transaction as the lock bump and
+    the ``in_progress`` flip: the web process never runs the phase.
     """
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     safe_feedback = validate_resume_action(body)
@@ -320,18 +326,19 @@ async def resume_editorial_workflow(
         str(project_id),
         body.expected_version,
     )
-    current_phase = await handlers.mark_resume_in_progress(engine, str(project_id))
-    schedule_background_resume(
-        engine,
-        BackgroundResumeParams(
+    await stage_workflow_resume(
+        db,
+        WorkflowResumePayload(
             project_id=str(project_id),
             action=body.action,
-            reviewer_id=current_user.id,
+            reviewer_id=str(current_user.id),
             feedback=safe_feedback or None,
             project_title=project.topic,
             structured_feedback=sanitize_structured_feedback(body.structured_feedback),
         ),
+        new_lock_version,
     )
+    current_phase = await handlers.mark_resume_in_progress(engine, str(project_id))
     payload = EditorialWorkflowResumeAcceptedResponse(
         accepted=True,
         project_id=str(project_id),

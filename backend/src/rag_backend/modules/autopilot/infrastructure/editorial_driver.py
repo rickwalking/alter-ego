@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -127,8 +128,11 @@ class InProcessEditorialDriver:
         owner-confirmed thesis (pov_hook_v1, follow CTA). PR #106 review: with
         the scout's format and slide count, the slide-1 photo (staged by the
         editorial ACL) and the autopilot persona.
-        The palette rotates per São Paulo day (``rotated_theme``).
+        The palette rotates per São Paulo day (``rotated_theme``). The id comes
+        from the run: when a re-delivered start finds that carousel, it is reused.
         """
+        if spec.project_id and await self._acl.heartbeat(spec.project_id) is not None:
+            return spec.project_id
         project = CarouselProject(
             topic=spec.topic,
             audience=spec.audience,
@@ -147,6 +151,8 @@ class InProcessEditorialDriver:
             slide_cover=spec.cover,
             **pov_fields_for(spec),
         )
+        if spec.project_id:
+            project.id = UUID(spec.project_id)
         return await self._acl.create_project(project)
 
     async def start(self, command: StartCommand) -> StartStatus:

@@ -102,3 +102,12 @@ def test_the_backend_limit_covers_the_measured_hd_export_peak() -> None:
     assert limit is not None
     assert limit >= MEASURED_HD_RUN_PEAK_MIB * HEADROOM
     assert _memory(backend, "reservations") is not None
+
+
+def test_the_generation_worker_limit_covers_the_measured_hd_export_peak() -> None:
+    """Scenario: The generation worker limit covers the measured HD export peak"""
+    worker = _services()["generation-worker"]
+    limit = _limit(worker)
+    assert limit is not None
+    assert limit >= MEASURED_HD_RUN_PEAK_MIB * HEADROOM
+    assert _mib(str(worker["memswap_limit"])) == limit
