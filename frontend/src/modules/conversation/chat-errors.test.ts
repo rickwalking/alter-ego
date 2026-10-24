@@ -84,4 +84,12 @@ describe("classifyChatError", () => {
       "notFound",
     );
   });
+
+  /** Scenario: A message sent while the previous reply is still being saved */
+  it("maps a 409 to busy, with a retry", () => {
+    expect(classifyChatError(new SseHttpError(409), REQUESTING)).toEqual({
+      kind: "busy",
+      retryable: true,
+    });
+  });
 });

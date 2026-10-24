@@ -16,6 +16,7 @@ Feature: Chat accessibility and localization
   Scenario: A long reply is announced as plain text, cut short
     When a reply with markdown and more than 280 characters finishes
     Then the live region reads it without markdown markers or extra spaces
+    And links and images are read by their text, never their address
     And it stops at 280 characters followed by an ellipsis
 
   Scenario: The message box has a label and a visible focus ring

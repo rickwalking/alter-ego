@@ -77,6 +77,14 @@ export function useChatSend({
     await send(content);
   }, [input, isStreaming, isBusy, send]);
 
+  const sendNow = useCallback(
+    async (text: string) => {
+      if (isStreaming || isBusy()) return;
+      await send(text);
+    },
+    [isStreaming, isBusy, send],
+  );
+
   const retry = useCallback(async () => {
     const content = lastFailedRef.current;
     if (!content || isStreaming || isBusy()) return;
@@ -88,5 +96,5 @@ export function useChatSend({
     lastFailedRef.current = null;
   }, []);
 
-  return { input, setInput, handleSend, retry, forgetFailed };
+  return { input, setInput, handleSend, retry, forgetFailed, sendNow };
 }
