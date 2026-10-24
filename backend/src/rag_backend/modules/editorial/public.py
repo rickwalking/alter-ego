@@ -136,6 +136,14 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     store_cover_image,
     switch_slide_cover,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
+    CoverRunWiring,
+    cover_generation_input,
+    cover_generation_runner,
+    cover_generation_service,
+    cover_generation_task,
+    cover_run_wiring,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
     cover_pick_service,
 )
@@ -255,6 +263,7 @@ __all__ = [
     "CarouselStatus",
     "CarouselTheme",
     "CoverImageRequest",
+    "CoverRunWiring",
     "CoverSwitchRequest",
     "EditorialAdapters",
     "EditorialModule",
@@ -302,8 +311,13 @@ __all__ = [
     "carousel_project_lock",
     "carousel_project_lock_key",
     "content_approve_blocker",
+    "cover_generation_input",
+    "cover_generation_runner",
+    "cover_generation_service",
+    "cover_generation_task",
     "cover_image_file",
     "cover_pick_service",
+    "cover_run_wiring",
     "delete_cover_images",
     "inspect_owner_issues",
     "is_carousel_project_lock_held",

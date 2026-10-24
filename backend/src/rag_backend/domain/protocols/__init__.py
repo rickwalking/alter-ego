@@ -8,6 +8,7 @@ from rag_backend.domain.protocols.ai import Agent, DocumentProcessor, LLMService
 from rag_backend.domain.protocols.carousel import (
     CarouselExportService,
     CarouselRefinementService,
+    CoverImageEditor,
     ExportConfig,
     ImageGenerationService,
     ImageStyleStrategy,
@@ -33,6 +34,7 @@ __all__ = [
     "CarouselRefinementService",
     "CarouselRepository",
     "ConversationRepository",
+    "CoverImageEditor",
     "DocumentProcessor",
     "DocumentRepository",
     "EmbeddingService",

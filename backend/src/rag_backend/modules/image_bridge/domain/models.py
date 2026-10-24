@@ -19,15 +19,18 @@ from rag_backend.modules.image_bridge.constants import (
     FIELD_CALLBACK_URL,
     FIELD_CONTENT_TYPE,
     FIELD_EXPIRES_AT,
+    FIELD_IMAGE,
     FIELD_JOB_ID,
     FIELD_METADATA,
     FIELD_MODEL,
     FIELD_N,
+    FIELD_OPERATION,
     FIELD_PROJECT_ID,
     FIELD_PROMPT,
     FIELD_RESPONSE_FORMAT,
     FIELD_SIZE,
     IMAGE_COUNT,
+    OPERATION_IMAGES_EDIT,
     RESPONSE_FORMAT_B64_JSON,
     SIZE_SEPARATOR,
 )
@@ -93,7 +96,15 @@ class JobDeadline:
 
 @dataclass(frozen=True)
 class WebhookRequest:
-    """The outbound webhook body of contract section 2.1."""
+    """The outbound webhook body of contract section 2.1.
+
+    A text-only job mirrors OpenAI ``images.generate`` (its body never
+    changes). A job with photos mirrors ``images.edit`` (contract section
+    2.4): ``operation: "images.edit"`` and ``image``, links to the photos the
+    Grok Bot fetches with the callback token. Its fields are ordered so the
+    callback fields come first and ``prompt`` and ``image`` last: a body cut
+    off in transit still has the callback.
+    """
 
     job_id: UUID
     model: str
@@ -103,9 +114,31 @@ class WebhookRequest:
     callback_token: str
     expires_at: datetime
     metadata: dict[str, str] = field(default_factory=dict)
+    images: tuple[str, ...] = ()
 
     def payload(self) -> dict[str, object]:
         """JSON body sent to the Grok Bot webhook."""
+        if self.images:
+            return self._edit_payload()
+        return self._base_payload()
+
+    def _edit_payload(self) -> dict[str, object]:
+        return {
+            FIELD_JOB_ID: str(self.job_id),
+            FIELD_CALLBACK_URL: self.callback_url,
+            FIELD_CALLBACK_TOKEN: self.callback_token,
+            FIELD_EXPIRES_AT: _iso_utc(self.expires_at),
+            FIELD_OPERATION: OPERATION_IMAGES_EDIT,
+            FIELD_MODEL: self.model,
+            FIELD_N: IMAGE_COUNT,
+            FIELD_SIZE: self.size,
+            FIELD_RESPONSE_FORMAT: RESPONSE_FORMAT_B64_JSON,
+            FIELD_METADATA: dict(self.metadata),
+            FIELD_PROMPT: self.prompt,
+            FIELD_IMAGE: list(self.images),
+        }
+
+    def _base_payload(self) -> dict[str, object]:
         return {
             FIELD_JOB_ID: str(self.job_id),
             FIELD_MODEL: self.model,
@@ -120,9 +153,11 @@ class WebhookRequest:
         }
 
 
-def job_metadata(project_id: str | None) -> dict[str, str]:
+def job_metadata(
+    project_id: str | None, content_type: str = CONTENT_TYPE_CAROUSEL
+) -> dict[str, str]:
     """Webhook metadata: the content type, plus the project when known."""
-    metadata = {FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL}
+    metadata = {FIELD_CONTENT_TYPE: content_type}
     if project_id:
         metadata[FIELD_PROJECT_ID] = project_id
     return metadata

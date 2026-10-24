@@ -8,8 +8,10 @@ consumers import from this package only::
 """
 
 from rag_backend.modules.image_bridge.public import (
+    IMAGE_BRIDGE_MODEL,
     ImageBridgeConfigError,
     build_carousel_openai_service,
+    build_grokbot_cover_editor,
     build_grokbot_image_service,
     missing_image_bridge_settings,
     register_persistence_models,
@@ -17,8 +19,10 @@ from rag_backend.modules.image_bridge.public import (
 )
 
 __all__ = [
+    "IMAGE_BRIDGE_MODEL",
     "ImageBridgeConfigError",
     "build_carousel_openai_service",
+    "build_grokbot_cover_editor",
     "build_grokbot_image_service",
     "missing_image_bridge_settings",
     "register_persistence_models",

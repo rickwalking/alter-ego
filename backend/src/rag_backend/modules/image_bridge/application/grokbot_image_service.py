@@ -4,31 +4,48 @@ One call: create a pending job, POST the webhook, poll Postgres until the
 callback lands (any worker may receive it), then write the image fitted to
 the configured size as PNG. Every failure raises ``ImageBridgeJobError``, a
 ``RuntimeError``, the same contract as ``OpenAIImageService``.
+
+``edit_image`` runs the same job as an OpenAI ``images.edit``-shaped body
+whose ``image`` are links to the owner's photos (contract section 2.4, a
+slide-1 cover; the Grok Bot fetches them with the callback token) and returns
+the image fitted to the cover size as PNG. Its ``claim`` runs once a slot is
+free and can cancel the job before anything is sent.
 """
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
 import structlog
 
+from rag_backend.domain.constants.cover_generation import COVER_GENERATION_SIZE
 from rag_backend.domain.models.carousel_run import current_run_context
+from rag_backend.domain.models.cover_generation import (
+    CoverEditJob,
+    CoverJobCancelledError,
+)
 from rag_backend.domain.protocols import ImageGenerationService
 from rag_backend.modules.image_bridge.constants import (
     CALLBACK_URL_TEMPLATE,
+    CONTENT_TYPE_CAROUSEL,
+    CONTENT_TYPE_COVER,
     DEFAULT_IMAGE_MODEL,
     DEFAULT_IMAGE_SIZE,
     DEFAULT_MAX_CONCURRENCY,
     DEFAULT_TIMEOUT_SECONDS,
+    EDIT_REQUEST_SIZE,
+    ERR_JOB_CANCELLED,
     ERR_JOB_EXPIRED,
     ERR_JOB_FAILED,
     ERR_JOB_MISSING,
     ERR_JOB_NO_IMAGE,
     ERROR_CODE_WEBHOOK_FAILED,
+    INPUT_URL_TEMPLATE,
     LOG_JOB_STARTED,
     LOG_JOB_SUCCEEDED,
     LOG_WEBHOOK_FAILED,
@@ -37,6 +54,7 @@ from rag_backend.modules.image_bridge.constants import (
 )
 from rag_backend.modules.image_bridge.domain.exceptions import (
     ImageBridgeJobError,
+    InvalidCallbackImageError,
     WebhookDeliveryError,
 )
 from rag_backend.modules.image_bridge.domain.models import (
@@ -86,6 +104,20 @@ class GrokBotImageDeps:
 
 
 @dataclass(frozen=True)
+class _JobSpec:
+    """What one job asks the Grok Bot for."""
+
+    prompt: str
+    model: str
+    size: str
+    project_id: str | None
+    content_type: str = CONTENT_TYPE_CAROUSEL
+    images: tuple[str, ...] = field(default_factory=tuple)
+    job_id: UUID | None = None
+    claim: Callable[[], Awaitable[bool]] | None = None
+
+
+@dataclass(frozen=True)
 class _StartedJob:
     job: ImageBridgeJob
     token: str
@@ -102,52 +134,90 @@ class GrokBotImageService(ImageGenerationService):
 
     async def generate_image(self, prompt: str, output_path: str) -> str:
         """Run one bridge job and write its normalized image to ``output_path``."""
-        async with self._slots:
-            job = await self._start(prompt)
-            image = await self._wait(job)
+        run = current_run_context()
+        spec = _JobSpec(
+            prompt=prompt,
+            model=self._config.model,
+            size=self._config.size,
+            project_id=run.project_id if run is not None else None,
+        )
+        image = await self._run(spec)
         request = NormalizeRequest(image, self._size.width, self._size.height)
         png = await asyncio.to_thread(self._deps.codec.normalize, request)
         await asyncio.to_thread(_write_file, output_path, png)
         return output_path
 
-    async def _start(self, prompt: str) -> ImageBridgeJob:
+    async def edit_image(self, job: CoverEditJob) -> bytes:
+        """Run one image-edit job with the reference photos; the cover as PNG."""
+        base = self._config.callback_base_url.rstrip(URL_TRAILING_SLASH)
+        image = await self._run(
+            _JobSpec(
+                prompt=job.prompt,
+                model=self._config.model,
+                size=EDIT_REQUEST_SIZE,
+                project_id=job.project_id,
+                content_type=CONTENT_TYPE_COVER,
+                images=tuple(
+                    INPUT_URL_TEMPLATE.format(base=base, job_id=job.job_id, index=index)
+                    for index in range(job.photo_count)
+                ),
+                job_id=job.job_id,
+                claim=job.claim,
+            )
+        )
+        size = ImageSize.parse(COVER_GENERATION_SIZE)
+        request = NormalizeRequest(image, size.width, size.height)
+        try:
+            return await asyncio.to_thread(self._deps.codec.normalize, request)
+        except InvalidCallbackImageError as exc:
+            raise ImageBridgeJobError(str(exc)) from exc
+
+    async def _run(self, spec: _JobSpec) -> bytes:
+        """One job under a concurrency slot; ``spec.claim`` may cancel it first."""
+        async with self._slots:
+            if spec.claim is not None and not await spec.claim():
+                raise CoverJobCancelledError(ERR_JOB_CANCELLED)
+            job = await self._start(spec)
+            return await self._wait(job)
+
+    async def _start(self, spec: _JobSpec) -> ImageBridgeJob:
         now = self._deps.clock.now()
         await self._deps.repository.sweep(now)
-        started = self._new_job()
+        started = self._new_job(spec)
         await self._deps.repository.create(started.job)
         try:
-            await self._deps.webhook.deliver(self._webhook_request(started, prompt))
+            await self._deps.webhook.deliver(self._webhook_request(started, spec))
         except WebhookDeliveryError as exc:
             await self._fail_delivery(started.job, exc)
             raise ImageBridgeJobError(str(exc)) from exc
         logger.info(LOG_JOB_STARTED, bridge_job_id=str(started.job.id))
         return started.job
 
-    def _new_job(self) -> _StartedJob:
+    def _new_job(self, spec: _JobSpec) -> _StartedJob:
         now = self._deps.clock.now()
         token = new_callback_token()
         job = ImageBridgeJob(
-            id=uuid4(),
+            id=spec.job_id or uuid4(),
             status=ImageBridgeJobStatus.PENDING,
-            size=self._config.size,
+            size=spec.size,
             token_sha256=token_digest(token),
             created_at=now,
             expires_at=now + timedelta(seconds=self._config.timeout_seconds),
         )
         return _StartedJob(job=job, token=token)
 
-    def _webhook_request(self, started: _StartedJob, prompt: str) -> WebhookRequest:
-        run = current_run_context()
+    def _webhook_request(self, started: _StartedJob, spec: _JobSpec) -> WebhookRequest:
         base = self._config.callback_base_url.rstrip(URL_TRAILING_SLASH)
         return WebhookRequest(
             job_id=started.job.id,
-            model=self._config.model,
-            prompt=prompt,
-            size=self._config.size,
+            model=spec.model,
+            prompt=spec.prompt,
+            size=spec.size,
             callback_url=CALLBACK_URL_TEMPLATE.format(base=base, job_id=started.job.id),
             callback_token=started.token,
             expires_at=started.job.expires_at,
-            metadata=job_metadata(run.project_id if run is not None else None),
+            metadata=job_metadata(spec.project_id, spec.content_type),
+            images=spec.images,
         )
 
     async def _fail_delivery(
@@ -185,7 +255,9 @@ class GrokBotImageService(ImageGenerationService):
             return await self._take(job.id)
         if job.status is ImageBridgeJobStatus.FAILED:
             raise ImageBridgeJobError(
-                ERR_JOB_FAILED.format(job_id=job.id, code=job.error_code)
+                ERR_JOB_FAILED.format(
+                    job_id=job.id, code=job.error_code, message=job.error_message or ""
+                )
             )
         if job.status is ImageBridgeJobStatus.EXPIRED:
             raise self._expired(job.id)
