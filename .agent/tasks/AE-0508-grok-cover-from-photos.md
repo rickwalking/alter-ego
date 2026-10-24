@@ -131,8 +131,10 @@ See `backend/tests/features/cover_generation_ae0508.feature` and
 
 ## Dependencies
 
-None in this repo. The Grok Bot sidecar must read `reference_images` (contract §2.4); asked of Pedro
-to confirm. If it does not, a generation is text-only on the bot side; nothing else breaks.
+The Grok Bot sidecar must handle `task: "image_edit"` + `reference_images` (contract §2.4). The live
+check on 2026-10-24 (bridge job `7d73695e-9783-46cf-9041-de78a35470f2`, synthetic reference) got no
+callback within 600 s: the sidecar accepts the body but does not answer it. Merge blocker until the
+sidecar side is fixed and the check repeated.
 
 ## Progress Log
 
@@ -162,4 +164,4 @@ See `.agent/reports/AE-0508.qa.md`.
 
 ## Blockers
 
-None.
+Grok Bot sidecar does not answer image-edit jobs (live check above); outside this repo.

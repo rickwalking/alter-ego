@@ -113,11 +113,11 @@ class CoverResults(Protocol):
         ...
 
     async def discard(self, asset_id: UUID) -> None:
-        """Delete a stored result (row and file) no generation will reference."""
-        ...
+        """Delete a stored result (row and file) no generation will reference.
 
-    async def forget(self, asset_id: UUID) -> None:
-        """Remove the file written for a result whose row was rolled back."""
+        The file is kept while another creator asset points at the same bytes;
+        the caller commits.
+        """
         ...
 
 

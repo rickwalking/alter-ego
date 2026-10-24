@@ -148,7 +148,6 @@ class _Photos:
 class _Results:
     stored: list[UUID] = field(default_factory=list)
     discarded: list[UUID] = field(default_factory=list)
-    forgotten: list[UUID] = field(default_factory=list)
     invalid: bool = False
 
     async def store(self, owner_id: str, image: bytes) -> UUID:
@@ -161,9 +160,6 @@ class _Results:
 
     async def discard(self, asset_id: UUID) -> None:
         self.discarded.append(asset_id)
-
-    async def forget(self, asset_id: UUID) -> None:
-        self.forgotten.append(asset_id)
 
 
 @dataclass
@@ -373,8 +369,9 @@ class TestRunner:
         status = await _runner(store, _Photos(), results, _Editor()).run(_run())
 
         assert status is CoverGenerationStatus.FAILED
-        assert results.forgotten == results.stored
+        assert results.discarded == results.stored
         assert len(results.stored) == 1
+        assert store.rollbacks >= 2
         assert store.settled[-1].error_code == "cover_generation_failed"
 
     async def test_success_stores_and_settles(self) -> None:

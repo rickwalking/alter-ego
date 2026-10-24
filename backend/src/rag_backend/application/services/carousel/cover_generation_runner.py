@@ -6,7 +6,8 @@ only if the row is still pending (the stale reaper times started rows from
 there); a row failed meanwhile cancels the job before any photo is sent. The
 image is then validated and stored as a private ``cover`` creator asset and
 the row settled. Every failure settles it ``failed`` with a code and leaves no
-asset behind, including a result whose settle fails.
+asset behind: the stored result is committed by the asset store, so a result
+whose settle fails is discarded (row and file) in a fresh transaction.
 """
 
 from __future__ import annotations
@@ -128,7 +129,8 @@ class CoverGenerationRunner:
             settled = await self._deps.store.settle(outcome)
         except Exception:
             await self._deps.store.rollback()
-            await self._deps.results.forget(asset_id)
+            await self._deps.results.discard(asset_id)
+            await self._deps.store.commit()
             raise
         if not settled:
             await self._deps.results.discard(asset_id)
