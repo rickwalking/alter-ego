@@ -19,7 +19,8 @@ MEMORY_VALUE = re.compile(r"^(?P<amount>\d+)(?P<unit>[kKmMgG])$")
 UNIT_MIB = {"k": 1 / 1024, "m": 1, "g": 1024}
 MEASURED_HD_RUN_PEAK_MIB = 1011
 HEADROOM = 1.3
-LANGFUSE_LIMIT_MIB = 768
+LANGFUSE_LIMIT_MIB = 1280
+LANGFUSE_MIN_HEAP_MIB = 1024
 CLICKHOUSE_LIMIT_MIB = 640
 CLICKHOUSE_MAX_RATIO = 0.75
 NODE_HEAP_FLAG = re.compile(r"--max-old-space-size=(?P<mib>\d+)")
@@ -119,7 +120,9 @@ def test_langfuse_web_keeps_its_node_heap_below_its_container_limit() -> None:
     assert isinstance(environment, dict)
     heap = NODE_HEAP_FLAG.search(str(environment.get("NODE_OPTIONS", "")))
     assert heap, "langfuse has no --max-old-space-size"
-    assert int(heap.group("mib")) + NODE_NATIVE_OVERHEAD_MIB <= LANGFUSE_LIMIT_MIB
+    heap_mib = int(heap.group("mib"))
+    assert heap_mib >= LANGFUSE_MIN_HEAP_MIB
+    assert heap_mib + NODE_NATIVE_OVERHEAD_MIB <= LANGFUSE_LIMIT_MIB
 
 
 def test_clickhouse_caps_its_server_memory_below_its_container_limit() -> None:

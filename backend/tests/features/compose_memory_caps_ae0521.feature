@@ -29,7 +29,8 @@ Feature: Every long-running production container has a memory cap (AE-0521)
   Scenario: Langfuse web keeps its Node heap below its container limit
     Given the production compose file
     When the langfuse service is read
-    Then it is capped at 768 MiB
+    Then it is capped at 1280 MiB
+    And its Node heap limit is at least 1024 MiB
     And its Node heap limit leaves room under that cap
 
   Scenario: ClickHouse caps its server memory below its container limit
