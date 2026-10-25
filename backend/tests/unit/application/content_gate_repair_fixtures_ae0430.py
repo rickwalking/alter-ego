@@ -9,7 +9,7 @@ model would answer. The same exported state also carries the label and emphasis 
 the QA noted ("**PT**", "**PT** ** **", a "PT:" line before "Heading:", EN "**…**"); the
 gate flags them, so the fake model answers those 4 fields with clean copy too. Four
 summary item bodies on slide 2 stop mid-sentence ("... Não é", "... an employee has");
-copy_truncated covers item bodies since AE-0549, so they get finished rewrites as well.
+copy_truncated also covers item bodies, so they get finished rewrites as well.
 """
 
 from __future__ import annotations
