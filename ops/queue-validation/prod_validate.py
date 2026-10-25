@@ -62,6 +62,10 @@ HEALTH_FAILURES_ABORT = 2
 AVAILABLE_ABORT_MIB = 300
 HTTP_OK = 200
 RUNNING = "running"
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/130.0 Safari/537.36"
+)
 KEY, STATUS = 0, 1
 
 
@@ -205,8 +209,9 @@ def deploy_running() -> bool:
 
 def healthy() -> bool:
     """The public health route answers 200."""
+    request = urllib.request.Request(BASE_URL + "/api/health", headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(BASE_URL + "/api/health", timeout=15) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             return response.status == HTTP_OK
     except (urllib.error.URLError, TimeoutError):
         return False
@@ -262,6 +267,8 @@ def drive(run_dir: Path, load: ModuleType, baseline_p95: float, project: str) ->
             handle.write(json.dumps(state) + "\n")
         if state.get("done"):
             return {"outcome": "reached final review", "chaos": done}
+        if state.get("stalled"):
+            return {"outcome": "stalled: the content gate kept refusing the voice score", "chaos": done}
         runs = state.get("runs") or []
         assert isinstance(runs, list)
         due = chaos_due(runs, int(str(state.get("other_active_runs", 0))), done)
