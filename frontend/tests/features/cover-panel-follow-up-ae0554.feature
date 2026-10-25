@@ -7,7 +7,7 @@ Feature: The cover panel offers uploads only to the owner and explains upload fa
   Scenario: A viewer who is not the owner sees no upload or generate control
     Given a carousel the viewer does not own
     When the publish page shows the cover panel
-    Then only the not-owner note is shown
+    Then the viewer stays on the publish page and only the not-owner note is shown
     And there is no "Enviar foto" and no "Gerar capa"
 
   Scenario: No control is shown while the generation list loads

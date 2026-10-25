@@ -119,11 +119,10 @@ export function CoverGeneratePanel({
     listedIds: photos.map((photo) => photo.asset_id),
     onListed: form.add,
   });
-  if (form.loadError) {
-    return <CoverGenerateUnavailable error={form.loadError} />;
-  }
   if (!form.data) {
-    return null;
+    return form.loadError ? (
+      <CoverGenerateUnavailable error={form.loadError} />
+    ) : null;
   }
   return (
     <div className="mt-4 border-t border-white/10 pt-3">

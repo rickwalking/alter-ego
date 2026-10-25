@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { it, expect, vi, beforeEach, describe } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { HTTP_METHODS } from "@/constants/api";
@@ -28,7 +29,10 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiCall: vi.fn() };
+  const apiCall = vi.fn<typeof actual.apiCall>();
+  const apiCallOwnerOnly = ((url: string, schema: z.ZodType) =>
+    apiCall(url, schema)) as typeof actual.apiCallOwnerOnly;
+  return { ...actual, apiCall, apiCallOwnerOnly };
 });
 
 import { apiCall, ApiError } from "@/lib/api-client";

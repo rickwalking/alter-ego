@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { it, expect, vi, beforeEach, describe } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { ApiError } from "@/lib/api-client";
@@ -28,7 +29,10 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiCall: vi.fn() };
+  const apiCall = vi.fn<typeof actual.apiCall>();
+  const apiCallOwnerOnly = ((url: string, schema: z.ZodType) =>
+    apiCall(url, schema)) as typeof actual.apiCallOwnerOnly;
+  return { ...actual, apiCall, apiCallOwnerOnly };
 });
 
 import { apiCall } from "@/lib/api-client";
@@ -65,6 +69,21 @@ describe("cover panel for someone who is not the owner", () => {
   });
 
   /** Scenario: No control is shown while the generation list loads */
+  it("keeps the owner's form when a later refetch fails", async () => {
+    routeApi([list()]);
+    const { client } = renderPanel(PHOTOS, undefined, vi.fn());
+    await screen.findByText(/^usage/);
+    mockApiCall.mockRejectedValue(new ApiError(500, "boom"));
+
+    await client.refetchQueries({
+      queryKey: ["carousel-cover-generations", "p-1"],
+    });
+
+    expect(screen.getByRole("button", { name: "action" })).toBeTruthy();
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  /** Scenario: No control is shown while the generation list loads */
   it("shows no upload or generate control while the list loads", () => {
     mockApiCall.mockReturnValue(new Promise(() => undefined));
     renderPanel(PHOTOS, undefined, vi.fn());
@@ -80,6 +99,8 @@ describe("upload errors by cause", () => {
     [new ApiError(429, "slow down"), "uploadErrors.rateLimited"],
     [new TypeError("Failed to fetch"), "uploadErrors.network"],
     [new ApiError(503, "down"), "uploadErrors.server"],
+    [new ApiError(500, "Invalid data from API"), "uploadErrors.server"],
+    [new Error("unexpected"), "uploadErrors.server"],
     [new ApiError(413, "too large"), "photo.uploadFailed"],
     [new ApiError(422, "bad type"), "photo.uploadFailed"],
   ])("explains %s", async (error, message) => {
@@ -174,6 +195,38 @@ describe("an uploaded photo is ticked once listed", () => {
       expect(postBodies()).toEqual([
         { photo_ids: ["a", "b", "c"], prompt: PROMPT, confirmed: true },
       ]),
+    );
+  });
+
+  /** Scenario: An uploaded photo is ticked once it is listed */
+  it("ticks two uploads that are listed together", async () => {
+    routeApi([list()]);
+    const upload = vi
+      .fn()
+      .mockResolvedValueOnce("up-1")
+      .mockResolvedValueOnce("up-2");
+    const { user, setPhotos } = renderPanel(PHOTOS, undefined, upload);
+    await screen.findByText(/^usage/);
+
+    await user.upload(uploadInput(), FILE);
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(1));
+    await user.upload(uploadInput(), FILE);
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+    setPhotos([
+      ...PHOTOS,
+      { asset_id: "up-1", source: "library" },
+      { asset_id: "up-2", source: "library" },
+    ]);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/"number":6}/)).toHaveProperty(
+        "checked",
+        true,
+      ),
+    );
+    expect(screen.getByLabelText(/"number":5}/)).toHaveProperty(
+      "checked",
+      true,
     );
   });
 

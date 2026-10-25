@@ -1,3 +1,4 @@
+import type { UPLOAD_FAILURE } from "@/modules/publishing/distribution/constants";
 import type { Dispatch, SetStateAction } from "react";
 import type { ChatStream } from "@/lib/use-chat-stream";
 /**
@@ -162,8 +163,9 @@ export interface CopyHistory {
 /** Upload a file from the device into the owner's photo library; its asset id. */
 export type UploadLibraryPhoto = (file: File) => Promise<string>;
 
-/** Why an upload failed: the file itself, a rate limit, the network or the server. */
-export type UploadFailure = "invalid" | "rateLimited" | "network" | "server";
+/** Why an upload failed (``UPLOAD_FAILURE``). */
+export type UploadFailure =
+  (typeof UPLOAD_FAILURE)[keyof typeof UPLOAD_FAILURE];
 
 /** "Enviar foto": whether the page offers it, its progress and failure cause. */
 export interface CoverPhotoUpload {

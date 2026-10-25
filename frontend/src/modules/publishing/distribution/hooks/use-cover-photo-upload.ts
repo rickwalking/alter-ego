@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { HTTP_STATUS } from "@/constants/api";
 import { ApiError } from "@/lib/api-client";
 import { coverOptionKeys } from "./use-cover-picker";
+import { UPLOAD_FAILURE } from "@/modules/publishing/distribution/constants";
 import type {
   CoverPhotoUpload,
   CoverPhotoUploadDeps,
@@ -11,15 +12,21 @@ import type {
 
 const SERVER_ERROR_MIN = 500;
 
-/** The cause of a failed upload: no HTTP answer is the network. */
+/**
+ * The cause of a failed upload. ``fetch`` rejects with a ``TypeError`` when no
+ * HTTP answer arrives (the network); any other unexpected error reads as the
+ * server's.
+ */
 export function uploadFailure(err: unknown): UploadFailure {
-  if (!(err instanceof ApiError)) {
-    return "network";
+  if (err instanceof TypeError) {
+    return UPLOAD_FAILURE.NETWORK;
   }
-  if (err.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
-    return "rateLimited";
+  if (!(err instanceof ApiError) || err.status >= SERVER_ERROR_MIN) {
+    return UPLOAD_FAILURE.SERVER;
   }
-  return err.status >= SERVER_ERROR_MIN ? "server" : "invalid";
+  return err.status === HTTP_STATUS.TOO_MANY_REQUESTS
+    ? UPLOAD_FAILURE.RATE_LIMITED
+    : UPLOAD_FAILURE.INVALID;
 }
 
 /**
@@ -37,10 +44,11 @@ export function useCoverPhotoUpload({
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [failure, setFailure] = useState<UploadFailure | null>(null);
-  const [waiting, setWaiting] = useState<string | null>(null);
-  if (waiting !== null && listedIds.includes(waiting)) {
-    setWaiting(null);
-    onListed(waiting);
+  const [waiting, setWaiting] = useState<readonly string[]>([]);
+  const listed = waiting.filter((assetId) => listedIds.includes(assetId));
+  if (listed.length > 0) {
+    setWaiting(waiting.filter((assetId) => !listed.includes(assetId)));
+    listed.forEach(onListed);
   }
   const onFile = useCallback(
     async (file: File): Promise<void> => {
@@ -50,7 +58,8 @@ export function useCoverPhotoUpload({
       setUploading(true);
       setFailure(null);
       try {
-        setWaiting(await upload(file));
+        const assetId = await upload(file);
+        setWaiting((current) => [...current, assetId]);
       } catch (err) {
         setFailure(uploadFailure(err));
         return;

@@ -6,7 +6,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { apiCall } from "@/lib/api-client";
+import { apiCall, apiCallOwnerOnly } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
   GENERATION_STATUS,
@@ -52,7 +52,8 @@ function newestSucceeded(data: CoverGenerations | undefined): string | null {
 }
 
 /**
- * The generations, polled only while one is pending. The cover
+ * The generations, polled only while one is pending. A 403 (not the owner)
+ * is shown by the panel, so it does not send the page to /403. The cover
  * options refresh whenever the newest succeeded generation changes, so a fast
  * job or one that finished while polling was paused still shows up.
  */
@@ -63,7 +64,7 @@ export function useCoverGenerations(
   const query = useQuery({
     queryKey: coverGenerationKeys.detail(projectId),
     queryFn: () =>
-      apiCall(
+      apiCallOwnerOnly(
         API_ENDPOINTS.CAROUSEL_COVER_GENERATIONS(projectId),
         coverGenerationsSchema,
       ),

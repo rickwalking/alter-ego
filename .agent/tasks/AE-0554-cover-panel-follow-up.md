@@ -26,6 +26,9 @@ Close the review findings on the AE-0551 cover panel (#287), per Pedro's review.
 4. `publish.coverPicker.generate.uploadFailed` duplicates `create.photo.uploadFailed` in pt and en.
 5. A freshly uploaded photo is ticked before the cover options refetch lists it, so it counts toward the
    3 while it is invisible in the checklist.
+6. Found while fixing 1: `GET cover-generations` went through `apiCall`, whose 403 sends the browser to
+   /403. A non-owner on the publish page lost the page instead of seeing the not-owner note (since
+   AE-0508). A successful upload whose reply did not parse also read as a network failure.
 
 ## Scope
 
@@ -39,6 +42,11 @@ Close the review findings on the AE-0551 cover panel (#287), per Pedro's review.
   only while a generation is pending.
 - A just-uploaded photo waits until the refetched options list it, then is ticked (still only while fewer
   than 3 are ticked).
+- `apiCallOwnerOnly(url, schema)` in `lib/api-client.ts`: a GET that keeps the 401 login redirect but
+  not the 403 page redirect, used only by the owner-only generation list. `apiUpload` turns a reply that
+  is not JSON or misses fields into `ApiError(500)`, like `apiCall`.
+- A failed refetch after a successful load keeps the owner's form (stale data wins over the error).
+- Two uploads in a row are both ticked once listed.
 - pt/en copy.
 
 ## Non-Goals
@@ -55,6 +63,8 @@ Close the review findings on the AE-0551 cover panel (#287), per Pedro's review.
 - [ ] The generation list polls only while a generation is pending.
 - [ ] `uploadFailed` exists once (`create.photo.uploadFailed`) in pt and en.
 - [ ] An uploaded photo is ticked only once the cover options list it, and never past 3.
+- [ ] A non-owner stays on the publish page (the list's 403 does not redirect to /403); a 401 still goes
+      to the login page.
 
 ## Gherkin Scenarios
 
@@ -62,7 +72,7 @@ See `frontend/tests/features/cover-panel-follow-up-ae0554.feature`.
 
 ## Affected Areas
 
-- [ ] Frontend (`cover-generate-panel.tsx`, `cover-photo-upload-field.tsx`, `use-cover-photo-upload.ts`,
+- [ ] Frontend (`lib/api-client.ts`, `cover-generate-panel.tsx`, `cover-photo-upload-field.tsx`, `use-cover-photo-upload.ts`,
       `use-cover-generate-form.ts`, `use-cover-generation.ts`, types, i18n)
 - Backend: no change. API: no change. Database: no change.
 
