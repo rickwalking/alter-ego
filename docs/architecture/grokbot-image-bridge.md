@@ -225,6 +225,17 @@ that counts every attempt. A queued job claims its generation once it has a brid
 the webhook. A generation failed meanwhile cancels the job, so no photo is sent. See
 [ADR-0027](../decisions/0027-grok-cover-from-library-photos.md).
 
+## 2.5 Cover jobs without photos (text-only, AE-0551)
+
+The owner may generate a cover with no photo ticked, from the direction alone (Pedro, 2026-10-25).
+That job is a text-only job: exactly the §2.1 body, with no `operation` and no `image`, so the Grok
+Bot answers it as `images.generate`, like a slide image. Only these values differ from a slide
+image: `size` is `"1024x1536"`, `metadata.content_type` is `"carousel_cover"`, and the prompt is the
+`cover_generation/v1/generate` template (a 4:5 cover scene with a calm top third, no text, no
+reference-photo instructions). The model, callback, confirmation, caps, attempt ceilings, claim
+before the webhook and the absence of an OpenAI fallback are the same as for an edit job. No photo
+link exists for such a job (every `/inputs/{n}` is 404).
+
 ## 3. Backend design
 
 ### 3.1 Module

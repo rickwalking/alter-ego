@@ -14,7 +14,12 @@ import type {
   CoverGenerationInput,
   CoverGenerations,
 } from "@/modules/publishing/distribution/hooks/use-cover-generation";
-import type { CapReason } from "@/modules/publishing/distribution/hooks/types";
+import type {
+  CapReason,
+  CoverGenerateForm,
+  CoverPhotoUpload,
+  UploadLibraryPhoto,
+} from "@/modules/publishing/distribution/hooks/types";
 import type { usePickCover } from "@/modules/publishing/distribution/hooks/use-cover-picker";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 import type {
@@ -93,11 +98,26 @@ export type RenderPromptSuggestions = (
   fill: (prompt: string) => void,
 ) => ReactNode;
 
-/** "Gerar capa com Grok": the owner's library photos it may send. */
+/**
+ * "Gerar capa com Grok": the owner's library photos it may send and, when the
+ * page composes it, the library upload behind "Enviar foto".
+ */
 export interface CoverGeneratePanelProps {
   projectId: string;
   photos: readonly CoverOptionView[];
   renderPromptSuggestions?: RenderPromptSuggestions;
+  uploadPhoto?: UploadLibraryPhoto;
+}
+
+/** The status line and the confirmation dialog of the generate form. */
+export interface CoverGenerateOutcomeProps {
+  form: CoverGenerateForm;
+}
+
+/** "Enviar foto": a file picker, its progress and the library's refusal. */
+export interface CoverPhotoUploadFieldProps {
+  upload: CoverPhotoUpload;
+  disabled: boolean;
 }
 
 /** The library photos as checkboxes (at most ``max`` ticked). */
@@ -173,6 +193,7 @@ export interface CoverPickerSectionProps {
   projectId: string;
   onSwitched: (artifactVersion: string | null) => void;
   renderPromptSuggestions?: RenderPromptSuggestions;
+  uploadPhoto?: UploadLibraryPhoto;
 }
 
 export interface RebuildPdfSectionProps {

@@ -9,6 +9,7 @@ generation-row helpers over the in-memory database. Photos are generated.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from io import BytesIO
@@ -44,11 +45,12 @@ def cover_png(size: tuple[int, int] = (1080, 1350)) -> bytes:
 
 @dataclass
 class FakeEditor:
-    """Records each job; answers ``image`` or raises ``error``."""
+    """Records each job and prompt renderer; answers ``image`` or raises ``error``."""
 
     image: bytes = field(default_factory=cover_png)
     error: Exception | None = None
     jobs: list[CoverEditJob] = field(default_factory=list)
+    renderers: list[Callable[[str], str]] = field(default_factory=list)
 
     async def edit_image(self, job: CoverEditJob) -> bytes:
         if job.claim is not None and not await job.claim():
@@ -63,8 +65,8 @@ def install_fake_editor(monkeypatch: pytest.MonkeyPatch) -> FakeEditor:
     """Route the cover generation through a fake bridge editor."""
     fake = FakeEditor()
 
-    def _wiring(render_prompt: object) -> CoverRunWiring:
-        del render_prompt
+    def _wiring(render_prompt: Callable[[str], str]) -> CoverRunWiring:
+        fake.renderers.append(render_prompt)
         return CoverRunWiring(
             editor=fake,
             render_prompt=lambda text: f"direction: {text}",

@@ -17,12 +17,15 @@ from rag_backend.domain.constants.cover_generation import (
 
 
 class CoverGenerationRequest(BaseModel):
-    """The photos to send, the owner's direction and the explicit confirmation."""
+    """The photos to send, the owner's direction and the explicit confirmation.
+
+    ``photo_ids`` may be empty or absent: a cover from the direction alone.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     photo_ids: list[UUID] = Field(
-        ...,
+        default_factory=list,
         min_length=COVER_GENERATION_MIN_PHOTOS,
         max_length=COVER_GENERATION_MAX_PHOTOS,
     )

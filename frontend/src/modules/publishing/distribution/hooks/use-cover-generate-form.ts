@@ -51,21 +51,33 @@ export function loadErrorKey(err: Error): string {
   return "errors.loadFailed";
 }
 
-/** Tick a photo on and off, keeping at most ``MAX_PHOTOS``. */
-function usePhotoSelection(): {
-  selected: readonly string[];
-  toggle: (assetId: string) => void;
-} {
+function withPhoto(
+  current: readonly string[],
+  assetId: string,
+): readonly string[] {
+  if (current.includes(assetId) || current.length >= MAX_PHOTOS) {
+    return current;
+  }
+  return [...current, assetId];
+}
+
+/** Tick a photo on and off, or add one, keeping at most ``MAX_PHOTOS``. */
+function usePhotoSelection(): Pick<
+  CoverGenerateForm,
+  "selected" | "toggle" | "add"
+> {
   const [selected, setSelected] = useState<readonly string[]>([]);
   const toggle = useCallback((assetId: string): void => {
-    setSelected((current) => {
-      if (current.includes(assetId)) {
-        return current.filter((id) => id !== assetId);
-      }
-      return current.length >= MAX_PHOTOS ? current : [...current, assetId];
-    });
+    setSelected((current) =>
+      current.includes(assetId)
+        ? current.filter((id) => id !== assetId)
+        : withPhoto(current, assetId),
+    );
   }, []);
-  return { selected, toggle };
+  const add = useCallback((assetId: string): void => {
+    setSelected((current) => withPhoto(current, assetId));
+  }, []);
+  return { selected, toggle, add };
 }
 
 /** Start the asked generation; a refusal becomes the dialog's message. */
@@ -98,21 +110,23 @@ function generateAllowed(gate: GenerateGate): boolean {
   );
 }
 
-/** The form, the caps and the latest generation, with what may happen next. */
+/**
+ * The form, the caps and the latest generation, with what may happen next.
+ * Photos are optional: a prompt alone asks for a cover from words.
+ */
 export function useCoverGenerateForm(
   projectId: string,
   enabled: boolean,
 ): CoverGenerateForm {
   const generations = useCoverGenerations(projectId, enabled);
-  const { selected, toggle } = usePhotoSelection();
+  const { selected, toggle, add } = usePhotoSelection();
   const [prompt, setPrompt] = useState("");
   const [asking, setAsking] = useState<CoverGenerationInput | null>(null);
   const data = generations.data;
   const latest = data?.generations[0] ?? null;
   const running = latest?.status === GENERATION_STATUS.PENDING;
   const blocked = capReason(data);
-  const formReady =
-    selected.length > 0 && prompt.trim().length >= PROMPT_MIN_LENGTH;
+  const formReady = prompt.trim().length >= PROMPT_MIN_LENGTH;
   const canGenerate = generateAllowed({
     loaded: data !== undefined,
     formReady,
@@ -132,6 +146,7 @@ export function useCoverGenerateForm(
     canGenerate,
     selected,
     toggle,
+    add,
     prompt,
     setPrompt,
     asking,

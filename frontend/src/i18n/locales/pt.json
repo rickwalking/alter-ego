@@ -1268,9 +1268,12 @@
       "generatedShort": "Grok",
       "generate": {
         "title": "Gerar capa com Grok",
-        "description": "Escolha até 3 fotos suas e descreva a cena. Uma capa nova é criada a partir delas; ela fica na sua biblioteca privada e aparece acima para escolher.",
+        "description": "Descreva a cena e, se quiser, escolha até 3 fotos suas ou envie uma nova. Uma capa nova é criada a partir delas, ou só das suas palavras; ela fica na sua biblioteca privada e aparece acima para escolher.",
         "photosLegend": "Fotos de referência (até {max})",
         "photoLabel": "Usar a foto {number} da biblioteca",
+        "upload": "Enviar foto",
+        "uploading": "Enviando…",
+        "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB).",
         "promptLabel": "Como deve ser a capa?",
         "promptPlaceholder": "Ex.: eu num café em Lisboa, luz de fim de tarde, olhando para a câmera",
         "usage": "{carouselUsed} de {carouselCap} neste carrossel · {monthUsed} de {monthCap} no mês (o limite do mês renova às 21:00, horário de Brasília, do último dia do mês)",
@@ -1288,7 +1291,9 @@
           "title": "Enviar suas fotos para a OpenAI (ChatGPT)?",
           "body": "{count, plural, one {Sua foto será enviada} other {Suas # fotos serão enviadas}} ao Grok Bot e processadas pela OpenAI (ChatGPT) para gerar esta capa. Esta geração conta no limite: {carouselUsed} de {carouselCap} neste carrossel e {monthUsed} de {monthCap} no mês. Falhas não contam.",
           "action": "Enviar e gerar",
-          "cancel": "Cancelar"
+          "cancel": "Cancelar",
+          "textTitle": "Enviar sua descrição para a OpenAI (ChatGPT)?",
+          "textBody": "Nenhuma foto é enviada: só a sua descrição vai ao Grok Bot e é processada pela OpenAI (ChatGPT) para gerar esta capa. Esta geração conta no limite: {carouselUsed} de {carouselCap} neste carrossel e {monthUsed} de {monthCap} no mês. Falhas não contam."
         },
         "errors": {
           "loadFailed": "Não foi possível carregar as gerações de capa. Recarregue a página.",
@@ -1307,7 +1312,7 @@
           "notOwner": "Só o dono do carrossel pode gerar capas."
         }
       },
-      "empty": "Nenhuma foto na biblioteca. Envie fotos no passo \"Foto do slide 1\" ao criar um carrossel."
+      "empty": "Nenhuma foto na biblioteca ainda. Envie uma abaixo, ou descreva a capa e gere a partir das suas palavras."
     },
     "slideEditor": {
       "title": "Editar texto dos slides",
