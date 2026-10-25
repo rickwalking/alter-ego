@@ -245,6 +245,30 @@ def truncation_detail(text: str) -> str:
     return ""
 
 
+def item_truncation_detail(text: str) -> str:
+    """A checklist item body that stops mid-sentence.
+
+    Item bodies may be short fragments with no closing punctuation, so only a
+    clear cut-off counts: an open ending (an ellipsis or a dangling ``,:;-``), a
+    last word that is a dangling connector, or a body written as sentences whose
+    last one is unfinished ("Texto curto. Não é").
+    """
+    plain = plain_text(text)
+    if not plain:
+        return ""
+    open_ending = _open_ending(plain)
+    if open_ending:
+        return open_ending
+    closed = plain.rstrip(_TRAILING_CLOSERS)
+    words = _LETTER_WORD_PATTERN.findall(closed.casefold())
+    if words and words[-1] in _DANGLING_CONNECTORS:
+        return f'ends on "{words[-1]}"'
+    written_as_sentences = any(mark in closed[:-1] for mark in _TERMINAL_PUNCTUATION)
+    if written_as_sentences and closed[-1] not in _TERMINAL_PUNCTUATION:
+        return "no closing punctuation"
+    return ""
+
+
 def wrong_language_detail(text: str, *, portuguese: bool) -> str:
     """Copy that reads as the other language (stopword markers).
 

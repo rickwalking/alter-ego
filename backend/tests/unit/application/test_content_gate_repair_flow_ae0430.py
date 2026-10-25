@@ -97,7 +97,7 @@ class TestRepairBlockedContentGate:
         drafts = cast(list[dict[str, object]], updates["slide_drafts"])
         first = drafts[0]
         assert cast(dict[str, object], first["presentation_en"])["tldr_strip"]
-        assert "presentation_en" not in drafts[1]
+        assert "presentation_en" not in drafts[4]
 
     async def test_no_repairer_or_passing_gate_does_nothing(self) -> None:
         """Scenario: Repair is off without a repairer or a blocking gate."""

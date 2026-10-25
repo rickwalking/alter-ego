@@ -89,6 +89,10 @@ class TestProdFixture:
             ("pt", "body", "drafting_scaffold_present"),
             ("en", "body", "drafting_scaffold_present"),
             ("en", "body", "emphasis_markup_locale_mismatch"),
+            ("pt", "summary_points[0].body", "copy_truncated"),
+            ("pt", "summary_points[2].body", "copy_truncated"),
+            ("en", "summary_points[0].body", "copy_truncated"),
+            ("en", "summary_points[2].body", "copy_truncated"),
         }
 
 
@@ -108,7 +112,7 @@ class TestTargetedRepair:
         assert repairer.calls == [PROD_FAILING_IDS]
         assert outcome.report.blocking is False
         assert outcome.report.violations == []
-        assert outcome.changed_indices == frozenset({1, 3, 4, 6})
+        assert outcome.changed_indices == frozenset({1, 2, 3, 4, 6})
 
     async def test_over_limit_field_repaired_in_one_round(self) -> None:
         """Scenario: An over-limit field is repaired in one round."""
@@ -156,7 +160,7 @@ class TestTargetedRepair:
 
         assert "6:pt:heading" not in repairer.calls[0]
         assert _payload(outcome.slides, 6, "pt")["heading"] == heading
-        assert _payload(outcome.slides, 2, "pt") == _payload(prod_slides(), 2, "pt")
+        assert _payload(outcome.slides, 5, "pt") == _payload(prod_slides(), 5, "pt")
 
     async def test_failing_model_leaves_copy_and_report(self) -> None:
         """Scenario: A failing model leaves the copy and the report as they were."""
