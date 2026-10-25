@@ -186,3 +186,10 @@ export interface CoverAiIdeas {
   context: string;
   ideas: readonly string[];
 }
+
+/** The list-level errors of one slide's structured items (``ListErrors``). */
+export interface ListErrorsProps {
+  slide: LocalizedSlideReview;
+  locale: PresentationLocaleKey;
+  props: SlideCopyEditorProps;
+}

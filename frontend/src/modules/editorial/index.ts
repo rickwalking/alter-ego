@@ -103,6 +103,7 @@ export {
   fieldDomId,
   fieldErrorKey,
   focusInvalidField,
+  listFieldErrorKeys,
   slideDomId,
   structuredItemFieldPath,
   violationsForSlide,

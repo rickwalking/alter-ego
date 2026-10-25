@@ -7,7 +7,10 @@ export of prod carousel 5344b6c6 (2026-10-19): its 7 localized slides and the
 PROD_ANSWERS holds within-limit rewrites of the 12 prod fields, as a limit-respecting
 model would answer. The same exported state also carries the label and emphasis leaks
 the QA noted ("**PT**", "**PT** ** **", a "PT:" line before "Heading:", EN "**…**"); the
-gate flags them, so the fake model answers those 4 fields with clean copy too.
+gate flags them, so the fake model answers those 4 fields with clean copy too. Five
+summary item bodies on slide 2 stop mid-sentence ("... Não é", "... concluindo a",
+"... an employee has"); copy_truncated also covers item bodies, so they get finished
+rewrites as well.
 """
 
 from __future__ import annotations
@@ -38,6 +41,21 @@ PROD_ANSWERS: dict[str, str] = {
     "1:pt:body": (
         "Todo mundo viu o Grok Bot reservar mesa. Ninguém falou do computador. "
         "A ligação chama atenção."
+    ),
+    "2:pt:summary_points[0].body": (
+        "Musk disse que o Grok Bot liga e reserva mesa por telefone. Não é só chat."
+    ),
+    "2:pt:summary_points[1].body": (
+        "Um vídeo mostrou o bot ligando para um restaurante e fechando a reserva."
+    ),
+    "2:pt:summary_points[2].body": (
+        "Musk comparou o bot a um funcionário. Eu vejo um agente com computador."
+    ),
+    "2:en:summary_points[0].body": (
+        "Musk said Grok Bot calls and books a table by phone. It is more than chat."
+    ),
+    "2:en:summary_points[2].body": (
+        "Musk compared the bot to an employee. I see an agent with its own computer."
     ),
     "3:pt:features[0].body": (
         "Navegador, terminal e arquivos ficam no ambiente dele, não no seu setup."

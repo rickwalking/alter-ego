@@ -64,6 +64,10 @@ _ITEM_TITLE = "title"
 _ITEM_BODY = "body"
 _ITEM_LIST_FIELDS = (_KEY_FEATURES, _KEY_SUMMARY_POINTS, _KEY_ACTIONS)
 _SLIDE_TYPE_KEYS = ("slide_type", "type")
+_LISTS_OF_CODE: dict[str, tuple[str, ...]] = {
+    VIOLATION_SUMMARY_POINTS_MISSING: (_KEY_SUMMARY_POINTS,),
+    VIOLATION_CLOSING_ACTIONS_MISSING: (_KEY_ACTIONS, _KEY_FEATURES),
+}
 _ALLOWED_TAG = "strong"
 _TAG_PATTERN = re.compile(r"<\s*(/?)\s*([A-Za-z][A-Za-z0-9]*)[^>]*>")
 _MANGLED_TAG_PATTERN = re.compile(r"(?<!<)/strong\b", flags=re.IGNORECASE)
@@ -224,13 +228,42 @@ def language_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
     return [*visible_fields(payload), *extra]
 
 
+def _first_incomplete_item(
+    payload: Mapping[str, object], list_fields: tuple[str, ...]
+) -> str:
+    """Where the editor shows a too-short item list: the first item missing a part.
+
+    ``summary_points[i].title`` or ``summary_points[i].body`` for the first item
+    without a title or a body; when every item is complete but there are too few,
+    the list that holds them (the first list when none has items).
+    """
+    for list_field in list_fields:
+        for index, item in enumerate(_items(payload, list_field)):
+            for key in (_ITEM_TITLE, _ITEM_BODY):
+                if not text_of(item, key).strip():
+                    return f"{list_field}[{index}].{key}"
+    holding = [field for field in list_fields if _items(payload, field)]
+    return (holding or list(list_fields))[0]
+
+
+def _structure_field(payload: Mapping[str, object], code: str) -> str:
+    list_fields = _LISTS_OF_CODE.get(code)
+    if list_fields is None:
+        return _FIELD_BODY
+    return _first_incomplete_item(payload, list_fields)
+
+
 def content_rule_violations(
     command: ContentRuleCommand,
 ) -> list[SlideValidationViolation]:
-    """Structure + markup rubric violations for one locale payload (v2+)."""
+    """Structure + markup rubric violations for one locale payload (v2+).
+
+    ``body_empty`` points at the body; a too-short summary or closing list points
+    at its first incomplete item, so the editor shows it under that item.
+    """
     slide_type = slide_type_of(command.payload)
     violations = [
-        _violation(command, code, _FIELD_BODY)
+        _violation(command, code, _structure_field(command.payload, code))
         for code in _structure_codes(command.payload, slide_type)
         if rule_active(command.policy, code, slide_type)
     ]

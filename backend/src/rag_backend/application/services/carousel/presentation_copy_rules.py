@@ -13,7 +13,8 @@ structured item (features, summary points, actions):
 - ``assistant_chatter``: "Here is", "Assistant:", "Claro! Aqui está o texto".
 - ``placeholder_text``: ``[insert…]``, ``{topic}``, to-do markers, lorem ipsum, stubs.
 - ``encoding_garbled``: mojibake, U+FFFD, control characters.
-- ``copy_truncated``: the slide body stops mid-sentence (body only).
+- ``copy_truncated``: the slide body stops mid-sentence, or a checklist item body is
+  clearly cut off (an open ending, a dangling connector, or an unfinished last sentence).
 - ``body_too_short``: a content slide body under 8 words (body only).
 - ``wrong_language``: PT copy that reads as English, EN copy as Portuguese.
 - ``repeated_text``: a sentence twice in one slide, or a doubled word.
@@ -43,6 +44,9 @@ from rag_backend.application.services.carousel.copy_hygiene_text import (
     truncation_detail,
     word_count,
     wrong_language_detail,
+)
+from rag_backend.application.services.carousel.item_truncation_text import (
+    item_truncation_detail,
 )
 from rag_backend.application.services.carousel.presentation_content_rules import (
     ContentRuleCommand,
@@ -80,6 +84,10 @@ _FIELD_BODY = "body"
 _KEY_FEATURES = "features"
 _DETAIL_SEPARATOR = ": "
 _ITEM_TITLE_SUFFIX = "].title"
+_ITEM_BODY_SUFFIX = "].body"
+_ITEM_MESSAGES: dict[str, str] = {
+    VIOLATION_COPY_TRUNCATED: "Item text stops mid-sentence",
+}
 
 _MESSAGES: dict[str, str] = {
     VIOLATION_STRUCTURED_PAYLOAD_IN_COPY: (
@@ -129,7 +137,8 @@ def _violation(
     severity: ViolationSeverity = (
         "warning" if command.policy.is_casing_warning(code) else "blocker"
     )
-    message = _MESSAGES[code] + (_DETAIL_SEPARATOR + detail if detail else "")
+    base = _ITEM_MESSAGES.get(code) if field.endswith(_ITEM_BODY_SUFFIX) else None
+    message = (base or _MESSAGES[code]) + (_DETAIL_SEPARATOR + detail if detail else "")
     return SlideValidationViolation(
         code=code,
         message=message,
@@ -191,6 +200,13 @@ def _body_codes(
         for code, detail_of in details.items()
         if code in active and (detail := detail_of())
     ]
+    if VIOLATION_COPY_TRUNCATED in active:
+        found.extend(
+            (VIOLATION_COPY_TRUNCATED, (field, detail))
+            for field, text in visible_fields(command.payload)
+            if field.endswith(_ITEM_BODY_SUFFIX)
+            and (detail := item_truncation_detail(text))
+        )
     if VIOLATION_WRONG_LANGUAGE in active:
         found.extend(
             (VIOLATION_WRONG_LANGUAGE, (field, detail))

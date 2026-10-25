@@ -245,6 +245,12 @@ def truncation_detail(text: str) -> str:
     return ""
 
 
+def open_ending_detail(text: str) -> str:
+    """An ellipsis or a dangling ``,:;-`` at the end of the copy, else empty."""
+    plain = plain_text(text)
+    return _open_ending(plain) if plain else ""
+
+
 def wrong_language_detail(text: str, *, portuguese: bool) -> str:
     """Copy that reads as the other language (stopword markers).
 
@@ -325,6 +331,7 @@ __all__ = [
     "ends_on_connector",
     "item_split_detail",
     "markup_leak_detail",
+    "open_ending_detail",
     "placeholder_detail",
     "plain_text",
     "sentence_keys",

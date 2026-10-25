@@ -7,10 +7,16 @@ import {
   useViolationFieldLabel,
 } from "@/modules/editorial/workspace/hooks/use-field-error-message";
 import { cn } from "@/lib/utils";
+import { PRESENTATION_STRUCTURED_ITEM_LIST_KEYS } from "@/modules/editorial/workspace/lib/presentation-review-utils";
+import {
+  fieldDomId,
+  fieldErrorKey,
+} from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type {
   BlockingSlidesNoticeProps,
   FieldErrorMessageProps,
   FlaggableTextareaProps,
+  ListErrorsProps,
   SlideViolationSummaryProps,
 } from "./types";
 
@@ -111,5 +117,31 @@ export function BlockingSlidesNotice({
         </p>
       ) : null}
     </div>
+  );
+}
+
+const LIST_ERROR_ID_SUFFIX = "-list-error";
+
+/**
+ * A list-level violation (``summary_points`` with fewer than 3 complete items),
+ * shown under the items heading; adding an item clears it.
+ */
+export function ListErrors({
+  slide,
+  locale,
+  props,
+}: Readonly<ListErrorsProps>): React.ReactElement | null {
+  const keys = PRESENTATION_STRUCTURED_ITEM_LIST_KEYS.map((listKey) =>
+    fieldErrorKey(slide.slide_index, locale, listKey),
+  );
+  const violations = keys.flatMap((key) => props.fieldErrors?.get(key) ?? []);
+  if (violations.length === 0) {
+    return null;
+  }
+  return (
+    <FieldErrorMessage
+      id={`${fieldDomId(props.idPrefix, keys[0] ?? "")}${LIST_ERROR_ID_SUFFIX}`}
+      violations={violations}
+    />
   );
 }
