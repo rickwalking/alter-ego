@@ -57,6 +57,7 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.pg_lock_timeout import (
     apply_run_write_lock_timeout,
 )
+from rag_backend.modules.generation_queue.public import projects_with_active_runs
 
 logger = structlog.get_logger()
 
@@ -89,13 +90,20 @@ class CarouselRunReaperRepository:
         self._stale_counts: dict[str, int] = {}
 
     async def tick(self, db: AsyncSession) -> int:
-        """One watchdog observation pass over all in_progress rows."""
+        """One watchdog observation pass over the in_progress rows nobody queued.
+
+        A project with an active generation run belongs to the queue (a resume
+        still waiting for the worker has no heartbeat yet); it is never observed,
+        reaped or alerted on here.
+        """
         result = await db.execute(
             select(CarouselProjectModel).where(
                 CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS
             )
         )
         rows = list(result.scalars().all())
+        queued = await projects_with_active_runs(db, [str(row.id) for row in rows])
+        rows = [row for row in rows if str(row.id) not in queued]
         active_ids = {str(row.id) for row in rows}
         for tracked_id in list(self._stale_counts):
             if tracked_id not in active_ids:

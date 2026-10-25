@@ -41,3 +41,10 @@ Feature: Revision-run progress visibility
     When the watchdog tick runs
     Then a run_overdue alert is emitted
     And the row remains in_progress and the run continues undisturbed
+
+  Scenario: A dashboard resume waiting in the generation queue is never reaped
+    Given a project left in progress by a dashboard resume that waits in the generation queue behind a long job
+    And its run heartbeat is older than the stale threshold
+    When the stale-run reaper observes it more times than its reap threshold
+    Then the project stays in progress and its lock version is unchanged
+    And once its generation run is finished the reaper treats it like any other stale run

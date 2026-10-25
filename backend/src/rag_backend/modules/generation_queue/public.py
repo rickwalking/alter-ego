@@ -7,11 +7,12 @@ Cross-module code imports only these symbols (also re-exported from the package
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Collection
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
@@ -75,6 +76,7 @@ __all__ = [
     "hand_back_queue",
     "hold_project_drive",
     "listen_for_progress",
+    "projects_with_active_runs",
     "queue_health_check",
     "register_persistence_models",
     "run_queue_monitor",
@@ -167,6 +169,34 @@ async def adopt_orphaned_projects(engine: AsyncEngine) -> int:
             continue
         logger.info(LOG_ORPHAN_ADOPTED, project_id=project_id)
     return adopted
+
+
+async def projects_with_active_runs(
+    session: AsyncSession, project_ids: Collection[str]
+) -> set[str]:
+    """The projects among ``project_ids`` with a queued, waiting or running run.
+
+    The queue owns those projects: a dashboard resume waiting behind another job
+    leaves its project ``in_progress`` with no heartbeat until the worker picks it
+    up, and a job whose driver died is recovered by its own re-pick. The stale-run
+    reaper leaves them alone.
+    """
+    if not project_ids:
+        return set()
+    from rag_backend.modules.generation_queue.constants import ACTIVE_STATUSES
+    from rag_backend.modules.generation_queue.infrastructure.models import (
+        GenerationRunModel,
+    )
+
+    rows = await session.scalars(
+        select(GenerationRunModel.carousel_project_id)
+        .where(
+            GenerationRunModel.status.in_(ACTIVE_STATUSES),
+            GenerationRunModel.carousel_project_id.in_(list(project_ids)),
+        )
+        .distinct()
+    )
+    return {str(project_id) for project_id in rows.all()}
 
 
 async def queue_health_check(engine: AsyncEngine) -> dict[str, str | int]:

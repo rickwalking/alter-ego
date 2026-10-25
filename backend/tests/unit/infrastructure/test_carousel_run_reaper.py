@@ -41,6 +41,13 @@ from rag_backend.infrastructure.database.carousel_run_reaper import (
     CarouselRunReaperRepository,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.generation_queue.domain.models import (
+    WorkflowResumePayload,
+    resume_stage,
+)
+from rag_backend.modules.generation_queue.infrastructure.repository import (
+    SqlGenerationRunStore,
+)
 
 _STALE_SECONDS = 180
 _OBSERVATIONS = 3
@@ -117,8 +124,43 @@ async def _tick_times(
     return total
 
 
+def _resume(project_id: str) -> WorkflowResumePayload:
+    return WorkflowResumePayload(
+        project_id=project_id, action="approve", reviewer_id="u1", project_title="T"
+    )
+
+
 @pytest.mark.asyncio
 class TestReaperRules:
+    # Scenario: A dashboard resume waiting in the generation queue is never reaped
+    async def test_resume_queued_behind_a_long_job_is_not_reaped(
+        self, test_engine
+    ) -> None:
+        """The queue owns a project with an active run: no reap, no lock bump."""
+        sessions = _factory(test_engine)
+        store = SqlGenerationRunStore(sessions)
+        async with sessions() as db:
+            project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 600)
+            project_id = str(project.id)
+            await store.stage(resume_stage(_resume(project_id), 3))
+            reaper = _reaper()
+            with patch(_HUB_PATH, return_value=AsyncMock()):
+                assert await _tick_times(reaper, db, _OBSERVATIONS * 3) == 0
+            await db.refresh(project)
+            assert project.phase_status == PHASE_STATUS_IN_PROGRESS
+            assert project.lock_version == 3
+            (run,) = await store.undispatched(1)
+            assert await store.mark_running(run.id)
+            with patch(_HUB_PATH, return_value=AsyncMock()):
+                assert await _tick_times(reaper, db, _OBSERVATIONS) == 0
+            await store.mark_succeeded(run.id)
+            with patch(_HUB_PATH, return_value=AsyncMock()):
+                assert await _tick_times(reaper, db, _OBSERVATIONS - 1) == 0
+                assert await _tick_times(reaper, db, 1) == 1
+            await db.refresh(project)
+            assert project.phase_status == PHASE_STATUS_AWAITING_HUMAN
+            assert project.lock_version == 4
+
     # Scenario: Dead run is reaped and the user recovers without an operator
     async def test_dead_run_reaped_after_n_stale_observations(
         self, test_engine
