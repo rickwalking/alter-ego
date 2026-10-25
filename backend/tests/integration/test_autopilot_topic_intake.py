@@ -21,6 +21,7 @@ from rag_backend.modules.autopilot.application.topic_intake import (
     TopicIntakeService,
 )
 from rag_backend.modules.autopilot.constants import (
+    DEFAULT_DAILY_CAP,
     REASON_DAILY_CAP_REACHED,
     REASON_DUPLICATE_TOPIC,
     REASON_SOURCE_NOT_IN_SIGNALS,
@@ -127,7 +128,8 @@ async def test_daily_cap_persists_and_does_not_queue(
     del configured_key
     async for client, engine in _client(tmp_path / "cap.db", _Clock(_AS_OF)):
         await _serve(engine, (_URL_A,), _AS_OF)
-        await _seed_run(engine, _AS_OF)
+        for _ in range(DEFAULT_DAILY_CAP):
+            await _seed_run(engine, _AS_OF)
         response = await client.post(
             _PATH,
             headers=_headers(),
@@ -139,7 +141,7 @@ async def test_daily_cap_persists_and_does_not_queue(
         {"index": 0, "title": "Another", "reason": REASON_DAILY_CAP_REACHED}
     ]
     assert len(body["accepted"]) == 1
-    assert await _topic_count(engine) == 2
+    assert await _topic_count(engine) == DEFAULT_DAILY_CAP + 1
 
 
 # Scenario: Replay is idempotent

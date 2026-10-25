@@ -79,6 +79,7 @@ from rag_backend.modules.generation_queue.infrastructure.raw_connection import (
     asyncpg_connection,
 )
 from rag_backend.worker.periodic import PeriodicSteps, run_dispatcher, run_periodic
+from rag_backend.worker.schedules import register_backlog_promotion
 
 logger = get_logger()
 
@@ -166,6 +167,8 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
             concurrency_limit=settings.generation_worker_concurrency,
             on_failure=ON_FAILURE_HOLD,
         )(job_entrypoint(composition.handler))
+        if settings.autopilot_enabled:
+            register_backlog_promotion(pgq, bridge)
         loops = [
             asyncio.create_task(
                 run_dispatcher(

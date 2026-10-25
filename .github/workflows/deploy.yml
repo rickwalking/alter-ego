@@ -166,7 +166,7 @@ jobs:
             CREDENTIALS_ENCRYPTION_KEY=${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
             AUTOPILOT_ENABLED=${{ secrets.AUTOPILOT_ENABLED || 'false' }}
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
-            AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '1' }}
+            AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '3' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
             AUTOPILOT_PERSONA_ID=${{ secrets.AUTOPILOT_PERSONA_ID }}
             # AE-0407: reasoning-model slide-fix attempts after the 3 fast ones.

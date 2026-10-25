@@ -3,7 +3,8 @@
 A mixin for ``OwnerActionService`` so the webhook keeps one entry point, one
 owner allowlist and one deferred-reply buffer. Confirm and the edit reply use
 one compare-and-set (``confirm_thesis``), so a double tap starts generation
-once; discard moves ``awaiting_thesis`` to ``rejected``.
+once; discard moves ``awaiting_thesis`` to ``rejected``. A confirmed thesis shows
+the run's place in the generation queue and its estimated start.
 """
 
 from __future__ import annotations
@@ -29,7 +30,13 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 )
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
+    Clock,
     TopicCandidateRepository,
+)
+from rag_backend.modules.autopilot.domain.queue_position import (
+    QueueControl,
+    position_of,
+    position_text,
 )
 from rag_backend.modules.autopilot.domain.thesis import (
     ThesisCallback,
@@ -52,6 +59,7 @@ from rag_backend.modules.autopilot.pov_constants import (
     TEXT_THESIS_TOO_LONG,
     THESIS_PENDING_PHASE,
 )
+from rag_backend.modules.autopilot.queue_constants import TEXT_THESIS_CONFIRMED_QUEUED
 
 
 class _ThesisDeps(Protocol):
@@ -63,6 +71,12 @@ class _ThesisDeps(Protocol):
 
     @property
     def topics(self) -> TopicCandidateRepository | None: ...
+
+    @property
+    def clock(self) -> Clock: ...
+
+    @property
+    def queue(self) -> QueueControl | None: ...
 
 
 class _Host(Protocol):
@@ -120,9 +134,9 @@ class ThesisOwnerActions:
             )
         )
         text = (
-            TEXT_THESIS_CONFIRMED.format(thesis=thesis)
+            await _confirmed_text(self, pending.run_id, thesis)
             if confirmed
-            else (TEXT_THESIS_ALREADY)
+            else TEXT_THESIS_ALREADY
         )
         await self._tell(update, text)
 
@@ -162,8 +176,21 @@ async def _confirm_draft(host: _Host, update: WebhookUpdate, run: AutopilotRun) 
     if not confirmed:
         await host._finish(update, TEXT_THESIS_ALREADY, TEXT_THESIS_ALREADY)
         return
-    await host._finish(
-        update, ANSWER_THESIS_CONFIRMED, TEXT_THESIS_CONFIRMED.format(thesis=thesis)
+    text = await _confirmed_text(host, run.run_id, thesis)
+    await host._finish(update, ANSWER_THESIS_CONFIRMED, text)
+
+
+async def _confirmed_text(host: _Host, run_id: UUID, thesis: str) -> str:
+    """The confirmation with the run's queue position, when the queue is wired."""
+    queue = host._deps.queue
+    snapshot = await queue.snapshot() if queue is not None else None
+    position = (
+        position_of(snapshot, run_id, host._deps.clock.now()) if snapshot else None
+    )
+    if position is None:
+        return TEXT_THESIS_CONFIRMED.format(thesis=thesis)
+    return TEXT_THESIS_CONFIRMED_QUEUED.format(
+        thesis=thesis, position=position_text(position)
     )
 
 

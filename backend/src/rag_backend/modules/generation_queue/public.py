@@ -59,6 +59,9 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.editorial_workflow_service import (
         EditorialWorkflowService,
     )
+    from rag_backend.modules.generation_queue.infrastructure.queue_view import (
+        QueuedWork,
+    )
     from rag_backend.modules.generation_queue.infrastructure.rollback import (
         RollbackReport,
     )
@@ -68,6 +71,7 @@ logger = structlog.get_logger()
 __all__ = [
     "QueueSchemaReport",
     "WorkflowResumePayload",
+    "active_queue",
     "adopt_orphaned_projects",
     "apply_queue_schema",
     "count_queue_hand_back",
@@ -76,7 +80,9 @@ __all__ = [
     "hold_project_drive",
     "listen_for_progress",
     "queue_health_check",
+    "recent_drive_minutes",
     "register_persistence_models",
+    "requeue_autopilot_dead_letter",
     "run_queue_monitor",
     "stage_workflow_resume",
     "verify_queue_schema",
@@ -212,3 +218,28 @@ async def count_queue_hand_back(engine: AsyncEngine) -> RollbackReport:
     from rag_backend.modules.generation_queue.infrastructure.rollback import pending
 
     return await pending(engine)
+
+
+async def active_queue(session: AsyncSession) -> list[QueuedWork]:
+    """The active generation runs in FIFO order, on the caller's session."""
+    from rag_backend.modules.generation_queue.infrastructure.queue_view import (
+        active_work,
+    )
+
+    return await active_work(session)
+
+
+async def recent_drive_minutes(session: AsyncSession, limit: int) -> list[float]:
+    """Minutes the latest finished autopilot drives took, newest first."""
+    from rag_backend.modules.generation_queue.infrastructure import queue_view
+
+    return await queue_view.recent_drive_minutes(session, limit)
+
+
+async def requeue_autopilot_dead_letter(
+    session: AsyncSession, autopilot_run_id: str
+) -> bool:
+    """Requeue the run's latest dead letter in the caller's transaction."""
+    from rag_backend.modules.generation_queue.infrastructure import queue_view
+
+    return await queue_view.requeue_autopilot_dead_letter(session, autopilot_run_id)

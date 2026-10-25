@@ -6,12 +6,16 @@ post of the same signal hash does not create another run.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from uuid import UUID, uuid4
 
 import structlog
 
+from rag_backend.modules.autopilot.application.intake_backlog import (
+    IntakeBacklog,
+    merge_rejections,
+)
 from rag_backend.modules.autopilot.constants import (
     LOG_TOPIC_INTAKE,
     REASON_DUPLICATE_TOPIC,
@@ -22,6 +26,7 @@ from rag_backend.modules.autopilot.cover_constants import (
     REASON_COVER_ASSET_UNKNOWN,
     REASON_COVER_ASSET_USED,
 )
+from rag_backend.modules.autopilot.domain.backlog import BacklogStore, NoBacklog
 from rag_backend.modules.autopilot.domain.cover import CoverAsset, CoverFacts
 from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverClaim,
@@ -91,7 +96,8 @@ class TopicIntakeDependencies:
     """Collaborators for one intake call. One object keeps the constructor small.
 
     ``posts`` reads the stored x-signals post texts that ``pov_news`` quotes cite;
-    ``covers`` resolves the GrokBot covers the topics name (``cover.asset_id``).
+    ``covers`` resolves the GrokBot covers the topics name (``cover.asset_id``);
+    ``backlog`` keeps the themes the daily cap left out for the next morning.
     """
 
     store: TopicIntakeStore
@@ -99,6 +105,7 @@ class TopicIntakeDependencies:
     daily_cap: int
     posts: XPostTextReader = field(default_factory=_NoStoredPosts)
     covers: CoverIntakeStore = field(default_factory=_NoCovers)
+    backlog: BacklogStore = field(default_factory=NoBacklog)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -128,13 +135,18 @@ class TopicIntakeService:
         prepared = tuple(prepare(item) for item in command.proposals)
         await self._deps.store.lock_intake()
         facts = await self._facts(prepared)
+        backlog = IntakeBacklog(self._deps.backlog, self._deps.store)
+        promotion = await backlog.promote(facts, self._deps.clock.now())
+        promoted = len(promotion.run_ids)
+        facts = replace(facts, runs_today=facts.runs_today + promoted)
         plan = await self._stored(plan_intake(prepared, facts))
         queued = await self._queue(plan)
+        full = await backlog.keep_overflow(plan, promotion)
         await self._deps.store.commit()
         result = TopicIntakeResult(
             accepted=plan.accepted_ids,
-            queued=queued,
-            rejected=plan.rejected,
+            queued=(*promotion.run_ids, *queued),
+            rejected=merge_rejections(plan.rejected, full),
         )
         _log(result)
         return result

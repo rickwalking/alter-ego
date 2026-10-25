@@ -194,7 +194,7 @@ both callers take a compare-and-set publish claim first.
 | `awaiting_owner` | `publishing` / `scheduled` / `reworking` / `rejected` / `expired` | Publicar agora / Agendar (AE-0370) / Rework / Reject / 72 h |
 | `scheduled` | `publishing` / `awaiting_owner` / `expired` / `scheduled` | `scheduled_at` is due, or Publicar agora / Cancelar agendamento / the carousel is no longer approved at the due time / Mudar dia/horário (AE-0404: a new `scheduled_at`) |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
-| `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI / the carousel is rejected (web UI or stuck auto-reject), or 72 h pass with no fix |
+| `escalated` | `awaiting_owner` / `rejected` / `generating` | Pedro fixes it in the web UI / the carousel is rejected (web UI or stuck auto-reject), or 72 h pass with no fix, or Pedro taps "Descartar" on a queue dead letter / Pedro taps "Tentar de novo" on a queue dead letter (AE-0523: resumes from the checkpoint) |
 | `publishing` | `published` / `publish_failed` / `awaiting_owner` | IG success / 3 retries exhausted / the editorial approve refused the owner's Approve (review stays open) |
 | `publish_failed` | `publishing` | Pedro taps [Retry] |
 
