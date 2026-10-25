@@ -23,6 +23,7 @@ from rag_backend.modules.generation_queue.constants import (
     SCAN_RECOVERY_DAYS,
     SCAN_STALE_HOURS,
     SUMMARY_FAILURE_ITEM,
+    SUMMARY_FAILURE_OVERFLOW,
     SUMMARY_FAILURES,
     SUMMARY_INTERACTIVE,
     SUMMARY_SCAN,
@@ -107,7 +108,9 @@ def _item_failure(drive: ParkedDrive, exc: Exception) -> RecoveryFailure:
 
 
 def _failure_reason(exc: Exception) -> str:
-    message = " ".join(str(exc).split()) or type(exc).__name__
+    message = " ".join(str(exc).split())
+    if not message:
+        return type(exc).__name__
     reason = f"{type(exc).__name__}{_REASON_SEPARATOR}{message}"
     return reason[:FAILURE_REASON_MAX_CHARS]
 
@@ -128,12 +131,17 @@ def summary_text(report: ScanReport) -> str:
 
 
 def _failures_summary(failures: tuple[RecoveryFailure, ...]) -> str:
+    visible = failures[:SUMMARY_TITLES_MAX]
     items = _TITLE_SEPARATOR.join(
         SUMMARY_FAILURE_ITEM.format(
             run_id=failure.drive.autopilot_run_id, reason=_short(failure.reason)
         )
-        for failure in failures[:SUMMARY_TITLES_MAX]
+        for failure in visible
     )
+    overflow = len(failures) - len(visible)
+    if overflow:
+        overflow_text = SUMMARY_FAILURE_OVERFLOW.format(count=overflow)
+        items = _TITLE_SEPARATOR.join((items, overflow_text))
     return SUMMARY_FAILURES.format(items=items)
 
 

@@ -125,6 +125,7 @@ SUMMARY_SCAN = (
 SUMMARY_INTERACTIVE = "Projetos do painel parados (retome pelo editor): {titles}"
 SUMMARY_FAILURES = "Falhas ao recuperar: {items}"
 SUMMARY_FAILURE_ITEM = "{run_id}: {reason}"
+SUMMARY_FAILURE_OVERFLOW = "… e mais {count}"
 SUMMARY_TITLE_MAX_CHARS = 80
 SUMMARY_TITLES_MAX = 10
 FAILURE_REASON_MAX_CHARS = 160
