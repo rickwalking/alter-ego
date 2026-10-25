@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { API_ENDPOINTS } from "@/constants/api";
+import { CREATOR_PHOTO_ACCEPTED_TYPES } from "@/constants/create";
 import { BG_CARD, NEON_AMBER, NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import { firstNonBlank } from "@/lib/utils";
 import type { PhotoInUse } from "@/modules/editorial";
@@ -28,8 +29,6 @@ export interface CreatePhotoSectionProps {
   /** The prompt field for a new cover photo, under the library. */
   promptField?: React.ReactNode;
 }
-
-const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
 
 /**
  * "Foto do slide 1" for Ponto de Vista decks. Pick a cut-out photo
@@ -118,7 +117,7 @@ export function CreatePhotoSection({
         {uploading ? t("uploading") : t("upload")}
         <input
           type="file"
-          accept={ACCEPTED_PHOTO_TYPES}
+          accept={CREATOR_PHOTO_ACCEPTED_TYPES}
           disabled={uploading}
           onChange={(e) => {
             const file = e.target.files?.[0];

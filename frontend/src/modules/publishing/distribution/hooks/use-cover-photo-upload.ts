@@ -25,14 +25,15 @@ export function useCoverPhotoUpload(
       setFailed(false);
       try {
         onUploaded(await upload(file));
-        await queryClient.invalidateQueries({
-          queryKey: coverOptionKeys.detail(projectId),
-        });
       } catch {
         setFailed(true);
+        return;
       } finally {
         setUploading(false);
       }
+      void queryClient.invalidateQueries({
+        queryKey: coverOptionKeys.detail(projectId),
+      });
     },
     [upload, onUploaded, queryClient, projectId],
   );

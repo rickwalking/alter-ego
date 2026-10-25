@@ -114,11 +114,8 @@ function generateAllowed(gate: GenerateGate): boolean {
  * The form, the caps and the latest generation, with what may happen next.
  * Photos are optional: a prompt alone asks for a cover from words.
  */
-export function useCoverGenerateForm(
-  projectId: string,
-  enabled: boolean,
-): CoverGenerateForm {
-  const generations = useCoverGenerations(projectId, enabled);
+export function useCoverGenerateForm(projectId: string): CoverGenerateForm {
+  const generations = useCoverGenerations(projectId, true);
   const { selected, toggle, add } = usePhotoSelection();
   const [prompt, setPrompt] = useState("");
   const [asking, setAsking] = useState<CoverGenerationInput | null>(null);

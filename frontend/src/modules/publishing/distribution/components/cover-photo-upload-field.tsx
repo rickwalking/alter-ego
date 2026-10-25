@@ -1,10 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { CREATOR_PHOTO_ACCEPTED_TYPES } from "@/constants/create";
 import { TEXT_DIM } from "@/constants/neon";
 import type { CoverPhotoUploadFieldProps } from "./types";
-
-const ACCEPTED_PHOTO_TYPES = "image/png,image/webp,image/jpeg";
 
 /**
  * "Enviar foto": picks a file from the device for the owner's library. The
@@ -24,7 +23,7 @@ export function CoverPhotoUploadField({
         {upload.uploading ? t("uploading") : t("upload")}
         <input
           type="file"
-          accept={ACCEPTED_PHOTO_TYPES}
+          accept={CREATOR_PHOTO_ACCEPTED_TYPES}
           disabled={disabled || upload.uploading}
           onChange={(e) => {
             const file = e.target.files?.[0];

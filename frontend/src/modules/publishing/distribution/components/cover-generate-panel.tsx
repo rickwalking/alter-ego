@@ -110,7 +110,7 @@ export function CoverGeneratePanel({
   uploadPhoto,
 }: Readonly<CoverGeneratePanelProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker.generate");
-  const form = useCoverGenerateForm(projectId, true);
+  const form = useCoverGenerateForm(projectId);
   const upload = useCoverPhotoUpload(projectId, uploadPhoto, form.add);
   if (form.loadError) {
     return <CoverGenerateUnavailable error={form.loadError} />;
@@ -136,7 +136,7 @@ export function CoverGeneratePanel({
       </CoverPromptField>
       <CoverUsageLine usage={form.data ?? null} />
       <CoverGenerateAction
-        enabled={form.canGenerate}
+        enabled={form.canGenerate && !upload.uploading}
         blocked={form.blocked}
         onAsk={form.ask}
       />

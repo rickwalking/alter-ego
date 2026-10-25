@@ -37,7 +37,7 @@ const mockApiCall = vi.mocked(apiCall);
 const FILE = new File(["png"], "me.png", { type: "image/png" });
 
 function uploadInput(): HTMLInputElement {
-  const label = screen.getByText("upload");
+  const label = screen.getByText(/^upload/);
   const input = label.querySelector("input");
   if (!input) {
     throw new Error("no file input");
@@ -160,6 +160,40 @@ describe("CoverGeneratePanel upload", () => {
         ([, , init]) => init?.method === HTTP_METHODS.POST,
       ),
     ).toBe(false);
+  });
+
+  /** Scenario: The panel works with an empty library */
+  it("offers the upload and the prompt with an empty library", async () => {
+    routeApi([list()]);
+    renderPanel([], undefined, vi.fn().mockResolvedValue("new-photo"));
+    await screen.findByText(/^usage/);
+
+    expect(uploadInput().disabled).toBe(false);
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  /** Scenario: An uploaded photo is added to the library and ticked */
+  it("holds the generate action while a photo is uploading", async () => {
+    routeApi([list()]);
+    const pending: ((assetId: string) => void)[] = [];
+    const upload = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+    const { user } = renderPanel(PHOTOS, undefined, upload);
+    await screen.findByText(/^usage/);
+    await user.type(screen.getByRole("textbox"), PROMPT);
+    const action = screen.getByRole("button", { name: "action" });
+
+    await user.upload(uploadInput(), FILE);
+
+    expect(await screen.findByText("uploading")).toBeTruthy();
+    expect(action).toHaveProperty("disabled", true);
+    pending[0]?.("new-photo");
+    await waitFor(() => expect(action).toHaveProperty("disabled", false));
   });
 
   /** Scenario: The panel works with an empty library */

@@ -108,7 +108,7 @@ class TestTextOnly:
     async def test_with_photos_the_edit_prompt_is_kept(
         self, client: AsyncClient, asset_dirs: Path, editor: FakeEditor
     ) -> None:
-        """Scenario: A confirmed generation without photos runs a text-only job."""
+        """Scenario: Photo ids are still checked."""
         photo = await upload_photo(client, RED)
         project_id = await project(client, photo["id"])
 
@@ -178,6 +178,68 @@ class TestSameRules:
         assert response.status_code == 409
         assert response.json()["detail"] == code
         assert editor.jobs == []
+
+    @pytest.mark.parametrize(
+        ("status", "code"),
+        [
+            ("succeeded", "cover_generation_monthly_cap"),
+            ("failed", "cover_generation_monthly_attempts"),
+        ],
+    )
+    async def test_monthly_limits_refuse_a_text_only_generation(
+        self,
+        client: AsyncClient,
+        asset_dirs: Path,
+        editor: FakeEditor,
+        status: str,
+        code: str,
+    ) -> None:
+        """Scenario: A text-only generation follows the same caps and lock."""
+        project_id = await _carousel(client)
+        now = datetime.now(UTC)
+        per_carousel = 4 if status == "succeeded" else 12
+        for _ in range(10):
+            other = await _carousel(client)
+            await insert_rows(other, [(status, now)] * per_carousel)
+
+        response = await client.post(_PATH.format(project_id), json=request_body([]))
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == code
+        assert editor.jobs == []
+
+    async def test_only_the_owner_can_generate_without_photos(
+        self, client: AsyncClient, asset_dirs: Path, editor: FakeEditor
+    ) -> None:
+        """Scenario: A text-only generation follows the same caps and lock."""
+        project_id = await _carousel(client)
+        admin = await create_test_user(f"{uuid4().hex}@x.test", UserRole.ADMIN)
+
+        response = await client.post(
+            _PATH.format(project_id),
+            json=request_body([]),
+            headers=auth_headers_for(admin),
+        )
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == "cover_generation_not_owner"
+        assert await generation_rows() == []
+
+    async def test_bridge_not_configured_is_503_without_photos(
+        self, client: AsyncClient, asset_dirs: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: A text-only generation follows the same caps and lock."""
+        from rag_backend.infrastructure.config.settings import get_settings
+
+        monkeypatch.setenv("GROKBOT_IMAGE_WEBHOOK_URL", "")
+        get_settings.cache_clear()
+        project_id = await _carousel(client)
+
+        response = await client.post(_PATH.format(project_id), json=request_body([]))
+
+        assert response.status_code == 503
+        assert response.json()["detail"] == "cover_generation_unavailable"
+        assert await generation_rows() == []
 
     async def test_confirmation_is_still_required(
         self, client: AsyncClient, asset_dirs: Path, editor: FakeEditor
