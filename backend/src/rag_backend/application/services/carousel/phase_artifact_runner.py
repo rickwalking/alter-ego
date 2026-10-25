@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import partial
 from typing import Protocol, TypedDict, runtime_checkable
 
 from langchain_core.language_models import BaseChatModel
@@ -18,7 +17,6 @@ from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
-from rag_backend.application.services.carousel.bounded_gather import gather_bounded
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
     SlideDraftRetryFn,
@@ -45,7 +43,10 @@ from rag_backend.application.services.carousel.editorial_visual_pipeline import 
     ensure_slides_from_outline,
     generate_carousel_images,
 )
-from rag_backend.application.services.carousel.persona_judge import judge_voice
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    SlideVoiceScoring,
+    score_slide_voices,
+)
 from rag_backend.application.services.carousel.revision_scope import (
     keep_unscoped_slides,
     revision_scope,
@@ -79,12 +80,12 @@ from rag_backend.domain.constants.presentation_policy import (
 )
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_DESIGN_RECOVERY_HINT,
+    STATE_FIELD_PERSONA_SCORES,
     STATE_FIELD_PRESENTATION_VALIDATION,
     STATE_FIELD_RESEARCH_FINDINGS,
     STATE_FIELD_SLIDE_DRAFTS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
-from rag_backend.domain.persona_score import on_hundred_scale_entry
 from rag_backend.domain.protocols.carousel_rubric import RubricJudge
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
@@ -437,7 +438,9 @@ class PhaseArtifactRunner:
                 return draft_updates
             updates.update(scoped_draft_updates(state, draft_updates, regen.scope))
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
-        persona_updates = await self._score_content_drafts(resolved, slide_drafts)
+        persona_updates = await self._score_content_drafts(
+            resolved, slide_drafts, state.get(STATE_FIELD_PERSONA_SCORES)
+        )
         updates.update(persona_updates)
         updates.update(
             await self._rubric.score(
@@ -614,21 +617,63 @@ class PhaseArtifactRunner:
             raise
         return {"slide_drafts": slide_drafts}
 
+    async def rescore_edited_content(
+        self, state: CarouselWorkflowState
+    ) -> dict[str, object]:
+        """Re-score the slides a reviewer edited on the edits-only (parked) path.
+
+        The replay of a parked content review reuses the reviewed artifacts and
+        never regenerates; without this the persona gate kept the pre-edit
+        scores, so a hand edit could never clear it. Unchanged slides keep their
+        scores (their text fingerprint still matches); only edited ones are judged.
+        """
+        if self._workflow_input is None:
+            return {}
+        resolved = resolve_workflow_input(state, self._workflow_input)
+        return await self._score_content_drafts(
+            resolved,
+            state.get(STATE_FIELD_SLIDE_DRAFTS),
+            state.get(STATE_FIELD_PERSONA_SCORES),
+        )
+
     async def _score_content_drafts(
         self,
         resolved: EditorialWorkflowStartInput,
         slide_drafts: object,
+        previous: object,
     ) -> dict[str, object]:
         if resolved.persona is None:
             return {}
         if not isinstance(slide_drafts, list) or not slide_drafts:
             return {}
         return {
-            "persona_scores": await self._score_slides(
-                slide_drafts,
-                resolved.persona,
+            STATE_FIELD_PERSONA_SCORES: await self._score_slides(
+                slide_drafts, resolved.persona, previous
             )
         }
+
+    async def _score_slides(
+        self,
+        slide_drafts: list[object],
+        persona: PersonaProfile,
+        previous: object = None,
+    ) -> dict[str, object]:
+        """Slides are scored concurrently (bounded) and keyed back in slide order.
+
+        Each is retried once on the queue's next model (the fallback judge); a
+        slide the judge never scored is left out; scores are stored on 0-100. A
+        slide whose copy matches the fingerprint of its ``previous`` entry keeps
+        that entry (``persona_slide_scoring``).
+        """
+        return await score_slide_voices(
+            SlideVoiceScoring(
+                slide_drafts=slide_drafts,
+                judge=PersonaAgent(persona=persona, llm=self._llm),
+                fallback=_fallback_judge(persona, self._llm),
+                previous=previous,
+                concurrency=self._draft_concurrency,
+            )
+        )
 
     async def _apply_content_design(
         self,
@@ -758,37 +803,6 @@ class PhaseArtifactRunner:
             ),
         )
         return {"image_assets": assets, "design_applied": True}
-
-    async def _score_slides(
-        self,
-        slide_drafts: list[object],
-        persona: PersonaProfile,
-    ) -> dict[str, object]:
-        """Slides are scored concurrently (bounded) and keyed back in slide order. Each
-        is retried once on the queue's next model (the fallback judge), so one slow
-        model cannot leave the run unscored; a slide the judge never scored is left
-        out. Scores are stored on 0-100 at write time: a raw 0-10 judge answer must
-        never reach the checkpoint.
-        """
-        persona_agent = PersonaAgent(persona=persona, llm=self._llm)
-        fallback = _fallback_judge(persona, self._llm)
-        texts = {
-            index: str(slide.get("draft_text", ""))
-            for index, slide in enumerate(slide_drafts)
-            if isinstance(slide, dict) and str(slide.get("draft_text", ""))
-        }
-        scores = await gather_bounded(
-            [
-                partial(judge_voice, persona_agent, text, fallback)
-                for text in texts.values()
-            ],
-            self._draft_concurrency,
-        )
-        return {
-            f"slide_{index + 1}": on_hundred_scale_entry(score)
-            for index, score in zip(texts, scores, strict=True)
-            if score is not None
-        }
 
 
 __all__ = ["PhaseArtifactRunner"]

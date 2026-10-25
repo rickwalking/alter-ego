@@ -17,6 +17,10 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 
 import rag_backend.application.services.carousel.phase_artifact_runner as runner_module
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    VOICE_TEXT_FINGERPRINT_KEY,
+    text_fingerprint,
+)
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
@@ -109,7 +113,10 @@ class TestContentScoring:
             model_name="primary", fallback_model=FakeChat(model_name="fallback")
         )
         scores = await _runner(llm)._score_slides([{"draft_text": TEXT}], PERSONA)
-        assert scores["slide_1"] == {"overall": 80.0}
+        assert scores["slide_1"] == {
+            "overall": 80.0,
+            VOICE_TEXT_FINGERPRINT_KEY: text_fingerprint(TEXT),
+        }
         assert primary.calls == [TEXT]
         assert fallback.calls == [TEXT]
 

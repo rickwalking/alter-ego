@@ -6,6 +6,7 @@ unavailable; the live prompt is agents/prompts/persona/v1/enforce.yaml.
 
 from typing import cast
 
+import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
@@ -13,6 +14,8 @@ from rag_backend.agents.constants import KEY_OVERALL
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.constants.persona import (
+    LOG_EVALUATE_PROMPT_FALLBACK,
+    PERSONA_JUDGE_TEMPERATURE,
     PERSONA_SCORE_TEN_POINT_MAX,
     PERSONA_SCORE_TEN_TO_HUNDRED,
 )
@@ -20,9 +23,18 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.persona_score import on_hundred_scale
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
+logger = structlog.get_logger()
+
 _ENFORCE_PROMPT_FALLBACK = (
     "Rewrite content to match this persona's voice. Prompt registry "
     "unavailable — load agents/prompts/persona/v1/enforce.yaml"
+)
+
+
+_EVALUATE_PROMPT_FALLBACK = (
+    "Score the content below against the persona above on 0-100 and answer with JSON: "
+    "tone_match, sentence_structure_match, opinion_strength, originality, "
+    "human_authenticity, overall, suggestions."
 )
 
 
@@ -47,19 +59,36 @@ class PersonaAgent:
         return cast(str, response.content)
 
     async def evaluate_match(self, content: str) -> dict[str, object]:
-        """Score how well content matches the persona (0-100)."""
+        """Score how well content matches the persona (0-100).
+
+        The prompt (``persona/v1/evaluate.yaml``) names the 0-100 scale and asks
+        for the voice only; the call asks for temperature 0 (the chat models default
+        to 0.7, which moved an unchanged slide by 40+ points between two runs).
+        Some reasoning models ignore the temperature; the content scoring reuses a
+        slide's last score while its copy is unchanged, which is what keeps the gate
+        stable.
+        """
         content = sanitize_llm_input(content)
-        style_guide = self._build_style_guide()
-        prompt = (
-            f"{style_guide}\n\n"
-            "Score this content on how well it matches the persona above.\n\n"
-            f"CONTENT:\n{content}\n\n"
-            "Respond with JSON containing: tone_match, sentence_structure_match, "
-            "opinion_strength, originality, human_authenticity, overall, suggestions."
+        messages: list[BaseMessage] = [
+            HumanMessage(content=self._evaluate_prompt(content))
+        ]
+        response = await self.llm.ainvoke(
+            messages,
+            get_langfuse_runnable_config(),
+            temperature=PERSONA_JUDGE_TEMPERATURE,
         )
-        messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         return self._parse_evaluation_response(cast(str, response.content))
+
+    def _evaluate_prompt(self, content: str) -> str:
+        variables: dict[str, object] = {
+            "style_guide": self._build_style_guide(),
+            "content": content,
+        }
+        try:
+            return render_prompt("persona", "evaluate", variables)[0]
+        except Exception:
+            logger.warning(LOG_EVALUATE_PROMPT_FALLBACK, exc_info=True)
+            return f"{variables['style_guide']}\n\n{_EVALUATE_PROMPT_FALLBACK}\n\n{content}"
 
     def _parse_evaluation_response(self, response: str) -> dict[str, object]:
         """Parse the evaluation response into a structured dictionary.

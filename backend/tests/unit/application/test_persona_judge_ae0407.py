@@ -19,6 +19,11 @@ from structlog.testing import capture_logs
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel import persona_judge
 from rag_backend.application.services.carousel.persona_judge import judge_voice
+from rag_backend.application.services.carousel.persona_slide_scoring import (
+    VOICE_TEXT_FINGERPRINT_KEY,
+    text_fingerprint,
+    voice_text,
+)
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
@@ -160,6 +165,7 @@ async def test_the_content_phase_omits_an_unscored_slide() -> None:
         **dict.fromkeys(_SUB_FIELDS, 0.0),
         "overall": 80.0,
         "suggestions": [],
+        VOICE_TEXT_FINGERPRINT_KEY: text_fingerprint(voice_text(drafts[0])),
     }
     assert len(_failed(logs)) == 2
 

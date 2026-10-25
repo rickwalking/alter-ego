@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.models.persona import PersonaProfile
 
 
@@ -391,15 +392,17 @@ class TestPersonaAgent:
         await agent.evaluate_match("mycontent")
 
         style_guide = agent._build_style_guide()
-        expected = (
-            f"{style_guide}\n\n"
-            "Score this content on how well it matches the persona above.\n\n"
-            "CONTENT:\nmycontent\n\n"
-            "Respond with JSON containing: tone_match, sentence_structure_match, "
-            "opinion_strength, originality, human_authenticity, overall, suggestions."
-        )
+        expected = render_prompt(
+            "persona",
+            "evaluate",
+            {"style_guide": style_guide, "content": "mycontent"},
+        )[0]
         prompt = mock_llm.ainvoke.call_args[0][0][0].content
         assert prompt == expected
+        assert prompt.startswith(style_guide)
+        assert "0-100 scale" in prompt
+        assert "CONTENT:\nmycontent\n" in prompt
+        assert mock_llm.ainvoke.call_args.kwargs["temperature"] == 0.0
 
     async def test_evaluate_match_prompt_includes_all_json_keys(
         self, agent: PersonaAgent, mock_llm: AsyncMock
