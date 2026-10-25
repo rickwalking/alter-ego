@@ -9,10 +9,20 @@ from dataclasses import dataclass, field
 
 from structlog.testing import capture_logs
 
-from rag_backend.modules.generation_queue.application.recovery_scan import summary_text
-from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
+from rag_backend.modules.generation_queue.application.recovery_scan import (
+    DailyRecoveryScan,
+    DailyScanDependencies,
+    summary_text,
+)
+from rag_backend.modules.generation_queue.bootstrap import _NoParkedAutopilot
+from rag_backend.modules.generation_queue.domain.recovery import (
+    ParkedDrive,
+    RecoveryFailure,
+    ScanReport,
+)
 from tests.unit.modules.generation_queue.test_recovery_scan_ae0524 import (
     _Autopilot,
+    _Clock,
     _drive,
     _scan,
     _Store,
@@ -92,3 +102,37 @@ async def test_each_failed_recovery_is_logged_without_content() -> None:
     assert "prompt and payload" not in repr(logs)
     assert "exc_info" not in item_logs[0]
     assert "exception" not in item_logs[0]
+
+
+async def test_disabled_autopilot_scans_preserve_one_attempt_marking() -> None:
+    """Scenario: Disabled autopilot scans preserve one-attempt marking"""
+    drive = _drive()
+    store = _Store(parked=[drive])
+    scan = DailyRecoveryScan(
+        DailyScanDependencies(
+            store=store,
+            autopilot=_NoParkedAutopilot(store=store),
+            clock=_Clock(),
+        )
+    )
+    first = await scan.run_once()
+    second = await scan.run_once()
+    assert first.recovered == 0
+    assert second.recovered == 0
+    assert store.tried == {drive.generation_run_id}
+    assert len(store.purged_before) == 2
+
+
+async def test_failure_summary_accounts_for_overflow_and_empty_reasons() -> None:
+    """Scenario: Failure summary accounts for overflow and empty reasons"""
+    failures = tuple(
+        RecoveryFailure(drive=_drive(), reason=f"reason {index}") for index in range(12)
+    )
+    text = summary_text(ScanReport(failures=failures))
+    assert "mais 2" in text
+    drive = _drive()
+    autopilot = _OneFailure(failing_run_id=drive.autopilot_run_id, reason="")
+    report = await _scan(_Store(parked=[drive]), autopilot).run_once()
+    empty_text = summary_text(report)
+    assert "RuntimeError" in empty_text
+    assert "RuntimeError: RuntimeError" not in empty_text

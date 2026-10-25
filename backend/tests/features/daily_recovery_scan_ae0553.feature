@@ -28,3 +28,15 @@ Feature: Daily recovery isolates a failing dead letter
     When the daily scan contains that item failure
     Then one structured log names both run ids and the exception type
     And the log has no payload, prompt, traceback, or exception-message text
+
+  Scenario: Disabled autopilot scans preserve one-attempt marking
+    Given a recoverable dead letter while autopilot driving is disabled
+    When the daily scan runs twice
+    Then the first scan stores its marker without reviving
+    And the second scan does not reconsider it
+
+  Scenario: Failure summary accounts for overflow and empty reasons
+    Given twelve failed items and an exception with no message
+    When the owner summary is rendered
+    Then it reports the two items beyond the display limit
+    And the empty reason names its exception type only once
