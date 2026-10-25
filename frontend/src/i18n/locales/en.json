@@ -1555,6 +1555,44 @@
       "showActive": "Active",
       "emptyArchived": "No archived carousels.",
       "autopilot": "It cannot be archived while an autopilot run still needs it (for example a scheduled publish)."
+    },
+    "queue": {
+      "title": "Generation queue",
+      "subtitle": "One carousel at a time, in arrival order. About {minutes} min per carousel.",
+      "empty": "Nothing in the queue right now.",
+      "active": "In the queue",
+      "dead": "Stopped",
+      "backlog": "Waiting list (daily limit)",
+      "position": "#{position}",
+      "untitled": "Untitled",
+      "eta": "starts ~{time}",
+      "phase": "phase {phase}",
+      "expires": "expires on {date}",
+      "retry": "Try again",
+      "discard": "Discard",
+      "cancel": "Cancel",
+      "generateNow": "Generate now",
+      "openEditor": "Resume in the editor",
+      "loadFailed": "Could not load the queue.",
+      "actionFailed": "The action did not go through. Try again.",
+      "status": {
+        "running": "Generating",
+        "queued": "Queued",
+        "retryWait": "Next try at {time}"
+      },
+      "kind": {
+        "autopilot": "Autopilot",
+        "dashboard": "Dashboard"
+      },
+      "reason": {
+        "transient": "A temporary error kept coming back until the retry limit.",
+        "permanent": "An error that will not fix itself.",
+        "phase_budget_exhausted": "The same phase failed several times in a row (possibly out of memory).",
+        "run_budget_exhausted": "The carousel stopped several times without progress (possibly out of memory).",
+        "held_by_queue": "The queue gave up after several crashes.",
+        "other": "Queue error ({code})."
+      },
+      "notAllowed": "This run can no longer take that action; the panel was refreshed."
     }
   },
   "dashboard": {

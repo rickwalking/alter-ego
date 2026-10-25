@@ -1555,6 +1555,44 @@
       "showActive": "Ativos",
       "emptyArchived": "Nenhum carrossel arquivado.",
       "autopilot": "Não dá para arquivar enquanto o piloto automático precisa dele (por exemplo, uma publicação agendada)."
+    },
+    "queue": {
+      "title": "Fila de geração",
+      "subtitle": "Um carrossel por vez, na ordem de chegada. Cerca de {minutes} min por carrossel.",
+      "empty": "Nada na fila agora.",
+      "active": "Na fila",
+      "dead": "Paradas",
+      "backlog": "Fila de espera (limite diário)",
+      "position": "#{position}",
+      "untitled": "Sem título",
+      "eta": "início ~{time}",
+      "phase": "fase {phase}",
+      "expires": "expira em {date}",
+      "retry": "Tentar de novo",
+      "discard": "Descartar",
+      "cancel": "Cancelar",
+      "generateNow": "Gerar agora",
+      "openEditor": "Retomar no editor",
+      "loadFailed": "Não foi possível carregar a fila.",
+      "actionFailed": "A ação não foi concluída. Tente de novo.",
+      "status": {
+        "running": "Gerando",
+        "queued": "Na fila",
+        "retryWait": "Nova tentativa às {time}"
+      },
+      "kind": {
+        "autopilot": "Autopilot",
+        "dashboard": "Painel"
+      },
+      "reason": {
+        "transient": "Um erro temporário se repetiu até o limite de tentativas.",
+        "permanent": "Um erro que não se resolve sozinho.",
+        "phase_budget_exhausted": "A mesma fase falhou várias vezes seguidas (pode ser falta de memória).",
+        "run_budget_exhausted": "O carrossel parou várias vezes sem avançar (pode ser falta de memória).",
+        "held_by_queue": "A fila desistiu depois de várias quedas.",
+        "other": "Erro na fila ({code})."
+      },
+      "notAllowed": "Esta execução não aceita mais essa ação; o painel foi atualizado."
     }
   },
   "dashboard": {

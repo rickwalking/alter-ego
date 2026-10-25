@@ -95,6 +95,7 @@ from rag_backend.modules.autopilot import prepare_instagram_credentials
 from rag_backend.modules.autopilot.api.insights import (
     router as instagram_insights_router,
 )
+from rag_backend.modules.autopilot.api.queue_board import router as queue_board_router
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
@@ -289,6 +290,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(chat_stream.router, prefix="/api")
     app.include_router(autopilot_router, prefix="/api")
     app.include_router(instagram_insights_router, prefix="/api")
+    app.include_router(queue_board_router, prefix="/api")
     app.include_router(telegram_webhook_router, prefix="/api")
     app.include_router(image_bridge_router, prefix="/api")
     app.include_router(image_bridge_inputs.router, prefix="/api")

@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 
 from rag_backend.modules.autopilot.application.run_revive import (
     ReviveDependencies,
+    discard_parked,
     revive,
 )
 from rag_backend.modules.autopilot.domain.backlog import (
@@ -28,7 +29,6 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
     ThesisConfirmCommand,
-    TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
@@ -58,7 +58,6 @@ from rag_backend.modules.autopilot.queue_constants import (
     KIND_DEAD_DISCARD,
     KIND_DEAD_RETRY,
     KIND_GENERATE_NOW,
-    REASON_DEAD_DISCARD,
     REASON_DEAD_RETRY,
     TEXT_APPROVED_HEADER,
     TEXT_APPROVED_LINE,
@@ -225,13 +224,16 @@ async def _retried_run(host: _Host, run: AutopilotRun) -> UUID | None:
     """The run now queued for this dead letter, or None when nothing moved."""
     if not is_dead_letter(run.state_reason):
         return None
-    deps = ReviveDependencies(
+    return await revive(_revive_deps(host), run, REASON_DEAD_RETRY)
+
+
+def _revive_deps(host: _Host) -> ReviveDependencies:
+    return ReviveDependencies(
         runs=host._deps.runs,
         clock=host._deps.clock,
         queue=host._deps.queue,
         dead_letters=host._deps.dead_letters,
     )
-    return await revive(deps, run, REASON_DEAD_RETRY)
 
 
 async def _discard(host: _Host, update: WebhookUpdate, run_id: UUID) -> None:
@@ -245,19 +247,7 @@ async def _discard(host: _Host, update: WebhookUpdate, run_id: UUID) -> None:
 async def _discarded(host: _Host, run: AutopilotRun) -> bool:
     if not is_dead_letter(run.state_reason):
         return False
-    if run.state is AutopilotRunState.ESCALATED:
-        return await host._deps.runs.transition(
-            TransitionCommand(
-                run_id=run.run_id,
-                expected=AutopilotRunState.ESCALATED,
-                new=AutopilotRunState.REJECTED,
-                reason=REASON_DEAD_DISCARD,
-            )
-        )
-    dead_letters = host._deps.dead_letters
-    if run.state is not AutopilotRunState.FAILED or dead_letters is None:
-        return False
-    return await dead_letters.discard_failed(run.run_id)
+    return await discard_parked(_revive_deps(host), run)
 
 
 async def _generate_now(host: _Host, update: WebhookUpdate, candidate_id: UUID) -> None:

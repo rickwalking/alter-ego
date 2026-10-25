@@ -54,28 +54,162 @@ const SCHEMAS_DIR = join(FRONTEND_ROOT, "src/schemas");
  * @type {{ zod: string, file: string, openapi: string, kind: "response" | "request" }[]}
  */
 const SCHEMA_MAP = [
-  { zod: "messageSourceSchema", file: "chat.ts", openapi: "MessageSource", kind: "response" },
-  { zod: "messageSchema", file: "chat.ts", openapi: "MessageResponse", kind: "response" },
-  { zod: "conversationSchema", file: "chat.ts", openapi: "ConversationResponse", kind: "response" },
-  { zod: "conversationListResponseSchema", file: "chat.ts", openapi: "ConversationListResponse", kind: "response" },
-  { zod: "messageListResponseSchema", file: "chat.ts", openapi: "MessageListResponse", kind: "response" },
-  { zod: "chatRequestSchema", file: "chat.ts", openapi: "ChatRequest", kind: "request" },
-  { zod: "chatResponseSchema", file: "chat.ts", openapi: "ChatResponse", kind: "response" },
-  { zod: "documentSchema", file: "knowledge.ts", openapi: "DocumentResponse", kind: "response" },
-  { zod: "documentListResponseSchema", file: "knowledge.ts", openapi: "DocumentListResponse", kind: "response" },
-  { zod: "createDocumentRequestSchema", file: "knowledge.ts", openapi: "DocumentCreate", kind: "request" },
-  { zod: "documentUploadResponseSchema", file: "knowledge.ts", openapi: "DocumentUploadResponse", kind: "response" },
-  { zod: "carouselDesignColorsSchema", file: "carousel.ts", openapi: "CarouselDesignColors", kind: "response" },
-  { zod: "carouselDesignTypographySchema", file: "carousel.ts", openapi: "CarouselDesignTypography", kind: "response" },
-  { zod: "carouselDesignImagesSchema", file: "carousel.ts", openapi: "CarouselDesignImages", kind: "response" },
-  { zod: "carouselDesignLayoutSchema", file: "carousel.ts", openapi: "CarouselDesignLayout", kind: "response" },
-  { zod: "carouselDesignResponseSchema", file: "carousel.ts", openapi: "CarouselDesignResponse", kind: "response" },
-  { zod: "carouselProjectResponseSchema", file: "carousel.ts", openapi: "CarouselProjectResponse", kind: "response" },
-  { zod: "carouselProjectListResponseSchema", file: "carousel.ts", openapi: "CarouselProjectListResponse", kind: "response" },
-  { zod: "carouselPublicSlideSchema", file: "carousel.ts", openapi: "CarouselPublicSlide", kind: "response" },
-  { zod: "carouselPublicResponseSchema", file: "carousel.ts", openapi: "CarouselPublicResponse", kind: "response" },
-  { zod: "carouselSlideResponseSchema", file: "carousel.ts", openapi: "CarouselSlideResponse", kind: "response" },
-  { zod: "slideFieldViolationSchema", file: "carousel.ts", openapi: "SlideFieldViolation", kind: "response" },
+  {
+    zod: "messageSourceSchema",
+    file: "chat.ts",
+    openapi: "MessageSource",
+    kind: "response",
+  },
+  {
+    zod: "messageSchema",
+    file: "chat.ts",
+    openapi: "MessageResponse",
+    kind: "response",
+  },
+  {
+    zod: "conversationSchema",
+    file: "chat.ts",
+    openapi: "ConversationResponse",
+    kind: "response",
+  },
+  {
+    zod: "conversationListResponseSchema",
+    file: "chat.ts",
+    openapi: "ConversationListResponse",
+    kind: "response",
+  },
+  {
+    zod: "messageListResponseSchema",
+    file: "chat.ts",
+    openapi: "MessageListResponse",
+    kind: "response",
+  },
+  {
+    zod: "chatRequestSchema",
+    file: "chat.ts",
+    openapi: "ChatRequest",
+    kind: "request",
+  },
+  {
+    zod: "chatResponseSchema",
+    file: "chat.ts",
+    openapi: "ChatResponse",
+    kind: "response",
+  },
+  {
+    zod: "documentSchema",
+    file: "knowledge.ts",
+    openapi: "DocumentResponse",
+    kind: "response",
+  },
+  {
+    zod: "documentListResponseSchema",
+    file: "knowledge.ts",
+    openapi: "DocumentListResponse",
+    kind: "response",
+  },
+  {
+    zod: "createDocumentRequestSchema",
+    file: "knowledge.ts",
+    openapi: "DocumentCreate",
+    kind: "request",
+  },
+  {
+    zod: "documentUploadResponseSchema",
+    file: "knowledge.ts",
+    openapi: "DocumentUploadResponse",
+    kind: "response",
+  },
+  {
+    zod: "carouselDesignColorsSchema",
+    file: "carousel.ts",
+    openapi: "CarouselDesignColors",
+    kind: "response",
+  },
+  {
+    zod: "carouselDesignTypographySchema",
+    file: "carousel.ts",
+    openapi: "CarouselDesignTypography",
+    kind: "response",
+  },
+  {
+    zod: "carouselDesignImagesSchema",
+    file: "carousel.ts",
+    openapi: "CarouselDesignImages",
+    kind: "response",
+  },
+  {
+    zod: "carouselDesignLayoutSchema",
+    file: "carousel.ts",
+    openapi: "CarouselDesignLayout",
+    kind: "response",
+  },
+  {
+    zod: "carouselDesignResponseSchema",
+    file: "carousel.ts",
+    openapi: "CarouselDesignResponse",
+    kind: "response",
+  },
+  {
+    zod: "carouselProjectResponseSchema",
+    file: "carousel.ts",
+    openapi: "CarouselProjectResponse",
+    kind: "response",
+  },
+  {
+    zod: "carouselProjectListResponseSchema",
+    file: "carousel.ts",
+    openapi: "CarouselProjectListResponse",
+    kind: "response",
+  },
+  {
+    zod: "carouselPublicSlideSchema",
+    file: "carousel.ts",
+    openapi: "CarouselPublicSlide",
+    kind: "response",
+  },
+  {
+    zod: "carouselPublicResponseSchema",
+    file: "carousel.ts",
+    openapi: "CarouselPublicResponse",
+    kind: "response",
+  },
+  {
+    zod: "carouselSlideResponseSchema",
+    file: "carousel.ts",
+    openapi: "CarouselSlideResponse",
+    kind: "response",
+  },
+  {
+    zod: "slideFieldViolationSchema",
+    file: "carousel.ts",
+    openapi: "SlideFieldViolation",
+    kind: "response",
+  },
+  {
+    zod: "queueItemSchema",
+    file: "generation-queue.ts",
+    openapi: "QueueItemResponse",
+    kind: "response",
+  },
+  {
+    zod: "backlogItemSchema",
+    file: "generation-queue.ts",
+    openapi: "BacklogItemResponse",
+    kind: "response",
+  },
+  {
+    zod: "queueBoardResponseSchema",
+    file: "generation-queue.ts",
+    openapi: "QueueBoardResponse",
+    kind: "response",
+  },
+  {
+    zod: "queueActionResponseSchema",
+    file: "generation-queue.ts",
+    openapi: "QueueActionResponse",
+    kind: "response",
+  },
 ];
 
 /** Marks a Zod field whose type we do not statically resolve (opaque). */
@@ -226,7 +360,7 @@ function classifyOpenApiProp(prop) {
     return { type: "object", nullable: false };
   }
   if (Array.isArray(prop.anyOf)) {
-    const variants =  (prop.anyOf);
+    const variants = prop.anyOf;
     const nullable = variants.some((v) => v.type === "null");
     const main = variants.find((v) => v.type !== "null") ?? {};
     const inner = classifyOpenApiProp(main);
@@ -245,16 +379,12 @@ function classifyOpenApiProp(prop) {
 function parseOpenApiComponent(component) {
   /** @type {Record<string, { type: string, nullable: boolean }>} */
   const props = {};
-  const rawProps =  (
-    component.properties ?? {}
-  );
+  const rawProps = component.properties ?? {};
   for (const [name, prop] of Object.entries(rawProps)) {
     props[name] = classifyOpenApiProp(prop);
   }
   const required = new Set(
-    Array.isArray(component.required)
-      ?  (component.required)
-      : [],
+    Array.isArray(component.required) ? component.required : [],
   );
   return { props, required };
 }
@@ -272,13 +402,17 @@ function compareEntry(entry, openApiSchemas) {
 
   const component = openApiSchemas[entry.openapi];
   if (!component) {
-    findings.push(`MISSING-COMPONENT: OpenAPI has no schema "${entry.openapi}" (mapping is stale or the backend renamed/removed it).`);
+    findings.push(
+      `MISSING-COMPONENT: OpenAPI has no schema "${entry.openapi}" (mapping is stale or the backend renamed/removed it).`,
+    );
     return findings;
   }
 
   const zodFields = parseZodSchema(entry.file, entry.zod);
   if (zodFields === null) {
-    findings.push(`UNPARSEABLE-ZOD: could not extract a z.object literal for "${entry.zod}" in ${entry.file}.`);
+    findings.push(
+      `UNPARSEABLE-ZOD: could not extract a z.object literal for "${entry.zod}" in ${entry.file}.`,
+    );
     return findings;
   }
 
@@ -288,14 +422,20 @@ function compareEntry(entry, openApiSchemas) {
 
   for (const name of zodNames) {
     if (!apiNames.has(name)) {
-      findings.push(`EXTRA-FRONTEND-FIELD: "${name}" is validated by the frontend but absent from the API schema.`);
+      findings.push(
+        `EXTRA-FRONTEND-FIELD: "${name}" is validated by the frontend but absent from the API schema.`,
+      );
     }
   }
 
   for (const name of apiNames) {
     if (!zodNames.has(name)) {
-      const tag = required.has(name) ? "MISSING-REQUIRED-FIELD" : "UNMODELED-OPTIONAL-FIELD";
-      findings.push(`${tag}: API field "${name}" is not present in the frontend schema.`);
+      const tag = required.has(name)
+        ? "MISSING-REQUIRED-FIELD"
+        : "UNMODELED-OPTIONAL-FIELD";
+      findings.push(
+        `${tag}: API field "${name}" is not present in the frontend schema.`,
+      );
     }
   }
 
@@ -307,13 +447,17 @@ function compareEntry(entry, openApiSchemas) {
     const zod = zodFields[name];
     const known = zod.type !== OPAQUE && api.type !== OPAQUE;
     if (known && zod.type !== api.type) {
-      findings.push(`TYPE-MISMATCH: "${name}" is ${zod.type} (frontend) vs ${api.type} (API).`);
+      findings.push(
+        `TYPE-MISMATCH: "${name}" is ${zod.type} (frontend) vs ${api.type} (API).`,
+      );
     }
     const apiOptional = !required.has(name);
     const apiAcceptsAbsent = api.nullable || apiOptional;
     const zodAcceptsAbsent = zod.nullable || zod.optional;
     if (apiAcceptsAbsent && !zodAcceptsAbsent) {
-      findings.push(`NULLABILITY-MISMATCH: "${name}" can be null/absent in the API but the frontend requires a present, non-null value.`);
+      findings.push(
+        `NULLABILITY-MISMATCH: "${name}" can be null/absent in the API but the frontend requires a present, non-null value.`,
+      );
     }
   }
 

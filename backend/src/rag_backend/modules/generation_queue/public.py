@@ -10,6 +10,7 @@ import asyncio
 from collections.abc import AsyncIterator, Callable, Collection
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import structlog
 from sqlalchemy import ColumnElement, exists, select
@@ -60,6 +61,10 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.editorial_workflow_service import (
         EditorialWorkflowService,
     )
+    from rag_backend.modules.generation_queue.infrastructure.queue_board import (
+        BoardRow,
+        RunFacts,
+    )
     from rag_backend.modules.generation_queue.infrastructure.queue_view import (
         QueuedWork,
     )
@@ -75,13 +80,16 @@ __all__ = [
     "active_queue",
     "adopt_orphaned_projects",
     "apply_queue_schema",
+    "cancel_queued_run",
     "count_queue_hand_back",
     "format_queue_schema_report",
+    "generation_run_facts",
     "hand_back_queue",
     "hold_project_drive",
     "listen_for_progress",
     "project_has_active_run",
     "projects_with_active_runs",
+    "queue_board_rows",
     "queue_health_check",
     "recent_drive_minutes",
     "register_persistence_models",
@@ -293,3 +301,30 @@ async def requeue_autopilot_dead_letter(
     from rag_backend.modules.generation_queue.infrastructure import queue_view
 
     return await queue_view.requeue_autopilot_dead_letter(session, autopilot_run_id)
+
+
+async def queue_board_rows(session: AsyncSession) -> list[BoardRow]:
+    """Active runs in FIFO order, then the dead letters of the last 7 days."""
+    from rag_backend.modules.generation_queue.infrastructure.queue_board import (
+        board_rows,
+    )
+
+    return await board_rows(session)
+
+
+async def generation_run_facts(session: AsyncSession, run_id: UUID) -> RunFacts | None:
+    """Kind, status and autopilot run of one generation run."""
+    from rag_backend.modules.generation_queue.infrastructure.queue_board import (
+        run_facts,
+    )
+
+    return await run_facts(session, run_id)
+
+
+async def cancel_queued_run(session: AsyncSession, run_id: UUID) -> bool:
+    """Cancel a queued or retry-waiting run in the caller's transaction."""
+    from rag_backend.modules.generation_queue.infrastructure.queue_board import (
+        cancel_queued,
+    )
+
+    return await cancel_queued(session, run_id)

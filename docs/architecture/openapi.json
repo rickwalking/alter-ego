@@ -105,6 +105,37 @@
         "title": "ApplyStrategyResponse",
         "type": "object"
       },
+      "BacklogItemResponse": {
+        "description": "A theme waiting in the backlog.",
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "title",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "BacklogItemResponse",
+        "type": "object"
+      },
       "BlogFromCarouselRequest": {
         "description": "``POST /blog-posts/from-carousel``: always creates a draft.\n\nThe document is always PT canonical plus an EN translation; language records which\none the owner asked to edit first.",
         "properties": {
@@ -7682,6 +7713,189 @@
           }
         },
         "title": "QualityRubricUpdate",
+        "type": "object"
+      },
+      "QueueActionResponse": {
+        "description": "What a panel button did.",
+        "properties": {
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "QueueActionResponse",
+        "type": "object"
+      },
+      "QueueBoardResponse": {
+        "description": "The whole panel.",
+        "properties": {
+          "active": {
+            "items": {
+              "$ref": "#/components/schemas/QueueItemResponse"
+            },
+            "title": "Active",
+            "type": "array"
+          },
+          "average_drive_minutes": {
+            "title": "Average Drive Minutes",
+            "type": "number"
+          },
+          "backlog": {
+            "items": {
+              "$ref": "#/components/schemas/BacklogItemResponse"
+            },
+            "title": "Backlog",
+            "type": "array"
+          },
+          "dead": {
+            "items": {
+              "$ref": "#/components/schemas/QueueItemResponse"
+            },
+            "title": "Dead",
+            "type": "array"
+          }
+        },
+        "required": [
+          "active",
+          "dead",
+          "backlog",
+          "average_drive_minutes"
+        ],
+        "title": "QueueBoardResponse",
+        "type": "object"
+      },
+      "QueueItemResponse": {
+        "description": "One generation run on the panel, with the buttons it offers.",
+        "properties": {
+          "can_cancel": {
+            "title": "Can Cancel",
+            "type": "boolean"
+          },
+          "can_discard": {
+            "title": "Can Discard",
+            "type": "boolean"
+          },
+          "can_retry": {
+            "title": "Can Retry",
+            "type": "boolean"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "eta": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "title",
+          "project_id",
+          "phase",
+          "position",
+          "eta",
+          "started_at",
+          "next_attempt_at",
+          "error_code",
+          "can_retry",
+          "can_discard",
+          "can_cancel"
+        ],
+        "title": "QueueItemResponse",
         "type": "object"
       },
       "QuoteProposal": {
@@ -17336,6 +17550,229 @@
         "summary": "Get editorial analytics dashboard data",
         "tags": [
           "blog_post_quality"
+        ]
+      }
+    },
+    "/api/generation-runs": {
+      "get": {
+        "description": "The queue panel.",
+        "operationId": "get_queue_board_api_generation_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueBoardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Queue Board",
+        "tags": [
+          "generation-queue"
+        ]
+      }
+    },
+    "/api/generation-runs/backlog/{candidate_id}/generate": {
+      "post": {
+        "description": "Queue a backlog theme at once, outside the daily cap.",
+        "operationId": "generate_backlog_theme_api_generation_runs_backlog__candidate_id__generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Backlog Theme",
+        "tags": [
+          "generation-queue"
+        ]
+      }
+    },
+    "/api/generation-runs/{run_id}/cancel": {
+      "post": {
+        "description": "Take an autopilot run that has not started out of the queue.",
+        "operationId": "cancel_generation_run_api_generation_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Generation Run",
+        "tags": [
+          "generation-queue"
+        ]
+      }
+    },
+    "/api/generation-runs/{run_id}/discard": {
+      "post": {
+        "description": "Close a dead-lettered autopilot run.",
+        "operationId": "discard_generation_run_api_generation_runs__run_id__discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard Generation Run",
+        "tags": [
+          "generation-queue"
+        ]
+      }
+    },
+    "/api/generation-runs/{run_id}/retry": {
+      "post": {
+        "description": "Put a dead-lettered autopilot run back in the queue.",
+        "operationId": "retry_generation_run_api_generation_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Generation Run",
+        "tags": [
+          "generation-queue"
         ]
       }
     },

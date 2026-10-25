@@ -15,6 +15,7 @@ import {
 import { useWorkflowKanban, type WorkflowKanban } from "@/modules/editorial";
 import { localizeBoardColumns } from "@/app/dashboard/workflow/localize-board";
 import { CardArchiveAction } from "./card-archive-action";
+import { QueuePanelSection } from "./queue-panel-section";
 import type { BoardFeedbackProps, WorkflowBoardViewProps } from "./types";
 
 const NEW_CARD_ICON = (
@@ -89,6 +90,7 @@ function WorkflowBoardView({
 
   return (
     <div className="p-6">
+      {!archived && <QueuePanelSection />}
       <BoardFeedback loading={loading} error={error} onRetry={refresh} />
       {showEmpty && (
         <p className="py-8 text-center text-sm">{t("archive.emptyArchived")}</p>
