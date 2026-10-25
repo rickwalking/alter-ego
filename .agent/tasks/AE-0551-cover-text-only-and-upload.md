@@ -1,6 +1,6 @@
 # AE-0551 — Cover generation without photos; upload photos from the cover panel
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -68,16 +68,16 @@ and "Upload images to be sent, not just select existing images."
 
 ## Acceptance Criteria
 
-- [ ] Given the cover panel with no photo ticked, When Pedro writes a prompt (3-500 chars) or picks a
+- [x] Given the cover panel with no photo ticked, When Pedro writes a prompt (3-500 chars) or picks a
       suggestion, clicks "Gerar capa" and confirms, Then a text-only bridge job runs and the result lands
       as a role-cover asset selectable in the grid; the API accepts `photo_ids: []` (and absent) and still
       refuses more than 3 ids and foreign ids.
-- [ ] Given the cover panel, When Pedro uploads a photo, Then it appears in the panel and in the photo
+- [x] Given the cover panel, When Pedro uploads a photo, Then it appears in the panel and in the photo
       library, is ticked, and the next generation sends it; an invalid file shows the same error as the
       library upload.
-- [ ] Caps, attempt ceilings, 409/422/503 refusals, the no-prompt-text logging and the one-pending-per-
+- [x] Caps, attempt ceilings, 409/422/503 refusals, the no-prompt-text logging and the one-pending-per-
       carousel lock behave exactly as with photos.
-- [ ] The confirmation for a no-photo generation does not claim photos are sent.
+- [x] The confirmation for a no-photo generation does not claim photos are sent.
 
 ## Gherkin Scenarios
 
@@ -86,13 +86,13 @@ See `backend/tests/features/cover_generation_text_ae0551.feature` and
 
 ## Affected Areas
 
-- [ ] Backend (`api/schemas/carousel_cover_generation.py`, `api/routes/carousels/cover_generate.py`,
+- [x] Backend (`api/schemas/carousel_cover_generation.py`, `api/routes/carousels/cover_generate.py`,
       `agents/cover_generation_prompts.py`, prompt template `cover_generation/v1/generate.yaml`)
-- [ ] Frontend (`cover-generate-panel.tsx`, `cover-generate-parts.tsx`, `use-cover-generate-form.ts`,
+- [x] Frontend (`cover-generate-panel.tsx`, `cover-generate-parts.tsx`, `use-cover-generate-form.ts`,
       `cover-picker-section.tsx`, `publish-cover-picker.tsx`, types, i18n)
-- [ ] API: `photo_ids` is optional with 0-3 items (OpenAPI artifact)
+- [x] API: `photo_ids` is optional with 0-3 items (OpenAPI artifact)
 - Database: no change (`photo_count` 0 and `photo_ids` `[]` fit the AE-0508 columns).
-- [ ] Docs: bridge contract §2.5
+- [x] Docs: bridge contract §2.5
 
 ## Dependencies
 
@@ -104,7 +104,10 @@ A live check of one text-only cover is done on prod after merge.
 
 ### 2026-10-25
 
-Ticket written from Pedro's asks; failing tests first.
+Ticket written from Pedro's asks; failing tests first. Backend: 0-3 photo ids, the text-only prompt and the
+§2.1 body for a no-photo job. Frontend: the panel works without photos, "Enviar foto" through the page's
+library upload, a no-photo confirmation. Independent review (WARN, no blocker): text-only tests for every
+cap and refusal, "Gerar capa" held while a photo uploads, one shared accept-types constant.
 
 ## Files Touched
 
