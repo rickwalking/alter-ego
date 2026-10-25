@@ -1,6 +1,6 @@
 # AE-0553 — Daily recovery survives one failing item
 
-Status: QA Running
+Status: Review
 Tier: T2
 Priority: High
 Type: Bug
@@ -87,17 +87,17 @@ The scan commits the dead letter's `recovery_attempt` marker and then revives th
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
 ### 2026-10-25
 
-Ticket and transaction design created after PR #286 merged into `origin/main`. Red tests were committed before the implementation; atomic revival and per-item isolation are implemented.
+Ticket and transaction design created after PR #286 merged into `origin/main`. Red tests were committed before the implementation; atomic revival and per-item isolation are implemented. Independent QA returned WARN; all five findings were fixed and the confirmation review returned PASS.
 
 ## Files Touched
 
@@ -110,10 +110,15 @@ Ticket and transaction design created after PR #286 merged into `origin/main`. R
 - `backend/src/rag_backend/modules/generation_queue/public.py`
 - `backend/tests/features/daily_recovery_scan_ae0553.feature`
 - `backend/tests/integration/test_daily_recovery_scan_ae0553.py`
+- `backend/tests/integration/test_daily_recovery_atomicity_ae0553.py`
+- `backend/tests/integration/test_daily_recovery_races_ae0553.py`
 - `backend/tests/unit/modules/generation_queue/test_recovery_scan_ae0524.py`
 - `backend/tests/unit/modules/generation_queue/test_recovery_scan_ae0553.py`
 - `.agent/reports/AE-0553.arch-plan.md`
 - `.agent/reports/AE-0553.plan-validation.md`
+- `.agent/reports/AE-0553.dev-summary.md`
+- `.agent/reports/AE-0553.qa-research.md`
+- `.agent/reports/AE-0553.qa.md`
 
 ## Test Evidence
 
@@ -121,16 +126,19 @@ Ticket and transaction design created after PR #286 merged into `origin/main`. R
 - Green after implementation: 27 passed across old and new recovery tests and the real Telegram retry integration tests.
 - `uv run mypy rag_backend/ --explicit-package-bases`: 1162 source files passed.
 - Targeted Ruff lint/format and `python3 scripts/ci/check_comments.py`: passed.
+- QA fixes: 36 targeted SQLite tests and 20 targeted Postgres tests passed, including post-write rollback and four forced races.
+- Final full gates: 7573 passed, 2 pre-existing skips; 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; integrity zero blockers/warnings.
 - No assertion or expectation lines were removed from the PR diff.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0553.qa.md` — PASS for Review; independent confirmation found all initial findings resolved.
 
 ## Decision Log
 
 - 2026-10-25 (Pedro): use one transaction for marking and reviving rather than a compensating marker update; no schema or feature flag.
 - 2026-10-25 (Pedro): logs contain ids and exception type only; the owner summary contains the failed item id and a bounded reason.
+- 2026-10-25 (Pedro): preserve disabled-autopilot one-attempt marking; show at most ten failure details plus an overflow count, and render empty reasons as the exception type alone.
 
 ## Blockers
 
