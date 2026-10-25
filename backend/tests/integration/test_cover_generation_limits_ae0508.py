@@ -213,7 +213,6 @@ class TestPayload:
     @pytest.mark.parametrize(
         ("photos", "changes"),
         [
-            (0, {}),
             (4, {}),
             (1, {"prompt": "   "}),
             (1, {"prompt": "\t\n a \n"}),

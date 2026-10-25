@@ -1,8 +1,9 @@
 """Constants for generating a slide-1 cover from library photos with Grok.
 
-The owner of a Ponto de Vista carousel sends one to three of their library
-photos to the Grok Bot (image-to-image, the bytes inside the webhook, never a
-URL), after an explicit confirmation, at most 4 generations per carousel and
+The owner of a Ponto de Vista carousel sends up to three of their library
+photos to the Grok Bot (image-to-image, linked from the webhook), or none for
+a cover from the direction alone (a text-only job), after an explicit
+confirmation, at most 4 generations per carousel and
 40 per calendar month (UTC). Succeeded and pending generations count; failed
 ones do not, so a retry is free, up to a hard ceiling of 3x the caps that
 counts every attempt (12 per carousel, 120 per month).
@@ -26,7 +27,7 @@ COVER_GENERATION_PER_CAROUSEL_ATTEMPTS = (
 COVER_GENERATION_MONTHLY_ATTEMPTS = (
     COVER_GENERATION_ATTEMPT_FACTOR * COVER_GENERATION_MONTHLY_CAP
 )
-COVER_GENERATION_MIN_PHOTOS = 1
+COVER_GENERATION_MIN_PHOTOS = 0
 COVER_GENERATION_MAX_PHOTOS = 3
 COVER_GENERATION_PROMPT_MIN_LEN = 3
 COVER_GENERATION_PROMPT_MAX_LEN = 500

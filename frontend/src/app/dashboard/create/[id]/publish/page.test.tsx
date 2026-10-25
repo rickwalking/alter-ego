@@ -25,6 +25,8 @@ const m = vi.hoisted(() => ({
   ready: true,
   coverPicker: false,
   fillPrompt: vi.fn(),
+  uploadToLibrary: vi.fn(() => Promise.resolve({ id: "new-photo" })),
+  uploaded: null as Promise<string> | null,
   catalog: undefined as PaletteCatalogResponse | undefined,
   radar: false,
   blogHref: null as string | null,
@@ -60,6 +62,7 @@ vi.mock("@/modules/editorial", () => ({
     state: m.workflowState,
   }),
   resolveLocalizedSlides: () => [{ slide_index: 1 }, { slide_index: 2 }],
+  useUploadCreatorPhoto: () => ({ mutateAsync: m.uploadToLibrary }),
   CoverPromptSuggestions: ({
     topic,
     palette,
@@ -153,12 +156,22 @@ vi.mock("@/modules/publishing", async () => ({
   ),
   CoverPickerSection: ({
     renderPromptSuggestions,
+    uploadPhoto,
   }: {
     renderPromptSuggestions?: (fill: (prompt: string) => void) => ReactNode;
+    uploadPhoto?: (file: File) => Promise<string>;
   }) => (
     <div>
       cover-picker
       {renderPromptSuggestions?.(m.fillPrompt)}
+      <button
+        type="button"
+        onClick={() => {
+          m.uploaded = uploadPhoto?.(new File(["x"], "me.png")) ?? null;
+        }}
+      >
+        upload-photo
+      </button>
     </div>
   ),
   RebuildPdfSection: ({
@@ -439,6 +452,22 @@ describe("DashboardCreatePublishPage", () => {
     fireEvent.click(suggestion);
 
     expect(m.fillPrompt).toHaveBeenCalledWith("ideia sobre AI topic");
+  });
+
+  /** Scenario: An uploaded photo is added to the library and ticked */
+  it("uploads a cover panel photo to the library as a slide-1 photo", async () => {
+    m.coverPicker = true;
+    m.workflowState = state({});
+    await renderLoaded();
+
+    fireEvent.click(screen.getByRole("button", { name: "upload-photo" }));
+
+    expect(await m.uploaded).toBe("new-photo");
+    const [input] = m.uploadToLibrary.mock.calls[0] as unknown as [
+      { file: File; role: string },
+    ];
+    expect(input.role).toBe("hook");
+    expect(input.file.name).toBe("me.png");
   });
 
   /** Scenario: The cover dialog offers prompt suggestions for the carousel */

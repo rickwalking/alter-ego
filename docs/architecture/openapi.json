@@ -3723,7 +3723,7 @@
       },
       "CoverGenerationRequest": {
         "additionalProperties": false,
-        "description": "The photos to send, the owner's direction and the explicit confirmation.",
+        "description": "The photos to send, the owner's direction and the explicit confirmation.\n\n``photo_ids`` may be empty or absent: a cover from the direction alone.",
         "properties": {
           "confirmed": {
             "title": "Confirmed",
@@ -3735,7 +3735,7 @@
               "type": "string"
             },
             "maxItems": 3,
-            "minItems": 1,
+            "minItems": 0,
             "title": "Photo Ids",
             "type": "array"
           },
@@ -3747,7 +3747,6 @@
           }
         },
         "required": [
-          "photo_ids",
           "prompt",
           "confirmed"
         ],
@@ -13842,7 +13841,7 @@
         ]
       },
       "post": {
-        "description": "Record a pending generation and run the Grok Bot job in the background.",
+        "description": "Record a pending generation and run the Grok Bot job in the background.\n\nWith no photo the job is text-only (the contract's text body); with photos\nit is an image edit that links them.",
         "operationId": "start_cover_generation_api_carousels__project_id__cover_generations_post",
         "parameters": [
           {

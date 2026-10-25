@@ -83,12 +83,13 @@ function PickStatus({
  * the GrokBot offer), marks the current one, and swaps slide 1 on a pick: the
  * server re-renders slides + PDFs, then `onSwitched` refreshes the previews
  * with the new artifact version. Below it, "Gerar capa com Grok" makes new
- * covers from the library photos.
+ * covers from a prompt, with library photos or a freshly uploaded one.
  */
 export function CoverPickerSection({
   projectId,
   onSwitched,
   renderPromptSuggestions,
+  uploadPhoto,
 }: Readonly<CoverPickerSectionProps>): React.ReactElement {
   const t = useTranslations("publish.coverPicker");
   const options = useCoverOptions(projectId);
@@ -144,6 +145,7 @@ export function CoverPickerSection({
         projectId={projectId}
         photos={libraryPhotos}
         renderPromptSuggestions={renderPromptSuggestions}
+        uploadPhoto={uploadPhoto}
       />
     </section>
   );

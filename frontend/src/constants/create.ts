@@ -77,6 +77,9 @@ export const LIGHT_THEME_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
 /** The preset a Ponto de Vista deck switches to. */
 export const POV_EDITORIAL_PRESET = "openai__pov_editorial";
 
+/** The image types the creator photo library upload accepts (the file picker filter). */
+export const CREATOR_PHOTO_ACCEPTED_TYPES = "image/png,image/webp,image/jpeg";
+
 /** Creator photo library roles. */
 export const CREATOR_PHOTO_ROLES = {
   HOOK: "hook",

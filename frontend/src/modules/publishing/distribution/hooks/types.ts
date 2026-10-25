@@ -159,7 +159,18 @@ export interface CopyHistory {
   loadMore: () => void;
 }
 
-/** The photos to send and the owner's direction (confirmed in the dialog). */
+/** Upload a file from the device into the owner's photo library; its asset id. */
+export type UploadLibraryPhoto = (file: File) => Promise<string>;
+
+/** "Enviar foto": whether the page offers it, its progress and failure. */
+export interface CoverPhotoUpload {
+  available: boolean;
+  uploading: boolean;
+  failed: boolean;
+  onFile: (file: File) => Promise<void>;
+}
+
+/** The photos to send (none for a cover from the prompt alone) and the owner's direction. */
 export interface CoverGenerationInput {
   projectId: string;
   photoIds: readonly string[];
@@ -184,6 +195,8 @@ export interface CoverGenerateForm {
   canGenerate: boolean;
   selected: readonly string[];
   toggle: (assetId: string) => void;
+  /** Tick a newly uploaded photo, unless three are already ticked. */
+  add: (assetId: string) => void;
   prompt: string;
   setPrompt: (prompt: string) => void;
   asking: CoverGenerationInput | null;

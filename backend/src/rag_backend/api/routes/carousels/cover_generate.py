@@ -2,7 +2,7 @@
 
 Thin HTTP adapter. ``GET /{id}/cover-generations`` returns the caps in use and
 the carousel's generations; ``POST /{id}/cover-generations`` checks the
-request (confirmed, owner only, own photos, caps), records a pending
+request (confirmed, owner only, own photos or none, caps), records a pending
 generation and runs the Grok Bot job in a tracked background task (202). The
 result is picked like any other cover through ``PUT /{id}/cover``.
 """
@@ -16,7 +16,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.agents.cover_generation_prompts import cover_edit_prompt
+from rag_backend.agents.cover_generation_prompts import cover_prompt_for
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
@@ -161,9 +161,13 @@ async def start_cover_generation(
     body: CoverGenerationRequest,
     ctx: Annotated[CoverGenerationContext, Depends(get_cover_generation_context)],
 ) -> CoverGenerationResponse:
-    """Record a pending generation and run the Grok Bot job in the background."""
+    """Record a pending generation and run the Grok Bot job in the background.
+
+    With no photo the job is text-only (the contract's text body); with photos
+    it is an image edit that links them.
+    """
     try:
-        wiring = cover_run_wiring(cover_edit_prompt)
+        wiring = cover_run_wiring(cover_prompt_for(len(body.photo_ids)))
     except ImageBridgeConfigError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

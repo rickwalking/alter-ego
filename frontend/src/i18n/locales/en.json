@@ -1268,9 +1268,12 @@
       "generatedShort": "Grok",
       "generate": {
         "title": "Generate a cover with Grok",
-        "description": "Pick up to 3 of your photos and describe the scene. A new cover is made from them; it stays in your private library and shows up above to pick.",
+        "description": "Describe the scene and, if you like, pick up to 3 of your photos or upload a new one. A new cover is made from them, or from your words alone; it stays in your private library and shows up above to pick.",
         "photosLegend": "Reference photos (up to {max})",
         "photoLabel": "Use library photo {number}",
+        "upload": "Upload a photo",
+        "uploading": "Uploading…",
+        "uploadFailed": "The photo could not be uploaded (PNG, WebP or JPEG up to 5 MB).",
         "promptLabel": "What should the cover look like?",
         "promptPlaceholder": "E.g. me in a café in Lisbon, late afternoon light, looking at the camera",
         "usage": "{carouselUsed} of {carouselCap} on this carousel · {monthUsed} of {monthCap} this month (the monthly limit resets at 21:00 BRT on the last day of the month)",
@@ -1288,7 +1291,9 @@
           "title": "Send your photos to OpenAI (ChatGPT)?",
           "body": "{count, plural, one {Your photo will be sent} other {Your # photos will be sent}} to the Grok Bot and processed by OpenAI (ChatGPT) to generate this cover. This generation counts towards the limit: {carouselUsed} of {carouselCap} on this carousel and {monthUsed} of {monthCap} this month. Failures do not count.",
           "action": "Send and generate",
-          "cancel": "Cancel"
+          "cancel": "Cancel",
+          "textTitle": "Send your description to OpenAI (ChatGPT)?",
+          "textBody": "No photo is sent: only your description goes to the Grok Bot and is processed by OpenAI (ChatGPT) to generate this cover. This generation counts towards the limit: {carouselUsed} of {carouselCap} on this carousel and {monthUsed} of {monthCap} this month. Failures do not count."
         },
         "errors": {
           "loadFailed": "The cover generations could not be loaded. Reload the page.",
@@ -1307,7 +1312,7 @@
           "notOwner": "Only the carousel's owner can generate covers."
         }
       },
-      "empty": "No photos in your library. Upload photos in the \"Slide 1 photo\" step when creating a carousel."
+      "empty": "No photos in your library yet. Upload one below, or describe the cover and generate it from your words."
     },
     "slideEditor": {
       "title": "Edit slide text",

@@ -28,8 +28,8 @@ Feature: Generate a slide-1 cover from library photos with Grok on the publish s
     When the owner clicks "Tentar de novo" and confirms
     Then the same photos and prompt are requested again
 
-  Scenario: The action needs a photo and a prompt
-    Given no photo is ticked or the prompt is shorter than 3 characters
+  Scenario: The action needs a prompt
+    Given the prompt is shorter than 3 characters
     Then "Gerar capa" is disabled
 
   Scenario: A reached cap disables the action with the reason

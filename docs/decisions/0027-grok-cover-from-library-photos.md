@@ -80,4 +80,7 @@ Chosen: **option 1**. Contract: [GrokBot Image Bridge §2.4](../architecture/gro
 
 ## More Information
 
+- Follow-up (AE-0551, Pedro 2026-10-25): a generation may tick no photo. It is then a text-only
+  bridge job (contract §2.5, the §2.1 body) under the same confirmation, caps and ceilings, and no
+  personal photo leaves the app. The panel also uploads a new library photo from the device.
 - Ticket: AE-0508. Related: ADR-0022 (image bridge), ADR-0024 (GrokBot cover asset).
