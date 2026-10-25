@@ -1,4 +1,4 @@
-"""Backlog intake, "Gerar agora" and dead-letter retries on a real database (SQLite).
+"""Backlog intake, "Gerar agora" and dead-letter retries (Postgres in CI, else SQLite).
 
 Feature: backend/tests/features/telegram_queue_flow_ae0523.feature
 """

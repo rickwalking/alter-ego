@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 
 from pgqueuer.adapters.persistence.queries import Queries
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -32,6 +33,10 @@ from rag_backend.modules.generation_queue.application.job_handler import (
     GenerationJobHandler,
     HandlerDependencies,
 )
+from rag_backend.modules.generation_queue.application.recovery_scan import (
+    DailyRecoveryScan,
+    DailyScanDependencies,
+)
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
 from rag_backend.modules.generation_queue.domain.errors import ProviderClassifier
 from rag_backend.modules.generation_queue.domain.models import GenerationKind
@@ -51,6 +56,9 @@ from rag_backend.modules.generation_queue.infrastructure.notices import (
 )
 from rag_backend.modules.generation_queue.infrastructure.pgq_gateway import (
     PgQueuerJobQueue,
+)
+from rag_backend.modules.generation_queue.infrastructure.recovery_store import (
+    SqlRecoveryStore,
 )
 from rag_backend.modules.generation_queue.infrastructure.repository import (
     SqlGenerationRunStore,
@@ -87,6 +95,23 @@ class WorkerComposition:
 
     handler: GenerationJobHandler
     dispatcher: Dispatcher
+    scan: DailyRecoveryScan
+
+
+class _NoParkedAutopilot:
+    """Autopilot driving is off: the scan revives nothing."""
+
+    @staticmethod
+    async def revive_dead_letter(run_id: str) -> bool:
+        """Nothing to revive."""
+        del run_id
+        return False
+
+    @staticmethod
+    async def revive_stale(since: datetime) -> int:
+        """Nothing to resume."""
+        del since
+        return 0
 
 
 def compose_handler(parts: HandlerParts) -> GenerationJobHandler:
@@ -141,7 +166,16 @@ def compose_worker(parts: HandlerParts, queries: Queries) -> WorkerComposition:
             notices=OwnerDeadLetterNotices(parts.bridge, parts.sessions),
         )
     )
-    return WorkerComposition(handler=compose_handler(parts), dispatcher=dispatcher)
+    scan = DailyRecoveryScan(
+        DailyScanDependencies(
+            store=SqlRecoveryStore(parts.sessions),
+            autopilot=parts.bridge if parts.drive_autopilot else _NoParkedAutopilot(),
+            clock=UTC_CLOCK,
+        )
+    )
+    return WorkerComposition(
+        handler=compose_handler(parts), dispatcher=dispatcher, scan=scan
+    )
 
 
 __all__ = ["HandlerParts", "WorkerComposition", "compose_handler", "compose_worker"]

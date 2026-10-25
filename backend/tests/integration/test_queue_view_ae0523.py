@@ -1,4 +1,4 @@
-"""Queue order, drive times and the in-transaction dead-letter requeue (SQLite).
+"""Queue order, drive times and the in-transaction requeue (Postgres in CI, else SQLite).
 
 Feature: backend/tests/features/telegram_queue_flow_ae0523.feature
 """

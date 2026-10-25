@@ -29,6 +29,7 @@ from rag_backend.modules.autopilot.queue_constants import (
     DEAD_LETTER_TEXT_BY_CODE,
     DEAD_LETTER_TEXT_DEFAULT,
     REASON_DEAD_LETTER_PREFIX,
+    REASON_DEAD_RETRY,
     TEXT_DEAD_LETTER,
 )
 
@@ -42,6 +43,7 @@ class RetryFailedCommand:
     run_id: UUID
     new_run_id: UUID
     created_at: datetime
+    reason: str = REASON_DEAD_RETRY
 
 
 class DeadLetterRuns(Protocol):
