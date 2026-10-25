@@ -1,6 +1,6 @@
 # AE-0554 — Cover panel follow-up: owner-only upload, upload errors by cause, polling, one error string
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Bugfix
@@ -55,15 +55,15 @@ Close the review findings on the AE-0551 cover panel (#287), per Pedro's review.
 
 ## Acceptance Criteria
 
-- [ ] Given a carousel the viewer does not own, Then the panel shows only the not-owner note: no "Enviar
+- [x] Given a carousel the viewer does not own, Then the panel shows only the not-owner note: no "Enviar
       foto", no "Gerar capa", and nothing is uploaded.
-- [ ] While the generation list is loading, no upload or generate control is shown.
-- [ ] A 429 upload, a network failure and a 5xx each show their own message; a 4xx refusal shows the
+- [x] While the generation list is loading, no upload or generate control is shown.
+- [x] A 429 upload, a network failure and a 5xx each show their own message; a 4xx refusal shows the
       wizard's upload sentence.
-- [ ] The generation list polls only while a generation is pending.
-- [ ] `uploadFailed` exists once (`create.photo.uploadFailed`) in pt and en.
-- [ ] An uploaded photo is ticked only once the cover options list it, and never past 3.
-- [ ] A non-owner stays on the publish page (the list's 403 does not redirect to /403); a 401 still goes
+- [x] The generation list polls only while a generation is pending.
+- [x] `uploadFailed` exists once (`create.photo.uploadFailed`) in pt and en.
+- [x] An uploaded photo is ticked only once the cover options list it, and never past 3.
+- [x] A non-owner stays on the publish page (the list's 403 does not redirect to /403); a 401 still goes
       to the login page.
 
 ## Gherkin Scenarios
@@ -72,7 +72,7 @@ See `frontend/tests/features/cover-panel-follow-up-ae0554.feature`.
 
 ## Affected Areas
 
-- [ ] Frontend (`lib/api-client.ts`, `cover-generate-panel.tsx`, `cover-photo-upload-field.tsx`, `use-cover-photo-upload.ts`,
+- [x] Frontend (`lib/api-client.ts`, `cover-generate-panel.tsx`, `cover-photo-upload-field.tsx`, `use-cover-photo-upload.ts`,
       `use-cover-generate-form.ts`, `use-cover-generation.ts`, types, i18n)
 - Backend: no change. API: no change. Database: no change.
 
@@ -84,7 +84,9 @@ AE-0551 (#287).
 
 ### 2026-10-25
 
-Ticket written from Pedro's review of #287; failing tests first.
+Ticket written from Pedro's review of #287; failing tests first. While fixing the owner-only point the
+list's 403 page redirect showed up and is fixed here (it defeated the point). Independent review (WARN):
+upload parse errors, stale data over a refetch error, two uploads in a row, one failure constant.
 
 ## Files Touched
 
