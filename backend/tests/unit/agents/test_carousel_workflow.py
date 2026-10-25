@@ -290,6 +290,12 @@ class TestCarouselWorkflowEngine:
                     }
                 return {}
 
+            async def rescore_edited_content(
+                self, state: CarouselWorkflowState
+            ) -> dict[str, object]:
+                del state
+                return {}
+
         runner = _CountingRunner()
         with TemporaryDirectory() as tmp_dir:
             db_path = Path(tmp_dir) / "workflow.sqlite"

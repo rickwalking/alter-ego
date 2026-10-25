@@ -446,12 +446,15 @@ async def _content_ensure_or_reuse(
     the artifacts the reviewer saw to the checkpoint when the graph parked, so
     the replay reuses them: no second regeneration with the same notes, no
     LLM call, and the reviewed (or hand-edited) copy is what gets committed.
+    Only the persona scores move: slides whose copy a reviewer edited are judged
+    again (the others keep their score), so a hand edit can clear the voice gate.
     """
     if state.get(STATE_FIELD_CONTENT_ARTIFACTS_PARKED) is True:
         logger.info(
             LOG_CONTENT_REPLAY_REUSED, project_id=str(state.get("project_id", ""))
         )
-        return {}
+        runner = artifact_runner_from_config(config)
+        return {} if runner is None else await runner.rescore_edited_content(state)
     return await ensure_artifacts(state, config, PHASE_CONTENT)
 
 

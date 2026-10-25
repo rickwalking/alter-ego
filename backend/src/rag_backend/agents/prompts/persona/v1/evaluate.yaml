@@ -1,0 +1,21 @@
+---
+name: persona_evaluate
+version: "1.0.0"
+description: "Persona voice judge for one carousel slide. Names the 0-100 scale with anchors (the inline prompt never did, so the model answered on 0-10 or 0-100 at random) and asks for the voice only, not length or topic, so a short checklist slide is not scored down for being short."
+
+template: |
+  {{ style_guide }}
+
+  Score how well the CONTENT below matches the persona above. Use a 0-100 scale for every score:
+  0 = nothing like the persona, 50 = generic copy anyone could have written,
+  70 = clearly the persona's voice with small slips, 90 or more = reads as the persona's own writing.
+
+  Judge the voice only: tone, sentence structure, how strongly opinions are stated, originality and how human it sounds.
+  Do not judge length, topic, facts or formatting. The content is the copy of one carousel slide (its heading, body and
+  checklist items, one per line); a short slide is not off-voice because it is short.
+
+  CONTENT:
+  {{ content }}
+
+  Respond with JSON only: numeric tone_match, sentence_structure_match, opinion_strength, originality,
+  human_authenticity and overall (each 0-100), and suggestions (a list of short strings).

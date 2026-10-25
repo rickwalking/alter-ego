@@ -54,7 +54,7 @@ from tests.unit.modules.autopilot.test_owner_actions import _Notices, _Topics
 
 SLIDE = 3
 REWRITTEN_3 = "Eu testo o Argon contra ataques indiretos antes de confiar nele."
-JUDGE_MARKER = "Score this content"
+JUDGE_MARKER = "Score how well the CONTENT"
 REWRITE = "```json\n" + json.dumps({"pt": {"body": REWRITTEN_3}}) + "\n```"
 
 

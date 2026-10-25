@@ -45,7 +45,7 @@ SCORE = json.dumps({
 
 
 def _reply(prompt: str) -> str:
-    return SCORE if "Score this content" in prompt else CLEAN
+    return SCORE if "Score how well the CONTENT" in prompt else CLEAN
 
 
 @pytest.mark.unit
