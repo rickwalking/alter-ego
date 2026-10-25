@@ -206,3 +206,31 @@ def test_prod_driver_only_touches_the_qa_project() -> None:
     emitted = [call.split(")\n", 1)[0] for call in text.split("_emit(")[2:]]
     assert emitted
     assert not [call for call in emitted if "token" in call.lower()]
+
+
+def test_prod_driver_waits_for_the_last_job_and_revises_a_low_voice_score() -> None:
+    """Scenario: The production validation stops on the first danger sign"""
+    driver = _load("prod_qa_run")
+    finished = [["resume:p:2", "succeeded", 1, "{}", "content", ""]]
+    running = [*finished, ["resume:p:3", "running", 1, "{}", "images", ""]]
+    assert driver._active(running)
+    assert not driver._active(finished)
+    revised_once = [*finished, ["resume:p:4", "succeeded", 0, "{}", "content", ""]]
+    assert driver._revisions(finished) == 0
+    assert driver._revisions(revised_once) == 1
+    refused = driver.httpx.Response(422, json={"detail": "persona_score_too_low"})
+    other = driver.httpx.Response(422, json={"detail": "version_conflict"})
+    assert driver._persona_refused(refused)
+    assert not driver._persona_refused(other)
+    assert not driver._persona_refused(driver.httpx.Response(202))
+    text = (TOOLS / "prod_qa_run.py").read_text(encoding="utf-8")
+    assert "phase == FINAL_PHASE and not _active(runs)" in text
+    assert "await _busy(project)" in text
+
+
+def test_prod_health_probe_sends_a_browser_user_agent() -> None:
+    """Scenario: The production validation refuses unsafe moments"""
+    prod = _load("prod_validate")
+    text = (TOOLS / "prod_validate.py").read_text(encoding="utf-8")
+    assert prod.USER_AGENT.startswith("Mozilla/5.0")
+    assert 'headers={"User-Agent": USER_AGENT}' in text
