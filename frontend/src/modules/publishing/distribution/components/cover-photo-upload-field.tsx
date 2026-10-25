@@ -5,15 +5,19 @@ import { CREATOR_PHOTO_ACCEPTED_TYPES } from "@/constants/create";
 import { TEXT_DIM } from "@/constants/neon";
 import type { CoverPhotoUploadFieldProps } from "./types";
 
+const UPLOAD_FAILURE_INVALID = "invalid";
+
 /**
- * "Enviar foto": picks a file from the device for the owner's library. The
- * refusal sentence is the wizard's upload error (same endpoint and limits).
+ * "Enviar foto": picks a file from the device for the owner's library. A
+ * refused file shows the wizard's upload sentence (same endpoint and limits);
+ * a rate limit, a network or a server failure says so instead.
  */
 export function CoverPhotoUploadField({
   upload,
   disabled,
 }: Readonly<CoverPhotoUploadFieldProps>): React.ReactElement | null {
   const t = useTranslations("publish.coverPicker.generate");
+  const tPhoto = useTranslations("create.photo");
   if (!upload.available) {
     return null;
   }
@@ -35,9 +39,11 @@ export function CoverPhotoUploadField({
           className="mt-1 block text-xs"
         />
       </label>
-      {upload.failed && (
+      {upload.failure && (
         <p role="alert" className="mt-1 text-xs text-red-400">
-          {t("uploadFailed")}
+          {upload.failure === UPLOAD_FAILURE_INVALID
+            ? tPhoto("uploadFailed")
+            : t(`uploadErrors.${upload.failure}`)}
         </p>
       )}
     </div>

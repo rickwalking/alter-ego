@@ -52,13 +52,12 @@ function newestSucceeded(data: CoverGenerations | undefined): string | null {
 }
 
 /**
- * The generations (only while ``enabled``), polled while one runs. The cover
+ * The generations, polled only while one is pending. The cover
  * options refresh whenever the newest succeeded generation changes, so a fast
  * job or one that finished while polling was paused still shows up.
  */
 export function useCoverGenerations(
   projectId: string,
-  enabled: boolean,
 ): UseQueryResult<CoverGenerations> {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -68,7 +67,6 @@ export function useCoverGenerations(
         API_ENDPOINTS.CAROUSEL_COVER_GENERATIONS(projectId),
         coverGenerationsSchema,
       ),
-    enabled,
     retry: false,
     refetchInterval: (current) =>
       hasPending(current.state.data) ? POLL_INTERVAL_MS : false,
