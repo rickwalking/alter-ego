@@ -123,7 +123,11 @@ SUMMARY_SCAN = (
     "{queued} na fila agora."
 )
 SUMMARY_INTERACTIVE = "Projetos do painel parados (retome pelo editor): {titles}"
+SUMMARY_FAILURES = "Falhas ao recuperar: {items}"
+SUMMARY_FAILURE_ITEM = "{run_id}: {reason}"
 SUMMARY_TITLE_MAX_CHARS = 80
 SUMMARY_TITLES_MAX = 10
+FAILURE_REASON_MAX_CHARS = 160
 LOG_SCAN_DONE = "generation_daily_scan_done"
 LOG_SCAN_FAILED = "generation_daily_scan_failed"
+LOG_SCAN_ITEM_FAILED = "generation_daily_recovery_item_failed"

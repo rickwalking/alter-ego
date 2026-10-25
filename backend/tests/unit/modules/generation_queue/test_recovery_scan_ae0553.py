@@ -29,7 +29,7 @@ class _OneFailure(_Autopilot):
         self.seen.append(drive.autopilot_run_id)
         if drive.autopilot_run_id == self.failing_run_id:
             raise RuntimeError(self.reason)
-        return await super().revive_dead_letter(drive.autopilot_run_id)
+        return await super().revive_dead_letter(drive)
 
 
 async def test_one_failing_dead_letter_does_not_stop_the_daily_scan() -> None:
@@ -69,3 +69,26 @@ async def test_one_failing_dead_letter_does_not_stop_the_daily_scan() -> None:
     assert reason not in repr(logs)
     assert "exc_info" not in entry
     assert "exception" not in entry
+
+
+async def test_each_failed_recovery_is_logged_without_content() -> None:
+    """Scenario: Each failed recovery is logged without content"""
+
+    class _AllFail(_Autopilot):
+        async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
+            raise ValueError(f"prompt and payload for {drive.autopilot_run_id}")
+
+    store = _Store(parked=[_drive(), _drive()])
+    with capture_logs() as logs:
+        report = await _scan(store, _AllFail()).run_once()
+    item_logs = [
+        entry
+        for entry in logs
+        if entry["event"] == "generation_daily_recovery_item_failed"
+    ]
+    assert len(report.failures) == 2
+    assert len(item_logs) == 2
+    assert {entry["error_type"] for entry in item_logs} == {"ValueError"}
+    assert "prompt and payload" not in repr(logs)
+    assert "exc_info" not in item_logs[0]
+    assert "exception" not in item_logs[0]

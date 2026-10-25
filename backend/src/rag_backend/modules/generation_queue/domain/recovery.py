@@ -24,6 +24,14 @@ class ParkedDrive:
 
 
 @dataclass(frozen=True, kw_only=True)
+class RecoveryFailure:
+    """One item whose revive failed and was rolled back."""
+
+    drive: ParkedDrive
+    reason: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class ScanReport:
     """What one scan did; ``interactive`` holds the parked dashboard projects."""
 
@@ -33,6 +41,7 @@ class ScanReport:
     purged_runs: int = 0
     purged_logs: int = 0
     interactive: tuple[str, ...] = field(default_factory=tuple)
+    failures: tuple[RecoveryFailure, ...] = field(default_factory=tuple)
 
 
 class RecoveryStore(Protocol):
@@ -66,8 +75,8 @@ class RecoveryStore(Protocol):
 class ParkedAutopilot(Protocol):
     """The autopilot side of the scan (the queue bridge)."""
 
-    async def revive_dead_letter(self, run_id: str) -> bool:
-        """Retry a run the queue parked; False when it is no longer parked."""
+    async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
+        """Atomically mark and retry a parked drive; False when already resolved."""
         ...
 
     async def revive_stale(self, since: datetime) -> int:
@@ -75,4 +84,10 @@ class ParkedAutopilot(Protocol):
         ...
 
 
-__all__ = ["ParkedAutopilot", "ParkedDrive", "RecoveryStore", "ScanReport"]
+__all__ = [
+    "ParkedAutopilot",
+    "ParkedDrive",
+    "RecoveryFailure",
+    "RecoveryStore",
+    "ScanReport",
+]

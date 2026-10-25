@@ -74,11 +74,16 @@ class _Autopilot:
     revived: list[str] = field(default_factory=list)
     stale_since: list[datetime] = field(default_factory=list)
     stale: int = 0
+    store: _Store | None = None
 
-    async def revive_dead_letter(self, run_id: str) -> bool:
-        if run_id in self.resolved:
+    async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
+        if self.store is None or not await self.store.mark_attempted(
+            drive.generation_run_id
+        ):
             return False
-        self.revived.append(run_id)
+        if drive.autopilot_run_id in self.resolved:
+            return False
+        self.revived.append(drive.autopilot_run_id)
         return True
 
     async def revive_stale(self, since: datetime) -> int:
@@ -87,6 +92,7 @@ class _Autopilot:
 
 
 def _scan(store: _Store, autopilot: _Autopilot) -> DailyRecoveryScan:
+    autopilot.store = store
     return DailyRecoveryScan(
         DailyScanDependencies(store=store, autopilot=autopilot, clock=_Clock())
     )

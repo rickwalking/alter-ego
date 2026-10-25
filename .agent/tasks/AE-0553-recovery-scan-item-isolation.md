@@ -36,10 +36,10 @@ The scan commits the dead letter's `recovery_attempt` marker and then revives th
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given several dead letters where reviving one raises, When the scan runs, Then the others are still revived, purge and the owner summary still run, and the summary names the failed item with its reason.
-- [ ] AC2 Given a revive that raises, Then that dead letter's one try is not used up, so the next day's scan retries it once; a successful revive is never repeated.
-- [ ] AC3 Given a concurrent scan or Pedro's "Tentar de novo", Then the dead letter cannot be revived twice.
-- [ ] AC4 Each failed item emits one structured log with its generation-run id, autopilot-run id, and exception type, without payload, prompt, traceback, or exception-message text.
+- [x] AC1 Given several dead letters where reviving one raises, When the scan runs, Then the others are still revived, purge and the owner summary still run, and the summary names the failed item with its reason.
+- [x] AC2 Given a revive that raises, Then that dead letter's one try is not used up, so the next day's scan retries it once; a successful revive is never repeated.
+- [x] AC3 Given a concurrent scan or Pedro's "Tentar de novo", Then the dead letter cannot be revived twice.
+- [x] AC4 Each failed item emits one structured log with its generation-run id, autopilot-run id, and exception type, without payload, prompt, traceback, or exception-message text.
 
 ## Gherkin Scenarios
 
@@ -97,15 +97,31 @@ The scan commits the dead letter's `recovery_attempt` marker and then revives th
 
 ### 2026-10-25
 
-Ticket and transaction design created after PR #286 merged into `origin/main`.
+Ticket and transaction design created after PR #286 merged into `origin/main`. Red tests were committed before the implementation; atomic revival and per-item isolation are implemented.
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/queue_bridge.py`
+- `backend/src/rag_backend/modules/generation_queue/application/recovery_scan.py`
+- `backend/src/rag_backend/modules/generation_queue/bootstrap.py`
+- `backend/src/rag_backend/modules/generation_queue/constants.py`
+- `backend/src/rag_backend/modules/generation_queue/domain/recovery.py`
+- `backend/src/rag_backend/modules/generation_queue/infrastructure/recovery_store.py`
+- `backend/src/rag_backend/modules/generation_queue/public.py`
+- `backend/tests/features/daily_recovery_scan_ae0553.feature`
+- `backend/tests/integration/test_daily_recovery_scan_ae0553.py`
+- `backend/tests/unit/modules/generation_queue/test_recovery_scan_ae0524.py`
+- `backend/tests/unit/modules/generation_queue/test_recovery_scan_ae0553.py`
+- `.agent/reports/AE-0553.arch-plan.md`
+- `.agent/reports/AE-0553.plan-validation.md`
 
 ## Test Evidence
 
-Pending.
+- Red before implementation: 2 failed, 2 passed; the revive exception propagated and the new drive contract was absent.
+- Green after implementation: 27 passed across old and new recovery tests and the real Telegram retry integration tests.
+- `uv run mypy rag_backend/ --explicit-package-bases`: 1162 source files passed.
+- Targeted Ruff lint/format and `python3 scripts/ci/check_comments.py`: passed.
+- No assertion or expectation lines were removed from the PR diff.
 
 ## QA Report
 

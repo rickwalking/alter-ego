@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import select
@@ -51,6 +52,9 @@ from rag_backend.modules.autopilot.queue_constants import (
     REASON_DAILY_RECOVERY,
     STALE_REVIVE_MIN_AGE_MINUTES,
 )
+
+if TYPE_CHECKING:
+    from rag_backend.modules.generation_queue.public import ParkedDrive
 
 DRIVEN_STATES: tuple[AutopilotRunState, ...] = (
     AutopilotRunState.QUEUED,
@@ -127,15 +131,25 @@ class AutopilotQueueBridge:
                 )
             )
 
-    async def revive_dead_letter(self, run_id: str) -> bool:
-        """Retry a run the queue parked, once per theme, as the daily recovery scan.
+    async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
+        """Atomically mark and retry one parked drive, once per theme.
 
         False when the run is gone, no longer parked by the queue (Pedro already
-        retried or discarded it), or is itself the scan's earlier retry.
+        retried or discarded it), is itself the scan's earlier retry, or was
+        already marked by a concurrent scan. The autopilot lock uses the same
+        write order as the owner retry, so the two paths cannot double-revive.
         """
         async with self.sessions() as session:
-            run = await SqlAlchemyAutopilotRepository(session).get(UUID(run_id))
+            run = await _locked_run(session, drive.autopilot_run_id)
+            from rag_backend.modules.generation_queue.public import (
+                mark_recovery_attempt,
+            )
+
+            marked = await mark_recovery_attempt(session, drive.generation_run_id)
+            if not marked:
+                return False
             if run is None or not is_dead_letter(run.state_reason) or _recovered(run):
+                await session.commit()
                 return False
             return await _revive_once(session, run)
 
@@ -180,6 +194,18 @@ class AutopilotQueueBridge:
     def _runner(self, session: AsyncSession) -> AutopilotRunner:
         deps = runner_dependencies(session, self.config)
         return AutopilotRunner(replace(deps, retryable=self.retryable))
+
+
+async def _locked_run(session: AsyncSession, run_id: str) -> AutopilotRun | None:
+    """Read one run after locking its row against a concurrent revive."""
+    result = await session.execute(
+        select(AutopilotRunModel.id)
+        .where(AutopilotRunModel.id == UUID(run_id))
+        .with_for_update()
+    )
+    if result.scalar_one_or_none() is None:
+        return None
+    return await SqlAlchemyAutopilotRepository(session).get(UUID(run_id))
 
 
 def _recovered(run: AutopilotRun) -> bool:

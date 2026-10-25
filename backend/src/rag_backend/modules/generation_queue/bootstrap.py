@@ -41,6 +41,7 @@ from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
 from rag_backend.modules.generation_queue.domain.errors import ProviderClassifier
 from rag_backend.modules.generation_queue.domain.models import GenerationKind
 from rag_backend.modules.generation_queue.domain.ports import KindExecutor
+from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
 from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
     AutopilotStepperAdapter,
     EngineFactory,
@@ -102,9 +103,9 @@ class _NoParkedAutopilot:
     """Autopilot driving is off: the scan revives nothing."""
 
     @staticmethod
-    async def revive_dead_letter(run_id: str) -> bool:
+    async def revive_dead_letter(drive: ParkedDrive) -> bool:
         """Nothing to revive."""
-        del run_id
+        del drive
         return False
 
     @staticmethod
