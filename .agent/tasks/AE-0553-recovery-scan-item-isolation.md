@@ -1,6 +1,6 @@
 # AE-0553 — Daily recovery survives one failing item
 
-Status: In Development
+Status: QA Running
 Tier: T2
 Priority: High
 Type: Bug
