@@ -36,11 +36,13 @@ from rag_backend.modules.autopilot.application.publish_choice import (
     PublishChoiceDeps,
     is_schedule_reply,
 )
+from rag_backend.modules.autopilot.application.queue_actions import QueueOwnerActions
 from rag_backend.modules.autopilot.application.thesis_actions import (
     ThesisOwnerActions,
     is_thesis_pending,
 )
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
+from rag_backend.modules.autopilot.domain.backlog import BacklogStore
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
     parse_callback,
@@ -49,6 +51,7 @@ from rag_backend.modules.autopilot.domain.cover_ports import (
     CoverChoiceStore,
     CoverOffers,
 )
+from rag_backend.modules.autopilot.domain.dead_letter import DeadLetterRuns
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
 )
@@ -76,6 +79,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     Clock,
     TopicCandidateRepository,
 )
+from rag_backend.modules.autopilot.domain.queue_position import QueueControl
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
 from rag_backend.modules.autopilot.domain.schedule_ports import ScheduleSignalsSource
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
@@ -129,6 +133,7 @@ class OwnerActionDeps:
     - ``schedule_signals`` gives the schedule picker audience and post engagement.
     - ``covers`` / ``cover_choices`` are the GrokBot cover offer and the owner's
       slide-1 choice.
+    - ``queue``, ``backlog`` and ``dead_letters`` serve the queue buttons.
     """
 
     runs: AutopilotRunRepository
@@ -147,9 +152,12 @@ class OwnerActionDeps:
     schedule_signals: ScheduleSignalsSource | None = None
     covers: CoverOffers | None = None
     cover_choices: CoverChoiceStore | None = None
+    queue: QueueControl | None = None
+    backlog: BacklogStore | None = None
+    dead_letters: DeadLetterRuns | None = None
 
 
-class OwnerActionService(ThesisOwnerActions, CoverOwnerActions):
+class OwnerActionService(ThesisOwnerActions, CoverOwnerActions, QueueOwnerActions):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
@@ -182,6 +190,8 @@ class OwnerActionService(ThesisOwnerActions, CoverOwnerActions):
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
         if await self._thesis_callback(update) or await self._cover_callback(update):
+            return
+        if await self._queue_callback(update):
             return
         parsed = parse_callback(update.data)
         if parsed is None:

@@ -15,6 +15,7 @@ from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.infrastructure.audience_gateway import (
     build_audience_gateway,
 )
+from rag_backend.modules.autopilot.infrastructure.backlog_store import SqlBacklogStore
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
@@ -29,6 +30,9 @@ from rag_backend.modules.autopilot.infrastructure.cover_offers import (
     SqlCoverChoices,
     cover_offers,
 )
+from rag_backend.modules.autopilot.infrastructure.dead_letter_runs import (
+    SqlDeadLetterRuns,
+)
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
@@ -38,6 +42,7 @@ from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNotice
 from rag_backend.modules.autopilot.infrastructure.pending_rework import (
     SqlPendingReworkStore,
 )
+from rag_backend.modules.autopilot.infrastructure.queue_control import SqlQueueControl
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
@@ -99,6 +104,9 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         schedule_signals=_schedule_signals(build),
         covers=cover_offers(build.session),
         cover_choices=SqlCoverChoices(build.session),
+        queue=SqlQueueControl(build.session),
+        backlog=SqlBacklogStore(build.session),
+        dead_letters=SqlDeadLetterRuns(build.session),
     )
     return OwnerActionService(deps)
 

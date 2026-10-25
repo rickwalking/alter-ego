@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.application.story_step import (
 from rag_backend.modules.autopilot.bootstrap_schedule import scheduled_publish_sweep
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
+    DEFAULT_DAILY_CAP,
     SIGNAL_CACHE_TTL_SECONDS,
 )
 from rag_backend.modules.autopilot.domain.ports import RecordServedUrls
@@ -257,7 +258,7 @@ class AutopilotTickConfig:
     ``persona_unscored_max_ticks`` come from ``AUTOPILOT_AUTOFIX_ATTEMPTS``,
     ``AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS`` and
     ``AUTOPILOT_PERSONA_UNSCORED_MAX_TICKS``; ``start_spacing_minutes`` from
-    ``AUTOPILOT_START_SPACING_MINUTES``.
+    ``AUTOPILOT_START_SPACING_MINUTES``; ``daily_cap`` from ``AUTOPILOT_DAILY_CAP``.
     """
 
     owner_user_id: str
@@ -269,6 +270,7 @@ class AutopilotTickConfig:
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
     persona_unscored_max_ticks: int = PERSONA_UNSCORED_MAX_TICKS
     start_spacing_minutes: int = DEFAULT_START_SPACING_MINUTES
+    daily_cap: int = DEFAULT_DAILY_CAP
 
 
 class AutopilotRunnerTickAdapter:

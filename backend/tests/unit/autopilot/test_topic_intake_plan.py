@@ -157,7 +157,7 @@ def test_foreign_url_rejects_only_that_proposal() -> None:
 def test_daily_cap_stores_the_candidate_and_queues_nothing() -> None:
     # Scenario: Daily cap
     proposal = prepare(_input("Another one", _URL_A, 88))
-    plan = plan_intake((proposal,), _facts(runs_today=1))
+    plan = plan_intake((proposal,), _facts(runs_today=DEFAULT_DAILY_CAP))
     assert len(plan.new_candidates) == 1
     assert plan.new_candidates[0].queue is False
     assert plan.accepted_ids == (plan.new_candidates[0].candidate_id,)

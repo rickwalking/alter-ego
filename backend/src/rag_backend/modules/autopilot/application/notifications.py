@@ -16,6 +16,7 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_PROJECT_ID,
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import profile_line
+from rag_backend.modules.autopilot.domain.dead_letter import status_body
 from rag_backend.modules.autopilot.domain.escalation_detail import detail_of
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
@@ -367,7 +368,7 @@ def _status_notice(deps: NotificationDependencies, job: _StatusJob) -> StatusNot
     return StatusNotice(
         chat_id=deps.chat_id,
         run_id=job.run.run_id,
-        text=status_text(job.kind, _copy(deps.web_base_url, job.event, job.run)),
+        text=status_body(job.kind, _copy(deps.web_base_url, job.event, job.run)),
         keyboard=status_keyboard(job.kind, job.run.run_id, job.event.payload),
     )
 

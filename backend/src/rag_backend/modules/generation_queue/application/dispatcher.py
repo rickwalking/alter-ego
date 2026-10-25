@@ -10,7 +10,9 @@ One pass (every 10 s in the worker):
    cancelled job) loses its job id, so step 2 hands it over again.
 4. Reconciler: jobs PgQueuer holds as ``failed`` without our handler having
    mirrored them become ``dead_letter`` with one Telegram notice, then the held job
-   is dropped (the row is the record; a retry stages a fresh job).
+   is dropped (the row is the record; a retry stages a fresh job). A held job is
+   mirrored only onto the row that still points at it: a row the owner already
+   requeued has moved on to a new job and is left alone.
 
 Each step is idempotent, so two dispatchers or a re-run pass change nothing twice.
 """
@@ -125,7 +127,7 @@ class Dispatcher:
         if job.generation_run_id is None:
             return False
         run = await self._deps.store.get(job.generation_run_id)
-        if run is None:
+        if run is None or run.pgq_job_id != job.job_id:
             return False
         moved = await self._deps.store.mark_dead_letter(
             DeadLetterCommand(

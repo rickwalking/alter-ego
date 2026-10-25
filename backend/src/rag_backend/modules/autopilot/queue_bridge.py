@@ -14,12 +14,21 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from rag_backend.modules.autopilot.application.backlog_promotion import (
+    PromotionDependencies,
+    promote_waiting,
+)
+from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.runner import AutopilotRunner
 from rag_backend.modules.autopilot.bootstrap import (
     AutopilotTickConfig,
     runner_dependencies,
 )
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.infrastructure.backlog_store import SqlBacklogStore
+from rag_backend.modules.autopilot.infrastructure.intake_store import (
+    SqlAlchemyTopicIntakeStore,
+)
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
@@ -87,6 +96,18 @@ class AutopilotQueueBridge:
             moved = await self._runner(session).sweep()
             await session.commit()
             return moved
+
+    async def promote_backlog(self) -> int:
+        """Queue waiting backlog themes into today's free slots; how many."""
+        async with self.sessions() as session:
+            return await promote_waiting(
+                PromotionDependencies(
+                    store=SqlAlchemyTopicIntakeStore(session),
+                    backlog=SqlBacklogStore(session),
+                    clock=SystemClock(),
+                    daily_cap=self.config.daily_cap,
+                )
+            )
 
     async def active_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
         """Runs that need driving, oldest first."""

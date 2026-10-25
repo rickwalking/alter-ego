@@ -6,8 +6,8 @@ fails this test instead of passing a loop over the implementation.
 
 _SPEC mirrors docs/architecture/grokbot-autopilot.md §4 plus later edges: a refused
 editorial approve keeps the owner review open, a POV run waits for the owner's thesis,
-the owner sets a publish time, and the owner moves a scheduled run to another day or
-time.
+the owner sets a publish time, the owner moves a scheduled run to another day or
+time, and the owner retries a run the generation queue parked.
 """
 
 from __future__ import annotations
@@ -41,6 +41,7 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.REWORKING, _S.ESCALATED),
     (_S.ESCALATED, _S.AWAITING_OWNER),
     (_S.ESCALATED, _S.REJECTED),
+    (_S.ESCALATED, _S.GENERATING),
     (_S.PUBLISHING, _S.PUBLISHED),
     (_S.PUBLISHING, _S.PUBLISH_FAILED),
     (_S.PUBLISH_FAILED, _S.PUBLISHING),

@@ -246,7 +246,7 @@ class Settings(AutopilotAutofixSettings, GenerationQueueSettings):
     autopilot_x_mirror_host: str = ""
     github_token: SecretStr = SecretStr("")
     autopilot_daily_cap: int = Field(
-        default=1,
+        default=3,
         ge=0,
         validation_alias=AliasChoices("AUTOPILOT_DAILY_CAP", "autopilot_daily_cap"),
     )

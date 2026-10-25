@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
-from rag_backend.modules.autopilot.bootstrap_thesis import thesis_prompts
+from rag_backend.modules.autopilot.bootstrap_thesis import queue_notices, thesis_prompts
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
@@ -49,8 +49,9 @@ class TelegramNotifyTickAdapter:
     async def tick(self, db: AsyncSession) -> int:
         """Send due reviews, statuses, reminders and thesis prompts; sweep covers.
 
-        Also asks the owner once to confirm each POV run's thesis, and deletes
-        the covers nobody used within 6 hours.
+        Also asks the owner once to confirm each POV run's thesis, sends the
+        "Aprovar todas" summary and the backlog notes, and deletes the covers
+        nobody used within 6 hours.
         """
         from rag_backend.modules.autopilot.application.notifications import (
             OwnerNotificationService,
@@ -60,6 +61,7 @@ class TelegramNotifyTickAdapter:
         deps = _notification_deps(db, self._config)
         sent = await OwnerNotificationService(deps).tick()
         sent += await thesis_prompts(db, deps).tick()
+        sent += await queue_notices(db, deps).tick()
         return sent + await cover_sweep(db).tick()
 
 

@@ -100,6 +100,7 @@ def autopilot_tick_config(
         engine_factory=engine_factory,
         stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
         start_spacing_minutes=settings.autopilot_start_spacing_minutes,
+        daily_cap=settings.autopilot_daily_cap,
         notifier_configured=notifier_is_configured(
             token, settings.telegram_owner_chat_id
         ),

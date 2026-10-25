@@ -40,6 +40,7 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     XBrowserSignalModel,
 )
 from rag_backend.modules.autopilot.infrastructure.topic_rows import topic_row
+from rag_backend.modules.autopilot.queue_constants import CANDIDATE_GENERATE_NOW
 from rag_backend.modules.autopilot.recovery_constants import INTAKE_LOCK_KEY
 from rag_backend.modules.editorial.public import CarouselAutomationAcl
 
@@ -86,13 +87,24 @@ class SqlAlchemyTopicIntakeStore:
         return await CarouselAutomationAcl(self._session).topics_since(since)
 
     async def runs_created_between(self, window: DayWindow) -> int:
-        """Count runs whose ``created_at`` is inside the half-open window."""
+        """Count runs created inside the half-open window.
+
+        "Gerar agora" runs are outside the daily cap (Pedro), so they are not counted.
+        """
         result = await self._session.execute(
             select(func.count())
             .select_from(AutopilotRunModel)
+            .outerjoin(
+                TopicCandidateModel,
+                TopicCandidateModel.id == AutopilotRunModel.topic_candidate_id,
+            )
             .where(
                 AutopilotRunModel.created_at >= window.start,
                 AutopilotRunModel.created_at < window.end,
+                or_(
+                    TopicCandidateModel.status.is_(None),
+                    TopicCandidateModel.status != CANDIDATE_GENERATE_NOW,
+                ),
             )
         )
         return int(result.scalar_one())
