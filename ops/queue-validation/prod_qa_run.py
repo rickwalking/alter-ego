@@ -49,13 +49,6 @@ FINAL_PHASE = "final_review"
 AWAITING = "awaiting_human"
 IN_PROGRESS = "in_progress"
 APPROVE = "approve"
-REVISE = "revise"
-PERSONA_SCORE_TOO_LOW = "persona_score_too_low"
-MAX_REVISIONS = 2
-REVISE_FEEDBACK = (
-    "Reescreva na voz do Pedro: frases curtas, diretas, primeira pessoa, "
-    "com um dado concreto por slide."
-)
 ACTIVE = ("queued", "running", "retry_wait")
 
 OTHER_ACTIVE_SQL = text(
@@ -182,66 +175,28 @@ async def _state(client: httpx.AsyncClient, project: str) -> dict[str, object]:
     return body
 
 
-async def _resume(
-    client: httpx.AsyncClient, project: str, body: dict[str, object], state: dict[str, object]
-) -> httpx.Response:
-    return await client.post(
-        f"/carousels/{project}/workflow/resume",
-        json={**body, "expected_version": state.get("lock_version")},
-    )
-
-
-def _persona_refused(response: httpx.Response) -> bool:
-    """The content gate refused the approval because the voice score is under 70."""
-    return response.status_code == httpx.codes.UNPROCESSABLE_ENTITY and (
-        PERSONA_SCORE_TOO_LOW in response.text
-    )
-
-
-def _revisions(runs: list[list[object]]) -> int:
-    """How many content runs came after the first one (revisions sent so far)."""
-    return max(0, sum(1 for run in runs if run[4] == "content") - 1)
-
-
 async def step(project: str) -> None:
     """Approve the next gate (never the final review) and report where the run is."""
     await _require_qa(project)
     async with await _client() as client:
         state = await _state(client, project)
         phase, status = state.get("current_phase"), state.get("phase_status")
-        approved = revised = stalled = False
-        runs = await _rows(RUNS_SQL, project=project)
+        approved = False
         if status == AWAITING and phase != FINAL_PHASE:
-            response = await _resume(client, project, {"action": APPROVE}, state)
+            response = await client.post(
+                f"/carousels/{project}/workflow/resume",
+                json={"action": APPROVE, "expected_version": state.get("lock_version")},
+            )
             approved = response.status_code == httpx.codes.ACCEPTED
-            if _persona_refused(response):
-                stalled = _revisions(runs) >= MAX_REVISIONS
-                revise = {"action": REVISE, "feedback": REVISE_FEEDBACK}
-                revised = not stalled and (
-                    await _resume(client, project, revise, state)
-                ).status_code == httpx.codes.ACCEPTED
     _emit(
         {
             "phase": phase,
             "phase_status": status,
             "approved": approved,
-            "revised": revised,
-            "stalled": stalled,
-            "done": status == AWAITING and phase == FINAL_PHASE and not _active(runs),
-            "runs": runs,
+            "done": status == AWAITING and phase == FINAL_PHASE,
+            "runs": await _rows(RUNS_SQL, project=project),
             "other_active_runs": await _scalar(OTHER_ACTIVE_SQL, project=project),
         }
-    )
-
-
-def _active(runs: list[list[object]]) -> bool:
-    """A run of the QA project is still queued, waiting or running (its job has not ended)."""
-    return any(run[1] in ACTIVE for run in runs)
-
-
-async def _busy(project: str) -> bool:
-    return await _require_qa(project) == IN_PROGRESS or _active(
-        await _rows(RUNS_SQL, project=project)
     )
 
 
@@ -288,7 +243,7 @@ async def _purge(project: str) -> None:
 
 
 async def cleanup(project: str) -> None:
-    """Cancel queued runs, wait for a running job to end, delete the project and its rows."""
+    """Cancel queued runs, wait for a running phase, delete the project and its rows."""
     await _require_qa(project)
     async with get_session_maker()() as session:
         jobs = [row[0] for row in (await session.execute(CANCEL_SQL, {"project": project})).all() if row[0]]
@@ -296,7 +251,7 @@ async def cleanup(project: str) -> None:
             await session.execute(DROP_JOBS_SQL, {"jobs": jobs})
         await session.commit()
     deadline = time.monotonic() + CLEANUP_WAIT_SECONDS
-    while time.monotonic() < deadline and await _busy(project):
+    while time.monotonic() < deadline and await _require_qa(project) == IN_PROGRESS:
         await asyncio.sleep(CLEANUP_POLL_SECONDS)
     async with await _client() as client:
         deleted = await client.delete(f"/carousels/{project}")

@@ -132,11 +132,13 @@ def _resume(project_id: str) -> WorkflowResumePayload:
 
 @pytest.mark.asyncio
 class TestReaperRules:
-    # Scenario: A dashboard resume waiting in the generation queue is never reaped
     async def test_resume_queued_behind_a_long_job_is_not_reaped(
         self, test_engine
     ) -> None:
-        """The queue owns a project with an active run: no reap, no lock bump."""
+        """Scenario: A dashboard resume waiting in the generation queue is never reaped
+
+        The queue owns a project with an active run: no reap, no lock bump.
+        """
         sessions = _factory(test_engine)
         store = SqlGenerationRunStore(sessions)
         async with sessions() as db:
@@ -160,6 +162,32 @@ class TestReaperRules:
             await db.refresh(project)
             assert project.phase_status == PHASE_STATUS_AWAITING_HUMAN
             assert project.lock_version == 4
+
+    async def test_reap_fences_a_run_queued_after_the_tick_read(
+        self, test_engine
+    ) -> None:
+        """Scenario: A dashboard resume waiting in the generation queue is never reaped
+
+        The fence is in the reap UPDATE itself: a resume staged after the tick read
+        its rows still stops the flip. The queue's own orphan recovery is not fenced.
+        """
+        sessions = _factory(test_engine)
+        async with sessions() as db:
+            project = await _add_run_row(db, heartbeat_age_seconds=_STALE_SECONDS + 600)
+            project_id = str(project.id)
+            await SqlGenerationRunStore(sessions).stage(
+                resume_stage(_resume(project_id), 3)
+            )
+            reaper = _reaper()
+            with patch(_HUB_PATH, return_value=AsyncMock()):
+                assert not await reaper._reap(db, project, fence_queue=True)
+                await db.commit()
+                await db.refresh(project)
+                assert project.lock_version == 3
+                assert await reaper.reap_orphan(db, project_id)
+            await db.commit()
+            await db.refresh(project)
+            assert project.phase_status == PHASE_STATUS_AWAITING_HUMAN
 
     # Scenario: Dead run is reaped and the user recovers without an operator
     async def test_dead_run_reaped_after_n_stale_observations(

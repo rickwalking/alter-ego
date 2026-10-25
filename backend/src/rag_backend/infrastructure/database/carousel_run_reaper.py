@@ -57,7 +57,10 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.pg_lock_timeout import (
     apply_run_write_lock_timeout,
 )
-from rag_backend.modules.generation_queue.public import projects_with_active_runs
+from rag_backend.modules.generation_queue.public import (
+    project_has_active_run,
+    projects_with_active_runs,
+)
 
 logger = structlog.get_logger()
 
@@ -136,7 +139,7 @@ class CarouselRunReaperRepository:
         self._stale_counts[project_id] = observed
         if observed < self._config.reap_observations:
             return False
-        return await self._reap(db, row)
+        return await self._reap(db, row, fence_queue=True)
 
     async def reap_orphan(self, db: AsyncSession, project_id: str) -> bool:
         """Reap an ``in_progress`` row now, without waiting for stale observations.
@@ -177,7 +180,9 @@ class CarouselRunReaperRepository:
             return checkpoint_status
         return PHASE_STATUS_AWAITING_HUMAN
 
-    async def _reap(self, db: AsyncSession, row: CarouselProjectModel) -> bool:
+    async def _reap(
+        self, db: AsyncSession, row: CarouselProjectModel, *, fence_queue: bool = False
+    ) -> bool:
         """Fence + flip in ONE atomic UPDATE, then cancel/publish.
 
         The CAS on phase_status + run_epoch makes the flip race-safe without the
@@ -186,8 +191,16 @@ class CarouselRunReaperRepository:
         a run whose own transaction still holds the row lock must not wedge the worker
         tick, and a blocked flip rolls back ONLY itself, never earlier flips pending in
         the same tick transaction.
+
+        ``fence_queue`` (the stale tick) adds ``NOT EXISTS`` an active generation
+        run to the same UPDATE, so a resume queued between the tick's read and the
+        flip is never reaped. The queue's own orphan recovery (``reap_orphan``,
+        called by the job that owns the active run) does not fence.
         """
         project_id = str(row.id)
+        fence = (
+            [~project_has_active_run(CarouselProjectModel.id)] if fence_queue else []
+        )
         seen_epoch = int(row.run_epoch or 0)
         reconciled = await self._reconciled_phase_status(project_id)
         try:
@@ -199,6 +212,7 @@ class CarouselRunReaperRepository:
                         CarouselProjectModel.id == project_id,
                         CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
                         CarouselProjectModel.run_epoch == seen_epoch,
+                        *fence,
                     )
                     .values(
                         phase_status=reconciled,

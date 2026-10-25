@@ -33,11 +33,10 @@ Pedro's open tab went stale (version conflict on the next action).
 - The autopilot `run_stale` escalation needs no change: an autopilot run's gate is only evaluated by its own job,
   which holds the drive lock and writes the heartbeat.
 
-- Prod validation tool fixes found by the same run (`ops/queue-validation/`): the health probe sends a browser
-  User-Agent (the edge answers Python's default with 403); the driver reports "done" only when the QA run has no
-  active job left, and cleanup waits for a running job before deleting (the run deleted the project under its last
-  finalize job); a `persona_score_too_low` refusal at the content gate sends one `revise` (at most 2), then reports
-  the run as stalled instead of looping.
+- The reap UPDATE itself carries `NOT EXISTS` an active generation run (atomic: a resume staged after the tick read
+  its rows still stops the flip); the queue's own orphan recovery (`reap_orphan`) is not fenced.
+- The autopilot gate snapshot (`InProcessEditorialDriver`) is not `stale` while its project has an active generation
+  run, so an autopilot drive queued behind a long job is not escalated as `run_stale`.
 
 ## Non-Goals
 
@@ -52,8 +51,10 @@ Pedro's open tab went stale (version conflict on the next action).
 - [x] AC2 Given that run then finishes, When the project is still stale, Then the reaper reaps it after its usual
   observations (same test).
 - [x] AC3 The test fails on the old reaper (seeded: 1 failed with `origin/main`'s reaper).
-- [x] AC4 The validation driver waits for the last job, revises a low voice score at most twice and the health probe
-  passes the edge (`test_queue_validation_ae0522.py`).
+- [x] AC4 The reap is fenced in its UPDATE: a run staged after the tick read is not reaped, `reap_orphan` still reaps
+  (`test_reap_fences_a_run_queued_after_the_tick_read`; seeded: fails without the clause).
+- [x] AC5 An autopilot drive queued behind a long job is not `run_stale`; with no run it is
+  (`test_drive_queued_behind_a_long_job_is_not_escalated_as_stale`; seeded: fails on the old driver).
 
 ## Repro Steps
 
@@ -84,8 +85,8 @@ Ticket created from the AE-0522 prod validation finding; fix and test written.
 - `backend/src/rag_backend/modules/generation_queue/public.py`
 - `backend/tests/unit/infrastructure/test_carousel_run_reaper.py`
 - `backend/tests/features/carousel_run_progress_reaper.feature`
-- `ops/queue-validation/prod_qa_run.py`, `ops/queue-validation/prod_validate.py`,
-  `backend/tests/unit/scripts_ci/test_queue_validation_ae0522.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/editorial_driver.py`
+- `backend/tests/integration/test_autopilot_resume_runs_phase.py`
 
 ## Test Evidence
 
