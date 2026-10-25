@@ -27,6 +27,9 @@ KIND_GENERATE_NOW = "qnow"
 REASON_DEAD_LETTER_PREFIX = "queue_dead_letter:"
 REASON_DEAD_RETRY = "owner_queue_retry"
 REASON_DEAD_DISCARD = "owner_queue_discard"
+REASON_DAILY_RECOVERY = "queue_daily_recovery"
+DAILY_RECOVERY_NOTICE_KEY = "daily_recovery"
+STALE_REVIVE_MIN_AGE_MINUTES = 60
 REASON_BACKLOG_FULL = "backlog_full"
 
 CANDIDATE_BACKLOG = "backlog"

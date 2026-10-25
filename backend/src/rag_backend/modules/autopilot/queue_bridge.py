@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -19,19 +20,36 @@ from rag_backend.modules.autopilot.application.backlog_promotion import (
     promote_waiting,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.application.run_revive import (
+    ReviveDependencies,
+    revive,
+)
 from rag_backend.modules.autopilot.application.runner import AutopilotRunner
 from rag_backend.modules.autopilot.bootstrap import (
     AutopilotTickConfig,
     runner_dependencies,
 )
-from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.constants import REASON_RUN_STALE
+from rag_backend.modules.autopilot.domain.dead_letter import is_dead_letter
+from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
+from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
 from rag_backend.modules.autopilot.infrastructure.backlog_store import SqlBacklogStore
+from rag_backend.modules.autopilot.infrastructure.dead_letter_runs import (
+    SqlDeadLetterRuns,
+)
 from rag_backend.modules.autopilot.infrastructure.intake_store import (
     SqlAlchemyTopicIntakeStore,
 )
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
+from rag_backend.modules.autopilot.infrastructure.queue_control import SqlQueueControl
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
+)
+from rag_backend.modules.autopilot.queue_constants import (
+    DAILY_RECOVERY_NOTICE_KEY,
+    REASON_DAILY_RECOVERY,
+    STALE_REVIVE_MIN_AGE_MINUTES,
 )
 
 DRIVEN_STATES: tuple[AutopilotRunState, ...] = (
@@ -109,6 +127,45 @@ class AutopilotQueueBridge:
                 )
             )
 
+    async def revive_dead_letter(self, run_id: str) -> bool:
+        """Retry a run the queue parked, once per theme, as the daily recovery scan.
+
+        False when the run is gone, no longer parked by the queue (Pedro already
+        retried or discarded it), or is itself the scan's earlier retry.
+        """
+        async with self.sessions() as session:
+            run = await SqlAlchemyAutopilotRepository(session).get(UUID(run_id))
+            if run is None or not is_dead_letter(run.state_reason) or _recovered(run):
+                return False
+            return await _revive_once(session, run)
+
+    async def revive_stale(self, since: datetime) -> int:
+        """Resume runs escalated as ``run_stale`` since ``since``, once each.
+
+        A run escalated in the last hour is left for the next scan (the reaper may
+        not be done with it); each run moves in its own transaction.
+        """
+        until = SystemClock().now() - timedelta(minutes=STALE_REVIVE_MIN_AGE_MINUTES)
+        async with self.sessions() as session:
+            result = await session.execute(
+                select(AutopilotRunModel.id)
+                .where(
+                    AutopilotRunModel.state == AutopilotRunState.ESCALATED.value,
+                    AutopilotRunModel.state_reason == REASON_RUN_STALE,
+                    AutopilotRunModel.updated_at >= since,
+                    AutopilotRunModel.updated_at <= until,
+                )
+                .order_by(AutopilotRunModel.updated_at)
+            )
+            run_ids = [row[0] for row in result.all()]
+        revived = 0
+        for run_id in run_ids:
+            async with self.sessions() as session:
+                run = await SqlAlchemyAutopilotRepository(session).get(run_id)
+                if run is not None and not _recovered(run):
+                    revived += int(await _revive_once(session, run))
+        return revived
+
     async def active_run_ids(self, limit: int) -> list[tuple[str, str | None]]:
         """Runs that need driving, oldest first."""
         async with self.sessions() as session:
@@ -123,6 +180,36 @@ class AutopilotQueueBridge:
     def _runner(self, session: AsyncSession) -> AutopilotRunner:
         deps = runner_dependencies(session, self.config)
         return AutopilotRunner(replace(deps, retryable=self.retryable))
+
+
+def _recovered(run: AutopilotRun) -> bool:
+    return DAILY_RECOVERY_NOTICE_KEY in run.notice_log.statuses
+
+
+async def _revive_once(session: AsyncSession, run: AutopilotRun) -> bool:
+    """Revive ``run``, mark the queued run so the scan never retries it again."""
+    queued_id = await revive(_revive_deps(session), run, REASON_DAILY_RECOVERY)
+    if queued_id is not None:
+        queued = await SqlAlchemyAutopilotRepository(session).get(queued_id)
+        if queued is not None:
+            statuses = (*queued.notice_log.statuses, DAILY_RECOVERY_NOTICE_KEY)
+            await SqlNoticeLogStore(session).save(
+                SaveNoticeLog(
+                    run_id=queued_id,
+                    log=replace(queued.notice_log, statuses=statuses),
+                )
+            )
+    await session.commit()
+    return queued_id is not None
+
+
+def _revive_deps(session: AsyncSession) -> ReviveDependencies:
+    return ReviveDependencies(
+        runs=SqlAlchemyAutopilotRepository(session),
+        clock=SystemClock(),
+        queue=SqlQueueControl(session),
+        dead_letters=SqlDeadLetterRuns(session),
+    )
 
 
 __all__ = ["DRIVEN_STATES", "AutopilotQueueBridge", "AutopilotRunFacts"]

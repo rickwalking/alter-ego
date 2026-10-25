@@ -24,7 +24,6 @@ from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunMode
 from rag_backend.modules.autopilot.queue_constants import (
     REASON_DEAD_DISCARD,
     REASON_DEAD_LETTER_PREFIX,
-    REASON_DEAD_RETRY,
 )
 
 _R = AutopilotRunModel
@@ -38,7 +37,7 @@ class SqlDeadLetterRuns:
 
     async def retry_failed(self, command: RetryFailedCommand) -> bool:
         """Mark the failed run retried and queue the new run; False when already."""
-        if not await self._resolve(command.run_id, REASON_DEAD_RETRY):
+        if not await self._resolve(command.run_id, command.reason):
             return False
         topic = await self._session.scalar(
             select(_R.topic_candidate_id).where(_R.id == command.run_id)

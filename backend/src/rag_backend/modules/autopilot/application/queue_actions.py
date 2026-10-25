@@ -11,13 +11,16 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID, uuid4
 
+from rag_backend.modules.autopilot.application.run_revive import (
+    ReviveDependencies,
+    revive,
+)
 from rag_backend.modules.autopilot.domain.backlog import (
     BacklogStore,
     GenerateNowCommand,
 )
 from rag_backend.modules.autopilot.domain.dead_letter import (
     DeadLetterRuns,
-    RetryFailedCommand,
     is_dead_letter,
 )
 from rag_backend.modules.autopilot.domain.messages import InlineKeyboard
@@ -222,28 +225,13 @@ async def _retried_run(host: _Host, run: AutopilotRun) -> UUID | None:
     """The run now queued for this dead letter, or None when nothing moved."""
     if not is_dead_letter(run.state_reason):
         return None
-    if run.state is AutopilotRunState.ESCALATED:
-        moved = await host._deps.runs.transition(
-            TransitionCommand(
-                run_id=run.run_id,
-                expected=AutopilotRunState.ESCALATED,
-                new=AutopilotRunState.GENERATING,
-                reason=REASON_DEAD_RETRY,
-            )
-        )
-        if moved and host._deps.queue is not None:
-            await host._deps.queue.requeue_dead_letter(run.run_id)
-        return run.run_id if moved else None
-    dead_letters = host._deps.dead_letters
-    if run.state is not AutopilotRunState.FAILED or dead_letters is None:
-        return None
-    new_run_id = uuid4()
-    retried = await dead_letters.retry_failed(
-        RetryFailedCommand(
-            run_id=run.run_id, new_run_id=new_run_id, created_at=host._deps.clock.now()
-        )
+    deps = ReviveDependencies(
+        runs=host._deps.runs,
+        clock=host._deps.clock,
+        queue=host._deps.queue,
+        dead_letters=host._deps.dead_letters,
     )
-    return new_run_id if retried else None
+    return await revive(deps, run, REASON_DEAD_RETRY)
 
 
 async def _discard(host: _Host, update: WebhookUpdate, run_id: UUID) -> None:

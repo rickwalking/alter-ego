@@ -103,3 +103,27 @@ ALERT_QUEUE_STALLED = (
     "Fila de geração: o tema mais antigo espera há {hours} h ({queued} na fila)."
 )
 LOG_QUEUE_ALERT = "generation_queue_alert"
+
+SCAN_ENTRYPOINT = "daily_recovery_scan"
+SCAN_CRON_UTC = "0 7 * * *"
+SCAN_RECOVERY_DAYS = 7
+SCAN_STALE_HOURS = 72
+SCAN_PURGE_DAYS = 30
+SCAN_BATCH = 50
+PAYLOAD_RECOVERY_ATTEMPT = "recovery_attempt"
+RECOVERABLE_ERROR_CODES = (
+    ERROR_TRANSIENT,
+    ERROR_PHASE_BUDGET,
+    ERROR_RUN_BUDGET,
+    ERROR_HELD_JOB,
+)
+SUMMARY_SCAN = (
+    "🌅 Varredura diária da fila: {recovered} recolocado(s) na fila, "
+    f"{{dead}} parado(s) nos últimos {SCAN_RECOVERY_DAYS} dias, "
+    "{queued} na fila agora."
+)
+SUMMARY_INTERACTIVE = "Projetos do painel parados (retome pelo editor): {titles}"
+SUMMARY_TITLE_MAX_CHARS = 80
+SUMMARY_TITLES_MAX = 10
+LOG_SCAN_DONE = "generation_daily_scan_done"
+LOG_SCAN_FAILED = "generation_daily_scan_failed"
