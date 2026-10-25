@@ -66,6 +66,7 @@ from rag_backend.modules.autopilot.constants import (
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
     REASON_PHASE_FAILED,
+    REASON_RUN_STALE,
     REASON_WAITING,
 )
 from rag_backend.modules.autopilot.domain.gate import (
@@ -83,6 +84,10 @@ from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
 from rag_backend.modules.autopilot.parked_constants import (
     PARKED_GRACE_SECONDS,
     REASON_ENGINE_PARKED,
+)
+from rag_backend.modules.generation_queue.domain.models import autopilot_stage
+from rag_backend.modules.generation_queue.infrastructure.repository import (
+    SqlGenerationRunStore,
 )
 
 _OWNER = "autopilot-owner"
@@ -476,6 +481,38 @@ async def test_run_in_flight_waits_and_refuses_a_second_resume(world: _World) ->
 
     assert result.status is ResumeStatus.IN_PROGRESS
     assert world.llm.content_runs == 0
+
+
+async def _stale_in_progress(world: _World) -> None:
+    async with db_config.get_session_maker()() as other:
+        await other.execute(
+            update(CarouselProjectModel)
+            .where(CarouselProjectModel.id == world.project_id)
+            .values(
+                phase_status=PHASE_STATUS_IN_PROGRESS,
+                run_heartbeat_at=datetime.now(UTC) - timedelta(minutes=30),
+            )
+        )
+        await other.commit()
+
+
+@pytest.mark.asyncio
+async def test_drive_queued_behind_a_long_job_is_not_escalated_as_stale(
+    world: _World,
+) -> None:
+    """Scenario: A dashboard resume waiting in the generation queue is never reaped
+
+    The autopilot gate reads a project whose heartbeat is 30 minutes old: with no
+    generation run it is ``run_stale``; with its autopilot drive queued behind a
+    long job it is waiting, not stale.
+    """
+    await _stale_in_progress(world)
+    assert (await world.driver.read_gate(world.project_id)).stale is True
+    store = SqlGenerationRunStore(db_config.get_session_maker())
+    await store.stage(autopilot_stage("run-behind-a-long-job", world.project_id))
+    gate = await world.driver.read_gate(world.project_id)
+    assert gate.stale is False
+    assert decide(gate).reason != REASON_RUN_STALE
 
 
 @pytest.mark.asyncio

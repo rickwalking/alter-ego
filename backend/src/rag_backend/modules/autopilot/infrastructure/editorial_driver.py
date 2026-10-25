@@ -96,6 +96,7 @@ from rag_backend.modules.editorial.public import (
     redrive_automation_phase,
     run_automation_phase,
 )
+from rag_backend.modules.generation_queue.public import projects_with_active_runs
 
 EngineFactory = Callable[[], EditorialWorkflowEngine]
 
@@ -204,7 +205,7 @@ class InProcessEditorialDriver:
                 images=_images(state.get(FIELD_IMAGE_ASSETS)),
                 slides_total=await self._slides_total(project_id),
                 lock_version=lock_version,
-                stale=self._is_stale(beat),
+                stale=await self._is_stale_unqueued(project_id, beat),
                 engine_blocker=content_approve_blocker(state) or "",
                 parked=gate.parked,
                 parked_overdue=gate.parked_overdue,
@@ -278,6 +279,20 @@ class InProcessEditorialDriver:
 
     async def _slides_total(self, project_id: str) -> int:
         return await self._acl.slide_total(project_id)
+
+    async def _is_stale_unqueued(
+        self, project_id: str, beat: RunHeartbeat | None
+    ) -> bool:
+        """Stale, and no generation run owns the project.
+
+        A run waiting in the generation queue behind a long job has no heartbeat
+        until its job starts; it is waiting, not stale. A drive whose worker died
+        is recovered by its own job's re-pick, not escalated as ``run_stale``.
+        """
+        if not self._is_stale(beat):
+            return False
+        owned = await projects_with_active_runs(self._config.session, [project_id])
+        return project_id not in owned
 
     def _is_stale(self, beat: RunHeartbeat | None) -> bool:
         if beat is None or beat.heartbeat_at is None:
