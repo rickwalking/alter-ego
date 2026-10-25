@@ -53,3 +53,30 @@ export const LOCK_CONTENT_TYPE_BLOG = "blog_post";
 export const HTTP_HEADER_IF_MATCH = "If-Match";
 
 export const LOCK_POLL_INTERVAL_MS = 30_000;
+
+/** Generation queue panel endpoints (admin only). */
+export const QUEUE_API = {
+  BOARD: "/api/generation-runs",
+  RETRY: (id: string) => `/api/generation-runs/${id}/retry`,
+  DISCARD: (id: string) => `/api/generation-runs/${id}/discard`,
+  CANCEL: (id: string) => `/api/generation-runs/${id}/cancel`,
+  GENERATE_NOW: (id: string) => `/api/generation-runs/backlog/${id}/generate`,
+} as const;
+
+/** Statuses of a generation run on the queue panel. */
+export const QUEUE_STATUS = {
+  QUEUED: "queued",
+  RUNNING: "running",
+  RETRY_WAIT: "retry_wait",
+  DEAD_LETTER: "dead_letter",
+} as const;
+
+/** The panel buttons. */
+export const QUEUE_ACTION = {
+  RETRY: "retry",
+  DISCARD: "discard",
+  CANCEL: "cancel",
+  GENERATE_NOW: "generateNow",
+} as const;
+
+export type QueueAction = (typeof QUEUE_ACTION)[keyof typeof QUEUE_ACTION];

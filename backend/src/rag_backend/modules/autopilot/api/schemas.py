@@ -305,3 +305,54 @@ class InstagramInsightsResponse(BaseModel):
     follows_per_post: float | None = None
     shares_per_100_views: float | None = None
     configured: bool = Field(description="False when no Graph account is set.")
+
+
+class QueueItemResponse(BaseModel):
+    """One generation run on the panel, with the buttons it offers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    kind: str
+    status: str
+    title: str
+    project_id: str | None
+    phase: str | None
+    position: int | None
+    eta: datetime | None
+    started_at: datetime | None
+    next_attempt_at: datetime | None
+    error_code: str | None
+    can_retry: bool
+    can_discard: bool
+    can_cancel: bool
+
+
+class BacklogItemResponse(BaseModel):
+    """A theme waiting in the backlog."""
+
+    model_config = ConfigDict(frozen=True)
+
+    candidate_id: str
+    title: str
+    created_at: datetime
+    expires_at: datetime
+
+
+class QueueBoardResponse(BaseModel):
+    """The whole panel."""
+
+    model_config = ConfigDict(frozen=True)
+
+    active: list[QueueItemResponse]
+    dead: list[QueueItemResponse]
+    backlog: list[BacklogItemResponse]
+    average_drive_minutes: float
+
+
+class QueueActionResponse(BaseModel):
+    """What a panel button did."""
+
+    model_config = ConfigDict(frozen=True)
+
+    outcome: str

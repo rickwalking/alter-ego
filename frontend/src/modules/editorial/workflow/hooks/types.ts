@@ -1,3 +1,5 @@
+import type { QueueAction } from "@/constants/workflow";
+import type { QueueBoard } from "@/schemas/generation-queue";
 /**
  * Editorial workflow hook data-shape types (colocated `types.ts`).
  *
@@ -56,4 +58,13 @@ export interface WorkflowPostActionResult {
   submitting: boolean;
   message: string | null;
   post: (url: string, body: object) => Promise<void>;
+}
+
+/** The queue panel's data, the button in flight and the last button's error. */
+export interface GenerationQueueState {
+  board: QueueBoard | null;
+  error: string | null;
+  pending: string | null;
+  actionError: string | null;
+  act: (action: QueueAction, id: string) => Promise<void>;
 }

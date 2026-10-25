@@ -18,6 +18,7 @@ from rag_backend.modules.autopilot.domain.backlog import (
     BacklogTheme,
     BacklogWindow,
     GenerateNowCommand,
+    expiry_cutoff,
 )
 from rag_backend.modules.autopilot.domain.ports import QueuedRunCommand
 from rag_backend.modules.autopilot.domain.topic_text import as_utc
@@ -77,7 +78,11 @@ class SqlBacklogStore:
         """Take a waiting theme out of the backlog and queue its run, once."""
         result = await self._session.execute(
             update(_T)
-            .where(_T.id == command.candidate_id, _T.status.in_(BACKLOG_WAITING))
+            .where(
+                _T.id == command.candidate_id,
+                _T.status.in_(BACKLOG_WAITING),
+                _T.created_at >= expiry_cutoff(command.created_at),
+            )
             .values(status=CANDIDATE_GENERATE_NOW)
         )
         if cast(CursorResult[object], result).rowcount != 1:
