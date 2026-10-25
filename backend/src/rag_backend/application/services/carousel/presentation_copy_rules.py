@@ -37,7 +37,6 @@ from rag_backend.application.services.carousel.copy_hygiene_text import (
     emphasis_unbalanced_detail,
     encoding_detail,
     item_split_detail,
-    item_truncation_detail,
     markup_leak_detail,
     placeholder_detail,
     sentence_keys,
@@ -45,6 +44,9 @@ from rag_backend.application.services.carousel.copy_hygiene_text import (
     truncation_detail,
     word_count,
     wrong_language_detail,
+)
+from rag_backend.application.services.carousel.item_truncation_text import (
+    item_truncation_detail,
 )
 from rag_backend.application.services.carousel.presentation_content_rules import (
     ContentRuleCommand,
@@ -83,6 +85,9 @@ _KEY_FEATURES = "features"
 _DETAIL_SEPARATOR = ": "
 _ITEM_TITLE_SUFFIX = "].title"
 _ITEM_BODY_SUFFIX = "].body"
+_ITEM_MESSAGES: dict[str, str] = {
+    VIOLATION_COPY_TRUNCATED: "Item text stops mid-sentence",
+}
 
 _MESSAGES: dict[str, str] = {
     VIOLATION_STRUCTURED_PAYLOAD_IN_COPY: (
@@ -132,7 +137,8 @@ def _violation(
     severity: ViolationSeverity = (
         "warning" if command.policy.is_casing_warning(code) else "blocker"
     )
-    message = _MESSAGES[code] + (_DETAIL_SEPARATOR + detail if detail else "")
+    base = _ITEM_MESSAGES.get(code) if field.endswith(_ITEM_BODY_SUFFIX) else None
+    message = (base or _MESSAGES[code]) + (_DETAIL_SEPARATOR + detail if detail else "")
     return SlideValidationViolation(
         code=code,
         message=message,

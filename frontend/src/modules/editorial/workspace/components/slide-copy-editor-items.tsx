@@ -28,7 +28,7 @@ import type {
   LocalizedSlideReview,
   SlideValidationViolation,
 } from "@/modules/editorial/workspace/types-ai";
-import { FlaggableTextarea } from "./slide-field-errors";
+import { FlaggableTextarea, ListErrors } from "./slide-field-errors";
 import type {
   ShownItems,
   SlideCopyEditorProps,
@@ -175,7 +175,7 @@ function shownItems(
 
 /**
  * The slide's structured items, editing exactly what the slide shows: one
- * line per drawn item on a checklist slide, else title and body.
+ * line per drawn item on a checklist slide, else title and body; list errors on top.
  */
 export function StructuredItemsEditor({
   slide,
@@ -190,14 +190,16 @@ export function StructuredItemsEditor({
 }>): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
   const shown = shownItems(slide, locale);
+  const listErrors = <ListErrors slide={slide} locale={locale} props={props} />;
   if (shown === null) {
-    return null;
+    return listErrors;
   }
   return (
     <div className="space-y-1">
       <p className="font-medium text-[var(--color-text-muted)] text-xs">
         {t("structuredItems")}
       </p>
+      {listErrors}
       {shown.itemIndexes.map((itemIndex, position) => (
         <StructuredItemFields
           key={`${shown.list.listKey}-${itemIndex}`}

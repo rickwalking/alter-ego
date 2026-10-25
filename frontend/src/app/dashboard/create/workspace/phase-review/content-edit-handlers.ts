@@ -6,6 +6,7 @@ import {
   applySlideStructuredItemEdit,
   applySlideStructuredListEdit,
   fieldErrorKey,
+  listFieldErrorKeys,
   structuredItemFieldPath,
   type SlideCopyEdit,
   type SlideExtraEdit,
@@ -24,7 +25,8 @@ interface ContentEditHandlers {
 /**
  * The content-review edit handlers: apply the edit to the slides and clear
  * the edited field's error. Structured items and free-text
- * extras are editable; list slots are added/removed (PT and EN).
+ * extras are editable; list slots are added/removed (PT and EN), which clears
+ * the list-level error (too few items) of both locales.
  */
 export function contentEditHandlers(
   slides: LocalizedSlideReview[],
@@ -48,6 +50,7 @@ export function contentEditHandlers(
     },
     onStructuredListChange: (edit) => {
       onSlidesChange(applySlideStructuredListEdit(slides, edit));
+      listFieldErrorKeys(edit.slideIndex, edit.listKey).forEach(clearField);
     },
     onExtraChange: (edit) => {
       onSlidesChange(applySlideExtraEdit(slides, edit));

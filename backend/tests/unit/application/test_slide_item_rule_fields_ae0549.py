@@ -109,6 +109,13 @@ class TestItemBodyTruncation:
             "O agente conduz a ligação e",
             "Começa simples e vai crescendo...",
             "Três passos:",
+            "Eu vejo diferente: funcionário tem. Ele resolve sozinho o pedido",
+            "O agente conduz a",
+            "O ganho real não é",
+            "The agent does not",
+            "It is not chat, it is",
+            "This",
+            "Calls restaurants and books a table by phone. It works for the",
         ],
     )
     def test_cut_off_item_body_is_truncated(self, body: str) -> None:
@@ -117,9 +124,37 @@ class TestItemBodyTruncation:
         assert _truncated(_summary(points)) == ["summary_points[1].body"]
 
     @pytest.mark.parametrize(
-        "body", ["Revisão automática de PRs", "Dados no seu ambiente", "Feito."]
+        "body",
+        [
+            "Revisão automática de PRs",
+            "Dados no seu ambiente",
+            "Feito.",
+            "Suporte a Node.js",
+            "Grok 3.5 reserva mesa",
+            "GPT-4.1 no fluxo",
+            "Custo cai 2.5x",
+            "Use e.g. Claude",
+            "Funciona? Sim",
+            "Plano A",
+            "Vale o teste. Sem pressa",
+            "Ship it. Then measure",
+        ],
     )
     def test_short_fragment_is_not_truncated(self, body: str) -> None:
         """Scenario: A short checklist fragment without a full stop is not truncated"""
         points = [_COMPLETE, {"title": "Fragmento", "body": body}, _COMPLETE]
         assert _truncated(_summary(points)) == []
+
+    def test_item_message_fits_the_item(self) -> None:
+        """Scenario: A checklist item body cut off mid-sentence is truncated copy"""
+        points = [
+            _COMPLETE,
+            {"title": "Corte", "body": "The agent does not"},
+            _COMPLETE,
+        ]
+        (violation,) = [
+            v
+            for v in copy_hygiene_violations(_command(_summary(points)))
+            if v.code == VIOLATION_COPY_TRUNCATED
+        ]
+        assert violation.message.startswith("Item text stops mid-sentence")

@@ -36,6 +36,16 @@ export function fieldErrorKey(
   return [slideIndex, locale, fieldPath].join(KEY_SEPARATOR);
 }
 
+/** The error keys of a whole item list in every locale (a list edit touches both). */
+export function listFieldErrorKeys(
+  slideIndex: number,
+  listKey: string,
+): string[] {
+  return Object.values(VIOLATION_LOCALE_TO_PRESENTATION_KEY).map((locale) =>
+    fieldErrorKey(slideIndex, locale, listKey),
+  );
+}
+
 /**
  * Fill ``item_list``/``item_index``/``item_field`` from a structured-item
  * ``field`` path when the source (workflow state) did not split it already.

@@ -30,12 +30,16 @@ telefone. Não é", "… an employee has").
   or `summary_points` when every point is complete but there are fewer than 3; `closing_actions_missing` does the same
   over `actions` then `features`. `body_empty` keeps `body`.
 - `copy_truncated` also checks every checklist item body (`features`, `summary_points`, `actions`), with a rule
-  suited to fragments: an open ending (ellipsis, dangling `,:;-`), a dangling connector as the last word, or a body
-  written as sentences whose last one has no closing punctuation. A bare fragment ("Revisão automática de PRs") passes.
+  suited to fragments (`item_truncation_text.py`): an open ending (ellipsis, dangling `,:;-`); a last word that is a
+  PT/EN function word, lowercase or the whole body ("O agente conduz a", "The agent does not", "This"); or a body
+  written as sentences whose last one (3+ words) has no closing punctuation. A sentence break is `.?!` + whitespace +
+  an uppercase letter, never after an abbreviation, so "Node.js", "Grok 3.5", "GPT-4.1", "2.5x", "e.g. Claude",
+  "Funciona? Sim" and "Plano A" pass. The item message is "Item text stops mid-sentence".
+- The content review shows a list-level `summary_points` violation under the items heading (also with no item yet),
+  and adding or removing an item clears it in both locales.
 
 ## Non-Goals
 
-- Frontend changes (the item routing already exists).
 - Changing the slide-body truncation rule.
 
 ## Acceptance Criteria
@@ -46,6 +50,10 @@ telefone. Não é", "… an employee has").
 - [x] AC4 An item body ending "… telefone. Não é", on a dangling connector, an ellipsis or a colon is `copy_truncated`
   on that item; short fragments without a full stop are not.
 - [x] AC5 The tests fail on the old rules (seeded: 7 failed against `origin/main`).
+- [x] AC6 No false positives on tech fragments (Node.js, 3.5, GPT-4.1, 2.5x, e.g., "Funciona? Sim", "Plano A"); PT and EN
+  function-word cut-offs are caught.
+- [x] AC7 The frontend shows `summary_points[1].body` under that item and a list-level error under the items heading;
+  adding an item clears it (`slide-copy-editor.item-errors.test.tsx`, `content-edit-handlers.test.ts`).
 
 ## Repro Steps
 
@@ -55,7 +63,7 @@ telefone. Não é", "… an employee has").
 ## Affected Areas
 
 - [x] Backend
-- [ ] Frontend
+- [x] Frontend
 - [x] Tests
 
 ## Dependencies

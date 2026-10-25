@@ -19,11 +19,11 @@ Feature: Checklist rule violations point at the item that needs the fix
     Then closing_actions_missing is reported on actions[0].title
 
   Scenario: A checklist item body cut off mid-sentence is truncated copy
-    Given a summary point body that ends "telefone. Não é" or on a dangling connector or an ellipsis
+    Given a summary point body that ends "telefone. Não é", "The agent does not", on a dangling connector or an ellipsis
     When the slide copy is checked
     Then copy_truncated is reported on that item body
 
   Scenario: A short checklist fragment without a full stop is not truncated
-    Given a summary point body "Revisão automática de PRs"
+    Given a summary point body "Revisão automática de PRs", "Suporte a Node.js", "Grok 3.5 reserva mesa", "Use e.g. Claude" or "Funciona? Sim"
     When the slide copy is checked
     Then no copy_truncated is reported on it
