@@ -205,12 +205,55 @@ class _ReplayRunner:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_the_parked_replay_rescores_instead_of_regenerating() -> None:
+async def test_only_an_edits_only_revise_rescores_and_the_replay_never_pays() -> None:
     """Scenario: An edit that improves the voice clears the gate"""
     runner = _ReplayRunner()
     state = {"project_id": "p1", "content_artifacts_parked": True}
     config = {"configurable": {"artifact_runner": runner}}
-    updates = await nodes._content_ensure_or_reuse(state, config)
+    assert await nodes._content_ensure_or_reuse(state, config) == {}
+    assert runner.rescored == []
+    assert await nodes._rescore_after_manual_fixes(state, config, {}) == {}
+    updates = await nodes._rescore_after_manual_fixes(
+        state, config, {"content_artifacts_parked": True}
+    )
     assert updates == {"persona_scores": {"slide_2": {"overall": 85.0}}}
     assert runner.rescored == [state]
-    assert await nodes._content_ensure_or_reuse(state, None) == {}
+
+
+@dataclass
+class _DownJudge:
+    """A judge that never scores (timeouts, empty answers)."""
+
+    async def evaluate_match(self, content: str) -> dict[str, object]:
+        raise TimeoutError(content)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_a_failed_rejudge_keeps_the_last_score_pending() -> None:
+    """Scenario: A judge that gives no score never opens the gate"""
+    before = _slide("Dois", "Texto genérico.")
+    after = _slide("Dois", "Eu vou direto: teste antes de abrir o PR.")
+    previous = {"slide_1": _scored(before, 62.0)}
+    scores = await _score([after], _DownJudge(), previous)
+    assert scores["slide_1"]["overall"] == 62.0
+    assert scores["slide_1"]["rescore_pending"] is True
+    with pytest.raises(ValueError, match="persona_score_too_low"):
+        validate_content_approve_persona_score({
+            "current_phase": "content",
+            "persona_scores": scores,
+        })
+    assert await _score([after], _DownJudge(), None) == {}
+
+
+@pytest.mark.unit
+def test_the_tldr_strip_is_judged() -> None:
+    """Scenario: The judge reads the slide's visible copy"""
+    slide = {
+        "presentation_pt": {
+            "heading": "Gancho",
+            "body": "Corpo.",
+            "tldr_strip": "Resumo curto",
+        }
+    }
+    assert voice_text(slide) == "Gancho\nCorpo.\nResumo curto"

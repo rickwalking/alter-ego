@@ -43,7 +43,13 @@ Pedro had to approve past the gate because of this.
 - `PhaseArtifactRunner._score_slides` delegates there (reuse on every content entry) and
   `rescore_edited_content(state)` re-scores on the parked replay: only the edited slides change text, so only they
   are judged.
-- `_content_ensure_or_reuse`: the parked replay calls `rescore_edited_content` (still no regeneration).
+- The edits-only revise re-scores in the content node's own return, after the edits apply
+  (`_rescore_after_manual_fixes` in `content_phase_async`), so the new scores reach the checkpoint. The parked replay
+  never scores (a replay's interrupt payload is not persisted, and it re-paid the judge on every replay).
+- A judge that gives no score keeps the slide's previous entry marked `rescore_pending` (still gating on its last score;
+  a timeout never opens the gate). A failed render of the judge prompt is logged before the inline fallback.
+- The judged copy is PT only and includes the TL;DR strip; stats and insight quotes are left out on purpose. Temperature
+  0 may be ignored by reasoning models; the fingerprint reuse is the stabiliser.
 - The judge runs at temperature 0 (`PERSONA_JUDGE_TEMPERATURE`) with a new prompt `persona/v1/evaluate.yaml` that
   names the 0-100 scale with anchors and asks for the voice only.
 
@@ -62,6 +68,11 @@ Pedro had to approve past the gate because of this.
 - [x] AC3 The judge reads heading, body and items (`test_the_judge_reads_the_visible_copy`).
 - [x] AC4 Stale, unscored or pending entries are judged again (`test_a_stale_or_unscored_entry_is_judged_again`).
 - [x] AC5 The judge call runs at temperature 0 with the 0-100 prompt (`test_evaluate_match_prompt_exact_format`).
+- [x] AC6 Engine level: submit manual fixes → `get_state()["persona_scores"]` holds the new score of the edited slide,
+  the others are unchanged, the judge ran once, and approve is no longer refused
+  (`test_submit_manual_fixes_persists_the_new_score_and_clears_the_gate`; seeded: fails at the previous head with 62).
+- [x] AC7 A judge timeout keeps the last score as `rescore_pending` and approval is still refused
+  (`test_a_failed_rejudge_keeps_the_last_score_pending`).
 
 ## Repro Steps
 
@@ -91,7 +102,7 @@ Ticket created from Pedro's two reports; fix and tests written.
 - `backend/src/rag_backend/agents/carousel_workflow_nodes.py`
 - `backend/src/rag_backend/agents/persona_agent.py`, `backend/src/rag_backend/agents/prompts/persona/v1/evaluate.yaml` (new)
 - `backend/src/rag_backend/domain/constants/persona.py`
-- tests: `test_persona_score_stability_ae0550.py` (new) + feature, `test_persona_agent.py`,
+- tests: `test_persona_score_stability_ae0550.py`, `test_persona_rescore_engine_ae0550.py` (new) + feature, `test_persona_agent.py`,
   `test_content_scoring_ae0439.py`, `test_persona_judge_ae0407.py`, `test_autopilot_unscored_judge_flow_ae0433.py`,
   `test_carousel_slide_fix_ae0401.py`, `test_carousel_workflow.py`
 

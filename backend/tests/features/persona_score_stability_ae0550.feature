@@ -18,8 +18,13 @@ Feature: The persona voice gate is stable and a hand edit can clear it
   Scenario: The judge reads the slide's visible copy
     Given a checklist slide with a heading, a short body and three items
     When its voice text is built
-    Then it holds the heading, the body and every item, and falls back to the draft text without a presentation payload
+    Then it holds the heading, the body, every item and the TL;DR strip, and falls back to the draft text without a presentation payload
 
   Scenario: A stale or unscored entry is judged again
     Given an entry without a fingerprint, one marked for a re-score, and one with no overall
     Then none of them is reused
+
+  Scenario: A judge that gives no score never opens the gate
+    Given slide 2 scored 62 and its copy was edited
+    When the judge times out on the edited copy
+    Then slide 2 keeps 62, marked for a re-score, and approval is still refused

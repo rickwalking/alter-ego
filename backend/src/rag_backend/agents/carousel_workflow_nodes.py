@@ -446,16 +446,32 @@ async def _content_ensure_or_reuse(
     the artifacts the reviewer saw to the checkpoint when the graph parked, so
     the replay reuses them: no second regeneration with the same notes, no
     LLM call, and the reviewed (or hand-edited) copy is what gets committed.
-    Only the persona scores move: slides whose copy a reviewer edited are judged
-    again (the others keep their score), so a hand edit can clear the voice gate.
     """
     if state.get(STATE_FIELD_CONTENT_ARTIFACTS_PARKED) is True:
         logger.info(
             LOG_CONTENT_REPLAY_REUSED, project_id=str(state.get("project_id", ""))
         )
-        runner = artifact_runner_from_config(config)
-        return {} if runner is None else await runner.rescore_edited_content(state)
+        return {}
     return await ensure_artifacts(state, config, PHASE_CONTENT)
+
+
+async def _rescore_after_manual_fixes(
+    state: CarouselWorkflowState,
+    config: RunnableConfig | None,
+    park: dict[str, object],
+) -> dict[str, object]:
+    """Persona scores of the hand-edited copy, in the node return that is persisted.
+
+    An edits-only revise applies the edits after ``interrupt()`` returns; this
+    node then returns (the graph routes back to content), so scoring here stores
+    the new scores in the checkpoint. Scoring on the replay put them only on the
+    next interrupt payload, which LangGraph never persists, so approve kept
+    refusing the pre-edit score. Unedited slides keep their scores (fingerprints).
+    """
+    if not park:
+        return {}
+    runner = artifact_runner_from_config(config)
+    return {} if runner is None else await runner.rescore_edited_content(state)
 
 
 async def content_phase_async(
@@ -487,7 +503,10 @@ async def content_phase_async(
         config,
         _content_artifact_config(artifact_updates),
     )
-    return {**merged, **sync_result, **manual_fixes_park_updates(sync_result, merged)}
+    park = manual_fixes_park_updates(sync_result, merged)
+    edited = cast(CarouselWorkflowState, {**merged, **sync_result})
+    rescored = await _rescore_after_manual_fixes(edited, config, park)
+    return {**merged, **sync_result, **park, **rescored}
 
 
 async def design_phase_async(
