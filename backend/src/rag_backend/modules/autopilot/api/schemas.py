@@ -322,7 +322,15 @@ class QueueItemResponse(BaseModel):
     eta: datetime | None
     started_at: datetime | None
     next_attempt_at: datetime | None
+    run_heartbeat_at: datetime | None
+    lock_version: int | None
     error_code: str | None
+    staged: bool
+    autopilot_run_id: str | None
+    priority: int
+    can_reprocess: bool
+    refusal_code: str | None
+    stuck_kind: str | None
     can_retry: bool
     can_discard: bool
     can_cancel: bool

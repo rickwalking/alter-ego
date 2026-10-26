@@ -1,5 +1,11 @@
+import type { RefObject } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 import type { QueueAction } from "@/constants/workflow";
 import type { QueueBoard } from "@/schemas/generation-queue";
+import type {
+  CarouselReprocessCapability,
+  ManualReprocessResponse,
+} from "@/schemas/carousel-reprocess";
 /**
  * Editorial workflow hook data-shape types (colocated `types.ts`).
  *
@@ -60,11 +66,86 @@ export interface WorkflowPostActionResult {
   post: (url: string, body: object) => Promise<void>;
 }
 
+export interface GenerationQueueMaintenanceState {
+  processPending: boolean;
+  processError: string | null;
+  processQueue: () => Promise<void>;
+}
+
+export type GenerationQueueReprocessTarget =
+  | { expectedVersion?: number; projectId?: never }
+  | { expectedVersion: number; projectId: string };
+
+export interface GenerationQueueLoadResult {
+  board: QueueBoard | null;
+  error: string | null;
+  forbidden: boolean;
+}
+
 /** The queue panel's data, the button in flight and the last button's error. */
-export interface GenerationQueueState {
+export interface GenerationQueueState extends GenerationQueueMaintenanceState {
   board: QueueBoard | null;
   error: string | null;
   pending: string | null;
   actionError: string | null;
-  act: (action: QueueAction, id: string) => Promise<void>;
+  act: (
+    action: QueueAction,
+    id: string,
+    reprocess?: GenerationQueueReprocessTarget,
+  ) => Promise<void>;
+}
+
+export interface GenerationQueueMaintenanceDeps {
+  load: () => Promise<void>;
+  translate: (key: string) => string;
+  processInFlightRef: RefObject<boolean>;
+  setProcessPending: (pending: boolean) => void;
+  setProcessError: (message: string | null) => void;
+}
+
+export interface UseCarouselReprocessOptions {
+  projectId: string;
+  enabled: boolean;
+  fallbackExpectedVersion?: number;
+  refreshWorkflow: () => Promise<unknown>;
+}
+
+export interface CarouselReprocessRequest {
+  expectedVersion: number;
+  runId: string | null;
+}
+
+export interface CarouselReprocessErrorDeps {
+  projectId: string;
+  queryClient: QueryClient;
+  refreshWorkflow: () => Promise<unknown>;
+  translate: (key: string) => string;
+  setActionError: (message: string | null) => void;
+}
+
+export interface CarouselReprocessRunDeps extends CarouselReprocessErrorDeps {
+  enabled: boolean;
+  capability: CarouselReprocessCapability | null;
+  fallbackExpectedVersion?: number;
+  inFlightRef: RefObject<boolean>;
+  setPending: (pending: boolean) => void;
+  mutateAsync: (
+    input: CarouselReprocessRequest,
+  ) => Promise<ManualReprocessResponse>;
+}
+
+export interface CarouselReprocessActionState {
+  pending: boolean;
+  canSubmit: boolean;
+  actionError: string | null;
+  reprocess: () => Promise<void>;
+}
+
+export interface CarouselReprocessState {
+  capability: CarouselReprocessCapability | null;
+  pending: boolean;
+  forbidden: boolean;
+  canSubmit: boolean;
+  error: string | null;
+  reprocess: () => Promise<void>;
 }

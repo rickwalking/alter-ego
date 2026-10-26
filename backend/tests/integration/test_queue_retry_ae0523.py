@@ -164,6 +164,8 @@ async def test_retry_resumes_an_escalated_dead_letter_on_the_database(
     assert row.pgq_job_id is None
     assert row.phase_attempts == {"content": 1}
     assert row.attempts == 1
+    assert row.payload["manual_priority"] == 1
+    assert row.payload["manual_origin"] == "carousel_reprocess"
     assert row.created_at.replace(tzinfo=UTC) > _PARKED_AT
     assert said[-1].startswith("🔁 De volta à fila. Na fila: posição 1 de 1")
 

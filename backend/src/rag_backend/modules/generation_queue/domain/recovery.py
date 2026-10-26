@@ -9,6 +9,7 @@ PgQueuer log rows, and sends Pedro one summary.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
@@ -84,10 +85,41 @@ class ParkedAutopilot(Protocol):
         ...
 
 
+_REASON_SEPARATOR = ": "
+_SQLSTATE_PATTERN = re.compile(r"[A-Z0-9]{5}")
+
+
+@dataclass(frozen=True)
+class FailureMetadata:
+    """Whitelisted exception metadata safe for logs and the owner summary."""
+
+    exception_type: str
+    dbapi_type: str | None = None
+    sqlstate: str | None = None
+
+    @property
+    def reason(self) -> str:
+        parts = (self.exception_type, self.dbapi_type, self.sqlstate)
+        return _REASON_SEPARATOR.join(part for part in parts if part is not None)
+
+
+def failure_metadata(exc: Exception) -> FailureMetadata:
+    """Read only types and SQLSTATE, never SQL, parameters, or exception text."""
+    original = getattr(exc, "orig", None)
+    if not isinstance(original, Exception):
+        return FailureMetadata(exception_type=type(exc).__name__)
+    sqlstate = getattr(original, "sqlstate", None)
+    if not isinstance(sqlstate, str) or _SQLSTATE_PATTERN.fullmatch(sqlstate) is None:
+        sqlstate = None
+    return FailureMetadata(type(exc).__name__, type(original).__name__, sqlstate)
+
+
 __all__ = [
+    "FailureMetadata",
     "ParkedAutopilot",
     "ParkedDrive",
     "RecoveryFailure",
     "RecoveryStore",
     "ScanReport",
+    "failure_metadata",
 ]

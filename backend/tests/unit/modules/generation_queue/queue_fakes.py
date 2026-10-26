@@ -13,6 +13,8 @@ from rag_backend.modules.generation_queue.domain import budget
 from rag_backend.modules.generation_queue.domain.drive_ports import AutopilotView
 from rag_backend.modules.generation_queue.domain.errors import DriveLockBusyError
 from rag_backend.modules.generation_queue.domain.models import (
+    ATTEMPT_ID_KEY,
+    AttemptDeadLetterCommand,
     CountsUpdate,
     DeadLetterCommand,
     GenerationKind,
@@ -67,13 +69,19 @@ def resume_run(**overrides: object) -> GenerationRun:
     return make_run(**fields)
 
 
+def _owns_attempt(run: GenerationRun, attempt_id: UUID) -> bool:
+    return run.status is GenerationStatus.RUNNING and run.attempt_id == attempt_id
+
+
 @dataclass
 class FakeStore:
     """``GenerationRunStore`` in memory."""
 
     runs: dict[UUID, GenerationRun] = field(default_factory=dict)
     waits: list[RetryCommand] = field(default_factory=list)
-    dead: list[DeadLetterCommand] = field(default_factory=list)
+    dead: list[DeadLetterCommand | AttemptDeadLetterCommand] = field(
+        default_factory=list
+    )
     saved: list[CountsUpdate] = field(default_factory=list)
 
     def add(self, run: GenerationRun) -> GenerationRun:
@@ -129,16 +137,24 @@ class FakeStore:
             if run.status.value in ACTIVE_STATUSES and run.pgq_job_id is not None
         ][:limit]
 
-    async def mark_running(self, run_id: UUID) -> bool:
-        """Active → running."""
+    async def mark_running(self, run_id: UUID) -> UUID | None:
+        """Active → running with a fresh attempt UUID."""
         run = self.runs[run_id]
         if run.status.value not in ACTIVE_STATUSES:
-            return False
-        self.runs[run_id] = replace(run, status=GenerationStatus.RUNNING)
-        return True
+            return None
+        attempt_id = uuid4()
+        payload = {**run.payload, ATTEMPT_ID_KEY: str(attempt_id)}
+        self.runs[run_id] = replace(
+            run, status=GenerationStatus.RUNNING, payload=payload
+        )
+        return attempt_id
 
-    async def save_counts(self, run_id: UUID, update: CountsUpdate) -> None:
-        """Persist the counters."""
+    async def save_counts(
+        self, run_id: UUID, attempt_id: UUID, update: CountsUpdate
+    ) -> bool:
+        """Persist counters only for the current running attempt."""
+        if not _owns_attempt(self.runs[run_id], attempt_id):
+            return False
         self.saved.append(update)
         self.runs[run_id] = replace(
             self.runs[run_id],
@@ -146,24 +162,43 @@ class FakeStore:
             phase_attempts=dict(update.counts.phase_attempts),
             last_phase=update.phase,
         )
+        return True
 
-    async def mark_succeeded(self, run_id: UUID) -> None:
-        """Running → succeeded."""
+    async def mark_succeeded(self, run_id: UUID, attempt_id: UUID) -> bool:
+        """Running → succeeded only for the current attempt."""
+        if not _owns_attempt(self.runs[run_id], attempt_id):
+            return False
         self.runs[run_id] = replace(
             self.runs[run_id], status=GenerationStatus.SUCCEEDED
         )
+        return True
 
-    async def mark_waiting(self, command: RetryCommand) -> None:
-        """Running → retry_wait."""
+    async def mark_waiting(self, command: RetryCommand) -> bool:
+        """Running → retry_wait only for the current attempt."""
+        if not _owns_attempt(self.runs[command.run_id], command.attempt_id):
+            return False
         self.waits.append(command)
         self.runs[command.run_id] = replace(
             self.runs[command.run_id],
             status=GenerationStatus.RETRY_WAIT,
             last_error_code=command.error_code,
         )
+        return True
+
+    async def mark_attempt_dead_letter(self, command: AttemptDeadLetterCommand) -> bool:
+        """Running → dead_letter only for the current attempt."""
+        if not _owns_attempt(self.runs[command.run_id], command.attempt_id):
+            return False
+        self.dead.append(command)
+        self.runs[command.run_id] = replace(
+            self.runs[command.run_id],
+            status=GenerationStatus.DEAD_LETTER,
+            last_error_code=command.error_code,
+        )
+        return True
 
     async def mark_dead_letter(self, command: DeadLetterCommand) -> bool:
-        """Active → dead_letter."""
+        """Active → dead_letter for the dispatcher's held-job path."""
         run = self.runs[command.run_id]
         if run.status.value not in ACTIVE_STATUSES:
             return False
@@ -313,17 +348,31 @@ class FakeQueue:
     held_jobs: list[HeldJob] = field(default_factory=list)
     forgotten: list[int] = field(default_factory=list)
     next_id: int = 100
+    kicked: list[UUID] = field(default_factory=list)
+    enqueued: list[UUID] = field(default_factory=list)
 
     async def find_job(self, dedupe_key: str) -> int | None:
         """The job with the key."""
         return self.jobs.get(dedupe_key)
 
     async def enqueue(self, run: GenerationRun) -> int | None:
-        """A new job id."""
+        """A new job id, or the active dedupe match."""
+        existing = self.jobs.get(run.dedupe_key)
+        if existing is not None:
+            return existing
         self.next_id += 1
         self.jobs[run.dedupe_key] = self.next_id
         self.alive.add(self.next_id)
+        self.enqueued.append(run.id)
         return self.next_id
+
+    async def kick(self, run: GenerationRun) -> int | None:
+        """Return the active job or enqueue a missing one."""
+        self.kicked.append(run.id)
+        existing = self.jobs.get(run.dedupe_key)
+        if existing is not None:
+            return existing
+        return await self.enqueue(run)
 
     async def existing(self, job_ids: Sequence[int]) -> set[int]:
         """The live ones."""

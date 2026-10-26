@@ -10,8 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
+from uuid import UUID
 
-from sqlalchemy import CursorResult, select, update
+from sqlalchemy import CursorResult, Update, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +24,10 @@ from rag_backend.modules.generation_queue.constants import (
     STATUS_SUCCEEDED,
 )
 from rag_backend.modules.generation_queue.domain import budget
+from rag_backend.modules.generation_queue.domain.budget import AttemptCounts
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
+from rag_backend.modules.generation_queue.domain.models import GenerationRun
+from rag_backend.modules.generation_queue.domain.priority import priority_of
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
 )
@@ -36,23 +40,41 @@ _SECONDS_PER_MINUTE = 60.0
 
 @dataclass(frozen=True, kw_only=True)
 class QueuedWork:
-    """One active generation run, in queue order."""
+    """One active generation run with all position and ETA metadata."""
 
     autopilot_run_id: str | None
     created_at: datetime
+    id: str = ""
+    status: str = STATUS_QUEUED
+    priority: int = 0
+    pgq_job_id: int | None = None
+    started_at: datetime | None = None
+    next_attempt_at: datetime | None = None
+    staged: bool = True
 
 
 async def active_work(session: AsyncSession) -> list[QueuedWork]:
-    """Queued, running and retry-waiting runs, oldest first (the FIFO order)."""
+    """Read every active generation run with its transport and timing metadata."""
     model = GenerationRunModel
-    result = await session.execute(
-        select(model.autopilot_run_id, model.created_at)
+    result = await session.scalars(
+        select(model)
         .where(model.status.in_(ACTIVE_STATUSES))
         .order_by(model.created_at, model.id)
     )
-    return [
-        QueuedWork(autopilot_run_id=row[0], created_at=row[1]) for row in result.all()
-    ]
+    return [_queued_work(row) for row in result.all()]
+
+
+def _queued_work(row: GenerationRunModel) -> QueuedWork:
+    return QueuedWork(
+        id=str(row.id),
+        autopilot_run_id=row.autopilot_run_id,
+        created_at=row.created_at,
+        status=row.status,
+        priority=priority_of(row.payload or {}),
+        pgq_job_id=row.pgq_job_id,
+        started_at=row.started_at,
+        next_attempt_at=row.next_attempt_at,
+    )
 
 
 async def recent_drive_minutes(session: AsyncSession, limit: int) -> list[float]:
@@ -78,48 +100,63 @@ async def recent_drive_minutes(session: AsyncSession, limit: int) -> list[float]
 async def requeue_autopilot_dead_letter(
     session: AsyncSession, autopilot_run_id: str
 ) -> bool:
-    """The run's latest dead letter → queued, failing phase reset; no commit.
-
-    The run joins the back of the queue (``created_at`` is now): PgQueuer hands it
-    a new job behind every job already handed over.
-
-    False when the run has no dead letter, or another active run holds the same
-    dedupe key (then that run carries the work).
-    """
-    model = GenerationRunModel
-    row = (
-        await session.execute(
-            select(model)
-            .where(
-                model.autopilot_run_id == autopilot_run_id,
-                model.status == STATUS_DEAD_LETTER,
-            )
-            .order_by(model.created_at.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    """Requeue the latest parked run unless another active run owns its key."""
+    row = await _latest_dead(session, autopilot_run_id)
     if row is None:
         return False
+    return await _requeue_row(session, row)
+
+
+async def _latest_dead(
+    session: AsyncSession, autopilot_run_id: str
+) -> GenerationRunModel | None:
+    model = GenerationRunModel
+    result = await session.execute(
+        select(model)
+        .where(
+            model.autopilot_run_id == autopilot_run_id,
+            model.status == STATUS_DEAD_LETTER,
+        )
+        .order_by(model.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def requeue_dead_letter(session: AsyncSession, run_id: UUID) -> bool:
+    """Requeue one dead generation row in the caller's transaction; no commit."""
+    row = await session.get(GenerationRunModel, run_id, populate_existing=True)
+    if row is None:
+        return False
+    return await _requeue_row(session, row)
+
+
+async def _requeue_row(session: AsyncSession, row: GenerationRunModel) -> bool:
     dead = run_from_row(row)
     counts = budget.reset_phase(dead.counts, dead.last_phase)
     try:
         async with session.begin_nested():
-            result = await session.execute(
-                update(model)
-                .where(model.id == dead.id, model.status == STATUS_DEAD_LETTER)
-                .values(
-                    status=STATUS_QUEUED,
-                    created_at=UTC_CLOCK.now(),
-                    pgq_job_id=None,
-                    attempts=counts.attempts,
-                    phase_attempts=dict(counts.phase_attempts),
-                    finished_at=None,
-                    next_attempt_at=None,
-                )
-            )
+            result = await session.execute(_requeue_update(dead, counts))
     except IntegrityError:
         return False
     return cast(CursorResult[object], result).rowcount == 1
+
+
+def _requeue_update(dead: GenerationRun, counts: AttemptCounts) -> Update:
+    model = GenerationRunModel
+    return (
+        update(model)
+        .where(model.id == dead.id, model.status == STATUS_DEAD_LETTER)
+        .values(
+            status=STATUS_QUEUED,
+            created_at=UTC_CLOCK.now(),
+            pgq_job_id=None,
+            attempts=counts.attempts,
+            phase_attempts=dict(counts.phase_attempts),
+            finished_at=None,
+            next_attempt_at=None,
+        )
+    )
 
 
 __all__ = [
@@ -127,4 +164,5 @@ __all__ = [
     "active_work",
     "recent_drive_minutes",
     "requeue_autopilot_dead_letter",
+    "requeue_dead_letter",
 ]

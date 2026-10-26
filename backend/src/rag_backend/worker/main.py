@@ -79,9 +79,8 @@ from rag_backend.modules.generation_queue.infrastructure.progress_relay import (
 from rag_backend.modules.generation_queue.infrastructure.raw_connection import (
     asyncpg_connection,
 )
+from rag_backend.worker.maintenance import WorkerMaintenance, register_maintenance
 from rag_backend.worker.periodic import PeriodicSteps, run_dispatcher, run_periodic
-from rag_backend.worker.recovery import register_daily_scan
-from rag_backend.worker.schedules import register_backlog_promotion
 
 logger = get_logger()
 
@@ -169,13 +168,22 @@ async def create_pgqueuer() -> AsyncIterator[PgQueuer]:
             concurrency_limit=settings.generation_worker_concurrency,
             on_failure=ON_FAILURE_HOLD,
         )(job_entrypoint(composition.handler))
-        if settings.autopilot_enabled:
-            register_backlog_promotion(pgq, bridge)
         alerts = TelegramLlmAlerts(
             token=settings.telegram_alerts_bot_token.get_secret_value(),
             chat_id=settings.telegram_alerts_chat_id,
         )
-        register_daily_scan(pgq, composition.scan, alerts.send)
+        register_maintenance(
+            WorkerMaintenance(
+                pgq=pgq,
+                queries=Queries(pgq.connection),
+                engine=engine,
+                dispatcher=composition.dispatcher,
+                scan=composition.scan,
+                bridge=bridge,
+                alert=alerts.send,
+                autopilot_enabled=settings.autopilot_enabled,
+            )
+        )
         loops = [
             asyncio.create_task(
                 run_dispatcher(

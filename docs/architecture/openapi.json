@@ -5548,6 +5548,25 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "GenerationRunReprocessRequest": {
+        "description": "Admin recovery with an optional project version fence.",
+        "properties": {
+          "expected_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          }
+        },
+        "title": "GenerationRunReprocessRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6144,6 +6163,270 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MaintenanceProcessResponse": {
+        "description": "The inserted or existing durable full-maintenance control job.",
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "queued",
+              "existing"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "job_id"
+        ],
+        "title": "MaintenanceProcessResponse",
+        "type": "object"
+      },
+      "ManualRecoveryCapabilityResponse": {
+        "description": "Workspace recovery capability and safe current-run progress.",
+        "properties": {
+          "can_reprocess": {
+            "title": "Can Reprocess",
+            "type": "boolean"
+          },
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Phase"
+          },
+          "lock_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Version"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "refusal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal Code"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "stuck_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stuck Kind"
+          }
+        },
+        "required": [
+          "can_reprocess",
+          "refusal_code",
+          "stuck_kind",
+          "run_id",
+          "status",
+          "last_phase",
+          "last_error_code",
+          "position",
+          "eta_seconds",
+          "lock_version"
+        ],
+        "title": "ManualRecoveryCapabilityResponse",
+        "type": "object"
+      },
+      "ManualReprocessRequest": {
+        "description": "Project recovery fenced by the workspace lock version.",
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "ManualReprocessRequest",
+        "type": "object"
+      },
+      "ManualReprocessResponse": {
+        "description": "The accepted or existing durable run and honest maintenance result.",
+        "properties": {
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "lock_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Version"
+          },
+          "outcome": {
+            "enum": [
+              "queued",
+              "existing"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stuck_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stuck Kind"
+          },
+          "worker_notified": {
+            "title": "Worker Notified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "outcome",
+          "run_id",
+          "status",
+          "stuck_kind",
+          "position",
+          "eta_seconds",
+          "lock_version",
+          "worker_notified"
+        ],
+        "title": "ManualReprocessResponse",
         "type": "object"
       },
       "MeResponse": {
@@ -7769,12 +8052,27 @@
       "QueueItemResponse": {
         "description": "One generation run on the panel, with the buttons it offers.",
         "properties": {
+          "autopilot_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autopilot Run Id"
+          },
           "can_cancel": {
             "title": "Can Cancel",
             "type": "boolean"
           },
           "can_discard": {
             "title": "Can Discard",
+            "type": "boolean"
+          },
+          "can_reprocess": {
+            "title": "Can Reprocess",
             "type": "boolean"
           },
           "can_retry": {
@@ -7812,6 +8110,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "lock_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Version"
+          },
           "next_attempt_at": {
             "anyOf": [
               {
@@ -7846,6 +8155,10 @@
             ],
             "title": "Position"
           },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -7856,6 +8169,33 @@
               }
             ],
             "title": "Project Id"
+          },
+          "refusal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal Code"
+          },
+          "run_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Heartbeat At"
+          },
+          "staged": {
+            "title": "Staged",
+            "type": "boolean"
           },
           "started_at": {
             "anyOf": [
@@ -7873,6 +8213,17 @@
             "title": "Status",
             "type": "string"
           },
+          "stuck_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stuck Kind"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -7889,7 +8240,15 @@
           "eta",
           "started_at",
           "next_attempt_at",
+          "run_heartbeat_at",
+          "lock_version",
           "error_code",
+          "staged",
+          "autopilot_run_id",
+          "priority",
+          "can_reprocess",
+          "refusal_code",
+          "stuck_kind",
           "can_retry",
           "can_discard",
           "can_cancel"
@@ -15617,6 +15976,112 @@
         ]
       }
     },
+    "/api/carousels/{project_id}/workflow/reprocess": {
+      "get": {
+        "description": "Return workspace capability and safe current-run progress.",
+        "operationId": "get_reprocess_capability_api_carousels__project_id__workflow_reprocess_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualRecoveryCapabilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Reprocess Capability",
+        "tags": [
+          "carousel_manual_recovery"
+        ]
+      },
+      "post": {
+        "description": "Queue or return manual recovery for an owned stuck carousel.",
+        "operationId": "reprocess_carousel_api_carousels__project_id__workflow_reprocess_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualReprocessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualReprocessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reprocess Carousel",
+        "tags": [
+          "carousel_manual_recovery"
+        ]
+      }
+    },
     "/api/carousels/{project_id}/workflow/resume": {
       "post": {
         "description": "Accept human review and resume workflow asynchronously (RW-010).\n\nStructured feedback is validated before the lock is bumped: a 422 after the bump\nwould leave the client on a stale version and reset its edits. The resume is\nqueued for the generation worker in the same transaction as the lock bump and\nthe ``in_progress`` flip: the web process never runs the phase.",
@@ -17628,6 +18093,33 @@
         ]
       }
     },
+    "/api/generation-runs/process": {
+      "post": {
+        "description": "Enqueue the same full maintenance control job used by cron.",
+        "operationId": "process_generation_queue_api_generation_runs_process_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceProcessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Process Generation Queue",
+        "tags": [
+          "carousel_manual_recovery"
+        ]
+      }
+    },
     "/api/generation-runs/{run_id}/cancel": {
       "post": {
         "description": "Take an autopilot run that has not started out of the queue.",
@@ -17726,9 +18218,68 @@
         ]
       }
     },
+    "/api/generation-runs/{run_id}/reprocess": {
+      "post": {
+        "description": "Queue or return admin recovery for an existing generation run.",
+        "operationId": "reprocess_generation_run_api_generation_runs__run_id__reprocess_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRunReprocessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualReprocessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reprocess Generation Run",
+        "tags": [
+          "carousel_manual_recovery"
+        ]
+      }
+    },
     "/api/generation-runs/{run_id}/retry": {
       "post": {
-        "description": "Put a dead-lettered autopilot run back in the queue.",
+        "description": "Put a dead-lettered autopilot run back through shared manual recovery.",
         "operationId": "retry_generation_run_api_generation_runs__run_id__retry_post",
         "parameters": [
           {

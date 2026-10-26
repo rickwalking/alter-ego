@@ -20,6 +20,7 @@ Each step is idempotent, so two dispatchers or a re-run pass change nothing twic
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 import structlog
 
@@ -32,8 +33,10 @@ from rag_backend.modules.generation_queue.constants import (
 from rag_backend.modules.generation_queue.domain.models import (
     DeadLetterCommand,
     GenerationRun,
+    GenerationStatus,
     HeldJob,
     autopilot_stage,
+    is_active,
 )
 from rag_backend.modules.generation_queue.domain.ports import (
     ActiveAutopilotSource,
@@ -70,6 +73,18 @@ class Dispatcher:
 
     def __init__(self, deps: DispatcherDependencies) -> None:
         self._deps = deps
+
+    async def kick(self, run_id: UUID) -> bool:
+        """Reconcile one queued run and persist its transport job id."""
+        run = await self._deps.store.get(run_id)
+        if run is None or run.status is not GenerationStatus.QUEUED:
+            return False
+        job_id = await self._deps.queue.kick(run)
+        current = await self._deps.store.get(run_id)
+        if job_id is None or current is None or not is_active(current.status):
+            return False
+        await self._deps.store.set_job(run.id, job_id)
+        return True
 
     async def run_once(self) -> DispatchReport:
         """One idempotent pass."""

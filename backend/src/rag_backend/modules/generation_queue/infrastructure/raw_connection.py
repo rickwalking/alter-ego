@@ -30,6 +30,14 @@ class AsyncpgConnection(Protocol):
         """Run one statement."""
         ...
 
+    def is_closed(self) -> bool:
+        """Whether the driver handle is already closed."""
+        ...
+
+    def terminate(self) -> None:
+        """Close the driver handle and socket immediately."""
+        ...
+
     def add_termination_listener(self, callback: TerminationCallback) -> None:
         """Call ``callback`` when the connection closes."""
         ...
@@ -39,14 +47,20 @@ class AsyncpgConnection(Protocol):
 async def asyncpg_connection(engine: AsyncEngine) -> AsyncIterator[AsyncpgConnection]:
     """A dedicated raw connection for the context; never returned to the pool."""
     connection = await engine.connect()
+    driver: AsyncpgConnection | None = None
     try:
         raw = await connection.get_raw_connection()
         if raw.driver_connection is None:
             raise RuntimeError(ERR_NO_DRIVER_CONNECTION)
-        yield cast(AsyncpgConnection, raw.driver_connection)
+        driver = cast(AsyncpgConnection, raw.driver_connection)
+        yield driver
     finally:
-        await connection.invalidate()
-        await connection.close()
+        try:
+            if driver is not None:
+                driver.terminate()
+        finally:
+            await connection.invalidate()
+            await connection.close()
 
 
 __all__ = [

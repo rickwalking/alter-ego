@@ -9,7 +9,20 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import (
+    JSON,
+    ColumnElement,
+    String,
+    cast,
+    column,
+    delete,
+    exists,
+    func,
+    not_,
+    or_,
+    select,
+    table,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +56,32 @@ from rag_backend.modules.autopilot.infrastructure.topic_rows import topic_row
 from rag_backend.modules.autopilot.queue_constants import CANDIDATE_GENERATE_NOW
 from rag_backend.modules.autopilot.recovery_constants import INTAKE_LOCK_KEY
 from rag_backend.modules.editorial.public import CarouselAutomationAcl
+from rag_backend.modules.generation_queue.constants import (
+    MANUAL_ORIGIN_REPROCESS,
+    PAYLOAD_MANUAL_ORIGIN,
+    TABLE_GENERATION_RUNS,
+)
+
+_GENERATION_RUNS = table(
+    TABLE_GENERATION_RUNS,
+    column("autopilot_run_id", String),
+    column("payload", JSON),
+)
+_UUID_DASH = "-"
+_EMPTY = ""
+
+
+def _not_manual_recovery() -> ColumnElement[bool]:
+    autopilot_id = func.replace(cast(AutopilotRunModel.id, String), _UUID_DASH, _EMPTY)
+    generation_id = func.replace(
+        _GENERATION_RUNS.c.autopilot_run_id, _UUID_DASH, _EMPTY
+    )
+    manual = select(_GENERATION_RUNS.c.autopilot_run_id).where(
+        generation_id == autopilot_id,
+        _GENERATION_RUNS.c.payload[PAYLOAD_MANUAL_ORIGIN].as_string()
+        == MANUAL_ORIGIN_REPROCESS,
+    )
+    return not_(exists(manual))
 
 
 class SqlAlchemyTopicIntakeStore:
@@ -105,6 +144,7 @@ class SqlAlchemyTopicIntakeStore:
                     TopicCandidateModel.status.is_(None),
                     TopicCandidateModel.status != CANDIDATE_GENERATE_NOW,
                 ),
+                _not_manual_recovery(),
             )
         )
         return int(result.scalar_one())

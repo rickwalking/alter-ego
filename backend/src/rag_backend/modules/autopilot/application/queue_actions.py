@@ -14,7 +14,6 @@ from uuid import UUID, uuid4
 from rag_backend.modules.autopilot.application.run_revive import (
     ReviveDependencies,
     discard_parked,
-    revive,
 )
 from rag_backend.modules.autopilot.domain.backlog import (
     BacklogStore,
@@ -58,7 +57,6 @@ from rag_backend.modules.autopilot.queue_constants import (
     KIND_DEAD_DISCARD,
     KIND_DEAD_RETRY,
     KIND_GENERATE_NOW,
-    REASON_DEAD_RETRY,
     TEXT_APPROVED_HEADER,
     TEXT_APPROVED_LINE,
     TEXT_APPROVED_NEED_EDIT,
@@ -83,6 +81,9 @@ class _QueueDeps(Protocol):
 
     @property
     def clock(self) -> Clock: ...
+
+    @property
+    def owner_chat_id(self) -> str: ...
 
     @property
     def queue(self) -> QueueControl | None: ...
@@ -221,10 +222,11 @@ async def _retry(host: _Host, update: WebhookUpdate, run_id: UUID) -> None:
 
 
 async def _retried_run(host: _Host, run: AutopilotRun) -> UUID | None:
-    """The run now queued for this dead letter, or None when nothing moved."""
-    if not is_dead_letter(run.state_reason):
+    """Delegate to shared manual recovery; preserve the callback reply contract."""
+    queue = host._deps.queue
+    if queue is None or not is_dead_letter(run.state_reason):
         return None
-    return await revive(_revive_deps(host), run, REASON_DEAD_RETRY)
+    return await queue.reprocess_autopilot(run.run_id, host._deps.owner_chat_id)
 
 
 def _revive_deps(host: _Host) -> ReviveDependencies:

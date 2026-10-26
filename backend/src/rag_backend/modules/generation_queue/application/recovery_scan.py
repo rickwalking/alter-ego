@@ -17,7 +17,6 @@ from datetime import datetime, timedelta
 import structlog
 
 from rag_backend.modules.generation_queue.constants import (
-    FAILURE_REASON_MAX_CHARS,
     LOG_SCAN_ITEM_FAILED,
     SCAN_PURGE_DAYS,
     SCAN_RECOVERY_DAYS,
@@ -37,13 +36,13 @@ from rag_backend.modules.generation_queue.domain.recovery import (
     RecoveryFailure,
     RecoveryStore,
     ScanReport,
+    failure_metadata,
 )
 
 logger = structlog.get_logger()
 
 _TITLE_SEPARATOR = "; "
 _ELLIPSIS = "…"
-_REASON_SEPARATOR = ": "
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -98,21 +97,20 @@ class DailyRecoveryScan:
 
 
 def _item_failure(drive: ParkedDrive, exc: Exception) -> RecoveryFailure:
+    metadata = failure_metadata(exc)
     logger.warning(
         LOG_SCAN_ITEM_FAILED,
         generation_run_id=str(drive.generation_run_id),
         autopilot_run_id=drive.autopilot_run_id,
-        error_type=type(exc).__name__,
+        error_type=metadata.exception_type,
+        dbapi_type=metadata.dbapi_type,
+        sqlstate=metadata.sqlstate,
     )
-    return RecoveryFailure(drive=drive, reason=_failure_reason(exc))
+    return RecoveryFailure(drive=drive, reason=metadata.reason)
 
 
 def _failure_reason(exc: Exception) -> str:
-    message = " ".join(str(exc).split())
-    if not message:
-        return type(exc).__name__
-    reason = f"{type(exc).__name__}{_REASON_SEPARATOR}{message}"
-    return reason[:FAILURE_REASON_MAX_CHARS]
+    return failure_metadata(exc).reason
 
 
 def summary_text(report: ScanReport) -> str:

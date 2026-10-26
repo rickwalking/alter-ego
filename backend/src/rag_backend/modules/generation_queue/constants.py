@@ -30,6 +30,8 @@ ACTIVE_STATUSES = (STATUS_QUEUED, STATUS_RUNNING, STATUS_RETRY_WAIT)
 
 KIND_AUTOPILOT_DRIVE = "autopilot_drive"
 KIND_WORKFLOW_RESUME = "workflow_resume"
+DRIVEN_AUTOPILOT_STATES = ("queued", "generating", "reworking")
+AUTOPILOT_OWNER_WAIT_STATES = ("awaiting_owner", "awaiting_thesis")
 
 DEDUPE_AUTOPILOT = "autopilot:{run_id}"
 DEDUPE_RESUME = "resume:{project_id}:{lock_version}"
@@ -40,6 +42,11 @@ TABLE_AUTOPILOT_RUNS = "autopilot_runs"
 COLUMN_CAROUSEL_PROJECT_ID = "carousel_project_id"
 
 ENTRYPOINT = "carousel_generation"
+MAINTENANCE_ENTRYPOINT = "generation_maintenance"
+MAINTENANCE_FULL = "full"
+MAINTENANCE_DISPATCH_PREFIX = "dispatch:"
+MAINTENANCE_ADVISORY_KEY = 5520552
+ORDINARY_PRIORITY = 0
 
 MAX_PHASE_ATTEMPTS = 3
 MAX_RUN_ATTEMPTS = 10
@@ -111,6 +118,21 @@ SCAN_STALE_HOURS = 72
 SCAN_PURGE_DAYS = 30
 SCAN_BATCH = 50
 PAYLOAD_RECOVERY_ATTEMPT = "recovery_attempt"
+PAYLOAD_MANUAL_ORIGIN = "manual_origin"
+MANUAL_ORIGIN_REPROCESS = "carousel_reprocess"
+PAYLOAD_MANUAL_REQUEST_ID = "manual_request_id"
+PAYLOAD_MANUAL_ACTOR_ID = "manual_actor_id"
+PAYLOAD_MANUAL_STUCK_KIND = "manual_stuck_kind"
+PAYLOAD_MANUAL_REQUESTED_AT = "manual_requested_at"
+PAYLOAD_MANUAL_PRIORITY = "manual_priority"
+PAYLOAD_MANUAL_REPLACES_RUN_ID = "replaces_generation_run_id"
+PAYLOAD_MANUAL_ACCELERATE_JOB_ID = "manual_accelerate_job_id"
+PAYLOAD_MANUAL_CANCEL_JOB_ID = "manual_cancel_job_id"
+PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID = "manual_cancel_attempt_id"
+MANUAL_REPROCESS_PRIORITY = 1
+AUDIT_CAROUSEL_REPROCESS = "carousel.reprocess.requested"
+AGGREGATE_CAROUSEL = "carousel"
+AGGREGATE_GENERATION_RUN = "generation_run"
 RECOVERABLE_ERROR_CODES = (
     ERROR_TRANSIENT,
     ERROR_PHASE_BUDGET,
@@ -128,7 +150,6 @@ SUMMARY_FAILURE_ITEM = "{run_id}: {reason}"
 SUMMARY_FAILURE_OVERFLOW = "… e mais {count}"
 SUMMARY_TITLE_MAX_CHARS = 80
 SUMMARY_TITLES_MAX = 10
-FAILURE_REASON_MAX_CHARS = 160
 LOG_SCAN_DONE = "generation_daily_scan_done"
 LOG_SCAN_FAILED = "generation_daily_scan_failed"
 LOG_SCAN_ITEM_FAILED = "generation_daily_recovery_item_failed"

@@ -6,6 +6,8 @@
  * live here rather than inline in the `.tsx` files.
  */
 
+import type { CarouselReprocessCapability } from "@/schemas/carousel-reprocess";
+
 export interface BlogPostEditExtrasProps {
   postId: string;
   title: string;
@@ -32,4 +34,23 @@ export interface VersionDiffViewProps {
   rightLabel: string;
   leftText: string;
   rightText: string;
+}
+
+export interface CarouselReprocessProps {
+  capability: CarouselReprocessCapability | null;
+  pending: boolean;
+  canSubmit: boolean;
+  error: string | null;
+  onReprocess: () => void;
+}
+
+export interface CarouselReprocessProgressProps {
+  capability: CarouselReprocessCapability;
+}
+
+export interface CarouselReprocessActionProps {
+  capability: CarouselReprocessCapability;
+  pending: boolean;
+  canSubmit: boolean;
+  onReprocess: () => void;
 }

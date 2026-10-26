@@ -29,9 +29,26 @@ from rag_backend.domain.models.carousel_conflict import (
     CarouselConflictError,
 )
 from rag_backend.modules.generation_queue.application.executors import project_key
-from rag_backend.modules.generation_queue.constants import LOG_ORPHAN_ADOPTED
+from rag_backend.modules.generation_queue.application.manual_reprocess import (
+    ManualRecoveryDependencies,
+    ManualRecoveryService,
+)
+from rag_backend.modules.generation_queue.constants import (
+    LOG_ORPHAN_ADOPTED,
+    ORPHAN_JOB_GRACE_SECONDS,
+)
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
 from rag_backend.modules.generation_queue.domain.errors import DriveLockBusyError
+from rag_backend.modules.generation_queue.domain.manual_recovery import (
+    ManualReprocessCommand,
+    RecoveryCapability,
+    RecoveryOutcome,
+    RecoveryPolicy,
+    RecoveryResult,
+)
+from rag_backend.modules.generation_queue.domain.manual_recovery_ports import (
+    MaintenanceNotifier,
+)
 from rag_backend.modules.generation_queue.domain.models import (
     WorkflowResumePayload,
     adopt_stage,
@@ -41,6 +58,9 @@ from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
 from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
     DriveLockTiming,
     PostgresDriveLock,
+)
+from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
+    WebMaintenanceGateway,
 )
 from rag_backend.modules.generation_queue.infrastructure.schema import (
     QueueSchemaReport,
@@ -76,12 +96,19 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 __all__ = [
+    "MaintenanceNotifier",
+    "ManualRecoveryService",
+    "ManualReprocessCommand",
     "ParkedDrive",
     "QueueSchemaReport",
+    "RecoveryCapability",
+    "RecoveryOutcome",
+    "RecoveryResult",
     "WorkflowResumePayload",
     "active_queue",
     "adopt_orphaned_projects",
     "apply_queue_schema",
+    "build_manual_recovery",
     "cancel_queued_run",
     "count_queue_hand_back",
     "format_queue_schema_report",
@@ -101,6 +128,34 @@ __all__ = [
     "stage_workflow_resume",
     "verify_queue_schema",
 ]
+
+
+def build_manual_recovery(
+    session: AsyncSession, notifier: MaintenanceNotifier | None = None
+) -> ManualRecoveryService:
+    """Compose the isolated recovery service on one API caller's session."""
+    from rag_backend.infrastructure.config.settings import get_settings
+    from rag_backend.modules.generation_queue.infrastructure import (
+        manual_recovery_audit,
+        manual_recovery_store,
+    )
+
+    bind = session.bind
+    engine = bind.engine if isinstance(bind, AsyncConnection) else bind
+    settings = get_settings()
+    return ManualRecoveryService(
+        ManualRecoveryDependencies(
+            store=manual_recovery_store.SqlManualRecoveryStore(session, UTC_CLOCK),
+            audit=manual_recovery_audit.SqlManualRecoveryAudit(session),
+            lock=PostgresDriveLock(engine, _NO_WAIT),
+            notifier=notifier or WebMaintenanceGateway(engine),
+            clock=UTC_CLOCK,
+            policy=RecoveryPolicy(
+                heartbeat_stale_seconds=settings.workflow_run_heartbeat_stale_seconds,
+                dispatcher_grace_seconds=ORPHAN_JOB_GRACE_SECONDS,
+            ),
+        )
+    )
 
 
 async def stage_workflow_resume(

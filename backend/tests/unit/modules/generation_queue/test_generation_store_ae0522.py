@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import timedelta
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.modules.generation_queue.domain.budget import AttemptCounts
 from rag_backend.modules.generation_queue.domain.models import (
+    AttemptDeadLetterCommand,
     CountsUpdate,
     DeadLetterCommand,
     GenerationKind,
@@ -53,6 +55,34 @@ async def _stage_resume(
         return inserted
 
 
+def _retry_command(run_id: UUID, attempt_id: UUID, code: str) -> RetryCommand:
+    return RetryCommand(
+        run_id=run_id,
+        attempt_id=attempt_id,
+        next_attempt_at=NOW,
+        error_code=code,
+        error=code,
+    )
+
+
+async def _attempt_writes(
+    store: SqlGenerationRunStore, run_id: UUID, attempt_id: UUID
+) -> tuple[bool, bool, bool, bool]:
+    """Try every attempt-fenced write with the supplied claim."""
+    counts = AttemptCounts(attempts=9, phase_attempts={"stale": 9})
+    update = CountsUpdate(counts=counts, phase="stale")
+    waiting = _retry_command(run_id, attempt_id, "stale")
+    dead = AttemptDeadLetterCommand(
+        run_id=run_id, attempt_id=attempt_id, error_code="stale", error="stale"
+    )
+    return (
+        await store.save_counts(run_id, attempt_id, update),
+        await store.mark_succeeded(run_id, attempt_id),
+        await store.mark_waiting(waiting),
+        await store.mark_attempt_dead_letter(dead),
+    )
+
+
 async def test_same_stage_twice_keeps_one_active_run(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -90,8 +120,9 @@ async def test_a_finished_run_frees_its_dedupe_key(
     store = SqlGenerationRunStore(sessions)
     await store.stage(autopilot_stage("r1"))
     (run,) = await store.undispatched(1)
-    assert await store.mark_running(run.id)
-    await store.mark_succeeded(run.id)
+    attempt_id = await store.mark_running(run.id)
+    assert attempt_id is not None
+    assert await store.mark_succeeded(run.id, attempt_id)
     assert (await store.get(run.id)).status is GenerationStatus.SUCCEEDED
     assert await store.stage(autopilot_stage("r1"))
 
@@ -116,12 +147,15 @@ async def test_lifecycle_and_compare_and_set(
     await store.set_job(run.id, 42)
     assert await store.undispatched(1) == []
     assert [item.pgq_job_id for item in await store.dispatched_active(5)] == [42]
-    assert await store.mark_running(run.id)
+    attempt_id = await store.mark_running(run.id)
+    assert attempt_id is not None
     counts = AttemptCounts(attempts=1, phase_attempts={"start": 1})
-    await store.save_counts(run.id, CountsUpdate(counts=counts, phase="start"))
-    await store.mark_waiting(
+    update = CountsUpdate(counts=counts, phase="start")
+    assert await store.save_counts(run.id, attempt_id, update)
+    assert await store.mark_waiting(
         RetryCommand(
             run_id=run.id,
+            attempt_id=attempt_id,
             next_attempt_at=NOW + timedelta(seconds=30),
             error_code="transient",
             error="TimeoutError: x",
@@ -139,6 +173,60 @@ async def test_lifecycle_and_compare_and_set(
     assert cleared.status is GenerationStatus.QUEUED
 
 
+async def test_wrong_attempt_writes_are_all_rejected(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: A stale running row is taken over safely"""
+    store = SqlGenerationRunStore(sessions)
+    await store.stage(autopilot_stage("r1"))
+    (run,) = await store.undispatched(1)
+    current = await store.mark_running(run.id)
+    assert current is not None
+    assert await _attempt_writes(store, run.id, uuid4()) == (False,) * 4
+    stored = await store.get(run.id)
+    assert stored.status is GenerationStatus.RUNNING
+    assert stored.attempt_id == current
+    assert stored.counts == AttemptCounts(attempts=0, phase_attempts={})
+
+
+async def test_aba_attempt_writes_are_all_rejected(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: A stale running row is taken over safely"""
+    store = SqlGenerationRunStore(sessions)
+    await store.stage(autopilot_stage("r1"))
+    (run,) = await store.undispatched(1)
+    first = await store.mark_running(run.id)
+    assert first is not None
+    waiting = _retry_command(run.id, first, "transient")
+    assert await store.mark_waiting(waiting)
+    second = await store.mark_running(run.id)
+    assert second is not None and second != first
+    assert await _attempt_writes(store, run.id, first) == (False,) * 4
+    stored = await store.get(run.id)
+    assert stored.status is GenerationStatus.RUNNING
+    assert stored.attempt_id == second
+    assert stored.payload["autopilot_run_id"] == "r1"
+    assert stored.counts == AttemptCounts(attempts=0, phase_attempts={})
+
+
+async def test_current_attempt_can_dead_letter(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: A permanent failure parks the run with its reason"""
+    store = SqlGenerationRunStore(sessions)
+    await store.stage(autopilot_stage("r1"))
+    (run,) = await store.undispatched(1)
+    attempt_id = await store.mark_running(run.id)
+    assert attempt_id is not None
+    command = AttemptDeadLetterCommand(
+        run_id=run.id, attempt_id=attempt_id, error_code="permanent", error="e"
+    )
+    assert await store.mark_attempt_dead_letter(command)
+    assert not await store.mark_attempt_dead_letter(command)
+    assert (await store.get(run.id)).status is GenerationStatus.DEAD_LETTER
+
+
 async def test_dead_letter_once_and_requeue_once(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -147,8 +235,11 @@ async def test_dead_letter_once_and_requeue_once(
     await store.stage(autopilot_stage("r1"))
     (run,) = await store.undispatched(1)
     await store.set_job(run.id, 7)
+    attempt_id = await store.mark_running(run.id)
+    assert attempt_id is not None
     counts = AttemptCounts(attempts=5, phase_attempts={"content": 4, "start": 1})
-    await store.save_counts(run.id, CountsUpdate(counts=counts, phase="content"))
+    update = CountsUpdate(counts=counts, phase="content")
+    assert await store.save_counts(run.id, attempt_id, update)
     command = DeadLetterCommand(run_id=run.id, error_code="phase", error="e")
     assert await store.mark_dead_letter(command)
     assert not await store.mark_dead_letter(command)
@@ -198,8 +289,9 @@ async def test_a_finished_run_is_never_requeued_as_lost(
     await store.stage(autopilot_stage("r1"))
     (run,) = await store.undispatched(1)
     await store.set_job(run.id, 9)
-    await store.mark_running(run.id)
-    await store.mark_succeeded(run.id)
+    attempt_id = await store.mark_running(run.id)
+    assert attempt_id is not None
+    assert await store.mark_succeeded(run.id, attempt_id)
     await store.clear_job(run.id)
     finished = await store.get(run.id)
     assert finished.status is GenerationStatus.SUCCEEDED

@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
-from rag_backend.api.dependencies.roles import require_admin
+from rag_backend.api.dependencies.roles import AdminUser, require_admin
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.modules.autopilot.api.schemas import (
@@ -62,10 +62,26 @@ class _Panel:
 
     service: QueueBoardService
     session: AsyncSession
+    recovery: SqlQueueControl
+    actor_id: str
 
 
-def _panel(session: Annotated[AsyncSession, Depends(get_db)]) -> _Panel:
-    service = QueueBoardService(
+def _panel(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    user: AdminUser,
+) -> _Panel:
+    notifier = getattr(request.app.state, "manual_recovery_notifier", None)
+    return _Panel(
+        service=_board_service(session),
+        session=session,
+        recovery=SqlQueueControl(session, notifier),
+        actor_id=str(user.id),
+    )
+
+
+def _board_service(session: AsyncSession) -> QueueBoardService:
+    return QueueBoardService(
         QueueBoardDependencies(
             reader=SqlQueueBoardReader(session),
             backlog=SqlBacklogStore(session),
@@ -77,7 +93,6 @@ def _panel(session: Annotated[AsyncSession, Depends(get_db)]) -> _Panel:
             ),
         )
     )
-    return _Panel(service=service, session=session)
 
 
 Panel = Annotated[_Panel, Depends(_panel)]
@@ -112,9 +127,10 @@ async def _apply(panel: _Panel, outcome: str) -> QueueActionResponse:
 async def retry_generation_run(
     request: Request, run_id: UUID, panel: Panel
 ) -> QueueActionResponse:
-    """Put a dead-lettered autopilot run back in the queue."""
+    """Put a dead-lettered autopilot run back through shared manual recovery."""
     del request
-    return await _apply(panel, await panel.service.retry(run_id))
+    result = await panel.recovery.retry_generation(run_id, panel.actor_id)
+    return await _apply(panel, result)
 
 
 @router.post(PATH_GENERATION_RUN_DISCARD, response_model=QueueActionResponse)

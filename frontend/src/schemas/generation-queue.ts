@@ -14,7 +14,15 @@ export const queueItemSchema = z.object({
   eta: timestamp.nullable(),
   started_at: timestamp.nullable(),
   next_attempt_at: timestamp.nullable(),
+  run_heartbeat_at: timestamp.nullable(),
+  lock_version: z.number().int().nullable(),
   error_code: z.string().nullable(),
+  staged: z.boolean(),
+  autopilot_run_id: z.string().nullable(),
+  priority: z.number().int(),
+  can_reprocess: z.boolean(),
+  refusal_code: z.string().nullable(),
+  stuck_kind: z.string().nullable(),
   can_retry: z.boolean(),
   can_discard: z.boolean(),
   can_cancel: z.boolean(),
@@ -39,6 +47,11 @@ export const queueBoardResponseSchema = z.object({
 /** What a panel button did. */
 export const queueActionResponseSchema = z.object({
   outcome: z.string(),
+});
+
+export const queueMaintenanceResponseSchema = z.object({
+  outcome: z.enum(["queued", "existing"]),
+  job_id: z.number().int(),
 });
 
 export type QueueItem = z.infer<typeof queueItemSchema>;

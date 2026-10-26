@@ -1573,13 +1573,19 @@
       "dead": "Stopped",
       "backlog": "Waiting list (daily limit)",
       "position": "#{position}",
+      "actionForTheme": "{action}: {theme}",
       "untitled": "Untitled",
       "eta": "starts ~{time}",
+      "startedAt": "started {time}",
+      "heartbeatAge": "last heartbeat {age}",
       "phase": "phase {phase}",
       "expires": "expires on {date}",
       "retry": "Try again",
       "discard": "Discard",
       "cancel": "Cancel",
+      "confirmCancel": "Cancel generation for {theme}?",
+      "confirmDiscard": "Discard {theme}?",
+      "confirmBack": "Back",
       "generateNow": "Generate now",
       "openEditor": "Resume in the editor",
       "loadFailed": "Could not load the queue.",
@@ -1601,7 +1607,45 @@
         "held_by_queue": "The queue gave up after several crashes.",
         "other": "Queue error ({code})."
       },
-      "notAllowed": "This run can no longer take that action; the panel was refreshed."
+      "notAllowed": "This run can no longer take that action; the panel was refreshed.",
+      "processNow": "Process queue now",
+      "processing": "Processing queue…",
+      "processFailed": "Could not process the queue. Try again.",
+      "processForbidden": "You do not have permission to process the queue."
+    },
+    "reprocess": {
+      "title": "Carousel recovery",
+      "action": "Reprocess",
+      "pending": "Reprocessing…",
+      "pendingReason": "The reprocess request is still being sent.",
+      "errors": {
+        "loadFailed": "Could not check whether this carousel can be reprocessed.",
+        "actionFailed": "Could not reprocess the carousel. Try again.",
+        "forbidden": "You do not have permission to reprocess this carousel.",
+        "unavailable": "The current workflow version is unavailable. Refresh and try again."
+      },
+      "refusals": {
+        "stale_expected_version": "The carousel changed after this page loaded. The current version has been refreshed; try again.",
+        "owner_waiting": "This phase is waiting for your review; there is no stuck run to reprocess.",
+        "normal_queued": "This work is already queued normally and is not stuck.",
+        "dispatcher_grace": "This work is still within the normal queue staging window.",
+        "fresh_running": "This run is active and reporting liveness; it is not stuck.",
+        "null_heartbeat": "There is not enough liveness data to confirm that this run is stuck.",
+        "drive_active": "Another run is using this carousel. Try again when it finishes.",
+        "unsupported": "The current state does not support reprocessing.",
+        "projectless_unstaged": "This work does not have a generation run to reprocess yet.",
+        "concurrent_update": "The queue changed at the same time. Wait for the refresh and try again."
+      },
+      "progress": {
+        "queued": "Queued for reprocessing",
+        "retryWait": "Waiting for the reprocess retry",
+        "running": "Reprocessing phase {phase}",
+        "runningUnknown": "Reprocessing is running",
+        "position": "position {position}",
+        "eta": "estimated start in {minutes} min",
+        "failed": "Reprocessing failed.",
+        "failedWithCode": "Reprocessing failed ({code})."
+      }
     }
   },
   "dashboard": {

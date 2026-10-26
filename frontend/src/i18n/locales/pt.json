@@ -1573,13 +1573,19 @@
       "dead": "Paradas",
       "backlog": "Fila de espera (limite diário)",
       "position": "#{position}",
+      "actionForTheme": "{action}: {theme}",
       "untitled": "Sem título",
       "eta": "início ~{time}",
+      "startedAt": "início às {time}",
+      "heartbeatAge": "último sinal de vida {age}",
       "phase": "fase {phase}",
       "expires": "expira em {date}",
       "retry": "Tentar de novo",
       "discard": "Descartar",
       "cancel": "Cancelar",
+      "confirmCancel": "Cancelar a geração de {theme}?",
+      "confirmDiscard": "Descartar {theme}?",
+      "confirmBack": "Voltar",
       "generateNow": "Gerar agora",
       "openEditor": "Retomar no editor",
       "loadFailed": "Não foi possível carregar a fila.",
@@ -1601,7 +1607,45 @@
         "held_by_queue": "A fila desistiu depois de várias quedas.",
         "other": "Erro na fila ({code})."
       },
-      "notAllowed": "Esta execução não aceita mais essa ação; o painel foi atualizado."
+      "notAllowed": "Esta execução não aceita mais essa ação; o painel foi atualizado.",
+      "processNow": "Processar fila agora",
+      "processing": "Processando fila…",
+      "processFailed": "Não foi possível processar a fila. Tente novamente.",
+      "processForbidden": "Você não tem permissão para processar a fila."
+    },
+    "reprocess": {
+      "title": "Recuperação do carrossel",
+      "action": "Reprocessar",
+      "pending": "Reprocessando…",
+      "pendingReason": "A solicitação de reprocessamento ainda está sendo enviada.",
+      "errors": {
+        "loadFailed": "Não foi possível verificar se este carrossel pode ser reprocessado.",
+        "actionFailed": "Não foi possível reprocessar o carrossel. Tente novamente.",
+        "forbidden": "Você não tem permissão para reprocessar este carrossel.",
+        "unavailable": "A versão atual do fluxo não está disponível. Atualize e tente novamente."
+      },
+      "refusals": {
+        "stale_expected_version": "O carrossel mudou depois que esta tela foi carregada. A versão atual foi atualizada; tente novamente.",
+        "owner_waiting": "Esta fase está aguardando sua revisão; não há execução parada para reprocessar.",
+        "normal_queued": "Este trabalho já está na fila normal e não está parado.",
+        "dispatcher_grace": "Este trabalho ainda está dentro do tempo normal de entrada na fila.",
+        "fresh_running": "A execução está ativa e enviando sinais de vida; não está parada.",
+        "null_heartbeat": "Não há dados de atividade suficientes para confirmar que a execução está parada.",
+        "drive_active": "Outra execução está usando este carrossel. Tente novamente quando ela terminar.",
+        "unsupported": "O estado atual não permite reprocessamento.",
+        "projectless_unstaged": "Este trabalho ainda não tem uma execução que possa ser reprocessada.",
+        "concurrent_update": "A fila mudou ao mesmo tempo. Aguarde a atualização e tente novamente."
+      },
+      "progress": {
+        "queued": "Na fila para reprocessar",
+        "retryWait": "Aguardando a nova tentativa de reprocessamento",
+        "running": "Reprocessando a fase {phase}",
+        "runningUnknown": "O reprocessamento está em execução",
+        "position": "posição {position}",
+        "eta": "início estimado em {minutes} min",
+        "failed": "O reprocessamento falhou.",
+        "failedWithCode": "O reprocessamento falhou ({code})."
+      }
     }
   },
   "dashboard": {

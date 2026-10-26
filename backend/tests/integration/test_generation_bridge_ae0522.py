@@ -38,7 +38,7 @@ from tests.unit.modules.generation_queue.queue_fakes import make_run, resume_run
 
 pytestmark = pytest.mark.integration
 
-_NOW = datetime(2026, 10, 23, 12, tzinfo=UTC)
+_NOW = datetime.now(UTC)
 Sessions = async_sessionmaker[AsyncSession]
 
 
