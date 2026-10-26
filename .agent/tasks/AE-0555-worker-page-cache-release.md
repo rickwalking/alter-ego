@@ -1,6 +1,6 @@
 # AE-0555 — The generation worker releases the page cache of the carousel files it writes
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
@@ -64,13 +64,13 @@ Findings, with measurements (see Test Evidence):
 
 ## Acceptance Criteria
 
-- [ ] AC1 A reproducible local measurement runs N carousel images/export cycles with fakes for paid calls
+- [x] AC1 A reproducible local measurement runs N carousel images/export cycles with fakes for paid calls
   and reports RSS/tracemalloc/cgroup memory per cycle, showing the growth before the fix and a flat
   baseline after it (numbers in Test Evidence).
-- [ ] AC2 The images/export peak for a 10-slide carousel drops measurably, or the ticket explains with
+- [x] AC2 The images/export peak for a 10-slide carousel drops measurably, or the ticket explains with
   measurements what bounds it (Test Evidence).
-- [ ] AC3 The fix is at the root (release what the worker wrote): no cap raise, no periodic restart.
-- [ ] AC4 `.agent/reports/AE-0522.memory-budget.md` carries the new numbers.
+- [x] AC3 The fix is at the root (release what the worker wrote): no cap raise, no periodic restart.
+- [x] AC4 `.agent/reports/AE-0522.memory-budget.md` carries the new numbers.
 
 ## Gherkin Scenarios
 
@@ -129,7 +129,7 @@ Findings, with measurements (see Test Evidence):
 
 ### 2026-10-26
 
-Measured, reproduced in the prod image, implemented the release at the two write sites.
+Measured on prod (read-only), reproduced in the prod image, implemented the release at the two write sites, re-measured before/after.
 
 ## Files Touched
 
@@ -146,7 +146,37 @@ Measured, reproduced in the prod image, implemented the release at the two write
 
 ## Test Evidence
 
-Pending.
+Measurement: `backend/scripts/measure_carousel_export_memory.py`, run in the prod image (`backend/Dockerfile`:
+Python 3.11, headless shell) with the worker's limits (`-m 1600m --memory-swap 1600m --cpus 1`, read-only
+root, `/tmp` tmpfs, outputs on a volume, `--keep`). Each cycle is a 10-slide PT+EN carousel: generated test
+images through the bridge codec, standard and HD export with real Chromium, the PDF, and the real artifact
+adapter with only the database faked. No paid calls. Eight cycles, before (origin/main image) and after (the
+fix image):
+
+| cycle | before: idle / run files cached / peak (MiB) | after: idle / run files cached / peak (MiB) |
+|---|---|---|
+| 1 | 468 / 70 / 1123 | 369 / 0 / 1096 |
+| 2 | 465 / 127 / 1159 | 383 / 0 / 1074 |
+| 4 | 461 / 125 / 1109 | 370 / 0 / 1079 |
+| 6 | 490 / 147 / 1138 | 358 / 0 / 1044 |
+| 8 | 493 / 119 / 1110 | 348 / 0 / 1029 |
+
+- Python process anon 234-247 MiB and tracemalloc 3-10 MiB in both runs: no Python-side retention in
+  images/export.
+- An earlier before-run on the same image, with more free memory in the Docker VM, kept accumulating:
+  idle 361 → 427 → 424 → 606 → 592 → 643 MiB, file cache 110 → 385 MiB, peak 980 → 1297 MiB. That is the
+  prod pattern. How much piles up depends on the host's spare memory, which is why the `mincore` column (the
+  run's own files still cached) is the stable signal: 119-147 MiB before, 0 after.
+- Real-kernel check: a written 20 MiB file showed 20 MiB resident, and 0 after `release_page_cache`.
+- AC2: the peak dropped from 1109-1159 to 1029-1096 MiB (by about 70-115 MiB per cycle in the side-by-side
+  runs, and by up to about 270 MiB against the accumulating run). What bounds it now is Chromium's HD
+  render, about 650-700 MiB over the idle baseline (the per-process breakdown and the Chromium flag
+  experiments are in Problem). Expected worker peak about 1050-1100 MiB against the 1600m cap.
+- Tests: `tests/unit/infrastructure/test_page_cache_ae0555.py` (9) and
+  `tests/unit/infrastructure/test_page_cache_call_sites_ae0555.py` (5). The call-site tests failed (5/5)
+  with the source change reverted and pass with it. The existing export, artifact, finalize and port suites
+  pass (102 tests).
+- No assertion or expectation lines were removed.
 
 ## QA Report
 

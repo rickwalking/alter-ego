@@ -26,6 +26,8 @@ of the process tree's anonymous memory seen during the cycle (Python, the Playwr
 driver and Chromium). When the process runs in its own cgroup (a container, or
 ``systemd-run --user --scope``): ``cgroup_peak_mib`` during the cycle, and
 ``cgroup_mib`` with its ``anon``/``file``/``shmem`` split after it.
+``output_cached_mib``: how much of the files written so far is still in the page
+cache (``mincore``), independent of how much memory the host has to spare.
 
 USAGE (inside the backend image, capped like the worker)
     docker run --rm -m 1600m --memory-swap 1600m --tmpfs /tmp:size=512m \\
@@ -37,9 +39,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ctypes
 import gc
 import io
 import json
+import mmap
 import os
 import shutil
 import threading
@@ -85,6 +89,8 @@ _BRIDGE_SIZE = (1536, 1024)
 _CGROUP_ROOT = Path("/sys/fs/cgroup")
 _CGROUP_STAT_KEYS = ("anon", "file", "shmem")
 _PROC_ANON_KEYS = ("RssAnon:", "RssShmem:")
+_LIBC = ctypes.CDLL(None, use_errno=True)
+_RESIDENT_BIT = 1
 _BUILD_MODULE = "rag_backend.application.services.carousel.artifact_build_service"
 _BUILD_REPO = f"{_BUILD_MODULE}.PostgresCarouselArtifactBuildRepository"
 _LOCK_READER = f"{_BUILD_MODULE}.read_project_lock_version"
@@ -96,12 +102,8 @@ def _proc_kib(pid: int, keys: tuple[str, ...]) -> int:
         lines = Path(f"/proc/{pid}/status").read_text().splitlines()
     except OSError:
         return 0
-    total = 0
-    for line in lines:
-        parts = line.split()
-        if parts and parts[0] in keys:
-            total += int(parts[1])
-    return total
+    fields = [line.split() for line in lines]
+    return sum(int(parts[1]) for parts in fields if parts and parts[0] in keys)
 
 
 def _children(pid: int) -> list[int]:
@@ -125,6 +127,35 @@ def _tree(pid: int) -> list[int]:
     for child in _children(pid):
         pids.extend(_tree(child))
     return pids
+
+
+def _resident_bytes(path: Path) -> int:
+    """Bytes of ``path`` in the page cache, read with ``mincore`` (pages untouched)."""
+    size = path.stat().st_size
+    if size == 0:
+        return 0
+    pages = (size + mmap.PAGESIZE - 1) // mmap.PAGESIZE
+    vector = (ctypes.c_ubyte * pages)()
+    with path.open("rb") as handle:
+        mapping = mmap.mmap(handle.fileno(), size, access=mmap.ACCESS_COPY)
+        anchor = ctypes.c_char.from_buffer(mapping)
+        _LIBC.mincore(
+            ctypes.c_void_p(ctypes.addressof(anchor)), ctypes.c_size_t(size), vector
+        )
+        del anchor
+        mapping.close()
+    return sum(byte & _RESIDENT_BIT for byte in vector) * mmap.PAGESIZE
+
+
+def _cached_mib(root: Path) -> int:
+    """MiB of every regular file under ``root`` held in the page cache."""
+    total = 0
+    for directory, _subdirs, names in os.walk(root):
+        for name in names:
+            path = Path(directory) / name
+            if path.is_file() and not path.is_symlink():
+                total += _resident_bytes(path)
+    return total // _MIB
 
 
 def _cgroup_dir() -> Path | None:
@@ -183,32 +214,27 @@ class _PeakSampler:
             time.sleep(_SAMPLE_SECONDS)
 
 
+def _slide_type(number: int, count: int) -> str:
+    edges = {1: "intro", count: "cta", count - 1: "closing"}
+    return edges.get(number, "content")
+
+
 def _slides(count: int) -> list[SlideData]:
     """A ``count``-slide deck with EN translations, so both languages render."""
-    slides: list[SlideData] = []
-    for number in range(1, count + 1):
-        if number == 1:
-            slide_type = "intro"
-        elif number == count:
-            slide_type = "cta"
-        elif number == count - 1:
-            slide_type = "closing"
-        else:
-            slide_type = "content"
-        slides.append(
-            SlideData(
-                slide_number=number,
-                slide_type=slide_type,
-                heading=f"Titulo do slide {number} sobre agentes de IA",
-                body="Texto do corpo do slide com frases reais de tamanho medio. " * 2,
-                image_prompt=f"editorial illustration {number}",
-                translation_en={
-                    "heading": f"Slide {number} heading about AI agents",
-                    "body": "Body copy of the slide with medium sized sentences. " * 2,
-                },
-            )
+    return [
+        SlideData(
+            slide_number=number,
+            slide_type=_slide_type(number, count),
+            heading=f"Titulo do slide {number} sobre agentes de IA",
+            body="Texto do corpo do slide com frases reais de tamanho medio. " * 2,
+            image_prompt=f"editorial illustration {number}",
+            translation_en={
+                "heading": f"Slide {number} heading about AI agents",
+                "body": "Body copy of the slide with medium sized sentences. " * 2,
+            },
         )
-    return slides
+        for number in range(1, count + 1)
+    ]
 
 
 def _source_image(seed: int) -> bytes:
@@ -266,6 +292,7 @@ async def _activate_artifact(project: CarouselProject, slide_count: int) -> None
     build_repo.get_by_project_and_version = AsyncMock(return_value=None)
     build_repo.upsert_build = AsyncMock(side_effect=lambda build: build)
     build_repo.activate_build = AsyncMock(return_value=1)
+    build_repo.mark_build_status = AsyncMock()
     session = MagicMock()
     session.commit = AsyncMock()
     adapter = CarouselArtifactBuildAdapter(
@@ -304,18 +331,28 @@ async def _cycle(output: Path, slide_count: int, cycle: int) -> None:
     await _activate_artifact(project, slide_count)
 
 
-def _report(cycle: int, seconds: float, sampler: _PeakSampler) -> dict[str, object]:
+@dataclass(frozen=True)
+class _CycleOutcome:
+    cycle: int
+    seconds: float
+    sampler: _PeakSampler
+    output_root: Path
+
+
+def _report(outcome: _CycleOutcome) -> dict[str, object]:
     me = os.getpid()
+    sampler = outcome.sampler
     current, peak = tracemalloc.get_traced_memory()
     tracemalloc.reset_peak()
     row: dict[str, object] = {
-        "cycle": cycle,
-        "seconds": round(seconds, 1),
+        "cycle": outcome.cycle,
+        "seconds": round(outcome.seconds, 1),
         "rss_mib": _proc_kib(me, ("VmRSS:",)) // _KIB_PER_MIB,
         "anon_mib": _proc_kib(me, ("RssAnon:",)) // _KIB_PER_MIB,
         "tracemalloc_mib": current // _MIB,
         "tracemalloc_peak_mib": peak // _MIB,
         "tree_peak_mib": sampler.tree_peak_mib,
+        "output_cached_mib": _cached_mib(outcome.output_root),
     }
     if sampler.cgroup is not None:
         row["cgroup_peak_mib"] = sampler.cgroup_peak_mib
@@ -329,9 +366,10 @@ def _report(cycle: int, seconds: float, sampler: _PeakSampler) -> dict[str, obje
 async def _main(args: argparse.Namespace) -> None:
     tracemalloc.start()
     cgroup = _cgroup_dir()
-    print(json.dumps({"cycle": 0, **_report(0, 0.0, _PeakSampler(cgroup))}))
+    root = Path(args.output)
+    print(json.dumps(_report(_CycleOutcome(0, 0.0, _PeakSampler(cgroup), root))))
     for cycle in range(1, args.cycles + 1):
-        output = Path(args.output) / f"cycle-{cycle}"
+        output = root / f"cycle-{cycle}"
         sampler = _PeakSampler(cgroup)
         sampler.start()
         started = time.monotonic()
@@ -341,7 +379,9 @@ async def _main(args: argparse.Namespace) -> None:
             shutil.rmtree(output, ignore_errors=True)
         gc.collect()
         print(
-            json.dumps(_report(cycle, time.monotonic() - started, sampler)),
+            json.dumps(
+                _report(_CycleOutcome(cycle, time.monotonic() - started, sampler, root))
+            ),
             flush=True,
         )
 
