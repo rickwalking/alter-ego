@@ -35,7 +35,9 @@ snapshot.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Mapping
+from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
@@ -46,6 +48,7 @@ from rag_backend.application.services.carousel.presentation_review_edits import 
     edited_slides_block_approval,
 )
 from rag_backend.domain.models import CarouselProject, CarouselSlide
+from rag_backend.infrastructure.external.page_cache import release_page_cache
 from rag_backend.modules.presentation.domain.contracts import (
     ArtifactActivation,
     ProducedArtifact,
@@ -112,6 +115,10 @@ class CarouselArtifactBuildAdapter:
     async def build_and_activate(self, project_id: str) -> ArtifactActivation:
         """Build + activate the project's artifact via the unchanged CAS path.
 
+        Once activated, the page cache of the project's output tree (slides, PDFs,
+        artifact copies) is released: the files are on disk and this process does
+        not read them again.
+
         The artifact-build service is imported at call time: it pulls the
         carousel workflow graph, which imports the presentation facade, so a
         module-top import would close an import cycle.
@@ -143,6 +150,8 @@ class CarouselArtifactBuildAdapter:
                 artifact_version=result.artifact_version or "",
                 errors=tuple(result.errors),
             )
+        if project.output_dir:
+            await asyncio.to_thread(release_page_cache, Path(project.output_dir))
         return ArtifactActivation(ok=True, artifact_version=result.artifact_version)
 
 
