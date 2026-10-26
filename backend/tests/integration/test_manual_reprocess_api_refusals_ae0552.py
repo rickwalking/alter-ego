@@ -188,6 +188,35 @@ async def test_every_refusal_is_stable_and_has_no_side_effects(
     assert harness.notifier.notices == []
 
 
+async def test_cross_owner_existing_run_is_rejected(
+    harness: RecoveryApiHarness,
+) -> None:
+    """Scenario: A cross-owner existing run is rejected"""
+    own_project_id, _ = await _dead_project(harness)
+    other_project_id = str(uuid4())
+    other_run = workflow_run_row(
+        other_project_id,
+        GenerationStatus.DEAD_LETTER,
+        payload={"manual_origin": "carousel_reprocess"},
+    )
+    async with harness.sessions() as session:
+        session.add_all([
+            project_row(other_project_id, str(harness.reviewer.id)),
+            other_run,
+        ])
+        await session.commit()
+    response = await harness.client.post(
+        _url(own_project_id),
+        json={"expected_version": 4, "run_id": str(other_run.id)},
+        headers=harness.headers(harness.owner),
+    )
+    async with harness.sessions() as session:
+        audits = await reprocess_audits(session)
+    assert response.status_code == 404
+    assert audits == []
+    assert harness.notifier.notices == []
+
+
 async def test_admin_project_version_is_checked_when_supplied(
     harness: RecoveryApiHarness,
 ) -> None:

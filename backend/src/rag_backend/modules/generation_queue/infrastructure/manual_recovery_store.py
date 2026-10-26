@@ -8,12 +8,16 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
+from rag_backend.modules.autopilot.domain.queue_position import (
+    QueuePosition,
+    position_of,
+)
+from rag_backend.modules.autopilot.infrastructure.queue_control import SqlQueueControl
 from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 from rag_backend.modules.generation_queue.constants import (
     PAYLOAD_MANUAL_ACCELERATE_JOB_ID,
     PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID,
     PAYLOAD_MANUAL_CANCEL_JOB_ID,
-    PAYLOAD_MANUAL_EXECUTE_AFTER,
     STATUS_QUEUED,
     STATUS_RETRY_WAIT,
     STATUS_RUNNING,
@@ -96,6 +100,12 @@ class SqlManualRecoveryStore:
             return write
         return await self._conflict(current)
 
+    async def position(self, run: GenerationRun) -> QueuePosition | None:
+        """Place one queued run with the shared scheduling core."""
+        snapshot = await SqlQueueControl(self._session).snapshot()
+        target = UUID(run.autopilot_run_id or str(run.id))
+        return position_of(snapshot, target, self._clock.now())
+
     async def commit(self) -> None:
         """Commit recovery and audit together."""
         await self._session.commit()
@@ -146,7 +156,6 @@ class SqlManualRecoveryStore:
         lock_version: int | None,
     ) -> RecoveryWrite:
         payload = {**run.payload, **manual_payload(mutation)}
-        payload[PAYLOAD_MANUAL_EXECUTE_AFTER] = mutation.requested_at.isoformat()
         _transport_fence(payload, run, accelerate=True)
         command = RecoveryRunCAS(
             mutation=mutation,
@@ -164,7 +173,6 @@ class SqlManualRecoveryStore:
         lock_version: int | None,
     ) -> RecoveryWrite:
         payload = {**run.payload, **manual_payload(mutation)}
-        payload[PAYLOAD_MANUAL_EXECUTE_AFTER] = mutation.requested_at.isoformat()
         _transport_fence(payload, run, accelerate=False)
         command = RecoveryRunCAS(
             mutation=mutation,

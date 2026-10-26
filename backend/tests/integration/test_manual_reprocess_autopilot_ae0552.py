@@ -172,6 +172,16 @@ async def test_failed_terminal_successor_is_durable_idempotent_and_outside_cap(
     assert candidates == 1
     assert len(audits) == 1
     assert len(notifier.notices) == 2
+    async with sessions() as session:
+        successor = await session.get(GenerationRunModel, accepted.run.id)
+        assert successor is not None
+        successor.status = GenerationStatus.RUNNING.value
+        await session.commit()
+        running_again = await build_manual_recovery(session, RecordingNotifier()).reprocess(
+            _command(generation_id)
+        )
+    assert running_again.outcome is RecoveryOutcome.EXISTING
+    assert running_again.run.id == accepted.run.id
 
 
 async def test_escalated_autopilot_uses_existing_revive_and_requeue(

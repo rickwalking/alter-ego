@@ -131,7 +131,8 @@ def position_of(
         (
             place
             for place in placements
-            if place.entry.autopilot_run_id == key and place.eta is not None
+            if (place.entry.autopilot_run_id or place.entry.id) == key
+            and place.eta is not None
         ),
         None,
     )

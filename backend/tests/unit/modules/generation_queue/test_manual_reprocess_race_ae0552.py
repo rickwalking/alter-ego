@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import dataclass, field, replace
 from uuid import UUID, uuid4
 
+from rag_backend.modules.autopilot.domain.queue_position import QueuePosition
 from rag_backend.modules.generation_queue.application.manual_reprocess import (
     ManualRecoveryDependencies,
     ManualRecoveryService,
@@ -20,7 +21,10 @@ from rag_backend.modules.generation_queue.domain.manual_recovery import (
     StuckKind,
     WriteStatus,
 )
-from rag_backend.modules.generation_queue.domain.models import GenerationStatus
+from rag_backend.modules.generation_queue.domain.models import (
+    GenerationRun,
+    GenerationStatus,
+)
 from tests.unit.modules.generation_queue.manual_recovery_fakes import (
     FakeDriveLock,
     FakeMaintenanceNotifier,
@@ -93,6 +97,11 @@ class _RaceStore:
             return RecoveryWrite(
                 status=WriteStatus.APPLIED, run=replacement, lock_version=5
             )
+
+    async def position(self, run: GenerationRun) -> QueuePosition | None:
+        """Return no visible placement for the scripted successor."""
+        del run
+        return None
 
     async def commit(self) -> None:
         """Each request has its own transaction boundary."""

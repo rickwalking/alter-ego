@@ -32,8 +32,31 @@ from rag_backend.modules.generation_queue.domain.manual_recovery_ports import (
     ManualRecoveryAudit,
     ManualRecoveryStore,
 )
-from rag_backend.modules.generation_queue.domain.models import GenerationRun
+from rag_backend.modules.generation_queue.domain.models import (
+    GenerationRun,
+    GenerationStatus,
+)
 from rag_backend.modules.generation_queue.domain.ports import Clock, DriveLock
+
+
+@dataclass(frozen=True, kw_only=True)
+class _Acceptance:
+    snapshot: RecoverySnapshot
+    stuck: StuckKind
+    write: RecoveryWrite
+
+
+@dataclass(frozen=True, kw_only=True)
+class _ExistingRun:
+    run: GenerationRun
+    lock_version: int | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class _CapabilityRun:
+    run: GenerationRun | None
+    decision: RecoveryDecision | None
+
 
 _LOCKED_KINDS = frozenset({StuckKind.STALE_RUNNING, StuckKind.ORPHAN})
 
@@ -59,12 +82,39 @@ class ManualRecoveryService:
     async def reprocess(self, command: ManualReprocessCommand) -> RecoveryResult:
         """Return an existing run or apply exactly one fenced recovery."""
         snapshot = await self._deps.store.load(command)
-        existing = await self._deps.store.find_existing(snapshot)
-        if existing is not None:
-            return await self._existing(snapshot, existing)
         if snapshot.missing:
             return await self._not_found()
+        if _running(snapshot):
+            return await self._reprocess_unlocked(snapshot)
+        existing = await self._deps.store.find_existing(snapshot)
+        if existing is not None:
+            return await self._existing(snapshot, _ExistingRun(run=existing))
+        return await self._continue(snapshot, self._classify(snapshot))
+
+    async def _reprocess_unlocked(self, snapshot: RecoverySnapshot) -> RecoveryResult:
         decision = self._classify(snapshot)
+        if _refusal_before_existing(decision):
+            return await self._refused(snapshot, _required_refusal(decision))
+        existing = await self._deps.store.find_existing(snapshot)
+        if existing is not None:
+            return await self._existing(snapshot, _ExistingRun(run=existing))
+        if decision.stuck in _LOCKED_KINDS:
+            return await self._take_over(snapshot)
+        return await self._reprocess_running(snapshot, decision)
+
+    async def _reprocess_running(
+        self, snapshot: RecoverySnapshot, decision: RecoveryDecision
+    ) -> RecoveryResult:
+        if decision.refusal is not None:
+            return await self._refused(snapshot, decision.refusal)
+        existing = await self._deps.store.find_existing(snapshot)
+        if existing is not None:
+            return await self._existing(snapshot, _ExistingRun(run=existing))
+        return await self._apply(snapshot, decision)
+
+    async def _continue(
+        self, snapshot: RecoverySnapshot, decision: RecoveryDecision
+    ) -> RecoveryResult:
         if decision.refusal is not None:
             return await self._refused(snapshot, decision.refusal)
         if decision.stuck in _LOCKED_KINDS:
@@ -79,29 +129,75 @@ class ManualRecoveryService:
         return capability
 
     async def _inspect_snapshot(self, snapshot: RecoverySnapshot) -> RecoveryCapability:
+        if snapshot.missing:
+            return await self._capability(
+                snapshot,
+                _CapabilityRun(
+                    run=None, decision=RecoveryDecision(refusal=RefusalCode.UNSUPPORTED)
+                ),
+            )
+        if _running(snapshot):
+            return await self._inspect_running(snapshot)
         existing = await self._deps.store.find_existing(snapshot)
         if existing is not None:
-            return self._capability(snapshot, existing, None)
-        if snapshot.missing:
-            return self._capability(
-                snapshot, None, RecoveryDecision(refusal=RefusalCode.UNSUPPORTED)
+            return await self._capability(
+                snapshot, _CapabilityRun(run=existing, decision=None)
             )
+        return await self._inspect_decision(snapshot, self._classify(snapshot))
+
+    async def _inspect_running(self, snapshot: RecoverySnapshot) -> RecoveryCapability:
         decision = self._classify(snapshot)
-        if decision.stuck not in _LOCKED_KINDS:
-            return self._capability(snapshot, snapshot.run, decision)
-        return await self._inspect_locked(snapshot)
+        if _refusal_before_existing(decision):
+            return await self._capability(
+                snapshot, _CapabilityRun(run=snapshot.run, decision=decision)
+            )
+        existing = await self._deps.store.find_existing(snapshot)
+        if existing is not None:
+            return await self._capability(
+                snapshot, _CapabilityRun(run=existing, decision=None)
+            )
+        return await self._inspect_decision(snapshot, decision)
+
+    async def _inspect_decision(
+        self, snapshot: RecoverySnapshot, decision: RecoveryDecision
+    ) -> RecoveryCapability:
+        if decision.refusal is not None:
+            return await self._capability(
+                snapshot, _CapabilityRun(run=snapshot.run, decision=decision)
+            )
+        if decision.stuck in _LOCKED_KINDS:
+            return await self._inspect_locked(snapshot)
+        return await self._capability(
+            snapshot, _CapabilityRun(run=snapshot.run, decision=decision)
+        )
 
     async def _inspect_locked(self, snapshot: RecoverySnapshot) -> RecoveryCapability:
         try:
             async with self._deps.lock.hold(recovery_lock_keys(snapshot)):
                 fresh = await self._deps.store.load(snapshot.command)
+                if fresh.missing:
+                    return await self._capability(
+                        fresh,
+                        _CapabilityRun(
+                            run=None,
+                            decision=RecoveryDecision(refusal=RefusalCode.UNSUPPORTED),
+                        ),
+                    )
                 existing = await self._deps.store.find_existing(fresh)
                 if existing is not None:
-                    return self._capability(fresh, existing, None)
+                    return await self._capability(
+                        fresh, _CapabilityRun(run=existing, decision=None)
+                    )
                 decision = self._classify(fresh)
-                return self._capability(fresh, fresh.run, decision)
+                return await self._capability(
+                    fresh, _CapabilityRun(run=fresh.run, decision=decision)
+                )
+
         except DriveLockBusyError:
-            return self._capability(snapshot, snapshot.run, _BUSY_DECISION)
+            return await self._capability(
+                snapshot,
+                _CapabilityRun(run=snapshot.run, decision=_BUSY_DECISION),
+            )
 
     async def _take_over(self, snapshot: RecoverySnapshot) -> RecoveryResult:
         try:
@@ -112,15 +208,14 @@ class ManualRecoveryService:
 
     async def _fresh_after_lock(self, snapshot: RecoverySnapshot) -> RecoveryResult:
         fresh = await self._deps.store.load(snapshot.command)
-        existing = await self._deps.store.find_existing(fresh)
-        if existing is not None:
-            return await self._existing(fresh, existing)
         if fresh.missing:
             return await self._not_found()
-        decision = self._classify(fresh)
-        if decision.refusal is not None:
-            return await self._refused(fresh, decision.refusal)
-        return await self._apply(fresh, decision)
+        if _running(fresh):
+            return await self._reprocess_running(fresh, self._classify(fresh))
+        existing = await self._deps.store.find_existing(fresh)
+        if existing is not None:
+            return await self._existing(fresh, _ExistingRun(run=existing))
+        return await self._apply(fresh, self._classify(fresh))
 
     def _classify(self, snapshot: RecoverySnapshot) -> RecoveryDecision:
         return classify_recovery(snapshot, self._deps.clock.now(), self._deps.policy)
@@ -137,22 +232,23 @@ class ManualRecoveryService:
             requested_at=self._deps.clock.now(),
         )
         write = await self._deps.store.apply(mutation)
-        return await self._after_write(snapshot, decision.stuck, write)
+        return await self._after_write(
+            _Acceptance(snapshot=snapshot, stuck=decision.stuck, write=write)
+        )
 
-    async def _after_write(
-        self, snapshot: RecoverySnapshot, stuck: StuckKind, write: RecoveryWrite
-    ) -> RecoveryResult:
+    async def _after_write(self, acceptance: _Acceptance) -> RecoveryResult:
+        snapshot, write = acceptance.snapshot, acceptance.write
         if write.status is WriteStatus.APPLIED and write.run is not None:
-            return await self._accepted(snapshot, stuck, write)
+            return await self._accepted(acceptance)
         if write.status is WriteStatus.EXISTING and write.run is not None:
-            return await self._existing(snapshot, write.run, write.lock_version)
+            current = _ExistingRun(run=write.run, lock_version=write.lock_version)
+            return await self._existing(snapshot, current)
         if write.status is WriteStatus.STALE_VERSION:
             return await self._refused(snapshot, RefusalCode.STALE_VERSION)
         return await self._refused(snapshot, RefusalCode.CONCURRENT_UPDATE)
 
-    async def _accepted(
-        self, snapshot: RecoverySnapshot, stuck: StuckKind, write: RecoveryWrite
-    ) -> RecoveryResult:
+    async def _accepted(self, acceptance: _Acceptance) -> RecoveryResult:
+        snapshot, stuck, write = acceptance.snapshot, acceptance.stuck, acceptance.write
         run = write.run
         if run is None:
             return await self._refused(snapshot, RefusalCode.CONCURRENT_UPDATE)
@@ -170,29 +266,33 @@ class ManualRecoveryService:
         )
         await self._deps.store.commit()
         notified = await self._notify(run)
+        position, eta_seconds = await self._progress(run)
         return RecoveryResult(
             outcome=RecoveryOutcome.QUEUED,
             run=run,
             stuck_kind=stuck,
             lock_version=write.lock_version,
             worker_notified=notified,
+            position=position,
+            eta_seconds=eta_seconds,
         )
 
     async def _existing(
-        self,
-        snapshot: RecoverySnapshot,
-        run: GenerationRun,
-        lock_version: int | None = None,
+        self, snapshot: RecoverySnapshot, current: _ExistingRun
     ) -> RecoveryResult:
         await self._deps.store.commit()
+        run = current.run
         notified = await self._notify(run)
-        version = lock_version or self._lock_version(snapshot)
+        version = current.lock_version or self._lock_version(snapshot)
+        position, eta_seconds = await self._progress(run)
         return RecoveryResult(
             outcome=RecoveryOutcome.EXISTING,
             run=run,
             stuck_kind=manual_stuck_kind(run),
             lock_version=version,
             worker_notified=notified,
+            position=position,
+            eta_seconds=eta_seconds,
         )
 
     async def _notify(self, run: GenerationRun) -> bool:
@@ -215,18 +315,28 @@ class ManualRecoveryService:
         await self._deps.store.rollback()
         return RecoveryResult(outcome=RecoveryOutcome.NOT_FOUND)
 
-    def _capability(
-        self,
-        snapshot: RecoverySnapshot,
-        run: GenerationRun | None,
-        decision: RecoveryDecision | None,
+    async def _progress(self, run: GenerationRun) -> tuple[int | None, int | None]:
+        placed = await self._deps.store.position(run)
+        if placed is None:
+            return None, None
+        elapsed = max(0, int((placed.eta - self._deps.clock.now()).total_seconds()))
+        return placed.position, elapsed
+
+    async def _capability(
+        self, snapshot: RecoverySnapshot, current: _CapabilityRun
     ) -> RecoveryCapability:
+        run, decision = current.run, current.decision
+        position, eta_seconds = (
+            await self._progress(run) if run is not None else (None, None)
+        )
         if run is not None and decision is None:
             return RecoveryCapability(
                 can_reprocess=True,
                 run=run,
                 lock_version=self._lock_version(snapshot),
                 stuck_kind=manual_stuck_kind(run),
+                position=position,
+                eta_seconds=eta_seconds,
             )
         return RecoveryCapability(
             can_reprocess=decision is not None and decision.stuck is not None,
@@ -236,11 +346,29 @@ class ManualRecoveryService:
             refusal=(
                 decision.refusal if decision is not None else RefusalCode.UNSUPPORTED
             ),
+            position=position,
+            eta_seconds=eta_seconds,
         )
 
     @staticmethod
     def _lock_version(snapshot: RecoverySnapshot) -> int | None:
         return snapshot.project.lock_version if snapshot.project is not None else None
+
+
+def _running(snapshot: RecoverySnapshot) -> bool:
+    run = snapshot.run
+    return run is not None and run.status is GenerationStatus.RUNNING
+
+
+def _refusal_before_existing(decision: RecoveryDecision) -> bool:
+    return (
+        decision.refusal is not None
+        and decision.refusal is not RefusalCode.STALE_VERSION
+    )
+
+
+def _required_refusal(decision: RecoveryDecision) -> RefusalCode:
+    return decision.refusal if decision.refusal is not None else RefusalCode.UNSUPPORTED
 
 
 _BUSY_DECISION = RecoveryDecision(refusal=RefusalCode.DRIVE_ACTIVE)

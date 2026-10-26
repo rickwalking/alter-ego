@@ -101,8 +101,9 @@ async def test_every_stuck_kind_returns_202_and_progress(
     assert body["outcome"] == "queued"
     assert body["run_id"]
     assert body["status"] == "queued"
-    assert body["position"] is None
-    assert body["eta_seconds"] is None
+    assert body["position"] == 1
+    assert isinstance(body["eta_seconds"], int)
+    assert body["eta_seconds"] >= 0
     assert body["lock_version"] == 5
     assert body["worker_notified"] is True
     assert body["stuck_kind"] == kind
@@ -223,8 +224,9 @@ async def test_get_returns_capability_and_current_progress(
     assert body["status"] == "queued"
     assert body["last_phase"] == "content"
     assert body["lock_version"] == 5
-    assert body["position"] is None
-    assert body["eta_seconds"] is None
+    assert body["position"] == 1
+    assert isinstance(body["eta_seconds"], int)
+    assert body["eta_seconds"] >= 0
 
 
 async def test_admin_can_reprocess_projectless_run_with_status_cas(

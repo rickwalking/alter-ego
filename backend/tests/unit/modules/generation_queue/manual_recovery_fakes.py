@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
 
+from rag_backend.modules.autopilot.domain.queue_position import QueuePosition
 from rag_backend.modules.generation_queue.domain.errors import DriveLockBusyError
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     AuditCommand,
@@ -29,6 +30,7 @@ class FakeManualStore:
     snapshots: list[RecoverySnapshot] = field(default_factory=list)
     apply_calls: int = 0
     rollback_calls: int = 0
+    position_result: QueuePosition | None = None
 
     async def load(self, command: ManualReprocessCommand) -> RecoverySnapshot:
         """Return the next fresh snapshot, then keep returning the last one."""
@@ -47,6 +49,11 @@ class FakeManualStore:
         del mutation
         self.apply_calls += 1
         return self.write
+
+    async def position(self, run: GenerationRun) -> QueuePosition | None:
+        """Return the scripted shared placement."""
+        del run
+        return self.position_result
 
     async def commit(self) -> None:
         """Record the transaction boundary."""

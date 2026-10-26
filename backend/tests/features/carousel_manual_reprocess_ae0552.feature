@@ -31,6 +31,11 @@ Feature: Owners reprocess stuck carousels through the generation queue
     When the owner clicks Reprocessar
     Then the response is 409 with a stable reason and no new work
 
+  Scenario: A cross-owner existing run is rejected
+    Given an owner supplies another project's active manual run UUID
+    When they reprocess their own project
+    Then the response is 404 and no audit or maintenance notification is created
+
   Scenario: Double click returns the existing manual run
     Given two sequential or concurrent Reprocessar clicks for the same stuck work
     When both requests finish

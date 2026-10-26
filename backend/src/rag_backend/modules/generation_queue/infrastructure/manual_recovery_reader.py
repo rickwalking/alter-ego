@@ -17,8 +17,6 @@ from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunMode
 from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
     PAYLOAD_MANUAL_REPLACES_RUN_ID,
-    STATUS_QUEUED,
-    STATUS_RETRY_WAIT,
 )
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     ManualReprocessCommand,
@@ -128,10 +126,10 @@ class ManualRecoveryReader:
         return run_from_row(row) if row is not None else None
 
     async def find_existing(self, snapshot: RecoverySnapshot) -> GenerationRun | None:
-        """Find a compatible queued or retry-waiting manual original or successor."""
+        """Find a compatible active manual original or failed-terminal successor."""
         rows = await self._session.scalars(
             select(GenerationRunModel)
-            .where(GenerationRunModel.status.in_((STATUS_QUEUED, STATUS_RETRY_WAIT)))
+            .where(GenerationRunModel.status.in_(ACTIVE_STATUSES))
             .order_by(GenerationRunModel.created_at.desc())
             .execution_options(populate_existing=True)
         )

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from rag_backend.api.dependencies.carousel_access import get_carousel_project_for_user
 from rag_backend.api.dependencies.database import get_db
-from rag_backend.api.dependencies.roles import AdminUser, EditorUser, UserModel
+from rag_backend.api.dependencies.roles import EditorUser, UserModel
 from rag_backend.api.schemas.carousel_reprocess import (
     GenerationRunReprocessRequest,
     MaintenanceProcessResponse,
@@ -20,6 +20,7 @@ from rag_backend.api.schemas.carousel_reprocess import (
     ManualReprocessRequest,
     ManualReprocessResponse,
 )
+from rag_backend.domain.models.user import UserRole
 from rag_backend.modules.generation_queue import (
     FullMaintenanceControl,
     MaintenanceEnqueue,
@@ -69,16 +70,16 @@ def _editor_context(
     return _context(request, db, user)
 
 
-def _admin_context(
-    request: Request,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    user: AdminUser,
-) -> _RecoveryContext:
-    return _context(request, db, user)
-
-
 EditorContext = Annotated[_RecoveryContext, Depends(_editor_context)]
-AdminContext = Annotated[_RecoveryContext, Depends(_admin_context)]
+
+
+def _admin_required(user: UserModel) -> JSONResponse | None:
+    if user.role == UserRole.ADMIN.value:
+        return None
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={"detail": "Admin access required"},
+    )
 
 
 def _control(request: Request, db: AsyncSession) -> FullMaintenanceControl:
@@ -139,9 +140,12 @@ async def get_reprocess_capability(
 async def reprocess_generation_run(
     run_id: UUID,
     body: GenerationRunReprocessRequest,
-    context: AdminContext,
+    context: EditorContext,
 ) -> JSONResponse:
     """Queue or return admin recovery for an existing generation run."""
+    denied = _admin_required(context.user)
+    if denied is not None:
+        return denied
     command = ManualReprocessCommand(
         project_id=None,
         run_id=run_id,
@@ -159,10 +163,12 @@ async def reprocess_generation_run(
 async def process_generation_queue(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    user: AdminUser,
+    user: EditorUser,
 ) -> JSONResponse:
     """Enqueue the same full maintenance control job used by cron."""
-    del user
+    denied = _admin_required(user)
+    if denied is not None:
+        return denied
     try:
         result = await _control(request, db).request_full()
     except Exception:

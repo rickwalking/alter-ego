@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from rag_backend.modules.autopilot.domain.queue_position import QueuePosition
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     AuditCommand,
     MaintenanceNotice,
@@ -28,6 +29,10 @@ class ManualRecoveryStore(Protocol):
 
     async def apply(self, mutation: RecoveryMutation) -> RecoveryWrite:
         """Serialize, CAS and link the accepted or existing run."""
+        ...
+
+    async def position(self, run: GenerationRun) -> QueuePosition | None:
+        """Place a queued run with the shared Telegram/panel scheduling core."""
         ...
 
     async def commit(self) -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -206,3 +206,40 @@ async def test_orphan_stages_existing_adopt_path(engine: AsyncEngine) -> None:
     assert payload.reviewer_id == "generation-queue"
     assert stored.payload[PAYLOAD_MANUAL_ORIGIN] == "carousel_reprocess"
     assert stored.pgq_job_id is None
+
+
+async def test_running_manual_run_returns_existing_but_fresh_running_is_refused(
+    engine: AsyncEngine,
+) -> None:
+    """Scenario: Double click returns the existing manual run"""
+    project_id = str(uuid4())
+    run_id = uuid4()
+    row = workflow_run_row(
+        project_id,
+        GenerationStatus.RUNNING,
+        id=run_id,
+        payload={PAYLOAD_MANUAL_ORIGIN: "carousel_reprocess"},
+    )
+    async with _sessions(engine)() as session:
+        session.add_all([project_row(project_id, run_heartbeat_at=OLD), row])
+        await session.commit()
+        service = build_manual_recovery(session, RecordingNotifier())
+        existing = await service.reprocess(_command(project_id, run_id))
+        fresh_project = str(uuid4())
+        fresh_run = workflow_run_row(
+            fresh_project,
+            GenerationStatus.RUNNING,
+            payload={PAYLOAD_MANUAL_ORIGIN: "carousel_reprocess"},
+        )
+        session.add_all([
+            project_row(fresh_project, run_heartbeat_at=datetime.now(UTC)),
+            fresh_run,
+        ])
+        await session.commit()
+        fresh = await build_manual_recovery(session, RecordingNotifier()).reprocess(
+            _command(fresh_project, fresh_run.id)
+        )
+    assert existing.outcome is RecoveryOutcome.EXISTING
+    assert existing.run.id == run_id
+    assert fresh.outcome is RecoveryOutcome.REFUSED
+    assert fresh.refusal.value == "fresh_running"
