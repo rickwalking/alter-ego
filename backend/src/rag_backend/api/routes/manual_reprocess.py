@@ -105,7 +105,10 @@ async def reprocess_carousel(
     context: EditorContext,
 ) -> JSONResponse:
     """Queue or return manual recovery for an owned stuck carousel."""
-    await get_carousel_project_for_user(context.db, project_id, context.user)
+    try:
+        await get_carousel_project_for_user(context.db, project_id, context.user)
+    except HTTPException as exc:
+        return _http_error(exc)
     command = ManualReprocessCommand(
         project_id=str(project_id),
         run_id=body.run_id,
@@ -120,7 +123,10 @@ async def get_reprocess_capability(
     project_id: UUID, context: EditorContext
 ) -> ManualRecoveryCapabilityResponse:
     """Return workspace capability and safe current-run progress."""
-    await get_carousel_project_for_user(context.db, project_id, context.user)
+    try:
+        await get_carousel_project_for_user(context.db, project_id, context.user)
+    except HTTPException as exc:
+        return _http_error(exc)
     command = ManualReprocessCommand(
         project_id=str(project_id), run_id=None, actor_id=str(context.user.id)
     )
@@ -162,17 +168,20 @@ async def process_generation_queue(
     try:
         result = await _control(request, db).request_full()
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_UNAVAILABLE
-        ) from None
+        return _unavailable_response()
     return _maintenance_response(result)
+
+
+def _unavailable_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": _UNAVAILABLE},
+    )
 
 
 def _maintenance_response(result: MaintenanceEnqueue) -> JSONResponse:
     if result.job_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_UNAVAILABLE
-        )
+        return _unavailable_response()
     accepted = result.inserted
     payload = MaintenanceProcessResponse(
         outcome="queued" if accepted else "existing", job_id=result.job_id
@@ -181,15 +190,26 @@ def _maintenance_response(result: MaintenanceEnqueue) -> JSONResponse:
     return JSONResponse(status_code=code, content=payload.model_dump())
 
 
+def _http_error(exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code, content={"detail": exc.detail}
+    )
+
+
 def _response(result: RecoveryResult) -> JSONResponse:
     if result.outcome is RecoveryOutcome.NOT_FOUND:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND)
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": _NOT_FOUND}
+        )
     if result.outcome is RecoveryOutcome.REFUSED:
         code = result.refusal.value if result.refusal else _CONCURRENT_UPDATE
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=code)
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT, content={"detail": code}
+        )
     if result.run is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=_CONCURRENT_UPDATE
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": _CONCURRENT_UPDATE},
         )
     accepted = result.outcome is RecoveryOutcome.QUEUED
     payload = ManualReprocessResponse(

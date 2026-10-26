@@ -17,11 +17,10 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_OUTCOME,
     PAYLOAD_PERMALINK,
     PAYLOAD_REASON,
-    PAYLOAD_STATE,
     TEXT_ENCODING,
 )
 from rag_backend.modules.autopilot.domain.exceptions import CallbackDataTooLongError
-from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.notice_state import state_kind as _state_kind
 from rag_backend.modules.autopilot.domain.publish import PostExtras
 from rag_backend.modules.autopilot.domain.published_copy import published_text
 from rag_backend.modules.autopilot.notify_constants import (
@@ -76,10 +75,6 @@ from rag_backend.modules.autopilot.recovery_constants import (
     NO_RETRY_REASONS,
     NOTICE_PUBLISH_HELD,
     PUBLISH_HELD_NOTICE_MINUTES,
-    REASON_CAROUSEL_REJECTED,
-    REASON_ESCALATION_EXPIRED,
-    REASON_REVIEW_REOPENED,
-    REASON_REWORK_RETRY,
 )
 from rag_backend.modules.autopilot.schedule_constants import (
     BUTTON_SCHEDULE,
@@ -295,38 +290,6 @@ def _publish_kind(payload: Mapping[str, object]) -> str | None:
     if outcome == NOTICE_PUBLISH_HELD:
         return KIND_PUBLISH_HELD
     return None
-
-
-def _state_kind(payload: Mapping[str, object]) -> str | None:
-    state = payload.get(PAYLOAD_STATE)
-    if state == AutopilotRunState.AWAITING_OWNER.value:
-        return _reopened_kind(payload)
-    if state == AutopilotRunState.REJECTED.value:
-        return _closed_kind(payload)
-    return _STATE_KINDS.get(str(state))
-
-
-def _reopened_kind(payload: Mapping[str, object]) -> str | None:
-    """Back to the owner without a new revision: send the buttons again."""
-    if payload.get(PAYLOAD_REASON) in _REOPEN_REASONS:
-        return KIND_REVIEW_REOPENED
-    return None
-
-
-def _closed_kind(payload: Mapping[str, object]) -> str | None:
-    """The runner closed an escalation. An owner reject was already answered."""
-    if payload.get(PAYLOAD_REASON) in _CLOSE_REASONS:
-        return KIND_ESCALATION_CLOSED
-    return None
-
-
-_STATE_KINDS: dict[str, str] = {
-    AutopilotRunState.ESCALATED.value: KIND_ESCALATED,
-    AutopilotRunState.FAILED.value: KIND_FAILED,
-    AutopilotRunState.EXPIRED.value: KIND_EXPIRED,
-}
-_REOPEN_REASONS = frozenset({REASON_REWORK_RETRY, REASON_REVIEW_REOPENED})
-_CLOSE_REASONS = frozenset({REASON_ESCALATION_EXPIRED, REASON_CAROUSEL_REJECTED})
 
 
 def _failed(copy: StatusCopy) -> str:

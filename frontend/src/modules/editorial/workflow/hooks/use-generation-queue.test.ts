@@ -2,7 +2,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { QUEUE_ACTION, QUEUE_API } from "@/constants/workflow";
+import { QUEUE_ACTION, QUEUE_API, WORKFLOW_API } from "@/constants/workflow";
 import en from "@/i18n/locales/en.json";
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
@@ -107,6 +107,60 @@ describe("useGenerationQueue", () => {
     expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({
       method: "POST",
       body: "{}",
+    });
+    expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
+    expect(result.current.actionError).toBeNull();
+  });
+
+  /** Scenario: Unstaged rows use safe recovery targets */
+  it("sends a staged reprocess to the run endpoint with its version", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockClear();
+    mockFetch
+      .mockResolvedValueOnce(reply(202, { outcome: "queued" }))
+      .mockResolvedValueOnce(reply(200));
+    await act(async () => {
+      await result.current.act(QUEUE_ACTION.REPROCESS, "run-real-1", {
+        expectedVersion: 7,
+      });
+    });
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      QUEUE_API.REPROCESS("run-real-1"),
+    );
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ expected_version: 7 }),
+    });
+    expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
+    expect(result.current.actionError).toBeNull();
+  });
+
+  /** Scenario: Unstaged rows use safe recovery targets */
+  it("reprocesses an orphan by project with a null run id", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockClear();
+    mockFetch
+      .mockResolvedValueOnce(reply(202, { outcome: "queued" }))
+      .mockResolvedValueOnce(reply(200));
+    await act(async () => {
+      await result.current.act(QUEUE_ACTION.REPROCESS, "synthetic-orphan", {
+        projectId: "proj-1",
+        expectedVersion: 4,
+      });
+    });
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      WORKFLOW_API.CAROUSEL_REPROCESS("proj-1"),
+    );
+    expect(mockFetch.mock.calls[0]?.[0]).not.toBe(
+      QUEUE_API.REPROCESS("synthetic-orphan"),
+    );
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ expected_version: 4, run_id: null }),
     });
     expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
     expect(result.current.actionError).toBeNull();

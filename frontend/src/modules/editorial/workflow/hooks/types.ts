@@ -72,13 +72,27 @@ export interface GenerationQueueMaintenanceState {
   processQueue: () => Promise<void>;
 }
 
+export type GenerationQueueReprocessTarget =
+  | { expectedVersion?: number; projectId?: never }
+  | { expectedVersion: number; projectId: string };
+
+export interface GenerationQueueLoadResult {
+  board: QueueBoard | null;
+  error: string | null;
+  forbidden: boolean;
+}
+
 /** The queue panel's data, the button in flight and the last button's error. */
 export interface GenerationQueueState extends GenerationQueueMaintenanceState {
   board: QueueBoard | null;
   error: string | null;
   pending: string | null;
   actionError: string | null;
-  act: (action: QueueAction, id: string) => Promise<void>;
+  act: (
+    action: QueueAction,
+    id: string,
+    reprocess?: GenerationQueueReprocessTarget,
+  ) => Promise<void>;
 }
 
 export interface GenerationQueueMaintenanceDeps {

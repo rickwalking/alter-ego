@@ -17,13 +17,12 @@ from pgqueuer.domain.types import JobId
 
 from rag_backend.modules.generation_queue.constants import (
     ENTRYPOINT,
-    ORDINARY_PRIORITY,
     PAYLOAD_MANUAL_ACCELERATE_JOB_ID,
     PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID,
     PAYLOAD_MANUAL_CANCEL_JOB_ID,
-    PAYLOAD_MANUAL_PRIORITY,
 )
 from rag_backend.modules.generation_queue.domain.models import GenerationRun, HeldJob
+from rag_backend.modules.generation_queue.domain.priority import priority_of
 
 _ACTIVE_JOB_SQL = (
     "SELECT id FROM {table} WHERE dedupe_key = $1"
@@ -86,7 +85,7 @@ class PgQueuerJobQueue:
         ids = await self._queries.enqueue(
             ENTRYPOINT,
             job_payload(run.id),
-            priority=_priority(run),
+            priority=priority_of(run.payload),
             dedupe_key=run.dedupe_key,
             on_conflict="update_priority",
         )
@@ -112,7 +111,7 @@ class PgQueuerJobQueue:
         rows = await self._queries.driver.fetch(
             _ACCELERATE_SQL.format(table=self._table),
             run.pgq_job_id,
-            _priority(run),
+            priority_of(run.payload),
             run.dedupe_key,
         )
         return bool(rows)
@@ -191,13 +190,6 @@ class PgQueuerJobQueue:
     async def forget(self, job_id: int) -> None:
         """Drop a held job once mirrored (logged as cancelled, deleted)."""
         await self._queries.mark_job_as_cancelled([JobId(job_id)])
-
-
-def _priority(run: GenerationRun) -> int:
-    value = run.payload.get(PAYLOAD_MANUAL_PRIORITY, ORDINARY_PRIORITY)
-    if isinstance(value, bool) or not isinstance(value, int):
-        return ORDINARY_PRIORITY
-    return value
 
 
 def _has_job_marker(run: GenerationRun) -> bool:

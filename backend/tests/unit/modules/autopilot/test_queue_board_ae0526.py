@@ -62,7 +62,7 @@ def test_the_running_drive_leads_and_queued_ones_get_estimates() -> None:
     assert board.active[0].eta is None
     assert board.active[1].eta == _NOW + timedelta(minutes=20)
     assert board.active[2].eta is None
-    assert board.active[3].eta == _NOW + timedelta(minutes=40)
+    assert board.active[3].eta == _NOW + timedelta(minutes=60)
     assert [item.can_cancel for item in board.active] == [False, True, False, True]
     assert board.active[1].title == "Tema"
     assert board.average_drive_minutes == 20.0

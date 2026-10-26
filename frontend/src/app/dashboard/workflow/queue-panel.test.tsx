@@ -1,75 +1,21 @@
 /** The generation queue panel above the workflow board. */
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { NextIntlClientProvider } from "next-intl";
-import type { ReactNode } from "react";
 
-import { QUEUE_ACTION } from "@/constants/workflow";
+import { QUEUE_ACTION, REPROCESS_REFUSAL } from "@/constants/workflow";
 import en from "@/i18n/locales/en.json";
-import type { QueueBoard, QueueItem } from "@/schemas/generation-queue";
+import pt from "@/i18n/locales/pt.json";
 import { QueuePanel } from "./queue-panel";
+import {
+  makeQueueBoard as board,
+  makeQueueItem as item,
+  queueActionName,
+  queueWrapper as wrapper,
+  renderQueuePanel as renderPanel,
+} from "./queue-panel.test-utils";
 
 const labels = en.workflow.queue;
-
-function item(overrides: Partial<QueueItem> = {}): QueueItem {
-  return {
-    id: "gen-1",
-    kind: "autopilot",
-    status: "queued",
-    title: "Agents that ship code",
-    project_id: null,
-    phase: null,
-    position: 1,
-    eta: null,
-    started_at: null,
-    next_attempt_at: null,
-    error_code: null,
-    can_retry: false,
-    can_discard: false,
-    can_cancel: false,
-    ...overrides,
-  };
-}
-
-function board(overrides: Partial<QueueBoard> = {}): QueueBoard {
-  return {
-    active: [],
-    dead: [],
-    backlog: [],
-    average_drive_minutes: 15,
-    ...overrides,
-  };
-}
-
-function wrapper({ children }: { children: ReactNode }) {
-  return (
-    <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
-      {children}
-    </NextIntlClientProvider>
-  );
-}
-
-function renderPanel(
-  value: QueueBoard | null,
-  extra: Partial<Parameters<typeof QueuePanel>[0]> = {},
-) {
-  const onAction = vi.fn();
-  render(
-    <QueuePanel
-      board={value}
-      error={null}
-      pending={null}
-      actionError={null}
-      processPending={false}
-      processError={null}
-      onAction={onAction}
-      onProcess={vi.fn()}
-      {...extra}
-    />,
-    { wrapper },
-  );
-  return onAction;
-}
+const reprocessLabels = en.workflow.reprocess;
 
 describe("QueuePanel", () => {
   /** Scenario: The panel shows the running and queued carousels in order */
@@ -77,7 +23,13 @@ describe("QueuePanel", () => {
     renderPanel(
       board({
         active: [
-          item({ id: "run", status: "running", position: 1, phase: "images" }),
+          item({
+            id: "run",
+            status: "running",
+            position: 1,
+            phase: "images",
+            refusal_code: "fresh_running",
+          }),
           item({
             id: "next",
             title: "Second theme",
@@ -96,21 +48,23 @@ describe("QueuePanel", () => {
     expect(second).toHaveTextContent("#2");
     expect(second).toHaveTextContent("starts ~11:30");
     const runningReprocess = within(first).getByRole("button", {
-      name: en.workflow.reprocess.action,
+      name: queueActionName(reprocessLabels.action, "Agents that ship code"),
     });
     expect(runningReprocess).toBeDisabled();
     expect(runningReprocess).toHaveAccessibleDescription(
       en.workflow.reprocess.refusals.fresh_running,
     );
     const queuedReprocess = within(second).getByRole("button", {
-      name: en.workflow.reprocess.action,
+      name: queueActionName(reprocessLabels.action, "Second theme"),
     });
     expect(queuedReprocess).toBeDisabled();
     expect(queuedReprocess).toHaveAccessibleDescription(
       en.workflow.reprocess.refusals.normal_queued,
     );
     expect(
-      within(second).getByRole("button", { name: labels.cancel }),
+      within(second).getByRole("button", {
+        name: queueActionName(labels.cancel, "Second theme"),
+      }),
     ).toBeEnabled();
     expect(screen.getByText(/About 15 min per carousel/)).toBeInTheDocument();
   });
@@ -124,6 +78,9 @@ describe("QueuePanel", () => {
             id: "dead-1",
             status: "dead_letter",
             error_code: "run_budget_exhausted",
+            can_reprocess: true,
+            refusal_code: null,
+            stuck_kind: "dead_letter",
             can_retry: true,
             can_discard: true,
           }),
@@ -133,8 +90,12 @@ describe("QueuePanel", () => {
     expect(
       screen.getByText(labels.reason.run_budget_exhausted),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: labels.retry }));
-    fireEvent.click(screen.getByRole("button", { name: labels.discard }));
+    const retry = queueActionName(labels.retry, "Agents that ship code");
+    const discard = queueActionName(labels.discard, "Agents that ship code");
+    fireEvent.click(screen.getByRole("button", { name: retry }));
+    fireEvent.click(screen.getByRole("button", { name: discard }));
+    expect(onAction.mock.calls).toEqual([[QUEUE_ACTION.RETRY, "dead-1"]]);
+    fireEvent.click(screen.getByRole("button", { name: discard }));
     expect(onAction.mock.calls).toEqual([
       [QUEUE_ACTION.RETRY, "dead-1"],
       [QUEUE_ACTION.DISCARD, "dead-1"],
@@ -152,18 +113,23 @@ describe("QueuePanel", () => {
             status: "dead_letter",
             project_id: "proj-9",
             error_code: "mystery",
+            can_reprocess: true,
+            refusal_code: null,
+            stuck_kind: "dead_letter",
           }),
         ],
       }),
     );
     const reprocess = screen.getByRole("button", {
-      name: en.workflow.reprocess.action,
+      name: queueActionName(reprocessLabels.action, "Agents that ship code"),
     });
     expect(reprocess).toBeEnabled();
     fireEvent.click(reprocess);
     expect(onAction).toHaveBeenCalledWith(QUEUE_ACTION.REPROCESS, "dead-2");
     expect(
-      screen.getByRole("link", { name: labels.openEditor }),
+      screen.getByRole("link", {
+        name: queueActionName(labels.openEditor, "Agents that ship code"),
+      }),
     ).toHaveAttribute("href", "/dashboard/create/proj-9");
     expect(screen.getByText("Queue error (mystery).")).toBeInTheDocument();
   });
@@ -176,13 +142,17 @@ describe("QueuePanel", () => {
           item({
             id: "retry-1",
             status: "retry_wait",
+            position: null,
             next_attempt_at: "2026-10-24T14:30:00Z",
+            can_reprocess: true,
+            refusal_code: null,
+            stuck_kind: "retry_wait",
           }),
         ],
       }),
     );
     const reprocess = screen.getByRole("button", {
-      name: en.workflow.reprocess.action,
+      name: queueActionName(reprocessLabels.action, "Agents that ship code"),
     });
     expect(reprocess).toBeEnabled();
     fireEvent.click(reprocess);
@@ -192,10 +162,18 @@ describe("QueuePanel", () => {
   /** Scenario: Not stuck reasons are accessible */
   it("disables reprocess for an unsupported existing row", () => {
     const onAction = renderPanel(
-      board({ dead: [item({ id: "cancelled-1", status: "cancelled" })] }),
+      board({
+        dead: [
+          item({
+            id: "cancelled-1",
+            status: "cancelled",
+            refusal_code: "unsupported",
+          }),
+        ],
+      }),
     );
     const reprocess = screen.getByRole("button", {
-      name: en.workflow.reprocess.action,
+      name: queueActionName(reprocessLabels.action, "Agents that ship code"),
     });
     expect(reprocess).toBeDisabled();
     expect(reprocess).toHaveAccessibleDescription(
@@ -220,11 +198,14 @@ describe("QueuePanel", () => {
       }),
     );
     expect(screen.getByText("expires on 10/27")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: labels.generateNow }));
+    const generate = queueActionName(labels.generateNow, "Waiting theme");
+    fireEvent.click(screen.getByRole("button", { name: generate }));
     expect(onAction).toHaveBeenCalledWith(QUEUE_ACTION.GENERATE_NOW, "cand-1");
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(
-      screen.queryByRole("button", { name: en.workflow.reprocess.action }),
+      screen.queryByRole("button", {
+        name: queueActionName(reprocessLabels.action, "Waiting theme"),
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -246,7 +227,11 @@ describe("QueuePanel", () => {
     expect(
       screen.getByRole("button", { name: labels.processNow }),
     ).toBeDisabled();
-    expect(screen.getByRole("button", { name: labels.cancel })).toBeEnabled();
+    expect(
+      screen.getByRole("button", {
+        name: queueActionName(labels.cancel, "Agents that ship code"),
+      }),
+    ).toBeEnabled();
     expect(screen.getByText(labels.processFailed)).toBeInTheDocument();
     expect(screen.getByText(labels.actionFailed)).toBeInTheDocument();
   });
@@ -258,7 +243,11 @@ describe("QueuePanel", () => {
       actionError: labels.actionFailed,
     });
     expect(screen.getByRole("alert")).toHaveTextContent(labels.actionFailed);
-    expect(screen.getByRole("button", { name: labels.cancel })).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: queueActionName(labels.cancel, "Agents that ship code"),
+      }),
+    ).toBeDisabled();
   });
 
   /** Scenario: An empty queue says so */
@@ -289,5 +278,24 @@ describe("QueuePanel", () => {
   it("shows the load error before the first board", () => {
     renderPanel(null, { error: labels.loadFailed });
     expect(screen.getByRole("alert")).toHaveTextContent(labels.loadFailed);
+  });
+
+  it.each(Object.values(REPROCESS_REFUSAL))(
+    "has PT and EN copy for the %s refusal",
+    (code) => {
+      expect(en.workflow.reprocess.refusals[code]).toEqual(expect.any(String));
+      expect(pt.workflow.reprocess.refusals[code]).toEqual(expect.any(String));
+    },
+  );
+
+  it("has PT and EN copy for new row labels and confirmations", () => {
+    for (const locale of [en, pt]) {
+      expect(locale.workflow.queue.actionForTheme).toContain("{theme}");
+      expect(locale.workflow.queue.startedAt).toContain("{time}");
+      expect(locale.workflow.queue.heartbeatAge).toContain("{age}");
+      expect(locale.workflow.queue.confirmCancel).toContain("{theme}");
+      expect(locale.workflow.queue.confirmDiscard).toContain("{theme}");
+      expect(locale.workflow.queue.confirmBack).toEqual(expect.any(String));
+    }
   });
 });

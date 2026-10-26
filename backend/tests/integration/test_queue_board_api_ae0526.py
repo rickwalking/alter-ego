@@ -153,6 +153,10 @@ async def test_parked_runs_are_listed_until_resolved(client: AsyncClient) -> Non
     assert dead[0]["can_retry"] is True
     assert dead[0]["can_discard"] is True
     assert dead[0]["error_code"] == "run_budget_exhausted"
+    assert dead[0]["can_reprocess"] is True
+    assert dead[0]["refusal_code"] is None
+    assert dead[0]["stuck_kind"] == "dead_letter"
+    assert dead[0]["staged"] is True
 
 
 async def test_a_parked_dashboard_resume_has_no_buttons(client: AsyncClient) -> None:
@@ -290,6 +294,9 @@ async def test_cancel_is_not_offered_for_a_run_already_generating(
     active = (await client.get(_BOARD, headers=headers)).json()["active"]
     assert active[0]["can_cancel"] is False
     assert active[0]["position"] is None
+    assert active[0]["can_reprocess"] is True
+    assert active[0]["stuck_kind"] == "retry_wait"
+    assert active[0]["run_heartbeat_at"] is None
 
 
 async def test_the_panel_api_is_admin_only(client: AsyncClient) -> None:

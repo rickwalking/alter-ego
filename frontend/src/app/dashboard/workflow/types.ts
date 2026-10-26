@@ -1,4 +1,5 @@
 import type { QueueAction } from "@/constants/workflow";
+import type { GenerationQueueReprocessTarget } from "@/modules/editorial";
 import type {
   BacklogItem,
   QueueBoard,
@@ -27,6 +28,12 @@ export interface BoardFeedbackProps {
   onRetry: () => void;
 }
 
+export type QueueActionHandler = (
+  action: QueueAction,
+  id: string,
+  reprocess?: GenerationQueueReprocessTarget,
+) => void;
+
 /** The generation queue panel; data and buttons come from the section. */
 export interface QueuePanelProps {
   board: QueueBoard | null;
@@ -35,7 +42,7 @@ export interface QueuePanelProps {
   actionError: string | null;
   processPending: boolean;
   processError: string | null;
-  onAction: (action: QueueAction, id: string) => void;
+  onAction: QueueActionHandler;
   onProcess: () => void;
 }
 
@@ -43,12 +50,31 @@ export interface QueuePanelProps {
 export interface QueueRowProps {
   item: QueueItem;
   pending: string | null;
-  onAction: (action: QueueAction, id: string) => void;
+  onAction: QueueActionHandler;
 }
 
 /** One backlog theme row. */
 export interface BacklogRowProps {
   item: BacklogItem;
   pending: string | null;
-  onAction: (action: QueueAction, id: string) => void;
+  onAction: QueueActionHandler;
+}
+
+export interface QueueReprocessButtonProps extends QueueRowProps {
+  theme: string;
+}
+
+export interface QueueRowActionProps {
+  id: string;
+  action: QueueAction;
+  theme: string;
+  label: string;
+  pending: boolean;
+  onAction: QueueActionHandler;
+  disabled?: boolean;
+  variant?: "primary" | "secondary";
+  confirmation?: string;
+  pendingLabel?: string;
+  describedBy?: string;
+  reprocess?: GenerationQueueReprocessTarget;
 }

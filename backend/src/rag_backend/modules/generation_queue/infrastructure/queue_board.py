@@ -25,6 +25,7 @@ from rag_backend.modules.generation_queue.constants import (
     STATUS_RETRY_WAIT,
 )
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
+from rag_backend.modules.generation_queue.domain.priority import priority_of
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
 )
@@ -46,7 +47,7 @@ class BoardRow:
     title: str
     last_phase: str | None
     last_error_code: str | None
-    last_error: str | None
+    priority: int
     created_at: datetime
     started_at: datetime | None
     next_attempt_at: datetime | None
@@ -65,13 +66,7 @@ class RunFacts:
 
 
 async def board_rows(session: AsyncSession) -> list[BoardRow]:
-    """Active runs in the worker's order, then the dead letters of the last 7 days.
-
-    The worker takes PgQueuer jobs in job order, so handed-over runs come first by
-    job id, then runs not handed over yet by creation. A dead letter is
-    ``superseded`` when a later run exists for the same project (the editor
-    resumed it).
-    """
+    """Read active runs and recent dead letters with supersession metadata."""
     since = UTC_CLOCK.now() - timedelta(days=SCAN_RECOVERY_DAYS)
     result = await session.execute(
         select(_G)
@@ -138,7 +133,7 @@ def _row(model: GenerationRunModel, latest: dict[str, datetime]) -> BoardRow:
         title=str(payload.get(_TITLE_KEY) or ""),
         last_phase=model.last_phase,
         last_error_code=model.last_error_code,
-        last_error=model.last_error,
+        priority=priority_of(payload),
         created_at=model.created_at,
         started_at=model.started_at,
         next_attempt_at=model.next_attempt_at,

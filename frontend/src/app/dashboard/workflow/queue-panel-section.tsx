@@ -23,7 +23,7 @@ export function QueuePanelSection(): React.ReactElement | null {
       actionError={actionError}
       processPending={processPending}
       processError={processError}
-      onAction={(action, id) => void act(action, id)}
+      onAction={(action, id, reprocess) => void act(action, id, reprocess)}
       onProcess={() => void processQueue()}
     />
   );
