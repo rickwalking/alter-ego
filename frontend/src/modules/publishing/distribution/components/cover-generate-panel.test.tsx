@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { it, expect, vi, beforeEach, describe } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -31,7 +32,10 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiCall: vi.fn() };
+  const apiCall = vi.fn<typeof actual.apiCall>();
+  const apiCallOwnerOnly = ((url: string, schema: z.ZodType) =>
+    apiCall(url, schema)) as typeof actual.apiCallOwnerOnly;
+  return { ...actual, apiCall, apiCallOwnerOnly };
 });
 
 import { apiCall, ApiError } from "@/lib/api-client";

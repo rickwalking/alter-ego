@@ -1,3 +1,4 @@
+import type { UPLOAD_FAILURE } from "@/modules/publishing/distribution/constants";
 import type { Dispatch, SetStateAction } from "react";
 import type { ChatStream } from "@/lib/use-chat-stream";
 /**
@@ -162,12 +163,24 @@ export interface CopyHistory {
 /** Upload a file from the device into the owner's photo library; its asset id. */
 export type UploadLibraryPhoto = (file: File) => Promise<string>;
 
-/** "Enviar foto": whether the page offers it, its progress and failure. */
+/** Why an upload failed (``UPLOAD_FAILURE``). */
+export type UploadFailure =
+  (typeof UPLOAD_FAILURE)[keyof typeof UPLOAD_FAILURE];
+
+/** "Enviar foto": whether the page offers it, its progress and failure cause. */
 export interface CoverPhotoUpload {
   available: boolean;
   uploading: boolean;
-  failed: boolean;
+  failure: UploadFailure | null;
   onFile: (file: File) => Promise<void>;
+}
+
+/** What the upload needs: the carousel, the page's library upload, the listed photos and the tick. */
+export interface CoverPhotoUploadDeps {
+  projectId: string;
+  upload: UploadLibraryPhoto | undefined;
+  listedIds: readonly string[];
+  onListed: (assetId: string) => void;
 }
 
 /** The photos to send (none for a cover from the prompt alone) and the owner's direction. */

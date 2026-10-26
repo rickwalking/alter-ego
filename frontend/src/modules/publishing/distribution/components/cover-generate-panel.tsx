@@ -101,19 +101,28 @@ function CoverGenerateOutcome({
  * photo the cover is made from the words alone. Each generation asks for an
  * explicit confirmation that names OpenAI (ChatGPT) and the caps. Progress and
  * failures (with a retry) come from the generation list, polled while one
- * runs; a finished cover appears among the cover options.
+ * runs; a finished cover appears among the cover options. The form shows only
+ * once the list has loaded, which only the owner can read (403 otherwise), so
+ * nobody else is offered an upload or a generation.
  */
 export function CoverGeneratePanel({
   projectId,
   photos,
   renderPromptSuggestions,
   uploadPhoto,
-}: Readonly<CoverGeneratePanelProps>): React.ReactElement {
+}: Readonly<CoverGeneratePanelProps>): React.ReactElement | null {
   const t = useTranslations("publish.coverPicker.generate");
   const form = useCoverGenerateForm(projectId);
-  const upload = useCoverPhotoUpload(projectId, uploadPhoto, form.add);
-  if (form.loadError) {
-    return <CoverGenerateUnavailable error={form.loadError} />;
+  const upload = useCoverPhotoUpload({
+    projectId,
+    upload: uploadPhoto,
+    listedIds: photos.map((photo) => photo.asset_id),
+    onListed: form.add,
+  });
+  if (!form.data) {
+    return form.loadError ? (
+      <CoverGenerateUnavailable error={form.loadError} />
+    ) : null;
   }
   return (
     <div className="mt-4 border-t border-white/10 pt-3">
@@ -134,7 +143,7 @@ export function CoverGeneratePanel({
       <CoverPromptField value={form.prompt} onChange={form.setPrompt}>
         {renderPromptSuggestions?.(form.setPrompt)}
       </CoverPromptField>
-      <CoverUsageLine usage={form.data ?? null} />
+      <CoverUsageLine usage={form.data} />
       <CoverGenerateAction
         enabled={form.canGenerate && !upload.uploading}
         blocked={form.blocked}

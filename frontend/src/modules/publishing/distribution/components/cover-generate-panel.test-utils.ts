@@ -98,16 +98,18 @@ export function renderPanel(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const user = userEvent.setup();
-  render(
+  const panel = (listed: typeof photos) =>
     createElement(CoverGeneratePanel, {
       projectId: PROJECT,
-      photos,
+      photos: listed,
       renderPromptSuggestions,
       uploadPhoto,
-    }),
-    { wrapper: wrapper(client) },
-  );
-  return { user, client };
+    });
+  const view = render(panel(photos), { wrapper: wrapper(client) });
+  const setPhotos = (listed: typeof photos): void => {
+    view.rerender(panel(listed));
+  };
+  return { user, client, setPhotos };
 }
 
 export async function fillForm(user: ReturnType<typeof userEvent.setup>) {

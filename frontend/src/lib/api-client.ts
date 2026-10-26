@@ -73,35 +73,48 @@ function fetchWithCredentials(
   });
 }
 
+const ERR_INVALID_API_DATA = "Invalid data from API";
+
 /** Message used when an auth error body carries none. */
 const AUTH_FALLBACK_MESSAGES: Readonly<Partial<Record<number, string>>> = {
   [HTTP_STATUS.UNAUTHORIZED]: "Unauthorized",
   [HTTP_STATUS.FORBIDDEN]: "Forbidden",
 };
 
-/** The 401 login redirect and the 403 page redirect. */
-function redirectForAuthStatus(status: number): void {
+/** The 401 login redirect and (when ``forbiddenRedirect``) the 403 page redirect. */
+function redirectForAuthStatus(
+  status: number,
+  forbiddenRedirect: boolean,
+): void {
   if (status === HTTP_STATUS.UNAUTHORIZED) {
     redirectToLoginAfterUnauthorized();
     return;
   }
-  if (status === HTTP_STATUS.FORBIDDEN && typeof window !== "undefined") {
+  if (
+    forbiddenRedirect &&
+    status === HTTP_STATUS.FORBIDDEN &&
+    typeof window !== "undefined"
+  ) {
     window.location.href = FORBIDDEN_REDIRECT_PATH;
   }
 }
 
 /**
  * Map non-OK HTTP statuses to `ApiError`, threading the 401 login redirect and
- * the 403 page redirect. Returns normally when the response is OK; the caller
- * then parses the body (or skips it, for No Content responses).
+ * (unless ``forbiddenRedirect`` is false) the 403 page redirect. Returns
+ * normally when the response is OK; the caller then parses the body (or skips
+ * it, for No Content responses).
  */
-async function throwIfErrorResponse(response: Response): Promise<void> {
+async function throwIfErrorResponse(
+  response: Response,
+  forbiddenRedirect = true,
+): Promise<void> {
   if (response.ok) {
     return;
   }
   const { status } = response;
   const errorData = await parseErrorBody(response);
-  redirectForAuthStatus(status);
+  redirectForAuthStatus(status, forbiddenRedirect);
   const authFallback = AUTH_FALLBACK_MESSAGES[status];
   const error = new ApiError(
     status,
@@ -119,10 +132,7 @@ function parseApiData<T>(schema: z.ZodType<T>, data: unknown): T {
   const dataResult = schema.safeParse(data);
   if (!dataResult.success) {
     console.error("Data validation failed:", dataResult.error.issues);
-    throw new ApiError(
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      "Invalid data from API",
-    );
+    throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERR_INVALID_API_DATA);
   }
   return dataResult.data;
 }
@@ -148,7 +158,27 @@ export async function apiCall<T>(
 ): Promise<T> {
   const response = await fetchWithCredentials(url, options);
   await throwIfErrorResponse(response);
+  return parseApiBody(response, schema);
+}
 
+/**
+ * ``apiCall`` (GET) for an owner-only read whose 403 the caller shows itself,
+ * e.g. as a "only the owner can…" note: the 401 login redirect stays, the 403
+ * page redirect does not, so the page the reader is on stays open.
+ */
+export async function apiCallOwnerOnly<T>(
+  url: string,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  const response = await fetchWithCredentials(url);
+  await throwIfErrorResponse(response, false);
+  return parseApiBody(response, schema);
+}
+
+async function parseApiBody<T>(
+  response: Response,
+  schema: z.ZodType<T>,
+): Promise<T> {
   const json: unknown = await response.json();
 
   const responseResult = apiResponseSchema.safeParse(json);
@@ -193,5 +223,14 @@ export async function apiUpload<T>(
     credentials: "include",
   });
   await throwIfErrorResponse(response);
-  return schema.parse(await response.json());
+  return parseApiData(schema, await readJson(response));
+}
+
+/** The JSON body of an OK response; a body that is not JSON is a contract break (500). */
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, ERR_INVALID_API_DATA);
+  }
 }

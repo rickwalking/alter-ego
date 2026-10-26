@@ -9,3 +9,11 @@ export const SECTION_CARD_STYLE = {
   borderRadius: "8px",
   padding: "24px",
 } as const;
+
+/** Why a cover panel photo upload failed: the file itself, a rate limit, the network or the server. */
+export const UPLOAD_FAILURE = {
+  INVALID: "invalid",
+  RATE_LIMITED: "rateLimited",
+  NETWORK: "network",
+  SERVER: "server",
+} as const;

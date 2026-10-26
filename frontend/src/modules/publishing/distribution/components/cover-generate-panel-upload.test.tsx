@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { it, expect, vi, beforeEach, describe } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { HTTP_METHODS } from "@/constants/api";
@@ -28,10 +29,13 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiCall: vi.fn() };
+  const apiCall = vi.fn<typeof actual.apiCall>();
+  const apiCallOwnerOnly = ((url: string, schema: z.ZodType) =>
+    apiCall(url, schema)) as typeof actual.apiCallOwnerOnly;
+  return { ...actual, apiCall, apiCallOwnerOnly };
 });
 
-import { apiCall } from "@/lib/api-client";
+import { apiCall, ApiError } from "@/lib/api-client";
 
 const mockApiCall = vi.mocked(apiCall);
 const FILE = new File(["png"], "me.png", { type: "image/png" });
@@ -95,7 +99,7 @@ describe("CoverGeneratePanel upload", () => {
   it("uploads the file, refreshes the options and ticks the new photo", async () => {
     routeApi([list()]);
     const upload = vi.fn().mockResolvedValue("new-photo");
-    const { user, client } = renderPanel(PHOTOS, undefined, upload);
+    const { user, client, setPhotos } = renderPanel(PHOTOS, undefined, upload);
     const invalidate = vi.spyOn(client, "invalidateQueries");
     await screen.findByText(/^usage/);
 
@@ -107,6 +111,7 @@ describe("CoverGeneratePanel upload", () => {
         queryKey: ["carousel-cover-options", PROJECT],
       }),
     );
+    setPhotos([...PHOTOS, { asset_id: "new-photo", source: "library" }]);
     await user.type(screen.getByRole("textbox"), PROMPT);
     await user.click(screen.getByRole("button", { name: "action" }));
     await user.click(
@@ -148,7 +153,7 @@ describe("CoverGeneratePanel upload", () => {
   /** Scenario: An invalid file shows the library upload error */
   it("shows the library upload error when the file is refused", async () => {
     routeApi([list()]);
-    const upload = vi.fn().mockRejectedValue(new Error("422"));
+    const upload = vi.fn().mockRejectedValue(new ApiError(422, "bad type"));
     const { user } = renderPanel(PHOTOS, undefined, upload);
     await screen.findByText(/^usage/);
 
@@ -217,6 +222,6 @@ describe("cover generation text and upload copy", () => {
     expect(generate.confirm.textTitle).toContain("OpenAI (ChatGPT)");
     expect(generate.confirm.textBody).toContain("{carouselCap}");
     expect(generate.confirm.textBody).toContain("{monthCap}");
-    expect(generate.uploadFailed).toBe(m.create.photo.uploadFailed);
+    expect(m.create.photo.uploadFailed).toContain("5 MB");
   });
 });

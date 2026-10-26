@@ -1273,7 +1273,11 @@
         "photoLabel": "Usar a foto {number} da biblioteca",
         "upload": "Enviar foto",
         "uploading": "Enviando…",
-        "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB).",
+        "uploadErrors": {
+          "rateLimited": "Muitos envios em pouco tempo. Espere um minuto e tente de novo.",
+          "network": "A foto não chegou ao servidor. Verifique sua conexão e tente de novo.",
+          "server": "O servidor não conseguiu guardar a foto. Tente de novo em instantes."
+        },
         "promptLabel": "Como deve ser a capa?",
         "promptPlaceholder": "Ex.: eu num café em Lisboa, luz de fim de tarde, olhando para a câmera",
         "usage": "{carouselUsed} de {carouselCap} neste carrossel · {monthUsed} de {monthCap} no mês (o limite do mês renova às 21:00, horário de Brasília, do último dia do mês)",
