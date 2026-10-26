@@ -115,9 +115,9 @@ class CarouselArtifactBuildAdapter:
     async def build_and_activate(self, project_id: str) -> ArtifactActivation:
         """Build + activate the project's artifact via the unchanged CAS path.
 
-        Once activated, the page cache of the project's output tree (slides, PDFs,
-        artifact copies) is released: the files are on disk and this process does
-        not read them again.
+        Once the build returns, activated or not, the page cache of the project's
+        output tree (slides, PDFs, artifact copies) is released: the files are on
+        disk and this process does not read them again.
 
         The artifact-build service is imported at call time: it pulls the
         carousel workflow graph, which imports the presentation facade, so a
@@ -144,14 +144,14 @@ class CarouselArtifactBuildAdapter:
                 prior_artifact_version=project.artifact_version,
             ),
         )
+        if project.output_dir:
+            await asyncio.to_thread(release_page_cache, Path(project.output_dir))
         if isinstance(result, ArtifactBuildFailure):
             return ArtifactActivation(
                 ok=False,
                 artifact_version=result.artifact_version or "",
                 errors=tuple(result.errors),
             )
-        if project.output_dir:
-            await asyncio.to_thread(release_page_cache, Path(project.output_dir))
         return ArtifactActivation(ok=True, artifact_version=result.artifact_version)
 
 

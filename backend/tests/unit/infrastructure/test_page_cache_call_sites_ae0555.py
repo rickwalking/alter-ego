@@ -136,12 +136,15 @@ class TestActivationReleasesTheOutputTree:
 
         release.assert_called_once_with(tmp_path)
 
-    async def test_a_failed_activation_releases_nothing(self, tmp_path: Path) -> None:
+    async def test_a_failed_activation_still_releases_the_output(
+        self, tmp_path: Path
+    ) -> None:
+        """Scenario: A failed activation still releases the carousel output."""
         failure = ArtifactBuildFailure(artifact_version=_VERSION, errors=("conflict",))
 
         release = await _activate(_project(str(tmp_path)), failure)
 
-        release.assert_not_called()
+        release.assert_called_once_with(tmp_path)
 
     async def test_a_project_without_output_dir_releases_nothing(
         self, tmp_path: Path

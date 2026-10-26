@@ -51,7 +51,7 @@ Findings, with measurements (see Test Evidence):
   and does nothing where the platform has no `posix_fadvise`.
 - The slide export releases its output directory after the slides are written.
 - The artifact activation (worker finalize, backend finalize) releases the whole project output tree
-  after a successful activation.
+  once the build returns, activated or not.
 - `backend/scripts/measure_carousel_export_memory.py`: the reproducible measurement.
 - Update `.agent/reports/AE-0522.memory-budget.md` with the measured numbers.
 
@@ -86,7 +86,7 @@ Findings, with measurements (see Test Evidence):
 ### MODIFIED
 
 - `PlaywrightExportService.export_slides` releases its output directory after rendering.
-- `CarouselArtifactBuildAdapter.build_and_activate` releases the project output tree after activation.
+- `CarouselArtifactBuildAdapter.build_and_activate` releases the project output tree once the build returns.
 
 ### REMOVED
 
@@ -177,8 +177,8 @@ fix image):
 - Tests: `tests/unit/infrastructure/test_page_cache_ae0555.py` (12, one of them checks with `mincore` that
   the kernel really drops the pages of a disk-backed file) and
   `tests/unit/infrastructure/test_page_cache_call_sites_ae0555.py` (5). With the call-site changes
-  reverted, both "releases" tests fail on their assertions; the "releases nothing" tests guard the
-  failure paths. The existing export, artifact, finalize and port suites
+  reverted, the "releases" tests fail on their assertions. The failed-activation test used to assert that
+  nothing was released; it now asserts the release (Pedro, 2026-10-26: release on the failure path too). The existing export, artifact, finalize and port suites
   pass (102 tests).
 - No assertion or expectation lines were removed.
 
@@ -189,7 +189,7 @@ fix image):
 ## Known Trade-offs
 
 - The PDF build re-reads the standard slides right after the export released them; the activation
-  release drops them again. If the activation fails, those pages stay until the next release.
+  release drops them again, whether the activation succeeds or fails.
 - The activation release walks the whole project output tree, older artifact versions included. Files
   that are already clean and uncached cost one open, `fdatasync` and `fadvise` each, in a worker thread.
   In the backend (dashboard finalize) it also drops pages the backend may have just served; those reads go

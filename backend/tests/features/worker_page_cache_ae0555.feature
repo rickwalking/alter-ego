@@ -30,3 +30,8 @@ Feature: The generation worker releases the page cache of the carousel files it 
     Given a carousel whose artifact version is built and activated
     When the activation commits
     Then the page cache of the carousel output directory is released
+
+  Scenario: A failed activation still releases the carousel output
+    Given a carousel whose artifact build or activation fails
+    When the build returns
+    Then the page cache of the carousel output directory is released
