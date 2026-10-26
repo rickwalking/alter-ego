@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from sqlalchemy import func, select
+from structlog.testing import capture_logs
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
 from rag_backend.modules.generation_queue.domain.maintenance import MaintenanceEnqueue
@@ -218,7 +219,7 @@ async def test_get_returns_capability_and_current_progress(
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["can_reprocess"] is True
+    assert body["can_reprocess"] is False
     assert body["refusal_code"] is None
     assert body["run_id"] == str(run_id)
     assert body["status"] == "queued"
@@ -286,11 +287,19 @@ async def test_process_now_failure_is_an_honest_503(
     """Scenario: A failed durable control enqueue returns 503 without details."""
     control = _Control(error=RuntimeError("sensitive queue detail"))
     harness.app.state.maintenance_control = control
-    response = await harness.client.post(
-        "/api/generation-runs/process", headers=harness.headers(harness.admin)
-    )
+    with capture_logs() as logs:
+        response = await harness.client.post(
+            "/api/generation-runs/process", headers=harness.headers(harness.admin)
+        )
     assert response.status_code == 503
     assert "sensitive queue detail" not in response.text
+    failures = [
+        entry
+        for entry in logs
+        if entry["event"] == "generation_maintenance_process_failed"
+    ]
+    assert len(failures) == 1
+    assert failures[0]["exc_info"] is True
 
 
 async def test_process_now_is_admin_only(harness: RecoveryApiHarness) -> None:

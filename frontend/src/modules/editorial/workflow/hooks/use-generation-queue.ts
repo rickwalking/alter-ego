@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   QUEUE_ACTION,
   QUEUE_API,
+  REPROCESS_REFUSAL_CODES,
   WORKFLOW_API,
   WORKFLOW_BOARD_POLL_INTERVAL_MS,
   type QueueAction,
@@ -18,6 +19,8 @@ import {
   type QueueBoard,
 } from "@/schemas/generation-queue";
 import type {
+  GenerationQueueActionResult,
+  GenerationQueueActionState,
   GenerationQueueLoadResult,
   GenerationQueueMaintenanceDeps,
   GenerationQueueMaintenanceState,
@@ -41,10 +44,11 @@ const POST_OUTCOME = {
   FORBIDDEN: "forbidden",
   FAILED: "failed",
 } as const;
-type PostOutcome = (typeof POST_OUTCOME)[keyof typeof POST_OUTCOME];
+type PostOutcome = GenerationQueueActionResult["outcome"];
 const conflictSchema = z.object({ detail: z.string() });
 const CONFLICT = 409;
 const FORBIDDEN = 403;
+const NO_PENDING: ReadonlySet<string> = new Set<string>();
 
 /** Polls on the board interval and focus until unmount or forbidden access. */
 function usePolling(load: () => Promise<void>, stopped: boolean): void {
@@ -91,16 +95,25 @@ function actionBody(
   return JSON.stringify({ expected_version: reprocess.expectedVersion });
 }
 
-/**
- * Posts one panel button: `done` when it went through or someone already resolved
- * it (409 `already_resolved`), `notAllowed` when the run can no longer take this
- * button (409 `not_allowed`), `failed` otherwise.
- */
+function actionResult(outcome: PostOutcome): GenerationQueueActionResult {
+  return { outcome, refusalCode: null };
+}
+
+function reprocessConflict(body: unknown): GenerationQueueActionResult {
+  const parsed = conflictSchema.safeParse(body);
+  const refusalCode =
+    parsed.success && REPROCESS_REFUSAL_CODES.has(parsed.data.detail)
+      ? parsed.data.detail
+      : null;
+  return { outcome: POST_OUTCOME.NOT_ALLOWED, refusalCode };
+}
+
+/** Posts one panel action and retains only recognized reprocess refusal codes. */
 async function postAction(
   action: QueueAction,
   id: string,
   reprocess?: GenerationQueueReprocessTarget,
-): Promise<PostOutcome> {
+): Promise<GenerationQueueActionResult> {
   try {
     const response = await authenticatedFetch(
       actionUrl(action, id, reprocess),
@@ -111,18 +124,38 @@ async function postAction(
       },
     );
     if (response.status === CONFLICT) {
-      if (action === QUEUE_ACTION.REPROCESS) return POST_OUTCOME.NOT_ALLOWED;
+      if (action === QUEUE_ACTION.REPROCESS) {
+        const body: unknown = await response.json().catch((): null => null);
+        return reprocessConflict(body);
+      }
       const body = conflictSchema.safeParse(await response.json());
-      return body.success && body.data.detail === NOT_ALLOWED
-        ? POST_OUTCOME.NOT_ALLOWED
-        : POST_OUTCOME.DONE;
+      return actionResult(
+        body.success && body.data.detail === NOT_ALLOWED
+          ? POST_OUTCOME.NOT_ALLOWED
+          : POST_OUTCOME.DONE,
+      );
     }
-    if (!response.ok) return POST_OUTCOME.FAILED;
+    if (!response.ok) return actionResult(POST_OUTCOME.FAILED);
     queueActionResponseSchema.parse(await response.json());
-    return POST_OUTCOME.DONE;
+    return actionResult(POST_OUTCOME.DONE);
   } catch {
-    return POST_OUTCOME.FAILED;
+    return actionResult(POST_OUTCOME.FAILED);
   }
+}
+
+function actionErrorMessage(
+  result: GenerationQueueActionResult,
+  translate: (key: string) => string,
+  translateReprocess: (key: string) => string,
+): string | null {
+  if (result.outcome === POST_OUTCOME.FAILED) {
+    return translate("actionFailed");
+  }
+  if (result.outcome !== POST_OUTCOME.NOT_ALLOWED) return null;
+  if (result.refusalCode !== null) {
+    return translateReprocess(`refusals.${result.refusalCode}`);
+  }
+  return translate("notAllowed");
 }
 
 async function postMaintenance(): Promise<PostOutcome> {
@@ -184,6 +217,45 @@ function useQueueMaintenance(
   return { processPending, processError, processQueue };
 }
 
+function useQueueActions(
+  load: () => Promise<void>,
+  translate: (key: string) => string,
+  translateReprocess: (key: string) => string,
+): GenerationQueueActionState {
+  const [pending, setPending] = useState<ReadonlySet<string>>(NO_PENDING);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const pendingRef = useRef<ReadonlySet<string>>(NO_PENDING);
+  const setRowPending = useCallback((id: string, isPending: boolean): void => {
+    const next = new Set(pendingRef.current);
+    if (isPending) next.add(id);
+    if (!isPending) next.delete(id);
+    pendingRef.current = next;
+    setPending(next);
+  }, []);
+  const act = useCallback(
+    async (
+      action: QueueAction,
+      id: string,
+      reprocess?: GenerationQueueReprocessTarget,
+    ): Promise<void> => {
+      if (pendingRef.current.has(id)) return;
+      setRowPending(id, true);
+      setActionError(null);
+      try {
+        const result = await postAction(action, id, reprocess);
+        setActionError(
+          actionErrorMessage(result, translate, translateReprocess),
+        );
+      } finally {
+        setRowPending(id, false);
+      }
+      await load();
+    },
+    [load, setRowPending, translate, translateReprocess],
+  );
+  return { pending, actionError, act };
+}
+
 /**
  * Loads the generation queue panel and refreshes it on the board's poll and on
  * window focus (only the newest answer may update it; a failed refresh keeps the
@@ -194,10 +266,9 @@ function useQueueMaintenance(
  */
 export function useGenerationQueue(): GenerationQueueState {
   const t = useTranslations("workflow.queue");
+  const tReprocess = useTranslations("workflow.reprocess");
   const [board, setBoard] = useState<QueueBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [pollingStopped, setPollingStopped] = useState(false);
   const latestRequestRef = useRef(0);
   const forbiddenRef = useRef(false);
@@ -220,26 +291,10 @@ export function useGenerationQueue(): GenerationQueueState {
     if (loaded.error === null) setBoard(loaded.board);
   }, [t]);
 
-  const act = useCallback(
-    async (
-      action: QueueAction,
-      id: string,
-      reprocess?: GenerationQueueReprocessTarget,
-    ): Promise<void> => {
-      setPending(id);
-      setActionError(null);
-      const outcome = await postAction(action, id, reprocess);
-      if (outcome === POST_OUTCOME.FAILED) setActionError(t("actionFailed"));
-      if (outcome === POST_OUTCOME.NOT_ALLOWED) setActionError(t("notAllowed"));
-      setPending(null);
-      await load();
-    },
-    [load, t],
-  );
-
+  const actions = useQueueActions(load, t, tReprocess);
   const maintenance = useQueueMaintenance(load, t);
   usePolling(load, pollingStopped);
-  return { board, error, pending, actionError, act, ...maintenance };
+  return { board, error, ...actions, ...maintenance };
 }
 
 /** The board or load error, with forbidden access latched by the caller. */

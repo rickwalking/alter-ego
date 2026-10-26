@@ -25,6 +25,7 @@ QUEUE_FLOW_TABLES = (
     "carousel_projects",
     "topic_candidates",
     "autopilot_runs",
+    "telegram_updates",
     "autopilot_served_urls",
     "generation_runs",
     "event_outbox",

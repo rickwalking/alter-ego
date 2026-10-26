@@ -18095,7 +18095,7 @@
     },
     "/api/generation-runs/process": {
       "post": {
-        "description": "Enqueue the same full maintenance control job used by cron.",
+        "description": "Enqueue a full maintenance control job.",
         "operationId": "process_generation_queue_api_generation_runs_process_post",
         "responses": {
           "202": {

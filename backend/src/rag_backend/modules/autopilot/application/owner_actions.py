@@ -145,6 +145,7 @@ class OwnerActionDeps:
     recovery: RunRecoveryStore
     clock: Clock
     owner_chat_id: str
+    owner_user_id: str = ""
     carousels: CarouselPublishSource | None = None
     default_publish: str = PUBLISH_MODE_NOW
     autofix: ContentAutofixer | None = None
@@ -167,11 +168,15 @@ class OwnerActionService(ThesisOwnerActions, CoverOwnerActions, QueueOwnerAction
         self._choice = PublishChoiceActions(_choice_deps(deps), self._out)
 
     async def deliver(self) -> int:
-        """Send the replies queued by ``handle``. Call after the commit."""
+        """Publish queue notices and replies after the commit."""
+        if self._deps.queue is not None:
+            await self._deps.queue.deliver_notifications()
         return await self._replies.deliver()
 
     def discard(self) -> int:
-        """Drop the queued replies. Call after a rollback."""
+        """Drop queue notices and replies after a rollback."""
+        if self._deps.queue is not None:
+            self._deps.queue.discard_notifications()
         return self._replies.discard()
 
     async def handle(self, update: WebhookUpdate) -> None:

@@ -77,7 +77,7 @@ Guards we add around it:
 - Our `generation_runs` table stays the source of truth for the dashboard, Telegram, idempotency (dedupe key) and the
   autopilot state machine; PgQueuer job events are mirrored into it. The dashboard never reads PgQueuer's tables.
 - `heartbeat_timeout` 300 s and CPU-heavy steps off the event loop (`asyncio.to_thread`), so heartbeats are never starved.
-- Pedro (2026-10-25): explicit owner recovery uses PgQueuer priority 1 without preempting the active drive; ordinary work stays at 0 and FIFO holds within each priority class. A separate deduped maintenance entrypoint kicks dispatch or runs the full promotion/recovery pass through the same execution and advisory-lock path for cron and on-demand actions.
+- Pedro (2026-10-25): explicit owner recovery uses PgQueuer priority 1 without preempting the active drive; ordinary work stays at 0 and FIFO holds within each priority class. Accelerating an already-queued retry keeps its original job id, so class FIFO follows original job creation rather than the Reprocessar click. A separate deduped maintenance entrypoint kicks dispatch or runs promote-only (08:05), scan-only (04:00), or full promotion/recovery/dispatch (on demand) through the same execution and advisory-lock path. Maintenance concurrency is one; scheduled work yields to an active full pass, and a successful full pass cancels queued scheduled modes it subsumes while preserving run-specific dispatch.
 
 Not chosen: 1 (in-house table) — roughly the same surface minus PgQueuer's dequeue/heartbeat/requeue/schedule
 primitives (our run table, outbox dispatcher and attempt counter exist either way); it stays the fallback if PgQueuer is ever abandoned, behind the same

@@ -5,9 +5,14 @@ Carousel generation runs in a separate, resource-capped worker fed by PgQueuer;
 this package only.
 """
 
+from rag_backend.modules.generation_queue.constants import (
+    LOG_MAINTENANCE_PROCESS_FAILED,
+)
 from rag_backend.modules.generation_queue.domain.maintenance import (
     FullMaintenanceControl,
+    MaintenanceControl,
     MaintenanceEnqueue,
+    MaintenanceMode,
 )
 from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
     WebMaintenanceGateway,
@@ -24,8 +29,11 @@ from rag_backend.modules.generation_queue.public import (
 )
 
 __all__ = [
+    "LOG_MAINTENANCE_PROCESS_FAILED",
     "FullMaintenanceControl",
+    "MaintenanceControl",
     "MaintenanceEnqueue",
+    "MaintenanceMode",
     "QueueSchemaReport",
     "WebMaintenanceGateway",
     "WorkflowResumePayload",

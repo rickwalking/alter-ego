@@ -251,7 +251,7 @@ async def test_capability_is_read_only_and_reports_progress() -> None:
     service, store, audit, notifier, _ = _service(StuckKind.RETRY_WAIT)
     store.existing = store.write.run
     capability = await service.inspect(_command())
-    assert capability.can_reprocess is True
+    assert capability.can_reprocess is False
     assert capability.run == store.existing
     assert capability.lock_version == 4
     assert store.apply_calls == 0

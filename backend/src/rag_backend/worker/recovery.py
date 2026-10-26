@@ -1,7 +1,7 @@
-"""Daily recovery execution and its 07:00 UTC full-control schedule.
+"""Daily recovery execution and its 07:00 UTC scan-only schedule.
 
-PgQueuer keeps the schedule in its own table. Cron and manual requests enqueue the
-same durable full job; only that job runs the scan and sends its summary.
+PgQueuer keeps the schedule in its own table. Cron enqueues a durable scan job;
+only that job runs the scan and sends its summary.
 """
 
 from __future__ import annotations
@@ -23,7 +23,8 @@ from rag_backend.modules.generation_queue.constants import (
     SCAN_ENTRYPOINT,
 )
 from rag_backend.modules.generation_queue.domain.maintenance import (
-    FullMaintenanceControl,
+    MaintenanceControl,
+    MaintenanceMode,
 )
 from rag_backend.modules.generation_queue.domain.recovery import ScanReport
 
@@ -53,12 +54,12 @@ async def run_daily_scan(
     return report
 
 
-def register_daily_scan(pgq: PgQueuer, control: FullMaintenanceControl) -> None:
-    """Enqueue the shared full control job on PgQueuer's scheduler."""
+def register_daily_scan(pgq: PgQueuer, control: MaintenanceControl) -> None:
+    """Enqueue the scan-only control job on PgQueuer's scheduler."""
 
     async def daily_scan(schedule: Schedule) -> None:
         del schedule
-        await control.request_full()
+        await control.request(MaintenanceMode.SCAN)
 
     pgq.schedule(SCAN_ENTRYPOINT, SCAN_CRON_UTC)(daily_scan)
 

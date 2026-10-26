@@ -71,7 +71,7 @@ export function renderQueuePanel(
     <QueuePanel
       board={value}
       error={null}
-      pending={null}
+      pending={new Set<string>()}
       actionError={null}
       processPending={false}
       processError={null}

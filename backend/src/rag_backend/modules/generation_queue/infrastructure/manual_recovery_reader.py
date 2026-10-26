@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_PENDING
@@ -16,6 +16,8 @@ from rag_backend.modules.autopilot.domain.dead_letter import is_dead_letter
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
+    MANUAL_ORIGIN_REPROCESS,
+    PAYLOAD_MANUAL_ORIGIN,
     PAYLOAD_MANUAL_REPLACES_RUN_ID,
 )
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
@@ -127,9 +129,17 @@ class ManualRecoveryReader:
 
     async def find_existing(self, snapshot: RecoverySnapshot) -> GenerationRun | None:
         """Find a compatible active manual original or failed-terminal successor."""
+        scopes = _existing_scopes(snapshot)
+        if not scopes:
+            return None
         rows = await self._session.scalars(
             select(GenerationRunModel)
-            .where(GenerationRunModel.status.in_(ACTIVE_STATUSES))
+            .where(
+                GenerationRunModel.status.in_(ACTIVE_STATUSES),
+                GenerationRunModel.payload[PAYLOAD_MANUAL_ORIGIN].as_string()
+                == MANUAL_ORIGIN_REPROCESS,
+                or_(*scopes),
+            )
             .order_by(GenerationRunModel.created_at.desc())
             .execution_options(populate_existing=True)
         )
@@ -268,6 +278,23 @@ def _autopilot_facts(row: AutopilotRunModel | None) -> AutopilotRecoveryFacts:
         dead=is_dead_letter(row.state_reason),
         state=str(row.state),
     )
+
+
+def _existing_scopes(snapshot: RecoverySnapshot) -> list[ColumnElement[bool]]:
+    scopes: list[ColumnElement[bool]] = []
+    if snapshot.project is not None:
+        scopes.append(GenerationRunModel.carousel_project_id == snapshot.project.id)
+    original = snapshot.run
+    if original is None:
+        return scopes
+    if original.autopilot_run_id is not None:
+        scopes.append(GenerationRunModel.autopilot_run_id == original.autopilot_run_id)
+    scopes.extend((
+        GenerationRunModel.id == original.id,
+        GenerationRunModel.payload[PAYLOAD_MANUAL_REPLACES_RUN_ID].as_string()
+        == str(original.id),
+    ))
+    return scopes
 
 
 def _scope(

@@ -109,10 +109,6 @@ def _item_failure(drive: ParkedDrive, exc: Exception) -> RecoveryFailure:
     return RecoveryFailure(drive=drive, reason=metadata.reason)
 
 
-def _failure_reason(exc: Exception) -> str:
-    return failure_metadata(exc).reason
-
-
 def summary_text(report: ScanReport) -> str:
     """The one message Pedro gets after the scan."""
     text = SUMMARY_SCAN.format(

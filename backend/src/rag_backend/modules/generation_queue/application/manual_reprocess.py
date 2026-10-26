@@ -76,8 +76,11 @@ class ManualRecoveryDependencies:
 class ManualRecoveryService:
     """Recover stuck rows without importing or executing a workflow graph."""
 
-    def __init__(self, deps: ManualRecoveryDependencies) -> None:
+    def __init__(
+        self, deps: ManualRecoveryDependencies, *, owns_transaction: bool = True
+    ) -> None:
         self._deps = deps
+        self._owns_transaction = owns_transaction
 
     async def reprocess(self, command: ManualReprocessCommand) -> RecoveryResult:
         """Return an existing run or apply exactly one fenced recovery."""
@@ -125,7 +128,7 @@ class ManualRecoveryService:
         """Read workspace capability and progress without writes or notification."""
         snapshot = await self._deps.store.load(command)
         capability = await self._inspect_snapshot(snapshot)
-        await self._deps.store.rollback()
+        await self._rollback()
         return capability
 
     async def _inspect_snapshot(self, snapshot: RecoverySnapshot) -> RecoveryCapability:
@@ -271,7 +274,7 @@ class ManualRecoveryService:
                 lock_version=write.lock_version,
             )
         )
-        await self._deps.store.commit()
+        await self._commit()
         notified = await self._notify(run)
         position, eta_seconds = await self._progress(run)
         return RecoveryResult(
@@ -287,7 +290,7 @@ class ManualRecoveryService:
     async def _existing(
         self, snapshot: RecoverySnapshot, current: _ExistingRun
     ) -> RecoveryResult:
-        await self._deps.store.commit()
+        await self._commit()
         run = current.run
         notified = await self._notify(run)
         version = current.lock_version or self._lock_version(snapshot)
@@ -311,7 +314,7 @@ class ManualRecoveryService:
     async def _refused(
         self, snapshot: RecoverySnapshot, refusal: RefusalCode
     ) -> RecoveryResult:
-        await self._deps.store.rollback()
+        await self._rollback()
         return RecoveryResult(
             outcome=RecoveryOutcome.REFUSED,
             refusal=refusal,
@@ -319,7 +322,7 @@ class ManualRecoveryService:
         )
 
     async def _not_found(self) -> RecoveryResult:
-        await self._deps.store.rollback()
+        await self._rollback()
         return RecoveryResult(outcome=RecoveryOutcome.NOT_FOUND)
 
     async def _progress(self, run: GenerationRun) -> tuple[int | None, int | None]:
@@ -338,7 +341,7 @@ class ManualRecoveryService:
         )
         if run is not None and decision is None:
             return RecoveryCapability(
-                can_reprocess=True,
+                can_reprocess=False,
                 run=run,
                 lock_version=self._lock_version(snapshot),
                 stuck_kind=manual_stuck_kind(run),
@@ -356,6 +359,14 @@ class ManualRecoveryService:
             position=position,
             eta_seconds=eta_seconds,
         )
+
+    async def _commit(self) -> None:
+        if self._owns_transaction:
+            await self._deps.store.commit()
+
+    async def _rollback(self) -> None:
+        if self._owns_transaction:
+            await self._deps.store.rollback()
 
     @staticmethod
     def _lock_version(snapshot: RecoverySnapshot) -> int | None:

@@ -177,9 +177,9 @@ async def test_failed_terminal_successor_is_durable_idempotent_and_outside_cap(
         assert successor is not None
         successor.status = GenerationStatus.RUNNING.value
         await session.commit()
-        running_again = await build_manual_recovery(session, RecordingNotifier()).reprocess(
-            _command(generation_id)
-        )
+        running_again = await build_manual_recovery(
+            session, RecordingNotifier()
+        ).reprocess(_command(generation_id))
     assert running_again.outcome is RecoveryOutcome.EXISTING
     assert running_again.run.id == accepted.run.id
 
@@ -211,8 +211,10 @@ async def test_escalated_autopilot_uses_existing_revive_and_requeue(
             generation,
         ])
         await session.commit()
+        before = await _cap_count(session)
         service = build_manual_recovery(session, RecordingNotifier())
         result = await service.reprocess(_command(generation_id, project_id))
+        after = await _cap_count(session)
         autopilot = await session.get(AutopilotRunModel, autopilot_id)
         stored = await session.get(GenerationRunModel, generation_id)
     assert result.outcome is RecoveryOutcome.QUEUED
@@ -224,6 +226,46 @@ async def test_escalated_autopilot_uses_existing_revive_and_requeue(
     assert stored.pgq_job_id is None
     assert stored.payload[PAYLOAD_MANUAL_ORIGIN] == "carousel_reprocess"
     assert stored.payload[ATTEMPT_ID_KEY]
+    assert before == after == 1
+
+
+async def test_retry_wait_reprocess_does_not_free_an_autopilot_cap_slot(
+    engine: AsyncEngine,
+) -> None:
+    """Scenario: Manual recovery is outside cap and backlog and keeps class FIFO"""
+    sessions = _sessions(engine)
+    topic_id, autopilot_id, generation_id = uuid4(), uuid4(), uuid4()
+    generation = autopilot_run_row(
+        autopilot_id,
+        GenerationStatus.RETRY_WAIT,
+        id=generation_id,
+        next_attempt_at=NOW + timedelta(hours=1),
+    )
+    async with sessions() as session:
+        await _seed_topic(session, topic_id)
+        session.add_all([
+            _autopilot(
+                topic_id,
+                autopilot_id,
+                AutopilotRunState.GENERATING,
+                state_reason="retry_scheduled",
+            ),
+            generation,
+        ])
+        await session.commit()
+        before = await _cap_count(session)
+        result = await build_manual_recovery(session, RecordingNotifier()).reprocess(
+            _command(generation_id)
+        )
+        after = await _cap_count(session)
+        stored = await session.get(GenerationRunModel, generation_id)
+    assert result.outcome is RecoveryOutcome.QUEUED
+    assert result.run.id == generation_id
+    assert stored is not None
+    assert stored.status == GenerationStatus.QUEUED.value
+    assert stored.payload[PAYLOAD_MANUAL_ORIGIN] == "carousel_reprocess"
+    assert PAYLOAD_MANUAL_REPLACES_RUN_ID not in stored.payload
+    assert before == after == 1
 
 
 async def test_project_backed_unstaged_autopilot_is_staged_not_adopted(

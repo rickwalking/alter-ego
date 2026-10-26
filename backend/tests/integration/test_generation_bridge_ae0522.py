@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -17,10 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import rag_backend.infrastructure.database.config as db_config
+import rag_backend.modules.autopilot.queue_bridge as queue_bridge_module
 from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_FAILED
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
+from rag_backend.modules.autopilot.application.runner_deps import RunnerDependencies
 from rag_backend.modules.autopilot.bootstrap import AutopilotTickConfig
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.infrastructure.models import (
@@ -40,6 +43,11 @@ pytestmark = pytest.mark.integration
 
 _NOW = datetime.now(UTC)
 Sessions = async_sessionmaker[AsyncSession]
+
+
+class _Clock:
+    def now(self) -> datetime:
+        return _NOW
 
 
 @pytest_asyncio.fixture(loop_scope="function")
@@ -132,8 +140,18 @@ async def test_bridge_lists_only_runs_that_need_driving(sessions: Sessions) -> N
     )
 
 
-async def test_bridge_facts_and_no_step_for_a_parked_run(sessions: Sessions) -> None:
+async def test_bridge_facts_and_no_step_for_a_parked_run(
+    sessions: Sessions, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Scenario: One autopilot drive steps a run until the owner has to act"""
+    original = queue_bridge_module.runner_dependencies
+
+    def with_seeded_clock(
+        session: AsyncSession, config: AutopilotTickConfig
+    ) -> RunnerDependencies:
+        return replace(original(session, config), clock=_Clock())
+
+    monkeypatch.setattr(queue_bridge_module, "runner_dependencies", with_seeded_clock)
     bridge = _bridge(sessions)
     owner = await _seed(sessions, AutopilotRunState.AWAITING_OWNER, "p3")
     facts = await bridge.facts(str(owner))

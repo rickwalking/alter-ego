@@ -31,7 +31,7 @@ export function QueueBacklogRow({
         theme={theme}
         label={t("generateNow")}
         variant="primary"
-        pending={pending === item.candidate_id}
+        pending={pending.has(item.candidate_id)}
         onAction={onAction}
       />
     </li>

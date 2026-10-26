@@ -131,9 +131,12 @@ __all__ = [
 
 
 def build_manual_recovery(
-    session: AsyncSession, notifier: MaintenanceNotifier | None = None
+    session: AsyncSession,
+    notifier: MaintenanceNotifier | None = None,
+    *,
+    owns_transaction: bool = True,
 ) -> ManualRecoveryService:
-    """Compose the isolated recovery service on one API caller's session."""
+    """Compose recovery with explicit transaction ownership on one session."""
     from rag_backend.infrastructure.config.settings import get_settings
     from rag_backend.modules.generation_queue.infrastructure import (
         manual_recovery_audit,
@@ -142,7 +145,6 @@ def build_manual_recovery(
 
     bind = session.bind
     engine = bind.engine if isinstance(bind, AsyncConnection) else bind
-    settings = get_settings()
     return ManualRecoveryService(
         ManualRecoveryDependencies(
             store=manual_recovery_store.SqlManualRecoveryStore(session, UTC_CLOCK),
@@ -151,10 +153,11 @@ def build_manual_recovery(
             notifier=notifier or WebMaintenanceGateway(engine),
             clock=UTC_CLOCK,
             policy=RecoveryPolicy(
-                heartbeat_stale_seconds=settings.workflow_run_heartbeat_stale_seconds,
+                heartbeat_stale_seconds=get_settings().workflow_run_heartbeat_stale_seconds,
                 dispatcher_grace_seconds=ORPHAN_JOB_GRACE_SECONDS,
             ),
-        )
+        ),
+        owns_transaction=owns_transaction,
     )
 
 

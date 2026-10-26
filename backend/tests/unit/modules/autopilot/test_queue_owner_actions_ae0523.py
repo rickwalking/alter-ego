@@ -174,6 +174,12 @@ class _Queue:
         )
         return await revive(deps, run, REASON_DEAD_RETRY)
 
+    async def deliver_notifications(self) -> None:
+        return None
+
+    def discard_notifications(self) -> None:
+        return None
+
 
 @dataclass
 class _Backlog:
@@ -257,6 +263,7 @@ def _world(*runs: AutopilotRun, ahead: tuple[str | None, ...] = ()) -> _World:
             recovery=_Recovery(runs=repo),
             clock=_Clock(),
             owner_chat_id=_OWNER,
+            owner_user_id="owner-user",
             topics=topics,
             queue=queue,
             backlog=backlog,

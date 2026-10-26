@@ -63,7 +63,7 @@ export function QueueReprocessButton({
 }: Readonly<QueueReprocessButtonProps>): React.ReactElement {
   const t = useTranslations("workflow.reprocess");
   const reasonId = useId();
-  const busy = pending === item.id;
+  const busy = pending.has(item.id);
   const available = canTarget(item);
   let reason: string | null = null;
   if (busy) reason = t("pendingReason");

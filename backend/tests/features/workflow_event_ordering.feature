@@ -20,3 +20,10 @@ Feature: Workflow event emission is consistent with the database
     When the Redis publish fails
     Then the request completes successfully
     And the failure is logged with the event identifier
+
+  Scenario: Savepoints publish only at the root transaction outcome
+    Given a workflow event and a nested recovery savepoint
+    When the savepoint commits or rolls back
+    Then no event is published before the root transaction ends
+    And the root commit publishes the surviving event exactly once
+    And a root rollback publishes nothing

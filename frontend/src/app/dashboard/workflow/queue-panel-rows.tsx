@@ -122,7 +122,7 @@ export function QueueActiveRow({
             action={QUEUE_ACTION.CANCEL}
             theme={theme}
             label={t("cancel")}
-            pending={pending === item.id}
+            pending={pending.has(item.id)}
             confirmation={t("confirmCancel", { theme })}
             onAction={onAction}
           />
@@ -166,7 +166,7 @@ export function QueueDeadRow({
             theme={theme}
             label={t("retry")}
             variant="primary"
-            pending={pending === item.id}
+            pending={pending.has(item.id)}
             onAction={onAction}
           />
         )}
@@ -176,7 +176,7 @@ export function QueueDeadRow({
             action={QUEUE_ACTION.DISCARD}
             theme={theme}
             label={t("discard")}
-            pending={pending === item.id}
+            pending={pending.has(item.id)}
             confirmation={t("confirmDiscard", { theme })}
             onAction={onAction}
           />

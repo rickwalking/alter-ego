@@ -14,7 +14,10 @@ from rag_backend.modules.autopilot.queue_constants import (
     BACKLOG_PROMOTION_CRON_UTC,
     BACKLOG_PROMOTION_ENTRYPOINT,
 )
-from rag_backend.modules.generation_queue.domain.maintenance import MaintenanceEnqueue
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    MaintenanceEnqueue,
+    MaintenanceMode,
+)
 from rag_backend.worker.schedules import (
     register_backlog_promotion,
     run_backlog_promotion,
@@ -53,16 +56,19 @@ class _Scheduler:
 
 @dataclass
 class _Control:
-    calls: int = 0
+    bridge: _Bridge
+    modes: list[MaintenanceMode] = field(default_factory=list)
 
-    async def request_full(self) -> MaintenanceEnqueue:
-        self.calls += 1
+    async def request(self, mode: MaintenanceMode) -> MaintenanceEnqueue:
+        self.modes.append(mode)
+        await run_backlog_promotion(self.bridge)
         return MaintenanceEnqueue(job_id=1, inserted=True)
 
 
 async def test_the_morning_promotion_is_scheduled_at_eight_five() -> None:
     """Scenario: The morning promotion is scheduled at 08:05 São Paulo time"""
-    scheduler, bridge, control = _Scheduler(), _Bridge(), _Control()
+    scheduler, bridge = _Scheduler(), _Bridge()
+    control = _Control(bridge)
     register_backlog_promotion(scheduler, control)
     assert scheduler.registered == [(BACKLOG_PROMOTION_ENTRYPOINT, "5 11 * * *")]
     assert BACKLOG_PROMOTION_CRON_UTC == "5 11 * * *"
@@ -71,8 +77,8 @@ async def test_the_morning_promotion_is_scheduled_at_eight_five() -> None:
     )
     assert (local.hour, local.minute) == (8, 5)
     await scheduler.jobs[0](object())
-    assert bridge.calls == 0
-    assert control.calls == 1
+    assert bridge.calls == 1
+    assert control.modes == [MaintenanceMode.PROMOTE]
 
 
 async def test_a_failed_promotion_is_logged_not_raised() -> None:

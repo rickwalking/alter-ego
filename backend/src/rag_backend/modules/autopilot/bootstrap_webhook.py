@@ -93,6 +93,7 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         recovery=SqlRunRecoveryStore(build.session),
         clock=SystemClock(),
         owner_chat_id=build.settings.telegram_owner_chat_id,
+        owner_user_id=build.settings.autopilot_owner_user_id,
         carousels=PublishingCarouselSource(
             build.session, build.settings.carousel_public_base_url
         ),
@@ -104,7 +105,7 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         schedule_signals=_schedule_signals(build),
         covers=cover_offers(build.session),
         cover_choices=SqlCoverChoices(build.session),
-        queue=SqlQueueControl(build.session),
+        queue=SqlQueueControl(build.session, deferred=True),
         backlog=SqlBacklogStore(build.session),
         dead_letters=SqlDeadLetterRuns(build.session),
     )

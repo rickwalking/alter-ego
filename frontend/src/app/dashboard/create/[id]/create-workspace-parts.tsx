@@ -13,6 +13,7 @@ import {
 } from "@/modules/editorial";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
+import type { CarouselReprocessState } from "@/modules/editorial";
 import type { CreateWorkspace } from "./use-create-workspace";
 
 const briefCardStyle = {
@@ -82,6 +83,14 @@ function PublishStepCard({
 
 type LoadedProject = NonNullable<CreateWorkspace["projectQuery"]["data"]>;
 
+function shouldShowReprocess(reprocess: CarouselReprocessState): boolean {
+  if (reprocess.pending || reprocess.error !== null) return true;
+  return (
+    typeof reprocess.capability?.stuck_kind === "string" ||
+    reprocess.progressVisible
+  );
+}
+
 /** The active step's body: failed card, publish hand-off, brief or a phase. */
 export function WorkspaceStepBody({
   workspace,
@@ -98,7 +107,8 @@ export function WorkspaceStepBody({
     fallbackExpectedVersion: state?.lock_version,
     refreshWorkflow: editorialWorkflow.refreshState,
   });
-  const reprocessControl = (
+  const showReprocess = shouldShowReprocess(reprocess);
+  const reprocessControl = showReprocess ? (
     <CarouselReprocess
       capability={reprocess.capability}
       pending={reprocess.pending}
@@ -108,7 +118,7 @@ export function WorkspaceStepBody({
         void reprocess.reprocess();
       }}
     />
-  );
+  ) : null;
   if (state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED) {
     return (
       <>
@@ -125,7 +135,12 @@ export function WorkspaceStepBody({
     );
   }
   if (activeStepId === CREATE_STEP_IDS.PUBLISH) {
-    return <PublishStepCard onGoToPublish={workspace.navigation.goToPublish} />;
+    return (
+      <>
+        {reprocessControl}
+        <PublishStepCard onGoToPublish={workspace.navigation.goToPublish} />
+      </>
+    );
   }
   if (activeStepId === CREATE_STEP_IDS.BRIEF) {
     return (

@@ -86,6 +86,9 @@ class _QueueDeps(Protocol):
     def owner_chat_id(self) -> str: ...
 
     @property
+    def owner_user_id(self) -> str: ...
+
+    @property
     def queue(self) -> QueueControl | None: ...
 
     @property
@@ -224,9 +227,10 @@ async def _retry(host: _Host, update: WebhookUpdate, run_id: UUID) -> None:
 async def _retried_run(host: _Host, run: AutopilotRun) -> UUID | None:
     """Delegate to shared manual recovery; preserve the callback reply contract."""
     queue = host._deps.queue
-    if queue is None or not is_dead_letter(run.state_reason):
+    actor_id = host._deps.owner_user_id
+    if queue is None or not actor_id or not is_dead_letter(run.state_reason):
         return None
-    return await queue.reprocess_autopilot(run.run_id, host._deps.owner_chat_id)
+    return await queue.reprocess_autopilot(run.run_id, actor_id)
 
 
 def _revive_deps(host: _Host) -> ReviveDependencies:

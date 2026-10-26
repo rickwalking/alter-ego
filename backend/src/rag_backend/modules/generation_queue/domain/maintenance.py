@@ -10,20 +10,31 @@ from uuid import UUID
 from rag_backend.modules.generation_queue.constants import (
     MAINTENANCE_DISPATCH_PREFIX,
     MAINTENANCE_FULL,
+    MAINTENANCE_PROMOTE,
+    MAINTENANCE_SCAN,
 )
+
+
+class MaintenanceMode(StrEnum):
+    """The independent scheduled and manual maintenance passes."""
+
+    PROMOTE = MAINTENANCE_PROMOTE
+    SCAN = MAINTENANCE_SCAN
+    FULL = MAINTENANCE_FULL
 
 
 @dataclass(frozen=True)
 class MaintenanceCommand:
-    """A full pass, or dispatch for exactly one generation run."""
+    """A mode-specific pass, or dispatch for exactly one generation run."""
 
     run_id: UUID | None = None
+    mode: MaintenanceMode = MaintenanceMode.FULL
 
     @property
     def dedupe_key(self) -> str:
         """The complete active-job dedupe identity."""
         if self.run_id is None:
-            return MAINTENANCE_FULL
+            return self.mode.value
         return f"{MAINTENANCE_DISPATCH_PREFIX}{self.run_id}"
 
     @property
@@ -46,11 +57,20 @@ class MaintenanceOutcome(StrEnum):
     DISPATCHED = "dispatched"
     COMPLETED = "completed"
     BUSY = "busy"
+    SUBSUMED = "subsumed"
     IGNORED = "ignored"
 
 
+class MaintenanceControl(Protocol):
+    """The mode-specific durable maintenance enqueue port."""
+
+    async def request(self, mode: MaintenanceMode) -> MaintenanceEnqueue:
+        """Insert or find the active control job for one mode."""
+        ...
+
+
 class FullMaintenanceControl(Protocol):
-    """The shared manual and cron full-pass enqueue port."""
+    """The manual full-pass enqueue port."""
 
     async def request_full(self) -> MaintenanceEnqueue:
         """Insert or find the active full control job."""
@@ -58,25 +78,25 @@ class FullMaintenanceControl(Protocol):
 
 
 def parse_maintenance(payload: bytes | None) -> MaintenanceCommand | None:
-    """Parse only a complete full or dispatch payload; ignore foreign jobs."""
+    """Parse only a complete maintenance or dispatch payload."""
     if not payload:
         return None
     try:
         text = payload.decode()
-        if text == MAINTENANCE_FULL:
-            return MaintenanceCommand()
-        if not text.startswith(MAINTENANCE_DISPATCH_PREFIX):
-            return None
-        run_id = UUID(text.removeprefix(MAINTENANCE_DISPATCH_PREFIX))
+        if text.startswith(MAINTENANCE_DISPATCH_PREFIX):
+            run_id = UUID(text.removeprefix(MAINTENANCE_DISPATCH_PREFIX))
+            return MaintenanceCommand(run_id=run_id)
+        return MaintenanceCommand(mode=MaintenanceMode(text))
     except (UnicodeDecodeError, ValueError):
         return None
-    return MaintenanceCommand(run_id=run_id)
 
 
 __all__ = [
     "FullMaintenanceControl",
     "MaintenanceCommand",
+    "MaintenanceControl",
     "MaintenanceEnqueue",
+    "MaintenanceMode",
     "MaintenanceOutcome",
     "parse_maintenance",
 ]

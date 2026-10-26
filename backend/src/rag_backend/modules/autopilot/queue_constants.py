@@ -106,6 +106,7 @@ DEAD_LETTER_TEXT_BY_CODE: dict[str, str] = {
 DEAD_LETTER_TEXT_DEFAULT = "um erro na fila de geração ({code})"
 
 LOG_QUEUE_FLOW = "autopilot.queue_flow"
+LOG_OWNER_QUEUE_DISPATCH_FAILED = "autopilot_owner_queue_dispatch_failed"
 LOG_BACKLOG_PROMOTED = "autopilot_backlog_promoted"
 LOG_BACKLOG_PROMOTION_FAILED = "autopilot_backlog_promotion_failed"
 BACKLOG_PROMOTION_ENTRYPOINT = "autopilot_backlog_promotion"
