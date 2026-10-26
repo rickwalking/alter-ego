@@ -6,7 +6,10 @@ from dataclasses import replace
 from datetime import timedelta
 from uuid import uuid4
 
-from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_IN_PROGRESS,
+)
 from rag_backend.modules.generation_queue.application.manual_reprocess import (
     ManualRecoveryDependencies,
     ManualRecoveryService,
@@ -193,6 +196,40 @@ async def test_state_is_reread_after_lock_acquisition() -> None:
     store.snapshots = [store.snapshot, fresh]
     result = await service.reprocess(_command())
     assert result.refusal is RefusalCode.FRESH_RUNNING
+    assert lock.held == [["autopilot:r1", "project:p1"]]
+    assert store.apply_calls == 0
+    assert audit.commands == []
+    assert notifier.notices == []
+
+
+async def test_normally_queued_is_refused_after_lock_acquisition() -> None:
+    """Scenario: Not stuck work is refused with a reason"""
+    service, store, audit, notifier, lock = _service(StuckKind.STALE_RUNNING)
+    fresh = replace(
+        store.snapshot,
+        run=replace(store.snapshot.run, status=GenerationStatus.QUEUED),
+    )
+    store.snapshots = [store.snapshot, fresh]
+    result = await service.reprocess(_command())
+    assert result.refusal is RefusalCode.NORMAL_QUEUED
+    assert lock.held == [["autopilot:r1", "project:p1"]]
+    assert store.apply_calls == 0
+    assert audit.commands == []
+    assert notifier.notices == []
+
+
+async def test_owner_waiting_is_refused_after_lock_acquisition() -> None:
+    """Scenario: Not stuck work is refused with a reason"""
+    service, store, audit, notifier, lock = _service(StuckKind.STALE_RUNNING)
+    fresh = replace(
+        store.snapshot,
+        project=replace(
+            store.snapshot.project, phase_status=PHASE_STATUS_AWAITING_HUMAN
+        ),
+    )
+    store.snapshots = [store.snapshot, fresh]
+    result = await service.reprocess(_command())
+    assert result.refusal is RefusalCode.OWNER_WAITING
     assert lock.held == [["autopilot:r1", "project:p1"]]
     assert store.apply_calls == 0
     assert audit.commands == []

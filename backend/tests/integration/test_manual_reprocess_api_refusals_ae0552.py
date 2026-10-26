@@ -196,7 +196,7 @@ async def test_cross_owner_existing_run_is_rejected(
     other_project_id = str(uuid4())
     other_run = workflow_run_row(
         other_project_id,
-        GenerationStatus.DEAD_LETTER,
+        GenerationStatus.QUEUED,
         payload={"manual_origin": "carousel_reprocess"},
     )
     async with harness.sessions() as session:

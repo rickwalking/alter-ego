@@ -215,7 +215,14 @@ class ManualRecoveryService:
         existing = await self._deps.store.find_existing(fresh)
         if existing is not None:
             return await self._existing(fresh, _ExistingRun(run=existing))
-        return await self._apply(fresh, self._classify(fresh))
+        return await self._finish(fresh, self._classify(fresh))
+
+    async def _finish(
+        self, snapshot: RecoverySnapshot, decision: RecoveryDecision
+    ) -> RecoveryResult:
+        if decision.refusal is not None:
+            return await self._refused(snapshot, decision.refusal)
+        return await self._apply(snapshot, decision)
 
     def _classify(self, snapshot: RecoverySnapshot) -> RecoveryDecision:
         return classify_recovery(snapshot, self._deps.clock.now(), self._deps.policy)

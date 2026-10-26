@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from rag_backend.modules.autopilot.domain.queue_position import QueuePosition
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     AuditCommand,
     MaintenanceNotice,
@@ -14,6 +13,9 @@ from rag_backend.modules.generation_queue.domain.manual_recovery import (
     RecoveryWrite,
 )
 from rag_backend.modules.generation_queue.domain.models import GenerationRun
+
+if TYPE_CHECKING:
+    from rag_backend.modules.autopilot.domain.queue_position import QueuePosition
 
 
 class ManualRecoveryStore(Protocol):

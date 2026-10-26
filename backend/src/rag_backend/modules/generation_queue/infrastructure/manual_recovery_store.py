@@ -84,6 +84,8 @@ class SqlManualRecoveryStore:
     async def apply(self, mutation: RecoveryMutation) -> RecoveryWrite:
         """Serialize on the old run/project and apply one atomic recovery."""
         fresh = await self._reader.serialize(mutation.snapshot)
+        if fresh.missing:
+            return RecoveryWrite(status=WriteStatus.CONFLICT)
         existing = await self._reader.find_existing(fresh)
         if existing is not None:
             return RecoveryWrite(
@@ -222,6 +224,8 @@ class SqlManualRecoveryStore:
         self, mutation: RecoveryMutation, fallback: WriteStatus = WriteStatus.CONFLICT
     ) -> RecoveryWrite:
         fresh = await self._reader.load(mutation.snapshot.command)
+        if fresh.missing:
+            return RecoveryWrite(status=WriteStatus.CONFLICT)
         existing = await self._reader.find_existing(fresh)
         if existing is not None:
             return RecoveryWrite(
