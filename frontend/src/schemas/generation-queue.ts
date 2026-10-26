@@ -41,6 +41,11 @@ export const queueActionResponseSchema = z.object({
   outcome: z.string(),
 });
 
+export const queueMaintenanceResponseSchema = z.object({
+  outcome: z.enum(["queued", "existing"]),
+  job_id: z.number().int(),
+});
+
 export type QueueItem = z.infer<typeof queueItemSchema>;
 export type BacklogItem = z.infer<typeof backlogItemSchema>;
 export type QueueBoard = z.infer<typeof queueBoardResponseSchema>;

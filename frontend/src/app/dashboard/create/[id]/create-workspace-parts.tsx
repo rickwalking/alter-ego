@@ -6,7 +6,11 @@ import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
-import { WorkflowFailedCard } from "@/modules/editorial";
+import {
+  CarouselReprocess,
+  useCarouselReprocess,
+  WorkflowFailedCard,
+} from "@/modules/editorial";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
 import type { CreateWorkspace } from "./use-create-workspace";
@@ -88,16 +92,36 @@ export function WorkspaceStepBody({
 }>): React.ReactElement {
   const { editorialWorkflow, activeStepId, projectId, starter } = workspace;
   const state = editorialWorkflow.state;
+  const reprocess = useCarouselReprocess({
+    projectId,
+    enabled: Boolean(state?.current_phase),
+    fallbackExpectedVersion: state?.lock_version,
+    refreshWorkflow: editorialWorkflow.refreshState,
+  });
+  const reprocessControl = (
+    <CarouselReprocess
+      capability={reprocess.capability}
+      pending={reprocess.pending}
+      canSubmit={reprocess.canSubmit}
+      error={reprocess.error}
+      onReprocess={() => {
+        void reprocess.reprocess();
+      }}
+    />
+  );
   if (state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED) {
     return (
-      <WorkflowFailedCard
-        currentPhase={state.current_phase}
-        errorMessage={state.error_message}
-        onRetry={() => {
-          void starter.handleRetryWorkflow();
-        }}
-        isRetrying={starter.retrying}
-      />
+      <>
+        {reprocessControl}
+        <WorkflowFailedCard
+          currentPhase={state.current_phase}
+          errorMessage={state.error_message}
+          onRetry={() => {
+            void starter.handleRetryWorkflow();
+          }}
+          isRetrying={starter.retrying}
+        />
+      </>
     );
   }
   if (activeStepId === CREATE_STEP_IDS.PUBLISH) {
@@ -117,15 +141,18 @@ export function WorkspaceStepBody({
     );
   }
   return (
-    <WorkflowStepContent
-      project={project}
-      projectId={projectId}
-      activeStepId={activeStepId}
-      sources={workspace.sources}
-      workflowStarted={starter.workflowStarted}
-      editorialWorkflow={editorialWorkflow}
-      publishedProject={workspace.publishedProject}
-      onPublished={workspace.setPublishedProject}
-    />
+    <>
+      {reprocessControl}
+      <WorkflowStepContent
+        project={project}
+        projectId={projectId}
+        activeStepId={activeStepId}
+        sources={workspace.sources}
+        workflowStarted={starter.workflowStarted}
+        editorialWorkflow={editorialWorkflow}
+        publishedProject={workspace.publishedProject}
+        onPublished={workspace.setPublishedProject}
+      />
+    </>
   );
 }

@@ -23,6 +23,17 @@ function reply(status: number, body: unknown = BOARD): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
+function deferred(): {
+  promise: Promise<Response>;
+  resolve: (response: Response) => void;
+} {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((resolvePromise): void => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("useGenerationQueue", () => {
   beforeEach(() => {
     mockFetch.mockReset();
@@ -77,6 +88,96 @@ describe("useGenerationQueue", () => {
     expect(result.current.actionError).toBeNull();
     expect(result.current.pending).toBeNull();
   });
+
+  /** Scenario: Reprocess shows progress after acceptance */
+  it("posts an existing generation run reprocess and reloads the board", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockClear();
+    mockFetch
+      .mockResolvedValueOnce(reply(202, { outcome: "queued" }))
+      .mockResolvedValueOnce(reply(200));
+    await act(async () => {
+      await result.current.act(QUEUE_ACTION.REPROCESS, "run-real-1");
+    });
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      QUEUE_API.REPROCESS("run-real-1"),
+    );
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: "{}",
+    });
+    expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
+    expect(result.current.actionError).toBeNull();
+  });
+
+  /** Scenario: Not stuck reasons are accessible */
+  it("reports a reprocess refusal instead of treating it as resolved", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockResolvedValueOnce(reply(409, { detail: "fresh_running" }));
+    await act(async () => {
+      await result.current.act(QUEUE_ACTION.REPROCESS, "run-real-1");
+    });
+    expect(result.current.actionError).toBe(labels.notAllowed);
+  });
+
+  /** Scenario: Process queue now is a panel action */
+  it("processes once during rapid clicks and refreshes the board", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockClear();
+    const pending = deferred();
+    mockFetch.mockReturnValueOnce(pending.promise);
+    const requests: Promise<void>[] = [];
+    await act(async () => {
+      requests.push(
+        result.current.processQueue(),
+        result.current.processQueue(),
+      );
+      await Promise.resolve();
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(QUEUE_API.PROCESS);
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
+    expect(result.current.processPending).toBe(true);
+    expect(result.current.pending).toBeNull();
+
+    await act(async () => {
+      pending.resolve(reply(202, { outcome: "queued", job_id: 7 }));
+      await Promise.all(requests);
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
+    expect(result.current.processPending).toBe(false);
+    expect(result.current.processError).toBeNull();
+    expect(result.current.actionError).toBeNull();
+  });
+
+  /** Scenario: Process queue now is a panel action */
+  it.each([
+    [403, labels.processForbidden],
+    [503, labels.processFailed],
+  ])(
+    "shows a safe independent process error for HTTP %s",
+    async (status, expected) => {
+      mockFetch.mockResolvedValue(reply(200));
+      const { result } = renderHook(() => useGenerationQueue());
+      await waitFor(() => expect(result.current.board).not.toBeNull());
+      mockFetch.mockResolvedValueOnce(reply(status, { detail: "raw detail" }));
+      await act(async () => {
+        await result.current.processQueue();
+      });
+      expect(result.current.processError).toBe(expected);
+      expect(result.current.processError).not.toContain("raw detail");
+      expect(result.current.actionError).toBeNull();
+      expect(result.current.processPending).toBe(false);
+      expect(result.current.pending).toBeNull();
+    },
+  );
 
   /** Scenario: A button someone else already used reloads without an error */
   it("treats 409 as already resolved", async () => {

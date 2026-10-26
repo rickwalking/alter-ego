@@ -1,13 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
 import { NEON_RED, TEXT_MUTED } from "@/constants/neon";
 import type { QueueBoard } from "@/schemas/generation-queue";
-import {
-  QueueActiveRow,
-  QueueBacklogRow,
-  QueueDeadRow,
-} from "./queue-panel-rows";
+import { QueueBacklogRow } from "./queue-backlog-row";
+import { QueueActiveRow, QueueDeadRow } from "./queue-panel-rows";
 import type { QueuePanelProps } from "./types";
 
 const MINUTES_DIGITS = 0;
@@ -31,7 +29,10 @@ export function QueuePanel({
   error,
   pending,
   actionError,
+  processPending,
+  processError,
   onAction,
+  onProcess,
 }: Readonly<QueuePanelProps>): React.ReactElement | null {
   const t = useTranslations("workflow.queue");
   if (!board) {
@@ -43,16 +44,32 @@ export function QueuePanel({
   }
   return (
     <section aria-labelledby="queue-panel-title" className="mb-6 space-y-3">
-      <div>
-        <h2 id="queue-panel-title" className="text-base font-semibold">
-          {t("title")}
-        </h2>
-        <p className="text-xs" style={{ color: TEXT_MUTED }}>
-          {t("subtitle", {
-            minutes: board.average_drive_minutes.toFixed(MINUTES_DIGITS),
-          })}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 id="queue-panel-title" className="text-base font-semibold">
+            {t("title")}
+          </h2>
+          <p className="text-xs" style={{ color: TEXT_MUTED }}>
+            {t("subtitle", {
+              minutes: board.average_drive_minutes.toFixed(MINUTES_DIGITS),
+            })}
+          </p>
+        </div>
+        <NeonButton
+          size="sm"
+          variant="secondary"
+          aria-label={t("processNow")}
+          loading={processPending}
+          onClick={onProcess}
+        >
+          {processPending ? t("processing") : t("processNow")}
+        </NeonButton>
       </div>
+      {processError && (
+        <p role="alert" className="text-xs" style={{ color: NEON_RED }}>
+          {processError}
+        </p>
+      )}
       {actionError && (
         <p role="alert" className="text-xs" style={{ color: NEON_RED }}>
           {actionError}

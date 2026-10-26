@@ -13,14 +13,20 @@ import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import {
   queueActionResponseSchema,
   queueBoardResponseSchema,
+  queueMaintenanceResponseSchema,
   type QueueBoard,
 } from "@/schemas/generation-queue";
-import type { GenerationQueueState } from "./types";
+import type {
+  GenerationQueueMaintenanceDeps,
+  GenerationQueueMaintenanceState,
+  GenerationQueueState,
+} from "./types";
 
 const ACTION_URL: Record<QueueAction, (id: string) => string> = {
   [QUEUE_ACTION.RETRY]: QUEUE_API.RETRY,
   [QUEUE_ACTION.DISCARD]: QUEUE_API.DISCARD,
   [QUEUE_ACTION.CANCEL]: QUEUE_API.CANCEL,
+  [QUEUE_ACTION.REPROCESS]: QUEUE_API.REPROCESS,
   [QUEUE_ACTION.GENERATE_NOW]: QUEUE_API.GENERATE_NOW,
 };
 
@@ -29,6 +35,7 @@ const NOT_ALLOWED = "not_allowed";
 const POST_OUTCOME = {
   DONE: "done",
   NOT_ALLOWED: "notAllowed",
+  FORBIDDEN: "forbidden",
   FAILED: "failed",
 } as const;
 type PostOutcome = (typeof POST_OUTCOME)[keyof typeof POST_OUTCOME];
@@ -70,6 +77,7 @@ async function postAction(
       body: NO_BODY,
     });
     if (response.status === CONFLICT) {
+      if (action === QUEUE_ACTION.REPROCESS) return POST_OUTCOME.NOT_ALLOWED;
       const body = conflictSchema.safeParse(await response.json());
       return body.success && body.data.detail === NOT_ALLOWED
         ? POST_OUTCOME.NOT_ALLOWED
@@ -81,6 +89,65 @@ async function postAction(
   } catch {
     return POST_OUTCOME.FAILED;
   }
+}
+
+async function postMaintenance(): Promise<PostOutcome> {
+  try {
+    const response = await authenticatedFetch(QUEUE_API.PROCESS, {
+      method: "POST",
+    });
+    if (response.status === FORBIDDEN) return POST_OUTCOME.FORBIDDEN;
+    if (!response.ok) return POST_OUTCOME.FAILED;
+    queueMaintenanceResponseSchema.parse(await response.json());
+    return POST_OUTCOME.DONE;
+  } catch {
+    return POST_OUTCOME.FAILED;
+  }
+}
+
+async function runQueueMaintenance(
+  deps: GenerationQueueMaintenanceDeps,
+): Promise<void> {
+  if (deps.processInFlightRef.current) return;
+  deps.processInFlightRef.current = true;
+  deps.setProcessPending(true);
+  deps.setProcessError(null);
+  try {
+    const outcome = await postMaintenance();
+    if (outcome === POST_OUTCOME.FAILED) {
+      deps.setProcessError(deps.translate("processFailed"));
+      return;
+    }
+    if (outcome === POST_OUTCOME.FORBIDDEN) {
+      deps.setProcessError(deps.translate("processForbidden"));
+      return;
+    }
+    await deps.load();
+  } finally {
+    deps.processInFlightRef.current = false;
+    deps.setProcessPending(false);
+  }
+}
+
+function useQueueMaintenance(
+  load: () => Promise<void>,
+  translate: (key: string) => string,
+): GenerationQueueMaintenanceState {
+  const [processPending, setProcessPending] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const processInFlightRef = useRef(false);
+  const processQueue = useCallback(
+    (): Promise<void> =>
+      runQueueMaintenance({
+        load,
+        translate,
+        processInFlightRef,
+        setProcessPending,
+        setProcessError,
+      }),
+    [load, translate],
+  );
+  return { processPending, processError, processQueue };
 }
 
 /**
@@ -121,8 +188,9 @@ export function useGenerationQueue(): GenerationQueueState {
     [load, t],
   );
 
+  const maintenance = useQueueMaintenance(load, t);
   usePolling(load);
-  return { board, error, pending, actionError, act };
+  return { board, error, pending, actionError, act, ...maintenance };
 }
 
 /** The board or the load error; a 403 (not an admin) is neither. */

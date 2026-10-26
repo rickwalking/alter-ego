@@ -60,7 +60,10 @@ function renderPanel(
       error={null}
       pending={null}
       actionError={null}
+      processPending={false}
+      processError={null}
       onAction={onAction}
+      onProcess={vi.fn()}
       {...extra}
     />,
     { wrapper },
@@ -92,7 +95,20 @@ describe("QueuePanel", () => {
     expect(first).toHaveTextContent("Generating · phase Images");
     expect(second).toHaveTextContent("#2");
     expect(second).toHaveTextContent("starts ~11:30");
-    expect(within(first).queryByRole("button")).toBeNull();
+    const runningReprocess = within(first).getByRole("button", {
+      name: en.workflow.reprocess.action,
+    });
+    expect(runningReprocess).toBeDisabled();
+    expect(runningReprocess).toHaveAccessibleDescription(
+      en.workflow.reprocess.refusals.fresh_running,
+    );
+    const queuedReprocess = within(second).getByRole("button", {
+      name: en.workflow.reprocess.action,
+    });
+    expect(queuedReprocess).toBeDisabled();
+    expect(queuedReprocess).toHaveAccessibleDescription(
+      en.workflow.reprocess.refusals.normal_queued,
+    );
     expect(
       within(second).getByRole("button", { name: labels.cancel }),
     ).toBeEnabled();
@@ -127,7 +143,7 @@ describe("QueuePanel", () => {
 
   /** Scenario: A parked dashboard run points to the editor */
   it("links a parked dashboard run to the editor", () => {
-    renderPanel(
+    const onAction = renderPanel(
       board({
         dead: [
           item({
@@ -140,11 +156,53 @@ describe("QueuePanel", () => {
         ],
       }),
     );
-    expect(screen.queryByRole("button")).toBeNull();
+    const reprocess = screen.getByRole("button", {
+      name: en.workflow.reprocess.action,
+    });
+    expect(reprocess).toBeEnabled();
+    fireEvent.click(reprocess);
+    expect(onAction).toHaveBeenCalledWith(QUEUE_ACTION.REPROCESS, "dead-2");
     expect(
       screen.getByRole("link", { name: labels.openEditor }),
     ).toHaveAttribute("href", "/dashboard/create/proj-9");
     expect(screen.getByText("Queue error (mystery).")).toBeInTheDocument();
+  });
+
+  /** Scenario: Reprocess shows progress after acceptance */
+  it("enables reprocess for an existing retry-wait generation row", () => {
+    const onAction = renderPanel(
+      board({
+        active: [
+          item({
+            id: "retry-1",
+            status: "retry_wait",
+            next_attempt_at: "2026-10-24T14:30:00Z",
+          }),
+        ],
+      }),
+    );
+    const reprocess = screen.getByRole("button", {
+      name: en.workflow.reprocess.action,
+    });
+    expect(reprocess).toBeEnabled();
+    fireEvent.click(reprocess);
+    expect(onAction).toHaveBeenCalledWith(QUEUE_ACTION.REPROCESS, "retry-1");
+  });
+
+  /** Scenario: Not stuck reasons are accessible */
+  it("disables reprocess for an unsupported existing row", () => {
+    const onAction = renderPanel(
+      board({ dead: [item({ id: "cancelled-1", status: "cancelled" })] }),
+    );
+    const reprocess = screen.getByRole("button", {
+      name: en.workflow.reprocess.action,
+    });
+    expect(reprocess).toBeDisabled();
+    expect(reprocess).toHaveAccessibleDescription(
+      en.workflow.reprocess.refusals.unsupported,
+    );
+    fireEvent.click(reprocess);
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   /** Scenario: A waiting theme offers "Gerar agora" */
@@ -164,6 +222,33 @@ describe("QueuePanel", () => {
     expect(screen.getByText("expires on 10/27")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: labels.generateNow }));
     expect(onAction).toHaveBeenCalledWith(QUEUE_ACTION.GENERATE_NOW, "cand-1");
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: en.workflow.reprocess.action }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Scenario: Process queue now is a panel action */
+  it("calls the panel process action from the header", () => {
+    const onProcess = vi.fn();
+    renderPanel(board(), { onProcess });
+    fireEvent.click(screen.getByRole("button", { name: labels.processNow }));
+    expect(onProcess).toHaveBeenCalledTimes(1);
+  });
+
+  /** Scenario: Process queue now is a panel action */
+  it("keeps process pending and error state independent from row actions", () => {
+    renderPanel(board({ active: [item({ id: "busy", can_cancel: true })] }), {
+      processPending: true,
+      processError: labels.processFailed,
+      actionError: labels.actionFailed,
+    });
+    expect(
+      screen.getByRole("button", { name: labels.processNow }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: labels.cancel })).toBeEnabled();
+    expect(screen.getByText(labels.processFailed)).toBeInTheDocument();
+    expect(screen.getByText(labels.actionFailed)).toBeInTheDocument();
   });
 
   /** Scenario: A failed button shows an error */
@@ -190,7 +275,10 @@ describe("QueuePanel", () => {
         error={null}
         pending={null}
         actionError={null}
+        processPending={false}
+        processError={null}
         onAction={vi.fn()}
+        onProcess={vi.fn()}
       />,
       { wrapper },
     );

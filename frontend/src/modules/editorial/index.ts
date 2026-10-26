@@ -213,6 +213,7 @@ export { useContentCalendar } from "./workflow/hooks/use-content-calendar";
 export { useWorkflowKanban } from "./workflow/hooks/use-workflow-kanban";
 export { useWorkflowPostAction } from "./workflow/hooks/use-workflow-post-action";
 export { useGenerationQueue } from "./workflow/hooks/use-generation-queue";
+export { useCarouselReprocess } from "./workflow/hooks/use-carousel-reprocess";
 export type { GenerationQueueState } from "./workflow/hooks/types";
 export type {
   CalendarItem,
@@ -225,6 +226,7 @@ export { useNotifications } from "./workflow/hooks/use-notifications";
 export { useCollaborativeEdit } from "./workflow/hooks/use-collaborative-edit";
 
 export { NotificationCenter } from "./workflow/components/notification-center";
+export { CarouselReprocess } from "./workflow/components/carousel-reprocess";
 export { ReviewAssignmentPanel } from "./workflow/components/review-assignment-panel";
 export { ScheduledPublishPicker } from "./workflow/components/scheduled-publish-picker";
 export { VersionDiffView } from "./workflow/components/version-diff-view";

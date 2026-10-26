@@ -6,29 +6,10 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 import { QUEUE_ACTION, QUEUE_STATUS } from "@/constants/workflow";
-import type { BacklogRowProps, QueueRowProps } from "./types";
+import { QueueReprocessButton } from "./queue-reprocess-button";
+import { formatQueueTime, QUEUE_ROW_CLASS } from "./queue-row-utils";
+import type { QueueRowProps } from "./types";
 
-const QUEUE_TIME_ZONE = "America/Sao_Paulo";
-const TIME_FORMAT: Intl.DateTimeFormatOptions = {
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-  timeZone: QUEUE_TIME_ZONE,
-};
-const DATE_FORMAT: Intl.DateTimeFormatOptions = {
-  day: "2-digit",
-  month: "2-digit",
-  timeZone: QUEUE_TIME_ZONE,
-};
-
-/** ``value`` (an ISO timestamp) in São Paulo time, in the page's locale. */
-function formatAt(
-  locale: string,
-  value: string,
-  options: Intl.DateTimeFormatOptions,
-): string {
-  return new Intl.DateTimeFormat(locale, options).format(new Date(value));
-}
 const KNOWN_KINDS: ReadonlySet<string> = new Set(["autopilot", "dashboard"]);
 const KNOWN_PHASES: ReadonlySet<string> = new Set([
   "brief",
@@ -47,9 +28,6 @@ const KNOWN_REASONS: ReadonlySet<string> = new Set([
   "run_budget_exhausted",
   "held_by_queue",
 ]);
-const ROW_CLASS =
-  "flex flex-wrap items-center justify-between gap-2 rounded-md border border-[color:var(--color-neon-cyan-border-30)] px-3 py-2";
-
 /** The line under an active run: status, phase and start estimate. */
 function ActiveDetail({
   item,
@@ -63,7 +41,7 @@ function ActiveDetail({
   if (item.status === QUEUE_STATUS.RETRY_WAIT && item.next_attempt_at) {
     parts.push(
       t("status.retryWait", {
-        time: formatAt(locale, item.next_attempt_at, TIME_FORMAT),
+        time: formatQueueTime(locale, item.next_attempt_at),
       }),
     );
   }
@@ -74,7 +52,7 @@ function ActiveDetail({
     parts.push(t("phase", { phase }));
   }
   if (item.eta) {
-    parts.push(t("eta", { time: formatAt(locale, item.eta, TIME_FORMAT) }));
+    parts.push(t("eta", { time: formatQueueTime(locale, item.eta) }));
   }
   return (
     <p className="text-xs" style={{ color: TEXT_MUTED }}>
@@ -91,7 +69,7 @@ export function QueueActiveRow({
 }: Readonly<QueueRowProps>): React.ReactElement {
   const t = useTranslations("workflow.queue");
   return (
-    <li className={ROW_CLASS}>
+    <li className={QUEUE_ROW_CLASS}>
       <div className="min-w-0">
         <p className="text-sm font-medium">
           <span style={{ color: TEXT_DIM }}>
@@ -106,16 +84,23 @@ export function QueueActiveRow({
         </p>
         <ActiveDetail item={item} />
       </div>
-      {item.can_cancel && (
-        <NeonButton
-          size="sm"
-          variant="secondary"
-          disabled={pending === item.id}
-          onClick={() => onAction(QUEUE_ACTION.CANCEL, item.id)}
-        >
-          {t("cancel")}
-        </NeonButton>
-      )}
+      <div className="flex flex-wrap gap-2">
+        <QueueReprocessButton
+          item={item}
+          pending={pending}
+          onAction={onAction}
+        />
+        {item.can_cancel && (
+          <NeonButton
+            size="sm"
+            variant="secondary"
+            disabled={pending === item.id}
+            onClick={() => onAction(QUEUE_ACTION.CANCEL, item.id)}
+          >
+            {t("cancel")}
+          </NeonButton>
+        )}
+      </div>
     </li>
   );
 }
@@ -133,7 +118,7 @@ export function QueueDeadRow({
     : t("reason.other", { code });
   const busy = pending === item.id;
   return (
-    <li className={ROW_CLASS}>
+    <li className={QUEUE_ROW_CLASS}>
       <div className="min-w-0">
         <p className="text-sm font-medium">{item.title || t("untitled")}</p>
         <p className="text-xs" style={{ color: TEXT_MUTED }}>
@@ -141,6 +126,11 @@ export function QueueDeadRow({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
+        <QueueReprocessButton
+          item={item}
+          pending={pending}
+          onAction={onAction}
+        />
         {item.can_retry && (
           <NeonButton
             size="sm"
@@ -169,35 +159,6 @@ export function QueueDeadRow({
           </Link>
         )}
       </div>
-    </li>
-  );
-}
-
-/** A backlog theme with its expiry and "Gerar agora". */
-export function QueueBacklogRow({
-  item,
-  pending,
-  onAction,
-}: Readonly<BacklogRowProps>): React.ReactElement {
-  const t = useTranslations("workflow.queue");
-  const locale = useLocale();
-  return (
-    <li className={ROW_CLASS}>
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{item.title || t("untitled")}</p>
-        <p className="text-xs" style={{ color: TEXT_MUTED }}>
-          {t("expires", {
-            date: formatAt(locale, item.expires_at, DATE_FORMAT),
-          })}
-        </p>
-      </div>
-      <NeonButton
-        size="sm"
-        disabled={pending === item.candidate_id}
-        onClick={() => onAction(QUEUE_ACTION.GENERATE_NOW, item.candidate_id)}
-      >
-        {t("generateNow")}
-      </NeonButton>
     </li>
   );
 }

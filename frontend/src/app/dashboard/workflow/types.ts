@@ -33,7 +33,10 @@ export interface QueuePanelProps {
   error: string | null;
   pending: string | null;
   actionError: string | null;
+  processPending: boolean;
+  processError: string | null;
   onAction: (action: QueueAction, id: string) => void;
+  onProcess: () => void;
 }
 
 /** One active or parked generation run row. */

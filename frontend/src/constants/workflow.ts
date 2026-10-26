@@ -5,6 +5,7 @@ export const WORKFLOW_API = {
   WORKFLOW_BOARD_ARCHIVED: "/api/workflow-board?archived=true",
   CAROUSEL_ARCHIVE: (id: string) => `/api/carousels/${id}/archive`,
   CAROUSEL_RESTORE: (id: string) => `/api/carousels/${id}/restore`,
+  CAROUSEL_REPROCESS: (id: string) => `/api/carousels/${id}/workflow/reprocess`,
   NOTIFICATIONS: "/api/notifications",
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read`,
   ASSIGN_REVIEW: "/api/notifications/assign-review",
@@ -60,6 +61,8 @@ export const QUEUE_API = {
   RETRY: (id: string) => `/api/generation-runs/${id}/retry`,
   DISCARD: (id: string) => `/api/generation-runs/${id}/discard`,
   CANCEL: (id: string) => `/api/generation-runs/${id}/cancel`,
+  REPROCESS: (id: string) => `/api/generation-runs/${id}/reprocess`,
+  PROCESS: "/api/generation-runs/process",
   GENERATE_NOW: (id: string) => `/api/generation-runs/backlog/${id}/generate`,
 } as const;
 
@@ -76,7 +79,27 @@ export const QUEUE_ACTION = {
   RETRY: "retry",
   DISCARD: "discard",
   CANCEL: "cancel",
+  REPROCESS: "reprocess",
   GENERATE_NOW: "generateNow",
 } as const;
 
 export type QueueAction = (typeof QUEUE_ACTION)[keyof typeof QUEUE_ACTION];
+
+export const REPROCESS_REFUSAL = {
+  STALE_VERSION: "stale_expected_version",
+  OWNER_WAITING: "owner_waiting",
+  NORMAL_QUEUED: "normal_queued",
+  DISPATCHER_GRACE: "dispatcher_grace",
+  FRESH_RUNNING: "fresh_running",
+  NULL_HEARTBEAT: "null_heartbeat",
+  DRIVE_ACTIVE: "drive_active",
+  UNSUPPORTED: "unsupported",
+  PROJECTLESS_UNSTAGED: "projectless_unstaged",
+  CONCURRENT_UPDATE: "concurrent_update",
+} as const;
+
+export const REPROCESS_REFUSAL_CODES: ReadonlySet<string> = new Set(
+  Object.values(REPROCESS_REFUSAL),
+);
+
+export const REPROCESS_POLL_INTERVAL_MS = 2_000;

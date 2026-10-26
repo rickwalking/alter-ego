@@ -19,6 +19,7 @@ const hooks = vi.hoisted(() => ({
   project: vi.fn<() => unknown>(),
   workflow: vi.fn<() => unknown>(),
   workflowOptions: vi.fn(),
+  reprocess: vi.fn<() => unknown>(),
   follow: vi.fn<(options: unknown) => unknown>(),
 }));
 
@@ -47,6 +48,8 @@ vi.mock("@/modules/editorial", () => ({
       retry-card
     </button>
   ),
+  useCarouselReprocess: () => hooks.reprocess(),
+  CarouselReprocess: () => <div>reprocess-control</div>,
 }));
 vi.mock("@/app/dashboard/create/use-follow-workflow-step", () => ({
   useFollowWorkflowStep: (options: unknown) => hooks.follow(options),
@@ -162,6 +165,13 @@ beforeEach(() => {
     isError: false,
   });
   setWorkflow(null);
+  hooks.reprocess.mockReturnValue({
+    capability: null,
+    pending: false,
+    canSubmit: false,
+    error: null,
+    reprocess: vi.fn(),
+  });
 });
 
 describe("CreateWorkspacePage", () => {
@@ -304,5 +314,18 @@ describe("CreateWorkspacePage", () => {
       ),
     );
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  /** Scenario: Failed phases keep Reprocessar visible */
+  it("renders Reprocessar before the failed workflow content", () => {
+    setWorkflow(workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }));
+    nav.step = "content";
+    render(<CreateWorkspacePage />);
+    const control = screen.getByText("reprocess-control");
+    const failure = screen.getByText("retry-card");
+    expect(
+      control.compareDocumentPosition(failure) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
   });
 });
