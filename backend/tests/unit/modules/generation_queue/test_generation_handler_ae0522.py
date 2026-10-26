@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 from uuid import uuid4
+
+import pytest
 
 from rag_backend.modules.generation_queue.application.job_handler import (
     GenerationJobHandler,
@@ -20,11 +23,14 @@ from rag_backend.modules.generation_queue.domain.errors import (
 )
 from rag_backend.modules.generation_queue.domain.models import (
     GenerationKind,
+    GenerationRun,
     GenerationStatus,
+    RetryCommand,
 )
 from rag_backend.modules.generation_queue.domain.ports import (
     KindExecutor,
     StepOutcome,
+    StepTracker,
 )
 from tests.unit.modules.generation_queue.queue_fakes import (
     NOW,
@@ -55,6 +61,43 @@ def _handler(
             uniform=lambda low, _high: low,
         )
     )
+
+
+@dataclass
+class ABAExecutor:
+    """Rotate A through retry wait to B before A finishes."""
+
+    store: FakeStore
+    outcome: StepOutcome = StepOutcome.DONE
+    error: Exception | None = None
+    track_after_rotation: bool = False
+
+    async def lock_keys(self, run: GenerationRun) -> list[str]:
+        """Lock only the run."""
+        return [f"run:{run.id}"]
+
+    async def execute(self, run: GenerationRun, tracker: StepTracker) -> StepOutcome:
+        """Take over the attempt, then finish or count as the old attempt."""
+        await self._rotate(run)
+        if self.track_after_rotation:
+            await tracker.begin("research")
+        if self.error is not None:
+            raise self.error
+        return self.outcome
+
+    async def _rotate(self, run: GenerationRun) -> None:
+        attempt_id = self.store.runs[run.id].attempt_id
+        assert attempt_id is not None
+        assert await self.store.mark_waiting(
+            RetryCommand(
+                run_id=run.id,
+                attempt_id=attempt_id,
+                next_attempt_at=NOW,
+                error_code="takeover",
+                error="takeover",
+            )
+        )
+        assert await self.store.mark_running(run.id) is not None
 
 
 async def test_done_marks_the_run_succeeded() -> None:
@@ -156,6 +199,7 @@ async def test_unknown_kind_dead_letters() -> None:
     verdict = await _handler(store, ScriptedExecutor()).handle(run.id)
     assert verdict == Verdict(VerdictKind.HOLD)
     assert store.runs[run.id].last_error_code == ERROR_UNKNOWN_KIND
+    assert store.runs[run.id].attempt_id is not None
 
 
 async def test_a_second_dead_letter_stages_no_second_notice() -> None:
@@ -169,3 +213,46 @@ async def test_a_second_dead_letter_stages_no_second_notice() -> None:
     await handler.handle(run.id)
     assert await handler.handle(run.id) == Verdict(VerdictKind.DONE)
     assert len(notices.staged) == 1
+
+
+@pytest.mark.parametrize(
+    ("outcome", "error"),
+    [
+        (StepOutcome.DONE, None),
+        (StepOutcome.WAIT, None),
+        (StepOutcome.YIELD, None),
+        (StepOutcome.DONE, TimeoutError("stale")),
+        (StepOutcome.DONE, ValueError("stale")),
+    ],
+)
+async def test_old_attempt_settlement_is_done_without_writes_or_notice(
+    outcome: StepOutcome, error: Exception | None
+) -> None:
+    """Scenario: A stale running row is taken over safely"""
+    store = FakeStore()
+    notices = FakeNotices()
+    run = store.add(make_run())
+    executor = ABAExecutor(store, outcome=outcome, error=error)
+    verdict = await _handler(store, executor, notices=notices).handle(run.id)
+    assert verdict == Verdict(VerdictKind.DONE)
+    assert store.runs[run.id].status is GenerationStatus.RUNNING
+    assert store.runs[run.id].attempt_id is not None
+    assert store.saved == []
+    assert len(store.waits) == 1
+    assert store.dead == []
+    assert notices.staged == []
+
+
+async def test_stale_count_write_is_done_without_failure_or_notice() -> None:
+    """Scenario: A stale running row is taken over safely"""
+    store = FakeStore()
+    notices = FakeNotices()
+    run = store.add(make_run())
+    executor = ABAExecutor(store, track_after_rotation=True)
+    verdict = await _handler(store, executor, notices=notices).handle(run.id)
+    assert verdict == Verdict(VerdictKind.DONE)
+    assert store.runs[run.id].status is GenerationStatus.RUNNING
+    assert store.saved == []
+    assert len(store.waits) == 1
+    assert store.dead == []
+    assert notices.staged == []

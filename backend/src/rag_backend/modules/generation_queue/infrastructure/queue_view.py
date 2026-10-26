@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import cast
+from uuid import UUID
 
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import IntegrityError
@@ -100,8 +101,21 @@ async def requeue_autopilot_dead_letter(
     ).scalar_one_or_none()
     if row is None:
         return False
+    return await _requeue_row(session, row)
+
+
+async def requeue_dead_letter(session: AsyncSession, run_id: UUID) -> bool:
+    """Requeue one dead generation row in the caller's transaction; no commit."""
+    row = await session.get(GenerationRunModel, run_id, populate_existing=True)
+    if row is None:
+        return False
+    return await _requeue_row(session, row)
+
+
+async def _requeue_row(session: AsyncSession, row: GenerationRunModel) -> bool:
     dead = run_from_row(row)
     counts = budget.reset_phase(dead.counts, dead.last_phase)
+    model = GenerationRunModel
     try:
         async with session.begin_nested():
             result = await session.execute(
@@ -127,4 +141,5 @@ __all__ = [
     "active_work",
     "recent_drive_minutes",
     "requeue_autopilot_dead_letter",
+    "requeue_dead_letter",
 ]

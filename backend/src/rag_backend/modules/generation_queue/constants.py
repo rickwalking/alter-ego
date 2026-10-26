@@ -30,6 +30,8 @@ ACTIVE_STATUSES = (STATUS_QUEUED, STATUS_RUNNING, STATUS_RETRY_WAIT)
 
 KIND_AUTOPILOT_DRIVE = "autopilot_drive"
 KIND_WORKFLOW_RESUME = "workflow_resume"
+DRIVEN_AUTOPILOT_STATES = ("queued", "generating", "reworking")
+AUTOPILOT_OWNER_WAIT_STATES = ("awaiting_owner", "awaiting_thesis")
 
 DEDUPE_AUTOPILOT = "autopilot:{run_id}"
 DEDUPE_RESUME = "resume:{project_id}:{lock_version}"
@@ -111,6 +113,22 @@ SCAN_STALE_HOURS = 72
 SCAN_PURGE_DAYS = 30
 SCAN_BATCH = 50
 PAYLOAD_RECOVERY_ATTEMPT = "recovery_attempt"
+PAYLOAD_MANUAL_ORIGIN = "manual_origin"
+MANUAL_ORIGIN_REPROCESS = "carousel_reprocess"
+PAYLOAD_MANUAL_REQUEST_ID = "manual_request_id"
+PAYLOAD_MANUAL_ACTOR_ID = "manual_actor_id"
+PAYLOAD_MANUAL_STUCK_KIND = "manual_stuck_kind"
+PAYLOAD_MANUAL_REQUESTED_AT = "manual_requested_at"
+PAYLOAD_MANUAL_PRIORITY = "manual_priority"
+PAYLOAD_MANUAL_REPLACES_RUN_ID = "replaces_generation_run_id"
+PAYLOAD_MANUAL_ACCELERATE_JOB_ID = "manual_accelerate_job_id"
+PAYLOAD_MANUAL_CANCEL_JOB_ID = "manual_cancel_job_id"
+PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID = "manual_cancel_attempt_id"
+PAYLOAD_MANUAL_EXECUTE_AFTER = "manual_execute_after"
+MANUAL_REPROCESS_PRIORITY = 1
+AUDIT_CAROUSEL_REPROCESS = "carousel.reprocess.requested"
+AGGREGATE_CAROUSEL = "carousel"
+AGGREGATE_GENERATION_RUN = "generation_run"
 RECOVERABLE_ERROR_CODES = (
     ERROR_TRANSIENT,
     ERROR_PHASE_BUDGET,

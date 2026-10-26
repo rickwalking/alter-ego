@@ -34,6 +34,8 @@ from rag_backend.modules.generation_queue.constants import (
 )
 from rag_backend.modules.generation_queue.domain.budget import AttemptCounts
 
+ATTEMPT_ID_KEY = "attempt_id"
+
 
 class GenerationKind(StrEnum):
     """What a generation run drives."""
@@ -158,6 +160,12 @@ class GenerationRun:
             attempts=self.attempts, phase_attempts=dict(self.phase_attempts)
         )
 
+    @property
+    def attempt_id(self) -> UUID | None:
+        """The current attempt UUID, or None before the first claim."""
+        value = self.payload.get(ATTEMPT_ID_KEY)
+        return UUID(value) if isinstance(value, str) else None
+
 
 @dataclass(frozen=True, kw_only=True)
 class CountsUpdate:
@@ -177,10 +185,21 @@ class DeadLetterCommand:
 
 
 @dataclass(frozen=True, kw_only=True)
-class RetryCommand:
-    """Put a run back to wait for its next attempt."""
+class AttemptDeadLetterCommand:
+    """Park only the expected running attempt with its classified reason."""
 
     run_id: UUID
+    attempt_id: UUID
+    error_code: str
+    error: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class RetryCommand:
+    """Put the expected running attempt back to wait for its next attempt."""
+
+    run_id: UUID
+    attempt_id: UUID
     next_attempt_at: datetime
     error_code: str
     error: str

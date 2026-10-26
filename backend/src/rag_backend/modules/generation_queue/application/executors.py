@@ -25,6 +25,10 @@ from rag_backend.modules.generation_queue.constants import (
     MAX_STEPS_PER_JOB,
     PHASE_START,
 )
+from rag_backend.modules.generation_queue.domain.drive_lock_keys import (
+    autopilot_lock_keys,
+    project_key,
+)
 from rag_backend.modules.generation_queue.domain.drive_ports import (
     AutopilotStepper,
     ProjectRecovery,
@@ -47,16 +51,9 @@ from rag_backend.modules.generation_queue.domain.ports import (
 logger = structlog.get_logger()
 
 DRIVEABLE_STATES = frozenset({"queued", "generating", "reworking"})
-AUTOPILOT_KEY = "autopilot:{run_id}"
-PROJECT_KEY = "project:{project_id}"
 RECOVERY_PHASE = "recovery:{phase}"
 
 Stopping = Callable[[], bool]
-
-
-def project_key(project_id: str) -> str:
-    """The drive-lock key of a carousel project."""
-    return PROJECT_KEY.format(project_id=project_id)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -110,11 +107,9 @@ class AutopilotDriveExecutor:
     async def lock_keys(self, run: GenerationRun) -> list[str]:
         """The run itself, plus its project once it has one."""
         run_id = _autopilot_run_id(run)
-        keys = [AUTOPILOT_KEY.format(run_id=run_id)]
         view = await self._deps.stepper.view(run_id)
-        if view is not None and view.project_id:
-            keys.append(project_key(view.project_id))
-        return keys
+        project_id = view.project_id if view is not None else None
+        return autopilot_lock_keys(run_id, project_id)
 
     async def execute(self, run: GenerationRun, tracker: StepTracker) -> StepOutcome:
         """Recover an orphaned or parked phase, then step until there is nothing to do.

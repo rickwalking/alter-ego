@@ -15,6 +15,7 @@ from typing import Protocol
 from uuid import UUID
 
 from rag_backend.modules.generation_queue.domain.models import (
+    AttemptDeadLetterCommand,
     CountsUpdate,
     DeadLetterCommand,
     GenerationRun,
@@ -51,24 +52,30 @@ class GenerationRunStore(Protocol):
         """Active runs that carry a job id, oldest first."""
         ...
 
-    async def mark_running(self, run_id: UUID) -> bool:
-        """Active → running. False when the run is no longer active."""
+    async def mark_running(self, run_id: UUID) -> UUID | None:
+        """Active → running with a fresh attempt UUID, or None when not active."""
         ...
 
-    async def save_counts(self, run_id: UUID, update: CountsUpdate) -> None:
-        """Persist the counters and the phase (committed before the work runs)."""
+    async def save_counts(
+        self, run_id: UUID, attempt_id: UUID, update: CountsUpdate
+    ) -> bool:
+        """Persist counters only for the expected running attempt."""
         ...
 
-    async def mark_succeeded(self, run_id: UUID) -> None:
-        """Running → succeeded."""
+    async def mark_succeeded(self, run_id: UUID, attempt_id: UUID) -> bool:
+        """Running → succeeded only for the expected attempt."""
         ...
 
-    async def mark_waiting(self, command: RetryCommand) -> None:
-        """Running → retry_wait until ``next_attempt_at``."""
+    async def mark_waiting(self, command: RetryCommand) -> bool:
+        """Running → retry_wait only for the command's expected attempt."""
+        ...
+
+    async def mark_attempt_dead_letter(self, command: AttemptDeadLetterCommand) -> bool:
+        """Running → dead_letter only for the command's expected attempt."""
         ...
 
     async def mark_dead_letter(self, command: DeadLetterCommand) -> bool:
-        """Active → dead_letter. False when it was not active (already mirrored)."""
+        """Mirror a dispatcher-held job; False when it was not active."""
         ...
 
     async def requeue_dead_letter(self, run_id: UUID) -> bool:

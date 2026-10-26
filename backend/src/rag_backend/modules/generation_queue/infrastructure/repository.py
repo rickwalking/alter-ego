@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import ColumnElement, CursorResult, select, update
+from sqlalchemy import ColumnElement, CursorResult, func, select, true, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -26,6 +26,8 @@ from rag_backend.modules.generation_queue.constants import (
 from rag_backend.modules.generation_queue.domain import budget
 from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
 from rag_backend.modules.generation_queue.domain.models import (
+    ATTEMPT_ID_KEY,
+    AttemptDeadLetterCommand,
     CountsUpdate,
     DeadLetterCommand,
     GenerationKind,
@@ -66,6 +68,31 @@ def run_from_row(row: GenerationRunModel) -> GenerationRun:
 
 def _active() -> ColumnElement[bool]:
     return GenerationRunModel.status.in_(ACTIVE_STATUSES)
+
+
+def _attempt_matches(attempt_id: UUID) -> ColumnElement[bool]:
+    value = cast(
+        ColumnElement[str],
+        GenerationRunModel.payload[ATTEMPT_ID_KEY].as_string(),
+    )
+    return value == str(attempt_id)
+
+
+def _attempt_payload(
+    dialect: str, attempt_id: UUID
+) -> ColumnElement[dict[str, object]]:
+    if dialect == "postgresql":
+        expression = func.jsonb_set(
+            GenerationRunModel.payload,
+            "{" + ATTEMPT_ID_KEY + "}",
+            func.to_jsonb(str(attempt_id)),
+            true(),
+        )
+    else:
+        expression = func.json_set(
+            GenerationRunModel.payload, "$." + ATTEMPT_ID_KEY, str(attempt_id)
+        )
+    return cast(ColumnElement[dict[str, object]], expression)
 
 
 class SqlGenerationRunStore:
@@ -129,22 +156,19 @@ class SqlGenerationRunStore:
             run_id, ACTIVE_STATUSES, {"pgq_job_id": None, "status": STATUS_QUEUED}
         )
 
-    async def mark_running(self, run_id: UUID) -> bool:
-        """Active → running."""
-        return await self._cas(
-            run_id,
-            ACTIVE_STATUSES,
-            {
-                "status": STATUS_RUNNING,
-                "started_at": self._clock.now(),
-                "next_attempt_at": None,
-            },
-        )
+    async def mark_running(self, run_id: UUID) -> UUID | None:
+        """Active → running with a fresh UUID rotated into the payload."""
+        attempt_id = uuid4()
+        claimed = await self._claim(run_id, attempt_id)
+        return attempt_id if claimed else None
 
-    async def save_counts(self, run_id: UUID, update_: CountsUpdate) -> None:
-        """Persist the attempt counters and the phase they were counted for."""
-        await self._update(
+    async def save_counts(
+        self, run_id: UUID, attempt_id: UUID, update_: CountsUpdate
+    ) -> bool:
+        """Persist counters only for the expected running attempt."""
+        return await self._attempt_cas(
             run_id,
+            attempt_id,
             {
                 "attempts": update_.counts.attempts,
                 "phase_attempts": dict(update_.counts.phase_attempts),
@@ -152,19 +176,19 @@ class SqlGenerationRunStore:
             },
         )
 
-    async def mark_succeeded(self, run_id: UUID) -> None:
-        """Running → succeeded."""
-        await self._cas(
+    async def mark_succeeded(self, run_id: UUID, attempt_id: UUID) -> bool:
+        """Running → succeeded only for the expected attempt."""
+        return await self._attempt_cas(
             run_id,
-            (STATUS_RUNNING,),
+            attempt_id,
             {"status": STATUS_SUCCEEDED, "finished_at": self._clock.now()},
         )
 
-    async def mark_waiting(self, command: RetryCommand) -> None:
-        """Running → retry_wait until the next attempt."""
-        await self._cas(
+    async def mark_waiting(self, command: RetryCommand) -> bool:
+        """Running → retry_wait only for the expected attempt."""
+        return await self._attempt_cas(
             command.run_id,
-            (STATUS_RUNNING,),
+            command.attempt_id,
             {
                 "status": STATUS_RETRY_WAIT,
                 "next_attempt_at": command.next_attempt_at,
@@ -173,8 +197,21 @@ class SqlGenerationRunStore:
             },
         )
 
+    async def mark_attempt_dead_letter(self, command: AttemptDeadLetterCommand) -> bool:
+        """Running → dead_letter only for the expected attempt."""
+        return await self._attempt_cas(
+            command.run_id,
+            command.attempt_id,
+            {
+                "status": STATUS_DEAD_LETTER,
+                "finished_at": self._clock.now(),
+                "last_error_code": command.error_code,
+                "last_error": command.error,
+            },
+        )
+
     async def mark_dead_letter(self, command: DeadLetterCommand) -> bool:
-        """Active → dead_letter with the classified reason."""
+        """Active → dead_letter for the dispatcher's held-job path."""
         return await self._cas(
             command.run_id,
             ACTIVE_STATUSES,
@@ -230,6 +267,24 @@ class SqlGenerationRunStore:
             )
             return found is not None
 
+    async def _claim(self, run_id: UUID, attempt_id: UUID) -> bool:
+        async with self._sessions() as session:
+            result = await session.execute(
+                update(GenerationRunModel)
+                .where(GenerationRunModel.id == run_id, _active())
+                .values(
+                    status=STATUS_RUNNING,
+                    started_at=self._clock.now(),
+                    next_attempt_at=None,
+                    payload=_attempt_payload(
+                        session.get_bind().dialect.name, attempt_id
+                    ),
+                    updated_at=self._clock.now(),
+                )
+            )
+            await session.commit()
+            return cast(CursorResult[object], result).rowcount == 1
+
     async def _update(self, run_id: UUID, values: dict[str, object]) -> None:
         async with self._sessions() as session:
             await session.execute(
@@ -242,13 +297,31 @@ class SqlGenerationRunStore:
     async def _cas(
         self, run_id: UUID, expected: Sequence[str], values: dict[str, object]
     ) -> bool:
+        conditions = (
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.status.in_(tuple(expected)),
+        )
+        return await self._cas_where(conditions, values)
+
+    async def _attempt_cas(
+        self, run_id: UUID, attempt_id: UUID, values: dict[str, object]
+    ) -> bool:
+        conditions = (
+            GenerationRunModel.id == run_id,
+            GenerationRunModel.status == STATUS_RUNNING,
+            _attempt_matches(attempt_id),
+        )
+        return await self._cas_where(conditions, values)
+
+    async def _cas_where(
+        self,
+        conditions: Sequence[ColumnElement[bool]],
+        values: dict[str, object],
+    ) -> bool:
         async with self._sessions() as session:
             result = await session.execute(
                 update(GenerationRunModel)
-                .where(
-                    GenerationRunModel.id == run_id,
-                    GenerationRunModel.status.in_(tuple(expected)),
-                )
+                .where(*conditions)
                 .values(**values, updated_at=self._clock.now())
             )
             await session.commit()

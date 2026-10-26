@@ -152,10 +152,11 @@ class TestReaperRules:
             assert project.phase_status == PHASE_STATUS_IN_PROGRESS
             assert project.lock_version == 3
             (run,) = await store.undispatched(1)
-            assert await store.mark_running(run.id)
+            attempt_id = await store.mark_running(run.id)
+            assert attempt_id is not None
             with patch(_HUB_PATH, return_value=AsyncMock()):
                 assert await _tick_times(reaper, db, _OBSERVATIONS) == 0
-            await store.mark_succeeded(run.id)
+            assert await store.mark_succeeded(run.id, attempt_id)
             with patch(_HUB_PATH, return_value=AsyncMock()):
                 assert await _tick_times(reaper, db, _OBSERVATIONS - 1) == 0
                 assert await _tick_times(reaper, db, 1) == 1
