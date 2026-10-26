@@ -1,6 +1,6 @@
 # AE-0552 — Manual Reprocessar for stuck carousels through the queue
 
-Status: In Development
+Status: Review
 Tier: T3
 Priority: High
 Type: Feature
@@ -38,17 +38,17 @@ Dead letters, retry waits, stale running rows, and generating projects with no a
 
 ## Acceptance Criteria
 
-- [ ] AC1 POST reprocess is owner/admin, CAS-guarded, audited, idempotent on sequential/concurrent double-click, returns the existing run where appropriate, and never directly invokes a graph.
-- [ ] AC2 Every required stuck kind re-enqueues the correct current-phase work and kicks the worker: dead_letter, retry_wait, stale running, and generating with no active run.
-- [ ] AC3 Waiting-owner, normal queued, fresh-running, null-heartbeat, busy-lock, unsupported, and stale-version requests return 409 with stable reasons and no work/audit duplicate.
-- [ ] AC4 Manual work creates no backlog item and is excluded from the autopilot daily cap; priority 1 runs next after the current drive, with FIFO inside each priority class.
-- [ ] AC5 Processar fila agora runs the scheduled promotion/recovery/dispatcher functions on demand; manual-vs-scheduled and double-click races cannot double-promote, double-revive, purge twice, or send duplicate summaries.
-- [ ] AC6 Workspace and Fila show queued position/ETA → running phase → safe failure reason, with PT/EN strings and an immediate board/workflow refresh.
-- [ ] AC7 Retry_wait never renders #0; running rows show started_at and attributed heartbeat age; action aria-labels include the theme; Cancel/Discard require confirmation.
-- [ ] AC8 Polling stops after the first 403; unstaged runs appear once with the same position function as Telegram; ETA accounts for running elapsed and retry_wait rejoin time.
-- [ ] AC9 owner_queue_cancelled produces no Telegram failure notice while retaining audit/outbox and genuine failure notices.
-- [ ] AC10 A SQLAlchemy error carrying SQL and bound parameters yields only exception type plus safe DBAPI class/SQLSTATE in logs and summary, never SQL, parameters, prompt, or payload.
-- [ ] AC11 queue_bridge imports mark_recovery_attempt at module top unless a demonstrated cycle requires retaining the local import, in which case the exact cycle is documented in the dev summary.
+- [x] AC1 POST reprocess is owner/admin, CAS-guarded, audited, idempotent on sequential/concurrent double-click, returns the existing run where appropriate, and never directly invokes a graph.
+- [x] AC2 Every required stuck kind re-enqueues the correct current-phase work and kicks the worker: dead_letter, retry_wait, stale running, and generating with no active run.
+- [x] AC3 Waiting-owner, normal queued, fresh-running, null-heartbeat, busy-lock, unsupported, and stale-version requests return 409 with stable reasons and no work/audit duplicate.
+- [x] AC4 Manual work creates no backlog item and is excluded from the autopilot daily cap; priority 1 runs next after the current drive, with FIFO inside each priority class.
+- [x] AC5 Processar fila agora runs the scheduled promotion/recovery/dispatcher functions on demand; manual-vs-scheduled and double-click races cannot double-promote, double-revive, purge twice, or send duplicate summaries.
+- [x] AC6 Workspace and Fila show queued position/ETA → running phase → safe failure reason, with PT/EN strings and an immediate board/workflow refresh.
+- [x] AC7 Retry_wait never renders #0; running rows show started_at and attributed heartbeat age; action aria-labels include the theme; Cancel/Discard require confirmation.
+- [x] AC8 Polling stops after the first 403; unstaged runs appear once with the same position function as Telegram; ETA accounts for running elapsed and retry_wait rejoin time.
+- [x] AC9 owner_queue_cancelled produces no Telegram failure notice while retaining audit/outbox and genuine failure notices.
+- [x] AC10 A SQLAlchemy error carrying SQL and bound parameters yields only exception type plus safe DBAPI class/SQLSTATE in logs and summary, never SQL, parameters, prompt, or payload.
+- [x] AC11 queue_bridge imports mark_recovery_attempt at module top unless a demonstrated cycle requires retaining the local import, in which case the exact cycle is documented in the dev summary.
 
 ## Gherkin Scenarios
 
@@ -101,29 +101,36 @@ Dead letters, retry waits, stale running rows, and generating projects with no a
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
 ### 2026-10-25
 
-Ticket and architecture plan created after #288 merged. #290 findings 8-9 are required before the final push.
+Ticket and architecture plan created after #288 merged. Endpoint, queue kick, UI and panel increments are complete; full backend/frontend gates are green and independent QA is next.
 
 ## Files Touched
 
-Pending.
+- Manual recovery API, domain, application, infrastructure, attempt fencing, maintenance worker/gateway/locks and ADR-0026.
+- Queue board position/ETA, unstaged/orphan/heartbeat readers, autopilot cap/notices and editorial project metadata facade.
+- Workspace and Fila controls, hooks, schemas, i18n, OpenAPI and backend/frontend tests.
+- `.agent/reports/AE-0552.arch-plan.md`, `.agent/reports/AE-0552.plan-validation.md`, `.agent/reports/AE-0552.skeptical-review.md`, `.agent/reports/AE-0552.dev-summary.md`.
 
 ## Test Evidence
 
-Pending.
+- Targeted backend: 234 tests passed twice with no resource errors; focused PgQueuer integration: 8 passed.
+- Targeted frontend: 112 tests passed across workspace/Fila/reprocess/polling.
+- Full backend: 7722 passed, 2 pre-existing skips, 95% coverage; 26 PASS, 0 FAIL, 1 CI-only mutation SKIP.
+- Full frontend: 378 files and 3005 tests passed; 18 PASS, 0 FAIL, 1 CI-only mutation SKIP.
+- Backend/frontend integrity: zero blockers and zero warnings; all removed assertions have documented contract-strengthening justifications in the dev summary.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0552.qa.md` — PASS for Review; all initial and follow-up findings resolved by independent confirmation.
 
 ## Decision Log
 
@@ -133,11 +140,12 @@ Pending.
 - 2026-10-25 (Pedro): null/unknown heartbeat is not stale. A stale running takeover requires a free project drive lock and a fresh state check.
 - 2026-10-25 (Pedro): ETA remains approximate; running elapsed and retry_wait lower bounds are included, while owner/lock waits cannot be predicted exactly.
 - 2026-10-25 (Pedro): skeptical review requires attempt-UUID fencing, explicit picked-job cancellation, full autopilot/project takeover keys, successor identity, cap NOT EXISTS on manual rows, one deduped maintenance path, and shared existing-retry semantics.
+- 2026-10-26 (Pedro): recovery summaries/logs use only exception type, DBAPI class and whitelisted SQLSTATE. The module-top recovery import was attempted but a fresh-process cycle was proven, so the local import remains with the exact cycle documented in the dev summary.
 
 ## Blockers
 
-#290/AE-0553 is still open at implementation start; rebase onto it before applying findings 8-9 and before the final push.
+None. #290/AE-0553 is merged and findings 8-9 are included.
 
 ## Final Summary
 
-Pending.
+Owner/admin Reprocessar now recovers all four required stuck kinds through the queue with CAS, attempt fencing, priority 1, immediate dispatch, and one deduped maintenance path. Workspace and Fila expose progress and accessible controls, while all nine panel follow-ups are included. Backend and frontend full gates are green; independent QA is PASS; both mutation jobs remain for PR CI.
