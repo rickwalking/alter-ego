@@ -74,7 +74,13 @@ def _bridge(sessions: Sessions) -> AutopilotQueueBridge:
 async def _seed(
     sessions: Sessions, state: AutopilotRunState, project_id: str | None = None
 ) -> UUID:
+    """Seed a run stamped with the current time.
+
+    The bridge reads the system clock, so a run stamped with a fixed date ages past
+    the review deadline as the calendar moves and the sweep starts expiring it.
+    """
     topic_id, run_id = uuid4(), uuid4()
+    seeded_at = datetime.now(UTC)
     async with sessions() as session:
         session.add(
             TopicCandidateModel(
@@ -100,8 +106,8 @@ async def _seed(
                 state=state.value,
                 publish_attempts=0,
                 telegram_message_ids=[],
-                created_at=_NOW,
-                updated_at=_NOW,
+                created_at=seeded_at,
+                updated_at=seeded_at,
             )
         )
         await session.commit()
