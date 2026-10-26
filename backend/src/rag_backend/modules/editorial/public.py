@@ -162,8 +162,12 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
     is_carousel_project_lock_held,
     is_carousel_project_lock_held_session,
 )
+from rag_backend.modules.editorial.domain.queue_metadata import ProjectQueueMetadata
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
+)
+from rag_backend.modules.editorial.infrastructure.carousel_queue_metadata import (
+    project_queue_metadata,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_rubric_acl import (
     CarouselRubricAcl,
@@ -324,6 +328,8 @@ __all__ = [
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
     "open_run_trace_scope",
+    "ProjectQueueMetadata",
+    "project_queue_metadata",
     "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",

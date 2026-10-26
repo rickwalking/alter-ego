@@ -61,7 +61,7 @@ class _Control:
 
 
 async def test_the_morning_promotion_is_scheduled_at_eight_five() -> None:
-    """Scenario: Promotion cron enqueues the shared full control job at 08:05."""
+    """Scenario: The morning promotion is scheduled at 08:05 São Paulo time"""
     scheduler, bridge, control = _Scheduler(), _Bridge(), _Control()
     register_backlog_promotion(scheduler, control)
     assert scheduler.registered == [(BACKLOG_PROMOTION_ENTRYPOINT, "5 11 * * *")]

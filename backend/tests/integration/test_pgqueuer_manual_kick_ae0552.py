@@ -202,7 +202,7 @@ async def test_manual_priority_is_fifo_and_never_preempts_or_demotes(
 async def test_retry_kick_updates_queued_priority_and_eligibility(
     harness: _Harness,
 ) -> None:
-    """Scenario: Retry wait becomes eligible immediately without update_priority."""
+    """Scenario: Retry and stale transport jobs use explicit fences"""
     queue = PgQueuerJobQueue(harness.queries)
     run = _manual("retry")
     (job_id,) = await harness.queries.enqueue(
@@ -224,7 +224,7 @@ async def test_retry_kick_updates_queued_priority_and_eligibility(
 async def test_stale_picked_kick_cancels_and_requeues_without_dedupe_block(
     harness: _Harness,
 ) -> None:
-    """Scenario: A stale picked job is fenced, cancelled and replaced once."""
+    """Scenario: Retry and stale transport jobs use explicit fences"""
     queue = PgQueuerJobQueue(harness.queries)
     old_attempt = uuid4()
     run = _manual("stale")
@@ -312,7 +312,7 @@ async def test_web_gateway_closes_its_raw_driver(
 async def test_dispatch_control_dedupes_for_worker_and_web(
     harness: _Harness,
 ) -> None:
-    """Scenario: Worker and web dispatch gateways return the active dedupe job."""
+    """Scenario: Maintenance control jobs are durable and deduped"""
     gateway = PgQueuerMaintenanceGateway(harness.queries)
     notice = MaintenanceNotice(run_id=uuid4())
     assert await gateway.notify(notice) is True

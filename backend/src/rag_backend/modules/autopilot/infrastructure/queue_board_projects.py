@@ -8,8 +8,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.autopilot.domain.queue_board import GenerationRow
+from rag_backend.modules.editorial.public import (
+    ProjectQueueMetadata,
+    project_queue_metadata,
+)
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.queue_constants import GENERATION_STATUS_RUNNING
 
@@ -17,7 +20,7 @@ from rag_backend.modules.autopilot.queue_constants import GENERATION_STATUS_RUNN
 @dataclass(frozen=True, kw_only=True)
 class _ProjectContext:
     attribution: dict[str, str | None]
-    projects: dict[str, CarouselProjectModel]
+    projects: dict[str, ProjectQueueMetadata]
 
 
 class QueueBoardProjects:
@@ -50,14 +53,9 @@ class QueueBoardProjects:
         )
         return {str(run_id): project_id for run_id, project_id in result.all()}
 
-    async def _projects(self, ids: set[str | None]) -> dict[str, CarouselProjectModel]:
-        present = [project_id for project_id in ids if project_id is not None]
-        if not present:
-            return {}
-        result = await self._session.scalars(
-            select(CarouselProjectModel).where(CarouselProjectModel.id.in_(present))
-        )
-        return {str(project.id): project for project in result.all()}
+    async def _projects(self, ids: set[str | None]) -> dict[str, ProjectQueueMetadata]:
+        present = {project_id for project_id in ids if project_id is not None}
+        return await project_queue_metadata(self._session, present)
 
 
 def _project_row(row: GenerationRow, context: _ProjectContext) -> GenerationRow:
@@ -70,7 +68,7 @@ def _project_row(row: GenerationRow, context: _ProjectContext) -> GenerationRow:
             run_heartbeat_at=None,
             lock_version=None,
         )
-    heartbeat = project.run_heartbeat_at if _running(row) else None
+    heartbeat = project.heartbeat_at if _running(row) else None
     phase = row.last_phase or (None if row.staged else project.current_phase)
     return replace(
         row,

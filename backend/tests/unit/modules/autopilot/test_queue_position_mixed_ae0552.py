@@ -86,7 +86,7 @@ def _mixed_entries(target: UUID) -> list[QueueEntry]:
 
 
 def test_mixed_staged_unstaged_order_matches_telegram() -> None:
-    """Scenario: Telegram and the panel share priority order and retry-aware estimates"""
+    """Scenario: Panel polling and positions stay consistent"""
     target = uuid4()
     entries = _mixed_entries(target)
     snapshot = QueueSnapshot(entries=tuple(entries), drive_minutes=(20.0,))

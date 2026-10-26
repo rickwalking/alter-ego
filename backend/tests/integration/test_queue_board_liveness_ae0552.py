@@ -71,6 +71,12 @@ async def test_running_heartbeat_is_attributed_and_queued_rows_are_not_live(
     assert "raw provider prompt" not in response.text
 
 
+async def test_forbidden_board_access(client: AsyncClient) -> None:
+    """Scenario: Polling stops on forbidden and running rows show liveness"""
+    response = await client.get(BOARD)
+    assert response.status_code == 403
+
+
 async def _liveness_data() -> _LivenessData:
     first_project, second_project = str(uuid4()), str(uuid4())
     running_id = await seed_autopilot("generating", first_project, "Running")

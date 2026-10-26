@@ -1,4 +1,4 @@
-"""Seed helpers for the AE-0552 queue-board API regressions."""
+"""Seed helpers for the queue-board API regressions."""
 
 from __future__ import annotations
 

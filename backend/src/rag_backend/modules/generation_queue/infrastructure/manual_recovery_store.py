@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import cast
 from uuid import UUID
 
-from sqlalchemy import CursorResult, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 from rag_backend.modules.generation_queue.constants import (
     PAYLOAD_MANUAL_ACCELERATE_JOB_ID,
     PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID,
@@ -201,16 +200,15 @@ class SqlManualRecoveryStore:
             return _ProjectClaim(version=None, moved=True)
         if expected is None:
             return _ProjectClaim(version=project.lock_version, moved=True)
-        result = await self._session.execute(
-            update(CarouselProjectModel)
-            .where(
-                CarouselProjectModel.id == project.id,
-                CarouselProjectModel.lock_version == expected,
-            )
-            .values(lock_version=expected + 1)
-        )
-        moved = cast(CursorResult[object], result).rowcount == 1
-        return _ProjectClaim(version=expected + 1 if moved else None, moved=moved)
+        try:
+            bumped = await CarouselProjectWriteOwner(
+                self._session
+            ).bump_resume_lock_version(project.id, expected)
+        except ValueError as exc:
+            if str(exc) != ERR_VERSION_CONFLICT:
+                raise
+            return _ProjectClaim(version=None, moved=False)
+        return _ProjectClaim(version=bumped, moved=True)
 
     async def _conflict(
         self, mutation: RecoveryMutation, fallback: WriteStatus = WriteStatus.CONFLICT

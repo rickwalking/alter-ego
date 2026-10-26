@@ -11,12 +11,10 @@ The caller sends Pedro the summary.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import structlog
-from sqlalchemy.exc import DBAPIError
 
 from rag_backend.modules.generation_queue.constants import (
     LOG_SCAN_ITEM_FAILED,
@@ -38,26 +36,13 @@ from rag_backend.modules.generation_queue.domain.recovery import (
     RecoveryFailure,
     RecoveryStore,
     ScanReport,
+    failure_metadata,
 )
 
 logger = structlog.get_logger()
 
 _TITLE_SEPARATOR = "; "
 _ELLIPSIS = "…"
-_REASON_SEPARATOR = ": "
-_SQLSTATE_PATTERN = re.compile(r"[A-Z0-9]{5}")
-
-
-@dataclass(frozen=True)
-class _FailureMetadata:
-    exception_type: str
-    dbapi_type: str | None = None
-    sqlstate: str | None = None
-
-    @property
-    def reason(self) -> str:
-        parts = (self.exception_type, self.dbapi_type, self.sqlstate)
-        return _REASON_SEPARATOR.join(part for part in parts if part is not None)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -112,7 +97,7 @@ class DailyRecoveryScan:
 
 
 def _item_failure(drive: ParkedDrive, exc: Exception) -> RecoveryFailure:
-    metadata = _failure_metadata(exc)
+    metadata = failure_metadata(exc)
     logger.warning(
         LOG_SCAN_ITEM_FAILED,
         generation_run_id=str(drive.generation_run_id),
@@ -125,22 +110,7 @@ def _item_failure(drive: ParkedDrive, exc: Exception) -> RecoveryFailure:
 
 
 def _failure_reason(exc: Exception) -> str:
-    return _failure_metadata(exc).reason
-
-
-def _failure_metadata(exc: Exception) -> _FailureMetadata:
-    if not isinstance(exc, DBAPIError):
-        return _FailureMetadata(exception_type=type(exc).__name__)
-    original = exc.orig
-    dbapi_type = type(original).__name__ if isinstance(original, Exception) else None
-    sqlstate = _safe_sqlstate(getattr(original, "sqlstate", None))
-    return _FailureMetadata(type(exc).__name__, dbapi_type, sqlstate)
-
-
-def _safe_sqlstate(value: object) -> str | None:
-    if not isinstance(value, str) or _SQLSTATE_PATTERN.fullmatch(value) is None:
-        return None
-    return value
+    return failure_metadata(exc).reason
 
 
 def summary_text(report: ScanReport) -> str:

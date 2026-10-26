@@ -166,7 +166,7 @@ async def test_every_refusal_is_stable_and_has_no_side_effects(
     case: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Scenario: Not stuck work is refused with a stable reason and no audit."""
+    """Scenario: Not stuck work is refused with a reason"""
     project_id, run_id, expected = await _seed_refusal(harness, case)
     if case == RefusalCode.DRIVE_ACTIVE.value:
         lock = FakeDriveLock(busy=True)

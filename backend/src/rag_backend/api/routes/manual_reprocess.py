@@ -20,11 +20,9 @@ from rag_backend.api.schemas.carousel_reprocess import (
     ManualReprocessRequest,
     ManualReprocessResponse,
 )
-from rag_backend.modules.generation_queue.domain.maintenance import (
+from rag_backend.modules.generation_queue import (
     FullMaintenanceControl,
     MaintenanceEnqueue,
-)
-from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
     WebMaintenanceGateway,
 )
 from rag_backend.modules.generation_queue.public import (
@@ -191,9 +189,7 @@ def _maintenance_response(result: MaintenanceEnqueue) -> JSONResponse:
 
 
 def _http_error(exc: HTTPException) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code, content={"detail": exc.detail}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 def _response(result: RecoveryResult) -> JSONResponse:

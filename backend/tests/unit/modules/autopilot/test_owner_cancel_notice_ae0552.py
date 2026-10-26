@@ -19,7 +19,7 @@ from tests.unit.modules.autopilot.test_owner_notifications import (
 
 
 def test_only_owner_cancel_failure_has_no_notice_kind() -> None:
-    """Scenario: Owner cancellation is audited without a Telegram failure alarm"""
+    """Scenario: Owner cancel does not alarm the owner"""
     cancelled = {"state": "failed", "reason": "owner_queue_cancelled"}
     genuine = {"state": "failed", "reason": "phase_failed"}
     assert notice_kind(EVENT_TYPE_STATE_CHANGED, cancelled) is None

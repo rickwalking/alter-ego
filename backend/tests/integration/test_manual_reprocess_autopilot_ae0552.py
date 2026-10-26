@@ -125,7 +125,7 @@ async def _cap_count(session: AsyncSession) -> int:
 async def test_failed_terminal_successor_is_durable_idempotent_and_outside_cap(
     engine: AsyncEngine,
 ) -> None:
-    """Scenario: Manual failed-terminal recovery has one successor and no cap cost."""
+    """Scenario: Manual recovery is outside cap and backlog and keeps class FIFO"""
     sessions = _sessions(engine)
     topic_id, autopilot_id, generation_id = uuid4(), uuid4(), uuid4()
     old = autopilot_run_row(
@@ -249,7 +249,7 @@ async def test_project_backed_unstaged_autopilot_is_staged_not_adopted(
 async def test_concurrent_failed_terminal_clicks_share_the_successor(
     engine: AsyncEngine,
 ) -> None:
-    """Scenario: Serializing on the old row links both callers to one successor."""
+    """Scenario: Double click returns the existing manual run"""
     sessions = _sessions(engine)
     topic_id, autopilot_id, generation_id = uuid4(), uuid4(), uuid4()
     old = autopilot_run_row(

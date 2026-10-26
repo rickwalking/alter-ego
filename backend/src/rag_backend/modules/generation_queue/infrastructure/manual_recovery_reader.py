@@ -17,6 +17,8 @@ from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunMode
 from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
     PAYLOAD_MANUAL_REPLACES_RUN_ID,
+    STATUS_QUEUED,
+    STATUS_RETRY_WAIT,
 )
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     ManualReprocessCommand,
@@ -73,8 +75,10 @@ class ManualRecoveryReader:
         )
 
     async def serialize(self, snapshot: RecoverySnapshot) -> RecoverySnapshot:
-        """Lock the original run or orphan project, then re-read all state."""
+        """Lock autopilot first, then the original run or orphan project."""
         command = snapshot.command
+        if snapshot.autopilot_run_id is not None:
+            await self._lock_autopilot(snapshot.autopilot_run_id)
         if snapshot.run is not None:
             await self._session.get(
                 GenerationRunModel,
@@ -90,6 +94,19 @@ class ManualRecoveryReader:
                 populate_existing=True,
             )
         return await self.load(command)
+
+    async def _lock_autopilot(self, run_id: str) -> None:
+        """Match the daily scan's autopilot-before-generation lock order."""
+        try:
+            autopilot_id = UUID(run_id)
+        except ValueError:
+            return
+        await self._session.get(
+            AutopilotRunModel,
+            autopilot_id,
+            with_for_update=True,
+            populate_existing=True,
+        )
 
     async def run_by_id(self, run_id: UUID) -> GenerationRun | None:
         """Read one generation row freshly by its durable id."""
@@ -111,10 +128,10 @@ class ManualRecoveryReader:
         return run_from_row(row) if row is not None else None
 
     async def find_existing(self, snapshot: RecoverySnapshot) -> GenerationRun | None:
-        """Find a compatible active manual original or failed-terminal successor."""
+        """Find a compatible queued or retry-waiting manual original or successor."""
         rows = await self._session.scalars(
             select(GenerationRunModel)
-            .where(GenerationRunModel.status.in_(ACTIVE_STATUSES))
+            .where(GenerationRunModel.status.in_((STATUS_QUEUED, STATUS_RETRY_WAIT)))
             .order_by(GenerationRunModel.created_at.desc())
             .execution_options(populate_existing=True)
         )
