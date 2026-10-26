@@ -35,6 +35,7 @@ from rag_backend.domain.constants.playwright_geometry import (
 )
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.external.export_lock import export_slot
+from rag_backend.infrastructure.external.page_cache import release_page_cache
 from rag_backend.infrastructure.external.playwright_artwork_check import (
     ensure_artwork_files,
 )
@@ -293,7 +294,8 @@ class PlaywrightExportService(CarouselExportService):
         Missing artwork files fail fast, naming the slide, before Playwright decodes
         images. POV layouts are scaled for the export canvas too. Each
         ``.ig-slide-inner`` is screenshotted (legacy ``.slide`` as fallback) and its 1px
-        border artifact cropped.
+        border artifact cropped. Once written, the page cache of ``output_dir`` is
+        released so the slides do not stay charged to this process's memory.
         """
         cfg = config or ExportConfig()
         output_path = Path(output_dir)
@@ -304,7 +306,9 @@ class PlaywrightExportService(CarouselExportService):
         ensure_artwork_files(html_content, output_path, hd=cfg.hd)
 
         async with export_slot():
-            return await _render_slides(html_file, cfg)
+            exported = await _render_slides(html_file, cfg)
+        await asyncio.to_thread(release_page_cache, output_path)
+        return exported
 
 
 async def _render_slides(html_file: Path, cfg: ExportConfig) -> list[str]:
