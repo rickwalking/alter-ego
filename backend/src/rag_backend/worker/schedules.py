@@ -1,10 +1,7 @@
-"""Daily jobs on PgQueuer's scheduler (cron in UTC; PgQueuer runs each once a day).
+"""The 11:05 UTC backlog schedule enqueues the shared full control job.
 
-* 11:05 UTC (08:05 São Paulo): promote waiting backlog themes into the day's free
-  slots, so they start even on a day the scout sends no batch. Registered only
-  while the worker drives autopilot runs.
-
-A failed job is logged; the next day's run tries again.
+The maintenance executor runs ``run_backlog_promotion`` under the full-pass lock,
+so cron never promotes independently of manual maintenance.
 """
 
 from __future__ import annotations
@@ -19,6 +16,9 @@ from rag_backend.modules.autopilot.queue_constants import (
     BACKLOG_PROMOTION_ENTRYPOINT,
     LOG_BACKLOG_PROMOTED,
     LOG_BACKLOG_PROMOTION_FAILED,
+)
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    FullMaintenanceControl,
 )
 
 logger = structlog.get_logger()
@@ -35,12 +35,12 @@ async def run_backlog_promotion(bridge: AutopilotQueueBridge) -> int | None:
     return promoted
 
 
-def register_backlog_promotion(pgq: PgQueuer, bridge: AutopilotQueueBridge) -> None:
-    """Put the morning backlog promotion on PgQueuer's scheduler."""
+def register_backlog_promotion(pgq: PgQueuer, control: FullMaintenanceControl) -> None:
+    """Enqueue the shared full control job on the morning schedule."""
 
     async def promote(schedule: Schedule) -> None:
         del schedule
-        await run_backlog_promotion(bridge)
+        await control.request_full()
 
     pgq.schedule(BACKLOG_PROMOTION_ENTRYPOINT, BACKLOG_PROMOTION_CRON_UTC)(promote)
 

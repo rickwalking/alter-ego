@@ -48,7 +48,7 @@ class ManualRecoveryAudit(Protocol):
 
 
 class MaintenanceNotifier(Protocol):
-    """The next increment's dispatch-only maintenance entrypoint."""
+    """The durable dispatch-only maintenance entrypoint."""
 
     async def notify(self, notice: MaintenanceNotice) -> bool:
         """Return whether the worker accepted the post-commit notification."""

@@ -48,6 +48,19 @@ Feature: Owners reprocess stuck carousels through the generation queue
     When they run concurrently
     Then the shared functions cannot double-promote, double-revive, purge twice, or send duplicate summaries
 
+  Scenario: Maintenance control jobs are durable and deduped
+    Given manual and scheduled maintenance requests for the same full pass
+    And repeated dispatch requests for one run
+    When their control jobs are enqueued
+    Then one active job per dedupe payload wakes the worker
+    And enqueue failure returns false or 503 honestly
+
+  Scenario: Retry and stale transport jobs use explicit fences
+    Given a delayed queued retry and a picked job from an old attempt
+    When manual recovery kicks them
+    Then the queued retry becomes eligible now with priority one
+    And the picked job is cancelled and replaced once without preempting its drive
+
   Scenario: Panel polling and positions stay consistent
     Given unstaged autopilot work, running elapsed time and retry-wait work
     When the board and Telegram compute positions and ETAs

@@ -58,7 +58,7 @@ class ManualRecoveryReader:
         project_id, mismatch = _project_id(command, run, autopilot)
         project = await self._project(project_id)
         latest_id, active_id = await self._run_scope(project_id, run)
-        missing = mismatch or (command.run_id is not None and run is None)
+        missing = mismatch or (_targeted(command) and run is None)
         missing = missing or (command.project_id is not None and project is None)
         return RecoverySnapshot(
             command=command,
@@ -127,11 +127,25 @@ class ManualRecoveryReader:
     async def _target(self, command: ManualReprocessCommand) -> GenerationRun | None:
         if command.run_id is not None:
             return await self.run_by_id(command.run_id)
+        if command.autopilot_run_id is not None:
+            return await self._target_autopilot(command.autopilot_run_id)
         if command.project_id is None:
             return None
         row = await self._session.scalar(
             select(GenerationRunModel)
             .where(GenerationRunModel.carousel_project_id == command.project_id)
+            .order_by(
+                GenerationRunModel.created_at.desc(), GenerationRunModel.id.desc()
+            )
+            .limit(1)
+            .execution_options(populate_existing=True)
+        )
+        return run_from_row(row) if row is not None else None
+
+    async def _target_autopilot(self, run_id: UUID) -> GenerationRun | None:
+        row = await self._session.scalar(
+            select(GenerationRunModel)
+            .where(GenerationRunModel.autopilot_run_id == str(run_id))
             .order_by(
                 GenerationRunModel.created_at.desc(), GenerationRunModel.id.desc()
             )
@@ -147,8 +161,9 @@ class ManualRecoveryReader:
             return AutopilotRecoveryFacts()
         if run is not None and run.autopilot_run_id is None:
             return AutopilotRecoveryFacts(dead=False)
-        if run is not None:
-            return await self._autopilot_by_id(run.autopilot_run_id or "")
+        target = _autopilot_target(command, run)
+        if target is not None:
+            return await self._autopilot_by_id(target)
         if command.project_id is None:
             return AutopilotRecoveryFacts()
         row = await self._session.scalar(
@@ -215,6 +230,20 @@ class ManualRecoveryReader:
         return _uuid_or_none(latest), _uuid_or_none(active)
 
 
+def _targeted(command: ManualReprocessCommand) -> bool:
+    return command.run_id is not None or command.autopilot_run_id is not None
+
+
+def _autopilot_target(
+    command: ManualReprocessCommand, run: GenerationRun | None
+) -> str | None:
+    if run is not None:
+        return run.autopilot_run_id
+    if command.autopilot_run_id is not None:
+        return str(command.autopilot_run_id)
+    return None
+
+
 def _autopilot_facts(row: AutopilotRunModel | None) -> AutopilotRecoveryFacts:
     if row is None:
         return AutopilotRecoveryFacts()
@@ -261,10 +290,12 @@ def _compatible(snapshot: RecoverySnapshot, run: GenerationRun) -> bool:
     if project_id is not None and run.carousel_project_id == project_id:
         return True
     original = snapshot.run
+    if original is None or not original.autopilot_run_id:
+        return False
+    replaced = run.payload.get(PAYLOAD_MANUAL_REPLACES_RUN_ID)
     return bool(
-        original is not None
-        and original.autopilot_run_id
-        and run.autopilot_run_id == original.autopilot_run_id
+        run.autopilot_run_id == original.autopilot_run_id
+        or replaced == str(original.id)
     )
 
 

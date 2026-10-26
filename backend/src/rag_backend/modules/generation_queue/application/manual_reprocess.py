@@ -38,16 +38,6 @@ from rag_backend.modules.generation_queue.domain.ports import Clock, DriveLock
 _LOCKED_KINDS = frozenset({StuckKind.STALE_RUNNING, StuckKind.ORPHAN})
 
 
-class DeferredMaintenanceNotifier:
-    """Honest fallback while the worker maintenance entrypoint is not wired."""
-
-    @staticmethod
-    async def notify(notice: MaintenanceNotice) -> bool:
-        """Leave the durable row for the ordinary dispatcher."""
-        del notice
-        return False
-
-
 @dataclass(frozen=True, kw_only=True)
 class ManualRecoveryDependencies:
     """The isolated store, audit, lock, notifier, clock and policy."""
@@ -256,8 +246,4 @@ class ManualRecoveryService:
 _BUSY_DECISION = RecoveryDecision(refusal=RefusalCode.DRIVE_ACTIVE)
 
 
-__all__ = [
-    "DeferredMaintenanceNotifier",
-    "ManualRecoveryDependencies",
-    "ManualRecoveryService",
-]
+__all__ = ["ManualRecoveryDependencies", "ManualRecoveryService"]

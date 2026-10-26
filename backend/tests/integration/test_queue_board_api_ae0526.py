@@ -197,6 +197,11 @@ async def test_retry_from_the_panel_happens_once(client: AsyncClient) -> None:
     assert second.json()["detail"] == "already_resolved"
     assert await _state(run) == ("generating", "owner_queue_retry")
     assert await _status(dead) == "queued"
+    async with get_session_maker()() as session:
+        row = await session.get(GenerationRunModel, dead)
+    assert row is not None
+    assert row.payload["manual_priority"] == 1
+    assert row.payload["manual_origin"] == "carousel_reprocess"
 
 
 async def test_discard_from_the_panel_closes_the_run(client: AsyncClient) -> None:

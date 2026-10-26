@@ -60,6 +60,10 @@ class QueueControl(Protocol):
         """Requeue the run's dead-lettered generation run; False when there is none."""
         ...
 
+    async def reprocess_autopilot(self, run_id: UUID, actor_id: str) -> UUID | None:
+        """Use shared manual recovery; return its queued autopilot identity."""
+        ...
+
 
 def average_drive_minutes(drives: Sequence[float]) -> float:
     """The mean of the recent drives, or the default without history."""

@@ -348,17 +348,31 @@ class FakeQueue:
     held_jobs: list[HeldJob] = field(default_factory=list)
     forgotten: list[int] = field(default_factory=list)
     next_id: int = 100
+    kicked: list[UUID] = field(default_factory=list)
+    enqueued: list[UUID] = field(default_factory=list)
 
     async def find_job(self, dedupe_key: str) -> int | None:
         """The job with the key."""
         return self.jobs.get(dedupe_key)
 
     async def enqueue(self, run: GenerationRun) -> int | None:
-        """A new job id."""
+        """A new job id, or the active dedupe match."""
+        existing = self.jobs.get(run.dedupe_key)
+        if existing is not None:
+            return existing
         self.next_id += 1
         self.jobs[run.dedupe_key] = self.next_id
         self.alive.add(self.next_id)
+        self.enqueued.append(run.id)
         return self.next_id
+
+    async def kick(self, run: GenerationRun) -> int | None:
+        """Return the active job or enqueue a missing one."""
+        self.kicked.append(run.id)
+        existing = self.jobs.get(run.dedupe_key)
+        if existing is not None:
+            return existing
+        return await self.enqueue(run)
 
     async def existing(self, job_ids: Sequence[int]) -> set[int]:
         """The live ones."""

@@ -1,8 +1,7 @@
-"""The daily recovery scan on PgQueuer's scheduler: 07:00 UTC (04:00 São Paulo).
+"""Daily recovery execution and its 07:00 UTC full-control schedule.
 
-PgQueuer keeps the schedule in its own table, so with several workers (or a
-restart around 07:00) the scan runs once a day. A failed scan is logged; the next
-day's scan tries again.
+PgQueuer keeps the schedule in its own table. Cron and manual requests enqueue the
+same durable full job; only that job runs the scan and sends its summary.
 """
 
 from __future__ import annotations
@@ -22,6 +21,9 @@ from rag_backend.modules.generation_queue.constants import (
     LOG_SCAN_FAILED,
     SCAN_CRON_UTC,
     SCAN_ENTRYPOINT,
+)
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    FullMaintenanceControl,
 )
 from rag_backend.modules.generation_queue.domain.recovery import ScanReport
 
@@ -51,14 +53,12 @@ async def run_daily_scan(
     return report
 
 
-def register_daily_scan(
-    pgq: PgQueuer, scan: DailyRecoveryScan, alert: AlertSender
-) -> None:
-    """Put the scan on PgQueuer's scheduler."""
+def register_daily_scan(pgq: PgQueuer, control: FullMaintenanceControl) -> None:
+    """Enqueue the shared full control job on PgQueuer's scheduler."""
 
     async def daily_scan(schedule: Schedule) -> None:
         del schedule
-        await run_daily_scan(scan, alert)
+        await control.request_full()
 
     pgq.schedule(SCAN_ENTRYPOINT, SCAN_CRON_UTC)(daily_scan)
 

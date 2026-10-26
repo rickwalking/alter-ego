@@ -35,6 +35,13 @@ class ManualReprocessResponse(BaseModel):
     last_error_code: str | None = None
 
 
+class MaintenanceProcessResponse(BaseModel):
+    """The inserted or existing durable full-maintenance control job."""
+
+    outcome: Literal["queued", "existing"]
+    job_id: int
+
+
 class ManualRecoveryCapabilityResponse(BaseModel):
     """Workspace recovery capability and safe current-run progress."""
 
@@ -52,6 +59,7 @@ class ManualRecoveryCapabilityResponse(BaseModel):
 
 __all__ = [
     "GenerationRunReprocessRequest",
+    "MaintenanceProcessResponse",
     "ManualRecoveryCapabilityResponse",
     "ManualReprocessRequest",
     "ManualReprocessResponse",

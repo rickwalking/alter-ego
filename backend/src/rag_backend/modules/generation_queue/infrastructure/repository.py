@@ -10,7 +10,8 @@ from collections.abc import Sequence
 from typing import cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import ColumnElement, CursorResult, func, select, true, update
+from sqlalchemy import ColumnElement, CursorResult, Text, func, select, true, update
+from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -84,7 +85,7 @@ def _attempt_payload(
     if dialect == "postgresql":
         expression = func.jsonb_set(
             GenerationRunModel.payload,
-            "{" + ATTEMPT_ID_KEY + "}",
+            pg_array([ATTEMPT_ID_KEY], type_=Text),
             func.to_jsonb(str(attempt_id)),
             true(),
         )

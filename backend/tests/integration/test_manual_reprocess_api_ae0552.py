@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -13,6 +14,7 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
+from rag_backend.modules.generation_queue.domain.maintenance import MaintenanceEnqueue
 from rag_backend.modules.generation_queue.domain.models import GenerationStatus
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
@@ -243,3 +245,55 @@ async def test_admin_can_reprocess_projectless_run_with_status_cas(
     assert response.status_code == 202
     assert response.json()["run_id"] == str(row.id)
     assert response.json()["lock_version"] is None
+
+
+@dataclass
+class _Control:
+    results: list[MaintenanceEnqueue] = field(default_factory=list)
+    error: Exception | None = None
+    calls: int = 0
+
+    async def request_full(self) -> MaintenanceEnqueue:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return self.results.pop(0)
+
+
+async def test_process_now_returns_accepted_then_existing(
+    harness: RecoveryApiHarness,
+) -> None:
+    """Scenario: Full maintenance double clicks share one active control job."""
+    control = _Control([
+        MaintenanceEnqueue(job_id=41, inserted=True),
+        MaintenanceEnqueue(job_id=41, inserted=False),
+    ])
+    harness.app.state.maintenance_control = control
+    headers = harness.headers(harness.admin)
+    first = await harness.client.post("/api/generation-runs/process", headers=headers)
+    second = await harness.client.post("/api/generation-runs/process", headers=headers)
+    assert (first.status_code, second.status_code) == (202, 200)
+    assert first.json() == {"outcome": "queued", "job_id": 41}
+    assert second.json() == {"outcome": "existing", "job_id": 41}
+    assert control.calls == 2
+
+
+async def test_process_now_failure_is_an_honest_503(
+    harness: RecoveryApiHarness,
+) -> None:
+    """Scenario: A failed durable control enqueue returns 503 without details."""
+    control = _Control(error=RuntimeError("sensitive queue detail"))
+    harness.app.state.maintenance_control = control
+    response = await harness.client.post(
+        "/api/generation-runs/process", headers=harness.headers(harness.admin)
+    )
+    assert response.status_code == 503
+    assert "sensitive queue detail" not in response.text
+
+
+async def test_process_now_is_admin_only(harness: RecoveryApiHarness) -> None:
+    """Scenario: Only an admin can request a full maintenance pass."""
+    response = await harness.client.post(
+        "/api/generation-runs/process", headers=harness.headers(harness.owner)
+    )
+    assert response.status_code == 403

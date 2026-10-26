@@ -17,7 +17,6 @@ from uuid import UUID, uuid4
 from rag_backend.modules.autopilot.application.run_revive import (
     ReviveDependencies,
     discard_parked,
-    revive,
 )
 from rag_backend.modules.autopilot.domain.backlog import (
     BacklogStore,
@@ -48,7 +47,6 @@ from rag_backend.modules.autopilot.queue_constants import (
     OUTCOME_DONE,
     OUTCOME_NOT_ALLOWED,
     OUTCOME_NOT_FOUND,
-    REASON_DEAD_RETRY,
     REASON_OWNER_CANCELLED,
 )
 
@@ -133,14 +131,6 @@ class QueueBoardService:
                 now=now,
             )
         )
-
-    async def retry(self, run_id: UUID) -> str:
-        """Put a dead-lettered autopilot run back in the queue."""
-        found = await self._parked(run_id)
-        if isinstance(found, str):
-            return found
-        queued = await revive(self._deps.revive, found, REASON_DEAD_RETRY)
-        return OUTCOME_DONE if queued is not None else OUTCOME_ALREADY
 
     async def discard(self, run_id: UUID) -> str:
         """Close a dead-lettered autopilot run."""

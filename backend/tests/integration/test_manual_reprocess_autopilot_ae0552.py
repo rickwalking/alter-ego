@@ -83,6 +83,11 @@ def _topic(topic_id: UUID) -> TopicCandidateModel:
     )
 
 
+async def _seed_topic(session: AsyncSession, topic_id: UUID) -> None:
+    session.add(_topic(topic_id))
+    await session.flush()
+
+
 def _autopilot(
     topic_id: UUID, run_id: UUID, state: AutopilotRunState, **overrides: object
 ) -> AutopilotRunModel:
@@ -128,8 +133,8 @@ async def test_failed_terminal_successor_is_durable_idempotent_and_outside_cap(
     )
     notifier = RecordingNotifier()
     async with sessions() as session:
+        await _seed_topic(session, topic_id)
         session.add_all([
-            _topic(topic_id),
             _autopilot(topic_id, autopilot_id, AutopilotRunState.FAILED),
             old,
         ])
@@ -184,9 +189,9 @@ async def test_escalated_autopilot_uses_existing_revive_and_requeue(
         pgq_job_id=55,
     )
     async with sessions() as session:
+        await _seed_topic(session, topic_id)
         session.add_all([
             project_row(project_id),
-            _topic(topic_id),
             _autopilot(
                 topic_id,
                 autopilot_id,
@@ -218,9 +223,9 @@ async def test_project_backed_unstaged_autopilot_is_staged_not_adopted(
     sessions = _sessions(engine)
     topic_id, autopilot_id, project_id = uuid4(), uuid4(), str(uuid4())
     async with sessions() as session:
+        await _seed_topic(session, topic_id)
         session.add_all([
             project_row(project_id),
-            _topic(topic_id),
             _autopilot(
                 topic_id,
                 autopilot_id,
@@ -251,8 +256,8 @@ async def test_concurrent_failed_terminal_clicks_share_the_successor(
         autopilot_id, GenerationStatus.DEAD_LETTER, id=generation_id
     )
     async with sessions() as session:
+        await _seed_topic(session, topic_id)
         session.add_all([
-            _topic(topic_id),
             _autopilot(topic_id, autopilot_id, AutopilotRunState.FAILED),
             old,
         ])

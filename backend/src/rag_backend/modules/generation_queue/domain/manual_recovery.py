@@ -77,6 +77,7 @@ class ManualReprocessCommand:
     project_id: str | None
     run_id: UUID | None
     actor_id: str
+    autopilot_run_id: UUID | None = None
     expected_version: int | None = None
     request_id: UUID = field(default_factory=uuid4)
 
@@ -183,7 +184,7 @@ class AuditCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class MaintenanceNotice:
-    """The future dispatch-only maintenance payload."""
+    """The dispatch-only maintenance payload for one run."""
 
     run_id: UUID
 

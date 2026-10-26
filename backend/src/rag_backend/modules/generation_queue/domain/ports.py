@@ -106,6 +106,10 @@ class JobQueue(Protocol):
         """Enqueue the run; None when PgQueuer already holds an active job for it."""
         ...
 
+    async def kick(self, run: GenerationRun) -> int | None:
+        """Reconcile priority, eligibility and any fenced picked replacement."""
+        ...
+
     async def existing(self, job_ids: Sequence[int]) -> set[int]:
         """Which of these job ids still exist in the queue table."""
         ...

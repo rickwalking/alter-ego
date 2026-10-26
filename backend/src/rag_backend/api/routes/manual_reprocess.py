@@ -8,16 +8,24 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from rag_backend.api.dependencies.carousel_access import get_carousel_project_for_user
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import AdminUser, EditorUser, UserModel
 from rag_backend.api.schemas.carousel_reprocess import (
     GenerationRunReprocessRequest,
+    MaintenanceProcessResponse,
     ManualRecoveryCapabilityResponse,
     ManualReprocessRequest,
     ManualReprocessResponse,
+)
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    FullMaintenanceControl,
+    MaintenanceEnqueue,
+)
+from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
+    WebMaintenanceGateway,
 )
 from rag_backend.modules.generation_queue.public import (
     MaintenanceNotifier,
@@ -33,8 +41,10 @@ router = APIRouter(tags=["carousel_manual_recovery"])
 
 _PROJECT_PATH = "/carousels/{project_id}/workflow/reprocess"
 _RUN_PATH = "/generation-runs/{run_id}/reprocess"
+_PROCESS_PATH = "/generation-runs/process"
 _NOT_FOUND = "not_found"
 _CONCURRENT_UPDATE = "concurrent_update"
+_UNAVAILABLE = "maintenance_unavailable"
 
 
 @dataclass(frozen=True)
@@ -71,6 +81,17 @@ def _admin_context(
 
 EditorContext = Annotated[_RecoveryContext, Depends(_editor_context)]
 AdminContext = Annotated[_RecoveryContext, Depends(_admin_context)]
+
+
+def _control(request: Request, db: AsyncSession) -> FullMaintenanceControl:
+    override: FullMaintenanceControl | None = getattr(
+        request.app.state, "maintenance_control", None
+    )
+    if override is not None:
+        return override
+    bind = db.bind
+    engine = bind.engine if isinstance(bind, AsyncConnection) else bind
+    return WebMaintenanceGateway(engine)
 
 
 @router.post(
@@ -124,6 +145,40 @@ async def reprocess_generation_run(
         expected_version=body.expected_version,
     )
     return _response(await context.service.reprocess(command))
+
+
+@router.post(
+    _PROCESS_PATH,
+    response_model=MaintenanceProcessResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def process_generation_queue(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: AdminUser,
+) -> JSONResponse:
+    """Enqueue the same full maintenance control job used by cron."""
+    del user
+    try:
+        result = await _control(request, db).request_full()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_UNAVAILABLE
+        ) from None
+    return _maintenance_response(result)
+
+
+def _maintenance_response(result: MaintenanceEnqueue) -> JSONResponse:
+    if result.job_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_UNAVAILABLE
+        )
+    accepted = result.inserted
+    payload = MaintenanceProcessResponse(
+        outcome="queued" if accepted else "existing", job_id=result.job_id
+    )
+    code = status.HTTP_202_ACCEPTED if accepted else status.HTTP_200_OK
+    return JSONResponse(status_code=code, content=payload.model_dump())
 
 
 def _response(result: RecoveryResult) -> JSONResponse:

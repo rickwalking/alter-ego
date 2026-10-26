@@ -8,7 +8,7 @@ Feature: Daily recovery isolates a failing dead letter
     When the daily scan runs
     Then the other dead letters are revived
     And old rows are purged and queue counts are collected
-    And the owner summary names the failed item and "database unavailable"
+    And the owner summary names the failed item and only safe exception metadata
 
   Scenario: A failed revive does not consume the recovery attempt
     Given a recoverable dead letter whose revive raises before commit

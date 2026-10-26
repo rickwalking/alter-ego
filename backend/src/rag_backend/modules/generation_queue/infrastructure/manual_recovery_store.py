@@ -148,8 +148,7 @@ class SqlManualRecoveryStore:
     ) -> RecoveryWrite:
         payload = {**run.payload, **manual_payload(mutation)}
         payload[PAYLOAD_MANUAL_EXECUTE_AFTER] = mutation.requested_at.isoformat()
-        if run.pgq_job_id is not None:
-            payload[PAYLOAD_MANUAL_ACCELERATE_JOB_ID] = run.pgq_job_id
+        _transport_fence(payload, run, accelerate=True)
         command = RecoveryRunCAS(
             mutation=mutation,
             run=run,
@@ -167,11 +166,7 @@ class SqlManualRecoveryStore:
     ) -> RecoveryWrite:
         payload = {**run.payload, **manual_payload(mutation)}
         payload[PAYLOAD_MANUAL_EXECUTE_AFTER] = mutation.requested_at.isoformat()
-        if run.pgq_job_id is not None:
-            payload[PAYLOAD_MANUAL_CANCEL_JOB_ID] = run.pgq_job_id
-        attempt_id = _old_attempt(run)
-        if attempt_id is not None:
-            payload[PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID] = str(attempt_id)
+        _transport_fence(payload, run, accelerate=False)
         command = RecoveryRunCAS(
             mutation=mutation,
             run=run,
@@ -229,6 +224,19 @@ class SqlManualRecoveryStore:
                 lock_version=_version(fresh),
             )
         return RecoveryWrite(status=fallback)
+
+
+def _transport_fence(
+    payload: dict[str, object], run: GenerationRun, *, accelerate: bool
+) -> None:
+    if run.pgq_job_id is None:
+        return
+    if accelerate:
+        payload[PAYLOAD_MANUAL_ACCELERATE_JOB_ID] = run.pgq_job_id
+    payload[PAYLOAD_MANUAL_CANCEL_JOB_ID] = run.pgq_job_id
+    attempt_id = _old_attempt(run)
+    if attempt_id is not None:
+        payload[PAYLOAD_MANUAL_CANCEL_ATTEMPT_ID] = str(attempt_id)
 
 
 def _write(run: GenerationRun | None, lock_version: int | None) -> RecoveryWrite:

@@ -30,7 +30,6 @@ from rag_backend.domain.models.carousel_conflict import (
 )
 from rag_backend.modules.generation_queue.application.executors import project_key
 from rag_backend.modules.generation_queue.application.manual_reprocess import (
-    DeferredMaintenanceNotifier,
     ManualRecoveryDependencies,
     ManualRecoveryService,
 )
@@ -59,6 +58,9 @@ from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
 from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
     DriveLockTiming,
     PostgresDriveLock,
+)
+from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
+    WebMaintenanceGateway,
 )
 from rag_backend.modules.generation_queue.infrastructure.schema import (
     QueueSchemaReport,
@@ -146,7 +148,7 @@ def build_manual_recovery(
             store=manual_recovery_store.SqlManualRecoveryStore(session, UTC_CLOCK),
             audit=manual_recovery_audit.SqlManualRecoveryAudit(session),
             lock=PostgresDriveLock(engine, _NO_WAIT),
-            notifier=notifier or DeferredMaintenanceNotifier(),
+            notifier=notifier or WebMaintenanceGateway(engine),
             clock=UTC_CLOCK,
             policy=RecoveryPolicy(
                 heartbeat_stale_seconds=settings.workflow_run_heartbeat_stale_seconds,

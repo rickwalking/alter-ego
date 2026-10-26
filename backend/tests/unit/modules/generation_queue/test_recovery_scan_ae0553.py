@@ -7,11 +7,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from asyncpg import UniqueViolationError
+from sqlalchemy.exc import DBAPIError
 from structlog.testing import capture_logs
 
 from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyRecoveryScan,
     DailyScanDependencies,
+    _failure_reason,
+    _item_failure,
     summary_text,
 )
 from rag_backend.modules.generation_queue.bootstrap import _NoParkedAutopilot
@@ -64,7 +68,8 @@ async def test_one_failing_dead_letter_does_not_stop_the_daily_scan() -> None:
     assert report.queued == 3
     text = summary_text(report)
     assert failed.autopilot_run_id in text
-    assert "database unavailable" in text
+    assert "RuntimeError" in text
+    assert reason not in text
     item_logs = [
         entry
         for entry in logs
@@ -136,3 +141,30 @@ async def test_failure_summary_accounts_for_overflow_and_empty_reasons() -> None
     empty_text = summary_text(report)
     assert "RuntimeError" in empty_text
     assert "RuntimeError: RuntimeError" not in empty_text
+
+
+async def test_sqlalchemy_failure_reason_is_metadata_only() -> None:
+    """Scenario: Recovery failures never expose SQL parameters."""
+    sql = "UPDATE runs SET prompt = %(prompt)s WHERE id = %(run_id)s"
+    secret = "secret-prompt-and-payload"
+    error = DBAPIError(
+        sql,
+        {"prompt": secret, "run_id": "secret-run"},
+        UniqueViolationError("duplicate sensitive detail"),
+    )
+    with capture_logs() as logs:
+        failure = _item_failure(_drive(), error)
+    text = summary_text(ScanReport(failures=(failure,)))
+    assert failure.reason == "DBAPIError: UniqueViolationError: 23505"
+    assert logs[0]["error_type"] == "DBAPIError"
+    assert logs[0]["dbapi_type"] == "UniqueViolationError"
+    assert logs[0]["sqlstate"] == "23505"
+    for sensitive in (sql, secret, "secret-run", "duplicate sensitive detail"):
+        assert sensitive not in repr(logs)
+        assert sensitive not in text
+
+
+def test_non_sql_failure_reason_is_exception_type_only() -> None:
+    """Scenario: A non-SQL failure never falls back to its message."""
+    error = RuntimeError("prompt payload and secret parameters")
+    assert _failure_reason(error) == "RuntimeError"
