@@ -52,7 +52,7 @@ class TestExportReleasesItsSlides:
 
         with (
             patch(f"{_EXPORT}._render_slides", side_effect=render),
-            patch(f"{_EXPORT}.release_page_cache", side_effect=release),
+            patch(f"{_EXPORT}.release_page_cache", side_effect=release, create=True),
         ):
             result = await PlaywrightExportService.export_slides(
                 html_content="<html></html>", output_dir=str(tmp_path)
@@ -69,7 +69,7 @@ class TestExportReleasesItsSlides:
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("chromium crashed"),
             ),
-            patch(f"{_EXPORT}.release_page_cache", release),
+            patch(f"{_EXPORT}.release_page_cache", release, create=True),
             pytest.raises(RuntimeError),
         ):
             await PlaywrightExportService.export_slides(
@@ -109,7 +109,7 @@ async def _activate(
             f"{_BUILD}.CarouselArtifactBuildService.build_and_activate",
             AsyncMock(return_value=outcome),
         ),
-        patch(f"{_PORTS}.release_page_cache", release),
+        patch(f"{_PORTS}.release_page_cache", release, create=True),
     ):
         activation = await adapter.build_and_activate(str(project.id))
     assert activation.ok is isinstance(outcome, ArtifactBuildResult)

@@ -5,7 +5,11 @@ Feature: tests/features/worker_page_cache_ae0555.feature
 
 from __future__ import annotations
 
+import ctypes
+import mmap
 import os
+import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -165,3 +169,65 @@ class TestReleasePageCache:
 
         assert release_page_cache(tmp_path) == 1
         assert target.read_bytes() == b"jpeg-bytes"
+
+    def test_a_file_that_vanished_is_skipped(
+        self, tmp_path: Path, spy: _Spy, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        kept = _write(tmp_path / "slide_1.jpg")
+
+        def walk_with_a_ghost(root: Path) -> Iterator[tuple[str, list[str], list[str]]]:
+            yield str(root), [], ["slide_1.jpg", "gone.jpg"]
+
+        monkeypatch.setattr(f"{_MODULE_OS}.walk", walk_with_a_ghost)
+
+        assert release_page_cache(tmp_path) == 1
+        assert spy.synced == [str(kept)]
+
+    def test_a_filesystem_error_mid_walk_never_raises(
+        self, tmp_path: Path, spy: _Spy, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        first = _write(tmp_path / "slide_1.jpg")
+
+        def failing_walk(root: Path) -> Iterator[tuple[str, list[str], list[str]]]:
+            yield str(root), [], ["slide_1.jpg"]
+            raise OSError(root)
+
+        monkeypatch.setattr(f"{_MODULE_OS}.walk", failing_walk)
+
+        assert release_page_cache(tmp_path) == 1
+        assert spy.synced == [str(first)]
+
+
+def _resident_pages(path: Path) -> int:
+    """Pages of ``path`` in the page cache (``mincore``; the pages are not read)."""
+    size = path.stat().st_size
+    pages = (size + mmap.PAGESIZE - 1) // mmap.PAGESIZE
+    vector = (ctypes.c_ubyte * pages)()
+    libc = ctypes.CDLL(None, use_errno=True)
+    with path.open("rb") as handle:
+        mapping = mmap.mmap(handle.fileno(), size, access=mmap.ACCESS_COPY)
+        anchor = ctypes.c_char.from_buffer(mapping)
+        result = libc.mincore(
+            ctypes.c_void_p(ctypes.addressof(anchor)), ctypes.c_size_t(size), vector
+        )
+        del anchor
+        mapping.close()
+    assert result == 0, os.strerror(ctypes.get_errno())
+    return sum(byte & 1 for byte in vector)
+
+
+@pytest.mark.unit
+class TestKernelDropsThePages:
+    def test_written_pages_leave_the_page_cache(self) -> None:
+        """Scenario: Releasing a directory drops the cache of every file under it.
+
+        Runs on a disk-backed folder next to this test: tmpfs pages are memory, not
+        cache, and fadvise cannot drop them.
+        """
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as folder:
+            target = _write(Path(folder) / "slide_1.jpg", os.urandom(1 << 20))
+
+            assert _resident_pages(target) > 0
+            assert release_page_cache(Path(folder)) == 1
+            assert _resident_pages(target) == 0
+            assert len(target.read_bytes()) == 1 << 20

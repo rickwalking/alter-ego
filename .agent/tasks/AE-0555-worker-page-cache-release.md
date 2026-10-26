@@ -119,11 +119,11 @@ Findings, with measurements (see Test Evidence):
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -163,24 +163,37 @@ fix image):
 
 - Python process anon 234-247 MiB and tracemalloc 3-10 MiB in both runs: no Python-side retention in
   images/export.
-- An earlier before-run on the same image, with more free memory in the Docker VM, kept accumulating:
+- An earlier before-run on the same image kept accumulating, when the Docker VM (3.9 GB, shared with other
+  containers) had memory to spare:
   idle 361 → 427 → 424 → 606 → 592 → 643 MiB, file cache 110 → 385 MiB, peak 980 → 1297 MiB. That is the
-  prod pattern. How much piles up depends on the host's spare memory, which is why the `mincore` column (the
-  run's own files still cached) is the stable signal: 119-147 MiB before, 0 after.
+  prod pattern. How much piles up depends on how much memory the host has to spare (the VM's own reclaim
+  evicted it in the side-by-side runs), which is why the `mincore` column (the run's own files still
+  cached) is the stable signal: 119-147 MiB before, 0 after.
 - Real-kernel check: a written 20 MiB file showed 20 MiB resident, and 0 after `release_page_cache`.
-- AC2: the peak dropped from 1109-1159 to 1029-1096 MiB (by about 70-115 MiB per cycle in the side-by-side
-  runs, and by up to about 270 MiB against the accumulating run). What bounds it now is Chromium's HD
-  render, about 650-700 MiB over the idle baseline (the per-process breakdown and the Chromium flag
-  experiments are in Problem). Expected worker peak about 1050-1100 MiB against the 1600m cap.
-- Tests: `tests/unit/infrastructure/test_page_cache_ae0555.py` (9) and
-  `tests/unit/infrastructure/test_page_cache_call_sites_ae0555.py` (5). The call-site tests failed (5/5)
-  with the source change reverted and pass with it. The existing export, artifact, finalize and port suites
+- AC2: the cycle peak dropped from 1109-1159 to 1029-1096 MiB, 27-94 MiB per cycle in the side-by-side runs
+  above, and up to about 270 MiB against the accumulating run (1297 MiB). What bounds it now is Chromium's
+  HD render, about 650-700 MiB over the idle baseline (the per-process breakdown and the Chromium flag
+  experiments are in Problem). Expected worker peak: about 1050-1100 MiB against the 1600m cap.
+- Tests: `tests/unit/infrastructure/test_page_cache_ae0555.py` (12, one of them checks with `mincore` that
+  the kernel really drops the pages of a disk-backed file) and
+  `tests/unit/infrastructure/test_page_cache_call_sites_ae0555.py` (5). With the call-site changes
+  reverted, both "releases" tests fail on their assertions; the "releases nothing" tests guard the
+  failure paths. The existing export, artifact, finalize and port suites
   pass (102 tests).
 - No assertion or expectation lines were removed.
 
 ## QA Report
 
 `.agent/reports/AE-0555.qa.md`.
+
+## Known Trade-offs
+
+- The PDF build re-reads the standard slides right after the export released them; the activation
+  release drops them again. If the activation fails, those pages stay until the next release.
+- The activation release walks the whole project output tree, older artifact versions included. Files
+  that are already clean and uncached cost one open, `fdatasync` and `fadvise` each, in a worker thread.
+  In the backend (dashboard finalize) it also drops pages the backend may have just served; those reads go
+  to disk next time.
 
 ## Decision Log
 
@@ -192,4 +205,8 @@ None.
 
 ## Final Summary
 
-Pending.
+The worker's growth between runs was the page cache of the carousel files it writes, charged to its cgroup.
+It now releases those pages once the files are written (export) and once the artifact is active (whole
+output tree). Measured in the prod image: the run's files in cache 119-147 → 0 MiB, idle flat, peak
+1109-1159 → 1029-1096 MiB. Chromium's HD render (about 650-700 MiB) bounds the remaining peak, well under the
+unchanged 1600m cap.

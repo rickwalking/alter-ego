@@ -6,13 +6,15 @@ which the backend serves later; left cached, those pages count against the
 generation worker's memory cap run after run. ``release_page_cache`` flushes each
 file (dirty pages cannot be dropped) and then advises the kernel to drop its cached
 pages. The content stays on disk; a later read just goes to disk. Symlinks are not
-followed, failures are skipped file by file, and platforms without
-``posix_fadvise`` release nothing.
+followed, and platforms without ``posix_fadvise`` release nothing. Releasing is an
+optimisation, so it never raises: a file or folder that cannot be read is skipped, and
+any other filesystem error stops the release with what was done so far.
 """
 
 from __future__ import annotations
 
 import os
+import stat
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -34,21 +36,36 @@ def release_page_cache(root: Path) -> int:
     """
     if not _SUPPORTED:
         return 0
-    return sum(1 for path in _regular_files(root) if _release_file(path))
+    released = 0
+    try:
+        for path in _regular_files(root):
+            released += int(_release_file(path))
+    except OSError:
+        logger.debug(LOG_PAGE_CACHE_RELEASE_FAILED, path=str(root))
+    return released
+
+
+def _is_regular_file(path: Path) -> bool:
+    """True for a regular file; a symlink (even to a file) is not followed.
+
+    A path that vanished or cannot be inspected is not a file to release.
+    """
+    try:
+        return stat.S_ISREG(path.lstat().st_mode)
+    except OSError:
+        return False
 
 
 def _regular_files(root: Path) -> Iterator[Path]:
-    if root.is_symlink():
+    if not root.exists() or root.is_symlink():
         return
-    if root.is_file():
+    if _is_regular_file(root):
         yield root
-        return
-    if not root.is_dir():
         return
     for directory, _subdirs, names in os.walk(root):
         for name in names:
             path = Path(directory) / name
-            if path.is_file() and not path.is_symlink():
+            if _is_regular_file(path):
                 yield path
 
 

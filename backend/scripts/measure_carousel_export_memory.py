@@ -26,13 +26,11 @@ of the process tree's anonymous memory seen during the cycle (Python, the Playwr
 driver and Chromium). When the process runs in its own cgroup (a container, or
 ``systemd-run --user --scope``): ``cgroup_peak_mib`` during the cycle, and
 ``cgroup_mib`` with its ``anon``/``file``/``shmem`` split after it.
-``output_cached_mib``: how much of the files written so far is still in the page
-cache (``mincore``), independent of how much memory the host has to spare.
+``output_cached_mib``: the files written so far still in the page cache (``mincore``).
 
 USAGE (inside the backend image, capped like the worker)
-    docker run --rm -m 1600m --memory-swap 1600m --tmpfs /tmp:size=512m \\
-        --entrypoint python <backend image> \\
-        scripts/measure_carousel_export_memory.py --cycles 6 --output /app/output/measure
+    docker run --rm -m 1600m --memory-swap 1600m --tmpfs /tmp:size=512m --entrypoint \\
+        python <image> scripts/measure_carousel_export_memory.py --output /app/output/m
 """
 
 from __future__ import annotations
@@ -139,11 +137,13 @@ def _resident_bytes(path: Path) -> int:
     with path.open("rb") as handle:
         mapping = mmap.mmap(handle.fileno(), size, access=mmap.ACCESS_COPY)
         anchor = ctypes.c_char.from_buffer(mapping)
-        _LIBC.mincore(
+        failed = _LIBC.mincore(
             ctypes.c_void_p(ctypes.addressof(anchor)), ctypes.c_size_t(size), vector
         )
         del anchor
         mapping.close()
+    if failed:
+        raise OSError(ctypes.get_errno(), "mincore failed", str(path))
     return sum(byte & _RESIDENT_BIT for byte in vector) * mmap.PAGESIZE
 
 
