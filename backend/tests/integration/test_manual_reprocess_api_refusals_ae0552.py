@@ -24,7 +24,6 @@ from tests.integration.manual_reprocess_api_support import (
     recovery_api_harness,
 )
 from tests.integration.manual_reprocess_support import (
-    NOW,
     OLD,
     project_row,
     reprocess_audits,
