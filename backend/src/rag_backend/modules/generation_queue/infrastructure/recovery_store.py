@@ -1,9 +1,10 @@
-"""``RecoveryStore`` for the daily scan: one short committed session per call.
+"""``RecoveryStore`` for the daily scan and its session-scoped retry marker.
 
 A tried dead letter carries ``recovery_attempt`` in its payload; the retry keeps
-the payload, so the scan never retries the same run twice. PgQueuer's log table
-(its name from PgQueuer's own settings) exists only on Postgres; elsewhere its purge
-is a no-op.
+the payload, so the scan never retries the same run twice. The queue bridge shares
+the marker's session with its revive so both commit or roll back together.
+PgQueuer's log table (its name from PgQueuer's own settings) exists only on
+Postgres; elsewhere its purge is a no-op.
 """
 
 from __future__ import annotations
@@ -48,6 +49,27 @@ _POSTGRESQL = "postgresql"
 _PGQ_LOG = table(str(DBSettings().queue_table_log), column("created"))
 
 
+async def mark_recovery_attempt(session: AsyncSession, generation_run_id: UUID) -> bool:
+    """Lock and mark an untried dead letter without committing the session."""
+    row = (
+        await session.execute(
+            select(_G).where(_G.id == generation_run_id).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None or row.status != STATUS_DEAD_LETTER:
+        return False
+    payload = dict(row.payload or {})
+    if payload.get(PAYLOAD_RECOVERY_ATTEMPT):
+        return False
+    payload[PAYLOAD_RECOVERY_ATTEMPT] = True
+    result = await session.execute(
+        update(_G)
+        .where(_G.id == generation_run_id, _G.status == STATUS_DEAD_LETTER)
+        .values(payload=payload)
+    )
+    return cast(CursorResult[object], result).rowcount == 1
+
+
 class SqlRecoveryStore:
     """Implements ``RecoveryStore``."""
 
@@ -82,24 +104,10 @@ class SqlRecoveryStore:
     async def mark_attempted(self, generation_run_id: UUID) -> bool:
         """Mark the dead letter tried once (compare-and-set); False when already."""
         async with self._sessions() as session:
-            row = (
-                await session.execute(
-                    select(_G).where(_G.id == generation_run_id).with_for_update()
-                )
-            ).scalar_one_or_none()
-            if row is None or row.status != STATUS_DEAD_LETTER:
-                return False
-            payload = dict(row.payload or {})
-            if payload.get(PAYLOAD_RECOVERY_ATTEMPT):
-                return False
-            payload[PAYLOAD_RECOVERY_ATTEMPT] = True
-            result = await session.execute(
-                update(_G)
-                .where(_G.id == generation_run_id, _G.status == STATUS_DEAD_LETTER)
-                .values(payload=payload)
-            )
-            await session.commit()
-            return cast(CursorResult[object], result).rowcount == 1
+            marked = await mark_recovery_attempt(session, generation_run_id)
+            if marked:
+                await session.commit()
+            return marked
 
     async def dead_letters(self, since: datetime) -> int:
         """How many generation runs were dead-lettered since ``since``."""
@@ -139,4 +147,4 @@ class SqlRecoveryStore:
             return int(counted or 0)
 
 
-__all__ = ["SqlRecoveryStore"]
+__all__ = ["SqlRecoveryStore", "mark_recovery_attempt"]

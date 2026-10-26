@@ -37,6 +37,7 @@ from rag_backend.modules.generation_queue.domain.models import (
     adopt_stage,
     resume_stage,
 )
+from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
 from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
     DriveLockTiming,
     PostgresDriveLock,
@@ -75,6 +76,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 __all__ = [
+    "ParkedDrive",
     "QueueSchemaReport",
     "WorkflowResumePayload",
     "active_queue",
@@ -87,6 +89,7 @@ __all__ = [
     "hand_back_queue",
     "hold_project_drive",
     "listen_for_progress",
+    "mark_recovery_attempt",
     "project_has_active_run",
     "projects_with_active_runs",
     "queue_board_rows",
@@ -292,6 +295,15 @@ async def recent_drive_minutes(session: AsyncSession, limit: int) -> list[float]
     from rag_backend.modules.generation_queue.infrastructure import queue_view
 
     return await queue_view.recent_drive_minutes(session, limit)
+
+
+async def mark_recovery_attempt(session: AsyncSession, generation_run_id: UUID) -> bool:
+    """Mark a daily recovery attempt in the caller's transaction."""
+    from rag_backend.modules.generation_queue.infrastructure.recovery_store import (
+        mark_recovery_attempt as mark,
+    )
+
+    return await mark(session, generation_run_id)
 
 
 async def requeue_autopilot_dead_letter(

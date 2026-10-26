@@ -41,6 +41,10 @@ from rag_backend.modules.generation_queue.domain.clock import UTC_CLOCK
 from rag_backend.modules.generation_queue.domain.errors import ProviderClassifier
 from rag_backend.modules.generation_queue.domain.models import GenerationKind
 from rag_backend.modules.generation_queue.domain.ports import KindExecutor
+from rag_backend.modules.generation_queue.domain.recovery import (
+    ParkedDrive,
+    RecoveryStore,
+)
 from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
     AutopilotStepperAdapter,
     EngineFactory,
@@ -98,13 +102,15 @@ class WorkerComposition:
     scan: DailyRecoveryScan
 
 
+@dataclass(frozen=True, kw_only=True)
 class _NoParkedAutopilot:
-    """Autopilot driving is off: the scan revives nothing."""
+    """Autopilot driving is off: the scan marks but revives nothing."""
 
-    @staticmethod
-    async def revive_dead_letter(run_id: str) -> bool:
-        """Nothing to revive."""
-        del run_id
+    store: RecoveryStore
+
+    async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
+        """Consume the scan's one attempt without reviving."""
+        await self.store.mark_attempted(drive.generation_run_id)
         return False
 
     @staticmethod
@@ -166,11 +172,15 @@ def compose_worker(parts: HandlerParts, queries: Queries) -> WorkerComposition:
             notices=OwnerDeadLetterNotices(parts.bridge, parts.sessions),
         )
     )
+    recovery_store = SqlRecoveryStore(parts.sessions)
+    parked_autopilot = (
+        parts.bridge
+        if parts.drive_autopilot
+        else _NoParkedAutopilot(store=recovery_store)
+    )
     scan = DailyRecoveryScan(
         DailyScanDependencies(
-            store=SqlRecoveryStore(parts.sessions),
-            autopilot=parts.bridge if parts.drive_autopilot else _NoParkedAutopilot(),
-            clock=UTC_CLOCK,
+            store=recovery_store, autopilot=parked_autopilot, clock=UTC_CLOCK
         )
     )
     return WorkerComposition(
