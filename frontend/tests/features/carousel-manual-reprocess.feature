@@ -16,8 +16,8 @@ Feature: Reprocess a stuck carousel from the workspace and Fila
     When the owner clicks again
     Then no second request is sent and the existing run is shown
 
-  Scenario: Failed phases keep Reprocessar visible
-    Given the carousel workspace is showing a failed phase
+  Scenario: Stuck failed phases keep Reprocessar visible
+    Given the carousel workspace is showing a stuck failed phase
     When the page renders
     Then Reprocessar remains available before the failure content
 
@@ -46,3 +46,26 @@ Feature: Reprocess a stuck carousel from the workspace and Fila
     Given an editor receives 403 and a running row has started and heartbeat timestamps
     When polling and rendering continue
     Then no later request is made and started time and heartbeat age are visible
+
+  Scenario: Ordinary active work polls slowly while stuck work polls for progress
+    Given queued, running, or retry-wait work without a stuck kind
+    When capability polling advances
+    Then it uses the slower board cadence until a click or stuck kind needs progress
+
+  Scenario: Idle workspace steps hide Reprocessar
+    Given review or published work has no stuck kind and no recovery in flight
+    When the workspace renders
+    Then Reprocessar and its disabled reason are absent
+    And pending or failed recovery feedback remains visible
+
+  Scenario: Confirmation keeps keyboard focus and supports Escape
+    Given the owner opens Cancel or Discard confirmation from the keyboard
+    Then focus moves to the destructive confirmation
+    When Back or Escape closes it
+    Then focus returns to a newly rendered row-action trigger
+
+  Scenario: Fila preserves safe reprocess refusals and overlapping pending rows
+    Given one row action is pending and another row is actionable
+    When the second action starts or the first finishes
+    Then each row keeps its own pending guard
+    And a known 409 reprocess refusal shows its translated reason

@@ -10,7 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncSession,
+    AsyncSessionTransaction,
+)
 
 from rag_backend.modules.autopilot.domain.queue_position import (
     QueueEntry,
@@ -22,6 +27,7 @@ from rag_backend.modules.autopilot.infrastructure.queue_waiting import (
 )
 from rag_backend.modules.autopilot.queue_constants import (
     GENERATION_KIND_AUTOPILOT,
+    LOG_OWNER_QUEUE_DISPATCH_FAILED,
     OUTCOME_ALREADY,
     OUTCOME_DONE,
     OUTCOME_NOT_ALLOWED,
@@ -30,7 +36,11 @@ from rag_backend.modules.autopilot.queue_constants import (
 )
 
 if TYPE_CHECKING:
+    from rag_backend.modules.generation_queue.application.manual_reprocess import (
+        ManualRecoveryService,
+    )
     from rag_backend.modules.generation_queue.domain.manual_recovery import (
+        MaintenanceNotice,
         ManualReprocessCommand,
         RecoveryResult,
     )
@@ -42,14 +52,23 @@ if TYPE_CHECKING:
     )
 
 
+logger = structlog.get_logger()
+
+
 class SqlQueueControl:
     """Bind queue reads and shared recovery to one request session."""
 
     def __init__(
-        self, session: AsyncSession, notifier: MaintenanceNotifier | None = None
+        self,
+        session: AsyncSession,
+        notifier: MaintenanceNotifier | None = None,
+        *,
+        deferred: bool = False,
     ) -> None:
         self._session = session
         self._notifier = notifier
+        self._deferred = deferred
+        self._pending_notices: list[MaintenanceNotice] = []
 
     async def snapshot(self) -> QueueSnapshot:
         """Read active and driven runs, excluding POV runs without a thesis."""
@@ -106,10 +125,72 @@ class SqlQueueControl:
         return _retry_outcome(await self._recover(command))
 
     async def _recover(self, command: ManualReprocessCommand) -> RecoveryResult:
+        if not self._deferred:
+            return await self._recovery_service(deferred=False).reprocess(command)
+        savepoint = await self._session.begin_nested()
+        try:
+            result = await self._recovery_service(deferred=True).reprocess(command)
+        except Exception:
+            await self._rollback_deferred(savepoint)
+            raise
+        return await self._finish_deferred(savepoint, result)
+
+    def _recovery_service(self, *, deferred: bool) -> ManualRecoveryService:
         from rag_backend.modules.generation_queue.public import build_manual_recovery
 
-        service = build_manual_recovery(self._session, self._notifier)
-        return await service.reprocess(command)
+        notifier = self if deferred else self._notifier
+        return build_manual_recovery(
+            self._session, notifier, owns_transaction=not deferred
+        )
+
+    async def _finish_deferred(
+        self, savepoint: AsyncSessionTransaction, result: RecoveryResult
+    ) -> RecoveryResult:
+        from rag_backend.modules.generation_queue.domain.manual_recovery import (
+            RecoveryOutcome,
+        )
+
+        if result.outcome in {RecoveryOutcome.REFUSED, RecoveryOutcome.NOT_FOUND}:
+            await self._rollback_deferred(savepoint)
+            return result
+        await savepoint.commit()
+        return result
+
+    async def _rollback_deferred(self, savepoint: AsyncSessionTransaction) -> None:
+        await savepoint.rollback()
+        self._pending_notices.clear()
+
+    async def notify(self, notice: MaintenanceNotice) -> bool:
+        """Buffer a dispatch notice until the webhook commits."""
+        self._pending_notices.append(notice)
+        return True
+
+    async def deliver_notifications(self) -> None:
+        """Publish buffered dispatch notices after the outer commit."""
+        notices = tuple(self._pending_notices)
+        self._pending_notices.clear()
+        notifier = self._default_notifier()
+        for notice in notices:
+            try:
+                await notifier.notify(notice)
+            except Exception as exc:
+                logger.warning(
+                    LOG_OWNER_QUEUE_DISPATCH_FAILED,
+                    error_type=type(exc).__name__,
+                )
+
+    def discard_notifications(self) -> None:
+        """Drop buffered notices when the outer transaction rolls back."""
+        self._pending_notices.clear()
+
+    def _default_notifier(self) -> MaintenanceNotifier:
+        if self._notifier is not None:
+            return self._notifier
+        from rag_backend.modules.generation_queue import WebMaintenanceGateway
+
+        bind = self._session.bind
+        engine = bind.engine if isinstance(bind, AsyncConnection) else bind
+        return WebMaintenanceGateway(engine)
 
     async def requeue_dead_letter(self, run_id: UUID) -> bool:
         """Requeue the run's latest dead letter in this transaction."""

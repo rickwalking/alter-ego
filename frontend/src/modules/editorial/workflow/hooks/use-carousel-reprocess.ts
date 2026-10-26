@@ -13,6 +13,7 @@ import {
   QUEUE_STATUS,
   REPROCESS_POLL_INTERVAL_MS,
   REPROCESS_REFUSAL_CODES,
+  WORKFLOW_BOARD_POLL_INTERVAL_MS,
 } from "@/constants/workflow";
 import { ApiError } from "@/lib/api-client";
 import type {
@@ -46,15 +47,37 @@ function isStatus(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status;
 }
 
+function isProgressVisible(
+  capability: CarouselReprocessCapability | null,
+  runId: string | null,
+): boolean {
+  return (
+    runId !== null &&
+    capability?.run_id === runId &&
+    capability.status !== null &&
+    ACTIVE_STATUSES.has(capability.status)
+  );
+}
+
 function queryPollInterval(
   capability: CarouselReprocessCapability | undefined,
   error: unknown,
+  progressRunId: string | null,
 ): number | false {
-  return !isStatus(error, HTTP_STATUS.FORBIDDEN) &&
+  let interval: number | false = false;
+  if (
+    !isStatus(error, HTTP_STATUS.FORBIDDEN) &&
     capability?.status &&
     ACTIVE_STATUSES.has(capability.status)
-    ? REPROCESS_POLL_INTERVAL_MS
-    : false;
+  ) {
+    const tracking =
+      progressRunId !== null && capability.run_id === progressRunId;
+    interval =
+      capability.stuck_kind === null && !tracking
+        ? WORKFLOW_BOARD_POLL_INTERVAL_MS
+        : REPROCESS_POLL_INTERVAL_MS;
+  }
+  return interval;
 }
 
 function refusalCode(error: unknown): string | null {
@@ -74,7 +97,7 @@ function acceptedCapability(
   previous: CarouselReprocessCapability | undefined,
 ): CarouselReprocessCapability {
   return {
-    can_reprocess: true,
+    can_reprocess: false,
     refusal_code: null,
     stuck_kind: response.stuck_kind,
     run_id: response.run_id,
@@ -148,7 +171,11 @@ async function runCarouselReprocess(
   deps.setPending(true);
   deps.setActionError(null);
   try {
-    await deps.mutateAsync({ expectedVersion: version, runId: current.run_id });
+    const response = await deps.mutateAsync({
+      expectedVersion: version,
+      runId: current.run_id,
+    });
+    deps.markProgressRequested(response.run_id);
   } catch (error: unknown) {
     await handleReprocessError(error, deps);
   } finally {
@@ -160,6 +187,7 @@ async function runCarouselReprocess(
 function useReprocessQuery(
   projectId: string,
   enabled: boolean,
+  progressRunId: string | null,
 ): UseQueryResult<CarouselReprocessCapability> {
   return useQuery({
     queryKey: carouselReprocessKeys.detail(projectId),
@@ -168,7 +196,7 @@ function useReprocessQuery(
     enabled,
     retry: false,
     refetchInterval: (current): number | false =>
-      queryPollInterval(current.state.data, current.state.error),
+      queryPollInterval(current.state.data, current.state.error, progressRunId),
     refetchOnWindowFocus: false,
   });
 }
@@ -197,6 +225,7 @@ function useReprocessMutation(
 function useReprocessAction(
   options: UseCarouselReprocessOptions,
   capability: CarouselReprocessCapability | null,
+  markProgressRequested: (runId: string) => void,
 ): CarouselReprocessActionState {
   const { projectId, enabled, fallbackExpectedVersion, refreshWorkflow } =
     options;
@@ -223,11 +252,12 @@ function useReprocessAction(
         queryClient,
         inFlightRef,
         setPending,
+        markProgressRequested,
         setActionError,
         mutateAsync,
         translate: t,
       }),
-    [capability, mutateAsync, options, queryClient, t],
+    [capability, markProgressRequested, mutateAsync, options, queryClient, t],
   );
   return { pending, canSubmit, actionError, reprocess };
 }
@@ -237,10 +267,18 @@ export function useCarouselReprocess(
   options: UseCarouselReprocessOptions,
 ): CarouselReprocessState {
   const t = useTranslations("workflow.reprocess");
-  const query = useReprocessQuery(options.projectId, options.enabled);
+  const [progressRunId, setProgressRunId] = useState<string | null>(null);
+  const markProgressRequested = useCallback((runId: string): void => {
+    setProgressRunId(runId);
+  }, []);
+  const query = useReprocessQuery(
+    options.projectId,
+    options.enabled,
+    progressRunId,
+  );
   const forbidden = isStatus(query.error, HTTP_STATUS.FORBIDDEN);
   const capability = forbidden ? null : (query.data ?? null);
-  const action = useReprocessAction(options, capability);
+  const action = useReprocessAction(options, capability, markProgressRequested);
   const loadError = query.isError && !forbidden ? t("errors.loadFailed") : null;
   return {
     capability,
@@ -248,6 +286,7 @@ export function useCarouselReprocess(
     forbidden,
     canSubmit: action.canSubmit,
     error: action.actionError ?? loadError,
+    progressVisible: isProgressVisible(capability, progressRunId),
     reprocess: action.reprocess,
   };
 }

@@ -157,7 +157,9 @@ def _schedule_relay(publishers: list[_PendingRelay]) -> None:
 
 @event.listens_for(Session, "after_commit")
 def _on_session_commit(session: Session) -> None:
-    """Relay outbox rows once their transaction commits (single publish path)."""
+    """Relay outbox rows only after the root transaction commits."""
+    if session.in_nested_transaction():
+        return
     pending = cast(
         "list[_PendingRelay] | None",
         session.info.pop(SESSION_INFO_PENDING_EVENTS, None),
@@ -168,7 +170,9 @@ def _on_session_commit(session: Session) -> None:
 
 @event.listens_for(Session, "after_rollback")
 def _on_session_rollback(session: Session) -> None:
-    """Discard queued relays when their transaction rolls back."""
+    """Discard queued relays only after the root transaction rolls back."""
+    if session.in_nested_transaction():
+        return
     session.info.pop(SESSION_INFO_PENDING_EVENTS, None)
 
 

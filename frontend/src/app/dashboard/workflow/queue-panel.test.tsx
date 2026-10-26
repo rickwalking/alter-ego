@@ -1,5 +1,6 @@
 /** The generation queue panel above the workflow board. */
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { QUEUE_ACTION, REPROCESS_REFUSAL } from "@/constants/workflow";
@@ -100,6 +101,75 @@ describe("QueuePanel", () => {
       [QUEUE_ACTION.RETRY, "dead-1"],
       [QUEUE_ACTION.DISCARD, "dead-1"],
     ]);
+  });
+
+  /** Scenario: Confirmation keeps keyboard focus and supports Escape */
+  it("focuses the destructive confirmation when opened from the keyboard", async () => {
+    const user = userEvent.setup();
+    renderPanel(board({ active: [item({ can_cancel: true })] }));
+    const name = queueActionName(labels.cancel, "Agents that ship code");
+    const trigger = screen.getByRole("button", { name });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const confirmation = screen.getByRole("group");
+    expect(within(confirmation).getByRole("button", { name })).toHaveFocus();
+  });
+
+  /** Scenario: Confirmation keeps keyboard focus and supports Escape */
+  it("restores focus to a new trigger when Back closes confirmation", async () => {
+    const user = userEvent.setup();
+    const onAction = renderPanel(
+      board({ active: [item({ can_cancel: true })] }),
+    );
+    const name = queueActionName(labels.cancel, "Agents that ship code");
+    const trigger = screen.getByRole("button", { name });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.click(
+      screen.getByRole("button", {
+        name: queueActionName(labels.confirmBack, "Agents that ship code"),
+      }),
+    );
+    const restored = screen.getByRole("button", { name });
+    expect(restored).not.toBe(trigger);
+    expect(restored).toHaveFocus();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: Confirmation keeps keyboard focus and supports Escape */
+  it("closes on Escape from the group and restores trigger focus", async () => {
+    const user = userEvent.setup();
+    const onAction = renderPanel(
+      board({ active: [item({ can_cancel: true })] }),
+    );
+    const name = queueActionName(labels.cancel, "Agents that ship code");
+    screen.getByRole("button", { name }).focus();
+    await user.keyboard("{Enter}");
+    const confirmation = screen.getByRole("group");
+    screen
+      .getByRole("button", {
+        name: queueActionName(labels.confirmBack, "Agents that ship code"),
+      })
+      .focus();
+    await user.keyboard("{Escape}");
+    expect(confirmation).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name })).toHaveFocus();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: Confirmation keeps keyboard focus and supports Escape */
+  it("supports Discard confirmation focus and Escape", async () => {
+    const user = userEvent.setup();
+    const onAction = renderPanel(
+      board({ dead: [item({ can_discard: true })] }),
+    );
+    const name = queueActionName(labels.discard, "Agents that ship code");
+    screen.getByRole("button", { name }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name })).toHaveFocus();
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   /** Scenario: A parked dashboard run points to the editor */
@@ -239,7 +309,7 @@ describe("QueuePanel", () => {
   /** Scenario: A failed button shows an error */
   it("shows the action error and disables the row in flight", () => {
     renderPanel(board({ active: [item({ id: "busy", can_cancel: true })] }), {
-      pending: "busy",
+      pending: new Set(["busy"]),
       actionError: labels.actionFailed,
     });
     expect(screen.getByRole("alert")).toHaveTextContent(labels.actionFailed);
@@ -262,7 +332,7 @@ describe("QueuePanel", () => {
       <QueuePanel
         board={null}
         error={null}
-        pending={null}
+        pending={new Set<string>()}
         actionError={null}
         processPending={false}
         processError={null}

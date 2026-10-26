@@ -46,18 +46,27 @@ Feature: Owners reprocess stuck carousels through the generation queue
     Given three automatic runs already used the daily cap and ordinary work is queued
     When an owner reprocesses a failed-terminal autopilot run and another manual run
     Then no backlog row or cap increment is created
-    And manual runs go next after the current drive in click order
+    And only failed-terminal replacements are excluded from the existing cap count
+    And in-place dead-letter and retry-wait recovery leave that count unchanged
+    And manual runs go next after the current drive in priority and original job-id order
 
   Scenario: Process queue now shares maintenance locks with schedules
     Given a scheduled promotion or recovery pass and an owner Processar fila agora request
     When they run concurrently
     Then the shared functions cannot double-promote, double-revive, purge twice, or send duplicate summaries
 
+  Scenario: Full maintenance subsumes queued scheduled passes
+    Given a full pass and scheduled promotion or scan jobs are queued
+    When the full pass completes successfully
+    Then queued scheduled jobs are cancelled without repeated work or another summary
+    And run-specific dispatch jobs remain queued
+    And scheduled work that sees an active full pass exits without running
+
   Scenario: Maintenance control jobs are durable and deduped
-    Given manual and scheduled maintenance requests for the same full pass
+    Given manual full, scheduled promotion, and scheduled scan requests
     And repeated dispatch requests for one run
     When their control jobs are enqueued
-    Then one active job per dedupe payload wakes the worker
+    Then one active job per mode-specific dedupe payload wakes the worker
     And enqueue failure returns false or 503 honestly
 
   Scenario: Retry and stale transport jobs use explicit fences

@@ -8,6 +8,7 @@ Feature: A daily recovery scan puts stuck carousel work back in the queue (AE-05
   Scenario: The daily scan is scheduled at 04:00 São Paulo time
     Given the generation worker starts
     Then the scan is registered on PgQueuer's scheduler as "0 7 * * *" (UTC)
+    And its maintenance mode never promotes backlog themes
 
   Scenario: A recent transient dead letter is retried once
     Given an autopilot drive the queue parked yesterday after its retries ran out

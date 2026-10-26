@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from pgqueuer.adapters.drivers.asyncpg import AsyncpgDriver
 from pgqueuer.adapters.persistence.queries import Queries
+from pgqueuer.domain.types import JobId
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from rag_backend.modules.generation_queue.constants import MAINTENANCE_ENTRYPOINT
 from rag_backend.modules.generation_queue.domain.maintenance import (
     MaintenanceCommand,
     MaintenanceEnqueue,
+    MaintenanceMode,
 )
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     MaintenanceNotice,
@@ -21,6 +23,10 @@ from rag_backend.modules.generation_queue.infrastructure.raw_connection import (
 _ACTIVE_SQL = (
     "SELECT id FROM {table} WHERE dedupe_key = $1 AND entrypoint = $2"
     " AND status IN ('queued', 'picked') ORDER BY id LIMIT 1"
+)
+_SCHEDULED_SQL = (
+    "SELECT id FROM {table} WHERE entrypoint = $1 AND status = 'queued'"
+    " AND dedupe_key IN ($2, $3) ORDER BY id"
 )
 _ID = "id"
 _POSTGRESQL = "postgresql"
@@ -38,9 +44,29 @@ class PgQueuerMaintenanceGateway:
         result = await self.enqueue(MaintenanceCommand(run_id=notice.run_id))
         return result.job_id is not None
 
+    async def request(self, mode: MaintenanceMode) -> MaintenanceEnqueue:
+        """Insert or find the active control job for one mode."""
+        return await self.enqueue(MaintenanceCommand(mode=mode))
+
     async def request_full(self) -> MaintenanceEnqueue:
         """Insert or find the shared full control job."""
-        return await self.enqueue(MaintenanceCommand())
+        return await self.request(MaintenanceMode.FULL)
+
+    async def full_is_active(self) -> bool:
+        """Return whether a full pass is queued or picked."""
+        return await self._find(MaintenanceCommand()) is not None
+
+    async def supersede_queued_scheduled(self) -> None:
+        """Cancel queued promote/scan jobs after a successful full pass."""
+        rows = await self._queries.driver.fetch(
+            _SCHEDULED_SQL.format(table=self._table),
+            MAINTENANCE_ENTRYPOINT,
+            MaintenanceMode.PROMOTE.value,
+            MaintenanceMode.SCAN.value,
+        )
+        ids = [JobId(int(str(row[_ID]))) for row in rows]
+        if ids:
+            await self._queries.mark_job_as_cancelled(ids)
 
     async def enqueue(self, command: MaintenanceCommand) -> MaintenanceEnqueue:
         """Use PgQueuer's insert trigger and active dedupe index."""
@@ -75,9 +101,13 @@ class WebMaintenanceGateway:
         result = await self._request(MaintenanceCommand(run_id=notice.run_id))
         return result.job_id is not None
 
+    async def request(self, mode: MaintenanceMode) -> MaintenanceEnqueue:
+        """Insert or find a mode-specific job through a short-lived connection."""
+        return await self._request(MaintenanceCommand(mode=mode))
+
     async def request_full(self) -> MaintenanceEnqueue:
         """Return an unavailable result off Postgres for an honest HTTP 503."""
-        return await self._request(MaintenanceCommand())
+        return await self.request(MaintenanceMode.FULL)
 
     async def _request(self, command: MaintenanceCommand) -> MaintenanceEnqueue:
         if self._engine.dialect.name != _POSTGRESQL:

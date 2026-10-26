@@ -74,12 +74,11 @@ async def _emit(session: AsyncSession) -> str:
     )
 
 
-# Scenario: a committed emit is published exactly once via the after-commit relay.
 @pytest.mark.asyncio
 async def test_commit_relays_exactly_once_via_after_commit(
     committing_maker: async_sessionmaker[AsyncSession],
 ) -> None:
-    """emit + commit triggers the fresh-session relay; exactly one delivery."""
+    """Scenario: Event published only after commit"""
     async with committing_maker() as session:
         event_id = await _emit(session)
         assert get_memory_events() == []
@@ -100,12 +99,11 @@ async def test_commit_relays_exactly_once_via_after_commit(
         assert len(list(published.scalars().all())) == 1
 
 
-# Scenario: a rolled-back emit followed by an unrelated commit publishes nothing.
 @pytest.mark.asyncio
 async def test_rollback_then_commit_does_not_publish_stale_events(
     committing_maker: async_sessionmaker[AsyncSession],
 ) -> None:
-    """after_rollback drops the queue, so a later commit relays no stale event."""
+    """Scenario: Rolled-back transaction publishes nothing"""
     async with committing_maker() as session:
         await _emit(session)
         await session.rollback()
@@ -117,3 +115,53 @@ async def test_rollback_then_commit_does_not_publish_stale_events(
     async with committing_maker() as verify:
         rows = await verify.execute(select(EventOutboxModel))
         assert list(rows.scalars().all()) == []
+
+
+@pytest.mark.asyncio
+async def test_savepoint_commit_waits_for_the_root_commit(
+    committing_maker: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: Savepoints publish only at the root transaction outcome"""
+    async with committing_maker() as session:
+        event_id = await _emit(session)
+        savepoint = await session.begin_nested()
+        await savepoint.commit()
+        await drain_pending_publishes()
+        assert get_memory_events() == []
+        await session.commit()
+    await drain_pending_publishes()
+    events = get_memory_events()
+    assert len(events) == 1
+    assert events[0][1][EVENT_FIELD_EVENT_ID] == event_id
+
+
+@pytest.mark.asyncio
+async def test_savepoint_rollback_preserves_the_root_pending_event(
+    committing_maker: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: Savepoints publish only at the root transaction outcome"""
+    async with committing_maker() as session:
+        event_id = await _emit(session)
+        savepoint = await session.begin_nested()
+        await savepoint.rollback()
+        await drain_pending_publishes()
+        assert get_memory_events() == []
+        await session.commit()
+    await drain_pending_publishes()
+    events = get_memory_events()
+    assert len(events) == 1
+    assert events[0][1][EVENT_FIELD_EVENT_ID] == event_id
+
+
+@pytest.mark.asyncio
+async def test_root_rollback_after_a_savepoint_publishes_nothing(
+    committing_maker: async_sessionmaker[AsyncSession],
+) -> None:
+    """Scenario: Savepoints publish only at the root transaction outcome"""
+    async with committing_maker() as session:
+        await _emit(session)
+        savepoint = await session.begin_nested()
+        await savepoint.commit()
+        await session.rollback()
+    await drain_pending_publishes()
+    assert get_memory_events() == []

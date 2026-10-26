@@ -1,6 +1,6 @@
-"""The 11:05 UTC backlog schedule enqueues the shared full control job.
+"""The 11:05 UTC backlog schedule enqueues promotion-only maintenance.
 
-The maintenance executor runs ``run_backlog_promotion`` under the full-pass lock,
+The maintenance executor runs ``run_backlog_promotion`` under the shared lock,
 so cron never promotes independently of manual maintenance.
 """
 
@@ -18,7 +18,8 @@ from rag_backend.modules.autopilot.queue_constants import (
     LOG_BACKLOG_PROMOTION_FAILED,
 )
 from rag_backend.modules.generation_queue.domain.maintenance import (
-    FullMaintenanceControl,
+    MaintenanceControl,
+    MaintenanceMode,
 )
 
 logger = structlog.get_logger()
@@ -35,12 +36,12 @@ async def run_backlog_promotion(bridge: AutopilotQueueBridge) -> int | None:
     return promoted
 
 
-def register_backlog_promotion(pgq: PgQueuer, control: FullMaintenanceControl) -> None:
-    """Enqueue the shared full control job on the morning schedule."""
+def register_backlog_promotion(pgq: PgQueuer, control: MaintenanceControl) -> None:
+    """Enqueue the promotion-only control job on the morning schedule."""
 
     async def promote(schedule: Schedule) -> None:
         del schedule
-        await control.request_full()
+        await control.request(MaintenanceMode.PROMOTE)
 
     pgq.schedule(BACKLOG_PROMOTION_ENTRYPOINT, BACKLOG_PROMOTION_CRON_UTC)(promote)
 

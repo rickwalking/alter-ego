@@ -21,7 +21,10 @@ from rag_backend.modules.generation_queue.constants import (
     SCAN_CRON_UTC,
     SCAN_ENTRYPOINT,
 )
-from rag_backend.modules.generation_queue.domain.maintenance import MaintenanceEnqueue
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    MaintenanceEnqueue,
+    MaintenanceMode,
+)
 from rag_backend.modules.generation_queue.domain.recovery import (
     ParkedDrive,
     ScanReport,
@@ -223,21 +226,21 @@ class _Scheduler:
 
 @dataclass
 class _Control:
-    calls: int = 0
+    modes: list[MaintenanceMode] = field(default_factory=list)
 
-    async def request_full(self) -> MaintenanceEnqueue:
-        self.calls += 1
+    async def request(self, mode: MaintenanceMode) -> MaintenanceEnqueue:
+        self.modes.append(mode)
         return MaintenanceEnqueue(job_id=1, inserted=True)
 
 
 async def test_the_daily_scan_is_scheduled_at_four_in_sao_paulo() -> None:
-    """Scenario: Cron enqueues the shared full control job at 04:00 São Paulo."""
+    """Scenario: The daily scan is scheduled at 04:00 São Paulo time"""
     scheduler, control = _Scheduler(), _Control()
     register_daily_scan(scheduler, control)
     assert scheduler.registered == [(SCAN_ENTRYPOINT, SCAN_CRON_UTC)]
     assert SCAN_CRON_UTC == "0 7 * * *"
     await scheduler.jobs[0](object())
-    assert control.calls == 1
+    assert control.modes == [MaintenanceMode.SCAN]
 
 
 @pytest.mark.parametrize("hours", [0, 3])

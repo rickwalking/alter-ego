@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_METHODS } from "@/constants/api";
-import { REPROCESS_POLL_INTERVAL_MS, WORKFLOW_API } from "@/constants/workflow";
+import {
+  QUEUE_STATUS,
+  REPROCESS_POLL_INTERVAL_MS,
+  WORKFLOW_API,
+  WORKFLOW_BOARD_POLL_INTERVAL_MS,
+} from "@/constants/workflow";
 import en from "@/i18n/locales/en.json";
 import type {
   CarouselReprocessCapability,
@@ -135,7 +140,7 @@ describe("useCarouselReprocess", () => {
     );
 
     mockFetch.mockResolvedValueOnce(
-      reply(202, accepted({ position: 2, eta_seconds: 180 })),
+      reply(202, accepted({ position: 2, eta_seconds: 180, stuck_kind: null })),
     );
     await act(async () => {
       await result.current.reprocess();
@@ -181,6 +186,82 @@ describe("useCarouselReprocess", () => {
     });
     expect(mockFetch).toHaveBeenCalledTimes(terminalCalls);
   });
+
+  /** Scenario: Ordinary active work polls slowly while stuck work polls for progress */
+  it("uses slow polling for ordinary work after an accepted run settles", async () => {
+    mockFetch.mockResolvedValueOnce(reply(200, capability()));
+    const { result } = renderReprocess(() => Promise.resolve(null));
+    await waitFor(() =>
+      expect(result.current.capability?.status).toBe("dead_letter"),
+    );
+    mockFetch.mockResolvedValueOnce(reply(202, accepted({ stuck_kind: null })));
+    await act(async () => {
+      await result.current.reprocess();
+    });
+    mockFetch.mockResolvedValueOnce(
+      reply(200, capability({ status: "succeeded", lock_version: 5 })),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPROCESS_POLL_INTERVAL_MS);
+    });
+    await waitFor(() =>
+      expect(result.current.capability?.status).toBe("succeeded"),
+    );
+    mockFetch.mockResolvedValue(
+      reply(
+        200,
+        capability({
+          can_reprocess: false,
+          run_id: "run-2",
+          status: "queued",
+          stuck_kind: null,
+          last_error_code: null,
+        }),
+      ),
+    );
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["carousel-reprocess", PROJECT_ID],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.capability?.run_id).toBe("run-2"),
+    );
+    const ordinaryCalls = mockFetch.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPROCESS_POLL_INTERVAL_MS);
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(ordinaryCalls);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WORKFLOW_BOARD_POLL_INTERVAL_MS);
+    });
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledTimes(ordinaryCalls + 1),
+    );
+  });
+
+  /** Scenario: Ordinary active work polls slowly while stuck work polls for progress */
+  it.each([QUEUE_STATUS.QUEUED, QUEUE_STATUS.RUNNING, QUEUE_STATUS.RETRY_WAIT])(
+    "uses the board cadence for ordinary %s work",
+    async (status) => {
+      const ordinary = capability({ status, stuck_kind: null });
+      mockFetch.mockResolvedValue(reply(200, ordinary));
+      const { result } = renderReprocess(() => Promise.resolve(null));
+      await waitFor(() =>
+        expect(result.current.capability?.status).toBe(status),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REPROCESS_POLL_INTERVAL_MS);
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(
+          WORKFLOW_BOARD_POLL_INTERVAL_MS - REPROCESS_POLL_INTERVAL_MS,
+        );
+      });
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    },
+  );
 
   /** Scenario: Rapid clicks cannot duplicate reprocess */
   it("shares one pending request and adopts the existing run response", async () => {

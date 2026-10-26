@@ -59,6 +59,7 @@ from rag_backend.modules.editorial.public import CarouselAutomationAcl
 from rag_backend.modules.generation_queue.constants import (
     MANUAL_ORIGIN_REPROCESS,
     PAYLOAD_MANUAL_ORIGIN,
+    PAYLOAD_MANUAL_REPLACES_RUN_ID,
     TABLE_GENERATION_RUNS,
 )
 
@@ -80,6 +81,10 @@ def _not_manual_recovery() -> ColumnElement[bool]:
         generation_id == autopilot_id,
         _GENERATION_RUNS.c.payload[PAYLOAD_MANUAL_ORIGIN].as_string()
         == MANUAL_ORIGIN_REPROCESS,
+        _GENERATION_RUNS.c
+        .payload[PAYLOAD_MANUAL_REPLACES_RUN_ID]
+        .as_string()
+        .is_not(None),
     )
     return not_(exists(manual))
 

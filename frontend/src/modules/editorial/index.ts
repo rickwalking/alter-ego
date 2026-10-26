@@ -215,6 +215,7 @@ export { useWorkflowPostAction } from "./workflow/hooks/use-workflow-post-action
 export { useGenerationQueue } from "./workflow/hooks/use-generation-queue";
 export { useCarouselReprocess } from "./workflow/hooks/use-carousel-reprocess";
 export type {
+  CarouselReprocessState,
   GenerationQueueReprocessTarget,
   GenerationQueueState,
 } from "./workflow/hooks/types";

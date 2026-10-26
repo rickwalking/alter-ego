@@ -2,7 +2,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { QUEUE_ACTION, QUEUE_API, WORKFLOW_API } from "@/constants/workflow";
+import {
+  QUEUE_ACTION,
+  QUEUE_API,
+  REPROCESS_REFUSAL,
+  WORKFLOW_API,
+} from "@/constants/workflow";
 import en from "@/i18n/locales/en.json";
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
@@ -12,6 +17,7 @@ import { useGenerationQueue } from "./use-generation-queue";
 
 const mockFetch = vi.mocked(authenticatedFetch);
 const labels = en.workflow.queue;
+const reprocessLabels = en.workflow.reprocess;
 const BOARD = {
   active: [],
   dead: [],
@@ -32,6 +38,12 @@ function deferred(): {
     resolve = resolvePromise;
   });
   return { promise, resolve };
+}
+
+function postCalls(): number {
+  return mockFetch.mock.calls.filter(
+    ([, options]) => options?.method === "POST",
+  ).length;
 }
 
 describe("useGenerationQueue", () => {
@@ -86,7 +98,49 @@ describe("useGenerationQueue", () => {
     expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
     expect(mockFetch.mock.calls[1]?.[0]).toBe(QUEUE_API.BOARD);
     expect(result.current.actionError).toBeNull();
-    expect(result.current.pending).toBeNull();
+    expect(result.current.pending.size).toBe(0);
+  });
+
+  /** Scenario: Fila preserves safe reprocess refusals and overlapping pending rows */
+  it("keeps overlapping rows pending and blocks duplicate posts", async () => {
+    mockFetch.mockResolvedValue(reply(200));
+    const { result } = renderHook(() => useGenerationQueue());
+    await waitFor(() => expect(result.current.board).not.toBeNull());
+    mockFetch.mockClear();
+    const first = deferred();
+    const second = deferred();
+    mockFetch
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue(reply(200));
+    const requests: Promise<void>[] = [];
+    await act(async () => {
+      requests.push(result.current.act(QUEUE_ACTION.RETRY, "row-a"));
+      requests.push(result.current.act(QUEUE_ACTION.RETRY, "row-a"));
+      requests.push(result.current.act(QUEUE_ACTION.DISCARD, "row-b"));
+      await Promise.resolve();
+    });
+    expect(postCalls()).toBe(2);
+    expect(result.current.pending).toEqual(new Set(["row-a", "row-b"]));
+
+    await act(async () => {
+      first.resolve(reply(200, { outcome: "done" }));
+      await Promise.all(requests.slice(0, 2));
+    });
+    expect(result.current.pending).toEqual(new Set(["row-b"]));
+    await act(async () => {
+      requests.push(result.current.act(QUEUE_ACTION.DISCARD, "row-b"));
+      await Promise.resolve();
+    });
+    expect(postCalls()).toBe(2);
+    expect(result.current.pending).toEqual(new Set(["row-b"]));
+
+    await act(async () => {
+      second.resolve(reply(200, { outcome: "done" }));
+      await Promise.all(requests);
+    });
+    expect(result.current.pending.size).toBe(0);
+    expect(postCalls()).toBe(2);
   });
 
   /** Scenario: Reprocess shows progress after acceptance */
@@ -166,16 +220,35 @@ describe("useGenerationQueue", () => {
     expect(result.current.actionError).toBeNull();
   });
 
-  /** Scenario: Not stuck reasons are accessible */
-  it("reports a reprocess refusal instead of treating it as resolved", async () => {
+  /** Scenario: Fila preserves safe reprocess refusals and overlapping pending rows */
+  it.each(Object.values(REPROCESS_REFUSAL))(
+    "translates the known %s reprocess refusal",
+    async (code) => {
+      mockFetch.mockResolvedValue(reply(200));
+      const { result } = renderHook(() => useGenerationQueue());
+      await waitFor(() => expect(result.current.board).not.toBeNull());
+      mockFetch.mockResolvedValueOnce(
+        reply(409, { detail: code, raw: "sensitive" }),
+      );
+      await act(async () => {
+        await result.current.act(QUEUE_ACTION.REPROCESS, "run-real-1");
+      });
+      expect(result.current.actionError).toBe(reprocessLabels.refusals[code]);
+      expect(result.current.actionError).not.toContain("sensitive");
+    },
+  );
+
+  /** Scenario: Fila preserves safe reprocess refusals and overlapping pending rows */
+  it("uses generic safe feedback for an unknown reprocess refusal", async () => {
     mockFetch.mockResolvedValue(reply(200));
     const { result } = renderHook(() => useGenerationQueue());
     await waitFor(() => expect(result.current.board).not.toBeNull());
-    mockFetch.mockResolvedValueOnce(reply(409, { detail: "fresh_running" }));
+    mockFetch.mockResolvedValueOnce(reply(409, { detail: "raw_refusal" }));
     await act(async () => {
       await result.current.act(QUEUE_ACTION.REPROCESS, "run-real-1");
     });
     expect(result.current.actionError).toBe(labels.notAllowed);
+    expect(result.current.actionError).not.toContain("raw_refusal");
   });
 
   /** Scenario: Process queue now is a panel action */
@@ -198,7 +271,7 @@ describe("useGenerationQueue", () => {
     expect(mockFetch.mock.calls[0]?.[0]).toBe(QUEUE_API.PROCESS);
     expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
     expect(result.current.processPending).toBe(true);
-    expect(result.current.pending).toBeNull();
+    expect(result.current.pending.size).toBe(0);
 
     await act(async () => {
       pending.resolve(reply(202, { outcome: "queued", job_id: 7 }));
@@ -229,7 +302,7 @@ describe("useGenerationQueue", () => {
       expect(result.current.processError).not.toContain("raw detail");
       expect(result.current.actionError).toBeNull();
       expect(result.current.processPending).toBe(false);
-      expect(result.current.pending).toBeNull();
+      expect(result.current.pending.size).toBe(0);
     },
   );
 

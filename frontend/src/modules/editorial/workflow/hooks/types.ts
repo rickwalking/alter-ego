@@ -82,17 +82,32 @@ export interface GenerationQueueLoadResult {
   forbidden: boolean;
 }
 
-/** The queue panel's data, the button in flight and the last button's error. */
-export interface GenerationQueueState extends GenerationQueueMaintenanceState {
-  board: QueueBoard | null;
-  error: string | null;
-  pending: string | null;
+type GenerationQueuePostOutcome =
+  | "done"
+  | "notAllowed"
+  | "forbidden"
+  | "failed";
+
+export interface GenerationQueueActionResult {
+  outcome: GenerationQueuePostOutcome;
+  refusalCode: string | null;
+}
+
+export interface GenerationQueueActionState {
+  pending: ReadonlySet<string>;
   actionError: string | null;
   act: (
     action: QueueAction,
     id: string,
     reprocess?: GenerationQueueReprocessTarget,
   ) => Promise<void>;
+}
+
+/** The queue panel's data, the buttons in flight and the last button's error. */
+export interface GenerationQueueState
+  extends GenerationQueueMaintenanceState, GenerationQueueActionState {
+  board: QueueBoard | null;
+  error: string | null;
 }
 
 export interface GenerationQueueMaintenanceDeps {
@@ -129,6 +144,7 @@ export interface CarouselReprocessRunDeps extends CarouselReprocessErrorDeps {
   fallbackExpectedVersion?: number;
   inFlightRef: RefObject<boolean>;
   setPending: (pending: boolean) => void;
+  markProgressRequested: (runId: string) => void;
   mutateAsync: (
     input: CarouselReprocessRequest,
   ) => Promise<ManualReprocessResponse>;
@@ -147,5 +163,6 @@ export interface CarouselReprocessState {
   forbidden: boolean;
   canSubmit: boolean;
   error: string | null;
+  progressVisible: boolean;
   reprocess: () => Promise<void>;
 }

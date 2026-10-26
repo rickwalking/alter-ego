@@ -142,3 +142,11 @@ Feature: The generation queue is visible and controllable from Telegram (AE-0523
   Scenario: The morning promotion is scheduled at 08:05 São Paulo time
     Given the generation worker drives autopilot runs
     Then the promotion is registered on PgQueuer's scheduler as "5 11 * * *" (UTC)
+    And its maintenance mode never revives dead letters or sends a scan summary
+
+  Scenario: Retry callback claim and recovery share one transaction
+    Given Pedro's retry callback is claimed before recovery starts
+    When the webhook rolls back after recovery handling
+    Then the callback claim, recovery, and audit are all absent
+    And the same callback can be retried successfully once
+    And its audit names the application owner rather than the Telegram chat

@@ -19,7 +19,10 @@ from rag_backend.modules.generation_queue.application.maintenance import (
 from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyRecoveryScan,
 )
-from rag_backend.modules.generation_queue.constants import MAINTENANCE_ENTRYPOINT
+from rag_backend.modules.generation_queue.constants import (
+    MAINTENANCE_CONCURRENCY_LIMIT,
+    MAINTENANCE_ENTRYPOINT,
+)
 from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
     PgQueuerMaintenanceGateway,
 )
@@ -65,7 +68,10 @@ def maintenance_entrypoint(
 def register_maintenance(wiring: WorkerMaintenance) -> None:
     """Register the separate entrypoint and cron enqueue paths."""
     executor = _executor(wiring)
-    wiring.pgq.entrypoint(MAINTENANCE_ENTRYPOINT)(maintenance_entrypoint(executor))
+    wiring.pgq.entrypoint(
+        MAINTENANCE_ENTRYPOINT,
+        concurrency_limit=MAINTENANCE_CONCURRENCY_LIMIT,
+    )(maintenance_entrypoint(executor))
     control = PgQueuerMaintenanceGateway(wiring.queries)
     if wiring.autopilot_enabled:
         register_backlog_promotion(wiring.pgq, control)
@@ -84,6 +90,7 @@ def _executor(wiring: WorkerMaintenance) -> MaintenanceExecutor:
             lock=PostgresMaintenanceLock(wiring.engine),
             promotion=promote,
             recovery=lambda: run_daily_scan(wiring.scan, wiring.alert),
+            coordination=PgQueuerMaintenanceGateway(wiring.queries),
         )
     )
 

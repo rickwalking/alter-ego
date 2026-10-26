@@ -14,8 +14,6 @@ from structlog.testing import capture_logs
 from rag_backend.modules.generation_queue.application.recovery_scan import (
     DailyRecoveryScan,
     DailyScanDependencies,
-    _failure_reason,
-    _item_failure,
     summary_text,
 )
 from rag_backend.modules.generation_queue.bootstrap import _NoParkedAutopilot
@@ -36,13 +34,13 @@ from tests.unit.modules.generation_queue.test_recovery_scan_ae0524 import (
 @dataclass
 class _OneFailure(_Autopilot):
     failing_run_id: str = ""
-    reason: str = ""
+    error: Exception = field(default_factory=RuntimeError)
     seen: list[str] = field(default_factory=list)
 
     async def revive_dead_letter(self, drive: ParkedDrive) -> bool:
         self.seen.append(drive.autopilot_run_id)
         if drive.autopilot_run_id == self.failing_run_id:
-            raise RuntimeError(self.reason)
+            raise self.error
         return await super().revive_dead_letter(drive)
 
 
@@ -52,7 +50,7 @@ async def test_one_failing_dead_letter_does_not_stop_the_daily_scan() -> None:
     reason = "database unavailable; prompt=never-log-this-content"
     autopilot = _OneFailure(
         failing_run_id=failed.autopilot_run_id,
-        reason=reason,
+        error=RuntimeError(reason),
     )
     store = _Store(parked=[first, failed, last])
     with capture_logs() as logs:
@@ -136,7 +134,7 @@ async def test_failure_summary_accounts_for_overflow_and_empty_reasons() -> None
     text = summary_text(ScanReport(failures=failures))
     assert "mais 2" in text
     drive = _drive()
-    autopilot = _OneFailure(failing_run_id=drive.autopilot_run_id, reason="")
+    autopilot = _OneFailure(failing_run_id=drive.autopilot_run_id, error=RuntimeError())
     report = await _scan(_Store(parked=[drive]), autopilot).run_once()
     empty_text = summary_text(report)
     assert "RuntimeError" in empty_text
@@ -152,10 +150,12 @@ async def test_sqlalchemy_failure_reason_is_metadata_only() -> None:
         {"prompt": secret, "run_id": "secret-run"},
         UniqueViolationError("duplicate sensitive detail"),
     )
+    drive = _drive()
+    autopilot = _OneFailure(failing_run_id=drive.autopilot_run_id, error=error)
     with capture_logs() as logs:
-        failure = _item_failure(_drive(), error)
-    text = summary_text(ScanReport(failures=(failure,)))
-    assert failure.reason == "DBAPIError: UniqueViolationError: 23505"
+        report = await _scan(_Store(parked=[drive]), autopilot).run_once()
+    text = summary_text(report)
+    assert report.failures[0].reason == "DBAPIError: UniqueViolationError: 23505"
     assert logs[0]["error_type"] == "DBAPIError"
     assert logs[0]["dbapi_type"] == "UniqueViolationError"
     assert logs[0]["sqlstate"] == "23505"
@@ -164,7 +164,11 @@ async def test_sqlalchemy_failure_reason_is_metadata_only() -> None:
         assert sensitive not in text
 
 
-def test_non_sql_failure_reason_is_exception_type_only() -> None:
+async def test_non_sql_failure_reason_is_exception_type_only() -> None:
     """Scenario: A non-SQL failure never falls back to its message."""
+    drive = _drive()
     error = RuntimeError("prompt payload and secret parameters")
-    assert _failure_reason(error) == "RuntimeError"
+    autopilot = _OneFailure(failing_run_id=drive.autopilot_run_id, error=error)
+    report = await _scan(_Store(parked=[drive]), autopilot).run_once()
+    assert report.failures[0].reason == "RuntimeError"
+    assert str(error) not in summary_text(report)

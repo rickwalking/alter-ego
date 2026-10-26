@@ -38,7 +38,7 @@ export type QueueActionHandler = (
 export interface QueuePanelProps {
   board: QueueBoard | null;
   error: string | null;
-  pending: string | null;
+  pending: ReadonlySet<string>;
   actionError: string | null;
   processPending: boolean;
   processError: string | null;
@@ -49,14 +49,14 @@ export interface QueuePanelProps {
 /** One active or parked generation run row. */
 export interface QueueRowProps {
   item: QueueItem;
-  pending: string | null;
+  pending: ReadonlySet<string>;
   onAction: QueueActionHandler;
 }
 
 /** One backlog theme row. */
 export interface BacklogRowProps {
   item: BacklogItem;
-  pending: string | null;
+  pending: ReadonlySet<string>;
   onAction: QueueActionHandler;
 }
 

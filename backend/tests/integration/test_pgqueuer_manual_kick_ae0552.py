@@ -33,7 +33,10 @@ from rag_backend.modules.generation_queue.constants import (
     PAYLOAD_MANUAL_CANCEL_JOB_ID,
     PAYLOAD_MANUAL_PRIORITY,
 )
-from rag_backend.modules.generation_queue.domain.maintenance import MaintenanceCommand
+from rag_backend.modules.generation_queue.domain.maintenance import (
+    MaintenanceCommand,
+    MaintenanceMode,
+)
 from rag_backend.modules.generation_queue.domain.manual_recovery import (
     MaintenanceNotice,
 )
@@ -67,6 +70,9 @@ pytestmark = [pytest.mark.integration, requires_postgres]
 PG_URL = os.environ.get("DATABASE_URL", "")
 DSN = PG_URL.replace("+asyncpg", "", 1)
 LIMIT_ONE = {QueueEntrypoint(ENTRYPOINT): EntrypointExecutionParameter(1)}
+MAINTENANCE_LIMIT_ONE = {
+    QueueEntrypoint(MAINTENANCE_ENTRYPOINT): EntrypointExecutionParameter(1)
+}
 _DEDUPE_SQL = "SELECT dedupe_key FROM pgqueuer WHERE entrypoint = $1"
 
 
@@ -107,15 +113,26 @@ def _manual(name: str) -> GenerationRun:
     )
 
 
-async def _dequeue(queries: Queries) -> list[int]:
+async def _dequeue_with(
+    queries: Queries,
+    entrypoints: dict[QueueEntrypoint, EntrypointExecutionParameter],
+) -> list[int]:
     jobs = await queries.dequeue(
         batch_size=1,
-        entrypoints=LIMIT_ONE,
+        entrypoints=entrypoints,
         queue_manager_id=QueueManagerId(uuid4()),
         global_concurrency_limit=None,
         heartbeat_timeout=timedelta(seconds=300),
     )
     return [int(job.id) for job in jobs]
+
+
+async def _dequeue(queries: Queries) -> list[int]:
+    return await _dequeue_with(queries, LIMIT_ONE)
+
+
+async def _dequeue_maintenance(queries: Queries) -> list[int]:
+    return await _dequeue_with(queries, MAINTENANCE_LIMIT_ONE)
 
 
 async def _finish(queries: Queries, job_id: int) -> None:
@@ -287,6 +304,43 @@ async def test_full_control_dedupes_and_insert_notifies(harness: _Harness) -> No
         assert existing.job_id == full.job_id
     finally:
         await listener.close()
+
+
+async def test_maintenance_modes_dedupe_independently(harness: _Harness) -> None:
+    """Scenario: Maintenance control jobs are durable and deduped"""
+    gateway = PgQueuerMaintenanceGateway(harness.queries)
+    modes = list(MaintenanceMode)
+    first = [await gateway.request(mode) for mode in modes]
+    existing = [await gateway.request(mode) for mode in modes]
+    assert [result.inserted for result in first] == [True] * len(modes)
+    assert [result.inserted for result in existing] == [False] * len(modes)
+    assert [result.job_id for result in existing] == [result.job_id for result in first]
+    assert await _dedupe_keys(harness) == {mode.value for mode in modes}
+    jobs = await harness.queries.browse_queue(10, 0)
+    assert {job.payload for job in jobs} == {mode.value.encode() for mode in modes}
+
+
+async def test_full_supersedes_queued_scheduled_jobs(harness: _Harness) -> None:
+    """Scenario: Full maintenance subsumes queued scheduled passes"""
+    gateway = PgQueuerMaintenanceGateway(harness.queries)
+    full = await gateway.request(MaintenanceMode.FULL)
+    promote = await gateway.request(MaintenanceMode.PROMOTE)
+    scan = await gateway.request(MaintenanceMode.SCAN)
+    dispatch = await gateway.enqueue(MaintenanceCommand(run_id=uuid4()))
+    assert full.job_id is not None
+    assert promote.job_id is not None
+    assert scan.job_id is not None
+    assert dispatch.job_id is not None
+    assert await _dequeue_maintenance(harness.queries) == [full.job_id]
+    assert await gateway.full_is_active() is True
+    assert await _dequeue_maintenance(harness.queries) == []
+    await gateway.supersede_queued_scheduled()
+    await _finish(harness.queries, full.job_id)
+    assert await gateway.full_is_active() is False
+    assert await harness.queries.queue_job_by_id(promote.job_id) is None
+    assert await harness.queries.queue_job_by_id(scan.job_id) is None
+    assert await _dequeue_maintenance(harness.queries) == [dispatch.job_id]
+    await _finish(harness.queries, dispatch.job_id)
 
 
 async def test_web_gateway_closes_its_raw_driver(

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
@@ -22,6 +23,7 @@ from rag_backend.api.schemas.carousel_reprocess import (
 )
 from rag_backend.domain.models.user import UserRole
 from rag_backend.modules.generation_queue import (
+    LOG_MAINTENANCE_PROCESS_FAILED,
     FullMaintenanceControl,
     MaintenanceEnqueue,
     WebMaintenanceGateway,
@@ -36,6 +38,7 @@ from rag_backend.modules.generation_queue.public import (
     build_manual_recovery,
 )
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["carousel_manual_recovery"])
 
 _PROJECT_PATH = "/carousels/{project_id}/workflow/reprocess"
@@ -165,13 +168,14 @@ async def process_generation_queue(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: EditorUser,
 ) -> JSONResponse:
-    """Enqueue the same full maintenance control job used by cron."""
+    """Enqueue a full maintenance control job."""
     denied = _admin_required(user)
     if denied is not None:
         return denied
     try:
         result = await _control(request, db).request_full()
     except Exception:
+        logger.exception(LOG_MAINTENANCE_PROCESS_FAILED, exc_info=True)
         return _unavailable_response()
     return _maintenance_response(result)
 

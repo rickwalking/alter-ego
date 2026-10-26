@@ -7,6 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
+import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 import CreateWorkspacePage from "./page";
 
@@ -156,6 +157,30 @@ function setWorkflow(
   return start;
 }
 
+interface ReprocessMock {
+  stuckKind?: string | null;
+  pending?: boolean;
+  error?: string | null;
+  progressVisible?: boolean;
+}
+
+function setReprocess(overrides: ReprocessMock = {}): void {
+  const {
+    stuckKind = null,
+    pending = false,
+    error = null,
+    progressVisible = false,
+  } = overrides;
+  hooks.reprocess.mockReturnValue({
+    capability: { stuck_kind: stuckKind },
+    pending,
+    canSubmit: false,
+    error,
+    progressVisible,
+    reprocess: vi.fn(),
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   nav.step = null;
@@ -165,13 +190,7 @@ beforeEach(() => {
     isError: false,
   });
   setWorkflow(null);
-  hooks.reprocess.mockReturnValue({
-    capability: null,
-    pending: false,
-    canSubmit: false,
-    error: null,
-    reprocess: vi.fn(),
-  });
+  setReprocess();
 });
 
 describe("CreateWorkspacePage", () => {
@@ -316,10 +335,57 @@ describe("CreateWorkspacePage", () => {
     expect(start).toHaveBeenCalledTimes(1);
   });
 
-  /** Scenario: Failed phases keep Reprocessar visible */
+  /** Scenario: Idle workspace steps hide Reprocessar */
+  it.each([
+    [EDITORIAL_PHASES.FINAL_REVIEW, CREATE_STEP_IDS.REVIEW],
+    [EDITORIAL_PHASES.PUBLISHED, CREATE_STEP_IDS.PUBLISH],
+  ])("hides idle Reprocessar on the %s step", (phase, step) => {
+    setWorkflow(workflowState({ current_phase: phase }));
+    nav.step = step;
+    setReprocess();
+    render(<CreateWorkspacePage />);
+    expect(screen.queryByText("reprocess-control")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: Idle workspace steps hide Reprocessar */
+  it.each([
+    { kind: "pending", pending: true, error: null },
+    { kind: "error", pending: false, error: "recovery failed" },
+  ])("keeps $kind recovery feedback", ({ pending, error }) => {
+    setWorkflow(
+      workflowState({ current_phase: EDITORIAL_PHASES.FINAL_REVIEW }),
+    );
+    nav.step = CREATE_STEP_IDS.REVIEW;
+    setReprocess({ pending, error });
+    render(<CreateWorkspacePage />);
+    expect(screen.getByText("reprocess-control")).toBeInTheDocument();
+  });
+
+  /** Scenario: Reprocess shows progress after acceptance */
+  it("keeps accepted null-stuck progress visible", () => {
+    setWorkflow(
+      workflowState({ current_phase: EDITORIAL_PHASES.FINAL_REVIEW }),
+    );
+    nav.step = CREATE_STEP_IDS.REVIEW;
+    setReprocess({ progressVisible: true });
+    render(<CreateWorkspacePage />);
+    expect(screen.getByText("reprocess-control")).toBeInTheDocument();
+  });
+
+  /** Scenario: Idle workspace steps hide Reprocessar */
+  it("keeps pending recovery feedback on the publish step", () => {
+    setWorkflow(workflowState({ current_phase: EDITORIAL_PHASES.PUBLISHED }));
+    nav.step = CREATE_STEP_IDS.PUBLISH;
+    setReprocess({ pending: true });
+    render(<CreateWorkspacePage />);
+    expect(screen.getByText("reprocess-control")).toBeInTheDocument();
+  });
+
+  /** Scenario: Stuck failed phases keep Reprocessar visible */
   it("renders Reprocessar before the failed workflow content", () => {
     setWorkflow(workflowState({ phase_status: WORKFLOW_PHASE_STATUS.FAILED }));
     nav.step = "content";
+    setReprocess({ stuckKind: "dead_letter" });
     render(<CreateWorkspacePage />);
     const control = screen.getByText("reprocess-control");
     const failure = screen.getByText("retry-card");

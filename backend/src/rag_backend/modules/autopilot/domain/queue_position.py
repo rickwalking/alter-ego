@@ -84,6 +84,14 @@ class QueueControl(Protocol):
         """Use shared manual recovery; return its queued autopilot identity."""
         ...
 
+    async def deliver_notifications(self) -> None:
+        """Publish maintenance notices after the webhook transaction commits."""
+        ...
+
+    def discard_notifications(self) -> None:
+        """Drop maintenance notices when the webhook transaction rolls back."""
+        ...
+
 
 def average_drive_minutes(drives: Sequence[float]) -> float:
     """The mean of the recent drives, or the default without history."""
