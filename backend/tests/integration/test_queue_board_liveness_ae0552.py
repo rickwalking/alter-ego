@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from httpx import AsyncClient
@@ -86,7 +86,7 @@ async def _liveness_data() -> _LivenessData:
         second_project=second_project,
         running_id=running_id,
         queued_id=queued_id,
-        heartbeat=NOW - timedelta(seconds=30),
+        heartbeat=datetime.now(UTC),
         started=NOW - timedelta(minutes=4),
         wrong_update=NOW - timedelta(hours=3),
     )

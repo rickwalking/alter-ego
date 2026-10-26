@@ -70,6 +70,7 @@ from rag_backend.modules.editorial.domain.ports import (
     ReviewerAssignmentPort,
     SourceMaterialPort,
 )
+from rag_backend.modules.editorial.domain.queue_metadata import ProjectQueueMetadata
 from rag_backend.modules.editorial.domain.release import (
     ApprovalState,
     PublicReleaseState,
@@ -162,7 +163,6 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
     is_carousel_project_lock_held,
     is_carousel_project_lock_held_session,
 )
-from rag_backend.modules.editorial.domain.queue_metadata import ProjectQueueMetadata
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
 )
@@ -287,6 +287,7 @@ __all__ = [
     "OwnerAutofixRequest",
     "OwnerIssues",
     "PovInputsAcl",
+    "ProjectQueueMetadata",
     "PublicReleasePort",
     "PublicReleaseState",
     "ResearchSource",
@@ -328,7 +329,6 @@ __all__ = [
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
     "open_run_trace_scope",
-    "ProjectQueueMetadata",
     "project_queue_metadata",
     "read_project_owner_id",
     "read_run_fence",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -124,9 +125,10 @@ async def _seed_refusal(
     elif case == RefusalCode.NORMAL_QUEUED.value:
         status = GenerationStatus.QUEUED
     elif case == RefusalCode.DISPATCHER_GRACE.value:
-        overrides["updated_at"] = NOW
+        overrides["updated_at"] = datetime.now(UTC)
     elif case == RefusalCode.FRESH_RUNNING.value:
         status = GenerationStatus.RUNNING
+        overrides["run_heartbeat_at"] = datetime.now(UTC)
     elif case == RefusalCode.NULL_HEARTBEAT.value:
         status = GenerationStatus.RUNNING
         overrides["run_heartbeat_at"] = None

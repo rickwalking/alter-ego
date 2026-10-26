@@ -9,12 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.domain.queue_board import GenerationRow
+from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+from rag_backend.modules.autopilot.queue_constants import GENERATION_STATUS_RUNNING
 from rag_backend.modules.editorial.public import (
     ProjectQueueMetadata,
     project_queue_metadata,
 )
-from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
-from rag_backend.modules.autopilot.queue_constants import GENERATION_STATUS_RUNNING
 
 
 @dataclass(frozen=True, kw_only=True)
