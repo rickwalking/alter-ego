@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from rag_backend.infrastructure.config.settings import Settings
-from rag_backend.infrastructure.langfuse_client import init_langfuse
+from rag_backend.infrastructure.langfuse_client import (
+    init_langfuse,
+    safe_langfuse_host,
+    schedule_langfuse_auth_check,
+)
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
 from rag_backend.infrastructure.telemetry.opentelemetry import init_opentelemetry
@@ -20,15 +24,18 @@ def init_observability(settings: Settings) -> None:
         exporter_endpoint=settings.otel_exporter_endpoint,
         enabled=settings.otel_enabled,
     )
-    langfuse_handler = init_langfuse(
+    langfuse = init_langfuse(
         settings.langfuse_public_key,
         settings.langfuse_secret_key.get_secret_value()
         if settings.langfuse_secret_key
         else "",
         settings.langfuse_host,
     )
-    if langfuse_handler:
-        logger.info("langfuse_initialized", host=settings.langfuse_host)
+    if langfuse:
+        logger.info(
+            "langfuse_initialized", host=safe_langfuse_host(settings.langfuse_host)
+        )
+        schedule_langfuse_auth_check(langfuse, settings.langfuse_host)
     else:
         logger.info("langfuse_disabled", reason="langfuse keys not set")
 

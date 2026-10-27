@@ -1,6 +1,6 @@
 # Active Task
 
-No active task. AE-0566 msgpack + dnspython repairs are dev-complete, the audit gate is green locally, and QA passes; PR CI runs on the single push.
+No active task. AE-0561 external QA is complete on `fix/ae-0561-langfuse-auth-check`; PR CI is the remaining delivery evidence.
 
 ## Rules
 

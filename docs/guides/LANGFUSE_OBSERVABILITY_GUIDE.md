@@ -72,6 +72,20 @@ LANGFUSE_PUBLIC_KEY=pk-lf-...
 LANGFUSE_HOST=http://langfuse:3000  # Internal Docker network
 ```
 
+### 1.4 Startup Credential Verification
+
+When both keys are configured, the web application and generation worker schedule one Langfuse public projects API request through the SDK after client initialization. The check runs in the background with a five-second request and await deadline and no retries; startup never waits for it, and an authentication failure does not disable the existing best-effort tracing client. The logged host is reduced to its HTTP(S) origin, with userinfo, paths, queries, and fragments removed.
+
+Each scheduled check emits exactly one structured outcome:
+
+| Event | Level | Meaning | Safe fields |
+|-------|-------|---------|-------------|
+| `langfuse_auth_ok` | info | Langfuse accepted the credentials | `host` |
+| `langfuse_auth_failed` | warning | The projects response was empty, the API returned a response such as 401, or the SDK raised an API exception | `host`, `reason` (HTTP status code or exception type) |
+| `langfuse_auth_unreachable` | warning | The check exceeded its deadline or could not reach Langfuse because of a transport error | `host`, `reason` (exception type) |
+
+The application never logs Langfuse keys, authorization headers, credential-bearing request URLs, response bodies, tracebacks, or exception messages for this check. `langfuse_initialized` still means only that the client was constructed; use the auth outcome to diagnose rejected credentials or the wrong Cloud region.
+
 ---
 
 ## 2. Observability Requirements for Pivot
