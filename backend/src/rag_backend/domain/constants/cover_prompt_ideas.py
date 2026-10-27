@@ -6,6 +6,9 @@ the carousel topic and palette. Only the topic and the palette reach the model,
 never personal data. An answer with fewer than ``IDEA_MIN_COUNT`` usable
 ideas gets ``IDEA_ATTEMPTS`` tries in all; the response carries at most
 ``IDEA_MAX_COUNT``. ``IDEA_MAX_LEN`` bounds one prompt so it fits the prompt field.
+Since AE-0562 the v2 prompt answers ideas as objects (``location``, ``pose``, ...,
+``prompt``): one repeating another's location and pose, or with a hex code, is
+dropped.
 Each call gets ``IDEAS_TIMEOUT_SECONDS``, so the two attempts stay under half a minute.
 """
 
@@ -45,6 +48,11 @@ NO_PALETTE_HINT: str = "no fixed palette; pick colours that suit the topic"
 
 PROMPT_DOMAIN_COVER_PROMPT: str = "cover_prompt"
 PROMPT_COVER_PROMPT_IDEAS: str = "ideas"
+PROMPT_COVER_PROMPT_IDEAS_VERSION: str = "v2"
+KEY_IDEA_PROMPT: str = "prompt"
+KEY_IDEA_LOCATION: str = "location"
+KEY_IDEA_POSE: str = "pose"
+IDEA_HEX_PATTERN: str = r"#[0-9a-fA-F]{3,8}\b"
 TRACE_PHASE_COVER_PROMPT_IDEAS: str = "cover_prompt_ideas"
 TRACE_AGENT_COVER_PROMPT_IDEAS: str = "cover_prompt_ideas"
 TRACE_CONTENT_TYPE_CAROUSEL: str = "carousel"
@@ -61,16 +69,21 @@ __all__ = [
     "IDEAS_TIMEOUT_SECONDS",
     "IDEA_ATTEMPTS",
     "IDEA_FORBIDDEN_CHARS",
+    "IDEA_HEX_PATTERN",
     "IDEA_MAX_COUNT",
     "IDEA_MAX_LEN",
     "IDEA_MIN_COUNT",
     "IDEA_MIN_LEN",
     "IDEA_REQUEST_COUNT",
     "KEY_IDEAS",
+    "KEY_IDEA_LOCATION",
+    "KEY_IDEA_POSE",
+    "KEY_IDEA_PROMPT",
     "LANGUAGE_BY_LOCALE",
     "LOG_COVER_IDEAS_CALL_FAILED",
     "NO_PALETTE_HINT",
     "PROMPT_COVER_PROMPT_IDEAS",
+    "PROMPT_COVER_PROMPT_IDEAS_VERSION",
     "PROMPT_DOMAIN_COVER_PROMPT",
     "TOPIC_MAX_LEN",
     "TOPIC_MIN_LEN",

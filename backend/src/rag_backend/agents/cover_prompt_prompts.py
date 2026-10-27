@@ -1,4 +1,4 @@
-"""Versioned cover-photo idea prompts (``agents/prompts/cover_prompt/v1/``), trace and model.
+"""Versioned cover-photo idea prompts (``agents/prompts/cover_prompt/v2/``), trace and model.
 
 The API composition edge injects these into the ideas service, so the application
 layer imports neither the prompt registry, the Langfuse adapter nor LangChain.
@@ -23,6 +23,7 @@ from rag_backend.domain.constants.cover_prompt_ideas import (
     IDEAS_TEMPERATURE,
     LANGUAGE_BY_LOCALE,
     PROMPT_COVER_PROMPT_IDEAS,
+    PROMPT_COVER_PROMPT_IDEAS_VERSION,
     PROMPT_DOMAIN_COVER_PROMPT,
     TRACE_AGENT_COVER_PROMPT_IDEAS,
     TRACE_CONTENT_TYPE_CAROUSEL,
@@ -50,6 +51,7 @@ def cover_ideas_prompt(topic: str, palette: str, locale: IdeaLocale) -> str:
             "count": IDEA_REQUEST_COUNT,
             "max_len": IDEA_MAX_LEN,
         },
+        version=PROMPT_COVER_PROMPT_IDEAS_VERSION,
     )
     return prompt
 

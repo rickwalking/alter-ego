@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Iterator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 
 import pytest
 from structlog.testing import capture_logs
@@ -258,3 +258,93 @@ class TestParseIdeas:
     def test_unreadable_answers_have_no_ideas(self, answer: str) -> None:
         """Scenario: The ideas are unavailable when the LLM fails."""
         assert parse_ideas(answer) == []
+
+
+def _scene_idea(location: str, pose: str, prompt: str) -> dict[str, str]:
+    return {"location": location, "pose": pose, "prompt": prompt}
+
+
+class TestVariedIdeasAe0562:
+    """Feature: Varied AI cover-photo prompt ideas (cover_prompt_variety_ae0562.feature)."""
+
+    def test_a_repeated_location_and_pose_is_dropped(self) -> None:
+        """Scenario: Ideas sharing a location and a pose are dropped."""
+        raw: list[object] = [
+            _scene_idea(
+                "Rooftop", "walking", "Rooftop at dusk, walking towards the lens"
+            ),
+            _scene_idea(" rooftop ", "Walking", "Rooftop again, walking in a hoodie"),
+            _scene_idea("Rooftop", "sitting", "Rooftop, sitting on the ledge at noon"),
+            _scene_idea(
+                "Coffee shop", "walking", "Coffee shop, walking past the window"
+            ),
+        ]
+
+        assert parse_ideas(_answer(raw)) == [
+            "Rooftop at dusk, walking towards the lens",
+            "Rooftop, sitting on the ledge at noon",
+            "Coffee shop, walking past the window",
+        ]
+
+    def test_object_ideas_without_scene_fields_are_kept(self) -> None:
+        """Scenario: Ideas sharing a location and a pose are dropped."""
+        raw: list[object] = [
+            {"prompt": "A bookshop portrait in warm lamp light"},
+            {"prompt": "A metro platform portrait in blue hour"},
+            {"location": "park"},
+        ]
+
+        assert parse_ideas(_answer(raw)) == [
+            "A bookshop portrait in warm lamp light",
+            "A metro platform portrait in blue hour",
+        ]
+
+    def test_hex_codes_are_rejected(self) -> None:
+        """Scenario: Ideas with hex codes are rejected."""
+        raw: list[object] = [
+            "Retrato com fundo liso #0b0b14 e luz suave",
+            "Retrato num terraço em tons de índigo e grafite",
+        ]
+
+        assert parse_ideas(_answer(raw)) == [
+            "Retrato num terraço em tons de índigo e grafite"
+        ]
+
+    @pytest.mark.asyncio
+    async def test_too_few_distinct_scenes_get_the_one_retry(self) -> None:
+        """Scenario: A repeated combination with too few left triggers the one retry."""
+        same = [
+            _scene_idea("rooftop", "walking", f"Rooftop shot number {i}")
+            for i in range(3)
+        ]
+        fresh = [
+            _scene_idea(f"place {i}", "sitting", f"Different place {i} sitting")
+            for i in range(3)
+        ]
+        answers = iter([_answer(same), _answer(fresh)])
+        calls: list[str] = []
+
+        class _LLM:
+            async def complete(self, prompt: str) -> str:
+                calls.append(prompt)
+                return next(answers)
+
+        service = CoverPromptIdeasService(
+            CoverIdeasPorts(
+                llm=_LLM(),
+                render_prompt=lambda topic, palette, locale: "p",
+                trace=lambda user_id: nullcontext(),
+            )
+        )
+
+        ideas = await service.suggest(
+            CoverIdeasRequest(
+                topic="IA", palette=None, locale=IdeaLocale.PT, user_id="u"
+            )
+        )
+
+        assert len(calls) == 2
+        assert ideas == [
+            "Rooftop shot number 0",
+            *[f"Different place {i} sitting" for i in range(3)],
+        ]
