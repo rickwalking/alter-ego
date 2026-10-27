@@ -1,10 +1,14 @@
 """LangFuse client initialization and management."""
 
+import asyncio
 from collections.abc import Callable
 from threading import Semaphore, Thread
+from urllib.parse import urlsplit
 
+import httpx
 import structlog
 from langfuse import Langfuse
+from langfuse.api.core.request_options import RequestOptions
 
 from rag_backend.infrastructure.config.settings import get_settings
 
@@ -14,6 +18,14 @@ logger = structlog.get_logger(__name__)
 
 _MAX_ACTIVE_FLUSHES = 8
 _FLUSH_SLOTS = Semaphore(_MAX_ACTIVE_FLUSHES)
+_LANGFUSE_AUTH_TIMEOUT_SECONDS = 5
+_AUTH_TASKS: set[asyncio.Task[None]] = set()
+_REDACTED_HOST = "<redacted>"
+_SAFE_HOST_SCHEMES = frozenset({"http", "https"})
+
+
+class AuthCheckFailedError(Exception):
+    """The Langfuse public projects response did not authenticate the client."""
 
 
 def init_langfuse(
@@ -69,6 +81,69 @@ def get_langfuse_client() -> Langfuse | None:
     return LANGFUSE_CLIENT
 
 
+def safe_langfuse_host(host: str) -> str:
+    """Return only the HTTP(S) origin for credential-free diagnostics."""
+    try:
+        parsed = urlsplit(host)
+        if parsed.scheme not in _SAFE_HOST_SCHEMES or not parsed.hostname:
+            return _REDACTED_HOST
+        hostname = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        port = f":{parsed.port}" if parsed.port is not None else ""
+        return f"{parsed.scheme}://{hostname}{port}"
+    except ValueError:
+        return _REDACTED_HOST
+
+
+def _auth_failure_reason(error: Exception) -> str:
+    status_code = getattr(error, "status_code", None)
+    if isinstance(status_code, int):
+        return str(status_code)
+    return type(error).__name__
+
+
+def _log_auth_exception(error: Exception, host: str) -> None:
+    reason = _auth_failure_reason(error)
+    if isinstance(error, (TimeoutError, httpx.RequestError, OSError)):
+        logger.warning("langfuse_auth_unreachable", host=host, reason=reason)
+        return
+    logger.warning("langfuse_auth_failed", host=host, reason=reason)
+
+
+def _check_projects(client: Langfuse) -> bool:
+    request_options: RequestOptions = {
+        "timeout_in_seconds": _LANGFUSE_AUTH_TIMEOUT_SECONDS,
+        "max_retries": 0,
+    }
+    projects = client.api.projects.get(request_options=request_options)
+    return bool(projects.data)
+
+
+def _require_authenticated(*, authenticated: bool) -> None:
+    if not authenticated:
+        raise AuthCheckFailedError
+
+
+async def _run_auth_check(client: Langfuse, host: str) -> None:
+    try:
+        authenticated = await asyncio.wait_for(
+            asyncio.to_thread(_check_projects, client),
+            timeout=_LANGFUSE_AUTH_TIMEOUT_SECONDS,
+        )
+        _require_authenticated(authenticated=authenticated)
+    except Exception as error:
+        _log_auth_exception(error, host)
+        return
+    logger.info("langfuse_auth_ok", host=host)
+
+
+def schedule_langfuse_auth_check(client: Langfuse, host: str) -> asyncio.Task[None]:
+    """Run one bounded credential check without blocking the caller."""
+    task = asyncio.create_task(_run_auth_check(client, safe_langfuse_host(host)))
+    _AUTH_TASKS.add(task)
+    task.add_done_callback(_AUTH_TASKS.discard)
+    return task
+
+
 def _run_flush(flush: Callable[[], None]) -> None:
     """Run one flush, then release its bounded slot."""
     try:
@@ -121,5 +196,7 @@ __all__ = [
     "flush_langfuse",
     "get_langfuse_client",
     "init_langfuse",
+    "safe_langfuse_host",
     "schedule_flush",
+    "schedule_langfuse_auth_check",
 ]
