@@ -1,8 +1,6 @@
 # Active Task
 
-AE-0561 is Dev Complete on `fix/ae-0561-langfuse-auth-check`.
-
-The final full backend capture is green with zero failures; independent external QA and PR CI are pending.
+No active task. AE-0561 external QA is complete on `fix/ae-0561-langfuse-auth-check`; PR CI is the remaining delivery evidence.
 
 ## Rules
 

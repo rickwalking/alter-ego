@@ -1,6 +1,6 @@
 # AE-0561 — Verify Langfuse credentials without blocking startup
 
-Status: QA Running
+Status: Review
 Tier: T2
 Priority: High
 Type: Bug
@@ -94,11 +94,11 @@ Emit one safe startup diagnosis for Langfuse credentials while keeping web and g
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -112,7 +112,9 @@ Review-driven hardening replaced the SDK `auth_check()` wrapper with its underly
 
 The full backend capture used a fresh isolated PostgreSQL 17 database and passed 26 gates with zero failures; only CI-only mutation skipped. After rebasing onto `origin/main` at `bc0ff7299`, the suite reported 7,775 passed and 2 pre-existing skips, 95% total coverage, and 100% diff coverage. Integrity reported zero blockers and warnings.
 
-Codex external QA round 1 returned WARN after static review because its read-only sandbox could not execute gates or tests. Its SDK standard-logging and task-retention findings were addressed without changing production code: the 401 case now uses the generated SDK projects client with a fake transport and DEBUG `caplog` secret assertions, and the success case asserts `_AUTH_TASKS` retention and cleanup. The 50 focused tests, full backend capture, and integrity scan were rerun green. Writable external confirmation QA and PR CI are pending.
+Codex external QA round 1 returned WARN after static review because its read-only sandbox could not execute gates or tests. Its SDK standard-logging and task-retention findings were addressed without changing production code: the 401 case now uses the generated SDK projects client with a fake transport and DEBUG `caplog` secret assertions, and the success case asserts `_AUTH_TASKS` retention and cleanup. The 50 focused tests, full backend capture, and integrity scan were rerun green.
+
+Cursor external QA confirmed both fixes and then passed the full gate on disk-backed ext4 at `692ec7249`: 26 non-mutation gates, 7,775 tests, 100% diff coverage, and zero integrity findings. After the final frontend-only main rebase, a separate external confirmation at `a36a45c2f` proved the complete AE-0561 patch byte-identical and reran the 50 focused tests and integrity green. The consolidated QA verdict is PASS. PR CI is pending.
 
 ## Files Touched
 
@@ -131,11 +133,11 @@ Codex external QA round 1 returned WARN after static review because its read-onl
 - Passing after implementation: ten tests cover async startup/success, empty projects, generated-SDK 401 handling with DEBUG standard-log secret assertions, transport, SDK and outer timeouts, unexpected exception, late completion, exactly-once events, no-retries/five-second request options, tracing preservation, task retention/cleanup, off-main-thread execution, planted-secret containment, IPv6 origins, unsupported schemes, and malformed ports.
 - Existing coverage: 40 Langfuse Cloud, callback, and trace I/O tests joined the ten new tests; all 50 passed.
 - Focused Ruff format and lint checks pass.
-- Full `gate-capture.sh backend`: 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; after rebase, 7,775 tests passed, 2 pre-existing skips, 95% total coverage, 100% diff coverage, migrations and schema drift PASS on a fresh isolated database. Integrity: 0 blockers, 0 warnings. External confirmation QA and PR CI are pending.
+- Full `gate-capture.sh backend`: 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; after the first rebase, 7,775 tests passed, 2 pre-existing skips, 95% total coverage, 100% diff coverage, migrations and schema drift PASS on a fresh isolated database. Integrity: 0 blockers, 0 warnings. Independent external QA reproduced the same green result, and final rebase confirmation reran 50 focused tests and integrity green. PR CI is pending.
 
 ## QA Report
 
-Pending.
+[AE-0561.qa.md](../reports/AE-0561.qa.md) — PASS, `mode: external`. Full non-mutation gate reproduction at `692ec7249` plus final rebase confirmation at `a36a45c2f`; CI mutation and PR workflows remain delivery evidence.
 
 ## Decision Log
 
@@ -150,4 +152,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shared web and worker startup now performs one asynchronous, five-second Langfuse public-projects credential check without delaying startup or disabling best-effort tracing. Outcomes are emitted once with sanitized origins and safe reasons. Fake-client and generated-SDK tests cover success, rejection, transport and timeout failures, secret containment, task lifecycle, and host edge cases; the Langfuse guide documents the behavior. Full local non-mutation gates and independent external QA pass. PR CI is the remaining evidence.
