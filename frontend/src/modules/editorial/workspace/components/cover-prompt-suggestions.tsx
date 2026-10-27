@@ -22,7 +22,8 @@ function contextKey(topic: string, palette: CoverIdeasPalette | null): string {
 
 /**
  * Prompt suggestions for a new cover image: the curated catalogue first
- * (tailored to the topic and palette), then AI ideas on "Mais ideias". AI
+ * (six varied scenes, stable per ``seed`` and reshuffled by "Outras ideias"
+ * without an AI call), then AI ideas on "Mais ideias". AI
  * ideas stay on screen while more load and give way to the catalogue when the
  * topic or palette changes. Tapping one hands it to ``onPick``. Only the topic
  * and the palette are sent; nothing is saved. Used by the create wizard's
@@ -31,17 +32,25 @@ function contextKey(topic: string, palette: CoverIdeasPalette | null): string {
 export function CoverPromptSuggestions({
   topic,
   palette,
+  seed,
   onPick,
 }: Readonly<CoverPromptSuggestionsProps>): React.ReactElement {
   const t = useTranslations("create.coverIdeas");
   const locale = useLocale() === LOCALE_EN ? LOCALE_EN : LOCALE_PT;
   const more = useCoverPromptIdeas();
   const [ai, setAi] = useState<CoverAiIdeas | null>(null);
+  const [round, setRound] = useState(0);
   const trimmedTopic = topic.trim();
   const context = contextKey(trimmedTopic, palette);
   const catalogue = useMemo(
-    () => buildCatalogueIdeas(t, { topic, palette }),
-    [t, topic, palette],
+    () =>
+      buildCatalogueIdeas(t, {
+        topic,
+        palette,
+        seed: seed ?? topic.trim(),
+        round,
+      }),
+    [t, topic, palette, seed, round],
   );
   const aiIdeas = ai?.context === context ? ai.ideas : [];
   const showAi = aiIdeas.length > 0;
@@ -60,6 +69,10 @@ export function CoverPromptSuggestions({
       source={showAi ? COVER_IDEA_SOURCES.AI : COVER_IDEA_SOURCES.CATALOGUE}
       onPick={onPick}
       onMore={askMore}
+      onShuffle={() => {
+        setAi(null);
+        setRound((current) => current + 1);
+      }}
       canAskMore={trimmedTopic.length >= COVER_IDEA_TOPIC_MIN}
       loadingMore={more.isPending}
       moreFailed={more.isError && askedHere}

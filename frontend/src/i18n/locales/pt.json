@@ -693,19 +693,162 @@
       "more": "Mais ideias",
       "needsTopic": "Escreva o tema do carrossel para pedir mais ideias.",
       "moreFailed": "Não foi possível gerar ideias agora. Tente de novo; as sugestões continuam disponíveis.",
-      "topicSuffix": ", com um elemento que remeta a “{topic}”",
-      "fallback": {
-        "palette": "neutra",
-        "background": "neutro",
-        "accent": "de destaque"
+      "shuffle": "Outras ideias",
+      "template": "{shot}, {pose}, {wardrobe}, {location}, {light}, {colors}; {prop}; espaço livre no topo para o título",
+      "colors": "em tons de {background} e {accent}",
+      "colorsFallback": "em tons neutros",
+      "colorNames": {
+        "black": "preto",
+        "charcoal": "grafite",
+        "gray": "cinza",
+        "white": "branco",
+        "red": "vermelho",
+        "orange": "laranja",
+        "yellow": "amarelo",
+        "green": "verde",
+        "teal": "verde-água",
+        "blue": "azul",
+        "indigo": "índigo",
+        "purple": "roxo",
+        "pink": "rosa"
       },
-      "catalogue": {
-        "frontal": "Retrato de meio corpo, de frente para a câmera, sorriso leve, fundo liso {background}, luz suave de estúdio",
-        "threeQuarter": "Retrato em três quartos, olhar para o lado, fundo desfocado na paleta {palette}, luz lateral marcante",
-        "lowAngle": "Foto de baixo para cima, postura confiante, braços cruzados, fundo amplo com detalhes na cor {accent}",
-        "desk": "Plano médio sentado à mesa de trabalho com notebook, escritório desfocado na paleta {palette}, luz natural de janela",
-        "gesture": "Plano médio explicando algo com as mãos, expressão animada, fundo liso {background}, luz frontal suave",
-        "closeUp": "Close do rosto, olhar direto para a câmera, fundo {background}, luz de recorte na cor {accent}"
+      "pools": {
+        "shot": {
+          "0": "Retrato de meio corpo à altura dos olhos",
+          "1": "Plano americano de baixo para cima",
+          "2": "Plano aberto com a pessoa à esquerda do quadro",
+          "3": "Close do rosto com lente 85mm",
+          "4": "Retrato em três quartos com lente 50mm",
+          "5": "Plano médio visto de cima, levemente inclinado",
+          "6": "Plano inteiro com bastante céu ou teto acima",
+          "7": "Perfil lateral com profundidade de campo rasa"
+        },
+        "pose": {
+          "0": "caminhando em direção à câmera",
+          "1": "apoiado no parapeito olhando para longe",
+          "2": "rindo no meio de uma conversa",
+          "3": "escrevendo em um caderno",
+          "4": "sentado na escada com os cotovelos nos joelhos",
+          "5": "ajustando a gola do casaco",
+          "6": "apontando para algo fora do quadro",
+          "7": "segurando uma xícara de café com as duas mãos"
+        },
+        "wardrobe": {
+          "0": "blazer azul-marinho sobre camiseta branca",
+          "1": "jaqueta jeans e camiseta cinza",
+          "2": "camisa de linho clara com mangas dobradas",
+          "3": "moletom com capuz de cor sóbria",
+          "4": "suéter de tricô bege",
+          "5": "camisa xadrez aberta sobre camiseta",
+          "6": "jaqueta bomber verde-oliva",
+          "7": "camisa social preta sem gravata"
+        },
+        "location": {
+          "0": "numa rua de paralelepípedos do centro histórico",
+          "1": "num coworking com plantas e mesas de madeira",
+          "2": "no terraço de um prédio com a cidade ao fundo",
+          "3": "numa cafeteria de esquina com janelas grandes",
+          "4": "numa estação de metrô quase vazia",
+          "5": "num parque arborizado com uma mesa de piquenique de madeira",
+          "6": "numa livraria com estantes altas e uma mesa de leitura",
+          "7": "numa praia urbana com calçadão de pedras portuguesas"
+        },
+        "light": {
+          "0": "luz dourada de fim de tarde",
+          "1": "luz azulada da hora azul",
+          "2": "luz suave de dia nublado",
+          "3": "sol forte do meio-dia com sombras marcadas",
+          "4": "luz de janela lateral",
+          "5": "luz neon refletida no rosto",
+          "6": "contraluz com halo no cabelo",
+          "7": "luz quente de luminárias internas à noite"
+        }
+      },
+      "props": {
+        "ai": {
+          "0": "um celular mostrando uma conversa com um assistente",
+          "1": "um quadro branco com o fluxo de agentes desenhado",
+          "2": "um pequeno robô de brinquedo sobre a mesa",
+          "3": "um notebook com janelas de chat abertas",
+          "4": "post-its com tarefas ligadas por setas",
+          "5": "um fone de ouvido e um assistente de voz ao lado",
+          "6": "um tablet mostrando a resposta de um chatbot",
+          "7": "um smartwatch acendendo com a resposta de um assistente",
+          "8": "um fluxograma impresso com as etapas de um agente na mão",
+          "9": "um pequeno boneco de robô na palma da mão",
+          "10": "fones sem fio e um celular mostrando uma onda de voz",
+          "11": "uma página de caderno cheia de rascunhos de prompts"
+        },
+        "code": {
+          "0": "um notebook com código colorido na tela",
+          "1": "um segundo monitor com diagramas",
+          "2": "um teclado mecânico em primeiro plano",
+          "3": "um caderno com rascunhos de arquitetura",
+          "4": "adesivos de tecnologia na tampa do notebook",
+          "5": "um quadro com caixas e setas de sistema",
+          "6": "um notebook carregado debaixo do braço",
+          "7": "um tablet mostrando um terminal",
+          "8": "um patinho de borracha na mão",
+          "9": "um celular mostrando uma notificação de deploy",
+          "10": "um diagrama de sistema impresso e enrolado na mão",
+          "11": "uma caneca com uma piada de programador"
+        },
+        "money": {
+          "0": "um gráfico subindo na tela do celular",
+          "1": "moedas empilhadas sobre a mesa",
+          "2": "um caderno com contas e uma calculadora",
+          "3": "um jornal de economia dobrado",
+          "4": "um tablet com um painel de vendas",
+          "5": "um cofrinho de vidro",
+          "6": "um cartão de crédito na mão",
+          "7": "uma nota fiscal comprida sendo conferida",
+          "8": "uma carteira de couro entreaberta",
+          "9": "um celular com o app do banco aberto",
+          "10": "uma calculadora de bolso na mão",
+          "11": "um gráfico de preços impresso na mão"
+        },
+        "social": {
+          "0": "um celular num tripé gravando",
+          "1": "uma ring light ao fundo",
+          "2": "um celular com notificações de curtidas",
+          "3": "um microfone de lapela preso na roupa",
+          "4": "um mural de fotos impressas",
+          "5": "uma claquete pequena na mão",
+          "6": "um celular erguido gravando um vídeo selfie",
+          "7": "um estabilizador de mão com um celular",
+          "8": "uma câmera compacta com alça no pescoço",
+          "9": "um rascunho de post impresso cheio de comentários",
+          "10": "um microfone de mão",
+          "11": "um tablet mostrando um gráfico de engajamento"
+        },
+        "career": {
+          "0": "um crachá pendurado no pescoço",
+          "1": "uma agenda aberta com metas",
+          "2": "uma mochila de trabalho no ombro",
+          "3": "uma mesa de reunião com cadeiras ao fundo",
+          "4": "um quadro com post-its de planejamento",
+          "5": "um livro de negócios nas mãos",
+          "6": "uma bolsa de notebook no ombro",
+          "7": "um currículo impresso na mão",
+          "8": "um celular mostrando uma agenda cheia de reuniões",
+          "9": "um crachá de conferência",
+          "10": "uma pasta de documentos debaixo do braço",
+          "11": "um café para viagem e um caderno"
+        },
+        "general": {
+          "0": "um caderno aberto com anotações",
+          "1": "um livro marcado com post-its",
+          "2": "um copo de café para viagem",
+          "3": "um notebook semiaberto",
+          "4": "uma caneta entre os dedos",
+          "5": "uma planta pequena por perto",
+          "6": "um par de óculos na mão",
+          "7": "um jornal debaixo do braço",
+          "8": "uma ecobag de lona no ombro",
+          "9": "um celular com fones enrolados",
+          "10": "um mapa de papel meio aberto",
+          "11": "uma garrafa de água na mão"
+        }
       }
     }
   },

@@ -45,7 +45,8 @@ dependencies = [
     "redis>=5.2.0",
     "langsmith>=0.8.18",  # GHSA-f4xh-w4cj-qxq8 (TracingMiddleware arbitrary file read)
     "starlette>=1.3.1",  # CVE-2026-54282/54283
-    "msgpack>=1.2.1",  # GHSA-6v7p-g79w-8964 (unpacker SEGV/DoS); transitive floor
+    "msgpack>=1.2.3",  # GHSA-6v7p-g79w-8964 and CVE-2026-114613 (unpacker SEGV/DoS and decoded-map-value leak); transitive floor
+    "dnspython>=2.9.0",  # CVE-2026-114605 (crafted DNS message causes excessive CPU in dns.name.from_wire_parser); transitive floor
     "defusedxml>=0.7.1",
     "pgqueuer[asyncpg]==1.6.0",
 ]

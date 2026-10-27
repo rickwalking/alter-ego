@@ -5,7 +5,8 @@ The curated catalogue comes first in the create form; this service backs
 Only the topic and the palette reach the model. The
 answer is JSON ``{"ideas": [...]}`` and every idea is re-checked here: a string of
 ``IDEA_MIN_LEN``-``IDEA_MAX_LEN`` characters once whitespace is collapsed, without
-markup characters, not repeating another idea. Fewer than ``IDEA_MIN_COUNT`` usable
+markup characters or hex codes, not repeating another idea, and (for the v2
+object ideas) not repeating another idea's location and pose. Fewer than ``IDEA_MIN_COUNT`` usable
 ideas gets one more call; still fewer, or any LLM failure with nothing kept, raises
 :class:`CoverPromptIdeasError`. Nothing is stored.
 """
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
@@ -26,11 +28,15 @@ from rag_backend.domain.constants.cover_prompt_ideas import (
     ERR_COVER_PROMPT_IDEAS_UNAVAILABLE,
     IDEA_ATTEMPTS,
     IDEA_FORBIDDEN_CHARS,
+    IDEA_HEX_PATTERN,
     IDEA_MAX_COUNT,
     IDEA_MAX_LEN,
     IDEA_MIN_COUNT,
     IDEA_MIN_LEN,
     IDEAS_TIMEOUT_SECONDS,
+    KEY_IDEA_LOCATION,
+    KEY_IDEA_POSE,
+    KEY_IDEA_PROMPT,
     KEY_IDEAS,
     LOG_COVER_IDEAS_CALL_FAILED,
     NO_PALETTE_HINT,
@@ -39,6 +45,8 @@ from rag_backend.domain.constants.cover_prompt_ideas import (
 from rag_backend.domain.constants.palette_types import PaletteMode
 
 logger = structlog.get_logger(__name__)
+
+_HEX = re.compile(IDEA_HEX_PATTERN)
 
 
 class CoverIdeasLLM(Protocol):
@@ -104,7 +112,34 @@ def _clean(raw: object) -> str | None:
         return None
     if any(char in idea for char in IDEA_FORBIDDEN_CHARS):
         return None
+    if _HEX.search(idea):
+        return None
     return idea
+
+
+def _scene(item: dict[str, object]) -> tuple[str, str]:
+    """The location and pose of an object idea, normalised for comparison."""
+    location, pose = (
+        " ".join(str(item.get(key, "")).casefold().split())
+        for key in (KEY_IDEA_LOCATION, KEY_IDEA_POSE)
+    )
+    return location, pose
+
+
+def _distinct_scenes(items: list[object]) -> list[object]:
+    """The ideas minus any object idea repeating an earlier one's location and pose."""
+    kept: list[object] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            kept.append(item)
+            continue
+        scene = _scene(item)
+        if all(scene) and scene in seen:
+            continue
+        seen.add(scene)
+        kept.append(item.get(KEY_IDEA_PROMPT))
+    return kept
 
 
 def _add_new(kept: list[str], fresh: list[str]) -> list[str]:
@@ -127,7 +162,7 @@ def parse_ideas(answer: str) -> list[str]:
     items = data.get(KEY_IDEAS) if isinstance(data, dict) else data
     if not isinstance(items, list):
         return []
-    cleaned = [_clean(item) for item in items]
+    cleaned = [_clean(item) for item in _distinct_scenes(items)]
     return _add_new([], [idea for idea in cleaned if idea is not None])
 
 
