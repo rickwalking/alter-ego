@@ -1,6 +1,6 @@
 # Active Task
 
-No active task. AE-0566 msgpack repair and external QA are complete; the overall audit remains blocked by the separate dnspython advisory.
+No active task. AE-0566 msgpack + dnspython repairs are dev-complete, the audit gate is green locally, and QA passes; PR CI runs on the single push.
 
 ## Rules
 

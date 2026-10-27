@@ -1,4 +1,4 @@
-# AE-0566 — Bump msgpack for CVE-2026-114613
+# AE-0566 — Bump msgpack and dnspython for CVE-2026-114613 / CVE-2026-114605
 
 Status: In Development
 Tier: T1
@@ -14,17 +14,23 @@ Updated: 2026-10-27
 
 ## Goal
 
-Restore `backend:pip-audit` to green by moving the existing transitive msgpack security floor to the first fixed release line.
+Restore `backend:pip-audit` to green by moving the existing transitive msgpack security floor to the first fixed release line, and add an equivalent transitive dnspython floor for the advisory that surfaced once msgpack cleared.
 
 ## Problem
 
-The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension retains a decoded map value when `strict_map_key` rejects a key, allowing repeated malformed inputs to grow process memory. The issue is fixed in msgpack 1.2.3 and blocks the existing pip-audit gate on PRs.
+Two locked transitive packages are flagged by new advisories:
+
+- msgpack 1.2.1 (CVE-2026-114613, fixed in 1.2.3): its C extension retains a decoded map value when `strict_map_key` rejects a key, allowing repeated malformed inputs to grow process memory. Fixed in msgpack 1.2.3.
+- dnspython 2.8.0 (CVE-2026-114605, fixed in 2.9.0): a crafted DNS message causes excessive CPU consumption in `dns.name.from_wire_parser`. Fixed in dnspython 2.9.0.
+
+Both block the existing pip-audit gate on PRs.
 
 ## Scope
 
 - Raise `msgpack>=1.2.1` to `msgpack>=1.2.3` in `backend/pyproject.toml` and retain the existing trailing-note style while naming both the prior GHSA and this CVE.
-- Run `uv lock --upgrade-package msgpack` so `backend/uv.lock` resolves msgpack 1.2.3 or later and review every lockfile change.
-- Sync the environment, run pip-audit without a vulnerability ignore, and run the existing msgpack checkpoint deserialization tests.
+- Add a transitive floor `dnspython>=2.9.0` in `backend/pyproject.toml` next to the msgpack floor, in the same trailing-note style naming CVE-2026-114605.
+- Run `uv lock --upgrade-package msgpack` and `uv lock --upgrade-package dnspython` so `backend/uv.lock` resolves the fixed releases and every lockfile change is reviewed.
+- Sync the environment, run pip-audit without a vulnerability ignore, and run the existing msgpack checkpoint deserialization tests plus the identity/email-validation unit tests that exercise dnspython transitively.
 - Produce developer and independent QA reports, open one PR, and require its CI checks to pass.
 
 ## Non-Goals
@@ -35,14 +41,15 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 ## Acceptance Criteria
 
 - [x] AC1 The project floor is `msgpack>=1.2.3`, the note names GHSA-6v7p-g79w-8964 and CVE-2026-114613, and the lock resolves msgpack 1.2.3+ without unrelated package upgrades.
-- [ ] AC2 `backend:pip-audit` passes with no new ignore or suppression; any separate advisory is reported rather than hidden.
-- [x] AC3 Existing msgpack checkpoint fixture/deserialization tests pass on the upgraded package.
-- [ ] AC4 Independent QA passes and every PR workflow is green; mutation remains CI-only.
+- [x] AC2 The project floor is `dnspython>=2.9.0`, the note names CVE-2026-114605, and the lock resolves dnspython 2.9.0 without unrelated package upgrades.
+- [x] AC3 `backend:pip-audit` passes with no findings and no new ignore or suppression.
+- [x] AC4 Existing msgpack checkpoint fixture/deserialization tests and the identity email-validation unit tests pass on the upgraded packages.
+- [ ] AC5 Independent QA passes and every PR workflow is green; mutation remains CI-only.
 
 ## No-`.feature` classification (dependency/CI ticket)
 
-- (a) No public or user-visible behavior change: this is a patch-level dependency security repair using the existing LangGraph checkpoint serializer API.
-- (b) Seeded-violation evidence: no gate or rule is added; the existing pip-audit gate already fails on the vulnerable version and is the regression sensor.
+- (a) No public or user-visible behavior change: this is a patch/minor-level dependency security repair using the existing LangGraph checkpoint serializer API and dnspython only as a transitive dependency of email-validator.
+- (b) Seeded-violation evidence: no gate or rule is added; the existing pip-audit gate already fails on the vulnerable versions and is the regression sensor.
 - (c) Affected gates: `backend:pip-audit` and `backend:test`.
 - (d) Reviewer/QA sign-off on this classification: `.agent/reports/AE-0566.qa.md`.
 
@@ -54,11 +61,11 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 
 ### MODIFIED
 
-- Msgpack security floor, advisory note, and locked package artifacts.
+- Msgpack and dnspython security floors, advisory notes, and locked package artifacts.
 
 ### REMOVED
 
-- Vulnerable msgpack 1.2.1 from the locked environment.
+- Vulnerable msgpack 1.2.1 and dnspython 2.8.0 from the locked environment.
 
 ## Affected Areas
 
@@ -66,7 +73,7 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 - Frontend: none.
 - Database: none.
 - API: none.
-- Tests: existing checkpoint fixture portability tests only; no test-file change required.
+- Tests: existing checkpoint fixture portability and identity unit tests only; no test-file change required.
 - Docs: ticket and delivery reports.
 - Prompts/LLM: none.
 - Observability: none.
@@ -74,15 +81,16 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 
 ## Dependencies
 
-- Blocks: PRs blocked by the msgpack pip-audit failure.
+- Blocks: PRs blocked by the msgpack/dnspython pip-audit failure.
 - Blocked by: none.
 - Related: AE-0540 backend dependency advisories.
 
 ## Implementation Plan
 
 1. Create the ticket, update the msgpack floor and note, and relock only msgpack.
-2. Review the lock diff, sync, run pip-audit and focused checkpoint tests, then reproduce required gates.
-3. Complete independent QA, commit, push, open the PR, and watch CI.
+2. Add the dnspython floor and note next to the msgpack floor, relock only dnspython, and review both lock diffs.
+3. Review the lock diff, sync, run pip-audit and focused checkpoint/identity tests, then reproduce required gates.
+4. Complete independent QA, commit, push, open the PR, and watch CI.
 
 ## QA Checklist
 
@@ -102,6 +110,12 @@ The floor now resolves msgpack 1.2.4 through uv 0.13.5 with no other package upg
 
 Independent external QA confirmed AC1 and AC3, the minimal lockfile, the checkpoint tests, and the no-`.feature` classification. It returned FAIL only because AC2 remains blocked by dnspython. PR CI is pending.
 
+### 2026-10-27 (dnspython extension, Pedro's instruction)
+
+Pedro extended the ticket to cover the second advisory surfaced by the same gate. Added the `dnspython>=2.9.0` transitive floor next to the msgpack floor with a trailing note naming CVE-2026-114605, relocked with the CI-pinned uv 0.13.5 (`uv lock --upgrade-package dnspython`), and reviewed the diff: dnspython 2.8.0 → 2.9.0 with its sdist/wheel artifacts plus the new direct floor entries in the project package block; no other package changed and lock revision 5 is retained.
+
+`gates.sh backend:pip-audit` now reports no known vulnerabilities (PASS, fail=0). The 45 targeted tests (checkpoint portability + full identity suite) pass, as do Ruff, strict mypy (1,193 files), and integrity (0 blockers, 0 warnings). PR CI pending on the single push.
+
 ## Files Touched
 
 - `backend/pyproject.toml`
@@ -114,24 +128,26 @@ Independent external QA confirmed AC1 and AC3, the minimal lockfile, the checkpo
 ## Test Evidence
 
 - `uv lock --upgrade-package msgpack` with uv 0.13.5: msgpack 1.2.1 → 1.2.4; no other package upgrade and lock revision 5 retained.
-- `uv run pytest tests/unit/test_checkpoint_fixture_portability.py -q`: 3 passed.
+- `uv lock --upgrade-package dnspython` with uv 0.13.5: dnspython 2.8.0 → 2.9.0; lock diff touches only dnspython artifacts and the new direct floor entries; revision 5 retained.
+- `uv run pytest tests/unit/test_checkpoint_fixture_portability.py tests/unit/modules/identity/ -q`: 45 passed.
 - `uv run ruff format --check src/` and `uv run ruff check src/`: pass; `uv run mypy rag_backend/ --explicit-package-bases` from `backend/src`: 1,193 files pass.
 - `check-integrity.sh backend`: 0 blockers, 0 warnings.
-- `gates.sh backend:pip-audit`: FAIL only on dnspython 2.8.0 / CVE-2026-114605; msgpack no longer appears. No ignore was added.
+- `gates.sh backend:pip-audit`: PASS — "No known vulnerabilities found"; no ignore was added.
 
 ## QA Report
 
-[AE-0566.qa.md](../reports/AE-0566.qa.md) — FAIL, `mode: external`. The msgpack patch and no-`.feature` classification are accepted; the overall gate remains red on the separate dnspython advisory.
+[AE-0566.qa.md](../reports/AE-0566.qa.md) — PASS after the dnspython extension (external QA had FAILed only on the then-out-of-scope dnspython advisory; the re-check validated the dnspython patch, the clean audit, and the unchanged no-`.feature` classification). PR CI pending.
 
 ## Decision Log
 
 - 2026-10-27 (Pedro): raise the existing transitive floor to msgpack 1.2.3+ and keep the change limited to that package.
 - 2026-10-27 (implementation): allow the lock resolver to select the latest compatible 1.2.3+ patch while rejecting unrelated upgrades through diff review.
+- 2026-10-27 (Pedro): extend the same PR and ticket with an equivalent `dnspython>=2.9.0` transitive floor for CVE-2026-114605 rather than opening a second ticket, since the same gate and lockfile are affected.
 
 ## Blockers
 
-`backend:pip-audit` still reports dnspython 2.8.0 under CVE-2026-114605, fixed in 2.9.0. This is a separate dependency advisory outside the msgpack-only instruction and must be fixed separately before the overall gate and PR CI can pass.
+None. The dnspython advisory is resolved in this ticket; PR CI must now run green on the single push.
 
 ## Final Summary
 
-The existing msgpack floor is now `>=1.2.3`, both advisory IDs are documented, and the lock resolves 1.2.4 without other package upgrades. Three checkpoint portability tests, Ruff, strict mypy, and integrity pass. External QA validates the patch but the overall audit remains blocked by dnspython CVE-2026-114605, which requires a separate fix.
+The msgpack floor is `>=1.2.3` (resolving 1.2.4, GHSA-6v7p-g79w-8964 and CVE-2026-114613 documented) and the dnspython floor is `>=2.9.0` (CVE-2026-114605 documented), with both lock updates minimal and revision 5 retained. `backend:pip-audit` passes with no findings, 45 targeted tests pass, Ruff, strict mypy, and integrity pass. External QA failed only on the then-out-of-scope dnspython advisory; the extension re-check passes and PR CI runs on the single push.
