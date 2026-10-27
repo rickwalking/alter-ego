@@ -45,6 +45,12 @@ Feature: Carousel generation log
     And resumed real work records one run start that closes the wait streak
     And an immediate yield records a normal retry and separates adjacent wait streaks
 
+  Scenario: Recorder timeout preserves authoritative generation state
+    Given a queued run and an event recorder whose database operation exceeds 100 ms
+    When the recorder timeout drops the event
+    Then the event is not persisted
+    And the carousel project and generation run remain readable
+
   Scenario: Generation log pages are stable during new events
     Given more than 200 generation events for one carousel
     When the owner loads bounded pages while a newer event arrives
