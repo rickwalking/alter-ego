@@ -91,7 +91,7 @@ describe("CoverPromptField", () => {
 
     const ideas = suggestions("Suggestions");
     expect(ideas).toHaveLength(6);
-    expect(ideas[0]).toHaveTextContent(/in black and \w+ tones/);
+    expect(ideas[0]).toHaveTextContent("in blue and yellow tones");
     expect(ideas[0]).not.toHaveTextContent("#0b1020");
     expect(ideas[0]).not.toHaveTextContent("AI at work");
     expect(authenticatedFetch).not.toHaveBeenCalled();
