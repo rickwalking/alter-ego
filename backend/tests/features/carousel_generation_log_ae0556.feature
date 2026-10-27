@@ -38,6 +38,12 @@ Feature: Carousel generation log
     And one safe warning names only event and exception types
     And recorder latency remains bounded
 
+  Scenario: Waiting autopilot work does not flood the generation log
+    Given an autopilot run repeatedly has no work or cannot take its drive lock
+    When several queue attempts finish in the same waiting streak
+    Then only the first wait records a waiting event and no phase events
+    And resumed real work records one run start that closes the wait streak
+
   Scenario: Generation log pages are stable during new events
     Given more than 200 generation events for one carousel
     When the owner loads bounded pages while a newer event arrives
@@ -47,7 +53,7 @@ Feature: Carousel generation log
   Scenario: Daily purge expires generation events after thirty days
     Given events older and newer than thirty days on succeeded runs
     When the existing daily recovery purge runs
-    Then only expired events are removed
+    Then only expired events are removed in bounded delete batches
     And run and PgQueuer log purges still complete
 
   Scenario: Langfuse trace links are optional

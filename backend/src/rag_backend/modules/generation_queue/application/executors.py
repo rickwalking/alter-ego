@@ -103,9 +103,11 @@ async def redrive_parked(
 ) -> None:
     """Re-run a parked node, counted against its own recovery phase budget."""
     phase = RECOVERY_PHASE.format(phase=await deps.recovery.current_phase(project_id))
-    await tracker.begin(phase)
-    await deps.recovery.redrive_if_parked(project_id)
-    await tracker.finish(phase)
+
+    async def redrive() -> int:
+        return int(await deps.recovery.redrive_if_parked(project_id))
+
+    await tracker.track_step(phase, redrive)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -157,9 +159,9 @@ class AutopilotDriveExecutor:
             if view.project_id:
                 set_generation_event_project(view.project_id)
             phase = view.phase or PHASE_START
-            await tracker.begin(phase)
-            stepped = await self._deps.stepper.step(run_id)
-            await tracker.finish(phase)
+            stepped = await tracker.track_step(
+                phase, lambda: self._deps.stepper.step(run_id)
+            )
             if stepped == 0:
                 return StepOutcome.WAIT
         return StepOutcome.YIELD

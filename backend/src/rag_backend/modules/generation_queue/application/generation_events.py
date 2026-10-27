@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -23,6 +24,8 @@ from rag_backend.modules.generation_queue.domain.generation_events import (
 from rag_backend.modules.generation_queue.domain.models import GenerationRun
 
 LOG_EVENT_STORE_FAILED = "generation_event_store_failed"
+TIMEOUT_WARNING_INTERVAL_SECONDS = 60.0
+_last_timeout_warning_at: float | None = None
 
 
 @dataclass
@@ -94,6 +97,28 @@ def current_generation_event_project() -> str | None:
     return scope.project_id if scope is not None else None
 
 
+def _allow_timeout_warning() -> bool:
+    global _last_timeout_warning_at
+    now = time.monotonic()
+    if (
+        _last_timeout_warning_at is not None
+        and now - _last_timeout_warning_at < TIMEOUT_WARNING_INTERVAL_SECONDS
+    ):
+        return False
+    _last_timeout_warning_at = now
+    return True
+
+
+def _log_store_failure(event: GenerationEventInput, exc: Exception) -> None:
+    if isinstance(exc, TimeoutError) and not _allow_timeout_warning():
+        return
+    logger.warning(
+        LOG_EVENT_STORE_FAILED,
+        event_type=event.event_type,
+        **safe_failure_metadata(exc),
+    )
+
+
 async def record_generation_event(event: GenerationEventInput) -> bool:
     """Write one bounded event without affecting the generation outcome."""
     scope = _SCOPE.get()
@@ -110,11 +135,7 @@ async def record_generation_event(event: GenerationEventInput) -> bool:
             safe = sanitize_event(event)
             return await scope.recorder.record(run, safe)
     except Exception as exc:
-        logger.warning(
-            LOG_EVENT_STORE_FAILED,
-            event_type=event.event_type,
-            **safe_failure_metadata(exc),
-        )
+        _log_store_failure(event, exc)
         return False
 
 

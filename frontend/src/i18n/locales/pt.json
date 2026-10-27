@@ -471,6 +471,7 @@
       "events": {
         "run_queued": "Execução adicionada à fila",
         "run_started": "Execução iniciada",
+        "run_waiting": "Aguardando a próxima etapa",
         "run_succeeded": "Execução da fila concluída",
         "run_retry": "Nova tentativa agendada",
         "run_dead_letter": "Execução falhou",

@@ -13,14 +13,14 @@ import pytest
 
 from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
     BackgroundResumeParams,
+    MarkFailedParams,
     _background_tasks,
-    _detect_resume_stuck,
     _execute_owned_run,
     _mark_background_resume_failed,
-    _MarkFailedParams,
     _revert_background_resume_stuck,
     _run_background_resume,
     cancel_background_resume_task,
+    detect_resume_stuck,
 )
 from rag_backend.domain.constants.carousel_run import (
     LOG_EVENT_RUN_FENCED,
@@ -135,7 +135,7 @@ class TestDetectResumeStuckMissingPhase:
     @pytest.mark.parametrize("prior_phase", _SENTINEL_PHASES)
     def test_missing_current_phase_never_matches_prior(self, prior_phase: str) -> None:
         state: dict[str, object] = {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
-        assert _detect_resume_stuck(_params(), prior_phase, state) is False
+        assert detect_resume_stuck(_params(), prior_phase, state) is False
 
 
 @pytest.mark.unit
@@ -160,7 +160,7 @@ class TestRunFinishedOnFailurePaths:
         service = MagicMock()
         service.publish_resume_error_event = AsyncMock()
         await _mark_background_resume_failed(
-            _MarkFailedParams(
+            MarkFailedParams(
                 service=service,
                 project_id=_PROJECT_ID,
                 message=ERR_BACKGROUND_RESUME_FAILED,
@@ -191,7 +191,7 @@ class TestBackgroundResumePriorPhaseFallback:
             patch(f"{_RUNNER}.get_session_maker", return_value=fake_session),
             patch(f"{_RUNNER}.carousel_run_epoch_var") as epoch_var,
             patch(f"{_RUNNER}._run_phase", new=AsyncMock(return_value={})),
-            patch(f"{_RUNNER}._detect_resume_stuck", return_value=False) as detect,
+            patch(f"{_RUNNER}.detect_resume_stuck", return_value=False) as detect,
             patch(f"{_RUNNER}.CarouselProjectWriteOwner") as owner,
             patch(f"{_RUNNER}.publish_workflow_sse_updates", new=AsyncMock()),
             patch(f"{_RUNNER}.publish_run_finished", new=AsyncMock()),

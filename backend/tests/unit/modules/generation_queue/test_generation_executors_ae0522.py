@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from uuid import uuid4
 
@@ -57,6 +58,13 @@ class _Tracker:
     async def finish(self, phase: str) -> None:
         self.calls.append(f"finish:{phase}")
 
+    async def track_step(self, phase: str, step: Callable[[], Awaitable[int]]) -> int:
+        stepped = await step()
+        if stepped == 0:
+            return 0
+        self.calls.extend((f"begin:{phase}", f"finish:{phase}"))
+        return stepped
+
 
 @dataclass
 class _Resumer:
@@ -99,7 +107,9 @@ async def test_drive_steps_until_the_owner_has_to_act() -> None:
 async def test_drive_waits_when_a_step_does_nothing() -> None:
     """Scenario: A drive with nothing to do comes back later"""
     stepper = FakeStepper(states=["generating"], stepped_values=[0])
-    assert await _drive(stepper).execute(make_run(), _Tracker()) is StepOutcome.WAIT
+    tracker = _Tracker()
+    assert await _drive(stepper).execute(make_run(), tracker) is StepOutcome.WAIT
+    assert tracker.calls == []
 
 
 async def test_drive_of_a_finished_run_is_done() -> None:

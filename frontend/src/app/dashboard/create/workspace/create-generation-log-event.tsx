@@ -4,10 +4,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { formatLocaleTime } from "@/lib/locale-format";
 import type { GenerationLogEvent } from "@/schemas/carousel-generation-log";
 import { formatGenerationDuration } from "./create-generation-log-model";
+import { WarningIcon } from "./progress-icons";
 
 const EVENT_TYPES = new Set([
   "run_queued",
   "run_started",
+  "run_waiting",
   "run_succeeded",
   "run_retry",
   "run_dead_letter",
@@ -47,6 +49,16 @@ interface GenerationEventRowProps {
   event: GenerationLogEvent;
 }
 
+function outcomeClass(failed: boolean, warning: boolean): string {
+  if (failed) {
+    return "border-neon-red text-neon-red";
+  }
+  if (warning) {
+    return "border-neon-amber text-neon-amber";
+  }
+  return "border-white/20 text-text-dim";
+}
+
 export function GenerationEventRow({
   event,
 }: Readonly<GenerationEventRowProps>) {
@@ -59,13 +71,15 @@ export function GenerationEventRow({
     ? t(`outcomes.${event.outcome}`)
     : event.outcome;
   const failed = event.outcome === "failed" || event.outcome === "dead_letter";
+  const warning = event.outcome === "warning";
   return (
     <li className="space-y-1" data-outcome={event.outcome}>
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1 text-text-primary">{label}</span>
         <span
-          className={`shrink-0 rounded border px-1 font-semibold ${failed ? "border-neon-red text-neon-red" : "border-white/20 text-text-dim"}`}
+          className={`inline-flex shrink-0 items-center gap-1 rounded border px-1 font-semibold ${outcomeClass(failed, warning)}`}
         >
+          {warning && <WarningIcon />}
           {outcome}
         </span>
         <span className="ml-auto shrink-0 text-right tabular-nums">

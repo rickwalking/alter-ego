@@ -9,7 +9,7 @@ import type { GenerationLogView } from "./types";
 
 const GENERATION_LOG_KEY = "generation-log";
 
-function generationLogKey(projectId: string) {
+export function generationLogKey(projectId: string) {
   return [...carouselKeys.detail(projectId), GENERATION_LOG_KEY] as const;
 }
 

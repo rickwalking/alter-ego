@@ -104,17 +104,13 @@ function GenerationRun({
   const status = RUN_STATUSES.has(run.status)
     ? t(`statuses.${run.status}`)
     : run.status;
-  const toggle = () => setExpanded((current) => !current);
   return (
     <details
       open={expanded}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
       className="rounded-md border border-white/10 p-2"
     >
-      <summary
-        className="cursor-pointer font-semibold text-text-primary"
-        onKeyDown={(event) => handleSummaryKeyDown(event, toggle)}
-      >
+      <summary className="cursor-pointer font-semibold text-text-primary">
         {kind}, {status}
       </summary>
       <div className="mt-2 space-y-2">
@@ -136,17 +132,6 @@ function GenerationRun({
       </div>
     </details>
   );
-}
-
-function handleSummaryKeyDown(
-  event: React.KeyboardEvent<HTMLElement>,
-  toggle: () => void,
-): void {
-  if (event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-  event.preventDefault();
-  toggle();
 }
 
 function RunTimes({ run }: Readonly<{ run: GenerationLogRun }>) {

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from structlog.testing import capture_logs
 
 from rag_backend.application.services.carousel.nodes.export import (
@@ -18,6 +19,7 @@ from rag_backend.application.services.carousel.nodes.export import (
     render_language,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.modules.generation_queue.application import generation_events
 from rag_backend.modules.generation_queue.application.generation_events import (
     generation_event_scope,
 )
@@ -39,9 +41,15 @@ from tests.unit.modules.generation_queue.test_generation_event_steps_ae0556 impo
 )
 from tests.unit.modules.generation_queue.test_generation_events_ae0556 import (
     FakeEventRecorder,
+    _event,
     _handler,
     _LateProjectExecutor,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_timeout_warnings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(generation_events, "_last_timeout_warning_at", None)
 
 
 @dataclass
@@ -139,9 +147,29 @@ async def test_timeouts_preserve_generation_and_emit_safe_warnings() -> None:
     failures = [
         entry for entry in logs if entry["event"] == "generation_event_store_failed"
     ]
-    assert len(failures) == 4
-    assert all(entry["error_type"] == "TimeoutError" for entry in failures)
+    assert len(failures) == 1
+    assert failures[0]["error_type"] == "TimeoutError"
     assert PLANTED_TEXT not in str(failures)
+
+
+async def test_timeout_warning_rate_limit_expires(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Scenario: Event storage failures never break generation"""
+    now = [100.0]
+    monkeypatch.setattr(generation_events.time, "monotonic", lambda: now[0])
+    recorder = FakeEventRecorder(error=TimeoutError())
+    with capture_logs() as logs:
+        async with generation_event_scope(_run(), recorder):
+            assert await generation_events.record_generation_event(_event()) is False
+            assert await generation_events.record_generation_event(_event()) is False
+            now[0] += generation_events.TIMEOUT_WARNING_INTERVAL_SECONDS + 1
+            assert await generation_events.record_generation_event(_event()) is False
+
+    failures = [
+        entry for entry in logs if entry["event"] == "generation_event_store_failed"
+    ]
+    assert len(failures) == 2
 
 
 async def test_late_project_success_refreshes_resolved_project() -> None:

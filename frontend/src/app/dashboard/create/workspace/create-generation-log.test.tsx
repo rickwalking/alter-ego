@@ -21,6 +21,15 @@ interface EventFixture {
   occurredAt: string;
 }
 
+function eventOutcome(
+  failed: boolean,
+  warning: boolean,
+): GenerationLogEvent["outcome"] {
+  if (failed) return "failed";
+  if (warning) return "warning";
+  return "succeeded";
+}
+
 function event({
   id,
   runId,
@@ -29,6 +38,7 @@ function event({
   occurredAt,
 }: EventFixture): GenerationLogEvent {
   const failed = type === "content_gate";
+  const warning = type === "pdf_failed";
   const details: GenerationLogEvent["details"] = failed
     ? { violation_count: 2, blocking_count: 1 }
     : { size: "1536x1024", model: "gpt-image-2" };
@@ -37,7 +47,7 @@ function event({
     generation_run_id: runId,
     event_type: type,
     phase,
-    outcome: failed ? "failed" : "succeeded",
+    outcome: eventOutcome(failed, warning),
     occurred_at: occurredAt,
     duration_ms: failed ? null : 1250,
     attempt: 1,
@@ -83,6 +93,13 @@ function view(overrides: Partial<GenerationLogView> = {}): GenerationLogView {
             },
           ],
           events: [
+            event({
+              id: "e4",
+              runId: newerRunId,
+              type: "pdf_failed",
+              phase: "export",
+              occurredAt: "2026-10-26T12:00:55Z",
+            }),
             event({
               id: "e3",
               runId: newerRunId,
@@ -158,17 +175,30 @@ describe("CreateGenerationLog", () => {
     const olderSummary = within(older as HTMLElement).getByText(
       /Autopilot drive/,
     );
-    olderSummary.focus();
-    await user.keyboard("{Enter}");
+    expect(olderSummary.tagName).toBe("SUMMARY");
+    await user.click(olderSummary);
     expect(olderSummary).toHaveFocus();
     expect(older).toHaveAttribute("open");
+    await user.click(olderSummary);
+    expect(older).not.toHaveAttribute("open");
     await user.click(screen.getByRole("button", { name: "Load more" }));
     expect(query.fetchNextPage).toHaveBeenCalledTimes(1);
     expect(
-      within(newer as HTMLElement).getByRole("link", {
+      within(newer as HTMLElement).getAllByRole("link", {
         name: "Open Langfuse trace",
-      }),
+      })[0],
     ).toHaveAttribute("target", "_blank");
+  });
+
+  /** Scenario: Generation log groups runs and phases accessibly */
+  it("distinguishes warnings with localized text and an icon", () => {
+    renderLog(view());
+
+    const warning = screen
+      .getByText("Warning")
+      .closest('[data-outcome="warning"]');
+    expect(warning).toHaveTextContent("Warning");
+    expect(warning?.querySelector("svg")).not.toBeNull();
   });
 
   /** Scenario: Generation log groups runs and phases accessibly */

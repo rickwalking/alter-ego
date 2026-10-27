@@ -471,6 +471,7 @@
       "events": {
         "run_queued": "Run queued",
         "run_started": "Run started",
+        "run_waiting": "Waiting for the next drive step",
         "run_succeeded": "Queue drive completed",
         "run_retry": "Retry scheduled",
         "run_dead_letter": "Run failed",

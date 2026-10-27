@@ -7,7 +7,7 @@ of work. Every port is async and owns its own session or connection.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from enum import StrEnum
@@ -160,6 +160,10 @@ class StepTracker(Protocol):
 
     async def finish(self, phase: str) -> None:
         """The phase finished cleanly: take its start back."""
+        ...
+
+    async def track_step(self, phase: str, step: Callable[[], Awaitable[int]]) -> int:
+        """Track a step only when it does work; zero leaves no phase events."""
         ...
 
 

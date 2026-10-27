@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class _MarkFailedParams:
+class MarkFailedParams:
     """Inputs for marking a background resume as failed."""
 
     service: EditorialWorkflowService
@@ -33,7 +33,7 @@ class _MarkFailedParams:
 
 
 @dataclass(frozen=True)
-class _RevertContext:
+class RevertContext:
     service: EditorialWorkflowService
     project_id: str
     prior_phase: str
@@ -41,7 +41,7 @@ class _RevertContext:
     publish: Callable[..., Awaitable[None]]
 
 
-async def _revert_background_resume_stuck(context: _RevertContext) -> None:
+async def revert_background_resume_stuck(context: RevertContext) -> None:
     """Revert DB phase_status to awaiting_human and publish error SSE."""
     async with context.session_factory() as db:
         await CarouselProjectWriteOwner(db).set_phase_status_and_commit(
@@ -60,8 +60,8 @@ async def _revert_background_resume_stuck(context: _RevertContext) -> None:
         )
 
 
-async def _mark_background_resume_failed(
-    params: _MarkFailedParams,
+async def mark_background_resume_failed(
+    params: MarkFailedParams,
     session_factory: async_sessionmaker[AsyncSession],
     publish: Callable[..., Awaitable[None]],
 ) -> None:
@@ -83,8 +83,8 @@ async def _mark_background_resume_failed(
 
 
 __all__ = [
-    "_MarkFailedParams",
-    "_RevertContext",
-    "_mark_background_resume_failed",
-    "_revert_background_resume_stuck",
+    "MarkFailedParams",
+    "RevertContext",
+    "mark_background_resume_failed",
+    "revert_background_resume_stuck",
 ]

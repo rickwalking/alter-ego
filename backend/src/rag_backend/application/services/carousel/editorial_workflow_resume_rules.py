@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     )
 
 
-def _detect_resume_stuck(
+def detect_resume_stuck(
     params: BackgroundResumeParams,
     prior_phase: str,
     state: dict[str, object],
@@ -32,4 +32,4 @@ def _detect_resume_stuck(
     )
 
 
-__all__ = ["_detect_resume_stuck"]
+__all__ = ["detect_resume_stuck"]

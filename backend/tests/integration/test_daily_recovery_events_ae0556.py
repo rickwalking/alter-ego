@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest_asyncio
+from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -20,12 +21,16 @@ from rag_backend.modules.generation_queue.application.dispatcher import (
     Dispatcher,
     DispatcherDependencies,
 )
+from rag_backend.modules.generation_queue.constants import SCAN_BATCH
 from rag_backend.modules.generation_queue.infrastructure.generation_events import (
     SqlGenerationEventRecorder,
 )
 from rag_backend.modules.generation_queue.infrastructure.models import (
     CarouselGenerationEventModel,
     GenerationRunModel,
+)
+from rag_backend.modules.generation_queue.infrastructure.recovery_store import (
+    SqlRecoveryStore,
 )
 from rag_backend.modules.generation_queue.infrastructure.repository import (
     SqlGenerationRunStore,
@@ -127,6 +132,43 @@ async def test_daily_purge_expires_events_without_blocking_run_purge(
     assert old_event not in events
     assert dead_event not in events
     assert runs == {recent_run, dead_run, boundary_run}
+
+
+async def test_daily_purge_deletes_expired_events_in_bounded_batches(
+    engine: AsyncEngine,
+) -> None:
+    """Scenario: Daily purge expires generation events after thirty days"""
+    dead_run = await _generation(
+        engine, None, "dead_letter", ("permanent", timedelta(days=31))
+    )
+    expired = {
+        await _event_for_run(engine, dead_run, timedelta(days=31))
+        for _ in range(SCAN_BATCH * 2 + 1)
+    }
+    recent = await _event_for_run(engine, dead_run, timedelta(days=2))
+    deletes: list[str] = []
+
+    def capture_delete(*args: object) -> None:
+        statement = str(args[2])
+        if "delete from carousel_generation_events" in statement.lower():
+            deletes.append(statement)
+
+    sqlalchemy_event.listen(engine.sync_engine, "before_cursor_execute", capture_delete)
+    try:
+        report = await SqlRecoveryStore(_sessions(engine)).purge(
+            _NOW - timedelta(days=30)
+        )
+    finally:
+        sqlalchemy_event.remove(
+            engine.sync_engine, "before_cursor_execute", capture_delete
+        )
+
+    assert report == (0, 0)
+    assert len(deletes) == 3
+    async with _sessions(engine)() as session:
+        remaining = set(await session.scalars(select(CarouselGenerationEventModel.id)))
+    assert remaining == {recent}
+    assert expired.isdisjoint(remaining)
 
 
 async def test_daily_revive_becomes_a_visible_queued_event(

@@ -20,17 +20,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel import resume_persona
 from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
-    _mark_background_resume_failed as _mark_failed_with_factory,
+    MarkFailedParams,
+    RevertContext,
 )
 from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
-    _MarkFailedParams,
-    _RevertContext,
+    mark_background_resume_failed as _mark_failed_with_factory,
 )
 from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
-    _revert_background_resume_stuck as _revert_stuck_with_factory,
+    revert_background_resume_stuck as _revert_stuck_with_factory,
 )
 from rag_backend.application.services.carousel.editorial_workflow_resume_rules import (
-    _detect_resume_stuck,
+    detect_resume_stuck,
 )
 from rag_backend.application.services.carousel.editorial_workflow_run_events import (
     publish_run_finished,
@@ -226,7 +226,7 @@ async def _run_background_resume(
             state = await _run_phase(service, params, db)
             await _beat_and_stage(ctx, RUN_STAGE_VALIDATING)
 
-            if _detect_resume_stuck(
+            if detect_resume_stuck(
                 params,
                 prior_phase,
                 state,
@@ -283,7 +283,7 @@ async def _run_background_resume(
                     detail=detail,
                 )
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=detail,
@@ -307,7 +307,7 @@ async def _run_background_resume(
             )
             try:
                 await _mark_background_resume_failed(
-                    _MarkFailedParams(
+                    MarkFailedParams(
                         service=service,
                         project_id=params.project_id,
                         message=ERR_BACKGROUND_RESUME_FAILED,
@@ -326,7 +326,7 @@ async def _run_background_resume(
                 error_type=type(exc).__name__,
             )
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -350,7 +350,7 @@ async def _revert_background_resume_stuck(
     _prior_phase: str,
 ) -> None:
     await _revert_stuck_with_factory(
-        _RevertContext(
+        RevertContext(
             service=service,
             project_id=project_id,
             prior_phase=_prior_phase,
@@ -360,7 +360,7 @@ async def _revert_background_resume_stuck(
     )
 
 
-async def _mark_background_resume_failed(params: _MarkFailedParams) -> None:
+async def _mark_background_resume_failed(params: MarkFailedParams) -> None:
     await _mark_failed_with_factory(params, get_session_maker(), publish_run_finished)
 
 

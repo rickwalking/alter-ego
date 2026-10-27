@@ -37,6 +37,7 @@ from rag_backend.modules.generation_queue.constants import (
     EVENT_RUN_RETRY,
     EVENT_RUN_STARTED,
     EVENT_RUN_SUCCEEDED,
+    EVENT_RUN_WAITING,
     LOCK_BUSY_DELAY_SECONDS,
     LOG_DEAD_LETTER,
     LOG_LOCK_BUSY,
@@ -47,6 +48,7 @@ from rag_backend.modules.generation_queue.constants import (
     MESSAGE_GENERATION_RETRY,
     MESSAGE_GENERATION_STARTED,
     MESSAGE_GENERATION_SUCCEEDED,
+    MESSAGE_GENERATION_WAITING,
     OUTCOME_DEAD_LETTER,
     OUTCOME_RETRY_WAIT,
     OUTCOME_RUNNING,
@@ -72,6 +74,7 @@ from rag_backend.modules.generation_queue.domain.models import (
     AttemptDeadLetterCommand,
     GenerationKind,
     GenerationRun,
+    GenerationStatus,
     RetryCommand,
     is_active,
 )
@@ -90,6 +93,7 @@ Uniform = Callable[[float, float], float]
 _SYSTEM_RANDOM = random.SystemRandom()
 LOCK_BUSY_CODE = "drive_lock_busy"
 WAITING_CODE = "waiting"
+WAIT_STREAK_CODES = frozenset({LOCK_BUSY_CODE, WAITING_CODE})
 
 
 class VerdictKind(StrEnum):
@@ -161,32 +165,23 @@ class GenerationJobHandler:
         attempt_id = await self._deps.store.mark_running(run.id)
         if attempt_id is None:
             return _DONE
-        attempt = _Attempt(run=run, attempt_id=attempt_id)
+        attempt = _Attempt(
+            run=run, attempt_id=attempt_id, started_at=self._deps.clock.now()
+        )
         executor = self._deps.executors.get(run.kind)
         if executor is None:
             return await self._dead(
                 attempt, PermanentGenerationError(ERROR_UNKNOWN_KIND)
             )
-        logger.info(LOG_STARTED, generation_run_id=str(run.id), kind=run.kind.value)
-        await record_generation_event(
-            GenerationEventInput(
-                event_type=EVENT_RUN_STARTED,
-                outcome=OUTCOME_RUNNING,
-                occurred_at=self._deps.clock.now(),
-                attempt=run.attempts + 1,
-                message_code=MESSAGE_GENERATION_STARTED,
-            )
-        )
         return await self._run(attempt, executor)
 
     async def _run(self, attempt: _Attempt, executor: KindExecutor) -> Verdict:
-        run = attempt.run
-        tracker = _Tracker(self._deps, attempt)
+        tracker = _Tracker(self._deps, attempt, lambda: _record_started(attempt))
         try:
-            async with self._deps.lock.hold(await executor.lock_keys(run)):
-                outcome = await executor.execute(run, tracker)
+            async with self._deps.lock.hold(await executor.lock_keys(attempt.run)):
+                outcome = await executor.execute(attempt.run, tracker)
         except DriveLockBusyError:
-            logger.info(LOG_LOCK_BUSY, generation_run_id=str(run.id))
+            logger.info(LOG_LOCK_BUSY, generation_run_id=str(attempt.run.id))
             return await self._retry(
                 attempt, _RetryPlan(LOCK_BUSY_CODE, LOCK_BUSY_DELAY)
             )
@@ -196,12 +191,18 @@ class GenerationJobHandler:
             return _DONE
         except Exception as exc:
             return await self._failed(attempt, exc, tracker)
-        return await self._settle(attempt, outcome)
+        return await self._settle(attempt, outcome, tracker)
 
-    async def _settle(self, attempt: _Attempt, outcome: StepOutcome) -> Verdict:
+    async def _settle(
+        self, attempt: _Attempt, outcome: StepOutcome, tracker: _Tracker
+    ) -> Verdict:
         delay = _OUTCOME_DELAYS.get(outcome)
-        if delay is not None:
+        if outcome is StepOutcome.WAIT and delay is not None:
             return await self._retry(attempt, _RetryPlan(WAITING_CODE, delay))
+        if delay is not None:
+            await tracker.ensure_started()
+            return await self._retry(attempt, _RetryPlan(WAITING_CODE, delay))
+        await tracker.ensure_started()
         moved = await self._deps.store.mark_succeeded(
             attempt.run.id, attempt.attempt_id
         )
@@ -237,6 +238,9 @@ class GenerationJobHandler:
             return _DONE
         if tracker is not None:
             await tracker.fail(plan.code)
+        if plan.code in WAIT_STREAK_CODES:
+            await self._record_wait(attempt, plan)
+            return Verdict(VerdictKind.RETRY, plan.delay)
         await record_generation_event(
             GenerationEventInput(
                 event_type=EVENT_RUN_RETRY,
@@ -249,9 +253,24 @@ class GenerationJobHandler:
         )
         return Verdict(VerdictKind.RETRY, plan.delay)
 
+    async def _record_wait(self, attempt: _Attempt, plan: _RetryPlan) -> None:
+        if _in_wait_streak(attempt.run):
+            return
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_RUN_WAITING,
+                outcome=OUTCOME_RETRY_WAIT,
+                occurred_at=self._deps.clock.now(),
+                error_code=plan.code,
+                message_code=MESSAGE_GENERATION_WAITING,
+                details=_retry_details(plan),
+            )
+        )
+
     async def _failed(
         self, attempt: _Attempt, exc: Exception, tracker: _Tracker
     ) -> Verdict:
+        await tracker.ensure_started()
         failure = classify(exc, self._deps.is_provider_error)
         if failure is FailureClass.PERMANENT:
             return await self._dead(attempt, exc, tracker)
@@ -273,6 +292,10 @@ class GenerationJobHandler:
     async def _dead(
         self, attempt: _Attempt, exc: Exception, tracker: _Tracker | None = None
     ) -> Verdict:
+        if tracker is None:
+            await _record_started(attempt)
+        else:
+            await tracker.ensure_started()
         code = _error_code(exc)
         command = AttemptDeadLetterCommand(
             run_id=attempt.run.id,
@@ -303,6 +326,28 @@ class GenerationJobHandler:
         if project_id is not None:
             await self._deps.completion.completed(project_id, succeeded=False)
         return _HOLD
+
+
+async def _record_started(attempt: _Attempt) -> None:
+    run = attempt.run
+    logger.info(LOG_STARTED, generation_run_id=str(run.id), kind=run.kind.value)
+    await record_generation_event(
+        GenerationEventInput(
+            event_type=EVENT_RUN_STARTED,
+            outcome=OUTCOME_RUNNING,
+            occurred_at=attempt.started_at,
+            attempt=run.attempts + 1,
+            message_code=MESSAGE_GENERATION_STARTED,
+            details={"resumed": True} if _in_wait_streak(run) else {},
+        )
+    )
+
+
+def _in_wait_streak(run: GenerationRun) -> bool:
+    return (
+        run.status is GenerationStatus.RETRY_WAIT
+        and run.last_error_code in WAIT_STREAK_CODES
+    )
 
 
 def _retry_details(plan: _RetryPlan) -> dict[str, object]:

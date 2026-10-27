@@ -71,6 +71,25 @@ async def mark_recovery_attempt(session: AsyncSession, generation_run_id: UUID) 
     return cast(CursorResult[object], result).rowcount == 1
 
 
+async def _purge_events(session: AsyncSession, before: datetime) -> None:
+    while True:
+        ids = (
+            await session.scalars(
+                select(CarouselGenerationEventModel.id)
+                .where(CarouselGenerationEventModel.occurred_at < before)
+                .order_by(CarouselGenerationEventModel.id)
+                .limit(SCAN_BATCH)
+            )
+        ).all()
+        if not ids:
+            return
+        await session.execute(
+            delete(CarouselGenerationEventModel).where(
+                CarouselGenerationEventModel.id.in_(ids)
+            )
+        )
+
+
 class SqlRecoveryStore:
     """Implements ``RecoveryStore``."""
 
@@ -128,11 +147,7 @@ class SqlRecoveryStore:
     async def purge(self, before: datetime) -> tuple[int, int]:
         """Delete expired events, succeeded runs and PgQueuer logs."""
         async with self._sessions() as session:
-            await session.execute(
-                delete(CarouselGenerationEventModel).where(
-                    CarouselGenerationEventModel.occurred_at < before
-                )
-            )
+            await _purge_events(session, before)
             runs = await session.execute(
                 delete(_G).where(_G.status == STATUS_SUCCEEDED, _G.finished_at < before)
             )

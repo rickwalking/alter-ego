@@ -8,6 +8,7 @@ job that gets the drive lock reaps it and re-runs the parked node.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -74,6 +75,10 @@ class _Tracker:
 
     async def finish(self, phase: str) -> None:
         del phase
+
+    async def track_step(self, phase: str, step: Callable[[], Awaitable[int]]) -> int:
+        del phase
+        return await step()
 
 
 def _executor(world: _World) -> WorkflowResumeExecutor:

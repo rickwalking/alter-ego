@@ -11,11 +11,11 @@ import pytest
 
 from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
     BackgroundResumeParams,
+    MarkFailedParams,
     _background_tasks,
-    _detect_resume_stuck,
     _mark_background_resume_failed,
-    _MarkFailedParams,
     _revert_background_resume_stuck,
+    detect_resume_stuck,
     execute_resume_run,
     schedule_background_resume,
 )
@@ -130,7 +130,7 @@ class TestDetectResumeStuck:
     def test_approve_same_phase_awaiting_detects_stuck(self) -> None:
         """Given approve action and phase unchanged with awaiting_human,
         returns True."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_APPROVE),
             prior_phase="research",
             state={
@@ -142,7 +142,7 @@ class TestDetectResumeStuck:
 
     def test_approve_phase_advances_not_stuck(self) -> None:
         """Given approve action and phase advances, returns False."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_APPROVE),
             prior_phase="research",
             state={
@@ -155,7 +155,7 @@ class TestDetectResumeStuck:
     def test_revise_same_phase_not_stuck(self) -> None:
         """Given revise action and phase unchanged, returns False
         (revise legitimately returns to same phase)."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_REVISE),
             prior_phase="research",
             state={
@@ -167,7 +167,7 @@ class TestDetectResumeStuck:
 
     def test_empty_prior_phase_not_stuck(self) -> None:
         """Given no prior phase (first resume), returns False."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_APPROVE),
             prior_phase="",
             state={
@@ -179,7 +179,7 @@ class TestDetectResumeStuck:
 
     def test_approve_different_phase_not_stuck(self) -> None:
         """Given approve action but phase changed, returns False."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_APPROVE),
             prior_phase="research",
             state={"current_phase": "research", "phase_status": "in_progress"},
@@ -189,7 +189,7 @@ class TestDetectResumeStuck:
     def test_reject_same_phase_not_stuck(self) -> None:
         """Given reject action and phase unchanged, returns False
         (reject legitimately returns to same phase)."""
-        result = _detect_resume_stuck(
+        result = detect_resume_stuck(
             _make_params(REVIEW_ACTION_REJECT),
             prior_phase="research",
             state={
@@ -276,7 +276,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ) as mock_sse,
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=False,
             ) as mock_detect,
         ):
@@ -327,7 +327,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=False,
             ),
         ):
@@ -366,7 +366,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=False,
             ),
         ):
@@ -413,7 +413,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=False,
             ) as mock_detect,
         ):
@@ -448,7 +448,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=False,
             ) as mock_detect,
         ):
@@ -484,7 +484,7 @@ class TestExecuteBackgroundResume:
                 new_callable=AsyncMock,
             ) as mock_sse,
             patch(
-                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.detect_resume_stuck",
                 return_value=True,
             ) as mock_detect,
             patch(
@@ -548,7 +548,7 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_REVISION_CAP_EXCEEDED)
             mock_mark.assert_awaited_once_with(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_REVISION_CAP_EXCEEDED,
@@ -601,7 +601,7 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_PERSONA_SCORE_TOO_LOW)
             mock_mark.assert_awaited_once_with(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_PERSONA_SCORE_TOO_LOW,
@@ -650,7 +650,7 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with("some error")
             mock_mark.assert_awaited_once_with(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -690,7 +690,7 @@ class TestExecuteBackgroundResume:
 
             mock_db.rollback.assert_awaited_once()
             mock_mark.assert_awaited_once_with(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -741,7 +741,7 @@ class TestExecuteBackgroundResume:
 
             mock_db.rollback.assert_awaited_once()
             mock_mark.assert_awaited_once_with(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -777,7 +777,7 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id="proj-1",
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -811,7 +811,7 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id="proj-1",
                     message=ERR_BACKGROUND_RESUME_FAILED,
@@ -846,7 +846,7 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id="proj-1",
                     message=ERR_REVISION_CAP_EXCEEDED,
