@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0556 is In Development on `feat/ae-0556-generation-log`.
+AE-0556 is Dev Complete on `feat/ae-0556-generation-log`.
 
-The architecture plan, ADR, ticket and Gherkin contracts are committed. Implementation follows the red-first acceptance loop.
+All local full backend/frontend gates are green. PR CI and backend mutation remain for final QA signoff.
 
 ## Rules
 

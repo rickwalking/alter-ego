@@ -1,6 +1,6 @@
 # AE-0556 — Generation log inside the carousel page
 
-Status: In Development
+Status: Dev Complete
 Tier: T3
 Priority: High
 Type: Feature
@@ -43,15 +43,15 @@ The carousel workspace shows a durable, live-updating generation timeline withou
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given a carousel generated through the queue, When its owner opens the workspace, Then newest runs show kind, queued/started/finished timestamps, attempts, status and error code, with phase outcomes and durations, image jobs, export and final status.
-- [ ] AC2 Given a failed and retried run, When the log renders, Then it shows the classified error code and retry without a raw exception message; recovery and a manually reprocessed run are also visible.
-- [ ] AC3 Given a non-owner non-admin or assigned reviewer, When they request the log, Then the API returns 403; anonymous requests return 401 and an unknown carousel returns 404; cross-project events never leak.
-- [ ] AC4 Given an exception containing a planted secret and a `DBAPIError` containing SQL and bound parameters, When failure events are recorded and read, Then neither stored rows nor API responses contain the secret, SQL or parameters, and details remain at or below 4096 serialized bytes.
-- [ ] AC5 Given an event store that raises or times out, When generation proceeds, Then the generation result is unchanged, one safe warning names only the event and exception types, and recorder latency is bounded and measured.
-- [ ] AC6 Given more than one page of events, When the owner loads more, Then keyset pagination returns no duplicates or omissions even when a newer event arrives, and every request is bounded to at most 200 events.
-- [ ] AC7 Given events older and newer than 30 days, When the existing daily purge runs, Then only expired events are removed and existing run/PgQueuer purges still complete on PostgreSQL.
-- [ ] AC8 Given an active run, When existing SSE or polling updates arrive, Then the timeline refreshes without a new interval; older runs are collapsed, failures have text labels, durations are right-aligned, controls are keyboard accessible, and PT/EN strings exist.
-- [ ] AC9 Given Langfuse disabled or unavailable, Then generation and the log still work; given a real phase trace, Then its id and SDK-generated URL are stored and rendered as a link.
+- [x] AC1 Given a carousel generated through the queue, When its owner opens the workspace, Then newest runs show kind, queued/started/finished timestamps, attempts, status and error code, with phase outcomes and durations, image jobs, export and final status.
+- [x] AC2 Given a failed and retried run, When the log renders, Then it shows the classified error code and retry without a raw exception message; recovery and a manually reprocessed run are also visible.
+- [x] AC3 Given a non-owner non-admin or assigned reviewer, When they request the log, Then the API returns 403; anonymous requests return 401 and an unknown carousel returns 404; cross-project events never leak.
+- [x] AC4 Given an exception containing a planted secret and a `DBAPIError` containing SQL and bound parameters, When failure events are recorded and read, Then neither stored rows nor API responses contain the secret, SQL or parameters, and details remain at or below 4096 serialized bytes.
+- [x] AC5 Given an event store that raises or times out, When generation proceeds, Then the generation result is unchanged, one safe warning names only the event and exception types, and recorder latency is bounded and measured.
+- [x] AC6 Given more than one page of events, When the owner loads more, Then keyset pagination returns no duplicates or omissions even when a newer event arrives, and every request is bounded to at most 200 events.
+- [x] AC7 Given events older and newer than 30 days, When the existing daily purge runs, Then only expired events are removed and existing run/PgQueuer purges still complete on PostgreSQL.
+- [x] AC8 Given an active run, When existing SSE or polling updates arrive, Then the timeline refreshes without a new interval; older runs are collapsed, failures have text labels, durations are right-aligned, controls are keyboard accessible, and PT/EN strings exist.
+- [x] AC9 Given Langfuse disabled or unavailable, Then generation and the log still work; given a real phase trace, Then its id and SDK-generated URL are stored and rendered as a link.
 
 ## Gherkin Scenarios
 
@@ -103,11 +103,11 @@ The carousel workspace shows a durable, live-updating generation timeline withou
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -127,7 +127,10 @@ Code research rejected existing run/audit/outbox data as a complete or safe time
 
 ## Files Touched
 
-Pending implementation.
+- `.agent/active-task.md`, ticket, ADR-0028, architecture/plan/QA research and dev/QA reports.
+- Backend migration, generation-queue domain/application/infrastructure/facades, carousel API schemas/routes, workflow/image/export instrumentation and OpenAPI snapshot.
+- Backend Gherkin, queue/recovery/migration/API/unit/integration fixtures and tests.
+- Frontend generation-log schema, query hook/types, workspace run/phase/event components and models, API constants, PT/EN locales, schema-drift map and Gherkin/tests.
 
 ## Test Evidence
 
@@ -146,11 +149,12 @@ Pending implementation.
 - Expanded regressions: 191 backend tests and 23 frontend tests pass. Strict mypy passes 1202 files; import contracts, architecture ratchet, integrity, full frontend lint and typecheck pass. Final full frontend capture and external QA remain pending.
 - External QA fixes: mismatched events are rejected on write and excluded on read; external image error codes map to safe classifications and models to canonical IDs; slide failures record before re-raise; raw strings are length-capped before normalization; outcome/attempt bounds match the DDL; artifact-only updates invalidate and terminal persistence triggers the existing run-finished refresh. Resume patch seams remain compatible and touched files stay under 400 lines.
 - Latest regressions: 270 backend tests and 24 frontend tests pass; strict mypy passes 1205 files; full frontend lint and both integrity scans pass. Nullable autopilot correlation now uses the authoritative parent, terminal refreshes cover late assignment and failures with the correct reason, and the SQLite cascade fixture uses one connection. Batch dispatch uses the same parent hydration, and facades/test files are split below the 400-line limit.
-- Confirmation regressions: 246 backend tests and 24 frontend tests pass; strict mypy passes 1206 files; import contracts and integrity remain green. Final full captures and confirmation QA remain pending.
+- Confirmation regressions: 246 backend tests and 24 frontend tests pass; strict mypy passes 1206 files; import contracts and integrity remain green. Nullable autopilot correlation now uses the authoritative parent, terminal refreshes cover late assignment and failures with the correct reason, and the SQLite cascade fixture uses one connection. Batch dispatch uses the same parent hydration, and facades/test files are split below the 400-line limit.
+- Final full backend capture: 7798 passed, 2 skipped; 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; diff coverage 97%. Final full frontend capture: 18 PASS, 0 FAIL, 1 CI-only mutation SKIP. Independent implementation review found no remaining blockers; PR CI and backend mutation are pending for final QA signoff.
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0556.qa.md` — INCONCLUSIVE pending PR CI. Independent implementation review and all local full gates pass; backend/frontend mutation and PR checks are the only remaining evidence.
 
 ## Decision Log
 
