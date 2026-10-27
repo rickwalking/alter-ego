@@ -6,6 +6,7 @@ Feature: backend/tests/features/daily_recovery_scan_ae0553.feature
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID
@@ -14,16 +15,23 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
+from rag_backend.infrastructure.database.models.workflow_audit_log import (
+    WorkflowAuditLogModel,
+)
 from rag_backend.modules.autopilot import queue_bridge
+from rag_backend.modules.autopilot.constants import EVENT_TYPE_STATE_CHANGED
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
-from rag_backend.modules.generation_queue.constants import ACTIVE_STATUSES
+from rag_backend.modules.generation_queue.constants import (
+    ACTIVE_STATUSES,
+    AUDIT_CAROUSEL_REPROCESS,
+)
 from rag_backend.modules.generation_queue.domain.recovery import ParkedDrive
 from rag_backend.modules.generation_queue.infrastructure.models import (
     GenerationRunModel,
 )
 from tests.integration.queue_flow_db_support import on_postgres
-from tests.integration.test_daily_recovery_atomicity_ae0553 import _event_counts
 from tests.integration.test_daily_recovery_scan_ae0524 import (
     _autopilot_run,
     _bridge,
@@ -132,7 +140,34 @@ async def _owner_race(engine: AsyncEngine, case: _RaceCase) -> tuple[bool, list[
             await asyncio.gather(scan, owner, return_exceptions=True)
 
 
-async def _assert_final(engine: AsyncEngine, case: _RaceCase) -> None:
+async def _assert_events(
+    engine: AsyncEngine, case: _RaceCase, owner_revived: int
+) -> None:
+    expected: Counter[str] = Counter()
+    if case.state is _S.ESCALATED:
+        expected[EVENT_TYPE_STATE_CHANGED] = 1
+    if owner_revived:
+        expected[AUDIT_CAROUSEL_REPROCESS] = 1
+    async with _sessions(engine)() as session:
+        audit_rows = (
+            await session.execute(
+                select(WorkflowAuditLogModel.event_id, WorkflowAuditLogModel.event_type)
+            )
+        ).all()
+        outbox_rows = (
+            await session.execute(
+                select(EventOutboxModel.event_id, EventOutboxModel.event_type)
+            )
+        ).all()
+    audit_pairs = {(row.event_id, row.event_type) for row in audit_rows}
+    outbox_pairs = {(row.event_id, row.event_type) for row in outbox_rows}
+    assert audit_pairs == outbox_pairs
+    assert Counter(row.event_type for row in audit_rows) == expected
+
+
+async def _assert_final(
+    engine: AsyncEngine, case: _RaceCase, owner_revived: int = 0
+) -> None:
     async with _sessions(engine)() as session:
         run = await session.get(AutopilotRunModel, UUID(case.run_id))
         dead = await session.get(GenerationRunModel, case.dead_id)
@@ -164,12 +199,12 @@ async def _assert_final(engine: AsyncEngine, case: _RaceCase) -> None:
         assert run.state == _S.GENERATING.value
         assert (int(same_theme or 0), int(replacements or 0)) == (1, 0)
         assert (dead.status, int(active or 0)) == ("queued", 1)
-        assert await _event_counts(engine) == (1, 1)
+        await _assert_events(engine, case, owner_revived)
         return
     assert run.state == _S.FAILED.value
     assert (int(same_theme or 0), int(replacements or 0)) == (2, 1)
     assert (dead.status, int(active or 0)) == ("dead_letter", 0)
-    assert await _event_counts(engine) == (0, 0)
+    await _assert_events(engine, case, owner_revived)
 
 
 @pytest.mark.parametrize("state", [_S.ESCALATED, _S.FAILED])
@@ -192,4 +227,4 @@ async def test_forced_owner_retry_and_scan_revive_only_once(
     scan_result, said = await _owner_race(engine, case)
     owner_revived = int(said[-1].startswith("🔁 De volta à fila"))
     assert int(scan_result) + owner_revived == 1
-    await _assert_final(engine, case)
+    await _assert_final(engine, case, owner_revived)

@@ -22,6 +22,8 @@ Feature: Daily recovery isolates a failing dead letter
     When two recovery paths or the scan and Pedro's owner retry race
     Then exactly one path reports a successful revive
     And the generation run is queued once
+    And audit and outbox contain matching event ids and types for the winning path
+    And an owner win records one manual-reprocess event alongside the revive events
 
   Scenario: Each failed recovery is logged without content
     Given a revive raises an exception whose message includes sensitive content
