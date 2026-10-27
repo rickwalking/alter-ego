@@ -1,5 +1,5 @@
 /**
- * The curated cover-photo prompts (AE-0509, varied by AE-0562): six scenes
+ * The curated cover-photo prompts: six scenes
  * distinct on every dimension, colour words instead of hex, a theme prop from
  * the topic words, stable per seed and reshuffled per round.
  */
