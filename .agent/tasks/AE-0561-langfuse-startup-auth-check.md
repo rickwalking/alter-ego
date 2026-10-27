@@ -110,7 +110,7 @@ The six focused tests failed before implementation because scheduling and timeou
 
 Review-driven hardening replaced the SDK `auth_check()` wrapper with its underlying public projects API request so the SDK cannot emit auxiliary raw-exception logs. The request and await both have a five-second deadline, retries are disabled, and diagnostic hosts are reduced to credential-free HTTP(S) origins. Seven revised behavioral tests failed before those changes; those seven plus three safe-host edge cases now pass alongside 40 existing Langfuse initialization/tracing tests. The async test holds the fake request blocked until after startup returns, and failure tests verify that both tracing clients and the callback handler remain available.
 
-The full backend capture used a fresh isolated PostgreSQL 17 database and passed 26 gates with zero failures; only CI-only mutation skipped. The suite reported 7,770 passed and 2 pre-existing skips, 95% total coverage, and 100% diff coverage. Integrity reported zero blockers and warnings.
+The full backend capture used a fresh isolated PostgreSQL 17 database and passed 26 gates with zero failures; only CI-only mutation skipped. After rebasing onto `origin/main` at `bc0ff7299`, the suite reported 7,775 passed and 2 pre-existing skips, 95% total coverage, and 100% diff coverage. Integrity reported zero blockers and warnings.
 
 Codex external QA round 1 returned WARN after static review because its read-only sandbox could not execute gates or tests. Its SDK standard-logging and task-retention findings were addressed without changing production code: the 401 case now uses the generated SDK projects client with a fake transport and DEBUG `caplog` secret assertions, and the success case asserts `_AUTH_TASKS` retention and cleanup. The 50 focused tests, full backend capture, and integrity scan were rerun green. Writable external confirmation QA and PR CI are pending.
 
@@ -131,7 +131,7 @@ Codex external QA round 1 returned WARN after static review because its read-onl
 - Passing after implementation: ten tests cover async startup/success, empty projects, generated-SDK 401 handling with DEBUG standard-log secret assertions, transport, SDK and outer timeouts, unexpected exception, late completion, exactly-once events, no-retries/five-second request options, tracing preservation, task retention/cleanup, off-main-thread execution, planted-secret containment, IPv6 origins, unsupported schemes, and malformed ports.
 - Existing coverage: 40 Langfuse Cloud, callback, and trace I/O tests joined the ten new tests; all 50 passed.
 - Focused Ruff format and lint checks pass.
-- Full `gate-capture.sh backend`: 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; 7,770 tests passed, 2 pre-existing skips, 95% total coverage, 100% diff coverage, migrations and schema drift PASS on a fresh isolated database. Integrity: 0 blockers, 0 warnings. External confirmation QA and PR CI are pending.
+- Full `gate-capture.sh backend`: 26 PASS, 0 FAIL, 1 CI-only mutation SKIP; after rebase, 7,775 tests passed, 2 pre-existing skips, 95% total coverage, 100% diff coverage, migrations and schema drift PASS on a fresh isolated database. Integrity: 0 blockers, 0 warnings. External confirmation QA and PR CI are pending.
 
 ## QA Report
 
