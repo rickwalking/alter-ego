@@ -6,6 +6,7 @@ Feature: backend/tests/features/langfuse_auth_check_ae0561.feature
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -13,7 +14,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from langfuse import Langfuse
-from langfuse.api.resources.commons.errors.unauthorized_error import UnauthorizedError
+from langfuse.api.resources.projects.client import ProjectsClient
 from pydantic import SecretStr
 from structlog.testing import capture_logs
 
@@ -107,9 +108,11 @@ async def test_valid_credentials_do_not_delay_startup(
             assert len(scheduled) == 1
             assert await asyncio.to_thread(started.wait, 1)
             assert not scheduled[0].done()
+            assert scheduled[0] in langfuse_client._AUTH_TASKS
         finally:
             release.set()
         await asyncio.wait_for(scheduled[0], 1)
+    assert scheduled[0] not in langfuse_client._AUTH_TASKS
     assert worker_threads != [threading.get_ident()]
     assert client.api.projects.get.call_count == 1
     client.auth_check.assert_not_called()
@@ -149,12 +152,23 @@ async def test_empty_projects_response_logs_failure_and_preserves_tracing(
     _assert_safe(logs)
 
 
-async def test_401_logs_status_without_response_content() -> None:
+async def test_401_logs_status_without_response_content(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Scenario: Rejected Langfuse credentials log an authentication failure"""
+    response = MagicMock()
+    response.status_code = 401
+    response.json.return_value = {
+        "secret": _SECRET_KEY,
+        "url": _CREDENTIAL_URL,
+        "detail": "planted-response-body",
+    }
+    wrapper = SimpleNamespace(httpx_client=MagicMock())
+    wrapper.httpx_client.request.return_value = response
     client = _client()
-    client.api.projects.get.side_effect = UnauthorizedError(
-        body={"secret": _SECRET_KEY, "url": _CREDENTIAL_URL}
-    )
+    client.api.projects = ProjectsClient(client_wrapper=wrapper)
+    caplog.set_level(logging.DEBUG)
+    caplog.clear()
     logs = await _run_auth_check(client, _CREDENTIAL_URL)
     events = _auth_events(logs)
     assert len(events) == 1
@@ -162,6 +176,19 @@ async def test_401_logs_status_without_response_content() -> None:
     assert events[0]["host"] == _HOST
     assert events[0]["reason"] == "401"
     assert events[0]["log_level"] == "warning"
+    wrapper.httpx_client.request.assert_called_once_with(
+        "api/public/projects",
+        method="GET",
+        request_options={"timeout_in_seconds": 5, "max_retries": 0},
+    )
+    for unsafe in (
+        _PUBLIC_KEY,
+        _SECRET_KEY,
+        _CREDENTIAL_URL,
+        "Authorization",
+        "planted-response-body",
+    ):
+        assert unsafe not in caplog.text
     _assert_safe(logs)
 
 
