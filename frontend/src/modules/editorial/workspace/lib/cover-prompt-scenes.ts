@@ -15,6 +15,8 @@ const SEED_SEPARATOR = ":";
 const FNV_OFFSET = 2166136261;
 const FNV_PRIME = 16777619;
 const SEARCH_BUDGET = 5000;
+const LAST_RESORT_BUDGET = 1000000;
+const ALTERNATIVE_KEYS = 8;
 const MAX_SHARED_WITH_PREVIOUS = 1;
 
 /** A scene dimension: one of the shared pools, or the theme prop. */
@@ -40,6 +42,7 @@ interface Choice {
 interface RoundLimits {
   previous: readonly CoverScene[];
   freshPropsOnly: boolean;
+  budget: number;
 }
 
 interface Search {
@@ -48,6 +51,7 @@ interface Search {
   previous: readonly CoverScene[];
   scenes: Record<CoverSceneDimension, number>[];
   steps: number;
+  budget: number;
 }
 
 function hashSeed(seed: string): number {
@@ -114,7 +118,7 @@ function fill(
   }
   for (const index of search.orders[dimension]) {
     search.steps += 1;
-    if (search.steps > SEARCH_BUDGET) return false;
+    if (search.steps > search.budget) return false;
     if (!fits(search, scene, { dimension, index })) continue;
     if (fill(search, depth + 1, { ...scene, [dimension]: index })) {
       return true;
@@ -126,7 +130,7 @@ function fill(
 function searchRound(
   key: string,
   theme: CoverIdeaTheme,
-  { previous, freshPropsOnly }: Readonly<RoundLimits>,
+  { previous, freshPropsOnly, budget }: Readonly<RoundLimits>,
 ): CoverScene[] | null {
   const usedProps = new Set(previous.map((scene) => scene.prop));
   const props = shuffled(
@@ -153,8 +157,59 @@ function searchRound(
     previous,
     scenes: [],
     steps: 0,
+    budget,
   };
   return fill(search, 0, {}) ? search.scenes : null;
+}
+
+/**
+ * One round after ``previous``: the seeded key and then alternative keys,
+ * first with fresh props only and then with any prop, so the consecutive-round
+ * rule holds whenever a few orders can satisfy it. Only when none does is the
+ * round picked without it, and as a last resort the previous round is kept.
+ */
+function nextRound(
+  key: string,
+  theme: CoverIdeaTheme,
+  previous: readonly CoverScene[],
+): CoverScene[] {
+  for (const freshPropsOnly of [true, false]) {
+    for (let attempt = 0; attempt < ALTERNATIVE_KEYS; attempt += 1) {
+      const attemptKey =
+        attempt === 0 ? key : `${key}${SEED_SEPARATOR}${attempt}`;
+      const scenes = searchRound(attemptKey, theme, {
+        previous,
+        freshPropsOnly,
+        budget: SEARCH_BUDGET,
+      });
+      if (scenes) return scenes;
+    }
+  }
+  return (
+    searchRound(key, theme, {
+      previous: [],
+      freshPropsOnly: false,
+      budget: LAST_RESORT_BUDGET,
+    }) ?? [...previous]
+  );
+}
+
+/**
+ * Rounds ``0..count-1`` of the catalogue, each derived from the one before.
+ */
+export function catalogueRounds(
+  seed: string,
+  theme: CoverIdeaTheme,
+  count: number,
+): CoverScene[][] {
+  const rounds: CoverScene[][] = [];
+  let previous: CoverScene[] = [];
+  for (let current = 0; current < count; current += 1) {
+    const key = [seed, String(current)].join(SEED_SEPARATOR);
+    previous = nextRound(key, theme, previous);
+    rounds.push(previous);
+  }
+  return rounds;
 }
 
 /**
@@ -171,14 +226,5 @@ export function catalogueScenes(
   theme: CoverIdeaTheme,
   round: number,
 ): CoverScene[] {
-  let previous: CoverScene[] = [];
-  for (let current = 0; current <= round; current += 1) {
-    const key = [seed, String(current)].join(SEED_SEPARATOR);
-    previous =
-      searchRound(key, theme, { previous, freshPropsOnly: true }) ??
-      searchRound(key, theme, { previous, freshPropsOnly: false }) ??
-      searchRound(key, theme, { previous: [], freshPropsOnly: false }) ??
-      [];
-  }
-  return previous;
+  return catalogueRounds(seed, theme, Math.max(round, 0) + 1).at(-1) ?? [];
 }
