@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rag_backend.application.services.carousel.editorial_workflow_support import (
@@ -79,6 +80,18 @@ from rag_backend.infrastructure.external.openai_image import (
     _openai_status_error_detail,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.generation_queue.events_public import (
+    EVENT_IMAGE_REUSED,
+    EVENT_IMAGE_SLIDE_FAILED,
+    EVENT_IMAGE_SLIDE_SUCCEEDED,
+    MESSAGE_IMAGE_JOB,
+    OUTCOME_FAILED,
+    OUTCOME_REUSED,
+    OUTCOME_SUCCEEDED,
+    GenerationEventInput,
+    record_generation_event,
+    set_generation_event_project,
+)
 from rag_backend.modules.presentation import (
     ImageProvider,
     ImageProviderPort,
@@ -512,12 +525,18 @@ async def _publish_progress_state(ctx: _ImageRunContext) -> None:
         )
 
 
+def _event_duration_ms(started: datetime) -> int:
+    return max(0, round((datetime.now(UTC) - started).total_seconds() * 1000))
+
+
 async def _run_one_image(
     index: int,
     slide: SlideData,
     ctx: _ImageRunContext,
 ) -> None:
     """Generate an image for one slide and persist the result."""
+    started_at = datetime.now(UTC)
+    set_generation_event_project(str(ctx.project.id))
     ctx.slide_status[index]["status"] = STATUS_IN_FLIGHT
     await _publish_progress_state(ctx)
 
@@ -537,6 +556,7 @@ async def _run_one_image(
         else None
     )
     reused_path = recorded_path or legacy_path
+    generation_succeeded = reused_path is None
     generation_status = (
         GENERATION_STATUS_REUSED
         if recorded_path
@@ -555,6 +575,19 @@ async def _run_one_image(
                     ),
                 )
         except Exception as exc:
+            generation_succeeded = False
+            await record_generation_event(
+                GenerationEventInput(
+                    event_type=EVENT_IMAGE_SLIDE_FAILED,
+                    outcome=OUTCOME_FAILED,
+                    phase=PHASE_IMAGES,
+                    occurred_at=datetime.now(UTC),
+                    duration_ms=_event_duration_ms(started_at),
+                    error_code=type(exc).__name__,
+                    message_code=MESSAGE_IMAGE_JOB,
+                    details={"slide_index": slide.slide_number, "status": "failed"},
+                )
+            )
             await _handle_generation_error(
                 exc,
                 _ErrorContext(
@@ -572,7 +605,35 @@ async def _run_one_image(
     else:
         image_path = reused_path
         _log_reuse(ctx.project, slide, image_path)
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_IMAGE_REUSED,
+                outcome=OUTCOME_REUSED,
+                phase=PHASE_IMAGES,
+                message_code=MESSAGE_IMAGE_JOB,
+                details={
+                    "slide_index": slide.slide_number,
+                    "status": generation_status,
+                    "reused": True,
+                },
+            )
+        )
 
+    if generation_succeeded:
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_IMAGE_SLIDE_SUCCEEDED,
+                outcome=OUTCOME_SUCCEEDED,
+                phase=PHASE_IMAGES,
+                occurred_at=datetime.now(UTC),
+                duration_ms=_event_duration_ms(started_at),
+                message_code=MESSAGE_IMAGE_JOB,
+                details={
+                    "slide_index": slide.slide_number,
+                    "status": generation_status,
+                },
+            )
+        )
     ctx.slide_status[index]["status"] = STATUS_DONE
     ctx.done_count += 1
     if persisted_slide is not None:

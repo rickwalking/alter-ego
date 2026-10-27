@@ -28,6 +28,7 @@ QUEUE_FLOW_TABLES = (
     "telegram_updates",
     "autopilot_served_urls",
     "generation_runs",
+    "carousel_generation_events",
     "event_outbox",
     "workflow_audit_log",
 )

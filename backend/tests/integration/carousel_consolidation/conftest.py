@@ -6,6 +6,7 @@ Feature: carousel_pipeline_consolidation.feature
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -36,14 +37,20 @@ def _reset_workflow_sse_hub() -> None:
 
 
 @pytest.fixture
-async def client():
+async def client(tmp_path: Path):
+    """Persist the schema across recorder-driven connection invalidation."""
     from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
     from rag_backend.infrastructure.database.config import Base, close_db
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{tmp_path / 'carousel-consolidation.db'}",
+        echo=False,
+        poolclass=StaticPool,
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

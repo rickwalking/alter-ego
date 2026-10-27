@@ -75,18 +75,27 @@ POST_ID = "22222222-2222-4222-8222-222222222222"
 
 
 @pytest.fixture(autouse=True)
-def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Isolate from any Langfuse client an earlier test configured (its flush
-    to an unreachable host would eat the run's timeout).
+def _isolate_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Run isolated from ambient logging state.
 
-    The editor's single-image service traces with its own helper.
+    An earlier test may have configured a Langfuse client whose flush to an
+    unreachable host would eat the run's timeout (the editor's single-image
+    service traces with its own helper), and structlog's unconfigured defaults
+    render the first ``exc_info`` through rich with locals: cold, that costs
+    hundreds of milliseconds inside the heartbeat's except handler and eats the
+    beat window. Production always configures the JSON pipeline, so these tests
+    run with it and restore whatever was configured beforehand.
     """
+
     from contextlib import nullcontext
+
+    import structlog
 
     from rag_backend.application.services.blog import (
         blog_generation_service,
         blog_image_batch,
     )
+    from rag_backend.infrastructure.logging import configure_structlog
 
     for module in (blog_generation_service, blog_image_batch):
         monkeypatch.setattr(
@@ -97,6 +106,11 @@ def _no_langfuse(monkeypatch: pytest.MonkeyPatch) -> None:
     from rag_backend.application.services.blog import blog_image_service as _single
 
     monkeypatch.setattr(_single, "blog_ai_propagate", lambda *_a: nullcontext())
+
+    saved_config = structlog.get_config()
+    configure_structlog(debug=False)
+    yield
+    structlog.configure(**saved_config)
 
 
 def _service(

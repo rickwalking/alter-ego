@@ -15,6 +15,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     DateTime,
+    ForeignKey,
     Index,
     SmallInteger,
     String,
@@ -30,14 +31,23 @@ from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
     DEDUPE_KEY_LENGTH,
     ERROR_CODE_LENGTH,
+    EVENT_TYPE_LENGTH,
     INDEX_ACTIVE_DEDUPE,
     INDEX_AUTOPILOT_RUN,
+    INDEX_EVENT_OCCURRED,
+    INDEX_EVENT_PROJECT_OCCURRED,
+    INDEX_EVENT_RUN_OCCURRED,
     INDEX_PROJECT,
     INDEX_STATUS_CREATED,
     KIND_LENGTH,
+    MESSAGE_CODE_LENGTH,
+    OUTCOME_LENGTH,
     PHASE_LENGTH,
     STATUS_LENGTH,
+    TABLE_CAROUSEL_GENERATION_EVENTS,
     TABLE_GENERATION_RUNS,
+    TRACE_ID_LENGTH,
+    TRACE_URL_LENGTH,
 )
 
 ACTIVE_WHERE_SQL = "status IN ({})".format(
@@ -103,4 +113,54 @@ class GenerationRunModel(GenerationQueueOrmBase):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
+    )
+
+
+class CarouselGenerationEventModel(GenerationQueueOrmBase):
+    """Append-only, content-free diagnostic event for one carousel run."""
+
+    __tablename__ = TABLE_CAROUSEL_GENERATION_EVENTS
+    __table_args__ = (
+        Index(
+            INDEX_EVENT_PROJECT_OCCURRED,
+            "carousel_project_id",
+            "occurred_at",
+            "id",
+        ),
+        Index(INDEX_EVENT_RUN_OCCURRED, "generation_run_id", "occurred_at", "id"),
+        Index(INDEX_EVENT_OCCURRED, "occurred_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True)
+    generation_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("generation_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    carousel_project_id: Mapped[str] = mapped_column(
+        String(_ID_LENGTH),
+        ForeignKey("carousel_projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    kind: Mapped[str] = mapped_column(String(KIND_LENGTH), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(EVENT_TYPE_LENGTH), nullable=False)
+    phase: Mapped[str | None] = mapped_column(String(PHASE_LENGTH), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(OUTCOME_LENGTH), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    duration_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    attempt: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(
+        String(ERROR_CODE_LENGTH), nullable=True
+    )
+    message_code: Mapped[str | None] = mapped_column(
+        String(MESSAGE_CODE_LENGTH), nullable=True
+    )
+    details: Mapped[dict[str, object]] = mapped_column(_JSON, nullable=False)
+    langfuse_trace_id: Mapped[str | None] = mapped_column(
+        String(TRACE_ID_LENGTH), nullable=True
+    )
+    langfuse_trace_url: Mapped[str | None] = mapped_column(
+        String(TRACE_URL_LENGTH), nullable=True
     )

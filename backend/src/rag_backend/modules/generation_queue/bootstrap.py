@@ -45,6 +45,9 @@ from rag_backend.modules.generation_queue.domain.recovery import (
     ParkedDrive,
     RecoveryStore,
 )
+from rag_backend.modules.generation_queue.infrastructure.completion import (
+    SseGenerationRunCompletion,
+)
 from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
     AutopilotStepperAdapter,
     EngineFactory,
@@ -54,6 +57,9 @@ from rag_backend.modules.generation_queue.infrastructure.drive_adapters import (
 )
 from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
     PostgresDriveLock,
+)
+from rag_backend.modules.generation_queue.infrastructure.generation_events import (
+    SqlGenerationEventRecorder,
 )
 from rag_backend.modules.generation_queue.infrastructure.notices import (
     OwnerDeadLetterNotices,
@@ -157,6 +163,8 @@ def compose_handler(parts: HandlerParts) -> GenerationJobHandler:
             notices=notices,
             clock=UTC_CLOCK,
             is_provider_error=parts.is_provider_error,
+            events=SqlGenerationEventRecorder(parts.sessions),
+            completion=SseGenerationRunCompletion(),
         )
     )
 
@@ -170,6 +178,8 @@ def compose_worker(parts: HandlerParts, queries: Queries) -> WorkerComposition:
             queue=PgQueuerJobQueue(queries),
             autopilot=parts.bridge if parts.drive_autopilot else _NoAutopilot(),
             notices=OwnerDeadLetterNotices(parts.bridge, parts.sessions),
+            events=SqlGenerationEventRecorder(parts.sessions),
+            completion=SseGenerationRunCompletion(),
         )
     )
     recovery_store = SqlRecoveryStore(parts.sessions)

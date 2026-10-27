@@ -28,7 +28,8 @@ _SINGLE_HEAD = "d3e4f5a6b7c8"
 _AUDIENCE_HEAD = "a0e4f0a4b4c4"
 _QUOTES_HEAD = "c4d5e6f7a8b9"
 _COVER_HEAD = "d5e6f7a8b9c0"
-ALEMBIC_HEAD = "d1b0cf9cd80d"
+_GENERATION_RUNS_HEAD = "d1b0cf9cd80d"
+ALEMBIC_HEAD = "e7a91c4d2f60"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -93,6 +94,12 @@ def test_autopilot_revision_is_the_only_head() -> None:
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     assert list(script.get_heads()) == [ALEMBIC_HEAD]
+    events = script.get_revision(ALEMBIC_HEAD)
+    assert events is not None
+    assert events.down_revision == _GENERATION_RUNS_HEAD
+    runs = script.get_revision(_GENERATION_RUNS_HEAD)
+    assert runs is not None
+    assert runs.down_revision == "344dec4495d3"
     cover = script.get_revision(_COVER_HEAD)
     assert cover is not None
     assert cover.down_revision == _QUOTES_HEAD
@@ -132,6 +139,7 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
     present = _tables(db_path)
     for name in _TABLES:
         assert name in present
+    assert "carousel_generation_events" in present
     topic_columns = _columns(db_path, "topic_candidates")
     assert "why_viral" in topic_columns
     assert {"image_style", "image_guidance"} <= topic_columns
@@ -186,4 +194,5 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
     remaining = _tables(db_path)
     for name in _TABLES:
         assert name not in remaining
+    assert "carousel_generation_events" not in remaining
     assert "carousel_projects" in remaining

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -16,6 +16,7 @@ import {
   WORKFLOW_BOARD_POLL_INTERVAL_MS,
 } from "@/constants/workflow";
 import { ApiError } from "@/lib/api-client";
+import { generationLogKey } from "@/modules/editorial/workspace/hooks/use-generation-log";
 import type {
   CarouselReprocessCapability,
   ManualReprocessResponse,
@@ -184,6 +185,28 @@ async function runCarouselReprocess(
   }
 }
 
+function useGenerationLogPollRefresh(
+  projectId: string,
+  dataUpdatedAt: number,
+): void {
+  const queryClient = useQueryClient();
+  const previousUpdate = useRef(dataUpdatedAt);
+  const hasData = useRef(dataUpdatedAt > 0);
+  useEffect(() => {
+    if (dataUpdatedAt === 0 || previousUpdate.current === dataUpdatedAt) {
+      return;
+    }
+    previousUpdate.current = dataUpdatedAt;
+    if (!hasData.current) {
+      hasData.current = true;
+      return;
+    }
+    void queryClient.invalidateQueries({
+      queryKey: generationLogKey(projectId),
+    });
+  }, [dataUpdatedAt, projectId, queryClient]);
+}
+
 function useReprocessQuery(
   projectId: string,
   enabled: boolean,
@@ -276,6 +299,7 @@ export function useCarouselReprocess(
     options.enabled,
     progressRunId,
   );
+  useGenerationLogPollRefresh(options.projectId, query.dataUpdatedAt);
   const forbidden = isStatus(query.error, HTTP_STATUS.FORBIDDEN);
   const capability = forbidden ? null : (query.data ?? null);
   const action = useReprocessAction(options, capability, markProgressRequested);

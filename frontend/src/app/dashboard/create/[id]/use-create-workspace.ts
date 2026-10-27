@@ -9,7 +9,12 @@ import {
   resolveStepFromWorkflowPhase,
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
-import { useCarouselProject, useEditorialWorkflow } from "@/modules/editorial";
+import {
+  useCarouselProject,
+  useEditorialWorkflow,
+  useGenerationLog,
+} from "@/modules/editorial";
+import type { GenerationLogView } from "@/modules/editorial";
 import type { ContentSource } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { createRetryWorkflowHandler } from "@/app/dashboard/create/[id]/create-retry-handler";
@@ -199,6 +204,7 @@ export interface CreateWorkspace {
   workflowStepId: CreateStepId;
   projectQuery: ReturnType<typeof useCarouselProject>;
   editorialWorkflow: EditorialWorkflow;
+  generationLog: GenerationLogView;
   projectSources: ContentSource[];
   setProjectSources: (sources: ContentSource[]) => void;
   sources: WorkflowSource[];
@@ -222,6 +228,7 @@ export function useCreateWorkspace(): CreateWorkspace {
       project !== undefined &&
       !NOT_STARTED_PHASES.has(project.current_phase ?? ""),
   });
+  const generationLog = useGenerationLog(projectId, editorialWorkflow.state);
   const [projectSources, setProjectSources] = useState<ContentSource[]>([]);
   const [publishedProject, setPublishedProject] =
     useState<CarouselProjectResponse | null>(null);
@@ -252,6 +259,7 @@ export function useCreateWorkspace(): CreateWorkspace {
     workflowStepId,
     projectQuery,
     editorialWorkflow,
+    generationLog,
     projectSources,
     setProjectSources,
     sources,

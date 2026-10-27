@@ -83,6 +83,12 @@ class CopyEnv:
             headers=auth_headers_for(user),
         )
 
+    def anonymous_client(self) -> AsyncClient:
+        """An HTTP client without authentication."""
+        return AsyncClient(
+            transport=ASGITransport(app=self._app), base_url="http://test"
+        )
+
     async def seed_carousel(self) -> str:
         """A completed carousel of the owner with its canonical distribution row."""
         from rag_backend.domain.constants.blog_post import (

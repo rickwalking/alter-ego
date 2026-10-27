@@ -7,6 +7,7 @@ dispatcher and a future retry button can race without a lost update.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -15,6 +16,7 @@ from sqlalchemy.dialects.postgresql import array as pg_array
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.generation_queue.constants import (
     ACTIVE_STATUSES,
     KIND_WORKFLOW_RESUME,
@@ -67,6 +69,25 @@ def run_from_row(row: GenerationRunModel) -> GenerationRun:
     )
 
 
+async def _resolve_project(session: AsyncSession, run: GenerationRun) -> GenerationRun:
+    if run.carousel_project_id is not None or run.autopilot_run_id is None:
+        return run
+    parent_id = _autopilot_uuid(run.autopilot_run_id)
+    if parent_id is None:
+        return run
+    parent = await session.get(AutopilotRunModel, parent_id)
+    if parent is None:
+        return run
+    return replace(run, carousel_project_id=parent.carousel_project_id)
+
+
+def _autopilot_uuid(value: str) -> UUID | None:
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
+
+
 def _active() -> ColumnElement[bool]:
     return GenerationRunModel.status.in_(ACTIVE_STATUSES)
 
@@ -107,7 +128,9 @@ class SqlGenerationRunStore:
         """The run, or None."""
         async with self._sessions() as session:
             row = await session.get(GenerationRunModel, run_id)
-            return run_from_row(row) if row is not None else None
+            if row is None:
+                return None
+            return await _resolve_project(session, run_from_row(row))
 
     async def stage(self, command: StageCommand) -> bool:
         """Stage in a session of its own (the dispatcher's safety net)."""
@@ -142,7 +165,10 @@ class SqlGenerationRunStore:
                 .order_by(GenerationRunModel.created_at, GenerationRunModel.id)
                 .limit(limit)
             )
-            return [run_from_row(row) for row in result.scalars().all()]
+            return [
+                await _resolve_project(session, run_from_row(row))
+                for row in result.scalars().all()
+            ]
 
     async def set_job(self, run_id: UUID, job_id: int) -> None:
         """Record the job carrying the run."""

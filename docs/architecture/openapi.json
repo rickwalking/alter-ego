@@ -2068,6 +2068,50 @@
         "title": "CarouselDesignTypography",
         "type": "object"
       },
+      "CarouselGenerationLogResponse": {
+        "description": "One event page and the runs needed to group it.",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationEventResponse"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationRunResponse"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "events",
+          "runs",
+          "next_cursor"
+        ],
+        "title": "CarouselGenerationLogResponse",
+        "type": "object"
+      },
       "CarouselProjectCreate": {
         "description": "Request body that creates a carousel project.\n\ntheme is a root key, \"auto\" or a custom-palette UUID (36 chars), stored as a string\nreference in a varchar(64) column. rubric_id is the quality rubric (left out: the\ndefault carousel rubric; null: none).",
         "properties": {
@@ -5548,6 +5592,148 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "GenerationEventResponse": {
+        "description": "One content-free generation event.",
+        "properties": {
+          "attempt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt"
+          },
+          "details": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Details",
+            "type": "object"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "generation_run_id": {
+            "format": "uuid",
+            "title": "Generation Run Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "langfuse_trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langfuse Trace Id"
+          },
+          "langfuse_trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langfuse Trace Url"
+          },
+          "message_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Code"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          }
+        },
+        "required": [
+          "id",
+          "generation_run_id",
+          "event_type",
+          "phase",
+          "outcome",
+          "occurred_at",
+          "duration_ms",
+          "attempt",
+          "error_code",
+          "message_code",
+          "details",
+          "langfuse_trace_id",
+          "langfuse_trace_url"
+        ],
+        "title": "GenerationEventResponse",
+        "type": "object"
+      },
       "GenerationRunReprocessRequest": {
         "description": "Admin recovery with an optional project version fence.",
         "properties": {
@@ -5565,6 +5751,92 @@
           }
         },
         "title": "GenerationRunReprocessRequest",
+        "type": "object"
+      },
+      "GenerationRunResponse": {
+        "description": "The current safe queue fields of one referenced run.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "queued_at": {
+            "format": "date-time",
+            "title": "Queued At",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "queued_at",
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "attempts",
+          "error_code"
+        ],
+        "title": "GenerationRunResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -14766,6 +15038,84 @@
         "summary": "Download Carousel",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/generation-log": {
+      "get": {
+        "description": "Return a bounded keyset page after the workspace access check.",
+        "operationId": "list_carousel_generation_log_api_carousels__project_id__generation_log_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselGenerationLogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Not the owner or an admin"
+          },
+          "404": {
+            "description": "Carousel not found"
+          },
+          "422": {
+            "description": "Invalid cursor"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List one carousel's sanitized generation history",
+        "tags": [
+          "carousels",
+          "carousels-generation-log"
         ]
       }
     },

@@ -1,8 +1,4 @@
-"""Public facade of the generation queue bounded context.
-
-Cross-module code imports only these symbols (also re-exported from the package
-``__init__``). The worker entry (``rag_backend.worker``) composes the rest.
-"""
+"""Public facade of the generation queue bounded context."""
 
 from __future__ import annotations
 
@@ -171,10 +167,14 @@ async def stage_workflow_resume(
 def register_persistence_models() -> tuple[str, ...]:
     """Import the ORM model so its table attaches to ``Base.metadata``."""
     from rag_backend.modules.generation_queue.infrastructure.models import (
+        CarouselGenerationEventModel,
         GenerationRunModel,
     )
 
-    return (GenerationRunModel.__tablename__,)
+    return (
+        GenerationRunModel.__tablename__,
+        CarouselGenerationEventModel.__tablename__,
+    )
 
 
 async def listen_for_progress(

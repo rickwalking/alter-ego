@@ -41,6 +41,7 @@ from rag_backend.modules.generation_queue.infrastructure.cutover import (
     orphaned_projects,
 )
 from rag_backend.modules.generation_queue.infrastructure.models import (
+    CarouselGenerationEventModel,
     GenerationRunModel,
 )
 
@@ -68,6 +69,25 @@ async def mark_recovery_attempt(session: AsyncSession, generation_run_id: UUID) 
         .values(payload=payload)
     )
     return cast(CursorResult[object], result).rowcount == 1
+
+
+async def _purge_events(session: AsyncSession, before: datetime) -> None:
+    while True:
+        ids = (
+            await session.scalars(
+                select(CarouselGenerationEventModel.id)
+                .where(CarouselGenerationEventModel.occurred_at < before)
+                .order_by(CarouselGenerationEventModel.id)
+                .limit(SCAN_BATCH)
+            )
+        ).all()
+        if not ids:
+            return
+        await session.execute(
+            delete(CarouselGenerationEventModel).where(
+                CarouselGenerationEventModel.id.in_(ids)
+            )
+        )
 
 
 class SqlRecoveryStore:
@@ -125,8 +145,9 @@ class SqlRecoveryStore:
             return [title for _, title in await orphaned_projects(session)]
 
     async def purge(self, before: datetime) -> tuple[int, int]:
-        """Delete succeeded runs and PgQueuer log rows older than ``before``."""
+        """Delete expired events, succeeded runs and PgQueuer logs."""
         async with self._sessions() as session:
+            await _purge_events(session, before)
             runs = await session.execute(
                 delete(_G).where(_G.status == STATUS_SUCCEEDED, _G.finished_at < before)
             )

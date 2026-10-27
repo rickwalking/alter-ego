@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rag_backend.application.services.carousel.carousel_export_assets import (
@@ -37,6 +38,17 @@ from rag_backend.domain.constants.creator_asset import ARTIFACT_ASSETS_DIR
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.generation_queue.events_public import (
+    EVENT_PDF_FAILED,
+    EVENT_PDF_SUCCEEDED,
+    MESSAGE_EXPORT,
+    OUTCOME_FAILED,
+    OUTCOME_SUCCEEDED,
+    OUTCOME_WARNING,
+    GenerationEventInput,
+    record_generation_event,
+    set_generation_event_project,
+)
 
 logger = get_logger()
 
@@ -60,6 +72,10 @@ class BilingualExportConfig:
 
 _UP_ONE = "../"
 _UP_TWO = "../../"
+_PHASE_EXPORT = "export"
+_ERROR_HD_EXPORT = "hd_export_failed"
+_ERROR_PDF_BUILD = "pdf_build_failed"
+_ERROR_SLIDES_EXPORT = "slides_export_failed"
 
 
 def rewrite_asset_paths(html: str, up: str) -> str:
@@ -75,6 +91,10 @@ def rewrite_asset_paths(html: str, up: str) -> str:
     return html
 
 
+def _elapsed_ms(started: datetime) -> int:
+    return max(0, round((datetime.now(UTC) - started).total_seconds() * 1000))
+
+
 async def render_language(
     config: BilingualExportConfig,
 ) -> None:
@@ -85,6 +105,8 @@ async def render_language(
     one after the other, and the PIL asset preparation and the img2pdf build run in a
     worker thread so the event loop keeps serving requests.
     """
+    started_at = datetime.now(UTC)
+    set_generation_event_project(str(config.project.id))
     lang_dir = config.output_dir / config.language
     lang_dir.mkdir(parents=True, exist_ok=True)
     if config.language == LANGUAGE_PT:
@@ -95,11 +117,26 @@ async def render_language(
 
     policy_version = config.project.presentation_policy_version
     slide_count = len(config.slides_data) or config.project.slide_count
-    slide_paths = await config.export.export_slides(
-        html_content=standard_html,
-        output_dir=str(lang_dir),
-        config=ExportConfig(policy_version=policy_version, slide_count=slide_count),
-    )
+    try:
+        slide_paths = await config.export.export_slides(
+            html_content=standard_html,
+            output_dir=str(lang_dir),
+            config=ExportConfig(policy_version=policy_version, slide_count=slide_count),
+        )
+    except Exception as exc:
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_PDF_FAILED,
+                outcome=OUTCOME_FAILED,
+                phase=_PHASE_EXPORT,
+                occurred_at=datetime.now(UTC),
+                duration_ms=_elapsed_ms(started_at),
+                error_code=_ERROR_SLIDES_EXPORT,
+                message_code=MESSAGE_EXPORT,
+                details={"language": config.language, "error_type": type(exc).__name__},
+            )
+        )
+        raise
     try:
         hd_dir = lang_dir / HD_SUBDIR_NAME
         hd_dir.mkdir(parents=True, exist_ok=True)
@@ -110,12 +147,24 @@ async def render_language(
                 hd=True, policy_version=policy_version, slide_count=slide_count
             ),
         )
-    except Exception:
+    except Exception as exc:
         logger.warning(
             "hd_export_failed",
             project_id=str(config.project.id),
             language=config.language,
             exc_info=True,
+        )
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_PDF_FAILED,
+                outcome=OUTCOME_WARNING,
+                phase=_PHASE_EXPORT,
+                occurred_at=datetime.now(UTC),
+                duration_ms=_elapsed_ms(started_at),
+                error_code=_ERROR_HD_EXPORT,
+                message_code=MESSAGE_EXPORT,
+                details={"language": config.language, "error_type": type(exc).__name__},
+            )
         )
     if config.pdf_builder is None or not slide_paths:
         return
@@ -132,11 +181,34 @@ async def render_language(
             language=config.language,
             error=str(exc),
         )
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_PDF_FAILED,
+                outcome=OUTCOME_FAILED,
+                phase=_PHASE_EXPORT,
+                occurred_at=datetime.now(UTC),
+                duration_ms=_elapsed_ms(started_at),
+                error_code=_ERROR_PDF_BUILD,
+                message_code=MESSAGE_EXPORT,
+                details={"language": config.language, "error_type": type(exc).__name__},
+            )
+        )
         return
     if config.language == LANGUAGE_EN:
         config.project.pdf_path_en = pdf_path
     else:
         config.project.pdf_path = pdf_path
+    await record_generation_event(
+        GenerationEventInput(
+            event_type=EVENT_PDF_SUCCEEDED,
+            outcome=OUTCOME_SUCCEEDED,
+            phase=_PHASE_EXPORT,
+            occurred_at=datetime.now(UTC),
+            duration_ms=_elapsed_ms(started_at),
+            message_code=MESSAGE_EXPORT,
+            details={"language": config.language, "page_count": len(slide_paths)},
+        )
+    )
 
 
 async def run_bilingual_export(

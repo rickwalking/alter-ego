@@ -425,6 +425,84 @@
       "activePhase": "Active phase",
       "startingWorkflow": "Starting editorial workflow…"
     },
+    "generationLog": {
+      "title": "Generation log",
+      "empty": "No generation events yet.",
+      "loading": "Loading generation history…",
+      "loadError": "Could not refresh the generation log. Showing the latest loaded events.",
+      "initialError": "Could not load the generation log.",
+      "loadMore": "Load more",
+      "attempts": "Attempts: {count}",
+      "queuedAt": "Queued:",
+      "startedAt": "Started:",
+      "finishedAt": "Finished:",
+      "errorCode": "Error: {code}",
+      "attempt": "Attempt {count}",
+      "openTrace": "Open Langfuse trace",
+      "kinds": {
+        "workflow_resume": "Workflow resume",
+        "autopilot_drive": "Autopilot drive"
+      },
+      "statuses": {
+        "queued": "Queued",
+        "running": "Running",
+        "retry_wait": "Waiting to retry",
+        "succeeded": "Succeeded",
+        "dead_letter": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "outcomes": {
+        "queued": "Queued",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "retry_wait": "Retry scheduled",
+        "dead_letter": "Failed",
+        "recovered": "Recovered",
+        "reused": "Reused",
+        "warning": "Warning"
+      },
+      "phases": {
+        "run": "Run",
+        "start": "Start",
+        "export": "Export / PDF",
+        "recovery": "Recovery"
+      },
+      "events": {
+        "run_queued": "Run queued",
+        "run_started": "Run started",
+        "run_waiting": "Waiting for the next drive step",
+        "run_succeeded": "Queue drive completed",
+        "run_retry": "Retry scheduled",
+        "run_dead_letter": "Run failed",
+        "run_lost": "Lost queue job recovered",
+        "phase_started": "Phase started",
+        "phase_succeeded": "Phase completed",
+        "phase_failed": "Phase failed",
+        "phase_artifacts": "Phase artifacts updated",
+        "persona_scored": "Persona scores updated",
+        "content_gate": "Content gate checked",
+        "image_job_started": "Image job started",
+        "image_job_reused": "Image job reused",
+        "image_job_succeeded": "Image job completed",
+        "image_job_failed": "Image job failed",
+        "image_reused": "Existing image reused",
+        "image_slide_succeeded": "Slide image completed",
+        "image_slide_failed": "Slide image failed",
+        "pdf_succeeded": "PDF built",
+        "pdf_failed": "Export or PDF issue",
+        "recovery_reaped": "Stale run recovered",
+        "workflow_succeeded": "Workflow completed",
+        "workflow_failed": "Workflow failed"
+      },
+      "details": {
+        "violations": "{count} violations",
+        "personaScore": "Lowest persona score: {score}",
+        "imageJob": "Image job: {id}",
+        "retryDelay": "Retry in {seconds}s",
+        "pages": "{count} PDF pages"
+      }
+    },
     "chat": {
       "error": "An error occurred while processing your request."
     },

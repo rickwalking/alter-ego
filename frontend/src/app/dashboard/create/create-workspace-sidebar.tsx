@@ -7,8 +7,10 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
+import type { GenerationLogView } from "@/modules/editorial";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
+import { CreateGenerationLog } from "@/app/dashboard/create/workspace/create-generation-log";
 import { ProjectSummaryCard } from "@/app/dashboard/create/workspace/project-summary-card";
 import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 import { usePhaseLabel } from "@/app/dashboard/create/workspace/editorial-phase-labels";
@@ -25,6 +27,7 @@ export interface CreateWorkspaceSidebarProps {
   workflowState: EditorialWorkflowState | null;
   activeStepId: string;
   projectId: string;
+  generationLog?: GenerationLogView;
 }
 
 /** The phase fields the summary card shows (all null before a workflow). */
@@ -74,6 +77,7 @@ export function CreateWorkspaceSidebar({
   workflowState,
   activeStepId,
   projectId,
+  generationLog,
 }: Readonly<CreateWorkspaceSidebarProps>): React.ReactElement {
   const t = useTranslations("create");
 
@@ -122,6 +126,8 @@ export function CreateWorkspaceSidebar({
       )}
 
       <ActivePhaseCard workflowState={workflowState} />
+
+      <CreateGenerationLog query={generationLog} />
 
       <CreateWorkflowArtifacts state={workflowState} />
     </div>

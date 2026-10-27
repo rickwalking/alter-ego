@@ -62,14 +62,18 @@ def redact_event_dict(
     return event_dict
 
 
-def setup_logging(*, debug: bool = False) -> None:
-    """Configure structured logging for the application.
+def configure_structlog(*, debug: bool = False) -> None:
+    """Configure the structlog pipeline only (no stdlib logging side effects).
+
+    Production JSON pipeline when ``debug`` is False, dev console otherwise.
+    Tests that are timing-sensitive around ``exc_info`` logging use this to run
+    under the production renderer: structlog's unconfigured defaults render the
+    first exception through rich with locals, which can stall an event loop for
+    hundreds of milliseconds cold.
 
     Args:
-        debug: If True, use human-readable dev output. If False, use JSON for production.
+        debug: If True, use human-readable dev output. If False, use JSON.
     """
-    log_level = logging.DEBUG if debug else logging.INFO
-
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
@@ -92,6 +96,17 @@ def setup_logging(*, debug: bool = False) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
+
+
+def setup_logging(*, debug: bool = False) -> None:
+    """Configure structured logging for the application.
+
+    Args:
+        debug: If True, use human-readable dev output. If False, use JSON for production.
+    """
+    log_level = logging.DEBUG if debug else logging.INFO
+
+    configure_structlog(debug=debug)
 
     logging.basicConfig(
         format="%(message)s",

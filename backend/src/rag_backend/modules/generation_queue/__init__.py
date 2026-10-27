@@ -14,6 +14,7 @@ from rag_backend.modules.generation_queue.domain.maintenance import (
     MaintenanceEnqueue,
     MaintenanceMode,
 )
+from rag_backend.modules.generation_queue.events_public import read_generation_log
 from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
     WebMaintenanceGateway,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "apply_queue_schema",
     "format_queue_schema_report",
     "hold_project_drive",
+    "read_generation_log",
     "register_persistence_models",
     "stage_workflow_resume",
     "verify_queue_schema",

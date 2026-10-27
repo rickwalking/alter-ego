@@ -1,6 +1,8 @@
 # Active Task
 
-No active task. AE-0561 external QA is complete on `fix/ae-0561-langfuse-auth-check`; PR CI is the remaining delivery evidence.
+AE-0556 is Dev Complete on `feat/ae-0556-generation-log`.
+
+All local full backend/frontend gates are green. PR CI and backend mutation remain for final QA signoff.
 
 ## Rules
 

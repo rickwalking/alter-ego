@@ -6,6 +6,7 @@
  * live here rather than inline in the hook `.ts` files.
  */
 
+import type { InfiniteData } from "@tanstack/react-query";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type {
   EditorialWorkflowTransportMode,
@@ -17,6 +18,16 @@ import type {
   SlideValidationViolation,
 } from "@/modules/editorial/workspace/types-ai";
 import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
+import type { GenerationLogPage } from "@/schemas/carousel-generation-log";
+
+export interface GenerationLogView {
+  data?: InfiniteData<GenerationLogPage>;
+  isLoading: boolean;
+  isError: boolean;
+  isFetchingNextPage: boolean;
+  hasNextPage?: boolean;
+  fetchNextPage: () => Promise<unknown>;
+}
 
 export interface EditorialReviseOptions {
   targetPhase?: string;

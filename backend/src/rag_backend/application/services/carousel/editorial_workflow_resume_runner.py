@@ -19,6 +19,19 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel import resume_persona
+from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
+    MarkFailedParams,
+    RevertContext,
+)
+from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
+    mark_background_resume_failed as _mark_failed_with_factory,
+)
+from rag_backend.application.services.carousel.editorial_workflow_resume_failures import (
+    revert_background_resume_stuck as _revert_stuck_with_factory,
+)
+from rag_backend.application.services.carousel.editorial_workflow_resume_rules import (
+    detect_resume_stuck,
+)
 from rag_backend.application.services.carousel.editorial_workflow_run_events import (
     publish_run_finished,
     publish_run_stage_changed,
@@ -42,19 +55,14 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.domain.constants.carousel_run import (
     LOG_EVENT_RUN_FENCED,
     RUN_FINISHED_REASON_COMPLETED,
-    RUN_FINISHED_REASON_FAILED,
     RUN_STAGE_GENERATING,
     RUN_STAGE_PERSISTING,
     RUN_STAGE_VALIDATING,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_BACKGROUND_RESUME_FAILED,
-    ERR_BACKGROUND_RESUME_STUCK,
     ERR_PERSONA_SCORE_TOO_LOW,
     ERR_REVISION_CAP_EXCEEDED,
-    PHASE_STATUS_AWAITING_HUMAN,
-    PHASE_STATUS_FAILED,
-    REVIEW_ACTION_APPROVE,
     RUN_ACTION_REDRIVE,
 )
 from rag_backend.domain.models.carousel_run import (
@@ -69,31 +77,27 @@ from rag_backend.modules.editorial.public import (
     read_run_fence,
     write_run_heartbeat_once,
 )
+from rag_backend.modules.generation_queue.events_public import (
+    OUTCOME_FAILED,
+    OUTCOME_SUCCEEDED,
+    OUTCOME_WARNING,
+    WorkflowOutcomeObservation,
+    record_workflow_outcome,
+)
 
 logger = structlog.get_logger()
 
 _background_tasks: set[asyncio.Task[None]] = set()
 
 _TASK_NAME_PREFIX = "workflow-resume-"
-
-
-@dataclass(frozen=True)
-class _MarkFailedParams:
-    """Inputs for marking a background resume as failed."""
-
-    service: EditorialWorkflowService
-    project_id: str
-    message: str
-    recoverable: bool
+_ERROR_RESUME_STUCK = "background_resume_stuck"
+_ERROR_RESUME_VALIDATION = "resume_validation_failed"
+_ERROR_STALE_EPOCH = "stale_run_epoch"
 
 
 @dataclass(frozen=True)
 class BackgroundResumeParams:
-    """Inputs required to resume a workflow in the background.
-
-    ``action`` is a review action, or ``RUN_ACTION_REDRIVE`` to re-run a
-    parked pending node without a review decision.
-    """
+    """Inputs for a review resume or a parked-node re-drive."""
 
     project_id: str
     action: str
@@ -167,6 +171,15 @@ async def _execute_owned_run(
         await _run_background_resume(service, params)
     except StaleRunEpochError:
         logger.warning(LOG_EVENT_RUN_FENCED, project_id=params.project_id)
+        await record_workflow_outcome(
+            WorkflowOutcomeObservation(
+                project_id=params.project_id,
+                phase=None,
+                outcome=OUTCOME_WARNING,
+                error_code=_ERROR_STALE_EPOCH,
+                error_type=StaleRunEpochError.__name__,
+            )
+        )
     finally:
         if token is not None:
             carousel_run_epoch_var.reset(token)
@@ -213,7 +226,7 @@ async def _run_background_resume(
             state = await _run_phase(service, params, db)
             await _beat_and_stage(ctx, RUN_STAGE_VALIDATING)
 
-            if _detect_resume_stuck(
+            if detect_resume_stuck(
                 params,
                 prior_phase,
                 state,
@@ -229,6 +242,14 @@ async def _run_background_resume(
                     params.project_id,
                     prior_phase,
                 )
+                await record_workflow_outcome(
+                    WorkflowOutcomeObservation(
+                        project_id=params.project_id,
+                        phase=prior_phase,
+                        outcome=OUTCOME_FAILED,
+                        error_code=_ERROR_RESUME_STUCK,
+                    )
+                )
                 return
 
             await _beat_and_stage(ctx, RUN_STAGE_PERSISTING)
@@ -238,6 +259,13 @@ async def _run_background_resume(
                 params.project_id,
                 RUN_FINISHED_REASON_COMPLETED,
                 final_phase_status=str(state.get("phase_status", "")),
+            )
+            await record_workflow_outcome(
+                WorkflowOutcomeObservation(
+                    project_id=params.project_id,
+                    phase=str(state.get("current_phase", "")),
+                    outcome=OUTCOME_SUCCEEDED,
+                )
             )
         except StaleRunEpochError:
             await db.rollback()
@@ -255,12 +283,21 @@ async def _run_background_resume(
                     detail=detail,
                 )
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=detail,
                     recoverable=detail != ERR_REVISION_CAP_EXCEEDED,
                 ),
+            )
+            await record_workflow_outcome(
+                WorkflowOutcomeObservation(
+                    project_id=params.project_id,
+                    phase=prior_phase,
+                    outcome=OUTCOME_FAILED,
+                    error_code=_ERROR_RESUME_VALIDATION,
+                    error_type=type(exc).__name__,
+                )
             )
         except asyncio.CancelledError:
             await db.rollback()
@@ -270,7 +307,7 @@ async def _run_background_resume(
             )
             try:
                 await _mark_background_resume_failed(
-                    _MarkFailedParams(
+                    MarkFailedParams(
                         service=service,
                         project_id=params.project_id,
                         message=ERR_BACKGROUND_RESUME_FAILED,
@@ -289,13 +326,42 @@ async def _run_background_resume(
                 error_type=type(exc).__name__,
             )
             await _mark_background_resume_failed(
-                _MarkFailedParams(
+                MarkFailedParams(
                     service=service,
                     project_id=params.project_id,
                     message=ERR_BACKGROUND_RESUME_FAILED,
                     recoverable=True,
                 ),
             )
+            await record_workflow_outcome(
+                WorkflowOutcomeObservation(
+                    project_id=params.project_id,
+                    phase=prior_phase,
+                    outcome=OUTCOME_FAILED,
+                    error_code=ERR_BACKGROUND_RESUME_FAILED,
+                    error_type=type(exc).__name__,
+                )
+            )
+
+
+async def _revert_background_resume_stuck(
+    service: EditorialWorkflowService,
+    project_id: str,
+    _prior_phase: str,
+) -> None:
+    await _revert_stuck_with_factory(
+        RevertContext(
+            service=service,
+            project_id=project_id,
+            prior_phase=_prior_phase,
+            session_factory=get_session_maker(),
+            publish=publish_run_finished,
+        )
+    )
+
+
+async def _mark_background_resume_failed(params: MarkFailedParams) -> None:
+    await _mark_failed_with_factory(params, get_session_maker(), publish_run_finished)
 
 
 async def _run_phase(
@@ -322,72 +388,6 @@ async def _run_phase(
             structured_feedback=params.structured_feedback,
         ),
     )
-
-
-def _detect_resume_stuck(
-    params: BackgroundResumeParams,
-    prior_phase: str,
-    state: dict[str, object],
-) -> bool:
-    """Return True when an approve resume completed but phase did not advance.
-
-    Revise and reject actions legitimately return to the same phase with
-    awaiting_human — stuck detection is scoped to approve only.
-    """
-    if params.action != REVIEW_ACTION_APPROVE:
-        return False
-    current_phase = str(state.get("current_phase", ""))
-    current_status = str(state.get("phase_status", ""))
-    return bool(
-        prior_phase
-        and current_phase == prior_phase
-        and current_status == PHASE_STATUS_AWAITING_HUMAN
-    )
-
-
-async def _revert_background_resume_stuck(
-    service: EditorialWorkflowService,
-    project_id: str,
-    _prior_phase: str,
-) -> None:
-    """Revert DB phase_status to awaiting_human and publish error SSE."""
-    session_factory = get_session_maker()
-    async with session_factory() as db:
-        await CarouselProjectWriteOwner(db).set_phase_status_and_commit(
-            project_id,
-            PHASE_STATUS_AWAITING_HUMAN,
-        )
-        await service.publish_resume_error_event(
-            project_id,
-            message=ERR_BACKGROUND_RESUME_STUCK,
-            recoverable=True,
-        )
-        await publish_run_finished(
-            project_id,
-            RUN_FINISHED_REASON_FAILED,
-            final_phase_status=PHASE_STATUS_AWAITING_HUMAN,
-        )
-
-
-async def _mark_background_resume_failed(
-    params: _MarkFailedParams,
-) -> None:
-    session_factory = get_session_maker()
-    async with session_factory() as db:
-        await CarouselProjectWriteOwner(db).set_phase_status_and_commit(
-            params.project_id,
-            PHASE_STATUS_FAILED,
-        )
-        await params.service.publish_resume_error_event(
-            params.project_id,
-            message=params.message,
-            recoverable=params.recoverable,
-        )
-        await publish_run_finished(
-            params.project_id,
-            RUN_FINISHED_REASON_FAILED,
-            final_phase_status=PHASE_STATUS_FAILED,
-        )
 
 
 __all__ = [
