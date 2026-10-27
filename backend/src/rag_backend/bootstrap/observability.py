@@ -5,6 +5,7 @@ from __future__ import annotations
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.langfuse_client import (
     init_langfuse,
+    safe_langfuse_host,
     schedule_langfuse_auth_check,
 )
 from rag_backend.infrastructure.logging import get_logger, setup_logging
@@ -31,7 +32,9 @@ def init_observability(settings: Settings) -> None:
         settings.langfuse_host,
     )
     if langfuse:
-        logger.info("langfuse_initialized", host=settings.langfuse_host)
+        logger.info(
+            "langfuse_initialized", host=safe_langfuse_host(settings.langfuse_host)
+        )
         schedule_langfuse_auth_check(langfuse, settings.langfuse_host)
     else:
         logger.info("langfuse_disabled", reason="langfuse keys not set")

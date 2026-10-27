@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
+AE-0561 is Dev Complete on `fix/ae-0561-langfuse-auth-check`.
 
-`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
+The final full backend capture is green with zero failures; independent external QA and PR CI are pending.
 
 ## Rules
 
