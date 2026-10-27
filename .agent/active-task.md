@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
+AE-0566 is In Development on `fix/ae-0566-msgpack-cve`.
 
-`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
+The msgpack security-floor update and focused verification are in progress.
 
 ## Rules
 
