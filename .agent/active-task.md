@@ -1,8 +1,6 @@
 # Active Task
 
-AE-0566 is In Development on `fix/ae-0566-msgpack-cve`.
-
-The msgpack security-floor update and focused verification are in progress.
+No active task. AE-0566 msgpack repair and external QA are complete; the overall audit remains blocked by the separate dnspython advisory.
 
 ## Rules
 

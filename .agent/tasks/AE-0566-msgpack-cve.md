@@ -86,11 +86,11 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -99,6 +99,8 @@ The locked msgpack 1.2.1 release is flagged by CVE-2026-114613. Its C extension 
 Urgent fix-forward ticket created from current `origin/main` in a dedicated worktree. The existing checkpoint fixture uses LangGraph's msgpack serializer and provides focused compatibility coverage without adding application code.
 
 The floor now resolves msgpack 1.2.4 through uv 0.13.5 with no other package upgrade and the existing lock revision retained. All three checkpoint portability tests pass, as do Ruff, strict mypy, and integrity. The audit no longer reports msgpack but remains red on the separate dnspython 2.8.0 advisory CVE-2026-114605 (fixed in 2.9.0); that package is outside this ticket and is reported rather than suppressed.
+
+Independent external QA confirmed AC1 and AC3, the minimal lockfile, the checkpoint tests, and the no-`.feature` classification. It returned FAIL only because AC2 remains blocked by dnspython. PR CI is pending.
 
 ## Files Touched
 
@@ -119,7 +121,7 @@ The floor now resolves msgpack 1.2.4 through uv 0.13.5 with no other package upg
 
 ## QA Report
 
-Pending.
+[AE-0566.qa.md](../reports/AE-0566.qa.md) — FAIL, `mode: external`. The msgpack patch and no-`.feature` classification are accepted; the overall gate remains red on the separate dnspython advisory.
 
 ## Decision Log
 
@@ -132,4 +134,4 @@ Pending.
 
 ## Final Summary
 
-Pending.
+The existing msgpack floor is now `>=1.2.3`, both advisory IDs are documented, and the lock resolves 1.2.4 without other package upgrades. Three checkpoint portability tests, Ruff, strict mypy, and integrity pass. External QA validates the patch but the overall audit remains blocked by dnspython CVE-2026-114605, which requires a separate fix.
