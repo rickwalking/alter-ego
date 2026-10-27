@@ -671,8 +671,8 @@
           "2": "on a rooftop with the city behind",
           "3": "in a corner coffee shop with big windows",
           "4": "in an almost empty metro station",
-          "5": "in a leafy park with wooden benches",
-          "6": "in a bookshop with tall shelves",
+          "5": "in a leafy park with a wooden picnic table",
+          "6": "in a bookshop with tall shelves and a reading table",
           "7": "on an urban beach promenade with patterned pavement"
         },
         "light": {
@@ -693,7 +693,13 @@
           "2": "a small toy robot on the desk",
           "3": "a laptop with chat windows open",
           "4": "sticky notes with tasks linked by arrows",
-          "5": "headphones next to a voice assistant"
+          "5": "headphones next to a voice assistant",
+          "6": "a tablet showing a chatbot answer",
+          "7": "a smartwatch lighting up with an assistant reply",
+          "8": "a printed flowchart of agent steps in hand",
+          "9": "a small robot figurine held in one palm",
+          "10": "wireless earbuds and a phone showing a voice wave",
+          "11": "a notebook page full of prompt drafts"
         },
         "code": {
           "0": "a laptop with colourful code on screen",
@@ -701,7 +707,13 @@
           "2": "a mechanical keyboard in the foreground",
           "3": "a notebook with architecture sketches",
           "4": "tech stickers on the laptop lid",
-          "5": "a board with system boxes and arrows"
+          "5": "a board with system boxes and arrows",
+          "6": "a laptop carried under one arm",
+          "7": "a tablet showing a terminal",
+          "8": "a rubber duck in hand",
+          "9": "a phone showing a deploy notification",
+          "10": "a rolled-up printed system diagram in hand",
+          "11": "a coffee mug with a code joke on it"
         },
         "money": {
           "0": "a rising chart on the phone screen",
@@ -709,7 +721,13 @@
           "2": "a notebook with sums and a calculator",
           "3": "a folded business newspaper",
           "4": "a tablet with a sales dashboard",
-          "5": "a glass piggy bank"
+          "5": "a glass piggy bank",
+          "6": "a credit card in hand",
+          "7": "a long receipt being checked",
+          "8": "a half-open leather wallet",
+          "9": "a phone with a banking app open",
+          "10": "a pocket calculator in hand",
+          "11": "a printed price chart in hand"
         },
         "social": {
           "0": "a phone on a tripod recording",
@@ -717,7 +735,13 @@
           "2": "a phone full of like notifications",
           "3": "a lavalier mic clipped on",
           "4": "a wall of printed photos",
-          "5": "a small clapperboard in hand"
+          "5": "a small clapperboard in hand",
+          "6": "a phone held up for a selfie video",
+          "7": "a handheld gimbal with a phone",
+          "8": "a compact camera on a neck strap",
+          "9": "a printed post sketch covered in comments",
+          "10": "a handheld microphone",
+          "11": "a tablet showing an engagement graph"
         },
         "career": {
           "0": "a badge on a lanyard",
@@ -725,7 +749,13 @@
           "2": "a work backpack on one shoulder",
           "3": "a meeting table with chairs behind",
           "4": "a board of planning sticky notes",
-          "5": "a business book in hand"
+          "5": "a business book in hand",
+          "6": "a laptop bag on the shoulder",
+          "7": "a printed CV in hand",
+          "8": "a phone showing a calendar full of meetings",
+          "9": "a conference name tag",
+          "10": "a folder of documents under one arm",
+          "11": "a takeaway coffee and a notebook"
         },
         "general": {
           "0": "an open notebook with notes",
@@ -733,7 +763,13 @@
           "2": "a takeaway coffee cup",
           "3": "a half-open laptop",
           "4": "a pen between the fingers",
-          "5": "a small plant nearby"
+          "5": "a small plant nearby",
+          "6": "a pair of glasses in hand",
+          "7": "a newspaper under one arm",
+          "8": "a canvas tote bag on the shoulder",
+          "9": "a phone with headphones wrapped around it",
+          "10": "a paper map half unfolded",
+          "11": "a water bottle in hand"
         }
       }
     }
