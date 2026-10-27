@@ -44,14 +44,10 @@ const LOCATION_RULES: CoverIdeaPoolRules = {
   7: { provides: [OUTDOOR, RAILING] },
 };
 
-/** Shots: every framing except the close-up and the half-body shows the whole pose. */
+/** Shots: only the wide and the full-body framings show the whole pose. */
 const SHOT_RULES: CoverIdeaPoolRules = {
-  1: { provides: [FULL_BODY] },
   2: { provides: [FULL_BODY] },
-  4: { provides: [FULL_BODY] },
-  5: { provides: [FULL_BODY] },
   6: { provides: [FULL_BODY] },
-  7: { provides: [FULL_BODY] },
 };
 
 /** Wardrobe: the outfits with a jacket collar to adjust. */
