@@ -1,8 +1,6 @@
 # Active Task
 
-AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
-
-`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
+No active task. AE-0566 msgpack + dnspython repairs are dev-complete, the audit gate is green locally, and QA passes; PR CI runs on the single push.
 
 ## Rules
 
