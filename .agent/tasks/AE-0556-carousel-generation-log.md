@@ -10,7 +10,7 @@ Agent Lane: architect → developer → qa → release
 Branch: feat/ae-0556-generation-log
 Kanban Card: TBD
 Created: 2026-10-26
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 ## Goal
 
@@ -23,7 +23,7 @@ The carousel workspace shows a durable, live-updating generation timeline withou
 ## Scope
 
 - Add an append-only `carousel_generation_events` store keyed to a generation run and carousel, recorded at existing queue, phase, image, recovery and export seams.
-- Record each event immediately in its own short, best-effort transaction with a 100 ms timeout; never buffer events across steps or runs and never propagate store failures into generation.
+- Record each event immediately in its own short, best-effort transaction with a 100 ms timeout; never buffer events across steps or runs and never propagate store failures into generation. A timeout drops that event and emits at most one safe warning per 60 seconds in each worker.
 - Allowlist flat diagnostic details. Cap serialized details at 4096 bytes, item counts and string lengths, and bound every fixed field. Do not persist exception messages, SQL, bound parameters, prompts, model input/output, personal data, tokens, feedback or image bytes.
 - Reuse the safe AE-0553 logging pattern through a shared failure-metadata helper that emits only the exception type and a classified code. Planted secrets and `DBAPIError` SQL/parameters must not reach an event.
 - Store a real Langfuse trace id and SDK-generated trace URL when a phase trace exists; Langfuse remains optional.
@@ -47,10 +47,10 @@ The carousel workspace shows a durable, live-updating generation timeline withou
 - [x] AC2 Given a failed and retried run, When the log renders, Then it shows the classified error code and retry without a raw exception message; recovery and a manually reprocessed run are also visible.
 - [x] AC3 Given a non-owner non-admin or assigned reviewer, When they request the log, Then the API returns 403; anonymous requests return 401 and an unknown carousel returns 404; cross-project events never leak.
 - [x] AC4 Given an exception containing a planted secret and a `DBAPIError` containing SQL and bound parameters, When failure events are recorded and read, Then neither stored rows nor API responses contain the secret, SQL or parameters, and details remain at or below 4096 serialized bytes.
-- [x] AC5 Given an event store that raises or times out, When generation proceeds, Then the generation result is unchanged, one safe warning names only the event and exception types, and recorder latency is bounded and measured.
+- [x] AC5 Given an event store that raises or times out, When generation proceeds, Then the generation result is unchanged, safe warnings name only the event and exception types with timeout warnings rate-limited, and recorder latency is bounded and measured.
 - [x] AC6 Given more than one page of events, When the owner loads more, Then keyset pagination returns no duplicates or omissions even when a newer event arrives, and every request is bounded to at most 200 events.
-- [x] AC7 Given events older and newer than 30 days, When the existing daily purge runs, Then only expired events are removed and existing run/PgQueuer purges still complete on PostgreSQL.
-- [x] AC8 Given an active run, When existing SSE or polling updates arrive, Then the timeline refreshes without a new interval; older runs are collapsed, failures have text labels, durations are right-aligned, controls are keyboard accessible, and PT/EN strings exist.
+- [x] AC7 Given events older and newer than 30 days, When the existing daily purge runs, Then only expired events are removed in bounded batches and existing run/PgQueuer purges still complete on PostgreSQL.
+- [x] AC8 Given an active run, When existing SSE or polling updates arrive, Then the timeline refreshes without a new interval and reaches its terminal state without SSE; older runs are collapsed, failures and warnings have non-color cues, durations are right-aligned, controls are keyboard accessible, and PT/EN strings exist.
 - [x] AC9 Given Langfuse disabled or unavailable, Then generation and the log still work; given a real phase trace, Then its id and SDK-generated URL are stored and rendered as a link.
 
 ## Gherkin Scenarios
@@ -125,6 +125,14 @@ Independent QA research identified four concrete defects. Manual dispatch now re
 
 Code research rejected existing run/audit/outbox data as a complete or safe timeline source. Pedro's requested behavior is specified as a new bounded, sanitized, best-effort event stream with 30-day retention and no Langfuse dependency.
 
+### 2026-10-27
+
+PR review follow-up at `40ec3b674` and `fc2597ec2`: terminal logs now refetch from the existing carousel capability poll after each successful update, including the active-to-terminal response, without relying on SSE or adding an interval. Repeated no-op autopilot and busy-lock attempts leave one waiting event per streak; real work records the resumed run boundary, while no-op steps leave no phase events. Immediate yields keep normal retry events and separate adjacent wait streaks.
+
+Retention deletes expired events in batches of 50. Native disclosures no longer have a duplicate key handler, warnings have an icon and amber text, timeout warnings are rate-limited to one per 60 seconds, and resume helpers no longer import private cross-module names. The 0.962 ms measurement is p95 on disposable in-memory SQLite; production event writes are dropped at the 100 ms timeout without affecting generation.
+
+Red-first regressions covered six no-op waits, five busy locks, wait/yield/wait separation, fresh yields, terminal refresh without SSE and three retention batches. Final focused run: 103 backend and 18 frontend tests pass. Full captures: backend 7804 passed, 2 skipped, 26 PASS / 0 FAIL / 1 CI-only mutation SKIP with 97% diff coverage; frontend 18 PASS / 0 FAIL / 1 CI-only mutation SKIP. Both integrity scans report zero blockers and warnings.
+
 ## Files Touched
 
 - `.agent/active-task.md`, ticket, ADR-0028, architecture/plan/QA research and dev/QA reports.
@@ -164,6 +172,9 @@ Code research rejected existing run/audit/outbox data as a complete or safe time
 - 2026-10-26 (Pedro): retain events for 30 days through the existing daily purge; run and carousel deletion cascade to their events.
 - 2026-10-26 (Pedro): paginate up to 200 events with an event-id keyset cursor and return only run summaries needed by that page.
 - 2026-10-26 (Pedro): use the pinned Langfuse SDK's current trace id and `get_trace_url`; do not invent a URL or require Langfuse.
+- 2026-10-27 (Pedro): use the existing carousel capability poll as the terminal-refresh fallback; in-process or relayed SSE remains only the immediate path.
+- 2026-10-27 (Pedro): coalesce no-op and lock-busy waits to one persisted waiting event per streak and suppress their run/phase/retry noise; resumed real work closes the streak.
+- 2026-10-27 (Pedro): batch retention deletes and rate-limit timeout warnings rather than changing the best-effort write contract.
 
 ## Blockers
 
