@@ -6,7 +6,7 @@ Only the topic and the palette reach the model. The
 answer is JSON ``{"ideas": [...]}`` and every idea is re-checked here: a string of
 ``IDEA_MIN_LEN``-``IDEA_MAX_LEN`` characters once whitespace is collapsed, without
 markup characters or hex codes, not repeating another idea, and (for the v2
-object ideas) not repeating another idea's location and pose (AE-0562). Fewer than ``IDEA_MIN_COUNT`` usable
+object ideas) not repeating another idea's location and pose. Fewer than ``IDEA_MIN_COUNT`` usable
 ideas gets one more call; still fewer, or any LLM failure with nothing kept, raises
 :class:`CoverPromptIdeasError`. Nothing is stored.
 """

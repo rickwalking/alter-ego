@@ -10,8 +10,6 @@ export const COVER_IDEA_DIMENSIONS = [
   "light",
 ] as const;
 
-export type CoverIdeaDimension = (typeof COVER_IDEA_DIMENSIONS)[number];
-
 /** Options in each dimension pool (`create.coverIdeas.pools.<dimension>.<n>`). */
 export const COVER_IDEA_POOL_SIZE = 8;
 

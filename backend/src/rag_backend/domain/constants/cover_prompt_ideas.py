@@ -6,7 +6,7 @@ the carousel topic and palette. Only the topic and the palette reach the model,
 never personal data. An answer with fewer than ``IDEA_MIN_COUNT`` usable
 ideas gets ``IDEA_ATTEMPTS`` tries in all; the response carries at most
 ``IDEA_MAX_COUNT``. ``IDEA_MAX_LEN`` bounds one prompt so it fits the prompt field.
-Since AE-0562 the v2 prompt answers ideas as objects (``location``, ``pose``, ...,
+The v2 prompt answers ideas as objects (``location``, ``pose``, ...,
 ``prompt``): one repeating another's location and pose, or with a hex code, is
 dropped.
 Each call gets ``IDEAS_TIMEOUT_SECONDS``, so the two attempts stay under half a minute.
