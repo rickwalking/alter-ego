@@ -1,6 +1,6 @@
 # AE-0560 — Correct the recovery race event oracle
 
-Status: In Development
+Status: QA Running
 Tier: T1
 Priority: High
 Type: Bug
