@@ -91,8 +91,22 @@ describe("CoverPromptField", () => {
 
     const ideas = suggestions("Suggestions");
     expect(ideas).toHaveLength(6);
-    expect(ideas[0]).toHaveTextContent("plain #0b1020 background");
-    expect(ideas[0]).toHaveTextContent("hints at “AI at work”");
+    expect(ideas[0]).toHaveTextContent("in blue and yellow tones");
+    expect(ideas[0]).not.toHaveTextContent("#0b1020");
+    expect(ideas[0]).not.toHaveTextContent("AI at work");
+    expect(authenticatedFetch).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: Outras ideias shuffles the catalogue without an AI call */
+  it("shows a new curated set on Other ideas", async () => {
+    const user = renderField();
+    const before = suggestions("Suggestions").map((idea) => idea.textContent);
+
+    await user.click(screen.getByRole("button", { name: "Other ideas" }));
+
+    const after = suggestions("Suggestions").map((idea) => idea.textContent);
+    expect(after).toHaveLength(6);
+    expect(after).not.toEqual(before);
     expect(authenticatedFetch).not.toHaveBeenCalled();
   });
 
@@ -101,10 +115,9 @@ describe("CoverPromptField", () => {
     const user = renderField();
     const field = screen.getByLabelText("Prompt for the new photo");
 
-    await user.click(suggestions("Suggestions")[2]!);
-    expect(field).toHaveValue(
-      "Low-angle shot, confident posture, arms crossed, wide background with details in the #fde68a colour, with one element that hints at “AI at work”",
-    );
+    const picked = suggestions("Suggestions")[2]!;
+    await user.click(picked);
+    expect(field).toHaveValue(picked.textContent);
 
     await user.type(field, ", golden hour");
     expect((field as HTMLTextAreaElement).value.endsWith(", golden hour")).toBe(
@@ -234,14 +247,14 @@ describe("CoverPromptField", () => {
     await screen.findByRole("region", { name: "AI ideas for your topic" });
     rerender(<Harness topic="Remote work" palette={PALETTE} />);
 
-    expect(suggestions("Suggestions")[0]).toHaveTextContent("“Remote work”");
+    expect(suggestions("Suggestions")[0]).toHaveTextContent("headline");
     rerender(
       <Harness
         topic="AI at work"
         palette={{ ...PALETTE, accent: "#ffffff" }}
       />,
     );
-    expect(suggestions("Suggestions")[2]).toHaveTextContent("#ffffff");
+    expect(suggestions("Suggestions")[2]).toHaveTextContent("white tones");
     rerender(<Harness topic="AI at work" palette={PALETTE} />);
     expect(suggestions("AI ideas for your topic")).toHaveLength(3);
   });

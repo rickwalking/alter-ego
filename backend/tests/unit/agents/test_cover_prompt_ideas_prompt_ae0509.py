@@ -51,7 +51,7 @@ def test_the_prompt_carries_topic_palette_and_language() -> None:
 
     assert "<<<\nIA no trabalho\n>>>" in prompt
     assert "Slide palette: Noite: dark background #0b1020." in prompt
-    assert "Write 6 different prompts in Brazilian Portuguese" in prompt
+    assert "Write 6 prompts in Brazilian Portuguese" in prompt
     assert "at most 400 characters" in prompt
 
 
@@ -59,7 +59,7 @@ def test_the_prompt_asks_for_english() -> None:
     """Scenario: The ideas come in the dashboard's language."""
     prompt = cover_ideas_prompt("AI at work", "none", IdeaLocale.EN)
 
-    assert "prompts in English" in prompt
+    assert "Write 6 prompts in English" in prompt
 
 
 def test_topic_and_palette_cannot_close_the_markers() -> None:
@@ -97,3 +97,18 @@ def test_the_trace_carries_phase_agent_and_user(
             "content_type": "carousel",
         }
     ]
+
+
+def test_the_v2_prompt_asks_for_varied_scenes() -> None:
+    """Scenario: The prompt asks for ideas distinct on every visual dimension (AE-0562)."""
+    prompt = cover_ideas_prompt("Agentes de IA", "Mono Indigo", IdeaLocale.PT)
+
+    assert "every idea has its own location" in prompt
+    assert "its own wardrobe" in prompt
+    assert "its own pose or action" in prompt
+    assert "its own camera angle and its own light" in prompt
+    assert "through a prop or a scene" in prompt
+    assert "never by writing the title" in prompt
+    assert "never as hex codes" in prompt
+    assert '"location": "...", "wardrobe": "...", "pose": "..."' in prompt
+    assert "empty space" in prompt

@@ -7,13 +7,14 @@ import type { CoverPromptIdeasProps } from "./types";
 
 /**
  * Three to six prompt ideas for a new cover photo: tapping one hands it to the
- * prompt field. "Mais ideias" asks for AI ideas (it needs a topic first).
+ * prompt field. "Outras ideias" shows a new curated set; "Mais ideias" asks for AI ideas (it needs a topic first).
  */
 export function CoverPromptIdeas({
   ideas,
   source,
   onPick,
   onMore,
+  onShuffle,
   canAskMore,
   loadingMore,
   moreFailed,
@@ -39,6 +40,9 @@ export function CoverPromptIdeas({
         ))}
       </ul>
       <div className="flex flex-wrap items-center gap-2">
+        <NeonButton variant="secondary" size="sm" onClick={onShuffle}>
+          {t("shuffle")}
+        </NeonButton>
         <NeonButton
           variant="secondary"
           size="sm"

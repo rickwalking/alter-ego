@@ -155,6 +155,7 @@ export interface CoverPromptIdeasProps {
   source: CoverIdeaSource;
   onPick: (idea: string) => void;
   onMore: () => void;
+  onShuffle: () => void;
   canAskMore: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
@@ -173,6 +174,8 @@ export interface CoverPromptFieldProps {
 export interface CoverPromptSuggestionsProps {
   topic: string;
   palette: CoverIdeasPalette | null;
+  /** Keeps the curated set stable per carousel (its id); defaults to the topic. */
+  seed?: string;
   onPick: (prompt: string) => void;
 }
 
