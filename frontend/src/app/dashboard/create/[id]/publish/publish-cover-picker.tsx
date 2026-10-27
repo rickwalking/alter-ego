@@ -37,12 +37,13 @@ export function PublishCoverPicker({
       return (
         <CoverPromptSuggestions
           topic={project.topic}
+          seed={projectId}
           palette={palette}
           onPick={fill}
         />
       );
     },
-    [project.topic, palette],
+    [project.topic, palette, projectId],
   );
   const { mutateAsync: uploadToLibrary } = useUploadCreatorPhoto();
   const uploadPhoto = useCallback(
