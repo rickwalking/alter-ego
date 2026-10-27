@@ -43,6 +43,7 @@ Feature: Carousel generation log
     When several queue attempts finish in the same waiting streak
     Then only the first wait records a waiting event and no phase events
     And resumed real work records one run start that closes the wait streak
+    And an immediate yield records a normal retry and separates adjacent wait streaks
 
   Scenario: Generation log pages are stable during new events
     Given more than 200 generation events for one carousel

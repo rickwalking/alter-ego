@@ -93,6 +93,7 @@ Uniform = Callable[[float, float], float]
 _SYSTEM_RANDOM = random.SystemRandom()
 LOCK_BUSY_CODE = "drive_lock_busy"
 WAITING_CODE = "waiting"
+YIELD_CODE = "yield"
 WAIT_STREAK_CODES = frozenset({LOCK_BUSY_CODE, WAITING_CODE})
 
 
@@ -201,7 +202,7 @@ class GenerationJobHandler:
             return await self._retry(attempt, _RetryPlan(WAITING_CODE, delay))
         if delay is not None:
             await tracker.ensure_started()
-            return await self._retry(attempt, _RetryPlan(WAITING_CODE, delay))
+            return await self._retry(attempt, _RetryPlan(YIELD_CODE, delay))
         await tracker.ensure_started()
         moved = await self._deps.store.mark_succeeded(
             attempt.run.id, attempt.attempt_id
