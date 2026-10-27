@@ -19,6 +19,7 @@ import {
 } from "./cover-prompt-catalogue";
 import {
   COVER_SCENE_DIMENSIONS,
+  catalogueRounds,
   catalogueScenes,
   type CoverScene,
 } from "./cover-prompt-scenes";
@@ -31,8 +32,8 @@ const THEMES: CoverIdeaTheme[] = [
   "career",
   "general",
 ];
-const SEEDS = Array.from({ length: 40 }, (_, i) => `carousel-${i}`);
-const ROUNDS = 6;
+const SEEDS = Array.from({ length: 60 }, (_, i) => `uuid-${i}-x`);
+const ROUNDS = 25;
 const HEX = /#[0-9a-f]{3,6}\b/i;
 
 function rulesOf(theme: CoverIdeaTheme) {
@@ -60,19 +61,17 @@ function shared(a: CoverScene, b: CoverScene): number {
   ).length;
 }
 
+const ALL_ROUNDS = THEMES.flatMap((theme) =>
+  SEEDS.map((seed) => ({
+    theme,
+    rounds: catalogueRounds(seed, theme, ROUNDS),
+  })),
+);
+
 function everyRound(
   check: (theme: CoverIdeaTheme, rounds: CoverScene[][]) => void,
 ): void {
-  for (const theme of THEMES) {
-    for (const seed of SEEDS) {
-      check(
-        theme,
-        Array.from({ length: ROUNDS }, (_, round) =>
-          catalogueScenes(seed, theme, round),
-        ),
-      );
-    }
-  }
+  for (const { theme, rounds } of ALL_ROUNDS) check(theme, rounds);
 }
 
 const t: CoverIdeasTranslator = (key, values = {}) => {
