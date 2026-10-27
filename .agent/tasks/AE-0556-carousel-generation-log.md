@@ -162,7 +162,7 @@ Red-first regressions covered six no-op waits, five busy locks, wait/yield/wait 
 
 ## QA Report
 
-`.agent/reports/AE-0556.qa.md` — INCONCLUSIVE pending PR CI for `afd3c4424`. Independent follow-up review returned PASS after the wait/yield edge-case fix; all local full gates pass. Backend/frontend mutation and PR checks are the only remaining evidence.
+`.agent/reports/AE-0556.qa.md` — INCONCLUSIVE pending PR CI for the branch head. Independent follow-up review returned PASS after the wait/yield edge-case fix; all local full gates pass. Backend/frontend mutation and PR checks are the only remaining evidence.
 
 ## Decision Log
 
