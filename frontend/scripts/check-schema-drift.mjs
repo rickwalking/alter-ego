@@ -210,6 +210,12 @@ const SCHEMA_MAP = [
     openapi: "QueueActionResponse",
     kind: "response",
   },
+  {
+    zod: "carouselGenerationLogResponseSchema",
+    file: "carousel-generation-log.ts",
+    openapi: "CarouselGenerationLogResponse",
+    kind: "response",
+  },
 ];
 
 /** Marks a Zod field whose type we do not statically resolve (opaque). */

@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
+AE-0556 is In Development on `feat/ae-0556-generation-log`.
 
-`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
+The architecture plan, ADR, ticket and Gherkin contracts are committed. Implementation follows the red-first acceptance loop.
 
 ## Rules
 

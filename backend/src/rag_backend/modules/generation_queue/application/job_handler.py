@@ -17,15 +17,40 @@ from uuid import UUID
 
 import structlog
 
+from rag_backend.modules.generation_queue.application.generation_events import (
+    NO_EVENT_RECORDER,
+    NO_RUN_COMPLETION,
+    current_generation_event_project,
+    generation_event_run,
+    generation_event_scope,
+    record_generation_event,
+)
+from rag_backend.modules.generation_queue.application.job_tracker import (
+    _Attempt,
+    _StaleAttemptError,
+    _Tracker,
+)
 from rag_backend.modules.generation_queue.constants import (
     ERROR_MESSAGE_MAX_CHARS,
     ERROR_UNKNOWN_KIND,
+    EVENT_RUN_DEAD_LETTER,
+    EVENT_RUN_RETRY,
+    EVENT_RUN_STARTED,
+    EVENT_RUN_SUCCEEDED,
     LOCK_BUSY_DELAY_SECONDS,
     LOG_DEAD_LETTER,
     LOG_LOCK_BUSY,
     LOG_RETRY,
     LOG_STARTED,
     LOG_SUCCEEDED,
+    MESSAGE_GENERATION_FAILED,
+    MESSAGE_GENERATION_RETRY,
+    MESSAGE_GENERATION_STARTED,
+    MESSAGE_GENERATION_SUCCEEDED,
+    OUTCOME_DEAD_LETTER,
+    OUTCOME_RETRY_WAIT,
+    OUTCOME_RUNNING,
+    OUTCOME_SUCCEEDED,
     RESTART_DELAY_SECONDS,
     WAIT_DELAY_SECONDS,
 )
@@ -38,9 +63,13 @@ from rag_backend.modules.generation_queue.domain.errors import (
     ProviderClassifier,
     classify,
 )
+from rag_backend.modules.generation_queue.domain.generation_events import (
+    GenerationEventInput,
+    GenerationEventRecorder,
+    GenerationRunCompletion,
+)
 from rag_backend.modules.generation_queue.domain.models import (
     AttemptDeadLetterCommand,
-    CountsUpdate,
     GenerationKind,
     GenerationRun,
     RetryCommand,
@@ -59,7 +88,6 @@ logger = structlog.get_logger()
 
 Uniform = Callable[[float, float], float]
 _SYSTEM_RANDOM = random.SystemRandom()
-
 LOCK_BUSY_CODE = "drive_lock_busy"
 WAITING_CODE = "waiting"
 
@@ -96,6 +124,7 @@ class _RetryPlan:
     code: str
     delay: timedelta
     error: str = ""
+    error_type: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -110,47 +139,8 @@ class HandlerDependencies:
     is_provider_error: ProviderClassifier
     uniform: Uniform = _SYSTEM_RANDOM.uniform
     budget: budget.AttemptBudget = field(default_factory=budget.AttemptBudget)
-
-
-@dataclass(frozen=True)
-class _Attempt:
-    """The run snapshot and UUID claimed by one handler invocation."""
-
-    run: GenerationRun
-    attempt_id: UUID
-
-
-class _StaleAttemptError(Exception):
-    """The attempt lost its fence while its executor was running."""
-
-
-class _Tracker:
-    """Counts phase starts for one job, persisting before the work runs."""
-
-    def __init__(self, deps: HandlerDependencies, attempt: _Attempt) -> None:
-        self._deps = deps
-        self._run_id = attempt.run.id
-        self._attempt_id = attempt.attempt_id
-        self.counts = attempt.run.counts
-
-    async def begin(self, phase: str) -> None:
-        self.counts = budget.begin(self.counts, phase)
-        await self._save(phase)
-        error_code = budget.exhausted(self.counts, phase, self._deps.budget)
-        if error_code is not None:
-            raise BudgetExhaustedError(error_code)
-
-    async def finish(self, phase: str) -> None:
-        self.counts = budget.finish(self.counts, phase)
-        await self._save(phase)
-
-    async def _save(self, phase: str) -> None:
-        update = CountsUpdate(counts=self.counts, phase=phase)
-        saved = await self._deps.store.save_counts(
-            self._run_id, self._attempt_id, update
-        )
-        if not saved:
-            raise _StaleAttemptError
+    events: GenerationEventRecorder = NO_EVENT_RECORDER
+    completion: GenerationRunCompletion = NO_RUN_COMPLETION
 
 
 class GenerationJobHandler:
@@ -164,6 +154,10 @@ class GenerationJobHandler:
         run = await self._deps.store.get(run_id)
         if run is None or not is_active(run.status):
             return _DONE
+        async with generation_event_scope(generation_event_run(run), self._deps.events):
+            return await self._handle_active(run)
+
+    async def _handle_active(self, run: GenerationRun) -> Verdict:
         attempt_id = await self._deps.store.mark_running(run.id)
         if attempt_id is None:
             return _DONE
@@ -174,6 +168,15 @@ class GenerationJobHandler:
                 attempt, PermanentGenerationError(ERROR_UNKNOWN_KIND)
             )
         logger.info(LOG_STARTED, generation_run_id=str(run.id), kind=run.kind.value)
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_RUN_STARTED,
+                outcome=OUTCOME_RUNNING,
+                occurred_at=self._deps.clock.now(),
+                attempt=run.attempts + 1,
+                message_code=MESSAGE_GENERATION_STARTED,
+            )
+        )
         return await self._run(attempt, executor)
 
     async def _run(self, attempt: _Attempt, executor: KindExecutor) -> Verdict:
@@ -188,11 +191,11 @@ class GenerationJobHandler:
                 attempt, _RetryPlan(LOCK_BUSY_CODE, LOCK_BUSY_DELAY)
             )
         except BudgetExhaustedError as exc:
-            return await self._dead(attempt, exc)
+            return await self._dead(attempt, exc, tracker)
         except _StaleAttemptError:
             return _DONE
         except Exception as exc:
-            return await self._failed(attempt, exc, tracker.counts.attempts)
+            return await self._failed(attempt, exc, tracker)
         return await self._settle(attempt, outcome)
 
     async def _settle(self, attempt: _Attempt, outcome: StepOutcome) -> Verdict:
@@ -205,9 +208,22 @@ class GenerationJobHandler:
         if not moved:
             return _DONE
         logger.info(LOG_SUCCEEDED, generation_run_id=str(attempt.run.id))
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_RUN_SUCCEEDED,
+                outcome=OUTCOME_SUCCEEDED,
+                occurred_at=self._deps.clock.now(),
+                message_code=MESSAGE_GENERATION_SUCCEEDED,
+            )
+        )
+        project_id = current_generation_event_project()
+        if project_id is not None:
+            await self._deps.completion.completed(project_id, succeeded=True)
         return _DONE
 
-    async def _retry(self, attempt: _Attempt, plan: _RetryPlan) -> Verdict:
+    async def _retry(
+        self, attempt: _Attempt, plan: _RetryPlan, tracker: _Tracker | None = None
+    ) -> Verdict:
         moved = await self._deps.store.mark_waiting(
             RetryCommand(
                 run_id=attempt.run.id,
@@ -219,25 +235,44 @@ class GenerationJobHandler:
         )
         if not moved:
             return _DONE
+        if tracker is not None:
+            await tracker.fail(plan.code)
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_RUN_RETRY,
+                outcome=OUTCOME_RETRY_WAIT,
+                occurred_at=self._deps.clock.now(),
+                error_code=plan.code,
+                message_code=MESSAGE_GENERATION_RETRY,
+                details=_retry_details(plan),
+            )
+        )
         return Verdict(VerdictKind.RETRY, plan.delay)
 
     async def _failed(
-        self, attempt: _Attempt, exc: Exception, attempts: int
+        self, attempt: _Attempt, exc: Exception, tracker: _Tracker
     ) -> Verdict:
         failure = classify(exc, self._deps.is_provider_error)
         if failure is FailureClass.PERMANENT:
-            return await self._dead(attempt, exc)
-        delay = budget.retry_delay(attempts, self._deps.uniform)
+            return await self._dead(attempt, exc, tracker)
+        delay = budget.retry_delay(tracker.counts.attempts, self._deps.uniform)
         logger.warning(
             LOG_RETRY,
             generation_run_id=str(attempt.run.id),
             error_type=type(exc).__name__,
             delay_seconds=round(delay.total_seconds()),
         )
-        plan = _RetryPlan(failure.value, delay, _describe(exc))
-        return await self._retry(attempt, plan)
+        plan = _RetryPlan(
+            failure.value,
+            delay,
+            _describe(exc),
+            error_type=type(exc).__name__,
+        )
+        return await self._retry(attempt, plan, tracker)
 
-    async def _dead(self, attempt: _Attempt, exc: Exception) -> Verdict:
+    async def _dead(
+        self, attempt: _Attempt, exc: Exception, tracker: _Tracker | None = None
+    ) -> Verdict:
         code = _error_code(exc)
         command = AttemptDeadLetterCommand(
             run_id=attempt.run.id,
@@ -248,11 +283,33 @@ class GenerationJobHandler:
         moved = await self._deps.store.mark_attempt_dead_letter(command)
         if not moved:
             return _DONE
+        if tracker is not None:
+            await tracker.fail(code)
         await self._deps.notices.stage(attempt.run, code)
+        await record_generation_event(
+            GenerationEventInput(
+                event_type=EVENT_RUN_DEAD_LETTER,
+                outcome=OUTCOME_DEAD_LETTER,
+                occurred_at=self._deps.clock.now(),
+                error_code=code,
+                message_code=MESSAGE_GENERATION_FAILED,
+                details={"error_type": type(exc).__name__},
+            )
+        )
         logger.warning(
             LOG_DEAD_LETTER, generation_run_id=str(attempt.run.id), error_code=code
         )
+        project_id = current_generation_event_project()
+        if project_id is not None:
+            await self._deps.completion.completed(project_id, succeeded=False)
         return _HOLD
+
+
+def _retry_details(plan: _RetryPlan) -> dict[str, object]:
+    details: dict[str, object] = {"delay_seconds": round(plan.delay.total_seconds())}
+    if plan.error_type is not None:
+        details["error_type"] = plan.error_type
+    return details
 
 
 def _error_code(exc: Exception) -> str:

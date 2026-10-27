@@ -40,6 +40,7 @@ vi.mock("@/components/organisms/neon-top-bar", () => ({
 }));
 vi.mock("@/modules/editorial", () => ({
   useCarouselProject: () => hooks.project(),
+  useGenerationLog: () => ({}),
   useEditorialWorkflow: (_id: string, options: unknown) => {
     hooks.workflowOptions(options);
     return hooks.workflow();

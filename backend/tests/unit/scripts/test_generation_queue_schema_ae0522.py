@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from rag_backend.modules.generation_queue.infrastructure import schema
 from rag_backend.modules.generation_queue.infrastructure.models import (
+    CarouselGenerationEventModel,
     GenerationRunModel,
 )
 from rag_backend.scripts import generation_queue_schema as cli
@@ -68,6 +69,22 @@ async def test_ddl_is_compiled_from_the_orm_table() -> None:
     unique = [item for item in indexes if "UNIQUE" in item]
     assert len(unique) == 1
     assert "WHERE status IN ('queued', 'running', 'retry_wait')" in unique[0]
+
+
+async def test_generation_event_ddl_is_compiled_from_the_orm() -> None:
+    """Scenario: The queue schema reaches prod with the deploy"""
+    engine = create_async_engine("postgresql+asyncpg://user:pw@db.invalid/app")
+    statements = schema.generation_events_ddl(engine.dialect)
+    await engine.dispose()
+
+    table = statements[0]
+    assert table.startswith("\nCREATE TABLE IF NOT EXISTS carousel_generation_events")
+    for column in CarouselGenerationEventModel.__table__.columns:
+        assert f"\t{column.name} " in table
+    assert "JSONB" in table
+    assert 'ON DELETE CASCADE' in table
+    assert len(statements[1:]) == 3
+    assert all(item.startswith("CREATE INDEX IF NOT EXISTS") for item in statements[1:])
 
 
 def test_cli_without_a_mode_is_a_usage_error(

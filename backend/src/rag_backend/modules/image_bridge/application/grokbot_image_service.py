@@ -31,6 +31,20 @@ from rag_backend.domain.models.cover_generation import (
     CoverJobCancelledError,
 )
 from rag_backend.domain.protocols import ImageGenerationService
+from rag_backend.modules.generation_queue.events_public import (
+    EVENT_IMAGE_JOB_REUSED,
+    EVENT_IMAGE_JOB_STARTED,
+    EVENT_IMAGE_JOB_SUCCEEDED,
+    OUTCOME_REUSED,
+    OUTCOME_RUNNING,
+    OUTCOME_SUCCEEDED,
+    set_generation_event_project,
+)
+from rag_backend.modules.image_bridge.application.generation_events import (
+    ImageJobObservation,
+    record_image_job,
+    record_terminal_image_job,
+)
 from rag_backend.modules.image_bridge.constants import (
     CALLBACK_URL_TEMPLATE,
     CONTENT_TYPE_CAROUSEL,
@@ -180,6 +194,8 @@ class GrokBotImageService(ImageGenerationService):
 
     async def _run(self, spec: _JobSpec) -> bytes:
         """One job under a concurrency slot; ``spec.claim`` may cancel it first."""
+        if spec.project_id is not None:
+            set_generation_event_project(spec.project_id)
         async with self._slots:
             if spec.claim is not None and not await spec.claim():
                 raise CoverJobCancelledError(ERR_JOB_CANCELLED)
@@ -199,6 +215,15 @@ class GrokBotImageService(ImageGenerationService):
         existing = await self._existing(spec)
         if existing is not None and _still_pending(existing, now):
             logger.info(LOG_JOB_REUSED, bridge_job_id=str(existing.id))
+            await record_image_job(
+                ImageJobObservation(
+                    event_type=EVENT_IMAGE_JOB_REUSED,
+                    job=existing,
+                    outcome=OUTCOME_REUSED,
+                    occurred_at=now,
+                    model=spec.model,
+                )
+            )
             return existing
         started = self._new_job(spec if existing is None else _fresh(spec))
         await self._deps.repository.create(started.job)
@@ -208,6 +233,15 @@ class GrokBotImageService(ImageGenerationService):
             await self._fail_delivery(started.job, exc)
             raise ImageBridgeJobError(str(exc)) from exc
         logger.info(LOG_JOB_STARTED, bridge_job_id=str(started.job.id))
+        await record_image_job(
+            ImageJobObservation(
+                event_type=EVENT_IMAGE_JOB_STARTED,
+                job=started.job,
+                outcome=OUTCOME_RUNNING,
+                occurred_at=self._deps.clock.now(),
+                model=spec.model,
+            )
+        )
         return started.job
 
     async def _existing(self, spec: _JobSpec) -> ImageBridgeJob | None:
@@ -250,11 +284,15 @@ class GrokBotImageService(ImageGenerationService):
             job.id, ERROR_CODE_WEBHOOK_FAILED, str(exc), self._deps.clock.now()
         )
         await self._deps.repository.fail(failure)
+        await record_terminal_image_job(
+            job, ERROR_CODE_WEBHOOK_FAILED, self._deps.clock.now()
+        )
 
     async def _wait(self, started: ImageBridgeJob) -> bytes:
         while True:
             job = await self._deps.repository.get(started.id)
             if job is None:
+                await self._record_terminal(started, "job_missing")
                 raise ImageBridgeJobError(ERR_JOB_MISSING.format(job_id=started.id))
             image = await self._settle(job)
             if image is not None:
@@ -263,6 +301,15 @@ class GrokBotImageService(ImageGenerationService):
                     LOG_JOB_SUCCEEDED,
                     bridge_job_id=str(job.id),
                     wait_seconds=round(elapsed.total_seconds(), 1),
+                )
+                await record_image_job(
+                    ImageJobObservation(
+                        event_type=EVENT_IMAGE_JOB_SUCCEEDED,
+                        job=job,
+                        outcome=OUTCOME_SUCCEEDED,
+                        occurred_at=self._deps.clock.now(),
+                        duration_ms=max(0, round(elapsed.total_seconds() * 1000)),
+                    )
                 )
                 return image
             await self._deps.clock.sleep(self._config.poll_interval_seconds)
@@ -274,21 +321,34 @@ class GrokBotImageService(ImageGenerationService):
         the next poll.
         """
         if job.status is ImageBridgeJobStatus.SUCCEEDED:
-            return await self._take(job.id)
+            try:
+                return await self._take(job.id)
+            except ImageBridgeJobError:
+                await self._record_terminal(job, "no_image")
+                raise
         if job.status is ImageBridgeJobStatus.FAILED:
+            await self._record_terminal(job, job.error_code)
             raise ImageBridgeJobError(
                 ERR_JOB_FAILED.format(
                     job_id=job.id, code=job.error_code, message=job.error_message or ""
                 )
             )
         if job.status is ImageBridgeJobStatus.EXPIRED:
+            await self._record_terminal(job, job.status.value)
             raise self._expired(job.id)
         now = self._deps.clock.now()
         if not job.is_overdue(now):
             return None
         if await self._deps.repository.expire(JobDeadline(job_id=job.id, at=now)):
+            await self._record_terminal(job, ImageBridgeJobStatus.EXPIRED.value)
             raise self._expired(job.id)
         return None
+
+    async def _record_terminal(
+        self, job: ImageBridgeJob, error_code: str | None
+    ) -> None:
+        now = self._deps.clock.now()
+        await record_terminal_image_job(job, error_code, now)
 
     async def _take(self, job_id: UUID) -> bytes:
         image = await self._deps.repository.take_image(job_id)

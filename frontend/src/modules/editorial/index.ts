@@ -48,6 +48,7 @@ export {
   useEditorialWorkflow,
   type EditorialReviseOptions,
 } from "./workspace/hooks/use-editorial-workflow";
+export { useGenerationLog } from "./workspace/hooks/use-generation-log";
 export {
   creatorPhotoKeys,
   photoInUse,
@@ -62,6 +63,7 @@ export {
   type SaveHookResponse,
 } from "./workspace/hooks/use-save-hook";
 export type {
+  GenerationLogView,
   SaveHookInput,
   UploadCreatorPhotoInput,
 } from "./workspace/hooks/types";

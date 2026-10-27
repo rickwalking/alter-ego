@@ -24,11 +24,31 @@ from uuid import UUID
 
 import structlog
 
+from rag_backend.modules.generation_queue.application.generation_events import (
+    NO_EVENT_RECORDER,
+    NO_RUN_COMPLETION,
+    generation_event_run,
+    generation_event_scope,
+    record_generation_event,
+)
 from rag_backend.modules.generation_queue.constants import (
     DISPATCH_BATCH,
     ERROR_HELD_JOB,
     ERROR_MESSAGE_MAX_CHARS,
+    EVENT_RUN_DEAD_LETTER,
+    EVENT_RUN_LOST,
+    EVENT_RUN_QUEUED,
     LOG_DISPATCHED,
+    MESSAGE_GENERATION_FAILED,
+    MESSAGE_GENERATION_QUEUED,
+    MESSAGE_GENERATION_RETRY,
+    OUTCOME_DEAD_LETTER,
+    OUTCOME_QUEUED,
+)
+from rag_backend.modules.generation_queue.domain.generation_events import (
+    GenerationEventInput,
+    GenerationEventRecorder,
+    GenerationRunCompletion,
 )
 from rag_backend.modules.generation_queue.domain.models import (
     DeadLetterCommand,
@@ -46,6 +66,7 @@ from rag_backend.modules.generation_queue.domain.ports import (
 )
 
 logger = structlog.get_logger()
+_ERROR_LOST_JOB = "job_lost"
 
 
 @dataclass(frozen=True)
@@ -66,6 +87,8 @@ class DispatcherDependencies:
     queue: JobQueue
     autopilot: ActiveAutopilotSource
     notices: DeadLetterNotices
+    events: GenerationEventRecorder = NO_EVENT_RECORDER
+    completion: GenerationRunCompletion = NO_RUN_COMPLETION
 
 
 class Dispatcher:
@@ -84,6 +107,16 @@ class Dispatcher:
         if job_id is None or current is None or not is_active(current.status):
             return False
         await self._deps.store.set_job(run.id, job_id)
+        await self._record(
+            run,
+            GenerationEventInput(
+                event_type=EVENT_RUN_QUEUED,
+                outcome=OUTCOME_QUEUED,
+                attempt=run.attempts + 1,
+                message_code=MESSAGE_GENERATION_QUEUED,
+                details={"action": "manual_kick"},
+            ),
+        )
         return True
 
     async def run_once(self) -> DispatchReport:
@@ -112,6 +145,15 @@ class Dispatcher:
                 continue
             await self._deps.store.set_job(run.id, job_id)
             logger.info(LOG_DISPATCHED, generation_run_id=str(run.id), job_id=job_id)
+            await self._record(
+                run,
+                GenerationEventInput(
+                    event_type=EVENT_RUN_QUEUED,
+                    outcome=OUTCOME_QUEUED,
+                    attempt=run.attempts + 1,
+                    message_code=MESSAGE_GENERATION_QUEUED,
+                ),
+            )
             dispatched += 1
         return dispatched
 
@@ -128,6 +170,15 @@ class Dispatcher:
         lost = [run for run in runs if run.pgq_job_id not in alive]
         for run in lost:
             await self._deps.store.clear_job(run.id)
+            await self._record(
+                run,
+                GenerationEventInput(
+                    event_type=EVENT_RUN_LOST,
+                    outcome=OUTCOME_QUEUED,
+                    error_code=_ERROR_LOST_JOB,
+                    message_code=MESSAGE_GENERATION_RETRY,
+                ),
+            )
         return len(lost)
 
     async def _mirror_held(self) -> int:
@@ -153,7 +204,24 @@ class Dispatcher:
         )
         if moved:
             await self._deps.notices.stage(run, ERROR_HELD_JOB)
+            await self._record(
+                run,
+                GenerationEventInput(
+                    event_type=EVENT_RUN_DEAD_LETTER,
+                    outcome=OUTCOME_DEAD_LETTER,
+                    error_code=ERROR_HELD_JOB,
+                    message_code=MESSAGE_GENERATION_FAILED,
+                ),
+            )
+            if run.carousel_project_id is not None:
+                await self._deps.completion.completed(
+                    run.carousel_project_id, succeeded=False
+                )
         return moved
+
+    async def _record(self, run: GenerationRun, event: GenerationEventInput) -> None:
+        async with generation_event_scope(generation_event_run(run), self._deps.events):
+            await record_generation_event(event)
 
 
 __all__ = ["DispatchReport", "Dispatcher", "DispatcherDependencies"]

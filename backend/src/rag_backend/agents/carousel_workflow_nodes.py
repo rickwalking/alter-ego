@@ -66,6 +66,10 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_PRESENTATION_VALIDATION,
 )
 from rag_backend.infrastructure.monitoring_langfuse import phase_trace
+from rag_backend.modules.generation_queue.events_public import (
+    record_phase_artifacts,
+    set_generation_event_project,
+)
 from rag_backend.modules.presentation import (
     apply_localized_slide_edits_via_port,
 )
@@ -215,6 +219,9 @@ async def ensure_artifacts(
         trace_input=trace_input,
     ) as trace:
         result = await runner.ensure_for_phase(cast(CarouselWorkflowState, merged))
+        if project_id:
+            set_generation_event_project(project_id)
+        await record_phase_artifacts(phase, result, trace)
         trace.set_output({
             TRACE_FIELD_PHASE: phase,
             TRACE_OUTPUT_UPDATED_KEYS: sorted(result),

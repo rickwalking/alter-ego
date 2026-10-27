@@ -18,11 +18,18 @@ from dataclasses import dataclass
 
 import structlog
 
+from rag_backend.modules.generation_queue.application.generation_events import (
+    record_generation_event,
+    set_generation_event_project,
+)
 from rag_backend.modules.generation_queue.constants import (
     ACTION_ADOPT,
     ERROR_BAD_PAYLOAD,
+    EVENT_RECOVERY_REAPED,
     LOG_ORPHAN_REAPED,
     MAX_STEPS_PER_JOB,
+    MESSAGE_RECOVERED,
+    OUTCOME_RECOVERED,
     PHASE_START,
 )
 from rag_backend.modules.generation_queue.domain.drive_lock_keys import (
@@ -36,6 +43,9 @@ from rag_backend.modules.generation_queue.domain.drive_ports import (
 )
 from rag_backend.modules.generation_queue.domain.errors import (
     PermanentGenerationError,
+)
+from rag_backend.modules.generation_queue.domain.generation_events import (
+    GenerationEventInput,
 )
 from rag_backend.modules.generation_queue.domain.models import (
     AutopilotDrivePayload,
@@ -68,6 +78,7 @@ async def recover_orphan(
     deps: RecoveryDependencies, run: GenerationRun, project_id: str
 ) -> bool:
     """Reap a project left ``in_progress`` by a dead driver. False when owned."""
+    set_generation_event_project(project_id)
     if not await deps.recovery.in_progress(project_id):
         return True
     if await deps.store.other_active_for_project(project_id, run.id):
@@ -75,6 +86,14 @@ async def recover_orphan(
     await deps.recovery.reap(project_id)
     logger.warning(
         LOG_ORPHAN_REAPED, generation_run_id=str(run.id), project_id=project_id
+    )
+    await record_generation_event(
+        GenerationEventInput(
+            event_type=EVENT_RECOVERY_REAPED,
+            outcome=OUTCOME_RECOVERED,
+            phase="recovery",
+            message_code=MESSAGE_RECOVERED,
+        )
     )
     return True
 
@@ -135,6 +154,8 @@ class AutopilotDriveExecutor:
             view = await self._deps.stepper.view(run_id)
             if view is None or view.state not in DRIVEABLE_STATES:
                 return StepOutcome.DONE
+            if view.project_id:
+                set_generation_event_project(view.project_id)
             phase = view.phase or PHASE_START
             await tracker.begin(phase)
             stepped = await self._deps.stepper.step(run_id)

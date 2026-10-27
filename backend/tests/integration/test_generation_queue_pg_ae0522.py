@@ -110,6 +110,10 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     scoped = create_async_engine(
         PG_URL, connect_args={"server_settings": {"search_path": name}}
     )
+    async with scoped.begin() as conn:
+        await conn.execute(
+            text("CREATE TABLE carousel_projects (id VARCHAR(36) PRIMARY KEY)")
+        )
     try:
         yield scoped
     finally:

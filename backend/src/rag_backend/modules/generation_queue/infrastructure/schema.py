@@ -21,8 +21,12 @@ from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.schema import CreateIndex, CreateTable
 
-from rag_backend.modules.generation_queue.constants import TABLE_GENERATION_RUNS
+from rag_backend.modules.generation_queue.constants import (
+    TABLE_CAROUSEL_GENERATION_EVENTS,
+    TABLE_GENERATION_RUNS,
+)
 from rag_backend.modules.generation_queue.infrastructure.models import (
+    CarouselGenerationEventModel,
     GenerationRunModel,
 )
 from rag_backend.modules.generation_queue.infrastructure.raw_connection import (
@@ -55,12 +59,21 @@ def _indexes() -> list[Index]:
 
 def generation_runs_ddl(dialect: Dialect) -> list[str]:
     """The ``generation_runs`` DDL for ``dialect``, compiled from the ORM table."""
-    statements = [
-        str(CreateTable(_table(), if_not_exists=True).compile(dialect=dialect))
-    ]
+    return _model_ddl(_table(), _indexes(), dialect)
+
+
+def generation_events_ddl(dialect: Dialect) -> list[str]:
+    """The generation-event DDL compiled from the same ORM as Alembic."""
+    table = cast(Table, CarouselGenerationEventModel.__table__)
+    indexes = sorted(table.indexes, key=lambda index: str(index.name))
+    return _model_ddl(table, indexes, dialect)
+
+
+def _model_ddl(table: Table, indexes: list[Index], dialect: Dialect) -> list[str]:
+    statements = [str(CreateTable(table, if_not_exists=True).compile(dialect=dialect))]
     statements += [
         str(CreateIndex(index, if_not_exists=True).compile(dialect=dialect))
-        for index in _indexes()
+        for index in indexes
     ]
     return statements
 
@@ -76,15 +89,27 @@ class QueueSchemaReport:
 
 
 async def _missing_objects(conn: AsyncConnection) -> tuple[str, ...]:
+    event_table = cast(Table, CarouselGenerationEventModel.__table__)
+    event_indexes = sorted(event_table.indexes, key=lambda index: str(index.name))
+    missing = await _missing_model(conn, TABLE_GENERATION_RUNS, _indexes())
+    missing += await _missing_model(
+        conn, TABLE_CAROUSEL_GENERATION_EVENTS, event_indexes
+    )
+    return tuple(missing)
+
+
+async def _missing_model(
+    conn: AsyncConnection, table_name: str, indexes: list[Index]
+) -> list[str]:
     missing: list[str] = []
-    found = await conn.execute(_TABLE_EXISTS_SQL, {"table": TABLE_GENERATION_RUNS})
+    found = await conn.execute(_TABLE_EXISTS_SQL, {"table": table_name})
     if found.first() is None:
-        missing.append(TABLE_GENERATION_RUNS)
-    for index in _indexes():
+        missing.append(table_name)
+    for index in indexes:
         row = await conn.execute(_INDEX_EXISTS_SQL, {"index": str(index.name)})
         if row.first() is None:
             missing.append(str(index.name))
-    return tuple(missing)
+    return missing
 
 
 async def _pgqueuer_install(engine: AsyncEngine) -> str:
@@ -118,7 +143,9 @@ async def apply(engine: AsyncEngine) -> QueueSchemaReport:
         return QueueSchemaReport(supported=False)
     async with engine.begin() as conn:
         missing = await _missing_objects(conn)
-        for statement in generation_runs_ddl(engine.dialect):
+        statements = generation_runs_ddl(engine.dialect)
+        statements += generation_events_ddl(engine.dialect)
+        for statement in statements:
             await conn.execute(text(statement))
     pgqueuer = await _pgqueuer_install(engine)
     logger.info(LOG_APPLIED, created=list(missing), pgqueuer=pgqueuer)
@@ -156,6 +183,7 @@ __all__ = [
     "QueueSchemaReport",
     "apply",
     "format_report",
+    "generation_events_ddl",
     "generation_runs_ddl",
     "verify",
 ]

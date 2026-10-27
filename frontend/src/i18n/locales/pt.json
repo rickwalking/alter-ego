@@ -425,6 +425,83 @@
       "activePhase": "Fase ativa",
       "startingWorkflow": "Iniciando o fluxo editorial…"
     },
+    "generationLog": {
+      "title": "Registro de geração",
+      "empty": "Nenhum evento de geração ainda.",
+      "loading": "Carregando histórico de geração…",
+      "loadError": "Não foi possível atualizar o registro. Exibindo os eventos já carregados.",
+      "initialError": "Não foi possível carregar o registro de geração.",
+      "loadMore": "Carregar mais",
+      "attempts": "Tentativas: {count}",
+      "queuedAt": "Na fila:",
+      "startedAt": "Início:",
+      "finishedAt": "Fim:",
+      "errorCode": "Erro: {code}",
+      "attempt": "Tentativa {count}",
+      "openTrace": "Abrir trace do Langfuse",
+      "kinds": {
+        "workflow_resume": "Retomada do fluxo",
+        "autopilot_drive": "Execução do autopilot"
+      },
+      "statuses": {
+        "queued": "Na fila",
+        "running": "Em execução",
+        "retry_wait": "Aguardando nova tentativa",
+        "succeeded": "Concluído",
+        "dead_letter": "Falhou",
+        "cancelled": "Cancelado"
+      },
+      "outcomes": {
+        "queued": "Na fila",
+        "running": "Em execução",
+        "succeeded": "Concluído",
+        "failed": "Falhou",
+        "retry_wait": "Nova tentativa agendada",
+        "dead_letter": "Falhou",
+        "recovered": "Recuperado",
+        "reused": "Reutilizado",
+        "warning": "Aviso"
+      },
+      "phases": {
+        "run": "Execução",
+        "start": "Início",
+        "export": "Exportação / PDF",
+        "recovery": "Recuperação"
+      },
+      "events": {
+        "run_queued": "Execução adicionada à fila",
+        "run_started": "Execução iniciada",
+        "run_succeeded": "Execução da fila concluída",
+        "run_retry": "Nova tentativa agendada",
+        "run_dead_letter": "Execução falhou",
+        "run_lost": "Job perdido recuperado",
+        "phase_started": "Fase iniciada",
+        "phase_succeeded": "Fase concluída",
+        "phase_failed": "Fase falhou",
+        "phase_artifacts": "Artefatos da fase atualizados",
+        "persona_scored": "Scores de persona atualizados",
+        "content_gate": "Gate de conteúdo verificado",
+        "image_job_started": "Job de imagem iniciado",
+        "image_job_reused": "Job de imagem reutilizado",
+        "image_job_succeeded": "Job de imagem concluído",
+        "image_job_failed": "Job de imagem falhou",
+        "image_reused": "Imagem existente reutilizada",
+        "image_slide_succeeded": "Imagem do slide concluída",
+        "image_slide_failed": "Imagem do slide falhou",
+        "pdf_succeeded": "PDF criado",
+        "pdf_failed": "Problema na exportação ou no PDF",
+        "recovery_reaped": "Execução parada recuperada",
+        "workflow_succeeded": "Fluxo concluído",
+        "workflow_failed": "Fluxo falhou"
+      },
+      "details": {
+        "violations": "{count} violações",
+        "personaScore": "Menor score de persona: {score}",
+        "imageJob": "Job de imagem: {id}",
+        "retryDelay": "Nova tentativa em {seconds}s",
+        "pages": "{count} páginas do PDF"
+      }
+    },
     "chat": {
       "error": "Ocorreu um erro ao processar sua solicitação."
     },

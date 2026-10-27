@@ -39,6 +39,8 @@ class RecordedTrace:
 
     name: str
     span_metadata: dict[str, object]
+    trace_id: str = "c" * 32
+    project_id: str = "test-project"
     span_input: object | None = None
     span_output: object | None = None
     trace_name: str = ""
@@ -70,9 +72,11 @@ class _FakeSpan:
         session_id: str | None = None,
         metadata: dict[str, object] | None = None,
         tags: list[str] | None = None,
-        input: object | None = None,
+        span_input: object | None = None,
         output: object | None = None,
+        **kwargs: object,
     ) -> None:
+        input_value = kwargs.pop("input", span_input)
         if name is not None:
             self.trace.trace_name = name
         if user_id is not None:
@@ -83,8 +87,8 @@ class _FakeSpan:
             self.trace.metadata = dict(metadata)
         if tags is not None:
             self.trace.tags = list(tags)
-        if input is not None:
-            self.trace.input = input
+        if input_value is not None:
+            self.trace.input = input_value
         if output is not None:
             self.trace.output = output
 
@@ -92,16 +96,18 @@ class _FakeSpan:
         self,
         *,
         name: str | None = None,
-        input: object | None = None,
+        span_input: object | None = None,
         output: object | None = None,
         metadata: dict[str, object] | None = None,
         level: str | None = None,
         status_message: str | None = None,
+        **kwargs: object,
     ) -> None:
+        input_value = kwargs.pop("input", span_input)
         if name is not None:
             self.trace.name = name
-        if input is not None:
-            self.trace.span_input = input
+        if input_value is not None:
+            self.trace.span_input = input_value
         if output is not None:
             self.trace.span_output = output
         if metadata is not None:
@@ -115,13 +121,15 @@ class _FakeSpan:
         self,
         *,
         name: str,
-        input: object | None = None,
+        span_input: object | None = None,
         output: object | None = None,
         metadata: dict[str, object] | None = None,
+        **kwargs: object,
     ) -> RecordedEvent:
+        input_value = kwargs.pop("input", span_input)
         event = RecordedEvent(
             name=name,
-            input=input,
+            input=input_value,
             output=output,
             metadata=dict(metadata or {}),
         )
@@ -148,13 +156,15 @@ class TraceCollector:
         self,
         *,
         name: str,
-        input: object | None = None,
+        span_input: object | None = None,
         metadata: dict[str, object] | None = None,
+        **kwargs: object,
     ) -> Iterator[_FakeSpan]:
+        input_value = kwargs.pop("input", span_input)
         trace = RecordedTrace(
             name=name,
             span_metadata=dict(metadata or {}),
-            span_input=input,
+            span_input=input_value,
         )
         self.traces.append(trace)
         token = self._active.set(trace)
@@ -162,6 +172,17 @@ class TraceCollector:
             yield _FakeSpan(trace)
         finally:
             self._active.reset(token)
+
+    def get_current_trace_id(self) -> str | None:
+        current = self.current()
+        return current.trace_id if current is not None else None
+
+    def get_trace_url(self, *, trace_id: str | None = None) -> str | None:
+        current = self.current()
+        chosen = trace_id or self.get_current_trace_id()
+        if current is None or chosen is None:
+            return None
+        return f"https://langfuse.test/project/{current.project_id}/traces/{chosen}"
 
     def flush(self) -> None:
         self.flushes += 1

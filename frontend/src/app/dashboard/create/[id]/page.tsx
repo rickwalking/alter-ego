@@ -75,6 +75,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
             workflowState={editorialWorkflow.state}
             activeStepId={activeStepId}
             projectId={workspace.projectId}
+            generationLog={workspace.generationLog}
           />
         </div>
       </div>

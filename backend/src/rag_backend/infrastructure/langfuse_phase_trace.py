@@ -82,6 +82,10 @@ class TraceClient(Protocol):
 
     def flush(self) -> None: ...
 
+    def get_current_trace_id(self) -> str | None: ...
+
+    def get_trace_url(self, *, trace_id: str | None = None) -> str | None: ...
+
 
 @dataclass(frozen=True)
 class WorkflowTraceScope:
@@ -115,6 +119,8 @@ class PhaseTrace:
     tags: tuple[str, ...]
     user_id: str | None
     session_id: str | None
+    trace_id: str | None = None
+    trace_url: str | None = None
     output: object | None = None
 
     def set_output(self, output: object) -> None:
@@ -289,6 +295,14 @@ def _close_span(
         )
 
 
+def _client_trace_identity(client: TraceClient) -> tuple[str | None, str | None]:
+    try:
+        trace_id = client.get_current_trace_id()
+        return trace_id, client.get_trace_url(trace_id=trace_id)
+    except Exception:
+        return None, None
+
+
 @contextmanager
 def _run_with_span(
     client: TraceClient,
@@ -310,6 +324,9 @@ def _run_with_span(
             metadata=attributes.metadata,
             tags=list(attributes.tags),
         )
+    trace_id, trace_url = (
+        _client_trace_identity(client) if span is not None else (None, None)
+    )
     handle = PhaseTrace(
         name=attributes.name,
         span=span,
@@ -318,6 +335,8 @@ def _run_with_span(
         tags=attributes.tags,
         user_id=attributes.user_id,
         session_id=attributes.session_id,
+        trace_id=trace_id,
+        trace_url=trace_url,
     )
     active_token = _ACTIVE.set(handle)
     run_token = _RUN_BASE.set(run_base)
