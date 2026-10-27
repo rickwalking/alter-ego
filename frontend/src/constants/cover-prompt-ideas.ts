@@ -14,7 +14,7 @@ export const COVER_IDEA_DIMENSIONS = [
 export const COVER_IDEA_POOL_SIZE = 8;
 
 /** Props in each theme pool (`create.coverIdeas.props.<theme>.<n>`). */
-export const COVER_IDEA_PROP_POOL_SIZE = 6;
+export const COVER_IDEA_PROP_POOL_SIZE = 12;
 
 /**
  * Topic words (lowercase, without accents) that pick a theme's prop pool; the
