@@ -62,8 +62,23 @@ def generation_runs_ddl(dialect: Dialect) -> list[str]:
     return _model_ddl(_table(), _indexes(), dialect)
 
 
+def _register_foreign_key_targets() -> str:
+    """Attach the tables the events foreign keys point at to the shared metadata.
+
+    The deploy process loads no other model, so without this the events DDL
+    cannot resolve ``carousel_projects``. Imported lazily: the shared model
+    package imports this module's package.
+    """
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    return CarouselProjectModel.__tablename__
+
+
 def generation_events_ddl(dialect: Dialect) -> list[str]:
     """The generation-event DDL compiled from the same ORM as Alembic."""
+    _register_foreign_key_targets()
     table = cast(Table, CarouselGenerationEventModel.__table__)
     indexes = sorted(table.indexes, key=lambda index: str(index.name))
     return _model_ddl(table, indexes, dialect)
