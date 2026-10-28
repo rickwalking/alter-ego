@@ -165,4 +165,12 @@ describe("WorkflowBoardPage refresh", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
   });
+
+  /** Scenario: The board fits the screen and columns scroll independently */
+  it("keeps the board view height fixed so the page never scrolls vertically", async () => {
+    await renderLoadedBoard();
+    const view = screen.getByTestId("workflow-board-view");
+    expect(view.className).toContain("h-[calc(100dvh-3.5rem)]");
+    expect(view.className).toContain("overflow-hidden");
+  });
 });

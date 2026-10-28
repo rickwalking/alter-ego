@@ -15,6 +15,7 @@ import {
   WorkspaceNotFound,
   WorkspaceStepBody,
 } from "./create-workspace-parts";
+import { BoardSequenceNavigation } from "./board-sequence-navigation";
 
 const LAYOUT_GRID_CLASS =
   "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_360px]";
@@ -50,6 +51,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
           { label: t("topBar.projects"), href: DASHBOARD_ROUTES.WORKFLOW },
           { label: project.topic },
         ]}
+        actions={<BoardSequenceNavigation projectId={workspace.projectId} />}
       />
 
       <div className="p-7">

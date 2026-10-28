@@ -1,3 +1,4 @@
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import {
   NEON_AMBER,
   NEON_AMBER_DIM,
@@ -135,3 +136,21 @@ export const WORKFLOW_COLUMNS: WorkflowColumnData[] = [
     ],
   },
 ];
+
+/** Phase id of the published column (a done state on the board). */
+export const WORKFLOW_BOARD_PHASE_PUBLISHED = "published";
+
+/** Done phases: rendered as collapsed rails until the owner expands them. */
+export const WORKFLOW_BOARD_DONE_PHASES: ReadonlySet<string> = new Set([
+  WORKFLOW_BOARD_PHASE_PUBLISHED,
+  WORKFLOW_PHASE_STATUS.REJECTED,
+]);
+
+/** localStorage key holding the column keys the owner expanded from rails. */
+export const WORKFLOW_BOARD_EXPANDED_STORAGE_KEY = "workflow-board:expanded";
+
+/** sessionStorage key prefix holding the board scroll across a card round trip. */
+export const WORKFLOW_BOARD_SCROLL_STORAGE_PREFIX = "workflow-board:scroll";
+
+/** sessionStorage key holding the ordered column used by workspace navigation. */
+export const WORKFLOW_BOARD_SEQUENCE_STORAGE_KEY = "workflow-board:sequence";

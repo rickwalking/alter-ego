@@ -46,7 +46,8 @@
     },
     "logout": "Logout",
     "login": "Login",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "breadcrumbNavLabel": "Breadcrumb"
   },
   "home": {
     "hero": {
@@ -676,6 +677,12 @@
       "newProject": "new project",
       "project": "project",
       "projects": "projects"
+    },
+    "boardSequence": {
+      "label": "Carousel sequence",
+      "previous": "← Prev",
+      "next": "Next →",
+      "position": "{position} / {total} in {column}"
     },
     "publishStep": {
       "hint": "Final approval and distribution live on the Publish screen.",
@@ -1637,13 +1644,15 @@
   },
   "workflow": {
     "board": {
+      "expandColumn": "Expand column {name} ({count})",
       "title": "Workflow Board",
       "subtitle": "Track carousel projects across editorial phases.",
       "noProjects": "No projects",
       "retry": "Retry",
       "breadcrumb": "pipeline",
       "newCard": "New Card",
-      "rejectedColumn": "Rejected"
+      "rejectedColumn": "Rejected",
+      "collapseColumn": "Collapse column {name}"
     },
     "calendar": {
       "title": "Content Calendar",

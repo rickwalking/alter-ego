@@ -46,7 +46,8 @@
     },
     "logout": "Sair",
     "login": "Entrar",
-    "skipToContent": "Pular para o conteúdo"
+    "skipToContent": "Pular para o conteúdo",
+    "breadcrumbNavLabel": "Trilha de navegação"
   },
   "home": {
     "hero": {
@@ -676,6 +677,12 @@
       "newProject": "novo projeto",
       "project": "projeto",
       "projects": "projetos"
+    },
+    "boardSequence": {
+      "label": "Sequência de carrosséis",
+      "previous": "← Anterior",
+      "next": "Próximo →",
+      "position": "{position} / {total} em {column}"
     },
     "publishStep": {
       "hint": "A aprovação final e a distribuição ficam na tela Publicar.",
@@ -1637,13 +1644,15 @@
   },
   "workflow": {
     "board": {
+      "expandColumn": "Expandir coluna {name} ({count})",
       "title": "Quadro de Workflow",
       "subtitle": "Acompanhe projetos de carrossel nas fases editoriais.",
       "noProjects": "Nenhum projeto",
       "retry": "Tentar novamente",
       "breadcrumb": "pipeline",
       "newCard": "Novo card",
-      "rejectedColumn": "Rejeitados"
+      "rejectedColumn": "Rejeitados",
+      "collapseColumn": "Recolher coluna {name}"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",
