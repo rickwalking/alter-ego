@@ -18,6 +18,22 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import type { SidebarSection } from "@/schemas/neon-sidebar";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+
+const CREATE_WORKSPACE_PREFIX = `${DASHBOARD_ROUTES.CREATE}/`;
+
+/**
+ * A sidebar item is active on its own page; the Workflow Board item is also
+ * active inside a carousel workspace (`/dashboard/create/<id>`), but not on
+ * the create wizard page itself.
+ */
+export function isActiveSidebarItem(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  return (
+    href === DASHBOARD_ROUTES.WORKFLOW &&
+    pathname.startsWith(CREATE_WORKSPACE_PREFIX)
+  );
+}
 
 /** Logo mark and product name. */
 export function SidebarBrand(): React.ReactElement {
@@ -105,11 +121,12 @@ export function SidebarNav({
             {t(group.sectionKey)}
           </div>
           {group.items.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveSidebarItem(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className="flex items-center gap-3 rounded-md px-3 py-2.5 [@media(pointer:coarse)]:min-h-11"
                 style={{
                   color: isActive ? NEON_CYAN : TEXT_MUTED,

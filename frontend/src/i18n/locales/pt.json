@@ -677,6 +677,12 @@
       "project": "projeto",
       "projects": "projetos"
     },
+    "boardSequence": {
+      "label": "Sequência de carrosséis",
+      "previous": "← Anterior",
+      "next": "Próximo →",
+      "position": "{position} / {total} em {column}"
+    },
     "publishStep": {
       "hint": "A aprovação final e a distribuição ficam na tela Publicar.",
       "goToPublish": "Ir para Publicar"
@@ -1637,6 +1643,7 @@
   },
   "workflow": {
     "board": {
+      "expandColumn": "Expandir coluna {name} ({count})",
       "title": "Quadro de Workflow",
       "subtitle": "Acompanhe projetos de carrossel nas fases editoriais.",
       "noProjects": "Nenhum projeto",

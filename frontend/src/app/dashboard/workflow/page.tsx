@@ -89,28 +89,42 @@ function WorkflowBoardView({
   const showEmpty = archived && board !== null && isEmptyBoard(board);
 
   return (
-    <div className="p-6">
-      {!archived && <QueuePanelSection />}
+    <div
+      data-testid="workflow-board-view"
+      className="flex h-[calc(100dvh-3.5rem)] flex-col gap-4 overflow-hidden p-6"
+    >
+      {!archived && (
+        <div className="max-h-[45%] shrink-0 overflow-y-auto">
+          <QueuePanelSection />
+        </div>
+      )}
       <BoardFeedback loading={loading} error={error} onRetry={refresh} />
       {showEmpty && (
         <p className="py-8 text-center text-sm">{t("archive.emptyArchived")}</p>
       )}
       {board && !showEmpty && (
-        <NeonKanbanBoard
-          columns={localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
-            phase: tPhase,
-            status: tStatus,
-            knownPhases: BOARD_PHASES,
-            rejectedColumn: t("board.rejectedColumn"),
-          })}
-          renderCardActions={(card) => (
-            <CardArchiveAction
-              card={card}
-              archived={archived}
-              onChanged={refresh}
-            />
-          )}
-        />
+        <div className="min-h-0 flex-1">
+          <NeonKanbanBoard
+            columns={localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
+              phase: tPhase,
+              status: tStatus,
+              knownPhases: BOARD_PHASES,
+              rejectedColumn: t("board.rejectedColumn"),
+            })}
+            labels={{
+              emptyColumn: t("board.noProjects"),
+              expandColumn: (name: string, count: number) =>
+                t("board.expandColumn", { name, count }),
+            }}
+            renderCardActions={(card) => (
+              <CardArchiveAction
+                card={card}
+                archived={archived}
+                onChanged={refresh}
+              />
+            )}
+          />
+        </div>
       )}
     </div>
   );

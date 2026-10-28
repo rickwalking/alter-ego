@@ -34,5 +34,10 @@ export const Default: Story = {
         cards: [],
       },
     ],
+    labels: {
+      emptyColumn: "Nenhum projeto",
+      expandColumn: (name: string, count: number) =>
+        `Expandir coluna ${name} (${count})`,
+    },
   },
 };
