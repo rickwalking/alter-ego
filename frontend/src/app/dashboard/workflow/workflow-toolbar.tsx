@@ -33,6 +33,13 @@ const SORT_LABEL_KEYS: Record<BoardSort, string> = {
   title: "sort.title",
 };
 
+const SORT_KEYS: Readonly<Record<string, BoardSort>> = {
+  ArrowLeft: "updated",
+  ArrowRight: "title",
+};
+
+const SORT_ORDER: readonly BoardSort[] = BOARD_SORTS;
+
 export interface WorkflowToolbarProps {
   filters: BoardFilters;
   counts: Record<BoardStatusFilter, number>;
@@ -42,7 +49,8 @@ export interface WorkflowToolbarProps {
 /**
  * The board toolbar: search (title + topic), status filter chips with live
  * counts, and the sort order. Dumb and controlled; the state lives in the
- * URL through `useBoardFilters`.
+ * URL through `useBoardFilters`. The sort group answers arrow keys like a
+ * native radio group.
  */
 export function WorkflowToolbar({
   filters,
@@ -52,6 +60,12 @@ export function WorkflowToolbar({
   const t = useTranslations("workflow.board");
   const searchRef = useRef<HTMLInputElement | null>(null);
   useSearchShortcut(searchRef);
+  const onSortKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    const next = SORT_KEYS[event.key];
+    if (next === undefined || filters.sort === next) return;
+    event.preventDefault();
+    onChange({ ...filters, sort: next });
+  };
   return (
     <div
       data-testid="workflow-toolbar"
@@ -66,7 +80,11 @@ export function WorkflowToolbar({
         inputRef={searchRef}
         className="w-64"
       />
-      <div className="flex flex-wrap items-center gap-1" role="group">
+      <div
+        className="flex flex-wrap items-center gap-1"
+        role="group"
+        aria-label={t("filters.group")}
+      >
         {BOARD_STATUS_FILTERS.map((status) => (
           <button
             key={status}
@@ -85,16 +103,18 @@ export function WorkflowToolbar({
         className="flex items-center gap-1"
         role="radiogroup"
         aria-label={t("sort.label")}
+        onKeyDown={onSortKeyDown}
       >
         <span className="text-xs" style={{ color: TEXT_DIM }}>
           {t("sort.label")}
         </span>
-        {BOARD_SORTS.map((sort) => (
+        {SORT_ORDER.map((sort) => (
           <button
             key={sort}
             type="button"
             role="radio"
             aria-checked={filters.sort === sort}
+            tabIndex={filters.sort === sort ? 0 : -1}
             className={SORT_CLASS}
             style={{ color: filters.sort === sort ? undefined : TEXT_DIM }}
             onClick={() => onChange({ ...filters, sort })}

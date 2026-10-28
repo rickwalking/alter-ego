@@ -129,6 +129,46 @@ describe("board filters", () => {
     });
   });
 
+  /** Scenario: Status chips filter by raw status */
+  it("counts an unmapped status only once, in the total", () => {
+    const counts = countBoardStatusBuckets(
+      columnsOf([
+        card({ statusKey: "published" }),
+        card({ statusKey: "draft" }),
+        card({ statusKey: "some_new_status" }),
+      ]),
+    );
+    expect(counts.all).toBe(3);
+    expect(counts).toEqual({
+      all: 3,
+      needsReview: 0,
+      inProgress: 0,
+      ready: 0,
+      failed: 0,
+    });
+  });
+
+  /** Scenario: Sort follows the toolbar */
+  it("sorts by title in the dashboard locale with an id tiebreak", () => {
+    const columns = columnsOf([
+      card({ id: "b", title: "Água" }),
+      card({ id: "c", title: "Azul" }),
+      card({ id: "a2", title: "Beta" }),
+      card({ id: "a1", title: "Beta" }),
+    ]);
+    const filtered = filterBoardColumns(
+      columns,
+      { ...DEFAULT_BOARD_FILTERS, sort: "title" },
+      "pt-BR",
+    );
+    expect(filtered[0]?.cards.map((item) => item.id)).toEqual([
+      "b",
+      "c",
+      "a1",
+      "a2",
+    ]);
+  });
+
   it("parses valid URL values and falls back to defaults", () => {
     const params = new URLSearchParams("q=claude&status=ready&sort=title");
     expect(parseBoardFilters(params)).toEqual({

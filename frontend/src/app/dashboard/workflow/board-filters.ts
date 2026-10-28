@@ -74,17 +74,32 @@ function cardMatchesStatus(
   return boardStatusBucket(card.statusKey) === status;
 }
 
-function compareBySort(a: KanbanCard, b: KanbanCard, sort: BoardSort): number {
-  if (sort === "title") {
-    return a.title.localeCompare(b.title);
-  }
+interface TitleSort {
+  sort: BoardSort;
+  locale: string | undefined;
+}
+
+function compareTitles(
+  a: KanbanCard,
+  b: KanbanCard,
+  locale: string | undefined,
+): number {
+  const byTitle = a.title.localeCompare(b.title, locale);
+  return byTitle !== 0 ? byTitle : a.id.localeCompare(b.id);
+}
+
+function compareUpdated(a: KanbanCard, b: KanbanCard): number {
   const aTime = a.updatedAt ?? null;
   const bTime = b.updatedAt ?? null;
-  if (aTime === null && bTime === null) return a.id.localeCompare(b.id);
+  if (aTime === bTime) return a.id.localeCompare(b.id);
   if (aTime === null) return 1;
   if (bTime === null) return -1;
-  if (aTime === bTime) return a.id.localeCompare(b.id);
   return aTime < bTime ? 1 : -1;
+}
+
+function compareBySort(a: KanbanCard, b: KanbanCard, order: TitleSort): number {
+  if (order.sort === "title") return compareTitles(a, b, order.locale);
+  return compareUpdated(a, b);
 }
 
 /** Card counts per filter bucket, plus the total, over every column. */
@@ -101,7 +116,9 @@ export function countBoardStatusBuckets(
   for (const column of columns) {
     for (const card of column.cards) {
       counts.all += 1;
-      counts[boardStatusBucket(card.statusKey)] += 1;
+      const bucket = boardStatusBucket(card.statusKey);
+      if (bucket === "all") continue;
+      counts[bucket] += 1;
     }
   }
   return counts;
@@ -110,18 +127,20 @@ export function countBoardStatusBuckets(
 /**
  * Apply the toolbar to the localized board: query and status narrow the cards
  * (counts follow the filtered set) and the sort orders each column. Columns
- * without a match stay on the board as empty columns.
+ * without a match stay on the board as empty columns. The title sort uses the
+ * dashboard locale and falls back to the id when titles are equal.
  */
 export function filterBoardColumns(
   columns: readonly KanbanColumn[],
   filters: BoardFilters,
+  locale?: string,
 ): KanbanColumn[] {
   const query = filters.query.trim();
   return columns.map((column) => {
     const cards = column.cards
       .filter((card) => cardMatchesQuery(card, query))
       .filter((card) => cardMatchesStatus(card, filters.status))
-      .sort((a, b) => compareBySort(a, b, filters.sort));
+      .sort((a, b) => compareBySort(a, b, { sort: filters.sort, locale }));
     return { ...column, cards, count: cards.length };
   });
 }

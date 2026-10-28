@@ -8,6 +8,7 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { TEXT, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { formatLocaleRelative } from "@/lib/locale-format";
+import { WORKFLOW_BOARD_PHASE_PUBLISHED } from "../constants";
 import type { KanbanCard } from "@/schemas/neon-kanban";
 import type { WorkflowBoardColumnProps } from "./types";
 
@@ -18,7 +19,6 @@ const FOCUS_RING_CLASS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 const COLUMN_WIDTH_CLASS = "min-w-[232px] max-w-[320px] flex-1 basis-0";
 const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_RING_CLASS}`;
-const BOARD_PHASE_PUBLISHED = "published";
 
 function countAwaitingOwner(cards: readonly KanbanCard[]): number {
   return cards.filter(
@@ -34,7 +34,7 @@ function CardStatus({
   card,
   locale,
 }: Readonly<{ card: KanbanCard; locale: string }>): React.ReactElement {
-  if (card.phase === BOARD_PHASE_PUBLISHED) {
+  if (card.phase === WORKFLOW_BOARD_PHASE_PUBLISHED) {
     return (
       <span
         className="text-[11px]"

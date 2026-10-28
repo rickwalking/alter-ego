@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
@@ -90,6 +90,7 @@ function WorkflowBoardView({
   const t = useTranslations("workflow");
   const tPhase = useTranslations("create.phases");
   const tStatus = useTranslations("create.status");
+  const locale = useLocale();
   const { filters, setFilters } = useBoardFilters();
   const { board, loading, error, refetch } = useWorkflowKanban(archived);
   const refresh = (): void => void refetch();
@@ -104,7 +105,7 @@ function WorkflowBoardView({
           rejectedColumn: t("board.rejectedColumn"),
           untitled: t("queue.untitled"),
         });
-  const visibleColumns = filterBoardColumns(localizedColumns, filters);
+  const visibleColumns = filterBoardColumns(localizedColumns, filters, locale);
   const counts = countBoardStatusBuckets(localizedColumns);
 
   return (
@@ -117,11 +118,13 @@ function WorkflowBoardView({
           <QueuePanelSection />
         </div>
       )}
-      <WorkflowToolbar
-        filters={filters}
-        counts={counts}
-        onChange={setFilters}
-      />
+      <div className="shrink-0">
+        <WorkflowToolbar
+          filters={filters}
+          counts={counts}
+          onChange={setFilters}
+        />
+      </div>
       <BoardFeedback loading={loading} error={error} onRetry={refresh} />
       {showEmpty && (
         <p className="py-8 text-center text-sm">{t("archive.emptyArchived")}</p>

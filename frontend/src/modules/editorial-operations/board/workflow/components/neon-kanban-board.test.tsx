@@ -65,7 +65,19 @@ function columnList(phase: string): HTMLElement {
 }
 
 describe("NeonKanbanBoard Component", () => {
-  const columns = [column("research", "Research", 1)];
+  const columns = [
+    cardsColumn("research", "Research", [
+      {
+        id: "card-1",
+        title: "DeepSeek V4",
+        description: "Research benchmarks",
+        phase: "research",
+        phaseStatus: "pending",
+        statusKey: "pending",
+        assignee: "PM",
+      },
+    ]),
+  ];
 
   it("renders column status labels", () => {
     render(<NeonKanbanBoard columns={columns} labels={labels} />);
@@ -74,7 +86,7 @@ describe("NeonKanbanBoard Component", () => {
 
   it("renders card titles", () => {
     render(<NeonKanbanBoard columns={columns} labels={labels} />);
-    expect(screen.getByText("Research card 0")).toBeInTheDocument();
+    expect(screen.getByText("DeepSeek V4")).toBeInTheDocument();
   });
 
   /** Scenario: Archiving a card asks for a confirmation first */
@@ -88,9 +100,9 @@ describe("NeonKanbanBoard Component", () => {
         )}
       />,
     );
-    const action = screen.getByRole("button", { name: "archive research-0" });
+    const action = screen.getByRole("button", { name: "archive card-1" });
     expect(action.closest("a")).toBeNull();
-    expect(screen.getByRole("link")).toHaveTextContent("Research card 0");
+    expect(screen.getByRole("link")).toHaveTextContent("DeepSeek V4");
   });
 
   /** Scenario: The board fits the screen and columns scroll independently */
@@ -393,8 +405,7 @@ describe("NeonKanbanBoard Component", () => {
   });
 
   /** Scenario: The published column stops saying ready to publish */
-  it("shows the relative updated time instead of a badge in the published column", async () => {
-    const user = userEvent.setup();
+  it("shows the relative updated time instead of a badge in the published column", () => {
     window.localStorage.setItem(
       WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
       JSON.stringify(["published"]),
@@ -422,9 +433,6 @@ describe("NeonKanbanBoard Component", () => {
     const updated = screen.getByTestId("published-updated");
     expect(updated.textContent).not.toBe("");
     expect(updated.textContent).not.toBe("Pronto para publicar");
-    await user.click(
-      screen.getByRole("button", { name: "Recolher coluna Published" }),
-    );
   });
 
   /** Scenario: Column headers count the cards that need the owner */
@@ -432,36 +440,32 @@ describe("NeonKanbanBoard Component", () => {
     render(
       <NeonKanbanBoard
         columns={[
-          cardsColumn(
-            "final_review",
-            "Final review",
-            [
-              {
-                id: "card-a",
-                title: "A",
-                description: "",
-                phase: "final_review",
-                phaseStatus: "x",
-                statusKey: "awaiting_human",
-              },
-              {
-                id: "card-b",
-                title: "B",
-                description: "",
-                phase: "final_review",
-                phaseStatus: "x",
-                statusKey: "awaiting_human",
-              },
-              {
-                id: "card-c",
-                title: "C",
-                description: "",
-                phase: "final_review",
-                phaseStatus: "x",
-                statusKey: "approved_for_publish",
-              },
-            ],
-          ),
+          cardsColumn("final_review", "Final review", [
+            {
+              id: "card-a",
+              title: "A",
+              description: "",
+              phase: "final_review",
+              phaseStatus: "x",
+              statusKey: "awaiting_human",
+            },
+            {
+              id: "card-b",
+              title: "B",
+              description: "",
+              phase: "final_review",
+              phaseStatus: "x",
+              statusKey: "awaiting_human",
+            },
+            {
+              id: "card-c",
+              title: "C",
+              description: "",
+              phase: "final_review",
+              phaseStatus: "x",
+              statusKey: "approved_for_publish",
+            },
+          ]),
         ]}
         labels={labels}
       />,

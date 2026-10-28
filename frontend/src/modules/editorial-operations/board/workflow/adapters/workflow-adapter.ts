@@ -66,11 +66,14 @@ export function mapWorkflowToKanbanColumns(
 
 const ARCHIVE_REFUSALS: readonly string[] = Object.values(ARCHIVE_REFUSAL);
 
-const INLINE_MARKUP_PATTERN = /<\/?(strong|em|b|i)>|\*\*|__/g;
+const INLINE_MARKUP_PATTERN = /<\/?(?:strong|em|b|i)(?:\s[^>]*)?>|\*\*|__/g;
 
 /**
  * Board titles come from LLM copy that may carry `**bold**`, `__underline__`
- * or `<strong>`-style tags; the board renders plain text only.
+ * or `<strong>`-style tags (with or without attributes); the board renders
+ * plain text only. The empty result is the adapter's documented contract for
+ * a card whose title and topic are both blank: `localizeBoardColumns`
+ * substitutes the localized untitled fallback before rendering.
  */
 export function stripInlineMarkup(value: string): string {
   return value.replaceAll(INLINE_MARKUP_PATTERN, "").trim();

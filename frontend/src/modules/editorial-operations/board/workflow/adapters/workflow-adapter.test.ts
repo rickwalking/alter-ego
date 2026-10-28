@@ -108,6 +108,51 @@ describe("workflow-adapter", () => {
   });
 
   /** Scenario: Card titles are readable */
+  it("mapApiKanbanColumn strips tags that carry attributes", () => {
+    const result = mapApiKanbanColumn({
+      phase: "content",
+      cards: [
+        {
+          id: "proj-7",
+          title: '<em class="hl">Título</em> com <b style="x">atributos</b>',
+          topic: "",
+          current_phase: "content",
+          phase_status: "in_progress",
+          updated_at: null,
+        },
+      ],
+    });
+    expect(result.cards[0]!.title).toBe("Título com atributos");
+  });
+
+  /** Scenario: Card titles are readable */
+  it("mapApiKanbanColumn yields an empty title only when title and topic are blank", () => {
+    const result = mapApiKanbanColumn({
+      phase: "rejected",
+      cards: [
+        {
+          id: "proj-8",
+          title: "  ** ** ",
+          topic: "  ",
+          current_phase: "brief",
+          phase_status: "rejected",
+          updated_at: null,
+        },
+        {
+          id: "proj-9",
+          title: "   ",
+          topic: " Tema válido ",
+          current_phase: "brief",
+          phase_status: "rejected",
+          updated_at: null,
+        },
+      ],
+    });
+    expect(result.cards[0]!.title).toBe("");
+    expect(result.cards[1]!.title).toBe("Tema válido");
+  });
+
+  /** Scenario: Card titles are readable */
   it("mapApiKanbanColumn falls back to the topic and blanks repeated descriptions", () => {
     const result = mapApiKanbanColumn({
       phase: "rejected",

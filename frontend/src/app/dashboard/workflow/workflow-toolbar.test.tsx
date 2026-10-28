@@ -128,4 +128,37 @@ describe("WorkflowToolbar", () => {
       sort: "title",
     });
   });
+
+  /** Scenario: Sort follows the toolbar */
+  it("moves between sort options with the arrow keys", () => {
+    const onChange = vi.fn();
+    render(
+      <WorkflowToolbar
+        filters={DEFAULT_BOARD_FILTERS}
+        counts={COUNTS}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("radiogroup", { name: "sort.label" }), {
+      key: "ArrowRight",
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_BOARD_FILTERS,
+      sort: "title",
+    });
+  });
+
+  /** Scenario: Status chips filter by raw status */
+  it("labels the chip group", () => {
+    render(
+      <WorkflowToolbar
+        filters={DEFAULT_BOARD_FILTERS}
+        counts={COUNTS}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("group", { name: "filters.group" }),
+    ).toBeInTheDocument();
+  });
 });

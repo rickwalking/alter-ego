@@ -1659,7 +1659,8 @@
         "needsReview": "Precisa de você",
         "inProgress": "Em andamento",
         "ready": "Pronto",
-        "failed": "Falhou"
+        "failed": "Falhou",
+        "group": "Status"
       },
       "sort": {
         "label": "Ordenar",
