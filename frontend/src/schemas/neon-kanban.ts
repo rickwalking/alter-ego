@@ -1,11 +1,16 @@
 import { z } from "zod";
+import { neonBadgeVariantSchema } from "@/schemas/neon-badge";
 
 export const kanbanCardSchema = z.object({
   id: z.string(),
-  title: z.string().min(1),
+  title: z.string(),
   description: z.string(),
   phase: z.string(),
   phaseStatus: z.string(),
+  statusKey: z.string(),
+  statusVariant: neonBadgeVariantSchema.optional(),
+  statusPulse: z.boolean().optional(),
+  updatedAt: z.string().nullable().optional(),
   assignee: z.string().optional(),
   archiveRefusal: z
     .enum(["published", "in_progress", "autopilot"])

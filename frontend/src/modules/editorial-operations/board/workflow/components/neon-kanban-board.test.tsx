@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BADGE_COLORS, type NeonBadgeVariant } from "@/schemas/neon-badge";
 import { NeonKanbanBoard } from "@/modules/editorial-operations";
 import {
   WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
@@ -8,27 +9,51 @@ import {
   WORKFLOW_BOARD_SEQUENCE_STORAGE_KEY,
 } from "@/modules/editorial-operations/board/workflow/constants";
 import type { BoardColumnLabels } from "@/modules/editorial-operations/board/workflow/components/types";
+import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
+
+vi.mock("next-intl", () => ({
+  useLocale: () => "pt",
+  useTranslations: () => (key: string) => key,
+}));
 
 const labels: BoardColumnLabels = {
   emptyColumn: "Nenhum projeto",
   expandColumn: (name: string, count: number) =>
     `Expandir coluna ${name} (${count})`,
   collapseColumn: (name: string) => `Recolher coluna ${name}`,
+  needYou: (count: number) => `${count} precisam de você`,
 };
 
-function column(phase: string, status: string, cards: number) {
-  return {
+function badgeColor(variant: NeonBadgeVariant): string {
+  const hex = BADGE_COLORS[variant].text.replace("#", "");
+  const value = Number.parseInt(hex, 16);
+  const r = (value >> 16) & 0xff;
+  const g = (value >> 8) & 0xff;
+  const b = value & 0xff;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function column(phase: string, status: string, cards: number): KanbanColumn {
+  return cardsColumn(
     phase,
     status,
-    count: cards,
-    cards: Array.from({ length: cards }, (_, index) => ({
+    Array.from({ length: cards }, (_, index) => ({
       id: `${phase}-${index}`,
       title: `${status} card ${index}`,
       description: "topic",
       phase,
       phaseStatus: "in_progress",
+      statusKey: "in_progress",
     })),
-  };
+  );
+}
+
+function cardsColumn(
+  phase: string,
+  status: string,
+  cards: KanbanCard[],
+): KanbanColumn {
+  return { phase, status, count: cards.length, cards };
 }
 
 function boardScroll(): HTMLElement {
@@ -40,23 +65,7 @@ function columnList(phase: string): HTMLElement {
 }
 
 describe("NeonKanbanBoard Component", () => {
-  const columns = [
-    {
-      phase: "research",
-      status: "Research",
-      count: 1,
-      cards: [
-        {
-          id: "card-1",
-          title: "DeepSeek V4",
-          description: "Research benchmarks",
-          phase: "research",
-          phaseStatus: "pending",
-          assignee: "PM",
-        },
-      ],
-    },
-  ];
+  const columns = [column("research", "Research", 1)];
 
   it("renders column status labels", () => {
     render(<NeonKanbanBoard columns={columns} labels={labels} />);
@@ -65,7 +74,7 @@ describe("NeonKanbanBoard Component", () => {
 
   it("renders card titles", () => {
     render(<NeonKanbanBoard columns={columns} labels={labels} />);
-    expect(screen.getByText("DeepSeek V4")).toBeInTheDocument();
+    expect(screen.getByText("Research card 0")).toBeInTheDocument();
   });
 
   /** Scenario: Archiving a card asks for a confirmation first */
@@ -79,9 +88,9 @@ describe("NeonKanbanBoard Component", () => {
         )}
       />,
     );
-    const action = screen.getByRole("button", { name: "archive card-1" });
+    const action = screen.getByRole("button", { name: "archive research-0" });
     expect(action.closest("a")).toBeNull();
-    expect(screen.getByRole("link")).toHaveTextContent("DeepSeek V4");
+    expect(screen.getByRole("link")).toHaveTextContent("Research card 0");
   });
 
   /** Scenario: The board fits the screen and columns scroll independently */
@@ -318,6 +327,153 @@ describe("NeonKanbanBoard Component", () => {
       column: "Final review",
       ids: ["final_review-0", "final_review-1", "final_review-2"],
     });
+  });
+
+  /** Scenario: Badges use semantic colors */
+  it("renders the card badge with the semantic variant and pulse", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          cardsColumn("final_review", "Final review", [
+            {
+              id: "card-need",
+              title: "Needs the owner",
+              description: "",
+              phase: "final_review",
+              phaseStatus: "Precisa de você",
+              statusKey: "awaiting_human",
+              statusVariant: "magenta",
+            },
+            {
+              id: "card-live",
+              title: "Generating",
+              description: "",
+              phase: "images",
+              phaseStatus: "Em andamento",
+              statusKey: "in_progress",
+              statusVariant: "cyan",
+              statusPulse: true,
+            },
+          ]),
+        ]}
+        labels={labels}
+      />,
+    );
+    const needBadge = screen.getByText("Precisa de você").closest("span");
+    expect(needBadge?.style.color).toBe(badgeColor("magenta"));
+    const liveBadge = screen.getByText("Em andamento").closest("span");
+    expect(liveBadge?.style.color).toBe(badgeColor("cyan"));
+    expect(liveBadge?.querySelector(".animate-pulse")).not.toBeNull();
+    expect(needBadge?.querySelector(".animate-pulse")).toBeNull();
+  });
+
+  /** Scenario: Badges use semantic colors */
+  it("labels each card link with the title and status", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          cardsColumn("research", "Research", [
+            {
+              id: "card-1",
+              title: "DeepSeek V4",
+              description: "Research benchmarks",
+              phase: "research",
+              phaseStatus: "Pending",
+              statusKey: "pending",
+            },
+          ]),
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "aria-label",
+      "DeepSeek V4, Pending",
+    );
+  });
+
+  /** Scenario: The published column stops saying ready to publish */
+  it("shows the relative updated time instead of a badge in the published column", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
+      JSON.stringify(["published"]),
+    );
+    render(
+      <NeonKanbanBoard
+        columns={[
+          cardsColumn("published", "Published", [
+            {
+              id: "card-pub",
+              title: "Published carousel",
+              description: "",
+              phase: "published",
+              phaseStatus: "Pronto para publicar",
+              statusKey: "approved_for_publish",
+              statusVariant: "teal",
+              updatedAt: "2026-10-27T12:00:00Z",
+            },
+          ]),
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByTestId("workflow-column-published")).not.toBeNull();
+    const updated = screen.getByTestId("published-updated");
+    expect(updated.textContent).not.toBe("");
+    expect(updated.textContent).not.toBe("Pronto para publicar");
+    await user.click(
+      screen.getByRole("button", { name: "Recolher coluna Published" }),
+    );
+  });
+
+  /** Scenario: Column headers count the cards that need the owner */
+  it("counts the awaiting-owner cards in the column header", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          cardsColumn(
+            "final_review",
+            "Final review",
+            [
+              {
+                id: "card-a",
+                title: "A",
+                description: "",
+                phase: "final_review",
+                phaseStatus: "x",
+                statusKey: "awaiting_human",
+              },
+              {
+                id: "card-b",
+                title: "B",
+                description: "",
+                phase: "final_review",
+                phaseStatus: "x",
+                statusKey: "awaiting_human",
+              },
+              {
+                id: "card-c",
+                title: "C",
+                description: "",
+                phase: "final_review",
+                phaseStatus: "x",
+                statusKey: "approved_for_publish",
+              },
+            ],
+          ),
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByTestId("column-need-you")).toHaveTextContent(
+      "2 precisam de você",
+    );
+  });
+
+  it("omits the need-you count when no card awaits the owner", () => {
+    render(<NeonKanbanBoard columns={columns} labels={labels} />);
+    expect(screen.queryByTestId("column-need-you")).toBeNull();
   });
 
   beforeEach(() => {

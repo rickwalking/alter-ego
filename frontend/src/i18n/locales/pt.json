@@ -1652,7 +1652,21 @@
       "breadcrumb": "pipeline",
       "newCard": "Novo card",
       "rejectedColumn": "Rejeitados",
-      "collapseColumn": "Recolher coluna {name}"
+      "collapseColumn": "Recolher coluna {name}",
+      "searchPlaceholder": "Buscar carrossel…",
+      "filters": {
+        "all": "Todos",
+        "needsReview": "Precisa de você",
+        "inProgress": "Em andamento",
+        "ready": "Pronto",
+        "failed": "Falhou"
+      },
+      "sort": {
+        "label": "Ordenar",
+        "updated": "Atualizado ↓",
+        "title": "Título A-Z"
+      },
+      "needYou": "{count, plural, one {# precisa de você} other {# precisam de você}}"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",

@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { TEXT, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { formatLocaleRelative } from "@/lib/locale-format";
+import type { KanbanCard } from "@/schemas/neon-kanban";
 import type { WorkflowBoardColumnProps } from "./types";
 
 const COLUMN_TEST_ID_PREFIX = "workflow-column-";
@@ -14,6 +18,43 @@ const FOCUS_RING_CLASS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 const COLUMN_WIDTH_CLASS = "min-w-[232px] max-w-[320px] flex-1 basis-0";
 const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_RING_CLASS}`;
+const BOARD_PHASE_PUBLISHED = "published";
+
+function countAwaitingOwner(cards: readonly KanbanCard[]): number {
+  return cards.filter(
+    (card) => card.statusKey === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+  ).length;
+}
+
+/**
+ * The published column's badge would only repeat the column header, so the
+ * card shows the relative updated time instead.
+ */
+function CardStatus({
+  card,
+  locale,
+}: Readonly<{ card: KanbanCard; locale: string }>): React.ReactElement {
+  if (card.phase === BOARD_PHASE_PUBLISHED) {
+    return (
+      <span
+        className="text-[11px]"
+        style={{ color: TEXT_MUTED }}
+        data-testid="published-updated"
+      >
+        {card.updatedAt ? formatLocaleRelative(card.updatedAt, locale) : ""}
+      </span>
+    );
+  }
+  return (
+    <NeonBadge
+      variant={card.statusVariant ?? "teal"}
+      pulse={card.statusPulse}
+      size="sm"
+    >
+      {card.phaseStatus}
+    </NeonBadge>
+  );
+}
 
 /** One expanded workflow column or its compact vertical rail. */
 export function WorkflowBoardColumn({
@@ -25,6 +66,7 @@ export function WorkflowBoardColumn({
   setColumnRef,
   renderCardActions,
 }: Readonly<WorkflowBoardColumnProps>): React.ReactElement {
+  const locale = useLocale();
   const key = column.phase;
   const count = column.count ?? column.cards.length;
   if (collapsed) {
@@ -51,6 +93,7 @@ export function WorkflowBoardColumn({
     );
   }
   const headerId = `board-column-${key}`;
+  const needYou = countAwaitingOwner(column.cards);
   return (
     <section
       aria-labelledby={headerId}
@@ -59,6 +102,15 @@ export function WorkflowBoardColumn({
       <div className="mb-3 flex shrink-0 items-center justify-between bg-bg-deep px-1">
         <h3 id={headerId} className="text-sm font-bold" style={{ color: TEXT }}>
           {column.status}
+          {needYou > 0 && labels.needYou && (
+            <span
+              className="ml-2 text-xs font-semibold"
+              style={{ color: TEXT_MUTED }}
+              data-testid="column-need-you"
+            >
+              {labels.needYou(needYou)}
+            </span>
+          )}
         </h3>
         <div className="flex items-center gap-1">
           <NeonBadge variant="cyan" size="sm">
@@ -93,6 +145,7 @@ export function WorkflowBoardColumn({
             <Link
               href={DASHBOARD_ROUTES.CREATE_WORKSPACE(card.id)}
               onClick={() => onCardClick(column)}
+              aria-label={`${card.title}, ${card.phaseStatus}`}
               className="block no-underline"
             >
               <NeonCard padding="sm" hover>
@@ -109,9 +162,7 @@ export function WorkflowBoardColumn({
                   {card.description}
                 </p>
                 <div className="flex items-center justify-between">
-                  <NeonBadge variant="teal" size="sm">
-                    {card.phaseStatus}
-                  </NeonBadge>
+                  <CardStatus card={card} locale={locale} />
                   {card.assignee && (
                     <span
                       className="text-[10px]"

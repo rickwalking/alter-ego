@@ -61,6 +61,7 @@ describe("mapWorkflowColumnDataToKanban", () => {
             description: "Desc A",
             phase: "research",
             phaseStatus: "pending",
+            statusKey: "pending",
             assignee: "PM",
           },
           {
@@ -69,6 +70,7 @@ describe("mapWorkflowColumnDataToKanban", () => {
             description: "Desc B",
             phase: "research",
             phaseStatus: "approved",
+            statusKey: "approved",
             assignee: "QA",
           },
         ],
@@ -86,6 +88,7 @@ describe("mapWorkflowToKanbanColumns", () => {
       description: "D",
       phase: "research",
       phaseStatus: "active",
+      statusKey: "active",
       assignee: "PM",
     };
     expect(
@@ -125,6 +128,8 @@ describe("mapApiKanbanColumn", () => {
         description: "AI",
         phase: "final_review",
         phaseStatus: "awaiting_human",
+        statusKey: "awaiting_human",
+        updatedAt: null,
         archiveRefusal: null,
         canArchive: false,
       },

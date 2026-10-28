@@ -40,6 +40,10 @@ async def board_projects(
                 CarouselProjectModel.assigned_reviewer_id == board.author_id,
             )
         )
+    query = query.order_by(
+        CarouselProjectModel.updated_at.desc(),
+        CarouselProjectModel.id,
+    )
     result = await session.execute(query)
     return list(result.scalars().all())
 
