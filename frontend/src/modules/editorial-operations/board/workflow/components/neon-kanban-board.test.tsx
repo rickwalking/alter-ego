@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { NeonKanbanBoard } from "@/modules/editorial-operations";
 import {
   WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
-  WORKFLOW_BOARD_SCROLL_STORAGE_KEY,
+  WORKFLOW_BOARD_SCROLL_STORAGE_PREFIX,
   WORKFLOW_BOARD_SEQUENCE_STORAGE_KEY,
 } from "@/modules/editorial-operations/board/workflow/constants";
 import type { BoardColumnLabels } from "@/modules/editorial-operations/board/workflow/components/types";
@@ -13,6 +13,7 @@ const labels: BoardColumnLabels = {
   emptyColumn: "Nenhum projeto",
   expandColumn: (name: string, count: number) =>
     `Expandir coluna ${name} (${count})`,
+  collapseColumn: (name: string) => `Recolher coluna ${name}`,
 };
 
 function column(phase: string, status: string, cards: number) {
@@ -160,6 +161,92 @@ describe("NeonKanbanBoard Component", () => {
   });
 
   /** Scenario: Expanded rails persist across reloads */
+  it("collapses an expanded column and persists the removal", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
+      JSON.stringify(["published"]),
+    );
+    render(
+      <NeonKanbanBoard
+        columns={[column("published", "Published", 2)]}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByTestId("workflow-column-published")).not.toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Recolher coluna Published" }),
+    );
+    expect(screen.queryByTestId("workflow-column-published")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Expandir coluna Published (2)" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(WORKFLOW_BOARD_EXPANDED_STORAGE_KEY) ??
+          "[]",
+      ),
+    ).toEqual([]);
+  });
+
+  it("exposes the expand and collapse state on both controls", async () => {
+    const user = userEvent.setup();
+    render(
+      <NeonKanbanBoard
+        columns={[column("published", "Published", 1)]}
+        labels={labels}
+      />,
+    );
+    const rail = screen.getByRole("button", {
+      name: "Expandir coluna Published (1)",
+    });
+    expect(rail).toHaveAttribute("aria-expanded", "false");
+    await user.click(rail);
+    const collapse = screen.getByRole("button", {
+      name: "Recolher coluna Published",
+    });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+  });
+
+  /** Scenario: Returning from a carousel restores the board scroll */
+  it("keeps card navigation working when the storage throws", async () => {
+    const user = userEvent.setup();
+    const original = window.sessionStorage;
+    const boom = (): never => {
+      throw new Error("storage disabled");
+    };
+    Object.defineProperty(window, "sessionStorage", {
+      value: {
+        getItem: boom,
+        setItem: boom,
+        removeItem: boom,
+      },
+      configurable: true,
+    });
+    let clicked = false;
+    try {
+      render(
+        <NeonKanbanBoard
+          columns={[column("research", "Research", 1)]}
+          labels={labels}
+        />,
+      );
+      const link = screen.getByRole("link", { name: /Research card 0/ });
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        clicked = true;
+      });
+      await user.click(link);
+      expect(clicked).toBe(true);
+    } finally {
+      Object.defineProperty(window, "sessionStorage", {
+        value: original,
+        configurable: true,
+      });
+    }
+  });
+
+  /** Scenario: Expanded rails persist across reloads */
   it("expands a rail that localStorage remembers", () => {
     window.localStorage.setItem(
       WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
@@ -202,7 +289,9 @@ describe("NeonKanbanBoard Component", () => {
     link.addEventListener("click", (event) => event.preventDefault());
     await user.click(link);
     const saved = JSON.parse(
-      window.sessionStorage.getItem(WORKFLOW_BOARD_SCROLL_STORAGE_KEY) ?? "{}",
+      window.sessionStorage.getItem(
+        `${WORKFLOW_BOARD_SCROLL_STORAGE_PREFIX}:active`,
+      ) ?? "{}",
     ) as { left?: unknown; tops?: unknown };
     expect(typeof saved.left).toBe("number");
     expect(typeof saved.tops).toBe("object");

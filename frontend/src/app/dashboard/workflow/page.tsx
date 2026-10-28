@@ -115,7 +115,10 @@ function WorkflowBoardView({
               emptyColumn: t("board.noProjects"),
               expandColumn: (name: string, count: number) =>
                 t("board.expandColumn", { name, count }),
+              collapseColumn: (name: string) =>
+                t("board.collapseColumn", { name }),
             }}
+            viewKey={archived ? "archived" : "active"}
             renderCardActions={(card) => (
               <CardArchiveAction
                 card={card}

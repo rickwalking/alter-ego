@@ -11,6 +11,11 @@ export interface NeonKanbanBoardProps {
   renderCardActions?: (card: KanbanCard) => ReactNode;
   /** Localized strings the board itself renders (rails, empty columns). */
   labels: BoardColumnLabels;
+  /**
+   * Board view identity for the saved scroll position (active vs archived),
+   * so Back never applies the archived scroll to the active board.
+   */
+  viewKey?: string;
 }
 
 export interface BoardColumnLabels {
@@ -18,6 +23,8 @@ export interface BoardColumnLabels {
   emptyColumn: string;
   /** Accessible rail label naming the column and its card count. */
   expandColumn: (name: string, count: number) => string;
+  /** Accessible label of the collapse control on an expanded column. */
+  collapseColumn: (name: string) => string;
 }
 
 export interface WorkflowBoardColumnProps {

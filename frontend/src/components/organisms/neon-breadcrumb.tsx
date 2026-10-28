@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 
 const BREADCRUMB_LINK_CLASS =
@@ -21,8 +22,9 @@ export interface NeonBreadcrumbProps {
 export function NeonBreadcrumb({
   items,
 }: Readonly<NeonBreadcrumbProps>): React.ReactElement {
+  const t = useTranslations("common");
   return (
-    <nav aria-label="breadcrumb">
+    <nav aria-label={t("breadcrumbNavLabel")}>
       <ol
         className="flex flex-wrap items-center gap-1"
         style={{

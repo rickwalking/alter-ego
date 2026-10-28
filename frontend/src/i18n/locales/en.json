@@ -46,7 +46,8 @@
     },
     "logout": "Logout",
     "login": "Login",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "breadcrumbNavLabel": "Breadcrumb"
   },
   "home": {
     "hero": {
@@ -1650,7 +1651,8 @@
       "retry": "Retry",
       "breadcrumb": "pipeline",
       "newCard": "New Card",
-      "rejectedColumn": "Rejected"
+      "rejectedColumn": "Rejected",
+      "collapseColumn": "Collapse column {name}"
     },
     "calendar": {
       "title": "Content Calendar",

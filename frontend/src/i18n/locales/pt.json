@@ -46,7 +46,8 @@
     },
     "logout": "Sair",
     "login": "Entrar",
-    "skipToContent": "Pular para o conteúdo"
+    "skipToContent": "Pular para o conteúdo",
+    "breadcrumbNavLabel": "Trilha de navegação"
   },
   "home": {
     "hero": {
@@ -1650,7 +1651,8 @@
       "retry": "Tentar novamente",
       "breadcrumb": "pipeline",
       "newCard": "Novo card",
-      "rejectedColumn": "Rejeitados"
+      "rejectedColumn": "Rejeitados",
+      "collapseColumn": "Recolher coluna {name}"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",

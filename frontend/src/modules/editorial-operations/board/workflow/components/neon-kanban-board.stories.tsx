@@ -38,6 +38,7 @@ export const Default: Story = {
       emptyColumn: "Nenhum projeto",
       expandColumn: (name: string, count: number) =>
         `Expandir coluna ${name} (${count})`,
+      collapseColumn: (name: string) => `Recolher coluna ${name}`,
     },
   },
 };

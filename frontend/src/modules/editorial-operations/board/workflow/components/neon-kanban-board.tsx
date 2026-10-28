@@ -11,6 +11,7 @@ import {
   saveBoardScroll,
 } from "./board-scroll";
 import { saveBoardSequence } from "./board-sequence";
+import { safeStorageGet, safeStorageSet } from "./board-storage";
 import { WorkflowBoardColumn } from "./workflow-board-column";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 import type { NeonKanbanBoardProps } from "./types";
@@ -18,6 +19,7 @@ import type { NeonKanbanBoardProps } from "./types";
 export type { NeonKanbanBoardProps } from "./types";
 
 const BOARD_SCROLL_TEST_ID = "workflow-board-scroll";
+const DEFAULT_BOARD_VIEW_KEY = "active";
 
 function isRailColumn(
   column: KanbanColumn,
@@ -32,7 +34,8 @@ function isRailColumn(
 function readExpandedColumns(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(
+    const raw = safeStorageGet(
+      window.localStorage,
       WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
     );
     const parsed = raw === null ? [] : (JSON.parse(raw) as unknown);
@@ -49,6 +52,7 @@ export function NeonKanbanBoard({
   columns,
   renderCardActions,
   labels,
+  viewKey = DEFAULT_BOARD_VIEW_KEY,
 }: Readonly<NeonKanbanBoardProps>): React.ReactElement {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(
     () => new Set(readExpandedColumns()),
@@ -68,14 +72,19 @@ export function NeonKanbanBoard({
     if (!columns.some((column) => column.cards.length > 0)) return;
     restoredRef.current = true;
     const board = boardScrollRef.current;
-    const saved = board === null ? null : loadSavedBoardScroll();
+    const saved = board === null ? null : loadSavedBoardScroll(viewKey);
     if (board === null || saved === null) return;
     const liveColumns: Record<string, HTMLElement> = {};
     for (const [key, element] of Object.entries(columnRefs.current)) {
       if (element !== null) liveColumns[key] = element;
     }
-    applyBoardScroll(board, liveColumns, saved);
-  }, [columns]);
+    applyBoardScroll({
+      board,
+      columns: liveColumns,
+      position: saved,
+      view: viewKey,
+    });
+  }, [columns, viewKey]);
 
   const toggleColumn = useCallback((key: string): void => {
     setExpanded((current) => {
@@ -85,7 +94,8 @@ export function NeonKanbanBoard({
       } else {
         next.add(key);
       }
-      window.localStorage.setItem(
+      safeStorageSet(
+        window.localStorage,
         WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
         JSON.stringify([...next]),
       );
@@ -100,8 +110,8 @@ export function NeonKanbanBoard({
     for (const [key, element] of Object.entries(columnRefs.current)) {
       if (element !== null) tops[key] = element.scrollTop;
     }
-    saveBoardScroll(board, tops);
-  }, []);
+    saveBoardScroll(board, tops, viewKey);
+  }, [viewKey]);
 
   const rememberColumn = useCallback(
     (column: KanbanColumn): void => {

@@ -61,6 +61,26 @@ describe("BoardSequenceNavigation", () => {
   });
 
   /** Scenario: Previous and next controls follow the board column sequence */
+  it("ignores bracket shortcuts with modifier keys", async () => {
+    storeSequence();
+    render(<BoardSequenceNavigation projectId="p2" />);
+    await screen.findByText("2 / 3 in Final review");
+    fireEvent.keyDown(window, { key: "[", metaKey: true });
+    fireEvent.keyDown(window, { key: "]", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "[", altKey: true });
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: Previous and next controls follow the board column sequence */
+  it("groups its controls with an accessible label", async () => {
+    storeSequence();
+    render(<BoardSequenceNavigation projectId="p2" />);
+    expect(
+      await screen.findByRole("group", { name: "label" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: Previous and next controls follow the board column sequence */
   it("ignores bracket shortcuts while editing text", async () => {
     storeSequence();
     render(

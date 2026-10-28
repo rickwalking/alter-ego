@@ -13,6 +13,7 @@ const RAIL_LABEL_CLASS = "[writing-mode:vertical-rl] rotate-180";
 const FOCUS_RING_CLASS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 const COLUMN_WIDTH_CLASS = "min-w-[232px] max-w-[320px] flex-1 basis-0";
+const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_RING_CLASS}`;
 
 /** One expanded workflow column or its compact vertical rail. */
 export function WorkflowBoardColumn({
@@ -33,6 +34,7 @@ export function WorkflowBoardColumn({
         type="button"
         title={railLabel}
         aria-label={railLabel}
+        aria-expanded={false}
         onClick={() => onToggle(key)}
         className={`flex flex-col items-center gap-2 rounded-md border border-transparent py-2 text-white transition-colors hover:border-neon-cyan/40 ${RAIL_WIDTH_CLASS} ${FOCUS_RING_CLASS}`}
       >
@@ -54,13 +56,26 @@ export function WorkflowBoardColumn({
       aria-labelledby={headerId}
       className={`flex min-h-0 flex-col ${COLUMN_WIDTH_CLASS}`}
     >
-      <div className="sticky top-0 z-10 mb-3 flex shrink-0 items-center justify-between bg-bg-deep px-1">
+      <div className="mb-3 flex shrink-0 items-center justify-between bg-bg-deep px-1">
         <h3 id={headerId} className="text-sm font-bold" style={{ color: TEXT }}>
           {column.status}
         </h3>
-        <NeonBadge variant="cyan" size="sm">
-          {count}
-        </NeonBadge>
+        <div className="flex items-center gap-1">
+          <NeonBadge variant="cyan" size="sm">
+            {count}
+          </NeonBadge>
+          <button
+            type="button"
+            aria-label={labels.collapseColumn(column.status)}
+            aria-expanded={true}
+            onClick={() => onToggle(key)}
+            className={HEADER_ACTION_CLASS}
+            style={{ color: TEXT_DIM }}
+            data-testid={`collapse-column-${key}`}
+          >
+            ⟨
+          </button>
+        </div>
       </div>
       <div
         ref={(element) => setColumnRef(key, element)}

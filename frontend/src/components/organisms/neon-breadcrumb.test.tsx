@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { NeonBreadcrumb } from "@/components/organisms/neon-breadcrumb";
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => `t:${key}`,
+}));
+
 describe("NeonBreadcrumb", () => {
+  it("labels the trail through i18n", () => {
+    render(<NeonBreadcrumb items={[{ label: "pipeline" }]} />);
+    expect(
+      screen.getByRole("navigation", { name: "t:breadcrumbNavLabel" }),
+    ).toBeInTheDocument();
+  });
   /** Scenario: The breadcrumb links back to the board */
   it("renders items with a link as real links", () => {
     render(

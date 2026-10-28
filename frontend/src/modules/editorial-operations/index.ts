@@ -47,6 +47,7 @@ export {
   type NeonKanbanBoardProps,
 } from "./board/workflow/components/neon-kanban-board";
 export {
+  boardSequenceSnapshot,
   loadBoardSequence,
   type BoardSequence,
 } from "./board/workflow/components/board-sequence";

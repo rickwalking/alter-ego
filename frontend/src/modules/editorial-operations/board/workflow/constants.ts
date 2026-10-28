@@ -149,8 +149,8 @@ export const WORKFLOW_BOARD_DONE_PHASES: ReadonlySet<string> = new Set([
 /** localStorage key holding the column keys the owner expanded from rails. */
 export const WORKFLOW_BOARD_EXPANDED_STORAGE_KEY = "workflow-board:expanded";
 
-/** sessionStorage key holding the board scroll across a card round trip. */
-export const WORKFLOW_BOARD_SCROLL_STORAGE_KEY = "workflow-board:scroll";
+/** sessionStorage key prefix holding the board scroll across a card round trip. */
+export const WORKFLOW_BOARD_SCROLL_STORAGE_PREFIX = "workflow-board:scroll";
 
 /** sessionStorage key holding the ordered column used by workspace navigation. */
 export const WORKFLOW_BOARD_SEQUENCE_STORAGE_KEY = "workflow-board:sequence";

@@ -49,8 +49,10 @@ impeccable critique (score 18/40).
 - `NeonBreadcrumb`: items with `href` render as `next/link` links (mono style,
   muted hover, cyan focus ring); the last item stays plain text.
 - Board scroll restore: before a card navigation the board's `scrollLeft` and
-  each column's `scrollTop` are saved to `sessionStorage("workflow-board:scroll")`
-  and restored once after the first board load lands.
+  each column's `scrollTop` are saved to `sessionStorage` keyed by board view
+  (`workflow-board:scroll:active|archived`) and restored once after the first
+  board load lands; every storage access is wrapped so a disabled, full or
+  corrupt storage never breaks the board or blocks navigation.
 - Sidebar: `/dashboard/create/<id>` (but not `/dashboard/create` itself) marks
   the Workflow Board item active via an explicit `isActiveItem` match.
 - Card navigation stores the ordered ids and localized name of its column in
@@ -71,10 +73,12 @@ impeccable critique (score 18/40).
 
 - [ ] AC1 Given a board with more cards than fit the viewport, When it renders,
   Then the board area is height-constrained (no vertical page scroll) and each
-  column's card list scrolls independently while its header stays visible.
+  column's card list scrolls independently while its header stays visible
+  (the header sits outside the column's scroll area, so it never scrolls away).
 - [ ] AC2 Given empty or done columns (Published, Rejected), When the board
   renders, Then they appear as vertical rails with the count, and clicking a
-  rail expands it into a normal column; expanded columns persist across
+  rail expands it into a normal column that offers a collapse control; both
+  controls expose `aria-expanded`, and the expanded set persists across
   reloads in localStorage.
 - [ ] AC3 Given a column, Then it is announced as a labelled section with a
   list of items, and an expanded empty column shows "Nenhum projeto".
