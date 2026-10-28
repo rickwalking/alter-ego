@@ -7,6 +7,7 @@ const translators = {
   status: (key: string): string => `status:${key}`,
   knownPhases: new Set(["research", "final_review", "content"]),
   rejectedColumn: "Rejected",
+  untitled: "Sem título",
 };
 
 function column(phase: string, statuses: string[]): KanbanColumn {
@@ -14,12 +15,13 @@ function column(phase: string, statuses: string[]): KanbanColumn {
     phase,
     status: phase,
     count: statuses.length,
-    cards: statuses.map((phaseStatus, index) => ({
+    cards: statuses.map((statusKey, index) => ({
       id: `${phase}-${index}`,
       title: "Card",
       description: "",
       phase,
-      phaseStatus,
+      phaseStatus: statusKey,
+      statusKey,
     })),
   };
 }
@@ -65,5 +67,50 @@ describe("localizeBoardColumns", () => {
       "phase:content",
       "Legacy X",
     ]);
+  });
+
+  /** Scenario: Card titles are readable */
+  it("substitutes the untitled fallback for empty titles", () => {
+    const [localized] = localizeBoardColumns(
+      [
+        {
+          ...column("rejected", ["rejected"]),
+          cards: [
+            {
+              id: "blank",
+              title: "",
+              description: "",
+              phase: "brief",
+              phaseStatus: "rejected",
+              statusKey: "rejected",
+            },
+          ],
+        },
+      ],
+      translators,
+    );
+    expect(localized!.cards[0]!.title).toBe("Sem título");
+  });
+
+  /** Scenario: Badges use semantic colors */
+  it("fills the semantic badge variant and pulse from the raw status", () => {
+    const [localized] = localizeBoardColumns(
+      [
+        column("final_review", [
+          "awaiting_human",
+          "in_progress",
+          "approved_for_publish",
+          "some_new_status",
+        ]),
+      ],
+      translators,
+    );
+    const [need, live, ready, unknown] = localized!.cards;
+    expect(need!.statusVariant).toBe("magenta");
+    expect(need!.statusPulse).toBe(false);
+    expect(live!.statusVariant).toBe("cyan");
+    expect(live!.statusPulse).toBe(true);
+    expect(ready!.statusVariant).toBe("teal");
+    expect(unknown!.statusVariant).toBeUndefined();
   });
 });

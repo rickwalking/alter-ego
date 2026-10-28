@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
@@ -14,6 +14,12 @@ import {
 } from "@/modules/editorial-operations";
 import { useWorkflowKanban, type WorkflowKanban } from "@/modules/editorial";
 import { localizeBoardColumns } from "@/app/dashboard/workflow/localize-board";
+import {
+  countBoardStatusBuckets,
+  filterBoardColumns,
+} from "@/app/dashboard/workflow/board-filters";
+import { useBoardFilters } from "@/app/dashboard/workflow/use-board-filters";
+import { WorkflowToolbar } from "@/app/dashboard/workflow/workflow-toolbar";
 import { CardArchiveAction } from "./card-archive-action";
 import { QueuePanelSection } from "./queue-panel-section";
 import type { BoardFeedbackProps, WorkflowBoardViewProps } from "./types";
@@ -84,9 +90,23 @@ function WorkflowBoardView({
   const t = useTranslations("workflow");
   const tPhase = useTranslations("create.phases");
   const tStatus = useTranslations("create.status");
+  const locale = useLocale();
+  const { filters, setFilters } = useBoardFilters();
   const { board, loading, error, refetch } = useWorkflowKanban(archived);
   const refresh = (): void => void refetch();
   const showEmpty = archived && board !== null && isEmptyBoard(board);
+  const localizedColumns =
+    board === null
+      ? []
+      : localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
+          phase: tPhase,
+          status: tStatus,
+          knownPhases: BOARD_PHASES,
+          rejectedColumn: t("board.rejectedColumn"),
+          untitled: t("queue.untitled"),
+        });
+  const visibleColumns = filterBoardColumns(localizedColumns, filters, locale);
+  const counts = countBoardStatusBuckets(localizedColumns);
 
   return (
     <div
@@ -98,6 +118,13 @@ function WorkflowBoardView({
           <QueuePanelSection />
         </div>
       )}
+      <div className="shrink-0">
+        <WorkflowToolbar
+          filters={filters}
+          counts={counts}
+          onChange={setFilters}
+        />
+      </div>
       <BoardFeedback loading={loading} error={error} onRetry={refresh} />
       {showEmpty && (
         <p className="py-8 text-center text-sm">{t("archive.emptyArchived")}</p>
@@ -105,18 +132,14 @@ function WorkflowBoardView({
       {board && !showEmpty && (
         <div className="min-h-0 flex-1">
           <NeonKanbanBoard
-            columns={localizeBoardColumns(mapApiWorkflowKanbanToNeon(board), {
-              phase: tPhase,
-              status: tStatus,
-              knownPhases: BOARD_PHASES,
-              rejectedColumn: t("board.rejectedColumn"),
-            })}
+            columns={visibleColumns}
             labels={{
               emptyColumn: t("board.noProjects"),
               expandColumn: (name: string, count: number) =>
                 t("board.expandColumn", { name, count }),
               collapseColumn: (name: string) =>
                 t("board.collapseColumn", { name }),
+              needYou: (count: number) => t("board.needYou", { count }),
             }}
             viewKey={archived ? "archived" : "active"}
             renderCardActions={(card) => (
@@ -133,6 +156,10 @@ function WorkflowBoardView({
   );
 }
 
+/**
+ * The toolbar state lives in the URL (`useSearchParams`), which needs a
+ * Suspense boundary for the static prerender of this route.
+ */
 export default function WorkflowBoardPage(): React.ReactElement {
   const t = useTranslations("workflow");
   const [archived, setArchived] = useState(false);
@@ -163,7 +190,9 @@ export default function WorkflowBoardPage(): React.ReactElement {
           </div>
         }
       />
-      <WorkflowBoardView key={String(archived)} archived={archived} />
+      <Suspense fallback={<NeonSpinner size="lg" />}>
+        <WorkflowBoardView key={String(archived)} archived={archived} />
+      </Suspense>
     </div>
   );
 }

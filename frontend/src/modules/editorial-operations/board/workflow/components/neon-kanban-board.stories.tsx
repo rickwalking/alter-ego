@@ -24,6 +24,8 @@ export const Default: Story = {
             description: "Research open-source LLM benchmarks.",
             phase: "research",
             phaseStatus: "awaiting_human",
+            statusKey: "awaiting_human",
+            statusVariant: "magenta",
             assignee: "PM",
           },
         ],

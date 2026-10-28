@@ -24,6 +24,7 @@ function card(overrides: Partial<KanbanCard> = {}): KanbanCard {
     description: "AI",
     phase: "content",
     phaseStatus: "awaiting_human",
+    statusKey: "awaiting_human",
     archiveRefusal: null,
     canArchive: true,
     ...overrides,

@@ -1652,7 +1652,22 @@
       "breadcrumb": "pipeline",
       "newCard": "New Card",
       "rejectedColumn": "Rejected",
-      "collapseColumn": "Collapse column {name}"
+      "collapseColumn": "Collapse column {name}",
+      "searchPlaceholder": "Search carousels…",
+      "filters": {
+        "all": "All",
+        "needsReview": "Needs review",
+        "inProgress": "In progress",
+        "ready": "Ready",
+        "failed": "Failed",
+        "group": "Status"
+      },
+      "sort": {
+        "label": "Sort",
+        "updated": "Updated ↓",
+        "title": "Title A-Z"
+      },
+      "needYou": "{count, plural, one {# needs you} other {# need you}}"
     },
     "calendar": {
       "title": "Content Calendar",

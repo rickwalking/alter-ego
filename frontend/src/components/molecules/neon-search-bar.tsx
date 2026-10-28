@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent } from "react";
+import { type ChangeEvent, type RefObject } from "react";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 
@@ -11,6 +11,8 @@ export interface NeonSearchBarProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  ariaLabel?: string;
 }
 
 export function NeonSearchBar({
@@ -18,6 +20,8 @@ export function NeonSearchBar({
   onChange,
   placeholder,
   className,
+  inputRef,
+  ariaLabel,
 }: Readonly<NeonSearchBarProps>): React.ReactElement {
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     onChange?.(e.target.value);
@@ -33,6 +37,8 @@ export function NeonSearchBar({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
+        aria-label={ariaLabel}
+        ref={inputRef}
         className="pl-10"
       />
     </div>

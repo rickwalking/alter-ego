@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@/test/utils";
+import { act, fireEvent, render, screen } from "@/test/utils";
 import {
   WORKFLOW_API,
   WORKFLOW_BOARD_POLL_INTERVAL_MS,
@@ -12,8 +12,23 @@ vi.mock("next-intl", () => {
   return {
     NextIntlClientProvider: ({ children }: { children: ReactNode }) => children,
     useTranslations: () => translate,
+    useLocale: () => "pt",
   };
 });
+
+const navigation = vi.hoisted(() => ({
+  params: new URLSearchParams(),
+  replace: vi.fn((href: string): void => {
+    const query = href.split("?")[1] ?? "";
+    navigation.params = new URLSearchParams(query);
+  }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => navigation.params,
+  useRouter: () => ({ replace: navigation.replace }),
+  usePathname: () => "/dashboard/workflow",
+}));
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),
@@ -82,6 +97,8 @@ describe("WorkflowBoardPage refresh", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     boardResponses = [];
+    navigation.params = new URLSearchParams();
+    navigation.replace.mockClear();
     mockFetch.mockReset();
     mockFetch.mockImplementation((url) =>
       url === WORKFLOW_API.WORKFLOW_BOARD
@@ -172,5 +189,35 @@ describe("WorkflowBoardPage refresh", () => {
     const view = screen.getByTestId("workflow-board-view");
     expect(view.className).toContain("h-[calc(100dvh-3.5rem)]");
     expect(view.className).toContain("overflow-hidden");
+  });
+});
+
+describe("WorkflowBoardPage toolbar", () => {
+  beforeEach(() => {
+    boardResponses = [];
+    navigation.params = new URLSearchParams();
+    navigation.replace.mockClear();
+    mockFetch.mockReset();
+    mockFetch.mockImplementation((url) =>
+      url === WORKFLOW_API.WORKFLOW_BOARD
+        ? jsonResponse(board(FIRST_TITLE))
+        : jsonResponse({}),
+    );
+  });
+
+  /** Scenario: Search narrows the board */
+  it("writes the search query into the URL through the toolbar", async () => {
+    boardResponses.push(jsonResponse(board(FIRST_TITLE)));
+    render(<WorkflowBoardPage />);
+    expect(await screen.findByText(FIRST_TITLE)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "claude" },
+    });
+
+    expect(navigation.replace).toHaveBeenLastCalledWith(
+      "/dashboard/workflow?q=claude",
+      { scroll: false },
+    );
   });
 });

@@ -1,4 +1,5 @@
 import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
+import type { NeonBadgeVariant } from "@/schemas/neon-badge";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import {
   KNOWN_WORKFLOW_STATUSES,
@@ -17,6 +18,8 @@ export interface BoardTranslators {
   knownPhases: ReadonlySet<string>;
   /** Title of the Rejected column. */
   rejectedColumn: string;
+  /** Title for a card whose title and topic are both empty. */
+  untitled: string;
 }
 
 /** Board column the API fills with rejected projects. */
@@ -30,6 +33,38 @@ function statusLabel(status: string, t: BoardTranslators): string {
   return labelKey ? t.status(labelKey) : titlecaseStatus(status);
 }
 
+interface BoardStatusVisual {
+  variant?: NeonBadgeVariant;
+  pulse?: boolean;
+}
+
+/**
+ * The raw status drives the semantic badge treatment; an unrecognized status
+ * keeps the neutral cyan instead of throwing on the board.
+ */
+function statusVisual(status: string): BoardStatusVisual {
+  if (!KNOWN_WORKFLOW_STATUSES.includes(status)) {
+    return {};
+  }
+  const { variant, pulse } = resolveWorkflowStatusVisual(status);
+  return { variant, pulse };
+}
+
+function localizeCard(
+  card: KanbanCard,
+  t: BoardTranslators,
+  labelFor: (card: KanbanCard) => string,
+): KanbanCard {
+  const { variant, pulse } = statusVisual(card.statusKey);
+  return {
+    ...card,
+    title: card.title === "" ? t.untitled : card.title,
+    phaseStatus: labelFor(card),
+    statusVariant: variant,
+    statusPulse: pulse,
+  };
+}
+
 function phaseLabel(phase: string, t: BoardTranslators): string {
   return t.knownPhases.has(phase) ? t.phase(phase) : titlecaseStatus(phase);
 }
@@ -37,7 +72,8 @@ function phaseLabel(phase: string, t: BoardTranslators): string {
 /**
  * The workflow board shows phase names and status labels in
  * the dashboard language instead of raw snake_case ids
- * ("approved_for_publish" -> "Pronto para publicar").
+ * ("approved_for_publish" -> "Pronto para publicar"), and fills each card's
+ * semantic badge variant from its raw workflow status.
  */
 export function localizeBoardColumns(
   columns: readonly KanbanColumn[],
@@ -49,10 +85,9 @@ export function localizeBoardColumns(
       : {
           ...column,
           status: phaseLabel(column.phase, t),
-          cards: column.cards.map((card) => ({
-            ...card,
-            phaseStatus: statusLabel(card.phaseStatus, t),
-          })),
+          cards: column.cards.map((card) =>
+            localizeCard(card, t, (item) => statusLabel(item.statusKey, t)),
+          ),
         },
   );
 }
@@ -69,10 +104,8 @@ function localizeRejectedColumn(
     ...column,
     status: t.rejectedColumn,
     cards: column.cards.map(
-      (card): KanbanCard => ({
-        ...card,
-        phaseStatus: phaseLabel(card.phase, t),
-      }),
+      (card): KanbanCard =>
+        localizeCard(card, t, (item) => phaseLabel(item.phase, t)),
     ),
   };
 }

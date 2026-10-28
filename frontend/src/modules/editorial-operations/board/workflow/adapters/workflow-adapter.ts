@@ -39,6 +39,7 @@ export function mapWorkflowColumnDataToKanban(
       description: card.description,
       phase: card.phase,
       phaseStatus: card.approvalStatus,
+      statusKey: card.approvalStatus,
       assignee: card.assignee,
     })),
   }));
@@ -57,12 +58,36 @@ export function mapWorkflowToKanbanColumns(
       description: card.description,
       phase: card.phase,
       phaseStatus: card.phaseStatus,
+      statusKey: card.phaseStatus,
       assignee: card.assignee,
     })),
   }));
 }
 
 const ARCHIVE_REFUSALS: readonly string[] = Object.values(ARCHIVE_REFUSAL);
+
+const INLINE_MARKUP_PATTERN = /<\/?(?:strong|em|b|i)(?:\s[^>]*)?>|\*\*|__/g;
+
+/**
+ * Board titles come from LLM copy that may carry `**bold**`, `__underline__`
+ * or `<strong>`-style tags (with or without attributes); the board renders
+ * plain text only. The empty result is the adapter's documented contract for
+ * a card whose title and topic are both blank: `localizeBoardColumns`
+ * substitutes the localized untitled fallback before rendering.
+ */
+export function stripInlineMarkup(value: string): string {
+  return value.replaceAll(INLINE_MARKUP_PATTERN, "").trim();
+}
+
+function boardTitle(title: string, topic: string): string {
+  return stripInlineMarkup(title) || stripInlineMarkup(topic);
+}
+
+function boardDescription(title: string, description: string): string {
+  const cleanTitle = stripInlineMarkup(title);
+  const cleanDescription = stripInlineMarkup(description);
+  return cleanDescription === cleanTitle ? "" : cleanDescription;
+}
 
 /** The board API's archive refusal for the card, or `null` when it can be archived. */
 export function archiveRefusalOf(card: ApiKanbanCard): ArchiveRefusal | null {
@@ -78,10 +103,12 @@ export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
     count: column.cards.length,
     cards: column.cards.map((card: ApiKanbanCard) => ({
       id: card.id,
-      title: card.title,
-      description: card.topic,
+      title: boardTitle(card.title, card.topic),
+      description: boardDescription(card.title, card.topic),
       phase: card.current_phase,
       phaseStatus: card.workflow_status ?? card.phase_status,
+      statusKey: card.workflow_status ?? card.phase_status,
+      updatedAt: card.updated_at,
       archiveRefusal: archiveRefusalOf(card),
       canArchive: card.can_archive ?? false,
     })),

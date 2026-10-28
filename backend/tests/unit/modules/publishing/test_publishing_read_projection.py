@@ -385,6 +385,47 @@ class TestAggregateProjections:
         assert "Pending topic" not in topics
 
     @pytest.mark.asyncio
+    async def test_board_orders_cards_newest_first_with_id_tiebreak(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Scenario: The board keeps a stable newest-first order."""
+        newest_id, middle_id, tie_a, tie_b = (
+            str(uuid4()),
+            str(uuid4()),
+            "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        )
+        tie_time = datetime(2026, 10, 20, tzinfo=UTC)
+        for project_id, updated_at in (
+            (middle_id, datetime(2026, 10, 18, tzinfo=UTC)),
+            (tie_b, tie_time),
+            (newest_id, datetime(2026, 10, 24, tzinfo=UTC)),
+            (tie_a, tie_time),
+        ):
+            db_session.add(
+                CarouselProjectModel(
+                    id=project_id,
+                    topic=f"topic {project_id[:4]}",
+                    audience="aud",
+                    niche="N",
+                    theme="ai_competition",
+                    current_phase=PHASE_CONTENT,
+                    phase_status=PHASE_STATUS_AWAITING_HUMAN,
+                    updated_at=updated_at,
+                )
+            )
+        await db_session.commit()
+        acl = PublishingReadAcl(db_session)
+        projection = await acl.project_board(BoardQuery())
+        column = next(col for col in projection.columns if col.phase == PHASE_CONTENT)
+        assert [card.id for card in column.cards] == [
+            newest_id,
+            tie_a,
+            tie_b,
+            middle_id,
+        ]
+
+    @pytest.mark.asyncio
     async def test_analytics_counts_drafts(self, db_session: AsyncSession) -> None:
         """Scenario: analytics counts a draft blog post in the summary."""
         db_session.add(

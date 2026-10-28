@@ -10,8 +10,23 @@ vi.mock("next-intl", () => {
   return {
     NextIntlClientProvider: ({ children }: { children: ReactNode }) => children,
     useTranslations: () => translate,
+    useLocale: () => "pt",
   };
 });
+
+const navigation = vi.hoisted(() => ({
+  params: new URLSearchParams(),
+  replace: vi.fn((href: string): void => {
+    const query = href.split("?")[1] ?? "";
+    navigation.params = new URLSearchParams(query);
+  }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => navigation.params,
+  useRouter: () => ({ replace: navigation.replace }),
+  usePathname: () => "/dashboard/workflow",
+}));
 
 vi.mock("@/lib/authenticated-fetch", () => ({ authenticatedFetch: vi.fn() }));
 
@@ -62,6 +77,8 @@ function boards(archived: WorkflowKanban): void {
 describe("WorkflowBoardPage archived view", () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    navigation.params = new URLSearchParams();
+    navigation.replace.mockClear();
   });
 
   /** Scenario: The archived board lists archived carousels with restore */

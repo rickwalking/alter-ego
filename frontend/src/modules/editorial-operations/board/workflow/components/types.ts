@@ -25,6 +25,8 @@ export interface BoardColumnLabels {
   expandColumn: (name: string, count: number) => string;
   /** Accessible label of the collapse control on an expanded column. */
   collapseColumn: (name: string) => string;
+  /** Localized "N need you" for column headers with awaiting-human cards. */
+  needYou?: (count: number) => string;
 }
 
 export interface WorkflowBoardColumnProps {
