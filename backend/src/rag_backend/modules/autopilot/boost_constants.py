@@ -1,0 +1,221 @@
+"""Boost requests, owner approval and Marketing API execution (ADR-0029)."""
+
+from __future__ import annotations
+
+PATH_BOOST_REQUEST = "/boost-request"
+PATH_BOOST_REQUEST_ID = "/boost-request/{boost_id}"
+PATH_BOOST_REQUESTS = "/boost-requests"
+
+HEADER_IDEMPOTENCY_KEY = "Idempotency-Key"
+IDEMPOTENCY_MIN = 8
+IDEMPOTENCY_MAX = 128
+
+OBJECTIVE_ENGAGEMENT = "engagement"
+CURRENCY_BRL = "BRL"
+ACTOR_BOT = "bot"
+ACTOR_WORKER = "worker"
+ACTOR_OWNER_PREFIX = "owner:"
+
+STATUS_PENDING = "pending_approval"
+STATUS_APPROVED = "approved"
+STATUS_REJECTED = "rejected"
+STATUS_EXPIRED = "expired"
+STATUS_LAUNCHING = "launching"
+STATUS_ACTIVE = "active"
+STATUS_FAILED = "failed"
+STATUS_COMPLETED = "completed"
+STATUS_STOPPED = "stopped"
+OPEN_STATUSES: frozenset[str] = frozenset({
+    STATUS_PENDING,
+    STATUS_APPROVED,
+    STATUS_LAUNCHING,
+    STATUS_ACTIVE,
+})
+_OPEN_STATUS_ORDER = (
+    STATUS_PENDING,
+    STATUS_APPROVED,
+    STATUS_LAUNCHING,
+    STATUS_ACTIVE,
+)
+OPEN_WHERE_SQL = "status IN ({})".format(
+    ", ".join(f"'{status}'" for status in _OPEN_STATUS_ORDER)
+)
+UNCOMMITTED_STATUSES: frozenset[str] = frozenset({STATUS_REJECTED, STATUS_EXPIRED})
+
+CALLBACK_OK = "ok"
+CALLBACK_NO = "no"
+CALLBACK_STOP = "stop"
+CALLBACK_BOOST_PATTERN = (
+    r"^ap:bst:(ok|no|stop):"
+    r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+)
+CALLBACK_PREFIX = "ap:bst:"
+
+TABLE_BOOST_REQUESTS = "boost_requests"
+TABLE_BOOST_EVENTS = "boost_request_events"
+INDEX_STATUS_NEXT = "ix_boost_requests_status_next_attempt"
+UQ_MEDIA_ACTIVE = "uq_boost_requests_media_active"
+
+ERR_DISABLED = "boost_disabled"
+ERR_DAILY_OVER = "daily_budget_over_cap"
+ERR_DAILY_UNDER = "daily_budget_under_floor"
+ERR_DAYS = "days_over_cap"
+ERR_WEEK = "weekly_cap_exceeded"
+ERR_OPEN = "boost_already_active"
+ERR_PENDING = "too_many_pending"
+ERR_MEDIA = "media_not_eligible"
+ERR_COUNTRY = "country_not_allowed"
+ERR_AUDIENCE = "audience_invalid"
+ERR_OBJECTIVE = "objective_not_supported"
+ERR_IDEMPOTENCY_REQUIRED = "idempotency_key_required"
+ERR_IDEMPOTENCY_REUSED = "idempotency_key_reused"
+ERR_REASON = "reason_invalid"
+ERR_NOT_FOUND = "boost_not_found"
+ERR_CAP_AT_LAUNCH = "cap_failed_at_launch"
+ERR_BELOW_META = "below_meta_minimum"
+ERR_MEDIA_HIDDEN = "media_not_visible_to_ads"
+ERR_NOT_BOOSTABLE = "media_not_boostable"
+ERR_CURRENCY = "currency_mismatch"
+ERR_ACCOUNT = "ad_account_inactive"
+ERR_ADS_DISABLED = "ads_disabled"
+
+DEFAULT_MAX_DAILY = 3000
+DEFAULT_MIN_DAILY = 600
+DEFAULT_MAX_DAYS = 7
+DEFAULT_MAX_WEEK = 10000
+DEFAULT_MAX_PENDING = 3
+DEFAULT_MAX_AGE_DAYS = 30
+DEFAULT_TTL_HOURS = 12
+DEFAULT_POLL_MINUTES = 60
+DEFAULT_MAX_ATTEMPTS = 5
+DEFAULT_COUNTRIES = "BR"
+REASON_MIN_LENGTH = 10
+LIST_DEFAULT = 20
+LIST_MAX = 100
+RESEND_AFTER_SECONDS = 30
+COMPLETE_GRACE_HOURS = 1
+CENTS_PER_UNIT = 100
+WEEK_DAYS = 7
+AGE_MIN = 18
+AGE_MAX = 65
+
+LOG_BOOST = "boost.request"
+LOG_LAUNCH = "boost.launch"
+LOG_INSIGHTS = "boost.insights"
+
+HTTP_OK = 200
+HTTP_ACCEPTED = 202
+HTTP_UNPROCESSABLE = 422
+HTTP_CONFLICT = 409
+HTTP_TOO_MANY = 429
+HTTP_UNAVAILABLE = 503
+HTTP_NOT_FOUND = 404
+HTTP_ERROR_MIN = 500
+
+APP_STATE_ADS_GATEWAY = "autopilot_ads_gateway"
+
+GRAPH_CAMPAIGNS = "/act_{account}/campaigns"
+GRAPH_ADSETS = "/act_{account}/adsets"
+GRAPH_CREATIVES = "/act_{account}/adcreatives"
+GRAPH_ADS = "/act_{account}/ads"
+STATUS_PAUSED = "PAUSED"
+STATUS_ACTIVE_AD = "ACTIVE"
+OBJECTIVE_OUTCOME = "OUTCOME_ENGAGEMENT"
+OPTIMIZATION_POST = "POST_ENGAGEMENT"
+BILLING_IMPRESSIONS = "IMPRESSIONS"
+BID_LOWEST = "LOWEST_COST_WITHOUT_CAP"
+DESTINATION_ON_POST = "ON_POST"
+BUYING_AUCTION = "AUCTION"
+ACCOUNT_ACTIVE = 1
+
+__all__ = [
+    "ACCOUNT_ACTIVE",
+    "ACTOR_BOT",
+    "ACTOR_OWNER_PREFIX",
+    "ACTOR_WORKER",
+    "AGE_MAX",
+    "AGE_MIN",
+    "APP_STATE_ADS_GATEWAY",
+    "BID_LOWEST",
+    "BILLING_IMPRESSIONS",
+    "BUYING_AUCTION",
+    "CALLBACK_BOOST_PATTERN",
+    "CALLBACK_NO",
+    "CALLBACK_OK",
+    "CALLBACK_PREFIX",
+    "CALLBACK_STOP",
+    "CENTS_PER_UNIT",
+    "COMPLETE_GRACE_HOURS",
+    "CURRENCY_BRL",
+    "DEFAULT_COUNTRIES",
+    "DEFAULT_MAX_AGE_DAYS",
+    "DEFAULT_MAX_ATTEMPTS",
+    "DEFAULT_MAX_DAILY",
+    "DEFAULT_MAX_DAYS",
+    "DEFAULT_MAX_PENDING",
+    "DEFAULT_MAX_WEEK",
+    "DEFAULT_MIN_DAILY",
+    "DEFAULT_POLL_MINUTES",
+    "DEFAULT_TTL_HOURS",
+    "DESTINATION_ON_POST",
+    "ERR_ACCOUNT",
+    "ERR_ADS_DISABLED",
+    "ERR_AUDIENCE",
+    "ERR_BELOW_META",
+    "ERR_CAP_AT_LAUNCH",
+    "ERR_COUNTRY",
+    "ERR_CURRENCY",
+    "ERR_DAILY_OVER",
+    "ERR_DAILY_UNDER",
+    "ERR_DAYS",
+    "ERR_DISABLED",
+    "ERR_IDEMPOTENCY_REQUIRED",
+    "ERR_IDEMPOTENCY_REUSED",
+    "ERR_MEDIA",
+    "ERR_MEDIA_HIDDEN",
+    "ERR_NOT_BOOSTABLE",
+    "ERR_NOT_FOUND",
+    "ERR_OBJECTIVE",
+    "ERR_OPEN",
+    "ERR_PENDING",
+    "ERR_REASON",
+    "ERR_WEEK",
+    "GRAPH_ADS",
+    "GRAPH_CAMPAIGNS",
+    "GRAPH_CREATIVES",
+    "HEADER_IDEMPOTENCY_KEY",
+    "IDEMPOTENCY_MAX",
+    "IDEMPOTENCY_MIN",
+    "INDEX_STATUS_NEXT",
+    "LIST_DEFAULT",
+    "LIST_MAX",
+    "LOG_BOOST",
+    "LOG_INSIGHTS",
+    "LOG_LAUNCH",
+    "OBJECTIVE_ENGAGEMENT",
+    "OBJECTIVE_OUTCOME",
+    "OPEN_STATUSES",
+    "OPEN_WHERE_SQL",
+    "OPTIMIZATION_POST",
+    "PATH_BOOST_REQUEST",
+    "PATH_BOOST_REQUESTS",
+    "PATH_BOOST_REQUEST_ID",
+    "RESEND_AFTER_SECONDS",
+    "STATUS_ACTIVE",
+    "STATUS_ACTIVE_AD",
+    "STATUS_APPROVED",
+    "STATUS_COMPLETED",
+    "STATUS_EXPIRED",
+    "STATUS_FAILED",
+    "STATUS_LAUNCHING",
+    "STATUS_PAUSED",
+    "STATUS_PENDING",
+    "STATUS_REJECTED",
+    "STATUS_STOPPED",
+    "TABLE_BOOST_EVENTS",
+    "TABLE_BOOST_REQUESTS",
+    "UNCOMMITTED_STATUSES",
+    "UQ_MEDIA_ACTIVE",
+    "WEEK_DAYS",
+]

@@ -526,6 +526,15 @@ path, and the fresh review goes out. An `ai_image` renders full-bleed under the 
 `topic_candidates.cover_asset_id`, `autopilot_runs.cover_chosen` and
 `carousel_projects.slide_cover` (all nullable / idempotent).
 
+### 5.9 Account insights for the boost bot (AE-0573, ADR-0029)
+
+`GET /api/autopilot/ig-insights` uses the autopilot `X-Api-Key`, not the dashboard
+JWT. It lists media on the Instagram account (not only posts this backend
+published), with feed and reel metric sets, derived rates, and a median baseline
+per product type. Missing metrics stay null. The dashboard route
+`GET /api/instagram/insights` is unchanged. Boost requests and ad spend are
+AE-0574 and AE-0575 and are not on this route.
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |

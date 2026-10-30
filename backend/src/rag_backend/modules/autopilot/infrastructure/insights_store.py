@@ -8,7 +8,7 @@ carousel ORM). Snapshots live in ``instagram_post_insights``.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import column, select, table
@@ -27,6 +27,21 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     ManualPublishModel,
 )
 from rag_backend.modules.autopilot.infrastructure.run_mapping import aware
+from rag_backend.modules.autopilot.insights_constants import (
+    COLUMN_AVG_WATCH_TIME,
+    COLUMN_TOTAL_WATCH_TIME,
+    METRIC_AVG_WATCH_TIME,
+    METRIC_COMMENTS,
+    METRIC_FOLLOWS,
+    METRIC_LIKES,
+    METRIC_PROFILE_VISITS,
+    METRIC_REACH,
+    METRIC_SAVED,
+    METRIC_SHARES,
+    METRIC_TOTAL_INTERACTIONS,
+    METRIC_TOTAL_WATCH_TIME,
+    METRIC_VIEWS,
+)
 
 _CAROUSELS = table("carousel_projects", column("id"), column("topic"))
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
@@ -122,6 +137,37 @@ def _published(row: Sequence[object]) -> tuple[datetime, PublishedPost]:
     )
 
 
+_MetricRead = Callable[[InsightMetrics], int | None]
+
+_READ: dict[str, _MetricRead] = {
+    METRIC_VIEWS: lambda metrics: metrics.views,
+    METRIC_REACH: lambda metrics: metrics.reach,
+    METRIC_SAVED: lambda metrics: metrics.saved,
+    METRIC_SHARES: lambda metrics: metrics.shares,
+    METRIC_FOLLOWS: lambda metrics: metrics.follows,
+    METRIC_PROFILE_VISITS: lambda metrics: metrics.profile_visits,
+    METRIC_TOTAL_INTERACTIONS: lambda metrics: metrics.total_interactions,
+    METRIC_LIKES: lambda metrics: metrics.likes,
+    METRIC_COMMENTS: lambda metrics: metrics.comments,
+    METRIC_AVG_WATCH_TIME: lambda metrics: metrics.avg_watch_time_ms,
+    METRIC_TOTAL_WATCH_TIME: lambda metrics: metrics.total_watch_time_ms,
+}
+
+_COLUMN: dict[str, str] = {
+    METRIC_VIEWS: METRIC_VIEWS,
+    METRIC_REACH: METRIC_REACH,
+    METRIC_SAVED: METRIC_SAVED,
+    METRIC_SHARES: METRIC_SHARES,
+    METRIC_FOLLOWS: METRIC_FOLLOWS,
+    METRIC_PROFILE_VISITS: METRIC_PROFILE_VISITS,
+    METRIC_TOTAL_INTERACTIONS: METRIC_TOTAL_INTERACTIONS,
+    METRIC_LIKES: METRIC_LIKES,
+    METRIC_COMMENTS: METRIC_COMMENTS,
+    METRIC_AVG_WATCH_TIME: COLUMN_AVG_WATCH_TIME,
+    METRIC_TOTAL_WATCH_TIME: COLUMN_TOTAL_WATCH_TIME,
+}
+
+
 def _snapshot(row: InstagramPostInsightsModel) -> InsightSnapshot:
     return InsightSnapshot(
         media_id=row.media_id,
@@ -133,21 +179,26 @@ def _snapshot(row: InstagramPostInsightsModel) -> InsightSnapshot:
             follows=row.follows,
             profile_visits=row.profile_visits,
             total_interactions=row.total_interactions,
+            likes=row.likes,
+            comments=row.comments,
+            avg_watch_time_ms=row.avg_watch_time_ms,
+            total_watch_time_ms=row.total_watch_time_ms,
         ),
         fetched_at=aware(row.fetched_at) or _EPOCH,
     )
 
 
 def _write(row: InstagramPostInsightsModel, snapshot: InsightSnapshot) -> None:
-    metrics = snapshot.metrics
-    row.views = metrics.views
-    row.reach = metrics.reach
-    row.saved = metrics.saved
-    row.shares = metrics.shares
-    row.follows = metrics.follows
-    row.profile_visits = metrics.profile_visits
-    row.total_interactions = metrics.total_interactions
+    for name in snapshot.written:
+        _assign(row, name, _READ[name](snapshot.metrics) if name in _READ else None)
     row.fetched_at = snapshot.fetched_at
+
+
+def _assign(row: InstagramPostInsightsModel, name: str, value: int | None) -> None:
+    column_name = _COLUMN.get(name)
+    if column_name is None:
+        return
+    setattr(row, column_name, value)
 
 
 __all__ = ["SqlInsightsStore"]

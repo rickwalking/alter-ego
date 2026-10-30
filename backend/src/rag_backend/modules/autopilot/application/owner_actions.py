@@ -15,6 +15,7 @@ from uuid import UUID
 
 import structlog
 
+from rag_backend.modules.autopilot.application.boost_actions import BoostOwnerActions
 from rag_backend.modules.autopilot.application.cover_actions import CoverOwnerActions
 from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
@@ -43,6 +44,8 @@ from rag_backend.modules.autopilot.application.thesis_actions import (
 )
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.backlog import BacklogStore
+from rag_backend.modules.autopilot.domain.boost import BoostStore, CampaignPauser
+from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
     parse_callback,
@@ -156,9 +159,14 @@ class OwnerActionDeps:
     queue: QueueControl | None = None
     backlog: BacklogStore | None = None
     dead_letters: DeadLetterRuns | None = None
+    boosts: BoostStore | None = None
+    boost_limits: BoostLimits | None = None
+    pauser: CampaignPauser | None = None
 
 
-class OwnerActionService(ThesisOwnerActions, CoverOwnerActions, QueueOwnerActions):
+class OwnerActionService(
+    ThesisOwnerActions, CoverOwnerActions, QueueOwnerActions, BoostOwnerActions
+):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
@@ -194,9 +202,11 @@ class OwnerActionService(ThesisOwnerActions, CoverOwnerActions, QueueOwnerAction
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
-        if await self._thesis_callback(update) or await self._cover_callback(update):
-            return
-        if await self._queue_callback(update):
+        handled = await self._boost_callback(update)
+        handled = handled or await self._thesis_callback(update)
+        handled = handled or await self._cover_callback(update)
+        handled = handled or await self._queue_callback(update)
+        if handled:
             return
         parsed = parse_callback(update.data)
         if parsed is None:

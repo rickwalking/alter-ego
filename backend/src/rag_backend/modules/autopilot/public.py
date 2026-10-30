@@ -125,10 +125,14 @@ def register_persistence_models() -> tuple[str, ...]:
     Returns the registered table names. Callers (the shared model package)
     use the call for its side effect; the tuple keeps the import live.
     """
+    from rag_backend.modules.autopilot.infrastructure.boost_models import (
+        BoostRequestModel,
+    )
     from rag_backend.modules.autopilot.infrastructure.cover_models import (
         AutopilotCoverAssetModel,
     )
     from rag_backend.modules.autopilot.infrastructure.insights_models import (
+        IgMediaModel,
         InstagramAudienceHoursModel,
         InstagramPostInsightsModel,
     )
@@ -156,5 +160,7 @@ def register_persistence_models() -> tuple[str, ...]:
         InstagramStoryModel.__tablename__,
         InstagramPostInsightsModel.__tablename__,
         InstagramAudienceHoursModel.__tablename__,
+        IgMediaModel.__tablename__,
+        BoostRequestModel.__tablename__,
         AutopilotCoverAssetModel.__tablename__,
     )

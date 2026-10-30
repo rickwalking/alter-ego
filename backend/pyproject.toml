@@ -160,6 +160,8 @@ module = [
     # AE-0353: Pydantic request models live in the module. BaseModel trips
     # explicit-any the same way rag_backend.api.schemas does.
     "rag_backend.modules.autopilot.api.schemas",
+    "rag_backend.modules.autopilot.api.ig_insights_schemas",
+    "rag_backend.modules.autopilot.api.boost_schemas",
 ]
 disable_error_code = ["explicit-any", "type-arg"]
 

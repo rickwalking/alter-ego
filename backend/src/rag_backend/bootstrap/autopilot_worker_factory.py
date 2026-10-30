@@ -30,6 +30,10 @@ from rag_backend.modules.autopilot import (
     credential_tick_config,
     notifier_is_configured,
 )
+from rag_backend.modules.autopilot.application.boost_tick import (
+    BoostTick,
+    BoostTickDeps,
+)
 
 EngineFactory = Callable[[], EditorialWorkflowService]
 
@@ -41,6 +45,7 @@ class AutopilotWorkerSteps:
     instagram_publish: InstagramPublishTickAdapter | None
     credential_refresh: CredentialRefreshTickAdapter | None
     telegram_notify: TelegramNotifyTickAdapter
+    boost: BoostRunAdapter | None
 
 
 def autopilot_engine_factory(checkpointer: object | None) -> EngineFactory:
@@ -83,6 +88,7 @@ def build_autopilot_worker_steps(
                 engine_factory=engine_factory,
             )
         ),
+        boost=BoostRunAdapter(settings),
     )
 
 
@@ -125,3 +131,89 @@ def credential_refresh_step(settings: Settings) -> CredentialRefreshTickAdapter 
     if config is None:
         return None
     return build_credential_refresh_tick(config)
+
+
+class BoostRunAdapter:
+    """Expire pending boosts. Launch only when the spend switch is on."""
+
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+
+    async def tick(self, db: object) -> int:
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        if not isinstance(db, AsyncSession):
+            return 0
+        ads, client = _ads_client(self._settings)
+        try:
+            return await _boost_tick(self._settings, db, ads).run()
+        finally:
+            await _close(client)
+
+
+def _boost_tick(settings: Settings, db: object, ads: object) -> BoostTick:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from rag_backend.modules.autopilot.api.boost import limits_from
+    from rag_backend.modules.autopilot.application.boost_requests import BoostDeps
+    from rag_backend.modules.autopilot.application.publish_job import SystemClock
+    from rag_backend.modules.autopilot.infrastructure.boost_notifier import (
+        TelegramBoostMessenger,
+    )
+    from rag_backend.modules.autopilot.infrastructure.boost_store import SqlBoostStore
+    from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
+        MetaAdsGateway,
+    )
+
+    if not isinstance(db, AsyncSession):
+        raise TypeError(type(db).__name__)
+    gateway = ads if isinstance(ads, MetaAdsGateway) else None
+    return BoostTick(
+        BoostTickDeps(
+            boosts=BoostDeps(
+                store=SqlBoostStore(db),
+                messenger=TelegramBoostMessenger(
+                    token=settings.telegram_bot_token.get_secret_value(),
+                    chat_id=settings.telegram_owner_chat_id,
+                ),
+                clock=SystemClock(),
+                owner_chat_id=settings.telegram_owner_chat_id,
+            ),
+            limits=limits_from(settings),
+            ads=gateway,
+        )
+    )
+
+
+def _ads_client(settings: Settings) -> tuple[object, object]:
+    import httpx
+
+    from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
+        AdsConfig,
+        MetaAdsGateway,
+    )
+
+    token = settings.meta_ads_access_token.get_secret_value().strip()
+    if not settings.boost_enabled or token == "":
+        return None, None
+    client = httpx.AsyncClient(timeout=20)
+    gateway = MetaAdsGateway(
+        AdsConfig(
+            enabled=True,
+            token=token,
+            app_secret=settings.meta_ads_app_secret.get_secret_value().strip(),
+            account_id=settings.meta_ad_account_id,
+            page_id=settings.meta_page_id,
+            ig_user_id=settings.meta_ads_ig_user_id,
+            graph_base=settings.meta_ads_graph_base,
+        ),
+        client,
+    )
+    return gateway, client
+
+
+async def _close(client: object) -> None:
+    close = getattr(client, "aclose", None)
+    if close is None:
+        return
+    await close()
