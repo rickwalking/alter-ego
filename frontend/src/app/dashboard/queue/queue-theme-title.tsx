@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-
-const THEME_LINK_CLASS =
-  "rounded underline decoration-neon-cyan/40 hover:decoration-neon-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+import { QUEUE_LINK_CLASS } from "./queue-row-utils";
 
 /**
  * The row's theme title: a link to the run's carousel when one exists, plain
@@ -20,7 +18,7 @@ export function QueueThemeTitle({
   return (
     <Link
       href={DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}
-      className={THEME_LINK_CLASS}
+      className={QUEUE_LINK_CLASS}
       aria-label={t("actionForTheme", { action: t("openCarousel"), theme })}
     >
       {theme}

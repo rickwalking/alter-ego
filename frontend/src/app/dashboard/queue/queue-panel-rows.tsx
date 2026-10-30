@@ -10,7 +10,11 @@ import { firstNonBlank } from "@/lib/utils";
 import { QueueReprocessButton } from "./queue-reprocess-button";
 import { QueueRowAction } from "./queue-row-action";
 import { QueueThemeTitle } from "./queue-theme-title";
-import { formatQueueTime, QUEUE_ROW_CLASS } from "./queue-row-utils";
+import {
+  formatQueueTime,
+  QUEUE_LINK_CLASS,
+  QUEUE_ROW_CLASS,
+} from "./queue-row-utils";
 import type { QueueRowProps } from "./types";
 
 const KNOWN_KINDS: ReadonlySet<string> = new Set(["autopilot", "dashboard"]);
@@ -186,7 +190,7 @@ export function QueueDeadRow({
         )}
         {!item.can_retry && item.project_id && (
           <Link
-            className="text-xs underline"
+            className={`text-xs ${QUEUE_LINK_CLASS}`}
             aria-label={t("actionForTheme", {
               action: t("openEditor"),
               theme,
