@@ -8,18 +8,23 @@ the Graph API may omit one, and an omitted metric is never estimated.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol
 
 from rag_backend.modules.autopilot.insights_constants import (
+    INSIGHT_METRICS,
     INSIGHTS_TTL_HOURS,
+    METRIC_AVG_WATCH_TIME,
+    METRIC_COMMENTS,
     METRIC_FOLLOWS,
+    METRIC_LIKES,
     METRIC_PROFILE_VISITS,
     METRIC_REACH,
     METRIC_SAVED,
     METRIC_SHARES,
     METRIC_TOTAL_INTERACTIONS,
+    METRIC_TOTAL_WATCH_TIME,
     METRIC_VIEWS,
     SHARES_PER_VIEWS_BASE,
 )
@@ -36,6 +41,10 @@ class InsightMetrics:
     follows: int | None = None
     profile_visits: int | None = None
     total_interactions: int | None = None
+    likes: int | None = None
+    comments: int | None = None
+    avg_watch_time_ms: int | None = None
+    total_watch_time_ms: int | None = None
 
     @classmethod
     def from_values(cls, values: Mapping[str, int]) -> InsightMetrics:
@@ -48,6 +57,10 @@ class InsightMetrics:
             follows=values.get(METRIC_FOLLOWS),
             profile_visits=values.get(METRIC_PROFILE_VISITS),
             total_interactions=values.get(METRIC_TOTAL_INTERACTIONS),
+            likes=values.get(METRIC_LIKES),
+            comments=values.get(METRIC_COMMENTS),
+            avg_watch_time_ms=values.get(METRIC_AVG_WATCH_TIME),
+            total_watch_time_ms=values.get(METRIC_TOTAL_WATCH_TIME),
         )
 
 
@@ -61,6 +74,11 @@ class PublishedPost:
     topic: str | None = None
 
 
+def dashboard_metrics() -> frozenset[str]:
+    """Metric names the dashboard route fetches and is allowed to overwrite."""
+    return frozenset(INSIGHT_METRICS)
+
+
 @dataclass(frozen=True, kw_only=True)
 class InsightSnapshot:
     """The last metrics read for one media id."""
@@ -68,6 +86,7 @@ class InsightSnapshot:
     media_id: str
     metrics: InsightMetrics
     fetched_at: datetime
+    written: frozenset[str] = field(default_factory=dashboard_metrics)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -132,7 +151,9 @@ def build_report(rows: Sequence[PostInsightsRow]) -> InsightsReport:
 class InsightsGateway(Protocol):
     """Reads one post's metrics from the Graph API."""
 
-    async def media_insights(self, media_id: str) -> InsightMetrics:
+    async def media_insights(
+        self, media_id: str, metrics: tuple[str, ...] = INSIGHT_METRICS
+    ) -> InsightMetrics:
         """Raise ``InstagramCallError`` when Graph cannot answer."""
         ...
 
@@ -166,6 +187,7 @@ __all__ = [
     "PostInsightsRow",
     "PublishedPost",
     "build_report",
+    "dashboard_metrics",
     "is_due",
     "shares_per_100",
 ]

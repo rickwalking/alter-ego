@@ -19,6 +19,12 @@ METRIC_SHARES = "shares"
 METRIC_FOLLOWS = "follows"
 METRIC_PROFILE_VISITS = "profile_visits"
 METRIC_TOTAL_INTERACTIONS = "total_interactions"
+METRIC_LIKES = "likes"
+METRIC_COMMENTS = "comments"
+METRIC_AVG_WATCH_TIME = "ig_reels_avg_watch_time"
+METRIC_TOTAL_WATCH_TIME = "ig_reels_video_view_total_time"
+COLUMN_AVG_WATCH_TIME = "avg_watch_time_ms"
+COLUMN_TOTAL_WATCH_TIME = "total_watch_time_ms"
 INSIGHT_METRICS: tuple[str, ...] = (
     METRIC_VIEWS,
     METRIC_REACH,
@@ -55,6 +61,8 @@ LOG_MEDIA_ID_INVALID = "media_id_invalid"
 
 __all__ = [
     "APP_STATE_INSIGHTS_GATEWAY",
+    "COLUMN_AVG_WATCH_TIME",
+    "COLUMN_TOTAL_WATCH_TIME",
     "FIELD_DATA",
     "FIELD_METRIC",
     "FIELD_NAME",
@@ -71,12 +79,16 @@ __all__ = [
     "LOG_INSIGHTS",
     "LOG_MEDIA_ID_INVALID",
     "LOG_REFRESH_FAILED",
+    "METRIC_AVG_WATCH_TIME",
+    "METRIC_COMMENTS",
     "METRIC_FOLLOWS",
+    "METRIC_LIKES",
     "METRIC_PROFILE_VISITS",
     "METRIC_REACH",
     "METRIC_SAVED",
     "METRIC_SHARES",
     "METRIC_TOTAL_INTERACTIONS",
+    "METRIC_TOTAL_WATCH_TIME",
     "METRIC_VIEWS",
     "PATH_INSIGHTS",
     "SHARES_PER_VIEWS_BASE",

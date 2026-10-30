@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.modules.autopilot.api.boost import limits_from
 from rag_backend.modules.autopilot.application.owner_actions import (
     OwnerActionDeps,
     OwnerActionService,
@@ -16,6 +17,7 @@ from rag_backend.modules.autopilot.infrastructure.audience_gateway import (
     build_audience_gateway,
 )
 from rag_backend.modules.autopilot.infrastructure.backlog_store import SqlBacklogStore
+from rag_backend.modules.autopilot.infrastructure.boost_store import SqlBoostStore
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
@@ -37,6 +39,9 @@ from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
     InProcessEditorialDriver,
+)
+from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
+    SettingsCampaignPauser,
 )
 from rag_backend.modules.autopilot.infrastructure.notice_source import SqlNoticeLogStore
 from rag_backend.modules.autopilot.infrastructure.pending_rework import (
@@ -108,6 +113,9 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         queue=SqlQueueControl(build.session, deferred=True),
         backlog=SqlBacklogStore(build.session),
         dead_letters=SqlDeadLetterRuns(build.session),
+        boosts=SqlBoostStore(build.session),
+        boost_limits=limits_from(build.settings),
+        pauser=SettingsCampaignPauser(build.settings),
     )
     return OwnerActionService(deps)
 

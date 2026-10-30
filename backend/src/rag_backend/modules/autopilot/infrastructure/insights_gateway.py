@@ -57,24 +57,30 @@ class GraphInsightsGateway:
         self._config = config
         self._client = client
 
-    async def media_insights(self, media_id: str) -> InsightMetrics:
+    async def media_insights(
+        self, media_id: str, metrics: tuple[str, ...] = INSIGHT_METRICS
+    ) -> InsightMetrics:
         """The post's metrics; omitted or refused metrics are ``None``."""
         if not media_id.isdigit():
             return InsightMetrics()
-        return await guard_graph(lambda: self._read_all(media_id))
+        return await guard_graph(lambda: self._read_all(media_id, metrics))
 
-    async def _read_all(self, media_id: str) -> InsightMetrics:
+    async def _read_all(
+        self, media_id: str, metrics: tuple[str, ...]
+    ) -> InsightMetrics:
         try:
-            values = await self._read(media_id, INSIGHT_METRICS)
+            values = await self._read(media_id, metrics)
         except InstagramGraphError as exc:
             if exc.transient:
                 raise
-            values = await self._read_one_by_one(media_id)
+            values = await self._read_one_by_one(media_id, metrics)
         return InsightMetrics.from_values(values)
 
-    async def _read_one_by_one(self, media_id: str) -> dict[str, int]:
+    async def _read_one_by_one(
+        self, media_id: str, metrics: tuple[str, ...]
+    ) -> dict[str, int]:
         values: dict[str, int] = {}
-        for metric in INSIGHT_METRICS:
+        for metric in metrics:
             try:
                 values.update(await self._read(media_id, (metric,)))
             except InstagramGraphError as exc:

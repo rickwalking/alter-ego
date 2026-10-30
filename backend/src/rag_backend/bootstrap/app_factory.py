@@ -93,6 +93,8 @@ from rag_backend.infrastructure.database.workflow_timeout_repository import (
 from rag_backend.infrastructure.logging import get_logger
 from rag_backend.infrastructure.telemetry.opentelemetry import instrument_fastapi
 from rag_backend.modules.autopilot import prepare_instagram_credentials
+from rag_backend.modules.autopilot.api.boost import router as boost_router
+from rag_backend.modules.autopilot.api.ig_insights import router as ig_insights_router
 from rag_backend.modules.autopilot.api.insights import (
     router as instagram_insights_router,
 )
@@ -160,6 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     instagram_publish=autopilot.instagram_publish,
                     credential_refresh=autopilot.credential_refresh,
                     telegram_notify=autopilot.telegram_notify,
+                    boost=autopilot.boost,
                 ),
             )
         )
@@ -290,6 +293,8 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(workflow_board.router, prefix="/api")
     app.include_router(chat_stream.router, prefix="/api")
     app.include_router(autopilot_router, prefix="/api")
+    app.include_router(boost_router, prefix="/api")
+    app.include_router(ig_insights_router, prefix="/api")
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(queue_board_router, prefix="/api")
     app.include_router(manual_reprocess.router, prefix="/api")

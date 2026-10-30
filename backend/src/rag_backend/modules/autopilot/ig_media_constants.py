@@ -1,0 +1,201 @@
+"""Account-media insights for the autopilot key (ADR-0029).
+
+The dashboard route keeps ``INSIGHT_METRICS``. This module names the wider
+metric sets, the media-list walk, and the read route.
+"""
+
+from __future__ import annotations
+
+from rag_backend.modules.autopilot.insights_constants import (
+    METRIC_AVG_WATCH_TIME,
+    METRIC_COMMENTS,
+    METRIC_FOLLOWS,
+    METRIC_LIKES,
+    METRIC_PROFILE_VISITS,
+    METRIC_REACH,
+    METRIC_SAVED,
+    METRIC_SHARES,
+    METRIC_TOTAL_INTERACTIONS,
+    METRIC_TOTAL_WATCH_TIME,
+    METRIC_VIEWS,
+)
+
+TABLE_IG_MEDIA = "ig_media"
+INDEX_IG_MEDIA_POSTED_AT = "ix_ig_media_posted_at"
+
+PRODUCT_FEED = "FEED"
+PRODUCT_REELS = "REELS"
+PRODUCT_STORY = "STORY"
+MEDIA_IMAGE = "IMAGE"
+MEDIA_CAROUSEL = "CAROUSEL_ALBUM"
+MEDIA_VIDEO = "VIDEO"
+MEDIA_TYPES: frozenset[str] = frozenset({MEDIA_IMAGE, MEDIA_CAROUSEL, MEDIA_VIDEO})
+PRODUCT_TYPES: frozenset[str] = frozenset({PRODUCT_FEED, PRODUCT_REELS})
+
+PATH_IG_INSIGHTS = "/ig-insights"
+GRAPH_PATH_USER_MEDIA = "/{ig_user_id}/media"
+FIELD_FIELDS = "fields"
+FIELD_LIMIT = "limit"
+FIELD_AFTER = "after"
+FIELD_PAGING = "paging"
+FIELD_CURSORS = "cursors"
+FIELD_ID = "id"
+FIELD_CAPTION = "caption"
+FIELD_MEDIA_TYPE = "media_type"
+FIELD_MEDIA_PRODUCT_TYPE = "media_product_type"
+FIELD_TIMESTAMP = "timestamp"
+FIELD_PERMALINK = "permalink"
+FIELD_LIKE_COUNT = "like_count"
+FIELD_COMMENTS_COUNT = "comments_count"
+MEDIA_FIELDS = (
+    "id,caption,media_type,media_product_type,timestamp,permalink,"
+    "like_count,comments_count"
+)
+
+QUERY_SINCE = "since"
+QUERY_UNTIL = "until"
+QUERY_LIMIT = "limit"
+QUERY_MEDIA_TYPE = "media_type"
+QUERY_PRODUCT_TYPE = "product_type"
+QUERY_REFRESH = "refresh"
+
+METRICS_SHARED: tuple[str, ...] = (
+    METRIC_VIEWS,
+    METRIC_REACH,
+    METRIC_SAVED,
+    METRIC_SHARES,
+    METRIC_LIKES,
+    METRIC_COMMENTS,
+    METRIC_TOTAL_INTERACTIONS,
+)
+METRICS_FEED: tuple[str, ...] = (
+    *METRICS_SHARED[:6],
+    METRIC_FOLLOWS,
+    METRIC_PROFILE_VISITS,
+    METRIC_TOTAL_INTERACTIONS,
+)
+METRICS_REELS: tuple[str, ...] = (
+    *METRICS_SHARED,
+    METRIC_AVG_WATCH_TIME,
+    METRIC_TOTAL_WATCH_TIME,
+)
+DEPRECATED_METRICS: frozenset[str] = frozenset(
+    {
+        "impressions",
+        "plays",
+        "clips_replays_count",
+        "ig_reels_aggregated_all_plays_count",
+        "video_views",
+    }
+)
+
+IG_MEDIA_LIST_TTL_MINUTES = 30
+IG_MEDIA_MAX_PAGES = 4
+IG_MEDIA_PAGE_SIZE = 50
+IG_MEDIA_QUERY_CAP = 500
+IG_INSIGHTS_DEFAULT_LIMIT = 30
+IG_INSIGHTS_MAX_LIMIT = 100
+IG_INSIGHTS_DEFAULT_SINCE_DAYS = 30
+IG_INSIGHTS_MAX_SINCE_DAYS = 90
+CAPTION_EXCERPT_LENGTH = 280
+MEDIA_TYPE_LENGTH = 32
+PRODUCT_TYPE_LENGTH = 16
+BASELINE_MIN_AGE_HOURS = 72
+BASELINE_MAX_AGE_DAYS = 30
+BASELINE_ROW_CAP = 200
+SAVES_PER_REACH_BASE = 100
+FOLLOWS_PER_REACH_BASE = 1000
+RATE_DIGITS = 2
+ENGAGEMENT_RATE_DIGITS = 4
+SECONDS_PER_HOUR = 3600
+AGE_HOURS_DIGITS = 1
+
+APP_STATE_IG_MEDIA_GATEWAY = "autopilot_ig_media_gateway"
+LOG_IG_MEDIA = "instagram.ig_media"
+LOG_LIST_FAILED = "list_failed"
+HEADER_CACHE_CONTROL = "Cache-Control"
+CACHE_CONTROL_NO_STORE = "no-store"
+
+ERR_SINCE_TOO_OLD = "since_too_old"
+ERR_WINDOW_INVALID = "window_invalid"
+ERR_LIMIT_INVALID = "limit_invalid"
+ERR_TIMESTAMP_INVALID = "timestamp_invalid"
+ERR_MEDIA_TYPE_INVALID = "media_type_invalid"
+ERR_PRODUCT_TYPE_INVALID = "product_type_invalid"
+ERR_REFRESH_INVALID = "refresh_invalid"
+
+REFRESH_TRUE = frozenset({"1", "true", "True"})
+REFRESH_FALSE = frozenset({"0", "false", "False"})
+
+__all__ = [
+    "AGE_HOURS_DIGITS",
+    "APP_STATE_IG_MEDIA_GATEWAY",
+    "BASELINE_MAX_AGE_DAYS",
+    "BASELINE_MIN_AGE_HOURS",
+    "BASELINE_ROW_CAP",
+    "CACHE_CONTROL_NO_STORE",
+    "CAPTION_EXCERPT_LENGTH",
+    "DEPRECATED_METRICS",
+    "ENGAGEMENT_RATE_DIGITS",
+    "ERR_LIMIT_INVALID",
+    "ERR_MEDIA_TYPE_INVALID",
+    "ERR_PRODUCT_TYPE_INVALID",
+    "ERR_REFRESH_INVALID",
+    "ERR_SINCE_TOO_OLD",
+    "ERR_TIMESTAMP_INVALID",
+    "ERR_WINDOW_INVALID",
+    "FIELD_AFTER",
+    "FIELD_CAPTION",
+    "FIELD_COMMENTS_COUNT",
+    "FIELD_CURSORS",
+    "FIELD_FIELDS",
+    "FIELD_ID",
+    "FIELD_LIKE_COUNT",
+    "FIELD_LIMIT",
+    "FIELD_MEDIA_PRODUCT_TYPE",
+    "FIELD_MEDIA_TYPE",
+    "FIELD_PAGING",
+    "FIELD_PERMALINK",
+    "FIELD_TIMESTAMP",
+    "FOLLOWS_PER_REACH_BASE",
+    "GRAPH_PATH_USER_MEDIA",
+    "HEADER_CACHE_CONTROL",
+    "IG_INSIGHTS_DEFAULT_LIMIT",
+    "IG_INSIGHTS_DEFAULT_SINCE_DAYS",
+    "IG_INSIGHTS_MAX_LIMIT",
+    "IG_INSIGHTS_MAX_SINCE_DAYS",
+    "IG_MEDIA_LIST_TTL_MINUTES",
+    "IG_MEDIA_MAX_PAGES",
+    "IG_MEDIA_PAGE_SIZE",
+    "IG_MEDIA_QUERY_CAP",
+    "INDEX_IG_MEDIA_POSTED_AT",
+    "LOG_IG_MEDIA",
+    "LOG_LIST_FAILED",
+    "MEDIA_CAROUSEL",
+    "MEDIA_FIELDS",
+    "MEDIA_IMAGE",
+    "MEDIA_TYPES",
+    "MEDIA_TYPE_LENGTH",
+    "MEDIA_VIDEO",
+    "METRICS_FEED",
+    "METRICS_REELS",
+    "METRICS_SHARED",
+    "PATH_IG_INSIGHTS",
+    "PRODUCT_FEED",
+    "PRODUCT_REELS",
+    "PRODUCT_STORY",
+    "PRODUCT_TYPES",
+    "PRODUCT_TYPE_LENGTH",
+    "QUERY_LIMIT",
+    "QUERY_MEDIA_TYPE",
+    "QUERY_PRODUCT_TYPE",
+    "QUERY_REFRESH",
+    "QUERY_SINCE",
+    "QUERY_UNTIL",
+    "RATE_DIGITS",
+    "REFRESH_FALSE",
+    "REFRESH_TRUE",
+    "SAVES_PER_REACH_BASE",
+    "SECONDS_PER_HOUR",
+    "TABLE_IG_MEDIA",
+]

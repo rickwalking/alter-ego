@@ -20,7 +20,10 @@ from rag_backend.domain.constants.carousel_archive import (
     CAROUSEL_AUTO_ARCHIVE_DEFAULT_DAYS,
 )
 from rag_backend.domain.constants.cover_generation import DEFAULT_GROK_COVER_COST_USD
-from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
+from rag_backend.domain.constants.instagram_publish import (
+    GRAPH_HOST_FACEBOOK,
+    GRAPH_HOST_INSTAGRAM,
+)
 from rag_backend.infrastructure.config.autopilot_autofix_settings import (
     AutopilotAutofixSettings,
 )
@@ -258,6 +261,91 @@ class Settings(AutopilotAutofixSettings, GenerationQueueSettings):
         default=False,
         validation_alias=AliasChoices("AUTOPILOT_ENABLED", "autopilot_enabled"),
     )
+    boost_requests_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "BOOST_REQUESTS_ENABLED", "boost_requests_enabled"
+        ),
+    )
+    boost_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("BOOST_ENABLED", "boost_enabled"),
+    )
+    boost_max_daily_budget_cents: int = Field(
+        default=3000,
+        ge=0,
+        validation_alias=AliasChoices(
+            "BOOST_MAX_DAILY_BUDGET_CENTS", "boost_max_daily_budget_cents"
+        ),
+    )
+    boost_min_daily_budget_cents: int = Field(
+        default=600,
+        ge=0,
+        validation_alias=AliasChoices(
+            "BOOST_MIN_DAILY_BUDGET_CENTS", "boost_min_daily_budget_cents"
+        ),
+    )
+    boost_max_days: int = Field(
+        default=7,
+        ge=1,
+        validation_alias=AliasChoices("BOOST_MAX_DAYS", "boost_max_days"),
+    )
+    boost_max_total_cents_per_week: int = Field(
+        default=10000,
+        ge=0,
+        validation_alias=AliasChoices(
+            "BOOST_MAX_TOTAL_CENTS_PER_WEEK", "boost_max_total_cents_per_week"
+        ),
+    )
+    boost_max_pending: int = Field(
+        default=3,
+        ge=0,
+        validation_alias=AliasChoices("BOOST_MAX_PENDING", "boost_max_pending"),
+    )
+    boost_max_media_age_days: int = Field(
+        default=30,
+        ge=0,
+        validation_alias=AliasChoices(
+            "BOOST_MAX_MEDIA_AGE_DAYS", "boost_max_media_age_days"
+        ),
+    )
+    boost_allowed_countries: str = Field(
+        default="BR",
+        validation_alias=AliasChoices(
+            "BOOST_ALLOWED_COUNTRIES", "boost_allowed_countries"
+        ),
+    )
+    boost_approval_ttl_hours: int = Field(
+        default=12,
+        ge=1,
+        validation_alias=AliasChoices(
+            "BOOST_APPROVAL_TTL_HOURS", "boost_approval_ttl_hours"
+        ),
+    )
+    boost_currency: str = Field(
+        default="BRL",
+        validation_alias=AliasChoices("BOOST_CURRENCY", "boost_currency"),
+    )
+    boost_insights_poll_minutes: int = Field(
+        default=60,
+        ge=0,
+        validation_alias=AliasChoices(
+            "BOOST_INSIGHTS_POLL_MINUTES", "boost_insights_poll_minutes"
+        ),
+    )
+    boost_launch_max_attempts: int = Field(
+        default=5,
+        ge=1,
+        validation_alias=AliasChoices(
+            "BOOST_LAUNCH_MAX_ATTEMPTS", "boost_launch_max_attempts"
+        ),
+    )
+    meta_ads_access_token: SecretStr = SecretStr("")
+    meta_ads_app_secret: SecretStr = SecretStr("")
+    meta_ad_account_id: str = ""
+    meta_page_id: str = ""
+    meta_ads_ig_user_id: str = ""
+    meta_ads_graph_base: str = GRAPH_HOST_FACEBOOK
     autopilot_owner_user_id: str = Field(
         default="",
         validation_alias=AliasChoices(
