@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { useCarouselPublicPostHref } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import { carouselDisplayTitle } from "@/lib/carousel-display-title";
 import { PreviewSlides } from "./create-carousel-preview-slides";
 
 interface CarouselPreviewProps {
@@ -42,14 +43,6 @@ function buildHeroImageUrl(project: CarouselProjectResponse): string | null {
   return tokens?.images?.hero ?? null;
 }
 
-/**
- * Falls back to the topic when the title is null, empty or whitespace (the
- * original `title || topic` intent; `??` would wrongly keep an empty title).
- */
-function displayTitle(project: CarouselProjectResponse): string {
-  return project.title?.trim() ? project.title : project.topic;
-}
-
 const TEMPLATE_VERSION_PREFIX = "v";
 
 /** "v2" stays "v2" (the stored value may already carry the v). */
@@ -74,7 +67,7 @@ function PreviewHeader({
           </span>
         )}
       </div>
-      <h3 className="font-semibold text-lg">{displayTitle(project)}</h3>
+      <h3 className="font-semibold text-lg">{carouselDisplayTitle(project)}</h3>
       {project.subtitle && (
         <p className="text-[var(--color-text-muted)] text-sm">
           {project.subtitle}
@@ -150,7 +143,7 @@ export function CarouselPreview({
   const t = useTranslations("create");
   const slideUrls = extractRenderedSlides(project);
   const heroUrl = buildHeroImageUrl(project);
-  const title = displayTitle(project);
+  const title = carouselDisplayTitle(project);
   const { href: blogHref } = useCarouselPublicPostHref(project.id);
 
   return (

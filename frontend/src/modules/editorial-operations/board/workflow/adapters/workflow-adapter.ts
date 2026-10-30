@@ -6,6 +6,10 @@ import type {
 } from "@/modules/editorial";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 import { ARCHIVE_REFUSAL, type ArchiveRefusal } from "@/constants/workflow";
+import {
+  carouselDisplayTitle,
+  stripInlineMarkup,
+} from "@/lib/carousel-display-title";
 
 function formatPhaseLabel(phase: string): string {
   return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -66,21 +70,8 @@ export function mapWorkflowToKanbanColumns(
 
 const ARCHIVE_REFUSALS: readonly string[] = Object.values(ARCHIVE_REFUSAL);
 
-const INLINE_MARKUP_PATTERN = /<\/?(?:strong|em|b|i)(?:\s[^>]*)?>|\*\*|__/g;
-
-/**
- * Board titles come from LLM copy that may carry `**bold**`, `__underline__`
- * or `<strong>`-style tags (with or without attributes); the board renders
- * plain text only. The empty result is the adapter's documented contract for
- * a card whose title and topic are both blank: `localizeBoardColumns`
- * substitutes the localized untitled fallback before rendering.
- */
-export function stripInlineMarkup(value: string): string {
-  return value.replaceAll(INLINE_MARKUP_PATTERN, "").trim();
-}
-
 function boardTitle(title: string, topic: string): string {
-  return stripInlineMarkup(title) || stripInlineMarkup(topic);
+  return carouselDisplayTitle({ title, topic });
 }
 
 function boardDescription(title: string, description: string): string {

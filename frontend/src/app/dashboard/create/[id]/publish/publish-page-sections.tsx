@@ -9,7 +9,7 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 
 import { PublishFailedNotice } from "@/modules/publishing";
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import { firstNonBlank } from "@/lib/utils";
+import { carouselDisplayTitle } from "@/lib/carousel-display-title";
 
 import type { LoadedProject } from "./use-publish-page";
 
@@ -32,7 +32,7 @@ export function PublishPageHeading({
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
-          {firstNonBlank([project.title, project.topic])}
+          {carouselDisplayTitle(project)}
         </h1>
         <p style={{ fontSize: "13px", color: TEXT_DIM, marginTop: "6px" }}>
           {project.audience} · {project.niche}

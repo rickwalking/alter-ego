@@ -36,7 +36,18 @@ vi.mock("@/components/atoms/neon-spinner", () => ({
   NeonSpinner: () => <div>spinner</div>,
 }));
 vi.mock("@/components/organisms/neon-top-bar", () => ({
-  NeonTopBar: ({ title }: { title: string }) => <h1>{title}</h1>,
+  NeonTopBar: ({
+    title,
+    breadcrumb,
+  }: {
+    title: string;
+    breadcrumb?: readonly { label: string; href?: string }[];
+  }) => (
+    <div>
+      <h1>{title}</h1>
+      <span>crumbs:{breadcrumb?.map((item) => item.label).join("|")}</span>
+    </div>
+  ),
 }));
 vi.mock("@/modules/editorial", () => ({
   useCarouselProject: () => hooks.project(),
@@ -210,6 +221,25 @@ describe("CreateWorkspacePage", () => {
   it("does not fetch workflow state for a project that never started", () => {
     render(<CreateWorkspacePage />);
     expect(hooks.workflowOptions).toHaveBeenCalledWith({ initialFetch: false });
+  });
+
+  /** Scenario: Workspace breadcrumb uses the same display title */
+  it("shows the title in the workspace breadcrumb when one is set", () => {
+    hooks.project.mockReturnValue({
+      data: { ...project, title: "AI Guide" },
+      isLoading: false,
+      isError: false,
+    });
+    render(<CreateWorkspacePage />);
+    expect(
+      screen.getByText("crumbs:topBar.projects|AI Guide"),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: Workspace breadcrumb falls back to the topic */
+  it("falls back to the topic in the workspace breadcrumb", () => {
+    render(<CreateWorkspacePage />);
+    expect(screen.getByText("crumbs:topBar.projects|AI")).toBeInTheDocument();
   });
 
   it("fetches workflow state once the project has a phase", () => {

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { carouselDisplayTitle } from "@/lib/carousel-display-title";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
 import { CreateWorkspaceSidebar } from "@/app/dashboard/create/create-workspace-sidebar";
 import {
@@ -49,7 +50,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
         title={t("topBar.title")}
         breadcrumb={[
           { label: t("topBar.projects"), href: DASHBOARD_ROUTES.WORKFLOW },
-          { label: project.topic },
+          { label: carouselDisplayTitle(project) },
         ]}
         actions={<BoardSequenceNavigation projectId={workspace.projectId} />}
       />
