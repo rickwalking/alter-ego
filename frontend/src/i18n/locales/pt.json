@@ -2171,6 +2171,11 @@
       "qualityScoreEmpty": "Sem dados",
       "qualityScoreCount": "{count, plural, one {# avaliação} other {# avaliações}}",
       "velocityTitle": "Velocidade de Publicação (8 semanas)",
+      "channelAll": "Todos",
+      "channelBlog": "Blog",
+      "channelCarousels": "Carrosséis",
+      "channelPickerLabel": "Canal da velocidade",
+      "publishedByChannel": "Publicados — Blog: {blog}, Carrosséis: {carousels}",
       "loadFailed": "Falha ao carregar analytics",
       "disabledTitle": "Analytics editorial desativado",
       "disabledBody": "O recurso de analytics editorial está desligado neste ambiente ou para o seu perfil. O resto do dashboard continua funcionando.",
@@ -2195,6 +2200,16 @@
         "followsPerPost": "Seguidores por post",
         "sharesPer100Views": "Compart. a cada 100 visualizações"
       }
+    },
+    "analyticsInstagram": {
+      "title": "Métricas do Instagram",
+      "subtitle": "Totais e métricas por post dos carrosséis publicados no Instagram",
+      "loadFailed": "Falha ao carregar as métricas do Instagram",
+      "notConfigured": "O conector {channel} não está configurado.",
+      "stale": "Última sincronização {lastSync}; os números podem estar desatualizados.",
+      "syncError": "Erro de sincronização: {error}",
+      "postColumn": "Post",
+      "fetchedColumn": "Buscado em"
     }
   },
   "admin": {

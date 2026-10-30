@@ -1,9 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { NeonCard } from "@/components/molecules/neon-card";
-import { NeonSpinner } from "@/components/atoms/neon-spinner";
-import { NEON_AMBER, NEON_RED, TEXT, TEXT_MUTED } from "@/constants/neon";
+import { NEON_AMBER, TEXT, TEXT_MUTED } from "@/constants/neon";
 import {
   useInstagramInsights,
   type InstagramInsights,
@@ -14,6 +12,8 @@ import {
   formatMetric,
   sumMetric,
 } from "./instagram-insights-helpers";
+import { InstagramKpiTiles } from "./instagram-kpi-tiles";
+import { InsightsCardShell } from "./insights-card-shell";
 
 /**
  * The dashboard's Instagram KPIs — totals over the recent published
@@ -25,28 +25,15 @@ export function InstagramInsightsCard(): React.ReactElement {
   const { data, isLoading, isError } = useInstagramInsights();
 
   return (
-    <NeonCard padding="md">
-      <h2
-        className="font-extrabold tracking-tight mb-1"
-        style={{ fontSize: 18, color: TEXT }}
-      >
-        {t("title")}
-      </h2>
-      <p className="text-xs mb-4" style={{ color: TEXT_MUTED }}>
-        {t("subtitle")}
-      </p>
-      {isLoading && (
-        <div className="flex justify-center py-6">
-          <NeonSpinner size="md" />
-        </div>
-      )}
-      {isError && (
-        <p className="text-sm" style={{ color: NEON_RED }}>
-          {t("loadFailed")}
-        </p>
-      )}
+    <InsightsCardShell
+      title={t("title")}
+      subtitle={t("subtitle")}
+      loadFailed={t("loadFailed")}
+      isLoading={isLoading}
+      isError={isError}
+    >
       {data && <InsightsBody data={data} />}
-    </NeonCard>
+    </InsightsCardShell>
   );
 }
 
@@ -78,18 +65,7 @@ function InsightsBody({
           {t("notConfigured")}
         </p>
       )}
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5">
-        {tiles.map((tile) => (
-          <div key={tile.key} data-testid={`ig-kpi-${tile.key}`}>
-            <dt className="text-xs" style={{ color: TEXT_MUTED }}>
-              {t(`kpi.${tile.key}`)}
-            </dt>
-            <dd className="text-lg font-bold" style={{ color: TEXT }}>
-              {formatMetric(tile.value, nd, locale)}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <InstagramKpiTiles tiles={tiles} />
       <ul className="space-y-2">
         {data.items.slice(0, RECENT_POSTS_SHOWN).map((item) => (
           <li

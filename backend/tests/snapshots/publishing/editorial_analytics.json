@@ -1,7 +1,20 @@
 {
   "body": {
     "summary": {
-      "average_views": 0,
+      "channels": [
+        {
+          "channel": "blog",
+          "published_this_month": 0,
+          "published_this_week": 0,
+          "published_total": 0
+        },
+        {
+          "channel": "carousel",
+          "published_this_month": 0,
+          "published_this_week": 0,
+          "published_total": 0
+        }
+      ],
       "content_velocity_per_week": 0,
       "draft_count": 1,
       "pending_review": 0,
@@ -16,34 +29,66 @@
     },
     "velocity_by_week": [
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       },
       {
+        "channels": {
+          "blog": 0,
+          "carousel": 0
+        },
         "published_count": 0,
         "week_start": "<date>"
       }

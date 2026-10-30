@@ -34,6 +34,10 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 MODULE_NAME = "publishing"
 
+CHANNEL_BLOG = "blog"
+CHANNEL_CAROUSEL = "carousel"
+PUBLISHING_CHANNELS: tuple[str, ...] = (CHANNEL_BLOG, CHANNEL_CAROUSEL)
+
 BOARD_PHASES = [
     PHASE_BRIEF,
     PHASE_RESEARCH,

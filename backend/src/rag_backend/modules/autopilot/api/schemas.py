@@ -297,14 +297,29 @@ class InstagramPostInsightsItem(BaseModel):
     stale: bool = Field(description="True when the metrics are older than 6 h.")
 
 
+class InstagramConnectorStatus(BaseModel):
+    """The instagram connector: name, last sync, staleness and refresh error."""
+
+    channel: str = Field(description="The connector channel (instagram).")
+    configured: bool = Field(description="False when no Graph account is set.")
+    last_sync_at: datetime | None = Field(
+        description="Newest stored fetched_at over the published posts."
+    )
+    stale: bool = Field(description="True when the last sync is older than 6 h.")
+    error: str | None = Field(
+        description="First Graph error code seen during this request's refresh."
+    )
+
+
 class InstagramInsightsResponse(BaseModel):
-    """Rows (newest first) and the KPI ratios over the posts that report them."""
+    """Rows (newest first), the KPI ratios and the connector state."""
 
     items: list[InstagramPostInsightsItem]
     follows_total: int | None = None
     follows_per_post: float | None = None
     shares_per_100_views: float | None = None
     configured: bool = Field(description="False when no Graph account is set.")
+    connector: InstagramConnectorStatus
 
 
 class QueueItemResponse(BaseModel):

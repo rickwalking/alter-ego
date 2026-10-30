@@ -39,6 +39,15 @@ class AiDisclosureResponse(BaseModel):
     ai_action_count: int = 0
 
 
+class ChannelPublishingSummary(BaseModel):
+    """Published counts for one channel (blog, carousel; LinkedIn/TikTok later)."""
+
+    channel: str
+    published_total: int
+    published_this_week: int
+    published_this_month: int
+
+
 class EditorialAnalyticsSummary(BaseModel):
     """Dashboard analytics summary."""
 
@@ -47,7 +56,7 @@ class EditorialAnalyticsSummary(BaseModel):
     published_this_month: int
     content_velocity_per_week: int
     status_breakdown: dict[str, int]
-    average_views: int
+    channels: list[ChannelPublishingSummary]
     pending_review: int
     draft_count: int
     quality_score_average: float | None = Field(
@@ -59,10 +68,11 @@ class EditorialAnalyticsSummary(BaseModel):
 
 
 class EditorialVelocityWeek(BaseModel):
-    """Weekly publish count bucket."""
+    """Weekly publish count bucket, per channel."""
 
     week_start: str
     published_count: int
+    channels: dict[str, int]
 
 
 class EditorialAnalyticsResponse(BaseModel):
@@ -75,6 +85,7 @@ class EditorialAnalyticsResponse(BaseModel):
 __all__ = [
     "AccessibilityCheckResponse",
     "AiDisclosureResponse",
+    "ChannelPublishingSummary",
     "EditorialAnalyticsResponse",
     "EditorialAnalyticsSummary",
     "EditorialVelocityWeek",

@@ -49,3 +49,19 @@ Feature: Instagram insights on the dashboard (AE-0378, ADR-0021 D11)
     Given the editorial analytics route answers 404
     When the dashboard loads
     Then the analytics card shows the disabled state and the rest of the dashboard renders
+
+  Scenario: The connector block reports the last sync
+    Given two published posts with stored snapshots
+    When the insights are requested
+    Then the connector block names the instagram channel with the newest fetched_at as last sync
+    And the connector is not stale and has no error
+
+  Scenario: A stale connector says when it last synced
+    Given stored snapshots older than six hours and a failing Graph API
+    When the insights are requested
+    Then the connector block is stale with the newest stored fetched_at and the Graph error
+
+  Scenario: An unconfigured connector is named instead of zeros
+    Given no Instagram user id is set and a published post with a stored snapshot
+    When the insights are requested
+    Then the connector block says instagram is not configured and last sync stays the stored one

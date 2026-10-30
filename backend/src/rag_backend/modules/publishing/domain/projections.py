@@ -171,6 +171,16 @@ class BoardProjection:
 
 
 @dataclass(frozen=True)
+class ChannelPublishing:
+    """Published counts for one channel (mirrors ``ChannelPublishingSummary``)."""
+
+    channel: str
+    published_total: int
+    published_this_week: int
+    published_this_month: int
+
+
+@dataclass(frozen=True)
 class AnalyticsSummary:
     """The editorial-analytics summary (mirrors ``EditorialAnalyticsSummary``)."""
 
@@ -179,7 +189,7 @@ class AnalyticsSummary:
     published_this_month: int
     content_velocity_per_week: int
     status_breakdown: dict[str, int]
-    average_views: int
+    channels: list[ChannelPublishing]
     pending_review: int
     draft_count: int
     quality_score_average: float | None
@@ -192,6 +202,7 @@ class AnalyticsVelocityWeek:
 
     week_start: str
     published_count: int
+    channels: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -217,4 +228,5 @@ __all__ = [
     "CalendarQuery",
     "CarouselBlogI18nProjection",
     "CarouselBlogProjection",
+    "ChannelPublishing",
 ]

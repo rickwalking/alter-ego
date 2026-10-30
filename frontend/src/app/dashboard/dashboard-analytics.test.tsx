@@ -44,7 +44,20 @@ describe("DashboardAnalyticsStats", () => {
           published_this_month: 5,
           content_velocity_per_week: 1.5,
           status_breakdown: { in_review: 3 },
-          average_views: 0,
+          channels: [
+            {
+              channel: "blog",
+              published_total: 12,
+              published_this_week: 2,
+              published_this_month: 5,
+            },
+            {
+              channel: "carousel",
+              published_total: 3,
+              published_this_week: 0,
+              published_this_month: 1,
+            },
+          ],
           pending_review: 3,
           draft_count: 4,
           quality_score_average: 81,
@@ -75,7 +88,20 @@ describe("DashboardAnalyticsStats", () => {
           published_this_month: 1,
           content_velocity_per_week: 1,
           status_breakdown: { published: 2 },
-          average_views: 0,
+          channels: [
+            {
+              channel: "blog",
+              published_total: 12,
+              published_this_week: 2,
+              published_this_month: 5,
+            },
+            {
+              channel: "carousel",
+              published_total: 3,
+              published_this_week: 0,
+              published_this_month: 1,
+            },
+          ],
           pending_review: 0,
           draft_count: 0,
           quality_score_average: null,

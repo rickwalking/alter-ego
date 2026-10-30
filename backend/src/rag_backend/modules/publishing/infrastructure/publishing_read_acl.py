@@ -74,7 +74,6 @@ from rag_backend.modules.publishing.domain.projections import (
     AnalyticsProjection,
     AnalyticsQuery,
     AnalyticsSummary,
-    AnalyticsVelocityWeek,
     BlogListQuery,
     BoardCard,
     BoardColumn,
@@ -85,6 +84,7 @@ from rag_backend.modules.publishing.domain.projections import (
     CalendarQuery,
     CarouselBlogI18nProjection,
     CarouselBlogProjection,
+    ChannelPublishing,
 )
 from rag_backend.modules.publishing.infrastructure.board_rows import (
     BoardArchiveFields,
@@ -92,6 +92,10 @@ from rag_backend.modules.publishing.infrastructure.board_rows import (
 )
 from rag_backend.modules.publishing.infrastructure.public_visibility import (
     public_blog_post_ids,
+)
+from rag_backend.modules.publishing.infrastructure.publishing_channels import (
+    ChannelPublishingQuery,
+    channel_publishing,
 )
 from rag_backend.modules.publishing.infrastructure.read_projection_helpers import (
     as_number,
@@ -235,19 +239,24 @@ class PublishingReadAcl:
     async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
         """Project the editorial-analytics summary, content quality score and velocity.
 
-        Counts and velocity come from ``EditorialAnalyticsService``; the quality score
-        from the content rubric scores (:func:`content_quality_summary`), limited to
-        the author's own content when the query names one.
+        Blog-status fields come from the legacy ``EditorialAnalyticsService``;
+        the channel publishing counts and velocity from
+        :func:`publishing_channels.channel_publishing` (one event read per
+        channel); the quality score from the content rubric scores
+        (:func:`content_quality_summary`), limited to the author's own
+        content when the query names one.
         """
         service = EditorialAnalyticsService()
         summary = await service.get_summary(self._session, author_id=query.author_id)
         summary.update(await content_quality_summary(self._session, query.author_id))
-        velocity = await service.get_velocity_by_week(
-            self._session, weeks=query.weeks, author_id=query.author_id
+        channels = await channel_publishing(
+            ChannelPublishingQuery(
+                db=self._session, author_id=query.author_id, weeks=query.weeks
+            )
         )
         return AnalyticsProjection(
-            summary=_to_analytics_summary(summary),
-            velocity_by_week=[_to_velocity_week(week) for week in velocity],
+            summary=_to_analytics_summary(summary, channels.channels),
+            velocity_by_week=channels.velocity,
         )
 
     @staticmethod
@@ -350,33 +359,29 @@ def _to_board_card(project: CarouselProjectModel) -> tuple[str, BoardCard]:
     return phase, card
 
 
-def _to_analytics_summary(summary: dict[str, object]) -> AnalyticsSummary:
-    """Map the legacy analytics summary dict to the projection value object."""
+def _to_analytics_summary(
+    summary: dict[str, object], channels: list[ChannelPublishing]
+) -> AnalyticsSummary:
+    """Map the legacy blog-summary dict and the typed channels to the summary."""
     breakdown = summary["status_breakdown"]
     status_breakdown: dict[str, int] = (
         {str(k): int(v) for k, v in breakdown.items()}
         if isinstance(breakdown, dict)
         else {}
     )
+    published_week = sum(channel.published_this_week for channel in channels)
+    published_month = sum(channel.published_this_month for channel in channels)
     return AnalyticsSummary(
         total_posts=int(as_number(summary["total_posts"])),
-        published_this_week=int(as_number(summary["published_this_week"])),
-        published_this_month=int(as_number(summary["published_this_month"])),
-        content_velocity_per_week=int(as_number(summary["content_velocity_per_week"])),
+        published_this_week=published_week,
+        published_this_month=published_month,
+        content_velocity_per_week=published_week,
         status_breakdown=status_breakdown,
-        average_views=int(as_number(summary["average_views"])),
+        channels=channels,
         pending_review=int(as_number(summary["pending_review"])),
         draft_count=int(as_number(summary["draft_count"])),
         quality_score_average=as_optional_number(summary["quality_score_average"]),
         quality_score_count=int(as_number(summary["quality_score_count"])),
-    )
-
-
-def _to_velocity_week(week: dict[str, object]) -> AnalyticsVelocityWeek:
-    """Map a legacy weekly-velocity dict bucket to the projection value object."""
-    return AnalyticsVelocityWeek(
-        week_start=str(week["week_start"]),
-        published_count=int(as_number(week["published_count"])),
     )
 
 

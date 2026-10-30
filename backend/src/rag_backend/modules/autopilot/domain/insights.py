@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from typing import Protocol
 
 from rag_backend.modules.autopilot.insights_constants import (
+    CHANNEL_INSTAGRAM,
     INSIGHT_METRICS,
     INSIGHTS_TTL_HOURS,
     METRIC_AVG_WATCH_TIME,
@@ -28,6 +29,17 @@ from rag_backend.modules.autopilot.insights_constants import (
     METRIC_VIEWS,
     SHARES_PER_VIEWS_BASE,
 )
+
+
+def _unknown_connector() -> InsightsConnector:
+    """The connector block before the service fills the real one in."""
+    return InsightsConnector(
+        channel=CHANNEL_INSTAGRAM,
+        configured=False,
+        last_sync_at=None,
+        stale=False,
+        error=None,
+    )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -105,6 +117,17 @@ class PostInsightsRow:
 
 
 @dataclass(frozen=True, kw_only=True)
+class InsightsConnector:
+    """Connector health: its name, last sync and refresh error, if any."""
+
+    channel: str
+    configured: bool
+    last_sync_at: datetime | None
+    stale: bool
+    error: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
 class InsightsReport:
     """Rows (newest first) and the KPI ratios over the rows that report them."""
 
@@ -112,6 +135,39 @@ class InsightsReport:
     follows_total: int | None
     follows_per_post: float | None
     shares_per_100_views: float | None
+    connector: InsightsConnector = field(default_factory=_unknown_connector)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ConnectorStatusQuery:
+    """Inputs for :func:`connector_status`."""
+
+    channel: str
+    configured: bool
+    rows: Sequence[PostInsightsRow]
+    now: datetime
+    refresh_error: str | None = None
+
+
+def connector_status(query: ConnectorStatusQuery) -> InsightsConnector:
+    """The connector block for one request's rows.
+
+    ``last_sync_at`` is the newest ``fetched_at`` over the rows; the connector
+    is stale when that sync is older than the TTL (a connector that never
+    synced has nothing outdated to flag yet).
+    """
+    synced = [row.fetched_at for row in query.rows if row.fetched_at is not None]
+    last_sync = max(synced) if synced else None
+    stale = last_sync is not None and query.now - last_sync >= timedelta(
+        hours=INSIGHTS_TTL_HOURS
+    )
+    return InsightsConnector(
+        channel=query.channel,
+        configured=query.configured,
+        last_sync_at=last_sync,
+        stale=stale,
+        error=query.refresh_error,
+    )
 
 
 def is_due(snapshot: InsightSnapshot | None, now: datetime) -> bool:
@@ -128,7 +184,9 @@ def shares_per_100(shares: int | None, views: int | None) -> float | None:
     return round(SHARES_PER_VIEWS_BASE * shares / views, 2)
 
 
-def build_report(rows: Sequence[PostInsightsRow]) -> InsightsReport:
+def build_report(
+    rows: Sequence[PostInsightsRow], *, connector: InsightsConnector | None = None
+) -> InsightsReport:
     """The KPI ratios, computed only from posts that report the metric."""
     follows = [r.metrics.follows for r in rows if r.metrics.follows is not None]
     pairs = [
@@ -145,6 +203,7 @@ def build_report(rows: Sequence[PostInsightsRow]) -> InsightsReport:
             sum(s for s, _ in pairs) if pairs else None,
             sum(v or 0 for _, v in pairs),
         ),
+        connector=connector or _unknown_connector(),
     )
 
 
@@ -179,14 +238,17 @@ class InsightsStore(Protocol):
 
 
 __all__ = [
+    "ConnectorStatusQuery",
     "InsightMetrics",
     "InsightSnapshot",
+    "InsightsConnector",
     "InsightsGateway",
     "InsightsReport",
     "InsightsStore",
     "PostInsightsRow",
     "PublishedPost",
     "build_report",
+    "connector_status",
     "dashboard_metrics",
     "is_due",
     "shares_per_100",
