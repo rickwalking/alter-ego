@@ -45,7 +45,18 @@ vi.mock("@/components/atoms/neon-spinner", () => ({
   NeonSpinner: () => <div>spinner</div>,
 }));
 vi.mock("@/components/organisms/neon-top-bar", () => ({
-  NeonTopBar: ({ title }: { title: string }) => <h2>{title}</h2>,
+  NeonTopBar: ({
+    title,
+    breadcrumb,
+  }: {
+    title: string;
+    breadcrumb?: readonly { label: string; href?: string }[];
+  }) => (
+    <div>
+      <h2>{title}</h2>
+      <span>crumbs:{breadcrumb?.map((item) => item.label).join("|")}</span>
+    </div>
+  ),
 }));
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: (...args: unknown[]) => m.fetch(...args),
@@ -301,6 +312,26 @@ describe("DashboardCreatePublishPage", () => {
     expect(screen.getByText("slides:1,2")).toBeInTheDocument();
     expect(screen.getByText("AI topic")).toBeInTheDocument();
     expect(screen.getByText("blog-from-carousel:true")).toBeInTheDocument();
+  });
+
+  /** Scenario: Publish breadcrumb and heading agree when the title is set */
+  it("shows the title in the sticky-header breadcrumb and the heading", async () => {
+    setProject({ ...project, title: "AI Guide" });
+    await renderLoaded();
+    expect(screen.getByText("crumbs:AI Guide|breadcrumb")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "AI Guide" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: Publish breadcrumb and heading fall back to the topic */
+  it("shows the topic in the sticky-header breadcrumb and the heading when the title is blank", async () => {
+    setProject({ ...project, title: "   " });
+    await renderLoaded();
+    expect(screen.getByText("crumbs:AI topic|breadcrumb")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "AI topic" }),
+    ).toBeInTheDocument();
   });
 
   it("refetches the project when only the workflow has the caption", async () => {

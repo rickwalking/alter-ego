@@ -10,6 +10,7 @@ import {
 } from "@/modules/publishing";
 import { usePublishCopy } from "./use-publish-copy";
 import { isPublishReady } from "@/app/dashboard/create/[id]/publish/publish-readiness";
+import { carouselDisplayTitle } from "@/lib/carousel-display-title";
 import {
   useInstagramPublish,
   usePublishPageData,
@@ -81,7 +82,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
         title={t("pageTitle")}
         breadcrumb={[
           {
-            label: project.topic,
+            label: carouselDisplayTitle(project),
             href: DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId),
           },
           { label: t("breadcrumb") },

@@ -30,7 +30,7 @@ function project(templateVersion: string | null): CarouselProjectResponse {
   };
 }
 
-// Scenario: The template version is not doubled
+/** Scenario: The template version is not doubled */
 describe("CarouselPreview template version (AE-0415, B33)", () => {
   it("shows a stored 'v2' as 'v2', not 'vv2'", () => {
     render(<CarouselPreview project={project("v2")} />);
@@ -50,7 +50,7 @@ describe("CarouselPreview template version (AE-0415, B33)", () => {
 });
 
 describe("CarouselPreview View Blog link", () => {
-  // Scenario: The workspace links the carousel's published blog post
+  /** Scenario: The workspace links the carousel's published blog post */
   it("links the carousel's published blog post", () => {
     blogHref.value = "/blog/b1";
     render(<CarouselPreview project={project(null)} />);
@@ -59,12 +59,32 @@ describe("CarouselPreview View Blog link", () => {
     ).toHaveAttribute("href", "/blog/b1");
   });
 
-  // Scenario: The workspace hides View Blog Post when the carousel has no published post
+  /** Scenario: The workspace hides View Blog Post when the carousel has no published post */
   it("hides the link when there is no published post", () => {
     blogHref.value = null;
     render(<CarouselPreview project={project(null)} />);
     expect(
       screen.queryByRole("link", { name: "View Blog Post" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("CarouselPreview display title", () => {
+  /** Scenario: The workspace preview uses the same display title */
+  it("prefers the stripped title for the preview heading", () => {
+    render(
+      <CarouselPreview
+        project={{ ...project(null), title: "**Bold** Moves" }}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Bold Moves" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: The workspace preview uses the same display title */
+  it("falls back to the topic when the title is blank", () => {
+    render(<CarouselPreview project={{ ...project(null), title: "   " }} />);
+    expect(screen.getByRole("heading", { name: "Topic" })).toBeInTheDocument();
   });
 });
