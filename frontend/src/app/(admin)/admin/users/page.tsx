@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import {
+  USER_FILTER_ROLE_ALL,
+  USER_FILTER_STATUS_ALL,
+} from "@/constants/admin-users";
+import { filterUsers } from "@/lib/filter-users";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
+import { UserFilterToolbar } from "@/components/admin/user-filter-toolbar";
 import { UserTable } from "@/components/admin/user-table";
 
 interface UserItem {
@@ -20,6 +26,9 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState(USER_FILTER_ROLE_ALL);
+  const [statusFilter, setStatusFilter] = useState(USER_FILTER_STATUS_ALL);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -52,6 +61,21 @@ export default function UsersPage() {
     void fetchUsers();
   };
 
+  const filteredUsers = useMemo(
+    () =>
+      filterUsers(users, {
+        query: searchQuery,
+        role: roleFilter,
+        status: statusFilter,
+      }),
+    [users, searchQuery, roleFilter, statusFilter],
+  );
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    roleFilter !== USER_FILTER_ROLE_ALL ||
+    statusFilter !== USER_FILTER_STATUS_ALL;
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -80,12 +104,28 @@ export default function UsersPage() {
       {isLoading ? (
         <div className="py-8 text-center text-gray-500">{t("loading")}</div>
       ) : (
-        <UserTable
-          users={users}
-          onRefresh={() => {
-            void fetchUsers();
-          }}
-        />
+        <>
+          <UserFilterToolbar
+            query={searchQuery}
+            role={roleFilter}
+            status={statusFilter}
+            onQueryChange={setSearchQuery}
+            onRoleChange={setRoleFilter}
+            onStatusChange={setStatusFilter}
+          />
+          {filteredUsers.length === 0 && hasActiveFilters ? (
+            <div className="rounded-lg bg-white p-8 text-center shadow">
+              <p className="text-gray-500">{t("noUsersMatch")}</p>
+            </div>
+          ) : (
+            <UserTable
+              users={filteredUsers}
+              onRefresh={() => {
+                void fetchUsers();
+              }}
+            />
+          )}
+        </>
       )}
 
       {isCreateOpen && (
