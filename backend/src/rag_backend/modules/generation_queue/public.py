@@ -114,6 +114,7 @@ __all__ = [
     "listen_for_progress",
     "mark_recovery_attempt",
     "project_has_active_run",
+    "project_has_held_run",
     "projects_with_active_runs",
     "queue_board_rows",
     "queue_health_check",
@@ -254,6 +255,24 @@ def project_has_active_run(project_id: ColumnElement[str]) -> ColumnElement[bool
     (``WHERE NOT project_has_active_run(...)``), not only with a read before it.
     """
     from rag_backend.modules.generation_queue.constants import ACTIVE_STATUSES
+
+    return _project_has_run_in(project_id, ACTIVE_STATUSES)
+
+
+def project_has_held_run(project_id: ColumnElement[str]) -> ColumnElement[bool]:
+    """SQL ``EXISTS`` a queued, running, waiting or dead-lettered run.
+
+    Each of those runs resumes the carousel's LangGraph thread from its
+    checkpoint later, so the checkpoint prune keeps such a thread whole.
+    """
+    from rag_backend.modules.generation_queue.constants import HELD_STATUSES
+
+    return _project_has_run_in(project_id, HELD_STATUSES)
+
+
+def _project_has_run_in(
+    project_id: ColumnElement[str], statuses: Collection[str]
+) -> ColumnElement[bool]:
     from rag_backend.modules.generation_queue.infrastructure.models import (
         GenerationRunModel,
     )
@@ -261,7 +280,7 @@ def project_has_active_run(project_id: ColumnElement[str]) -> ColumnElement[bool
     return exists(
         select(GenerationRunModel.id).where(
             GenerationRunModel.carousel_project_id == project_id,
-            GenerationRunModel.status.in_(ACTIVE_STATUSES),
+            GenerationRunModel.status.in_(list(statuses)),
         )
     )
 

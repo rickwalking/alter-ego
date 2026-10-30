@@ -1,7 +1,8 @@
 """Shared Postgres fixtures of the checkpoint prune integration tests.
 
 A real LangGraph graph checkpointed by ``AsyncPostgresSaver`` in a throwaway
-schema, plus carousel projects and autopilot runs to prune against.
+schema, plus carousel projects, autopilot runs and generation runs to prune
+against.
 """
 
 from __future__ import annotations
@@ -32,6 +33,18 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     TopicCandidateModel,
 )
 from rag_backend.modules.autopilot.public import AutopilotRunState
+from rag_backend.modules.generation_queue.constants import (
+    KIND_AUTOPILOT_DRIVE,
+    STATUS_CANCELLED,
+    STATUS_DEAD_LETTER,
+    STATUS_QUEUED,
+    STATUS_RETRY_WAIT,
+    STATUS_RUNNING,
+    STATUS_SUCCEEDED,
+)
+from rag_backend.modules.generation_queue.infrastructure.models import (
+    GenerationRunModel,
+)
 from tests.integration.pg_schema_support import PG_URL, isolated_schema
 
 TABLES = (
@@ -42,6 +55,7 @@ TABLES = (
     "carousel_projects",
     "topic_candidates",
     "autopilot_runs",
+    "generation_runs",
 )
 OLD = datetime.now(UTC) - timedelta(days=90)
 RECENT = datetime.now(UTC) - timedelta(days=2)
@@ -59,6 +73,13 @@ UNSETTLED = (
     AutopilotRunState.PUBLISH_FAILED,
     AutopilotRunState.AWAITING_THESIS,
 )
+HELD_GENERATION = (
+    STATUS_QUEUED,
+    STATUS_RUNNING,
+    STATUS_RETRY_WAIT,
+    STATUS_DEAD_LETTER,
+)
+FINISHED_GENERATION = (STATUS_SUCCEEDED, STATUS_CANCELLED)
 TABLES_BY_ORDER = (
     checkpoint_prune_sql.checkpoints,
     checkpoint_prune_sql.checkpoint_writes,
@@ -189,6 +210,25 @@ async def seed_autopilot_run(db: Db, project_id: str, state: AutopilotRunState) 
                 topic_candidate_id=topic_id,
                 state=state.value,
                 telegram_message_ids=[],
+            )
+        )
+
+
+async def seed_generation_run(db: Db, project_id: str, status: str) -> None:
+    now = datetime.now(UTC)
+    async with db.engine.begin() as conn:
+        await conn.execute(
+            insert(GenerationRunModel).values(
+                id=uuid4(),
+                kind=KIND_AUTOPILOT_DRIVE,
+                dedupe_key=uuid4().hex,
+                status=status,
+                payload={},
+                carousel_project_id=project_id,
+                attempts=0,
+                phase_attempts={},
+                created_at=now,
+                updated_at=now,
             )
         )
 
