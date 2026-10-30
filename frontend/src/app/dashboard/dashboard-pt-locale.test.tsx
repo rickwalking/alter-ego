@@ -19,6 +19,9 @@ vi.mock("@/modules/editorial-operations", async (importOriginal) => ({
 vi.mock("./instagram-insights-card", () => ({
   InstagramInsightsCard: () => null,
 }));
+vi.mock("./analytics/instagram-insights-section", () => ({
+  InstagramInsightsSection: () => null,
+}));
 
 import DashboardPage from "./page";
 import AnalyticsPage from "./analytics/page";
@@ -49,7 +52,7 @@ const SUMMARY: EditorialAnalyticsSummary = {
   published_this_month: 0,
   content_velocity_per_week: 0,
   status_breakdown: { draft: 26 },
-  average_views: 0,
+  channels: [],
   pending_review: 0,
   draft_count: 26,
   quality_score_average: null,

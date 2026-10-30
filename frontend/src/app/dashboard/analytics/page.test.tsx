@@ -20,6 +20,11 @@ vi.mock("@/modules/editorial-operations", async (importOriginal) => ({
     disabled: false,
     refetch: vi.fn(),
   }),
+  useInstagramInsights: () => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 function render(ui: React.ReactElement): ReturnType<typeof renderBare> {
@@ -42,7 +47,20 @@ function summary(
     published_this_month: 2,
     content_velocity_per_week: 1,
     status_breakdown: { published: 2, draft: 2 },
-    average_views: 0,
+    channels: [
+      {
+        channel: "blog",
+        published_total: 2,
+        published_this_week: 1,
+        published_this_month: 1,
+      },
+      {
+        channel: "carousel",
+        published_total: 2,
+        published_this_week: 0,
+        published_this_month: 1,
+      },
+    ],
     pending_review: 0,
     draft_count: 2,
     quality_score_average: average,

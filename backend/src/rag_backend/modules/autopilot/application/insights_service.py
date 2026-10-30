@@ -16,6 +16,7 @@ import structlog
 
 from rag_backend.modules.autopilot.domain.exceptions import InstagramCallError
 from rag_backend.modules.autopilot.domain.insights import (
+    ConnectorStatusQuery,
     InsightMetrics,
     InsightsGateway,
     InsightSnapshot,
@@ -24,10 +25,12 @@ from rag_backend.modules.autopilot.domain.insights import (
     PostInsightsRow,
     PublishedPost,
     build_report,
+    connector_status,
     is_due,
 )
 from rag_backend.modules.autopilot.domain.ports import Clock
 from rag_backend.modules.autopilot.insights_constants import (
+    CHANNEL_INSTAGRAM,
     INSIGHTS_POST_LIMIT,
     INSIGHTS_REFRESH_PER_REQUEST,
     LOG_INSIGHTS,
@@ -48,11 +51,12 @@ class InsightsDependencies:
 
 @dataclass
 class _Pass:
-    """One request: the time and the Graph reads left."""
+    """One request: the time, the Graph reads left and the first error code."""
 
     now: datetime
     budget: int
     saved: int = 0
+    error_code: str | None = None
 
 
 class InstagramInsightsService:
@@ -62,7 +66,7 @@ class InstagramInsightsService:
         self._deps = deps
 
     async def report(self) -> InsightsReport:
-        """One row per published post plus the KPI ratios."""
+        """One row per published post plus the KPI ratios and connector state."""
         posts = await self._deps.store.published_posts(INSIGHTS_POST_LIMIT)
         snapshots = await self._deps.store.snapshots([p.media_id for p in posts])
         state = _Pass(now=self._deps.clock.now(), budget=INSIGHTS_REFRESH_PER_REQUEST)
@@ -71,7 +75,18 @@ class InstagramInsightsService:
         ]
         if state.saved:
             await self._deps.store.commit()
-        return build_report(rows)
+        return build_report(
+            rows,
+            connector=connector_status(
+                ConnectorStatusQuery(
+                    channel=CHANNEL_INSTAGRAM,
+                    configured=self._deps.gateway is not None,
+                    rows=rows,
+                    now=state.now,
+                    refresh_error=state.error_code,
+                )
+            ),
+        )
 
     async def _row(
         self, post: PublishedPost, snapshot: InsightSnapshot | None, state: _Pass
@@ -92,6 +107,8 @@ class InstagramInsightsService:
                 media_id=post.media_id,
                 error_code=exc.error_code,
             )
+            if state.error_code is None:
+                state.error_code = exc.error_code
             return _from_snapshot(post, snapshot, stale=True)
         fresh = InsightSnapshot(
             media_id=post.media_id, metrics=metrics, fetched_at=state.now

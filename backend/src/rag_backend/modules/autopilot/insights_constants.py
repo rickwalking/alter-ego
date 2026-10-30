@@ -51,6 +51,7 @@ FIELD_TOTAL_VALUE = "total_value"
 INSIGHTS_ROUTER_PREFIX = "/instagram"
 PATH_INSIGHTS = "/insights"
 TAG_INSTAGRAM = "instagram"
+CHANNEL_INSTAGRAM = "instagram"
 
 APP_STATE_INSIGHTS_GATEWAY = "autopilot_insights_gateway"
 INSIGHTS_HTTP_TIMEOUT_SECONDS = 15.0
@@ -61,6 +62,7 @@ LOG_MEDIA_ID_INVALID = "media_id_invalid"
 
 __all__ = [
     "APP_STATE_INSIGHTS_GATEWAY",
+    "CHANNEL_INSTAGRAM",
     "COLUMN_AVG_WATCH_TIME",
     "COLUMN_TOTAL_WATCH_TIME",
     "FIELD_DATA",

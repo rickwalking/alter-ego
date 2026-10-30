@@ -6,6 +6,8 @@ import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
 import type { EditorialAnalytics, EditorialAnalyticsState } from "./types";
 
 export type {
+  AnalyticsVelocityWeek,
+  ChannelPublishingSummary,
   EditorialAnalytics,
   EditorialAnalyticsState,
   EditorialAnalyticsSummary,

@@ -7,6 +7,7 @@ import {
 } from "./instagram-insights-schema";
 
 export type {
+  InstagramConnector,
   InstagramInsights,
   InstagramPostInsights,
 } from "./instagram-insights-schema";

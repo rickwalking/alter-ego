@@ -10,17 +10,23 @@ import {
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NeonStatsGrid } from "@/components/organisms/neon-stats-grid";
-import {
-  NEON_CYAN,
-  NEON_GLOW_CYAN_SOFT,
-  NEON_RED,
-  TEXT,
-  TEXT_MUTED,
-} from "@/constants/neon";
+import { CHANNEL_BLOG, CHANNEL_CAROUSEL } from "@/constants/analytics";
+import { NEON_RED, TEXT_MUTED } from "@/constants/neon";
 import {
   qualityScoreStat,
   useEditorialAnalytics,
+  type ChannelPublishingSummary,
 } from "@/modules/editorial-operations";
+import { InstagramInsightsSection } from "./instagram-insights-section";
+import { VelocityChart } from "./velocity-chart";
+
+function publishedTotals(
+  channels: ChannelPublishingSummary[],
+): Record<string, number> {
+  return Object.fromEntries(
+    channels.map((c) => [c.channel, c.published_total]),
+  );
+}
 
 /**
  * Shows a disabled state when the analytics flag is off (404) or the role has
@@ -87,6 +93,8 @@ export default function AnalyticsPage(): React.ReactElement {
     { label: t("qualityScore"), ...qualityScoreStat(summary, t) },
   ];
 
+  const publishedByChannel = publishedTotals(summary.channels);
+
   return (
     <div className="flex-1">
       <NeonTopBar
@@ -102,43 +110,24 @@ export default function AnalyticsPage(): React.ReactElement {
           <NeonStatsGrid cards={statCards} />
         </div>
 
-        <NeonCard padding="md">
+        <NeonCard padding="md" className="mb-8">
           <NeonCardHeader>
             <NeonCardTitle className="text-base">
               {t("velocityTitle")}
             </NeonCardTitle>
+            <p className="text-xs mt-1" style={{ color: TEXT_MUTED }}>
+              {t("publishedByChannel", {
+                blog: publishedByChannel[CHANNEL_BLOG] ?? 0,
+                carousels: publishedByChannel[CHANNEL_CAROUSEL] ?? 0,
+              })}
+            </p>
           </NeonCardHeader>
           <NeonCardContent>
-            <div className="space-y-2">
-              {velocity_by_week.map((week) => (
-                <div
-                  key={week.week_start}
-                  className="flex min-w-0 items-center gap-3 text-sm"
-                >
-                  <span
-                    className="w-20 shrink-0 sm:w-28"
-                    style={{ color: TEXT_MUTED }}
-                  >
-                    {week.week_start}
-                  </span>
-                  <div className="min-w-0 flex-1 overflow-x-auto">
-                    <div
-                      className="h-4 rounded"
-                      style={{
-                        width: `${Math.max(week.published_count * 24, 4)}px`,
-                        background: NEON_CYAN,
-                        boxShadow: NEON_GLOW_CYAN_SOFT,
-                      }}
-                    />
-                  </div>
-                  <span className="shrink-0" style={{ color: TEXT }}>
-                    {week.published_count}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <VelocityChart weeks={velocity_by_week} />
           </NeonCardContent>
         </NeonCard>
+
+        <InstagramInsightsSection />
       </div>
     </div>
   );

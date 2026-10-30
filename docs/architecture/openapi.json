@@ -3483,6 +3483,35 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ChannelPublishingSummary": {
+        "description": "Published counts for one channel (blog, carousel; LinkedIn/TikTok later).",
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "published_this_month": {
+            "title": "Published This Month",
+            "type": "integer"
+          },
+          "published_this_week": {
+            "title": "Published This Week",
+            "type": "integer"
+          },
+          "published_total": {
+            "title": "Published Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel",
+          "published_total",
+          "published_this_week",
+          "published_this_month"
+        ],
+        "title": "ChannelPublishingSummary",
+        "type": "object"
+      },
       "ChatRequest": {
         "properties": {
           "content": {
@@ -4974,9 +5003,12 @@
       "EditorialAnalyticsSummary": {
         "description": "Dashboard analytics summary.",
         "properties": {
-          "average_views": {
-            "title": "Average Views",
-            "type": "integer"
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelPublishingSummary"
+            },
+            "title": "Channels",
+            "type": "array"
           },
           "content_velocity_per_week": {
             "title": "Content Velocity Per Week",
@@ -5033,7 +5065,7 @@
           "published_this_month",
           "content_velocity_per_week",
           "status_breakdown",
-          "average_views",
+          "channels",
           "pending_review",
           "draft_count",
           "quality_score_average",
@@ -5264,8 +5296,15 @@
         "type": "object"
       },
       "EditorialVelocityWeek": {
-        "description": "Weekly publish count bucket.",
+        "description": "Weekly publish count bucket, per channel.",
         "properties": {
+          "channels": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Channels",
+            "type": "object"
+          },
           "published_count": {
             "title": "Published Count",
             "type": "integer"
@@ -5277,7 +5316,8 @@
         },
         "required": [
           "week_start",
-          "published_count"
+          "published_count",
+          "channels"
         ],
         "title": "EditorialVelocityWeek",
         "type": "object"
@@ -6595,13 +6635,70 @@
         "title": "IgMediaRatesModel",
         "type": "object"
       },
+      "InstagramConnectorStatus": {
+        "description": "The instagram connector: name, last sync, staleness and refresh error.",
+        "properties": {
+          "channel": {
+            "description": "The connector channel (instagram).",
+            "title": "Channel",
+            "type": "string"
+          },
+          "configured": {
+            "description": "False when no Graph account is set.",
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First Graph error code seen during this request's refresh.",
+            "title": "Error"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Newest stored fetched_at over the published posts.",
+            "title": "Last Sync At"
+          },
+          "stale": {
+            "description": "True when the last sync is older than 6 h.",
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "channel",
+          "configured",
+          "last_sync_at",
+          "stale",
+          "error"
+        ],
+        "title": "InstagramConnectorStatus",
+        "type": "object"
+      },
       "InstagramInsightsResponse": {
-        "description": "Rows (newest first) and the KPI ratios over the posts that report them.",
+        "description": "Rows (newest first), the KPI ratios and the connector state.",
         "properties": {
           "configured": {
             "description": "False when no Graph account is set.",
             "title": "Configured",
             "type": "boolean"
+          },
+          "connector": {
+            "$ref": "#/components/schemas/InstagramConnectorStatus"
           },
           "follows_per_post": {
             "anyOf": [
@@ -6646,7 +6743,8 @@
         },
         "required": [
           "items",
-          "configured"
+          "configured",
+          "connector"
         ],
         "title": "InstagramInsightsResponse",
         "type": "object"

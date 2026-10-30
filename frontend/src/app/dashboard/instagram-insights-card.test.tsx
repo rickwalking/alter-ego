@@ -13,6 +13,14 @@ vi.mock("@/modules/editorial-operations", () => ({
   useInstagramInsights: () => state,
 }));
 
+const CONNECTOR = {
+  channel: "instagram",
+  configured: true,
+  last_sync_at: "2026-10-20T12:00:00Z",
+  stale: true,
+  error: null,
+};
+
 const ROW = {
   media_id: "1789",
   carousel_project_id: null,
@@ -45,6 +53,7 @@ describe("InstagramInsightsCard", () => {
       follows_per_post: null,
       shares_per_100_views: 1,
       configured: true,
+      connector: CONNECTOR,
     };
     render(<InstagramInsightsCard />);
     expect(screen.getByTestId("ig-kpi-views")).toHaveTextContent("1,000");
@@ -67,6 +76,7 @@ describe("InstagramInsightsCard", () => {
       follows_per_post: null,
       shares_per_100_views: null,
       configured: false,
+      connector: { ...CONNECTOR, configured: false },
     };
     render(<InstagramInsightsCard />);
     expect(
@@ -81,6 +91,7 @@ describe("InstagramInsightsCard", () => {
       follows_per_post: null,
       shares_per_100_views: null,
       configured: true,
+      connector: CONNECTOR,
     };
     const { unmount } = render(<InstagramInsightsCard />);
     expect(screen.getByText("No published posts yet.")).toBeInTheDocument();

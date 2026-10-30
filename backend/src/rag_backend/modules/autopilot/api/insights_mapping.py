@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from rag_backend.modules.autopilot.api.schemas import (
+    InstagramConnectorStatus,
     InstagramInsightsResponse,
     InstagramPostInsightsItem,
 )
 from rag_backend.modules.autopilot.domain.insights import (
+    InsightsConnector,
     InsightsReport,
     PostInsightsRow,
 )
@@ -22,6 +24,18 @@ def insights_response(
         follows_per_post=report.follows_per_post,
         shares_per_100_views=report.shares_per_100_views,
         configured=configured,
+        connector=_connector(report.connector),
+    )
+
+
+def _connector(connector: InsightsConnector) -> InstagramConnectorStatus:
+    """Map the domain connector block to the API schema."""
+    return InstagramConnectorStatus(
+        channel=connector.channel,
+        configured=connector.configured,
+        last_sync_at=connector.last_sync_at,
+        stale=connector.stale,
+        error=connector.error,
     )
 
 

@@ -2171,6 +2171,11 @@
       "qualityScoreEmpty": "No data",
       "qualityScoreCount": "{count, plural, one {# evaluation} other {# evaluations}}",
       "velocityTitle": "Publish Velocity (8 weeks)",
+      "channelAll": "All",
+      "channelBlog": "Blog",
+      "channelCarousels": "Carousels",
+      "channelPickerLabel": "Velocity channel",
+      "publishedByChannel": "Published — Blog: {blog}, Carousels: {carousels}",
       "loadFailed": "Failed to load analytics",
       "disabledTitle": "Editorial analytics is off",
       "disabledBody": "The editorial analytics feature is disabled for this environment or your role. The rest of the dashboard still works.",
@@ -2195,6 +2200,16 @@
         "followsPerPost": "Follows per post",
         "sharesPer100Views": "Shares per 100 views"
       }
+    },
+    "analyticsInstagram": {
+      "title": "Instagram insights",
+      "subtitle": "Totals and per-post metrics of the carousels published to Instagram",
+      "loadFailed": "Failed to load Instagram insights",
+      "notConfigured": "The {channel} connector is not configured.",
+      "stale": "Last sync {lastSync}; the numbers may be outdated.",
+      "syncError": "Sync error: {error}",
+      "postColumn": "Post",
+      "fetchedColumn": "Fetched"
     }
   },
   "admin": {

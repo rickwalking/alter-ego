@@ -21,6 +21,7 @@ from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.content_quality import (
     AccessibilityCheckResponse,
     AiDisclosureResponse,
+    ChannelPublishingSummary,
     EditorialAnalyticsResponse,
     EditorialAnalyticsSummary,
     EditorialVelocityWeek,
@@ -214,7 +215,15 @@ async def get_editorial_analytics(
             published_this_month=summary.published_this_month,
             content_velocity_per_week=summary.content_velocity_per_week,
             status_breakdown=summary.status_breakdown,
-            average_views=summary.average_views,
+            channels=[
+                ChannelPublishingSummary(
+                    channel=channel.channel,
+                    published_total=channel.published_total,
+                    published_this_week=channel.published_this_week,
+                    published_this_month=channel.published_this_month,
+                )
+                for channel in summary.channels
+            ],
             pending_review=summary.pending_review,
             draft_count=summary.draft_count,
             quality_score_average=summary.quality_score_average,
@@ -224,6 +233,7 @@ async def get_editorial_analytics(
             EditorialVelocityWeek(
                 week_start=week.week_start,
                 published_count=week.published_count,
+                channels=week.channels,
             )
             for week in projection.velocity_by_week
         ],
