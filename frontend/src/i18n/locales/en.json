@@ -1651,7 +1651,7 @@
       "noProjects": "No projects",
       "retry": "Retry",
       "breadcrumb": "pipeline",
-      "newCard": "New Card",
+      "newCard": "New carousel",
       "rejectedColumn": "Rejected",
       "collapseColumn": "Collapse column {name}",
       "searchPlaceholder": "Search carousels…",
@@ -1668,7 +1668,9 @@
         "updated": "Updated ↓",
         "title": "Title A-Z"
       },
-      "needYou": "{count, plural, one {# needs you} other {# need you}}"
+      "needYou": "{count, plural, one {# needs you} other {# need you}}",
+      "columnCount": "{count, plural, one {# item} other {# items}}",
+      "viewGroup": "Board view"
     },
     "calendar": {
       "title": "Content Calendar",
@@ -1809,6 +1811,7 @@
       "showArchived": "Archived",
       "showActive": "Active",
       "emptyArchived": "No archived carousels.",
+      "menuLabel": "More actions: {title}",
       "autopilot": "It cannot be archived while an autopilot run still needs it (for example a scheduled publish)."
     },
     "queue": {

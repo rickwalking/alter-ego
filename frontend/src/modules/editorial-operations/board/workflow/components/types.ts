@@ -2,7 +2,7 @@
  * Component prop types for the workflow board (colocated `types.ts`).
  */
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
 
 export interface NeonKanbanBoardProps {
@@ -27,6 +27,8 @@ export interface BoardColumnLabels {
   collapseColumn: (name: string) => string;
   /** Localized "N need you" for column headers with awaiting-human cards. */
   needYou?: (count: number) => string;
+  /** Localized item count announced on the column card list. */
+  columnCount: (count: number) => string;
 }
 
 export interface WorkflowBoardColumnProps {
@@ -37,4 +39,15 @@ export interface WorkflowBoardColumnProps {
   onCardClick: (column: KanbanColumn) => void;
   setColumnRef: (key: string, element: HTMLDivElement | null) => void;
   renderCardActions?: (card: KanbanCard) => ReactNode;
+  /** The only card link kept in the tab order (roving keyboard focus). */
+  tabbableCardId: string | null;
+  /** Registers a card link element for arrow-key focus moves. */
+  registerCard: (id: string, element: HTMLElement | null) => void;
+}
+
+/** Keyboard navigation state and callbacks for the board card grid. */
+export interface BoardRovingFocus {
+  tabbableCardId: string | null;
+  registerCard: (id: string, element: HTMLElement | null) => void;
+  onBoardKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }

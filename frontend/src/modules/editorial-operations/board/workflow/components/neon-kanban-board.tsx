@@ -13,6 +13,7 @@ import {
 import { saveBoardSequence } from "./board-sequence";
 import { safeStorageGet, safeStorageSet } from "./board-storage";
 import { WorkflowBoardColumn } from "./workflow-board-column";
+import { useBoardRovingFocus } from "./use-board-roving-focus";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 import type { NeonKanbanBoardProps } from "./types";
 
@@ -60,6 +61,8 @@ export function NeonKanbanBoard({
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const restoredRef = useRef(false);
+  const { tabbableCardId, registerCard, onBoardKeyDown } =
+    useBoardRovingFocus(columns);
   const setColumnRef = useCallback(
     (key: string, element: HTMLDivElement | null): void => {
       columnRefs.current[key] = element;
@@ -128,6 +131,7 @@ export function NeonKanbanBoard({
     <div
       ref={boardScrollRef}
       data-testid={BOARD_SCROLL_TEST_ID}
+      onKeyDown={onBoardKeyDown}
       className="flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2"
     >
       {columns.map((column) => (
@@ -140,6 +144,8 @@ export function NeonKanbanBoard({
           onCardClick={rememberColumn}
           setColumnRef={setColumnRef}
           renderCardActions={renderCardActions}
+          tabbableCardId={tabbableCardId}
+          registerCard={registerCard}
         />
       ))}
     </div>

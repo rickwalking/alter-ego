@@ -1,26 +1,49 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
-import { NeonButton } from "@/components/atoms/neon-button";
-import { ARCHIVE_REFUSAL, WORKFLOW_API } from "@/constants/workflow";
-import { NEON_RED, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
+import { ARCHIVE_REFUSAL } from "@/constants/workflow";
+import { TEXT_DIM } from "@/constants/neon";
 import { useWorkflowPostAction } from "@/modules/editorial";
+import { CardArchiveMenuItems } from "./card-archive-menu-items";
 import type { CardArchiveActionProps } from "./types";
 
 const NO_MESSAGE = "";
+const MENU_WIDTH_PX = 224;
+const MENU_GAP_PX = 4;
+const MENU_EDGE_MARGIN_PX = 8;
 
-const REFUSAL_REASON = {
-  [ARCHIVE_REFUSAL.IN_PROGRESS]: "inProgress",
-  [ARCHIVE_REFUSAL.AUTOPILOT]: "autopilot",
-} as const;
+const TRIGGER_CLASS =
+  "absolute -top-2 -right-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep text-sm leading-none transition-colors hover:border-neon-cyan/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+
+const MENU_CLASS =
+  "fixed z-50 min-w-[160px] rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep p-1 shadow-[var(--shadow-neon-button)] focus-visible:outline-none";
+
+interface MenuPosition {
+  readonly top: number;
+  readonly left: number;
+}
+
+function menuPosition(trigger: DOMRect): MenuPosition {
+  const left = Math.max(
+    MENU_EDGE_MARGIN_PX,
+    Math.min(
+      trigger.right - MENU_WIDTH_PX,
+      window.innerWidth - MENU_WIDTH_PX - MENU_EDGE_MARGIN_PX,
+    ),
+  );
+  return {
+    top: trigger.bottom + MENU_GAP_PX,
+    left,
+  };
+}
 
 /**
- * "Arquivar" (with a confirmation) on an active card, "Restaurar" on an
- * archived one, shown only when the caller may archive it (its owner or an
- * admin). A published card has no control; a card with a running phase or an
- * autopilot run still going shows a disabled "Arquivar" with the reason. Only a failure is
- * shown: a success takes the card off this board.
+ * The per-card overflow menu holding "Arquivar" (with the confirmation) or
+ * "Restaurar", or the refusal reason as disabled text. Fixed-positioned so
+ * the column scroll container cannot clip it; Escape closes it and returns
+ * focus to the trigger.
  */
 export function CardArchiveAction({
   card,
@@ -29,7 +52,14 @@ export function CardArchiveAction({
 }: Readonly<CardArchiveActionProps>): React.ReactElement | null {
   const t = useTranslations("workflow.archive");
   const reasonId = useId();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [position, setPosition] = useState<MenuPosition>({
+    top: 0,
+    left: 0,
+  });
   const archive = useWorkflowPostAction(
     { success: NO_MESSAGE, failed: t("archiveFailed") },
     onChanged,
@@ -39,88 +69,87 @@ export function CardArchiveAction({
     onChanged,
   );
 
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target) === true) return;
+      if (triggerRef.current?.contains(target) === true) return;
+      setOpen(false);
+      setConfirming(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) menuRef.current?.focus();
+  }, [open]);
+
   if (!card.canArchive) return null;
-  if (archived) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 px-1">
-        <NeonButton
-          size="sm"
-          variant="secondary"
-          disabled={restore.submitting}
-          onClick={() =>
-            void restore.post(WORKFLOW_API.CAROUSEL_RESTORE(card.id), {})
-          }
-        >
-          {t("restore")}
-        </NeonButton>
-        {restore.message && (
-          <p role="alert" className="text-xs" style={{ color: NEON_RED }}>
-            {restore.message}
-          </p>
-        )}
-      </div>
-    );
+  if (!archived && card.archiveRefusal === ARCHIVE_REFUSAL.PUBLISHED) {
+    return null;
   }
-  if (card.archiveRefusal === ARCHIVE_REFUSAL.PUBLISHED) return null;
-  if (card.archiveRefusal) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 px-1">
-        <NeonButton
-          size="sm"
-          variant="secondary"
-          disabled
-          aria-describedby={reasonId}
-        >
-          {t("archive")}
-        </NeonButton>
-        <p id={reasonId} className="text-[11px]" style={{ color: TEXT_DIM }}>
-          {t(REFUSAL_REASON[card.archiveRefusal])}
-        </p>
-      </div>
-    );
+
+  function closeMenu(returnFocus: boolean): void {
+    setOpen(false);
+    setConfirming(false);
+    if (returnFocus) triggerRef.current?.focus();
   }
-  if (!confirming) {
-    return (
-      <div className="px-1">
-        <NeonButton
-          size="sm"
-          variant="secondary"
-          onClick={() => setConfirming(true)}
-        >
-          {t("archive")}
-        </NeonButton>
-      </div>
-    );
+
+  function openMenu(): void {
+    const trigger = triggerRef.current?.getBoundingClientRect();
+    if (trigger !== undefined) setPosition(menuPosition(trigger));
+    setOpen(true);
   }
+
+  function onMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu(true);
+    }
+  }
+
   return (
-    <div className="space-y-1 px-1">
-      <p className="text-xs" style={{ color: TEXT_MUTED }}>
-        {t("confirm")}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <NeonButton
-          size="sm"
-          variant="danger"
-          disabled={archive.submitting}
-          onClick={() =>
-            void archive.post(WORKFLOW_API.CAROUSEL_ARCHIVE(card.id), {})
-          }
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={t("menuLabel", { title: card.title })}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => (open ? closeMenu(true) : openMenu())}
+        className={TRIGGER_CLASS}
+        style={{ color: TEXT_DIM }}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={t("menuLabel", { title: card.title })}
+          tabIndex={-1}
+          onKeyDown={onMenuKeyDown}
+          className={MENU_CLASS}
+          style={{
+            top: position.top,
+            left: position.left,
+            width: MENU_WIDTH_PX,
+          }}
         >
-          {t("confirmYes")}
-        </NeonButton>
-        <NeonButton
-          size="sm"
-          variant="secondary"
-          onClick={() => setConfirming(false)}
-        >
-          {t("cancel")}
-        </NeonButton>
-      </div>
-      {archive.message && (
-        <p role="alert" className="text-xs" style={{ color: NEON_RED }}>
-          {archive.message}
-        </p>
+          <CardArchiveMenuItems
+            card={card}
+            archived={archived}
+            confirming={confirming}
+            onConfirmingChange={setConfirming}
+            archive={archive}
+            restore={restore}
+            reasonId={reasonId}
+          />
+        </div>
       )}
-    </div>
+    </>
   );
 }

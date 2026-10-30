@@ -1,3 +1,4 @@
+import type { WorkflowPostActionResult } from "@/modules/editorial";
 import type { KanbanCard } from "@/schemas/neon-kanban";
 
 /** The archive control under one workflow board card. */
@@ -19,4 +20,24 @@ export interface BoardFeedbackProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+}
+
+/** The Ativos | Arquivados segmented control in the board top bar. */
+export interface WorkflowViewSwitchProps {
+  /** Whether the archived board view is active. */
+  archived: boolean;
+}
+
+/** The menu items rendered inside a card's overflow menu. */
+export interface CardArchiveMenuItemsProps {
+  card: KanbanCard;
+  /** The board lists archived carousels (restore) instead of active ones. */
+  archived: boolean;
+  /** Whether the archive confirmation step is showing. */
+  confirming: boolean;
+  onConfirmingChange: (confirming: boolean) => void;
+  archive: WorkflowPostActionResult;
+  restore: WorkflowPostActionResult;
+  /** Id of the element describing the refusal reason. */
+  reasonId: string;
 }

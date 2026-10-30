@@ -65,6 +65,8 @@ export function WorkflowBoardColumn({
   onCardClick,
   setColumnRef,
   renderCardActions,
+  tabbableCardId,
+  registerCard,
 }: Readonly<WorkflowBoardColumnProps>): React.ReactElement {
   const locale = useLocale();
   const key = column.phase;
@@ -133,6 +135,7 @@ export function WorkflowBoardColumn({
         ref={(element) => setColumnRef(key, element)}
         data-testid={`${COLUMN_TEST_ID_PREFIX}${key}`}
         role="list"
+        aria-label={labels.columnCount(count)}
         className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5"
       >
         {column.cards.length === 0 && (
@@ -141,12 +144,15 @@ export function WorkflowBoardColumn({
           </p>
         )}
         {column.cards.map((card) => (
-          <div key={card.id} role="listitem" className="space-y-1">
+          <div key={card.id} role="listitem" className="relative space-y-1">
             <Link
               href={DASHBOARD_ROUTES.CREATE_WORKSPACE(card.id)}
               onClick={() => onCardClick(column)}
               aria-label={`${card.title}, ${card.phaseStatus}`}
-              className="block no-underline"
+              data-board-card-id={card.id}
+              tabIndex={card.id === tabbableCardId ? 0 : -1}
+              ref={(element) => registerCard(card.id, element)}
+              className={`block no-underline rounded-md ${FOCUS_RING_CLASS}`}
             >
               <NeonCard padding="sm" hover>
                 <p
