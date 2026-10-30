@@ -40,6 +40,8 @@ VAR_TELEGRAM_WEBHOOK_SECRET = "TELEGRAM_WEBHOOK_SECRET"
 VAR_GROKBOT_API_KEY_SHA256 = "GROKBOT_API_KEY_SHA256"
 VAR_CREDENTIALS_ENCRYPTION_KEY = "CREDENTIALS_ENCRYPTION_KEY"
 VAR_AUTOPILOT_ENABLED = "AUTOPILOT_ENABLED"
+VAR_BOOST_REQUESTS_ENABLED = "BOOST_REQUESTS_ENABLED"
+VAR_BOOST_ENABLED = "BOOST_ENABLED"
 VAR_AUTOPILOT_OWNER_USER_ID = "AUTOPILOT_OWNER_USER_ID"
 VAR_AUTOPILOT_DAILY_CAP = "AUTOPILOT_DAILY_CAP"
 # AE-0370: what Telegram Approve does; both surfaces default it to "now".
@@ -66,6 +68,8 @@ REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_GROKBOT_API_KEY_SHA256,
     VAR_CREDENTIALS_ENCRYPTION_KEY,
     VAR_AUTOPILOT_ENABLED,
+    VAR_BOOST_REQUESTS_ENABLED,
+    VAR_BOOST_ENABLED,
     VAR_AUTOPILOT_OWNER_USER_ID,
     VAR_AUTOPILOT_DAILY_CAP,
     VAR_AUTOPILOT_DEFAULT_PUBLISH,
@@ -102,21 +106,13 @@ _NEXT_SERVICE = re.compile(r"^  [A-Za-z0-9_-]+:\s*(?:#.*)?$")
 _ENV_BLOCK = re.compile(r"^( +)environment:\s*(?:#.*)?$")
 _ENV_KEY = re.compile(r"^\s+([A-Z][A-Z0-9_]*):\s*(.*)$")
 _PUBLIC_URL = re.compile(re.escape(PUBLIC_SLIDE_BASE_URL) + r"(?=[:}'\"\s]|$)")
-_COMPOSE_ENABLED = re.compile(
-    r"^\$\{" + re.escape(VAR_AUTOPILOT_ENABLED) + r":-" + DISABLED_VALUE + r"\}$"
-)
-_DEPLOY_ENABLED = re.compile(
-    r"^\$\{\{\s*secrets\."
-    + re.escape(VAR_AUTOPILOT_ENABLED)
-    + r"\s*\|\|\s*['\"]"
-    + DISABLED_VALUE
-    + r"['\"]\s*\}\}$"
+_KILL_SWITCHES = frozenset(
+    {VAR_AUTOPILOT_ENABLED, VAR_BOOST_REQUESTS_ENABLED, VAR_BOOST_ENABLED}
 )
 _LITERAL_NUMBER = re.compile(r"^[0-9]+$")
 
 MSG_MISSING_DEPLOY = "{name} missing from deploy.yml"
 MSG_MISSING_COMPOSE = "{name} missing from docker-compose.prod.yml backend environment"
-MSG_ENABLED = VAR_AUTOPILOT_ENABLED + " must default to false in {surface}"
 MSG_BASE_URL = (
     VAR_CAROUSEL_PUBLIC_BASE_URL + " must be " + PUBLIC_SLIDE_BASE_URL + " in {surface}"
 )
@@ -163,7 +159,7 @@ class ValueRule:
 
 def sample_deploy_value(name: str) -> str:
     """Canonical deploy.yml value that satisfies the parity rules."""
-    if name == VAR_AUTOPILOT_ENABLED:
+    if name in _KILL_SWITCHES:
         return "${{ secrets." + name + " || '" + DISABLED_VALUE + "' }}"
     if name == VAR_AUTOPILOT_DAILY_CAP:
         return "${{ secrets." + name + " || '" + DEFAULT_DAILY_CAP + "' }}"
@@ -178,7 +174,7 @@ def sample_deploy_value(name: str) -> str:
 
 def sample_compose_value(name: str) -> str:
     """Canonical compose environment value that satisfies the parity rules."""
-    if name == VAR_AUTOPILOT_ENABLED:
+    if name in _KILL_SWITCHES:
         return "${" + name + ":-" + DISABLED_VALUE + "}"
     if name == VAR_AUTOPILOT_DAILY_CAP:
         return "${" + name + ":-" + DEFAULT_DAILY_CAP + "}"
@@ -322,8 +318,12 @@ def _missing(surfaces: EnvSurfaces, name: str) -> list[str]:
 
 
 def _check_enabled(surfaces: EnvSurfaces) -> list[str]:
-    rule = ValueRule(VAR_AUTOPILOT_ENABLED, _enabled_ok, MSG_ENABLED)
-    return _when_present(surfaces, rule)
+    messages: list[str] = []
+    for name in _KILL_SWITCHES:
+        template = name + " must default to false in {surface}"
+        rule = ValueRule(name, _switch_ok(name), template)
+        messages.extend(_when_present(surfaces, rule))
+    return messages
 
 
 def _check_base_url(surfaces: EnvSurfaces) -> list[str]:
@@ -348,12 +348,26 @@ def _when_present(surfaces: EnvSurfaces, rule: ValueRule) -> list[str]:
     return messages
 
 
-def _enabled_ok(value: str) -> bool:
-    if value == DISABLED_VALUE:
-        return True
-    if _COMPOSE_ENABLED.fullmatch(value):
-        return True
-    return _DEPLOY_ENABLED.fullmatch(value) is not None
+def _switch_ok(name: str) -> Callable[[str], bool]:
+    compose = re.compile(
+        r"^\$\{" + re.escape(name) + r":-" + DISABLED_VALUE + r"\}$"
+    )
+    deploy = re.compile(
+        r"^\$\{\{\s*secrets\."
+        + re.escape(name)
+        + r"\s*\|\|\s*['\"]"
+        + DISABLED_VALUE
+        + r"['\"]\s*\}\}$"
+    )
+
+    def ok(value: str) -> bool:
+        if value == DISABLED_VALUE:
+            return True
+        if compose.fullmatch(value):
+            return True
+        return deploy.fullmatch(value) is not None
+
+    return ok
 
 
 def _public_url_ok(value: str) -> bool:

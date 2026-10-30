@@ -165,6 +165,10 @@ jobs:
             GROKBOT_API_KEY_SHA256=${{ secrets.GROKBOT_API_KEY_SHA256 }}
             CREDENTIALS_ENCRYPTION_KEY=${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
             AUTOPILOT_ENABLED=${{ secrets.AUTOPILOT_ENABLED || 'false' }}
+            # AE-0572: requests can be on while spend stays off. Both default
+            # false here; the secrets are what turns a test on.
+            BOOST_REQUESTS_ENABLED=${{ secrets.BOOST_REQUESTS_ENABLED || 'false' }}
+            BOOST_ENABLED=${{ secrets.BOOST_ENABLED || 'false' }}
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
             AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '3' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
