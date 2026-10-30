@@ -119,7 +119,74 @@ describe("CardArchiveAction", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: labels.cancel }));
 
     expect(screen.queryByText(labels.confirm)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("focuses the first menu item on open and moves with the arrow keys", () => {
+    renderAction();
+    openMenu();
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("moves between the confirmation items with the arrow keys", () => {
+    renderAction();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.archive }));
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.confirmYes }),
+    ).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(screen.getByRole("menuitem", { name: labels.cancel })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Home" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.confirmYes }),
+    ).toHaveFocus();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("closes on Tab without trapping the focus", () => {
+    renderAction();
+    openMenu();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Tab" });
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("closes when the board or the window scrolls or resizes", () => {
+    renderAction();
+    openMenu();
+
+    fireEvent.scroll(window);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    openMenu();
+    fireEvent.scroll(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    openMenu();
+    fireEvent(window, new Event("resize"));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   /** Scenario: The archive action lives behind a per-card overflow menu */

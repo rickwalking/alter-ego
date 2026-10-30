@@ -118,11 +118,12 @@ export function WorkflowBoardView({
               columnCount: (count: number) => t("board.columnCount", { count }),
             }}
             viewKey={archived ? "archived" : "active"}
-            renderCardActions={(card) => (
+            renderCardActions={(card, tabbable) => (
               <CardArchiveAction
                 card={card}
                 archived={archived}
                 onChanged={refresh}
+                tabbable={tabbable}
               />
             )}
           />

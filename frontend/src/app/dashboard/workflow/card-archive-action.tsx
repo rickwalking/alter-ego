@@ -1,65 +1,50 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ARCHIVE_REFUSAL } from "@/constants/workflow";
 import { TEXT_DIM } from "@/constants/neon";
 import { useWorkflowPostAction } from "@/modules/editorial";
 import { CardArchiveMenuItems } from "./card-archive-menu-items";
+import { useCardOverflowMenu } from "./use-card-overflow-menu";
 import type { CardArchiveActionProps } from "./types";
 
 const NO_MESSAGE = "";
+
+const OUTLINE_FOCUS_CLASS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan";
+
+const TRIGGER_CLASS = `absolute top-1 right-1 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep text-sm leading-none transition-colors hover:border-neon-cyan/60 hover:text-white ${OUTLINE_FOCUS_CLASS}`;
+
+const MENU_CLASS = `fixed z-50 min-w-[160px] rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep p-1 shadow-[var(--shadow-neon-button)] ${OUTLINE_FOCUS_CLASS}`;
+
 const MENU_WIDTH_PX = 224;
-const MENU_GAP_PX = 4;
-const MENU_EDGE_MARGIN_PX = 8;
-
-const TRIGGER_CLASS =
-  "absolute -top-2 -right-2 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep text-sm leading-none transition-colors hover:border-neon-cyan/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
-
-const MENU_CLASS =
-  "fixed z-50 min-w-[160px] rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep p-1 shadow-[var(--shadow-neon-button)] focus-visible:outline-none";
-
-interface MenuPosition {
-  readonly top: number;
-  readonly left: number;
-}
-
-function menuPosition(trigger: DOMRect): MenuPosition {
-  const left = Math.max(
-    MENU_EDGE_MARGIN_PX,
-    Math.min(
-      trigger.right - MENU_WIDTH_PX,
-      window.innerWidth - MENU_WIDTH_PX - MENU_EDGE_MARGIN_PX,
-    ),
-  );
-  return {
-    top: trigger.bottom + MENU_GAP_PX,
-    left,
-  };
-}
 
 /**
  * The per-card overflow menu holding "Arquivar" (with the confirmation) or
  * "Restaurar", or the refusal reason as disabled text. Fixed-positioned so
  * the column scroll container cannot clip it; Escape closes it and returns
- * focus to the trigger.
+ * focus to the trigger. On the board, only the roving card's trigger stays
+ * in the tab order (`tabbable`).
  */
 export function CardArchiveAction({
   card,
   archived,
   onChanged,
+  tabbable = true,
 }: Readonly<CardArchiveActionProps>): React.ReactElement | null {
   const t = useTranslations("workflow.archive");
-  const reasonId = useId();
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [position, setPosition] = useState<MenuPosition>({
-    top: 0,
-    left: 0,
-  });
+  const {
+    open,
+    confirming,
+    onConfirmingChange,
+    triggerRef,
+    menuRef,
+    position,
+    openMenu,
+    closeMenu,
+    onMenuKeyDown,
+    onMenuBlur,
+  } = useCardOverflowMenu();
   const archive = useWorkflowPostAction(
     { success: NO_MESSAGE, failed: t("archiveFailed") },
     onChanged,
@@ -69,46 +54,9 @@ export function CardArchiveAction({
     onChanged,
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent): void => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (menuRef.current?.contains(target) === true) return;
-      if (triggerRef.current?.contains(target) === true) return;
-      setOpen(false);
-      setConfirming(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
-
-  useEffect(() => {
-    if (open) menuRef.current?.focus();
-  }, [open]);
-
   if (!card.canArchive) return null;
   if (!archived && card.archiveRefusal === ARCHIVE_REFUSAL.PUBLISHED) {
     return null;
-  }
-
-  function closeMenu(returnFocus: boolean): void {
-    setOpen(false);
-    setConfirming(false);
-    if (returnFocus) triggerRef.current?.focus();
-  }
-
-  function openMenu(): void {
-    const trigger = triggerRef.current?.getBoundingClientRect();
-    if (trigger !== undefined) setPosition(menuPosition(trigger));
-    setOpen(true);
-  }
-
-  function onMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeMenu(true);
-    }
   }
 
   return (
@@ -119,6 +67,7 @@ export function CardArchiveAction({
         aria-label={t("menuLabel", { title: card.title })}
         aria-haspopup="menu"
         aria-expanded={open}
+        tabIndex={tabbable ? 0 : -1}
         onClick={() => (open ? closeMenu(true) : openMenu())}
         className={TRIGGER_CLASS}
         style={{ color: TEXT_DIM }}
@@ -132,6 +81,7 @@ export function CardArchiveAction({
           aria-label={t("menuLabel", { title: card.title })}
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
+          onBlur={onMenuBlur}
           className={MENU_CLASS}
           style={{
             top: position.top,
@@ -143,10 +93,9 @@ export function CardArchiveAction({
             card={card}
             archived={archived}
             confirming={confirming}
-            onConfirmingChange={setConfirming}
+            onConfirmingChange={onConfirmingChange}
             archive={archive}
             restore={restore}
-            reasonId={reasonId}
           />
         </div>
       )}

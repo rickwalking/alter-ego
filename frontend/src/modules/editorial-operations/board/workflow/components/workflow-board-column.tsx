@@ -18,6 +18,8 @@ const RAIL_LABEL_CLASS = "[writing-mode:vertical-rl] rotate-180";
 const FOCUS_RING_CLASS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 const COLUMN_WIDTH_CLASS = "min-w-[232px] max-w-[320px] flex-1 basis-0";
+const CARD_LINK_FOCUS_CLASS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan";
 const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_RING_CLASS}`;
 
 function countAwaitingOwner(cards: readonly KanbanCard[]): number {
@@ -152,7 +154,7 @@ export function WorkflowBoardColumn({
               data-board-card-id={card.id}
               tabIndex={card.id === tabbableCardId ? 0 : -1}
               ref={(element) => registerCard(card.id, element)}
-              className={`block no-underline rounded-md ${FOCUS_RING_CLASS}`}
+              className={`block no-underline rounded-md ${CARD_LINK_FOCUS_CLASS}`}
             >
               <NeonCard padding="sm" hover>
                 <p

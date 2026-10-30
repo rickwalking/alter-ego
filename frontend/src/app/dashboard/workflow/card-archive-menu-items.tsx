@@ -6,7 +6,7 @@ import { NEON_RED, TEXT, TEXT_DIM } from "@/constants/neon";
 import type { CardArchiveMenuItemsProps } from "./types";
 
 const MENU_ITEM_CLASS =
-  "block w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-neon-cyan-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded px-3 py-2 text-left text-sm transition-colors hover:bg-neon-cyan-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan disabled:cursor-not-allowed disabled:opacity-60";
 
 const MENU_ITEM_DISABLED_CLASS = `${MENU_ITEM_CLASS} text-xs`;
 
@@ -30,7 +30,6 @@ export function CardArchiveMenuItems({
   onConfirmingChange,
   archive,
   restore,
-  reasonId,
 }: Readonly<CardArchiveMenuItemsProps>): React.ReactElement {
   const t = useTranslations("workflow.archive");
 
@@ -69,7 +68,6 @@ export function CardArchiveMenuItems({
         type="button"
         role="menuitem"
         disabled
-        aria-describedby={reasonId}
         className={MENU_ITEM_DISABLED_CLASS}
         style={{ color: TEXT_DIM }}
       >

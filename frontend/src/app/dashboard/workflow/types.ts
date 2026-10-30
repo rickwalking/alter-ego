@@ -1,3 +1,4 @@
+import type { FocusEvent, KeyboardEvent, RefObject } from "react";
 import type { WorkflowPostActionResult } from "@/modules/editorial";
 import type { KanbanCard } from "@/schemas/neon-kanban";
 
@@ -8,6 +9,11 @@ export interface CardArchiveActionProps {
   archived: boolean;
   /** Called once the archive or restore went through. */
   onChanged: () => void;
+  /**
+   * Whether the trigger holds the board's single roving-control tab stop;
+   * standalone usage leaves it tabbable.
+   */
+  tabbable?: boolean;
 }
 
 /** The board of the workflow page, active or archived. */
@@ -38,6 +44,30 @@ export interface CardArchiveMenuItemsProps {
   onConfirmingChange: (confirming: boolean) => void;
   archive: WorkflowPostActionResult;
   restore: WorkflowPostActionResult;
-  /** Id of the element describing the refusal reason. */
-  reasonId: string;
+}
+
+/** State and callbacks of a card's overflow menu shell. */
+export interface CardOverflowMenu {
+  open: boolean;
+  confirming: boolean;
+  onConfirmingChange: (confirming: boolean) => void;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  menuRef: RefObject<HTMLDivElement | null>;
+  position: MenuPosition;
+  openMenu: () => void;
+  closeMenu: (returnFocus: boolean) => void;
+  onMenuKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  onMenuBlur: (event: FocusEvent<HTMLDivElement>) => void;
+}
+
+/** Fixed viewport position of the open overflow menu. */
+export interface MenuPosition {
+  readonly top: number;
+  readonly left: number;
+}
+
+/** Refs the menu dismissal effect needs while the menu is open. */
+export interface MenuDismissalRefs {
+  readonly menuRef: RefObject<HTMLDivElement | null>;
+  readonly triggerRef: RefObject<HTMLButtonElement | null>;
 }

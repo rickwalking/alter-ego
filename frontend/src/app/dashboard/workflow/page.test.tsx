@@ -241,12 +241,34 @@ describe("WorkflowBoardPage queue summary", () => {
       .length;
   }
 
+  function archivedBoard(): WorkflowKanban {
+    return {
+      columns: [
+        {
+          phase: "research",
+          cards: [
+            {
+              id: "proj-archived",
+              title: "Archived carousel",
+              topic: "AI",
+              current_phase: "research",
+              phase_status: "in_progress",
+              updated_at: null,
+              can_archive: true,
+              archive_refusal: null,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
   function route(url: string): Promise<Response> {
     if (url === WORKFLOW_API.WORKFLOW_BOARD) {
       return jsonResponse(board(FIRST_TITLE));
     }
     if (url === WORKFLOW_API.WORKFLOW_BOARD_ARCHIVED) {
-      return jsonResponse({ columns: [] });
+      return jsonResponse(archivedBoard());
     }
     if (url === QUEUE_API.BOARD) {
       return jsonResponse({
@@ -290,5 +312,12 @@ describe("WorkflowBoardPage queue summary", () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId("queue-summary-link")).not.toBeInTheDocument();
     expect(queueCalls()).toBe(callsBefore);
+
+    const trigger = screen.getAllByRole("button", { name: "menuLabel" })[0];
+    if (trigger === undefined) throw new Error("no overflow trigger rendered");
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole("menuitem", { name: "restore" }),
+    ).toBeInTheDocument();
   });
 });

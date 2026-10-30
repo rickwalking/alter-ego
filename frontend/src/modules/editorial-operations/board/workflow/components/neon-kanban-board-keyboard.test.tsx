@@ -165,13 +165,103 @@ describe("NeonKanbanBoard keyboard navigation", () => {
   });
 
   /** Scenario: The card grid costs one tab stop and arrows move between cards */
-  it("gives the card links the cyan focus ring", () => {
+  it("gives the card links the cyan focus outline", () => {
     renderBoard();
-    expect(link("r-0").className).toContain("focus-visible:ring-neon-cyan");
+    expect(link("r-0").className).toContain("focus-visible:outline-neon-cyan");
   });
 
   /** Scenario: The card grid costs one tab stop and arrows move between cards */
-  it("falls back to the first card when the focused card disappears", () => {
+  it("gives the roving card the only tabbable card action", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          {
+            phase: "research",
+            status: "Research",
+            count: 2,
+            cards: [card("r-0", "research"), card("r-1", "research")],
+          },
+          {
+            phase: "content",
+            status: "Content",
+            count: 1,
+            cards: [card("c-0", "content")],
+          },
+        ]}
+        labels={labels}
+        renderCardActions={(item, tabbable) => (
+          <button type="button" tabIndex={tabbable ? 0 : -1}>
+            {`menu ${item.id}`}
+          </button>
+        )}
+      />,
+    );
+    const tabbable = screen
+      .getAllByRole("button", { name: /menu / })
+      .filter((element) => element.getAttribute("tabindex") === "0");
+    expect(tabbable).toHaveLength(1);
+    expect(tabbable[0]).toHaveTextContent("menu r-0");
+  });
+
+  /** Scenario: The card grid costs one tab stop and arrows move between cards */
+  it("skips collapsed rail columns when jumping across columns", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          {
+            phase: "research",
+            status: "Research",
+            count: 2,
+            cards: [card("r-0", "research"), card("r-1", "research")],
+          },
+          {
+            phase: "published",
+            status: "Published",
+            count: 3,
+            cards: [
+              card("p-0", "published"),
+              card("p-1", "published"),
+              card("p-2", "published"),
+            ],
+          },
+          {
+            phase: "content",
+            status: "Content",
+            count: 2,
+            cards: [card("c-0", "content"), card("c-1", "content")],
+          },
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.queryByTestId("workflow-column-published")).toBeNull();
+    fireEvent.keyDown(link("r-1"), { key: "ArrowRight" });
+    expect(link("c-1")).toHaveFocus();
+  });
+
+  /** Scenario: The card grid costs one tab stop and arrows move between cards */
+  it("renders a board whose only columns are rails without a tab stop", () => {
+    render(
+      <NeonKanbanBoard
+        columns={[
+          {
+            phase: "published",
+            status: "Published",
+            count: 2,
+            cards: [card("p-0", "published"), card("p-1", "published")],
+          },
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: "Expandir coluna Published (2)" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Scenario: The card grid costs one tab stop and arrows move between cards */
+  it("falls back to the first card and refocuses when the focused card disappears", () => {
     const { rerender } = render(
       <NeonKanbanBoard columns={boardColumns()} labels={labels} />,
     );
@@ -184,5 +274,6 @@ describe("NeonKanbanBoard keyboard navigation", () => {
     rerender(<NeonKanbanBoard columns={withoutImages} labels={labels} />);
 
     expect(link("r-0")).toHaveAttribute("tabindex", "0");
+    expect(link("r-0")).toHaveFocus();
   });
 });

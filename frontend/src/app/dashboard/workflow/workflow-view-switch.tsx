@@ -2,12 +2,16 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useRef } from "react";
 import type { KeyboardEvent } from "react";
-import { WORKFLOW_BOARD_ARCHIVED_PARAM } from "@/constants/workflow";
+import {
+  WORKFLOW_BOARD_ARCHIVED_PARAM,
+  WORKFLOW_BOARD_ARCHIVED_VALUE,
+} from "@/constants/workflow";
 import type { WorkflowViewSwitchProps } from "./types";
 
 const SEGMENT_CLASS =
-  "px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+  "rounded px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan";
 
 const SEGMENT_OFF_CLASS = `${SEGMENT_CLASS} text-white/70 hover:text-white`;
 const SEGMENT_ON_CLASS = `${SEGMENT_CLASS} bg-neon-cyan/15 text-white`;
@@ -18,8 +22,8 @@ const PREVIOUS_KEYS: ReadonlySet<string> = new Set(["ArrowLeft", "ArrowUp"]);
 /**
  * The Ativos | Arquivados segmented control. A radiogroup whose state lives
  * in the URL (`?archived=1`), so Back and shared links restore the view; the
- * other query params are kept. Arrow keys move between the segments and
- * select, with a single tab stop on the checked segment.
+ * other query params are kept. Arrow keys move between the segments, select
+ * and focus the checked one, with a single tab stop on it.
  */
 export function WorkflowViewSwitch({
   archived,
@@ -28,12 +32,14 @@ export function WorkflowViewSwitch({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+  const archivedRef = useRef<HTMLButtonElement | null>(null);
 
   function select(next: boolean): void {
     if (next === archived) return;
     const params = new URLSearchParams(searchParams.toString());
     if (next) {
-      params.set(WORKFLOW_BOARD_ARCHIVED_PARAM, "1");
+      params.set(WORKFLOW_BOARD_ARCHIVED_PARAM, WORKFLOW_BOARD_ARCHIVED_VALUE);
     } else {
       params.delete(WORKFLOW_BOARD_ARCHIVED_PARAM);
     }
@@ -41,6 +47,7 @@ export function WorkflowViewSwitch({
     router.replace(query === "" ? pathname : `${pathname}?${query}`, {
       scroll: false,
     });
+    (next ? archivedRef : activeRef).current?.focus();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
@@ -56,8 +63,8 @@ export function WorkflowViewSwitch({
   }
 
   const segments = [
-    { archived: false, label: t("archive.showActive") },
-    { archived: true, label: t("archive.showArchived") },
+    { archived: false, label: t("archive.showActive"), ref: activeRef },
+    { archived: true, label: t("archive.showArchived"), ref: archivedRef },
   ] as const;
 
   return (
@@ -72,12 +79,13 @@ export function WorkflowViewSwitch({
         return (
           <button
             key={segment.label}
+            ref={segment.ref}
             type="button"
             role="radio"
             aria-checked={checked}
             tabIndex={checked ? 0 : -1}
             onClick={() => select(segment.archived)}
-            className={`rounded ${checked ? SEGMENT_ON_CLASS : SEGMENT_OFF_CLASS}`}
+            className={checked ? SEGMENT_ON_CLASS : SEGMENT_OFF_CLASS}
           >
             {segment.label}
           </button>

@@ -48,6 +48,14 @@ function readExpandedColumns(): string[] {
   }
 }
 
+/** Columns whose cards render: collapsed rails have none and are skipped. */
+function openBoardColumns(
+  columns: readonly KanbanColumn[],
+  expanded: ReadonlySet<string>,
+): KanbanColumn[] {
+  return columns.filter((column) => !isRailColumn(column, expanded));
+}
+
 /** A viewport-bound board with independent columns and persistent navigation. */
 export function NeonKanbanBoard({
   columns,
@@ -61,8 +69,9 @@ export function NeonKanbanBoard({
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const restoredRef = useRef(false);
-  const { tabbableCardId, registerCard, onBoardKeyDown } =
-    useBoardRovingFocus(columns);
+  const { tabbableCardId, registerCard, onBoardKeyDown } = useBoardRovingFocus(
+    openBoardColumns(columns, expanded),
+  );
   const setColumnRef = useCallback(
     (key: string, element: HTMLDivElement | null): void => {
       columnRefs.current[key] = element;
@@ -143,7 +152,9 @@ export function NeonKanbanBoard({
           onToggle={toggleColumn}
           onCardClick={rememberColumn}
           setColumnRef={setColumnRef}
-          renderCardActions={renderCardActions}
+          renderCardActions={(card) =>
+            renderCardActions?.(card, card.id === tabbableCardId)
+          }
           tabbableCardId={tabbableCardId}
           registerCard={registerCard}
         />

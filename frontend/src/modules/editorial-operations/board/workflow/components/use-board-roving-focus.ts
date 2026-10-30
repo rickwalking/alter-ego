@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
 import type {
+  BoardCardFocus,
   BoardCardLinkTarget,
   BoardCardPosition,
   BoardKeyResult,
@@ -147,16 +148,40 @@ function useTabbableCardId(
 }
 
 /**
- * Roving tabindex across the board cards: exactly one card link stays in the
- * tab order and the arrow keys move the focus, scrolling the card into view
- * nearest-edge.
+ * When the focused card leaves the board (archive, poll refresh, filter),
+ * the browser drops focus on the body; move it to the roving fallback card.
  */
-export function useBoardRovingFocus(
-  columns: readonly KanbanColumn[],
-): BoardRovingFocus {
-  const cardColumns = columns.map((column) => column.cards);
+function useFocusRestoration(
+  cardColumns: CardColumns,
+  tabbableCardId: string | null,
+  focusCard: (cardId: string) => void,
+): void {
+  const previousTabbableRef = useRef(tabbableCardId);
+  useEffect(() => {
+    const previous = previousTabbableRef.current;
+    previousTabbableRef.current = tabbableCardId;
+    if (previous === tabbableCardId) return;
+    if (previous === null || positionOf(cardColumns, previous) !== null) {
+      return;
+    }
+    const active = document.activeElement;
+    if (active !== null && active !== document.body && active.isConnected) {
+      return;
+    }
+    if (tabbableCardId !== null) focusCard(tabbableCardId);
+  }, [cardColumns, tabbableCardId, focusCard]);
+}
+
+/**
+ * Focus moves between card links: the arrow-key handler resolves the target
+ * and `focusCard` applies it, updates the roving stop and scrolls the card
+ * into view nearest-edge.
+ */
+function useBoardCardFocus(
+  cardColumns: CardColumns,
+  setTabbableCardId: (id: string) => void,
+): BoardCardFocus {
   const cardRefs = useRef(new Map<string, HTMLElement>());
-  const [tabbableCardId, setTabbableCardId] = useTabbableCardId(cardColumns);
 
   const registerCard = useCallback(
     (id: string, element: HTMLElement | null): void => {
@@ -199,6 +224,28 @@ export function useBoardRovingFocus(
     },
     [cardColumns, focusCard],
   );
+
+  return { focusCard, onBoardKeyDown, registerCard };
+}
+
+/**
+ * Roving tabindex across the board cards: exactly one card link stays in the
+ * tab order; the arrow keys move the focus, scrolling the card into view.
+ */
+export function useBoardRovingFocus(
+  columns: readonly KanbanColumn[],
+): BoardRovingFocus {
+  const cardColumns = useMemo(
+    () => columns.map((column) => column.cards),
+    [columns],
+  );
+  const [tabbableCardId, setTabbableCardId] = useTabbableCardId(cardColumns);
+  const { focusCard, onBoardKeyDown, registerCard } = useBoardCardFocus(
+    cardColumns,
+    setTabbableCardId,
+  );
+
+  useFocusRestoration(cardColumns, tabbableCardId, focusCard);
 
   return { tabbableCardId, registerCard, onBoardKeyDown };
 }

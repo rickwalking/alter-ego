@@ -7,8 +7,11 @@ import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
 
 export interface NeonKanbanBoardProps {
   columns: KanbanColumn[];
-  /** Controls shown under a card, outside its link (e.g. archive). */
-  renderCardActions?: (card: KanbanCard) => ReactNode;
+  /**
+   * Controls shown under a card, outside its link (e.g. archive). Receives
+   * whether the card owns the board's single roving-control tab stop.
+   */
+  renderCardActions?: (card: KanbanCard, tabbable: boolean) => ReactNode;
   /** Localized strings the board itself renders (rails, empty columns). */
   labels: BoardColumnLabels;
   /**
@@ -68,4 +71,14 @@ export interface BoardKeyResult {
 export interface BoardCardLinkTarget {
   readonly link: Element;
   readonly cardId: string;
+}
+
+/** The board container's arrow-key/Enter handler. */
+export type BoardKeyHandler = (event: KeyboardEvent<HTMLElement>) => void;
+
+/** Focus moves and card element registration for the board card grid. */
+export interface BoardCardFocus {
+  readonly focusCard: (cardId: string) => void;
+  readonly onBoardKeyDown: BoardKeyHandler;
+  readonly registerCard: (id: string, element: HTMLElement | null) => void;
 }

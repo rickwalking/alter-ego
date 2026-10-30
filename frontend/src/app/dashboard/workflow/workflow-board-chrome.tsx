@@ -6,7 +6,10 @@ import { useSearchParams } from "next/navigation";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { neonButtonVariants } from "@/components/atoms/neon-button";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import { WORKFLOW_BOARD_ARCHIVED_PARAM } from "@/constants/workflow";
+import {
+  WORKFLOW_BOARD_ARCHIVED_PARAM,
+  WORKFLOW_BOARD_ARCHIVED_VALUE,
+} from "@/constants/workflow";
 import { WorkflowBoardView } from "./workflow-board-view";
 import { WorkflowViewSwitch } from "./workflow-view-switch";
 
@@ -34,7 +37,9 @@ const NEW_CAROUSEL_ICON = (
 export function WorkflowBoardChrome(): React.ReactElement {
   const t = useTranslations("workflow");
   const searchParams = useSearchParams();
-  const archived = searchParams.get(WORKFLOW_BOARD_ARCHIVED_PARAM) === "1";
+  const archived =
+    searchParams.get(WORKFLOW_BOARD_ARCHIVED_PARAM) ===
+    WORKFLOW_BOARD_ARCHIVED_VALUE;
 
   return (
     <>

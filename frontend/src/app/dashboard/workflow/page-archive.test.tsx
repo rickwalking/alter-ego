@@ -179,9 +179,11 @@ describe("WorkflowBoardPage archived view", () => {
     fireEvent.keyDown(viewSwitch(), { key: "ArrowRight" });
 
     expect(await screen.findByText(ARCHIVED_TITLE)).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: "archive.showArchived" }),
-    ).toHaveAttribute("aria-checked", "true");
+    const archivedRadio = screen.getByRole("radio", {
+      name: "archive.showArchived",
+    });
+    expect(archivedRadio).toHaveAttribute("aria-checked", "true");
+    expect(archivedRadio).toHaveFocus();
 
     fireEvent.keyDown(viewSwitch(), { key: "ArrowLeft" });
 

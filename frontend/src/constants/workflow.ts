@@ -41,6 +41,9 @@ export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;
 /** URL query param marking the archived board view (`?archived=1`). */
 export const WORKFLOW_BOARD_ARCHIVED_PARAM = "archived";
 
+/** The query value of `WORKFLOW_BOARD_ARCHIVED_PARAM` when archived. */
+export const WORKFLOW_BOARD_ARCHIVED_VALUE = "1";
+
 /** Why a board card cannot be archived, as the board API reports it (the archive route's 409s). */
 export const ARCHIVE_REFUSAL = {
   PUBLISHED: "published",
