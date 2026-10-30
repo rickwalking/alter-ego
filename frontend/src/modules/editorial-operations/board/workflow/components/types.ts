@@ -2,13 +2,16 @@
  * Component prop types for the workflow board (colocated `types.ts`).
  */
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
 
 export interface NeonKanbanBoardProps {
   columns: KanbanColumn[];
-  /** Controls shown under a card, outside its link (e.g. archive). */
-  renderCardActions?: (card: KanbanCard) => ReactNode;
+  /**
+   * Controls shown under a card, outside its link (e.g. archive). Receives
+   * whether the card owns the board's single roving-control tab stop.
+   */
+  renderCardActions?: (card: KanbanCard, tabbable: boolean) => ReactNode;
   /** Localized strings the board itself renders (rails, empty columns). */
   labels: BoardColumnLabels;
   /**
@@ -27,6 +30,8 @@ export interface BoardColumnLabels {
   collapseColumn: (name: string) => string;
   /** Localized "N need you" for column headers with awaiting-human cards. */
   needYou?: (count: number) => string;
+  /** Localized item count announced on the column card list. */
+  columnCount: (count: number) => string;
 }
 
 export interface WorkflowBoardColumnProps {
@@ -37,4 +42,43 @@ export interface WorkflowBoardColumnProps {
   onCardClick: (column: KanbanColumn) => void;
   setColumnRef: (key: string, element: HTMLDivElement | null) => void;
   renderCardActions?: (card: KanbanCard) => ReactNode;
+  /** The only card link kept in the tab order (roving keyboard focus). */
+  tabbableCardId: string | null;
+  /** Registers a card link element for arrow-key focus moves. */
+  registerCard: (id: string, element: HTMLElement | null) => void;
+}
+
+/** Keyboard navigation state and callbacks for the board card grid. */
+export interface BoardRovingFocus {
+  tabbableCardId: string | null;
+  registerCard: (id: string, element: HTMLElement | null) => void;
+  onBoardKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
+}
+
+/** A card's coordinates in the non-empty-column grid. */
+export interface BoardCardPosition {
+  readonly column: number;
+  readonly row: number;
+}
+
+/** The outcome of resolving a key press on a board card. */
+export interface BoardKeyResult {
+  readonly click: boolean;
+  readonly focusId: string | null;
+}
+
+/** The card link element a keyboard event bubbled from. */
+export interface BoardCardLinkTarget {
+  readonly link: Element;
+  readonly cardId: string;
+}
+
+/** The board container's arrow-key/Enter handler. */
+export type BoardKeyHandler = (event: KeyboardEvent<HTMLElement>) => void;
+
+/** Focus moves and card element registration for the board card grid. */
+export interface BoardCardFocus {
+  readonly focusCard: (cardId: string) => void;
+  readonly onBoardKeyDown: BoardKeyHandler;
+  readonly registerCard: (id: string, element: HTMLElement | null) => void;
 }

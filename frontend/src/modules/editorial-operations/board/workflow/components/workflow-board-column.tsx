@@ -15,10 +15,10 @@ import type { WorkflowBoardColumnProps } from "./types";
 const COLUMN_TEST_ID_PREFIX = "workflow-column-";
 const RAIL_WIDTH_CLASS = "w-11 shrink-0";
 const RAIL_LABEL_CLASS = "[writing-mode:vertical-rl] rotate-180";
-const FOCUS_RING_CLASS =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+const FOCUS_OUTLINE_CLASS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon-cyan";
 const COLUMN_WIDTH_CLASS = "min-w-[232px] max-w-[320px] flex-1 basis-0";
-const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_RING_CLASS}`;
+const HEADER_ACTION_CLASS = `rounded p-1 text-xs font-semibold transition-colors hover:text-white ${FOCUS_OUTLINE_CLASS}`;
 
 function countAwaitingOwner(cards: readonly KanbanCard[]): number {
   return cards.filter(
@@ -65,6 +65,8 @@ export function WorkflowBoardColumn({
   onCardClick,
   setColumnRef,
   renderCardActions,
+  tabbableCardId,
+  registerCard,
 }: Readonly<WorkflowBoardColumnProps>): React.ReactElement {
   const locale = useLocale();
   const key = column.phase;
@@ -78,7 +80,7 @@ export function WorkflowBoardColumn({
         aria-label={railLabel}
         aria-expanded={false}
         onClick={() => onToggle(key)}
-        className={`flex flex-col items-center gap-2 rounded-md border border-transparent py-2 text-white transition-colors hover:border-neon-cyan/40 ${RAIL_WIDTH_CLASS} ${FOCUS_RING_CLASS}`}
+        className={`flex flex-col items-center gap-2 rounded-md border border-transparent py-2 text-white transition-colors hover:border-neon-cyan/40 ${RAIL_WIDTH_CLASS} ${FOCUS_OUTLINE_CLASS}`}
       >
         <NeonBadge variant="cyan" size="sm">
           {count}
@@ -133,6 +135,7 @@ export function WorkflowBoardColumn({
         ref={(element) => setColumnRef(key, element)}
         data-testid={`${COLUMN_TEST_ID_PREFIX}${key}`}
         role="list"
+        aria-label={labels.columnCount(count)}
         className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5"
       >
         {column.cards.length === 0 && (
@@ -141,12 +144,15 @@ export function WorkflowBoardColumn({
           </p>
         )}
         {column.cards.map((card) => (
-          <div key={card.id} role="listitem" className="space-y-1">
+          <div key={card.id} role="listitem" className="relative space-y-1">
             <Link
               href={DASHBOARD_ROUTES.CREATE_WORKSPACE(card.id)}
               onClick={() => onCardClick(column)}
               aria-label={`${card.title}, ${card.phaseStatus}`}
-              className="block no-underline"
+              data-board-card-id={card.id}
+              tabIndex={card.id === tabbableCardId ? 0 : -1}
+              ref={(element) => registerCard(card.id, element)}
+              className={`block no-underline rounded-md ${FOCUS_OUTLINE_CLASS}`}
             >
               <NeonCard padding="sm" hover>
                 <p

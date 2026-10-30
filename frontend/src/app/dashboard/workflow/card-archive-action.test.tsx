@@ -1,4 +1,4 @@
-/** The archive control under a workflow board card. */
+/** The archive control behind a workflow board card overflow menu. */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
@@ -16,11 +16,12 @@ import { CardArchiveAction } from "./card-archive-action";
 
 const mockFetch = vi.mocked(authenticatedFetch);
 const labels = en.workflow.archive;
+const CARD_TITLE = "Stale carousel";
 
 function card(overrides: Partial<KanbanCard> = {}): KanbanCard {
   return {
     id: "proj-1",
-    title: "Stale carousel",
+    title: CARD_TITLE,
     description: "AI",
     phase: "content",
     phaseStatus: "awaiting_human",
@@ -55,6 +56,16 @@ function renderAction(
   return onChanged;
 }
 
+function menuTrigger(): HTMLElement {
+  return screen.getByRole("button", {
+    name: labels.menuLabel.replace("{title}", CARD_TITLE),
+  });
+}
+
+function openMenu(): void {
+  fireEvent.click(menuTrigger());
+}
+
 function respond(ok: boolean): void {
   mockFetch.mockResolvedValue({
     ok,
@@ -67,15 +78,28 @@ describe("CardArchiveAction", () => {
     mockFetch.mockReset();
   });
 
-  /** Scenario: Archiving a card asks for a confirmation first */
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("renders a 28px overflow trigger labelled with the card title", () => {
+    renderAction();
+    const trigger = menuTrigger();
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger.className).toContain("h-7");
+    expect(trigger.className).toContain("w-7");
+    expect(pt.workflow.archive.menuLabel).toBe("Mais ações: {title}");
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
   it("archives after the confirmation and refreshes the board", async () => {
     respond(true);
     const onChanged = renderAction();
 
-    fireEvent.click(screen.getByRole("button", { name: labels.archive }));
+    openMenu();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.archive }));
     expect(screen.getByText(labels.confirm)).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: labels.confirmYes }));
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.confirmYes }));
 
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(mockFetch).toHaveBeenCalledWith(
@@ -86,61 +110,150 @@ describe("CardArchiveAction", () => {
     expect(pt.workflow.archive.confirm).toBe("Arquivar este carrossel?");
   });
 
-  /** Scenario: Archiving a card asks for a confirmation first */
+  /** Scenario: The archive action lives behind a per-card overflow menu */
   it("archives nothing when the confirmation is cancelled", () => {
     renderAction();
 
-    fireEvent.click(screen.getByRole("button", { name: labels.archive }));
-    fireEvent.click(screen.getByRole("button", { name: labels.cancel }));
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.archive }));
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.cancel }));
 
     expect(screen.queryByText(labels.confirm)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: labels.archive })).toBeEnabled();
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  /** Scenario: A card in progress cannot be archived */
-  it("disables archive with the reason while the phase is in progress", () => {
-    renderAction({ archiveRefusal: "in_progress" });
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("focuses the first menu item on open and moves with the arrow keys", () => {
+    renderAction();
+    openMenu();
 
-    const button = screen.getByRole("button", { name: labels.archive });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleDescription(labels.inProgress);
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.archive }),
+    ).toHaveFocus();
   });
 
-  /** Scenario: A reviewer sees no archive control */
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("moves between the confirmation items with the arrow keys", () => {
+    renderAction();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.archive }));
+
+    expect(
+      screen.getByRole("menuitem", { name: labels.confirmYes }),
+    ).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
+    expect(screen.getByRole("menuitem", { name: labels.cancel })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Home" });
+    expect(
+      screen.getByRole("menuitem", { name: labels.confirmYes }),
+    ).toHaveFocus();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("closes on Tab without trapping the focus", () => {
+    renderAction();
+    openMenu();
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Tab" });
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("closes when the board or the window scrolls or resizes", () => {
+    renderAction();
+    openMenu();
+
+    fireEvent.scroll(window);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    openMenu();
+    fireEvent.scroll(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    openMenu();
+    fireEvent(window, new Event("resize"));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("closes the menu and returns focus to the trigger on Escape", () => {
+    renderAction();
+    openMenu();
+    const menu = screen.getByRole("menu");
+
+    fireEvent.keyDown(menu, { key: "Escape" });
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(menuTrigger()).toHaveFocus();
+  });
+
+  /** Scenario: The archive action lives behind a per-card overflow menu */
+  it("is not clipped by a scrolling column", () => {
+    renderAction();
+    openMenu();
+    const menu = screen.getByRole("menu");
+    expect(menu.className).toContain("fixed");
+  });
+
+  /** Scenario: A refused card explains itself once, inside its menu */
+  it("shows the refusal reason once as disabled text in the menu", () => {
+    renderAction({ archiveRefusal: "in_progress" });
+
+    expect(screen.queryByText(labels.inProgress)).not.toBeInTheDocument();
+    openMenu();
+    const reason = screen.getByRole("menuitem", { name: labels.inProgress });
+    expect(reason).toBeDisabled();
+    expect(screen.getAllByText(labels.inProgress)).toHaveLength(1);
+  });
+
+  /** Scenario: A card an autopilot run still needs cannot be archived */
+  it("shows the autopilot refusal reason in the menu", () => {
+    renderAction({ archiveRefusal: "autopilot" });
+    openMenu();
+    expect(
+      screen.getByRole("menuitem", { name: labels.autopilot }),
+    ).toBeDisabled();
+  });
+
+  /** Scenario: A card without archive rights shows no control */
   it("shows no control to a caller who may not archive the card", () => {
     renderAction({ canArchive: false });
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  /** Scenario: A reviewer sees no archive control */
+  /** Scenario: A card without archive rights shows no control */
   it("shows no restore to a caller who may not archive the card", () => {
     renderAction({ canArchive: false }, true);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  /** Scenario: A card an autopilot run still needs cannot be archived */
-  it("disables archive with the reason while an autopilot run needs the card", () => {
-    renderAction({ archiveRefusal: "autopilot" });
-
-    const button = screen.getByRole("button", { name: labels.archive });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleDescription(labels.autopilot);
-  });
-
-  /** Scenario: A published card has no archive control */
+  /** Scenario: A card without archive rights shows no control */
   it("shows no control on a published card", () => {
     renderAction({ archiveRefusal: "published" });
-
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  /** Scenario: The archived board lists archived carousels with restore */
+  /** Scenario: The archived board restores through the same menu */
   it("restores an archived carousel and refreshes the board", async () => {
     respond(true);
     const onChanged = renderAction({}, true);
 
-    fireEvent.click(screen.getByRole("button", { name: labels.restore }));
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.restore }));
 
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(mockFetch).toHaveBeenCalledWith(
@@ -155,8 +268,9 @@ describe("CardArchiveAction", () => {
     respond(false);
     const onChanged = renderAction();
 
-    fireEvent.click(screen.getByRole("button", { name: labels.archive }));
-    fireEvent.click(screen.getByRole("button", { name: labels.confirmYes }));
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.archive }));
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.confirmYes }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       labels.archiveFailed,
@@ -169,7 +283,8 @@ describe("CardArchiveAction", () => {
     respond(false);
     const onChanged = renderAction({}, true);
 
-    fireEvent.click(screen.getByRole("button", { name: labels.restore }));
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: labels.restore }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       labels.restoreFailed,

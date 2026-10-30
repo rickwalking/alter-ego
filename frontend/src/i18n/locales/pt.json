@@ -1651,7 +1651,7 @@
       "noProjects": "Nenhum projeto",
       "retry": "Tentar novamente",
       "breadcrumb": "pipeline",
-      "newCard": "Novo card",
+      "newCard": "Novo carrossel",
       "rejectedColumn": "Rejeitados",
       "collapseColumn": "Recolher coluna {name}",
       "searchPlaceholder": "Buscar carrossel…",
@@ -1668,7 +1668,9 @@
         "updated": "Atualizado ↓",
         "title": "Título A-Z"
       },
-      "needYou": "{count, plural, one {# precisa de você} other {# precisam de você}}"
+      "needYou": "{count, plural, one {# precisa de você} other {# precisam de você}}",
+      "columnCount": "{count, plural, one {# item} other {# itens}}",
+      "viewGroup": "Visão do quadro"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",
@@ -1809,6 +1811,7 @@
       "showArchived": "Arquivados",
       "showActive": "Ativos",
       "emptyArchived": "Nenhum carrossel arquivado.",
+      "menuLabel": "Mais ações: {title}",
       "autopilot": "Não dá para arquivar enquanto o piloto automático precisa dele (por exemplo, uma publicação agendada)."
     },
     "queue": {

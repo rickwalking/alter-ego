@@ -17,19 +17,31 @@ vi.mock("next-intl", () => {
   };
 });
 
-const navigation = vi.hoisted(() => ({
-  params: new URLSearchParams(),
-  replace: vi.fn((href: string): void => {
-    const query = href.split("?")[1] ?? "";
-    navigation.params = new URLSearchParams(query);
-  }),
-}));
+const navigation = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return {
+    params: new URLSearchParams(),
+    replace: vi.fn((href: string): void => {
+      const query = href.split("?")[1] ?? "";
+      navigation.params = new URLSearchParams(query);
+      listeners.forEach((listener) => listener());
+    }),
+    subscribe: (listener: () => void): (() => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
 
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => navigation.params,
-  useRouter: () => ({ replace: navigation.replace }),
-  usePathname: () => "/dashboard/workflow",
-}));
+vi.mock("next/navigation", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useSearchParams: (): URLSearchParams =>
+      useSyncExternalStore(navigation.subscribe, () => navigation.params),
+    useRouter: () => ({ replace: navigation.replace }),
+    usePathname: () => "/dashboard/workflow",
+  };
+});
 
 vi.mock("@/lib/authenticated-fetch", () => ({
   authenticatedFetch: vi.fn(),
@@ -229,12 +241,34 @@ describe("WorkflowBoardPage queue summary", () => {
       .length;
   }
 
+  function archivedBoard(): WorkflowKanban {
+    return {
+      columns: [
+        {
+          phase: "research",
+          cards: [
+            {
+              id: "proj-archived",
+              title: "Archived carousel",
+              topic: "AI",
+              current_phase: "research",
+              phase_status: "in_progress",
+              updated_at: null,
+              can_archive: true,
+              archive_refusal: null,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
   function route(url: string): Promise<Response> {
     if (url === WORKFLOW_API.WORKFLOW_BOARD) {
       return jsonResponse(board(FIRST_TITLE));
     }
     if (url === WORKFLOW_API.WORKFLOW_BOARD_ARCHIVED) {
-      return jsonResponse({ columns: [] });
+      return jsonResponse(archivedBoard());
     }
     if (url === QUEUE_API.BOARD) {
       return jsonResponse({
@@ -270,13 +304,20 @@ describe("WorkflowBoardPage queue summary", () => {
     const callsBefore = queueCalls();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "archive.showArchived" }),
+      screen.getByRole("radio", { name: "archive.showArchived" }),
     );
 
     expect(
-      await screen.findByRole("button", { name: "archive.showActive" }),
+      await screen.findByRole("radio", { name: "archive.showActive" }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("queue-summary-link")).not.toBeInTheDocument();
     expect(queueCalls()).toBe(callsBefore);
+
+    const trigger = screen.getAllByRole("button", { name: "menuLabel" })[0];
+    if (trigger === undefined) throw new Error("no overflow trigger rendered");
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole("menuitem", { name: "restore" }),
+    ).toBeInTheDocument();
   });
 });

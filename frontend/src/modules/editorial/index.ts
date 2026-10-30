@@ -220,6 +220,7 @@ export type {
   CarouselReprocessState,
   GenerationQueueReprocessTarget,
   GenerationQueueState,
+  WorkflowPostActionResult,
 } from "./workflow/hooks/types";
 export type {
   CalendarItem,

@@ -22,6 +22,7 @@ const labels: BoardColumnLabels = {
     `Expandir coluna ${name} (${count})`,
   collapseColumn: (name: string) => `Recolher coluna ${name}`,
   needYou: (count: number) => `${count} precisam de você`,
+  columnCount: (count: number) => `${count} itens`,
 };
 
 function badgeColor(variant: NeonBadgeVariant): string {
@@ -131,6 +132,7 @@ describe("NeonKanbanBoard Component", () => {
     const list = within(section).getByRole("list");
     expect(within(list).getAllByRole("listitem")).toHaveLength(1);
     expect(list).toHaveTextContent("Research card 0");
+    expect(list).toHaveAttribute("aria-label", "1 itens");
   });
 
   /** Scenario: Empty and done columns collapse to rails */

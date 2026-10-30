@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   WORKFLOW_BOARD_DONE_PHASES,
   WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
@@ -13,6 +13,7 @@ import {
 import { saveBoardSequence } from "./board-sequence";
 import { safeStorageGet, safeStorageSet } from "./board-storage";
 import { WorkflowBoardColumn } from "./workflow-board-column";
+import { useBoardRovingFocus } from "./use-board-roving-focus";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 import type { NeonKanbanBoardProps } from "./types";
 
@@ -47,6 +48,14 @@ function readExpandedColumns(): string[] {
   }
 }
 
+/** Columns whose cards render: collapsed rails have none and are skipped. */
+function openBoardColumns(
+  columns: readonly KanbanColumn[],
+  expanded: ReadonlySet<string>,
+): KanbanColumn[] {
+  return columns.filter((column) => !isRailColumn(column, expanded));
+}
+
 /** A viewport-bound board with independent columns and persistent navigation. */
 export function NeonKanbanBoard({
   columns,
@@ -60,6 +69,12 @@ export function NeonKanbanBoard({
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const restoredRef = useRef(false);
+  const rovingColumns = useMemo(
+    () => openBoardColumns(columns, expanded),
+    [columns, expanded],
+  );
+  const { tabbableCardId, registerCard, onBoardKeyDown } =
+    useBoardRovingFocus(rovingColumns);
   const setColumnRef = useCallback(
     (key: string, element: HTMLDivElement | null): void => {
       columnRefs.current[key] = element;
@@ -128,6 +143,7 @@ export function NeonKanbanBoard({
     <div
       ref={boardScrollRef}
       data-testid={BOARD_SCROLL_TEST_ID}
+      onKeyDown={onBoardKeyDown}
       className="flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2"
     >
       {columns.map((column) => (
@@ -139,7 +155,11 @@ export function NeonKanbanBoard({
           onToggle={toggleColumn}
           onCardClick={rememberColumn}
           setColumnRef={setColumnRef}
-          renderCardActions={renderCardActions}
+          renderCardActions={(card) =>
+            renderCardActions?.(card, card.id === tabbableCardId)
+          }
+          tabbableCardId={tabbableCardId}
+          registerCard={registerCard}
         />
       ))}
     </div>
