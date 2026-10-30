@@ -48,6 +48,26 @@ describe("dashboard sidebar items", () => {
     expect(hrefs().includes("/admin/users")).toBe(shown);
   });
 
+  /** Scenario: The Fila nav item is admin-only */
+  it.each([
+    ["admin", true],
+    ["editor", false],
+  ])("shows the queue link to a %s: %s", (role, shown) => {
+    auth.role = role;
+    render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
+    expect(hrefs().includes("/dashboard/queue")).toBe(shown);
+  });
+
+  /** Scenario: The Fila nav item is admin-only */
+  it("places Fila right after Workflow Board for admins", () => {
+    auth.role = "admin";
+    render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
+    const list = hrefs();
+    expect(list.indexOf("/dashboard/queue")).toBe(
+      list.indexOf("/dashboard/workflow") + 1,
+    );
+  });
+
   // Scenario: Chat shows no invented unread badge
   it("shows no badge on chat", () => {
     auth.role = "admin";

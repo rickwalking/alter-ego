@@ -12,7 +12,11 @@ import {
   NeonKanbanBoard,
   mapApiWorkflowKanbanToNeon,
 } from "@/modules/editorial-operations";
-import { useWorkflowKanban, type WorkflowKanban } from "@/modules/editorial";
+import {
+  useWorkflowKanban,
+  useGenerationQueue,
+  type WorkflowKanban,
+} from "@/modules/editorial";
 import { localizeBoardColumns } from "@/app/dashboard/workflow/localize-board";
 import {
   countBoardStatusBuckets,
@@ -20,8 +24,8 @@ import {
 } from "@/app/dashboard/workflow/board-filters";
 import { useBoardFilters } from "@/app/dashboard/workflow/use-board-filters";
 import { WorkflowToolbar } from "@/app/dashboard/workflow/workflow-toolbar";
+import { QueueSummaryLink } from "./queue-summary-link";
 import { CardArchiveAction } from "./card-archive-action";
-import { QueuePanelSection } from "./queue-panel-section";
 import type { BoardFeedbackProps, WorkflowBoardViewProps } from "./types";
 
 const NEW_CARD_ICON = (
@@ -92,6 +96,7 @@ function WorkflowBoardView({
   const tStatus = useTranslations("create.status");
   const locale = useLocale();
   const { filters, setFilters } = useBoardFilters();
+  const { board: queueBoard } = useGenerationQueue();
   const { board, loading, error, refetch } = useWorkflowKanban(archived);
   const refresh = (): void => void refetch();
   const showEmpty = archived && board !== null && isEmptyBoard(board);
@@ -115,7 +120,7 @@ function WorkflowBoardView({
     >
       {!archived && (
         <div className="max-h-[45%] shrink-0 overflow-y-auto">
-          <QueuePanelSection />
+          <QueueSummaryLink board={queueBoard} />
         </div>
       )}
       <div className="shrink-0">
