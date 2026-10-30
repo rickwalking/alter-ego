@@ -276,4 +276,55 @@ describe("NeonKanbanBoard keyboard navigation", () => {
     expect(link("r-0")).toHaveAttribute("tabindex", "0");
     expect(link("r-0")).toHaveFocus();
   });
+
+  /** Scenario: The card grid costs one tab stop and arrows move between cards */
+  it("refocuses when a non-roving card action held the focus and its card leaves", () => {
+    const { rerender } = render(
+      <NeonKanbanBoard
+        columns={boardColumns()}
+        labels={labels}
+        renderCardActions={(item, tabbable) => (
+          <button type="button" tabIndex={tabbable ? 0 : -1}>
+            {`menu ${item.id}`}
+          </button>
+        )}
+      />,
+    );
+    screen.getByRole("button", { name: "menu c-1" }).focus();
+
+    const withoutC1 = boardColumns().map((column) =>
+      column.phase === "content"
+        ? { ...column, cards: column.cards.filter((item) => item.id !== "c-1") }
+        : column,
+    );
+    rerender(
+      <NeonKanbanBoard
+        columns={withoutC1}
+        labels={labels}
+        renderCardActions={(item, tabbable) => (
+          <button type="button" tabIndex={tabbable ? 0 : -1}>
+            {`menu ${item.id}`}
+          </button>
+        )}
+      />,
+    );
+
+    expect(link("r-0")).toHaveFocus();
+  });
+
+  /** Scenario: The card grid costs one tab stop and arrows move between cards */
+  it("never pulls focus into the board when the removed card never held it", () => {
+    const { rerender } = render(
+      <NeonKanbanBoard columns={boardColumns()} labels={labels} />,
+    );
+    expect(document.body).toHaveFocus();
+
+    const withoutImages = boardColumns().filter(
+      (column) => column.phase !== "images",
+    );
+    rerender(<NeonKanbanBoard columns={withoutImages} labels={labels} />);
+
+    expect(document.body).toHaveFocus();
+    expect(link("r-0")).not.toHaveFocus();
+  });
 });

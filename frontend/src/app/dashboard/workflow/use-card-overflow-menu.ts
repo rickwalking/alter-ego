@@ -8,7 +8,8 @@ import type {
   MenuPosition,
 } from "./types";
 
-const MENU_WIDTH_PX = 224;
+/** The fixed width of the open overflow menu. */
+export const MENU_WIDTH_PX = 224;
 const MENU_GAP_PX = 4;
 const MENU_EDGE_MARGIN_PX = 8;
 

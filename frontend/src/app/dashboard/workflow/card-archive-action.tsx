@@ -5,7 +5,7 @@ import { ARCHIVE_REFUSAL } from "@/constants/workflow";
 import { TEXT_DIM } from "@/constants/neon";
 import { useWorkflowPostAction } from "@/modules/editorial";
 import { CardArchiveMenuItems } from "./card-archive-menu-items";
-import { useCardOverflowMenu } from "./use-card-overflow-menu";
+import { MENU_WIDTH_PX, useCardOverflowMenu } from "./use-card-overflow-menu";
 import type { CardArchiveActionProps } from "./types";
 
 const NO_MESSAGE = "";
@@ -16,8 +16,6 @@ const OUTLINE_FOCUS_CLASS =
 const TRIGGER_CLASS = `absolute top-1 right-1 z-10 flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep text-sm leading-none transition-colors hover:border-neon-cyan/60 hover:text-white ${OUTLINE_FOCUS_CLASS}`;
 
 const MENU_CLASS = `fixed z-50 min-w-[160px] rounded-md border border-[var(--color-neon-border-subtle)] bg-bg-deep p-1 shadow-[var(--shadow-neon-button)] ${OUTLINE_FOCUS_CLASS}`;
-
-const MENU_WIDTH_PX = 224;
 
 /**
  * The per-card overflow menu holding "Arquivar" (with the confirmation) or

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   WORKFLOW_BOARD_DONE_PHASES,
   WORKFLOW_BOARD_EXPANDED_STORAGE_KEY,
@@ -69,9 +69,12 @@ export function NeonKanbanBoard({
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const restoredRef = useRef(false);
-  const { tabbableCardId, registerCard, onBoardKeyDown } = useBoardRovingFocus(
-    openBoardColumns(columns, expanded),
+  const rovingColumns = useMemo(
+    () => openBoardColumns(columns, expanded),
+    [columns, expanded],
   );
+  const { tabbableCardId, registerCard, onBoardKeyDown } =
+    useBoardRovingFocus(rovingColumns);
   const setColumnRef = useCallback(
     (key: string, element: HTMLDivElement | null): void => {
       columnRefs.current[key] = element;

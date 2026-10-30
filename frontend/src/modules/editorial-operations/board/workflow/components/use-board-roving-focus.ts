@@ -148,22 +148,30 @@ function useTabbableCardId(
 }
 
 /**
- * When the focused card leaves the board (archive, poll refresh, filter),
- * the browser drops focus on the body; move it to the roving fallback card.
+ * When the element that had focus leaves the board with its card (archive
+ * from the menu, poll refresh, filter), the browser drops focus on the
+ * body; move it to the roving fallback card. Focus outside the board (or
+ * never inside it) is never pulled into the board.
  */
 function useFocusRestoration(
   cardColumns: CardColumns,
   tabbableCardId: string | null,
   focusCard: (cardId: string) => void,
 ): void {
-  const previousTabbableRef = useRef(tabbableCardId);
+  const previousFocusRef = useRef<Element | null>(null);
   useEffect(() => {
-    const previous = previousTabbableRef.current;
-    previousTabbableRef.current = tabbableCardId;
-    if (previous === tabbableCardId) return;
-    if (previous === null || positionOf(cardColumns, previous) !== null) {
-      return;
-    }
+    const rememberFocus = (): void => {
+      previousFocusRef.current = document.activeElement;
+    };
+    document.addEventListener("focusin", rememberFocus);
+    return () => document.removeEventListener("focusin", rememberFocus);
+  }, []);
+
+  useEffect(() => {
+    const previous = previousFocusRef.current;
+    previousFocusRef.current = document.activeElement;
+    if (previous === null || previous === document.body) return;
+    if (previous.isConnected) return;
     const active = document.activeElement;
     if (active !== null && active !== document.body && active.isConnected) {
       return;
