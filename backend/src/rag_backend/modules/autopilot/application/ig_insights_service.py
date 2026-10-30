@@ -248,9 +248,7 @@ class _Seen:
     stale: bool
 
 
-def _seen(
-    query: _RowQuery, snapshot: InsightSnapshot | None, *, stale: bool
-) -> _Seen:
+def _seen(query: _RowQuery, snapshot: InsightSnapshot | None, *, stale: bool) -> _Seen:
     return _Seen(item=query.item, snapshot=snapshot, now=query.now, stale=stale)
 
 

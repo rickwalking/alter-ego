@@ -49,7 +49,9 @@ class SqlIgMediaStore:
     async def list_is_fresh(self, now: datetime) -> bool:
         """True when the newest listing is inside the TTL."""
         newest = await self._session.scalar(
-            select(IgMediaModel.listed_at).order_by(IgMediaModel.listed_at.desc()).limit(1)
+            select(IgMediaModel.listed_at)
+            .order_by(IgMediaModel.listed_at.desc())
+            .limit(1)
         )
         if not isinstance(newest, datetime):
             return False

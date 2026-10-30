@@ -15,14 +15,17 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rag_backend.modules.autopilot.boost_constants import (
     INDEX_STATUS_NEXT,
+    OPEN_WHERE_SQL,
     TABLE_BOOST_EVENTS,
     TABLE_BOOST_REQUESTS,
+    UQ_MEDIA_ACTIVE,
 )
 from rag_backend.modules.autopilot.constants import IG_IDENTIFIER_LENGTH
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotOrmBase
@@ -34,7 +37,16 @@ class BoostRequestModel(AutopilotOrmBase):
     """One owner-approved boost. The bot can only insert pending rows."""
 
     __tablename__ = TABLE_BOOST_REQUESTS
-    __table_args__ = (Index(INDEX_STATUS_NEXT, "status", "next_attempt_at"),)
+    __table_args__ = (
+        Index(INDEX_STATUS_NEXT, "status", "next_attempt_at"),
+        Index(
+            UQ_MEDIA_ACTIVE,
+            "media_id",
+            unique=True,
+            postgresql_where=text(OPEN_WHERE_SQL),
+            sqlite_where=text(OPEN_WHERE_SQL),
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)

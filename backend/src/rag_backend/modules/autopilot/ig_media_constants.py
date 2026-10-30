@@ -79,15 +79,13 @@ METRICS_REELS: tuple[str, ...] = (
     METRIC_AVG_WATCH_TIME,
     METRIC_TOTAL_WATCH_TIME,
 )
-DEPRECATED_METRICS: frozenset[str] = frozenset(
-    {
-        "impressions",
-        "plays",
-        "clips_replays_count",
-        "ig_reels_aggregated_all_plays_count",
-        "video_views",
-    }
-)
+DEPRECATED_METRICS: frozenset[str] = frozenset({
+    "impressions",
+    "plays",
+    "clips_replays_count",
+    "ig_reels_aggregated_all_plays_count",
+    "video_views",
+})
 
 IG_MEDIA_LIST_TTL_MINUTES = 30
 IG_MEDIA_MAX_PAGES = 4

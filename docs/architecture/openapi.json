@@ -1444,6 +1444,136 @@
         "title": "Body_upload_library_photo_api_carousels_creator_assets_post",
         "type": "object"
       },
+      "BoostRequestList": {
+        "description": "Newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BoostRequestResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BoostRequestList",
+        "type": "object"
+      },
+      "BoostRequestResponse": {
+        "description": "One stored request. Ad insights come from the database only.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "daily_budget_cents": {
+            "title": "Daily Budget Cents",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "meta_ad_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Ad Id"
+          },
+          "meta_campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Campaign Id"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_budget_cents": {
+            "title": "Total Budget Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "media_id",
+          "permalink",
+          "objective",
+          "daily_budget_cents",
+          "days",
+          "total_budget_cents",
+          "currency",
+          "reason",
+          "created_at",
+          "expires_at",
+          "error_code"
+        ],
+        "title": "BoostRequestResponse",
+        "type": "object"
+      },
       "CalendarItemResponse": {
         "description": "Single calendar entry.",
         "properties": {
@@ -5983,6 +6113,487 @@
         ],
         "title": "IdeaLocale",
         "type": "string"
+      },
+      "IgAccountBaselineModel": {
+        "description": "Medians for posts aged between 72 hours and 30 days.",
+        "properties": {
+          "median_engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Engagement Rate"
+          },
+          "median_follows_per_1000_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Follows Per 1000 Reach"
+          },
+          "median_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Reach"
+          },
+          "median_saves_per_100_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Saves Per 100 Reach"
+          },
+          "median_shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Shares Per 100 Views"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sample_size",
+          "median_reach",
+          "median_shares_per_100_views",
+          "median_saves_per_100_reach",
+          "median_follows_per_1000_reach",
+          "median_engagement_rate"
+        ],
+        "title": "IgAccountBaselineModel",
+        "type": "object"
+      },
+      "IgInsightsResponse": {
+        "description": "Account media, newest first, plus per-type baselines.",
+        "properties": {
+          "baseline": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IgAccountBaselineModel"
+            },
+            "title": "Baseline",
+            "type": "object"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IgMediaInsightsItemModel"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "list_truncated": {
+            "title": "List Truncated",
+            "type": "boolean"
+          },
+          "next_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Until"
+          }
+        },
+        "required": [
+          "items",
+          "baseline",
+          "next_until",
+          "configured",
+          "list_truncated",
+          "generated_at"
+        ],
+        "title": "IgInsightsResponse",
+        "type": "object"
+      },
+      "IgMediaBoostStateModel": {
+        "description": "Latest non-terminal boost request. Null until a request exists.",
+        "properties": {
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "status"
+        ],
+        "title": "IgMediaBoostStateModel",
+        "type": "object"
+      },
+      "IgMediaInsightsItemModel": {
+        "description": "One account media row.",
+        "properties": {
+          "age_hours": {
+            "title": "Age Hours",
+            "type": "number"
+          },
+          "boost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IgMediaBoostStateModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "caption_excerpt": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption Excerpt"
+          },
+          "carousel_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carousel Project Id"
+          },
+          "comments_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments Count"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "like_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Count"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "media_product_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FEED",
+                  "REELS"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Product Type"
+          },
+          "media_type": {
+            "enum": [
+              "IMAGE",
+              "CAROUSEL_ALBUM",
+              "VIDEO"
+            ],
+            "title": "Media Type",
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/IgMediaMetrics"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "rates": {
+            "$ref": "#/components/schemas/IgMediaRatesModel"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "media_id",
+          "media_type",
+          "media_product_type",
+          "permalink",
+          "timestamp",
+          "age_hours",
+          "metrics",
+          "rates",
+          "fetched_at",
+          "stale"
+        ],
+        "title": "IgMediaInsightsItemModel",
+        "type": "object"
+      },
+      "IgMediaMetrics": {
+        "description": "Graph metrics. Null means the metric was not returned.",
+        "properties": {
+          "avg_watch_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Watch Time Ms"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "profile_visits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Visits"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "total_interactions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Interactions"
+          },
+          "total_watch_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Watch Time Ms"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "title": "IgMediaMetrics",
+        "type": "object"
+      },
+      "IgMediaRatesModel": {
+        "description": "Derived rates. Null when an input is null or the divisor is zero.",
+        "properties": {
+          "engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Rate"
+          },
+          "follows_per_1000_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Per 1000 Reach"
+          },
+          "saves_per_100_reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves Per 100 Reach"
+          },
+          "shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Per 100 Views"
+          }
+        },
+        "title": "IgMediaRatesModel",
+        "type": "object"
       },
       "InstagramInsightsResponse": {
         "description": "Rows (newest first) and the KPI ratios over the posts that report them.",
@@ -11045,6 +11656,122 @@
           }
         },
         "summary": "Post Autopilot Asset",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/boost-request": {
+      "post": {
+        "description": "Create a pending request and message the owner.",
+        "operationId": "post_boost_request_api_autopilot_boost_request_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoostRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Post Boost Request",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/boost-request/{boost_id}": {
+      "get": {
+        "description": "Status from Postgres. This route never calls Meta.",
+        "operationId": "get_boost_request_api_autopilot_boost_request__boost_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "boost_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Boost Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoostRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Boost Request",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/boost-requests": {
+      "get": {
+        "description": "Newest first. ``status`` may be repeated.",
+        "operationId": "list_boost_requests_api_autopilot_boost_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoostRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Boost Requests",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/ig-insights": {
+      "get": {
+        "description": "Account media with type-specific metrics, rates and baselines.",
+        "operationId": "get_ig_insights_api_autopilot_ig_insights_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IgInsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid_api_key"
+          },
+          "503": {
+            "description": "autopilot_api_key_unconfigured"
+          }
+        },
+        "summary": "Get Ig Insights",
         "tags": [
           "autopilot"
         ]

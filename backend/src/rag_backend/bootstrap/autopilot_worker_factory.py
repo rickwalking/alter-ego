@@ -151,9 +151,7 @@ class BoostRunAdapter:
             await _close(client)
 
 
-def _boost_tick(
-    settings: Settings, db: object, ads: object
-) -> BoostTick:
+def _boost_tick(settings: Settings, db: object, ads: object) -> BoostTick:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from rag_backend.modules.autopilot.api.boost import limits_from

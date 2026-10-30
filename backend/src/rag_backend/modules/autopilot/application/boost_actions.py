@@ -37,16 +37,28 @@ from rag_backend.modules.autopilot.webhook_constants import ANSWER_UNKNOWN
 
 
 class _Deps(Protocol):
-    boosts: BoostStore | None
-    boost_limits: BoostLimits | None
-    pauser: CampaignPauser | None
-    messenger: OwnerMessenger
-    clock: Clock
-    owner_chat_id: str
+    @property
+    def boosts(self) -> BoostStore | None: ...
+
+    @property
+    def boost_limits(self) -> BoostLimits | None: ...
+
+    @property
+    def pauser(self) -> CampaignPauser | None: ...
+
+    @property
+    def messenger(self) -> OwnerMessenger: ...
+
+    @property
+    def clock(self) -> Clock: ...
+
+    @property
+    def owner_chat_id(self) -> str: ...
 
 
 class _Host(Protocol):
-    _deps: _Deps
+    @property
+    def _deps(self) -> _Deps: ...
 
     async def _answer(self, update: WebhookUpdate, text: str) -> None: ...
 

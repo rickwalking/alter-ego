@@ -83,8 +83,9 @@ class SqlBoostStore:
 
     async def committed_cents(self, since: datetime) -> int:
         total = await self._session.scalar(
-            select(func.coalesce(func.sum(BoostRequestModel.total_budget_cents), 0))
-            .where(
+            select(
+                func.coalesce(func.sum(BoostRequestModel.total_budget_cents), 0)
+            ).where(
                 BoostRequestModel.created_at >= since,
                 BoostRequestModel.status.notin_(tuple(UNCOMMITTED_STATUSES)),
             )
@@ -99,9 +100,7 @@ class SqlBoostStore:
     async def save_status(self, change: StatusSave) -> None:
         row = await self._session.get(BoostRequestModel, change.request.id)
         if row is None or row.status != change.previous:
-            raise IllegalBoostTransitionError(
-                change.previous, change.request.status
-            )
+            raise IllegalBoostTransitionError(change.previous, change.request.status)
         assert_transition(change.previous, change.request.status)
         _copy(row, change.request)
         self._session.add(

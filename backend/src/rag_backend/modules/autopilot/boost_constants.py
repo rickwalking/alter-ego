@@ -25,8 +25,20 @@ STATUS_ACTIVE = "active"
 STATUS_FAILED = "failed"
 STATUS_COMPLETED = "completed"
 STATUS_STOPPED = "stopped"
-OPEN_STATUSES: frozenset[str] = frozenset(
-    {STATUS_PENDING, STATUS_APPROVED, STATUS_LAUNCHING, STATUS_ACTIVE}
+OPEN_STATUSES: frozenset[str] = frozenset({
+    STATUS_PENDING,
+    STATUS_APPROVED,
+    STATUS_LAUNCHING,
+    STATUS_ACTIVE,
+})
+_OPEN_STATUS_ORDER = (
+    STATUS_PENDING,
+    STATUS_APPROVED,
+    STATUS_LAUNCHING,
+    STATUS_ACTIVE,
+)
+OPEN_WHERE_SQL = "status IN ({})".format(
+    ", ".join(f"'{status}'" for status in _OPEN_STATUS_ORDER)
 )
 UNCOMMITTED_STATUSES: frozenset[str] = frozenset({STATUS_REJECTED, STATUS_EXPIRED})
 
@@ -184,6 +196,7 @@ __all__ = [
     "OBJECTIVE_ENGAGEMENT",
     "OBJECTIVE_OUTCOME",
     "OPEN_STATUSES",
+    "OPEN_WHERE_SQL",
     "OPTIMIZATION_POST",
     "PATH_BOOST_REQUEST",
     "PATH_BOOST_REQUESTS",

@@ -10,6 +10,7 @@ Additive tables for owner-approved Instagram boosts. Idempotent.
 from __future__ import annotations
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 from alembic import op
 
@@ -21,7 +22,9 @@ depends_on = None
 _REQUESTS = "boost_requests"
 _EVENTS = "boost_request_events"
 _INDEX = "ix_boost_requests_status_next_attempt"
-_OPEN = "status IN ('pending_approval','approved','launching','active')"
+_OPEN_INDEX = "uq_boost_requests_media_active"
+_OPEN_WHERE = "status IN ('pending_approval', 'approved', 'launching', 'active')"
+_JSON = sa.JSON().with_variant(JSONB(), "postgresql")
 
 
 def _has_table(name: str) -> bool:
@@ -43,7 +46,7 @@ def upgrade() -> None:
             sa.Column("days", sa.Integer(), nullable=False),
             sa.Column("total_budget_cents", sa.Integer(), nullable=False),
             sa.Column("currency", sa.String(3), nullable=False),
-            sa.Column("audience", sa.JSON(), nullable=False),
+            sa.Column("audience", _JSON, nullable=False),
             sa.Column("reason", sa.Text(), nullable=False),
             sa.Column("score", sa.Float(), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -60,7 +63,7 @@ def upgrade() -> None:
             sa.Column("meta_ad_id", sa.String(64), nullable=True),
             sa.Column("launch_attempts", sa.Integer(), nullable=False),
             sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=True),
-            sa.Column("last_insights", sa.JSON(), nullable=True),
+            sa.Column("last_insights", _JSON, nullable=True),
             sa.Column("insights_fetched_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("error_code", sa.String(64), nullable=True),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -68,12 +71,13 @@ def upgrade() -> None:
             sa.UniqueConstraint("idempotency_key"),
         )
         op.create_index(_INDEX, _REQUESTS, ["status", "next_attempt_at"])
-    if op.get_bind().dialect.name == "postgresql":
-        op.execute(
-            sa.text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_boost_requests_media_active "
-                f"ON {_REQUESTS} (media_id) WHERE {_OPEN}"
-            )
+        op.create_index(
+            _OPEN_INDEX,
+            _REQUESTS,
+            ["media_id"],
+            unique=True,
+            postgresql_where=sa.text(_OPEN_WHERE),
+            sqlite_where=sa.text(_OPEN_WHERE),
         )
     if _has_table(_EVENTS):
         return
@@ -85,7 +89,7 @@ def upgrade() -> None:
         sa.Column("from_status", sa.String(24), nullable=False),
         sa.Column("to_status", sa.String(24), nullable=False),
         sa.Column("actor", sa.String(64), nullable=False),
-        sa.Column("detail", sa.JSON(), nullable=False),
+        sa.Column("detail", _JSON, nullable=False),
         sa.ForeignKeyConstraint(["request_id"], [f"{_REQUESTS}.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -97,7 +101,6 @@ def downgrade() -> None:
         op.drop_table(_EVENTS)
     if not _has_table(_REQUESTS):
         return
-    if op.get_bind().dialect.name == "postgresql":
-        op.execute(sa.text("DROP INDEX IF EXISTS uq_boost_requests_media_active"))
+    op.drop_index(_OPEN_INDEX, table_name=_REQUESTS)
     op.drop_index(_INDEX, table_name=_REQUESTS)
     op.drop_table(_REQUESTS)

@@ -15,21 +15,19 @@ from rag_backend.modules.autopilot.boost_constants import (
 )
 from rag_backend.modules.autopilot.domain.boost import IllegalBoostTransitionError
 
-_PAIRS: frozenset[tuple[str, str]] = frozenset(
-    {
-        (STATUS_PENDING, STATUS_APPROVED),
-        (STATUS_PENDING, STATUS_REJECTED),
-        (STATUS_PENDING, STATUS_EXPIRED),
-        (STATUS_PENDING, STATUS_FAILED),
-        (STATUS_APPROVED, STATUS_LAUNCHING),
-        (STATUS_APPROVED, STATUS_FAILED),
-        (STATUS_LAUNCHING, STATUS_ACTIVE),
-        (STATUS_LAUNCHING, STATUS_FAILED),
-        (STATUS_ACTIVE, STATUS_COMPLETED),
-        (STATUS_ACTIVE, STATUS_FAILED),
-        (STATUS_ACTIVE, STATUS_STOPPED),
-    }
-)
+_PAIRS: frozenset[tuple[str, str]] = frozenset({
+    (STATUS_PENDING, STATUS_APPROVED),
+    (STATUS_PENDING, STATUS_REJECTED),
+    (STATUS_PENDING, STATUS_EXPIRED),
+    (STATUS_PENDING, STATUS_FAILED),
+    (STATUS_APPROVED, STATUS_LAUNCHING),
+    (STATUS_APPROVED, STATUS_FAILED),
+    (STATUS_LAUNCHING, STATUS_ACTIVE),
+    (STATUS_LAUNCHING, STATUS_FAILED),
+    (STATUS_ACTIVE, STATUS_COMPLETED),
+    (STATUS_ACTIVE, STATUS_FAILED),
+    (STATUS_ACTIVE, STATUS_STOPPED),
+})
 
 
 def assert_transition(expected: str, new: str) -> None:
