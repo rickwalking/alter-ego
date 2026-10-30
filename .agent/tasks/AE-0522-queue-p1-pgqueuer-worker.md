@@ -1,6 +1,6 @@
 # AE-0522 — P1 — PgQueuer queue, generation_runs, dispatcher and capped worker (live on merge)
 
-Status: In Development
+Status: Done
 Tier: T3
 Priority: High
 Type: Feature
@@ -223,7 +223,8 @@ None.
 
 ## Final Summary
 
-Pending.
+Merged to `main` in PR #275 (298976fa, 2026-10-24), follow-up #284 (ec095587, 2026-10-25). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).
+
 - 2026-10-24: Review fixes on #275: the staging clock is injected (the date-dependent test), the worker cap is 1536M
   (prod run peak 1181 MiB + 30 %) and the backend keeps 1536M for its in-process renders (Langfuse is off the box,
   budget in `.agent/reports/AE-0522.memory-budget.md`), decision ids out of code, ADR-0026 and plan §4.3 describe the

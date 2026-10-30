@@ -1,6 +1,6 @@
 # AE-0557 — Generation queue on its own page with links to the carousels
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: High
 Type: Feature / UX
@@ -104,3 +104,7 @@ link to the carousel details page."
 - Decisions attributed to Pedro (critique follow-up, 2026-10-26).
 - No comments in source (JSDoc only); i18n in pt.json + en.json; every
   interactive element gets a `:focus-visible` style.
+
+## Final Summary
+
+Merged to `main` in PR #305 (ecfee8b4, 2026-10-30). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

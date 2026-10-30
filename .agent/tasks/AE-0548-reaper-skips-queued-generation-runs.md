@@ -1,6 +1,6 @@
 # AE-0548 — The stale-run reaper leaves projects with a queued generation run alone
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -99,3 +99,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #282 (b163a54f, 2026-10-25). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

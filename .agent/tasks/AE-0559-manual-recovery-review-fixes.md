@@ -1,6 +1,6 @@
 # AE-0559 — Fix forward manual recovery review findings
 
-Status: Review
+Status: Done
 Tier: T2
 Priority: High
 Type: Bug

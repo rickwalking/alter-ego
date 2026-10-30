@@ -1,6 +1,6 @@
 # AE-0526 — P4 — dashboard queue panel and generation-runs API
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -59,3 +59,7 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
   backlog endpoint lives under `/api/generation-runs` because `/api/autopilot/*` is reserved for the GrokBot API-key
   routes; cancel is limited to autopilot runs that have not started (cancelling a dashboard resume or a drive between
   gates would leave the project half-driven).
+
+## Final Summary
+
+Merged to `main` in PR #288 (b30b4758, 2026-10-25). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

@@ -1,6 +1,6 @@
 # AE-0552 — Manual Reprocessar for stuck carousels through the queue
 
-Status: Review
+Status: Done
 Tier: T3
 Priority: High
 Type: Feature

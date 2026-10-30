@@ -1,6 +1,6 @@
 # AE-0524 — P3 — daily recovery scan and summary
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -68,3 +68,7 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
   failed run's retry is never retried again and a stale run is resumed once (and not in its first hour, while the
   reaper may still be at it); each stale revive has its own transaction; tried dead letters no longer hide newer ones;
   "parados" counts the last 7 days; PgQueuer's log table name comes from PgQueuer's settings.
+
+## Final Summary
+
+Merged to `main` in PR #286 (def0c208, 2026-10-25). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).
