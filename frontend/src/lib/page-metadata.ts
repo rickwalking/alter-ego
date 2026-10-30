@@ -21,6 +21,7 @@ export type PageTitleKey =
   | "personas"
   | "knowledge"
   | "workflow"
+  | "queue"
   | "blogPosts"
   | "analytics"
   | "createCarousel"

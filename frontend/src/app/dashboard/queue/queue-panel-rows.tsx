@@ -9,7 +9,12 @@ import { formatLocaleRelative } from "@/lib/locale-format";
 import { firstNonBlank } from "@/lib/utils";
 import { QueueReprocessButton } from "./queue-reprocess-button";
 import { QueueRowAction } from "./queue-row-action";
-import { formatQueueTime, QUEUE_ROW_CLASS } from "./queue-row-utils";
+import { QueueThemeTitle } from "./queue-theme-title";
+import {
+  formatQueueTime,
+  QUEUE_LINK_CLASS,
+  QUEUE_ROW_CLASS,
+} from "./queue-row-utils";
 import type { QueueRowProps } from "./types";
 
 const KNOWN_KINDS: ReadonlySet<string> = new Set(["autopilot", "dashboard"]);
@@ -100,7 +105,7 @@ export function QueueActiveRow({
               </span>{" "}
             </>
           )}
-          {theme}{" "}
+          <QueueThemeTitle theme={theme} projectId={item.project_id} />{" "}
           {KNOWN_KINDS.has(item.kind) && (
             <span className="text-xs" style={{ color: TEXT_DIM }}>
               {t(`kind.${item.kind}`)}
@@ -147,7 +152,9 @@ export function QueueDeadRow({
   return (
     <li className={QUEUE_ROW_CLASS}>
       <div className="min-w-0">
-        <p className="text-sm font-medium">{theme}</p>
+        <p className="text-sm font-medium">
+          <QueueThemeTitle theme={theme} projectId={item.project_id} />
+        </p>
         <p className="text-xs" style={{ color: TEXT_MUTED }}>
           {reason}
         </p>
@@ -183,7 +190,7 @@ export function QueueDeadRow({
         )}
         {!item.can_retry && item.project_id && (
           <Link
-            className="text-xs underline"
+            className={`text-xs ${QUEUE_LINK_CLASS}`}
             aria-label={t("actionForTheme", {
               action: t("openEditor"),
               theme,

@@ -14,6 +14,9 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 export const QUEUE_ROW_CLASS =
   "flex flex-wrap items-center justify-between gap-2 rounded-md border border-[color:var(--color-neon-cyan-border-30)] px-3 py-2";
 
+export const QUEUE_LINK_CLASS =
+  "rounded underline decoration-neon-cyan/40 hover:decoration-neon-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
+
 function formatAt(
   locale: string,
   value: string,

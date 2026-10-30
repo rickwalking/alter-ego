@@ -42,7 +42,8 @@
       "knowledge": "Knowledge Base",
       "analytics": "Analytics",
       "sectionAdmin": "Admin",
-      "adminUsers": "Users"
+      "adminUsers": "Users",
+      "queue": "Queue"
     },
     "logout": "Logout",
     "login": "Login",
@@ -1856,7 +1857,17 @@
       "processNow": "Process queue now",
       "processing": "Processing queue…",
       "processFailed": "Could not process the queue. Try again.",
-      "processForbidden": "You do not have permission to process the queue."
+      "processForbidden": "You do not have permission to process the queue.",
+      "openCarousel": "Open carousel",
+      "boardLink": "Go to the board",
+      "adminsOnly": "The generation queue is only available to admins.",
+      "summary": {
+        "label": "Queue",
+        "empty": "Queue is empty",
+        "running": "{count, plural, one {# generating} other {# generating}}",
+        "queued": "{count, plural, one {# queued} other {# queued}}",
+        "dead": "{count, plural, one {# stuck} other {# stuck}}"
+      }
     },
     "reprocess": {
       "title": "Carousel recovery",
@@ -2293,7 +2304,8 @@
     "blogPosts": "Blog Posts",
     "analytics": "Analytics",
     "createCarousel": "Create Carousel",
-    "adminUsers": "Users"
+    "adminUsers": "Users",
+    "queue": "Queue"
   },
   "personas": {
     "page": {

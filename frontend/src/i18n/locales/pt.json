@@ -42,7 +42,8 @@
       "knowledge": "Base de Conhecimento",
       "analytics": "Analytics",
       "sectionAdmin": "Administração",
-      "adminUsers": "Usuários"
+      "adminUsers": "Usuários",
+      "queue": "Fila"
     },
     "logout": "Sair",
     "login": "Entrar",
@@ -1856,7 +1857,17 @@
       "processNow": "Processar fila agora",
       "processing": "Processando fila…",
       "processFailed": "Não foi possível processar a fila. Tente novamente.",
-      "processForbidden": "Você não tem permissão para processar a fila."
+      "processForbidden": "Você não tem permissão para processar a fila.",
+      "openCarousel": "Abrir carrossel",
+      "boardLink": "Ir para o quadro",
+      "adminsOnly": "A fila de geração está disponível apenas para administradores.",
+      "summary": {
+        "label": "Fila",
+        "empty": "Fila vazia",
+        "running": "{count, plural, one {# gerando} other {# gerando}}",
+        "queued": "{count, plural, one {# na fila} other {# na fila}}",
+        "dead": "{count, plural, one {# parada} other {# paradas}}"
+      }
     },
     "reprocess": {
       "title": "Recuperação do carrossel",
@@ -2293,7 +2304,8 @@
     "blogPosts": "Posts do Blog",
     "analytics": "Analytics",
     "createCarousel": "Criar carrossel",
-    "adminUsers": "Usuários"
+    "adminUsers": "Usuários",
+    "queue": "Fila"
   },
   "personas": {
     "page": {

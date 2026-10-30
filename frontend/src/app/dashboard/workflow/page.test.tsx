@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@/test/utils";
 import {
+  QUEUE_API,
   WORKFLOW_API,
   WORKFLOW_BOARD_POLL_INTERVAL_MS,
 } from "@/constants/workflow";
@@ -219,5 +220,63 @@ describe("WorkflowBoardPage toolbar", () => {
       "/dashboard/workflow?q=claude",
       { scroll: false },
     );
+  });
+});
+
+describe("WorkflowBoardPage queue summary", () => {
+  function queueCalls(): number {
+    return mockFetch.mock.calls.filter(([url]) => url === QUEUE_API.BOARD)
+      .length;
+  }
+
+  function route(url: string): Promise<Response> {
+    if (url === WORKFLOW_API.WORKFLOW_BOARD) {
+      return jsonResponse(board(FIRST_TITLE));
+    }
+    if (url === WORKFLOW_API.WORKFLOW_BOARD_ARCHIVED) {
+      return jsonResponse({ columns: [] });
+    }
+    if (url === QUEUE_API.BOARD) {
+      return jsonResponse({
+        active: [],
+        dead: [],
+        backlog: [],
+        average_drive_minutes: 0,
+      });
+    }
+    return jsonResponse({});
+  }
+
+  beforeEach(() => {
+    navigation.params = new URLSearchParams();
+    navigation.replace.mockClear();
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(route);
+  });
+
+  /** Scenario: The board keeps only a queue summary */
+  it("shows the summary chip without the full queue panel", async () => {
+    render(<WorkflowBoardPage />);
+    expect(await screen.findByTestId("queue-summary-link")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "queue.processNow" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** Scenario: The board keeps only a queue summary */
+  it("does not call the queue API on the archived board", async () => {
+    render(<WorkflowBoardPage />);
+    await screen.findByTestId("queue-summary-link");
+    const callsBefore = queueCalls();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "archive.showArchived" }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "archive.showActive" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("queue-summary-link")).not.toBeInTheDocument();
+    expect(queueCalls()).toBe(callsBefore);
   });
 });

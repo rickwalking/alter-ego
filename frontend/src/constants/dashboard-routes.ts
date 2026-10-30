@@ -8,6 +8,7 @@ export const DASHBOARD_ROUTES = {
   BLOG_POSTS: "/dashboard/blog-posts",
   BLOG_POST_EDIT: (id: string) => `/dashboard/blog-posts/${id}/edit`,
   WORKFLOW: "/dashboard/workflow",
+  QUEUE: "/dashboard/queue",
   CALENDAR: "/dashboard/calendar",
   RUBRICS: "/dashboard/rubrics",
   PERSONAS: "/dashboard/personas",
