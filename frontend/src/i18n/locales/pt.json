@@ -1860,12 +1860,13 @@
       "processForbidden": "Você não tem permissão para processar a fila.",
       "openCarousel": "Abrir carrossel",
       "boardLink": "Ir para o quadro",
+      "adminsOnly": "A fila de geração está disponível apenas para administradores.",
       "summary": {
         "label": "Fila",
         "empty": "Fila vazia",
-        "running": "{count} gerando",
-        "queued": "{count} na fila",
-        "dead": "{count} parada"
+        "running": "{count, plural, one {# gerando} other {# gerando}}",
+        "queued": "{count, plural, one {# na fila} other {# na fila}}",
+        "dead": "{count, plural, one {# parada} other {# paradas}}"
       }
     },
     "reprocess": {

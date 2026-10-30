@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 
 import { QUEUE_API } from "@/constants/workflow";
 import en from "@/i18n/locales/en.json";
+import pt from "@/i18n/locales/pt.json";
 import GenerationQueuePage from "./page";
 import { queueWrapper as wrapper } from "./queue-panel.test-utils";
 
@@ -103,9 +104,29 @@ describe("GenerationQueuePage", () => {
     });
     expect(carousel).toHaveAttribute("href", "/dashboard/create/proj-1");
   });
-  it("has the queue page title in both languages", async () => {
-    renderPage();
-    await screen.findByText("Running theme");
+  it("has the queue page title in both languages", () => {
     expect(en.pageTitles).toHaveProperty("queue");
+    expect(pt.pageTitles).toHaveProperty("queue");
+  });
+
+  /** Scenario: The Fila nav item is admin-only */
+  it("tells non-admins the queue is admins-only when the API latches 403", async () => {
+    mockFetch.mockImplementation((url) =>
+      url === QUEUE_API.BOARD
+        ? Promise.resolve({
+            ok: false,
+            status: 403,
+            json: () => Promise.resolve({ detail: "forbidden" }),
+          } as unknown as Response)
+        : Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({}),
+          } as unknown as Response),
+    );
+    renderPage();
+    expect(await screen.findByText(labels.adminsOnly)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: labels.processNow }),
+    ).not.toBeInTheDocument();
   });
 });

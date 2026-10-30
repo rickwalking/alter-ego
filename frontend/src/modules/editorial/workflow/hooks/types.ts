@@ -108,6 +108,8 @@ export interface GenerationQueueState
   extends GenerationQueueMaintenanceState, GenerationQueueActionState {
   board: QueueBoard | null;
   error: string | null;
+  /** Latched once the queue API answers 403 (admin-only surface). */
+  forbidden: boolean;
 }
 
 export interface GenerationQueueMaintenanceDeps {

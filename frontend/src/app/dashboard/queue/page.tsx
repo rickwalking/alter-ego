@@ -5,9 +5,8 @@ import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { DASHBOARD_PAGE_FONT_FAMILY } from "@/constants/dashboard-page";
 import { QueuePanelSection } from "./queue-panel-section";
-
-const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 
 /** The generation queue on its own admin page, linked from the board. */
 export default function GenerationQueuePage(): React.ReactElement {
@@ -15,7 +14,7 @@ export default function GenerationQueuePage(): React.ReactElement {
   return (
     <div
       className="flex-1 text-white relative"
-      style={{ fontFamily: PAGE_FONT_FAMILY }}
+      style={{ fontFamily: DASHBOARD_PAGE_FONT_FAMILY }}
     >
       <NeonTopBar
         title={t("title")}

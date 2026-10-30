@@ -1,5 +1,5 @@
 /** The board's compact queue summary linking to the queue page. */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import { QUEUE_STATUS } from "@/constants/workflow";
@@ -14,6 +14,8 @@ import {
   makeQueueItem as item,
   queueWrapper as wrapper,
 } from "@/app/dashboard/queue/queue-panel.test-utils";
+
+vi.mock("next-intl", async (importOriginal) => importOriginal());
 
 const labels = en.workflow.queue.summary;
 
@@ -62,9 +64,9 @@ describe("QueueSummaryLink", () => {
   /** Scenario: The board keeps only a queue summary */
   it("reads Fila vazia when the queue is empty", () => {
     renderSummary(board());
-    expect(screen.getByTestId("queue-summary-link")).toHaveTextContent(
-      labels.empty,
-    );
+    const link = screen.getByTestId("queue-summary-link");
+    expect(link).toHaveTextContent(labels.empty);
+    expect(link).not.toHaveTextContent(`${labels.label}:`);
   });
 
   /** Scenario: The board keeps only a queue summary */

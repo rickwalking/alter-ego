@@ -269,6 +269,7 @@ export function useGenerationQueue(): GenerationQueueState {
   const tReprocess = useTranslations("workflow.reprocess");
   const [board, setBoard] = useState<QueueBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const [pollingStopped, setPollingStopped] = useState(false);
   const latestRequestRef = useRef(0);
   const forbiddenRef = useRef(false);
@@ -284,6 +285,7 @@ export function useGenerationQueue(): GenerationQueueState {
       setPollingStopped(true);
       setBoard(null);
       setError(null);
+      setForbidden(true);
       return;
     }
     if (requestId !== latestRequestRef.current) return;
@@ -294,7 +296,7 @@ export function useGenerationQueue(): GenerationQueueState {
   const actions = useQueueActions(load, t, tReprocess);
   const maintenance = useQueueMaintenance(load, t);
   usePolling(load, pollingStopped);
-  return { board, error, ...actions, ...maintenance };
+  return { board, error, forbidden, ...actions, ...maintenance };
 }
 
 /** The board or load error, with forbidden access latched by the caller. */

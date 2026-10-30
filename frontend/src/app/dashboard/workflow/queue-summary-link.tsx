@@ -6,11 +6,13 @@ import { NeonBadge } from "@/components/atoms/neon-badge";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { QUEUE_STATUS } from "@/constants/workflow";
 import { NEON_RED, TEXT_MUTED } from "@/constants/neon";
+import { useGenerationQueue } from "@/modules/editorial";
 import type { QueueBoard } from "@/schemas/generation-queue";
 
 const SUMMARY_CLASS =
   "inline-flex max-w-full items-center gap-2 rounded-full border border-[color:var(--color-neon-cyan-border-30)] px-3 py-1 text-xs font-semibold transition-colors hover:border-neon-cyan/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep";
 const SEGMENT_SEPARATOR = " · ";
+const SUMMARY_ARROW = "→";
 
 interface QueueSummarySegment {
   text: string;
@@ -72,28 +74,39 @@ export function QueueSummaryLink({
       className={SUMMARY_CLASS}
       data-testid="queue-summary-link"
     >
-      <span style={{ color: TEXT_MUTED }}>{t("label")}:</span>
       {total === 0 ? (
         <span>{t("empty")}</span>
       ) : (
-        <span className="flex items-center gap-1 whitespace-nowrap">
-          {segments.map((segment, index) => (
-            <span key={segment.text} className="flex items-center gap-1">
-              {index > 0 && (
-                <span aria-hidden="true" style={{ color: TEXT_MUTED }}>
-                  {SEGMENT_SEPARATOR}
+        <>
+          <span style={{ color: TEXT_MUTED }}>{t("label")}:</span>
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            {segments.map((segment, index) => (
+              <span key={segment.text} className="flex items-center gap-1">
+                {index > 0 && (
+                  <span aria-hidden="true" style={{ color: TEXT_MUTED }}>
+                    {SEGMENT_SEPARATOR}
+                  </span>
+                )}
+                <span style={segment.alert ? { color: NEON_RED } : undefined}>
+                  {segment.text}
                 </span>
-              )}
-              <span style={segment.alert ? { color: NEON_RED } : undefined}>
-                {segment.text}
               </span>
-            </span>
-          ))}
-        </span>
+            ))}
+          </span>
+        </>
       )}
-      <NeonBadge variant="cyan" size="sm">
-        →
+      <NeonBadge variant="cyan" size="sm" aria-hidden="true">
+        {SUMMARY_ARROW}
       </NeonBadge>
     </Link>
   );
+}
+
+/**
+ * The board's queue summary wired to the queue API. Rendered only on the
+ * active board, so the archived board never polls the queue.
+ */
+export function QueueSummarySection(): React.ReactElement | null {
+  const { board } = useGenerationQueue();
+  return <QueueSummaryLink board={board} />;
 }

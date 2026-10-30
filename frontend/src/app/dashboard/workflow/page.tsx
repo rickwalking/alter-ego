@@ -12,19 +12,16 @@ import {
   NeonKanbanBoard,
   mapApiWorkflowKanbanToNeon,
 } from "@/modules/editorial-operations";
-import {
-  useWorkflowKanban,
-  useGenerationQueue,
-  type WorkflowKanban,
-} from "@/modules/editorial";
+import { useWorkflowKanban, type WorkflowKanban } from "@/modules/editorial";
 import { localizeBoardColumns } from "@/app/dashboard/workflow/localize-board";
+import { DASHBOARD_PAGE_FONT_FAMILY } from "@/constants/dashboard-page";
 import {
   countBoardStatusBuckets,
   filterBoardColumns,
 } from "@/app/dashboard/workflow/board-filters";
 import { useBoardFilters } from "@/app/dashboard/workflow/use-board-filters";
 import { WorkflowToolbar } from "@/app/dashboard/workflow/workflow-toolbar";
-import { QueueSummaryLink } from "./queue-summary-link";
+import { QueueSummarySection } from "./queue-summary-link";
 import { CardArchiveAction } from "./card-archive-action";
 import type { BoardFeedbackProps, WorkflowBoardViewProps } from "./types";
 
@@ -42,8 +39,6 @@ const NEW_CARD_ICON = (
     <path d="M5 12h14" strokeLinecap="round" />
   </svg>
 );
-
-const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 
 /** Phase ids with a `create.phases` name (board columns). */
 const BOARD_PHASES: ReadonlySet<string> = new Set([
@@ -96,7 +91,6 @@ function WorkflowBoardView({
   const tStatus = useTranslations("create.status");
   const locale = useLocale();
   const { filters, setFilters } = useBoardFilters();
-  const { board: queueBoard } = useGenerationQueue();
   const { board, loading, error, refetch } = useWorkflowKanban(archived);
   const refresh = (): void => void refetch();
   const showEmpty = archived && board !== null && isEmptyBoard(board);
@@ -118,11 +112,7 @@ function WorkflowBoardView({
       data-testid="workflow-board-view"
       className="flex h-[calc(100dvh-3.5rem)] flex-col gap-4 overflow-hidden p-6"
     >
-      {!archived && (
-        <div className="max-h-[45%] shrink-0 overflow-y-auto">
-          <QueueSummaryLink board={queueBoard} />
-        </div>
-      )}
+      {!archived && <QueueSummarySection />}
       <div className="shrink-0">
         <WorkflowToolbar
           filters={filters}
@@ -172,7 +162,7 @@ export default function WorkflowBoardPage(): React.ReactElement {
   return (
     <div
       className="flex-1 text-white relative"
-      style={{ fontFamily: PAGE_FONT_FAMILY }}
+      style={{ fontFamily: DASHBOARD_PAGE_FONT_FAMILY }}
     >
       <NeonTopBar
         title={t("board.title")}
