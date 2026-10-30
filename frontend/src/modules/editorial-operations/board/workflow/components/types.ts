@@ -51,3 +51,21 @@ export interface BoardRovingFocus {
   registerCard: (id: string, element: HTMLElement | null) => void;
   onBoardKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }
+
+/** A card's coordinates in the non-empty-column grid. */
+export interface BoardCardPosition {
+  readonly column: number;
+  readonly row: number;
+}
+
+/** The outcome of resolving a key press on a board card. */
+export interface BoardKeyResult {
+  readonly click: boolean;
+  readonly focusId: string | null;
+}
+
+/** The card link element a keyboard event bubbled from. */
+export interface BoardCardLinkTarget {
+  readonly link: Element;
+  readonly cardId: string;
+}

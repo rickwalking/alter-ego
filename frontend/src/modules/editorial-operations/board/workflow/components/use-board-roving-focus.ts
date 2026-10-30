@@ -3,27 +3,25 @@
 import { useCallback, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { KanbanCard, KanbanColumn } from "@/schemas/neon-kanban";
-import type { BoardRovingFocus } from "./types";
+import type {
+  BoardCardLinkTarget,
+  BoardCardPosition,
+  BoardKeyResult,
+  BoardRovingFocus,
+} from "./types";
 
 const CARD_LINK_SELECTOR = "a[data-board-card-id]";
 
 type CardColumns = readonly (readonly KanbanCard[])[];
 
-interface CardPosition {
-  readonly column: number;
-  readonly row: number;
-}
-
-interface BoardKeyResult {
-  readonly click: boolean;
-  readonly focusId: string | null;
-}
-
 function cardsAt(columns: CardColumns, index: number): readonly KanbanCard[] {
   return columns[index] ?? [];
 }
 
-function positionOf(columns: CardColumns, cardId: string): CardPosition | null {
+function positionOf(
+  columns: CardColumns,
+  cardId: string,
+): BoardCardPosition | null {
   for (let column = 0; column < columns.length; column += 1) {
     const row = cardsAt(columns, column).findIndex(
       (card) => card.id === cardId,
@@ -45,7 +43,11 @@ function clampRow(row: number, length: number): number {
   return Math.min(Math.max(row, 0), Math.max(length - 1, 0));
 }
 
-function rowStep(columns: CardColumns, position: CardPosition, delta: number) {
+function rowStep(
+  columns: CardColumns,
+  position: BoardCardPosition,
+  delta: number,
+) {
   return {
     column: position.column,
     row: clampRow(
@@ -57,9 +59,9 @@ function rowStep(columns: CardColumns, position: CardPosition, delta: number) {
 
 function columnJump(
   columns: CardColumns,
-  position: CardPosition,
+  position: BoardCardPosition,
   step: number,
-): CardPosition | null {
+): BoardCardPosition | null {
   let column = position.column + step;
   while (
     column >= 0 &&
@@ -77,9 +79,9 @@ function columnJump(
 
 function targetPosition(
   columns: CardColumns,
-  position: CardPosition,
+  position: BoardCardPosition,
   key: string,
-): CardPosition | null {
+): BoardCardPosition | null {
   if (key === "Home") return { column: position.column, row: 0 };
   if (key === "End") {
     return {
@@ -115,12 +117,7 @@ function boardKeyResult(
   return { click: false, focusId: card.id };
 }
 
-interface BoardCardLink {
-  readonly link: Element;
-  readonly cardId: string;
-}
-
-function boardCardLink(target: EventTarget | null): BoardCardLink | null {
+function boardCardLink(target: EventTarget | null): BoardCardLinkTarget | null {
   if (!(target instanceof Element)) return null;
   const link = target.closest(CARD_LINK_SELECTOR);
   const cardId = link?.getAttribute("data-board-card-id");
