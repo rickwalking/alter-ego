@@ -281,9 +281,9 @@ jobs:
   test:
     name: backend / Test & Coverage
     runs-on: ubuntu-latest
-    # AE-0417: a hung pytest teardown once ran this job ~3h (green runs take
-    # 9-14 min). Fail fast instead of burning the runner.
-    timeout-minutes: 30
+    # AE-0417: a hung pytest teardown once ran this job ~3h. The suite now
+    # takes about 25-40 min, so 45 still stops a hang without cutting it off.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
