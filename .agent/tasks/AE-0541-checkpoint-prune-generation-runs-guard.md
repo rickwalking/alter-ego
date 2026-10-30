@@ -67,6 +67,11 @@ AE-0522 not merged.
   queue through its public facade (`generation_queue.public.project_has_held_run`), the same `EXISTS` shape as the
   existing `project_has_active_run`, so the import-linter boundary stays intact. Pedro asked for the queue tickets
   before the users-area items (2026-10-30).
+- 2026-10-30: the `EXISTS` fences live in `generation_queue/infrastructure/run_fences.py` and are re-exported by
+  `public.py` (kept under 400 lines). Known limit, same as the autopilot guard: `FOR UPDATE` locks only
+  `carousel_projects` rows, so a run enqueued in the instant after the locked re-check is not seen; the prune still
+  keeps the latest checkpoint, so such a resume still works. A dead-lettered run blocks the prune of its carousel
+  until it is recovered or cancelled (intended).
 
 ## Progress Log
 
@@ -76,7 +81,8 @@ AE-0522 not merged.
 ## Files Touched
 
 - `backend/src/rag_backend/modules/generation_queue/constants.py` (`HELD_STATUSES`)
-- `backend/src/rag_backend/modules/generation_queue/public.py` (`project_has_held_run`, shared `_project_has_run_in`)
+- `backend/src/rag_backend/modules/generation_queue/infrastructure/run_fences.py` (new: `project_has_active_run` moved here, `project_has_held_run`, shared `_project_has_run_in`)
+- `backend/src/rag_backend/modules/generation_queue/public.py` (re-exports the fences)
 - `backend/src/rag_backend/infrastructure/database/checkpoint_prune.py` (eligibility guard + module docstring)
 - `backend/tests/features/checkpoint_prune_ae0525.feature` (2 scenarios)
 - `backend/tests/integration/checkpoint_prune_pg_support.py` (`generation_runs` table, `seed_generation_run`)

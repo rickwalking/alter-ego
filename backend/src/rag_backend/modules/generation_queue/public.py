@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
-from sqlalchemy import ColumnElement, exists, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
@@ -57,6 +57,10 @@ from rag_backend.modules.generation_queue.infrastructure.drive_lock import (
 )
 from rag_backend.modules.generation_queue.infrastructure.maintenance_gateway import (
     WebMaintenanceGateway,
+)
+from rag_backend.modules.generation_queue.infrastructure.run_fences import (
+    project_has_active_run,
+    project_has_held_run,
 )
 from rag_backend.modules.generation_queue.infrastructure.schema import (
     QueueSchemaReport,
@@ -246,43 +250,6 @@ async def adopt_orphaned_projects(engine: AsyncEngine) -> int:
             continue
         logger.info(LOG_ORPHAN_ADOPTED, project_id=project_id)
     return adopted
-
-
-def project_has_active_run(project_id: ColumnElement[str]) -> ColumnElement[bool]:
-    """SQL ``EXISTS`` an active generation run for ``project_id`` (a column).
-
-    Lets a writer fence its own UPDATE on the queue's ownership atomically
-    (``WHERE NOT project_has_active_run(...)``), not only with a read before it.
-    """
-    from rag_backend.modules.generation_queue.constants import ACTIVE_STATUSES
-
-    return _project_has_run_in(project_id, ACTIVE_STATUSES)
-
-
-def project_has_held_run(project_id: ColumnElement[str]) -> ColumnElement[bool]:
-    """SQL ``EXISTS`` a queued, running, waiting or dead-lettered run.
-
-    Each of those runs resumes the carousel's LangGraph thread from its
-    checkpoint later, so the checkpoint prune keeps such a thread whole.
-    """
-    from rag_backend.modules.generation_queue.constants import HELD_STATUSES
-
-    return _project_has_run_in(project_id, HELD_STATUSES)
-
-
-def _project_has_run_in(
-    project_id: ColumnElement[str], statuses: Collection[str]
-) -> ColumnElement[bool]:
-    from rag_backend.modules.generation_queue.infrastructure.models import (
-        GenerationRunModel,
-    )
-
-    return exists(
-        select(GenerationRunModel.id).where(
-            GenerationRunModel.carousel_project_id == project_id,
-            GenerationRunModel.status.in_(list(statuses)),
-        )
-    )
 
 
 async def projects_with_active_runs(
