@@ -251,7 +251,9 @@ jobs:
               sleep 2
             done
 
-            # DISABLED (AE-0207 rework): migrate-on-deploy + drift gate removed.
+            # DISABLED (AE-0207 rework): migrate-on-deploy + the pre-stack drift gate
+            # removed. The read-only drift check now runs after the stack is up
+            # (AE-0578, below), where it cannot keep prod down.
             # The alembic chain has TWO heads (0011_drop_audit_stream_entry_id +
             # e5f6a7b8c9d0) so `alembic upgrade head` errors, and prod was never
             # stamped — this TOOK PROD DOWN on 2026-06-18 (deploy aborted before
@@ -335,11 +337,40 @@ jobs:
               echo "::error::generation queue schema exited $QUEUE_SCHEMA_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            # Insight columns (AE-0578): create_all made ig_media but never adds
+            # columns to the existing instagram_post_insights table, so this is how
+            # the four nullable columns of migration f9a0b1c2d3e4 reach prod.
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.ig_insight_columns --apply --verify
+            IG_INSIGHT_COLUMNS_EXIT=$?
+            set -e
+            if [ "$IG_INSIGHT_COLUMNS_EXIT" -ne 0 ]; then
+              echo "::error::ig insight columns exited $IG_INSIGHT_COLUMNS_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
             # Wait for services to start
             sleep 10
+
+            # Schema drift check (AE-0578): read-only, in the running backend, so
+            # the app's create_all has made any new table first. A mapped ORM
+            # column missing from the live DB (a model change on an existing table
+            # with no one-shot) fails the job here instead of 500ing the first
+            # read. Retried while the backend finishes starting; never takes the
+            # stack down (the job fails at the very end).
+            SCHEMA_DRIFT_EXIT=1
+            for attempt in $(seq 1 12); do
+              set +e
+              docker compose -f docker-compose.prod.yml exec -T backend \
+                python -m rag_backend.infrastructure.database.check_drift_cli
+              SCHEMA_DRIFT_EXIT=$?
+              set -e
+              [ "$SCHEMA_DRIFT_EXIT" -eq 0 ] && break
+              sleep 10
+            done
 
             # Post-deploy health check & diagnostics
             echo "--- Checking listening ports ---"
@@ -405,6 +436,14 @@ jobs:
             fi
             if [ "$QUEUE_SCHEMA_EXIT" -ne 0 ]; then
               echo "::error::generation queue schema failed (exit $QUEUE_SCHEMA_EXIT): run 'python -m rag_backend.scripts.generation_queue_schema --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$IG_INSIGHT_COLUMNS_EXIT" -ne 0 ]; then
+              echo "::error::ig insight columns failed (exit $IG_INSIGHT_COLUMNS_EXIT): run 'python -m rag_backend.scripts.ig_insight_columns --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$SCHEMA_DRIFT_EXIT" -ne 0 ]; then
+              echo "::error::schema drift (exit $SCHEMA_DRIFT_EXIT): a mapped ORM column is missing on prod (see the drift check output above); add an idempotent one-shot for a new column on an existing table"
               ONE_SHOT_FAILED=1
             fi
             if [ "$ONE_SHOT_FAILED" -ne 0 ]; then
