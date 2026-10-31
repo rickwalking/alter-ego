@@ -36,3 +36,13 @@ export const USER_CARDS_MEDIA_QUERY = "(max-width: 767px)";
 
 /** At least 44 x 44 px, the WCAG 2.5.5 touch target size. */
 export const TOUCH_TARGET_CLASS = "min-h-11 min-w-11";
+
+/** Marks a row action button with `<action>:<user id>`, to find it again after a re-render. */
+export const USER_ACTION_ATTRIBUTE = "data-user-action";
+
+/** The row actions, as written in `USER_ACTION_ATTRIBUTE`. */
+export const USER_ACTIONS = {
+  EDIT: "edit",
+  RESET: "reset",
+  DELETE: "delete",
+} as const;

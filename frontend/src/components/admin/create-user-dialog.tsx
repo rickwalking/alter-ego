@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin-user-errors";
 import { responseErrorBody } from "@/lib/response-error";
 import { CreatePasswordField } from "./create-password-field";
+import { DialogDoneButton } from "./dialog-done-button";
 import {
   UserDialogActions,
   UserDialogShell,
@@ -26,7 +27,6 @@ import { UserFormField } from "./user-form-field";
 const CREATE_USERS_URL = "/api/admin/users";
 const AUTOCOMPLETE_EMAIL = "email";
 const AUTOCOMPLETE_NAME = "name";
-const SUCCESS_CLOSE_DELAY_MS = 2000;
 
 interface CreateUserDialogProps {
   onClose: () => void;
@@ -67,6 +67,12 @@ function buildPayload(
   return password ? { ...fields, password } : fields;
 }
 
+/**
+ * The create-user dialog. Once the user is created it shows the result (with
+ * the one-time temporary password when the API generated one) and only its
+ * "Done" button closes it: Escape and the backdrop are ignored, so the
+ * password cannot be dismissed by accident.
+ */
 export function CreateUserDialog({
   onClose,
   onSuccess,
@@ -95,7 +101,6 @@ export function CreateUserDialog({
         ? t("createSuccessWithPassword", { password: outcome.tempPassword })
         : t("createSuccess"),
     );
-    setTimeout(onSuccess, SUCCESS_CLOSE_DELAY_MS);
   };
 
   const handleSubmit = async (e: React.SubmitEvent) => {
@@ -118,56 +123,62 @@ export function CreateUserDialog({
     }
   };
 
+  const ignoreClose = (): void => undefined;
+  const succeeded = status.success !== "";
+
   return (
     <UserDialogShell
       title={t("createUserTitle")}
-      onClose={onClose}
+      onClose={succeeded ? ignoreClose : onClose}
       error={status.error}
       success={status.success}
     >
-      <form
-        method="post"
-        onSubmit={(e) => {
-          void handleSubmit(e);
-        }}
-        className="mt-4 space-y-4"
-      >
-        <UserFormField
-          id={`${fieldId}-email`}
-          label={t("emailLabel")}
-          type="email"
-          value={email}
-          onChange={setEmail}
-          autoComplete={AUTOCOMPLETE_EMAIL}
-          error={fieldError(fieldErrors.email)}
-        />
+      {succeeded && <DialogDoneButton onDone={onSuccess} />}
+      {!succeeded && (
+        <form
+          method="post"
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="mt-4 space-y-4"
+        >
+          <UserFormField
+            id={`${fieldId}-email`}
+            label={t("emailLabel")}
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete={AUTOCOMPLETE_EMAIL}
+            error={fieldError(fieldErrors.email)}
+          />
 
-        <UserFormField
-          id={`${fieldId}-full-name`}
-          label={t("fullNameLabel")}
-          type="text"
-          value={fullName}
-          onChange={setFullName}
-          autoComplete={AUTOCOMPLETE_NAME}
-          error={fieldError(fieldErrors.full_name)}
-        />
+          <UserFormField
+            id={`${fieldId}-full-name`}
+            label={t("fullNameLabel")}
+            type="text"
+            value={fullName}
+            onChange={setFullName}
+            autoComplete={AUTOCOMPLETE_NAME}
+            error={fieldError(fieldErrors.full_name)}
+          />
 
-        <UserRoleSelect value={role} onChange={setRole} />
+          <UserRoleSelect value={role} onChange={setRole} />
 
-        <CreatePasswordField
-          id={`${fieldId}-password`}
-          value={password}
-          onChange={setPassword}
-          error={fieldError(fieldErrors.password)}
-        />
+          <CreatePasswordField
+            id={`${fieldId}-password`}
+            value={password}
+            onChange={setPassword}
+            error={fieldError(fieldErrors.password)}
+          />
 
-        <UserDialogActions
-          onClose={onClose}
-          isLoading={status.isLoading}
-          label={t("create")}
-          loadingLabel={t("creating")}
-        />
-      </form>
+          <UserDialogActions
+            onClose={onClose}
+            isLoading={status.isLoading}
+            label={t("create")}
+            loadingLabel={t("creating")}
+          />
+        </form>
+      )}
     </UserDialogShell>
   );
 }

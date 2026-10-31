@@ -16,6 +16,8 @@ export interface NeonModalProps {
   role?: "dialog" | "alertdialog";
   /** Accessible name of the backdrop button (translated by the caller). */
   closeLabel?: string;
+  /** Id of the element that describes the dialog (`aria-describedby`). */
+  describedBy?: string;
 }
 
 const DEFAULT_CLOSE_LABEL = "Close modal";
@@ -34,6 +36,7 @@ export function NeonModal({
   footer,
   role = "dialog",
   closeLabel = DEFAULT_CLOSE_LABEL,
+  describedBy,
 }: Readonly<NeonModalProps>): React.ReactElement | null {
   const cardRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -62,6 +65,7 @@ export function NeonModal({
       role={role}
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
+      aria-describedby={describedBy}
     >
       <button
         type="button"

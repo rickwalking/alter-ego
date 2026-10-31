@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { adminErrorKey } from "@/lib/admin-user-errors";
 import { responseErrorBody } from "@/lib/response-error";
@@ -35,6 +35,7 @@ export function DeleteUserDialog({
   const t = useTranslations("admin");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const descriptionId = useId();
 
   const handleDelete = async () => {
     setError("");
@@ -59,8 +60,9 @@ export function DeleteUserDialog({
       title={t("deleteUserTitle")}
       onClose={onClose}
       role={DIALOG_ROLE_ALERT}
+      descriptionId={descriptionId}
       subtitle={
-        <p className={DIALOG_MUTED_TEXT_CLASS}>
+        <p id={descriptionId} className={DIALOG_MUTED_TEXT_CLASS}>
           {t("deleteUserDescription", { email: user.email })}
         </p>
       }

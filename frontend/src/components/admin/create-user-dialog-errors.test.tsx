@@ -147,3 +147,40 @@ describe("create-user dialog errors", () => {
     expect(screen.queryByText("offline")).not.toBeInTheDocument();
   });
 });
+
+describe("create-user dialog after success", () => {
+  // Scenario: The generated password stays until the admin closes it
+  it("ignores Escape and the backdrop while the temporary password shows", async () => {
+    stubFetch({ id: "n1", email: "x", temp_password: "Temp-Pass-123!" }, 201);
+    const onClose = vi.fn();
+    const onSuccess = vi.fn();
+    const user = userEvent.setup();
+    render(<CreateUserDialog onClose={onClose} onSuccess={onSuccess} />);
+    await user.type(screen.getByLabelText("Email"), "new@example.com");
+    await user.type(screen.getByLabelText("Full name"), "New Person");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const done = await screen.findByRole("button", { name: "Done" });
+    expect(screen.getByRole("status")).toHaveTextContent("Temp-Pass-123!");
+    expect(done).toHaveFocus();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Close dialog" }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(done);
+    expect(onSuccess).toHaveBeenCalledOnce();
+  });
+
+  // Scenario: Escape closes a dialog and focus returns to the opener
+  it("still closes on Escape before anything was created", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<CreateUserDialog onClose={onClose} onSuccess={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Close dialog" }));
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});

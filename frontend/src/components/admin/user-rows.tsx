@@ -2,7 +2,12 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { TOUCH_TARGET_CLASS } from "@/constants/admin-users";
+import {
+  TOUCH_TARGET_CLASS,
+  USER_ACTION_ATTRIBUTE,
+  USER_ACTIONS,
+} from "@/constants/admin-users";
+import { userActionKey } from "@/lib/refocus-user-action";
 import { formatLocaleDate } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
 import { RoleBadge } from "./role-badge";
@@ -44,6 +49,9 @@ function UserActions({
         variant="ghost"
         size="sm"
         onClick={() => handlers.onEdit(user)}
+        {...{
+          [USER_ACTION_ATTRIBUTE]: userActionKey(USER_ACTIONS.EDIT, user.id),
+        }}
         className={cn(ACTION_BUTTON_CLASS, "text-neon-cyan")}
       >
         {t("edit")}
@@ -52,6 +60,9 @@ function UserActions({
         variant="ghost"
         size="sm"
         onClick={() => handlers.onReset(user)}
+        {...{
+          [USER_ACTION_ATTRIBUTE]: userActionKey(USER_ACTIONS.RESET, user.id),
+        }}
         className={cn(ACTION_BUTTON_CLASS, "text-neon-cyan")}
       >
         {t("resetPassword")}
@@ -60,6 +71,9 @@ function UserActions({
         variant="ghost"
         size="sm"
         onClick={() => handlers.onDelete(user)}
+        {...{
+          [USER_ACTION_ATTRIBUTE]: userActionKey(USER_ACTIONS.DELETE, user.id),
+        }}
         className={cn(ACTION_BUTTON_CLASS, "text-neon-red")}
       >
         {t("delete")}

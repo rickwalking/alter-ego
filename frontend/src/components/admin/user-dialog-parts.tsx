@@ -71,6 +71,8 @@ interface UserDialogShellProps {
   success?: ReactNode;
   /** `alertdialog` for the destructive confirmation (delete). */
   role?: "dialog" | "alertdialog";
+  /** Id of the text that describes the dialog. */
+  descriptionId?: string;
   children: ReactNode;
 }
 
@@ -87,6 +89,7 @@ export function UserDialogShell({
   errorId,
   success,
   role,
+  descriptionId,
   children,
 }: Readonly<UserDialogShellProps>) {
   const t = useTranslations("admin");
@@ -97,6 +100,7 @@ export function UserDialogShell({
       title={title}
       role={role}
       closeLabel={t("closeDialog")}
+      describedBy={descriptionId}
       footer={false}
     >
       {subtitle}
@@ -142,7 +146,7 @@ export function UserDialogActions({
   const t = useTranslations("admin");
   const destructive = onConfirm !== undefined;
   return (
-    <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
       <NeonButton
         variant="ghost"
         onClick={onClose}

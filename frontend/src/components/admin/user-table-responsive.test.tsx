@@ -1,7 +1,7 @@
 /**
  * Gherkin: tests/features/users-area-polish-ae0514.feature
  */
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -139,6 +139,51 @@ describe("user list on a phone", () => {
     );
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveClass(
       "min-h-11",
+    );
+  });
+});
+
+/** A matchMedia whose phone query can be flipped, notifying its listeners. */
+function switchableWidth(): (phone: boolean) => void {
+  let phone = false;
+  const listeners = new Set<() => void>();
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      get matches(): boolean {
+        return query === USER_CARDS_MEDIA_QUERY && phone;
+      },
+      media: query,
+      addEventListener: (_: string, listener: () => void) =>
+        listeners.add(listener),
+      removeEventListener: (_: string, listener: () => void) =>
+        listeners.delete(listener),
+    })),
+  );
+  return (next) => {
+    phone = next;
+    act(() => listeners.forEach((listener) => listener()));
+  };
+}
+
+describe("focus after the layout swaps", () => {
+  // Scenario: Focus survives a layout swap while a dialog is open
+  it("returns focus to the same action of the same user in the cards", async () => {
+    const setPhone = switchableWidth();
+    const user = userEvent.setup();
+    render(<UserTable users={USERS} onRefresh={vi.fn()} />);
+    const row = within(screen.getAllByRole("row")[2]!);
+
+    await user.click(row.getByRole("button", { name: "Reset password" }));
+    setPhone(true);
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    const card = within(screen.getAllByRole("listitem")[1]!);
+    await waitFor(() =>
+      expect(
+        card.getByRole("button", { name: "Reset password" }),
+      ).toHaveFocus(),
     );
   });
 });

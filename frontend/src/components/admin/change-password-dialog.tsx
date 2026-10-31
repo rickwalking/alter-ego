@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { adminErrorKey } from "@/lib/admin-user-errors";
 import { responseErrorBody } from "@/lib/response-error";
+import { DialogDoneButton } from "./dialog-done-button";
 import {
   DIALOG_BUTTON_CLASS,
   DIALOG_MUTED_TEXT_CLASS,
@@ -122,17 +123,12 @@ export function ChangePasswordDialog({
       )}
 
       {status.success && (
-        <div className="mt-6 flex justify-end">
-          <NeonButton
-            onClick={() => {
-              onSuccess();
-              onClose();
-            }}
-            className={DIALOG_BUTTON_CLASS}
-          >
-            {t("done")}
-          </NeonButton>
-        </div>
+        <DialogDoneButton
+          onDone={() => {
+            onSuccess();
+            onClose();
+          }}
+        />
       )}
     </UserDialogShell>
   );

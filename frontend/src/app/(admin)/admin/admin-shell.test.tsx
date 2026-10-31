@@ -3,23 +3,25 @@
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/users",
 }));
 
+const auth = vi.hoisted(() => ({ isAdmin: true }));
+
 vi.mock("@/modules/identity", () => ({
   useAuth: () => ({
     user: {
-      id: "admin-1",
-      email: "admin@example.com",
-      full_name: "Admin User",
-      role: "admin",
+      id: "user-1",
+      email: "user@example.com",
+      full_name: "Some User",
+      role: auth.isAdmin ? "admin" : "editor",
     },
     isLoading: false,
-    isAdmin: true,
-    isEditor: false,
+    isAdmin: auth.isAdmin,
+    isEditor: !auth.isAdmin,
     logout: vi.fn(),
   }),
 }));
@@ -34,7 +36,21 @@ function renderShell(): void {
   );
 }
 
+afterEach(() => {
+  auth.isAdmin = true;
+});
+
 describe("admin shell", () => {
+  // Scenario: A non-admin does not see the Users link
+  it("hides the Users link from a non-admin", () => {
+    auth.isAdmin = false;
+    renderShell();
+    expect(
+      screen.queryByRole("link", { name: /Users/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Dashboard/ })).toBeInTheDocument();
+  });
+
   // Scenario: The admin shell has the PT/EN switch
   it("shows the EN | PT language switch in the sidebar", () => {
     renderShell();

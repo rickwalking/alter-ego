@@ -1636,7 +1636,8 @@
     "forbiddenDescription": "Você não tem permissão para acessar esta página.",
     "goHome": "Ir para o Início",
     "tryAgain": "Tentar Novamente",
-    "accountDeactivated": "Esta conta está desativada. Peça a um admin para reativá-la."
+    "accountDeactivated": "Esta conta está desativada. Peça a um admin para reativá-la.",
+    "serverUnreachable": "Não foi possível falar com o servidor. Tente de novo em instantes."
   },
   "notFound": {
     "code": "404",

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { USER_CARDS_MEDIA_QUERY } from "@/constants/admin-users";
+import { USER_ACTIONS, USER_CARDS_MEDIA_QUERY } from "@/constants/admin-users";
+import { refocusUserAction } from "@/lib/refocus-user-action";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
@@ -17,7 +18,8 @@ interface UserTableProps {
 
 /**
  * The admin user list: a table from tablet width up, stacked cards on a
- * phone. Each row action opens its modal dialog.
+ * phone. Each row action opens its modal dialog; closing it brings focus back
+ * to that action even if the layout swapped meanwhile.
  */
 export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
   const t = useTranslations("admin");
@@ -47,7 +49,10 @@ export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
       {editUser && (
         <EditUserDialog
           user={editUser}
-          onClose={() => setEditUser(null)}
+          onClose={() => {
+            setEditUser(null);
+            refocusUserAction(USER_ACTIONS.EDIT, editUser.id);
+          }}
           onSuccess={onRefresh}
         />
       )}
@@ -55,7 +60,10 @@ export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
       {deleteUser && (
         <DeleteUserDialog
           user={deleteUser}
-          onClose={() => setDeleteUser(null)}
+          onClose={() => {
+            setDeleteUser(null);
+            refocusUserAction(USER_ACTIONS.DELETE, deleteUser.id);
+          }}
           onSuccess={onRefresh}
         />
       )}
@@ -63,7 +71,10 @@ export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
       {resetUser && (
         <ChangePasswordDialog
           user={resetUser}
-          onClose={() => setResetUser(null)}
+          onClose={() => {
+            setResetUser(null);
+            refocusUserAction(USER_ACTIONS.RESET, resetUser.id);
+          }}
           onSuccess={onRefresh}
         />
       )}

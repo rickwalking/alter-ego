@@ -22,6 +22,7 @@ from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.schemas.coded_error import LoginErrorResponse
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, MIN_PASSWORD_LENGTH
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.identity import (
@@ -81,7 +82,12 @@ class ChangePasswordRequest(BaseModel):
     "/token",
     response_model=TokenResponse,
     responses={
-        401: {"description": "Invalid credentials"},
+        401: {
+            "model": LoginErrorResponse,
+            "description": (
+                "Invalid credentials, or a deactivated account (code user_inactive)"
+            ),
+        },
     },
 )
 @limiter.limit("5/minute")

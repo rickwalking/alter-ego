@@ -1636,7 +1636,8 @@
     "forbiddenDescription": "You do not have permission to access this page.",
     "goHome": "Go Home",
     "tryAgain": "Try Again",
-    "accountDeactivated": "This account is deactivated. Ask an admin to reactivate it."
+    "accountDeactivated": "This account is deactivated. Ask an admin to reactivate it.",
+    "serverUnreachable": "Couldn't reach the server. Try again in a moment."
   },
   "notFound": {
     "code": "404",

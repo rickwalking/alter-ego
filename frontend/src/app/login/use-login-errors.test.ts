@@ -26,6 +26,8 @@ async function submitWith(response: Response | Error): Promise<string> {
   return result.current.error;
 }
 
+const SERVER_UNREACHABLE = "Couldn't reach the server. Try again in a moment.";
+
 function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -52,16 +54,25 @@ describe("useLogin failures", () => {
   // Scenario: Wrong credentials keep the translated invalid-credentials message
   it.each([
     jsonResponse({ detail: "Some English text" }, 401),
+    jsonResponse({ detail: "Invalid email or password" }, 401),
     jsonResponse({ detail: [{ loc: ["body", "email"] }] }, 422),
-    new Response("Bad Gateway", { status: 502 }),
   ])("shows the translated invalid-credentials message", async (response) => {
     expect(await submitWith(response)).toBe("Invalid email or password");
   });
 
-  // Scenario: Wrong credentials keep the translated invalid-credentials message
-  it("shows the translated message when the request itself fails", async () => {
+  // Scenario: A server failure says the server could not be reached
+  it.each([
+    jsonResponse({ detail: "Internal Server Error" }, 500),
+    new Response("Bad Gateway", { status: 502 }),
+    new Response("Service Unavailable", { status: 503 }),
+  ])("says the server could not be reached on a 5xx", async (response) => {
+    expect(await submitWith(response)).toBe(SERVER_UNREACHABLE);
+  });
+
+  // Scenario: A server failure says the server could not be reached
+  it("says the server could not be reached when the request fails", async () => {
     expect(await submitWith(new TypeError("Failed to fetch"))).toBe(
-      "Invalid email or password",
+      SERVER_UNREACHABLE,
     );
   });
 });

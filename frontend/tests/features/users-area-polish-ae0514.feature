@@ -59,6 +59,29 @@ Feature: Users area polish
     Given the API answers 401 with no code
     Then the login page shows the translated invalid-credentials message
 
+  Scenario: A server failure says the server could not be reached
+    Given the sign-in request fails, or the API or its proxy answers 5xx
+    Then the login page says it could not reach the server in the reader's language
+    And it does not say the email or password is wrong
+
+  Scenario: The generated password stays until the admin closes it
+    Given the admin created a user without a password
+    And the dialog shows the one-time temporary password
+    When they press Escape or tap the backdrop
+    Then the dialog stays open
+    When they press "Done"
+    Then the dialog closes
+
+  Scenario: Focus survives a layout swap while a dialog is open
+    Given a dialog was opened from the user table
+    And the window narrows to the card layout
+    When the dialog closes
+    Then focus is on the same action of the same user in the card
+
+  Scenario: A non-admin does not see the Users link
+    Given an editor opens a page with the app shell
+    Then the sidebar has no "Users" link
+
   Scenario: The admin sidebar is a drawer on a phone
     Given the admin is on "/admin/users" at 390 px wide
     Then the sidebar is off screen and a menu button is shown

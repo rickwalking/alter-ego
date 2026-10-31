@@ -11,6 +11,7 @@ import {
   LOGIN_ERROR_CODE_USER_INACTIVE,
   LOGIN_ERROR_TOO_MANY_ATTEMPTS,
 } from "@/constants/auth";
+import { HTTP_STATUS } from "@/constants/api";
 import { sanitizeLoginRedirect } from "@/modules/identity";
 import { errorBodyCode, responseErrorBody } from "@/lib/response-error";
 
@@ -26,15 +27,19 @@ export interface LoginController {
 
 const HTTP_TOO_MANY_REQUESTS = 429;
 const LOGIN_ERROR_KEY = "loginError";
+const SERVER_UNREACHABLE_KEY = "serverUnreachable";
 
 /**
- * The `auth` message key of a failed sign-in: rate-limited, a deactivated
- * account (its stable `code`), else invalid credentials. The API's English
- * `detail` is never shown.
+ * The `auth` message key of a failed sign-in: rate-limited, a server or proxy
+ * failure (5xx), a deactivated account (its stable `code`), else invalid
+ * credentials. The API's English `detail` is never shown.
  */
 async function loginFailureKey(response: Response): Promise<string> {
   if (response.status === HTTP_TOO_MANY_REQUESTS) {
     return "tooManyAttempts";
+  }
+  if (response.status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
+    return SERVER_UNREACHABLE_KEY;
   }
   const code = errorBodyCode(await responseErrorBody(response));
   return code === LOGIN_ERROR_CODE_USER_INACTIVE
@@ -95,7 +100,7 @@ export function useLogin(): LoginController {
       router.push(redirectTo);
       router.refresh();
     } catch {
-      setError(t(LOGIN_ERROR_KEY));
+      setError(t(SERVER_UNREACHABLE_KEY));
     } finally {
       setIsLoading(false);
     }

@@ -33,6 +33,7 @@ describe("adminErrorKey", () => {
     [409, { detail: "English" }],
     [500, null],
     [400, { code: 7 }],
+    [409, { detail: "English", code: "toString" }],
   ])("leaves %i %o to the caller's fallback", (status, body) => {
     expect(adminErrorKey(status, body)).toBeUndefined();
   });
@@ -46,6 +47,7 @@ describe("createFieldErrors", () => {
         { loc: ["body", "email"], msg: "bad" },
         { loc: ["body", "role"], msg: "bad" },
         { loc: ["body", "password"], msg: "short" },
+        { loc: ["body", "constructor"], msg: "inherited name" },
       ],
     };
     expect(createFieldErrors(422, body)).toEqual({

@@ -31,6 +31,7 @@ from rag_backend.api.dependencies import require_admin
 from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.schemas.coded_error import CodedErrorResponse
 from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
 from rag_backend.domain.constants.auth import FULL_NAME_MAX_LENGTH, VALID_ROLES
 from rag_backend.modules.identity import (
@@ -172,7 +173,10 @@ async def list_users(
     status_code=status.HTTP_201_CREATED,
     responses={
         403: {"description": "Admin access required"},
-        409: {"description": "User already exists"},
+        409: {
+            "model": CodedErrorResponse,
+            "description": "User already exists (code user_email_exists)",
+        },
     },
 )
 @limiter.limit("10/minute")
@@ -217,7 +221,10 @@ async def create_user(
     responses={
         403: {"description": "Admin access required"},
         404: {"description": "User not found"},
-        409: {"description": "Cannot demote last admin"},
+        409: {
+            "model": CodedErrorResponse,
+            "description": "Cannot demote last admin (code last_admin)",
+        },
     },
 )
 @limiter.limit("20/minute")
@@ -258,7 +265,12 @@ async def update_user(
     responses={
         403: {"description": "Admin access required"},
         404: {"description": "User not found"},
-        409: {"description": "Cannot delete last admin or self"},
+        409: {
+            "model": CodedErrorResponse,
+            "description": (
+                "Cannot delete last admin or self (code last_admin or self_delete)"
+            ),
+        },
     },
 )
 @limiter.limit("20/minute")

@@ -105,6 +105,35 @@ describe("admin dialogs are real modals", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  // Scenario: Every admin dialog is a real modal
+  it("describes the delete alertdialog with its question", async () => {
+    const user = userEvent.setup();
+    render(<UserTable users={[USER]} onRefresh={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+      "Are you sure you want to delete qa@example.com? This cannot be undone.",
+    );
+  });
+
+  // Scenario: Tab stays inside an open dialog
+  it("puts Cancel before the action in both reading and tab order", async () => {
+    const user = userEvent.setup();
+    render(<UserTable users={[USER]} onRefresh={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+
+    expect(cancel).toHaveFocus();
+    expect(cancel.parentElement).not.toHaveClass("flex-col-reverse");
+    await user.tab();
+    expect(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete",
+      }),
+    ).toHaveFocus();
+  });
+
   // Scenario: Tab stays inside an open dialog
   it("Tab past the last button wraps to the first control", async () => {
     const user = userEvent.setup();

@@ -47,14 +47,14 @@ export function adminErrorKey(
   body: unknown,
 ): string | undefined {
   const code = errorBodyCode(body);
-  if (code !== undefined && code in CODE_MESSAGE_KEYS) {
+  if (code !== undefined && Object.hasOwn(CODE_MESSAGE_KEYS, code)) {
     return CODE_MESSAGE_KEYS[code];
   }
   return status === HTTP_STATUS.NOT_FOUND ? USER_NOT_FOUND_KEY : undefined;
 }
 
 function isCreateUserField(field: string): field is CreateUserField {
-  return field in CREATE_FIELD_MESSAGE_KEYS;
+  return Object.hasOwn(CREATE_FIELD_MESSAGE_KEYS, field);
 }
 
 /** The invalid create-user fields of a 422 body (no entry for other fields). */

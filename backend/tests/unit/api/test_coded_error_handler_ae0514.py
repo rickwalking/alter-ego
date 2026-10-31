@@ -43,3 +43,28 @@ class TestCodedErrorHandler:
     def test_reraises_any_other_exception(self) -> None:
         with pytest.raises(ValueError, match="boom"):
             coded_error_handler(_request(), ValueError("boom"))
+
+
+class TestCodedErrorsInOpenApi:
+    """Scenario: A duplicate email on create returns the email-exists code."""
+
+    @pytest.mark.parametrize(
+        ("path", "method", "status", "schema"),
+        [
+            ("/api/admin/users", "post", "409", "CodedErrorResponse"),
+            ("/api/admin/users/{user_id}", "patch", "409", "CodedErrorResponse"),
+            ("/api/admin/users/{user_id}", "delete", "409", "CodedErrorResponse"),
+            ("/api/auth/token", "post", "401", "LoginErrorResponse"),
+        ],
+    )
+    def test_the_coded_response_is_documented(
+        self, path: str, method: str, status: str, schema: str
+    ) -> None:
+        from rag_backend.api.app import create_app
+
+        document = create_app().openapi()
+        response = document["paths"][path][method]["responses"][status]
+        ref = response["content"]["application/json"]["schema"]["$ref"]
+
+        assert ref.endswith(f"/{schema}")
+        assert "code" in document["components"]["schemas"][schema]["properties"]
