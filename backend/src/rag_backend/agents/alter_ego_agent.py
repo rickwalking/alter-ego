@@ -35,6 +35,10 @@ from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
 )
+from rag_backend.domain.constants.alter_ego_prompt import (
+    ALTER_EGO_PROMPT_NAME,
+    ALTER_EGO_PROMPT_VERSION,
+)
 from rag_backend.domain.constants.chat_stream import (
     ALTER_EGO_RECURSION_LIMIT,
     ALTER_EGO_SEARCH_BUDGET,
@@ -133,7 +137,9 @@ class AlterEgoAgent:
         try:
             from rag_backend.agents.prompts.registry import get_system_prompt
 
-            return get_system_prompt("alter_ego", version="v3")
+            return get_system_prompt(
+                ALTER_EGO_PROMPT_NAME, version=ALTER_EGO_PROMPT_VERSION
+            )
         except Exception:
             return _ALTER_EGO_FALLBACK_PROMPT
 
