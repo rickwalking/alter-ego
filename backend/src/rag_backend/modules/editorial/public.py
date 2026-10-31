@@ -137,6 +137,10 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     store_cover_image,
     switch_slide_cover,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autostart import (
+    AutoCoverOutcome,
+    schedule_autopilot_cover,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
     cover_generation_input,
@@ -253,6 +257,7 @@ __all__ = [
     "AclReviewerAssignmentAdapter",
     "ApprovalPort",
     "ApprovalState",
+    "AutoCoverOutcome",
     "AutomationResume",
     "AutomationResumeInput",
     "AutomationRun",
@@ -337,6 +342,7 @@ __all__ = [
     "run_gate_repair",
     "run_owner_autofix",
     "run_slide_fix",
+    "schedule_autopilot_cover",
     "slides_in_config",
     "store_cover_image",
     "switch_slide_cover",

@@ -99,6 +99,7 @@ def autopilot_tick_config(
     token = settings.telegram_bot_token.get_secret_value()
     return AutopilotTickConfig(
         owner_user_id=settings.autopilot_owner_user_id,
+        cover_consent=settings.autopilot_cover_consent,
         persona_id=settings.autopilot_persona_id,
         autofix_attempts=settings.autopilot_autofix_attempts,
         autofix_escalation_attempts=settings.autopilot_autofix_escalation_attempts,

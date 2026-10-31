@@ -15,6 +15,7 @@ from rag_backend.modules.autopilot.domain.autofix import (
     GateRepairer,
     SlideFixer,
 )
+from rag_backend.modules.autopilot.domain.cover_autostart import AutoCoverScheduler
 from rag_backend.modules.autopilot.domain.cover_ports import CoverOffers, CoverSwitcher
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
@@ -42,6 +43,8 @@ class RunnerDependencies:
     before any revise, then ``slide_fix`` model-fixes what still fails (no revise).
     ``spacing`` keeps a queued run waiting until the previous start is old enough.
     ``retryable`` names the errors the generation queue retries instead.
+    ``auto_cover`` schedules one slide-1 cover generation when a fresh carousel
+    starts (None: the step is off).
     """
 
     runs: AutopilotRunRepository
@@ -58,6 +61,7 @@ class RunnerDependencies:
     slide_fix: SlideFixer | None = None
     covers: CoverOffers | None = None
     cover_switch: CoverSwitcher | None = None
+    auto_cover: AutoCoverScheduler | None = None
     spacing: StartSpacing | None = None
     retryable: Callable[[BaseException], bool] = field(default=_never_retryable)
 
