@@ -2352,7 +2352,8 @@
       "title": "No personas found",
       "noResults": "No results for \"{query}\". Try a different search term.",
       "body": "Create your first persona to define a unique voice profile for your content pipeline.",
-      "action": "Create your first persona"
+      "action": "Create your first persona",
+      "firstTitle": "No personas yet"
     },
     "createCard": {
       "title": "Create Persona",
@@ -2362,7 +2363,12 @@
       "edit": "Edit",
       "delete": "Delete",
       "editLabel": "Edit persona {name}",
-      "deleteLabel": "Delete persona {name}"
+      "deleteLabel": "Delete persona {name}",
+      "noDescription": "No description",
+      "defaultRole": "Persona",
+      "avatarLabel": "Avatar of {name}",
+      "skillsLabel": "Expertise areas",
+      "moreSkills": "More expertise areas ({count}): {areas}"
     },
     "form": {
       "createTitle": "New persona",

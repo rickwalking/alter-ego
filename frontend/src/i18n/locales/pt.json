@@ -2352,7 +2352,8 @@
       "title": "Nenhuma persona encontrada",
       "noResults": "Nenhum resultado para \"{query}\". Tente outro termo.",
       "body": "Crie a primeira persona para definir um perfil de voz único para o seu conteúdo.",
-      "action": "Criar a primeira persona"
+      "action": "Criar a primeira persona",
+      "firstTitle": "Nenhuma persona ainda"
     },
     "createCard": {
       "title": "Criar persona",
@@ -2362,7 +2363,12 @@
       "edit": "Editar",
       "delete": "Excluir",
       "editLabel": "Editar a persona {name}",
-      "deleteLabel": "Excluir a persona {name}"
+      "deleteLabel": "Excluir a persona {name}",
+      "noDescription": "Sem descrição",
+      "defaultRole": "Persona",
+      "avatarLabel": "Avatar de {name}",
+      "skillsLabel": "Áreas de especialidade",
+      "moreSkills": "Mais áreas de especialidade ({count}): {areas}"
     },
     "form": {
       "createTitle": "Nova persona",

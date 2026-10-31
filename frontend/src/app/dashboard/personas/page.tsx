@@ -20,6 +20,13 @@ import { PersonasEmptyState } from "@/app/dashboard/personas/personas-empty-stat
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 
+/** On a phone, the search box keeps the 44 px minimum touch target. */
+const SEARCH_BAR_CLASS = "w-full sm:w-[200px] max-sm:[&_input]:min-h-11";
+
+/** On a phone, every form button and text box keeps a 44 px touch target. */
+const FORM_TOUCH_CLASS =
+  "max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11 max-sm:[&_input]:min-h-11";
+
 interface PersonaListProps {
   personas: PersonaProfile[];
   searchQuery: string;
@@ -90,7 +97,7 @@ export default function PersonasPage(): React.ReactElement {
               placeholder={t("search")}
               value={searchQuery}
               onChange={setSearchQuery}
-              className="w-full sm:w-[200px]"
+              className={SEARCH_BAR_CLASS}
             />
           )
         }
@@ -110,7 +117,9 @@ export default function PersonasPage(): React.ReactElement {
             />
           }
           renderForm={(persona) => (
-            <PersonaForm persona={persona} {...editor.formActions} />
+            <div className={FORM_TOUCH_CLASS}>
+              <PersonaForm persona={persona} {...editor.formActions} />
+            </div>
           )}
         />
       </div>

@@ -83,6 +83,24 @@ describe("PersonasPage", () => {
     expect(screen.getByLabelText("Conversational")).toHaveValue("0.8");
   });
 
+  it("keeps the search box and the form touch-sized on a phone", async () => {
+    // Scenario: The personas page keeps touch-sized controls on a 390 px phone
+    const phoneTouchInput = '[class*="max-sm:[&_input]:min-h-11"]';
+    const user = userEvent.setup();
+    authenticatedFetch.mockResolvedValueOnce(list([PERSONA]));
+    render(<PersonasPage />);
+    const search = await screen.findByPlaceholderText("Search personas...");
+    expect(search.closest(phoneTouchInput)).not.toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Edit persona Pedro" }),
+    );
+    const formArea = screen.getByLabelText("Name").closest(phoneTouchInput);
+    expect(formArea).toHaveClass("max-sm:[&_button]:min-h-11");
+    expect(formArea).toContainElement(
+      screen.getByRole("button", { name: "Save changes" }),
+    );
+  });
+
   it("creates a persona with every voice field", async () => {
     // Scenario: A new persona is created with its voice fields
     const user = await openNewForm();
