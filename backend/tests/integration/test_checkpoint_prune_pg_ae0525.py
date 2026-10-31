@@ -23,8 +23,11 @@ from rag_backend.infrastructure.database.checkpoint_prune import (
 from rag_backend.infrastructure.database.checkpoint_prune_sql import TableCounts
 from rag_backend.infrastructure.database.models import CarouselProjectModel
 from rag_backend.modules.autopilot.public import AutopilotRunState
+from rag_backend.modules.generation_queue.constants import STATUS_QUEUED
 from tests.integration.checkpoint_prune_pg_support import (
     CUTOFF,
+    FINISHED_GENERATION,
+    HELD_GENERATION,
     OLD,
     RECENT,
     STEPS,
@@ -34,6 +37,7 @@ from tests.integration.checkpoint_prune_pg_support import (
     row_counts,
     seed_autopilot_run,
     seed_carousel,
+    seed_generation_run,
     thread_config,
 )
 from tests.integration.pg_schema_support import requires_postgres
@@ -79,6 +83,42 @@ async def test_a_carousel_with_an_unsettled_autopilot_run_is_never_matched() -> 
         await seed_autopilot_run(db, settled, AutopilotRunState.PUBLISHED)
         found = await find_candidates(db.engine, CUTOFF)
         assert [c.thread_id for c in found] == [settled]
+
+
+@requires_postgres
+async def test_a_carousel_with_a_held_generation_run_is_never_matched() -> None:
+    """Scenario: A carousel whose generation run is queued, running or held is never matched"""
+    async with database() as db:
+        for status in HELD_GENERATION:
+            await seed_generation_run(db, await seed_carousel(db), status)
+        finished = []
+        for status in FINISHED_GENERATION:
+            project = await seed_carousel(db)
+            await seed_generation_run(db, project, status)
+            finished.append(project)
+        found = await find_candidates(db.engine, CUTOFF)
+        assert sorted(c.thread_id for c in found) == sorted(finished)
+
+
+@requires_postgres
+async def test_a_queued_generation_run_after_the_dry_run_stops_the_prune(
+    tmp_path: Path,
+) -> None:
+    """Scenario: A signed-off thread whose carousel gets a queued generation run stops the prune"""
+    async with database() as db:
+        queued = await seed_carousel(db)
+        still = await seed_carousel(db)
+        found = {c.thread_id for c in await find_candidates(db.engine, CUTOFF)}
+        assert found == {queued, still}
+        before = {t: await row_counts(db, t) for t in (queued, still)}
+        await seed_generation_run(db, queued, STATUS_QUEUED)
+        backup = tmp_path / "b.jsonl"
+        with pytest.raises(PruneRefusedError) as refused:
+            await apply_prune(db.engine, prune_request((queued, still), backup))
+        assert queued in str(refused.value)
+        assert still not in str(refused.value)
+        assert {t: await row_counts(db, t) for t in before} == before
+        assert not backup.exists()
 
 
 @requires_postgres

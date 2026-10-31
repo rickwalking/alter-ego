@@ -1,16 +1,16 @@
 # AE-0541 — Checkpoint prune: queued, running and dead-letter generation runs protect their thread
 
-Status: Blocked
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
 Area: Backend
-Owner: Unassigned
+Owner: Pedro
 Agent Lane: developer → qa → release
-Branch: TBD
+Branch: fix/ae-0541-prune-generation-runs-guard
 Kanban Card: TBD
 Created: 2026-10-24
-Updated: 2026-10-24
+Updated: 2026-10-30
 
 ## Goal
 
@@ -39,9 +39,9 @@ Pedro asked that a queued, running or held run keep its full history).
 
 ## Acceptance Criteria
 
-- [ ] AC1 Given a published carousel past the TTL with a generation run in each non-terminal state, When the prune
+- [x] AC1 Given a published carousel past the TTL with a generation run in each non-terminal state, When the prune
   dry-runs, Then none of them is listed; a carousel whose only run succeeded is listed.
-- [ ] AC2 Given a signed-off thread whose carousel gets a queued generation run after the dry run, When the prune
+- [x] AC2 Given a signed-off thread whose carousel gets a queued generation run after the dry run, When the prune
   applies, Then it refuses and deletes nothing.
 
 ## Gherkin Scenarios
@@ -51,7 +51,7 @@ or held is never matched").
 
 ## Dependencies
 
-- Blocked by: AE-0522 (the `generation_runs` table on `main`).
+- Blocked by: AE-0522 (the `generation_runs` table on `main`) — merged in #275; unblocked 2026-10-30.
 - Related: AE-0525.
 
 ## Decision Log
@@ -62,3 +62,33 @@ or held is never matched").
 ## Blockers
 
 AE-0522 not merged.
+- 2026-10-30: the held states are `generation_queue.constants.HELD_STATUSES` = the queue's `ACTIVE_STATUSES` (queued,
+  running, retry_wait) plus `dead_letter`; `succeeded` and `cancelled` never resume the thread. The prune asks the
+  queue through its public facade (`generation_queue.public.project_has_held_run`), the same `EXISTS` shape as the
+  existing `project_has_active_run`, so the import-linter boundary stays intact. Pedro asked for the queue tickets
+  before the users-area items (2026-10-30).
+- 2026-10-30: the `EXISTS` fences live in `generation_queue/infrastructure/run_fences.py` and are re-exported by
+  `public.py` (kept under 400 lines). Known limit, same as the autopilot guard: `FOR UPDATE` locks only
+  `carousel_projects` rows, so a run enqueued in the instant after the locked re-check is not seen; the prune still
+  keeps the latest checkpoint, so such a resume still works. A dead-lettered run blocks the prune of its carousel
+  until it is recovered or cancelled (intended).
+
+## Progress Log
+
+- 2026-10-30: guard added to `_eligible_projects` (dry run and the locked `--apply` re-check share it); two Gherkin
+  scenarios and two Postgres integration tests; both tests fail with the guard removed and pass with it.
+
+## Files Touched
+
+- `backend/src/rag_backend/modules/generation_queue/constants.py` (`HELD_STATUSES`)
+- `backend/src/rag_backend/modules/generation_queue/infrastructure/run_fences.py` (new: `project_has_active_run` moved here, `project_has_held_run`, shared `_project_has_run_in`)
+- `backend/src/rag_backend/modules/generation_queue/public.py` (re-exports the fences)
+- `backend/src/rag_backend/infrastructure/database/checkpoint_prune.py` (eligibility guard + module docstring)
+- `backend/tests/features/checkpoint_prune_ae0525.feature` (2 scenarios)
+- `backend/tests/integration/checkpoint_prune_pg_support.py` (`generation_runs` table, `seed_generation_run`)
+- `backend/tests/integration/test_checkpoint_prune_pg_ae0525.py` (2 tests)
+
+## Test Evidence
+
+- Full local backend gate run green (26 pass, 0 fail, mutation CI-only): `.agent/reports/AE-0541.dev-summary.md`.
+- The two new Postgres integration tests fail with the guard removed and pass with it.

@@ -3,8 +3,9 @@
 A thread is eligible when its carousel project is finished (completed or
 failed), was last updated before the cutoff, is not running, has no pending
 republish, has no autopilot run that is not settled (queued, generating, waiting
-for the owner, reworking, scheduled, publishing, or held after a failure), and
-was rejected or published. Threads without a carousel project are never
+for the owner, reworking, scheduled, publishing, or held after a failure), has no
+generation run that is queued, running, waiting for a retry or dead-lettered,
+and was rejected or published. Threads without a carousel project are never
 eligible: they may belong to another graph. Each pruned thread keeps its latest
 checkpoint, so a run that resumes it later still has its node-level state.
 
@@ -54,6 +55,7 @@ from rag_backend.infrastructure.database.checkpoint_prune_sql import (
 )
 from rag_backend.infrastructure.database.models import CarouselProjectModel
 from rag_backend.modules.autopilot.public import AutopilotRunState
+from rag_backend.modules.generation_queue.public import project_has_held_run
 
 logger = structlog.get_logger(__name__)
 
@@ -136,6 +138,7 @@ def _eligible_projects(cutoff: datetime) -> Select[ProjectRow]:
         ),
         or_(model.phase_status == PHASE_STATUS_REJECTED, model.is_public.is_(True)),
         ~exists(_unsettled_autopilot_run()),
+        ~project_has_held_run(model.id),
     )
 
 
