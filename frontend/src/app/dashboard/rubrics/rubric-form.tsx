@@ -46,7 +46,7 @@ function LeaveDialog({
       body={t("unsavedConfirm")}
       confirmLabel={t("leaveConfirm")}
       cancelLabel={t("leaveStay")}
-      errorFallback={t("errors.save")}
+      errorFallback={t("leaveError")}
       onConfirm={leave.confirm}
       onClose={leave.stay}
     />

@@ -28,7 +28,6 @@ export function mapRubricToCardProps(
 const CONTENT_TYPE_COLOR: Readonly<Record<string, RubricColorKey>> = {
   carousel: "cyan",
   blog_post: "magenta",
-  blog: "magenta",
 };
 
 const DEFAULT_CONTENT_TYPE_COLOR: RubricColorKey = "teal";

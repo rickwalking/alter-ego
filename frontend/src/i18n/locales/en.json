@@ -1378,6 +1378,7 @@
       "leaveTitle": "Discard your changes?",
       "leaveConfirm": "Leave without saving",
       "leaveStay": "Keep editing",
+      "leaveError": "Could not leave the editor. Try again.",
       "fixErrors": "Fix the highlighted fields before saving.",
       "errors": {
         "name": "Enter a name of 1 to 255 characters.",

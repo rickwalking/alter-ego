@@ -1378,6 +1378,7 @@
       "leaveTitle": "Descartar as alterações?",
       "leaveConfirm": "Sair sem salvar",
       "leaveStay": "Continuar editando",
+      "leaveError": "Não foi possível sair do editor. Tente de novo.",
       "fixErrors": "Corrija os campos destacados antes de salvar.",
       "errors": {
         "name": "Informe um nome de 1 a 255 caracteres.",

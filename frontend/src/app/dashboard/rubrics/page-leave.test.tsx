@@ -3,7 +3,7 @@
  * leave dialog when there are unsaved changes) and the keyboard path through
  * the rubric list.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import RubricsPage from "./page";
@@ -148,11 +148,45 @@ describe("RubricsPage leaving the editor", () => {
     const user = await openEditor();
     const outside = document.createElement("button");
     document.body.append(outside);
-    outside.focus();
-    await user.keyboard("{Escape}");
+    try {
+      outside.focus();
+      await user.keyboard("{Escape}");
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    } finally {
+      outside.remove();
+    }
+  });
 
+  it("ignores an Escape that ends an IME composition", async () => {
+    // Scenario: Escape cancels the editor
+    await openEditor();
+    fireEvent.keyDown(screen.getByLabelText("Name"), {
+      key: "Escape",
+      isComposing: true,
+    });
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
-    outside.remove();
+  });
+
+  it("ignores an Escape another handler already took", async () => {
+    // Scenario: Escape cancels the editor
+    const user = await openEditor();
+    const takeEscape = (event: KeyboardEvent): void => event.preventDefault();
+    window.addEventListener("keydown", takeEscape, { capture: true });
+    try {
+      screen.getByLabelText("Name").focus();
+      await user.keyboard("{Escape}");
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    } finally {
+      window.removeEventListener("keydown", takeEscape, { capture: true });
+    }
+  });
+
+  it("leaves Escape on a focused select to the select", async () => {
+    // Scenario: Escape cancels the editor
+    const user = await openEditor();
+    screen.getByLabelText("Scoring scale").focus();
+    await user.keyboard("{Escape}");
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
   });
 
   it("sends Escape on a changed editor through the dialog", async () => {
