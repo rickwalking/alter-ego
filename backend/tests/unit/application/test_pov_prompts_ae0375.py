@@ -27,6 +27,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     EditorialWorkflowStartInput,
 )
 from rag_backend.application.services.carousel.outline_by_mode import (
+    HookSelection,
     ModeOutlineRequest,
     attach_hook_and_checks,
     generate_outline_for_mode,
@@ -267,9 +268,9 @@ class TestOutlineByMode:
             {"title": "Algo", "key_points": []},
             {"title": "Outra coisa", "key_points": []},
         ]
-        checked = attach_hook_and_checks(outline, _brief(), [])
+        checked = attach_hook_and_checks(outline, _brief(), HookSelection([]))
         assert checked[0]["outline_checks"] == {"thesis_early": False}
-        assert attach_hook_and_checks([], _brief(), []) == []
+        assert attach_hook_and_checks([], _brief(), HookSelection([])) == []
 
     # Scenario: Radar IA v4 outline is sized and stamped
     @pytest.mark.asyncio

@@ -3,7 +3,7 @@
 Feature: Carousel editorial orchestration with subagent delegation
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -170,7 +170,7 @@ class TestCarouselEditorialOrchestrator:
         orchestrator._bind_resume_context(db=db, workflow_input=workflow_input)
 
         orchestrator._artifact_runner.with_context.assert_called_once_with(
-            db=db, workflow_input=workflow_input
+            db=db, workflow_input=workflow_input, recent_hooks=ANY
         )
 
     def test_bind_resume_context_calls_set_artifact_runner_with_scoped(
@@ -197,7 +197,7 @@ class TestCarouselEditorialOrchestrator:
         orchestrator._bind_resume_context(db=None, workflow_input=None)
 
         orchestrator._artifact_runner.with_context.assert_called_once_with(
-            db=None, workflow_input=None
+            db=None, workflow_input=None, recent_hooks=None
         )
 
     @pytest.mark.asyncio

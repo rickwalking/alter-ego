@@ -29,6 +29,9 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.protocols import ResearchEnrichmentParams
+from rag_backend.infrastructure.database.carousel_recent_hooks import (
+    SqlRecentHookReader,
+)
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
@@ -93,6 +96,7 @@ class CarouselEditorialOrchestrator:
     ) -> None:
         scoped = self._artifact_runner.with_context(
             db=db,
+            recent_hooks=SqlRecentHookReader(db) if db is not None else None,
             workflow_input=workflow_input,
         )
         self._engine.set_artifact_runner(scoped)

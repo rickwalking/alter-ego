@@ -49,11 +49,16 @@ class PovOutlineRequest:
 
 @dataclass(frozen=True, kw_only=True)
 class PovHookRequest:
-    """Five slide-1 hook candidates for a thesis."""
+    """Five slide-1 hook candidates for a thesis.
+
+    ``recent_hooks`` are the owner's recent slide-1 openings; the prompt
+    forbids reusing them or their formulas.
+    """
 
     topic: str
     audience: str
     pov: PovThesis
+    recent_hooks: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

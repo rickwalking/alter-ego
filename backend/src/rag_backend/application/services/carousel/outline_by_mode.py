@@ -31,6 +31,7 @@ from rag_backend.application.services.carousel.pov_checks import thesis_appears_
 from rag_backend.application.services.carousel.presentation_policy import (
     render_presentation_policy_context,
 )
+from rag_backend.application.services.carousel.recent_hooks import drop_reused_openings
 from rag_backend.domain.constants.pov_prompts import (
     OUTLINE_CHECK_THESIS_EARLY,
     OUTLINE_FIELD_HOOK_CANDIDATES,
@@ -69,10 +70,17 @@ class OutlineAgent(Protocol):
 
 @dataclass(frozen=True)
 class ModeOutlineRequest:
-    """The workflow brief plus the project's content-mode brief."""
+    """The workflow brief plus the project's content-mode brief.
+
+    ``recent_hooks`` are the owner's recent slide-1 openings (forbidden reuses
+    on the POV hook prompt) and ``hook_seed`` rotates the chosen hook across
+    the candidates, so consecutive carousels stop repeating an opening.
+    """
 
     workflow_input: EditorialWorkflowStartInput
     brief: ContentModeBrief | None = None
+    recent_hooks: tuple[str, ...] = ()
+    hook_seed: int = 0
 
     def source_texts(self) -> list[str]:
         """The source documents' text."""
@@ -128,6 +136,7 @@ async def _hooks(
                 topic=workflow_input.topic,
                 audience=workflow_input.audience,
                 pov=_thesis(brief),
+                recent_hooks=request.recent_hooks,
             )
         )
     except (ValueError, TypeError):
@@ -135,17 +144,42 @@ async def _hooks(
         return []
 
 
+async def _selection(
+    agent: OutlineAgent, request: ModeOutlineRequest, brief: ContentModeBrief
+) -> HookSelection:
+    """The hook candidates minus reused recent openings, plus the seed."""
+    hooks = await _hooks(agent, request, brief)
+    return HookSelection(
+        candidates=drop_reused_openings(hooks, request.recent_hooks),
+        seed=request.hook_seed,
+    )
+
+
+@dataclass(frozen=True)
+class HookSelection:
+    """The hook candidates and the rotation seed of one outline.
+
+    Without a saved hook the chosen one is ``candidates[seed % len]``: the seed
+    (the owner's slide-1 hook count) grows by one per carousel, so consecutive
+    carousels never pick the same candidate.
+    """
+
+    candidates: list[str]
+    seed: int = 0
+
+
 def attach_hook_and_checks(
     outline: list[dict[str, object]],
     brief: ContentModeBrief,
-    hooks: list[str],
+    selection: HookSelection,
 ) -> list[dict[str, object]]:
     """Slide 1 carries the candidates, the chosen hook and the outline checks."""
     if not outline:
         return outline
+    hooks = selection.candidates
     first = dict(outline[0])
     first[OUTLINE_FIELD_HOOK_CANDIDATES] = hooks
-    chosen = brief.hook_text or (hooks[0] if hooks else "")
+    chosen = brief.hook_text or (hooks[selection.seed % len(hooks)] if hooks else "")
     if chosen:
         first[OUTLINE_FIELD_TITLE] = chosen
     early = [_slide_text(slide) for slide in [first, *outline[1:_EARLY_SLIDES]]]
@@ -171,7 +205,9 @@ async def _pov_outline(
         )
     )
     outline = normalize_editorial_outline(stamp_outline_roles(raw, brief.policy))
-    return attach_hook_and_checks(outline, brief, await _hooks(agent, request, brief))
+    return attach_hook_and_checks(
+        outline, brief, await _selection(agent, request, brief)
+    )
 
 
 async def generate_outline_for_mode(
@@ -195,10 +231,13 @@ async def generate_outline_for_mode(
     if brief is None or sizing is None:
         return outline
     stamped = normalize_editorial_outline(stamp_outline_roles(outline, brief.policy))
-    return attach_hook_and_checks(stamped, brief, await _hooks(agent, request, brief))
+    return attach_hook_and_checks(
+        stamped, brief, await _selection(agent, request, brief)
+    )
 
 
 __all__ = [
+    "HookSelection",
     "ModeOutlineRequest",
     "OutlineAgent",
     "attach_hook_and_checks",
