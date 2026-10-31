@@ -1,6 +1,6 @@
 # AE-0515 — Search and filter users
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Low
 Type: Feature
@@ -86,3 +86,8 @@ Full local frontend gates at f0341d775: pass 18, fail 0, skip 1 (mutation, CI on
 
 Independent review: no blockers; SHOULD-FIX items 1-4 and NITs 5, 6, 8 applied. NIT 7 (string unions for the filter
 values) left as is: the values are constants and the selects only offer those options.
+
+## Final Summary
+
+Merged to `main` in PR #316 (29b45139, 2026-10-31): `/admin/users` has a search box (name or email, case- and
+accent-insensitive) and role and status filters, with a filter-specific empty message.

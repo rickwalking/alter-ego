@@ -1,6 +1,6 @@
 # AE-0584 — Boost request returns 409: the first status event is inserted before its request
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -41,10 +41,10 @@ drift).
 
 ## Acceptance Criteria
 
-- [ ] AC1 A boost request on Postgres is stored as pending approval with one event, and the owner is notified.
-- [ ] AC2 The owner's approval on Postgres stores the approved status and a second event.
-- [ ] AC3 The same idempotency key replays the stored request without a second row, event or notice.
-- [ ] AC4 The new tests fail on the old store with the same foreign key violation seen on prod.
+- [x] AC1 A boost request on Postgres is stored as pending approval with one event, and the owner is notified.
+- [x] AC2 The owner's approval on Postgres stores the approved status and a second event.
+- [x] AC3 The same idempotency key replays the stored request without a second row, event or notice.
+- [x] AC4 The new tests fail on the old store with the same foreign key violation seen on prod.
 
 ## Gherkin Scenarios
 
@@ -81,12 +81,19 @@ Fix and tests written: 3 passed with the fix; on the old store all fail with the
 
 ## Test Evidence
 
-Pending.
+Full local backend gates at bf8481d9: pass 26, fail 0, skip 1 (mutation, CI only). GATES_JSON in
+`.agent/reports/AE-0584.dev-summary.md`. The three Postgres tests pass with the fix and fail on the old store with the
+prod foreign key violation; PR CI ran them (PASSED).
 
 ## QA Report
 
-Pending.
+Root cause reproduced on Postgres; sweep of other stores found no other parent and child added in one flush.
 
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #319 (85f4652b, 2026-10-31): a boost request stores its row before its first event, so the
+bot's request is accepted (202) instead of 409. Deployed and verified read-only; the bot resends with the same keys.

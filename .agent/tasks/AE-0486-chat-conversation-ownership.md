@@ -1,6 +1,6 @@
 # AE-0486 — Chat: nobody but the owner (or an admin) reads or writes a signed-in user's conversation
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -96,3 +96,8 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #227 (e6279398, 2026-10-22): a signed-in user's conversation answers 404 to anyone but its
+owner or an admin, on every conversation endpoint. The later chat polish items are covered by AE-0535 (#267).

@@ -1,6 +1,6 @@
 # AE-0579 — Pass the Meta ads variables through the production env
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Chore
@@ -95,3 +95,10 @@ Independent review: no blockers; findings applied (see dev summary).
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #315 (bddf87c1, 2026-10-31): `deploy.yml` and both prod services pass the four Meta ads
+variables with empty defaults, and the env parity check requires them; no boost cap is set from any prod surface. The
+first deploy whose run was created after the secrets existed is the one that delivers the values (a run reads the
+secrets as of its creation).
