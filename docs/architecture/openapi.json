@@ -10857,8 +10857,21 @@
         "type": "object"
       },
       "UpdateUserRequest": {
-        "description": "Request body for updating a user.",
+        "description": "Request body for updating a user (every field optional).\n\n``full_name`` is stripped of surrounding whitespace, then must be 1 to 255\ncharacters (else 422); omitting it leaves the name unchanged. There is no\nemail field: the email is fixed, so a sent ``email`` is ignored.",
         "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
           "is_active": {
             "anyOf": [
               {

@@ -49,3 +49,8 @@ class User:
         """Assign a new role and refresh the updated timestamp."""
         self.role = role
         self.updated_at = utc_now()
+
+    def rename(self, full_name: str) -> None:
+        """Change the display name and refresh the updated timestamp."""
+        self.full_name = full_name
+        self.updated_at = utc_now()

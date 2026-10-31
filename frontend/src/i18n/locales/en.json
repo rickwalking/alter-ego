@@ -2254,6 +2254,7 @@
     "saving": "Saving...",
     "save": "Save",
     "updateError": "Failed to update user.",
+    "nameInvalid": "Enter a full name of 1 to 255 characters.",
     "deleteUserTitle": "Delete user",
     "deleteUserDescription": "Are you sure you want to delete {email}? This cannot be undone.",
     "deleting": "Deleting...",

@@ -9,3 +9,5 @@ export const USER_FILTER_STATUS_ALL = "all";
 export const USER_FILTER_STATUS_ACTIVE = "active";
 
 export const USER_FILTER_STATUS_INACTIVE = "inactive";
+
+export const USER_FULL_NAME_MAX_LENGTH = 255;
