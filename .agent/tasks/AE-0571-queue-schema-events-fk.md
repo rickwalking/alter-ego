@@ -1,6 +1,6 @@
 # AE-0571 — Queue schema one-shot fails on the events foreign key
 
-Status: Review
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -69,3 +69,7 @@ Reproduced, fixed, tests added; hotfix fast path (mutation deferred to CI).
 ## Test Evidence
 
 See `.agent/reports/AE-0571.dev-summary.md`.
+
+## Final Summary
+
+Merged to `main` in PR #302 (f475cfbd, 2026-10-28). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

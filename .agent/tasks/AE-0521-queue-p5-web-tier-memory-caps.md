@@ -1,6 +1,6 @@
 # AE-0521 — P5 — memory reservations and limits for the web tier
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: High
 Type: Infra
@@ -56,3 +56,7 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
   keeps 1344M because it still runs the HD exports.
 - 2026-10-24: the first prod run sampled (carousel 5350e0ca) peaked at 1222 MiB, so AE-0542 raises the backend cap
   to 1600M and the P1 worker cap to 1600M. Langfuse moved to Langfuse Cloud (AE-0545).
+
+## Final Summary
+
+Merged to `main` in PR #269 (6c53cea8, 2026-10-24). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

@@ -1,6 +1,6 @@
 # AE-0523 — P2 — Telegram queue position, Aprovar todas, dead-letter Retry/Discard, over-cap backlog
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -80,3 +80,7 @@ disposable droplet → AE-0522 (live on merge) → AE-0523, AE-0524, AE-0525, AE
 - 2026-10-24 (Pedro, #281 review): daily cap 3; backlog expiry 7 days with a notice and limit 10 kept; the rollover
   gets its own daily promotion at 08:05 São Paulo time in the worker. The prod deploy reads the
   `AUTOPILOT_DAILY_CAP` GitHub secret first, so the secret must be set to 3 (or removed) for prod to use 3.
+
+## Final Summary
+
+Merged to `main` in PR #281 (3bbbd6d6, 2026-10-25). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

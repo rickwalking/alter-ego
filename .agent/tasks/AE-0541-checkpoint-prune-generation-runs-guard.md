@@ -1,6 +1,6 @@
 # AE-0541 — Checkpoint prune: queued, running and dead-letter generation runs protect their thread
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -92,3 +92,7 @@ AE-0522 not merged.
 
 - Full local backend gate run green (26 pass, 0 fail, mutation CI-only): `.agent/reports/AE-0541.dev-summary.md`.
 - The two new Postgres integration tests fail with the guard removed and pass with it.
+
+## Final Summary
+
+Merged to `main` in PR #310 (bcd45c9e, 2026-10-31): the checkpoint prune never matches a carousel with a queued, running, retry-waiting or dead-lettered generation run.

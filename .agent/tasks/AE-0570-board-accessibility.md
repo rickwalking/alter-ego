@@ -1,6 +1,6 @@
 # AE-0570 — Workflow board accessibility: keyboard navigation, archive overflow menu, archived segmented control
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: High
 Type: Feature / UX / Accessibility
@@ -122,3 +122,7 @@ layout (AE-0568) and discovery (AE-0569) splits are already merged.
 - The menu uses `position: fixed` (not the clipping `NeonDropdown` absolute
   positioning) and manages Escape/outside-click/focus-return itself because
   `NeonDropdown` has no keyboard support.
+
+## Final Summary
+
+Merged to `main` in PR #307 (86c8871f, 2026-10-30). Closed on 2026-10-31 (ticket housekeeping, no code change).

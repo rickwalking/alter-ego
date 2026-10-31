@@ -1,6 +1,6 @@
 # AE-0576 — Bump pyasn1 and pypdf for CVE-2026-119194..119197 / CVE-2026-119206..119209
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Chore
@@ -42,7 +42,7 @@ next main run fail the gate.
 - [x] AC2 The floor is `pyasn1>=0.6.5` with a note naming CVE-2026-119194..119197, and the lock resolves pyasn1 0.6.5.
 - [x] AC3 `backend:pip-audit` passes with no findings and no new ignore or suppression.
 - [x] AC4 The PDF slide builder, artifact build and artifact health unit tests pass on the upgraded pypdf.
-- [ ] AC5 Every PR workflow is green; mutation remains CI-only.
+- [x] AC5 Every PR workflow is green; mutation remains CI-only.
 
 ## No-`.feature` classification (dependency/CI ticket)
 
@@ -86,3 +86,7 @@ next main run fail the gate.
 
 - 2026-10-30: same pattern as AE-0566 (floor + lock, no ignore). The pypdf fix release resolved to 6.21.4, the latest
   6.21.x patch.
+
+## Final Summary
+
+Merged to `main` in PR #311 (31d0ab9e, 2026-10-31). pip-audit green again on every branch; evidence in `.agent/reports/AE-0576.dev-summary.md`.

@@ -1,6 +1,6 @@
 # AE-0542 — backend and P1 worker memory caps from the real prod run peak (AE-0521 follow-up)
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Infra
@@ -58,3 +58,7 @@ the peak + 30 % rule.
 - 2026-10-24: the real peak is above the estimate: backend and P1 worker caps from it. First 1181 MiB (4 s sampler,
   1536M); the 15 s sampler shows 1222 MiB at 02:06:36 UTC, so the caps are 1600M.
 - 2026-10-24: rebased on AE-0545 (Langfuse on Langfuse Cloud); the budget with Langfuse gone lives there.
+
+## Final Summary
+
+Merged to `main` in PR #274 (5502f552, 2026-10-24). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).

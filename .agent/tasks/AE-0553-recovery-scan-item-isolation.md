@@ -1,6 +1,6 @@
 # AE-0553 — Daily recovery survives one failing item
 
-Status: Review
+Status: Done
 Tier: T2
 Priority: High
 Type: Bug
@@ -146,4 +146,5 @@ None.
 
 ## Final Summary
 
-Pending.
+Merged to `main` in PR #290 (5de60853, 2026-10-26). The status was left open after the merge; closed on 2026-10-30 (ticket housekeeping, no code change).
+
