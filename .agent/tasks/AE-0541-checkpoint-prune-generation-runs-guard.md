@@ -1,6 +1,6 @@
 # AE-0541 — Checkpoint prune: queued, running and dead-letter generation runs protect their thread
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -88,3 +88,7 @@ AE-0522 not merged.
 - `backend/tests/integration/checkpoint_prune_pg_support.py` (`generation_runs` table, `seed_generation_run`)
 - `backend/tests/integration/test_checkpoint_prune_pg_ae0525.py` (2 tests)
 
+## Test Evidence
+
+- Full local backend gate run green (26 pass, 0 fail, mutation CI-only): `.agent/reports/AE-0541.dev-summary.md`.
+- The two new Postgres integration tests fail with the guard removed and pass with it.
