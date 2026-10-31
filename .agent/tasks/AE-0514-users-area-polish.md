@@ -1,6 +1,6 @@
 # AE-0514 — Users area polish
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
