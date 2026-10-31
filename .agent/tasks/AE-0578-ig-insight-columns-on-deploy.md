@@ -1,6 +1,6 @@
 # AE-0578 — Insight columns reach prod with the deploy, and the deploy checks schema drift
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -112,3 +112,10 @@ Independent review: no blockers; findings applied (see dev summary).
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #314 (badf5981, 2026-10-31): the deploy runs the idempotent `ig_insight_columns` one-shot before
+the stack comes up and, once it is up, the read-only schema drift check in the running backend. The first deploy logged
+"ig insight columns: added none (present)" (prod had been fixed by hand) and "OK: live schema matches all mapped ORM
+columns."

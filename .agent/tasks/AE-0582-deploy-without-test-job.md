@@ -1,6 +1,6 @@
 # AE-0582 — Deploy workflow drops its test job (tests stay in PR CI)
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Chore
@@ -39,9 +39,9 @@ are untouched.
 
 ## Acceptance Criteria
 
-- [ ] AC1 `deploy.yml` has only the `deploy` job, with no `needs`.
-- [ ] AC2 The main-only `if`, the `prod-deploy` concurrency (no cancel) and `workflow_dispatch` are unchanged.
-- [ ] AC3 The first deploy after merge goes straight to the deploy job and finishes green.
+- [x] AC1 `deploy.yml` has only the `deploy` job, with no `needs`.
+- [x] AC2 The main-only `if`, the `prod-deploy` concurrency (no cancel) and `workflow_dispatch` are unchanged.
+- [x] AC3 The first deploy after merge goes straight to the deploy job and finishes green.
 
 ## Gherkin Scenarios
 
@@ -72,12 +72,19 @@ Test job and `needs: test` removed; workflow-shape test added (fails on the old 
 
 ## Test Evidence
 
-Pending.
+Full local backend gates on main at 29b45139 (contains this change): pass 26, fail 0, skip 1 (mutation, CI only).
+An earlier branch run had one known aiosqlite setup error (AE-0583); its `backend:test` rerun passed (7902 passed). GATES_JSON in
+`.agent/reports/AE-0582.dev-summary.md`. The shape test fails on the old `deploy.yml` (1 failed, 1 passed).
 
 ## QA Report
 
-Pending.
+Independent review of the scope by the coordinating session: only the test job and `needs: test` removed.
 
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #318 (0734d7da, 2026-10-31): the deploy workflow no longer re-runs the test suites. The first
+deploy after it ran only the deploy job and finished green in about 8 minutes.
