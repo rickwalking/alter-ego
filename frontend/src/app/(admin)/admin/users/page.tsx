@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  TOUCH_TARGET_CLASS,
   USER_FILTER_ROLE_ALL,
   USER_FILTER_STATUS_ALL,
 } from "@/constants/admin-users";
 import { filterUsers } from "@/lib/filter-users";
+import { NeonButton } from "@/components/atoms/neon-button";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { UserFilterToolbar } from "@/components/admin/user-filter-toolbar";
 import { UserTable } from "@/components/admin/user-table";
@@ -24,7 +26,7 @@ export default function UsersPage() {
   const t = useTranslations("admin");
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState(USER_FILTER_ROLE_ALL);
@@ -32,21 +34,22 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     setIsLoading(true);
-    setError("");
+    setLoadFailed(false);
     try {
       const response = await fetch("/api/admin/users", {
         credentials: "include",
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch users");
+        setLoadFailed(true);
+        return;
       }
       const data = (await response.json()) as {
         items: UserItem[];
         total: number;
       };
       setUsers(data.items);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch {
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -78,31 +81,34 @@ export default function UsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-text-primary">
             {t("usersTitle")}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-text-muted">
             {t("usersSubtitle", { count: users.length })}
           </p>
         </div>
-        <button
+        <NeonButton
           onClick={() => setIsCreateOpen(true)}
-          className="rounded-md bg-primary-700 px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-800"
+          className={TOUCH_TARGET_CLASS}
         >
           {t("createUser")}
-        </button>
+        </NeonButton>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800">
-          {error}
+      {loadFailed && (
+        <div
+          role="alert"
+          className="mb-4 rounded-md border border-neon-red/30 bg-neon-red/10 p-3 text-sm text-text-primary"
+        >
+          {t("loadError")}
         </div>
       )}
 
       {isLoading ? (
-        <div className="py-8 text-center text-gray-500">{t("loading")}</div>
+        <div className="py-8 text-center text-text-muted">{t("loading")}</div>
       ) : (
         <>
           <UserFilterToolbar
@@ -113,9 +119,9 @@ export default function UsersPage() {
             onRoleChange={setRoleFilter}
             onStatusChange={setStatusFilter}
           />
-          {filteredUsers.length === 0 && hasActiveFilters && !error ? (
-            <div className="rounded-lg bg-white p-8 text-center shadow">
-              <p className="text-gray-500">{t("noUsersMatch")}</p>
+          {filteredUsers.length === 0 && hasActiveFilters && !loadFailed ? (
+            <div className="rounded-lg border border-[var(--color-neon-card-border)] bg-bg-card p-8 text-center">
+              <p className="text-text-muted">{t("noUsersMatch")}</p>
             </div>
           ) : (
             <UserTable

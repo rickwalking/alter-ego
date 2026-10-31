@@ -1,19 +1,18 @@
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { SkipLink } from "@/components/atoms/skip-link";
-import { MAIN_CONTENT_ID } from "@/constants/a11y";
+import { NeonAppShell } from "@/components/layout/neon-app-shell";
 
+/**
+ * Admin shell: the same neon app shell as the dashboard (sidebar drawer on a
+ * phone, EN/PT switch, dark theme). The top padding below lg keeps the page
+ * heading clear of the fixed menu button.
+ */
 export default function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <SkipLink />
-      <AdminSidebar />
-      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 p-8">
-        {children}
-      </main>
-    </div>
+    <NeonAppShell>
+      <div className="w-full px-4 pb-8 pt-16 sm:px-6 lg:p-8">{children}</div>
+    </NeonAppShell>
   );
 }

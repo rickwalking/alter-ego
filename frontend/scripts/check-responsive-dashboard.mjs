@@ -29,6 +29,7 @@ const FRONTEND_ROOT = join(import.meta.dirname, "..");
 /** Files the responsive-dashboard epic made responsive. */
 export const ALLOW_LIST = [
   "src/app/dashboard/layout.tsx",
+  "src/components/layout/neon-app-shell.tsx",
   "src/components/organisms/neon-sidebar.tsx",
   "src/components/organisms/neon-top-bar.tsx",
   "src/app/dashboard/create/page.tsx",

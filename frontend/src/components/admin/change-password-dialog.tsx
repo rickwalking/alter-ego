@@ -2,13 +2,66 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { responseErrorDetail } from "@/lib/response-error";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { adminErrorKey } from "@/lib/admin-user-errors";
+import { responseErrorBody } from "@/lib/response-error";
 import {
+  DIALOG_BUTTON_CLASS,
+  DIALOG_MUTED_TEXT_CLASS,
   UserDialogActions,
   UserDialogShell,
   useDialogStatus,
   type UserDialogProps,
 } from "./user-dialog-parts";
+
+const RESET_ERROR_KEY = "resetError";
+
+/** What the reset request ended in: the new password, or a key to translate. */
+type ResetOutcome = { password: string } | { errorKey: string };
+
+async function requestReset(userId: string): Promise<ResetOutcome> {
+  const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const body = await responseErrorBody(response);
+    return {
+      errorKey: adminErrorKey(response.status, body) ?? RESET_ERROR_KEY,
+    };
+  }
+  const data = (await response.json()) as { temp_password: string };
+  return { password: data.temp_password };
+}
+
+interface TempPasswordProps {
+  message: string;
+  password: string;
+}
+
+function TempPassword({ message, password }: Readonly<TempPasswordProps>) {
+  const t = useTranslations("admin");
+  return (
+    <>
+      {message}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <code className="break-all rounded bg-bg-deep px-2 py-1 font-mono text-sm text-text-primary">
+          {password}
+        </code>
+        <NeonButton
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            void navigator.clipboard.writeText(password);
+          }}
+          className={DIALOG_BUTTON_CLASS}
+        >
+          {t("copy")}
+        </NeonButton>
+      </div>
+    </>
+  );
+}
 
 export function ChangePasswordDialog({
   user,
@@ -22,27 +75,16 @@ export function ChangePasswordDialog({
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     status.begin();
-
     try {
-      const response = await fetch(
-        `/api/admin/users/${user.id}/reset-password`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          (await responseErrorDetail(response)) ?? t("resetError"),
-        );
+      const outcome = await requestReset(user.id);
+      if ("errorKey" in outcome) {
+        status.setError(t(outcome.errorKey));
+        return;
       }
-
-      const data = (await response.json()) as { temp_password: string };
-      setPassword(data.temp_password);
+      setPassword(outcome.password);
       status.setSuccess(t("resetSuccess"));
-    } catch (err) {
-      status.setError(err instanceof Error ? err.message : t("resetError"));
+    } catch {
+      status.setError(t(RESET_ERROR_KEY));
     } finally {
       status.finish();
     }
@@ -51,26 +93,12 @@ export function ChangePasswordDialog({
   return (
     <UserDialogShell
       title={t("resetPasswordTitle")}
-      subtitle={<p className="text-sm text-gray-500">{user.email}</p>}
+      onClose={onClose}
+      subtitle={<p className={DIALOG_MUTED_TEXT_CLASS}>{user.email}</p>}
       error={status.error}
       success={
         status.success ? (
-          <>
-            {status.success}
-            <div className="mt-2 flex items-center space-x-2">
-              <code className="rounded bg-gray-100 px-2 py-1 text-sm font-mono">
-                {password}
-              </code>
-              <button
-                onClick={() => {
-                  void navigator.clipboard.writeText(password);
-                }}
-                className="text-xs text-primary hover:text-primary-900"
-              >
-                {t("copy")}
-              </button>
-            </div>
-          </>
+          <TempPassword message={status.success} password={password} />
         ) : undefined
       }
     >
@@ -81,7 +109,7 @@ export function ChangePasswordDialog({
           }}
           className="mt-4"
         >
-          <p className="text-sm text-gray-600">
+          <p className={DIALOG_MUTED_TEXT_CLASS}>
             {t("resetPasswordDescription")}
           </p>
           <UserDialogActions
@@ -95,16 +123,15 @@ export function ChangePasswordDialog({
 
       {status.success && (
         <div className="mt-6 flex justify-end">
-          <button
-            type="button"
+          <NeonButton
             onClick={() => {
               onSuccess();
               onClose();
             }}
-            className="rounded-md bg-primary-700 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-800"
+            className={DIALOG_BUTTON_CLASS}
           >
             {t("done")}
-          </button>
+          </NeonButton>
         </div>
       )}
     </UserDialogShell>

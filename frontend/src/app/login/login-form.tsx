@@ -37,6 +37,7 @@ export function LoginForm({
     >
       {error && (
         <div
+          role="alert"
           style={{
             marginBottom: "20px",
             padding: "10px 14px",

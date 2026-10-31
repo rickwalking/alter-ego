@@ -1635,7 +1635,8 @@
     "forbiddenTitle": "Acesso Negado",
     "forbiddenDescription": "Você não tem permissão para acessar esta página.",
     "goHome": "Ir para o Início",
-    "tryAgain": "Tentar Novamente"
+    "tryAgain": "Tentar Novamente",
+    "accountDeactivated": "Esta conta está desativada. Peça a um admin para reativá-la."
   },
   "notFound": {
     "code": "404",
@@ -2213,9 +2214,6 @@
     }
   },
   "admin": {
-    "panelTitle": "Admin",
-    "usersLink": "Usuários",
-    "logout": "Sair",
     "usersTitle": "Usuários",
     "usersSubtitle": "{count} usuário(s)",
     "createUser": "Criar usuário",
@@ -2272,7 +2270,17 @@
     "roleFilterAll": "Todas as funções",
     "statusFilterAll": "Todos os status",
     "noUsersMatch": "Nenhum usuário encontrado para os filtros selecionados.",
-    "statusLabel": "Status"
+    "statusLabel": "Status",
+    "closeDialog": "Fechar diálogo",
+    "passwordHint": "Pelo menos {min} caracteres. Deixe em branco para gerar uma senha temporária.",
+    "minLengthNotMet": "A senha precisa ter pelo menos {min} caracteres.",
+    "emailInvalid": "Informe um e-mail válido.",
+    "createNameInvalid": "Informe um nome completo de 2 a 255 caracteres.",
+    "emailTaken": "Já existe um usuário com este e-mail.",
+    "lastAdminError": "O último admin não pode ser rebaixado, desativado nem excluído.",
+    "selfDeleteError": "Você não pode excluir a sua própria conta.",
+    "userNotFound": "Este usuário não existe mais. Recarregue a lista.",
+    "loadError": "Não foi possível carregar os usuários."
   },
   "carousels": {
     "eyebrow": "Arquivo visual",

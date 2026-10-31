@@ -168,17 +168,27 @@ describe("edit-user name field", () => {
     expect(input).toHaveAttribute("aria-invalid", "false");
   });
 
-  // Scenario: The backend rejects the name
-  it("shows the API message for other failures", async () => {
-    stubFetch(jsonResponse({ detail: "Cannot demote the last admin" }, 409));
+  // Scenario: A last-admin or self-delete refusal is translated
+  it("shows the translated message for a coded failure, never the API text", async () => {
+    stubFetch(
+      jsonResponse(
+        { detail: "Cannot demote the last admin", code: "last_admin" },
+        409,
+      ),
+    );
     const user = userEvent.setup();
     renderDialog();
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(
-      await screen.findByText("Cannot demote the last admin"),
+      await screen.findByText(
+        "The last admin cannot be demoted, deactivated or deleted.",
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Cannot demote the last admin"),
+    ).not.toBeInTheDocument();
   });
 
   // Scenario: The backend rejects the name
@@ -222,7 +232,7 @@ describe("edit-user name field", () => {
 
     expect(input).toHaveAttribute("type", "text");
     expect(input).toHaveClass("focus-visible:ring-2");
-    expect(input).toHaveClass("focus:ring-primary-500");
+    expect(input).toHaveClass("focus:ring-neon-cyan");
   });
 });
 

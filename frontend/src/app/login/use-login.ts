@@ -8,10 +8,11 @@ import {
   LOGIN_ERROR_INVALID_CREDENTIALS,
   LOGIN_ERROR_PARAM,
   LOGIN_ERROR_SESSION_EXPIRED,
+  LOGIN_ERROR_CODE_USER_INACTIVE,
   LOGIN_ERROR_TOO_MANY_ATTEMPTS,
 } from "@/constants/auth";
 import { sanitizeLoginRedirect } from "@/modules/identity";
-import { responseErrorDetail } from "@/lib/response-error";
+import { errorBodyCode, responseErrorBody } from "@/lib/response-error";
 
 export interface LoginController {
   email: string;
@@ -24,6 +25,22 @@ export interface LoginController {
 }
 
 const HTTP_TOO_MANY_REQUESTS = 429;
+const LOGIN_ERROR_KEY = "loginError";
+
+/**
+ * The `auth` message key of a failed sign-in: rate-limited, a deactivated
+ * account (its stable `code`), else invalid credentials. The API's English
+ * `detail` is never shown.
+ */
+async function loginFailureKey(response: Response): Promise<string> {
+  if (response.status === HTTP_TOO_MANY_REQUESTS) {
+    return "tooManyAttempts";
+  }
+  const code = errorBodyCode(await responseErrorBody(response));
+  return code === LOGIN_ERROR_CODE_USER_INACTIVE
+    ? "accountDeactivated"
+    : LOGIN_ERROR_KEY;
+}
 
 function useSessionExpiredNotice(setError: (message: string) => void) {
   const t = useTranslations("auth");
@@ -66,13 +83,9 @@ export function useLogin(): LoginController {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.status === HTTP_TOO_MANY_REQUESTS) {
-        throw new Error(t("tooManyAttempts"));
-      }
       if (!response.ok) {
-        throw new Error(
-          (await responseErrorDetail(response)) ?? t("loginError"),
-        );
+        setError(t(await loginFailureKey(response)));
+        return;
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -81,8 +94,8 @@ export function useLogin(): LoginController {
       );
       router.push(redirectTo);
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("loginError"));
+    } catch {
+      setError(t(LOGIN_ERROR_KEY));
     } finally {
       setIsLoading(false);
     }

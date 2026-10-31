@@ -23,8 +23,9 @@ const SEARCH_INPUT_ID = "user-search";
 const ROLE_SELECT_ID = "user-role-filter";
 const STATUS_SELECT_ID = "user-status-filter";
 const FIELD_CLASS =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500";
-const LABEL_CLASS = "mb-1 block text-sm font-medium text-gray-700";
+  "h-11 w-full rounded-md border border-[var(--color-neon-input-border)] bg-[var(--color-neon-input-bg)] px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-neon-cyan focus:outline-none focus:ring-2 focus:ring-neon-cyan";
+const LABEL_CLASS = "mb-1 block text-sm font-medium text-text-primary";
+const SELECT_BOX_CLASS = "w-full sm:w-48";
 
 export function UserFilterToolbar({
   query,
@@ -37,8 +38,8 @@ export function UserFilterToolbar({
   const t = useTranslations("admin");
 
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow">
-      <div className="min-w-56 flex-1">
+    <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-[var(--color-neon-card-border)] bg-bg-card p-4">
+      <div className="w-full sm:w-auto sm:min-w-56 sm:flex-1">
         <label htmlFor={SEARCH_INPUT_ID} className={LABEL_CLASS}>
           {t("searchLabel")}
         </label>
@@ -51,7 +52,7 @@ export function UserFilterToolbar({
           className={FIELD_CLASS}
         />
       </div>
-      <div className="w-40">
+      <div className={SELECT_BOX_CLASS}>
         <label htmlFor={ROLE_SELECT_ID} className={LABEL_CLASS}>
           {t("roleLabel")}
         </label>
@@ -66,7 +67,7 @@ export function UserFilterToolbar({
           <option value={USER_FILTER_ROLE_EDITOR}>{t("editorRole")}</option>
         </select>
       </div>
-      <div className="w-40">
+      <div className={SELECT_BOX_CLASS}>
         <label htmlFor={STATUS_SELECT_ID} className={LABEL_CLASS}>
           {t("statusLabel")}
         </label>

@@ -4,9 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import AdminLayout from "@/app/(admin)/admin/layout";
 import DashboardLayout from "@/app/dashboard/layout";
 
-vi.mock("@/components/admin/admin-sidebar", () => ({
-  AdminSidebar: () => <nav aria-label="admin" />,
-}));
 vi.mock("@/components/organisms/neon-sidebar", () => ({
   NeonSidebar: () => <nav aria-label="sidebar" />,
 }));

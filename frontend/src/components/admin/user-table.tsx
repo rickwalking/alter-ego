@@ -1,101 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { formatLocaleDate } from "@/lib/locale-format";
-import { RoleBadge } from "./role-badge";
+import { useTranslations } from "next-intl";
+import { USER_CARDS_MEDIA_QUERY } from "@/constants/admin-users";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import type { UserItem } from "./user-dialog-parts";
+import { UserCardList, type UserRowHandlers, UserTableView } from "./user-rows";
 
 interface UserTableProps {
   users: UserItem[];
   onRefresh: () => void;
 }
 
+/**
+ * The admin user list: a table from tablet width up, stacked cards on a
+ * phone. Each row action opens its modal dialog.
+ */
 export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
   const t = useTranslations("admin");
-  const locale = useLocale();
+  const isPhone = useMediaQuery(USER_CARDS_MEDIA_QUERY);
   const [editUser, setEditUser] = useState<UserItem | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
   const [resetUser, setResetUser] = useState<UserItem | null>(null);
+  const handlers: UserRowHandlers = {
+    onEdit: setEditUser,
+    onReset: setResetUser,
+    onDelete: setDeleteUser,
+  };
 
   if (users.length === 0) {
     return (
-      <div className="rounded-lg bg-white p-8 text-center shadow">
-        <p className="text-gray-500">{t("noUsers")}</p>
+      <div className="rounded-lg border border-[var(--color-neon-card-border)] bg-bg-card p-8 text-center">
+        <p className="text-text-muted">{t("noUsers")}</p>
       </div>
     );
   }
 
+  const List = isPhone ? UserCardList : UserTableView;
   return (
-    <div className="overflow-hidden rounded-lg bg-white shadow">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("nameColumn")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("emailColumn")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("roleColumn")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("statusColumn")}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("createdColumn")}
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-              {t("actionsColumn")}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                {user.full_name}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {user.email}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4">
-                <RoleBadge role={user.role} />
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {user.is_active ? t("active") : t("inactive")}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {formatLocaleDate(user.created_at, locale)}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                <button
-                  onClick={() => setEditUser(user)}
-                  className="mr-3 text-primary hover:text-primary-900"
-                >
-                  {t("edit")}
-                </button>
-                <button
-                  onClick={() => setResetUser(user)}
-                  className="mr-3 text-primary hover:text-primary-900"
-                >
-                  {t("resetPassword")}
-                </button>
-                <button
-                  onClick={() => setDeleteUser(user)}
-                  className="text-destructive hover:text-destructive/80"
-                >
-                  {t("delete")}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <>
+      <List users={users} handlers={handlers} />
 
       {editUser && (
         <EditUserDialog
@@ -120,6 +67,6 @@ export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
           onSuccess={onRefresh}
         />
       )}
-    </div>
+    </>
   );
 }
