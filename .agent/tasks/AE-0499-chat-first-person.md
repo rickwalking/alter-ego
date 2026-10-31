@@ -1,6 +1,6 @@
 # AE-0499 — Chat persona speaks consistently in first person
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Bug
@@ -40,19 +40,19 @@ replies: "I just know Pedro's stuff", "his alter ego".
 
 ## Acceptance Criteria
 
-- [ ] AC1 `alter_ego/v4/system.md`: everything about Pedro in first person,
+- [x] AC1 `alter_ego/v4/system.md`: everything about Pedro in first person,
   including the vague answer about how the chat works; explicit rule never to
   refer to Pedro in the third person nor call itself "his alter ego" / "an
   assistant for Pedro" / "o alter ego dele"; answers in the user's language.
   Every other v3 rule kept. README for v4. v1 to v3 untouched.
-- [ ] AC2 The version is a named constant in the context's constants file and
+- [x] AC2 The version is a named constant in the context's constants file and
   points at v4; v3 stays loadable.
-- [ ] AC3 CI eval without a live LLM: 20 eval prompts as data (PT and EN, with
+- [x] AC3 CI eval without a live LLM: 20 eval prompts as data (PT and EN, with
   "who are you?", "quem é você?", "is this a bot?", "você é um robô?", career
   questions); tests that v4 has no third-person reference to Pedro, that v4 has
   the first-person rule, and a reply checker unit-tested on recorded good and
   bad replies.
-- [ ] AC4 No regression in the existing alter-ego agent and prompt tests.
+- [x] AC4 No regression in the existing alter-ego agent and prompt tests.
 
 ## Gherkin Scenarios
 
@@ -136,6 +136,7 @@ chat prompt and this ticket does not change it.
 ### 2026-10-31
 
 Ticket created. v4 prompt, constants, checker, eval fixture and tests written.
+Full `gate-capture.sh backend` at 9937b21f1: 26 pass, 0 fail, 1 skip (mutation, CI only). Moved to Dev Complete.
 
 ## Files Touched
 
