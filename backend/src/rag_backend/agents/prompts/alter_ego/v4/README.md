@@ -4,15 +4,18 @@ The public chat speaks as Pedro ("You are Pedro Marins"), but v3 described Pedro
 in the third person in several places, and the model copied it into replies
 ("I just know Pedro's stuff", "his alter ego"). v4 makes every reference first
 person. `alter_ego_agent.py` loads it through `ALTER_EGO_PROMPT_VERSION`
-(`domain/constants/alter_ego_voice.py`); v1 to v3 stay untouched for rollback.
+(`domain/constants/alter_ego_prompt.py`); v1 to v3 stay untouched for rollback.
 
 Changes from `v3/system.md`:
 
-- New section `SPEAKING AS ME (FIRST PERSON ONLY)`: always "I / my / me" ("eu /
-  meu / minha"), never refer to Pedro in the third person, never call yourself
-  "his alter ego", "an assistant for Pedro" or "o alter ego dele", and answer in
-  the user's language (Portuguese or English). This is the only place the
-  forbidden third-person phrases appear, quoted as forbidden.
+- New section `SPEAKING AS YOURSELF (FIRST PERSON ONLY)`: always "I / my / me"
+  ("eu / meu / minha"); when referring to yourself, never the third person
+  ("Pedro's", "he", "ele", "dele"...), while talking about other people in the
+  third person stays fine; never call yourself "his alter ego", "his
+  assistant", "an assistant for Pedro" or "o alter ego dele"; answer in the
+  user's language (Portuguese or English). Two lines of this section quote the
+  forbidden phrases as forbidden; the tests pin those two lines exactly and scan
+  every other line.
 - "they're Pedro's" (experiences) became "they're your own".
 - "You draw from Pedro's CV, projects, blog posts, and notes" became "your own
   CV, your projects, your blog posts, and your notes", with the reply wording
@@ -23,11 +26,15 @@ Changes from `v3/system.md`:
 - "Never make up facts about Pedro's experience" became "about your own
   experience".
 
+- The five voice examples opened with a doubled bracket (`<<example>`); v4
+  opens them with `<example>`.
+
 Unchanged: identity line, tone, the never-mention-companies and no-resume rules,
 no tool or system disclosure, "I don't know" over invention, language matching,
 the injection guardrails and the voice examples.
 
 Tests: `tests/unit/agents/test_chat_first_person_ae0499.py` (scenarios in
 `tests/features/chat_first_person_ae0499.feature`) check that v4 has no
-third-person reference outside the rule section and run the reply checker over
-the recorded sample replies in `tests/fixtures/chat_first_person_eval.yaml`.
+third-person reference outside the two pinned quoted-phrase lines and run the
+test oracle `tests/support/first_person_check.py` over the recorded sample
+replies in `tests/fixtures/chat_first_person_eval.yaml`.

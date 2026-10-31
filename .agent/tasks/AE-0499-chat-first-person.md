@@ -77,14 +77,14 @@ Feature: The public chat speaks as Pedro, always in the first person
 ### ADDED
 
 - `backend/src/rag_backend/agents/prompts/alter_ego/v4/system.md` and `README.md`.
-- `backend/src/rag_backend/domain/constants/alter_ego_voice.py` (prompt id, version, checker patterns).
-- `backend/src/rag_backend/agents/first_person_check.py` (deterministic reply and prompt checker).
+- `backend/src/rag_backend/domain/constants/alter_ego_prompt.py` (`ALTER_EGO_PROMPT_NAME`, `ALTER_EGO_PROMPT_VERSION`).
+- `backend/tests/support/first_person_check.py` and `first_person_patterns.py` (test oracle: deterministic reply and prompt checker; not used in production).
 - `backend/tests/fixtures/chat_first_person_eval.yaml` (20 recorded eval cases).
 - `backend/tests/features/chat_first_person_ae0499.feature`, `backend/tests/unit/agents/test_chat_first_person_ae0499.py`.
 
 ### MODIFIED
 
-- `backend/src/rag_backend/agents/alter_ego_agent.py`: loads `ALTER_EGO_PROMPT_AGENT` at `ALTER_EGO_PROMPT_VERSION` (v4) instead of the literal `"v3"`.
+- `backend/src/rag_backend/agents/alter_ego_agent.py`: loads `ALTER_EGO_PROMPT_NAME` at `ALTER_EGO_PROMPT_VERSION` (v4) instead of the literal `"v3"`.
 
 ### REMOVED
 
@@ -96,7 +96,7 @@ Feature: The public chat speaks as Pedro, always in the first person
 - Frontend: none.
 - Database: none.
 - API: none.
-- Tests: new unit tests and fixture.
+- Tests: new unit tests, fixture and test oracle; `test_alter_ego_prompt.py` rule asserts now target `ALTER_EGO_PROMPT_VERSION` (v4), with v3 and v2 rollback-load tests.
 - Docs: v4 prompt README.
 - Prompts/LLM: new `alter_ego/v4` system prompt.
 - Observability: none.
@@ -137,6 +137,9 @@ chat prompt and this ticket does not change it.
 
 Ticket created. v4 prompt, constants, checker, eval fixture and tests written.
 Full `gate-capture.sh backend` at 9937b21f1: 26 pass, 0 fail, 1 skip (mutation, CI only). Moved to Dev Complete.
+Review follow-up: pronoun rule limited to the speaker, checker generalised with 8 short recorded leaks and 5 recorded
+good replies, checker moved to `backend/tests/support/`, prompt scan pins the two quoted lines instead of skipping the
+section, existing prompt tests point at the current version, heading renamed, `<<example>` typo fixed in v4.
 
 ## Files Touched
 
@@ -155,13 +158,18 @@ Pending.
 - The prompt stays written to the model in the second person ("you", "your own
   CV"), as v1 to v3 are; the reply wording it asks for is first person ("my CV",
   "my projects", "my blog posts").
-- The forbidden third-person phrases are quoted only inside the
-  `SPEAKING AS ME (FIRST PERSON ONLY)` section; the prompt scan skips that
-  section and checks the rest of the prompt, bare pronouns included.
-- The reply checker only flags patterns anchored on Pedro or on the
-  "alter ego / assistant" self-description, so a reply that says "he" about
-  someone else (a former manager) is not flagged. Bare pronouns are checked on
-  the prompt only.
+- The forbidden phrases are quoted in two lines of the
+  `SPEAKING AS YOURSELF (FIRST PERSON ONLY)` section. The tests pin those two
+  lines to their exact text and scan every other line, so a new third-person
+  line in that section is still caught, and an edited pinned line fails.
+- The pronoun rule is about the speaker only: third person about other people
+  is allowed, and the checker agrees. Replies are flagged for Pedro (or Pedro
+  Marins) as a sentence subject, "o Pedro" + a word (not "Sou o Pedro"),
+  "his alter ego" / "his assistant" / "assistente dele", and a reply that
+  opens with "He" or "Ele". A pronoun about a named someone else later in a
+  reply passes. Bare pronouns anywhere are checked on the prompt only.
+- The checker is a test oracle under `backend/tests/support/`; production only
+  holds the prompt name and version constants.
 - No live-eval script: optional in the ticket, and the checker can be reused by
   one later.
 

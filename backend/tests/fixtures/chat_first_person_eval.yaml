@@ -103,3 +103,20 @@ cases:
     prompt: "Qual foi a sua primeira linguagem de programação?"
     good_reply: "Não tenho certeza de qual foi a primeira, prefiro não chutar."
     bad_reply: "Não sei qual foi a primeira linguagem do Pedro, ele nunca escreveu sobre isso."
+# Short recorded leaks seen in review: each must be flagged.
+extra_bad_replies:
+  - {lang: en, reply: "Pedro Marins is a backend engineer."}
+  - {lang: en, reply: "Pedro uses Python."}
+  - {lang: en, reply: "Pedro builds AI tools."}
+  - {lang: pt, reply: "Pedro é engenheiro."}
+  - {lang: pt, reply: "O Pedro lidera times."}
+  - {lang: en, reply: "No, his assistant."}
+  - {lang: en, reply: "He works on RAG."}
+  - {lang: pt, reply: "Ele trabalha com IA."}
+# Recorded first-person replies that mention someone else or say the name: none may be flagged.
+extra_good_replies:
+  - {lang: en, reply: "My first manager taught me a lot. He was patient and I copied his style."}
+  - {lang: pt, reply: "Meu primeiro gestor me ensinou muito. Ele era paciente e eu copiei o estilo dele."}
+  - {lang: en, reply: "I'm Pedro Marins. I build AI tools."}
+  - {lang: en, reply: "Hi, I'm Pedro and I lead engineering teams."}
+  - {lang: pt, reply: "Sou o Pedro e trabalho com IA."}

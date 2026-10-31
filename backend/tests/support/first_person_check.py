@@ -1,16 +1,17 @@
-"""Deterministic first-person voice check for the Alter-Ego chat.
+"""Deterministic first-person voice oracle for the Alter-Ego chat eval.
 
 Finds third-person references to Pedro in a chat reply or in the chat system
 prompt. It is the recorded judge of the first-person eval: no model call, only
-the patterns in ``domain.constants.alter_ego_voice``.
+the patterns in ``tests.support.first_person_patterns``. In the prompt, only
+the exact lines that quote the forbidden phrases as forbidden are skipped, so a
+new third-person line anywhere else, the rule section included, is caught.
 """
 
 from __future__ import annotations
 
 import re
 
-from rag_backend.domain.constants.alter_ego_voice import (
-    FIRST_PERSON_RULE_HEADING,
+from tests.support.first_person_patterns import (
     THIRD_PERSON_PRONOUN_PATTERNS,
     THIRD_PERSON_REPLY_PATTERNS,
 )
@@ -38,24 +39,26 @@ def is_first_person_reply(reply: str) -> bool:
     return not third_person_reply_findings(reply)
 
 
-def strip_first_person_rule(prompt: str) -> str:
-    """Drop the first-person rule section, the only place forbidden phrases are quoted.
-
-    The section runs from ``FIRST_PERSON_RULE_HEADING`` to the next blank line.
-    A prompt without the heading is returned unchanged.
-    """
-    start = prompt.find(FIRST_PERSON_RULE_HEADING)
-    if start < 0:
-        return prompt
-    end = prompt.find("\n\n", start)
-    tail = "" if end < 0 else prompt[end:]
-    return prompt[:start] + tail
+def strip_lines(prompt: str, lines: tuple[str, ...]) -> str:
+    """Remove each exact line from the prompt; fail if one is missing."""
+    kept = prompt.splitlines()
+    for line in lines:
+        if line not in kept:
+            raise ValueError(line)
+        kept.remove(line)
+    return "\n".join(kept)
 
 
-def third_person_prompt_findings(prompt: str) -> list[str]:
+def third_person_prompt_findings(
+    prompt: str, quoted_lines: tuple[str, ...]
+) -> list[str]:
     """Return third-person references to Pedro in a system prompt.
 
-    The first-person rule section is skipped, and bare pronouns count too,
-    because the prompt describes no one but Pedro.
+    ``quoted_lines`` are the exact rule lines that quote forbidden phrases;
+    every other line is scanned, bare pronouns included, because the prompt
+    describes no one but Pedro.
     """
-    return _findings(strip_first_person_rule(prompt), _PROMPT_REGEXES)
+    scanned = strip_lines(prompt, quoted_lines)
+    return [
+        hit for line in scanned.splitlines() for hit in _findings(line, _PROMPT_REGEXES)
+    ]

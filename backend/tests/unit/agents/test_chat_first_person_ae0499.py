@@ -12,38 +12,41 @@ import pytest
 import yaml
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.first_person_check import (
+from rag_backend.agents.prompts.registry import get_system_prompt
+from rag_backend.domain.constants.alter_ego_prompt import (
+    ALTER_EGO_PROMPT_NAME,
+    ALTER_EGO_PROMPT_VERSION,
+)
+from tests.support.first_person_check import (
     is_first_person_reply,
-    strip_first_person_rule,
+    strip_lines,
     third_person_prompt_findings,
     third_person_reply_findings,
-)
-from rag_backend.agents.prompts.registry import get_system_prompt
-from rag_backend.domain.constants.alter_ego_voice import (
-    ALTER_EGO_PROMPT_AGENT,
-    ALTER_EGO_PROMPT_VERSION,
-    FIRST_PERSON_RULE_HEADING,
 )
 
 _FIXTURE = (
     Path(__file__).resolve().parents[2] / "fixtures" / "chat_first_person_eval.yaml"
 )
-_CASES: list[dict[str, str]] = yaml.safe_load(_FIXTURE.read_text(encoding="utf-8"))[
-    "cases"
-]
+_EVAL = yaml.safe_load(_FIXTURE.read_text(encoding="utf-8"))
+_CASES: list[dict[str, str]] = _EVAL["cases"]
 _CASE_IDS = [case["id"] for case in _CASES]
+_EXTRA_BAD = [item["reply"] for item in _EVAL["extra_bad_replies"]]
+_EXTRA_GOOD = [item["reply"] for item in _EVAL["extra_good_replies"]]
 _REGISTRY = "rag_backend.agents.prompts.registry.get_system_prompt"
+_RULE_HEADING = "SPEAKING AS YOURSELF (FIRST PERSON ONLY):"
+_QUOTED_FORBIDDEN_LINES = (
+    '- When referring to yourself, never use the third person: no "Pedro\'s", '
+    '"Pedro is", "he", "his", "him", "o Pedro", "do Pedro", "ele", "dele". '
+    "Talking about other people in the third person is fine.",
+    '- NEVER call yourself "his alter ego", "his assistant", "an assistant for Pedro", '
+    '"Pedro\'s assistant", "o alter ego dele" or "o assistente do Pedro". '
+    'If someone asks who you are: "I\'m Pedro." / "Sou o Pedro."',
+)
 
 
 def _v4() -> str:
     """Load the v4 chat system prompt."""
-    return get_system_prompt(ALTER_EGO_PROMPT_AGENT, version="v4")
-
-
-def _rule_section(prompt: str) -> str:
-    """Return the first-person rule section of a prompt."""
-    start = prompt.index(FIRST_PERSON_RULE_HEADING)
-    return prompt[start : prompt.index("\n\n", start)]
+    return get_system_prompt(ALTER_EGO_PROMPT_NAME, version=ALTER_EGO_PROMPT_VERSION)
 
 
 class TestPromptVersion:
@@ -56,7 +59,6 @@ class TestPromptVersion:
         with patch(_REGISTRY, return_value="loaded") as loader:
             assert agent._load_system_prompt() == "loaded"
         loader.assert_called_once_with("alter_ego", version="v4")
-        assert ALTER_EGO_PROMPT_VERSION == "v4"
 
     # Scenario: The v3 prompt stays loadable for rollback
     def test_v3_stays_loadable_and_unchanged(self) -> None:
@@ -71,28 +73,41 @@ class TestV4Prompt:
 
     # Scenario: The v4 prompt has no third-person reference to Pedro
     def test_v4_has_no_third_person_reference(self) -> None:
-        """Outside the rule section, v4 never describes Pedro in the third person."""
+        """Apart from the two pinned quoted-phrase lines, v4 never uses the third person."""
         prompt = _v4()
-        assert third_person_prompt_findings(prompt) == []
-        assert "You are Pedro Marins" in strip_first_person_rule(prompt)
+        assert third_person_prompt_findings(prompt, _QUOTED_FORBIDDEN_LINES) == []
+        assert "You are Pedro Marins" in strip_lines(prompt, _QUOTED_FORBIDDEN_LINES)
 
     # Scenario: The v4 prompt has no third-person reference to Pedro
     def test_v3_fails_the_same_scan(self) -> None:
         """The scan catches the v3 lines that leaked into replies."""
-        findings = third_person_prompt_findings(
-            get_system_prompt("alter_ego", version="v3")
-        )
-        assert findings.count("Pedro's") == 4
+        prompt = get_system_prompt("alter_ego", version="v3")
+        assert third_person_prompt_findings(prompt, ()).count("Pedro's") == 4
+
+    # Scenario: The prompt scan skips only the pinned quoted-phrase lines
+    def test_a_new_third_person_line_in_the_rule_section_is_caught(self) -> None:
+        """Only the pinned lines are skipped, not the whole rule section."""
+        prompt = _v4().replace(_RULE_HEADING, f"{_RULE_HEADING}\n- He keeps it short.")
+        assert third_person_prompt_findings(prompt, _QUOTED_FORBIDDEN_LINES) == [
+            "- He",
+            "He",
+        ]
 
     # Scenario: The v4 prompt states the first-person rule
     def test_v4_states_the_first_person_rule(self) -> None:
-        """The rule forbids third person and the alter-ego self-description."""
-        rule = _rule_section(_v4())
-        assert "NEVER refer to Pedro in the third person" in rule
-        assert '"his alter ego"' in rule
-        assert '"o alter ego dele"' in rule
-        assert '"an assistant for Pedro"' in rule
-        assert "Answer in the user's language (Portuguese or English)" in rule
+        """The rule section holds the pinned lines and the language rule."""
+        prompt = _v4()
+        section = prompt[prompt.index(_RULE_HEADING) :].split("\n\n")[0].splitlines()
+        assert section[0] == _RULE_HEADING
+        assert set(_QUOTED_FORBIDDEN_LINES) <= set(section)
+        assert (
+            "Talking about other people in the third person is fine."
+            in _QUOTED_FORBIDDEN_LINES[0]
+        )
+        assert (
+            "- Answer in the user's language (Portuguese or English), always in first person."
+            in section
+        )
 
     # Scenario: The v4 prompt keeps every v3 rule
     @pytest.mark.parametrize(
@@ -121,6 +136,13 @@ class TestV4Prompt:
         assert '"Eu só respondo com o que eu sei e já escrevi."' in prompt
         assert "I just know Pedro's stuff" not in prompt
 
+    # Scenario: The v4 prompt keeps every v3 rule
+    def test_v4_examples_are_well_formed(self) -> None:
+        """Every example opens with a single bracket and is closed."""
+        prompt = _v4()
+        assert "<<example>" not in prompt
+        assert prompt.count("<example>") == prompt.count("</example>") == 5
+
 
 class TestRecordedEval:
     """The checker judges the recorded replies of the 20 eval prompts."""
@@ -138,6 +160,18 @@ class TestRecordedEval:
         """A third-person or alter-ego reply is flagged."""
         assert third_person_reply_findings(case["bad_reply"])
         assert not is_first_person_reply(case["bad_reply"])
+
+    # Scenario: Recorded third-person replies are flagged
+    @pytest.mark.parametrize("reply", _EXTRA_BAD)
+    def test_short_recorded_leak_is_flagged(self, reply: str) -> None:
+        """Name-as-subject, "o Pedro", "his assistant" and pronoun-opening leaks are flagged."""
+        assert not is_first_person_reply(reply)
+
+    # Scenario: A reply that mentions someone else in the third person is not flagged
+    @pytest.mark.parametrize("reply", _EXTRA_GOOD)
+    def test_first_person_reply_about_someone_else_passes(self, reply: str) -> None:
+        """A pronoun about a named someone else, or saying the own name, is not flagged."""
+        assert third_person_reply_findings(reply) == []
 
     # Scenario: The eval covers identity, bot and career questions in both languages
     def test_fixture_covers_both_languages_and_key_prompts(self) -> None:
@@ -166,6 +200,8 @@ class TestCheckerEdges:
             ("I'm an assistant for Pedro.", "assistant for Pedro"),
             ("O Pedro escreveu sobre isso.", "O Pedro escreveu"),
             ("Pedro\u2019s view is simple.", "Pedro\u2019s"),
+            ("Sim. Pedro Marins gosta de RAG.", ". Pedro Marins gosta"),
+            ("Sou o assistente dele.", "assistente dele"),
         ],
     )
     def test_named_phrases_are_reported(self, reply: str, expected: str) -> None:
@@ -173,30 +209,21 @@ class TestCheckerEdges:
         assert expected in third_person_reply_findings(reply)
 
     # Scenario: A reply that mentions someone else in the third person is not flagged
-    def test_third_person_about_someone_else_is_not_flagged(self) -> None:
-        """A pronoun about someone else does not flag a reply."""
-        reply = (
-            "My first manager taught me a lot. He was patient and I copied his style."
-        )
-        assert is_first_person_reply(reply)
-
-    # Scenario: A reply that mentions someone else in the third person is not flagged
     def test_prompt_scan_counts_bare_pronouns(self) -> None:
-        """The prompt scan flags bare pronouns that the reply check allows."""
-        text = "He knows it and it is his."
+        """The prompt scan flags bare pronouns that the reply check allows mid-reply."""
+        text = "It is simple. He knows it and it is his."
         assert third_person_reply_findings(text) == []
-        assert third_person_prompt_findings(text) == ["He", "his"]
+        assert third_person_prompt_findings(text, ()) == ["He", "his"]
 
-    # Scenario: A prompt without the rule section is scanned whole
-    def test_prompt_without_rule_is_scanned_whole(self) -> None:
-        """No heading means nothing is skipped."""
+    # Scenario: The prompt scan skips only the pinned quoted-phrase lines
+    def test_prompt_without_quoted_lines_is_scanned_whole(self) -> None:
+        """No pinned lines means nothing is skipped."""
         prompt = "Use Pedro's CV.\n\nBe direct."
-        assert strip_first_person_rule(prompt) == prompt
-        assert third_person_prompt_findings(prompt) == ["Pedro's"]
+        assert strip_lines(prompt, ()) == prompt
+        assert third_person_prompt_findings(prompt, ()) == ["Pedro's"]
 
-    # Scenario: A prompt without the rule section is scanned whole
-    def test_rule_section_at_the_end_is_dropped(self) -> None:
-        """A rule section with no blank line after it runs to the end."""
-        prompt = f"Be direct.\n\n{FIRST_PERSON_RULE_HEADING}\n- never say his alter ego"
-        assert strip_first_person_rule(prompt) == "Be direct.\n\n"
-        assert third_person_prompt_findings(prompt) == []
+    # Scenario: The prompt scan skips only the pinned quoted-phrase lines
+    def test_a_missing_pinned_line_fails_the_scan(self) -> None:
+        """A pinned quoted-phrase line that changed is reported, not silently skipped."""
+        with pytest.raises(ValueError, match="never say"):
+            third_person_prompt_findings("Be direct.", ("- never say his alter ego",))
