@@ -1,6 +1,6 @@
 # AE-0564 — Publish page heading and sticky header show different carousel titles
 
-Status: In Development
+Status: Done
 Tier: T1
 Priority: High
 Type: Bug
@@ -92,3 +92,7 @@ When `title` differs from `topic`, the header and the heading disagree.
 - No comments in source (JSDoc only); no ticket ids in repo text.
 - The board adapter's card-description logic (`boardDescription`) is
   unchanged apart from importing the shared markup stripper.
+
+## Final Summary
+
+Merged to `main` in PR #306 (7ce104c7, 2026-10-30). Closed on 2026-10-31 (ticket housekeeping, no code change).

@@ -1,6 +1,6 @@
 # AE-0500 — Analytics shows carousel publishing and Instagram insights
 
-Status: In Development
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -147,3 +147,7 @@ the full backend pytest run (1215 passed).
 ## Blockers
 
 None.
+
+## Final Summary
+
+Merged to `main` in PR #309 (a82f9ca2, 2026-10-30). Closed on 2026-10-31 (ticket housekeeping, no code change).
