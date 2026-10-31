@@ -28,11 +28,11 @@ export interface RubricFormProps {
   onCancel: () => void;
 }
 
-/** Asks in an in-app dialog before the form drops its unsaved changes. */
 interface LeaveDialogProps {
   leave: LeaveConfirm;
 }
 
+/** Asks in an in-app dialog before the form drops its unsaved changes. */
 function LeaveDialog({
   leave,
 }: Readonly<LeaveDialogProps>): React.ReactElement | null {
@@ -66,7 +66,7 @@ export function RubricForm({
   const form = useRubricForm(rubric);
   const { formRef, showErrors, saving, serverError, handleSubmit, errorOf } =
     useGuardedForm({ form, onSave, onCancel, t });
-  const leave = useLeaveConfirm(form.dirty, onCancel);
+  const leave = useLeaveConfirm(formRef, form.dirty, onCancel);
 
   return (
     <>

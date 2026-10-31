@@ -16,8 +16,8 @@ export interface OffCanvasState {
   close: () => void;
 }
 
-/** Call `close` on Escape while `open` (a document-level key listener). */
-export function useCloseOnEscape(open: boolean, close: () => void): void {
+/** Close on Escape while open. */
+function useCloseOnEscape(open: boolean, close: () => void): void {
   useEffect(() => {
     if (!open) {
       return;

@@ -76,6 +76,7 @@ describe("RubricsPage leaving the editor", () => {
 
   it("asks in a modal dialog, then keeps editing with focus back on Cancel", async () => {
     // Scenario: Discarding unsaved changes asks in an in-app dialog
+    // Scenario: Unsaved changes ask before leaving
     const nativeConfirm = vi.spyOn(window, "confirm");
     const user = await openChangedEditor();
     const cancel = screen.getByRole("button", { name: "Cancel" });
@@ -112,6 +113,7 @@ describe("RubricsPage leaving the editor", () => {
 
   it("leaves without saving once the dialog is confirmed", async () => {
     // Scenario: Discarding unsaved changes asks in an in-app dialog
+    // Scenario: Cancel leaves the form without saving
     const user = await openChangedEditor();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(
@@ -139,6 +141,18 @@ describe("RubricsPage leaving the editor", () => {
 
     expectListShown();
     expect(authenticatedFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores Escape pressed outside the editor", async () => {
+    // Scenario: Escape cancels the editor
+    const user = await openEditor();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    outside.remove();
   });
 
   it("sends Escape on a changed editor through the dialog", async () => {

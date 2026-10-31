@@ -66,7 +66,8 @@ now reads with en dashes.
 
 ### ADDED
 
-- `frontend/src/lib/use-leave-confirm.ts` — leave-now-or-ask hook with Escape.
+- `frontend/src/lib/use-leave-confirm.ts` — leave-now-or-ask hook; Escape is scoped to the form (or the page
+  body), so Escape in the mobile menu drawer does not also cancel the editor.
 - `frontend/src/app/dashboard/rubrics/rubric-criteria-table.tsx`, `rubric-default-badge.tsx`,
   `use-rubric-labels.ts`.
 - Tests: `rubric-panel.test.tsx`, `page-leave.test.tsx`; feature `rubrics-polish-ae0512.feature`.
@@ -75,7 +76,6 @@ now reads with en dashes.
 
 - `rubric-adapter.ts` / `types.ts`: card data carries API keys and numbers; the page translates them.
 - `rubric-panel.tsx`, `rubric-form.tsx`, `page.tsx` (narrower phone padding), `rubric-content-types-field.tsx`.
-- `use-off-canvas.ts`: `useCloseOnEscape` exported for reuse.
 - `pt.json` / `en.json` (`rubrics.panel`, `rubrics.form`).
 
 ### REMOVED
