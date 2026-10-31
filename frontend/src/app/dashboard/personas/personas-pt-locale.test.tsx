@@ -56,7 +56,7 @@ describe("personas in Portuguese", () => {
       screen.getByRole("img", { name: "Avatar de 123 ⚙" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Mais áreas de especialidade: 1"),
+      screen.getByText("Mais áreas de especialidade (1): A7"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Editar a persona 123 ⚙" }),

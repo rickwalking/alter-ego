@@ -63,7 +63,7 @@ describe("PersonaTile", () => {
     expect(
       within(avatar).getByRole("img", { name: "Avatar of 123 ⚙" }),
     ).toBeInTheDocument();
-    expect(avatar).toHaveTextContent("");
+    expect(avatar.textContent).toBe("");
   });
 
   it("says when a persona has no description", () => {
@@ -95,8 +95,12 @@ describe("PersonaTile", () => {
     expect(within(chips).getAllByRole("listitem")).toHaveLength(7);
     expect(within(chips).getByText("+2")).toBeInTheDocument();
     expect(
-      within(chips).getByText("More expertise areas: 2"),
+      within(chips).getByText("More expertise areas (2): A7, A8"),
     ).toBeInTheDocument();
+    expect(within(chips).getByText("+2").closest("li")).toHaveAttribute(
+      "title",
+      "A7, A8",
+    );
     expect(within(chips).queryByText("A7")).not.toBeInTheDocument();
   });
 

@@ -13,8 +13,8 @@ export interface NeonPersonaCardProps {
   description: string;
   skills: string[];
   avatarUrl?: string;
-  /** Expertise areas not shown as chips; rendered as a "+N" chip when > 0. */
-  hiddenSkillCount?: number;
+  /** Expertise areas not shown as chips; summarised by a "+N" chip. */
+  hiddenSkills?: string[];
   /** Actions rendered in the card footer (e.g. Edit and Delete). */
   footer?: ReactNode;
 }

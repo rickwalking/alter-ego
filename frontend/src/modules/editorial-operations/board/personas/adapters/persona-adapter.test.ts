@@ -59,7 +59,7 @@ describe("mapPersonaProfileToCardProps", () => {
       role: "Persona",
       description: "Sem descrição",
       skills: [],
-      hiddenSkillCount: 0,
+      hiddenSkills: [],
     });
   });
 
@@ -73,6 +73,6 @@ describe("mapPersonaProfileToCardProps", () => {
     expect(card.role).toBe("A1");
     expect(card.description).toBe("Voz");
     expect(card.skills).toEqual(areas.slice(0, 6));
-    expect(card.hiddenSkillCount).toBe(1);
+    expect(card.hiddenSkills).toEqual(["A7"]);
   });
 });

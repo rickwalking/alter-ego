@@ -17,6 +17,8 @@ import type { NeonPersonaCardProps } from "./types";
 const PERSONA_AVATAR_SIZE = 48;
 /** Fallback avatar icon size (px) inside the 48 px avatar. */
 const PERSONA_AVATAR_ICON_SIZE = 22;
+/** Joins the hidden expertise areas in the "+N" chip tooltip and label. */
+const SKILL_LIST_SEPARATOR = ", ";
 
 type AvatarProps = Pick<NeonPersonaCardProps, "name" | "avatarUrl">;
 
@@ -58,7 +60,7 @@ export function NeonPersonaCard({
   description,
   skills,
   avatarUrl,
-  hiddenSkillCount = 0,
+  hiddenSkills = [],
   footer,
 }: Readonly<NeonPersonaCardProps>): React.ReactElement {
   const t = useTranslations("personas.card");
@@ -96,12 +98,15 @@ export function NeonPersonaCard({
             </NeonBadge>
           </li>
         ))}
-        {hiddenSkillCount > 0 && (
-          <li>
+        {hiddenSkills.length > 0 && (
+          <li title={hiddenSkills.join(SKILL_LIST_SEPARATOR)}>
             <NeonBadge variant="teal" size="md" outline>
-              <span aria-hidden="true">+{hiddenSkillCount}</span>
+              <span aria-hidden="true">+{hiddenSkills.length}</span>
               <span className="sr-only">
-                {t("moreSkills", { count: hiddenSkillCount })}
+                {t("moreSkills", {
+                  count: hiddenSkills.length,
+                  areas: hiddenSkills.join(SKILL_LIST_SEPARATOR),
+                })}
               </span>
             </NeonBadge>
           </li>

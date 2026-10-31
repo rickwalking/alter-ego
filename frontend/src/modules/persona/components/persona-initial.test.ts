@@ -17,6 +17,22 @@ describe("personaInitial", () => {
     expect(personaInitial("pedro")).toBe("P");
   });
 
+  it("keeps the accent of a decomposed letter", () => {
+    // Scenario: The avatar initial is uppercased
+    expect(personaInitial("e\u0301lan")).toBe("É");
+    expect(personaInitial("[a\u0301gata]")).toBe("Á");
+  });
+
+  it("keeps a single character when the uppercase would be longer", () => {
+    // Scenario: The avatar initial is uppercased
+    expect(personaInitial("ßeta")).toBe("ß");
+  });
+
+  it("uppercases with a fixed, non-Turkish locale", () => {
+    // Scenario: The avatar initial is uppercased
+    expect(personaInitial("istanbul")).toBe("I");
+  });
+
   it("skips digits, symbols and emoji", () => {
     // Scenario: The avatar shows the first letter of the name
     expect(personaInitial("42 🚀 ana")).toBe("A");

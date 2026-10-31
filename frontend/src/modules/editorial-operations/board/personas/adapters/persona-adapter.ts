@@ -48,6 +48,6 @@ export function mapPersonaProfileToCardProps(
     role: areas[0] ?? fallbacks.role,
     description,
     skills: areas.slice(0, MAX_PERSONA_SKILLS),
-    hiddenSkillCount: Math.max(areas.length - MAX_PERSONA_SKILLS, 0),
+    hiddenSkills: areas.slice(MAX_PERSONA_SKILLS),
   };
 }

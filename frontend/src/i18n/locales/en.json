@@ -2359,7 +2359,7 @@
       "defaultRole": "Persona",
       "avatarLabel": "Avatar of {name}",
       "skillsLabel": "Expertise areas",
-      "moreSkills": "More expertise areas: {count}"
+      "moreSkills": "More expertise areas ({count}): {areas}"
     },
     "form": {
       "createTitle": "New persona",
