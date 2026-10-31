@@ -1,6 +1,6 @@
 # AE-0578 — Insight columns reach prod with the deploy, and the deploy checks schema drift
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bug
@@ -101,11 +101,13 @@ SQLite-only apply test replaced by a Postgres one. The deploy test fails on the 
 
 ## Test Evidence
 
-Pending.
+Full local backend gates at 354f37030: pass 26, fail 0, skip 1 (mutation, CI only). GATES_JSON in
+`.agent/reports/AE-0578.dev-summary.md`. New tests: 8 Gherkin scenarios, 5 Postgres integration, 4 unit, 6 deploy
+ordering (all 6 fail on the old `deploy.yml`).
 
 ## QA Report
 
-Pending.
+Independent review: no blockers; findings applied (see dev summary).
 
 ## Blockers
 
