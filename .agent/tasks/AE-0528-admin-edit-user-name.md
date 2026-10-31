@@ -1,6 +1,6 @@
 # AE-0528 — Admin edits a user's name
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Feature
@@ -126,11 +126,22 @@ Ticket written; implementation started on `feat/ae-0528-admin-edit-user-name`.
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/api/routes/admin.py`, `backend/src/rag_backend/domain/constants/auth.py`,
+  `backend/src/rag_backend/domain/models/user.py`,
+  `backend/src/rag_backend/modules/identity/application/admin_handlers.py`
+- `backend/tests/features/admin_edit_user_name_ae0528.feature`,
+  `backend/tests/unit/modules/identity/test_admin_rename_user_ae0528.py`,
+  `backend/tests/integration/test_admin_edit_user_name_ae0528.py`
+- `frontend/src/components/admin/edit-user-dialog.tsx` (+ test), `frontend/src/lib/user-update.ts` (+ test),
+  `frontend/src/constants/admin-users.ts`, `frontend/src/i18n/locales/{pt,en}.json`,
+  `frontend/tests/features/admin-edit-user-name-ae0528.feature`
+- `docs/architecture/openapi.json`
 
 ## Test Evidence
 
-Pending.
+- Full local gate runs green: backend 26 pass / 0 fail / 1 skip (mutation, CI only); frontend 18 pass / 0 fail /
+  1 skip (mutation, CI only). GATES_JSON lines in `.agent/reports/AE-0528.dev-summary.md`.
+- Targeted: 14 backend tests (unit + API) and 14 frontend tests, all passing.
 
 ## QA Report
 
