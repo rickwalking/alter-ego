@@ -169,6 +169,12 @@ jobs:
             # false here; the secrets are what turns a test on.
             BOOST_REQUESTS_ENABLED=${{ secrets.BOOST_REQUESTS_ENABLED || 'false' }}
             BOOST_ENABLED=${{ secrets.BOOST_ENABLED || 'false' }}
+            # AE-0579: the boost launch and pause calls (Meta Marketing API). Empty
+            # until Pedro adds the secrets; with no token the launch path is inert.
+            META_ADS_ACCESS_TOKEN=${{ secrets.META_ADS_ACCESS_TOKEN }}
+            META_AD_ACCOUNT_ID=${{ secrets.META_AD_ACCOUNT_ID }}
+            META_PAGE_ID=${{ secrets.META_PAGE_ID }}
+            META_ADS_IG_USER_ID=${{ secrets.META_ADS_IG_USER_ID }}
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
             AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '3' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
