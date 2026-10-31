@@ -15,7 +15,7 @@ Updated: 2026-10-31
 ## Goal
 
 The approved boost launch (generation worker) and the owner's pause from Telegram (web backend) get the Meta ads
-token, ad account, page and Instagram user on prod. Pedro approved spending (D-70p, 2026-10-31).
+token, ad account, page and Instagram user on prod. Pedro approved spending (2026-10-31).
 
 ## Problem
 

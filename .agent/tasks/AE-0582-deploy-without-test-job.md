@@ -14,7 +14,7 @@ Updated: 2026-10-31
 
 ## Goal
 
-A merge to main goes straight to the deploy job. Pedro's decision (D-77p, 2026-10-31): tests run in CI, not in CD.
+A merge to main goes straight to the deploy job. Pedro's decision (2026-10-31): tests run in CI, not in CD.
 
 ## Problem
 
