@@ -18,13 +18,13 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, StringConstraints
 
 from rag_backend.api.dependencies import require_admin
 from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
-from rag_backend.domain.constants.auth import VALID_ROLES
+from rag_backend.domain.constants.auth import FULL_NAME_MAX_LENGTH, VALID_ROLES
 from rag_backend.modules.identity import (
     CreateUserInput,
     DeleteUserInput,
@@ -53,10 +53,24 @@ class CreateUserRequest(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
-    """Request body for updating a user."""
+    """Request body for updating a user (every field optional).
+
+    ``full_name`` is stripped of surrounding whitespace, then must be 1 to 255
+    characters (else 422); omitting it leaves the name unchanged. There is no
+    email field: the email is fixed, so a sent ``email`` is ignored.
+    """
 
     role: str | None = None
     is_active: bool | None = None
+    full_name: (
+        Annotated[
+            str,
+            StringConstraints(
+                strip_whitespace=True, min_length=1, max_length=FULL_NAME_MAX_LENGTH
+            ),
+        ]
+        | None
+    ) = None
 
 
 class UserResponse(BaseModel):
@@ -212,6 +226,7 @@ async def update_user(
                 user_id=user_id,
                 role=body.role,
                 is_active=body.is_active,
+                full_name=body.full_name,
             )
         )
     except InvalidRoleError as exc:

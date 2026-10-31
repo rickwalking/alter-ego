@@ -89,11 +89,17 @@ class CreateUserInput:
 
 @dataclass(frozen=True)
 class UpdateUserInput:
-    """Inputs to the admin update-user use case (role/active are optional)."""
+    """Inputs to the admin update-user use case (every change is optional).
+
+    ``full_name`` arrives already trimmed and length-checked by the request
+    schema; ``None`` leaves the stored name unchanged. The email is fixed and
+    deliberately has no field here.
+    """
 
     user_id: UUID
     role: str | None = None
     is_active: bool | None = None
+    full_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -162,7 +168,7 @@ class AdminUserHandler:
         return result
 
     async def update(self, command: UpdateUserInput) -> UserView:
-        """Apply role/active changes (with the last-admin guard) and commit once.
+        """Apply name/role/active changes (last-admin guard) and commit once.
 
         Mirrors the legacy route ordering: the user is required (404) before the
         role is validated (422), so a missing user always yields 404 regardless
@@ -174,6 +180,8 @@ class AdminUserHandler:
                 await self._apply_role(user, _parse_role(command.role))
             if command.is_active is not None:
                 _apply_active(user, is_active=command.is_active)
+            if command.full_name is not None:
+                user.rename(command.full_name)
             updated = await self._repository.update(user)
             view = to_user_view(updated)
         return view

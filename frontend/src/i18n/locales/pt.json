@@ -2254,6 +2254,7 @@
     "saving": "Salvando...",
     "save": "Salvar",
     "updateError": "Falha ao atualizar usuário.",
+    "nameInvalid": "Informe um nome completo de 1 a 255 caracteres.",
     "deleteUserTitle": "Excluir usuário",
     "deleteUserDescription": "Tem certeza de que deseja excluir {email}? Esta ação não pode ser desfeita.",
     "deleting": "Excluindo...",
