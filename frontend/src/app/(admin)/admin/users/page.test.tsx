@@ -14,7 +14,7 @@ const USERS_PAYLOAD = {
   items: [
     {
       id: "1",
-      email: "joao@example.com",
+      email: "jsilva@example.com",
       full_name: "João Silva",
       role: "admin",
       is_active: true,
@@ -30,7 +30,7 @@ const USERS_PAYLOAD = {
     },
     {
       id: "3",
-      email: "jose.lima@example.com",
+      email: "jlima@example.com",
       full_name: "José Lima",
       role: "editor",
       is_active: true,
@@ -40,11 +40,11 @@ const USERS_PAYLOAD = {
   total: 3,
 };
 
-function mockUsersFetch(): void {
+function mockUsersFetch(payload: object = USERS_PAYLOAD): void {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(USERS_PAYLOAD), {
+      new Response(JSON.stringify(payload), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -70,14 +70,28 @@ describe("UsersPage filtering", () => {
   /**
    * Scenario: Search matches a name regardless of case and accents.
    */
-  it("filters rows by search term", async () => {
+  it("filters rows by an unaccented, lowercase name", async () => {
     const user = await renderLoadedPage();
     const searchbox = screen.getByRole("searchbox", { name: "Search" });
 
-    await user.type(searchbox, "ana");
+    await user.type(searchbox, "joao");
 
-    expect(screen.queryByText("João Silva")).not.toBeInTheDocument();
-    expect(screen.getByText("Ana Souza")).toBeInTheDocument();
+    expect(screen.getByText("João Silva")).toBeInTheDocument();
+    expect(screen.queryByText("Ana Souza")).not.toBeInTheDocument();
+    expect(screen.queryByText("José Lima")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Scenario: An empty user list keeps the no-users message.
+   */
+  it("keeps the no-users message when the list is empty", async () => {
+    mockUsersFetch({ items: [], total: 0 });
+    render(<UsersPage />);
+
+    expect(await screen.findByText("No users found.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No users match the filters."),
+    ).not.toBeInTheDocument();
   });
 
   /**
@@ -129,20 +143,23 @@ describe("UsersPage filtering", () => {
   it("restores the full list when filters are cleared", async () => {
     const user = await renderLoadedPage();
     const searchbox = screen.getByRole("searchbox", { name: "Search" });
+    const role = screen.getByRole("combobox", { name: "Role" });
+    const status = screen.getByRole("combobox", { name: "Status" });
 
-    await user.type(searchbox, "ana");
-    expect(screen.queryByText("João Silva")).not.toBeInTheDocument();
+    await user.type(searchbox, "zzz");
+    await user.selectOptions(role, USER_FILTER_ROLE_ADMIN);
+    await user.selectOptions(status, USER_FILTER_STATUS_INACTIVE);
+    expect(screen.getByText("No users match the filters.")).toBeInTheDocument();
 
     await user.clear(searchbox);
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Role" }),
-      USER_FILTER_ROLE_ALL,
-    );
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Status" }),
-      USER_FILTER_STATUS_ALL,
-    );
+    expect(screen.queryByText("João Silva")).not.toBeInTheDocument();
+    await user.selectOptions(role, USER_FILTER_ROLE_ALL);
+    expect(screen.queryByText("José Lima")).not.toBeInTheDocument();
+    await user.selectOptions(status, USER_FILTER_STATUS_ALL);
 
+    expect(
+      screen.queryByText("No users match the filters."),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("João Silva")).toBeInTheDocument();
     expect(screen.getByText("José Lima")).toBeInTheDocument();
     expect(screen.getByText("Ana Souza")).toBeInTheDocument();

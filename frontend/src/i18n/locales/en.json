@@ -2270,7 +2270,8 @@
     "searchPlaceholder": "Search by name or email",
     "roleFilterAll": "All roles",
     "statusFilterAll": "All statuses",
-    "noUsersMatch": "No users match the filters."
+    "noUsersMatch": "No users match the filters.",
+    "statusLabel": "Status"
   },
   "carousels": {
     "eyebrow": "Visual archive",

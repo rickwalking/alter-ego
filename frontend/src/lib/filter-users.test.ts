@@ -13,7 +13,7 @@ import { filterUsers, normalizeSearchText } from "@/lib/filter-users";
 const USERS = [
   {
     full_name: "João Silva",
-    email: "joao@example.com",
+    email: "jsilva@example.com",
     role: "admin",
     is_active: true,
   },
@@ -25,7 +25,7 @@ const USERS = [
   },
   {
     full_name: "José Lima",
-    email: "jose.lima@example.com",
+    email: "jlima@example.com",
     role: "editor",
     is_active: true,
   },
@@ -51,6 +51,24 @@ describe("filterUsers", () => {
   it("matches names case- and accent-insensitively", () => {
     const result = filterUsers(USERS, { ...ALL_FILTER, query: "joao" });
     expect(result.map((user) => user.full_name)).toEqual(["João Silva"]);
+    const upper = filterUsers(USERS, { ...ALL_FILTER, query: "JOSE" });
+    expect(upper.map((user) => user.full_name)).toEqual(["José Lima"]);
+  });
+
+  /**
+   * Scenario: Search matches a name regardless of case and accents.
+   */
+  it("matches an unaccented name from an accented query", () => {
+    const plain = [
+      {
+        full_name: "Joao Pereira",
+        email: "jp@example.com",
+        role: USER_FILTER_ROLE_ADMIN,
+        is_active: true,
+      },
+    ];
+    const result = filterUsers(plain, { ...ALL_FILTER, query: "João" });
+    expect(result.map((user) => user.full_name)).toEqual(["Joao Pereira"]);
   });
 
   /**
@@ -61,10 +79,16 @@ describe("filterUsers", () => {
     expect(result.map((user) => user.email)).toEqual(["ana@example.com"]);
   });
 
+  /**
+   * Scenario: Clearing the filters restores the full list.
+   */
   it("returns every user when the query is empty or whitespace", () => {
     expect(filterUsers(USERS, { ...ALL_FILTER, query: "   " })).toHaveLength(3);
   });
 
+  /**
+   * Scenario: No match shows a filter-specific empty message.
+   */
   it("returns no users when nothing matches", () => {
     expect(filterUsers(USERS, { ...ALL_FILTER, query: "zzz" })).toHaveLength(0);
   });
@@ -123,6 +147,13 @@ describe("filterUsers", () => {
       status: USER_FILTER_STATUS_INACTIVE,
     });
     expect(noMatch).toHaveLength(0);
+
+    const wrongRole = filterUsers(USERS, {
+      query: "lima",
+      role: USER_FILTER_ROLE_ADMIN,
+      status: USER_FILTER_STATUS_ACTIVE,
+    });
+    expect(wrongRole).toHaveLength(0);
   });
 
   /**

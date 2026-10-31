@@ -41,5 +41,16 @@ Feature: Search and filter users on the admin users page
 
   Scenario: Clearing the filters restores the full list
     Given the admin filtered the list down to one row
-    When they clear "Buscar" and set both filters back to "all"
+    When they clear "Buscar" and set the role and status filters back to "all"
     Then the full list is shown again
+
+  Scenario: An empty user list keeps the no-users message
+    Given the admin is on "/admin/users" and there are no users
+    Then the "no users found" message is shown
+    And the "no users match the filters" message is not shown
+
+  Scenario: Search and filter controls are keyboard accessible
+    Given the admin is on "/admin/users"
+    When they press Tab from the search field
+    Then focus moves to the role filter and then to the status filter
+    And each control is announced by its label

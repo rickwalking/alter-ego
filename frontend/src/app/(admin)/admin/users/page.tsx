@@ -113,7 +113,7 @@ export default function UsersPage() {
             onRoleChange={setRoleFilter}
             onStatusChange={setStatusFilter}
           />
-          {filteredUsers.length === 0 && hasActiveFilters ? (
+          {filteredUsers.length === 0 && hasActiveFilters && !error ? (
             <div className="rounded-lg bg-white p-8 text-center shadow">
               <p className="text-gray-500">{t("noUsersMatch")}</p>
             </div>

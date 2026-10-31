@@ -68,7 +68,7 @@ export function UserFilterToolbar({
       </div>
       <div className="w-40">
         <label htmlFor={STATUS_SELECT_ID} className={LABEL_CLASS}>
-          {t("statusColumn")}
+          {t("statusLabel")}
         </label>
         <select
           id={STATUS_SELECT_ID}

@@ -61,6 +61,21 @@ describe("UserFilterToolbar", () => {
   });
 
   /**
+   * Scenario: Search and filter controls are keyboard accessible.
+   */
+  it("moves focus from search to role to status with Tab", async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+
+    await user.tab();
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("combobox", { name: "Role" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveFocus();
+  });
+
+  /**
    * Scenario: Search matches a name regardless of case and accents.
    */
   it("reports search text as the admin types", async () => {

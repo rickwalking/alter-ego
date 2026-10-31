@@ -2270,7 +2270,8 @@
     "searchPlaceholder": "Buscar por nome ou e-mail",
     "roleFilterAll": "Todas as funções",
     "statusFilterAll": "Todos os status",
-    "noUsersMatch": "Nenhum usuário encontrado para os filtros selecionados."
+    "noUsersMatch": "Nenhum usuário encontrado para os filtros selecionados.",
+    "statusLabel": "Status"
   },
   "carousels": {
     "eyebrow": "Arquivo visual",
