@@ -2265,7 +2265,13 @@
     "reset": "Redefinir",
     "done": "Concluído",
     "resetError": "Falha ao redefinir senha.",
-    "resetSuccess": "Senha redefinida com sucesso."
+    "resetSuccess": "Senha redefinida com sucesso.",
+    "searchLabel": "Buscar",
+    "searchPlaceholder": "Buscar por nome ou e-mail",
+    "roleFilterAll": "Todas as funções",
+    "statusFilterAll": "Todos os status",
+    "noUsersMatch": "Nenhum usuário encontrado para os filtros selecionados.",
+    "statusLabel": "Status"
   },
   "carousels": {
     "eyebrow": "Arquivo visual",
