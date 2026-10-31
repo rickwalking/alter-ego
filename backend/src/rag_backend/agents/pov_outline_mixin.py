@@ -24,6 +24,7 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.domain.constants.pov_prompts import (
     HOOK_CANDIDATE_COUNT,
     POV_PROMPT_HOOK,
+    POV_PROMPT_HOOK_VERSION,
     POV_PROMPT_OUTLINE,
     POV_PROMPT_VERSION,
     RADAR_PROMPT_DOMAIN,
@@ -130,7 +131,11 @@ class PovOutlineMixin:
         return outline
 
     async def hook_candidates(self: _AgentState, request: PovHookRequest) -> list[str]:
-        """Five slide-1 hooks, one per formula, from the owner's thesis."""
+        """Five slide-1 hooks, one per formula, from the owner's thesis.
+
+        The owner's recent openings go to the prompt as forbidden reuses, so
+        consecutive carousels stop opening with the same formulas.
+        """
         prompt, _ = render_prompt(
             request.pov.prompt_domain,
             POV_PROMPT_HOOK,
@@ -138,8 +143,11 @@ class PovOutlineMixin:
                 **_thesis_variables(request.pov),
                 "topic": sanitize_llm_input(request.topic),
                 "audience": sanitize_llm_input(request.audience),
+                "recent_hooks": [
+                    sanitize_llm_input(opening) for opening in request.recent_hooks
+                ],
             },
-            version=POV_PROMPT_VERSION,
+            version=POV_PROMPT_HOOK_VERSION,
         )
         candidates, _raw = await ainvoke_json(
             self.llm,

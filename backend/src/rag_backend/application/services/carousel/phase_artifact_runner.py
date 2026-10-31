@@ -87,6 +87,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.protocols.carousel_rubric import RubricJudge
+from rag_backend.domain.protocols.recent_hooks import RecentHookReader
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
@@ -110,7 +111,9 @@ from .editorial_workflow_support import (
     publish_workflow_artifacts_from_updates,
 )
 from .localized_rows_sync import sync_rows_to_localized
+from .outline_by_mode import ModeOutlineRequest
 from .outline_normalize import normalize_editorial_outline
+from .recent_hooks import load_recent_hooks
 
 
 @dataclass
@@ -129,6 +132,7 @@ class PhaseArtifactRunnerConfig:
     llm: BaseChatModel
     image_registry: ImageProviderRegistry | None = None
     db: AsyncSession | None = None
+    recent_hooks: RecentHookReader | None = None
     workflow_input: EditorialWorkflowStartInput | None = None
     slide_draft_retry: SlideDraftRetryFn | None = None
     draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
@@ -237,6 +241,7 @@ class PhaseArtifactRunner:
         self._llm = config.llm
         self._image_registry = config.image_registry
         self._db = config.db
+        self._recent_hooks = config.recent_hooks
         self._workflow_input = config.workflow_input
         self._slide_draft_retry = config.slide_draft_retry
         self._draft_concurrency = config.draft_concurrency
@@ -249,6 +254,7 @@ class PhaseArtifactRunner:
         self,
         *,
         db: AsyncSession | None = None,
+        recent_hooks: RecentHookReader | None = None,
         workflow_input: EditorialWorkflowStartInput | None = None,
     ) -> PhaseArtifactRunner:
         """Return a runner scoped to the current resume/request context."""
@@ -259,6 +265,7 @@ class PhaseArtifactRunner:
                 llm=self._llm,
                 image_registry=self._image_registry,
                 db=db if db is not None else self._db,
+                recent_hooks=recent_hooks or self._recent_hooks,
                 workflow_input=workflow_input or self._workflow_input,
                 slide_draft_retry=self._slide_draft_retry,
                 draft_concurrency=self._draft_concurrency,
@@ -332,6 +339,28 @@ class PhaseArtifactRunner:
         """The project's content mode, read from its row (ADR-0021 D4)."""
         return await load_content_mode_brief(self._db, str(state.get("project_id", "")))
 
+    async def _outline(
+        self, state: CarouselWorkflowState, resolved: EditorialWorkflowStartInput
+    ) -> list[dict[str, object]]:
+        """The outline, with the owner's recent openings for hook diversity."""
+        project_id = str(state.get("project_id", ""))
+        brief = await self._mode_brief(state)
+        if brief is None or not brief.is_pov:
+            return await generate_outline(
+                self._outline_agent,
+                ModeOutlineRequest(workflow_input=resolved, brief=brief),
+            )
+        recent = await load_recent_hooks(self._recent_hooks, project_id)
+        return await generate_outline(
+            self._outline_agent,
+            ModeOutlineRequest(
+                workflow_input=resolved,
+                brief=brief,
+                recent_hooks=recent.headings,
+                hook_seed=recent.total,
+            ),
+        )
+
     async def ensure_for_phase(self, state: CarouselWorkflowState) -> dict[str, object]:
         """Build missing artifacts for the active workflow phase."""
         phase = str(state.get("current_phase", ""))
@@ -342,9 +371,7 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {**outline_updates}
 
         if phase == PHASE_OUTLINE and not state.get("outline"):
-            updates["outline"] = await generate_outline(
-                self._outline_agent, resolved, await self._mode_brief(state)
-            )
+            updates["outline"] = await self._outline(state, resolved)
         elif phase == PHASE_CONTENT:
             updates.update(
                 await self._ensure_content_artifacts(state, resolved, updates)

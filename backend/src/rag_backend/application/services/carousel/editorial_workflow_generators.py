@@ -129,13 +129,10 @@ async def synthesize_research(
 
 async def generate_outline(
     outline_agent: OutlineAgent,
-    workflow_input: EditorialWorkflowStartInput,
-    brief: ContentModeBrief | None = None,
+    request: ModeOutlineRequest,
 ) -> list[dict[str, object]]:
     """Generate the carousel outline for the project's content mode."""
-    outline = await generate_outline_for_mode(
-        outline_agent, ModeOutlineRequest(workflow_input=workflow_input, brief=brief)
-    )
+    outline = await generate_outline_for_mode(outline_agent, request)
     return [slide for slide in outline if isinstance(slide, dict)]
 
 
