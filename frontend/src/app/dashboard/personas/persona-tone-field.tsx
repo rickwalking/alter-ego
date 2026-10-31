@@ -6,12 +6,19 @@ import { TONE_KEYS, type ToneKey } from "@/schemas/persona";
 const TONE_STEP = 0.05;
 const PERCENT = 100;
 
+/**
+ * A 44 px tall native range input with a visible keyboard focus ring; on a
+ * phone it takes the full row under its label and value.
+ */
+const SLIDER_CLASS =
+  "order-last col-span-2 h-11 w-full cursor-pointer rounded-md accent-[var(--color-neon-cyan)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep sm:order-none sm:col-span-1";
+
 interface PersonaToneFieldProps {
   tone: Readonly<Record<ToneKey, number>>;
   onChange: (key: ToneKey, value: number) => void;
 }
 
-/** The three tone sliders (0–1), each announcing its value as a percentage. */
+/** The three tone sliders (0–1), each showing and announcing its percentage. */
 export function PersonaToneField({
   tone,
   onChange,
@@ -26,7 +33,7 @@ export function PersonaToneField({
         return (
           <div
             key={key}
-            className="grid grid-cols-[8rem_1fr_3rem] items-center gap-3"
+            className="grid grid-cols-[1fr_3rem] items-center gap-x-3 sm:grid-cols-[8rem_1fr_3rem]"
           >
             <label htmlFor={id} className="text-sm">
               {t(`tone.${key}`)}
@@ -40,14 +47,16 @@ export function PersonaToneField({
               value={tone[key]}
               aria-valuetext={`${percent}%`}
               onChange={(e) => onChange(key, Number(e.target.value))}
-              className="accent-[var(--color-neon-cyan)]"
+              className={SLIDER_CLASS}
             />
-            <span
-              className="text-right font-mono text-xs text-text-muted"
+            <output
+              htmlFor={id}
+              data-testid={`${id}-value`}
+              className="text-right font-mono text-xs text-text-primary"
               aria-hidden="true"
             >
               {percent}%
-            </span>
+            </output>
           </div>
         );
       })}

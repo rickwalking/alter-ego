@@ -1,62 +1,46 @@
 "use client";
 
+import { UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
+import { TEXT, TEXT_MUTED } from "@/constants/neon";
+
+/** Empty-state illustration size (px). */
+const EMPTY_ICON_SIZE = 56;
 
 export interface PersonasEmptyStateProps {
   searchQuery: string;
   onCreate: () => void;
 }
 
-/** No personas (with a create action), or no match for the search. */
+/** No personas yet (with the create action), or no match for the search. */
 export function PersonasEmptyState({
   searchQuery,
   onCreate,
 }: Readonly<PersonasEmptyStateProps>): React.ReactElement {
   const t = useTranslations("personas.empty");
+  const searching = searchQuery.length > 0;
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "80px 20px",
-        textAlign: "center",
-        color: "rgba(255,255,255,0.55)",
-      }}
+      className="flex flex-col items-center justify-center px-5 py-16 text-center sm:py-20"
+      style={{ color: TEXT_MUTED }}
     >
-      <svg
-        width="56"
-        height="56"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        style={{ opacity: 0.2, marginBottom: 16 }}
+      <UserRound
+        size={EMPTY_ICON_SIZE}
+        className="mb-4 opacity-40"
         aria-hidden="true"
-      >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-      <h3
-        style={{
-          fontSize: 18,
-          color: "rgba(255,255,255,0.45)",
-          marginBottom: 8,
-          fontWeight: 700,
-        }}
-      >
-        {t("title")}
+      />
+      <h3 className="mb-2 text-lg font-bold" style={{ color: TEXT }}>
+        {searching ? t("title") : t("firstTitle")}
       </h3>
-      <p style={{ fontSize: 13, maxWidth: 400, lineHeight: 1.6, margin: 0 }}>
-        {searchQuery ? t("noResults", { query: searchQuery }) : t("body")}
+      <p className="m-0 max-w-[400px] text-sm leading-relaxed">
+        {searching ? t("noResults", { query: searchQuery }) : t("body")}
       </p>
-      {!searchQuery && (
+      {!searching && (
         <NeonButton
           variant="primary"
-          size="sm"
-          className="mt-4"
+          size="md"
+          className="mt-6 min-h-11"
           onClick={onCreate}
         >
           {t("action")}

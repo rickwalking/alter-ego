@@ -24,19 +24,30 @@ export function mapPersonaToCardProps(
   };
 }
 
+/** Translated texts shown when a persona leaves a card field empty. */
+export interface PersonaCardFallbacks {
+  /** Shown when the persona has no description nor opinion style. */
+  description: string;
+  /** Shown as the role when the persona has no expertise area. */
+  role: string;
+}
+
 export function mapPersonaProfileToCardProps(
   profile: PersonaProfile,
+  fallbacks: Readonly<PersonaCardFallbacks>,
 ): NeonPersonaCardProps {
   const description = firstNonBlank([
     profile.description,
     profile.opinion_expression,
-    "No description provided.",
+    fallbacks.description,
   ]);
+  const areas = profile.expertise_areas;
 
   return {
     name: profile.name,
-    role: profile.expertise_areas[0] ?? "Persona",
+    role: areas[0] ?? fallbacks.role,
     description,
-    skills: profile.expertise_areas.slice(0, MAX_PERSONA_SKILLS),
+    skills: areas.slice(0, MAX_PERSONA_SKILLS),
+    hiddenSkillCount: Math.max(areas.length - MAX_PERSONA_SKILLS, 0),
   };
 }

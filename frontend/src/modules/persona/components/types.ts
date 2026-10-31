@@ -5,6 +5,7 @@
  * (`frontend/scripts/component-type-location.config.mjs`), component prop shapes
  * live here rather than inline in the `.tsx` files.
  */
+import type { ReactNode } from "react";
 
 export interface NeonPersonaCardProps {
   name: string;
@@ -12,6 +13,10 @@ export interface NeonPersonaCardProps {
   description: string;
   skills: string[];
   avatarUrl?: string;
+  /** Expertise areas not shown as chips; rendered as a "+N" chip when > 0. */
+  hiddenSkillCount?: number;
+  /** Actions rendered in the card footer (e.g. Edit and Delete). */
+  footer?: ReactNode;
 }
 
 export interface VoiceMatchScorerProps {
