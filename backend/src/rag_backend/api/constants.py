@@ -34,3 +34,8 @@ MEDIA_TYPE_PDF = "application/pdf"
 MEDIA_TYPE_STREAM = "text/event-stream"
 
 ERR_NOT_CAROUSEL_CONVERSATION = "Not a carousel conversation"
+
+ERR_CODE_USER_INACTIVE = "user_inactive"
+ERR_CODE_USER_EMAIL_EXISTS = "user_email_exists"
+ERR_CODE_LAST_ADMIN = "last_admin"
+ERR_CODE_SELF_DELETE = "self_delete"

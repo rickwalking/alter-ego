@@ -21,6 +21,7 @@ from rag_backend.agents.harness import build_checkpointer
 from rag_backend.api.middleware.carousel_conflict_handler import (
     add_carousel_conflict_handler,
 )
+from rag_backend.api.middleware.coded_error_handler import add_coded_error_handler
 from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.no_cors_job_inputs import NoCorsOnJobInputsMiddleware
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
@@ -347,6 +348,7 @@ def create_app() -> FastAPI:
 
     _register_routes(app)
     add_carousel_conflict_handler(app)
+    add_coded_error_handler(app)
     add_error_handlers(app)
 
     instrument_fastapi(app)

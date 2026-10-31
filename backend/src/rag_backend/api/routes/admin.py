@@ -11,7 +11,9 @@ of Work (the single commit owner, ADR-0009 §9); these routes never call
 Status codes, response shapes, bcrypt, and the last-admin / self-delete guards
 are byte-identical to the pre-refactor routes: bcrypt still comes from
 the UNCHANGED ``infrastructure.auth`` via the identity adapters, and the legacy
-HTTP messages are formatted here from the handler's typed domain errors.
+HTTP messages are formatted here from the handler's typed domain errors. The
+409 bodies also carry a stable ``code`` next to the legacy ``detail`` (additive),
+so a client can translate the message without matching the English text.
 """
 
 from typing import Annotated
@@ -20,8 +22,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field, StringConstraints
 
+from rag_backend.api.constants import (
+    ERR_CODE_LAST_ADMIN,
+    ERR_CODE_SELF_DELETE,
+    ERR_CODE_USER_EMAIL_EXISTS,
+)
 from rag_backend.api.dependencies import require_admin
 from rag_backend.api.dependencies.identity import get_identity_service
+from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
 from rag_backend.domain.constants.auth import FULL_NAME_MAX_LENGTH, VALID_ROLES
@@ -190,9 +198,10 @@ async def create_user(
     except InvalidRoleError as exc:
         raise _invalid_role(exc) from exc
     except UserAlreadyExistsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email {body.email} already exists",
+        raise CodedHTTPException(
+            status.HTTP_409_CONFLICT,
+            f"User with email {body.email} already exists",
+            ERR_CODE_USER_EMAIL_EXISTS,
         ) from exc
 
     return CreateUserResponse(
@@ -234,9 +243,10 @@ async def update_user(
     except UserNotFoundError as exc:
         raise _not_found(user_id) from exc
     except LastAdminError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot demote the last admin",
+        raise CodedHTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cannot demote the last admin",
+            ERR_CODE_LAST_ADMIN,
         ) from exc
 
     return _to_response(updated)
@@ -264,16 +274,18 @@ async def delete_user(
             DeleteUserInput(user_id=user_id, requested_by=admin.id)
         )
     except SelfDeleteError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete your own account",
+        raise CodedHTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cannot delete your own account",
+            ERR_CODE_SELF_DELETE,
         ) from exc
     except UserNotFoundError as exc:
         raise _not_found(user_id) from exc
     except LastAdminError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete the last admin",
+        raise CodedHTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cannot delete the last admin",
+            ERR_CODE_LAST_ADMIN,
         ) from exc
 
 
