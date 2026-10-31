@@ -1,6 +1,6 @@
 # AE-0579 — Pass the Meta ads variables through the production env
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Chore
@@ -85,11 +85,12 @@ services test on the old compose: 2 failed.
 
 ## Test Evidence
 
-Pending.
+Full local backend gates at cb0d33b28: pass 26, fail 0, skip 1 (mutation, CI only). GATES_JSON in
+`.agent/reports/AE-0579.dev-summary.md`.
 
 ## QA Report
 
-Pending.
+Independent review: no blockers; findings applied (see dev summary).
 
 ## Blockers
 
