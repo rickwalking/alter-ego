@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -85,23 +85,58 @@ describe("edit-user name field", () => {
   });
 
   // Scenario: A name longer than 255 characters is rejected before submit
-  it("rejects a 256-character name without sending a request", async () => {
+  it("caps typing at 255 and rejects a longer value without a request", async () => {
     const fetchMock = stubFetch(jsonResponse(USER, 200));
     const user = userEvent.setup();
     const input = renderDialog();
+    expect(input).toHaveAttribute("maxLength", "255");
 
-    await user.clear(input);
-    await user.click(input);
-    await user.paste("a".repeat(256));
+    fireEvent.change(input, { target: { value: "a".repeat(256) } });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText(NAME_INVALID)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // Scenario: A name of exactly 255 characters is saved
+  it("sends a name of exactly 255 characters", async () => {
+    const fetchMock = stubFetch(jsonResponse(USER, 200));
+    const user = userEvent.setup();
+    const input = renderDialog();
+
+    fireEvent.change(input, { target: { value: "b".repeat(255) } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(sentBody(fetchMock).full_name).toBe("b".repeat(255));
+  });
+
+  // Scenario: A blank name is rejected before submit
+  it("marks the field invalid and describes it with the announced message", async () => {
+    stubFetch(jsonResponse(USER, 200));
+    const user = userEvent.setup();
+    const input = renderDialog();
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(input).not.toHaveAttribute("aria-describedby");
+
+    await user.clear(input);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(NAME_INVALID);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(NAME_INVALID);
+    expect(input).toHaveAttribute("aria-describedby", alert.id);
+  });
+
   // Scenario: The backend rejects the name
-  it("maps a 422 validation list to the name message", async () => {
-    stubFetch(jsonResponse({ detail: [{ msg: "too short" }] }, 422));
+  it("maps a 422 on full_name to the name message", async () => {
+    stubFetch(
+      jsonResponse(
+        { detail: [{ loc: ["body", "full_name"], msg: "too short" }] },
+        422,
+      ),
+    );
     const onSuccess = vi.fn();
     const user = userEvent.setup();
     const input = renderDialog(onSuccess);
@@ -111,6 +146,26 @@ describe("edit-user name field", () => {
 
     expect(await screen.findByText(NAME_INVALID)).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Full name")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  // Scenario: Another validation error keeps the generic message
+  it("keeps the generic message for a 422 on another field", async () => {
+    stubFetch(
+      jsonResponse({ detail: [{ loc: ["body", "role"], msg: "bad" }] }, 422),
+    );
+    const user = userEvent.setup();
+    const input = renderDialog();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("Failed to update user."),
+    ).toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "false");
   });
 
   // Scenario: The backend rejects the name

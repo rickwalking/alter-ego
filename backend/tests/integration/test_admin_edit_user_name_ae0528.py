@@ -143,7 +143,7 @@ class TestAdminRenameUserApi:
         assert resp.status_code == 422
         assert (await _stored(target.id)).full_name == target.full_name
 
-    # Scenario: A name longer than 255 characters is rejected
+    # Scenario: A name of exactly 255 characters is saved
     async def test_a_name_of_exactly_255_characters_is_accepted(
         self, rename_env: _RenameEnv
     ) -> None:
@@ -198,8 +198,8 @@ class TestAdminRenameUserApi:
 
         assert resp.status_code == 404
 
-    # Scenario: The last-admin rule still holds when the name is edited with the role
-    async def test_last_admin_cannot_self_demote_while_renaming(
+    # Scenario: A failing role change leaves the name unchanged
+    async def test_a_failing_role_change_leaves_the_name_unchanged(
         self, rename_env: _RenameEnv
     ) -> None:
         admin = rename_env.admin

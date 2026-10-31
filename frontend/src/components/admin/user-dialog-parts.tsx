@@ -61,6 +61,8 @@ interface UserDialogShellProps {
   title: string;
   subtitle?: ReactNode;
   error: string;
+  /** Id of the error banner, so a field can point `aria-describedby` at it. */
+  errorId?: string;
   success?: ReactNode;
   children: ReactNode;
 }
@@ -69,6 +71,7 @@ export function UserDialogShell({
   title,
   subtitle,
   error,
+  errorId,
   success,
   children,
 }: Readonly<UserDialogShellProps>) {
@@ -79,7 +82,11 @@ export function UserDialogShell({
         {subtitle}
 
         {error && (
-          <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800">
+          <div
+            id={errorId}
+            role="alert"
+            className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800"
+          >
             {error}
           </div>
         )}

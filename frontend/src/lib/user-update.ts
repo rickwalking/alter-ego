@@ -1,4 +1,7 @@
-import { USER_FULL_NAME_MAX_LENGTH } from "@/constants/admin-users";
+import {
+  USER_FULL_NAME_FIELD,
+  USER_FULL_NAME_MAX_LENGTH,
+} from "@/constants/admin-users";
 
 /** The edit-dialog values an admin can change (the email is fixed). */
 export interface UserUpdateDraft {
@@ -13,10 +16,33 @@ interface UserUpdatePayload {
   full_name?: string;
 }
 
-/** True when the trimmed name has 1 to 255 characters, as the API requires. */
+/**
+ * True when the trimmed name has 1 to 255 characters, as the API requires.
+ *
+ * Counts code points (like Python's `len`), not UTF-16 units, so an emoji
+ * counts as one character on both sides.
+ */
 export function isValidFullName(name: string): boolean {
-  const trimmed = name.trim();
-  return trimmed.length > 0 && trimmed.length <= USER_FULL_NAME_MAX_LENGTH;
+  const length = Array.from(name.trim()).length;
+  return length > 0 && length <= USER_FULL_NAME_MAX_LENGTH;
+}
+
+function hasFullNameLoc(item: unknown): boolean {
+  if (item === null || typeof item !== "object" || !("loc" in item)) {
+    return false;
+  }
+  return Array.isArray(item.loc) && item.loc.includes(USER_FULL_NAME_FIELD);
+}
+
+/**
+ * True when a FastAPI 422 body is a validation list with an error on the name
+ * (its `loc` includes `full_name`); any other body is not a name error.
+ */
+export function isFullNameValidationError(body: unknown): boolean {
+  if (body === null || typeof body !== "object" || !("detail" in body)) {
+    return false;
+  }
+  return Array.isArray(body.detail) && body.detail.some(hasFullNameLoc);
 }
 
 /**

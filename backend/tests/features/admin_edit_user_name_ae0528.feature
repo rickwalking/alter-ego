@@ -24,6 +24,13 @@ Feature: Admin edits a user's name
     When I send a PATCH request with a full_name of 256 characters
     Then the response status should be 422
 
+  Scenario: A name of exactly 255 characters is saved
+    Given I am authenticated as an admin
+    And a user exists
+    When I send a PATCH request with a full_name of 255 characters
+    Then the response status should be 200
+    And the user's name should be that 255-character name
+
   Scenario: Omitting the name leaves it unchanged
     Given I am authenticated as an admin
     And a user exists with the name "Jon Smith"
@@ -48,8 +55,8 @@ Feature: Admin edits a user's name
     When I send a PATCH request to an unknown user id with full_name "Nobody"
     Then the response status should be 404
 
-  Scenario: The last-admin rule still holds when the name is edited with the role
+  Scenario: A failing role change leaves the name unchanged
     Given I am authenticated as the only admin
     When I send a PATCH request to my own user with full_name "Renamed" and role "editor"
-    Then the response status should be 409
-    And my name should not change
+    Then the response status should be 409 because the last admin cannot be demoted
+    And my name and role should not change

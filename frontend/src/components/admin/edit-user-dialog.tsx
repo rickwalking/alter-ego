@@ -3,9 +3,11 @@
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HTTP_STATUS } from "@/constants/api";
+import { USER_FULL_NAME_MAX_LENGTH } from "@/constants/admin-users";
 import { responseErrorDetail } from "@/lib/response-error";
 import {
   buildUserUpdatePayload,
+  isFullNameValidationError,
   isValidFullName,
   type UserUpdateDraft,
 } from "@/lib/user-update";
@@ -28,19 +30,25 @@ interface UpdateFailureMessages {
 
 /**
  * The error text for a failed update: the API's own message when it sends one,
- * the name-validation message for a 422 validation list, else the fallback.
+ * the name-validation message for a 422 whose errors point at `full_name`,
+ * else the fallback (any other 422 included).
  */
 async function updateFailureMessage(
   response: Response,
   messages: UpdateFailureMessages,
 ): Promise<string> {
+  const body: unknown = await response
+    .clone()
+    .json()
+    .catch(() => null);
   const detail = await responseErrorDetail(response);
   if (detail !== undefined) {
     return detail;
   }
-  return response.status === HTTP_STATUS.UNPROCESSABLE_ENTITY
-    ? messages.invalidName
-    : messages.fallback;
+  const isNameError =
+    response.status === HTTP_STATUS.UNPROCESSABLE_ENTITY &&
+    isFullNameValidationError(body);
+  return isNameError ? messages.invalidName : messages.fallback;
 }
 
 /** PATCH the draft for `user`; throws with the error text when it fails. */
@@ -63,10 +71,19 @@ async function sendUserUpdate(
 interface FullNameFieldProps {
   value: string;
   onChange: (value: string) => void;
+  /** Id of the error banner when the name is invalid, else undefined. */
+  errorId?: string;
 }
 
-/** The labelled, editable full-name input of the edit dialog. */
-function FullNameField({ value, onChange }: Readonly<FullNameFieldProps>) {
+/**
+ * The labelled, editable full-name input of the edit dialog; when `errorId`
+ * is set it is marked invalid and described by that error banner.
+ */
+function FullNameField({
+  value,
+  onChange,
+  errorId,
+}: Readonly<FullNameFieldProps>) {
   const t = useTranslations("admin");
   const inputId = useId();
   return (
@@ -78,6 +95,9 @@ function FullNameField({ value, onChange }: Readonly<FullNameFieldProps>) {
         id={inputId}
         type="text"
         autoComplete="name"
+        maxLength={USER_FULL_NAME_MAX_LENGTH}
+        aria-invalid={errorId !== undefined}
+        aria-describedby={errorId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(FIELD_INPUT_CLASS, "focus-visible:ring-2")}
@@ -96,6 +116,8 @@ export function EditUserDialog({
   const [isActive, setIsActive] = useState(user.is_active);
   const [fullName, setFullName] = useState(user.full_name);
   const status = useDialogStatus();
+  const errorId = useId();
+  const nameErrorId = status.error === t("nameInvalid") ? errorId : undefined;
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
@@ -124,6 +146,7 @@ export function EditUserDialog({
       title={t("editUserTitle")}
       subtitle={<p className="text-sm text-gray-500">{user.email}</p>}
       error={status.error}
+      errorId={errorId}
     >
       <form
         noValidate
@@ -132,7 +155,11 @@ export function EditUserDialog({
         }}
         className="mt-4 space-y-4"
       >
-        <FullNameField value={fullName} onChange={setFullName} />
+        <FullNameField
+          value={fullName}
+          onChange={setFullName}
+          errorId={nameErrorId}
+        />
 
         <UserRoleSelect value={role} onChange={setRole} />
 

@@ -124,6 +124,12 @@ database.
 
 Ticket written; implementation started on `feat/ae-0528-admin-edit-user-name`.
 
+### 2026-10-31 15:00
+
+Review follow-up: code-point length, field accessibility, 422 mapping by `loc`,
+`maxLength`, the 255-character boundary scenario, and the failing-role-change
+scenario renamed to what it proves.
+
 ## Files Touched
 
 - `backend/src/rag_backend/api/routes/admin.py`, `backend/src/rag_backend/domain/constants/auth.py`,
@@ -153,6 +159,14 @@ Pending.
   `updated_at` like `set_role`/`activate` do.
 - The dialog sends `full_name` only when the trimmed value differs from the
   current name, so a role-only save keeps the old request shape.
+- The client counts the name in code points (`Array.from`), like Python's `len`
+  on the backend. The input also carries `maxLength={255}`, which browsers count
+  in UTF-16 units, so typing is capped earlier than the API limit for names made
+  of astral characters (such as emoji); the submit check stays code-point based.
+- A 422 maps to the name message only when a validation error's `loc` includes
+  `full_name`; any other 422 keeps the generic update error.
+- The name field sets `aria-invalid` and `aria-describedby` (pointing at the
+  error banner, now `role="alert"`) while the name message is shown.
 
 ## Blockers
 

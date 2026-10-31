@@ -2,7 +2,7 @@
 
 Scenarios: ``tests/features/admin_edit_user_name_ae0528.feature``. The fakes and
 builders are the identity handler test doubles, whose repository only persists on
-a Unit of Work commit, so a rolled-back rename is observable.
+a Unit of Work commit, so a write that never commits is observable.
 """
 
 from __future__ import annotations
@@ -80,8 +80,8 @@ class TestAdminRenameUser:
 
         assert uow.commits == 0
 
-    # Scenario: The last-admin rule still holds when the name is edited with the role
-    async def test_rename_with_last_admin_demotion_is_rejected(self) -> None:
+    # Scenario: A failing role change leaves the name unchanged
+    async def test_a_failing_role_change_leaves_the_name_unchanged(self) -> None:
         handler, repo, uow = _build_admin_handler()
         admin = _seed_user(repo, email="admin@example.com", role=UserRole.ADMIN)
 
@@ -90,7 +90,7 @@ class TestAdminRenameUser:
                 UpdateUserInput(user_id=admin.id, role="editor", full_name=_NEW_NAME)
             )
 
-        assert uow.rollbacks == 1
+        assert uow.commits == 0
         stored = await repo.get_by_id(admin.id)
         assert stored is not None
         assert stored.full_name == _OLD_NAME
