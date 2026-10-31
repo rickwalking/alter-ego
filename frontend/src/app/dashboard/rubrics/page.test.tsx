@@ -1,6 +1,7 @@
 /**
- * The rubrics page: empty state, create/edit form, validation, server errors,
- * cancel, unsaved-changes guard and delete.
+ * The rubrics page: empty state, create/edit form, validation, server errors
+ * and delete. Leaving the editor and the keyboard path through the list are
+ * covered in `page-leave.test.tsx`.
  */
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -262,44 +263,6 @@ describe("RubricsPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The rubric could not be saved. Check the fields and try again.",
     );
-  });
-
-  it("cancels without saving once leaving is confirmed", async () => {
-    // Scenario: Cancel leaves the form without saving
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    const user = await openNewForm();
-    await user.type(screen.getByLabelText("Name"), "Draft");
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(confirm).toHaveBeenCalledWith(
-      "You have unsaved changes to this rubric. Leave without saving?",
-    );
-    expect(
-      screen.getByRole("button", { name: "Create your first rubric" }),
-    ).toBeInTheDocument();
-    expect(authenticatedFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("cancels an untouched form without asking", async () => {
-    // Scenario: Cancel leaves the form without saving
-    const confirm = vi.spyOn(window, "confirm");
-    const user = await openNewForm();
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(confirm).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", { name: "New Rubric" }),
-    ).toBeInTheDocument();
-  });
-
-  it("keeps the form open when leaving is declined", async () => {
-    // Scenario: Unsaved changes ask before leaving
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-    const user = await openNewForm();
-    await user.type(screen.getByLabelText("Name"), "Draft");
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(screen.getByLabelText("Name")).toHaveValue("Draft");
   });
 
   it("deletes after confirmation and explains a rubric still in use", async () => {

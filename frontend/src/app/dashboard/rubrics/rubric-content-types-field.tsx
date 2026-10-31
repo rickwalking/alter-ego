@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { NEON_RED } from "@/constants/neon";
-import { RUBRIC_CONTENT_TYPES } from "@/schemas/rubric";
 import { contentTypeOptions } from "./rubric-form-model";
+import { useContentTypeLabel } from "./use-rubric-labels";
 import { fieldErrorId } from "@/components/molecules/neon-labelled-field";
 
 const FIELD_ID = "rubric-content-types";
@@ -12,13 +12,6 @@ interface RubricContentTypesFieldProps {
   selected: readonly string[];
   error?: string;
   onToggle: (type: string) => void;
-}
-
-/** Translated label of a known content type; a stored unknown one shows as is. */
-function useContentTypeLabel(): (type: string) => string {
-  const t = useTranslations("rubrics.contentType");
-  const known: readonly string[] = RUBRIC_CONTENT_TYPES;
-  return (type) => (known.includes(type) ? t(type) : type);
 }
 
 /** The "applies to" checkbox group of the rubric form. */

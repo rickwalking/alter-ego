@@ -18,7 +18,8 @@ import {
 } from "@/modules/quality";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
-const PAGE_CONTENT_PADDING = "24px 32px";
+/** Narrower side padding on a phone so the rubric cards keep their width. */
+const PAGE_CONTENT_CLASS = "page-content px-4 py-6 sm:px-8";
 
 function PlusIcon(): React.ReactElement {
   return (
@@ -115,7 +116,7 @@ export default function RubricsPage(): React.ReactElement {
         }
       />
 
-      <div className="page-content" style={{ padding: PAGE_CONTENT_PADDING }}>
+      <div className={PAGE_CONTENT_CLASS}>
         <NeonEntityWorkspace
           editor={editor}
           deleteT={tDelete}
