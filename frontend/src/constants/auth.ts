@@ -36,3 +36,6 @@ export const LOGIN_ERROR_TOO_MANY_ATTEMPTS = "too_many_attempts";
 
 /** `?error=` value after the session expired (set by `/auth/logout`). */
 export const LOGIN_ERROR_SESSION_EXPIRED = "session_expired";
+
+/** Stable `code` of the 401 the API sends when a deactivated account signs in. */
+export const LOGIN_ERROR_CODE_USER_INACTIVE = "user_inactive";

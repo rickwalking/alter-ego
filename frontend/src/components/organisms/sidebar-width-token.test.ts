@@ -1,8 +1,8 @@
 /**
  * guards the single-source-of-truth for the dashboard rail width.
  * The Tailwind class literals (`w-[Npx]` in the sidebar, `lg:ml-[Npx]` in the
- * dashboard layout) must equal the JS constant `SIDEBAR_WIDTH_PX`, or the rail
- * and the content offset drift apart. (A CSS `--sidebar-width` var was dropped
+ * app shell shared by the dashboard and admin layouts) must equal the JS
+ * constant `SIDEBAR_WIDTH_PX`, or the rail and the content offset drift apart. (A CSS `--sidebar-width` var was dropped
  * because Tailwind v4 tree-shook the @theme declaration; literals are used now.)
  * Feature: responsive-dashboard-shell.feature — "sidebar width token stays in sync".
  */
@@ -14,7 +14,7 @@ import { SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
 
 const ROOT = process.cwd();
 const SIDEBAR = resolve(ROOT, "src/components/organisms/neon-sidebar.tsx");
-const LAYOUT = resolve(ROOT, "src/app/dashboard/layout.tsx");
+const LAYOUT = resolve(ROOT, "src/components/layout/neon-app-shell.tsx");
 
 describe("dashboard rail width token", () => {
   it("the sidebar w-[Npx] literal matches SIDEBAR_WIDTH_PX", () => {

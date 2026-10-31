@@ -13,6 +13,7 @@ describe("UserDialogShell", () => {
     render(
       <UserDialogShell
         title="Title"
+        onClose={vi.fn()}
         subtitle={<p>sub</p>}
         error="boom"
         success="yay"
@@ -30,12 +31,13 @@ describe("UserDialogShell", () => {
   it("omits the banners when there is no feedback", () => {
     // Scenario: no feedback banners
     render(
-      <UserDialogShell title="Title" error="">
+      <UserDialogShell title="Title" onClose={vi.fn()} error="">
         <span>body</span>
       </UserDialogShell>,
     );
     expect(screen.queryByText("boom")).not.toBeInTheDocument();
-    expect(document.querySelectorAll(".mt-4.rounded-md")).toHaveLength(0);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });
 

@@ -2,6 +2,9 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonModal } from "@/components/molecules/neon-modal";
+import { TOUCH_TARGET_CLASS } from "@/constants/admin-users";
 
 export interface UserItem {
   id: string;
@@ -18,9 +21,16 @@ export interface UserDialogProps {
   onSuccess: () => void;
 }
 
-export const FIELD_LABEL_CLASS = "block text-sm font-medium text-gray-700";
+export const FIELD_LABEL_CLASS = "block text-sm font-medium text-text-primary";
 export const FIELD_INPUT_CLASS =
-  "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500";
+  "mt-1 block h-11 w-full rounded-md border border-[var(--color-neon-input-border)] bg-[var(--color-neon-input-bg)] px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-neon-cyan focus:outline-none focus:ring-neon-cyan aria-[invalid=true]:border-neon-red";
+/** Muted secondary text of a dialog (subtitle, description, field hint). */
+export const DIALOG_MUTED_TEXT_CLASS = "text-sm text-text-muted";
+/** A field-level validation message under its input. */
+export const FIELD_ERROR_CLASS = "mt-1 text-sm text-neon-red";
+/** Dialog buttons: the neon button, at least 44 px tall to tap. */
+export const DIALOG_BUTTON_CLASS = TOUCH_TARGET_CLASS;
+
 export interface DialogStatus {
   error: string;
   success: string;
@@ -50,55 +60,71 @@ export function useDialogStatus(): DialogStatus {
   };
 }
 
-const CANCEL_BUTTON_CLASS =
-  "rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50";
-const PRIMARY_BUTTON_CLASS =
-  "rounded-md bg-primary-700 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-800 disabled:opacity-50";
-const DESTRUCTIVE_BUTTON_CLASS =
-  "rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50";
-
 interface UserDialogShellProps {
   title: string;
+  /** Escape, the backdrop and the Cancel button all call it. */
+  onClose: () => void;
   subtitle?: ReactNode;
   error: string;
   /** Id of the error banner, so a field can point `aria-describedby` at it. */
   errorId?: string;
   success?: ReactNode;
+  /** `alertdialog` for the destructive confirmation (delete). */
+  role?: "dialog" | "alertdialog";
+  /** Id of the text that describes the dialog. */
+  descriptionId?: string;
   children: ReactNode;
 }
 
+/**
+ * The modal frame of every admin user dialog, built on the dashboard's
+ * NeonModal: labelled by its title, focus trapped inside, Escape and the
+ * backdrop close it, and focus returns to the button that opened it.
+ */
 export function UserDialogShell({
   title,
+  onClose,
   subtitle,
   error,
   errorId,
   success,
+  role,
+  descriptionId,
   children,
 }: Readonly<UserDialogShellProps>) {
+  const t = useTranslations("admin");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center   bg-background/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-        {subtitle}
+    <NeonModal
+      open
+      onClose={onClose}
+      title={title}
+      role={role}
+      closeLabel={t("closeDialog")}
+      describedBy={descriptionId}
+      footer={false}
+    >
+      {subtitle}
 
-        {error && (
-          <div
-            id={errorId}
-            role="alert"
-            className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-red-800"
-          >
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mt-4 rounded-md bg-success/10 p-3 text-sm text-success-foreground">
-            {success}
-          </div>
-        )}
+      {error && (
+        <div
+          id={errorId}
+          role="alert"
+          className="mt-4 rounded-md border border-neon-red/30 bg-neon-red/10 p-3 text-sm text-text-primary"
+        >
+          {error}
+        </div>
+      )}
+      {success && (
+        <div
+          role="status"
+          className="mt-4 rounded-md border border-neon-green/30 bg-neon-green/10 p-3 text-sm text-text-primary"
+        >
+          {success}
+        </div>
+      )}
 
-        {children}
-      </div>
-    </div>
+      {children}
+    </NeonModal>
   );
 }
 
@@ -120,20 +146,23 @@ export function UserDialogActions({
   const t = useTranslations("admin");
   const destructive = onConfirm !== undefined;
   return (
-    <div className="mt-6 flex justify-end space-x-3">
-      <button type="button" onClick={onClose} className={CANCEL_BUTTON_CLASS}>
+    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <NeonButton
+        variant="ghost"
+        onClick={onClose}
+        className={DIALOG_BUTTON_CLASS}
+      >
         {t("cancel")}
-      </button>
-      <button
+      </NeonButton>
+      <NeonButton
         type={destructive ? "button" : "submit"}
+        variant={destructive ? "danger" : "primary"}
         onClick={onConfirm}
         disabled={isLoading}
-        className={
-          destructive ? DESTRUCTIVE_BUTTON_CLASS : PRIMARY_BUTTON_CLASS
-        }
+        className={DIALOG_BUTTON_CLASS}
       >
         {isLoading ? loadingLabel : label}
-      </button>
+      </NeonButton>
     </div>
   );
 }

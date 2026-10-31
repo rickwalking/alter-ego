@@ -3553,6 +3553,25 @@
         "title": "ChatResponse",
         "type": "object"
       },
+      "CodedErrorResponse": {
+        "description": "An error with its legacy English ``detail`` and a stable ``code``.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail",
+          "code"
+        ],
+        "title": "CodedErrorResponse",
+        "type": "object"
+      },
       "CollectorError": {
         "description": "A collector that timed out or raised. The bundle still returns.",
         "properties": {
@@ -7123,6 +7142,31 @@
           "slide_type"
         ],
         "title": "LocalizedSlideReview",
+        "type": "object"
+      },
+      "LoginErrorResponse": {
+        "description": "A failed sign-in; ``code`` is ``user_inactive`` for a deactivated account.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "LoginErrorResponse",
         "type": "object"
       },
       "LoginRequest": {
@@ -11399,7 +11443,14 @@
             "description": "Admin access required"
           },
           "409": {
-            "description": "User already exists"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodedErrorResponse"
+                }
+              }
+            },
+            "description": "User already exists (code user_email_exists)"
           },
           "422": {
             "content": {
@@ -11450,7 +11501,14 @@
             "description": "User not found"
           },
           "409": {
-            "description": "Cannot delete last admin or self"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodedErrorResponse"
+                }
+              }
+            },
+            "description": "Cannot delete last admin or self (code last_admin or self_delete)"
           },
           "422": {
             "content": {
@@ -11516,7 +11574,14 @@
             "description": "User not found"
           },
           "409": {
-            "description": "Cannot demote last admin"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodedErrorResponse"
+                }
+              }
+            },
+            "description": "Cannot demote last admin (code last_admin)"
           },
           "422": {
             "content": {
@@ -11712,7 +11777,14 @@
             "description": "Successful Response"
           },
           "401": {
-            "description": "Invalid credentials"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid credentials, or a deactivated account (code user_inactive)"
           },
           "422": {
             "content": {

@@ -1,13 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { responseErrorDetail } from "@/lib/response-error";
+import { adminErrorKey } from "@/lib/admin-user-errors";
+import { responseErrorBody } from "@/lib/response-error";
 import {
+  DIALOG_MUTED_TEXT_CLASS,
   UserDialogActions,
   UserDialogShell,
   type UserDialogProps,
 } from "./user-dialog-parts";
+
+const DELETE_ERROR_KEY = "deleteError";
+const DIALOG_ROLE_ALERT = "alertdialog";
+
+/** DELETE the user; the message key of a failure, else undefined. */
+async function requestDelete(userId: string): Promise<string | undefined> {
+  const response = await fetch(`/api/admin/users/${userId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (response.ok) {
+    return undefined;
+  }
+  const body = await responseErrorBody(response);
+  return adminErrorKey(response.status, body) ?? DELETE_ERROR_KEY;
+}
 
 export function DeleteUserDialog({
   user,
@@ -17,27 +35,21 @@ export function DeleteUserDialog({
   const t = useTranslations("admin");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const descriptionId = useId();
 
   const handleDelete = async () => {
     setError("");
     setIsLoading(true);
-
     try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          (await responseErrorDetail(response)) ?? t("deleteError"),
-        );
+      const failureKey = await requestDelete(user.id);
+      if (failureKey !== undefined) {
+        setError(t(failureKey));
+        return;
       }
-
       onSuccess();
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("deleteError"));
+    } catch {
+      setError(t(DELETE_ERROR_KEY));
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +58,11 @@ export function DeleteUserDialog({
   return (
     <UserDialogShell
       title={t("deleteUserTitle")}
+      onClose={onClose}
+      role={DIALOG_ROLE_ALERT}
+      descriptionId={descriptionId}
       subtitle={
-        <p className="mt-2 text-sm text-gray-500">
+        <p id={descriptionId} className={DIALOG_MUTED_TEXT_CLASS}>
           {t("deleteUserDescription", { email: user.email })}
         </p>
       }

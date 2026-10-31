@@ -4,7 +4,8 @@ import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HTTP_STATUS } from "@/constants/api";
 import { USER_FULL_NAME_MAX_LENGTH } from "@/constants/admin-users";
-import { responseErrorDetail } from "@/lib/response-error";
+import { adminErrorKey } from "@/lib/admin-user-errors";
+import { responseErrorBody } from "@/lib/response-error";
 import {
   buildUserUpdatePayload,
   isFullNameValidationError,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/user-update";
 import { cn } from "@/lib/utils";
 import {
+  DIALOG_MUTED_TEXT_CLASS,
   FIELD_INPUT_CLASS,
   FIELD_LABEL_CLASS,
   UserDialogActions,
@@ -23,49 +25,39 @@ import {
   type UserItem,
 } from "./user-dialog-parts";
 
-interface UpdateFailureMessages {
-  invalidName: string;
-  fallback: string;
-}
+const NAME_INVALID_KEY = "nameInvalid";
+const UPDATE_ERROR_KEY = "updateError";
 
 /**
- * The error text for a failed update: the API's own message when it sends one,
- * the name-validation message for a 422 whose errors point at `full_name`,
- * else the fallback (any other 422 included).
+ * The `admin` message key for a failed update: the stable API code first
+ * (last admin, user gone), the name message for a 422 whose errors point at
+ * `full_name`, else the generic one (any other 422 included). The English
+ * `detail` is never shown.
  */
-async function updateFailureMessage(
-  response: Response,
-  messages: UpdateFailureMessages,
-): Promise<string> {
-  const body: unknown = await response
-    .clone()
-    .json()
-    .catch(() => null);
-  const detail = await responseErrorDetail(response);
-  if (detail !== undefined) {
-    return detail;
+async function updateFailureKey(response: Response): Promise<string> {
+  const body = await responseErrorBody(response);
+  const known = adminErrorKey(response.status, body);
+  if (known !== undefined) {
+    return known;
   }
   const isNameError =
     response.status === HTTP_STATUS.UNPROCESSABLE_ENTITY &&
     isFullNameValidationError(body);
-  return isNameError ? messages.invalidName : messages.fallback;
+  return isNameError ? NAME_INVALID_KEY : UPDATE_ERROR_KEY;
 }
 
-/** PATCH the draft for `user`; throws with the error text when it fails. */
+/** PATCH the draft for `user`; the message key of a failure, else undefined. */
 async function sendUserUpdate(
   user: UserItem,
   draft: UserUpdateDraft,
-  messages: UpdateFailureMessages,
-): Promise<void> {
+): Promise<string | undefined> {
   const response = await fetch(`/api/admin/users/${user.id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(buildUserUpdatePayload(user.full_name, draft)),
   });
-  if (!response.ok) {
-    throw new Error(await updateFailureMessage(response, messages));
-  }
+  return response.ok ? undefined : updateFailureKey(response);
 }
 
 interface FullNameFieldProps {
@@ -117,25 +109,30 @@ export function EditUserDialog({
   const [fullName, setFullName] = useState(user.full_name);
   const status = useDialogStatus();
   const errorId = useId();
-  const nameErrorId = status.error === t("nameInvalid") ? errorId : undefined;
+  const nameErrorId =
+    status.error === t(NAME_INVALID_KEY) ? errorId : undefined;
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!isValidFullName(fullName)) {
-      status.setError(t("nameInvalid"));
+      status.setError(t(NAME_INVALID_KEY));
       return;
     }
     status.begin();
     try {
-      await sendUserUpdate(
-        user,
-        { role, isActive, fullName },
-        { invalidName: t("nameInvalid"), fallback: t("updateError") },
-      );
+      const failureKey = await sendUserUpdate(user, {
+        role,
+        isActive,
+        fullName,
+      });
+      if (failureKey !== undefined) {
+        status.setError(t(failureKey));
+        return;
+      }
       onSuccess();
       onClose();
-    } catch (err) {
-      status.setError(err instanceof Error ? err.message : t("updateError"));
+    } catch {
+      status.setError(t(UPDATE_ERROR_KEY));
     } finally {
       status.finish();
     }
@@ -144,7 +141,8 @@ export function EditUserDialog({
   return (
     <UserDialogShell
       title={t("editUserTitle")}
-      subtitle={<p className="text-sm text-gray-500">{user.email}</p>}
+      onClose={onClose}
+      subtitle={<p className={DIALOG_MUTED_TEXT_CLASS}>{user.email}</p>}
       error={status.error}
       errorId={errorId}
     >
@@ -163,17 +161,17 @@ export function EditUserDialog({
 
         <UserRoleSelect value={role} onChange={setRole} />
 
-        <div className="flex items-center">
+        <div className="flex min-h-11 items-center">
           <input
             id="is_active"
             type="checkbox"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary-500"
+            className="h-5 w-5 rounded accent-neon-cyan"
           />
           <label
             htmlFor="is_active"
-            className="ml-2 block text-sm text-gray-900"
+            className="ml-2 block text-sm text-text-primary"
           >
             {t("activeLabel")}
           </label>

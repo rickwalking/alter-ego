@@ -11,7 +11,7 @@ const AUTOCOMPLETE_NEW_CREDENTIAL = "new-password";
 const AUTOCAPITALIZE_OFF = "none";
 const INPUT_CLASS = `${FIELD_INPUT_CLASS} pr-11`;
 const TOGGLE_CLASS =
-  "absolute bottom-0 right-0 top-1 flex w-11 items-center justify-center rounded-md text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500";
+  "absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-md text-text-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan";
 const ICON_CLASS = "h-4 w-4";
 
 interface PasswordInputProps {
@@ -19,6 +19,10 @@ interface PasswordInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Ids of the hint and error texts that describe the input. */
+  describedBy?: string;
+  /** Marks the input invalid (its error text is among `describedBy`). */
+  invalid?: boolean;
 }
 
 /**
@@ -31,6 +35,8 @@ export function PasswordInput({
   value,
   onChange,
   placeholder,
+  describedBy,
+  invalid = false,
 }: Readonly<PasswordInputProps>) {
   const t = useTranslations("admin");
   const [visible, setVisible] = useState(false);
@@ -46,6 +52,8 @@ export function PasswordInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
         className={INPUT_CLASS}
       />
       <button

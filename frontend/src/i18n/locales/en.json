@@ -1643,7 +1643,9 @@
     "forbiddenTitle": "Access Denied",
     "forbiddenDescription": "You do not have permission to access this page.",
     "goHome": "Go Home",
-    "tryAgain": "Try Again"
+    "tryAgain": "Try Again",
+    "accountDeactivated": "This account is deactivated. Ask an admin to reactivate it.",
+    "serverUnreachable": "Couldn't reach the server. Try again in a moment."
   },
   "notFound": {
     "code": "404",
@@ -2221,9 +2223,6 @@
     }
   },
   "admin": {
-    "panelTitle": "Admin",
-    "usersLink": "Users",
-    "logout": "Log out",
     "usersTitle": "Users",
     "usersSubtitle": "{count} user(s)",
     "createUser": "Create user",
@@ -2280,7 +2279,17 @@
     "roleFilterAll": "All roles",
     "statusFilterAll": "All statuses",
     "noUsersMatch": "No users match the filters.",
-    "statusLabel": "Status"
+    "statusLabel": "Status",
+    "closeDialog": "Close dialog",
+    "passwordHint": "At least {min} characters. Leave blank to generate a temporary one.",
+    "minLengthNotMet": "The password needs at least {min} characters.",
+    "emailInvalid": "Enter a valid email address.",
+    "createNameInvalid": "Enter a full name of 2 to 255 characters.",
+    "emailTaken": "A user with this email already exists.",
+    "lastAdminError": "The last admin cannot be demoted, deactivated or deleted.",
+    "selfDeleteError": "You cannot delete your own account.",
+    "userNotFound": "This user no longer exists. Reload the list.",
+    "loadError": "Could not load the users."
   },
   "carousels": {
     "eyebrow": "Visual archive",
