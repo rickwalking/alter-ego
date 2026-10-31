@@ -102,6 +102,9 @@ class Settings(AutopilotAutofixSettings, GenerationQueueSettings):
       and the runner escalates final review with ``notifier_unconfigured``. An empty
       ``telegram_webhook_secret`` rejects the webhook with HTTP 401.
     - The worker calls the in-process runner only when ``autopilot_enabled``.
+      ``autopilot_cover_consent`` is the owner's standing consent for the
+      autopilot to start one slide-1 cover generation per fresh carousel from
+      their library photos; without it the step skips and no photo is read.
       ``autopilot_owner_user_id`` is an existing user owning the created carousels
       (reviewer_id stays unset). It is the site owner: only conversations and
       knowledge searches of this user read personal knowledge; unset, every chat
@@ -351,6 +354,14 @@ class Settings(AutopilotAutofixSettings, GenerationQueueSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_OWNER_USER_ID",
             "autopilot_owner_user_id",
+        ),
+    )
+
+    autopilot_cover_consent: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "AUTOPILOT_COVER_CONSENT",
+            "autopilot_cover_consent",
         ),
     )
 

@@ -207,8 +207,18 @@ class AutopilotRunner:
         if status is StartStatus.PROVIDER_OUTAGE:
             await self._count_start_failure(run)
             return 1
+        await self._auto_cover(project_id)
         await self._move(run, AutopilotRunState.GENERATING, REASON_GENERATING)
         return 1
+
+    async def _auto_cover(self, project_id: str) -> None:
+        """The consent-gated cover step; the editorial helper dedups per carousel."""
+        if self._deps.auto_cover is None:
+            return
+        try:
+            await self._deps.auto_cover.start_cover(project_id)
+        except Exception:
+            logger.exception(LOG_RUNNER, action="auto_cover", project_id=project_id)
 
     async def _apply(self, step: _Step) -> int:
         handlers: dict[GateAction, Callable[[_Step], Awaitable[int]]] = {

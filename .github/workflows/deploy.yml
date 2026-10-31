@@ -134,6 +134,9 @@ jobs:
             # false here; the secrets are what turns a test on.
             BOOST_REQUESTS_ENABLED=${{ secrets.BOOST_REQUESTS_ENABLED || 'false' }}
             BOOST_ENABLED=${{ secrets.BOOST_ENABLED || 'false' }}
+            # AE-0581: standing consent for autopilot cover generation from the
+            # owner's library photos; off unless the secret is 'true'.
+            AUTOPILOT_COVER_CONSENT=${{ secrets.AUTOPILOT_COVER_CONSENT || 'false' }}
             # AE-0579: the boost launch and pause calls (Meta Marketing API). Empty
             # until Pedro adds the secrets; with no token the launch path is inert.
             META_ADS_ACCESS_TOKEN=${{ secrets.META_ADS_ACCESS_TOKEN }}

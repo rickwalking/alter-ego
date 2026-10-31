@@ -253,6 +253,8 @@ async def remember_served_signal_urls(
 class AutopilotTickConfig:
     """Worker-tick wiring for the editorial runner. The session arrives per tick.
 
+    ``cover_consent`` is ``AUTOPILOT_COVER_CONSENT``: the owner's standing consent
+    to one automatic cover generation per fresh carousel from their library photos.
     ``persona_id`` is ``AUTOPILOT_PERSONA_ID`` (``""`` = the persona named "Pedro");
     ``autofix_attempts``, ``autofix_escalation_attempts`` and
     ``persona_unscored_max_ticks`` come from ``AUTOPILOT_AUTOFIX_ATTEMPTS``,
@@ -265,6 +267,7 @@ class AutopilotTickConfig:
     engine_factory: EngineFactory
     stale_after_seconds: int
     notifier_configured: bool = True
+    cover_consent: bool = False
     persona_id: str = ""
     autofix_attempts: int = AUTOFIX_MODEL_ATTEMPTS
     autofix_escalation_attempts: int = AUTOFIX_ESCALATION_ATTEMPTS
@@ -296,9 +299,13 @@ def runner_dependencies(
     config: AutopilotTickConfig,
 ) -> RunnerDependencies:
     """The runner's ports on ``session`` (the worker tick and the queue bridge)."""
+    from rag_backend.infrastructure.database.config import get_session_maker
     from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
         AutofixerConfig,
         InProcessContentAutofixer,
+    )
+    from rag_backend.modules.autopilot.infrastructure.cover_autostart import (
+        EditorialAutoCoverScheduler,
     )
     from rag_backend.modules.autopilot.infrastructure.cover_images import (
         EditorialCoverSwitcher,
@@ -344,6 +351,9 @@ def runner_dependencies(
         slide_fix=autofixer,
         covers=cover_offers(session),
         cover_switch=EditorialCoverSwitcher(session),
+        auto_cover=EditorialAutoCoverScheduler(
+            lambda: get_session_maker()(), consent=config.cover_consent
+        ),
         spacing=StartSpacing(
             starts=SqlStartHistory(session),
             clock=SystemClock(),

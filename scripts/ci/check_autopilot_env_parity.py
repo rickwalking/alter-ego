@@ -62,6 +62,8 @@ VAR_TELEGRAM_ALERTS_BOT_TOKEN = "TELEGRAM_ALERTS_BOT_TOKEN"
 VAR_TELEGRAM_ALERTS_CHAT_ID = "TELEGRAM_ALERTS_CHAT_ID"
 # AE-0407: reasoning-model attempts of the slide fix; 0 turns them off.
 VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS = "AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS"
+# AE-0581: standing consent to auto-generate slide-1 covers from library photos.
+VAR_AUTOPILOT_COVER_CONSENT = "AUTOPILOT_COVER_CONSENT"
 
 REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_META_IG_ACCESS_TOKEN,
@@ -90,6 +92,7 @@ REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_TELEGRAM_ALERTS_BOT_TOKEN,
     VAR_TELEGRAM_ALERTS_CHAT_ID,
     VAR_AUTOPILOT_AUTOFIX_ESCALATION_ATTEMPTS,
+    VAR_AUTOPILOT_COVER_CONSENT,
 )
 
 PUBLIC_SLIDE_BASE_URL = "https://marinssolutions.com"
@@ -116,7 +119,12 @@ _ENV_BLOCK = re.compile(r"^( +)environment:\s*(?:#.*)?$")
 _ENV_KEY = re.compile(r"^\s+([A-Z][A-Z0-9_]*):\s*(.*)$")
 _PUBLIC_URL = re.compile(re.escape(PUBLIC_SLIDE_BASE_URL) + r"(?=[:}'\"\s]|$)")
 _KILL_SWITCHES = frozenset(
-    {VAR_AUTOPILOT_ENABLED, VAR_BOOST_REQUESTS_ENABLED, VAR_BOOST_ENABLED}
+    {
+        VAR_AUTOPILOT_ENABLED,
+        VAR_BOOST_REQUESTS_ENABLED,
+        VAR_BOOST_ENABLED,
+        VAR_AUTOPILOT_COVER_CONSENT,
+    }
 )
 _LITERAL_NUMBER = re.compile(r"^[0-9]+$")
 
