@@ -1,6 +1,6 @@
 # AE-0512 — Rubrics polish: translated cards, real API data, phone layout, in-app leave dialog
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Feature / UX
