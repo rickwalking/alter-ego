@@ -93,7 +93,14 @@ class SqlBoostStore:
         return int(total or 0)
 
     async def insert(self, request: BoostRequest) -> None:
+        """Write the request row, then its first event.
+
+        The models share only a foreign key (no ``relationship``), so one flush does
+        not order the two INSERTs; Postgres would reject the event before its request
+        exists.
+        """
         self._session.add(_model(request))
+        await self._session.flush()
         self._session.add(_event(_recorded(request)))
         await self._session.flush()
 
