@@ -82,17 +82,23 @@ class AuthCommandHandler:
         forced-change flag cleared and the token version bumped via
         ``repository.update``, committed once through the Unit of Work. Every
         token issued before is now stale; the returned fresh token, at the new
-        version, keeps the caller signed in.
+        version, keeps the caller signed in. The user row is read locked (and
+        stays locked until the commit), so the bump is atomic.
         """
-        user = await self._require_user(command.user_id)
+        user = await self._require_locked_user(command.user_id)
         new_hash = new_password_hash(self._passwords, user, command)
         async with self._unit_of_work:
             user.change_password(new_hash)
             updated = await self._repository.update(user)
         return self._authentication.issue_token(updated)
 
-    async def _require_user(self, user_id: UUID) -> User:
-        user = await self._repository.get_by_id(user_id)
+    async def _require_locked_user(self, user_id: UUID) -> User:
+        """The user with its row locked, so concurrent changes run one at a time.
+
+        A second change waits for the first to commit, then sees its new hash
+        and token version: it cannot bump from the same version again.
+        """
+        user = await self._repository.get_by_id_for_update(user_id)
         if user is None:
             raise UserNotFoundError(ERR_USER_NOT_FOUND)
         return user

@@ -66,16 +66,23 @@ Feature: A password change logs out every other session of the user
     Given the real app
     Then every HTTP and websocket route that reads the access token goes through a dependency that checks the token version
 
-  Scenario: An older write never lowers the token version
-    Given a user whose token version moved to 2
-    When an update carrying the version 1 it read earlier is saved
-    Then the stored token version stays 2
+  Scenario: Concurrent password changes run one at a time
+    Given a user signed in on two sessions
+    When both sessions change the password from the same current password at the same time
+    Then one change succeeds and the other is refused because the current password changed
+    And the token version is bumped once and the refused session is logged out
+
+  Scenario: Two changes in a row bump the version twice
+    Given two writers that each read the user row locked to change the password
+    When the second one waits for the first to commit
+    Then it sees the first change and the token version ends at 2
+    And the token the first change issued is refused once the second change is done
 
   Scenario: The token version column is added on prod by a one-shot
     Given an existing users table without token_version
     When the column one-shot runs with apply and verify
     Then the column exists as INTEGER NOT NULL DEFAULT 0 and existing users read 0
-    And a second run is a no-op
+    And a second run is a no-op that issues no ALTER
 
   Scenario: Verify fails while token_version is missing
     Given an existing users table without token_version

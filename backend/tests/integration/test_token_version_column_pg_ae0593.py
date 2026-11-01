@@ -34,6 +34,7 @@ _COLUMN_SQL = text(
     " WHERE table_schema = current_schema() AND table_name = 'users'"
     " AND column_name = 'token_version'"
 )
+_READ_LOCK_SQL = text("LOCK TABLE users IN ACCESS SHARE MODE")
 _ROWS_SQL = text("SELECT id, email, hashed_password, token_version FROM users")
 _INSERT_WITHOUT_VERSION_SQL = text(
     "INSERT INTO users (id, email, hashed_password, must_change_password)"
@@ -130,3 +131,16 @@ async def test_apply_only_adds_the_column_and_exits_0() -> None:
 
     assert code == EXIT_OK
     assert report.missing is False
+
+
+# Scenario: The token version column is added on prod by a one-shot
+@requires_postgres
+async def test_a_run_on_a_present_column_takes_no_table_lock() -> None:
+    async with _users_without_version() as engine:
+        await column.apply(engine)
+        async with engine.connect() as reader:
+            await reader.execute(_READ_LOCK_SQL)
+            again = await column.apply(engine)
+            await reader.rollback()
+
+    assert again == column.VersionColumnReport(supported=True, table_present=True)

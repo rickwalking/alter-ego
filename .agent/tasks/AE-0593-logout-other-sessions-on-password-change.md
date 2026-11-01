@@ -1,6 +1,6 @@
 # AE-0593 — A password change logs out every other session
 
-Status: Dev Complete
+Status: In Development
 Tier: T1
 Priority: High
 Type: Feature
@@ -39,11 +39,13 @@ forgotten browser) keeps working until its token expires, so changing the passwo
   `require_editor_or_admin`, `/api/auth/me`, `/api/auth/change-password`), `get_optional_user` (a stale token is a
   visitor) and `api/dependencies/roles.get_current_user` (`CurrentUser`, `EditorUser`, `AdminUser`, `RoleUser`).
 - `change_password` bumps `token_version` in the same Unit of Work write as the hash (entity `User.change_password`,
-  used by both `AuthCommandHandler` and `UserService`). The handler returns a fresh token at the new version; the
+  used by `AuthCommandHandler`; the unused `UserService.change_password` is removed). The handler reads the user
+  row locked (`UserRepository.get_by_id_for_update`, `SELECT ... FOR UPDATE`, re-read past the session's identity
+  map) before the password check, so concurrent changes run one at a time and each bumps from the committed
+  version. The handler returns a fresh token at the new version; the
   route sets it in the `access_token` cookie with the login's flags (HttpOnly, Secure on HTTPS, SameSite=Strict,
   Path=/, max age = token lifetime). Status stays 204.
-- The repository never lowers the stored version (an update built from a user read before a change keeps the newer
-  version).
+- The deploy one-shot issues no `ALTER` when the column is already present (no table lock on a re-run).
 
 ## Non-Goals
 
@@ -70,7 +72,9 @@ forgotten browser) keeps working until its token expires, so changing the passwo
 - [x] AC8 The column one-shot adds `INTEGER NOT NULL DEFAULT 0` on an existing table, is idempotent, verify fails
       while missing, and it is a no-op without `users` or outside Postgres; the deploy runs it before the stack comes
       up, retries once in the running backend and fails the job at the end.
-- [x] AC9 An update read before a change never lowers the stored version (Postgres).
+- [x] AC9 Concurrent changes are serialised on the locked user row: two changes from the same current password give
+      one 204 and one 401 with the version bumped once; two changes in a row end at version 2 and the first change's
+      token is refused (Postgres).
 - [x] AC10 The existing rules stay: reusing the current password is refused, `must_change_password` is cleared by a
       change, the change is rate limited.
 
@@ -172,8 +176,10 @@ Pending.
 - The stale check runs before the forced-change check: a stale token is not signed in at all.
 - `change-password` stays 204 and sets the cookie; no body. A bearer-only API client must log in again after a
   change.
-- The repository writes `max(stored, entity)` for the version so an update read before a change cannot revive the
-  logged-out tokens.
+- The bump is made atomic with a row lock on the change-password read (not a SQL increment), so the password check,
+  the hash and the version all come from the same locked, committed row.
+- An unrelated update built from a user read before a change (e.g. an admin edit) still writes back every field,
+  including the old hash and version (pre-existing repository behaviour); left to a separate follow-up ticket.
 
 ## Blockers
 

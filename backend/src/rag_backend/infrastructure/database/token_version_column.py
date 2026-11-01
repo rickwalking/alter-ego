@@ -9,11 +9,12 @@ The column is ``INTEGER NOT NULL DEFAULT 0``: Postgres 11+ keeps a constant
 default in the catalog, so existing rows read 0 without a table rewrite, and
 the access tokens alive at deploy time (no ``tv`` claim, read as 0) keep
 working. A short lock timeout makes a hand run with the stack up fail fast
-instead of queueing every sign-in behind the ``ALTER``. ``ADD COLUMN IF NOT
-EXISTS`` makes a second run a no-op; a database without ``users`` yet is left
-alone (``create_all`` creates it with the column), and a database that is not
-Postgres (SQLite in tests) is a no-op. The SQL is fixed text, never built from
-input.
+instead of queueing every sign-in behind the ``ALTER``. A run that finds the
+column already there issues no ``ALTER`` at all, so it takes no table lock;
+``ADD COLUMN IF NOT EXISTS`` keeps a racing second run harmless. A database
+without ``users`` yet is left alone (``create_all`` creates it with the
+column), and a database that is not Postgres (SQLite in tests) is a no-op. The
+SQL is fixed text, never built from input.
 """
 
 from __future__ import annotations
@@ -85,8 +86,9 @@ async def apply(engine: AsyncEngine) -> VersionColumnReport:
         table, column = await _state(conn)
         if not table:
             return VersionColumnReport(supported=True)
-        await conn.execute(_LOCK_TIMEOUT_SQL)
-        await conn.execute(_ADD_VERSION_SQL)
+        if not column:
+            await conn.execute(_LOCK_TIMEOUT_SQL)
+            await conn.execute(_ADD_VERSION_SQL)
     logger.info("token_version_column_applied", added=not column)
     return VersionColumnReport(supported=True, table_present=True, added=not column)
 

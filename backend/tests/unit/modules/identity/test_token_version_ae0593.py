@@ -7,6 +7,7 @@ persists on a Unit of Work commit, so a refused change is observable.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
@@ -23,14 +24,13 @@ from rag_backend.api.dependencies.token_version import (
 )
 from rag_backend.domain.constants import JWT_ALGORITHM
 from rag_backend.infrastructure.auth import create_access_token, decode_access_token
-from rag_backend.infrastructure.config.settings import get_settings
+from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.identity import (
     ChangePasswordCommand,
     CurrentPasswordIncorrectError,
     PasswordUnchangedError,
     User,
 )
-from tests.unit.modules.identity import test_identity_services as services
 from tests.unit.modules.identity.test_identity_handlers import (
     _TOKEN_PREFIX,
     _VALID_PASSWORD,
@@ -39,6 +39,18 @@ from tests.unit.modules.identity.test_identity_handlers import (
 )
 
 _NEW_PASSWORD = "brand-new-passphrase"
+_SIGNING_KEY = "unit-test-signing-key-of-forty-chars!!!"
+
+
+@pytest.fixture
+def signing_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[Settings]:
+    """Settings with a signing key long enough for HS256, whatever the env holds."""
+    monkeypatch.setenv("SECRET_KEY", _SIGNING_KEY)
+    get_settings.cache_clear()
+    yield get_settings()
+    get_settings.cache_clear()
+
+
 _STALE_DETAIL = "Invalid or expired token"
 
 
@@ -74,8 +86,10 @@ class _Repo:
 @pytest.mark.unit
 class TestIssuedToken:
     # Scenario: A new token carries the user's current token version
-    def test_a_new_token_carries_the_user_token_version(self) -> None:
-        settings = get_settings()
+    def test_a_new_token_carries_the_user_token_version(
+        self, signing_settings: Settings
+    ) -> None:
+        settings = signing_settings
         token = create_access_token(settings, _user(3))
 
         payload = decode_access_token(settings, token)
@@ -191,6 +205,7 @@ class TestChangePasswordBumpsTheVersion:
         assert stored is not None
         assert stored.token_version == 1
         assert uow.commits == 1
+        assert repo.locked == [user.id]
         assert token.access_token == _TOKEN_PREFIX + str(user.id)
 
     # Scenario: A wrong current password does not log anyone out
@@ -217,26 +232,14 @@ class TestChangePasswordBumpsTheVersion:
         assert user.token_version == 0
         assert uow.commits == 0
 
-    # Scenario: A password change bumps the token version in the same write
-    async def test_the_user_service_bumps_the_version_too(self) -> None:
-        service, repo, uow = services._build_user_service()
-        user = services._seed_user(repo)
-
-        await service.change_password(
-            _command(user, services._VALID_PASSWORD, _NEW_PASSWORD)
-        )
-
-        stored = await repo.get_by_id(user.id)
-        assert stored is not None
-        assert stored.token_version == 1
-        assert uow.commits == 1
-
 
 @pytest.mark.unit
 class TestTokenWithoutVersion:
     # Scenario: A token without a token version still works for a user at version 0
-    def test_a_pre_versioning_token_decodes_without_tv(self) -> None:
-        settings = get_settings()
+    def test_a_pre_versioning_token_decodes_without_tv(
+        self, signing_settings: Settings
+    ) -> None:
+        settings = signing_settings
         user = _user(0)
         token = jwt.encode(
             {"sub": str(user.id), "type": "auth", "exp": 4102444800},

@@ -50,6 +50,22 @@ class PostgresUserRepository(UserRepository):
         model = result.scalar_one_or_none()
         return model.to_entity() if model else None
 
+    async def get_by_id_for_update(self, user_id: UUID) -> User | None:
+        """Get a user by ID, locking its row until the transaction ends.
+
+        The row is re-read even when the session already holds it, so a
+        concurrent change committed meanwhile (a new hash, a bumped token
+        version) is what the caller sees. SQLite ignores the lock.
+        """
+        result = await self._session.execute(
+            select(UserModel)
+            .where(UserModel.id == str(user_id))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model else None
+
     async def get_by_email(self, email: str) -> User | None:
         """Get a user by email address.
 
@@ -91,10 +107,6 @@ class PostgresUserRepository(UserRepository):
         mapping so the entity never triggers a lazy load inside the async
         session (that lazy load raised ``MissingGreenlet`` → HTTP 500).
 
-        The token version only moves up: an update built from a user read
-        before a password change keeps the newer stored version, so it cannot
-        bring the tokens that change logged out back to life.
-
         Args:
             user: User entity with updated fields.
 
@@ -114,7 +126,7 @@ class PostgresUserRepository(UserRepository):
         model.role = user.role.value
         model.is_active = user.is_active
         model.must_change_password = user.must_change_password
-        model.token_version = max(int(model.token_version or 0), user.token_version)
+        model.token_version = user.token_version
         model.updated_at = user.updated_at
 
         await self._session.flush()
