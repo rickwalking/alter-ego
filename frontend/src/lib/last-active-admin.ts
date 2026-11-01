@@ -16,6 +16,10 @@ function isActiveAdmin(user: AdminCandidate): boolean {
  * (no active admin, or more than one). The API refuses to demote or
  * deactivate that user, so the dialog locks those controls. Inactive admins
  * do not count: they cannot sign in.
+ *
+ * The lock is only a hint. It assumes every user arrived in one list
+ * response (the API caps the list at 1000 users) and that it is fresh;
+ * the backend guard (409 `last_admin`) is the source of truth.
  */
 export function lastActiveAdminId(
   users: readonly AdminCandidate[],

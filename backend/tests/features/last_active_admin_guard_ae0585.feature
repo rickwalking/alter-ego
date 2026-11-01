@@ -16,6 +16,14 @@ Feature: The app always keeps one active admin
     And the response detail should be "Cannot deactivate the last active admin"
     And my account should still be active
 
+  Scenario: Deactivating is refused when the other admins are inactive
+    Given I am authenticated as the only active admin
+    And another admin exists who is inactive
+    When I deactivate my own account
+    Then the response status should be 409
+    And the response code should be "last_admin"
+    And my account should still be active
+
   Scenario: Demoting is refused when the other admins are inactive
     Given I am authenticated as the only active admin
     And another admin exists who is inactive
@@ -56,3 +64,16 @@ Feature: The app always keeps one active admin
     And an active editor exists
     When I deactivate the editor
     Then the response status should be 200
+
+  Scenario: Two admins deactivating each other at once leave one active admin
+    Given two active admins
+    When each one deactivates the other at the same time
+    Then exactly one of the two updates succeeds
+    And the other is refused as the last active admin
+    And exactly one active admin remains
+
+  Scenario: The active-admin count locks the rows it counts
+    Given one transaction has counted the active admins
+    When a second transaction counts the active admins
+    Then the second count waits until the first transaction ends
+    And it then counts the admins that are still active

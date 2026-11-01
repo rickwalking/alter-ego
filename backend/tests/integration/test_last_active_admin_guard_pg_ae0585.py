@@ -207,3 +207,20 @@ class TestLastActiveAdminGuardOnPostgres:
 
             assert resp.status_code == _OK
             assert (await _stored(editor.id)).is_active is False
+
+    # Scenario: Deactivating is refused when the other admins are inactive
+    async def test_deactivating_with_an_inactive_other_admin_returns_409(
+        self,
+    ) -> None:
+        async with _guard_env() as guard_env:
+            me = await _seed(_Seed(_ME_EMAIL, UserRole.ADMIN))
+            await _seed(_Seed(_OTHER_EMAIL, UserRole.ADMIN, is_active=False))
+
+            resp = await _patch(guard_env, me, (me.id, {"is_active": False}))
+
+            assert resp.status_code == _CONFLICT
+            assert resp.json() == {
+                "detail": _DEACTIVATE_DETAIL,
+                "code": _CODE_LAST_ADMIN,
+            }
+            assert (await _stored(me.id)).is_active is True
