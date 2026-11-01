@@ -99,6 +99,8 @@ class BoostRequest:
     next_attempt_at: datetime | None = None
     last_insights: dict[str, int | None] | None = None
     error_code: str | None = None
+    error_detail: dict[str, str] | None = None
+    """Meta's error fields for the failure event. Not a request column."""
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -5,9 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Protocol
 
+import structlog
+
 from rag_backend.modules.autopilot.application.boost_requests import BoostDeps
 from rag_backend.modules.autopilot.boost_constants import (
     ACTOR_WORKER,
+    LOG_LAUNCH,
     STATUS_ACTIVE,
     STATUS_APPROVED,
     STATUS_EXPIRED,
@@ -24,6 +27,8 @@ from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
 from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import AdsCallError
 
 _SCAN = 20
+
+logger = structlog.get_logger(__name__)
 
 
 class _Ads(Protocol):
@@ -89,7 +94,13 @@ class BoostTick:
         try:
             launched = await ads.launch(launching)
         except AdsCallError as exc:
-            failed = replace(launching, status=STATUS_FAILED, error_code=exc.code)
+            _log_failure(launching, exc)
+            failed = replace(
+                launching,
+                status=STATUS_FAILED,
+                error_code=exc.code,
+                error_detail=exc.detail,
+            )
             await self._deps.boosts.store.save_status(
                 StatusSave(
                     previous=STATUS_LAUNCHING,
@@ -105,6 +116,17 @@ class BoostTick:
         )
         await self._deps.boosts.store.commit()
         return 1
+
+
+def _log_failure(request: BoostRequest, exc: AdsCallError) -> None:
+    """One structured line with Meta's error fields. They never hold the token."""
+    logger.warning(
+        LOG_LAUNCH,
+        request_id=str(request.id),
+        error_code=exc.code,
+        permanent=exc.permanent,
+        meta=exc.detail,
+    )
 
 
 __all__ = ["BoostTick", "BoostTickDeps"]
