@@ -341,6 +341,18 @@ jobs:
             # Wait for services to start
             sleep 10
 
+            # Forced password change flag, second chance (AE-0511): without the
+            # column every sign-in 500s, so a failed one-shot is retried once in
+            # the running backend before the drift check. Success clears the
+            # failure; a second failure still fails the job at the end.
+            if [ "$MUST_CHANGE_PASSWORD_EXIT" -ne 0 ]; then
+              set +e
+              docker compose -f docker-compose.prod.yml exec -T backend \
+                python -m rag_backend.scripts.must_change_password_column --apply --verify
+              MUST_CHANGE_PASSWORD_EXIT=$?
+              set -e
+            fi
+
             # Schema drift check (AE-0578): read-only, in the running backend, so
             # the app's create_all has made any new table first. A mapped ORM
             # column missing from the live DB (a model change on an existing table

@@ -110,3 +110,9 @@ Feature: Users change their own password, and a reset password must be changed
     Given the deploy workflow
     Then the column one-shot runs after the insight columns step and before the stack comes up
     And its failure is captured, the stack stays up, and the job fails at the end
+
+  Scenario: The deploy retries a failed must_change_password one-shot in the running backend
+    Given the deploy workflow
+    When the column one-shot failed before the stack came up
+    Then it runs once more in the running backend before the drift check
+    And a successful retry clears the failure, while a second failure still fails the job at the end
