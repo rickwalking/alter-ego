@@ -192,6 +192,7 @@ async def create_user(
     """Create a new user. Admin only.
 
     If password is not provided, a secure temporary password is generated.
+    The new user must change the password at the first sign-in.
     """
     try:
         created = await service.admin.create(
