@@ -282,3 +282,54 @@ class TestDraftWriteBack:
 
         assert fitter.calls == [["3:pt:heading"]]
         assert result.changed_indices == frozenset({3})
+
+
+_LONG_EN_HOOK = (
+    "Code reviews without a clear owner cost the whole team hours, rework and fights"
+)
+
+
+def _hook_drafts() -> list[dict[str, object]]:
+    drafts = _qa_drafts()[:1]
+    en = cast(dict[str, object], drafts[0]["presentation_en"])
+    en["heading"] = _LONG_EN_HOOK
+    return drafts
+
+
+async def _asked(command_hook: tuple[str, str]) -> list[str]:
+    hook_text, approved = command_hook
+    fitter = FakeFitter(answer_fn=_within_limit)
+    await fit_drafts_to_budgets(
+        DraftFitCommand(
+            slide_drafts=_hook_drafts(),
+            fitter=fitter,
+            policy_version=POLICY_V4,
+            hook_text=hook_text,
+            approved_hook_title=approved,
+        )
+    )
+    return fitter.calls[0]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestOwnerHook:
+    async def test_picked_hook_heading_is_left_to_block(self) -> None:
+        """Scenario: The owner's hook heading is never rewritten."""
+        asked = await _asked(("Revisões sem dono custam horas", ""))
+
+        assert len(_LONG_EN_HOOK) > 72
+        assert "1:pt:heading" not in asked
+        assert "1:en:heading" in asked
+
+    async def test_approved_outline_title_is_left_to_block(self) -> None:
+        """Scenario: The owner's hook heading is never rewritten (approved outline title)."""
+        asked = await _asked(("", _INTRO_HEADING_PT))
+
+        assert "1:pt:heading" not in asked and "1:en:heading" in asked
+
+    async def test_unowned_hook_heading_is_shortened(self) -> None:
+        """Scenario: The owner's hook heading is never rewritten (not the owner's)."""
+        asked = await _asked(("", "Outro título aprovado"))
+
+        assert "1:pt:heading" in asked

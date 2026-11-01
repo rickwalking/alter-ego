@@ -163,7 +163,9 @@ class ContentDraftAgent:
 
         ``policy`` (role contracts) targets the project's contract and
         deck size; with ``policy.pov`` the slide is drafted from the owner's
-        thesis with the ``carousel_pov/v1`` prompt.
+        thesis with the POV content prompt of its family (``carousel_pov`` or
+        ``carousel_pov_news``) at ``POV_PROMPT_CONTENT_VERSION``; the slide's copy
+        limits arrive in the instruction context.
 
         Titles and key points use case-preserving sanitization: lowercased input made
         the model echo lowercase copy into the slides. Revision notes are rendered once,

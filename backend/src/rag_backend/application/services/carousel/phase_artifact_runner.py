@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from typing import Protocol, TypedDict, runtime_checkable
 
 from langchain_core.language_models import BaseChatModel
@@ -18,9 +19,9 @@ from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
 from rag_backend.application.services.carousel.content_budget_step import (
-    BudgetStepInput,
+    ContentBudgetContext,
     llm_budget_fitter,
-    run_budget_step,
+    run_content_budget_step,
 )
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
@@ -41,9 +42,6 @@ from rag_backend.application.services.carousel.content_gate_repair_flow import (
     gate_violation_note,
     repair_blocked_content_gate,
     visible_copy_changed,
-)
-from rag_backend.application.services.carousel.copy_budget_fit_drafts import (
-    DraftFitResult,
 )
 from rag_backend.application.services.carousel.copy_budget_fit_llm import (
     CopyBudgetFitter,
@@ -137,7 +135,7 @@ class PhaseArtifactRunnerConfig:
     with neither it is off. ``rubric_judge`` scores the drafts against the
     carousel's quality rubric (no judge: no scores). ``budget_fitter`` shortens the
     fields over their copy budget right before the content review is built; when
-    unset it is the fast-model fitter, on exactly when ``gate_repair_tracing`` is.
+    unset, ``budget_fit_tracing`` turns on the fast-model fitter built from ``llm``.
     """
 
     outline_agent: OutlineAgent
@@ -153,31 +151,13 @@ class PhaseArtifactRunnerConfig:
     gate_repair_tracing: Callable[[], RunnableConfig] | None = None
     rubric_judge: RubricJudge | None = None
     budget_fitter: CopyBudgetFitter | None = None
-
-
-_TRANSLATIONS_EN_KEY = "translations_en"
+    budget_fit_tracing: Callable[[], RunnableConfig] | None = None
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
     """Resolve the seeded presentation policy version from workflow state."""
     value = state.get("presentation_policy_version")
     return value if isinstance(value, str) and value.strip() else None
-
-
-def _review_translations(
-    state: CarouselWorkflowState,
-    updates: dict[str, object],
-) -> object:
-    """EN translations for the content review build.
-
-    Fresh translations win. When the drafts were NOT regenerated the stored
-    translations still match them: dropping them made the builder fall back
-    to the PT draft, so the EN copy silently became Portuguese.
-    """
-    fresh = updates.get(_TRANSLATIONS_EN_KEY)
-    if fresh is not None or STATE_FIELD_SLIDE_DRAFTS in updates:
-        return fresh
-    return state.get(_TRANSLATIONS_EN_KEY)
 
 
 def _llm_gate_repairer(config: PhaseArtifactRunnerConfig) -> GateFieldRepairer | None:
@@ -263,8 +243,9 @@ class PhaseArtifactRunner:
         self._gate_repairer = config.gate_repairer or _llm_gate_repairer(config)
         self._rubric_judge = config.rubric_judge
         self._rubric = CarouselRubricStep(db=config.db, judge=config.rubric_judge)
+        self._budget_fit_tracing = config.budget_fit_tracing
         self._budget_fitter = config.budget_fitter or llm_budget_fitter(
-            config.llm, config.gate_repair_tracing
+            config.llm, config.budget_fit_tracing
         )
 
     def with_context(
@@ -290,6 +271,7 @@ class PhaseArtifactRunner:
                 gate_repair_tracing=self._gate_repair_tracing,
                 rubric_judge=self._rubric_judge,
                 budget_fitter=self._budget_fitter,
+                budget_fit_tracing=self._budget_fit_tracing,
             )
         )
 
@@ -527,10 +509,19 @@ class PhaseArtifactRunner:
             updates["outline"] = sanitized_state["outline"]
         if isinstance(sanitized_state.get("slide_drafts"), list):
             updates["slide_drafts"] = sanitized_state["slide_drafts"]
-        fit = await self._fit_copy_budgets(
-            state,
-            resolved,
-            (sanitized_state.get("slide_drafts") or [], updates, regen.scope),
+        fit = await run_content_budget_step(
+            self._budget_fitter,
+            ContentBudgetContext(
+                state=state,
+                updates=updates,
+                slide_drafts=sanitized_state.get("slide_drafts") or [],
+                style_guide=self._style_guide(resolved),
+                persona=resolved.persona,
+                hook_text=regen.mode.hook_text if regen.mode else "",
+                outline=outline,
+                scope=regen.scope,
+                scorer=partial(self._score_content_drafts, resolved),
+            ),
         )
         updates.update(
             await self._build_presentation_review_updates(
@@ -551,43 +542,6 @@ class PhaseArtifactRunner:
         if regenerated:
             updates.update(_settle_used_notes(state, updates))
         return updates
-
-    async def _fit_copy_budgets(
-        self,
-        state: CarouselWorkflowState,
-        resolved: EditorialWorkflowStartInput,
-        inputs: tuple[object, dict[str, object], frozenset[int] | None],
-    ) -> DraftFitResult:
-        """Shorten the over-budget fields before the review build (``updates`` in place).
-
-        The persona voice of the shortened slides is scored again; unchanged slides
-        keep their score by fingerprint.
-        """
-        drafts, updates, scope = inputs
-        persona = resolved.persona
-        fit = await run_budget_step(
-            self._budget_fitter,
-            BudgetStepInput(
-                project_id=str(state.get("project_id", "")),
-                slide_drafts=drafts,
-                translations_en=_review_translations(state, updates),
-                policy_version=_state_policy_version(state),
-                style_guide=self._style_guide(resolved),
-                forbidden_phrases=tuple(persona.forbidden_phrases) if persona else (),
-                scope=scope,
-            ),
-            updates,
-        )
-        if fit.changed_indices:
-            previous = updates.get(STATE_FIELD_PERSONA_SCORES)
-            updates.update(
-                await self._score_content_drafts(
-                    resolved,
-                    fit.slide_drafts,
-                    previous or state.get(STATE_FIELD_PERSONA_SCORES),
-                )
-            )
-        return fit
 
     def _style_guide(self, resolved: EditorialWorkflowStartInput) -> str:
         """The author's style guide for the field rewrites ("" without a persona)."""

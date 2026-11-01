@@ -11,13 +11,13 @@ this module adds no application -> infrastructure import.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage
-from langchain_core.runnables import RunnableConfig
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.runnables import Runnable, RunnableConfig
 
 from rag_backend.application.services.carousel.content_gate_repair import parse_fixes
 from rag_backend.application.services.carousel.content_gate_repair_targets import (
@@ -38,6 +38,7 @@ from rag_backend.domain.constants.content_gate_repair import (
     GATE_REPAIR_JSON_ID_KEY,
 )
 from rag_backend.domain.constants.copy_budget_fit import (
+    BINDABLE_MODEL_KEYS,
     COPY_BUDGET_VAR_FIELDS_JSON,
     COPY_BUDGET_VAR_STYLE_GUIDE,
     LIMIT_KEY_FIELD,
@@ -99,13 +100,23 @@ def _field_json(item: FitTarget) -> dict[str, object]:
     return entry
 
 
-def render_fit_prompt(request: FitRequest) -> str:
-    """The versioned shorten prompt for one attempt."""
+def render_fit_prompt(request: FitRequest) -> tuple[str, dict[str, object]]:
+    """The versioned shorten prompt for one attempt and its YAML model config."""
     fields = [_field_json(item) for item in request.targets]
     return build_copy_budget_fit_prompt({
         COPY_BUDGET_VAR_FIELDS_JSON: json.dumps(fields, ensure_ascii=False, indent=2),
         COPY_BUDGET_VAR_STYLE_GUIDE: request.style_guide,
     })
+
+
+def model_bind_kwargs(model_cfg: Mapping[str, object]) -> dict[str, object]:
+    """The numeric ``temperature`` / ``max_tokens`` of the prompt's model block."""
+    bind: dict[str, object] = {}
+    for key in BINDABLE_MODEL_KEYS:
+        value = model_cfg.get(key)
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            bind[key] = value
+    return bind
 
 
 class LlmCopyBudgetFitter:
@@ -115,10 +126,19 @@ class LlmCopyBudgetFitter:
         self._config = config
 
     async def fit(self, request: FitRequest) -> dict[str, str]:
-        """Render the prompt, call the model once, parse the answer."""
-        response = await self._config.llm.ainvoke(
-            [HumanMessage(content=render_fit_prompt(request))],
-            self._config.runnable_config(),
+        """Render the prompt, bind its model config, call the model once, parse.
+
+        The YAML's ``temperature`` and ``max_tokens`` are bound per call, as the
+        content drafter does, so the prompt file controls the sampling.
+        """
+        prompt, model_cfg = render_fit_prompt(request)
+        bind = model_bind_kwargs(model_cfg)
+        llm = self._config.llm
+        runnable: Runnable[LanguageModelInput, BaseMessage] = (
+            llm.bind(**bind) if bind else llm
+        )
+        response = await runnable.ainvoke(
+            [HumanMessage(content=prompt)], self._config.runnable_config()
         )
         return parse_fixes(str(response.content))
 
@@ -129,5 +149,6 @@ __all__ = [
     "FitTarget",
     "LlmCopyBudgetConfig",
     "LlmCopyBudgetFitter",
+    "model_bind_kwargs",
     "render_fit_prompt",
 ]

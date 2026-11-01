@@ -25,9 +25,10 @@ Feature: Generated slide copy fits the slide length budgets (AE-0588)
     Then the body limit in the prompt is 123 characters
 
   Scenario: The hook slide limit carries the word limit the validator applies
-    Given intro slide 1 of a "pov_hook_v1" deck
-    When the slide limits are rendered for the intro slide
-    Then the heading limit includes at most 10 words
+    Given slide 1 of a "pov_hook_v1" deck, whose contract role is "hook"
+    When the slide limits are rendered for the hook slide
+    Then the Portuguese heading limit includes at most 10 words
+    And the English heading limit and a slide without the hook role carry no word limit
 
   Scenario: The translation request carries each slide's field limits
     Given PT drafts of a summary slide with summary points
@@ -97,6 +98,23 @@ Feature: Generated slide copy fits the slide length budgets (AE-0588)
     When the shorten step runs
     Then the slides are unchanged
 
+  Scenario: A model that times out leaves the copy as it was
+    Given the model does not answer within the step timeout
+    When the shorten step runs
+    Then the slides are unchanged
+
+  Scenario: A Portuguese field answered in English is rejected
+    Given the model answers a PT body with an English sentence
+    When the shorten step runs
+    Then the PT body keeps its original text
+
+  Scenario: The owner's hook heading is never rewritten
+    Given the hook slide's PT heading is over budget
+    And the owner picked a hook, or the heading is the approved outline title
+    When the shorten step runs
+    Then "1:pt:heading" is not sent to the model and is left to block
+    And the EN hook heading may still be shortened
+
   Scenario: Shortened copy is written back to the drafts and EN translations
     Given slide 3 PT and EN bodies are over budget in the drafts
     When the draft shorten step runs
@@ -120,3 +138,15 @@ Feature: Generated slide copy fits the slide length budgets (AE-0588)
     Given the content phase with a persona and an over-budget slide
     When the content artifacts are ensured
     Then the changed slide is scored again and unchanged slides keep their scores
+
+  Scenario: A shortening that drops the voice under the floor is undone
+    Given a slide whose voice score was at least 70 before the shortening
+    And its new voice score is below 70
+    When the shorten step finishes
+    Then the slide's draft, EN translation and score go back to their previous values
+    And no extra model call is made
+
+  Scenario: A parked content review replay never calls the fit model
+    Given the content review is parked after the shorten step ran once
+    When the owner approves and the content node replays
+    Then the fit model is not called again

@@ -6,7 +6,8 @@ fields are shortened (``fit_slides_to_budgets``), and the slides that changed
 are written back to the drafts and translations through the owner-edit path
 (``apply_localized_slide_edits``), so the fail-closed review chain that runs
 next validates the shortened copy. Slides with an unrecovered parse failure
-are left to that chain; a scoped revision only touches its scoped slides.
+are left to that chain; a scoped revision only touches its scoped slides; the
+owner's PT hook heading is never rewritten.
 """
 
 from __future__ import annotations
@@ -15,14 +16,21 @@ from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.copy_budget_fit import (
     BudgetFitCommand,
+    FieldAddress,
     fit_slides_to_budgets,
 )
 from rag_backend.application.services.carousel.copy_budget_fit_llm import (
     CopyBudgetFitter,
 )
 from rag_backend.application.services.carousel.localized_slide_builder import (
+    PRESENTATION_PT_KEY,
+    as_dict,
     build_localized_slides_with_failures,
     resolve_policy_version,
+)
+from rag_backend.application.services.carousel.owner_autofix_paths import text_at
+from rag_backend.application.services.carousel.presentation_policy import (
+    load_presentation_policy,
 )
 from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
@@ -37,10 +45,14 @@ from rag_backend.application.services.carousel.presentation_review_edits import 
 from rag_backend.application.services.carousel.slide_scaffold_recovery import (
     recover_parse_failures,
 )
+from rag_backend.domain.constants.carousel import LANGUAGE_PT
+from rag_backend.domain.constants.presentation_roles import ROLE_HOOK
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_SLIDE_DRAFTS,
     STATE_FIELD_SLIDE_INDEX,
 )
+
+_HEADING = "heading"
 
 
 @dataclass(frozen=True)
@@ -55,6 +67,8 @@ class DraftFitCommand:
     forbidden_phrases: tuple[str, ...] = ()
     project_id: str = ""
     scope: frozenset[int] | None = None
+    hook_text: str = ""
+    approved_hook_title: str = ""
 
 
 @dataclass(frozen=True)
@@ -78,6 +92,32 @@ def _allowed(
     }
     allowed = indices - blocked
     return frozenset(allowed if scope is None else allowed & scope)
+
+
+def _owner_hook_fields(
+    slides: list[dict[str, object]],
+    command: DraftFitCommand,
+    policy_version: str,
+) -> frozenset[FieldAddress]:
+    """The PT hook heading the owner chose or approved: never rewritten.
+
+    The hook slide is the one whose contract role is ``hook``. Its PT heading is
+    the owner's when a hook was picked, or when it is still the approved outline
+    title; an over-budget one blocks instead of being reworded. EN may be shortened.
+    """
+    policy = load_presentation_policy(policy_version)
+    hooks = {slide.slide_number for slide in policy.slides if slide.role == ROLE_HOOK}
+    picked = command.hook_text.strip()
+    approved = command.approved_hook_title.strip()
+    owned: set[FieldAddress] = set()
+    for slide in slides:
+        index = slide.get(STATE_FIELD_SLIDE_INDEX)
+        if not isinstance(index, int) or index not in hooks:
+            continue
+        heading = text_at(as_dict(slide.get(PRESENTATION_PT_KEY)) or {}, _HEADING)
+        if picked or (approved and heading.strip() == approved):
+            owned.add((index, LANGUAGE_PT, _HEADING))
+    return frozenset(owned)
 
 
 def _unchanged(command: DraftFitCommand) -> DraftFitResult:
@@ -110,6 +150,7 @@ async def fit_drafts_to_budgets(command: DraftFitCommand) -> DraftFitResult:
             only_slides=_allowed(
                 slides, {failure.slide_index for failure in remaining}, command.scope
             ),
+            excluded_fields=_owner_hook_fields(slides, command, policy_version),
         )
     )
     if not outcome.changed_indices:

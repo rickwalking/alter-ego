@@ -62,7 +62,8 @@ not the fix.
 `copy_budget_limits.py` resolves a field's limit with the validator's own
 resolvers (`heading_budget_for_slide_type`, `body_budget_for_slide_type`, the
 item budget keys via `field_budget`) plus the word rules the validator applies
-(`HOOK_MAX_WORDS` on the intro heading when `hook_word_limit` is active,
+(`HOOK_MAX_WORDS` on the PT heading of the slide whose contract role is
+`hook`, as `presentation_deck_rules.py` checks it, when `hook_word_limit` is active,
 `MIN_CONTENT_BODY_WORDS` on a content body when `body_too_short` is active).
 No number is written anywhere else.
 
@@ -120,12 +121,21 @@ retry chain):
    (a free rewrite would undo the budgets). Instead the prompt carries the
    style guide, forbidden phrases are rejected deterministically, and the
    persona voice scores are recomputed after the step for the slides whose
-   copy changed (unchanged slides keep their score by fingerprint).
+   copy changed (unchanged slides keep their score by fingerprint). A slide
+   whose new score is under `VOICE_MATCH_MIN_SCORE` (70) while its old score
+   met it goes back to its old draft, translation and score (no model call).
+   The exemption is recorded in ADR-0030 (proposed, amends ADR-003).
+8. Owner hook: the PT heading of the hook slide is never a target when the
+   content mode has a chosen `hook_text`, or when it equals the approved
+   outline's slide-1 title; an over-budget one blocks. EN may be shortened.
+9. A PT answer that reads as English is rejected, like an EN answer that
+   reads as Portuguese; a timeout keeps the copy.
 
-Model: fast role (`roles.fast`, same as the gate repair); the call is traced
-with `get_langfuse_runnable_config` (inside the phase trace that carries
-`project_id`, `phase`, `agent_name`, `user_id`, `content_type`). Enabled
-exactly when the gate repair is (tracing configured), injectable in tests.
+Model: fast role (`roles.fast`, same as the gate repair); `temperature` and
+`max_tokens` are bound from `fit_fields.yaml`; the call is traced with
+`get_langfuse_runnable_config("copy budget fit")` (inside the phase trace that
+carries `project_id`, `phase`, `agent_name`, `user_id`, `content_type`).
+Enabled when the orchestrator passes `budget_fit_tracing`, injectable in tests.
 Logs: `copy_budget_fit_attempt` (fields asked) and `copy_budget_fit_done`
 (attempts, asked, accepted, rejected, still over budget, changed slides).
 
@@ -166,8 +176,10 @@ is wrapped.
   shorter and adds no violation (best effort); a rewrite that breaks emphasis,
   punctuation or any other rule is rejected; a model failure keeps the copy.
 - [x] AC6 Changed slides are written back to drafts and EN translations; the
-  persona voice score is recomputed for changed slides; forbidden phrases are
-  rejected.
+  persona voice score is recomputed for changed slides and a slide that drops
+  under 70 from at least 70 is reverted; forbidden phrases are rejected.
+- [x] AC9 The owner's PT hook heading (picked hook or approved outline title)
+  is never rewritten; EN may be.
 - [x] AC7 Validators, thresholds, severities and contracts unchanged.
 - [x] AC8 Regression test with the QA evidence shapes ends with no length
   violation.
@@ -189,6 +201,7 @@ See `backend/tests/features/copy_fits_slide_budgets_ae0588.feature`.
 - `backend/src/rag_backend/agents/prompts/carousel/v10/` (README, slide_translations)
 - `backend/src/rag_backend/agents/prompts/carousel_pov/v3/`, `carousel_pov_news/v3/` (README, content)
 - `backend/src/rag_backend/application/services/carousel/content_budget_step.py`
+- `docs/decisions/0030-persona-check-for-budget-field-rewrites.md` (proposed, amends ADR-003)
 - Feature file and unit tests.
 
 ### MODIFIED
@@ -220,7 +233,7 @@ See `backend/tests/features/copy_fits_slide_budgets_ae0588.feature`.
 
 - Blocks: none.
 - Blocked by: none.
-- Related: AE-0499 (QA evidence), AE-0430 (gate field repair), AE-0401 (copy rules).
+- Related: AE-0499 (QA evidence), AE-0430 (gate field repair), AE-0401 (copy rules), ADR-0030 (proposed).
 
 ## Implementation Plan
 

@@ -17,12 +17,16 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
+from rag_backend.agents import carousel_editorial_orchestrator as orchestrator_module
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.application.services.carousel import phase_artifact_runner
 from rag_backend.application.services.carousel.content_budget_step import (
     BudgetStepInput,
+    ContentBudgetContext,
     llm_budget_fitter,
+    review_translations,
     run_budget_step,
+    run_content_budget_step,
 )
 from rag_backend.application.services.carousel.content_gate_repair_targets import (
     FieldRepairTarget,
@@ -32,6 +36,7 @@ from rag_backend.application.services.carousel.copy_budget_fit_llm import (
     FitTarget,
     LlmCopyBudgetConfig,
     LlmCopyBudgetFitter,
+    model_bind_kwargs,
     render_fit_prompt,
 )
 from rag_backend.application.services.carousel.copy_budget_limits import FieldLimit
@@ -45,14 +50,15 @@ from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
 )
-from rag_backend.application.services.carousel.workflow_state import (
-    CarouselWorkflowState,
-)
+from rag_backend.domain.constants.carousel_workflow import REVIEW_ACTION_APPROVE
+from rag_backend.domain.constants.copy_budget_fit import COPY_BUDGET_TRACE_DETAIL
 from rag_backend.domain.models.persona import PersonaProfile
 from tests.unit.agents.content_feedback_flow_ae0405 import (
     GENERATE_TARGET,
+    Review,
     drafts_for,
     park_at_content,
+    review,
     state_of,
 )
 from tests.unit.application.copy_budget_fit_fixtures_ae0588 import (
@@ -174,59 +180,155 @@ class TestContentPhaseOrder:
         drafts = cast(list[dict[str, object]], state["slide_drafts"])
         assert _feature_body(drafts[1], "pt") == _SHORT_FEATURE
 
+    async def test_parked_replay_never_calls_the_fitter(
+        self, events: list[str]
+    ) -> None:
+        """Scenario: A parked content review replay never calls the fit model."""
+        fitter = _OrderedFitter(events)
+        engine = _engine(fitter)
+        await park_at_content(engine)
+        calls = len(fitter.calls)
+
+        await review(engine, Review(REVIEW_ACTION_APPROVE))
+
+        assert calls == 1
+        assert len(fitter.calls) == calls
+        assert events.count("fit") == 1
+
+
+_SCORE_KEY = "slide_1"
+
+
+def _over_budget_draft() -> list[object]:
+    long_slide = content_slide(3, pt_body=prose(PT_SENTENCES, 230), en_body="x")
+    return [
+        {
+            "slide_index": 3,
+            "slide_type": "content",
+            "policy_version": "hero_lower_third_v4",
+            "title": "Revisões precisam de um dono",
+            "draft_text": "x",
+            "presentation_pt": long_slide["presentation_pt"],
+            "presentation_en": {
+                **cast(dict[str, object], long_slide["presentation_en"]),
+                "body": EN_ANSWERS[3],
+            },
+        }
+    ]
+
+
+def _scorer(overall: float) -> AsyncMock:
+    return AsyncMock(
+        return_value={"persona_scores": {_SCORE_KEY: {"overall": overall}}}
+    )
+
+
+def _step(drafts: list[object], scorer: AsyncMock, old: float) -> BudgetStepInput:
+    return BudgetStepInput(
+        project_id="p",
+        slide_drafts=drafts,
+        translations_en={"3": {"heading": "Reviews need an owner", "body": "Old."}},
+        scorer=scorer,
+        previous_scores={_SCORE_KEY: {"overall": old, "text_sha256": "old"}},
+    )
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestPersonaRescore:
-    async def test_changed_slides_are_scored_again(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_changed_slides_are_scored_again(self) -> None:
         """Scenario: Persona voice scores are recomputed for the changed slides."""
         fitter = FakeFitter()
-        runner = PhaseArtifactRunner(
-            PhaseArtifactRunnerConfig(
-                outline_agent=MagicMock(),
-                content_agent=MagicMock(),
-                llm=MagicMock(),
-                budget_fitter=fitter,
-            )
-        )
-        scores = {"persona_scores": {"3": {"overall": 80.0}}}
-        score_spy = AsyncMock(return_value={"persona_scores": {"3": {"overall": 75.0}}})
-        monkeypatch.setattr(runner, "_score_content_drafts", score_spy)
-        persona = PersonaProfile(forbidden_phrases=["game changer"])
-        resolved = EditorialWorkflowStartInput(
-            topic="t", audience="a", brief="b", sources=[], persona=persona
-        )
-        long_slide = content_slide(3, pt_body=prose(PT_SENTENCES, 230), en_body="x")
-        drafts: list[object] = [
-            {
-                "slide_index": 3,
-                "slide_type": "content",
-                "policy_version": "hero_lower_third_v4",
-                "title": "Revisões precisam de um dono",
-                "draft_text": "x",
-                "presentation_pt": long_slide["presentation_pt"],
-                "presentation_en": {
-                    **cast(dict[str, object], long_slide["presentation_en"]),
-                    "body": EN_ANSWERS[3],
-                },
-            }
-        ]
-        updates: dict[str, object] = {"slide_drafts": drafts, **scores}
+        scorer = _scorer(75.0)
+        drafts = _over_budget_draft()
+        updates: dict[str, object] = {}
 
-        fit = await runner._fit_copy_budgets(
-            cast(CarouselWorkflowState, {"project_id": "p"}),
-            resolved,
-            (drafts, updates, None),
+        fit = await run_budget_step(fitter, _step(drafts, scorer, 80.0), updates)
+
+        assert fit.changed_indices == frozenset({3})
+        assert updates["persona_scores"] == {_SCORE_KEY: {"overall": 75.0}}
+        rescored = scorer.await_args.args[0]
+        assert rescored[0]["draft_text"] == PT_ANSWERS[0]
+        assert scorer.await_args.args[1] == {
+            _SCORE_KEY: {"overall": 80.0, "text_sha256": "old"}
+        }
+        assert updates["slide_drafts"] == fit.slide_drafts
+
+    async def test_voice_drop_below_the_floor_reverts_the_slide(self) -> None:
+        """Scenario: A shortening that drops the voice under the floor is undone."""
+        fitter = FakeFitter()
+        scorer = _scorer(60.0)
+        drafts = _over_budget_draft()
+        updates: dict[str, object] = {}
+
+        fit = await run_budget_step(fitter, _step(drafts, scorer, 80.0), updates)
+
+        assert len(fitter.calls) == 1 and scorer.await_count == 1
+        assert fit.changed_indices == frozenset()
+        assert fit.slide_drafts[0] == drafts[0]
+        assert updates["slide_drafts"] == [drafts[0]]
+        assert updates["persona_scores"] == {
+            _SCORE_KEY: {"overall": 80.0, "text_sha256": "old"}
+        }
+        translations = cast(dict[str, dict[str, object]], fit.translations_en)
+        assert translations["3"]["body"] == "Old."
+
+    async def test_slide_already_under_the_floor_keeps_its_shortening(self) -> None:
+        """Scenario: A shortening that drops the voice under the floor is undone (not when it was already under)."""
+        scorer = _scorer(60.0)
+        updates: dict[str, object] = {}
+
+        fit = await run_budget_step(
+            FakeFitter(), _step(_over_budget_draft(), scorer, 65.0), updates
         )
 
         assert fit.changed_indices == frozenset({3})
-        assert updates["persona_scores"] == {"3": {"overall": 75.0}}
-        rescored_drafts = score_spy.await_args.args[1]
-        assert rescored_drafts[0]["draft_text"] == PT_ANSWERS[0]
-        assert score_spy.await_args.args[2] == scores["persona_scores"]
-        assert "game changer" in fitter.requests[0].style_guide
+        assert updates["persona_scores"] == {_SCORE_KEY: {"overall": 60.0}}
+
+    async def test_no_persona_scores_keep_the_fit(self) -> None:
+        """Scenario: Persona voice scores are recomputed for the changed slides (no persona)."""
+        updates: dict[str, object] = {}
+        scorer = AsyncMock(return_value={})
+
+        fit = await run_budget_step(
+            FakeFitter(), _step(_over_budget_draft(), scorer, 80.0), updates
+        )
+        unscored = await run_budget_step(
+            FakeFitter(),
+            BudgetStepInput("p", _over_budget_draft(), None),
+            {},
+        )
+
+        assert fit.changed_indices == frozenset({3}) == unscored.changed_indices
+        assert "persona_scores" not in updates
+
+    async def test_content_context_passes_persona_and_hook(self) -> None:
+        """Scenario: Persona voice scores are recomputed for the changed slides (wiring)."""
+        fitter = FakeFitter()
+        scorer = _scorer(75.0)
+        persona = PersonaProfile(forbidden_phrases=["game changer"])
+        drafts = _over_budget_draft()
+        updates: dict[str, object] = {"slide_drafts": drafts}
+
+        fit = await run_content_budget_step(
+            fitter,
+            ContentBudgetContext(
+                state={
+                    "project_id": "p",
+                    "presentation_policy_version": "hero_lower_third_v4",
+                },
+                updates=updates,
+                slide_drafts=drafts,
+                style_guide="Never say game changer.",
+                persona=persona,
+                outline=[{"slide_index": 1, "title": "Gancho"}, "bad"],
+                scorer=scorer,
+            ),
+        )
+
+        assert fit.changed_indices == frozenset({3})
+        assert fitter.requests[0].style_guide == "Never say game changer."
+        assert updates["persona_scores"] == {_SCORE_KEY: {"overall": 75.0}}
 
     async def test_without_a_fitter_the_drafts_pass_through(self) -> None:
         """Scenario: The shorten step runs before the presentation validation (off)."""
@@ -239,9 +341,8 @@ class TestPersonaRescore:
 
         assert fit.slide_drafts == [{"slide_index": 1}] and updates == {}
         assert fit.translations_en == {"1": {}}
-        assert (
-            await run_budget_step(None, BudgetStepInput("p", None, None), {})
-        ).slide_drafts == []
+        empty = await run_budget_step(None, BudgetStepInput("p", None, None), {})
+        assert empty.slide_drafts == []
 
 
 @pytest.mark.unit
@@ -255,39 +356,70 @@ class TestFitterWiring:
         assert llm_budget_fitter(MagicMock(), None) is None
         assert isinstance(llm_budget_fitter(MagicMock(), tracing), LlmCopyBudgetFitter)
 
+    def test_orchestrator_names_the_fit_trace(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: The shorten step runs before the presentation validation (trace name)."""
+        details: list[object] = []
+
+        def fake_config(detail: str | None = None) -> RunnableConfig:
+            details.append(detail)
+            return RunnableConfig()
+
+        monkeypatch.setattr(
+            orchestrator_module, "get_langfuse_runnable_config", fake_config
+        )
+        orchestrator = orchestrator_module.CarouselEditorialOrchestrator(MagicMock())
+        fitter = orchestrator._artifact_runner._budget_fitter
+        assert isinstance(fitter, LlmCopyBudgetFitter)
+
+        fitter._config.runnable_config()
+
+        assert details == [COPY_BUDGET_TRACE_DETAIL] == ["copy budget fit"]
+
+    def test_review_translations_prefer_fresh_ones(self) -> None:
+        """Scenario: The shorten step runs before the presentation validation (translations)."""
+        assert review_translations({"translations_en": {"1": {}}}, {}) == {"1": {}}
+        assert review_translations({}, {"slide_drafts": []}) is None
+
+
+def _target() -> FieldRepairTarget:
+    return FieldRepairTarget(
+        target_id="3:en:body",
+        slide_index=3,
+        locale="en",
+        field="body",
+        text="A long English body.",
+        problems=("body_too_long: body exceeds max 220 characters (got 260)",),
+        slide_heading="Revisões precisam de um dono",
+        source_text="Um body longo.",
+        max_characters=220,
+        max_lines=6,
+    )
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestLlmFitter:
     async def test_one_traced_call_with_limits_and_parsed_fixes(self) -> None:
         """Scenario: Over-budget fields are rewritten within budget and pass (model call)."""
-        llm = MagicMock()
-        llm.ainvoke = AsyncMock(
+        bound = MagicMock()
+        bound.ainvoke = AsyncMock(
             return_value=AIMessage(
                 content='{"fixes": [{"id": "3:en:body", "text": " Short. "}]}'
             )
         )
+        llm = MagicMock()
+        llm.bind = MagicMock(return_value=bound)
         configs: list[int] = []
 
         def tracing() -> RunnableConfig:
             configs.append(1)
             return RunnableConfig(tags=["fit"])
 
-        target = FieldRepairTarget(
-            target_id="3:en:body",
-            slide_index=3,
-            locale="en",
-            field="body",
-            text="A long English body.",
-            problems=("body_too_long: body exceeds max 220 characters (got 260)",),
-            slide_heading="Revisões precisam de um dono",
-            source_text="Um body longo.",
-            max_characters=220,
-            max_lines=6,
-        )
         request = FitRequest(
             targets=(
-                FitTarget(target, FieldLimit("body", 220, max_lines=6, min_words=8)),
+                FitTarget(_target(), FieldLimit("body", 220, max_lines=6, min_words=8)),
             ),
             style_guide="Never say game changer.",
         )
@@ -297,11 +429,24 @@ class TestLlmFitter:
 
         texts = await fitter.fit(request)
 
-        prompt = str(llm.ainvoke.await_args.args[0][0].content)
+        prompt = str(bound.ainvoke.await_args.args[0][0].content)
+        rendered, model_cfg = render_fit_prompt(request)
         assert texts == {"3:en:body": "Short."}
         assert configs == [1]
-        assert llm.ainvoke.await_args.args[1] == RunnableConfig(tags=["fit"])
+        assert bound.ainvoke.await_args.args[1] == RunnableConfig(tags=["fit"])
+        llm.bind.assert_called_once_with(
+            temperature=model_cfg["temperature"], max_tokens=model_cfg["max_tokens"]
+        )
+        assert model_cfg == {"temperature": 0.3, "max_tokens": 4096}
         assert '"max_characters": 220' in prompt and '"min_words": 8' in prompt
         assert '"portuguese_source": "Um body longo."' in prompt
         assert "Never say game changer." in prompt
-        assert render_fit_prompt(request) == prompt
+        assert rendered == prompt
+
+    async def test_no_model_block_calls_the_model_unbound(self) -> None:
+        """Scenario: Over-budget fields are rewritten within budget and pass (no model block)."""
+        assert model_bind_kwargs({}) == {}
+        assert model_bind_kwargs({"temperature": True, "max_tokens": "x"}) == {}
+        assert model_bind_kwargs({"temperature": 0.2, "top_p": 1}) == {
+            "temperature": 0.2
+        }

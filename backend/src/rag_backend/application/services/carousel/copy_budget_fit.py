@@ -6,7 +6,8 @@ headings, bodies and item titles/bodies. Only those fields go to the fast model,
 one call per attempt, at most ``max_attempts``. Every answer is checked by code
 before it replaces the field:
 
-- non-empty, different, and (EN) not Portuguese;
+- non-empty, different, and in the field's language (EN not Portuguese, PT not
+  English);
 - shorter than the current text, or on fewer lines;
 - no persona forbidden phrase the current text did not already have;
 - re-validating the whole deck adds no new violation anywhere (a lone ``**``, a
@@ -40,7 +41,12 @@ from rag_backend.application.services.carousel.copy_budget_fit_llm import (
     FitTarget,
 )
 from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
     field_limit,
+    role_at,
+)
+from rag_backend.application.services.carousel.copy_hygiene_text import (
+    wrong_language_detail,
 )
 from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_EN_KEY,
@@ -89,7 +95,10 @@ _LOCALE_KEYS: dict[str, str] = {
     LANGUAGE_EN: PRESENTATION_EN_KEY,
 }
 
+_SLIDE_TYPE_KEY = "slide_type"
+
 ViolationKey = tuple[int | None, str | None, str | None, str]
+FieldAddress = tuple[int, str, str]
 
 
 @dataclass(frozen=True)
@@ -98,6 +107,8 @@ class BudgetFitCommand:
 
     ``only_slides`` limits the step to these slide indices (a scoped revision,
     or the slides without an unrecovered parse failure); None means every slide.
+    ``excluded_fields`` are ``(slide, locale, field)`` addresses never rewritten
+    (the owner's hook heading): they go to the validation as they are.
     """
 
     slides: list[dict[str, object]]
@@ -108,6 +119,7 @@ class BudgetFitCommand:
     project_id: str = ""
     only_slides: frozenset[int] | None = None
     max_attempts: int = COPY_BUDGET_FIT_MAX_ATTEMPTS
+    excluded_fields: frozenset[FieldAddress] = frozenset()
 
 
 @dataclass
@@ -154,8 +166,16 @@ def _over_budget_targets(
     payloads = _payloads(slides)
     found: list[FitTarget] = []
     for target in targets:
+        address = (target.slide_index, target.locale, target.field)
+        if address in command.excluded_fields:
+            continue
         payload = payloads.get((target.slide_index, target.locale), {})
-        limit = field_limit(payload, target.field, policy)
+        scope = LimitScope(
+            str(payload.get(_SLIDE_TYPE_KEY) or ""),
+            role_at(policy, target.slide_index),
+            target.locale,
+        )
+        limit = field_limit(payload, target.field, (scope, policy))
         if limit is not None:
             found.append(FitTarget(target=target, limit=limit))
     return tuple(found)
@@ -190,6 +210,10 @@ def _plausible(item: FitTarget, text: str, command: BudgetFitCommand) -> bool:
     if not text or text == current:
         return False
     if item.target.locale == LANGUAGE_EN and looks_portuguese(text):
+        return False
+    if item.target.locale == LANGUAGE_PT and wrong_language_detail(
+        text, portuguese=True
+    ):
         return False
     shorter = len(text) < len(current)
     fewer_lines = count_rendered_lines(text) < count_rendered_lines(current)
@@ -321,5 +345,6 @@ __all__ = [
     "LENGTH_VIOLATION_CODES",
     "BudgetFitCommand",
     "BudgetFitOutcome",
+    "FieldAddress",
     "fit_slides_to_budgets",
 ]

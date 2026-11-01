@@ -9,7 +9,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
 from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
     limits_payload,
+    role_at,
 )
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
@@ -133,9 +135,10 @@ def _build_translation_payload(
             item[LONG_FORM_NOTES_KEY] = notes
         item.update(structured_source(slide))
         translated = map_texts(item, lambda text: normalize_emphasis(LANGUAGE_EN, text))
-        translated[TRANSLATION_LIMITS_KEY] = limits_payload(
-            resolve_slide_type(slide, index), policy
+        scope = LimitScope(
+            resolve_slide_type(slide, index), role_at(policy, index), LANGUAGE_EN
         )
+        translated[TRANSLATION_LIMITS_KEY] = limits_payload(scope, policy)
         payload.append(translated)
     return payload
 

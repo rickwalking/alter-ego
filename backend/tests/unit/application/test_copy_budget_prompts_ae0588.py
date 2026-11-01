@@ -18,8 +18,10 @@ from langchain_core.messages import AIMessage
 
 from rag_backend.agents.content_draft_agent import _render_content_prompt
 from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
     field_limit,
     limits_payload,
+    role_at,
     slide_field_limits,
 )
 from rag_backend.application.services.carousel.editorial_distribution_generation import (
@@ -138,14 +140,15 @@ class TestDraftingLimits:
             },
         )
 
-        block = _limits_block("content", changed)
+        block = _limits_block(LimitScope("content"), changed)
         limits = {
-            limit.field: limit for limit in slide_field_limits("content", changed)
+            limit.field: limit
+            for limit in slide_field_limits(LimitScope("content"), changed)
         }
 
         assert "- body: at most 123 characters, at most 4 lines" in block
         assert limits["body"].max_characters == 123
-        assert "123" not in _limits_block("content", policy)
+        assert "123" not in _limits_block(LimitScope("content"), policy)
 
     def test_hook_heading_carries_the_word_limit(self) -> None:
         """Scenario: The hook slide limit carries the word limit the validator applies."""
@@ -153,18 +156,36 @@ class TestDraftingLimits:
         subtitle = policy.copy_budgets["intro_subtitle"]
 
         instruction = _instruction(1)
-        limits = {limit.field: limit for limit in slide_field_limits("intro", policy)}
+        limits = {
+            limit.field: limit
+            for limit in slide_field_limits(LimitScope("intro", "hook"), policy)
+        }
 
         assert f"at most {HOOK_MAX_WORDS} words" in instruction
         assert limits["heading"].max_words == HOOK_MAX_WORDS
         assert limits["body"].max_characters == subtitle.max_characters
         assert "- body: at most 40 characters, at most 1 line\n" in instruction
 
+    def test_hook_word_limit_follows_role_and_locale(self) -> None:
+        """Scenario: The hook slide limit carries the word limit the validator applies (role, PT)."""
+        policy = load_presentation_policy(POLICY_POV)
+
+        def heading(scope: LimitScope) -> int | None:
+            return slide_field_limits(scope, policy)[0].max_words
+
+        assert role_at(policy, 1) == "hook"
+        assert heading(LimitScope("intro", role_at(policy, 1))) == HOOK_MAX_WORDS
+        assert heading(LimitScope("intro", "hook", "en")) is None
+        assert heading(LimitScope("intro")) is None
+        assert heading(LimitScope("content", "hook")) == HOOK_MAX_WORDS
+        assert role_at(policy, 99) is None
+
     def test_hook_word_limit_absent_when_the_contract_has_no_hook_rule(self) -> None:
         """Scenario: The hook slide limit carries the word limit the validator applies (v1)."""
         policy = load_presentation_policy("hero_lower_third_v1")
+        scope = LimitScope("intro", "hook")
 
-        limits = {limit.field: limit for limit in slide_field_limits("intro", policy)}
+        limits = {limit.field: limit for limit in slide_field_limits(scope, policy)}
 
         assert limits["heading"].max_words is None
 
@@ -172,9 +193,13 @@ class TestDraftingLimits:
         """Scenario: The drafting instruction states this slide's field limits (items)."""
         policy = load_presentation_policy(POLICY_V4)
 
-        summary = [limit.field for limit in slide_field_limits("summary", policy)]
-        closing = [limit.field for limit in slide_field_limits("closing", policy)]
-        cta = [limit.field for limit in slide_field_limits("cta", policy)]
+        summary = [
+            limit.field for limit in slide_field_limits(LimitScope("summary"), policy)
+        ]
+        closing = [
+            limit.field for limit in slide_field_limits(LimitScope("closing"), policy)
+        ]
+        cta = [limit.field for limit in slide_field_limits(LimitScope("cta"), policy)]
 
         assert summary == ["heading", "summary_points[].title", "summary_points[].body"]
         assert closing == ["heading", "actions[].title", "actions[].body"]
@@ -185,15 +210,19 @@ class TestDraftingLimits:
         policy = load_presentation_policy(POLICY_V4)
         payload: dict[str, object] = {"slide_type": "summary"}
 
-        item = field_limit(payload, "summary_points[2].body", policy)
+        item = field_limit(
+            payload, "summary_points[2].body", (LimitScope("summary"), policy)
+        )
 
         assert item is not None
         assert (
             item.max_characters
             == policy.copy_budgets["summary_point_body"].max_characters
         )
-        assert field_limit(payload, "tldr_strip", policy) is None
-        assert field_limit(payload, "body", policy) is None
+        assert (
+            field_limit(payload, "tldr_strip", (LimitScope("summary"), policy)) is None
+        )
+        assert field_limit(payload, "body", (LimitScope("summary"), policy)) is None
 
 
 @pytest.mark.unit
@@ -227,8 +256,12 @@ class TestTranslationLimits:
         await _generate_en_translations(llm, drafts)
         prompt = str(llm.ainvoke.await_args.args[0][0].content)
 
-        assert payload[0]["limits"] == limits_payload("summary", policy)
-        assert payload[1]["limits"] == limits_payload("content", policy)
+        assert payload[0]["limits"] == limits_payload(
+            LimitScope("summary", role_at(policy, 2), "en"), policy
+        )
+        assert payload[1]["limits"] == limits_payload(
+            LimitScope("content", role_at(policy, 3), "en"), policy
+        )
         limits = cast(list[dict[str, object]], payload[1]["limits"])
         assert (
             limits[1]["max_characters"]

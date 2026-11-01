@@ -6,18 +6,23 @@ The model is a fake; the validator and the contracts are the real ones.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import replace
 from typing import cast
 
 import pytest
 
+from rag_backend.application.services.carousel import copy_budget_fit
 from rag_backend.application.services.carousel.copy_budget_fit import (
     LENGTH_VIOLATION_CODES,
     BudgetFitCommand,
     fit_slides_to_budgets,
 )
-from rag_backend.application.services.carousel.copy_budget_fit_llm import FitTarget
+from rag_backend.application.services.carousel.copy_budget_fit_llm import (
+    FitRequest,
+    FitTarget,
+)
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     validate_localized_slides,
 )
@@ -40,6 +45,10 @@ _SHORT_PT = PT_SENTENCES[0]
 _SHORT_EN = EN_SENTENCES[0]
 _LONG_PT = prose(PT_SENTENCES, 230)
 _LONG_EN = prose(EN_SENTENCES, 230)
+_ENGLISH_FOR_PT = (
+    "I see the team lose hours on reviews without a clear goal, and it is the "
+    "rule that is missing."
+)
 _ITEM_ANSWER = "Eu meço o tempo de cada revisão e corto o que sobra."
 
 
@@ -303,3 +312,56 @@ class TestBoundedAndBestEffort:
 
         assert fitter.calls == [["4:pt:body"]]
         assert outcome.changed_indices == frozenset({4})
+
+
+class _SlowFitter(FakeFitter):
+    async def fit(self, request: FitRequest) -> dict[str, str]:
+        await asyncio.sleep(1)
+        return await super().fit(request)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestModelTimeoutAndLanguage:
+    async def test_timeout_keeps_the_copy(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: A model that times out leaves the copy as it was."""
+        monkeypatch.setattr(copy_budget_fit, "COPY_BUDGET_FIT_TIMEOUT_SECONDS", 0.01)
+        slides = [content_slide(3, pt_body=_LONG_PT, en_body=_SHORT_EN)]
+
+        outcome = await fit_slides_to_budgets(_command(slides, _SlowFitter()))
+
+        assert outcome.slides == slides
+        assert outcome.attempts == 1 and outcome.changed_indices == frozenset()
+
+    async def test_portuguese_field_answered_in_english_is_rejected(self) -> None:
+        """Scenario: A Portuguese field answered in English is rejected."""
+        slides = [content_slide(3, pt_body=_LONG_PT, en_body=_SHORT_EN)]
+        fitter = FakeFitter(answers={"3:pt:body": _ENGLISH_FOR_PT})
+
+        outcome = await fit_slides_to_budgets(
+            _command(
+                slides,
+                fitter,
+                lambda c: replace(c, policy_version="hero_lower_third_v1"),
+            )
+        )
+
+        assert _payload(outcome.slides[0], "pt")["body"] == _LONG_PT
+        assert outcome.rejected == 2
+
+    async def test_excluded_field_is_never_asked(self) -> None:
+        """Scenario: The owner's hook heading is never rewritten (excluded address)."""
+        slides = [content_slide(3, pt_body=_LONG_PT, en_body=_LONG_EN)]
+        fitter = FakeFitter()
+
+        await fit_slides_to_budgets(
+            _command(
+                slides,
+                fitter,
+                lambda c: replace(c, excluded_fields=frozenset({(3, "pt", "body")})),
+            )
+        )
+
+        assert fitter.calls == [["3:en:body"]]

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 
 from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
     limits_payload,
 )
 from rag_backend.application.services.carousel.phase_subagents import (
@@ -259,15 +260,15 @@ def _slide_block(
                 f"({slide.slide_type}{_role_text(slide.role)}). "
                 f"Image required: {slide.image_required}. {ratio}."
             )
-            return f"{target}\n{_limits_block(slide.slide_type, policy)}"
+            return f"{target}\n{_limits_block(LimitScope(slide.slide_type, slide.role), policy)}"
     return f"Target slide {slide_number}."
 
 
-def _limits_block(slide_type: str, policy: CarouselPresentationPolicy) -> str:
+def _limits_block(scope: LimitScope, policy: CarouselPresentationPolicy) -> str:
     """This slide's copy limits, from the contract values the validator enforces."""
     return build_slide_limits_block({
-        COPY_BUDGET_VAR_SLIDE_TYPE: slide_type,
-        COPY_BUDGET_VAR_LIMITS: limits_payload(slide_type, policy),
+        COPY_BUDGET_VAR_SLIDE_TYPE: scope.slide_type,
+        COPY_BUDGET_VAR_LIMITS: limits_payload(scope, policy),
     })
 
 

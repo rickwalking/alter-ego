@@ -31,6 +31,8 @@ LIMIT_KEY_MAX_WORDS: Final[str] = "max_words"
 LIMIT_KEY_MIN_WORDS: Final[str] = "min_words"
 
 TRANSLATION_LIMITS_KEY: Final[str] = "limits"
+BINDABLE_MODEL_KEYS: Final[tuple[str, ...]] = ("temperature", "max_tokens")
+COPY_BUDGET_TRACE_DETAIL: Final[str] = "copy budget fit"
 ITEM_FIELD_PATTERN: Final[str] = "{list_field}[].{item_field}"
 
 LOG_COPY_BUDGET_FIT_ATTEMPT: Final[str] = "copy_budget_fit_attempt"
@@ -38,12 +40,14 @@ LOG_COPY_BUDGET_FIT_DONE: Final[str] = "copy_budget_fit_done"
 LOG_COPY_BUDGET_FIT_MODEL_FAILED: Final[str] = "copy_budget_fit_model_failed"
 
 __all__ = [
+    "BINDABLE_MODEL_KEYS",
     "COPY_BUDGET_FIT_MAX_ATTEMPTS",
     "COPY_BUDGET_FIT_TIMEOUT_SECONDS",
     "COPY_BUDGET_PROMPT_DOMAIN",
     "COPY_BUDGET_PROMPT_FIT",
     "COPY_BUDGET_PROMPT_LIMITS",
     "COPY_BUDGET_PROMPT_VERSION",
+    "COPY_BUDGET_TRACE_DETAIL",
     "COPY_BUDGET_VAR_FIELDS_JSON",
     "COPY_BUDGET_VAR_LIMITS",
     "COPY_BUDGET_VAR_SLIDE_TYPE",
