@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -27,9 +27,11 @@ from rag_backend.modules.autopilot.domain.boost import (
     BoostAudience,
     BoostListQuery,
     BoostRequest,
+    MediaEligibility,
     StatusSave,
 )
 from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
+from rag_backend.modules.autopilot.domain.ig_media import OpenBoost
 from rag_backend.modules.autopilot.domain.messages import InlineKeyboard
 from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
     AdsCallError,
@@ -165,8 +167,41 @@ class _Store:
     saves: list[StatusSave] = field(default_factory=list)
     commits: int = 0
 
+    async def by_key(self, key: str) -> BoostRequest | None:
+        del key
+        return None
+
+    async def get(self, request_id: UUID) -> BoostRequest | None:
+        del request_id
+        return None
+
+    async def media(self, media_id: str) -> MediaEligibility:
+        del media_id
+        return MediaEligibility(posted_at=None, product_type=None, permalink=None)
+
+    async def open_exists(self, media_id: str) -> bool:
+        del media_id
+        return False
+
+    async def pending_count(self) -> int:
+        return 0
+
+    async def committed_cents(self, since: datetime) -> int:
+        del since
+        return 0
+
+    async def insert(self, request: BoostRequest) -> None:
+        self.row = request
+
     async def list_requests(self, query: BoostListQuery) -> list[BoostRequest]:
         return [self.row] if self.row.status in query.statuses else []
+
+    async def open_for(self, media_ids: tuple[str, ...]) -> dict[str, OpenBoost]:
+        del media_ids
+        return {}
+
+    async def remember_message(self, request_id: UUID, message_id: int) -> None:
+        del request_id, message_id
 
     async def save_status(self, change: StatusSave) -> None:
         self.saves.append(change)
@@ -202,7 +237,7 @@ async def test_worker_stores_the_boost_as_failed_with_meta_page_missing() -> Non
     tick = BoostTick(
         BoostTickDeps(
             boosts=BoostDeps(
-                store=store,  # type: ignore[arg-type]
+                store=store,
                 messenger=_Msg(),
                 clock=_Clock(),
                 owner_chat_id="1",
