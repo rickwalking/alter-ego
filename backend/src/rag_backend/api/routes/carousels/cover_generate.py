@@ -3,8 +3,10 @@
 Thin HTTP adapter. ``GET /{id}/cover-generations`` returns the caps in use and
 the carousel's generations; ``POST /{id}/cover-generations`` checks the
 request (confirmed, owner only, own photos or none, caps), records a pending
-generation and runs the Grok Bot job in a tracked background task (202). The
-result is picked like any other cover through ``PUT /{id}/cover``.
+generation and runs the Grok Bot job in a tracked background task (202). A
+succeeded result becomes slide 1's cover while the carousel is still before
+the owner's review and no cover was chosen; otherwise it is picked like any
+other cover through ``PUT /{id}/cover``.
 """
 
 from __future__ import annotations
@@ -49,8 +51,8 @@ from rag_backend.domain.models.cover_generation import CoverGeneration
 from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
     cover_generation_service,
-    cover_generation_task,
     cover_run_wiring,
+    selecting_cover_task,
 )
 from rag_backend.modules.image_bridge import ImageBridgeConfigError
 
@@ -185,7 +187,7 @@ async def start_cover_generation(
     except CoverGenerationError as error:
         raise _http_error(error) from error
     schedule_cover_generation(
-        cover_generation_task(wiring, run), str(run.generation.id)
+        selecting_cover_task(wiring, run, ctx.project), str(run.generation.id)
     )
     return _generation(run.generation)
 

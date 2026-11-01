@@ -8,6 +8,10 @@ path applies here (not a POV carousel, a cap reached, a generation already
 pending) and becomes a skip with the refusal's code as the reason. A carousel
 that already has a generation row (any status) is skipped, so a re-driven or
 retried run never enqueues a second job.
+
+Once the run settles ``succeeded`` the cover becomes slide 1's cover, unless
+a cover was already chosen or the owner chose one since the job was
+scheduled (see ``carousel_cover_autoselect``).
 """
 
 from __future__ import annotations
@@ -26,10 +30,12 @@ from rag_backend.domain.models import CarouselProject
 from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     CarouselAutomationAcl,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
+    selecting_cover_task,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
     cover_generation_service,
-    cover_generation_task,
     cover_run_wiring,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
@@ -99,7 +105,7 @@ async def _start_cover(
     run = await _record_generation(session, project, photos)
     if isinstance(run, str):
         return _skip(run)
-    _schedule(wiring, run)
+    _schedule(wiring, run, project)
     return AutoCoverOutcome(scheduled=True, generation_id=str(run.generation.id))
 
 
@@ -126,13 +132,15 @@ async def _record_generation(
         return f"{REASON_AUTO_COVER_REFUSED}:{exc.code}"
 
 
-def _schedule(wiring: CoverRunWiring, run: CoverGenerationRun) -> None:
-    """Hand the run to the tracked background task."""
+def _schedule(
+    wiring: CoverRunWiring, run: CoverGenerationRun, project: CarouselProject
+) -> None:
+    """Hand the run, then the slide-1 selection, to the tracked background task."""
     from rag_backend.application.services.carousel.cover_generation_tasks import (
         schedule_cover_generation,
     )
 
-    task = cover_generation_task(wiring, run)
+    task = selecting_cover_task(wiring, run, project)
     schedule_cover_generation(task, str(run.generation.id))
 
 

@@ -137,6 +137,9 @@ from rag_backend.modules.editorial.infrastructure.carousel_cover import (
     store_cover_image,
     switch_slide_cover,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
+    selecting_cover_task,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autostart import (
     AutoCoverOutcome,
     schedule_autopilot_cover,
@@ -343,6 +346,7 @@ __all__ = [
     "run_owner_autofix",
     "run_slide_fix",
     "schedule_autopilot_cover",
+    "selecting_cover_task",
     "slides_in_config",
     "store_cover_image",
     "switch_slide_cover",

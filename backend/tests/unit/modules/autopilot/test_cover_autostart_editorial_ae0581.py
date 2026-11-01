@@ -24,6 +24,7 @@ from rag_backend.domain.constants.cover_generation import (
 )
 from rag_backend.domain.models import CarouselProject
 from rag_backend.modules.editorial.infrastructure import (
+    carousel_cover_autoselect,
     carousel_cover_autostart,
     cover_generations,
 )
@@ -128,7 +129,7 @@ def _helper(
         carousel_cover_autostart, "cover_generation_service", lambda _s: service
     )
     monkeypatch.setattr(
-        carousel_cover_autostart, "cover_generation_task", lambda _w, run: run
+        carousel_cover_autoselect, "cover_generation_task", lambda _w, run: run
     )
     monkeypatch.setattr(
         cover_generation_tasks,

@@ -266,7 +266,11 @@ class CreatorAssetService:
         return tagged or asset
 
     async def select_hook_photo(self, command: HookPhotoCommand) -> CarouselProject:
-        """Bind the slide-1 photo and stage it where the slides are rendered."""
+        """Bind the slide-1 photo and stage it where the slides are rendered.
+
+        Any chosen ``slide_cover`` is cleared, as the cover picker does for a
+        library photo, so the owner's latest choice is what slide 1 shows.
+        """
         self._assert_owner_or_admin(command.project, command.user)
         asset = await self._asset_repo.get_by_id(command.creator_asset_id)
         if asset is None:
@@ -274,6 +278,7 @@ class CreatorAssetService:
         self._assert_asset_access(asset, command.project, command.user)
         command.project.hook_asset_id = asset.id
         command.project.hook_asset_staged_path = asset.relative_path
+        command.project.slide_cover = None
         updated = await self._carousel_repo.update_project(command.project)
         self.stage_into_candidate_artifact(
             StageCreatorAssetCommand(asset=asset, staging_root=command.output_root)
