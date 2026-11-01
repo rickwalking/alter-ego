@@ -259,6 +259,11 @@ Ticket created with the design (Pedro's decision, 2026-11-01). Implemented
 (98efa2325), integrity fix for 3 `type: ignore` in the new tests (ed2ee3c58).
 Full `gate-capture.sh backend` at ed2ee3c58: 26 pass, 0 fail, 1 skip (mutation,
 CI only). Moved to Dev Complete.
+Review fixes (f4f193521): voice guard revert under 70, owner hook heading
+excluded, PT-in-English rejected, hook word rule by role and PT locale, fit
+prompt model config bound, `copy budget fit` trace name, wiring moved to
+`content_budget_step.py`, ADR-0030 (proposed). Full `gate-capture.sh backend`
+at f4f193521 on `rag_test_ae0588`: 26 pass, 0 fail, 1 skip (mutation, CI only).
 
 ## Files Touched
 
@@ -266,9 +271,9 @@ See Delta.
 
 ## Test Evidence
 
-48 new unit tests (fake models only) in
+64 new unit tests (fake models only) in
 `backend/tests/unit/application/test_{copy_budget_fit,copy_budget_prompts,copy_budget_fit_drafts,content_budget_step}_ae0588.py`;
-`tests/unit/application` + `tests/unit/agents`: 3242 passed. See
+`tests/unit/application` + `tests/unit/agents`: 3257 passed. See
 `.agent/reports/AE-0588.dev-summary.md`.
 
 GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
