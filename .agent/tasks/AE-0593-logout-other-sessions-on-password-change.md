@@ -1,6 +1,6 @@
 # AE-0593 — A password change logs out every other session
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Feature
