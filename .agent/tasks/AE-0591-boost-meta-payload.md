@@ -1,6 +1,6 @@
 # AE-0591 — Boost ad set sends the capped audience and run window, and keeps Meta's error details
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bug
@@ -141,7 +141,11 @@ with `httpx.MockTransport`; no Meta call is made.
 
 ## Test Evidence
 
-TBD
+Hotfix fast path: every backend gate except mutation run individually (Postgres-backed) at 2e70da495:
+8135 passed, 2 skipped; diff-cover 98% on changed lines. Python 3.11.15 import check ok. Integrity: 0 net-new
+blockers. mutation: deferred to CI (hotfix fast path).
+
+GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
 
 ## QA Report
 
