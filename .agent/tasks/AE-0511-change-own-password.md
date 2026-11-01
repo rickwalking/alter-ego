@@ -143,6 +143,13 @@ and the new revision read `users` columns on partial schemas some tests stamp). 
 and the revision now leaves a database without `users` alone. Run 2: only the AE-0583 flake; run 3 green. Frontend
 scope green.
 
+Review (no blockers), two fixes: `deploy.yml` retries a failed column one-shot once in the running backend
+(`exec -T backend ... --apply --verify`) before the drift check, so a missed column does not leave every sign-in at
+500 (a successful retry clears `MUST_CHANGE_PASSWORD_EXIT`; a second failure still fails the job at the end); and
+`tests/unit/api/test_password_change_gate_inventory_ae0511.py` walks every HTTP and websocket route of `create_app()`
+and asserts only `/api/auth/me` and `/api/auth/change-password` reach the raw token without the flag check, with a
+seeded app proving it fires (raw parameter, route-level dependency, websocket). Full backend scope re-run green.
+
 ## Files Touched
 
 - `backend/src/rag_backend/domain/models/user.py`, `infrastructure/database/models/user.py`,
@@ -152,7 +159,8 @@ scope green.
 - `backend/alembic/versions/b9c0d1e2f3a4_users_must_change_password.py` (new)
 - `backend/src/rag_backend/infrastructure/database/must_change_password_column.py`,
   `backend/src/rag_backend/scripts/must_change_password_column.py` (new)
-- `.github/workflows/deploy.yml`, `docs/architecture/openapi.json`
+- `.github/workflows/deploy.yml` (one-shot step + in-stack retry), `docs/architecture/openapi.json`
+- `backend/tests/unit/api/test_password_change_gate_inventory_ae0511.py` (new)
 - `backend/tests/features/change_own_password_ae0511.feature` (new)
 - `backend/tests/integration/change_password_support.py`, `test_change_own_password_ae0511.py`,
   `test_change_own_password_pg_ae0511.py`, `test_must_change_password_column_pg_ae0511.py` (new)
@@ -181,7 +189,11 @@ skipped; the new Postgres flow and one-shot tests PASSED (not skipped). The firs
 tests (the shared single-head constant and a revision that assumed a `users` table); fixed in fb06daaa1. The second
 hit only the known AE-0583 aiosqlite unclosed-connection flake (`test_publishing_safety_net.py`); the third was green.
 
-Backend:
+Backend, rerun at f12839c6f after the review fixes (8089 passed, 2 skipped; Postgres tests PASSED):
+
+GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
+
+Backend, earlier run at fb06daaa1:
 
 GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
 
