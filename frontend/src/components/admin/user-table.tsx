@@ -14,6 +14,11 @@ import { UserCardList, type UserRowHandlers, UserTableView } from "./user-rows";
 interface UserTableProps {
   users: UserItem[];
   onRefresh: () => void;
+  /**
+   * Id of the only active admin of the FULL list (not just the filtered
+   * rows), whose role and active status the edit dialog locks.
+   */
+  lastActiveAdminId?: string;
 }
 
 /**
@@ -21,7 +26,11 @@ interface UserTableProps {
  * phone. Each row action opens its modal dialog; closing it brings focus back
  * to that action even if the layout swapped meanwhile.
  */
-export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
+export function UserTable({
+  users,
+  onRefresh,
+  lastActiveAdminId,
+}: Readonly<UserTableProps>) {
   const t = useTranslations("admin");
   const isPhone = useMediaQuery(USER_CARDS_MEDIA_QUERY);
   const [editUser, setEditUser] = useState<UserItem | null>(null);
@@ -49,6 +58,7 @@ export function UserTable({ users, onRefresh }: Readonly<UserTableProps>) {
       {editUser && (
         <EditUserDialog
           user={editUser}
+          isLastActiveAdmin={editUser.id === lastActiveAdminId}
           onClose={() => {
             setEditUser(null);
             refocusUserAction(USER_ACTIONS.EDIT, editUser.id);

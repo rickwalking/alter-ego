@@ -161,3 +161,19 @@ class PostgresUserRepository(UserRepository):
             .where(UserModel.role == role.value)
         )
         return result.scalar() or 0
+
+    async def count_active_by_role(self, role: UserRole) -> int:
+        """Count the active users with a specific role.
+
+        Args:
+            role: User role to filter by.
+
+        Returns:
+            Number of active users with the given role.
+        """
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(UserModel)
+            .where(UserModel.role == role.value, UserModel.is_active.is_(True))
+        )
+        return result.scalar() or 0

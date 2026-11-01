@@ -22,6 +22,7 @@ ERR_CREDENTIAL_TOO_SHORT = "Password does not meet the minimum length policy"
 ERR_USER_ALREADY_EXISTS = "User already exists"
 ERR_INVALID_ROLE = "Invalid role"
 ERR_LAST_ADMIN = "Cannot modify the last admin"
+ERR_LAST_ACTIVE_ADMIN_DEACTIVATION = "Cannot deactivate the last active admin"
 ERR_SELF_DELETE = "Cannot delete your own account"
 
 GENERATED_CREDENTIAL_LENGTH = 16

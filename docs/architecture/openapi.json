@@ -11581,7 +11581,7 @@
                 }
               }
             },
-            "description": "Cannot demote last admin (code last_admin)"
+            "description": "Cannot demote or deactivate the last active admin (code last_admin)"
           },
           "422": {
             "content": {

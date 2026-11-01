@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonModal } from "@/components/molecules/neon-modal";
 import { TOUCH_TARGET_CLASS } from "@/constants/admin-users";
+import { cn } from "@/lib/utils";
 
 export interface UserItem {
   id: string;
@@ -170,11 +171,17 @@ export function UserDialogActions({
 interface UserRoleSelectProps {
   value: string;
   onChange: (role: string) => void;
+  /** Locks the select (the last active admin cannot be demoted). */
+  disabled?: boolean;
+  /** Id of the text that explains the select, e.g. why it is locked. */
+  describedBy?: string;
 }
 
 export function UserRoleSelect({
   value,
   onChange,
+  disabled = false,
+  describedBy,
 }: Readonly<UserRoleSelectProps>) {
   const t = useTranslations("admin");
   const selectId = useId();
@@ -187,7 +194,9 @@ export function UserRoleSelect({
         id={selectId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={FIELD_INPUT_CLASS}
+        disabled={disabled}
+        aria-describedby={describedBy}
+        className={cn(FIELD_INPUT_CLASS, "disabled:opacity-60")}
       >
         <option value="editor">{t("editorRole")}</option>
         <option value="admin">{t("adminRole")}</option>

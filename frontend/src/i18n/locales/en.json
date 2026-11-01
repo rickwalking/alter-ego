@@ -2287,6 +2287,7 @@
     "createNameInvalid": "Enter a full name of 2 to 255 characters.",
     "emailTaken": "A user with this email already exists.",
     "lastAdminError": "The last admin cannot be demoted, deactivated or deleted.",
+    "lastActiveAdminLocked": "This is the only active admin, so the role and the Active status cannot be changed. Make another user an active admin first.",
     "selfDeleteError": "You cannot delete your own account.",
     "userNotFound": "This user no longer exists. Reload the list.",
     "loadError": "Could not load the users."

@@ -24,8 +24,10 @@ import {
   type UserDialogProps,
   type UserItem,
 } from "./user-dialog-parts";
+import { UserActiveField } from "./user-active-field";
 
 const NAME_INVALID_KEY = "nameInvalid";
+const LAST_ACTIVE_ADMIN_LOCKED_KEY = "lastActiveAdminLocked";
 const UPDATE_ERROR_KEY = "updateError";
 
 /**
@@ -98,12 +100,24 @@ function FullNameField({
   );
 }
 
+interface EditUserDialogProps extends UserDialogProps {
+  /**
+   * True when `user` is the only active admin: the API refuses to demote or
+   * deactivate them, so the role select and the active checkbox are locked
+   * and explained.
+   */
+  isLastActiveAdmin?: boolean;
+}
+
 export function EditUserDialog({
   user,
   onClose,
   onSuccess,
-}: Readonly<UserDialogProps>) {
+  isLastActiveAdmin = false,
+}: Readonly<EditUserDialogProps>) {
   const t = useTranslations("admin");
+  const lockHintId = useId();
+  const lockedBy = isLastActiveAdmin ? lockHintId : undefined;
   const [role, setRole] = useState(user.role);
   const [isActive, setIsActive] = useState(user.is_active);
   const [fullName, setFullName] = useState(user.full_name);
@@ -159,23 +173,25 @@ export function EditUserDialog({
           errorId={nameErrorId}
         />
 
-        <UserRoleSelect value={role} onChange={setRole} />
+        <UserRoleSelect
+          value={role}
+          onChange={setRole}
+          disabled={isLastActiveAdmin}
+          describedBy={lockedBy}
+        />
 
-        <div className="flex min-h-11 items-center">
-          <input
-            id="is_active"
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            className="h-5 w-5 rounded accent-neon-cyan"
-          />
-          <label
-            htmlFor="is_active"
-            className="ml-2 block text-sm text-text-primary"
-          >
-            {t("activeLabel")}
-          </label>
-        </div>
+        <UserActiveField
+          checked={isActive}
+          onChange={setIsActive}
+          disabled={isLastActiveAdmin}
+          describedBy={lockedBy}
+        />
+
+        {isLastActiveAdmin && (
+          <p id={lockHintId} className={DIALOG_MUTED_TEXT_CLASS}>
+            {t(LAST_ACTIVE_ADMIN_LOCKED_KEY)}
+          </p>
+        )}
 
         <UserDialogActions
           onClose={onClose}

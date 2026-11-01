@@ -123,6 +123,11 @@ class FakeUserRepository:
     async def count_by_role(self, role: UserRole) -> int:
         return sum(1 for user in self._store.values() if user.role == role)
 
+    async def count_active_by_role(self, role: UserRole) -> int:
+        return sum(
+            1 for user in self._store.values() if user.role == role and user.is_active
+        )
+
 
 _PORT_CHECK: ModuleUserRepository = FakeUserRepository()
 
@@ -280,3 +285,17 @@ class TestUserRepositoryContract:
 
         assert await repo.count_by_role(UserRole.ADMIN) == 1
         assert await repo.count_by_role(UserRole.EDITOR) == 2
+
+    # Scenario (AE-0585): Demoting the last active admin is refused when the other
+    # admins are inactive
+    async def test_count_active_by_role(self, repo: ModuleUserRepository) -> None:
+        """count_active_by_role SHALL count only ACTIVE users with the given role."""
+        await repo.create(_user("admin1@example.com", role=UserRole.ADMIN))
+        inactive = _user("admin2@example.com", role=UserRole.ADMIN)
+        inactive.is_active = False
+        await repo.create(inactive)
+        await repo.create(_user("editor1@example.com", role=UserRole.EDITOR))
+
+        assert await repo.count_active_by_role(UserRole.ADMIN) == 1
+        assert await repo.count_active_by_role(UserRole.EDITOR) == 1
+        assert await repo.count_by_role(UserRole.ADMIN) == 2

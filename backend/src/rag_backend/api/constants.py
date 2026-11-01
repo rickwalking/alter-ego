@@ -39,3 +39,6 @@ ERR_CODE_USER_INACTIVE = "user_inactive"
 ERR_CODE_USER_EMAIL_EXISTS = "user_email_exists"
 ERR_CODE_LAST_ADMIN = "last_admin"
 ERR_CODE_SELF_DELETE = "self_delete"
+
+ERR_LAST_ADMIN_DEMOTE = "Cannot demote the last admin"
+ERR_LAST_ACTIVE_ADMIN_DEACTIVATE = "Cannot deactivate the last active admin"

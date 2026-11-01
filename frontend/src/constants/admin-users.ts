@@ -4,6 +4,9 @@ export const USER_FILTER_ROLE_ADMIN = "admin";
 
 export const USER_FILTER_ROLE_EDITOR = "editor";
 
+/** The `role` value of an admin, as the admin user API sends it. */
+export const USER_ROLE_ADMIN = "admin";
+
 export const USER_FILTER_STATUS_ALL = "all";
 
 export const USER_FILTER_STATUS_ACTIVE = "active";
