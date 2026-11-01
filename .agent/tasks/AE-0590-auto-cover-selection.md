@@ -266,6 +266,11 @@ removed again). `PUT /hook-photo` clears `slide_cover`. A `rejected` or
   healthcheck-loopback, openapi-fresh, bandit, pip-audit, integrity,
   duplication, migrations, schema-drift, test (8124 passed, 2 skipped),
   diff-cover (100%, 0 missing lines). Every gate PASS, none skipped.
+  After the review fixes: all of the above rerun individually, PASS, none
+  skipped; test 8133 passed, 2 skipped; diff-cover 100%, 0 missing lines.
+  The locked write's branches run after a SQLAlchemy greenlet switch, which
+  the tracer does not follow, so fake-based unit tests cover them besides the
+  Postgres tests.
   Python 3.11 import check OK (3.11.15). mutation: deferred to CI (hotfix
   fast path); CI must be green before merge (no `--admin`).
 
