@@ -69,6 +69,13 @@ inactive admin is now allowed. The users page finds the only active admin in the
 its role select and Active checkbox with a pt/en explanation. Full `gate-capture.sh all` run: only `backend:comments`
 failed (multi-line Scenario comments, a ticket id in a docstring); fixed, then the full backend scope re-ran green.
 
+Review round 1: concurrency fix — the active-admin count now selects the active admin ids `FOR UPDATE` and counts them
+in Python (Postgres refuses `FOR UPDATE` on `count(*)`). Chosen over `pg_advisory_xact_lock` because it locks only the
+rows the guard reads and needs no lock key; concurrent mutual deactivation is serialized and the second update is
+refused. Added a deterministic Postgres blocking test, a mutual-deactivation Postgres test, a unit test that the
+statement carries `FOR UPDATE`, and the Postgres case for deactivating while the other admin is inactive. The UI
+helper now documents that its lock is only a hint. Full backend and frontend scopes re-ran green.
+
 ## Files Touched
 
 - `backend/src/rag_backend/modules/identity/application/admin_handlers.py` — guard, `_AdminChange`, new error
@@ -79,7 +86,8 @@ failed (multi-line Scenario comments, a ticket id in a docstring); fixed, then t
 - `backend/tests/features/last_active_admin_guard_ae0585.feature`
 - `backend/tests/unit/modules/identity/test_last_active_admin_guard_ae0585.py` (new),
   `test_identity_handlers.py`, `test_identity_services.py`, `tests/unit/infrastructure/test_user_repository_contract.py`
-- `backend/tests/integration/test_last_active_admin_guard_pg_ae0585.py` (new, Postgres)
+- `backend/tests/integration/test_last_active_admin_guard_pg_ae0585.py`, `test_last_active_admin_lock_pg_ae0585.py`
+  (new, Postgres); `backend/tests/unit/infrastructure/test_user_repository_lock_ae0585.py` (new)
 - `docs/architecture/openapi.json` (409 description)
 - `frontend/src/lib/last-active-admin.ts` (+ test), `frontend/src/constants/admin-users.ts`
 - `frontend/src/components/admin/edit-user-dialog.tsx`, `user-active-field.tsx` (new), `user-dialog-parts.tsx`,
@@ -90,13 +98,14 @@ failed (multi-line Scenario comments, a ticket id in a docstring); fixed, then t
 
 ## Test Evidence
 
-Full backend scope (`bash scripts/ci/gate-capture.sh backend`, Postgres-backed, 8047 passed, 2 skipped; the 7 new
-Postgres API tests PASSED, not skipped):
+Full backend scope (`gate-capture.sh backend`, Postgres-backed, 8051 passed, 2 skipped; the new Postgres tests
+PASSED, not skipped):
 
 GATES_JSON: {"pass":26,"fail":0,"skip":1,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:gherkin-refs","status":"PASS"},{"gate":"backend:comments","status":"PASS"},{"gate":"backend:blog-v1-dead-code","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:autopilot-env","status":"PASS"},{"gate":"backend:healthcheck-loopback","status":"PASS"},{"gate":"backend:openapi-fresh","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:duplication","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"SKIP"}]}
 
-Frontend: all 18 frontend gates PASS (mutation SKIP, CI only) in the full `gate-capture.sh all` run; see
-`.agent/reports/AE-0585.dev-summary.md`.
+Full frontend scope (`gate-capture.sh frontend`):
+
+GATES_JSON: {"pass":18,"fail":0,"skip":1,"results":[{"gate":"frontend:lint","status":"PASS"},{"gate":"frontend:lint-changed","status":"PASS"},{"gate":"frontend:component-types","status":"PASS"},{"gate":"frontend:duplication","status":"PASS"},{"gate":"frontend:dead-code","status":"PASS"},{"gate":"frontend:blog-v1-dead-code","status":"PASS"},{"gate":"frontend:typecheck","status":"PASS"},{"gate":"frontend:build","status":"PASS"},{"gate":"frontend:legacy-guard","status":"PASS"},{"gate":"frontend:gherkin-refs","status":"PASS"},{"gate":"frontend:legacy-inventory","status":"PASS"},{"gate":"frontend:format","status":"PASS"},{"gate":"frontend:security","status":"PASS"},{"gate":"frontend:integrity","status":"PASS"},{"gate":"frontend:test","status":"PASS"},{"gate":"frontend:schema-drift","status":"PASS"},{"gate":"frontend:duplication-tests","status":"PASS"},{"gate":"frontend:dead-files","status":"PASS"},{"gate":"frontend:mutation","status":"SKIP"}]}
 
 ## QA Report
 
