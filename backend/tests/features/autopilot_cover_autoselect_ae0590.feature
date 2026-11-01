@@ -1,11 +1,14 @@
-Feature: Use the autopilot's generated cover on slide 1 (AE-0590)
-  When the cover generation the autopilot started for a fresh carousel
-  succeeds, the generated cover becomes slide 1's cover (slide_cover, kind
-  ai_image), stored while the workflow is paused at a gate, through the
-  lock-version compare-and-set. The owner's choice always wins. The selection
-  never re-renders, never changes the carousel status and never publishes;
-  the carousel's own finalize render uses the stored cover and the owner
-  reviews it as usual. Manual generations keep today's picker flow.
+Feature: Use a generated cover on slide 1 (AE-0590)
+  When a cover generation succeeds, the one the autopilot started for a
+  fresh carousel or the owner's "Gerar capa com Grok", the generated cover
+  becomes slide 1's cover (slide_cover, kind ai_image), stored while the
+  workflow is paused at a gate, through the lock-version compare-and-set.
+  The owner's choice always wins: a cover already chosen at scheduling, or
+  any change made while the job ran. The selection never re-renders, never
+  changes the carousel status and never publishes; the carousel's own
+  finalize render uses the stored cover and the owner reviews it as usual. A
+  carousel already completed or at final review keeps its cover: no
+  re-render, no re-approval, the generated cover stays a picker option.
 
   Scenario: A succeeded autopilot cover becomes slide 1's cover
     Given an autopilot carousel paused at a gate with the default slide 1
@@ -46,8 +49,9 @@ Feature: Use the autopilot's generated cover on slide 1 (AE-0590)
 
   Scenario: A carousel already at the owner's review keeps its cover
     Given the carousel is completed or at final review
-    When the autopilot's generation succeeds
+    When a generation succeeds
     Then slide_cover is unchanged and the cover stays a picker option
+    And nothing is re-rendered or sent for approval again
 
   Scenario: The selection never re-renders or publishes
     Given an autopilot carousel paused at a gate
@@ -64,10 +68,16 @@ Feature: Use the autopilot's generated cover on slide 1 (AE-0590)
     When the selection writes
     Then slide 1 is unchanged and the skip reason is asset_gone
 
-  Scenario: A manual generation is never auto-selected
-    Given the owner starts a generation from the publish step
-    When it succeeds
-    Then slide 1 is unchanged and the cover is only a picker option
+  Scenario: A succeeded manual cover becomes slide 1's cover
+    Given a carousel paused at a gate with the default slide 1
+    When the owner's "Gerar capa com Grok" generation succeeds
+    Then slide_cover is the generated asset with kind ai_image
+    And nothing is re-rendered and the status is unchanged
+
+  Scenario: A manual generation keeps an already chosen cover
+    Given slide 1 already has a chosen cover when the owner clicks Grok
+    When the generation succeeds
+    Then the chosen cover is kept and the lock version is unchanged
 
   Scenario: An owner photo bound while the write runs is kept
     Given the owner binds another slide-1 photo right before the locked write

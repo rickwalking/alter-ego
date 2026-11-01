@@ -53,7 +53,7 @@ from rag_backend.modules.editorial.infrastructure import (
     carousel_cover_autostart,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
-    autopilot_cover_task,
+    with_cover_selection,
 )
 
 _SELECTION = AutoCoverSelection(
@@ -100,7 +100,7 @@ class TestAutopilotCoverTask:
         selector = _Selector()
         _install(monkeypatch, selector)
 
-        task = autopilot_cover_task(
+        task = with_cover_selection(
             _generate(CoverGenerationStatus.SUCCEEDED), _SELECTION
         )
 
@@ -113,7 +113,7 @@ class TestAutopilotCoverTask:
         selector = _Selector()
         _install(monkeypatch, selector)
 
-        task = autopilot_cover_task(_generate(CoverGenerationStatus.FAILED), _SELECTION)
+        task = with_cover_selection(_generate(CoverGenerationStatus.FAILED), _SELECTION)
 
         assert await task() is CoverGenerationStatus.FAILED
         assert selector.selected == []
@@ -124,7 +124,7 @@ class TestAutopilotCoverTask:
     ) -> None:
         selector = _Selector(error=RuntimeError("db down"))
         _install(monkeypatch, selector)
-        task = autopilot_cover_task(
+        task = with_cover_selection(
             _generate(CoverGenerationStatus.SUCCEEDED), _SELECTION
         )
 
@@ -159,14 +159,14 @@ class TestScheduleWiring:
         generation_id = uuid4()
 
         monkeypatch.setattr(
-            carousel_cover_autostart, "cover_generation_task", lambda _w, _r: "gen"
+            carousel_cover_autoselect, "cover_generation_task", lambda _w, _r: "gen"
         )
 
         def _wrap(generate: object, selection: AutoCoverSelection) -> object:
             wrapped.append((generate, selection))
             return "wrapped"
 
-        monkeypatch.setattr(carousel_cover_autostart, "autopilot_cover_task", _wrap)
+        monkeypatch.setattr(carousel_cover_autoselect, "with_cover_selection", _wrap)
         monkeypatch.setattr(
             cover_generation_tasks,
             "schedule_cover_generation",

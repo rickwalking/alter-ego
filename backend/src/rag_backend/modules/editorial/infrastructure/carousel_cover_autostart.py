@@ -9,8 +9,8 @@ pending) and becomes a skip with the refusal's code as the reason. A carousel
 that already has a generation row (any status) is skipped, so a re-driven or
 retried run never enqueues a second job.
 
-The scheduled run is the autopilot's own: once it settles ``succeeded`` the
-cover becomes slide 1's cover, unless the owner chose one since the job was
+Once the run settles ``succeeded`` the cover becomes slide 1's cover, unless
+a cover was already chosen or the owner chose one since the job was
 scheduled (see ``carousel_cover_autoselect``).
 """
 
@@ -22,10 +22,6 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.carousel.cover_autoselect import (
-    AutoCoverSelection,
-    cover_baseline,
-)
 from rag_backend.domain.constants.cover_generation import (
     COVER_GENERATION_MAX_PHOTOS,
     COVER_GENERATION_PROMPT_MIN_LEN,
@@ -35,12 +31,11 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     CarouselAutomationAcl,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autoselect import (
-    autopilot_cover_task,
+    selecting_cover_task,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
     CoverRunWiring,
     cover_generation_service,
-    cover_generation_task,
     cover_run_wiring,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_cover_pick import (
@@ -140,21 +135,12 @@ async def _record_generation(
 def _schedule(
     wiring: CoverRunWiring, run: CoverGenerationRun, project: CarouselProject
 ) -> None:
-    """Hand the run, then the slide-1 selection, to the tracked background task.
-
-    The selection's baseline is slide 1's cover as it is now, so any change
-    the owner makes while the job runs is seen as a manual choice.
-    """
+    """Hand the run, then the slide-1 selection, to the tracked background task."""
     from rag_backend.application.services.carousel.cover_generation_tasks import (
         schedule_cover_generation,
     )
 
-    selection = AutoCoverSelection(
-        project_id=str(project.id),
-        generation_id=run.generation.id,
-        baseline=cover_baseline(project),
-    )
-    task = autopilot_cover_task(cover_generation_task(wiring, run), selection)
+    task = selecting_cover_task(wiring, run, project)
     schedule_cover_generation(task, str(run.generation.id))
 
 

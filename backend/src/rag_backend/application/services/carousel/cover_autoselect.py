@@ -1,6 +1,7 @@
-"""Use the cover the autopilot generated for a fresh carousel on slide 1.
+"""Use a generated cover on slide 1.
 
-Called only after the autopilot-started generation settled ``succeeded``.
+Called only after a generation settled ``succeeded``: the one the autopilot
+starts for a fresh carousel, or the owner's "Gerar capa com Grok".
 The selection waits (bounded) until the workflow is paused at a gate, so no
 running phase holds a stale copy of the project that would write the old
 cover back, then stores the generated asset as ``slide_cover`` through the
@@ -11,7 +12,8 @@ and the owner reviews it like any other slide 1.
 The owner's choice always wins: a cover chosen before the job was scheduled,
 or any change to ``slide_cover`` / ``hook_asset_id`` since, is a logged skip.
 A carousel that already reached the owner's review (completed or at
-``final_review``) is skipped too; the cover stays a picker option. A CAS
+``final_review``) is skipped too: no re-render and no re-approval, the cover
+stays a picker option. A CAS
 conflict or a held lock is a logged skip, never retried.
 """
 
@@ -185,7 +187,7 @@ def _skip(selection: AutoCoverSelection, reason: str) -> str:
 
 
 class AutoCoverSelector:
-    """Store a succeeded autopilot cover as slide 1's cover, when allowed."""
+    """Store a succeeded generated cover as slide 1's cover, when allowed."""
 
     def __init__(
         self, store: AutoCoverStore, polling: AutoCoverPolling | None = None

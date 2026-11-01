@@ -1,7 +1,7 @@
-"""Constants for using an autopilot-generated cover on slide 1.
+"""Constants for using a generated cover on slide 1.
 
-When the cover generation the autopilot started for a fresh carousel
-succeeds, the cover becomes slide 1's ``slide_cover`` (kind ``ai_image``)
+When a cover generation succeeds (the autopilot's or the owner's "Gerar capa
+com Grok"), the cover becomes slide 1's ``slide_cover`` (kind ``ai_image``)
 while the workflow is paused at a gate, unless the owner chose a cover in the
 meantime. Every refusal is a logged skip with one of the reasons below.
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 AUTO_SELECT_POLL_SECONDS = 5.0
 AUTO_SELECT_MAX_WAIT_SECONDS = 45 * 60.0
 
-LOG_COVER_AUTO_SELECT = "autopilot_cover_auto_select"
+LOG_COVER_AUTO_SELECT = "cover_auto_select"
 
 OUTCOME_AUTO_SELECT_SELECTED = "selected"
 OUTCOME_AUTO_SELECT_ALREADY = "already_selected"

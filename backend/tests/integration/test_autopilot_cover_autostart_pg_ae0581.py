@@ -28,7 +28,10 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
 )
-from rag_backend.modules.editorial.infrastructure import carousel_cover_autostart
+from rag_backend.modules.editorial.infrastructure import (
+    carousel_cover_autoselect,
+    carousel_cover_autostart,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_cover_autostart import (
     schedule_autopilot_cover,
 )
@@ -65,7 +68,7 @@ def _fake_bridge(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         carousel_cover_autostart, "cover_run_wiring", lambda _render: object()
     )
     monkeypatch.setattr(
-        carousel_cover_autostart, "cover_generation_task", lambda _w, run: run
+        carousel_cover_autoselect, "cover_generation_task", lambda _w, run: run
     )
     from rag_backend.application.services.carousel import cover_generation_tasks
 

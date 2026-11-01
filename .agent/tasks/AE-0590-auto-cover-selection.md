@@ -1,4 +1,4 @@
-# AE-0590 — Use the autopilot's generated cover on slide 1
+# AE-0590 — Use a generated cover on slide 1
 
 Status: In Development
 Tier: T1
@@ -12,9 +12,11 @@ Updated: 2026-11-01
 
 ## Goal
 
-When the cover generation the autopilot started for a fresh carousel
-succeeds, slide 1 uses that cover, unless the owner already chose a cover
-for slide 1. A manual choice is never overridden.
+When a cover generation succeeds, the one the autopilot starts for a fresh
+carousel or the owner's "Gerar capa com Grok", slide 1 uses that cover,
+unless a cover was already chosen or the owner chose one while the job ran.
+A manual choice is never overridden. A carousel already completed or at final
+review keeps its cover; the generated one stays a picker option.
 
 ## Problem
 
@@ -89,7 +91,9 @@ ticket listed "no automatic picking" as a non-goal; this ticket changes that.
   selection is attached to that task only. The HTTP route's
   `cover_generation_task` stays as it is. The run is in-process, and a restart
   kills it (the row is then failed as interrupted), so no generation can
-  succeed outside its own task. No schema change is needed.
+  succeed outside its own task. No schema change is needed. (Superseded by
+  Pedro's decision of 2026-11-01, below: manual generations select too, so
+  both paths now share one task wrapper.)
 
 ## Scope (design)
 
@@ -137,20 +141,25 @@ ticket listed "no automatic picking" as a non-goal; this ticket changes that.
   stays a picker option, which is today's behavior.
 - A failed or refused generation never calls the selection. The current
   cover is left alone.
-- Manual generations (HTTP route) keep today's behavior.
+- Manual generations (Pedro, 2026-11-01): the HTTP route's run goes through
+  the same wrapper (`selecting_cover_task`), with the baseline taken from the
+  project the request loaded, under the same rules. If the owner clicks Grok
+  while a cover is already chosen, `slide_cover` is set at scheduling and
+  the `owner_cover` rule keeps it: an existing chosen cover wins.
 
 ## Non-Goals
 
 - No schema or migration change.
 - No change to the picker, the Telegram cover buttons, the caps, consent,
   prompts or publish code.
-- No auto-selection on a carousel that is already completed. It waits for
-  Pedro's decision after the prod probe. Today's behavior applies: the cover
-  shows up in the picker.
+- No auto-selection on a carousel that is already completed or at final
+  review (Pedro, 2026-11-01): no re-render and no re-approval; the
+  generated cover stays a picker option.
 
 ## Acceptance Criteria
 
-- [ ] A succeeded autopilot generation becomes slide 1's `slide_cover`
+- [ ] A succeeded generation (autopilot or "Gerar capa com Grok") becomes
+      slide 1's `slide_cover`
       (`ai_image`) when the owner made no choice, written while the workflow
       is paused at a gate.
 - [ ] A manual choice made after scheduling (hook photo rebind, a
@@ -163,7 +172,9 @@ ticket listed "no automatic picking" as a non-goal; this ticket changes that.
       Instagram/LinkedIn (a test asserts no renderer or publish call).
 - [ ] Lock-version CAS unchanged: on a conflict the selection skips and logs,
       with no retry (a test asserts it).
-- [ ] Manual (HTTP) generations are never auto-selected.
+- [ ] A manual generation follows the same rules: selected on a paused
+      carousel; an already chosen cover is kept; on a completed carousel it
+      is only a picker option.
 - [ ] Backend gates green (hotfix fast path: every gate except local
       mutation, individually, with `DATABASE_URL`; Python 3.11 import check);
       CI green before merge (no `--admin`).
@@ -219,6 +230,20 @@ removed again). `PUT /hook-photo` clears `slide_cover`. A `rejected` or
 `failed` `phase_status` is a skip. The generation task is typed
 `CoverGenerationStatus`. Lost-row and timeout skips log at warning.
 
+### 2026-11-01 (Pedro's decisions)
+
+(a) A cover from the manual "Gerar capa com Grok" button also becomes the
+cover when it succeeds, under the same rules. (b) A generation that finishes
+after completion or at final review stays a picker option: no re-render, no
+re-approval. Implemented: `selecting_cover_task(wiring, run, project)` in
+`carousel_cover_autoselect` (wrapper renamed `with_cover_selection`) is used
+by the autostart and by `POST /cover-generations`; the log event is now
+`cover_auto_select`. Note: the button lives on the publish page, which renders the
+cover picker only once the artifacts are ready (`artifactsReady`, a completed
+carousel), so with (b) a manual generation from the UI normally stays a
+picker option, as today; only a generation started before completion (API,
+or a carousel re-run after the click) is selected.
+
 ## Files Touched
 
 - backend/src/rag_backend/domain/constants/cover_autoselect.py (new)
@@ -226,12 +251,16 @@ removed again). `PUT /hook-photo` clears `slide_cover`. A `rejected` or
 - backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autoselect.py (new)
 - backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autostart.py
 - backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_generation.py
+- backend/src/rag_backend/modules/editorial/public.py
+- backend/src/rag_backend/api/routes/carousels/cover_generate.py
+- backend/tests/unit/modules/autopilot/test_cover_autostart_editorial_ae0581.py
+- backend/tests/integration/test_autopilot_cover_autostart_pg_ae0581.py
 - backend/src/rag_backend/application/services/carousel/creator_asset_service.py
 - backend/tests/features/autopilot_cover_autoselect_ae0590.feature (new)
 - backend/tests/unit/application/test_cover_autoselect_ae0590.py (new)
 - backend/tests/unit/modules/editorial/test_cover_autoselect_task_ae0590.py (new)
 - backend/tests/integration/test_autopilot_cover_autoselect_pg_ae0590.py (new)
-- backend/tests/integration/test_cover_generation_manual_no_autoselect_ae0590.py (new)
+- backend/tests/integration/test_cover_generation_manual_autoselect_ae0590.py (new)
 
 ## Test Evidence
 
@@ -256,9 +285,13 @@ removed again). `PUT /hook-photo` clears `slide_cover`. A `rejected` or
   between the re-check and the locked UPDATE is kept (`manual_choice`, lock
   version unchanged; the test fails without the `hook_asset_id` guard); a
   lock version moved after the read is a `conflict` skip.
-- Integration (HTTP, SQLite): a manual generation on a paused carousel
-  succeeds and slide 1 is unchanged; `PUT /hook-photo` clears a stored
-  generated `slide_cover` (the test fails without the fix).
+- Integration (HTTP, SQLite, real route): a manual generation on a paused
+  carousel becomes `slide_cover` (`ai_image`, lock version +1, status
+  unchanged, no re-render); with a cover already chosen it is kept (lock
+  version unchanged); on a completed carousel it is only a picker option
+  (no re-render); `PUT /hook-photo` clears a stored generated `slide_cover`
+  (the test fails without the fix). The earlier test asserting a manual
+  generation never selects itself was replaced.
 - Backend gates green locally (hotfix fast path, each run individually with
   the Postgres `DATABASE_URL`): format, lint, lint-diff, blanket-ignore,
   strict-diff, type, imports, arch-ratchet, docstrings, dead-code,

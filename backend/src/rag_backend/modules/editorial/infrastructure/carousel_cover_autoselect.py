@@ -1,14 +1,14 @@
-"""The editorial side of using an autopilot-generated cover on slide 1.
+"""The editorial side of using a generated cover on slide 1.
 
 ``EditorialAutoCoverStore`` gives the selector fresh reads (one session per
 call, so a poll never sees a cached row) and the write: the generated asset
-as an ``ai_image`` ``slide_cover`` through the existing cover switch with
-rendering off (stage, project lock, lock-version CAS, store). The owner-choice
-check is repeated on the write's own read, right before the CAS.
+as an ``ai_image`` ``slide_cover`` by a conditional update of that one column
+under the project lock and the lock-version CAS. The owner-choice check is
+repeated on the write's own read, right before the CAS.
 
-``autopilot_cover_task`` wraps the autopilot's generation run: only a
-``succeeded`` run is followed by the selection; a failed one leaves slide 1
-alone. Manual generations never go through it.
+``selecting_cover_task`` is the background run of every generation, the
+autopilot's and the owner's "Gerar capa com Grok": only a ``succeeded`` run is
+followed by the selection; a failed one leaves slide 1 alone.
 
 The ORM, repositories and the carousel services are imported lazily (the
 editorial facade loads while the ORM registry is still initialising).
@@ -31,6 +31,7 @@ from rag_backend.application.services.carousel.cover_autoselect import (
     AutoCoverWrite,
     ProjectAtVersion,
     choice_refusal,
+    cover_baseline,
 )
 from rag_backend.domain.constants.carousel_autofix import (
     AUTOFIX_STATUS_CONFLICT,
@@ -48,6 +49,15 @@ from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.cover_generation import CoverGenerationStatus
 from rag_backend.domain.models.slide_cover import SlideCover, slide_cover_row
+from rag_backend.modules.editorial.infrastructure.carousel_cover_generation import (
+    CoverRunWiring,
+    cover_generation_task,
+)
+
+if typing.TYPE_CHECKING:
+    from rag_backend.application.services.carousel.cover_generation import (
+        CoverGenerationRun,
+    )
 
 logger = structlog.get_logger(__name__)
 
@@ -225,7 +235,7 @@ async def _select(selection: AutoCoverSelection) -> None:
         )
 
 
-def autopilot_cover_task(
+def with_cover_selection(
     generate: Callable[[], Awaitable[CoverGenerationStatus]],
     selection: AutoCoverSelection,
 ) -> Callable[[], Awaitable[CoverGenerationStatus]]:
@@ -244,8 +254,26 @@ def autopilot_cover_task(
     return _execute
 
 
+def selecting_cover_task(
+    wiring: CoverRunWiring, run: CoverGenerationRun, project: CarouselProject
+) -> Callable[[], Awaitable[CoverGenerationStatus]]:
+    """The run of ``run``, then the slide-1 selection.
+
+    The baseline is slide 1's cover as ``project`` has it now, at scheduling,
+    so a cover already chosen, or any change the owner makes while the job
+    runs, wins over the generated one.
+    """
+    selection = AutoCoverSelection(
+        project_id=str(project.id),
+        generation_id=run.generation.id,
+        baseline=cover_baseline(project),
+    )
+    return with_cover_selection(cover_generation_task(wiring, run), selection)
+
+
 __all__ = [
     "EditorialAutoCoverStore",
     "auto_cover_selector",
-    "autopilot_cover_task",
+    "selecting_cover_task",
+    "with_cover_selection",
 ]
