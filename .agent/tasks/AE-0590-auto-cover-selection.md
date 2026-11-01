@@ -228,6 +228,15 @@ own task with the scheduling baseline.
   project, asset; moved baseline) write nothing.
 - Integration (HTTP, SQLite): a manual generation on a paused carousel
   succeeds and slide 1 is unchanged.
+- Backend gates green locally (hotfix fast path, each run individually with
+  the Postgres `DATABASE_URL`): format, lint, lint-diff, blanket-ignore,
+  strict-diff, type, imports, arch-ratchet, docstrings, dead-code,
+  inline-prompts, gherkin-refs, comments, redis-factory, autopilot-env,
+  healthcheck-loopback, openapi-fresh, bandit, pip-audit, integrity,
+  duplication, migrations, schema-drift, test (8124 passed, 2 skipped),
+  diff-cover (100%, 0 missing lines). Every gate PASS, none skipped.
+  Python 3.11 import check OK (3.11.15). mutation: deferred to CI (hotfix
+  fast path); CI must be green before merge (no `--admin`).
 
 ## QA Report
 
