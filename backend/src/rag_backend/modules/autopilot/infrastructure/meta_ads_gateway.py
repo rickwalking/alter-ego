@@ -20,6 +20,7 @@ from rag_backend.modules.autopilot.boost_constants import (
     ERR_ADS_DISABLED,
     ERR_BELOW_META,
     ERR_MEDIA_HIDDEN,
+    ERR_PAGE_MISSING,
     GRAPH_ADS,
     GRAPH_ADSETS,
     GRAPH_CAMPAIGNS,
@@ -67,6 +68,7 @@ class MetaAdsGateway:
     async def launch(self, request: BoostRequest) -> BoostRequest:
         """Create the four objects paused, then turn them on."""
         self._require_enabled()
+        self._require_page()
         await self._preflight(request)
         campaign = request.meta_campaign_id or await self._campaign(request)
         adset = request.meta_adset_id or await self._adset(request, campaign)
@@ -91,6 +93,12 @@ class MetaAdsGateway:
     def _require_enabled(self) -> None:
         if not self._config.enabled:
             raise AdsCallError(ERR_ADS_DISABLED, permanent=False)
+
+    def _require_page(self) -> None:
+        """Meta boosts an Instagram post only through a Page and its Instagram user."""
+        config = self._config
+        if config.page_id.strip() == "" or config.ig_user_id.strip() == "":
+            raise AdsCallError(ERR_PAGE_MISSING, permanent=True)
 
     async def _preflight(self, request: BoostRequest) -> None:
         media = await self._get(f"/{request.media_id}", {"fields": "id"})
