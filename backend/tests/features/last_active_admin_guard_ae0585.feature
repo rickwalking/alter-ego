@@ -16,7 +16,7 @@ Feature: The app always keeps one active admin
     And the response detail should be "Cannot deactivate the last active admin"
     And my account should still be active
 
-  Scenario: Demoting the last active admin is refused when the other admins are inactive
+  Scenario: Demoting is refused when the other admins are inactive
     Given I am authenticated as the only active admin
     And another admin exists who is inactive
     When I change my own role to editor

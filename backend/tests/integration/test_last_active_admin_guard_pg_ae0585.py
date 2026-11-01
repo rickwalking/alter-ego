@@ -117,7 +117,7 @@ async def _patch(
 
 
 class TestLastActiveAdminGuardOnPostgres:
-    """AC1-AC3 of AE-0585 through the HTTP API on Postgres."""
+    """The last-active-admin guard through the HTTP API on Postgres."""
 
     # Scenario: Deactivating the last active admin is refused
     async def test_deactivating_the_last_active_admin_returns_409(self) -> None:
@@ -135,8 +135,7 @@ class TestLastActiveAdminGuardOnPostgres:
             assert stored.is_active is True
             assert stored.role == UserRole.ADMIN
 
-    # Scenario: Demoting the last active admin is refused when the other admins
-    # are inactive
+    # Scenario: Demoting is refused when the other admins are inactive
     async def test_demoting_with_an_inactive_other_admin_returns_409(self) -> None:
         async with _guard_env() as guard_env:
             me = await _seed(_Seed(_ME_EMAIL, UserRole.ADMIN))

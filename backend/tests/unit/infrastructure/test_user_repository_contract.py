@@ -286,8 +286,7 @@ class TestUserRepositoryContract:
         assert await repo.count_by_role(UserRole.ADMIN) == 1
         assert await repo.count_by_role(UserRole.EDITOR) == 2
 
-    # Scenario (AE-0585): Demoting the last active admin is refused when the other
-    # admins are inactive
+    # Scenario: Demoting is refused when the other admins are inactive
     async def test_count_active_by_role(self, repo: ModuleUserRepository) -> None:
         """count_active_by_role SHALL count only ACTIVE users with the given role."""
         await repo.create(_user("admin1@example.com", role=UserRole.ADMIN))

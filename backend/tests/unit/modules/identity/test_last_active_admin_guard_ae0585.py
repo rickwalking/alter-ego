@@ -54,8 +54,7 @@ class TestLastActiveAdminGuard:
         with pytest.raises(LastAdminError):
             await handler.update(UpdateUserInput(user_id=admin.id, is_active=False))
 
-    # Scenario: Demoting the last active admin is refused when the other admins
-    # are inactive
+    # Scenario: Demoting is refused when the other admins are inactive
     async def test_demoting_with_only_inactive_other_admins_is_refused(
         self,
     ) -> None:
