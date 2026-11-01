@@ -126,6 +126,9 @@ class _FakeUserRepository:
     async def count_by_role(self, role: UserRole) -> int:
         return sum(1 for u in self.persisted.values() if u.role == role)
 
+    async def count_active_by_role(self, role: UserRole) -> int:
+        return sum(1 for u in self.persisted.values() if u.role == role and u.is_active)
+
 
 class _FakePasswordHasher:
     """PasswordHasher double: prefix-hash + matching verify."""

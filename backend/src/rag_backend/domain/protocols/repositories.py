@@ -35,6 +35,8 @@ class UserRepository(Protocol):
 
     async def count_by_role(self, role: UserRole) -> int: ...
 
+    async def count_active_by_role(self, role: UserRole) -> int: ...
+
 
 class OwnerDocumentQuery(TypedDict, total=False):
     """Bundled query parameters for owner-scoped document listing.

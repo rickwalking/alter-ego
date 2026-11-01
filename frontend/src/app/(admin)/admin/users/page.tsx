@@ -8,6 +8,7 @@ import {
   USER_FILTER_STATUS_ALL,
 } from "@/constants/admin-users";
 import { filterUsers } from "@/lib/filter-users";
+import { lastActiveAdminId } from "@/lib/last-active-admin";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { UserFilterToolbar } from "@/components/admin/user-filter-toolbar";
@@ -74,6 +75,8 @@ export default function UsersPage() {
     [users, searchQuery, roleFilter, statusFilter],
   );
 
+  const onlyActiveAdminId = useMemo(() => lastActiveAdminId(users), [users]);
+
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     roleFilter !== USER_FILTER_ROLE_ALL ||
@@ -126,6 +129,7 @@ export default function UsersPage() {
           ) : (
             <UserTable
               users={filteredUsers}
+              lastActiveAdminId={onlyActiveAdminId}
               onRefresh={() => {
                 void fetchUsers();
               }}

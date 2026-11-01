@@ -161,3 +161,26 @@ class PostgresUserRepository(UserRepository):
             .where(UserModel.role == role.value)
         )
         return result.scalar() or 0
+
+    async def count_active_by_role(self, role: UserRole) -> int:
+        """Count the active users with a specific role, locking their rows.
+
+        The rows are selected ``FOR UPDATE`` (Postgres refuses it on
+        ``count(*)``, so the ids are counted here) and stay locked until the
+        transaction ends. Two admins deactivating each other at once are then
+        serialized: the second waits, re-reads after the first commits and sees
+        one active admin, so the last-admin guard refuses it. SQLite ignores the
+        lock.
+
+        Args:
+            role: User role to filter by.
+
+        Returns:
+            Number of active users with the given role.
+        """
+        result = await self._session.execute(
+            select(UserModel.id)
+            .where(UserModel.role == role.value, UserModel.is_active.is_(True))
+            .with_for_update()
+        )
+        return len(result.scalars().all())

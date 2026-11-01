@@ -2287,6 +2287,7 @@
     "createNameInvalid": "Informe um nome completo de 2 a 255 caracteres.",
     "emailTaken": "Já existe um usuário com este e-mail.",
     "lastAdminError": "O último admin não pode ser rebaixado, desativado nem excluído.",
+    "lastActiveAdminLocked": "Este é o único admin ativo, então a função e o status Ativo não podem ser alterados. Torne outro usuário um admin ativo antes.",
     "selfDeleteError": "Você não pode excluir a sua própria conta.",
     "userNotFound": "Este usuário não existe mais. Recarregue a lista.",
     "loadError": "Não foi possível carregar os usuários."

@@ -26,6 +26,8 @@ from rag_backend.api.constants import (
     ERR_CODE_LAST_ADMIN,
     ERR_CODE_SELF_DELETE,
     ERR_CODE_USER_EMAIL_EXISTS,
+    ERR_LAST_ACTIVE_ADMIN_DEACTIVATE,
+    ERR_LAST_ADMIN_DEMOTE,
 )
 from rag_backend.api.dependencies import require_admin
 from rag_backend.api.dependencies.identity import get_identity_service
@@ -39,6 +41,7 @@ from rag_backend.modules.identity import (
     DeleteUserInput,
     IdentityServices,
     InvalidRoleError,
+    LastActiveAdminDeactivationError,
     LastAdminError,
     SelfDeleteError,
     UpdateUserInput,
@@ -223,7 +226,9 @@ async def create_user(
         404: {"description": "User not found"},
         409: {
             "model": CodedErrorResponse,
-            "description": "Cannot demote last admin (code last_admin)",
+            "description": (
+                "Cannot demote or deactivate the last active admin (code last_admin)"
+            ),
         },
     },
 )
@@ -249,10 +254,16 @@ async def update_user(
         raise _invalid_role(exc) from exc
     except UserNotFoundError as exc:
         raise _not_found(user_id) from exc
+    except LastActiveAdminDeactivationError as exc:
+        raise CodedHTTPException(
+            status.HTTP_409_CONFLICT,
+            ERR_LAST_ACTIVE_ADMIN_DEACTIVATE,
+            ERR_CODE_LAST_ADMIN,
+        ) from exc
     except LastAdminError as exc:
         raise CodedHTTPException(
             status.HTTP_409_CONFLICT,
-            "Cannot demote the last admin",
+            ERR_LAST_ADMIN_DEMOTE,
             ERR_CODE_LAST_ADMIN,
         ) from exc
 

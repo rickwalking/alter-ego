@@ -39,6 +39,7 @@ from rag_backend.modules.identity.application.user_service import UserNotFoundEr
 from rag_backend.modules.identity.application.user_view import to_user_view
 from rag_backend.modules.identity.constants import (
     ERR_INVALID_ROLE,
+    ERR_LAST_ACTIVE_ADMIN_DEACTIVATION,
     ERR_LAST_ADMIN,
     ERR_SELF_DELETE,
     ERR_USER_ALREADY_EXISTS,
@@ -70,7 +71,18 @@ class InvalidRoleError(Exception):
 
 
 class LastAdminError(Exception):
-    """Raised when an operation would demote or delete the last admin."""
+    """Raised when an update would demote the last active admin.
+
+    Also raised when a delete would remove the last admin (active or not).
+    """
+
+
+class LastActiveAdminDeactivationError(LastAdminError):
+    """Raised when an update would deactivate the last active admin.
+
+    A :class:`LastAdminError`, so every caller that maps the last-admin rule
+    keeps working; the inbound adapter catches it first for its own detail.
+    """
 
 
 class SelfDeleteError(Exception):
@@ -117,6 +129,14 @@ class CreatedUserView:
     id: UUID
     email: str
     temp_password: str | None
+
+
+@dataclass(frozen=True)
+class _AdminChange:
+    """The role / active part of an update, parsed, for the last-admin guard."""
+
+    role: UserRole | None
+    is_active: bool | None
 
 
 @dataclass(frozen=True)
@@ -168,16 +188,21 @@ class AdminUserHandler:
         return result
 
     async def update(self, command: UpdateUserInput) -> UserView:
-        """Apply name/role/active changes (last-admin guard) and commit once.
+        """Apply name/role/active changes (last-active-admin guard), commit once.
 
         Mirrors the legacy route ordering: the user is required (404) before the
         role is validated (422), so a missing user always yields 404 regardless
-        of the supplied role.
+        of the supplied role. The guard runs before any mutation, so a refused
+        update changes nothing.
         """
         async with self._unit_of_work:
             user = await self._require_user(command.user_id)
-            if command.role is not None:
-                await self._apply_role(user, _parse_role(command.role))
+            new_role = None if command.role is None else _parse_role(command.role)
+            await self._reject_losing_last_active_admin(
+                user, _AdminChange(role=new_role, is_active=command.is_active)
+            )
+            if new_role is not None:
+                user.set_role(new_role)
             if command.is_active is not None:
                 _apply_active(user, is_active=command.is_active)
             if command.full_name is not None:
@@ -208,14 +233,27 @@ class AdminUserHandler:
             await self._repository.update(user)
         return temp_password
 
-    async def _apply_role(self, user: User, new_role: UserRole) -> None:
-        if user.role == UserRole.ADMIN and new_role != UserRole.ADMIN:
-            await self._reject_demoting_last_admin()
-        user.set_role(new_role)
+    async def _reject_losing_last_active_admin(
+        self, user: User, change: _AdminChange
+    ) -> None:
+        """Refuse a change that would leave the app without an active admin.
 
-    async def _reject_demoting_last_admin(self) -> None:
-        if await self._repository.count_by_role(UserRole.ADMIN) <= 1:
+        Only an active admin who would stop being one (demoted, deactivated or
+        both) is checked, against the ACTIVE admins: inactive admins cannot sign
+        in, so they never keep the admin area reachable. A demotion wins over a
+        deactivation when the change does both.
+        """
+        if not (user.is_admin() and user.is_active):
+            return
+        demoted = change.role is not None and change.role != UserRole.ADMIN
+        deactivated = change.is_active is False
+        if not (demoted or deactivated):
+            return
+        if await self._repository.count_active_by_role(UserRole.ADMIN) > 1:
+            return
+        if demoted:
             raise LastAdminError(ERR_LAST_ADMIN)
+        raise LastActiveAdminDeactivationError(ERR_LAST_ACTIVE_ADMIN_DEACTIVATION)
 
     async def _reject_last_admin_removal(self, user: User) -> None:
         if user.role != UserRole.ADMIN:
@@ -282,6 +320,7 @@ __all__ = [
     "CreatedUserView",
     "DeleteUserInput",
     "InvalidRoleError",
+    "LastActiveAdminDeactivationError",
     "LastAdminError",
     "SelfDeleteError",
     "UpdateUserInput",
