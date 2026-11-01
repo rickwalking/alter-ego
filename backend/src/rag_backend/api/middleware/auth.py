@@ -3,7 +3,11 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
+from rag_backend.api.constants import (
+    ERR_INVALID_OR_EXPIRED_TOKEN,
+    ERR_NOT_AUTHENTICATED,
+    WWW_AUTHENTICATE_BEARER,
+)
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, COOKIE_ANON_TOKEN
 from rag_backend.infrastructure.auth import (
     decode_access_token,
@@ -34,7 +38,10 @@ async def get_current_user(
 ) -> dict[str, str]:
     """Validate JWT token and return current user payload.
 
-    Checks Bearer header first, then falls back to access_token cookie.
+    Checks Bearer header first, then falls back to access_token cookie. Only
+    the signature, type and expiry are checked here; the token version is
+    checked against the user by the dependencies that load the user
+    (``api.dependencies.token_version``).
 
     Args:
         request: FastAPI request object.
@@ -55,15 +62,15 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERR_NOT_AUTHENTICATED,
-            headers={"WWW-Authenticate": "Bearer"},
+            headers=WWW_AUTHENTICATE_BEARER,
         )
 
     payload = decode_access_token(settings, token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=ERR_INVALID_OR_EXPIRED_TOKEN,
+            headers=WWW_AUTHENTICATE_BEARER,
         )
 
     return payload

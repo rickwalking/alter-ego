@@ -11667,7 +11667,7 @@
     },
     "/api/auth/change-password": {
       "post": {
-        "description": "Change the authenticated user's password.\n\nAlso open to a user who must change an admin-issued password; a\nsuccessful change clears that flag. Rate limited like the login.",
+        "description": "Change the authenticated user's password.\n\nAlso open to a user who must change an admin-issued password; a\nsuccessful change clears that flag. Rate limited like the login.\n\nA successful change logs out every other session of the user: each token\nissued before it is refused with 401 from now on. This session gets a\nfresh token in the ``access_token`` cookie (same attributes as the login),\nso it stays signed in. A refused change sets no cookie and logs nobody out.",
         "operationId": "change_password_api_auth_change_password_post",
         "requestBody": {
           "content": {

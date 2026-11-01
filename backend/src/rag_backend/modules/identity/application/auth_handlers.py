@@ -12,7 +12,8 @@ facade.
 
 ``change_password`` reproduces the legacy update path: verify the current
 password first (the 401 guard runs *before* any write), then set the new hash,
-clear ``must_change_password`` and call ``repository.update`` inside the request-scoped
+clear ``must_change_password``, bump the token version (which logs out every
+other session) and call ``repository.update`` inside the request-scoped
 Unit of Work (the single commit owner, ADR-0009 §9). The repository refreshes
 the user after its flush, so a password-only update returns the stored row
 instead of lazy-loading the database-set ``updated_at`` (which used to 500).
@@ -73,19 +74,22 @@ class AuthCommandHandler:
         """Authenticate credentials and issue an access token (delegated JWT)."""
         return await self._authentication.login(command)
 
-    async def change_password(self, command: ChangePasswordCommand) -> None:
+    async def change_password(self, command: ChangePasswordCommand) -> AccessTokenView:
         """Change a user's password after verifying the current one.
 
         The wrong-current-password and unchanged-password guards raise before
-        any write (legacy 401 ordering). On success the new hash is staged and
-        the forced-change flag cleared via ``repository.update``, committed once
-        through the Unit of Work; the route answers 204.
+        any write (legacy 401 ordering). On success the new hash is staged, the
+        forced-change flag cleared and the token version bumped via
+        ``repository.update``, committed once through the Unit of Work. Every
+        token issued before is now stale; the returned fresh token, at the new
+        version, keeps the caller signed in.
         """
         user = await self._require_user(command.user_id)
         new_hash = new_password_hash(self._passwords, user, command)
         async with self._unit_of_work:
             user.change_password(new_hash)
-            await self._repository.update(user)
+            updated = await self._repository.update(user)
+        return self._authentication.issue_token(updated)
 
     async def _require_user(self, user_id: UUID) -> User:
         user = await self._repository.get_by_id(user_id)

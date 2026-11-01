@@ -27,6 +27,7 @@ class User:
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
     must_change_password: bool = False
+    token_version: int = 0
 
     def is_admin(self) -> bool:
         """Return True when the user has the admin role."""
@@ -57,9 +58,14 @@ class User:
         self.must_change_password = True
 
     def change_password(self, hashed_password: str) -> None:
-        """Store the user's own new hash and clear the forced-change flag."""
+        """Store the user's own new hash and clear the forced-change flag.
+
+        Also bumps the token version, so every access token issued before the
+        change is refused from now on.
+        """
         self.hashed_password = hashed_password
         self.must_change_password = False
+        self.token_version += 1
 
     def rename(self, full_name: str) -> None:
         """Change the display name and refresh the updated timestamp."""

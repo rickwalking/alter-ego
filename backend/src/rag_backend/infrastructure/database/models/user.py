@@ -6,8 +6,10 @@ from sqlalchemy import (
     Boolean,
     Column,
     Index,
+    Integer,
     String,
     false,
+    text,
 )
 
 from rag_backend.domain.models import (
@@ -35,6 +37,7 @@ class UserModel(Base):
     must_change_password = Column(
         Boolean, default=False, server_default=false(), nullable=False
     )
+    token_version = Column(Integer, default=0, server_default=text("0"), nullable=False)
     created_at = created_at_column()
     updated_at = updated_at_column()
 
@@ -57,6 +60,7 @@ class UserModel(Base):
             created_at=self.created_at,
             updated_at=self.updated_at,
             must_change_password=bool(self.must_change_password),
+            token_version=int(self.token_version or 0),
         )
 
     @classmethod
@@ -72,4 +76,5 @@ class UserModel(Base):
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             must_change_password=entity.must_change_password,
+            token_version=entity.token_version,
         )

@@ -91,6 +91,10 @@ class PostgresUserRepository(UserRepository):
         mapping so the entity never triggers a lazy load inside the async
         session (that lazy load raised ``MissingGreenlet`` → HTTP 500).
 
+        The token version only moves up: an update built from a user read
+        before a password change keeps the newer stored version, so it cannot
+        bring the tokens that change logged out back to life.
+
         Args:
             user: User entity with updated fields.
 
@@ -110,6 +114,7 @@ class PostgresUserRepository(UserRepository):
         model.role = user.role.value
         model.is_active = user.is_active
         model.must_change_password = user.must_change_password
+        model.token_version = max(int(model.token_version or 0), user.token_version)
         model.updated_at = user.updated_at
 
         await self._session.flush()
