@@ -12,6 +12,9 @@ ad needs ``--adset-id`` and ``--creative-id`` (existing objects); without them t
 body is printed, token redacted. A POST without ``validate_only`` is refused before
 it is sent. One JSON line per call: ok, Meta's error fields, or the held body.
 
+The ORM model registry is imported first so the autopilot package loads cleanly
+when this module is the entry point.
+
 Exit codes: 0 every sent call passed, 1 a call failed or the request/token is
 missing, 2 usage error.
 """
@@ -28,6 +31,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+import rag_backend.infrastructure.database.models  # noqa: F401
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.modules.autopilot.infrastructure.boost_store import SqlBoostStore
 from rag_backend.modules.autopilot.infrastructure.boost_validate_only import (

@@ -1,6 +1,6 @@
 # AE-0591 — Boost ad set sends the capped audience and run window, and keeps Meta's error details
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bug
