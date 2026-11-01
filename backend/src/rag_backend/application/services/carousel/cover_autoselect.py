@@ -160,13 +160,11 @@ _WRITE_REFUSALS: dict[str, str] = {
 }
 
 
-_WARNING_REASONS = frozenset(
-    {
-        REASON_AUTO_SELECT_NO_RESULT,
-        REASON_AUTO_SELECT_NO_PROJECT,
-        REASON_AUTO_SELECT_TIMED_OUT,
-    }
-)
+_WARNING_REASONS = frozenset({
+    REASON_AUTO_SELECT_NO_RESULT,
+    REASON_AUTO_SELECT_NO_PROJECT,
+    REASON_AUTO_SELECT_TIMED_OUT,
+})
 
 
 def _log(selection: AutoCoverSelection, outcome: str, reason: str = "") -> str:
