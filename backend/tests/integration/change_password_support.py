@@ -98,6 +98,16 @@ async def login(env: FlowEnv, credentials: tuple[str, str]) -> Response:
         return await client.post(TOKEN_URL, json={"email": email, "password": password})
 
 
+async def sign_in(client: AsyncClient, credentials: tuple[str, str]) -> Response:
+    """Log in through ``client``, so its cookie jar holds the session cookie.
+
+    This is how the browser holds the session: a password change replaces the
+    cookie in the same jar, and the client keeps working with the new token.
+    """
+    email, password = credentials
+    return await client.post(TOKEN_URL, json={"email": email, "password": password})
+
+
 def bearer(token_response: Response) -> dict[str, str]:
     """Auth headers carrying the token a login returned."""
     return {"Authorization": f"Bearer {token_response.json()['access_token']}"}

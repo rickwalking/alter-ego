@@ -5,6 +5,8 @@ from rag_backend.domain.constants import (
 )
 
 ERR_NOT_AUTHENTICATED = "Not authenticated"
+ERR_INVALID_OR_EXPIRED_TOKEN = "Invalid or expired token"
+WWW_AUTHENTICATE_BEARER = {"WWW-Authenticate": "Bearer"}
 ERR_FORBIDDEN = "Forbidden"
 ERR_NOT_FOUND = "Not found"
 ERR_SEARCH_FAILED = "Search failed"

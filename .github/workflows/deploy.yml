@@ -335,6 +335,18 @@ jobs:
               echo "::error::users must_change_password exited $MUST_CHANGE_PASSWORD_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            # Token version (AE-0593): create_all never adds a column to the
+            # existing users table, so users.token_version of migration
+            # c0d1e2f3a4b5 reaches prod through this one-shot.
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.token_version_column --apply --verify
+            TOKEN_VERSION_EXIT=$?
+            set -e
+            if [ "$TOKEN_VERSION_EXIT" -ne 0 ]; then
+              echo "::error::users token_version exited $TOKEN_VERSION_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
@@ -350,6 +362,18 @@ jobs:
               docker compose -f docker-compose.prod.yml exec -T backend \
                 python -m rag_backend.scripts.must_change_password_column --apply --verify
               MUST_CHANGE_PASSWORD_EXIT=$?
+              set -e
+            fi
+
+            # Token version, second chance (AE-0593): without the column every
+            # sign-in 500s, so a failed one-shot is retried once in the running
+            # backend before the drift check. Success clears the failure; a
+            # second failure still fails the job at the end.
+            if [ "$TOKEN_VERSION_EXIT" -ne 0 ]; then
+              set +e
+              docker compose -f docker-compose.prod.yml exec -T backend \
+                python -m rag_backend.scripts.token_version_column --apply --verify
+              TOKEN_VERSION_EXIT=$?
               set -e
             fi
 
@@ -442,6 +466,10 @@ jobs:
             fi
             if [ "$MUST_CHANGE_PASSWORD_EXIT" -ne 0 ]; then
               echo "::error::users must_change_password failed (exit $MUST_CHANGE_PASSWORD_EXIT): run 'python -m rag_backend.scripts.must_change_password_column --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$TOKEN_VERSION_EXIT" -ne 0 ]; then
+              echo "::error::users token_version failed (exit $TOKEN_VERSION_EXIT): run 'python -m rag_backend.scripts.token_version_column --apply --verify' on the droplet"
               ONE_SHOT_FAILED=1
             fi
             if [ "$SCHEMA_DRIFT_EXIT" -ne 0 ]; then

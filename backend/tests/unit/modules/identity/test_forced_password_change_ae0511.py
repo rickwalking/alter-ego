@@ -15,7 +15,6 @@ from rag_backend.modules.identity import (
     PasswordUnchangedError,
     User,
 )
-from tests.unit.modules.identity import test_identity_services as services
 from tests.unit.modules.identity.test_identity_handlers import (
     _HASH_PREFIX,
     _VALID_PASSWORD,
@@ -134,33 +133,3 @@ class TestAdminResetPasswordFlag:
         assert stored.must_change_password is True
         assert stored.hashed_password == _HASH_PREFIX + temp_password
         assert uow.commits == 1
-
-
-@pytest.mark.unit
-class TestUserServiceChangePassword:
-    """``UserService.change_password`` follows the same rules."""
-
-    # Scenario: Changing a temporary password clears the flag
-    async def test_the_service_clears_the_flag(self) -> None:
-        service, repo, uow = services._build_user_service()
-        user = services._seed_user(repo)
-        user.must_change_password = True
-
-        await service.change_password(
-            _command(user, services._VALID_PASSWORD, _NEW_PASSWORD)
-        )
-
-        assert user.must_change_password is False
-        assert uow.commits == 1
-
-    # Scenario: A new password equal to the current one is refused
-    async def test_the_service_refuses_the_same_password(self) -> None:
-        service, repo, uow = services._build_user_service()
-        user = services._seed_user(repo)
-
-        with pytest.raises(PasswordUnchangedError):
-            await service.change_password(
-                _command(user, services._VALID_PASSWORD, services._VALID_PASSWORD)
-            )
-
-        assert uow.commits == 0

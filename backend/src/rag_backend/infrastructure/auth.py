@@ -8,6 +8,7 @@ import jwt
 from rag_backend.domain.constants import (
     ENCODING_UTF8,
     JWT_ALGORITHM,
+    JWT_CLAIM_TOKEN_VERSION,
     JWT_TYPE_ANON,
     JWT_TYPE_AUTH,
 )
@@ -21,6 +22,9 @@ def create_access_token(
     expires_delta: timedelta | None = None,
 ) -> str:
     """Create a JWT access token for an authenticated user.
+
+    The token carries the user's token version (claim ``tv``), so a password
+    change, which bumps the version, invalidates every token issued before it.
 
     Args:
         settings: Application settings containing the secret key.
@@ -38,6 +42,7 @@ def create_access_token(
         "email": user.email,
         "role": user.role.value,
         "type": JWT_TYPE_AUTH,
+        JWT_CLAIM_TOKEN_VERSION: user.token_version,
         "exp": expire,
         "iat": datetime.now(UTC),
     }

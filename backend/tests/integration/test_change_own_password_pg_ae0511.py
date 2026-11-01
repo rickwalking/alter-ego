@@ -25,12 +25,12 @@ from tests.integration.change_password_support import (
     OLD_PASSWORD,
     FlowEnv,
     app_over,
-    bearer,
     change_body,
     create_by_admin,
     login,
     reset_by_admin,
     seed_user,
+    sign_in,
     stored_user,
 )
 from tests.integration.pg_schema_support import isolated_schema, requires_postgres
@@ -58,9 +58,9 @@ async def test_reset_login_refused_change_then_allowed() -> None:
 
         temp = await reset_by_admin(env, admin, editor)
         assert (await stored_user(editor.id)).must_change_password is True
-        token = await login(env, (_EDITOR_EMAIL, temp))
-        assert token.status_code == 200
-        async with env.client(bearer(token)) as client:
+        async with env.client() as client:
+            token = await sign_in(client, (_EDITOR_EMAIL, temp))
+            assert token.status_code == 200
             refused = await client.get(CONVERSATIONS_URL)
             flagged_me = await client.get(ME_URL)
             changed = await client.post(
@@ -105,9 +105,9 @@ async def test_admin_created_user_must_change_before_using_the_app() -> None:
 
         user_id, generated = await create_by_admin(env, admin, _CREATED_EMAIL)
         assert (await stored_user(user_id)).must_change_password is True
-        token = await login(env, (_CREATED_EMAIL, generated))
-        assert token.status_code == 200
-        async with env.client(bearer(token)) as client:
+        async with env.client() as client:
+            token = await sign_in(client, (_CREATED_EMAIL, generated))
+            assert token.status_code == 200
             flagged_me = await client.get(ME_URL)
             refused = await client.get(CONVERSATIONS_URL)
             changed = await client.post(
