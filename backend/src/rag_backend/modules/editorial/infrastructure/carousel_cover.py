@@ -195,8 +195,24 @@ class _ProjectStager:
         return await stage_slide_cover(self._session, project)
 
 
-def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService:
-    """The cover switch of one session: project stager + republish renderer."""
+class _NoRender:
+    """A renderer that renders nothing (the stored cover waits for the build)."""
+
+    @staticmethod
+    async def render(project_id: str) -> tuple[str, ...]:
+        """No re-render, so no artifact build, status change or publish."""
+        del project_id
+        return ()
+
+
+def slide_cover_switch_service(
+    session: AsyncSession, *, render: bool = True
+) -> SlideCoverSwitchService:
+    """The cover switch of one session: project stager + republish renderer.
+
+    ``render=False`` keeps the stage and the lock-version CAS write but never
+    re-renders: the carousel's own finalize render picks the cover up.
+    """
     from rag_backend.application.services.carousel.slide_cover_switch import (
         SlideCoverSwitchDeps,
         SlideCoverSwitchService,
@@ -213,7 +229,7 @@ def slide_cover_switch_service(session: AsyncSession) -> SlideCoverSwitchService
             db=session,
             repo=PostgresCarouselRepository(session=session),
             stager=_ProjectStager(session),
-            renderer=RepublishRenderer(session),
+            renderer=RepublishRenderer(session) if render else _NoRender(),
         )
     )
 

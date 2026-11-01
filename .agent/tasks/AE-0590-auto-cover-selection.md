@@ -101,13 +101,16 @@ ticket listed "no automatic picking" as a non-goal; this ticket changes that.
   1. Wait, bounded, for a safe point: re-read the project every few seconds
      until `phase_status != in_progress`. Give up when the deadline passes or
      the carousel is `completed`.
-  2. Guards, each a logged skip: project gone; the carousel is `completed` or
-     `failed` (owner review already started, or the run is over); the
-     autopilot run is not `generating` or has `cover_chosen = true`; the
-     baseline had a `slide_cover`; the current `slide_cover` or
-     `hook_asset_id` differs from the baseline (a manual choice); the
-     generated asset or its file is gone. If `slide_cover` already is the
-     generated asset, the run is a no-op (idempotent).
+  2. Guards, each a logged skip: project gone; the carousel is `completed`,
+     at `final_review` or `failed` (owner review already started, or the run
+     is over); the baseline had a `slide_cover` (the owner's thesis-time
+     GrokBot choice, which is what `cover_chosen = true` produces); the
+     current `slide_cover` or `hook_asset_id` differs from the baseline (a
+     manual choice); the generated asset or its file is gone. If
+     `slide_cover` already is the generated asset, the run is a no-op
+     (idempotent). The autopilot run state is not read: editorial must not
+     import autopilot, and the picker and the review-time Telegram button
+     only act on completed carousels, which are already skipped.
   3. Write through the unchanged `SlideCoverSwitchService`: stage the file,
      then project advisory lock + `lock_version` CAS at the version just read,
      then store `slide_cover` (kind `ai_image`). It uses a no-op renderer, so
@@ -169,16 +172,62 @@ AE-0581 (autopilot auto-cover start).
 ### 2026-11-01
 
 Ticket created (hotfix, Pedro 2026-11-01). Step 1 findings recorded above. A
-read-only prod probe (outside the repo) was handed to the lead; the fix waits
-for the probe output and the go-ahead.
+read-only prod probe (outside the repo) was handed to the lead.
+
+Probe result (lead, prod): none of the 5 latest autopilot carousels with a
+generation had an auto-started one. AE-0581 deployed 2026-10-31 20:07Z with
+`AUTOPILOT_COVER_CONSENT=true`, and no autopilot carousel was created after
+it, so the auto-start path has not run on prod yet. The reported generations
+were manual: each was applied by the owner through `PUT .../cover`. Go-ahead
+given for the design as proposed: autopilot-started generations only, only on
+`succeeded`, only while paused at a gate, never a republish, and a cover that
+finishes after completion stays a picker option. Whether manual generations
+should auto-select too is an open question for Pedro (a possible follow-up).
+`slide_cover` is read only through the existing entity path
+(`slide_cover_from_row`), never with JSON SQL operators.
+
+Implemented: `application/services/carousel/cover_autoselect.py` (selector,
+baseline, owner-choice rules, bounded wait for a gate);
+`modules/editorial/infrastructure/carousel_cover_autoselect.py` (fresh-session
+store, write through the unchanged cover switch with rendering off, the
+succeeded-only task wrapper); `slide_cover_switch_service(render=False)`
+(a no-op renderer: stage + lock + CAS + store only); the autostart wraps its
+own task with the scheduling baseline.
 
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/domain/constants/cover_autoselect.py (new)
+- backend/src/rag_backend/application/services/carousel/cover_autoselect.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autoselect.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autostart.py
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover.py
+- backend/tests/features/autopilot_cover_autoselect_ae0590.feature (new)
+- backend/tests/unit/application/test_cover_autoselect_ae0590.py (new)
+- backend/tests/unit/modules/editorial/test_cover_autoselect_task_ae0590.py (new)
+- backend/tests/integration/test_autopilot_cover_autoselect_pg_ae0590.py (new)
+- backend/tests/integration/test_cover_generation_manual_no_autoselect_ae0590.py (new)
 
 ## Test Evidence
 
-Pending.
+- Unit (selector, fake store): selects at the version read; waits while
+  `in_progress` then selects; times out; owner cover before the job kept;
+  rebound photo and cover set while running kept (`manual_choice`); already
+  selected is a no-op; completed / `final_review` / failed skipped without
+  waiting; CAS conflict skipped once, logged, never retried; write refusal
+  passes through; no result never reads or writes.
+- Unit (task + wiring): only `succeeded` runs the selection; a selection
+  crash is logged; `render=False` never builds the republish renderer; the
+  autostart schedules the wrapped task with the baseline.
+- Postgres integration (real autostart, generation service and runner, asset
+  store, cover switch, repository; fake bridge, inline task):
+  succeeded → `slide_cover` = generated asset (`ai_image`), lock version +1,
+  status unchanged, `is_public` false, no render/finalize/Instagram call;
+  a photo rebound while the job ran is kept; a bridge failure leaves slide 1
+  and the lock version alone; a held project lock is one logged `conflict`
+  skip; a rerun is `already_selected`; store refusals (unknown generation,
+  project, asset; moved baseline) write nothing.
+- Integration (HTTP, SQLite): a manual generation on a paused carousel
+  succeeds and slide 1 is unchanged.
 
 ## QA Report
 
