@@ -304,6 +304,9 @@ or a carousel re-run after the click) is selected.
   The locked write's branches run after a SQLAlchemy greenlet switch, which
   the tracer does not follow, so fake-based unit tests cover them besides the
   Postgres tests.
+  After the manual-route change: all gates rerun individually, PASS, none
+  skipped; test 8135 passed, 2 skipped; diff-cover 100%, 0 missing lines
+  (see `.agent/reports/AE-0590.dev-summary.md`).
   Python 3.11 import check OK (3.11.15). mutation: deferred to CI (hotfix
   fast path); CI must be green before merge (no `--admin`).
 
