@@ -219,8 +219,13 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U rag_user rag_
 The backend's rate limits (login and change-password: 5 per minute) key on the visitor's address:
 
 - nginx reads the visitor from `CF-Connecting-IP`, only when the peer is a Cloudflare range (`set_real_ip_from` in
-  `nginx/nginx.conf.ssl`; refresh from <https://www.cloudflare.com/ips/> if Cloudflare adds ranges). It sends
-  `X-Forwarded-For: $remote_addr` upstream, never an appended client-supplied header.
+  `nginx/nginx.conf.ssl`). It sends `X-Forwarded-For: $remote_addr` upstream, never an appended client-supplied header.
+- The Cloudflare ranges are a pinned list (checked 2026-11-01), not fetched at deploy time, so a Cloudflare outage can
+  never break a deploy. To refresh: copy <https://www.cloudflare.com/ips-v4> and <https://www.cloudflare.com/ips-v6>
+  into the `set_real_ip_from` lines of both `nginx/nginx.conf.ssl` and `nginx/nginx.conf`, run
+  `docker run --rm -v "$PWD/nginx/nginx.conf.ssl:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t`, and ship it as a
+  normal PR. A missing range only makes those visitors key on the Cloudflare edge again (no spoofing risk). AE-0592
+  tracks a weekly check that flags a difference.
 - nginx has the fixed address `172.18.200.10` on the pinned compose network (`172.18.0.0/16`, dynamic addresses from
   `172.18.0.0/17` only). The backend runs uvicorn with `--proxy-headers` and `FORWARDED_ALLOW_IPS=127.0.0.1,172.18.200.10`,
   so it trusts `X-Forwarded-For` from nginx and nobody else.
