@@ -17,6 +17,7 @@ import { responseErrorBody } from "@/lib/response-error";
 import { CreatePasswordField } from "./create-password-field";
 import { DialogDoneButton } from "./dialog-done-button";
 import {
+  DIALOG_MUTED_TEXT_CLASS,
   UserDialogActions,
   UserDialogShell,
   useDialogStatus,
@@ -67,11 +68,23 @@ function buildPayload(
   return password ? { ...fields, password } : fields;
 }
 
+/** The create result, with the note that the user must change the password. */
+function CreatedMessage({ message }: Readonly<{ message: string }>) {
+  const t = useTranslations("admin");
+  return (
+    <>
+      <p>{message}</p>
+      <p className="mt-1">{t("createMustChangeNote")}</p>
+    </>
+  );
+}
+
 /**
  * The create-user dialog. Once the user is created it shows the result (with
  * the one-time temporary password when the API generated one) and only its
  * "Done" button closes it: Escape and the backdrop are ignored, so the
- * password cannot be dismissed by accident.
+ * password cannot be dismissed by accident. Before and after creating, it
+ * says the new user must change the password at the first sign-in.
  */
 export function CreateUserDialog({
   onClose,
@@ -131,7 +144,9 @@ export function CreateUserDialog({
       title={t("createUserTitle")}
       onClose={succeeded ? ignoreClose : onClose}
       error={status.error}
-      success={status.success}
+      success={
+        succeeded ? <CreatedMessage message={status.success} /> : undefined
+      }
     >
       {succeeded && <DialogDoneButton onDone={onSuccess} />}
       {!succeeded && (
@@ -142,6 +157,10 @@ export function CreateUserDialog({
           }}
           className="mt-4 space-y-4"
         >
+          <p className={DIALOG_MUTED_TEXT_CLASS}>
+            {t("createUserDescription")}
+          </p>
+
           <UserFormField
             id={`${fieldId}-email`}
             label={t("emailLabel")}

@@ -11421,7 +11421,7 @@
         ]
       },
       "post": {
-        "description": "Create a new user. Admin only.\n\nIf password is not provided, a secure temporary password is generated.",
+        "description": "Create a new user. Admin only.\n\nIf password is not provided, a secure temporary password is generated.\nThe new user must change the password at the first sign-in.",
         "operationId": "create_user_api_admin_users_post",
         "requestBody": {
           "content": {

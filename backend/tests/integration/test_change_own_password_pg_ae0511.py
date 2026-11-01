@@ -1,6 +1,7 @@
-"""The admin reset and forced password change flow on real Postgres.
+"""The admin reset, admin create and forced password change flows on real Postgres.
 
-Scenarios: ``tests/features/change_own_password_ae0511.feature``. Runs the real
+Scenarios: ``tests/features/change_own_password_ae0511.feature`` and
+``tests/features/force_change_for_created_users_ae0587.feature``. Runs the real
 app against a throwaway Postgres schema holding the users and conversations
 tables, so the flag is the real column the production adapter reads and
 writes. Skipped unless ``DATABASE_URL`` points at Postgres (CI's backend test
@@ -26,6 +27,7 @@ from tests.integration.change_password_support import (
     app_over,
     bearer,
     change_body,
+    create_by_admin,
     login,
     reset_by_admin,
     seed_user,
@@ -36,6 +38,7 @@ from tests.integration.pg_schema_support import isolated_schema, requires_postgr
 _TABLES = ("users", "conversations", "messages")
 _ADMIN_EMAIL = "flow-admin@integration.example.com"
 _EDITOR_EMAIL = "flow-editor@integration.example.com"
+_CREATED_EMAIL = "flow-created@integration.example.com"
 
 pytestmark = [pytest.mark.integration, requires_postgres]
 
@@ -93,3 +96,30 @@ async def test_a_wrong_current_password_leaves_the_stored_user_unchanged() -> No
         assert stored.hashed_password == editor.hashed_password
         assert stored.must_change_password is False
         assert (await login(env, (_EDITOR_EMAIL, OLD_PASSWORD))).status_code == 200
+
+
+# Scenario: A created user is refused on protected endpoints until the change
+async def test_admin_created_user_must_change_before_using_the_app() -> None:
+    async with _pg_env() as env:
+        admin = await seed_user(_ADMIN_EMAIL, UserRole.ADMIN)
+
+        user_id, generated = await create_by_admin(env, admin, _CREATED_EMAIL)
+        assert (await stored_user(user_id)).must_change_password is True
+        token = await login(env, (_CREATED_EMAIL, generated))
+        assert token.status_code == 200
+        async with env.client(bearer(token)) as client:
+            flagged_me = await client.get(ME_URL)
+            refused = await client.get(CONVERSATIONS_URL)
+            changed = await client.post(
+                CHANGE_URL, json=change_body(generated, NEW_PASSWORD)
+            )
+            allowed = await client.get(CONVERSATIONS_URL)
+
+        assert flagged_me.json()["must_change_password"] is True
+        assert refused.status_code == 403
+        assert refused.json()["code"] == CODE_CHANGE_REQUIRED
+        assert changed.status_code == 204
+        assert (await stored_user(user_id)).must_change_password is False
+        assert allowed.status_code == 200
+        assert (await login(env, (_CREATED_EMAIL, generated))).status_code == 401
+        assert (await login(env, (_CREATED_EMAIL, NEW_PASSWORD))).status_code == 200

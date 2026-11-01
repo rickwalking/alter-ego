@@ -114,3 +114,15 @@ async def reset_by_admin(env: FlowEnv, admin: User, target: User) -> str:
 def change_body(current: str, new: str) -> dict[str, str]:
     """The change-password request body."""
     return {"current_password": current, "new_password": new}
+
+
+async def create_by_admin(env: FlowEnv, admin: User, email: str) -> tuple[UUID, str]:
+    """Create an editor as ``admin`` without a password; its id and password."""
+    async with env.client_for(admin) as client:
+        resp = await client.post(
+            "/api/admin/users",
+            json={"email": email, "full_name": "Created User", "role": "editor"},
+        )
+    assert resp.status_code == 201
+    body = resp.json()
+    return UUID(body["id"]), str(body["temp_password"])
