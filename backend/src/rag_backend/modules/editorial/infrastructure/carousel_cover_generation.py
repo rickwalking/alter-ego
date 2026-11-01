@@ -291,11 +291,11 @@ def cover_generation_runner(
 
 def cover_generation_task(
     wiring: CoverRunWiring, run: CoverGenerationRun
-) -> Callable[[], Awaitable[object]]:
+) -> Callable[[], Awaitable[CoverGenerationStatus]]:
     """The background run of ``run`` on its own session."""
     from rag_backend.infrastructure.database.config import get_session_maker
 
-    async def _execute() -> object:
+    async def _execute() -> CoverGenerationStatus:
         async with get_session_maker()() as session:
             return await cover_generation_runner(session, wiring).run(run)
 

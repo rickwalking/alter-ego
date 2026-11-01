@@ -403,3 +403,76 @@ async def _generation_id(engine: AsyncEngine, project_id: str) -> UUID:
     async with factory() as session:
         rows = await SqlCoverGenerationRepository(session).for_project(project_id)
     return rows[0].id
+
+
+def _before_write(
+    monkeypatch: pytest.MonkeyPatch, engine: AsyncEngine, values: dict[str, object]
+) -> None:
+    """Commit ``values`` on the project from another session, after the re-check."""
+    from rag_backend.modules.editorial.infrastructure import carousel_cover_autoselect
+
+    original = carousel_cover_autoselect._stage
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def _stage_then_owner_write(
+        session: object, target: tuple[object, object]
+    ) -> bool:
+        project_id = str(target[0].id)
+        async with factory() as other:
+            await other.execute(
+                update(CarouselProjectModel)
+                .where(CarouselProjectModel.id == project_id)
+                .values(**values)
+            )
+            await other.commit()
+        return await original(session, target)
+
+    monkeypatch.setattr(carousel_cover_autoselect, "_stage", _stage_then_owner_write)
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_photo_bound_right_before_the_write_is_kept(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An owner photo committed after the re-check is never written over."""
+    # Scenario: An owner photo bound while the write runs is kept
+    async with isolated_schema(_tables()) as engine:
+        project_id, photos = await _seed(engine, dirs)
+        harness = _harness(engine, monkeypatch)
+        task = await _start(harness, project_id)
+        _before_write(monkeypatch, engine, {"hook_asset_id": photos[1]})
+
+        with capture_logs() as logs:
+            await task()
+
+        row = await _row(engine, project_id)
+        assert row.hook_asset_id == photos[1]
+        assert row.slide_cover is None
+        assert row.lock_version == 3
+        skips = [e for e in logs if e["event"] == LOG_COVER_AUTO_SELECT]
+        assert [e["reason"] for e in skips] == [REASON_AUTO_SELECT_MANUAL_CHOICE]
+
+
+@requires_postgres
+@pytest.mark.asyncio
+async def test_lock_version_moved_before_the_write_is_a_skip(
+    dirs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A version bumped after the selection read it makes the CAS refuse."""
+    # Scenario: A lock version moved before the write is a skip
+    async with isolated_schema(_tables()) as engine:
+        project_id, photos = await _seed(engine, dirs)
+        harness = _harness(engine, monkeypatch)
+        task = await _start(harness, project_id)
+        _before_write(monkeypatch, engine, {"lock_version": 5})
+
+        with capture_logs() as logs:
+            await task()
+
+        row = await _row(engine, project_id)
+        assert row.slide_cover is None
+        assert row.hook_asset_id == photos[0]
+        assert row.lock_version == 5
+        skips = [e for e in logs if e["event"] == LOG_COVER_AUTO_SELECT]
+        assert [e["reason"] for e in skips] == [REASON_AUTO_SELECT_CONFLICT]

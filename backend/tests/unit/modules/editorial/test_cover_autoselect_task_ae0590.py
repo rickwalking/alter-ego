@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from structlog.testing import capture_logs
 
 from rag_backend.application.services.carousel import cover_generation_tasks
@@ -25,7 +24,6 @@ from rag_backend.domain.constants.cover_autoselect import (
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.cover_generation import CoverGenerationStatus
 from rag_backend.modules.editorial.infrastructure import (
-    carousel_cover,
     carousel_cover_autoselect,
     carousel_cover_autostart,
 )
@@ -52,8 +50,10 @@ class _Selector:
         return "selected"
 
 
-def _generate(status: CoverGenerationStatus) -> Callable[[], Awaitable[object]]:
-    async def _run() -> object:
+def _generate(
+    status: CoverGenerationStatus,
+) -> Callable[[], Awaitable[CoverGenerationStatus]]:
+    async def _run() -> CoverGenerationStatus:
         return status
 
     return _run
@@ -108,27 +108,6 @@ class TestAutopilotCoverTask:
 
         assert logs[-1]["event"] == LOG_COVER_AUTO_SELECT
         assert logs[-1]["outcome"] == OUTCOME_AUTO_SELECT_CRASHED
-
-
-@pytest.mark.unit
-class TestNoRenderSwitch:
-    # Scenario: The selection never re-renders or publishes
-    @pytest.mark.asyncio
-    async def test_render_off_never_republishes(
-        self, monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession
-    ) -> None:
-        def _no_republish(_session: object) -> object:
-            raise AssertionError
-
-        from rag_backend.modules.editorial.infrastructure import (
-            carousel_owner_autofix,
-        )
-
-        monkeypatch.setattr(carousel_owner_autofix, "RepublishRenderer", _no_republish)
-
-        service = carousel_cover.slide_cover_switch_service(db_session, render=False)
-
-        assert await service._deps.renderer.render("p-1") == ()
 
 
 @dataclass(frozen=True)

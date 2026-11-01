@@ -31,7 +31,9 @@ from rag_backend.domain.constants.carousel_autofix import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_FINAL_REVIEW,
+    PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
+    PHASE_STATUS_REJECTED,
 )
 from rag_backend.domain.constants.cover_autoselect import (
     AUTO_SELECT_MAX_WAIT_SECONDS,
@@ -138,14 +140,19 @@ def choice_refusal(
 
 
 def _phase_refusal(project: CarouselProject) -> str | None:
-    """The owner's review already started, or the carousel failed."""
+    """The owner's review already started, or the carousel or phase ended."""
     if project.status == CarouselStatus.FAILED:
         return REASON_AUTO_SELECT_FAILED
     if project.status == CarouselStatus.COMPLETED:
         return REASON_AUTO_SELECT_COMPLETED
     if project.current_phase == PHASE_FINAL_REVIEW:
         return REASON_AUTO_SELECT_COMPLETED
+    if project.phase_status in _ENDED_PHASE_STATUSES:
+        return REASON_AUTO_SELECT_FAILED
     return None
+
+
+_ENDED_PHASE_STATUSES = frozenset({PHASE_STATUS_REJECTED, PHASE_STATUS_FAILED})
 
 
 _WRITE_REFUSALS: dict[str, str] = {
@@ -153,8 +160,19 @@ _WRITE_REFUSALS: dict[str, str] = {
 }
 
 
+_WARNING_REASONS = frozenset(
+    {
+        REASON_AUTO_SELECT_NO_RESULT,
+        REASON_AUTO_SELECT_NO_PROJECT,
+        REASON_AUTO_SELECT_TIMED_OUT,
+    }
+)
+
+
 def _log(selection: AutoCoverSelection, outcome: str, reason: str = "") -> str:
-    logger.info(
+    """Log the outcome; a lost row or a wait that ran out is a warning."""
+    log = logger.warning if reason in _WARNING_REASONS else logger.info
+    log(
         LOG_COVER_AUTO_SELECT,
         outcome=outcome,
         reason=reason,

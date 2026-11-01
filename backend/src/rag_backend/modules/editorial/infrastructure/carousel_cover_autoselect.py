@@ -16,10 +16,13 @@ editorial facade loads while the ORM registry is still initialising).
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import structlog
+from sqlalchemy import CursorResult, Text, cast, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.cover_autoselect import (
@@ -29,20 +32,27 @@ from rag_backend.application.services.carousel.cover_autoselect import (
     ProjectAtVersion,
     choice_refusal,
 )
+from rag_backend.domain.constants.carousel_autofix import (
+    AUTOFIX_STATUS_CONFLICT,
+    AUTOFIX_STATUS_FIXED,
+)
 from rag_backend.domain.constants.cover_autoselect import (
     LOG_COVER_AUTO_SELECT,
     OUTCOME_AUTO_SELECT_CRASHED,
     REASON_AUTO_SELECT_ASSET_GONE,
+    REASON_AUTO_SELECT_MANUAL_CHOICE,
     REASON_AUTO_SELECT_NO_PROJECT,
 )
 from rag_backend.domain.constants.slide_cover import COVER_KIND_AI_IMAGE
+from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
 from rag_backend.domain.models.cover_generation import CoverGenerationStatus
-from rag_backend.domain.models.slide_cover import SlideCover
+from rag_backend.domain.models.slide_cover import SlideCover, slide_cover_row
 
 logger = structlog.get_logger(__name__)
 
 SessionFactory = Callable[[], AsyncSession]
+_JSON_NULL = "null"
 
 
 class EditorialAutoCoverStore:
@@ -88,14 +98,9 @@ class EditorialAutoCoverStore:
 
 
 async def _write(session: AsyncSession, command: AutoCoverWrite) -> str:
-    from rag_backend.application.services.carousel.slide_cover_switch import (
-        SlideCoverSwitchCommand,
-    )
+    """Re-check, stage, then the locked conditional write."""
     from rag_backend.modules.editorial.infrastructure.carousel_automation import (
         CarouselAutomationAcl,
-    )
-    from rag_backend.modules.editorial.infrastructure.carousel_cover import (
-        slide_cover_switch_service,
     )
 
     project = await CarouselAutomationAcl(session).load_project(command.project_id)
@@ -110,14 +115,82 @@ async def _write(session: AsyncSession, command: AutoCoverWrite) -> str:
     cover = SlideCover(
         asset_id=asset.id, kind=COVER_KIND_AI_IMAGE, staged_path=asset.relative_path
     )
-    result = await slide_cover_switch_service(session, render=False).switch(
-        SlideCoverSwitchCommand(
-            project_id=command.project_id,
-            expected_version=command.expected_version,
-            cover=cover,
-        )
+    if not await _stage(session, (project, cover)):
+        return REASON_AUTO_SELECT_ASSET_GONE
+    return await _locked_store(session, _CoverStore(command=command, cover=cover))
+
+
+async def _stage(
+    session: AsyncSession, target: tuple[CarouselProject, SlideCover]
+) -> bool:
+    """Copy the cover where the slides render (nothing is persisted)."""
+    from rag_backend.modules.editorial.infrastructure.carousel_cover import (
+        stage_slide_cover,
     )
-    return result.status
+
+    project, cover = target
+    return await stage_slide_cover(session, replace(project, slide_cover=cover))
+
+
+@dataclass(frozen=True, kw_only=True)
+class _CoverStore:
+    command: AutoCoverWrite
+    cover: SlideCover
+
+
+async def _locked_store(session: AsyncSession, store: _CoverStore) -> str:
+    """Project lock + the unchanged lock-version CAS, then the conditional write.
+
+    A held lock or a moved version is ``conflict``; a cover field that moved
+    since the baseline (an owner write that takes no lock) is
+    ``manual_choice`` and the CAS bump is rolled back with it.
+    """
+    from rag_backend.application.services.carousel.owner_autofix_lock import (
+        AutofixConflictError,
+        LockedWrite,
+        write_locked,
+    )
+
+    target = LockedWrite(
+        project_id=store.command.project_id,
+        expected_version=store.command.expected_version,
+    )
+    try:
+        stored = await write_locked(
+            session, target, lambda: _store_if_unchanged(session, store)
+        )
+    except AutofixConflictError:
+        return AUTOFIX_STATUS_CONFLICT
+    return AUTOFIX_STATUS_FIXED if stored else REASON_AUTO_SELECT_MANUAL_CHOICE
+
+
+async def _store_if_unchanged(session: AsyncSession, store: _CoverStore) -> bool:
+    """Set only ``slide_cover``, only while both cover fields match the baseline.
+
+    ``hook_asset_id`` is never written. The match is evaluated by the database
+    on the committed row, so an owner write that landed after the re-check is
+    never overwritten.
+    """
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel as Row,
+    )
+
+    hook = store.command.baseline.hook_asset_id
+    result = await session.execute(
+        update(Row)
+        .where(
+            Row.id == store.command.project_id,
+            or_(Row.slide_cover.is_(None), cast(Row.slide_cover, Text) == _JSON_NULL),
+            Row.hook_asset_id.is_not_distinct_from(str(hook) if hook else None),
+        )
+        .values(slide_cover=slide_cover_row(store.cover))
+        .execution_options(synchronize_session=False)
+    )
+    if typing.cast("CursorResult[object]", result).rowcount != 1:
+        await session.rollback()
+        return False
+    await session.commit()
+    return True
 
 
 async def _generated_asset(
@@ -153,11 +226,16 @@ async def _select(selection: AutoCoverSelection) -> None:
 
 
 def autopilot_cover_task(
-    generate: Callable[[], Awaitable[object]], selection: AutoCoverSelection
-) -> Callable[[], Awaitable[object]]:
-    """``generate``, then the selection only when it ``succeeded``."""
+    generate: Callable[[], Awaitable[CoverGenerationStatus]],
+    selection: AutoCoverSelection,
+) -> Callable[[], Awaitable[CoverGenerationStatus]]:
+    """``generate``, then the selection only when it ``succeeded``.
 
-    async def _execute() -> object:
+    A restart or a deploy while the selection waits loses it: the cover then
+    stays a picker option.
+    """
+
+    async def _execute() -> CoverGenerationStatus:
         status = await generate()
         if status is CoverGenerationStatus.SUCCEEDED:
             await _select(selection)

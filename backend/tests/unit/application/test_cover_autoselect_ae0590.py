@@ -162,6 +162,7 @@ class TestAutoCoverSelector:
         assert sleeps.calls == [5.0, 5.0, 5.0]
         assert store.writes == []
         assert logs[-1]["reason"] == REASON_AUTO_SELECT_TIMED_OUT
+        assert logs[-1]["log_level"] == "warning"
 
     # Scenario: A cover the owner chose before the job is kept
     @pytest.mark.asyncio
@@ -215,12 +216,17 @@ class TestAutoCoverSelector:
             ({"status": CarouselStatus.COMPLETED}, REASON_AUTO_SELECT_COMPLETED),
             ({"current_phase": "final_review"}, REASON_AUTO_SELECT_COMPLETED),
             ({"status": CarouselStatus.FAILED}, REASON_AUTO_SELECT_FAILED),
+            ({"phase_status": "rejected"}, REASON_AUTO_SELECT_FAILED),
+            ({"phase_status": "failed"}, REASON_AUTO_SELECT_FAILED),
         ],
     )
     async def test_review_or_failed_carousel_is_skipped(
         self, changes: dict[str, object], reason: str
     ) -> None:
-        store = _Store(reads=[_project(phase_status="in_progress", **changes)])
+        base = _project(phase_status="in_progress")
+        for name, value in changes.items():
+            setattr(base, name, value)
+        store = _Store(reads=[base])
         sleeps = _Sleeps()
 
         outcome = await _selector(store, sleeps).select(_selection())
@@ -240,6 +246,7 @@ class TestAutoCoverSelector:
         assert outcome == REASON_AUTO_SELECT_CONFLICT
         assert len(store.writes) == 1
         assert logs[-1]["reason"] == REASON_AUTO_SELECT_CONFLICT
+        assert logs[-1]["log_level"] == "info"
 
     # Scenario: A generated cover whose file is gone is skipped
     @pytest.mark.asyncio

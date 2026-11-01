@@ -1,4 +1,4 @@
-"""A manual Grok cover generation is never auto-selected for slide 1.
+"""A manual generation is never auto-selected; the owner's photo wins.
 
 Feature: Use the autopilot's generated cover on slide 1
 (tests/features/autopilot_cover_autoselect_ae0590.feature). The real app
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -17,6 +18,7 @@ from httpx import AsyncClient
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from tests.integration.cover_generation_support import (
+    BLUE,
     RED,
     FakeEditor,
     generate,
@@ -59,3 +61,37 @@ async def test_manual_generation_is_only_a_picker_option(
         assert model.slide_cover is None
         assert model.hook_asset_id == photo["id"]
         assert model.lock_version == 4
+
+
+@pytest.mark.integration
+async def test_hook_photo_clears_an_auto_selected_cover(
+    client: AsyncClient, asset_dirs: Path
+) -> None:
+    """The owner's latest slide-1 photo wins over a stored generated cover."""
+    # Scenario: Binding a slide-1 photo clears an auto-selected cover
+    first = await upload_photo(client, RED)
+    second = await upload_photo(client, BLUE)
+    project_id = await project(client, first["id"])
+    await set_project(
+        project_id,
+        status="drafting",
+        phase_status="awaiting_human",
+        slide_cover={
+            "asset_id": str(uuid4()),
+            "kind": "ai_image",
+            "staged_path": "cover.webp",
+            "credit": "",
+        },
+    )
+
+    response = await client.put(
+        f"/api/carousels/{project_id}/hook-photo",
+        json={"creator_asset_id": second["id"]},
+    )
+
+    assert response.status_code == 200, response.text
+    async with get_session_maker()() as session:
+        model = await session.get(CarouselProjectModel, project_id)
+        assert model is not None
+        assert model.slide_cover is None
+        assert model.hook_asset_id == second["id"]

@@ -68,3 +68,18 @@ Feature: Use the autopilot's generated cover on slide 1 (AE-0590)
     Given the owner starts a generation from the publish step
     When it succeeds
     Then slide 1 is unchanged and the cover is only a picker option
+
+  Scenario: An owner photo bound while the write runs is kept
+    Given the owner binds another slide-1 photo right before the locked write
+    When the selection writes
+    Then the owner's photo is kept, slide_cover stays empty and the reason is manual_choice
+
+  Scenario: A lock version moved before the write is a skip
+    Given another writer moved the lock version after the selection read it
+    When the selection writes
+    Then nothing is written and the skip reason is conflict
+
+  Scenario: Binding a slide-1 photo clears an auto-selected cover
+    Given slide 1 shows an auto-selected generated cover
+    When the owner binds a library photo with PUT hook-photo
+    Then slide_cover is cleared and slide 1 shows the owner's photo

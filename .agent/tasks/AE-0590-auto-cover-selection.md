@@ -111,11 +111,30 @@ ticket listed "no automatic picking" as a non-goal; this ticket changes that.
      (idempotent). The autopilot run state is not read: editorial must not
      import autopilot, and the picker and the review-time Telegram button
      only act on completed carousels, which are already skipped.
-  3. Write through the unchanged `SlideCoverSwitchService`: stage the file,
-     then project advisory lock + `lock_version` CAS at the version just read,
-     then store `slide_cover` (kind `ai_image`). It uses a no-op renderer, so
-     there is no republish, no status change and no publish.
+  3. Stage the file, then, under the project advisory lock and the unchanged
+     `lock_version` CAS (`write_locked`) at the version just read, run one
+     conditional UPDATE that sets only `slide_cover` (kind `ai_image`)
+     `WHERE slide_cover IS NULL (or JSON null) AND hook_asset_id IS NOT
+     DISTINCT FROM <baseline>`. `hook_asset_id` is never written. No
+     renderer is called: no republish, no status change, no publish. When the
+     UPDATE matches no row (an owner write that takes no lock, such as
+     `PUT /hook-photo`, landed after the re-check), the CAS bump is rolled
+     back and the skip reason is `manual_choice`.
   4. On a CAS conflict or a held lock: skip and log. Never retry, never force.
+  5. Skips for a lost row (`no_result`, `no_project`) and for `timed_out`
+     log at warning; the others at info. A `rejected` or `failed`
+     `phase_status` ends the wait like a failed carousel.
+- `PUT /carousels/{id}/hook-photo` (`select_hook_photo`) now clears
+  `slide_cover`, as the picker already does for a library photo, so the
+  owner's latest slide-1 photo wins over a stored generated cover. The
+  frontend does not call this route (API only), and the create-time bind
+  runs on a project with no cover, so nothing else changes. A run whose
+  owner chose the topic's GrokBot cover on Telegram keeps
+  `cover_chosen = true` after such a rebind; that flag only drives the
+  Telegram keyboard.
+- Known limit: the wait runs inside the in-process background task, so a
+  restart or a deploy while it waits loses the selection. The cover then
+  stays a picker option, which is today's behavior.
 - A failed or refused generation never calls the selection. The current
   cover is left alone.
 - Manual generations (HTTP route) keep today's behavior.
@@ -189,10 +208,16 @@ should auto-select too is an open question for Pedro (a possible follow-up).
 Implemented: `application/services/carousel/cover_autoselect.py` (selector,
 baseline, owner-choice rules, bounded wait for a gate);
 `modules/editorial/infrastructure/carousel_cover_autoselect.py` (fresh-session
-store, write through the unchanged cover switch with rendering off, the
-succeeded-only task wrapper); `slide_cover_switch_service(render=False)`
-(a no-op renderer: stage + lock + CAS + store only); the autostart wraps its
-own task with the scheduling baseline.
+store, the locked conditional write, the succeeded-only task wrapper); the
+autostart wraps its own task with the scheduling baseline.
+
+Review fixes (lead review, nothing blocking): the write no longer goes through
+`SlideCoverSwitchService` (whose re-read could reuse a cached project and
+write a stale `hook_asset_id` back). It is now a conditional UPDATE of
+`slide_cover` alone inside the unchanged lock + CAS (`render=False` was
+removed again). `PUT /hook-photo` clears `slide_cover`. A `rejected` or
+`failed` `phase_status` is a skip. The generation task is typed
+`CoverGenerationStatus`. Lost-row and timeout skips log at warning.
 
 ## Files Touched
 
@@ -200,7 +225,8 @@ own task with the scheduling baseline.
 - backend/src/rag_backend/application/services/carousel/cover_autoselect.py (new)
 - backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autoselect.py (new)
 - backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_autostart.py
-- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover.py
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_cover_generation.py
+- backend/src/rag_backend/application/services/carousel/creator_asset_service.py
 - backend/tests/features/autopilot_cover_autoselect_ae0590.feature (new)
 - backend/tests/unit/application/test_cover_autoselect_ae0590.py (new)
 - backend/tests/unit/modules/editorial/test_cover_autoselect_task_ae0590.py (new)
@@ -213,11 +239,12 @@ own task with the scheduling baseline.
   `in_progress` then selects; times out; owner cover before the job kept;
   rebound photo and cover set while running kept (`manual_choice`); already
   selected is a no-op; completed / `final_review` / failed skipped without
-  waiting; CAS conflict skipped once, logged, never retried; write refusal
-  passes through; no result never reads or writes.
+  waiting, and so are `rejected` / `failed` phase statuses; CAS conflict
+  skipped once, logged at info, never retried; timeout logged at warning;
+  write refusal passes through; no result never reads or writes.
 - Unit (task + wiring): only `succeeded` runs the selection; a selection
-  crash is logged; `render=False` never builds the republish renderer; the
-  autostart schedules the wrapped task with the baseline.
+  crash is logged; the autostart schedules the wrapped task with the
+  baseline.
 - Postgres integration (real autostart, generation service and runner, asset
   store, cover switch, repository; fake bridge, inline task):
   succeeded → `slide_cover` = generated asset (`ai_image`), lock version +1,
@@ -225,9 +252,13 @@ own task with the scheduling baseline.
   a photo rebound while the job ran is kept; a bridge failure leaves slide 1
   and the lock version alone; a held project lock is one logged `conflict`
   skip; a rerun is `already_selected`; store refusals (unknown generation,
-  project, asset; moved baseline) write nothing.
+  project, asset; moved baseline) write nothing; an owner photo committed
+  between the re-check and the locked UPDATE is kept (`manual_choice`, lock
+  version unchanged; the test fails without the `hook_asset_id` guard); a
+  lock version moved after the read is a `conflict` skip.
 - Integration (HTTP, SQLite): a manual generation on a paused carousel
-  succeeds and slide 1 is unchanged.
+  succeeds and slide 1 is unchanged; `PUT /hook-photo` clears a stored
+  generated `slide_cover` (the test fails without the fix).
 - Backend gates green locally (hotfix fast path, each run individually with
   the Postgres `DATABASE_URL`): format, lint, lint-diff, blanket-ignore,
   strict-diff, type, imports, arch-ratchet, docstrings, dead-code,
