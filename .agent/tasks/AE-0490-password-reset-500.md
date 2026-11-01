@@ -99,7 +99,8 @@ tests; their pinned-500 twins are removed).
 
 ## Dependencies
 
-- Blocks: AE-0511 (self-service change-password UI).
+- Blocks: AE-0511 (self-service change-password UI and forced change after a reset:
+  `.agent/tasks/AE-0511-change-own-password.md`).
 - Blocked by: none.
 - Related: AE-0097 (pinned the defect baseline).
 
