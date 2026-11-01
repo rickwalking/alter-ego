@@ -1,0 +1,25 @@
+---
+name: carousel_copy_budget_slide_limits
+version: "1.0.0"
+description: "This slide's copy limits, rendered from the presentation contract the validator enforces"
+
+template: |
+  Copy limits of this slide ({{ slide_type }}). Code checks every limit after
+  you answer and blocks the slide when one is exceeded; characters include
+  spaces, punctuation and emphasis marks.
+  {% for limit in limits -%}
+  - {{ limit.field }}: at most {{ limit.max_characters }} characters
+    {%- if limit.max_lines %}, at most {{ limit.max_lines }} {{ 'line' if limit.max_lines == 1 else 'lines' }}{% endif %}
+    {%- if limit.max_words %}, at most {{ limit.max_words }} words{% endif %}
+    {%- if limit.min_words %}, at least {{ limit.min_words }} words{% endif %}
+  {% endfor -%}
+  These limits apply to the Portuguese and to the English copy. Write each
+  field inside its limit from the start, with complete sentences: never rely on
+  the text being cut later.
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-11-01"
+  tags: ["carousel", "copy-budget", "content", "translation"]

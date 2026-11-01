@@ -37,7 +37,7 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.news_quotes import CARD_KEY_QUOTE_ID
 from rag_backend.domain.constants.pov_prompts import (
     POV_PROMPT_CONTENT,
-    POV_PROMPT_VERSION,
+    POV_PROMPT_CONTENT_VERSION,
     RADAR_PROMPT_CONTENT,
     RADAR_PROMPT_DOMAIN,
     RADAR_PROMPT_VERSION,
@@ -110,7 +110,7 @@ def _render_content_prompt(
             "cta_copy": pov.cta_copy,
             "quotes": quote_prompt_rows(pov.pov.quotes),
         },
-        version=POV_PROMPT_VERSION,
+        version=POV_PROMPT_CONTENT_VERSION,
     )
 
 

@@ -4,7 +4,9 @@
 same prompt names and version as ``carousel_pov``, only the domain differs. The
 ``RADAR_*`` ids are the Radar IA v7 prompts used by ``hero_lower_third_v4``
 projects. ``PERSONA_POV_*`` name the persona block of the POV outline; a project
-with no persona gets the explicit empty ``NO_PERSONA_CONTEXT``.
+with no persona gets the explicit empty ``NO_PERSONA_CONTEXT``. The slide
+content renders from ``POV_PROMPT_CONTENT_VERSION`` (no hardcoded limits: the
+contract's arrive in the instruction context).
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ POV_PROMPT_OUTLINE = "outline"
 POV_PROMPT_HOOK = "hook"
 POV_PROMPT_HOOK_VERSION = "v2"
 POV_PROMPT_CONTENT = "content"
+POV_PROMPT_CONTENT_VERSION = "v3"
 POV_PROMPT_CAPTION = "caption"
 POV_NEWS_PROMPT_DOMAIN = "carousel_pov_news"
 HOOK_CANDIDATE_COUNT = 5
@@ -46,6 +49,7 @@ __all__ = [
     "POV_NEWS_PROMPT_DOMAIN",
     "POV_PROMPT_CAPTION",
     "POV_PROMPT_CONTENT",
+    "POV_PROMPT_CONTENT_VERSION",
     "POV_PROMPT_DOMAIN",
     "POV_PROMPT_HOOK",
     "POV_PROMPT_HOOK_VERSION",
