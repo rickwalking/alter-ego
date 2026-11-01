@@ -1,6 +1,6 @@
 # AE-0589 — Rate limits see nginx's address: one login bucket for every user
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bug
