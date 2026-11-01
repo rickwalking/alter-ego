@@ -214,6 +214,22 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U rag_user rag_
 0 2 * * * cd /opt/alter-ego && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U rag_user rag_db > /backups/rag_db_$(date +\%Y\%m\%d).sql
 ```
 
+### Client Addresses and Rate Limits
+
+The backend's rate limits (login and change-password: 5 per minute) key on the visitor's address:
+
+- nginx reads the visitor from `CF-Connecting-IP`, only when the peer is a Cloudflare range (`set_real_ip_from` in
+  `nginx/nginx.conf.ssl`; refresh from <https://www.cloudflare.com/ips/> if Cloudflare adds ranges). It sends
+  `X-Forwarded-For: $remote_addr` upstream, never an appended client-supplied header.
+- nginx has the fixed address `172.18.200.10` on the pinned compose network (`172.18.0.0/16`, dynamic addresses from
+  `172.18.0.0/17` only). The backend runs uvicorn with `--proxy-headers` and `FORWARDED_ALLOW_IPS=127.0.0.1,172.18.200.10`,
+  so it trusts `X-Forwarded-For` from nginx and nobody else.
+- Server-side calls from the frontend container (the no-JavaScript `/auth/login` form) reach `backend:8000` directly and
+  key on the frontend container. nginx's per-visitor `limit_req` on `/auth/login` covers that path.
+
+Check: `docker compose -f docker-compose.prod.yml logs --tail=50 backend` shows visitor addresses on `/api/auth/*`, not
+`172.18.200.10`.
+
 ---
 
 ## 8. Troubleshooting
