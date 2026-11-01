@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.boost_constants import (
     ACTOR_BOT,
+    DETAIL_ERROR_CODE,
     OPEN_STATUSES,
     STATUS_PENDING,
     UNCOMMITTED_STATUSES,
@@ -239,8 +240,15 @@ def _event(recorded: _Recorded) -> BoostEventModel:
         from_status=recorded.previous,
         to_status=recorded.request.status,
         actor=recorded.actor,
-        detail={"error_code": recorded.request.error_code or ""},
+        detail=_detail(recorded.request),
     )
+
+
+def _detail(request: BoostRequest) -> dict[str, str]:
+    """The error code, plus Meta's error fields when the launch failed on a call."""
+    detail = dict(request.error_detail or {})
+    detail[DETAIL_ERROR_CODE] = request.error_code or ""
+    return detail
 
 
 @dataclass(frozen=True, kw_only=True)

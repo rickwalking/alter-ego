@@ -51,7 +51,10 @@ from rag_backend.modules.autopilot.domain.boost import (
     BoostRequest,
     parse_idempotency_key,
 )
-from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
+from rag_backend.modules.autopilot.domain.boost_policy import (
+    BoostLimits,
+    allowed_countries,
+)
 from rag_backend.modules.autopilot.infrastructure.boost_notifier import (
     TelegramBoostMessenger,
 )
@@ -97,11 +100,7 @@ async def _bundle(
 
 def limits_from(settings: Settings) -> BoostLimits:
     """Caps from the process settings."""
-    countries = frozenset(
-        part.strip()
-        for part in settings.boost_allowed_countries.split(",")
-        if part.strip()
-    )
+    countries = allowed_countries(settings.boost_allowed_countries)
     return BoostLimits(
         requests_enabled=settings.boost_requests_enabled,
         spend_enabled=settings.boost_enabled,
