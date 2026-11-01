@@ -34,7 +34,8 @@ from rag_backend.modules.autopilot.infrastructure.meta_ads_payloads import (
     campaign_payload,
 )
 from rag_backend.modules.autopilot.infrastructure.meta_graph import GraphCall
-from rag_backend.scripts import boost_validate_only as cli
+from rag_backend.scripts import boost_validate_only as entry
+from rag_backend.scripts import boost_validate_only_cli as cli
 from tests.unit.modules.autopilot.meta_ads_fakes import (
     MEDIA,
     NOW,
@@ -277,3 +278,11 @@ async def test_validate_only_command_refuses_without_request_token_or_uuid(
     assert graph.sent == []
     err = capsys.readouterr().err
     assert "boost request not found" in err
+
+
+def test_entry_point_loads_the_command_and_refuses_a_bad_id(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Scenario: The validate-only command refuses a missing request, a missing token or a bad id
+    assert entry.main(["not-a-uuid"]) == cli.EXIT_USAGE
+    assert "request_id must be a UUID" in capsys.readouterr().err

@@ -63,7 +63,10 @@ Both owner-approved boost requests failed with `meta_100`. The read-only and `va
   builds the exact launch bodies through the same builders and signed Graph client, runs the three preflight reads,
   posts the campaign and the creative with `execution_options=["validate_only"]`, and validates the ad set and ad
   only against given existing parent ids (otherwise prints their body, token redacted). A POST without
-  `validate_only` is refused before it is sent. One JSON line per call; exit 1 when a sent call failed.
+  `validate_only` is refused before it is sent. One JSON line per call; exit 1 when a sent call failed. The
+  entry module loads the ORM model registry before the autopilot package (the app's import order), because the
+  autopilot package cannot be the first import of a process (existing circular import through
+  `models/autopilot_registry.py`).
 
 ## Non-Goals
 
@@ -128,6 +131,7 @@ with `httpx.MockTransport`; no Meta call is made.
 - `backend/src/rag_backend/modules/autopilot/infrastructure/boost_store.py`
 - `backend/src/rag_backend/modules/autopilot/infrastructure/boost_validate_only.py`
 - `backend/src/rag_backend/scripts/boost_validate_only.py`
+- `backend/src/rag_backend/scripts/boost_validate_only_cli.py`
 - `backend/tests/features/boost_meta_payload_ae0591.feature`
 - `backend/tests/unit/modules/autopilot/meta_ads_fakes.py`
 - `backend/tests/unit/modules/autopilot/test_boost_meta_payload_ae0591.py`
