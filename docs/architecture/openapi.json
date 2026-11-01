@@ -7469,6 +7469,11 @@
             "title": "Id",
             "type": "string"
           },
+          "must_change_password": {
+            "default": false,
+            "title": "Must Change Password",
+            "type": "boolean"
+          },
           "role": {
             "title": "Role",
             "type": "string"
@@ -11662,7 +11667,7 @@
     },
     "/api/auth/change-password": {
       "post": {
-        "description": "Change the authenticated user's password.",
+        "description": "Change the authenticated user's password.\n\nAlso open to a user who must change an admin-issued password; a\nsuccessful change clears that flag. Rate limited like the login.",
         "operationId": "change_password_api_auth_change_password_post",
         "requestBody": {
           "content": {
@@ -11679,10 +11684,24 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "Invalid new password"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodedErrorResponse"
+                }
+              }
+            },
+            "description": "New password equals the current one (code password_unchanged)"
           },
           "401": {
-            "description": "Invalid current password or not authenticated"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginErrorResponse"
+                }
+              }
+            },
+            "description": "Not authenticated, or a wrong current password (code current_password_incorrect)"
           },
           "422": {
             "content": {
@@ -11693,6 +11712,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many attempts"
           }
         },
         "security": [
@@ -11723,7 +11745,7 @@
     },
     "/api/auth/me": {
       "get": {
-        "description": "Get current authenticated user information.",
+        "description": "Get current authenticated user information.\n\nAlso answers a user who must change the password, with\n``must_change_password`` true, so the dashboard can send them to the\nchange-password screen.",
         "operationId": "get_me_api_auth_me_get",
         "responses": {
           "200": {

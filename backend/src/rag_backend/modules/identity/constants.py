@@ -17,6 +17,7 @@ ERR_INVALID_CREDENTIALS = "Invalid email or password"
 ERR_USER_INACTIVE = "User account is deactivated"
 ERR_USER_NOT_FOUND = "User not found"
 ERR_CURRENT_CREDENTIAL_INCORRECT = "Current password is incorrect"
+ERR_CREDENTIAL_UNCHANGED = "New password must differ from the current one"
 ERR_CREDENTIAL_TOO_SHORT = "Password does not meet the minimum length policy"
 
 ERR_USER_ALREADY_EXISTS = "User already exists"

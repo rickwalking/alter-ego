@@ -9,6 +9,9 @@ import { DASHBOARD_MENU_BUTTON_ATTRIBUTE } from "@/constants/a11y";
 vi.mock("@/components/organisms/neon-sidebar", () => ({
   NeonSidebar: () => null,
 }));
+vi.mock("@/components/layout/password-change-gate", () => ({
+  PasswordChangeGate: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 import DashboardLayout from "./layout";
 

@@ -20,6 +20,8 @@ export interface AuthUser {
   email: string;
   full_name: string;
   role: string;
+  /** True after an admin reset, until the user changes the password. */
+  must_change_password: boolean;
 }
 
 export interface UseAuthResult {
@@ -28,4 +30,30 @@ export interface UseAuthResult {
   isAdmin: boolean;
   isEditor: boolean;
   logout: () => void;
+}
+
+/** The three fields of the change-password form. */
+export interface PasswordChangeValues {
+  current: string;
+  next: string;
+  confirm: string;
+}
+
+/** Message keys (`account.password.errors.*`) of a refused password change. */
+export type PasswordChangeErrorKey =
+  | "currentIncorrect"
+  | "unchanged"
+  | "mismatch"
+  | "tooShort"
+  | "tooMany"
+  | "failed";
+
+/** State and actions of the change-password form. */
+export interface ChangePasswordController {
+  values: PasswordChangeValues;
+  errorKey: PasswordChangeErrorKey | null;
+  succeeded: boolean;
+  isLoading: boolean;
+  setField: (field: keyof PasswordChangeValues, value: string) => void;
+  handleSubmit: (event: React.SubmitEvent) => Promise<void>;
 }

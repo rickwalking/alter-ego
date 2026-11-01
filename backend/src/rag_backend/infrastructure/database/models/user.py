@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     Index,
     String,
+    false,
 )
 
 from rag_backend.domain.models import (
@@ -31,6 +32,9 @@ class UserModel(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default=UserRole.EDITOR.value, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    must_change_password = Column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     created_at = created_at_column()
     updated_at = updated_at_column()
 
@@ -52,6 +56,7 @@ class UserModel(Base):
             is_active=self.is_active,
             created_at=self.created_at,
             updated_at=self.updated_at,
+            must_change_password=bool(self.must_change_password),
         )
 
     @classmethod
@@ -66,4 +71,5 @@ class UserModel(Base):
             is_active=entity.is_active,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
+            must_change_password=entity.must_change_password,
         )

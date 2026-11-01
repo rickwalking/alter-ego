@@ -323,11 +323,35 @@ jobs:
               echo "::error::ig insight columns exited $IG_INSIGHT_COLUMNS_EXIT; bringing the stack up anyway, failing the job after"
             fi
 
+            # Forced password change flag (AE-0511): create_all never adds a column
+            # to the existing users table, so users.must_change_password of
+            # migration b9c0d1e2f3a4 reaches prod through this one-shot.
+            set +e
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.scripts.must_change_password_column --apply --verify
+            MUST_CHANGE_PASSWORD_EXIT=$?
+            set -e
+            if [ "$MUST_CHANGE_PASSWORD_EXIT" -ne 0 ]; then
+              echo "::error::users must_change_password exited $MUST_CHANGE_PASSWORD_EXIT; bringing the stack up anyway, failing the job after"
+            fi
+
             # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
             # Wait for services to start
             sleep 10
+
+            # Forced password change flag, second chance (AE-0511): without the
+            # column every sign-in 500s, so a failed one-shot is retried once in
+            # the running backend before the drift check. Success clears the
+            # failure; a second failure still fails the job at the end.
+            if [ "$MUST_CHANGE_PASSWORD_EXIT" -ne 0 ]; then
+              set +e
+              docker compose -f docker-compose.prod.yml exec -T backend \
+                python -m rag_backend.scripts.must_change_password_column --apply --verify
+              MUST_CHANGE_PASSWORD_EXIT=$?
+              set -e
+            fi
 
             # Schema drift check (AE-0578): read-only, in the running backend, so
             # the app's create_all has made any new table first. A mapped ORM
@@ -414,6 +438,10 @@ jobs:
             fi
             if [ "$IG_INSIGHT_COLUMNS_EXIT" -ne 0 ]; then
               echo "::error::ig insight columns failed (exit $IG_INSIGHT_COLUMNS_EXIT): run 'python -m rag_backend.scripts.ig_insight_columns --apply --verify' on the droplet"
+              ONE_SHOT_FAILED=1
+            fi
+            if [ "$MUST_CHANGE_PASSWORD_EXIT" -ne 0 ]; then
+              echo "::error::users must_change_password failed (exit $MUST_CHANGE_PASSWORD_EXIT): run 'python -m rag_backend.scripts.must_change_password_column --apply --verify' on the droplet"
               ONE_SHOT_FAILED=1
             fi
             if [ "$SCHEMA_DRIFT_EXIT" -ne 0 ]; then

@@ -2267,13 +2267,14 @@
     "deleting": "Excluindo...",
     "deleteError": "Falha ao excluir usuário.",
     "resetPasswordTitle": "Redefinir senha",
-    "resetPasswordDescription": "Uma nova senha temporária foi gerada. Copie-a agora — ela não será exibida novamente.",
+    "resetPasswordDescription": "Gere uma nova senha temporária para este usuário. Ela aparece só uma vez, e o usuário terá de trocá-la no próximo login.",
     "copy": "Copiar",
     "resetting": "Redefinindo...",
     "reset": "Redefinir",
     "done": "Concluído",
     "resetError": "Falha ao redefinir senha.",
     "resetSuccess": "Senha redefinida com sucesso.",
+    "resetMustChangeNote": "Copie agora: ela não aparece de novo. O usuário terá de trocá-la no próximo login antes de usar o app.",
     "searchLabel": "Buscar",
     "searchPlaceholder": "Buscar por nome ou e-mail",
     "roleFilterAll": "Todas as funções",
@@ -2348,7 +2349,8 @@
     "analytics": "Analytics",
     "createCarousel": "Criar carrossel",
     "adminUsers": "Usuários",
-    "queue": "Fila"
+    "queue": "Fila",
+    "changePassword": "Alterar senha"
   },
   "personas": {
     "page": {
@@ -2428,6 +2430,30 @@
       "cancel": "Cancelar",
       "error": "Não foi possível excluir a persona.",
       "inUse": "Esta persona ainda é usada por carrosséis ou correções de voz, então não pode ser excluída."
+    }
+  },
+  "account": {
+    "password": {
+      "title": "Alterar senha",
+      "description": "Digite sua senha atual e depois a nova senha duas vezes.",
+      "forcedNotice": "Um admin redefiniu sua senha. Troque a senha temporária para continuar usando o app.",
+      "currentLabel": "Senha atual",
+      "temporaryLabel": "Senha temporária",
+      "newLabel": "Nova senha",
+      "newHint": "Pelo menos {min} caracteres, diferente da atual.",
+      "confirmLabel": "Confirme a nova senha",
+      "submit": "Alterar senha",
+      "saving": "Salvando...",
+      "success": "Senha alterada.",
+      "sidebarLink": "Alterar senha",
+      "errors": {
+        "currentIncorrect": "A senha atual está errada.",
+        "unchanged": "A nova senha precisa ser diferente da atual.",
+        "mismatch": "A nova senha e a confirmação não são iguais.",
+        "tooShort": "A nova senha precisa ter pelo menos {min} caracteres.",
+        "tooMany": "Muitas tentativas. Espere um minuto e tente de novo.",
+        "failed": "Não foi possível alterar a senha. Tente de novo."
+      }
     }
   }
 }

@@ -19,6 +19,7 @@ from rag_backend.modules.identity.application.ports import (
 )
 from rag_backend.modules.identity.application.user_service import (
     CurrentPasswordIncorrectError,
+    PasswordUnchangedError,
     UserNotFoundError,
     UserService,
     UserServiceDeps,
@@ -32,6 +33,7 @@ __all__ = [
     "InvalidCredentialsError",
     "PasswordHasher",
     "PasswordService",
+    "PasswordUnchangedError",
     "TokenIssuer",
     "UserNotFoundError",
     "UserService",

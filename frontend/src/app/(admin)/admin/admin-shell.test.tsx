@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/users",
+  useRouter: () => ({ replace: vi.fn() }),
 }));
 
 const auth = vi.hoisted(() => ({ isAdmin: true }));

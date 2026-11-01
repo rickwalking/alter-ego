@@ -6,6 +6,7 @@ import pytest
 from fastapi import HTTPException
 
 from rag_backend.api.dependencies.roles import get_current_user, require_editor
+from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.domain.models.user import UserRole
 
 
@@ -13,7 +14,7 @@ from rag_backend.domain.models.user import UserRole
 class TestGetCurrentUser:
     async def test_returns_user_for_valid_payload(self) -> None:
         db = AsyncMock()
-        user = MagicMock(is_active=True)
+        user = MagicMock(is_active=True, must_change_password=False)
         db.get = AsyncMock(return_value=user)
 
         result = await get_current_user({"sub": "user-1"}, db)
@@ -36,6 +37,19 @@ class TestGetCurrentUser:
             await get_current_user({"sub": "user-1"}, db)
 
         assert exc_info.value.status_code == 401
+
+    # Scenario: A user with a temporary password is refused on protected endpoints
+    async def test_rejects_a_user_who_must_change_the_password(self) -> None:
+        db = AsyncMock()
+        db.get = AsyncMock(
+            return_value=MagicMock(is_active=True, must_change_password=True)
+        )
+
+        with pytest.raises(CodedHTTPException) as exc_info:
+            await get_current_user({"sub": "user-1"}, db)
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.code == "password_change_required"
 
 
 @pytest.mark.asyncio

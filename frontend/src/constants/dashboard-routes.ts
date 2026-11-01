@@ -15,4 +15,5 @@ export const DASHBOARD_ROUTES = {
   PALETTES: "/dashboard/palettes",
   KNOWLEDGE: "/dashboard/knowledge",
   ANALYTICS: "/dashboard/analytics",
+  ACCOUNT_PASSWORD: "/dashboard/account/password",
 } as const;

@@ -13,6 +13,7 @@ import { BG_CARD, NEON_BORDER_SUBTLE, NEON_CYAN, TEXT } from "@/constants/neon";
 import { useOffCanvas } from "@/lib/use-off-canvas";
 import { SkipLink } from "@/components/atoms/skip-link";
 import { MAIN_CONTENT_ID } from "@/constants/a11y";
+import { PasswordChangeGate } from "./password-change-gate";
 
 const SIDEBAR_ID = "dashboard-sidebar";
 const ICON_HAMBURGER = "M3 6h18M3 12h18M3 18h18";
@@ -31,7 +32,8 @@ interface NeonAppShellProps {
  * context, so its z-40 sits above the z-30 backdrop. The content column needs
  * ``min-w-0``: a flex item defaults to ``min-width: auto`` and would grow to its
  * widest child, making inner ``overflow-x-auto`` regions widen the page instead
- * of scrolling.
+ * of scrolling. A user who must change an admin-issued password only sees the
+ * change-password page (see `PasswordChangeGate`).
  */
 export function NeonAppShell({
   children,
@@ -95,7 +97,7 @@ export function NeonAppShell({
               tabIndex={-1}
               className="flex-1 flex flex-col"
             >
-              {children}
+              <PasswordChangeGate>{children}</PasswordChangeGate>
             </main>
           </div>
         </div>

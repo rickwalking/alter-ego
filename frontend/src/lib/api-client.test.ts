@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   apiCall,
   apiCallNoContent,
+  apiCallOwnerOnly,
   ApiError,
   apiResponseSchema,
   errorResponseSchema,
@@ -289,6 +290,35 @@ describe("API Client Module", () => {
         );
         expect(location.href).toBe("/403");
       });
+
+      // Scenario: An API call refused with password_change_required goes to the change page
+      it.each([
+        ["apiCall", apiCall],
+        ["apiCallOwnerOnly", apiCallOwnerOnly],
+      ] as const)(
+        "Then a password_change_required 403 from %s goes to the change-password page",
+        async (_name, call) => {
+          const location = mockWindowLocation();
+          vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue({
+              ok: false,
+              status: 403,
+              json: () =>
+                Promise.resolve({
+                  detail: "Password change required",
+                  code: "password_change_required",
+                }),
+            }),
+          );
+
+          await expect(call("/api/test", testSchema)).rejects.toMatchObject({
+            status: 403,
+            code: "password_change_required",
+          });
+          expect(location.href).toBe("/dashboard/account/password");
+        },
+      );
     });
 
     describe("When the API returns an HTTP error", () => {

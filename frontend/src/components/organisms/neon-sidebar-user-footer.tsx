@@ -1,7 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { NeonIcon } from "@/components/atoms/neon-icon";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import {
   TEXT,
   NEON_BORDER_LIGHT,
@@ -15,11 +18,35 @@ import { SIDEBAR_AVATAR_SIZE } from "@/components/organisms/constants";
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>["user"]>;
 
+const FOOTER_BUTTON_CLASS =
+  "flex shrink-0 items-center justify-center rounded-md h-7 w-7 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11";
+const KEY_ICON_PATH =
+  "M15 7a4 4 0 1 1-3.9 4.9L3 20v-3h3v-3h3l2.1-2.1A4 4 0 0 1 15 7zM16 9h.01";
+
+/** The footer link to the change-password page. */
+function ChangePasswordLink(): React.ReactElement {
+  const t = useTranslations("account.password");
+  return (
+    <Link
+      href={DASHBOARD_ROUTES.ACCOUNT_PASSWORD}
+      aria-label={t("sidebarLink")}
+      title={t("sidebarLink")}
+      className={FOOTER_BUTTON_CLASS}
+      style={{
+        border: `1px solid ${NEON_BORDER_LIGHT}`,
+        color: TEXT_MUTED,
+      }}
+    >
+      <NeonIcon path={KEY_ICON_PATH} size={14} />
+    </Link>
+  );
+}
+
 /**
- * The signed-in user's avatar, name, email and logout.
+ * The signed-in user's avatar, name, email, change-password link and logout.
  *
- * The logout button is a 44px+ tap target on touch devices and compact for a
- * mouse.
+ * The link and the logout button are 44px+ tap targets on touch devices and
+ * compact for a mouse.
  */
 export function SidebarUserFooter({
   user,
@@ -75,12 +102,13 @@ export function SidebarUserFooter({
           {user.email}
         </div>
       </div>
+      <ChangePasswordLink />
       <button
         type="button"
         onClick={onLogout}
         aria-label="Logout"
         title="Logout"
-        className="flex shrink-0 items-center justify-center rounded-md h-7 w-7 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
+        className={FOOTER_BUTTON_CLASS}
         style={{
           border: `1px solid ${NEON_BORDER_LIGHT}`,
           background: "transparent",
