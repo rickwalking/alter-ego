@@ -6,6 +6,8 @@ The model is a fake; the validator and the contracts are the real ones.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import replace
 from typing import cast
 
 import pytest
@@ -42,15 +44,14 @@ _ITEM_ANSWER = "Eu meço o tempo de cada revisão e corto o que sobra."
 
 
 def _command(
-    slides: list[dict[str, object]], fitter: FakeFitter, **extra: object
+    slides: list[dict[str, object]],
+    fitter: FakeFitter,
+    tweak: Callable[[BudgetFitCommand], BudgetFitCommand] | None = None,
 ) -> BudgetFitCommand:
-    return BudgetFitCommand(
-        slides=slides,
-        fitter=fitter,
-        policy_version=POLICY_V4,
-        project_id="p",
-        **extra,  # type: ignore[arg-type]
+    command = BudgetFitCommand(
+        slides=slides, fitter=fitter, policy_version=POLICY_V4, project_id="p"
     )
+    return tweak(command) if tweak is not None else command
 
 
 def _payload(slide: dict[str, object], locale: str) -> dict[str, object]:
@@ -178,7 +179,9 @@ class TestBoundedAndBestEffort:
         slides = [content_slide(3, pt_body=_LONG_PT, en_body=_SHORT_EN)]
         fitter = FakeFitter(answers={"3:pt:body": _LONG_PT + " Mais um ponto."})
 
-        await fit_slides_to_budgets(_command(slides, fitter, max_attempts=1))
+        await fit_slides_to_budgets(
+            _command(slides, fitter, lambda c: replace(c, max_attempts=1))
+        )
 
         assert len(fitter.calls) == 1
 
@@ -249,7 +252,11 @@ class TestBoundedAndBestEffort:
         )
 
         outcome = await fit_slides_to_budgets(
-            _command(slides, fitter, forbidden_phrases=("Game Changer", " "))
+            _command(
+                slides,
+                fitter,
+                lambda c: replace(c, forbidden_phrases=("Game Changer", " ")),
+            )
         )
 
         assert _payload(outcome.slides[0], "pt")["body"] == _LONG_PT
@@ -291,7 +298,7 @@ class TestBoundedAndBestEffort:
         fitter = FakeFitter()
 
         outcome = await fit_slides_to_budgets(
-            _command(slides, fitter, only_slides=frozenset({4}))
+            _command(slides, fitter, lambda c: replace(c, only_slides=frozenset({4})))
         )
 
         assert fitter.calls == [["4:pt:body"]]

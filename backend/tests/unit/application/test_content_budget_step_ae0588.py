@@ -45,6 +45,9 @@ from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
 )
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from tests.unit.agents.content_feedback_flow_ae0405 import (
     GENERATE_TARGET,
@@ -175,7 +178,9 @@ class TestContentPhaseOrder:
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestPersonaRescore:
-    async def test_changed_slides_are_scored_again(self) -> None:
+    async def test_changed_slides_are_scored_again(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Scenario: Persona voice scores are recomputed for the changed slides."""
         fitter = FakeFitter()
         runner = PhaseArtifactRunner(
@@ -188,7 +193,7 @@ class TestPersonaRescore:
         )
         scores = {"persona_scores": {"3": {"overall": 80.0}}}
         score_spy = AsyncMock(return_value={"persona_scores": {"3": {"overall": 75.0}}})
-        runner._score_content_drafts = score_spy  # type: ignore[method-assign]
+        monkeypatch.setattr(runner, "_score_content_drafts", score_spy)
         persona = PersonaProfile(forbidden_phrases=["game changer"])
         resolved = EditorialWorkflowStartInput(
             topic="t", audience="a", brief="b", sources=[], persona=persona
@@ -211,7 +216,7 @@ class TestPersonaRescore:
         updates: dict[str, object] = {"slide_drafts": drafts, **scores}
 
         fit = await runner._fit_copy_budgets(
-            {"project_id": "p"},  # type: ignore[arg-type]
+            cast(CarouselWorkflowState, {"project_id": "p"}),
             resolved,
             (drafts, updates, None),
         )
