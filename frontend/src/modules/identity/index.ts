@@ -21,7 +21,14 @@
  * See `src/modules/README.md` for the public-contract convention.
  */
 
-export type { AccessTokenPayload, AuthUser, UseAuthResult } from "./types";
+export type {
+  AccessTokenPayload,
+  AuthUser,
+  ChangePasswordController,
+  PasswordChangeErrorKey,
+  PasswordChangeValues,
+  UseAuthResult,
+} from "./types";
 
 export { verifyAccessToken, decodeJwtPayloadUnsafe } from "./lib/jwt-auth";
 export { isLiveSession } from "./lib/live-session";
@@ -50,3 +57,4 @@ export {
 } from "./guards";
 
 export { useAuth } from "./hooks/use-auth";
+export { useChangePassword } from "./hooks/use-change-password";

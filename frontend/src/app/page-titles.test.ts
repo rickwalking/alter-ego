@@ -26,6 +26,7 @@ import { generateMetadata as analyticsMetadata } from "@/app/dashboard/analytics
 import { generateMetadata as createMetadata } from "@/app/dashboard/create/layout";
 import { generateMetadata as dashboardMetadata } from "@/app/dashboard/page";
 import { generateMetadata as usersMetadata } from "@/app/(admin)/admin/users/layout";
+import { generateMetadata as changePasswordMetadata } from "@/app/dashboard/account/password/layout";
 import { generateMetadata as loginMetadata } from "@/app/login/layout";
 import { generateMetadata as forbiddenMetadata } from "@/app/403/layout";
 import { generateMetadata as notFoundMetadata } from "@/app/not-found";
@@ -45,6 +46,7 @@ describe("page titles", () => {
     [analyticsMetadata, "Analytics · Pedro Marins"],
     [createMetadata, "Create Carousel · Pedro Marins"],
     [usersMetadata, "Users · Pedro Marins"],
+    [changePasswordMetadata, "Change password · Pedro Marins"],
   ])("titles a dashboard page %#", async (generate, title) => {
     locale.value = "en";
     expect((await generate()).title).toBe(title);
@@ -59,5 +61,14 @@ describe("page titles", () => {
   ])("titles a public page %#", async (generate, title) => {
     locale.value = "en";
     expect((await generate()).title).toBe(title);
+  });
+
+  // Scenario: The change-password page has its own title
+  it.each([
+    ["en", "Change password · Pedro Marins"],
+    ["pt", "Alterar senha · Pedro Marins"],
+  ])("titles the change-password page in %s", async (language, title) => {
+    locale.value = language;
+    expect((await changePasswordMetadata()).title).toBe(title);
   });
 });

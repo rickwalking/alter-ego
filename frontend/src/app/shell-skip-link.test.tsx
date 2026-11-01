@@ -7,6 +7,9 @@ import DashboardLayout from "@/app/dashboard/layout";
 vi.mock("@/components/organisms/neon-sidebar", () => ({
   NeonSidebar: () => <nav aria-label="sidebar" />,
 }));
+vi.mock("@/components/layout/password-change-gate", () => ({
+  PasswordChangeGate: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 describe("shell skip links", () => {
   // Scenario: Keyboard users can skip to the main content

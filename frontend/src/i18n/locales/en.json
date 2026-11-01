@@ -2267,13 +2267,14 @@
     "deleting": "Deleting...",
     "deleteError": "Failed to delete user.",
     "resetPasswordTitle": "Reset password",
-    "resetPasswordDescription": "A new temporary password has been generated. Copy it now — it will not be shown again.",
+    "resetPasswordDescription": "Generate a new temporary password for this user. It is shown only once, and the user must change it at the next sign-in.",
     "copy": "Copy",
     "resetting": "Resetting...",
     "reset": "Reset",
     "done": "Done",
     "resetError": "Failed to reset password.",
     "resetSuccess": "Password reset successfully.",
+    "resetMustChangeNote": "Copy it now: it will not be shown again. The user must change it at the next sign-in before using the app.",
     "searchLabel": "Search",
     "searchPlaceholder": "Search by name or email",
     "roleFilterAll": "All roles",
@@ -2348,7 +2349,8 @@
     "analytics": "Analytics",
     "createCarousel": "Create Carousel",
     "adminUsers": "Users",
-    "queue": "Queue"
+    "queue": "Queue",
+    "changePassword": "Change password"
   },
   "personas": {
     "page": {
@@ -2428,6 +2430,30 @@
       "cancel": "Cancel",
       "error": "The persona could not be deleted.",
       "inUse": "This persona is still used by carousels or voice corrections, so it cannot be deleted."
+    }
+  },
+  "account": {
+    "password": {
+      "title": "Change password",
+      "description": "Enter your current password, then the new one twice.",
+      "forcedNotice": "An admin reset your password. Change the temporary password to keep using the app.",
+      "currentLabel": "Current password",
+      "temporaryLabel": "Temporary password",
+      "newLabel": "New password",
+      "newHint": "At least {min} characters, different from the current one.",
+      "confirmLabel": "Confirm the new password",
+      "submit": "Change password",
+      "saving": "Saving...",
+      "success": "Password changed.",
+      "sidebarLink": "Change password",
+      "errors": {
+        "currentIncorrect": "The current password is wrong.",
+        "unchanged": "The new password must be different from the current one.",
+        "mismatch": "The new password and its confirmation do not match.",
+        "tooShort": "The new password needs at least {min} characters.",
+        "tooMany": "Too many attempts. Wait a minute and try again.",
+        "failed": "Could not change the password. Try again."
+      }
     }
   }
 }

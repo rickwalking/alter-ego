@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { HTTP_STATUS } from "@/constants/api";
-import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import {
+  AUTH_LOGIN_REDIRECT_PARAM,
+  ACCOUNT_ERROR_CODES,
+} from "@/constants/auth";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 export const apiResponseSchema = z.object({
@@ -81,13 +85,41 @@ const AUTH_FALLBACK_MESSAGES: Readonly<Partial<Record<number, string>>> = {
   [HTTP_STATUS.FORBIDDEN]: "Forbidden",
 };
 
-/** The 401 login redirect and (when ``forbiddenRedirect``) the 403 page redirect. */
+/** Send the browser to ``path`` (a no-op outside the browser). */
+function navigateInBrowser(path: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.location.href = path;
+}
+
+/** A 403 telling the user to change an admin-issued password first. */
+function isPasswordChangeRequired(
+  status: number,
+  code: string | undefined,
+): boolean {
+  return (
+    status === HTTP_STATUS.FORBIDDEN &&
+    code === ACCOUNT_ERROR_CODES.CHANGE_REQUIRED
+  );
+}
+
+/**
+ * The 401 login redirect, the change-password redirect of a 403
+ * `password_change_required` (always: the user cannot use the app until the
+ * password is changed), and (when ``forbiddenRedirect``) the 403 page redirect.
+ */
 function redirectForAuthStatus(
   status: number,
   forbiddenRedirect: boolean,
+  code?: string,
 ): void {
   if (status === HTTP_STATUS.UNAUTHORIZED) {
     redirectToLoginAfterUnauthorized();
+    return;
+  }
+  if (isPasswordChangeRequired(status, code)) {
+    navigateInBrowser(DASHBOARD_ROUTES.ACCOUNT_PASSWORD);
     return;
   }
   if (
@@ -114,7 +146,7 @@ async function throwIfErrorResponse(
   }
   const { status } = response;
   const errorData = await parseErrorBody(response);
-  redirectForAuthStatus(status, forbiddenRedirect);
+  redirectForAuthStatus(status, forbiddenRedirect, errorData?.code);
   const authFallback = AUTH_FALLBACK_MESSAGES[status];
   const error = new ApiError(
     status,

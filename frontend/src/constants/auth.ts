@@ -39,3 +39,14 @@ export const LOGIN_ERROR_SESSION_EXPIRED = "session_expired";
 
 /** Stable `code` of the 401 the API sends when a deactivated account signs in. */
 export const LOGIN_ERROR_CODE_USER_INACTIVE = "user_inactive";
+
+/**
+ * Stable `code` values of the account API: the 403 sent until an admin-issued
+ * password is changed, and the change-password refusals (wrong current
+ * password, new password equal to the current one).
+ */
+export const ACCOUNT_ERROR_CODES = {
+  CHANGE_REQUIRED: "password_change_required",
+  CURRENT_INCORRECT: "current_password_incorrect",
+  UNCHANGED: "password_unchanged",
+} as const;

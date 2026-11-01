@@ -40,11 +40,16 @@ interface TempPasswordProps {
   password: string;
 }
 
+/**
+ * The temporary password, shown only in this dialog and never again, with a
+ * copy button and the note that the user must change it at the next sign-in.
+ */
 function TempPassword({ message, password }: Readonly<TempPasswordProps>) {
   const t = useTranslations("admin");
   return (
     <>
       {message}
+      <p className="mt-1">{t("resetMustChangeNote")}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <code className="break-all rounded bg-bg-deep px-2 py-1 font-mono text-sm text-text-primary">
           {password}
