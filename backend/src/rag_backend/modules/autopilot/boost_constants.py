@@ -79,6 +79,7 @@ ERR_NOT_BOOSTABLE = "media_not_boostable"
 ERR_CURRENCY = "currency_mismatch"
 ERR_ACCOUNT = "ad_account_inactive"
 ERR_ADS_DISABLED = "ads_disabled"
+ERR_PAGE_MISSING = "meta_page_missing"
 
 DEFAULT_MAX_DAILY = 3000
 DEFAULT_MIN_DAILY = 600
@@ -178,6 +179,7 @@ __all__ = [
     "ERR_NOT_FOUND",
     "ERR_OBJECTIVE",
     "ERR_OPEN",
+    "ERR_PAGE_MISSING",
     "ERR_PENDING",
     "ERR_REASON",
     "ERR_WEEK",
