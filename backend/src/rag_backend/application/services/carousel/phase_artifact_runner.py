@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from typing import Protocol, TypedDict, runtime_checkable
 
 from langchain_core.language_models import BaseChatModel
@@ -16,6 +17,11 @@ from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
+)
+from rag_backend.application.services.carousel.content_budget_step import (
+    ContentBudgetContext,
+    llm_budget_fitter,
+    run_content_budget_step,
 )
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
@@ -36,6 +42,9 @@ from rag_backend.application.services.carousel.content_gate_repair_flow import (
     gate_violation_note,
     repair_blocked_content_gate,
     visible_copy_changed,
+)
+from rag_backend.application.services.carousel.copy_budget_fit_llm import (
+    CopyBudgetFitter,
 )
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
@@ -124,7 +133,9 @@ class PhaseArtifactRunnerConfig:
     rewrites only the fields a blocked content gate names; when unset,
     ``gate_repair_tracing`` turns on the fast-model repairer built from ``llm``, and
     with neither it is off. ``rubric_judge`` scores the drafts against the
-    carousel's quality rubric (no judge: no scores).
+    carousel's quality rubric (no judge: no scores). ``budget_fitter`` shortens the
+    fields over their copy budget right before the content review is built; when
+    unset, ``budget_fit_tracing`` turns on the fast-model fitter built from ``llm``.
     """
 
     outline_agent: OutlineAgent
@@ -139,31 +150,14 @@ class PhaseArtifactRunnerConfig:
     gate_repairer: GateFieldRepairer | None = None
     gate_repair_tracing: Callable[[], RunnableConfig] | None = None
     rubric_judge: RubricJudge | None = None
-
-
-_TRANSLATIONS_EN_KEY = "translations_en"
+    budget_fitter: CopyBudgetFitter | None = None
+    budget_fit_tracing: Callable[[], RunnableConfig] | None = None
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
     """Resolve the seeded presentation policy version from workflow state."""
     value = state.get("presentation_policy_version")
     return value if isinstance(value, str) and value.strip() else None
-
-
-def _review_translations(
-    state: CarouselWorkflowState,
-    updates: dict[str, object],
-) -> object:
-    """EN translations for the content review build.
-
-    Fresh translations win. When the drafts were NOT regenerated the stored
-    translations still match them: dropping them made the builder fall back
-    to the PT draft, so the EN copy silently became Portuguese.
-    """
-    fresh = updates.get(_TRANSLATIONS_EN_KEY)
-    if fresh is not None or STATE_FIELD_SLIDE_DRAFTS in updates:
-        return fresh
-    return state.get(_TRANSLATIONS_EN_KEY)
 
 
 def _llm_gate_repairer(config: PhaseArtifactRunnerConfig) -> GateFieldRepairer | None:
@@ -249,6 +243,10 @@ class PhaseArtifactRunner:
         self._gate_repairer = config.gate_repairer or _llm_gate_repairer(config)
         self._rubric_judge = config.rubric_judge
         self._rubric = CarouselRubricStep(db=config.db, judge=config.rubric_judge)
+        self._budget_fit_tracing = config.budget_fit_tracing
+        self._budget_fitter = config.budget_fitter or llm_budget_fitter(
+            config.llm, config.budget_fit_tracing
+        )
 
     def with_context(
         self,
@@ -272,6 +270,8 @@ class PhaseArtifactRunner:
                 gate_repairer=self._gate_repairer,
                 gate_repair_tracing=self._gate_repair_tracing,
                 rubric_judge=self._rubric_judge,
+                budget_fitter=self._budget_fitter,
+                budget_fit_tracing=self._budget_fit_tracing,
             )
         )
 
@@ -484,8 +484,7 @@ class PhaseArtifactRunner:
             state, outline, (slide_drafts, updates)
         )
         updates.update(distribution)
-        design_updates = await self._apply_content_design(state, outline)
-        updates.update(design_updates)
+        updates.update(await self._apply_content_design(state, outline))
         from rag_backend.application.services.carousel.workflow_state_sanitize import (
             SanitizeWorkflowStateCommand,
             sanitize_workflow_state_artifacts,
@@ -510,12 +509,26 @@ class PhaseArtifactRunner:
             updates["outline"] = sanitized_state["outline"]
         if isinstance(sanitized_state.get("slide_drafts"), list):
             updates["slide_drafts"] = sanitized_state["slide_drafts"]
+        fit = await run_content_budget_step(
+            self._budget_fitter,
+            ContentBudgetContext(
+                state=state,
+                updates=updates,
+                slide_drafts=sanitized_state.get("slide_drafts") or [],
+                style_guide=self._style_guide(resolved),
+                persona=resolved.persona,
+                hook_text=regen.mode.hook_text if regen.mode else "",
+                outline=outline,
+                scope=regen.scope,
+                scorer=partial(self._score_content_drafts, resolved),
+            ),
+        )
         updates.update(
             await self._build_presentation_review_updates(
                 ContentReviewContext(
                     project_id=str(state.get("project_id", "")),
-                    slide_drafts=sanitized_state.get("slide_drafts") or [],
-                    translations_en=_review_translations(state, updates),
+                    slide_drafts=fit.slide_drafts,
+                    translations_en=fit.translations_en,
                     retry_draft=self._resolve_slide_draft_retry(
                         resolved, outline, regen
                     ),
@@ -530,6 +543,12 @@ class PhaseArtifactRunner:
             updates.update(_settle_used_notes(state, updates))
         return updates
 
+    def _style_guide(self, resolved: EditorialWorkflowStartInput) -> str:
+        """The author's style guide for the field rewrites ("" without a persona)."""
+        if resolved.persona is None:
+            return ""
+        return PersonaAgent(resolved.persona, self._llm).style_guide()
+
     async def _repair_content_gate(
         self,
         state: CarouselWorkflowState,
@@ -537,11 +556,7 @@ class PhaseArtifactRunner:
         resolved: EditorialWorkflowStartInput,
     ) -> None:
         """Targeted field repair of a blocked content gate (in place)."""
-        style_guide = (
-            PersonaAgent(resolved.persona, self._llm).style_guide()
-            if resolved.persona
-            else ""
-        )
+        style_guide = self._style_guide(resolved)
         updates.update(
             await repair_blocked_content_gate(
                 state,

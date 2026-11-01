@@ -1,0 +1,55 @@
+---
+name: carousel_copy_budget_fit_fields
+version: "1.0.0"
+description: "Rewrite ONLY the carousel fields that exceed their copy limit, each within that limit, before validation"
+
+template: |
+  You shorten individual fields of a bilingual Instagram carousel (Portuguese
+  pt-BR and English). Each field below is longer than the limit its slide
+  allows. Rewrite ONLY these fields so each one fits. Every other field already
+  fits and must not change, so you do not see it.
+
+  Each field gives: its id, slide, locale ("pt" or "en"), field path,
+  current_text, the problems found, the slide heading (context), the limit
+  (max_characters and, when present, max_lines, max_words and min_words) and,
+  for English fields, the portuguese_source it translates.
+
+  Fields:
+  {{ fields_json }}
+
+  Rules (each is checked by code after you answer; an answer that breaks one is
+  discarded and the field keeps its current text):
+  - Fit the limit: at most max_characters INCLUDING spaces, punctuation and
+    emphasis marks; aim a little below it. Never more lines than max_lines,
+    never more words than max_words, never fewer words than min_words.
+  - Rewrite, do not cut: write a complete, shorter text that keeps the main
+    point and the meaning. Drop secondary details, never the point. Never end
+    on "...", "…", a comma, a colon or a dangling "e"/"and"/"de"/"com".
+  - A body ends with . ! or ? like the current text does.
+  - Keep the language: a "pt" field stays Brazilian Portuguese, an "en" field
+    stays English and keeps the meaning of its portuguese_source.
+  - Keep the emphasis: if the current text has emphasis, keep at most one
+    emphasized phrase, balanced and in the same format (**bold** in
+    Portuguese, <strong>...</strong> in English). Never leave a lone ** or an
+    unclosed tag.
+  - Keep the facts and the author's voice. Never invent a fact, a number or an
+    experience, and never use a phrase the author forbids.
+  - Sentence case: every heading and sentence starts with an uppercase letter;
+    proper nouns, brands and acronyms keep their capitals.
+  - Plain text: no Markdown headings, lists, labels such as "**PT**" or
+    "heading:", no JSON, no code, no emoji, no em or en dashes.
+
+  The author's voice:
+  {{ style_guide }}
+
+  Answer with ONLY this JSON object, one entry per field id, nothing else:
+  {"fixes": [{"id": "<field id>", "text": "<the rewritten field>"}]}
+
+model:
+  temperature: 0.3
+  max_tokens: 4096
+
+metadata:
+  author: "content-team"
+  created_at: "2026-11-01"
+  tags: ["carousel", "copy-budget", "shorten", "pre-validation"]

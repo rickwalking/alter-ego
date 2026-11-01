@@ -147,6 +147,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-024: GrokBot Cover Asset for Slide 1 (upload + per-post owner choice on Telegram)](docs/decisions/0024-grok-cover-asset.md) *(proposed)*
 - [ADR-025: Blog Post Owns Its Structure, Voice and Images (blog.v2 document model)](docs/decisions/0025-blog-post-owns-structure-voice-and-images.md) *(proposed)*
 - [ADR-027: Generate Slide-1 Covers from the Owner's Library Photos through the Image Bridge](docs/decisions/0027-grok-cover-from-library-photos.md) *(proposed)*
+- [ADR-030: Budget-Bound Field Rewrites Use a Forbidden-Phrase Check and a Voice Rescore instead of `PersonaAgent.enforce()` (amends ADR-003)](docs/decisions/0030-persona-check-for-budget-field-rewrites.md) *(proposed)*
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually

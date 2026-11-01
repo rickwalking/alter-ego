@@ -1,7 +1,8 @@
 """Instruction context assembly for carousel editorial agents.
 
 The imperative rework framing is rendered once, in the instruction context; the content
-prompt carries no second revision-notes block.
+prompt carries no second revision-notes block. The per-slide block also lists the
+slide's copy limits, rendered from the contract values the validator enforces.
 """
 
 from __future__ import annotations
@@ -9,6 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 
+from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
+    limits_payload,
+)
 from rag_backend.application.services.carousel.phase_subagents import (
     PHASE_SUBAGENT_REGISTRY,
     SUBAGENT_CONTENT_DRAFTER,
@@ -22,10 +27,17 @@ from rag_backend.application.services.carousel.presentation_policy import (
 from rag_backend.application.services.carousel.presentation_policy_range import (
     expand_policy_for_count,
 )
+from rag_backend.application.services.carousel_template.prompts import (
+    build_slide_limits_block,
+)
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_CONTENT,
     PHASE_OUTLINE,
+)
+from rag_backend.domain.constants.copy_budget_fit import (
+    COPY_BUDGET_VAR_LIMITS,
+    COPY_BUDGET_VAR_SLIDE_TYPE,
 )
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
@@ -243,12 +255,21 @@ def _slide_block(
                 if slide.copy_start_ratio is not None
                 else "cta layout (no lower-third ratio)"
             )
-            return (
+            target = (
                 f"Target slide {slide.slide_number} "
                 f"({slide.slide_type}{_role_text(slide.role)}). "
                 f"Image required: {slide.image_required}. {ratio}."
             )
+            return f"{target}\n{_limits_block(LimitScope(slide.slide_type, slide.role), policy)}"
     return f"Target slide {slide_number}."
+
+
+def _limits_block(scope: LimitScope, policy: CarouselPresentationPolicy) -> str:
+    """This slide's copy limits, from the contract values the validator enforces."""
+    return build_slide_limits_block({
+        COPY_BUDGET_VAR_SLIDE_TYPE: scope.slide_type,
+        COPY_BUDGET_VAR_LIMITS: limits_payload(scope, policy),
+    })
 
 
 __all__ = [
