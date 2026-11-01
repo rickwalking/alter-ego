@@ -68,6 +68,19 @@ Both owner-approved boost requests failed with `meta_100`. The read-only and `va
   autopilot package cannot be the first import of a process (existing circular import through
   `models/autopilot_registry.py`).
 
+### Review fixes (2026-11-01)
+
+- The worker re-checks the caps in force right before launching (`check_launch`: objective, daily budget floor and
+  cap, days, audience, and the rolling-week total without the request's own budget). A cap lowered after the
+  approval fails the launch permanent (approved → failed) with the existing cap codes and no Meta call.
+- The ad set window and targeting use `AdsConfig.caps` built from the settings (`BOOST_MAX_DAYS`,
+  `BOOST_ALLOWED_COUNTRIES`; ages stay 18-65, not configurable), not hard-coded values.
+- The preflight rules (media visible, account active, budget floor) and `require_page` live in
+  `meta_ads_preflight.py`; the launch and the validate-only check run the same rules. The check also reports the
+  caps re-check, so anything a launch would fail on is a failed line and exit 1.
+- The validate-only check reports `httpx.InvalidURL` by its type name only.
+- A test proves no launch POST carries `execution_options`.
+
 ## Non-Goals
 
 - No change to the caps (R$6-30/day, R$100/week, max 7 days, Brazil only, 12h approval) or the approval flow.
@@ -92,6 +105,10 @@ Both owner-approved boost requests failed with `meta_100`. The read-only and `va
 - [x] AC5 The token and the appsecret proof never appear in the details or the log.
 - [x] AC6 The worker stores the details on the failure event and logs them; the Postgres event `detail` holds them.
 - [x] AC7 The validate-only command sends only `validate_only` POSTs; a POST without it is refused unsent.
+- [x] AC8 The worker re-checks the caps in force at launch; a lowered cap fails the launch with its cap code.
+- [x] AC9 The ad set window and targeting use the configured caps from the settings.
+- [x] AC10 The validate-only check applies the launch's preflight rules, Page check and caps; any failure exits 1.
+- [x] AC11 No launch POST carries `execution_options`; `httpx.InvalidURL` is reported by type only.
 
 ## Gherkin Scenarios
 
@@ -128,6 +145,11 @@ with `httpx.MockTransport`; no Meta call is made.
 - `backend/src/rag_backend/modules/autopilot/infrastructure/meta_ads_errors.py`
 - `backend/src/rag_backend/modules/autopilot/infrastructure/meta_ads_payloads.py`
 - `backend/src/rag_backend/modules/autopilot/infrastructure/meta_ads_gateway.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/meta_ads_preflight.py`
+- `backend/src/rag_backend/modules/autopilot/domain/boost_policy.py`
+- `backend/src/rag_backend/modules/autopilot/application/boost_requests.py`
+- `backend/src/rag_backend/modules/autopilot/api/boost.py`
+- `backend/src/rag_backend/bootstrap/autopilot_worker_factory.py`
 - `backend/src/rag_backend/modules/autopilot/infrastructure/boost_store.py`
 - `backend/src/rag_backend/modules/autopilot/infrastructure/boost_validate_only.py`
 - `backend/src/rag_backend/scripts/boost_validate_only.py`
@@ -137,6 +159,7 @@ with `httpx.MockTransport`; no Meta call is made.
 - `backend/tests/unit/modules/autopilot/test_boost_meta_payload_ae0591.py`
 - `backend/tests/unit/modules/autopilot/test_boost_meta_errors_ae0591.py`
 - `backend/tests/unit/modules/autopilot/test_boost_validate_only_ae0591.py`
+- `backend/tests/unit/modules/autopilot/test_boost_launch_caps_ae0591.py`
 - `backend/tests/integration/test_boost_failure_detail_pg_ae0591.py`
 
 ## Test Evidence

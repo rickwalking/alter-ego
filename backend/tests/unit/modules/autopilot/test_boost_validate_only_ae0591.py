@@ -9,6 +9,8 @@ import argparse
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
@@ -19,6 +21,7 @@ from pydantic import SecretStr
 
 from rag_backend.modules.autopilot.boost_constants import GRAPH_CAMPAIGNS
 from rag_backend.modules.autopilot.domain.boost import BoostAudience, BoostRequest
+from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
 from rag_backend.modules.autopilot.infrastructure.boost_validate_only import (
     OUTCOME_FAILED,
     OUTCOME_NEEDS_PARENT,
@@ -43,6 +46,7 @@ from tests.unit.modules.autopilot.meta_ads_fakes import (
     TOKEN,
     Graph,
     config,
+    limits,
     meta_error,
     request,
 )
@@ -68,6 +72,8 @@ async def test_validate_only_check_sends_only_validate_only_posts() -> None:
     graph = Graph()
     outcomes = await _run(graph, ParentIds())
     assert [(o.call, o.outcome) for o in outcomes] == [
+        ("page", OUTCOME_OK),
+        ("caps", OUTCOME_OK),
         ("preflight_media", OUTCOME_OK),
         ("preflight_account", OUTCOME_OK),
         ("min_budgets", OUTCOME_OK),
@@ -83,12 +89,12 @@ async def test_validate_only_check_sends_only_validate_only_posts() -> None:
     assert all(
         body["execution_options"] == '["validate_only"]' for body in _posts(graph)
     )
-    adset = outcomes[5].payload
+    adset = outcomes[7].payload
     assert adset["access_token"] == "[redacted]"
     assert adset["campaign_id"] == "<campaign_id>"
     assert json.loads(adset["targeting"])["geo_locations"] == {"countries": ["BR"]}
     assert "execution_options" not in adset
-    assert outcomes[6].payload["adset_id"] == "<adset_id>"
+    assert outcomes[8].payload["adset_id"] == "<adset_id>"
     assert TOKEN not in json.dumps([o.payload for o in outcomes])
 
 
@@ -157,7 +163,7 @@ async def test_transport_failure_is_reported_by_its_type_only() -> None:
     check = CheckInput(request=request(), parents=ParentIds(), now=NOW)
     async with httpx.AsyncClient(transport=httpx.MockTransport(refuse)) as client:
         outcomes = await run_checks(check, config(), client)
-    assert outcomes[0] == CallOutcome(
+    assert outcomes[2] == CallOutcome(
         call="preflight_media", outcome=OUTCOME_FAILED, error_code="ConnectError"
     )
     assert all(TOKEN not in cli.render(o) for o in outcomes)
@@ -182,6 +188,10 @@ async def test_validate_only_check_reports_an_audience_outside_the_caps() -> Non
 class _Store:
     def __init__(self, found: BoostRequest | None) -> None:
         self._found = found
+
+    async def committed_cents(self, since: datetime) -> int:
+        del since
+        return 0
 
     async def get(self, request_id: UUID) -> BoostRequest | None:
         assert request_id == REQUEST_ID
@@ -208,14 +218,22 @@ def _captured_cli(argv: list[str]) -> tuple[cli.GuardedCli, argparse.Namespace]:
     return seen[0], seen[0].parser.parse_args(argv)
 
 
-async def _main(graph: Graph, found: BoostRequest | None, token: str = TOKEN) -> int:
+@dataclass(frozen=True, kw_only=True)
+class _Env:
+    found: BoostRequest | None
+    token: str = TOKEN
+    caps: BoostLimits = field(default_factory=limits)
+
+
+async def _main(graph: Graph, env: _Env) -> int:
     guarded, args = _captured_cli([str(REQUEST_ID), "--campaign-id", "c-1"])
     assert guarded.validate(args) is None
     real_client = httpx.AsyncClient
-    settings = SimpleNamespace(meta_ads_access_token=SecretStr(token))
+    settings = SimpleNamespace(meta_ads_access_token=SecretStr(env.token))
     with (
         patch.object(cli, "AsyncSession", _session),
-        patch.object(cli, "SqlBoostStore", lambda session: _Store(found)),
+        patch.object(cli, "SqlBoostStore", lambda session: _Store(env.found)),
+        patch.object(cli, "limits_from", lambda s: env.caps),
         patch.object(cli, "get_settings", lambda: settings),
         patch.object(cli, "ads_config", lambda s, t: config()),
         patch.object(cli, "run_on_own_engine", _own_engine),
@@ -234,9 +252,11 @@ async def test_validate_only_command_prints_one_line_per_call(
 ) -> None:
     # Scenario: The validate-only command loads the request and prints one line per call
     graph = Graph()
-    assert await _main(graph, request()) == cli.EXIT_OK
+    assert await _main(graph, _Env(found=request())) == cli.EXIT_OK
     lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert [line["call"] for line in lines] == [
+        "page",
+        "caps",
         "preflight_media",
         "preflight_account",
         "min_budgets",
@@ -261,7 +281,7 @@ async def test_validate_only_command_exits_one_when_a_call_fails(
 ) -> None:
     # Scenario: The validate-only command loads the request and prints one line per call
     graph = Graph(fail={"creative": meta_error(100, 1885183)})
-    assert await _main(graph, request()) == cli.EXIT_FAILED
+    assert await _main(graph, _Env(found=request())) == cli.EXIT_FAILED
     assert TOKEN not in capsys.readouterr().out
 
 
@@ -271,8 +291,8 @@ async def test_validate_only_command_refuses_without_request_token_or_uuid(
 ) -> None:
     # Scenario: The validate-only command refuses a missing request, a missing token or a bad id
     graph = Graph()
-    assert await _main(graph, None) == cli.EXIT_FAILED
-    assert await _main(graph, request(), token="  ") == cli.EXIT_FAILED
+    assert await _main(graph, _Env(found=None)) == cli.EXIT_FAILED
+    assert await _main(graph, _Env(found=request(), token="  ")) == cli.EXIT_FAILED
     guarded, args = _captured_cli(["not-a-uuid"])
     assert guarded.validate(args) == "request_id must be a UUID"
     assert graph.sent == []
@@ -286,3 +306,19 @@ def test_entry_point_loads_the_command_and_refuses_a_bad_id(
     # Scenario: The validate-only command refuses a missing request, a missing token or a bad id
     assert entry.main(["not-a-uuid"]) == cli.EXIT_USAGE
     assert "request_id must be a UUID" in capsys.readouterr().err
+
+
+@pytest.mark.asyncio
+async def test_validate_only_command_fails_on_caps_the_worker_would_refuse(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Scenario: The validate-only check fails without a Page and on caps the worker would refuse
+    graph = Graph()
+    env = _Env(found=request(), caps=limits(max_daily_cents=1000))
+    assert await _main(graph, env) == cli.EXIT_FAILED
+    lines = {
+        json.loads(line)["call"]: json.loads(line)
+        for line in capsys.readouterr().out.splitlines()
+    }
+    assert lines["caps"]["outcome"] == OUTCOME_FAILED
+    assert lines["caps"]["error_code"] == "daily_budget_over_cap"

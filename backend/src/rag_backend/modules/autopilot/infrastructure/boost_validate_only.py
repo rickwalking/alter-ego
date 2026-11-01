@@ -22,17 +22,18 @@ from rag_backend.modules.autopilot.boost_constants import (
 )
 from rag_backend.modules.autopilot.domain.boost import BoostRequest
 from rag_backend.modules.autopilot.infrastructure.meta_ads_errors import AdsCallError
-from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
-    account_check,
-    budget_floor_check,
-    media_check,
-)
 from rag_backend.modules.autopilot.infrastructure.meta_ads_payloads import (
+    AdsetInput,
     ad_payload,
     adset_payload,
     adset_window,
     campaign_payload,
     creative_payload,
+)
+from rag_backend.modules.autopilot.infrastructure.meta_ads_preflight import (
+    PreflightStep,
+    preflight_steps,
+    require_page,
 )
 from rag_backend.modules.autopilot.infrastructure.meta_graph import (
     AdsConfig,
@@ -43,7 +44,9 @@ from rag_backend.modules.autopilot.meta_ads_constants import (
     CALL_AD,
     CALL_ADSET,
     CALL_CAMPAIGN,
+    CALL_CAPS,
     CALL_CREATIVE,
+    CALL_PAGE,
     EXECUTION_OPTIONS,
     REDACTED,
     VALIDATE_ONLY_VALUE,
@@ -81,11 +84,15 @@ class ParentIds:
 
 @dataclass(frozen=True, kw_only=True)
 class CheckInput:
-    """The stored request, the parent ids and the time the ad set would start."""
+    """The stored request, the parent ids and the time the ad set would start.
+
+    ``caps_refusal`` is the cap code the worker would fail the launch with, if any.
+    """
 
     request: BoostRequest
     parents: ParentIds
     now: datetime
+    caps_refusal: str | None = None
 
 
 class ValidateOnlyGraph:
@@ -120,22 +127,44 @@ def shown(payload: dict[str, str]) -> dict[str, str]:
 
 
 async def _attempt(
-    graph: ValidateOnlyGraph, call: GraphCall, *, write: bool
+    graph: ValidateOnlyGraph, step: PreflightStep | GraphCall
 ) -> CallOutcome:
+    """A preflight read checked by its rule, or a ``validate_only`` POST."""
+    call = step.call if isinstance(step, PreflightStep) else step
     try:
-        await (graph.post(call) if write else graph.get(call))
+        if isinstance(step, PreflightStep):
+            step.rule(await graph.get(call))
+        else:
+            await graph.post(call)
     except AdsCallError as exc:
-        return CallOutcome(
-            call=call.call,
-            outcome=OUTCOME_FAILED,
-            error_code=exc.code,
-            detail=exc.detail,
-        )
-    except httpx.HTTPError as exc:
+        return _failed(call.call, exc)
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
         return CallOutcome(
             call=call.call, outcome=OUTCOME_FAILED, error_code=type(exc).__name__
         )
     return CallOutcome(call=call.call, outcome=OUTCOME_OK)
+
+
+def _failed(call: str, exc: AdsCallError) -> CallOutcome:
+    return CallOutcome(
+        call=call, outcome=OUTCOME_FAILED, error_code=exc.code, detail=exc.detail
+    )
+
+
+def _local(check: CheckInput, config: AdsConfig) -> list[CallOutcome]:
+    """The checks a launch makes without HTTP: the Page ids and the caps in force."""
+    try:
+        require_page(config)
+    except AdsCallError as exc:
+        page = _failed(CALL_PAGE, exc)
+    else:
+        page = CallOutcome(call=CALL_PAGE, outcome=OUTCOME_OK)
+    if check.caps_refusal is None:
+        return [page, CallOutcome(call=CALL_CAPS, outcome=OUTCOME_OK)]
+    refused = CallOutcome(
+        call=CALL_CAPS, outcome=OUTCOME_FAILED, error_code=check.caps_refusal
+    )
+    return [page, refused]
 
 
 def _held(call: GraphCall) -> CallOutcome:
@@ -151,11 +180,15 @@ def _placeholder(value: str | None, name: str) -> str:
 Write = tuple[GraphCall, bool]
 
 
-def _adset(check: CheckInput) -> Write:
+def _adset(check: CheckInput, config: AdsConfig) -> Write:
     """The ad set body. An audience or run length outside the caps raises here."""
-    window = adset_window(check.request, check.now)
+    window = adset_window(check.request, check.now, config.caps)
     parent = _placeholder(check.parents.campaign_id, "campaign_id")
-    payload = adset_payload(check.request, parent, window)
+    payload = adset_payload(
+        AdsetInput(
+            request=check.request, campaign_id=parent, window=window, caps=config.caps
+        )
+    )
     call = GraphCall(call=CALL_ADSET, path=GRAPH_ADSETS, params=payload)
     return call, bool(check.parents.campaign_id)
 
@@ -182,12 +215,14 @@ async def _write(graph: ValidateOnlyGraph, write: Write) -> CallOutcome:
     call, ready = write
     if not ready:
         return _held(call)
-    return await _attempt(graph, validate_only(call), write=True)
+    return await _attempt(graph, validate_only(call))
 
 
-async def _children(check: CheckInput, graph: ValidateOnlyGraph) -> list[CallOutcome]:
+async def _children(
+    check: CheckInput, graph: ValidateOnlyGraph, config: AdsConfig
+) -> list[CallOutcome]:
     try:
-        adset = _adset(check)
+        adset = _adset(check, config)
     except AdsCallError as exc:
         refused = CallOutcome(
             call=CALL_ADSET, outcome=OUTCOME_FAILED, error_code=exc.code
@@ -201,10 +236,10 @@ async def run_checks(
 ) -> list[CallOutcome]:
     """Preflight reads, then every write as ``validate_only`` or as a held body."""
     graph = ValidateOnlyGraph(config, client)
-    reads = (media_check(check.request.media_id), account_check(), budget_floor_check())
-    outcomes = [await _attempt(graph, call, write=False) for call in reads]
+    outcomes = _local(check, config)
+    outcomes += [await _attempt(graph, step) for step in preflight_steps(check.request)]
     outcomes += [await _write(graph, write) for write in _roots(check, config)]
-    return outcomes + await _children(check, graph)
+    return outcomes + await _children(check, graph, config)
 
 
 __all__ = [

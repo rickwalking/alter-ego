@@ -127,3 +127,40 @@ Feature: Boost launch sends the capped audience and run window, and keeps Meta's
     Given the validate-only command
     When the request is missing, the token is empty or the id is not a UUID
     Then it exits non-zero without calling Meta
+
+  Scenario: The worker fails an approved boost that the current caps no longer allow
+    Given an approved boost and caps lowered after the approval
+    When the worker ticks with spending enabled
+    Then the request is stored as failed with the cap error code
+    And no Marketing API request is made
+
+  Scenario: The weekly cap counts other commitments but not the request itself
+    Given an approved boost and other boosts committed in the rolling week
+    When the worker ticks with spending enabled
+    Then it launches while the other commitments plus this one fit the weekly cap
+    And it fails with weekly_cap_exceeded once they do not
+
+  Scenario: The ad set is built inside the configured caps
+    Given BOOST_MAX_DAYS and BOOST_ALLOWED_COUNTRIES in the settings
+    When the ads gateway builds the ad set
+    Then it targets inside the configured countries and refuses a run over the configured days
+
+  Scenario: The launch bodies never carry execution_options
+    Given an approved boost
+    When the boost is launched
+    Then no POST of the launch carries execution_options
+
+  Scenario: The validate-only check fails where the launch preflight would fail
+    Given Meta answers a preflight read with a body the launch would refuse
+    When the validate-only check runs
+    Then that read is a failed line with the launch's own error code
+
+  Scenario: The validate-only check fails without a Page and on caps the worker would refuse
+    Given no Page id, or caps that no longer allow the request
+    When the validate-only check runs
+    Then the page or caps line is failed and the command exits non-zero
+
+  Scenario: A malformed Graph URL is reported by its type only
+    Given a Graph base URL that httpx cannot parse
+    When the validate-only check runs
+    Then each call is failed with the error code InvalidURL and no URL or token

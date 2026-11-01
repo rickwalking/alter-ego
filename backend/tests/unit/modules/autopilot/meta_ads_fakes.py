@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qsl
 from uuid import UUID
@@ -10,7 +10,16 @@ from uuid import UUID
 import httpx
 
 from rag_backend.modules.autopilot.boost_constants import STATUS_APPROVED
-from rag_backend.modules.autopilot.domain.boost import BoostAudience, BoostRequest
+from rag_backend.modules.autopilot.domain.boost import (
+    BoostAudience,
+    BoostListQuery,
+    BoostRequest,
+    MediaEligibility,
+    StatusSave,
+)
+from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
+from rag_backend.modules.autopilot.domain.ig_media import OpenBoost
+from rag_backend.modules.autopilot.domain.messages import InlineKeyboard
 from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import (
     AdsConfig,
     MetaAdsGateway,
@@ -33,9 +42,9 @@ _POST_CALLS = {
 }
 
 
-def config(*, enabled: bool = True) -> AdsConfig:
-    """Ads config with a Page and Instagram user."""
-    return AdsConfig(
+def config(*, enabled: bool = True, **changes: object) -> AdsConfig:
+    """Ads config with a Page and Instagram user; ``changes`` replaces fields."""
+    base = AdsConfig(
         enabled=enabled,
         token=TOKEN,
         app_secret=APP_SECRET,
@@ -44,6 +53,7 @@ def config(*, enabled: bool = True) -> AdsConfig:
         ig_user_id=IG_USER,
         graph_base="https://graph.example/v23.0",
     )
+    return replace(base, **changes)
 
 
 def request(
@@ -159,3 +169,94 @@ def _ok(call: str, count: int) -> httpx.Response:
         "activate": {"success": True},
     }
     return httpx.Response(200, json=answers.get(call, {"id": f"id-{call}-{count}"}))
+
+
+class Clock:
+    """The fixed test time."""
+
+    def now(self) -> datetime:
+        return NOW
+
+
+class Msg:
+    """Owner notices that go nowhere."""
+
+    async def send(self, text: str, keyboard: InlineKeyboard) -> int | None:
+        del text, keyboard
+        return None
+
+    async def edit(self, message_id: int, text: str) -> None:
+        del message_id, text
+
+
+@dataclass
+class Store:
+    """One stored row; ``committed`` is the rolling-week total the store reports."""
+
+    row: BoostRequest
+    committed: int = 0
+    saves: list[StatusSave] = field(default_factory=list)
+    commits: int = 0
+
+    async def by_key(self, key: str) -> BoostRequest | None:
+        del key
+        return None
+
+    async def get(self, request_id: UUID) -> BoostRequest | None:
+        del request_id
+        return None
+
+    async def media(self, media_id: str) -> MediaEligibility:
+        del media_id
+        return MediaEligibility(posted_at=None, product_type=None, permalink=None)
+
+    async def open_exists(self, media_id: str) -> bool:
+        del media_id
+        return False
+
+    async def pending_count(self) -> int:
+        return 0
+
+    async def committed_cents(self, since: datetime) -> int:
+        del since
+        return self.committed
+
+    async def insert(self, request: BoostRequest) -> None:
+        self.row = request
+
+    async def list_requests(self, query: BoostListQuery) -> list[BoostRequest]:
+        return [self.row] if self.row.status in query.statuses else []
+
+    async def open_for(self, media_ids: tuple[str, ...]) -> dict[str, OpenBoost]:
+        del media_ids
+        return {}
+
+    async def remember_message(self, request_id: UUID, message_id: int) -> None:
+        del request_id, message_id
+
+    async def save_status(self, change: StatusSave) -> None:
+        self.saves.append(change)
+        self.row = change.request
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+
+def limits(**changes: int) -> BoostLimits:
+    """The shipped caps, with spending on; ``changes`` lowers single caps."""
+    base = BoostLimits(
+        requests_enabled=True,
+        spend_enabled=True,
+        max_daily_cents=3000,
+        min_daily_cents=600,
+        max_days=7,
+        max_week_cents=10000,
+        max_pending=3,
+        max_age_days=30,
+        allowed_countries=frozenset({"BR"}),
+        approval_ttl_hours=12,
+        currency="BRL",
+        poll_minutes=60,
+        max_attempts=5,
+    )
+    return replace(base, **changes)

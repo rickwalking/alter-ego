@@ -5,14 +5,16 @@ Usage (backend container on prod; reads the request from the app database):
     python -m rag_backend.scripts.boost_validate_only <request_id> \\
         --campaign-id <id> [--adset-id <id> --creative-id <id>]
 
-It builds the exact campaign, ad set, creative and ad bodies the launch would send,
-runs the three preflight reads, and posts the campaign and the creative with
+It re-checks the caps in force and the Page ids, runs the three preflight reads
+with the launch's own rules, builds the exact campaign, ad set, creative and ad
+bodies the launch would send, and posts the campaign and the creative with
 ``execution_options=["validate_only"]``. The ad set needs ``--campaign-id`` and the
 ad needs ``--adset-id`` and ``--creative-id`` (existing objects); without them their
 body is printed, token redacted. A POST without ``validate_only`` is refused before
-it is sent. One JSON line per call: ok, Meta's error fields, or the held body.
+it is sent. One JSON line per call: ok, Meta's error fields, or the held body. Any
+check a launch would fail on is a failed line and a non-zero exit.
 
-Exit codes: 0 every sent call passed, 1 a call failed or the request/token is
+Exit codes: 0 every check passed, 1 a check failed or the request/token is
 missing, 2 usage error.
 """
 
@@ -29,6 +31,8 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from rag_backend.infrastructure.config.settings import get_settings
+from rag_backend.modules.autopilot.api.boost import limits_from
+from rag_backend.modules.autopilot.application.boost_tick import CapsAt, caps_refusal
 from rag_backend.modules.autopilot.infrastructure.boost_store import SqlBoostStore
 from rag_backend.modules.autopilot.infrastructure.boost_validate_only import (
     OUTCOME_FAILED,
@@ -93,10 +97,24 @@ def _parents(args: argparse.Namespace) -> ParentIds:
     )
 
 
-async def _check(engine: AsyncEngine, args: argparse.Namespace) -> int:
+async def _stored(engine: AsyncEngine, args: argparse.Namespace) -> CheckInput | None:
+    """The request and the cap code the worker would fail it with, or None if absent."""
+    now = datetime.now(UTC)
     async with AsyncSession(engine) as session:
-        request = await SqlBoostStore(session).get(UUID(args.request_id))
-    if request is None:
+        store = SqlBoostStore(session)
+        request = await store.get(UUID(args.request_id))
+        if request is None:
+            return None
+        at = CapsAt(limits=limits_from(get_settings()), now=now)
+        refusal = await caps_refusal(store, request, at)
+    return CheckInput(
+        request=request, parents=_parents(args), now=now, caps_refusal=refusal
+    )
+
+
+async def _check(engine: AsyncEngine, args: argparse.Namespace) -> int:
+    check = await _stored(engine, args)
+    if check is None:
         print(f"ERROR: {_ERR_NOT_FOUND}", file=sys.stderr)
         return EXIT_FAILED
     settings = get_settings()
@@ -104,7 +122,6 @@ async def _check(engine: AsyncEngine, args: argparse.Namespace) -> int:
     if token == "":
         print(f"ERROR: {_ERR_NO_ADS_KEY}", file=sys.stderr)
         return EXIT_FAILED
-    check = CheckInput(request=request, parents=_parents(args), now=datetime.now(UTC))
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         outcomes = await run_checks(check, ads_config(settings, token), client)
     for outcome in outcomes:

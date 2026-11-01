@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 from typing import Protocol
 
 import structlog
 
-from rag_backend.modules.autopilot.application.boost_requests import BoostDeps
+from rag_backend.modules.autopilot.application.boost_requests import (
+    BoostDeps,
+    draft_of,
+)
 from rag_backend.modules.autopilot.boost_constants import (
     ACTOR_WORKER,
     LOG_LAUNCH,
@@ -17,13 +21,16 @@ from rag_backend.modules.autopilot.boost_constants import (
     STATUS_FAILED,
     STATUS_LAUNCHING,
     STATUS_PENDING,
+    WEEK_DAYS,
 )
 from rag_backend.modules.autopilot.domain.boost import (
+    BoostError,
     BoostListQuery,
     BoostRequest,
+    BoostStore,
     StatusSave,
 )
-from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
+from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits, check_launch
 from rag_backend.modules.autopilot.infrastructure.meta_ads_gateway import AdsCallError
 
 _SCAN = 20
@@ -87,35 +94,67 @@ class BoostTick:
         if not rows:
             return 0
         current = rows[0]
+        refused = await self._caps_refusal(current)
+        if refused is not None:
+            failed = replace(current, status=STATUS_FAILED, error_code=refused)
+            await self._finish(STATUS_APPROVED, failed)
+            return 1
         launching = replace(current, status=STATUS_LAUNCHING)
         await self._deps.boosts.store.save_status(
             StatusSave(previous=STATUS_APPROVED, request=launching, actor=ACTOR_WORKER)
         )
-        try:
-            launched = await ads.launch(launching)
-        except AdsCallError as exc:
-            _log_failure(launching, exc)
-            failed = replace(
-                launching,
-                status=STATUS_FAILED,
-                error_code=exc.code,
-                error_detail=exc.detail,
-            )
-            await self._deps.boosts.store.save_status(
-                StatusSave(
-                    previous=STATUS_LAUNCHING,
-                    request=failed,
-                    actor=ACTOR_WORKER,
-                )
-            )
-            await self._deps.boosts.store.commit()
-            return 1
-        active = replace(launched, status=STATUS_ACTIVE)
+        await self._finish(STATUS_LAUNCHING, await _attempt(ads, launching))
+        return 1
+
+    async def _caps_refusal(self, request: BoostRequest) -> str | None:
+        """The cap code when the current caps no longer allow the approved request."""
+        at = CapsAt(limits=self._deps.limits, now=self._deps.boosts.clock.now())
+        return await caps_refusal(self._deps.boosts.store, request, at)
+
+    async def _finish(self, previous: str, request: BoostRequest) -> None:
         await self._deps.boosts.store.save_status(
-            StatusSave(previous=STATUS_LAUNCHING, request=active, actor=ACTOR_WORKER)
+            StatusSave(previous=previous, request=request, actor=ACTOR_WORKER)
         )
         await self._deps.boosts.store.commit()
-        return 1
+
+
+@dataclass(frozen=True, kw_only=True)
+class CapsAt:
+    """The caps in force and the time the rolling week ends."""
+
+    limits: BoostLimits
+    now: datetime
+
+
+async def caps_refusal(
+    store: BoostStore, request: BoostRequest, at: CapsAt
+) -> str | None:
+    """The cap code when the caps in force no longer allow the request, else None.
+
+    The request's own budget is taken out of the weekly total it is checked against.
+    """
+    since = at.now - timedelta(days=WEEK_DAYS)
+    others = max(0, await store.committed_cents(since) - request.total_budget_cents)
+    try:
+        check_launch(draft_of(request), at.limits, others)
+    except BoostError as exc:
+        return exc.code
+    return None
+
+
+async def _attempt(ads: _Ads, launching: BoostRequest) -> BoostRequest:
+    """The launched request as active, or as failed with Meta's error details."""
+    try:
+        launched = await ads.launch(launching)
+    except AdsCallError as exc:
+        _log_failure(launching, exc)
+        return replace(
+            launching,
+            status=STATUS_FAILED,
+            error_code=exc.code,
+            error_detail=exc.detail,
+        )
+    return replace(launched, status=STATUS_ACTIVE)
 
 
 def _log_failure(request: BoostRequest, exc: AdsCallError) -> None:
@@ -129,4 +168,4 @@ def _log_failure(request: BoostRequest, exc: AdsCallError) -> None:
     )
 
 
-__all__ = ["BoostTick", "BoostTickDeps"]
+__all__ = ["BoostTick", "BoostTickDeps", "CapsAt", "caps_refusal"]

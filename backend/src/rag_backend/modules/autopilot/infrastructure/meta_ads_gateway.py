@@ -10,12 +10,7 @@ import httpx
 
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.modules.autopilot.boost_constants import (
-    ACCOUNT_ACTIVE,
-    ERR_ACCOUNT,
     ERR_ADS_DISABLED,
-    ERR_BELOW_META,
-    ERR_MEDIA_HIDDEN,
-    ERR_PAGE_MISSING,
     GRAPH_ADS,
     GRAPH_ADSETS,
     GRAPH_CAMPAIGNS,
@@ -26,6 +21,7 @@ from rag_backend.modules.autopilot.boost_constants import (
 from rag_backend.modules.autopilot.domain.boost import BoostRequest
 from rag_backend.modules.autopilot.infrastructure.meta_ads_errors import AdsCallError
 from rag_backend.modules.autopilot.infrastructure.meta_ads_payloads import (
+    AdsetInput,
     AdsetWindow,
     ad_payload,
     adset_payload,
@@ -33,6 +29,10 @@ from rag_backend.modules.autopilot.infrastructure.meta_ads_payloads import (
     campaign_payload,
     creative_payload,
     targeting,
+)
+from rag_backend.modules.autopilot.infrastructure.meta_ads_preflight import (
+    preflight_steps,
+    require_page,
 )
 from rag_backend.modules.autopilot.infrastructure.meta_graph import (
     AdsConfig,
@@ -46,10 +46,7 @@ from rag_backend.modules.autopilot.meta_ads_constants import (
     CALL_ADSET,
     CALL_CAMPAIGN,
     CALL_CREATIVE,
-    CALL_MIN_BUDGETS,
     CALL_PAUSE,
-    CALL_PREFLIGHT_ACCOUNT,
-    CALL_PREFLIGHT_MEDIA,
     ERR_META_NO_ID,
     FIELD_CALL,
 )
@@ -59,29 +56,6 @@ Clock = Callable[[], datetime]
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
-
-
-def media_check(media_id: str) -> GraphCall:
-    """The preflight read of the post. The ads token needs ``instagram_basic``."""
-    return GraphCall(
-        call=CALL_PREFLIGHT_MEDIA, path=f"/{media_id}", params={"fields": "id"}
-    )
-
-
-def account_check() -> GraphCall:
-    """The preflight read of the ad account status."""
-    return GraphCall(
-        call=CALL_PREFLIGHT_ACCOUNT,
-        path="/act_{account}",
-        params={"fields": "account_status"},
-    )
-
-
-def budget_floor_check() -> GraphCall:
-    """The preflight read of Meta's minimum daily budgets."""
-    return GraphCall(
-        call=CALL_MIN_BUDGETS, path="/act_{account}/minimum_budgets", params={}
-    )
 
 
 class MetaAdsGateway:
@@ -100,9 +74,10 @@ class MetaAdsGateway:
         An audience or a run length outside the caps fails before any HTTP.
         """
         self._require_enabled()
-        self._require_page()
-        window = adset_window(request, self._clock())
-        targeting(request.audience)
+        require_page(self._config)
+        caps = self._config.caps
+        window = adset_window(request, self._clock(), caps)
+        targeting(request.audience, caps)
         await self._preflight(request)
         campaign = request.meta_campaign_id or await self._campaign(request)
         adset = request.meta_adset_id or await self._adset(request, campaign, window)
@@ -136,23 +111,9 @@ class MetaAdsGateway:
         if not self._config.enabled:
             raise AdsCallError(ERR_ADS_DISABLED, permanent=False)
 
-    def _require_page(self) -> None:
-        """Meta boosts an Instagram post only through a Page and its Instagram user."""
-        config = self._config
-        if config.page_id.strip() == "" or config.ig_user_id.strip() == "":
-            raise AdsCallError(ERR_PAGE_MISSING, permanent=True)
-
     async def _preflight(self, request: BoostRequest) -> None:
-        media = await self._graph.get(media_check(request.media_id))
-        if "id" not in media:
-            raise AdsCallError(ERR_MEDIA_HIDDEN, permanent=True)
-        state = await self._graph.get(account_check())
-        if state.get("account_status") != ACCOUNT_ACTIVE:
-            raise AdsCallError(ERR_ACCOUNT, permanent=True)
-        floors = await self._graph.get(budget_floor_check())
-        floor = floors.get("min_daily_budget_high_freq")
-        if isinstance(floor, int) and request.daily_budget_cents < floor:
-            raise AdsCallError(ERR_BELOW_META, permanent=True)
+        for step in preflight_steps(request):
+            step.rule(await self._graph.get(step.call))
 
     async def _campaign(self, request: BoostRequest) -> str:
         payload = campaign_payload(request)
@@ -163,7 +124,14 @@ class MetaAdsGateway:
     async def _adset(
         self, request: BoostRequest, campaign_id: str, window: AdsetWindow
     ) -> str:
-        payload = adset_payload(request, campaign_id, window)
+        payload = adset_payload(
+            AdsetInput(
+                request=request,
+                campaign_id=campaign_id,
+                window=window,
+                caps=self._config.caps,
+            )
+        )
         return await self._created(
             GraphCall(call=CALL_ADSET, path=GRAPH_ADSETS, params=payload)
         )
@@ -206,9 +174,6 @@ __all__ = [
     "AdsConfig",
     "MetaAdsGateway",
     "SettingsCampaignPauser",
-    "account_check",
-    "budget_floor_check",
-    "media_check",
 ]
 
 

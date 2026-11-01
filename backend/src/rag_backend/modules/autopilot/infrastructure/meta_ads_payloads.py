@@ -11,12 +11,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from rag_backend.modules.autopilot.boost_constants import (
-    AGE_MAX,
-    AGE_MIN,
     BID_LOWEST,
     BILLING_IMPRESSIONS,
     BUYING_AUCTION,
-    DEFAULT_MAX_DAYS,
     DESTINATION_ON_POST,
     ERR_AUDIENCE,
     ERR_COUNTRY,
@@ -27,10 +24,9 @@ from rag_backend.modules.autopilot.boost_constants import (
 )
 from rag_backend.modules.autopilot.domain.boost import BoostAudience, BoostRequest
 from rag_backend.modules.autopilot.infrastructure.meta_ads_errors import AdsCallError
-from rag_backend.modules.autopilot.infrastructure.meta_graph import AdsConfig
+from rag_backend.modules.autopilot.infrastructure.meta_graph import AdsCaps, AdsConfig
 from rag_backend.modules.autopilot.meta_ads_constants import (
     ADVANTAGE_OFF,
-    ALLOWED_AD_COUNTRIES,
     ERR_SCHEDULE,
     IG_POSITION_FEED,
     PLATFORM_INSTAGRAM,
@@ -53,22 +49,22 @@ class AdsetWindow:
     end: datetime
 
 
-def adset_window(request: BoostRequest, now: datetime) -> AdsetWindow:
+def adset_window(request: BoostRequest, now: datetime, caps: AdsCaps) -> AdsetWindow:
     """Start at the requested time (or now, if that is past) and run ``days`` days."""
     if request.days < 1:
         raise AdsCallError(ERR_SCHEDULE, permanent=True)
-    if request.days > DEFAULT_MAX_DAYS:
+    if request.days > caps.max_days:
         raise AdsCallError(ERR_DAYS, permanent=True)
     start = now if request.starts_at is None else max(now, request.starts_at)
     return AdsetWindow(start=start, end=start + timedelta(days=request.days))
 
 
-def targeting(audience: BoostAudience) -> str:
+def targeting(audience: BoostAudience, caps: AdsCaps) -> str:
     """The ad set targeting JSON. An audience outside the caps is refused."""
     countries = sorted(set(audience.countries))
-    if not countries or not set(countries) <= ALLOWED_AD_COUNTRIES:
+    if not countries or not set(countries) <= caps.countries:
         raise AdsCallError(ERR_COUNTRY, permanent=True)
-    if not AGE_MIN <= audience.age_min <= audience.age_max <= AGE_MAX:
+    if not caps.age_min <= audience.age_min <= audience.age_max <= caps.age_max:
         raise AdsCallError(ERR_AUDIENCE, permanent=True)
     spec: dict[str, object] = {
         TARGET_GEO: {TARGET_COUNTRIES: countries},
@@ -93,20 +89,29 @@ def campaign_payload(request: BoostRequest) -> dict[str, str]:
     }
 
 
-def adset_payload(
-    request: BoostRequest, campaign_id: str, window: AdsetWindow
-) -> dict[str, str]:
+@dataclass(frozen=True, kw_only=True)
+class AdsetInput:
+    """The request, its parent campaign, the run window and the caps to target."""
+
+    request: BoostRequest
+    campaign_id: str
+    window: AdsetWindow
+    caps: AdsCaps
+
+
+def adset_payload(adset: AdsetInput) -> dict[str, str]:
     """Paused ad set: daily budget, capped audience, start and end time."""
+    request, window = adset.request, adset.window
     return {
         "name": f"AE boost {str(request.id)[:8]}",
-        "campaign_id": campaign_id,
+        "campaign_id": adset.campaign_id,
         "status": STATUS_PAUSED,
         "daily_budget": str(request.daily_budget_cents),
         "billing_event": BILLING_IMPRESSIONS,
         "optimization_goal": OPTIMIZATION_POST,
         "bid_strategy": BID_LOWEST,
         "destination_type": DESTINATION_ON_POST,
-        "targeting": targeting(request.audience),
+        "targeting": targeting(request.audience, adset.caps),
         "start_time": str(int(window.start.timestamp())),
         "end_time": str(int(window.end.timestamp())),
     }
@@ -133,6 +138,7 @@ def ad_payload(adset_id: str, creative_id: str) -> dict[str, str]:
 
 
 __all__ = [
+    "AdsetInput",
     "AdsetWindow",
     "ad_payload",
     "adset_payload",

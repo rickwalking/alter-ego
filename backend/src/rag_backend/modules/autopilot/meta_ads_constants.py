@@ -3,14 +3,16 @@
 Targeting for an ``ON_POST`` engagement boost of an existing Instagram post:
 
 - ``geo_locations.countries`` and ``age_min``/``age_max`` come from the stored request
-  audience and must sit inside the shipped caps (Brazil only, ages 18-65).
+  audience and must sit inside the configured caps (``BOOST_ALLOWED_COUNTRIES``,
+  ages 18-65; shipped as Brazil only).
 - ``publisher_platforms=["instagram"]`` with ``instagram_positions=["stream"]`` keeps
   delivery on the Instagram feed, where the boosted post lives.
 - ``targeting_automation.advantage_audience=0`` stops Meta from widening the audience
   past the caps (v23 requires the flag to be set explicitly on new ad sets).
 
 The ad set runs from ``start_time`` to ``end_time`` (unix seconds), ``days`` long and
-never more than the 7-day cap, so Meta stops spending on its own side too.
+never more than ``BOOST_MAX_DAYS`` (shipped as 7), so Meta stops spending on its
+own side too.
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ CALL_CREATIVE = "creative"
 CALL_AD = "ad"
 CALL_ACTIVATE = "activate"
 CALL_PAUSE = "pause"
+CALL_PAGE = "page"
+CALL_CAPS = "caps"
 
 FIELD_CALL = "call"
 FIELD_CODE = "code"
@@ -69,7 +73,6 @@ TARGET_ADVANTAGE = "advantage_audience"
 PLATFORM_INSTAGRAM = "instagram"
 IG_POSITION_FEED = "stream"
 ADVANTAGE_OFF = 0
-ALLOWED_AD_COUNTRIES: frozenset[str] = frozenset({"BR"})
 
 EXECUTION_OPTIONS = "execution_options"
 VALIDATE_ONLY = "validate_only"
@@ -77,13 +80,14 @@ VALIDATE_ONLY_VALUE = '["validate_only"]'
 
 __all__ = [
     "ADVANTAGE_OFF",
-    "ALLOWED_AD_COUNTRIES",
     "CALL_ACTIVATE",
     "CALL_AD",
     "CALL_ADSET",
     "CALL_CAMPAIGN",
+    "CALL_CAPS",
     "CALL_CREATIVE",
     "CALL_MIN_BUDGETS",
+    "CALL_PAGE",
     "CALL_PAUSE",
     "CALL_PREFLIGHT_ACCOUNT",
     "CALL_PREFLIGHT_MEDIA",

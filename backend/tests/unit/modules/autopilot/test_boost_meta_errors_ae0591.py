@@ -8,9 +8,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from dataclasses import dataclass, field
-from datetime import datetime
-from uuid import UUID
 
 import httpx
 import pytest
@@ -22,15 +19,6 @@ from rag_backend.modules.autopilot.application.boost_tick import (
     BoostTickDeps,
 )
 from rag_backend.modules.autopilot.boost_constants import STATUS_FAILED
-from rag_backend.modules.autopilot.domain.boost import (
-    BoostListQuery,
-    BoostRequest,
-    MediaEligibility,
-    StatusSave,
-)
-from rag_backend.modules.autopilot.domain.boost_policy import BoostLimits
-from rag_backend.modules.autopilot.domain.ig_media import OpenBoost
-from rag_backend.modules.autopilot.domain.messages import InlineKeyboard
 from rag_backend.modules.autopilot.infrastructure.meta_ads_errors import (
     AdsCallError,
     CallContext,
@@ -38,10 +26,13 @@ from rag_backend.modules.autopilot.infrastructure.meta_ads_errors import (
 )
 from tests.unit.modules.autopilot.meta_ads_fakes import (
     APP_SECRET,
-    NOW,
     TOKEN,
+    Clock,
     Graph,
+    Msg,
+    Store,
     gateway,
+    limits,
     meta_error,
     request,
 )
@@ -184,94 +175,13 @@ async def test_created_object_without_an_id_names_the_call() -> None:
     assert (error.code, error.detail) == ("meta_no_id", {"call": "adset"})
 
 
-class _Clock:
-    def now(self) -> datetime:
-        return NOW
-
-
-class _Msg:
-    async def send(self, text: str, keyboard: InlineKeyboard) -> int | None:
-        del text, keyboard
-        return None
-
-    async def edit(self, message_id: int, text: str) -> None:
-        del message_id, text
-
-
-@dataclass
-class _Store:
-    row: BoostRequest
-    saves: list[StatusSave] = field(default_factory=list)
-
-    async def by_key(self, key: str) -> BoostRequest | None:
-        del key
-        return None
-
-    async def get(self, request_id: UUID) -> BoostRequest | None:
-        del request_id
-        return None
-
-    async def media(self, media_id: str) -> MediaEligibility:
-        del media_id
-        return MediaEligibility(posted_at=None, product_type=None, permalink=None)
-
-    async def open_exists(self, media_id: str) -> bool:
-        del media_id
-        return False
-
-    async def pending_count(self) -> int:
-        return 0
-
-    async def committed_cents(self, since: datetime) -> int:
-        del since
-        return 0
-
-    async def insert(self, request: BoostRequest) -> None:
-        self.row = request
-
-    async def list_requests(self, query: BoostListQuery) -> list[BoostRequest]:
-        return [self.row] if self.row.status in query.statuses else []
-
-    async def open_for(self, media_ids: tuple[str, ...]) -> dict[str, OpenBoost]:
-        del media_ids
-        return {}
-
-    async def remember_message(self, request_id: UUID, message_id: int) -> None:
-        del request_id, message_id
-
-    async def save_status(self, change: StatusSave) -> None:
-        self.saves.append(change)
-        self.row = change.request
-
-    async def commit(self) -> None:
-        return None
-
-
-def _limits() -> BoostLimits:
-    return BoostLimits(
-        requests_enabled=True,
-        spend_enabled=True,
-        max_daily_cents=3000,
-        min_daily_cents=600,
-        max_days=7,
-        max_week_cents=10000,
-        max_pending=3,
-        max_age_days=30,
-        allowed_countries=frozenset({"BR"}),
-        approval_ttl_hours=12,
-        currency="BRL",
-        poll_minutes=60,
-        max_attempts=5,
-    )
-
-
 @pytest.mark.asyncio
 async def test_worker_stores_meta_details_on_the_failure_and_logs_them() -> None:
     # Scenario: The worker stores Meta's error details on the failure event and logs them
-    store = _Store(row=request())
+    store = Store(row=request())
     graph = Graph(fail={"creative": meta_error(100, 1885183)})
-    deps = BoostDeps(store=store, messenger=_Msg(), clock=_Clock(), owner_chat_id="1")
-    tick = BoostTick(BoostTickDeps(boosts=deps, limits=_limits(), ads=gateway(graph)))
+    deps = BoostDeps(store=store, messenger=Msg(), clock=Clock(), owner_chat_id="1")
+    tick = BoostTick(BoostTickDeps(boosts=deps, limits=limits(), ads=gateway(graph)))
     with capture_logs() as logs:
         assert await tick.run() == 1
     assert store.row.status == STATUS_FAILED
