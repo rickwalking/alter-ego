@@ -10,9 +10,9 @@ auth command onto the exact persistence/JWT/bcrypt calls the legacy
 status codes, cookies) stays byte-identical when the routes move behind the
 facade.
 
-``change_password`` deliberately reproduces the legacy update path verbatim:
-verify the current password first (the 401 guard runs *before* any write), then
-set ``hashed_password`` and call ``repository.update`` inside the request-scoped
+``change_password`` reproduces the legacy update path: verify the current
+password first (the 401 guard runs *before* any write), then set the new hash,
+clear ``must_change_password`` and call ``repository.update`` inside the request-scoped
 Unit of Work (the single commit owner, ADR-0009 §9). The repository refreshes
 the user after its flush, so a password-only update returns the stored row
 instead of lazy-loading the database-set ``updated_at`` (which used to 500).
@@ -29,13 +29,10 @@ from rag_backend.modules.identity.application.authentication_service import (
 )
 from rag_backend.modules.identity.application.password_service import PasswordService
 from rag_backend.modules.identity.application.user_service import (
-    CurrentPasswordIncorrectError,
     UserNotFoundError,
+    new_password_hash,
 )
-from rag_backend.modules.identity.constants import (
-    ERR_CURRENT_CREDENTIAL_INCORRECT,
-    ERR_USER_NOT_FOUND,
-)
+from rag_backend.modules.identity.constants import ERR_USER_NOT_FOUND
 from rag_backend.modules.identity.domain.commands import (
     ChangePasswordCommand,
     LoginCommand,
@@ -79,15 +76,15 @@ class AuthCommandHandler:
     async def change_password(self, command: ChangePasswordCommand) -> None:
         """Change a user's password after verifying the current one.
 
-        The wrong-current-password guard raises before any write (legacy 401
-        ordering). On success the new hash is staged via ``repository.update``
-        and committed once through the Unit of Work; the route answers 204.
+        The wrong-current-password and unchanged-password guards raise before
+        any write (legacy 401 ordering). On success the new hash is staged and
+        the forced-change flag cleared via ``repository.update``, committed once
+        through the Unit of Work; the route answers 204.
         """
         user = await self._require_user(command.user_id)
-        if not self._passwords.verify(command.current_password, user.hashed_password):
-            raise CurrentPasswordIncorrectError(ERR_CURRENT_CREDENTIAL_INCORRECT)
+        new_hash = new_password_hash(self._passwords, user, command)
         async with self._unit_of_work:
-            user.hashed_password = self._passwords.hash(command.new_password)
+            user.change_password(new_hash)
             await self._repository.update(user)
 
     async def _require_user(self, user_id: UUID) -> User:

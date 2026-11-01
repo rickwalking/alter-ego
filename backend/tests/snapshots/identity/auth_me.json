@@ -3,6 +3,7 @@
     "email": "id-admin@integration.example.com",
     "full_name": "Id-Admin",
     "id": "<uuid>",
+    "must_change_password": false,
     "role": "admin"
   },
   "cookies": {},

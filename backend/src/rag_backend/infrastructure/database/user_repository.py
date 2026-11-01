@@ -109,6 +109,7 @@ class PostgresUserRepository(UserRepository):
         model.hashed_password = user.hashed_password
         model.role = user.role.value
         model.is_active = user.is_active
+        model.must_change_password = user.must_change_password
         model.updated_at = user.updated_at
 
         await self._session.flush()

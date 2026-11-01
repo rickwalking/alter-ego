@@ -223,13 +223,14 @@ class AdminUserHandler:
     async def reset_password(self, user_id: UUID) -> str:
         """Reset a user's password to a fresh temp password; return it.
 
-        Sets ``hashed_password`` and saves it through ``repository.update``;
-        the temporary password is returned once and never stored in clear.
+        Stores the new hash and flags the user to change it at the next login,
+        then saves it through ``repository.update``; the temporary password is
+        returned once and never stored in clear.
         """
         async with self._unit_of_work:
             user = await self._require_user(user_id)
             temp_password = _generate_secure_password()
-            user.hashed_password = self._passwords.hash(temp_password)
+            user.reset_password(self._passwords.hash(temp_password))
             await self._repository.update(user)
         return temp_password
 

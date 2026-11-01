@@ -17,12 +17,20 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
-from rag_backend.api.constants import ERR_CODE_USER_INACTIVE, ERR_NOT_AUTHENTICATED
-from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.constants import (
+    ERR_CODE_CURRENT_PASSWORD_INCORRECT,
+    ERR_CODE_PASSWORD_UNCHANGED,
+    ERR_CODE_USER_INACTIVE,
+    ERR_NOT_AUTHENTICATED,
+)
+from rag_backend.api.dependencies.auth import require_signed_in_user
 from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.api.schemas.coded_error import LoginErrorResponse
+from rag_backend.api.schemas.coded_error import (
+    CodedErrorResponse,
+    LoginErrorResponse,
+)
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, MIN_PASSWORD_LENGTH
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.identity import (
@@ -32,10 +40,13 @@ from rag_backend.modules.identity import (
     InactiveUserError,
     InvalidCredentialsError,
     LoginCommand,
+    PasswordUnchangedError,
     User,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+AUTH_ATTEMPTS_RATE_LIMIT = "5/minute"
 
 
 def _auth_cookie_secure(request: Request, settings: Settings) -> bool:
@@ -69,6 +80,7 @@ class MeResponse(BaseModel):
     email: str
     full_name: str
     role: str
+    must_change_password: bool = False
 
 
 class ChangePasswordRequest(BaseModel):
@@ -90,7 +102,7 @@ class ChangePasswordRequest(BaseModel):
         },
     },
 )
-@limiter.limit("5/minute")
+@limiter.limit(AUTH_ATTEMPTS_RATE_LIMIT)
 async def login(
     request: Request,
     body: LoginRequest,
@@ -155,14 +167,20 @@ async def logout(
     },
 )
 async def get_me(
-    user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_signed_in_user)],
 ) -> MeResponse:
-    """Get current authenticated user information."""
+    """Get current authenticated user information.
+
+    Also answers a user who must change the password, with
+    ``must_change_password`` true, so the dashboard can send them to the
+    change-password screen.
+    """
     return MeResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         role=user.role.value,
+        must_change_password=user.must_change_password,
     )
 
 
@@ -170,26 +188,47 @@ async def get_me(
     "/change-password",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        401: {"description": "Invalid current password or not authenticated"},
-        400: {"description": "Invalid new password"},
+        401: {
+            "model": LoginErrorResponse,
+            "description": (
+                "Not authenticated, or a wrong current password"
+                " (code current_password_incorrect)"
+            ),
+        },
+        400: {
+            "model": CodedErrorResponse,
+            "description": "New password equals the current one (code password_unchanged)",
+        },
+        429: {"description": "Too many attempts"},
     },
 )
+@limiter.limit(AUTH_ATTEMPTS_RATE_LIMIT)
 async def change_password(
-    request: ChangePasswordRequest,
-    user: Annotated[User, Depends(require_authenticated_user)],
+    request: Request,
+    body: ChangePasswordRequest,
+    user: Annotated[User, Depends(require_signed_in_user)],
     service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> None:
-    """Change the authenticated user's password."""
+    """Change the authenticated user's password.
+
+    Also open to a user who must change an admin-issued password; a
+    successful change clears that flag. Rate limited like the login.
+    """
     try:
         await service.auth.change_password(
             ChangePasswordCommand(
                 user_id=user.id,
-                current_password=request.current_password,
-                new_password=request.new_password,
+                current_password=body.current_password,
+                new_password=body.new_password,
             )
         )
     except CurrentPasswordIncorrectError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect",
+        raise CodedHTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            str(exc),
+            ERR_CODE_CURRENT_PASSWORD_INCORRECT,
+        ) from exc
+    except PasswordUnchangedError as exc:
+        raise CodedHTTPException(
+            status.HTTP_400_BAD_REQUEST, str(exc), ERR_CODE_PASSWORD_UNCHANGED
         ) from exc

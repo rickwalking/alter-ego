@@ -26,6 +26,7 @@ class User:
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
+    must_change_password: bool = False
 
     def is_admin(self) -> bool:
         """Return True when the user has the admin role."""
@@ -49,6 +50,16 @@ class User:
         """Assign a new role and refresh the updated timestamp."""
         self.role = role
         self.updated_at = utc_now()
+
+    def reset_password(self, hashed_password: str) -> None:
+        """Store an admin-issued temporary hash; the user must change it next."""
+        self.hashed_password = hashed_password
+        self.must_change_password = True
+
+    def change_password(self, hashed_password: str) -> None:
+        """Store the user's own new hash and clear the forced-change flag."""
+        self.hashed_password = hashed_password
+        self.must_change_password = False
 
     def rename(self, full_name: str) -> None:
         """Change the display name and refresh the updated timestamp."""

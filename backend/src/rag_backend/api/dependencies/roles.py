@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
+from rag_backend.api.dependencies.auth import reject_pending_password_change
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.middleware.auth import get_current_user as get_jwt_payload
 from rag_backend.domain.models.user import UserRole
@@ -16,7 +17,11 @@ async def get_current_user(
     payload: Annotated[dict[str, str], Depends(get_jwt_payload)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> UserModel:
-    """Resolve the authenticated user from a validated JWT payload."""
+    """Resolve the authenticated user from a validated JWT payload.
+
+    A user who must change an admin-issued password is refused with 403
+    ``password_change_required``, like :func:`require_authenticated_user`.
+    """
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(
@@ -35,6 +40,7 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is deactivated",
         )
+    reject_pending_password_change(must_change_password=bool(user.must_change_password))
     return user
 
 

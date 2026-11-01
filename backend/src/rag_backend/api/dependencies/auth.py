@@ -6,8 +6,14 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import ERR_ADMIN_REQUIRED, ERR_USER_NOT_FOUND
+from rag_backend.api.constants import (
+    ERR_ADMIN_REQUIRED,
+    ERR_CODE_PASSWORD_CHANGE_REQUIRED,
+    ERR_PASSWORD_CHANGE_REQUIRED,
+    ERR_USER_NOT_FOUND,
+)
 from rag_backend.api.middleware.auth import get_current_user, get_current_user_optional
+from rag_backend.api.middleware.coded_error_handler import CodedHTTPException
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
@@ -34,11 +40,16 @@ async def get_user_repo(
     return PostgresUserRepository(db)
 
 
-async def require_authenticated_user(
+async def require_signed_in_user(
     payload: Annotated[dict[str, str], Depends(get_current_user)],
     repo: Annotated[PostgresUserRepository, Depends(get_user_repo)],
 ) -> User:
-    """Require an authenticated user and resolve to User entity.
+    """Require a signed-in, active user, even one who must change the password.
+
+    Only ``/api/auth/me`` and ``/api/auth/change-password`` use this directly;
+    every other protected endpoint goes through
+    :func:`require_authenticated_user`, which also refuses a user who must
+    change the password first.
 
     Args:
         payload: JWT payload from get_current_user.
@@ -65,6 +76,31 @@ async def require_authenticated_user(
             detail="User account is deactivated",
         )
 
+    return user
+
+
+def reject_pending_password_change(*, must_change_password: bool) -> None:
+    """Refuse a user who must change an admin-issued password first (403)."""
+    if must_change_password:
+        raise CodedHTTPException(
+            status.HTTP_403_FORBIDDEN,
+            ERR_PASSWORD_CHANGE_REQUIRED,
+            ERR_CODE_PASSWORD_CHANGE_REQUIRED,
+        )
+
+
+async def require_authenticated_user(
+    user: Annotated[User, Depends(require_signed_in_user)],
+) -> User:
+    """Require an authenticated user who may use the app.
+
+    A user whose password an admin reset is refused with 403
+    ``password_change_required`` until they change it.
+
+    Raises:
+        HTTPException: 401 if not signed in, 403 if the password must change.
+    """
+    reject_pending_password_change(must_change_password=user.must_change_password)
     return user
 
 
@@ -152,7 +188,8 @@ async def get_optional_user(
         repo: User repository.
 
     Returns:
-        User entity if authenticated, None otherwise.
+        User entity if authenticated, None otherwise. A user who must change
+        the password is treated as an anonymous visitor.
     """
     if payload is None:
         return None
@@ -160,7 +197,7 @@ async def get_optional_user(
     user_id = UUID(payload["sub"])
     user = await repo.get_by_id(user_id)
 
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.must_change_password:
         return None
 
     return user
@@ -170,8 +207,10 @@ __all__ = [
     "get_optional_user",
     "get_request_session",
     "get_user_repo",
+    "reject_pending_password_change",
     "require_admin",
     "require_authenticated_user",
     "require_editor_or_admin",
     "require_owner_or_admin",
+    "require_signed_in_user",
 ]

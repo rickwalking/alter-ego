@@ -24,6 +24,7 @@ from rag_backend.modules.identity.api.views import UserListView, UserView
 from rag_backend.modules.identity.application.password_service import PasswordService
 from rag_backend.modules.identity.application.user_view import to_user_view
 from rag_backend.modules.identity.constants import (
+    ERR_CREDENTIAL_UNCHANGED,
     ERR_CURRENT_CREDENTIAL_INCORRECT,
     ERR_USER_NOT_FOUND,
 )
@@ -47,6 +48,26 @@ class UserNotFoundError(Exception):
 
 class CurrentPasswordIncorrectError(Exception):
     """Raised when a password change supplies the wrong current password."""
+
+
+class PasswordUnchangedError(Exception):
+    """Raised when the new password is the same as the current one."""
+
+
+def new_password_hash(
+    passwords: PasswordService, user: User, command: ChangePasswordCommand
+) -> str:
+    """The hash of the new password, once the change is allowed.
+
+    The current password must match, and the new one must differ from it (a
+    temporary password an admin shared cannot be kept by "changing" it to
+    itself). Both checks run before any write.
+    """
+    if not passwords.verify(command.current_password, user.hashed_password):
+        raise CurrentPasswordIncorrectError(ERR_CURRENT_CREDENTIAL_INCORRECT)
+    if command.new_password == command.current_password:
+        raise PasswordUnchangedError(ERR_CREDENTIAL_UNCHANGED)
+    return passwords.hash(command.new_password)
 
 
 @dataclass(frozen=True)
@@ -127,11 +148,7 @@ class UserService:
         """Change a user's password after verifying the current one (committed once)."""
         async with self._unit_of_work:
             user = await self._require_user(command.user_id)
-            if not self._passwords.verify(
-                command.current_password, user.hashed_password
-            ):
-                raise CurrentPasswordIncorrectError(ERR_CURRENT_CREDENTIAL_INCORRECT)
-            user.hashed_password = self._passwords.hash(command.new_password)
+            user.change_password(new_password_hash(self._passwords, user, command))
             await self._repository.update(user)
 
     async def delete(self, command: DeleteUserCommand) -> bool:
@@ -158,7 +175,9 @@ class UserService:
 
 __all__ = [
     "CurrentPasswordIncorrectError",
+    "PasswordUnchangedError",
     "UserNotFoundError",
     "UserService",
     "UserServiceDeps",
+    "new_password_hash",
 ]
