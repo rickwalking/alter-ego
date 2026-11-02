@@ -8,6 +8,11 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
+from rag_backend.application.services.carousel.copy_budget_limits import (
+    LimitScope,
+    limits_payload,
+    role_at,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
@@ -27,6 +32,10 @@ from rag_backend.application.services.carousel.editorial_translation_structure i
     structured_source,
     structured_translation,
 )
+from rag_backend.application.services.carousel.localized_slide_builder import (
+    resolve_policy_version,
+    resolve_slide_type,
+)
 from rag_backend.application.services.carousel.owner_autofix_paths import map_texts
 from rag_backend.application.services.carousel.owner_autofix_text import (
     normalize_emphasis,
@@ -45,6 +54,7 @@ from rag_backend.application.services.carousel_template.prompts import (
 )
 from rag_backend.domain.constants.ai_agents import PROMPT_EDITORIAL_CAPTION_FALLBACK
 from rag_backend.domain.constants.carousel import LANGUAGE_EN
+from rag_backend.domain.constants.copy_budget_fit import TRANSLATION_LIMITS_KEY
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
@@ -105,9 +115,12 @@ def _build_translation_payload(
     already inside the pipeline; user inputs were sanitized at intake) so the EN blog
     gets translated prose. The TL;DR and item texts travel too, so EN keeps PT's shape,
     and PT emphasis travels as <strong> tags, the EN convention, so the keep-every-tag
-    instruction yields EN emphasis instead of echoed PT markers.
+    instruction yields EN emphasis instead of echoed PT markers. Each slide carries
+    its field limits, from the contract values the validator enforces on its slide
+    type, so the English copy is written to fit them.
     """
     payload: list[dict[str, object]] = []
+    policy = load_presentation_policy(resolve_policy_version(slide_drafts))
     for slide in slide_drafts[:MAX_SLIDES]:
         if not isinstance(slide, dict):
             continue
@@ -121,9 +134,12 @@ def _build_translation_payload(
         if notes:
             item[LONG_FORM_NOTES_KEY] = notes
         item.update(structured_source(slide))
-        payload.append(
-            map_texts(item, lambda text: normalize_emphasis(LANGUAGE_EN, text))
+        translated = map_texts(item, lambda text: normalize_emphasis(LANGUAGE_EN, text))
+        scope = LimitScope(
+            resolve_slide_type(slide, index), role_at(policy, index), LANGUAGE_EN
         )
+        translated[TRANSLATION_LIMITS_KEY] = limits_payload(scope, policy)
+        payload.append(translated)
     return payload
 
 

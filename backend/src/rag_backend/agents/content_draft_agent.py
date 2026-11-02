@@ -37,7 +37,7 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.news_quotes import CARD_KEY_QUOTE_ID
 from rag_backend.domain.constants.pov_prompts import (
     POV_PROMPT_CONTENT,
-    POV_PROMPT_VERSION,
+    POV_PROMPT_CONTENT_VERSION,
     RADAR_PROMPT_CONTENT,
     RADAR_PROMPT_DOMAIN,
     RADAR_PROMPT_VERSION,
@@ -110,7 +110,7 @@ def _render_content_prompt(
             "cta_copy": pov.cta_copy,
             "quotes": quote_prompt_rows(pov.pov.quotes),
         },
-        version=POV_PROMPT_VERSION,
+        version=POV_PROMPT_CONTENT_VERSION,
     )
 
 
@@ -163,7 +163,9 @@ class ContentDraftAgent:
 
         ``policy`` (role contracts) targets the project's contract and
         deck size; with ``policy.pov`` the slide is drafted from the owner's
-        thesis with the ``carousel_pov/v1`` prompt.
+        thesis with the POV content prompt of its family (``carousel_pov`` or
+        ``carousel_pov_news``) at ``POV_PROMPT_CONTENT_VERSION``; the slide's copy
+        limits arrive in the instruction context.
 
         Titles and key points use case-preserving sanitization: lowercased input made
         the model echo lowercase copy into the slides. Revision notes are rendered once,

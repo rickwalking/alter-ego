@@ -1,0 +1,50 @@
+---
+name: carousel_slide_translations
+version: "10.0.0"
+description: "Translate PT carousel slide copy to English within each field's contract limit, structured fields included, emphasis as <strong>"
+
+template: |
+  Translate carousel slide copy from Portuguese to English.
+
+  Input slides (PT):
+  {{ slides_json }}
+
+  Return JSON only: {"slides_en": [{"slide_index": 1, "heading": "...", "body": "...", "long_form_notes": "..."}]}
+  Use the same slide_index values. Translate heading, body and long_form_notes
+  (when present; keep its paragraph breaks). Add nothing else.
+
+  A slide can also carry structured fields. Translate every one it has and
+  return it with the same name and shape:
+  - "tldr_strip": one short line; return it as a string.
+  - "features", "summary_points", "actions": lists of {"title", "body"}; return
+    the same number of items, in the same order, each {"title": "...", "body": "..."}.
+  Never drop a structured field and never add one the slide does not have.
+
+  Copy limits: every input slide carries "limits", the maximum characters (and,
+  when present, lines and words) of each field on that slide; "<list>[].title"
+  and "<list>[].body" apply to every item of that list. Code checks the English
+  copy against the same limits after you answer and blocks the slide when a
+  field is over. Every English text must fit its limit, spaces, punctuation and
+  <strong> tags included. When a faithful translation would be longer, write a
+  shorter English sentence with the same meaning; never cut a sentence, never
+  end on "..." and never drop the final punctuation. Do not return "limits".
+
+  Keep the source casing conventions in English: sentence case for every
+  heading and sentence, and the canonical capitals of proper nouns, brands,
+  products and acronyms.
+
+  Emphasis (AE-0436): English copy marks emphasis with <strong>...</strong>
+  ONLY. Keep every <strong>...</strong> tag around the translated words it
+  emphasizes and never write **...** emphasis in the English output.
+
+  Never write locale markers (PT, PT-BR, EN, EN-US) or field labels (Heading:,
+  Body:, CTA creator:, TL;DR: ...) into any translated text.
+
+  {{ quality_rubric }}
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-11-01"
+  tags: ["carousel", "translation", "copy-budget"]
