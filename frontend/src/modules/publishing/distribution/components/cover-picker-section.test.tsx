@@ -11,7 +11,8 @@ import { CoverPickerSection } from "./cover-picker-section";
 /**
  * Gherkin: frontend/tests/features/publish-cover-picker-ae0445.feature and
  * frontend/tests/features/workflow-lock-version-ae0447.feature (backend
- * contract: backend/tests/features/carousel_cover_pick_ae0445.feature).
+ * contract: backend/tests/features/carousel_cover_pick_ae0445.feature and
+ * backend/tests/features/reopen_review_on_cover_switch_ae0597.feature).
  */
 
 vi.mock("next-intl", () => ({
@@ -24,6 +25,7 @@ vi.mock("next-intl", () => ({
       current: "Atual",
       switching: "Trocando a capa…",
       success: "Capa trocada.",
+      reopened: "Capa trocada. Aprove de novo.",
       conflict: "Recarregue a página.",
       failed: "Não foi possível trocar a capa.",
       requiresReview: "A capa não pode mudar sem nova revisão.",
@@ -183,6 +185,22 @@ describe("CoverPickerSection", () => {
     expect(onSwitched).toHaveBeenCalledWith("sha256-new");
   });
 
+  // Scenario: A cover switch reopens the review of an approved carousel
+  it("says an approved carousel is back in final review", async () => {
+    routeApi(OPTIONS, {
+      project_id: PROJECT,
+      status: "switched",
+      current_asset_id: "b",
+      artifact_version: "sha256-new",
+      review_reopened: true,
+    });
+    renderSection();
+    await userEvent.click(await screen.findByRole("radio", { name: "Foto 2" }));
+    expect(
+      await screen.findByText("Capa trocada. Aprove de novo."),
+    ).toBeTruthy();
+  });
+
   it("passes a null artifact version through", async () => {
     routeApi(OPTIONS, {
       project_id: PROJECT,
@@ -249,8 +267,8 @@ describe("CoverPickerSection", () => {
     );
   });
 
-  // Scenario: The picker explains that an approved carousel needs a new review
-  it("explains an approved or published carousel", async () => {
+  // Scenario: The picker explains that a published carousel cannot change
+  it("explains a published carousel", async () => {
     const refused = new ApiError(409, "refused");
     refused.detail = COVER_SWITCH_REQUIRES_REVIEW;
     routeApi(OPTIONS, refused);
