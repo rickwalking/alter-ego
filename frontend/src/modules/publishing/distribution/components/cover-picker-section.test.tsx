@@ -251,7 +251,7 @@ describe("CoverPickerSection", () => {
 
   // Scenario: The picker explains that an approved carousel needs a new review
   it("explains an approved or published carousel", async () => {
-    const refused = new ApiError(422, "refused");
+    const refused = new ApiError(409, "refused");
     refused.detail = COVER_SWITCH_REQUIRES_REVIEW;
     routeApi(OPTIONS, refused);
     renderSection();
@@ -261,7 +261,7 @@ describe("CoverPickerSection", () => {
     );
   });
 
-  // Scenario: The picker explains that an approved carousel needs a new review
+  /** Scenario: Any other failure is visible */
   it("keeps the generic failure for an error that is not an ApiError", async () => {
     routeApi(OPTIONS, new Error("network down"));
     renderSection();
